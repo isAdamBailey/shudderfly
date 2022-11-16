@@ -1,5 +1,5 @@
 <script setup>
-import BreezeLabel from '@/Components/Label.vue';
+import BreezeLabel from '@/Components/InputLabel.vue';
 import {useForm} from '@inertiajs/inertia-vue3';
 import Button from "@/Components/Button";
 import {ref} from "vue";
