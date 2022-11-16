@@ -22,7 +22,7 @@
 </template>
 
 <script setup>
-import BreezeAuthenticatedLayout from '@/Layouts/Authenticated.vue';
+import BreezeAuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PhotosGrid from '@/Pages/Photos/PhotosGrid.vue';
 import {Head, Link} from '@inertiajs/inertia-vue3';
 import RoundArrowsIcon from '@/Components/svg/RoundArrowsIcon';

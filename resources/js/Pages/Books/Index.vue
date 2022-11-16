@@ -26,7 +26,7 @@
 
 <script setup>
 import {ref} from "vue";
-import BreezeAuthenticatedLayout from '@/Layouts/Authenticated.vue';
+import BreezeAuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import BooksGrid from '@/Pages/Books/BooksGrid.vue';
 import Button from "@/Components/Button";
 import {Head, Link} from '@inertiajs/inertia-vue3';
