@@ -11,6 +11,7 @@ const form = useForm({
     email: '',
     password: '',
     password_confirmation: '',
+    registration_secret: '',
     terms: false,
 });
 
@@ -48,6 +49,12 @@ const submit = () => {
                 <InputLabel for="password_confirmation" value="Confirm Password" />
                 <TextInput id="password_confirmation" type="password" class="mt-1 block w-full" v-model="form.password_confirmation" required autocomplete="new-password" />
                 <InputError class="mt-2" :message="form.errors.password_confirmation" />
+            </div>
+
+            <div class="mt-4">
+              <InputLabel for="registration_secret" value="Secret"/>
+              <TextInput id="registration_secret" type="text" class="mt-1 block w-full" v-model="form.registration_secret"/>
+              <InputError class="mt-2" :message="form.errors.registration_secret" />
             </div>
 
             <div class="flex items-center justify-end mt-4">
