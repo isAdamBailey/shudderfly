@@ -1,10 +1,10 @@
 <script setup>
 import BreezeLabel from '@/Components/InputLabel.vue';
 import {useForm} from '@inertiajs/inertia-vue3';
-import Button from "@/Components/Button";
+import Button from "@/Components/Button.vue";
 import {ref} from "vue";
-import Wysiwyg from "@/Components/Wysiwyg";
-import VideoIcon from "@/Components/svg/VideoIcon";
+import Wysiwyg from "@/Components/Wysiwyg.vue";
+import VideoIcon from "@/Components/svg/VideoIcon.vue";
 
 const emit = defineEmits(['close-form'])
 

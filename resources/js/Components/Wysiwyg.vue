@@ -58,7 +58,7 @@
 import {useEditor, EditorContent} from "@tiptap/vue-3";
 import StarterKit from "@tiptap/starter-kit";
 import {defineProps} from "vue";
-import WysiwygButton from "@/Components/WysiwygButton";
+import WysiwygButton from "@/Components/WysiwygButton.vue";
 
 const emit = defineEmits(["update:modelValue"]);
 

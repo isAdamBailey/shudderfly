@@ -28,10 +28,10 @@
 import {ref} from "vue";
 import BreezeAuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import BooksGrid from '@/Pages/Books/BooksGrid.vue';
-import Button from "@/Components/Button";
+import Button from "@/Components/Button.vue";
 import {Head, Link} from '@inertiajs/inertia-vue3';
-import RoundArrowsIcon from "@/Components/svg/RoundArrowsIcon";
-import SearchInput from '@/Components/SearchInput';
+import RoundArrowsIcon from "@/Components/svg/RoundArrowsIcon.vue";
+import SearchInput from '@/Components/SearchInput.vue';
 
 defineProps({
   books: Object,

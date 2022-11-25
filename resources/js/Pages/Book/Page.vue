@@ -20,9 +20,9 @@
 </template>
 
 <script setup>
-import Button from "@/Components/Button";
+import Button from "@/Components/Button.vue";
 import {computed, ref} from "vue";
-import EditPageForm from "@/Pages/Book/EditPageForm";
+import EditPageForm from "@/Pages/Book/EditPageForm.vue";
 import {usePermissions} from "@/permissions";
 
 const {canEditPages} = usePermissions();

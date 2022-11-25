@@ -67,7 +67,7 @@
             aria-label="next page">
         <ArrowIcon/>
       </Link>
-    </div>
+      </div>
   </BreezeAuthenticatedLayout>
 </template>
 
@@ -75,13 +75,13 @@
 import BreezeAuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import BreezeValidationErrors from '@/Components/ValidationErrors.vue';
 import {Head, Link} from '@inertiajs/inertia-vue3';
-import Button from "@/Components/Button";
+import Button from "@/Components/Button.vue";
 import {onMounted, ref} from "vue";
-import NewPageForm from "@/Pages/Book/NewPageForm";
-import EditForm from "@/Pages/Book/EditBookForm";
+import NewPageForm from "@/Pages/Book/NewPageForm.vue"
+import EditForm from "@/Pages/Book/EditBookForm.vue";
 import {usePermissions} from "@/permissions";
-import Page from "@/Pages/Book/Page";
-import ArrowIcon from '@/Components/svg/ArrowIcon';
+import Page from "@/Pages/Book/Page.vue";
+import ArrowIcon from '@/Components/svg/ArrowIcon.vue';
 
 const {canEditPages} = usePermissions();
 
@@ -93,7 +93,6 @@ const props = defineProps({
 
 const prevButtonDisabled = ref(false)
 const nextButtonDisabled = ref(false)
-const beginningButtonDisabled = ref(false)
 let settingsOpen = ref(false)
 
 onMounted(() => {

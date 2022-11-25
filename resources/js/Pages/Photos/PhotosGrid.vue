@@ -1,6 +1,6 @@
 <script setup>
 import {Link} from '@inertiajs/inertia-vue3';
-import Button from '@/Components/Button';
+import Button from '@/Components/Button.vue';
 
 defineProps({
   photos: Array,

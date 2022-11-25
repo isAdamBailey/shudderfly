@@ -25,8 +25,8 @@
 import BreezeAuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PhotosGrid from '@/Pages/Photos/PhotosGrid.vue';
 import {Head, Link} from '@inertiajs/inertia-vue3';
-import RoundArrowsIcon from '@/Components/svg/RoundArrowsIcon';
-import Button from "@/Components/Button";
+import RoundArrowsIcon from '@/Components/svg/RoundArrowsIcon.vue';
+import Button from "@/Components/Button.vue";
 import {ref, computed} from 'vue';
 
 defineProps({

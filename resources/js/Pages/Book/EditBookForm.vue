@@ -2,9 +2,9 @@
 import BreezeButton from '@/Components/Button.vue';
 import BreezeInput from '@/Components/TextInput.vue';
 import BreezeLabel from '@/Components/InputLabel.vue';
-import DeleteForm from "@/Pages/Book/DeleteBookForm";
+import DeleteForm from "@/Pages/Book/DeleteBookForm.vue";
 import {useForm} from '@inertiajs/inertia-vue3';
-import TextArea from "@/Components/TextArea";
+import TextArea from "@/Components/TextArea.vue";
 import Multiselect from "@vueform/multiselect";
 import {computed} from "vue";
 
