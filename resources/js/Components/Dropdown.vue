@@ -9,7 +9,7 @@ const props = defineProps({
         default: '48'
     },
     contentClasses: {
-        default: () => ['py-1', 'bg-white dark:bg-gray-700']
+        default: () => ['py-1', 'bg-yellow-200 dark:bg-gray-700 hover:bg-yellow-400']
     }
 });
 
