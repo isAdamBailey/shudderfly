@@ -14,21 +14,24 @@ defineProps({
             v-for="book in books.data"
             :key="book.id"
             :href="route('books.show', book.slug)"
-            class="border-2 rounded border-gray-900 overflow-hidden shadow-sm mx-3"
+            class="border-2 rounded border-gray-900 overflow-hidden shadow-sm mx-3 dark:text-white"
         >
             <div
-                class="p-6 bg-gradient-to-r from-white to-yellow-100 h-full flex flex-col justify-between"
+                class="p-6 bg-gradient-to-r from-white dark:from-gray-700 dark:via-gray-900 to-yellow-100 dark:to-black h-full flex flex-col justify-between"
             >
                 <div
                     class="flex flex-wrap justify-between mb-5 border-b border-gray-900"
                 >
                     <h3 class="font-bold text-3xl w-full">{{ book.title }}</h3>
-                    <p v-if="book.author" class="text-sm text-grey-900">
+                    <p
+                        v-if="book.author"
+                        class="text-sm text-grey-900 dark:text-white"
+                    >
                         by: {{ book.author }}
                     </p>
                 </div>
                 <div class="flex justify-center flex-wrap">
-                    <p class="prose mb-5">{{ book.excerpt }}</p>
+                    <p class="prose mb-5 dark:text-white">{{ book.excerpt }}</p>
                     <img
                         v-if="book.pages[0]?.image_path"
                         class="w-52 rounded-lg ml-1"
@@ -36,9 +39,11 @@ defineProps({
                         alt="cover image"
                     />
                 </div>
-                <span class="text-sm text-gray-900 font-bold"
+                <span class="text-sm text-gray-900 dark:text-white font-bold"
                     >{{ book.pages_count }}
-                    <span class="text-gray-500">pages</span></span
+                    <span class="text-gray-500 dark:text-white"
+                        >pages</span
+                    ></span
                 >
             </div>
         </Link>

@@ -15,7 +15,9 @@ const props = defineProps({
 
     <BreezeAuthenticatedLayout>
         <template #header>
-            <h2 class="font-semibold text-3xl text-gray-900 leading-tight">
+            <h2
+                class="font-semibold text-3xl text-gray-900 dark:text-gray-100 leading-tight"
+            >
                 Dashboard
             </h2>
         </template>

@@ -6,7 +6,7 @@
             <div class="flex justify-between">
                 <Link class="w-3/4" :href="route('pictures.index')">
                     <h2
-                        class="font-semibold text-3xl text-gray-900 leading-tight"
+                        class="font-semibold text-3xl text-gray-900 dark:text-gray-100 leading-tight"
                     >
                         {{ photos.per_page }}
                         {{ isRandom ? "Random" : "Most Recent" }} Photos

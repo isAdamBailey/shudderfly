@@ -12,10 +12,12 @@ Book Pages connects to Amazon S3 for image/video storage.
 _NOTE: This application is not allowing registration from the public and requires a secret. This is for family members only._
 
 ## Development
+
 This project includes [Laravel Sail](https://laravel.com/docs/sail) for local development with Docker.
 
 Simply run `sail up` to start the docker container, then in another terminal, run
 `npm install && npm run watch` and mix will watch for changes to the code and update webpack.
 
 ## Production
+
 Point to `/public` for the build, and `npm install && npm run prod` for the minified build on production.

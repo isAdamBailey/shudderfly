@@ -6,7 +6,7 @@
             <div class="flex justify-between">
                 <Link class="w-3/4" :href="route('books.index')">
                     <h2
-                        class="font-semibold text-3xl text-gray-900 leading-tight"
+                        class="font-semibold text-3xl text-gray-900 dark:text-gray-100 leading-tight"
                     >
                         Books
                     </h2>

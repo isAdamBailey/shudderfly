@@ -1,6 +1,6 @@
 <template>
     <div
-        class="p-1 border-2 border-gray-900 bg-gradient-to-r from-white to-yellow-100 h-full flex flex-col justify-between"
+        class="p-1 border-2 border-gray-900 bg-gradient-to-r from-white dark:from-gray-700 dark:via-gray-900 to-yellow-100 dark:to-black h-full flex flex-col justify-between"
     >
         <video v-if="isVideo" controls class="rounded">
             <source :src="page.image_path" />
@@ -12,7 +12,10 @@
             :src="page.image_path"
             alt="image"
         />
-        <p class="prose px-3 py-3 text-gray-900" v-html="page.content"></p>
+        <p
+            class="prose px-3 py-3 text-gray-900 dark:text-white"
+            v-html="page.content"
+        ></p>
         <div v-if="canEditPages">
             <Button
                 v-if="!showPageSettings"

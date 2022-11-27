@@ -4,6 +4,7 @@ import ApplicationLogo from "@/Components/ApplicationLogo.vue";
 import Dropdown from "@/Components/Dropdown.vue";
 import DropdownLink from "@/Components/DropdownLink.vue";
 import NavLink from "@/Components/NavLink.vue";
+import ThemeToggle from "@/Layouts/Nav/ThemeToggle.vue";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
 import { Link, usePage } from "@inertiajs/inertia-vue3";
 import { usePermissions } from "@/permissions";
@@ -16,7 +17,7 @@ const username = ref(usePage().props.value.auth.user.name);
 <template>
     <div>
         <div
-            class="min-h-screen bg-gradient-to-r from-blue-500 to-green-300 dark:bg-gray-900"
+            class="min-h-screen bg-gradient-to-r from-blue-500 dark:from-pink-500 dark:via-red-500 to-green-300 dark:to-yellow-500"
         >
             <nav
                 class="bg-blue-500 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700"
@@ -60,6 +61,8 @@ const username = ref(usePage().props.value.auth.user.name);
                             </div>
                         </div>
 
+                        <ThemeToggle />
+
                         <div class="hidden sm:flex sm:items-center sm:ml-6">
                             <!-- Settings Dropdown -->
                             <div class="ml-3 relative">
@@ -90,6 +93,7 @@ const username = ref(usePage().props.value.auth.user.name);
 
                                     <template #content>
                                         <DropdownLink
+                                            v-if="canEditPages"
                                             :href="route('profile.edit')"
                                         >
                                             Profile
@@ -102,7 +106,7 @@ const username = ref(usePage().props.value.auth.user.name);
                                         >
                                             Log Out
                                         </DropdownLink>
-                                        <div v-else class="p-5">
+                                        <div v-else class="p-5 dark:text-white">
                                             <h3>
                                                 Hi {{ username }} Mommy and
                                                 Daddy love you!!

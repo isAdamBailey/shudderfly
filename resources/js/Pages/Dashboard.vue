@@ -9,7 +9,7 @@ import { Head } from "@inertiajs/inertia-vue3";
     <AuthenticatedLayout>
         <template #header>
             <h2
-                class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight"
+                class="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight"
             >
                 Dashboard
             </h2>

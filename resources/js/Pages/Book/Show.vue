@@ -6,10 +6,12 @@
             <Link :href="pages.first_page_url" class="w-full">
                 <div class="flex">
                     <h2
-                        class="font-semibold text-3xl text-gray-900 leading-tight"
+                        class="font-semibold text-3xl text-gray-900 dark:text-gray-100 leading-tight"
                     >
                         {{ book.title }}
-                        <span v-if="book.author" class="text-base text-gray-500"
+                        <span
+                            v-if="book.author"
+                            class="text-base text-gray-500 dark:text-gray-200"
                             >by: {{ book.author }}</span
                         >
                     </h2>
@@ -42,13 +44,13 @@
 
         <div v-if="pages.total > 0" class="flex justify-around mt-3">
             <p
-                class="border border-gray-900 rounded-full w-8 h-8 text-sm text-center pt-1.5 bg-yellow-100 font-bold"
+                class="border border-gray-900 rounded-full w-8 h-8 text-sm text-center dark:text-white pt-1.5 bg-yellow-100 dark:bg-gray-800 font-bold"
             >
                 {{ pages.from }}
             </p>
             <p
                 v-if="pages.from !== pages.to"
-                class="border border-gray-900 rounded-full w-8 h-8 text-sm text-center pt-1.5 bg-yellow-100 font-bold"
+                class="border border-gray-900 rounded-full w-8 h-8 text-sm text-center dark:text-white pt-1.5 bg-yellow-100 dark:bg-gray-800 font-bold"
             >
                 {{ pages.to }}
             </p>
@@ -59,7 +61,7 @@
         >
             <div
                 v-for="page in pages.data"
-                :key="pages.id"
+                :key="page.id"
                 class="bg-yellow-100 overflow-hidden"
             >
                 <Page :page="page" />
@@ -73,7 +75,7 @@
                 :href="pages.prev_page_url || pages.last_page_url"
                 as="button"
                 :disabled="prevButtonDisabled"
-                class="inline-flex border border-white items-center px-8 py-4 bg-blue-500 border border-transparent rounded-md text-white hover:bg-blue-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:shadow-outline-blue transition ease-in-out duration-150"
+                class="inline-flex border border-white items-center px-8 py-4 bg-blue-500 dark:bg-gray-800 border border-transparent dark:border-gray-500 rounded-md text-white hover:bg-blue-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:shadow-outline-blue transition ease-in-out duration-150"
                 aria-label="previous page"
                 @click="prevButtonDisabled = true"
             >
@@ -83,7 +85,7 @@
                 :href="pages.next_page_url || pages.first_page_url"
                 as="button"
                 :disabled="nextButtonDisabled"
-                class="inline-flex border border-white items-center px-8 py-4 bg-blue-500 border border-transparent rounded-md text-white hover:bg-blue-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:shadow-outline-blue transition ease-in-out duration-150"
+                class="inline-flex border border-white items-center px-8 py-4 bg-blue-500 dark:bg-gray-800 border border-transparent dark:border-gray-500 rounded-md text-white hover:bg-blue-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:shadow-outline-blue transition ease-in-out duration-150"
                 aria-label="next page"
                 @click="nextButtonDisabled = true"
             >
