@@ -1,5 +1,5 @@
 [![Laravel Forge Site Deployment Status](https://img.shields.io/endpoint?url=https%3A%2F%2Fforge.laravel.com%2Fsite-badges%2Fa89488e3-6bf3-4f91-9427-41050b590248%3Fdate%3D1&style=flat-square)](https://forge.laravel.com)
-## About Book Pages
+## About Shudderfly
 
 [Colin's Shudderfly](https://shudderfly.adambailey.io) is an application I made to upload and structure the images and
 videos my son wants to see on his devices. This is a port over from [@isAdamBailey/book-pages](https://github.com/isAdamBailey/book-pages) where I build this application.
@@ -8,7 +8,7 @@ Because the existing apps with this functionality include a lot of links outside
 links, we needed a way to just keep him on the page with the pictures for his permission level,
 and add permissions for users who are able to upload and edit the content.
 
-Book Pages connects to Amazon S3 for image/video storage.
+Shudderfly connects to Amazon S3 for image/video storage.
 
 _NOTE: This application is not allowing registration from the public and requires a secret. This is for family members only._
 
