@@ -1,3 +1,4 @@
+[![Laravel Forge Site Deployment Status](https://img.shields.io/endpoint?url=https%3A%2F%2Fforge.laravel.com%2Fsite-badges%2Fa89488e3-6bf3-4f91-9427-41050b590248%3Fdate%3D1&style=flat-square)](https://forge.laravel.com)
 ## About Book Pages
 
 [Colin's Shudderfly](https://shudderfly.adambailey.io) is an application I made to upload and structure the images and
