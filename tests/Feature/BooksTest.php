@@ -44,11 +44,11 @@ class BooksTest extends TestCase
 
         Book::factory()->count(30)->create();
         $searchBooks = Book::factory()->count(3)->create(
-            ["title" => "Adam"]
+            ['title' => 'Adam']
         );
 
-        $searchTerm = "Adam";
-        $this->get(route('books.index', ["search" => $searchTerm]))->assertInertia(
+        $searchTerm = 'Adam';
+        $this->get(route('books.index', ['search' => $searchTerm]))->assertInertia(
             fn (Assert $page) => $page
                 ->component('Books/Index')
                 ->url('/books?search='.$searchTerm)

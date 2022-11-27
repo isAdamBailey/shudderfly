@@ -31,6 +31,7 @@ class PagesTest extends TestCase
 
         );
     }
+
     public function test_page_cannot_be_stored_without_permissions()
     {
         $this->actingAs(User::factory()->create());

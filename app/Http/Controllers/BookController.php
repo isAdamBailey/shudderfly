@@ -73,7 +73,7 @@ class BookController extends Controller
         return Inertia::render('Book/Show', [
             'book' => $book,
             'pages' => $book->pages()->paginate(2),
-            'authors' => User::all()->toArray()
+            'authors' => User::all()->toArray(),
         ]);
     }
 
