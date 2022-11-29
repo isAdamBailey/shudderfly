@@ -1,22 +1,22 @@
 <template>
     <Guest>
         <Head :title="status" />
-        <LostMan v-if="status === 404" class="w-96 h-96"/>
-        <NotAllowed v-if="status === 403" class="w-96 h-96"/>
+        <LostMan v-if="status === 404" class="w-96 h-96" />
+        <NotAllowed v-if="status === 403" class="w-96 h-96" />
         <div class="py-20 px-10">
             <h2 class="text-4xl text-gray-700 dark:text-orange-400">
-              {{ title }}
+                {{ title }}
             </h2>
             <div class="text-xl text-gray-700 dark:text-gray-100">
-              {{ description }}
+                {{ description }}
             </div>
 
             <div class="mt-10 flex justify-center">
-              <Link :href="route('books.index')">
-                <Button>Back</Button>
-              </Link>
+                <Link :href="route('books.index')">
+                    <Button>Back</Button>
+                </Link>
             </div>
-          </div>
+        </div>
     </Guest>
 </template>
 

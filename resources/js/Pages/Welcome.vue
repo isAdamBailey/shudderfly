@@ -7,7 +7,7 @@ import Button from "@/Components/Button.vue";
 const { canEditPages } = usePermissions();
 
 defineProps({
-    appName: { type: String , default: ""},
+    appName: { type: String, default: "" },
 });
 </script>
 
@@ -33,12 +33,18 @@ defineProps({
                         Colin's very own app to make books!
                     </p>
                     <div class="mt-20">
-                        <div v-if="$page.props.auth.user" class="flex justify-around">
+                        <div
+                            v-if="$page.props.auth.user"
+                            class="flex justify-around"
+                        >
                             <Link :href="route('books.index')">
                                 <Button> View Books </Button>
                             </Link>
-                            <Link v-if="canEditPages" :href="route('dashboard')">
-                              <Button> Dashboard </Button>
+                            <Link
+                                v-if="canEditPages"
+                                :href="route('dashboard')"
+                            >
+                                <Button> Dashboard </Button>
                             </Link>
                         </div>
                         <div v-else class="flex justify-around">
