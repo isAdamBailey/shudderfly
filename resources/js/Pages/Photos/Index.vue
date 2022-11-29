@@ -23,6 +23,7 @@
                         :disabled="randomButtonDisabled"
                         @click="randomButtonDisabled = true"
                     >
+                        <span class="text-lg mr-3">Mix</span>
                         <RoundArrowsIcon />
                     </Button>
                 </Link>

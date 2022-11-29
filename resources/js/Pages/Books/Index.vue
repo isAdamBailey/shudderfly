@@ -22,11 +22,12 @@
                     "
                 >
                     <Button
-                        class="w-14"
+                        class="w-25"
                         :disabled="randomButtonDisabled"
                         @click="randomButtonDisabled = true"
                     >
-                        <RoundArrowsIcon />
+                      <span class="text-lg mr-3">Mix</span>
+                      <RoundArrowsIcon />
                     </Button>
                 </Link>
             </div>
@@ -46,7 +47,7 @@ import RoundArrowsIcon from "@/Components/svg/RoundArrowsIcon.vue";
 import SearchInput from "@/Components/SearchInput.vue";
 
 defineProps({
-    books: Object,
+    books: { type: Object, required: true },
 });
 
 const randomButtonDisabled = ref(false);

@@ -7,7 +7,7 @@ import Button from "@/Components/Button.vue";
 const { canEditPages } = usePermissions();
 
 defineProps({
-    appName: String,
+    appName: { type: String , default: ""},
 });
 </script>
 
@@ -28,14 +28,17 @@ defineProps({
                         {{ appName }}
                     </h1>
                     <p
-                        class="mt-4 text-gray-300 dark:text-gray-100 text-2xl text-gray-600 font-bold"
+                        class="mt-10 text-gray-300 dark:text-gray-100 text-2xl text-gray-600 font-bold"
                     >
-                        Colin's very own "ShutterFly" app to save picture books!
+                        Colin's very own app to make books!
                     </p>
                     <div class="mt-20">
-                        <div v-if="$page.props.auth.user">
+                        <div v-if="$page.props.auth.user" class="flex justify-around">
                             <Link :href="route('books.index')">
                                 <Button> View Books </Button>
+                            </Link>
+                            <Link v-if="canEditPages" :href="route('dashboard')">
+                              <Button> Dashboard </Button>
                             </Link>
                         </div>
                         <div v-else class="flex justify-around">
