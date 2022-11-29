@@ -44,7 +44,7 @@ const username = ref(usePage().props.value.auth.user.name);
                                     :href="route('dashboard')"
                                     :active="route().current('dashboard')"
                                 >
-                                    Dashboard
+                                    Admin
                                 </NavLink>
                                 <NavLink
                                     :href="route('books.index')"
@@ -174,7 +174,7 @@ const username = ref(usePage().props.value.auth.user.name);
                             :href="route('dashboard')"
                             :active="route().current('dashboard')"
                         >
-                            Dashboard
+                            Admin
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             :href="route('books.index')"

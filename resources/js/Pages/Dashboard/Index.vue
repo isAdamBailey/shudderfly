@@ -4,35 +4,70 @@ import BreezeValidationErrors from "@/Components/ValidationErrors.vue";
 import { Head } from "@inertiajs/inertia-vue3";
 import NewBookForm from "@/Pages/Dashboard/NewBookForm.vue";
 import UsersForm from "@/Pages/Dashboard/UsersForm.vue";
+import { ref } from "vue";
+import Close from "@/Components/svg/Close.vue";
 
 const props = defineProps({
-    users: Object,
+    users: { type: Object, required: true },
 });
+
+const firstClose = ref(false);
+const lastClose = ref(false);
 </script>
 
 <template>
-    <Head title="Dashboard" />
+    <Head title="Admin" />
 
     <BreezeAuthenticatedLayout>
         <template #header>
             <h2
                 class="font-semibold text-3xl text-gray-900 dark:text-gray-100 leading-tight"
             >
-                Dashboard
+                The Administrative Duties Of Colin's Books!
             </h2>
         </template>
 
-        <div class="py-12">
+        <Transition>
+          <div
+              v-if="!lastClose"
+              class="mx-6 mt-3 p-6 flex justify-between bg-white dark:bg-gray-800 sm:rounded-lg"
+          >
+            <h2
+                class="font-semibold text-lg text-gray-900 dark:text-gray-100 leading-tight"
+            >
+                <span v-if="!firstClose"
+                >Thank you so much {{ $page.props.auth.user.name }} for
+                    helping with Colin's pictures and books. Colin and I   love you for it.</span
+                >
+              <span v-else>still love you.</span>
+            </h2>
+            <Close
+                v-if="!firstClose"
+                class="text-gray-900 dark:text-gray-100"
+                @click="firstClose = true"
+            />
+            <Close
+                v-if=" firstClose && !lastClose"
+                class="text-gray-900 dark:text-gray-100"
+                @click="lastClose = true"
+            />
+          </div>
+        </Transition>
+
+        <div class="pb-12">
             <div class="flex justify-center mb-4">
                 <BreezeValidationErrors />
             </div>
+
             <div class="flex flex-wrap justify-around space-y-2 md:space-y-0">
                 <div class="w-full md:w-1/2 sm:px-6 lg:px-8">
                     <div
                         class="bg-white overflow-hidden shadow-sm sm:rounded-lg"
                     >
-                        <div class="p-6 bg-white border-b border-gray-200">
-                            <h3 class="text-xl font-semibold border-b mb-10">
+                        <div class="p-6 bg-white dark:bg-gray-800">
+                            <h3
+                                class="text-xl dark:text-gray-100 font-semibold border-b mb-10"
+                            >
                                 New Book
                             </h3>
                             <NewBookForm :authors="props.users.data" />
@@ -44,8 +79,10 @@ const props = defineProps({
                     <div
                         class="bg-white overflow-hidden shadow-sm sm:rounded-lg"
                     >
-                        <div class="p-6 bg-white border-b border-gray-200">
-                            <h3 class="text-xl font-semibold border-b">
+                        <div class="p-6 bg-white dark:bg-gray-800">
+                            <h3
+                                class="text-xl dark:text-gray-100 font-semibold border-b"
+                            >
                                 Users
                             </h3>
                             <UsersForm :users="users" />
@@ -56,3 +93,15 @@ const props = defineProps({
         </div>
     </BreezeAuthenticatedLayout>
 </template>
+
+<style scoped>
+.v-enter-active,
+.v-leave-active {
+  transition: opacity 0.5s ease;
+}
+
+.v-enter-from,
+.v-leave-to {
+  opacity: 0;
+}
+</style>

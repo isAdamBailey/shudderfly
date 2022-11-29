@@ -1,26 +1,26 @@
 <template>
     <div class="mt-10 flex flex-col">
         <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
-            <div class="inline-block min-w-full py-2 sm:px-6 lg:px-8">
+            <div class="inline-block min-w-full sm:px-6 lg:px-8">
                 <div class="overflow-hidden">
                     <table class="min-w-full">
                         <thead class="border-b">
                             <tr>
                                 <th
                                     scope="col"
-                                    class="px-6 py-4 text-left text-sm font-semibold text-gray-900"
+                                    class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100"
                                 >
                                     Name
                                 </th>
                                 <th
                                     scope="col"
-                                    class="px-6 py-4 text-left text-sm font-semibold text-gray-900"
+                                    class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100"
                                 >
                                     Email
                                 </th>
                                 <th
                                     scope="col"
-                                    class="px-6 py-4 text-left text-sm font-semibold text-gray-900"
+                                    class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100"
                                 >
                                     Role
                                 </th>

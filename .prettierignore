@@ -1,0 +1,7 @@
+vendor
+public
+package-lock.json
+composer.lock
+composer.json
+docker-compose.yml
+*.yml

@@ -68,6 +68,11 @@ const submit = () => {
             />
         </div>
 
+        <div class="my-8 dark:text-gray-100">
+            Any text added to "title" or "excerpt" can be searched to find the
+            book later.
+        </div>
+
         <div class="flex items-center justify-end mt-4">
             <BreezeButton
                 class="ml-4"

@@ -44,7 +44,7 @@ defineProps({
                                 v-if="canEditPages"
                                 :href="route('dashboard')"
                             >
-                                <Button> Dashboard </Button>
+                                <Button> Admin </Button>
                             </Link>
                         </div>
                         <div v-else class="flex justify-around">
