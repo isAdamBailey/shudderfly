@@ -1,6 +1,6 @@
 <template>
     <div
-        class="p-1 border-2 border-gray-900 bg-gradient-to-r from-white dark:from-gray-700 dark:via-gray-900 to-yellow-100 dark:to-black h-full flex flex-col justify-between"
+        class="p-1 border-2 border-gray-900 bg-gradient-to-r from-white dark:from-gray-700 dark:via-gray-900 to-yellow-100 dark:to-black flex flex-col justify-between"
     >
         <video v-if="isVideo" controls class="rounded">
             <source :src="page.image_path" />

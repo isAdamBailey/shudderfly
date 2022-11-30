@@ -62,7 +62,7 @@
             <div
                 v-for="page in pages.data"
                 :key="page.id"
-                class="bg-yellow-100 overflow-hidden"
+                class="overflow-hidden"
             >
                 <Page :page="page" />
             </div>
