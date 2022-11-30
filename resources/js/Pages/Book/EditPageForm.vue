@@ -10,8 +10,8 @@ import VideoIcon from "@/Components/svg/VideoIcon.vue";
 const emit = defineEmits(["close-page-form"]);
 
 const props = defineProps({
-    page: Object,
-    showPageSettings: false,
+    page: { type: Object, required: true },
+    showPageSettings: { type: Boolean, default: false },
 });
 
 const form = useForm({
@@ -60,7 +60,7 @@ const submit = () => {
 </script>
 
 <template>
-    <div class="border-t-2 bg-white rounded p-5 mt-10">
+    <div class="border-t-2 bg-white dark:bg-gray-800 rounded p-5 mt-10">
         <form @submit.prevent="submit">
             <div class="flex flex-wrap">
                 <div class="w-full md:w-1/4">

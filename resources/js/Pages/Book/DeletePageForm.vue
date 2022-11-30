@@ -11,12 +11,8 @@ import { useForm } from "@inertiajs/inertia-vue3";
 const emit = defineEmits(["close-page-form"]);
 
 const props = defineProps({
-    page: Object,
+    page: { type: Object, required: true },
 });
-
-const truncateString = (str, num) =>
-    str.length > num ? `${str.slice(0, num > 3 ? num - 3 : num)}...` : str;
-const buttonText = truncateString(props.page.content, 20);
 
 const form = useForm({});
 

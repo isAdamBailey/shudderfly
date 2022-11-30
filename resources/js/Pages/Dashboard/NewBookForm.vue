@@ -52,7 +52,6 @@ const submit = () => {
                 type="text"
                 class="mt-1 block w-full"
                 required
-                autofocus
                 autocomplete="title"
             />
         </div>

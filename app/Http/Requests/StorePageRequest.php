@@ -27,7 +27,7 @@ class StorePageRequest extends FormRequest
             'book_id' => 'integer|required',
             'content' => 'string|nullable|required_without:image',
             'image' => [
-                'max:40000',
+                'max:70000',
                 'mimes:jpg,jpeg,bmp,png,svg,webp,avi,gif,mpeg,quicktime,mp4',
                 'required_without:content',
             ],
