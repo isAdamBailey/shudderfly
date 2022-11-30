@@ -2,7 +2,7 @@
 import BreezeButton from "@/Components/Button.vue";
 import BreezeInput from "@/Components/TextInput.vue";
 import BreezeLabel from "@/Components/InputLabel.vue";
-import { useForm } from "@inertiajs/inertia-vue3";
+import { useForm, usePage } from "@inertiajs/inertia-vue3";
 import Multiselect from "@vueform/multiselect";
 import { computed } from "vue";
 
@@ -13,10 +13,12 @@ const props = defineProps({
     },
 });
 
+const currentUser = usePage().props.value.auth.user.name;
+
 const form = useForm({
     title: "",
     excerpt: "",
-    author: "",
+    author: currentUser,
 });
 
 const authorsOptions = computed(() => {

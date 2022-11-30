@@ -33,11 +33,11 @@ const lastClose = ref(false);
               class="mx-6 mt-3 p-6 flex justify-between bg-white dark:bg-gray-800 sm:rounded-lg"
           >
             <h2
-                class="font-semibold text-lg text-gray-900 dark:text-gray-100 leading-tight"
+                class="font-semibold text-lg text-gray-900 dark:text-gray-100 leading-tight w-3/4 md:w-full"
             >
                 <span v-if="!firstClose"
                 >Thank you so much {{ $page.props.auth.user.name }} for
-                    helping with Colin's pictures and books. Colin and I   love you for it.</span
+                    helping with Colin's pictures and books. Colin and I love you for it.</span
                 >
               <span v-else>still love you.</span>
             </h2>
