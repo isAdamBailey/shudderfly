@@ -1,6 +1,9 @@
 <script setup>
 import { Link } from "@inertiajs/inertia-vue3";
 import Button from "@/Components/Button.vue";
+import { useMedia } from "@/mediaHelpers";
+
+const { isVideo } = useMedia();
 
 defineProps({
     photos: Array,
@@ -13,10 +16,19 @@ defineProps({
     >
         <div v-for="photo in photos" :key="photo.id" class="shadow-sm">
             <div class="flex justify-center flex-wrap">
+                <video
+                    v-if="isVideo(photo.image_path)"
+                    controls
+                    class="rounded"
+                >
+                    <source :src="photo.image_path" />
+                    Your browser does not support the video tag.
+                </video>
                 <img
+                    v-else-if="photo.image_path"
                     class="w-full rounded-t"
                     :src="photo.image_path"
-                    alt="cover image"
+                    alt="image"
                 />
                 <Link
                     class="w-full"

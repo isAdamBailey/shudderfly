@@ -25,7 +25,7 @@ class PagesTest extends TestCase
 
         $this->get(route('pictures.index'))->assertInertia(
             fn (Assert $page) => $page
-                ->component('Photos/Index')
+                ->component('Uploads/Index')
                 ->url('/photos')
                 ->has('photos.data', 10)
 

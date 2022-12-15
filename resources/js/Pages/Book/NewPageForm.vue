@@ -9,7 +9,7 @@ import VideoIcon from "@/Components/svg/VideoIcon.vue";
 const emit = defineEmits(["close-form"]);
 
 const props = defineProps({
-    book: { type: Object, required: true }
+    book: { type: Object, required: true },
 });
 
 const form = useForm({
@@ -59,8 +59,12 @@ const submit = () => {
 </script>
 
 <template>
-    <div class="bg-white dark:bg-gray-800 rounded mb-5 md:mb-0 md:mr-5 p-5 md:w-3/4">
-        <h3 class="text-2xl dark:text-gray-100 w-full border-b mb-7">Add a New Page</h3>
+    <div
+        class="bg-white dark:bg-gray-800 rounded mb-5 md:mb-0 md:mr-5 p-5 md:w-3/4"
+    >
+        <h3 class="text-2xl dark:text-gray-100 w-full border-b mb-7">
+            Add a New Page
+        </h3>
         <form @submit.prevent="submit">
             <div class="flex flex-wrap">
                 <div class="w-full md:w-1/4">

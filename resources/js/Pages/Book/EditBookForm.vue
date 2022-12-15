@@ -34,7 +34,9 @@ const submit = () => {
 
 <template>
     <div class="bg-white dark:bg-gray-800 rounded p-5 md:w-1/4">
-        <h3 class="text-2xl dark:text-gray-100 w-full border-b mb-7">Edit Book</h3>
+        <h3 class="text-2xl dark:text-gray-100 w-full border-b mb-7">
+            Edit Book
+        </h3>
         <form @submit.prevent="submit">
             <div class="flex flex-col">
                 <div class="mr-3">

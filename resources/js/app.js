@@ -25,4 +25,8 @@ createInertiaApp({
     },
 });
 
-InertiaProgress.init({ color: "#4B5563" });
+const loadingColor = window.document.getElementsByClassName("dark")[0]
+    ? "#ffffff"
+    : "#000000";
+
+InertiaProgress.init({ color: loadingColor, showSpinner: true });

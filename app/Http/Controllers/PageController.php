@@ -20,14 +20,13 @@ class PageController extends Controller
     {
         $photos = Page::with('book')
             ->where('image_path', '!=', '')
-            ->where('image_path', 'not like', '%.mp4%')
             ->when($request->filter === 'random',
                 fn ($query) => $query->inRandomOrder(),
                 fn ($query) => $query->latest()
             )
             ->paginate(10);
 
-        return Inertia::render('Photos/Index', [
+        return Inertia::render('Uploads/Index', [
             'photos' => $photos,
         ]);
     }

@@ -28,30 +28,31 @@ const lastClose = ref(false);
         </template>
 
         <Transition>
-          <div
-              v-if="!lastClose"
-              class="mx-6 mt-3 p-6 flex justify-between bg-white dark:bg-gray-800 sm:rounded-lg"
-          >
-            <h2
-                class="font-semibold text-lg text-gray-900 dark:text-gray-100 leading-tight w-3/4 md:w-full"
+            <div
+                v-if="!lastClose"
+                class="mx-6 mt-3 p-6 flex justify-between bg-white dark:bg-gray-800 sm:rounded-lg"
             >
-                <span v-if="!firstClose"
-                >Thank you so much {{ $page.props.auth.user.name }} for
-                    helping with Colin's pictures and books. Colin and I love you for it.</span
+                <h2
+                    class="font-semibold text-lg text-gray-900 dark:text-gray-100 leading-tight w-3/4 md:w-full"
                 >
-              <span v-else>still love you.</span>
-            </h2>
-            <Close
-                v-if="!firstClose"
-                class="text-gray-900 dark:text-gray-100"
-                @click="firstClose = true"
-            />
-            <Close
-                v-if=" firstClose && !lastClose"
-                class="text-gray-900 dark:text-gray-100"
-                @click="lastClose = true"
-            />
-          </div>
+                    <span v-if="!firstClose"
+                        >Thank you so much {{ $page.props.auth.user.name }} for
+                        helping with Colin's pictures and books. Colin and I
+                        love you for it.</span
+                    >
+                    <span v-else>still love you.</span>
+                </h2>
+                <Close
+                    v-if="!firstClose"
+                    class="text-gray-900 dark:text-gray-100"
+                    @click="firstClose = true"
+                />
+                <Close
+                    v-if="firstClose && !lastClose"
+                    class="text-gray-900 dark:text-gray-100"
+                    @click="lastClose = true"
+                />
+            </div>
         </Transition>
 
         <div class="pb-12">
@@ -97,11 +98,11 @@ const lastClose = ref(false);
 <style scoped>
 .v-enter-active,
 .v-leave-active {
-  transition: opacity 0.5s ease;
+    transition: opacity 0.5s ease;
 }
 
 .v-enter-from,
 .v-leave-to {
-  opacity: 0;
+    opacity: 0;
 }
 </style>

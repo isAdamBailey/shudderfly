@@ -2,7 +2,7 @@
     <div
         class="p-1 border-2 border-gray-900 bg-gradient-to-r from-white dark:from-gray-700 dark:via-gray-900 to-yellow-100 dark:to-black flex flex-col justify-between"
     >
-        <video v-if="isVideo" controls class="rounded">
+        <video v-if="isVideo(page.image_path)" controls class="rounded">
             <source :src="page.image_path" />
             Your browser does not support the video tag.
         </video>
@@ -35,21 +35,16 @@
 
 <script setup>
 import Button from "@/Components/Button.vue";
-import { computed, ref } from "vue";
+import { ref } from "vue";
 import EditPageForm from "@/Pages/Book/EditPageForm.vue";
 import { usePermissions } from "@/permissions";
+import { useMedia } from "@/mediaHelpers";
 
 const { canEditPages } = usePermissions();
+const { isVideo } = useMedia();
 
 const props = defineProps({
     page: Object,
-});
-
-const isVideo = computed(() => {
-    const videoFormats = ["mp4", "avi", "mpeg", "quicktime"];
-    return videoFormats.some(function (suffix) {
-        return props.page.image_path.endsWith(suffix);
-    });
 });
 
 let showPageSettings = ref(false);

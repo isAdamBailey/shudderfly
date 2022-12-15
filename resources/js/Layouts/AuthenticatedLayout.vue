@@ -57,7 +57,7 @@ const username = ref(usePage().props.value.auth.user.name);
                                     :href="route('pictures.index')"
                                     :active="route().current('pictures.*')"
                                 >
-                                    Photos
+                                    Uploads
                                 </NavLink>
                             </div>
                         </div>
@@ -187,7 +187,7 @@ const username = ref(usePage().props.value.auth.user.name);
                             :href="route('pictures.index')"
                             :active="route().current('pictures.*')"
                         >
-                            Photos
+                            Uploads
                         </ResponsiveNavLink>
                     </div>
 

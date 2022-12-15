@@ -1,5 +1,5 @@
 <template>
-    <Head title="Photos" />
+    <Head title="Uploads" />
 
     <BreezeAuthenticatedLayout>
         <template #header>
@@ -9,7 +9,7 @@
                         class="font-semibold text-3xl text-gray-900 dark:text-gray-100 leading-tight"
                     >
                         {{ photos.per_page }}
-                        {{ isRandom ? "Random" : "Most Recent" }} Photos
+                        {{ isRandom ? "Random" : "Most Recent" }} Uploads
                     </h2>
                 </Link>
                 <Link
@@ -36,7 +36,7 @@
 
 <script setup>
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import PhotosGrid from "@/Pages/Photos/PhotosGrid.vue";
+import PhotosGrid from "@/Pages/Uploads/UploadsGrid.vue";
 import { Head, Link } from "@inertiajs/inertia-vue3";
 import RoundArrowsIcon from "@/Components/svg/RoundArrowsIcon.vue";
 import Button from "@/Components/Button.vue";
