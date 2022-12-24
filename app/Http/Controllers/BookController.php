@@ -31,7 +31,7 @@ class BookController extends Controller
             ->with(['pages' => fn ($q) => $q->hasImage()])
             ->when($request->filter === 'random',
                 fn ($query) => $query->inRandomOrder(),
-                fn ($query) => $query->orderBy('created_at', 'desc')
+                fn ($query) => $query->orderBy('updated_at', 'desc')
             )
             ->when($search,
                 fn ($query) => $query->where('title', 'LIKE', '%'.$search.'%')
