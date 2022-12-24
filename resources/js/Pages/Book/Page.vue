@@ -17,7 +17,7 @@
             v-html="page.content"
         ></p>
         <p class="prose px-3 py-3 text-gray-900 dark:text-white">
-            {{ short(page.updated_at) }}
+            {{ short(page.created_at) }}
         </p>
         <div v-if="canEditPages">
             <Button
