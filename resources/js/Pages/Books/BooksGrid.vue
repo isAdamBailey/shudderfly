@@ -1,7 +1,7 @@
 <script setup>
 import { Link } from "@inertiajs/inertia-vue3";
-import  { useDate } from "@/dateHelpers";
-const  { short } = useDate();
+import { useDate } from "@/dateHelpers";
+const { short } = useDate();
 
 defineProps({
     books: Object,
@@ -21,7 +21,6 @@ defineProps({
             <div
                 class="p-6 bg-gradient-to-r from-white dark:from-gray-700 dark:via-gray-900 to-yellow-100 dark:to-black h-full flex flex-col justify-between"
             >
-
                 <h3 class="font-bold text-3xl w-full">{{ book.title }}</h3>
                 <div
                     class="flex flex-wrap justify-between mb-5 border-b border-gray-900"

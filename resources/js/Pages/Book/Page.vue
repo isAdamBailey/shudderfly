@@ -16,6 +16,9 @@
             class="prose px-3 py-3 text-gray-900 dark:text-white"
             v-html="page.content"
         ></p>
+        <p class="prose px-3 py-3 text-gray-900 dark:text-white">
+            {{ short(page.updated_at) }}
+        </p>
         <div v-if="canEditPages">
             <Button
                 v-if="!showPageSettings"
@@ -39,9 +42,11 @@ import { ref } from "vue";
 import EditPageForm from "@/Pages/Book/EditPageForm.vue";
 import { usePermissions } from "@/permissions";
 import { useMedia } from "@/mediaHelpers";
+import { useDate } from "@/dateHelpers";
 
 const { canEditPages } = usePermissions();
 const { isVideo } = useMedia();
+const { short } = useDate();
 
 const props = defineProps({
     page: Object,
