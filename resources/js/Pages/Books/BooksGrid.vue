@@ -1,7 +1,12 @@
 <script setup>
-import { Link } from "@inertiajs/inertia-vue3";
-import { useDate } from "@/dateHelpers";
-const { short } = useDate();
+import {Link} from "@inertiajs/inertia-vue3";
+import {useDate} from "@/dateHelpers";
+
+const {short} = useDate();
+
+function isEdited(book) {
+    return book.updated_at !== book.created_at;
+}
 
 defineProps({
     books: Object,
@@ -27,12 +32,19 @@ defineProps({
                 >
                     <p
                         v-if="book.author"
-                        class="text-sm text-grey-900 dark:text-white"
+                        class="text-sm text-gray-900 dark:text-white"
                     >
                         by: {{ book.author }}
                     </p>
-                    <p class="text-sm text-grey-900 dark:text-white">
-                        {{ short(book.updated_at) }}
+                    <p>
+                        <span class="text-xs text-gray-900 dark:text-white">
+                            On {{ short(book.created_at) }}
+                        </span>
+                        <span
+                            v-if="isEdited(book)"
+                            class="pl-1 text-xs text-gray-400">
+                            Edited
+                        </span>
                     </p>
                 </div>
                 <div class="flex justify-center flex-wrap">
@@ -45,9 +57,9 @@ defineProps({
                     />
                 </div>
                 <span class="text-sm text-gray-900 dark:text-white font-bold"
-                    >{{ book.pages_count }}
+                >{{ book.pages_count }}
                     <span class="text-gray-500 dark:text-white"
-                        >pages</span
+                    >pages</span
                     ></span
                 >
             </div>
