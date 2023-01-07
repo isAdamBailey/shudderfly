@@ -1,5 +1,5 @@
 <template>
-    <div class="w-full bg-white px-4 bg-yellow-300 dark:bg-gray-800">
+    <div class="w-full px-4 bg-transparent">
         <label for="search" class="hidden">Search</label>
         <input
             id="search"
@@ -26,7 +26,7 @@ export default defineComponent({
 
     data() {
         return {
-            search: this.$inertia.page.props.books.search || null,
+            search: this.$inertia.page.props.books?.search || null,
         };
     },
 
