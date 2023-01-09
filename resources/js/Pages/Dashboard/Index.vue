@@ -6,9 +6,11 @@ import NewBookForm from "@/Pages/Dashboard/NewBookForm.vue";
 import UsersForm from "@/Pages/Dashboard/UsersForm.vue";
 import { ref } from "vue";
 import Close from "@/Components/svg/Close.vue";
+import StatsCard from "@/Pages/Dashboard/StatsCard.vue";
 
 const props = defineProps({
     users: { type: Object, required: true },
+    stats: { type: Object, required: true },
 });
 
 const firstClose = ref(false);
@@ -88,6 +90,20 @@ const lastClose = ref(false);
                             </h3>
                             <UsersForm :users="users" />
                         </div>
+                    </div>
+                </div>
+            </div>
+            <div class="w-full pt-6 sm:px-6 lg:px-8">
+                <div
+                    class="bg-white overflow-hidden shadow-sm sm:rounded-lg"
+                >
+                    <div class="p-6 bg-white dark:bg-gray-800">
+                        <h3
+                            class="text-xl dark:text-gray-100 font-semibold border-b"
+                        >
+                            Nerd Stats
+                        </h3>
+                        <StatsCard :stats="stats" />
                     </div>
                 </div>
             </div>

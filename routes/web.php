@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\BookController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProfileController;
 use App\Models\User;
@@ -33,11 +34,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/photos', [PageController::class, 'index'])->name('pictures.index');
 
     Route::group(['middleware' => ['can:edit pages']], function () {
-        Route::get('/dashboard', function () {
-            return Inertia::render('Dashboard/Index', [
-                'users' => ['data' => User::all()],
-            ]);
-        })->name('dashboard');
+        Route::get('/dashboard', [DashboardController::class, 'show'])->name('dashboard');
 
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

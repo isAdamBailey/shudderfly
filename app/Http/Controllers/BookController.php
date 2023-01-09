@@ -70,6 +70,8 @@ class BookController extends Controller
      */
     public function show(Book $book): Response
     {
+        $book->increment('read_count');
+
         return Inertia::render('Book/Show', [
             'book' => $book,
             'pages' => $book->pages()->paginate(2),

@@ -78,6 +78,9 @@ class BooksTest extends TestCase
                 ->has('pages.total')
                 ->has('authors', 1)
         );
+
+        // make sure we recorded it being read
+        $this->assertSame($book->read_count + 1, $book->fresh()->read_count);
     }
 
     public function test_book_cannot_be_stored_without_permissions()
