@@ -35,7 +35,7 @@ class DashboardController extends Controller
                 'mostPages' => $mostPages->toArray(),
                 'mostRead' => $mostRead->toArray(),
                 'leastRead' => $leastRead->toArray(),
-            ]
+            ],
         ]);
     }
 }

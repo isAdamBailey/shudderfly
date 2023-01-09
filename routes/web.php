@@ -5,7 +5,6 @@ use App\Http\Controllers\BookController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProfileController;
-use App\Models\User;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;

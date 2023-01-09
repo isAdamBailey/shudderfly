@@ -94,9 +94,7 @@ const lastClose = ref(false);
                 </div>
             </div>
             <div class="w-full pt-6 sm:px-6 lg:px-8">
-                <div
-                    class="bg-white overflow-hidden shadow-sm sm:rounded-lg"
-                >
+                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                     <div class="p-6 bg-white dark:bg-gray-800">
                         <h3
                             class="text-xl dark:text-gray-100 font-semibold border-b"

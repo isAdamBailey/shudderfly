@@ -14,7 +14,7 @@ class Book extends Model
     use HasSlug;
 
     protected $fillable = [
-        'title', 'excerpt', 'author', 'read_count'
+        'title', 'excerpt', 'author', 'read_count',
     ];
 
     public function pages(): HasMany

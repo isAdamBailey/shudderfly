@@ -6,7 +6,6 @@ use App\Models\Book;
 use App\Models\Page;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -19,7 +18,7 @@ class DashboardTest extends TestCase
         $this->actingAs($user = User::factory()->create());
         $user->givePermissionTo('edit pages');
 
-       $books = Book::factory()->has(Page::factory(13))->count(3)->create();
+        $books = Book::factory()->has(Page::factory(13))->count(3)->create();
 
         $this->get(route('dashboard'))->assertInertia(
             fn (Assert $page) => $page
