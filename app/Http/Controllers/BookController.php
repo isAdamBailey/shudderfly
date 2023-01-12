@@ -68,9 +68,11 @@ class BookController extends Controller
      * @param  Book  $book
      * @return Response
      */
-    public function show(Book $book): Response
+    public function show(Book $book, Request $request): Response
     {
-        $book->increment('read_count');
+        if (! $request->has('page')) {
+            $book->increment('read_count');
+        }
 
         return Inertia::render('Book/Show', [
             'book' => $book,
