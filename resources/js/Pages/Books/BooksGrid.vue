@@ -4,10 +4,6 @@ import { useDate } from "@/dateHelpers";
 
 const { short } = useDate();
 
-function isEdited(book) {
-    return book.updated_at !== book.created_at;
-}
-
 defineProps({
     books: Object,
 });
@@ -39,12 +35,6 @@ defineProps({
                     <p>
                         <span class="text-xs text-gray-900 dark:text-white">
                             On {{ short(book.created_at) }}
-                        </span>
-                        <span
-                            v-if="isEdited(book)"
-                            class="pl-1 text-xs text-gray-400"
-                        >
-                            Edited
                         </span>
                     </p>
                 </div>

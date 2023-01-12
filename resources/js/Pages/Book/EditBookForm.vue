@@ -73,11 +73,6 @@ const submit = () => {
                 />
             </div>
 
-            <div class="dark:text-white text-sm mt-3">
-                Updating information here will also put the book at the top of
-                the page
-            </div>
-
             <div class="flex justify-center mt-4">
                 <BreezeButton
                     class="w-3/4 py-3 flex justify-center"
