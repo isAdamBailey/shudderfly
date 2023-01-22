@@ -3,10 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\Book;
+use App\Models\Category;
 use App\Models\Page;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -24,17 +26,22 @@ class BooksTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        $books = Book::factory()->has(Page::factory(13))->count(3)->create();
+        DB::table('categories')->delete();
+        $categories = Category::factory()
+            ->has(
+                Book::factory()
+                ->has(Page::factory(13))
+                ->count(3)
+            )
+            ->count(2)
+            ->create();
 
         $this->get(route('books.index'))->assertInertia(
             fn (Assert $page) => $page
                 ->component('Books/Index')
                 ->url('/books')
-                ->has('books.data', $books->count())
-                ->has('books.data.0', fn (Assert $page) => $page
-                    ->where('pages_count', $books[0]->pages->count())
-                    ->etc()
-                )
+                ->has('categories.data', $categories->count())
+                ->has('categories.data.0.books.0.pages')
         );
     }
 
@@ -42,17 +49,24 @@ class BooksTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        Book::factory()->count(30)->create();
-        $searchBooks = Book::factory()->count(3)->create(
-            ['title' => 'Adam']
-        );
+        DB::table('categories')->delete();
+        $categories = Category::factory()
+            ->has(
+                Book::factory()->count(30)
+            )
+            ->count(2)
+            ->create();
+
+        $searchBooks = Category::factory()
+            ->has(Book::factory(null, ['title' => 'Adam'])->count(3)
+            )->create();
 
         $searchTerm = 'Adam';
         $this->get(route('books.index', ['search' => $searchTerm]))->assertInertia(
             fn (Assert $page) => $page
                 ->component('Books/Index')
                 ->url('/books?search='.$searchTerm)
-                ->has('books.data', $searchBooks->count())
+                ->has('categories.data.2.books', $searchBooks->count())
         );
     }
 
