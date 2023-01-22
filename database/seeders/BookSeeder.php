@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\Book;
-use App\Models\Page;
 use App\Models\Category;
+use App\Models\Page;
 use Illuminate\Database\Seeder;
 
 class BookSeeder extends Seeder
@@ -23,6 +23,5 @@ class BookSeeder extends Seeder
                 ->has(Page::factory()->count(5))
                 ->create();
         }
-
     }
 }

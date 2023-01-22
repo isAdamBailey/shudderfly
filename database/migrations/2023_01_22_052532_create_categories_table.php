@@ -29,6 +29,7 @@ return new class extends Migration
             'activities',
             'music',
             'animals',
+            'uncategorized',
         ];
 
         foreach ($categories as $category) {
@@ -37,8 +38,11 @@ return new class extends Migration
             ]);
         }
 
-        Schema::table('books', function (Blueprint $table) {
-            $table->foreignidFor(Category::class)->nullable();
+        $default = Category::query()
+            ->where(['name' => 'uncategorized'])->first();
+
+        Schema::table('books', function (Blueprint $table) use ($default) {
+            $table->foreignidFor(Category::class)->default($default->id);
         });
     }
 

@@ -27,6 +27,7 @@ class UpdateBookRequest extends FormRequest
             'title' => 'string|max:255',
             'excerpt' => 'string|max:255|nullable',
             'author' => 'string|max:100|nullable',
+            'category_id' => 'integer',
         ];
     }
 }

@@ -15,10 +15,21 @@ const props = defineProps({
 
 const currentUser = usePage().props.value.auth.user.name;
 
+const categoriesOptions = computed(() => {
+    return usePage().props.value.categories
+        ? usePage().props.value.categories.map((category) => {
+            return { value: category.id, label: category.name };
+        })
+        : [];
+});
+
+const undefinedCategory = categoriesOptions.value.find((category) => category.label === "uncategorized");
+
 const form = useForm({
     title: "",
     excerpt: "",
     author: currentUser,
+    category_id: undefinedCategory?.value,
 });
 
 const authorsOptions = computed(() => {
@@ -43,6 +54,17 @@ const submit = () => {
                 v-model="form.author"
                 :options="authorsOptions"
                 placeholder="Author Name"
+            />
+        </div>
+
+        <div class="mt-4">
+            <BreezeLabel for="category" value="Book Category" />
+            <Multiselect
+                id="category"
+                v-model="form.category_id"
+                :options="categoriesOptions"
+                track-by="value"
+                placeholder="Category"
             />
         </div>
 

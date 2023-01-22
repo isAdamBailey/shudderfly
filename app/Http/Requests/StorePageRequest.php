@@ -31,6 +31,7 @@ class StorePageRequest extends FormRequest
                 'mimes:jpg,jpeg,bmp,png,svg,webp,avi,gif,mpeg,quicktime,mp4',
                 'required_without:content',
             ],
+            'category_id' => 'integer',
         ];
     }
 }

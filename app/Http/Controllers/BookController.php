@@ -28,7 +28,7 @@ class BookController extends Controller
     {
         $search = $request->search;
         $categories = Category::query()
-            ->with(['books' => fn ($book) => $book->withCount('pages')
+            ->with(['books' => fn ($book) => $book
                     ->with(['pages' => fn ($q) => $q->hasImage()])
                     ->when($search,
                         fn ($query) => $query->where('title', 'LIKE', '%'.$search.'%')

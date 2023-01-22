@@ -3,7 +3,7 @@ import BreezeButton from "@/Components/Button.vue";
 import BreezeInput from "@/Components/TextInput.vue";
 import BreezeLabel from "@/Components/InputLabel.vue";
 import DeleteForm from "@/Pages/Book/DeleteBookForm.vue";
-import { useForm } from "@inertiajs/inertia-vue3";
+import { useForm, usePage } from "@inertiajs/inertia-vue3";
 import TextArea from "@/Components/TextArea.vue";
 import Multiselect from "@vueform/multiselect";
 import { computed } from "vue";
@@ -17,6 +17,7 @@ const form = useForm({
     title: props.book.title,
     excerpt: props.book.excerpt,
     author: props.book.author,
+    category_id: props.book.category_id,
 });
 
 const authorsOptions = computed(() => {
@@ -26,6 +27,15 @@ const authorsOptions = computed(() => {
           })
         : [];
 });
+
+const categoriesOptions = computed(() => {
+    return usePage().props.value.categories
+        ? usePage().props.value.categories.map((category) => {
+            return { value: category.id, label: category.name };
+        })
+        : [];
+});
+
 
 const submit = () => {
     form.put(route("books.update", props.book.slug));
@@ -50,7 +60,7 @@ const submit = () => {
                         autocomplete="title"
                     />
                 </div>
-                <div>
+                <div class="mt-4">
                     <BreezeLabel for="author" value="Author" />
                     <Multiselect
                         id="author"
@@ -59,9 +69,19 @@ const submit = () => {
                         placeholder="Author Name"
                     />
                 </div>
+                <div class="mt-4">
+                    <BreezeLabel for="category" value="Book Category" />
+                    <Multiselect
+                        id="category"
+                        v-model="form.category_id"
+                        :options="categoriesOptions"
+                        track-by="value"
+                        placeholder="Category"
+                    />
+                </div>
             </div>
 
-            <div>
+            <div class="mt-4">
                 <BreezeLabel for="excerpt" value="Excerpt" />
                 <TextArea
                     id="excerpt"

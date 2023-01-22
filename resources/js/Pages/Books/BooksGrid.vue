@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <div v-if="category.books?.length">
         <h3 class="pl-3 mt-3 text-xl text-gray-100 font-bold dark:text-gray-800">
             {{ capitalize(category.name) }}
         </h3>
