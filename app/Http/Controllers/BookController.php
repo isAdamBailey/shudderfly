@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreBookRequest;
 use App\Http\Requests\UpdateBookRequest;
 use App\Models\Book;
+use App\Models\Category;
 use App\Models\User;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\RedirectResponse;
@@ -26,22 +27,19 @@ class BookController extends Controller
     public function index(Request $request): Response
     {
         $search = $request->search;
-        $books = Book::query()
-            ->withCount('pages')
-            ->with(['pages' => fn ($q) => $q->hasImage()])
-            ->when($request->filter === 'random',
-                fn ($query) => $query->inRandomOrder(),
-                fn ($query) => $query->orderBy('created_at', 'desc')
-            )
-            ->when($search,
-                fn ($query) => $query->where('title', 'LIKE', '%'.$search.'%')
-                    ->orWhere('excerpt', 'LIKE', '%'.$search.'%')
-            )
+        $categories = Category::query()
+            ->with(['books' => fn ($book) => $book->withCount('pages')
+                    ->with(['pages' => fn ($q) => $q->hasImage()])
+                    ->when($search,
+                        fn ($query) => $query->where('title', 'LIKE', '%'.$search.'%')
+                            ->orWhere('excerpt', 'LIKE', '%'.$search.'%')
+                    ),
+            ])
             ->get();
 
         return Inertia::render('Books/Index', [
-            'books' => [
-                'data' => $books,
+            'categories' => [
+                'data' => $categories,
                 'search' => $search,
             ],
         ]);

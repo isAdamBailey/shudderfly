@@ -1,59 +1,50 @@
-<script setup>
-import { Link } from "@inertiajs/inertia-vue3";
-import { useDate } from "@/dateHelpers";
-
-const { short } = useDate();
-
-defineProps({
-    books: Object,
-});
-</script>
-
 <template>
-    <div
-        class="mt-3 md:mt-0 mx-auto grid max-w-7xl grid-cols-[repeat(auto-fit,minmax(22rem,1fr))] gap-2 md:p-4"
-    >
-        <Link
-            v-for="book in books.data"
-            :key="book.id"
-            :href="route('books.show', book.slug)"
-            class="border-2 rounded border-gray-900 overflow-hidden shadow-sm mx-3 dark:text-white"
+    <div>
+        <h3 class="pl-3 mt-3 text-xl text-gray-100 font-bold dark:text-gray-800">
+            {{ capitalize(category.name) }}
+        </h3>
+        <div
+            class="flex snap-x space-x-5 overflow-x-scroll pb-4 scrollbar scrollbar-thumb-gray-500 scrollbar-thumb-rounded"
         >
-            <div
-                class="p-6 bg-gradient-to-r from-white dark:from-gray-700 dark:via-gray-900 to-yellow-100 dark:to-black h-full flex flex-col justify-between"
+            <Link
+                v-for="book in category.books"
+                :key="book.id"
+                :href="route('books.show', book.slug)"
+                class="relative w-48 shrink-0 snap-start rounded-lg bg-white shadow-gray-200/50 transition hover:opacity-80 hover:shadow hover:shadow-gray-300/50"
             >
-                <h3 class="font-bold text-3xl w-full">{{ book.title }}</h3>
                 <div
-                    class="flex flex-wrap justify-between mb-5 border-b border-gray-900"
+                    class="rounded-t-lg absolute inset-x-0 top-0 w-full truncate bg-white/30 py-2.5 text-center text-xl leading-4 text-white backdrop-blur-sm line-clamp-1"
                 >
-                    <p
-                        v-if="book.author"
-                        class="text-sm text-gray-900 dark:text-white"
-                    >
-                        by: {{ book.author }}
-                    </p>
-                    <p>
-                        <span class="text-xs text-gray-900 dark:text-white">
-                            On {{ short(book.created_at) }}
-                        </span>
-                    </p>
+                    {{ book.title }}
                 </div>
-                <div class="flex justify-center flex-wrap">
-                    <p class="prose mb-5 dark:text-white">{{ book.excerpt }}</p>
-                    <img
-                        v-if="book.pages[0]?.image_path"
-                        class="w-52 rounded-lg ml-1"
-                        :src="book.pages[0].image_path"
-                        alt="cover image"
-                    />
-                </div>
-                <span class="text-sm text-gray-900 dark:text-white font-bold"
-                    >{{ book.pages_count }}
-                    <span class="text-gray-500 dark:text-white"
-                        >pages</span
-                    ></span
+                <div
+                    class="absolute inset-x-0 bottom-0 w-full truncate bg-white/30 py-2.5 text-center text-sm leading-4 text-white backdrop-blur-sm line-clamp-1"
                 >
-            </div>
-        </Link>
+                    {{ book.excerpt }}
+                </div>
+                <img
+                    v-if="book.pages[0]?.image_path"
+                    class="h-36 w-full rounded-lg object-cover"
+                    :src="book.pages[0].image_path"
+                    alt="cover image"
+                />
+                <div
+                    v-else
+                    class="bg-gray-800 h-36 w-full rounded-lg object-cover"
+                ></div>
+            </Link>
+        </div>
     </div>
 </template>
+
+<script setup>
+import { Link } from "@inertiajs/inertia-vue3";
+
+defineProps({
+    category: Object,
+});
+
+function capitalize(string) {
+    return string[0].toUpperCase() + string.slice(1);
+}
+</script>

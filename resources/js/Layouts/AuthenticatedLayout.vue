@@ -8,7 +8,6 @@ import ThemeToggle from "@/Layouts/Nav/ThemeToggle.vue";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
 import { Link, usePage } from "@inertiajs/inertia-vue3";
 import { usePermissions } from "@/permissions";
-import ScrollTop from "@/Components/ScrollTop.vue";
 
 const { canEditPages } = usePermissions();
 const showingNavigationDropdown = ref(false);
@@ -237,7 +236,6 @@ const username = ref(usePage().props.value.auth.user.name);
                 <slot />
             </main>
 
-            <ScrollTop />
         </div>
     </div>
 </template>

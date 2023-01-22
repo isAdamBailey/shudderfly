@@ -4,17 +4,21 @@
     <BreezeAuthenticatedLayout>
         <template #header>
             <Link :href="pages.first_page_url" class="w-full">
-                <div class="flex">
+                <div class="flex justify-between flex-wrap">
                     <h2
                         class="font-semibold text-3xl text-gray-900 dark:text-gray-100 leading-tight"
                     >
                         {{ book.title }}
-                        <span
-                            v-if="book.author"
-                            class="text-base text-gray-500 dark:text-gray-200"
-                            >by: {{ book.author }}</span
-                        >
                     </h2>
+                    <p
+                        v-if="book.author"
+                        class="mr-3 text-gray-900 dark:text-gray-100"
+                    >
+                        by: {{ book.author }}
+                    </p>
+                    <p class="text-xs text-gray-900 dark:text-white">
+                        On {{ short(book.created_at) }}
+                    </p>
                 </div>
             </Link>
         </template>
@@ -104,10 +108,12 @@ import { onMounted, ref } from "vue";
 import NewPageForm from "@/Pages/Book/NewPageForm.vue";
 import EditForm from "@/Pages/Book/EditBookForm.vue";
 import { usePermissions } from "@/permissions";
+import { useDate } from "@/dateHelpers";
 import Page from "@/Pages/Book/Page.vue";
 import ArrowIcon from "@/Components/svg/ArrowIcon.vue";
 
 const { canEditPages } = usePermissions();
+const { short } = useDate();
 
 const props = defineProps({
     book: Object,
