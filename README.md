@@ -3,10 +3,10 @@
 ## About Shudderfly
 
 [Colin's Shudderfly](https://shudderfly.adambailey.io) is an application I made to upload and structure the images and
-videos my son wants to see on his devices. I originally started building this application at [@isAdamBailey/book-pages](https://github.com/isAdamBailey/book-pages) then moved it over to change the rake advantage of some of the new features in Laravel breeze.
+videos my son wants to see on his devices.
 
-Because other, existing apps with this functionality include a lot of ways for our child to explore outside their applications, such as to marketing or social
-links, we needed a way to just keep him on the page with the pictures for his permission level,
+Because other existing apps with this functionality include a lot of ways for our child to explore outside their applications, such as to marketing or social
+links, we needed a way to be in better control of the pictures for his permission level,
 and add permissions for users who are able to upload and edit the content.
 
 Shudderfly connects to Amazon S3 for image/video storage.
