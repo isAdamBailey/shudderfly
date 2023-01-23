@@ -35,6 +35,7 @@ class BookController extends Controller
                             ->orWhere('excerpt', 'LIKE', '%'.$search.'%')
                     ),
             ])
+            ->orderBy('name')
             ->get();
 
         return Inertia::render('Books/Index', [
