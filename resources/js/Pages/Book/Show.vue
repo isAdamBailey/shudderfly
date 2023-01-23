@@ -6,22 +6,35 @@
             <Link :href="pages.first_page_url" class="w-full">
                 <div class="flex justify-between flex-wrap">
                     <h2
-                        class="font-semibold text-3xl text-gray-900 dark:text-gray-100 leading-tight"
+                        class="font-semibold text-3xl text-gray-900 dark:text-gray-100"
                     >
                         {{ book.title }}
                     </h2>
-                    <p
-                        v-if="book.author"
-                        class="mr-3 text-gray-900 dark:text-gray-100"
-                    >
-                        by: {{ book.author }}
-                    </p>
-                    <p class="text-xs text-gray-900 dark:text-white">
-                        On {{ short(book.created_at) }}
-                    </p>
+                    <div>
+                        <p
+                            v-if="book.author"
+                            class="mr-3 text-gray-900 dark:text-gray-100"
+                        >
+                            by: {{ book.author }}
+                        </p>
+                        <p class="text-xs text-gray-900 dark:text-white">
+                            On {{ short(book.created_at) }}
+                        </p>
+                    </div>
                 </div>
             </Link>
         </template>
+
+        <div
+            v-if="book.excerpt"
+            class="mx-1 mt-1 p-6 flex justify-between bg-white dark:bg-gray-800"
+        >
+            <h2
+                class="text-sm text-gray-900 dark:text-gray-100 leading-tight w-3/4 md:w-full"
+            >
+                {{ book.excerpt }}
+            </h2>
+        </div>
 
         <div v-if="canEditPages" class="flex mb-10 mt-5 mx-5">
             <div v-if="!settingsOpen" class="w-full">
