@@ -31,5 +31,4 @@ import SearchInput from "@/Components/SearchInput.vue";
 defineProps({
     categories: { type: Object, required: true },
 });
-
 </script>

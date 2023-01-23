@@ -18,12 +18,14 @@ const currentUser = usePage().props.value.auth.user.name;
 const categoriesOptions = computed(() => {
     return usePage().props.value.categories
         ? usePage().props.value.categories.map((category) => {
-            return { value: category.id, label: category.name };
-        })
+              return { value: category.id, label: category.name };
+          })
         : [];
 });
 
-const undefinedCategory = categoriesOptions.value.find((category) => category.label === "uncategorized");
+const undefinedCategory = categoriesOptions.value.find(
+    (category) => category.label === "uncategorized"
+);
 
 const form = useForm({
     title: "",

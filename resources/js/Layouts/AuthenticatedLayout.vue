@@ -235,7 +235,6 @@ const username = ref(usePage().props.value.auth.user.name);
             <main>
                 <slot />
             </main>
-
         </div>
     </div>
 </template>

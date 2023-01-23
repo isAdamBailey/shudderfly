@@ -31,11 +31,10 @@ const authorsOptions = computed(() => {
 const categoriesOptions = computed(() => {
     return usePage().props.value.categories
         ? usePage().props.value.categories.map((category) => {
-            return { value: category.id, label: category.name };
-        })
+              return { value: category.id, label: category.name };
+          })
         : [];
 });
-
 
 const submit = () => {
     form.put(route("books.update", props.book.slug));

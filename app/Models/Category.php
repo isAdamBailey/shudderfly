@@ -14,6 +14,7 @@ class Category extends Model
 
     public function books(): HasMany
     {
-        return $this->hasMany(Book::class);
+        return $this->hasMany(Book::class)
+            ->orderBy('created_at', 'desc');
     }
 }
