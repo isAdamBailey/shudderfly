@@ -12,7 +12,7 @@ defineProps({
 
 <template>
     <div
-        class="mt-3 md:mt-0 mx-auto grid max-w-7xl grid-cols-[repeat(auto-fit,minmax(22rem,1fr))] gap-2 md:p-4"
+        class="mt-3 md:mt-0 mx-auto grid max-w-7xl grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] gap-2 md:p-4"
     >
         <div v-for="photo in photos" :key="photo.id" class="shadow-sm">
             <div class="flex justify-center flex-wrap">
