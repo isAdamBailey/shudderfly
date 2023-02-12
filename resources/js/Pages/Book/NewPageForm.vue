@@ -2,9 +2,11 @@
 import BreezeLabel from "@/Components/InputLabel.vue";
 import { useForm } from "@inertiajs/inertia-vue3";
 import Button from "@/Components/Button.vue";
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
 import VideoIcon from "@/Components/svg/VideoIcon.vue";
+import { useVuelidate } from "@vuelidate/core";
+import { requiredIf } from "@vuelidate/validators";
 
 const emit = defineEmits(["close-form"]);
 
@@ -18,11 +20,33 @@ const form = useForm({
     image: null,
 });
 
+const rules = computed(() => {
+    return {
+        form: {
+            image: {
+                required: requiredIf(
+                    (form.content === "" || form.content === "<p></p>") &&
+                        !form.image
+                ),
+            },
+            content: {
+                required: requiredIf(
+                    (!form.image && form.content === "") ||
+                        form.content === "<p></p>"
+                ),
+            },
+        },
+    };
+});
+
+let v$ = useVuelidate(rules, form);
+
 const imagePreview = ref("");
 
 const imageInput = ref(null);
 
 function selectNewImage() {
+    v$.value.$reset();
     imageInput.value.click();
 }
 
@@ -44,17 +68,22 @@ function clearImageFileInput() {
     }
 }
 
-const submit = () => {
+const submit = async () => {
     if (imageInput.value) {
         form.image = imageInput.value.files[0];
     }
-    form.post(route("pages.store"), {
-        onSuccess: () => {
-            clearImageFileInput();
-            form.reset();
-            emit("close-form");
-        },
-    });
+
+    const validated = await v$.value.$validate();
+
+    if (validated) {
+        form.post(route("pages.store"), {
+            onSuccess: () => {
+                clearImageFileInput();
+                form.reset();
+                emit("close-form");
+            },
+        });
+    }
 };
 </script>
 
@@ -106,13 +135,19 @@ const submit = () => {
                         class="mt-1 block w-full"
                     />
                 </div>
+
             </div>
+            <p v-for="error of v$.form.$errors" :key="error.$uid" class="text-red-600">
+              <strong>{{ error.$property }}</strong>
+              <small> is </small>
+              <strong>{{ error.$validator }}</strong>
+            </p>
 
             <div class="flex justify-center mt-5 md:mt-20">
                 <Button
                     class="w-3/4 flex justify-center py-3"
                     :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
+                    :disabled="form.processing || v$.$error"
                 >
                     Create!
                 </Button>
