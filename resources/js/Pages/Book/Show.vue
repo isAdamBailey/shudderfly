@@ -27,7 +27,7 @@
 
         <div
             v-if="book.excerpt"
-            class="mx-1 mt-1 p-6 flex justify-between bg-white dark:bg-gray-800"
+            class="italic mt-0.5 py-3 px-6 flex justify-between bg-yellow-200 dark:bg-gray-800"
         >
             <h2
                 class="text-sm text-gray-900 dark:text-gray-100 leading-tight w-3/4 md:w-full"
