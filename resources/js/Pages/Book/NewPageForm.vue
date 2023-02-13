@@ -20,7 +20,15 @@ const form = useForm({
     image: null,
 });
 
+const imageInput = ref(null);
+
 const rules = computed(() => {
+    const file_size_validation = () => {
+        if (!imageInput.value?.files[0]) {
+            return true;
+        }
+        return imageInput.value.files[0]?.size < 40714055;
+    };
     return {
         form: {
             image: {
@@ -28,11 +36,12 @@ const rules = computed(() => {
                     (form.content === "" || form.content === "<p></p>") &&
                         !form.image
                 ),
+                file_size_validation,
             },
             content: {
                 required: requiredIf(
-                    (!form.image && form.content === "") ||
-                        form.content === "<p></p>"
+                    !form.image &&
+                        (form.content === "" || form.content === "<p></p>")
                 ),
             },
         },
@@ -42,8 +51,6 @@ const rules = computed(() => {
 let v$ = useVuelidate(rules, form);
 
 const imagePreview = ref("");
-
-const imageInput = ref(null);
 
 function selectNewImage() {
     v$.value.$reset();
@@ -135,12 +142,15 @@ const submit = async () => {
                         class="mt-1 block w-full"
                     />
                 </div>
-
             </div>
-            <p v-for="error of v$.form.$errors" :key="error.$uid" class="text-red-600">
-              <strong>{{ error.$property }}</strong>
-              <small> is </small>
-              <strong>{{ error.$validator }}</strong>
+            <p v-if="v$.$errors.length && v$.form.image.file_size_validation.$invalid" class="text-red-600">
+                That file is tooo biig (over 40MB hurts my belly)
+            </p>
+            <p v-if="v$.$errors.length && v$.form.image.required.$invalid" class="text-red-600">
+                Upload is required without any text on the page.
+            </p>
+            <p v-if="v$.$errors.length && v$.form.content.required.$invalid" class="text-red-600">
+                Some words are required without an upload.
             </p>
 
             <div class="flex justify-center mt-5 md:mt-20">
