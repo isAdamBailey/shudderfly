@@ -2,7 +2,7 @@
 import BreezeLabel from "@/Components/InputLabel.vue";
 import { useForm, usePage } from "@inertiajs/inertia-vue3";
 import Button from "@/Components/Button.vue";
-import { computed, ref } from 'vue'
+import { computed, ref } from "vue";
 import DeletePageForm from "@/Pages/Book/DeletePageForm.vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
 import VideoIcon from "@/Components/svg/VideoIcon.vue";
@@ -18,7 +18,7 @@ const props = defineProps({
 const form = useForm({
     content: props.page.content,
     image: null,
-    book_id: props.page.book_id
+    book_id: props.page.book_id,
 });
 
 const imagePreview = ref(props.page.image_path);
@@ -26,11 +26,11 @@ const imagePreview = ref(props.page.image_path);
 const imageInput = ref(null);
 
 const booksOptions = computed(() => {
-  return usePage().props.value.books
-      ? usePage().props.value.books.map((book) => {
-        return { value: book.id, label: book.title };
-      })
-      : [];
+    return usePage().props.value.books
+        ? usePage().props.value.books.map((book) => {
+              return { value: book.id, label: book.title };
+          })
+        : [];
 });
 
 function selectNewImage() {
@@ -117,15 +117,15 @@ const submit = () => {
                     />
                 </div>
             </div>
-          <div class="mt-3">
-            <BreezeLabel for="book" value="Move Books" />
-            <Multiselect
-                id="book"
-                v-model="form.book_id"
-                :options="booksOptions"
-                track-by="value"
-            />
-          </div>
+            <div class="mt-3">
+                <BreezeLabel for="book" value="Move Books" />
+                <Multiselect
+                    id="book"
+                    v-model="form.book_id"
+                    :options="booksOptions"
+                    track-by="value"
+                />
+            </div>
 
             <div class="flex justify-center mt-5 md:mt-20">
                 <Button

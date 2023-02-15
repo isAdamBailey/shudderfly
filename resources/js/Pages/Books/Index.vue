@@ -16,6 +16,10 @@
             </div>
         </template>
 
+        <BooksGrid
+            :category="{ name: 'Most Popular', books: categories.mostPopular }"
+        />
+
         <div v-for="(category, index) in categories.data" :key="index">
             <BooksGrid :category="category" />
         </div>

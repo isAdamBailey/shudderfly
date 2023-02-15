@@ -42,6 +42,7 @@ class BooksTest extends TestCase
                 ->url('/books')
                 ->has('categories.data', $categories->count())
                 ->has('categories.data.0.books.0.pages')
+                ->has('categories.mostPopular', 6)
         );
     }
 

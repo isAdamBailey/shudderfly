@@ -143,13 +143,25 @@ const submit = async () => {
                     />
                 </div>
             </div>
-            <p v-if="v$.$errors.length && v$.form.image.file_size_validation.$invalid" class="text-red-600">
+            <p
+                v-if="
+                    v$.$errors.length &&
+                    v$.form.image.file_size_validation.$invalid
+                "
+                class="text-red-600"
+            >
                 That file is tooo biig (over 40MB hurts my belly)
             </p>
-            <p v-if="v$.$errors.length && v$.form.image.required.$invalid" class="text-red-600">
+            <p
+                v-if="v$.$errors.length && v$.form.image.required.$invalid"
+                class="text-red-600"
+            >
                 Upload is required without any text on the page.
             </p>
-            <p v-if="v$.$errors.length && v$.form.content.required.$invalid" class="text-red-600">
+            <p
+                v-if="v$.$errors.length && v$.form.content.required.$invalid"
+                class="text-red-600"
+            >
                 Some words are required without an upload.
             </p>
 

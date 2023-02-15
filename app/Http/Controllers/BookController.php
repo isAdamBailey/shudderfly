@@ -38,9 +38,16 @@ class BookController extends Controller
             ->orderBy('name')
             ->get();
 
+        $mostPopular = ! $search ? Book::query()
+            ->with(['pages' => fn ($q) => $q->hasImage()])
+            ->orderBy('read_count', 'desc')
+            ->take(10)
+            ->get() : null;
+
         return Inertia::render('Books/Index', [
             'categories' => [
                 'data' => $categories,
+                'mostPopular' => $mostPopular,
                 'search' => $search,
             ],
         ]);
