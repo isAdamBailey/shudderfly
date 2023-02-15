@@ -102,6 +102,30 @@ class PagesTest extends TestCase
         $response->assertRedirect(route('books.show', $book));
     }
 
+    public function test_page_can_be_moved_to_different_book()
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        $book = Book::factory()->has(Page::factory())->create();
+        $page = $book->pages->first();
+        $this->assertSame($book->id, $page->book_id);
+
+        $newBook = Book::factory()->create();
+
+        $payload = [
+            'book_id' => $newBook->id,
+        ];
+
+        $response = $this->post(route('pages.update', $page), $payload);
+
+        $freshPage = $page->fresh();
+        $this->assertSame($newBook->id, $freshPage->book_id);
+
+        // takes us to the new book
+        $response->assertRedirect(route('books.show', $newBook));
+    }
+
     public function test_page_is_destroyed()
     {
         Storage::fake('s3');

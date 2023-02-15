@@ -15,6 +15,7 @@ class Page extends Model
     protected $fillable = [
         'content',
         'image_path',
+        'book_id',
     ];
 
     public function getImagePathAttribute($value): string

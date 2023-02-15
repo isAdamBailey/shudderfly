@@ -1,11 +1,12 @@
 <script setup>
 import BreezeLabel from "@/Components/InputLabel.vue";
-import { useForm } from "@inertiajs/inertia-vue3";
+import { useForm, usePage } from "@inertiajs/inertia-vue3";
 import Button from "@/Components/Button.vue";
-import { ref } from "vue";
+import { computed, ref } from 'vue'
 import DeletePageForm from "@/Pages/Book/DeletePageForm.vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
 import VideoIcon from "@/Components/svg/VideoIcon.vue";
+import Multiselect from "@vueform/multiselect";
 
 const emit = defineEmits(["close-page-form"]);
 
@@ -17,11 +18,20 @@ const props = defineProps({
 const form = useForm({
     content: props.page.content,
     image: null,
+    book_id: props.page.book_id
 });
 
 const imagePreview = ref(props.page.image_path);
 
 const imageInput = ref(null);
+
+const booksOptions = computed(() => {
+  return usePage().props.value.books
+      ? usePage().props.value.books.map((book) => {
+        return { value: book.id, label: book.title };
+      })
+      : [];
+});
 
 function selectNewImage() {
     imageInput.value.click();
@@ -85,7 +95,7 @@ const submit = () => {
                         v-else-if="imagePreview.startsWith('data:video')"
                         class="w-3/4"
                     >
-                        <VideoIcon class="text-blue-500" />
+                        <VideoIcon class="text-blue-500 dark:text-gray-200" />
                     </div>
 
                     <Button
@@ -107,6 +117,15 @@ const submit = () => {
                     />
                 </div>
             </div>
+          <div class="mt-3">
+            <BreezeLabel for="book" value="Move Books" />
+            <Multiselect
+                id="book"
+                v-model="form.book_id"
+                :options="booksOptions"
+                track-by="value"
+            />
+          </div>
 
             <div class="flex justify-center mt-5 md:mt-20">
                 <Button
@@ -124,3 +143,5 @@ const submit = () => {
         />
     </div>
 </template>
+
+<style src="@vueform/multiselect/themes/default.css"></style>

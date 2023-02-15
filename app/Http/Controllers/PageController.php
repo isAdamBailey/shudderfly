@@ -73,6 +73,10 @@ class PageController extends Controller
             $page->content = $request->input('content');
         }
 
+        if ($request->has('book_id')) {
+            $page->book_id = $request->input('book_id');
+        }
+
         $page->save();
 
         return redirect(route('books.show', $page->book));

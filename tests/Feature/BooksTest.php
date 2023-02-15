@@ -50,15 +50,15 @@ class BooksTest extends TestCase
         $this->actingAs(User::factory()->create());
 
         DB::table('categories')->delete();
-        $categories = Category::factory()
+        Category::factory()
             ->has(
                 Book::factory()->count(30)
             )
             ->count(2)
             ->create();
 
-        $searchBooks = Category::factory()
-            ->has(Book::factory(null, ['title' => 'Adam'])->count(3)
+        $searchCategory = Category::factory()
+            ->has(Book::factory(3, ['title' => 'Adam'])
             )->create();
 
         $searchTerm = 'Adam';
@@ -66,7 +66,7 @@ class BooksTest extends TestCase
             fn (Assert $page) => $page
                 ->component('Books/Index')
                 ->url('/books?search='.$searchTerm)
-                ->has('categories.data.2.books', $searchBooks->count())
+                ->has('categories.data.0.books', $searchCategory->books->count())
         );
     }
 

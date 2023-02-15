@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Book;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -35,11 +36,16 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request)
     {
+        $canEditPages = in_array('edit pages', $request->user() ? $request->user()->permissions_list->toArray() : []);
+
         return array_merge(parent::share($request), [
             'auth' => [
                 'user' => $request->user(),
             ],
-            'categories' => in_array('edit pages', $request->user() ? $request->user()->permissions_list->toArray() : [])
+            'books' => $canEditPages
+                ? Book::all()->map->only(['id', 'title'])->toArray()
+                : null,
+            'categories' => $canEditPages
                 ? Category::all()->toArray()
                 : null,
             'ziggy' => function () use ($request) {

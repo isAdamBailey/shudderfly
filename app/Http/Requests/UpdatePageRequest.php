@@ -24,8 +24,10 @@ class UpdatePageRequest extends FormRequest
     public function rules()
     {
         return [
-            'content' => 'string',
+            'content' => 'string|nullable',
+            'book_id' => 'integer',
             'image' => [
+                'nullable',
                 'max:70000',
                 'mimes:jpg,jpeg,bmp,png,svg,webp,avi,gif,mpeg,quicktime,mp4',
             ],
