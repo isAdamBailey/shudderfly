@@ -206,10 +206,14 @@ const username = ref(usePage().props.value.auth.user.name);
                         </div>
 
                         <div class="mt-3 space-y-1">
-                            <ResponsiveNavLink :href="route('profile.edit')">
+                            <ResponsiveNavLink
+                                v-if="canEditPages"
+                                :href="route('profile.edit')"
+                            >
                                 Profile
                             </ResponsiveNavLink>
                             <ResponsiveNavLink
+                                v-if="canEditPages"
                                 :href="route('logout')"
                                 method="post"
                                 as="button"
