@@ -12,10 +12,10 @@
             :src="page.image_path"
             alt="image"
         />
-        <p
-            class="prose px-3 py-3 text-gray-900 dark:text-white"
+        <div
+            class="px-3 py-3 text-gray-900 dark:text-white"
             v-html="page.content"
-        ></p>
+        ></div>
         <p class="px-3 py-3">
             <span class="text-xs text-gray-900 dark:text-white">
                 First written {{ short(page.created_at) }}
