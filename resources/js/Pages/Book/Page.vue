@@ -1,16 +1,23 @@
 <template>
     <div
-        class="p-1 border-2 border-gray-900 bg-gradient-to-r from-white dark:from-gray-700 dark:via-gray-900 to-yellow-100 dark:to-black flex flex-col justify-between"
+        class="rounded bg-gradient-to-r from-white dark:from-gray-700 dark:via-gray-900 to-yellow-100 dark:to-black flex flex-col justify-between"
     >
-        <video v-if="isVideo(page.image_path)" controls class="rounded">
+        <video
+            v-if="isVideo(page.image_path)"
+            controls
+            preload="none"
+            poster="/img/video-placeholder.png"
+            class="rounded-top"
+        >
             <source :src="page.image_path" />
             Your browser does not support the video tag.
         </video>
         <img
             v-else-if="page.image_path"
-            class="rounded"
+            class="rounded-top"
             :src="page.image_path"
             alt="image"
+            loading="lazy"
         />
         <div
             class="px-3 py-3 text-gray-900 dark:text-white"
@@ -27,7 +34,7 @@
         <div v-if="canEditPages">
             <Button
                 v-if="!showPageSettings"
-                class="w-full"
+                class="w-3/4 ml-2 mb-2"
                 @click="showPageSettings = true"
             >
                 Edit Page

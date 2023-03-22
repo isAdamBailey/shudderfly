@@ -15,12 +15,12 @@
                 class="relative w-48 shrink-0 snap-start rounded-lg bg-white shadow-gray-200/50 transition hover:opacity-80 hover:shadow hover:shadow-gray-300/50"
             >
                 <div
-                    class="rounded-t-lg absolute inset-x-0 top-0 w-full truncate bg-white/30 py-2.5 text-center text-xl leading-4 text-white backdrop-blur-sm line-clamp-1"
+                    class="rounded-t-lg absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 text-center text-xl leading-4 text-black backdrop-blur-sm line-clamp-1"
                 >
                     {{ book.title }}
                 </div>
                 <div
-                    class="absolute inset-x-0 bottom-0 w-full truncate bg-white/30 py-2.5 text-center text-sm leading-4 text-white backdrop-blur-sm line-clamp-1"
+                    class=" rounded-b-lg absolute inset-x-0 bottom-0 w-full truncate bg-white/70 py-2.5 text-center text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
                 >
                     {{ book.excerpt }}
                 </div>
@@ -29,6 +29,7 @@
                     class="h-36 w-full rounded-lg object-cover"
                     :src="book.pages[0].image_path"
                     alt="cover image"
+                    loading="lazy"
                 />
                 <div
                     v-else

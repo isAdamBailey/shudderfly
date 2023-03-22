@@ -6,7 +6,7 @@
             <Link :href="pages.first_page_url" class="w-full">
                 <div class="flex justify-between flex-wrap">
                     <h2
-                        class="font-semibold text-3xl text-gray-900 dark:text-gray-100"
+                        class="font-semibold text-2xl text-gray-900 dark:text-gray-100"
                     >
                         {{ book.title }}
                     </h2>
@@ -17,9 +17,9 @@
                         >
                             by: {{ book.author }}
                         </p>
-                        <p class="text-xs text-gray-900 dark:text-white">
-                            On {{ short(book.created_at) }}
-                        </p>
+                      <p class="text-xs text-gray-900 dark:text-white">
+                        {{ pages.total }} pages
+                      </p>
                     </div>
                 </div>
             </Link>

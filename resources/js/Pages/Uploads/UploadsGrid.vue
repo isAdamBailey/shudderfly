@@ -19,6 +19,8 @@ defineProps({
                 <video
                     v-if="isVideo(photo.image_path)"
                     controls
+                    preload="none"
+                    poster="/img/video-placeholder.png"
                     class="rounded"
                 >
                     <source :src="photo.image_path" />
@@ -29,6 +31,7 @@ defineProps({
                     class="w-full rounded-t"
                     :src="photo.image_path"
                     alt="image"
+                    loading="lazy"
                 />
                 <Link
                     class="w-full"

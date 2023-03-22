@@ -3,10 +3,10 @@
 
     <BreezeAuthenticatedLayout>
         <template #header>
-            <div class="flex justify-between">
+            <div class="flex justify-between flex-wrap">
                 <Link class="w-3/4" :href="route('pictures.index')">
                     <h2
-                        class="font-semibold text-3xl text-gray-900 dark:text-gray-100 leading-tight"
+                        class="font-semibold text-2xl text-gray-900 dark:text-gray-100 leading-tight"
                     >
                         {{ photos.per_page }}
                         {{ isRandom ? "Random" : "Most Recent" }} Uploads
@@ -23,7 +23,7 @@
                         :disabled="randomButtonDisabled"
                         @click="randomButtonDisabled = true"
                     >
-                        <span class="text-lg mr-3">Mix</span>
+                        <span class="text-md mr-3">Mix</span>
                         <RoundArrowsIcon />
                     </Button>
                 </Link>
