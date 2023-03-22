@@ -60,7 +60,7 @@ class BooksTest extends TestCase
 
         $searchCategory = Category::factory()
             ->has(Book::factory(3, ['title' => 'Adam'])
-            )->create();
+            )->create(["name" => "aaaaaa"]); // so it shows up first in the array of categories
 
         $searchTerm = 'Adam';
         $this->get(route('books.index', ['search' => $searchTerm]))->assertInertia(

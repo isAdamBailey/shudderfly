@@ -1,8 +1,12 @@
 <template>
     <div class="text-gray-900 dark:text-white">
-        <div class="border-b mt-4 flex justify-around">
-            <p class="font-bold text-xl">Total number of books</p>
-            <p class="font-bold text-xl">{{ props.stats.numberOfBooks }}</p>
+        <div class="border-b py-4 flex justify-between">
+            <p>Total number of books</p>
+            <p>{{ props.stats.numberOfBooks.toLocaleString() }}</p>
+        </div>
+        <div class="border-b py-4 flex justify-between">
+            <p>Total number of pages / uploads</p>
+            <p>{{ props.stats.numberOfPages.toLocaleString() }}</p>
         </div>
         <div class="border-b mt-4 flex justify-between">
             <p>Most popular book</p>
@@ -34,7 +38,14 @@
             >
                 {{ props.stats.mostPages.title }}
             </Link>
-            <p>{{ countAddS(props.stats.mostPages.pages_count, "page") }}</p>
+            <p>
+                {{
+                    countAddS(
+                        props.stats.mostPages.pages_count.toLocaleString(),
+                        "page"
+                    )
+                }}
+            </p>
         </div>
         <div class="border-b mt-4 flex justify-between">
             <p>Book with least pages</p>
@@ -50,7 +61,6 @@
 </template>
 
 <script setup>
-import Button from "@/Components/Button.vue";
 import { Link } from "@inertiajs/inertia-vue3";
 
 const props = defineProps({
@@ -61,6 +71,6 @@ const props = defineProps({
 });
 
 function countAddS(count, word) {
-    return `${count} ${count === 1 ? word : `${word}s`}`;
+    return `${count} ${count == 1 ? word : `${word}s`}`;
 }
 </script>

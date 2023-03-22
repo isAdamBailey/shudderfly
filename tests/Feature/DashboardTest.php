@@ -30,7 +30,7 @@ class DashboardTest extends TestCase
                 ->has('stats.mostRead')
                 ->has('stats.leastRead')
                 ->has('stats.numberOfBooks')
-                ->has('stats.numberOfBooks')
+                ->has('stats.numberOfPages')
                 ->etc()
         );
     }

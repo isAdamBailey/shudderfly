@@ -17,9 +17,9 @@
                         >
                             by: {{ book.author }}
                         </p>
-                      <p class="text-xs text-gray-900 dark:text-white">
-                        {{ pages.total }} pages
-                      </p>
+                        <p class="text-xs text-gray-900 dark:text-white">
+                            {{ pages.total }} pages
+                        </p>
                     </div>
                 </div>
             </Link>

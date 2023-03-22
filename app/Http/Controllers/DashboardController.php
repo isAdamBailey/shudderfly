@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Book;
+use App\Models\Page;
 use App\Models\User;
 use Inertia\Inertia;
 
@@ -31,6 +32,7 @@ class DashboardController extends Controller
             'users' => ['data' => User::all()],
             'stats' => [
                 'numberOfBooks' => Book::count(),
+                'numberOfPages' => Page::count(),
                 'leastPages' => $leastPages->toArray(),
                 'mostPages' => $mostPages->toArray(),
                 'mostRead' => $mostRead->toArray(),
