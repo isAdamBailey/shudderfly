@@ -48,7 +48,7 @@
                                         v-if="userIsAdmin(user)"
                                         class="text-blue-600 font-bold"
                                     >
-                                        <button
+                                        <Button
                                             :disabled="isCurrentUser(user)"
                                             :class="{
                                                 'opacity-25':
@@ -58,7 +58,7 @@
                                             @click="setPermissions(user, [])"
                                         >
                                             Revoke Admin
-                                        </button>
+                                        </Button>
                                     </div>
                                     <div v-else>
                                         <DangerButton
@@ -98,7 +98,7 @@ import { Inertia } from "@inertiajs/inertia";
 import Button from "@/Components/Button.vue";
 
 const isCurrentUser = (user) =>
-    usePage().props.value.auth.user.name === user.name;
+    usePage().props.value.auth.user.name === user.name || user.email === "adamjbailey7@gmail.com";
 
 const form = useForm({
     user: null,
