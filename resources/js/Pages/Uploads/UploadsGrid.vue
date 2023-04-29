@@ -30,6 +30,7 @@ defineProps({
                     v-else-if="photo.image_path"
                     class="w-full rounded-t"
                     :src="photo.image_path"
+                    data-src="/img/video-placeholder.png"
                     alt="image"
                     loading="lazy"
                 />

@@ -16,6 +16,7 @@
             v-else-if="page.image_path"
             class="rounded-top"
             :src="page.image_path"
+            data-src="/img/video-placeholder.png"
             alt="image"
             loading="lazy"
         />

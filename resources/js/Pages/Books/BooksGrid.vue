@@ -29,6 +29,7 @@
                     v-if="book.pages[0]?.image_path"
                     class="h-36 w-full rounded-lg object-cover"
                     :src="book.pages[0].image_path"
+                    data-src="/img/video-placeholder.png"
                     alt="cover image"
                     loading="lazy"
                 />
