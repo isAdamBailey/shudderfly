@@ -26,36 +26,35 @@
         </template>
 
         <div
-            v-if="book.excerpt"
-            class="italic mt-0.5 py-3 px-6 flex justify-between bg-yellow-200 dark:bg-gray-800"
+            class="flex flex-wrap align-middle justify-between bg-yellow-200 dark:bg-gray-800"
         >
-            <h2
-                class="text-sm text-gray-900 dark:text-gray-100 leading-tight w-3/4 md:w-full"
+            <div
+                v-if="book.excerpt"
+                class="italic px-6 pt-2 flex justify-between"
             >
-                {{ book.excerpt }}
-            </h2>
-        </div>
-
-        <div v-if="canEditPages" class="flex mb-10 mt-5 mx-5">
-            <div v-if="!settingsOpen" class="w-full">
-                <Button
-                    class="w-full flex justify-center py-5 font-bold"
-                    @click="settingsOpen = true"
+                <h2
+                    class="text-sm text-gray-900 dark:text-gray-100 leading-tight"
                 >
-                    Add Page / Edit Book
+                    {{ book.excerpt }}
+                </h2>
+            </div>
+            <div v-if="canEditPages" class="">
+                <Button
+                    class="rounded-none flex justify-center font-bold"
+                    @click="settingsOpen = !settingsOpen"
+                >
+                    <span v-if="settingsOpen">Close</span>
+                    <span v-else>Add/Edit</span>
                 </Button>
             </div>
-            <div v-else class="w-full">
-                <div>
-                    <BreezeValidationErrors class="mb-4" />
-                </div>
-                <div class="flex flex-col md:flex-row justify-around">
-                    <NewPageForm
-                        :book="book"
-                        @close-form="settingsOpen = false"
-                    />
-                    <EditForm :book="book" :authors="authors" />
-                </div>
+        </div>
+        <div v-if="canEditPages && settingsOpen" class="w-full mt-4">
+            <div>
+                <BreezeValidationErrors class="mb-4" />
+            </div>
+            <div class="flex flex-col md:flex-row justify-around">
+                <NewPageForm :book="book" @close-form="settingsOpen = false" />
+                <EditForm :book="book" :authors="authors" />
             </div>
         </div>
 

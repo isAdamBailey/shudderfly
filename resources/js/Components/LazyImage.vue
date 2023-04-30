@@ -11,7 +11,7 @@
     >
         <span class="m-auto">Swoops!</span>
     </div>
-    <img v-else :src="src" :alt="alt" />
+    <img v-else class="object-cover w-full" :src="src" :alt="alt" />
 </template>
 
 <script setup>

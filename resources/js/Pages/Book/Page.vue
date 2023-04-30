@@ -1,6 +1,6 @@
 <template>
     <div
-        class="rounded bg-gradient-to-r from-white dark:from-gray-700 dark:via-gray-900 to-yellow-100 dark:to-black flex flex-col justify-between"
+        class="rounded-lg overflow-hidden bg-gradient-to-r from-white dark:from-gray-700 dark:via-gray-900 to-yellow-100 dark:to-black flex flex-col justify-between"
     >
         <video
             v-if="isVideo(page.image_path)"
@@ -33,7 +33,7 @@
         <div v-if="canEditPages">
             <Button
                 v-if="!showPageSettings"
-                class="w-3/4 ml-2 mb-2"
+                class="w-full rounded-t-none"
                 @click="showPageSettings = true"
             >
                 Edit Page
@@ -55,6 +55,7 @@ import LazyImage from "@/Components/LazyImage.vue";
 import { usePermissions } from "@/permissions";
 import { useMedia } from "@/mediaHelpers";
 import { useDate } from "@/dateHelpers";
+import { Link } from "@inertiajs/inertia-vue3";
 
 const { canEditPages } = usePermissions();
 const { isVideo } = useMedia();
