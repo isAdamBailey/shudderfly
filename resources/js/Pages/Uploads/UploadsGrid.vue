@@ -38,9 +38,8 @@ defineProps({
                 <div
                     v-if="photo.content"
                     class="absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 text-center text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
-                >
-                    {{ photo.content }}
-                </div>
+                    v-html="photo.content"
+                ></div>
                 <Link
                     class="w-full"
                     :href="route('books.show', photo.book.slug)"
