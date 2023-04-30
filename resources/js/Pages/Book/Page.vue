@@ -12,13 +12,11 @@
             <source :src="page.image_path" />
             Your browser does not support the video tag.
         </video>
-        <img
+
+        <LazyImage
             v-else-if="page.image_path"
             class="rounded-top"
             :src="page.image_path"
-            data-src="/img/video-placeholder.png"
-            alt="image"
-            loading="lazy"
         />
         <div
             class="px-3 py-3 text-gray-900 dark:text-white"
@@ -53,6 +51,7 @@
 import Button from "@/Components/Button.vue";
 import { ref } from "vue";
 import EditPageForm from "@/Pages/Book/EditPageForm.vue";
+import LazyImage from "@/Components/LazyImage.vue";
 import { usePermissions } from "@/permissions";
 import { useMedia } from "@/mediaHelpers";
 import { useDate } from "@/dateHelpers";

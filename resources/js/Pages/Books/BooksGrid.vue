@@ -25,24 +25,18 @@
                 >
                     {{ book.excerpt }}
                 </div>
-                <img
-                    v-if="book.pages[0]?.image_path"
-                    class="h-36 w-full rounded-lg object-cover"
-                    :src="book.pages[0].image_path"
-                    data-src="/img/video-placeholder.png"
+                <LazyImage
+                    class="h-36 rounded-lg"
+                    :src="book.pages[0]?.image_path"
                     alt="cover image"
-                    loading="lazy"
                 />
-                <div
-                    v-else
-                    class="bg-gray-800 h-36 w-full rounded-lg object-cover"
-                ></div>
             </Link>
         </div>
     </div>
 </template>
 
 <script setup>
+import LazyImage from "@/Components/LazyImage.vue";
 import { Link } from "@inertiajs/inertia-vue3";
 
 defineProps({
