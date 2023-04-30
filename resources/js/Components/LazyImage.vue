@@ -36,6 +36,7 @@ const excusesImagesWontLoad = [
     "a madagascar hissing cockroach",
     "that screaming baby",
     "Trump",
+    "a fart",
 ];
 const excuse =
     excusesImagesWontLoad[
