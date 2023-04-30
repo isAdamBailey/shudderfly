@@ -1,6 +1,6 @@
 <template>
     <div
-        v-if="!isLoading"
+        v-if="isLoading"
         class="bg-gray-800 w-full h-36 animate-pulse object-cover text-white flex p-2"
     >
         <span class="m-auto"
