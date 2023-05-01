@@ -46,9 +46,12 @@ const imageSrc = ref(placeholderImage);
 const isVisible = ref(false);
 useIntersectionObserver(
     target,
-    ([{ isIntersecting }]) => {
+    ([{ isIntersecting }], observer) => {
         isVisible.value = isIntersecting;
-        imageSrc.value = isIntersecting ? props.src : placeholderImage;
+        if (isIntersecting) {
+            imageSrc.value = props.src;
+            observer.unobserve(target.value);
+        }
     },
     { threshold: 0.5, rootMargin: "200px" }
 );
