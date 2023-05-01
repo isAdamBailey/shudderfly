@@ -13,17 +13,49 @@
     >
         <span class="m-auto">Swoops!</span>
     </div>
-    <img v-else class="object-cover w-full" :src="src" :alt="alt" />
+    <img
+        v-else
+        ref="target"
+        class="object-cover w-full"
+        :src="imageSrc"
+        :alt="alt"
+    />
 </template>
 
 <script setup>
-import { useImage } from "@vueuse/core";
+import { useImage, useIntersectionObserver } from "@vueuse/core";
 import { usePage } from "@inertiajs/inertia-vue3";
+import { ref } from "vue";
 
-const { isLoading, error } = useImage({ src: props.src });
+const props = defineProps({
+    src: {
+        type: String,
+        default: null,
+    },
+    alt: {
+        type: String,
+        default: "image",
+    },
+});
 
+// let's make it only lead the image src when it's visible
+const target = ref(null);
+const imageSrc = ref(props.src);
+// is this image visible in the viewport?
+const isVisible = ref(false);
+useIntersectionObserver(
+    target,
+    ([{ isIntersecting }]) => {
+        isVisible.value = isIntersecting;
+        imageSrc.value = isIntersecting
+            ? props.src
+            : "/img/photo-placeholder.png";
+    },
+    { threshold: 0.5 }
+);
+
+const { isLoading, error } = useImage({ src: imageSrc.value });
 const username = usePage().props.value.auth.user.name;
-
 const excusesImagesWontLoad = [
     "the WIFI",
     "the internet",
@@ -42,17 +74,4 @@ const excuse =
     excusesImagesWontLoad[
         Math.floor(Math.random() * excusesImagesWontLoad.length)
     ];
-
-const props = defineProps({
-    src: {
-        type: String,
-        default: "/img/video-placeholder.png",
-    },
-    alt: {
-        type: String,
-        default: "image",
-    },
-});
 </script>
-
-<style scoped></style>
