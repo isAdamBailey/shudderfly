@@ -50,7 +50,7 @@ useIntersectionObserver(
         isVisible.value = isIntersecting;
         imageSrc.value = isIntersecting ? props.src : placeholderImage;
     },
-    { threshold: 0.5 }
+    { threshold: 0.5, rootMargin: "200px" }
 );
 
 const { isLoading, error } = useImage({ src: imageSrc.value });
