@@ -40,16 +40,15 @@ const props = defineProps({
 
 // let's make it only lead the image src when it's visible
 const target = ref(null);
-const imageSrc = ref(props.src);
+const placeholderImage = "/img/photo-placeholder.png";
+const imageSrc = ref(placeholderImage);
 // is this image visible in the viewport?
 const isVisible = ref(false);
 useIntersectionObserver(
     target,
     ([{ isIntersecting }]) => {
         isVisible.value = isIntersecting;
-        imageSrc.value = isIntersecting
-            ? props.src
-            : "/img/photo-placeholder.png";
+        imageSrc.value = isIntersecting ? props.src : placeholderImage;
     },
     { threshold: 0.5 }
 );
