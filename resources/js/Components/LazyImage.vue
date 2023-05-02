@@ -1,7 +1,7 @@
 <template>
     <div
         v-if="!imageSrc"
-        class="rounded-lg bg-gray-800 w-full h-36 animate-pulse object-cover text-white flex p-2"
+        class="rounded-lg bg-gray-800 h-32 w-full animate-pulse object-cover text-white flex p-2"
     >
         <span class="m-auto"
             >Sorry {{ username }}! Must be {{ excuse }}...</span
@@ -10,7 +10,7 @@
 
     <img
         ref="target"
-        class="rounded-lg object-cover w-full"
+        class="rounded-lg object-cover h-full w-full"
         :src="imageSrc"
         :alt="imageSrc ? alt : null"
     />
