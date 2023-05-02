@@ -6,7 +6,7 @@
             {{ capitalize(category.name) }}
         </h3>
         <div
-            class="flex snap-x space-x-5 overflow-x-scroll pb-4 scrollbar scrollbar-thumb-gray-500 scrollbar-thumb-rounded"
+            class="flex snap-x space-x-5 overflow-x-scroll overflow-y-hidden pb-6 scrollbar scrollbar-thumb-gray-500 scrollbar-thumb-rounded"
         >
             <Link
                 v-for="book in category.books"
@@ -25,11 +25,12 @@
                 >
                     {{ book.excerpt }}
                 </div>
-                <LazyImage
-                    class="h-36 rounded-lg"
-                    :src="book.pages[0]?.image_path"
-                    alt="cover image"
-                />
+                <div class="h-36">
+                    <LazyImage
+                        :src="book.pages[0]?.image_path"
+                        :alt="`${book.title} cover image`"
+                    />
+                </div>
             </Link>
         </div>
     </div>

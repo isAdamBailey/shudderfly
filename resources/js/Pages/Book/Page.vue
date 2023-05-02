@@ -15,8 +15,8 @@
 
         <LazyImage
             v-else-if="page.image_path"
-            class="rounded-top"
             :src="page.image_path"
+            :alt="page.description"
         />
         <div
             class="px-3 py-3 text-gray-900 dark:text-white"
@@ -55,13 +55,12 @@ import LazyImage from "@/Components/LazyImage.vue";
 import { usePermissions } from "@/permissions";
 import { useMedia } from "@/mediaHelpers";
 import { useDate } from "@/dateHelpers";
-import { Link } from "@inertiajs/inertia-vue3";
 
 const { canEditPages } = usePermissions();
 const { isVideo } = useMedia();
 const { short } = useDate();
 
-const props = defineProps({
+defineProps({
     page: Object,
 });
 
