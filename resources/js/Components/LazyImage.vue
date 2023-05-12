@@ -1,14 +1,14 @@
 <template>
     <img
         v-if="isLoading"
-        :class="`${classes} object-cover h-full w-full dark:bg-gray-700`"
+        :class="`${classes} object-cover h-full w-full bg-yellow-300 dark:bg-gray-700`"
         :src="placeholder"
         alt="placeholder image"
     />
     <img
         v-else
         ref="target"
-        :class="`${classes} object-cover h-full w-full dark:bg-gray-700`"
+        :class="`${classes} object-cover h-full w-full bg-yellow-300 dark:bg-gray-700`"
         :src="imageSrc"
         :alt="alt"
     />
