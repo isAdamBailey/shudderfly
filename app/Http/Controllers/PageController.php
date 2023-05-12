@@ -24,7 +24,7 @@ class PageController extends Controller
                 fn ($query) => $query->inRandomOrder(),
                 fn ($query) => $query->latest()
             )
-            ->paginate(10);
+            ->paginate(50);
 
         return Inertia::render('Uploads/Index', [
             'photos' => $photos,
