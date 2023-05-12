@@ -1,14 +1,14 @@
 <template>
     <img
         v-if="isLoading"
-        class="rounded-lg object-cover h-full w-full"
+        :class="`${classes} object-cover h-full w-full`"
         :src="placeholder"
         alt="placeholder image"
     />
     <img
         v-else
         ref="target"
-        class="rounded-lg object-cover h-full w-full"
+        :class="`${classes} object-cover h-full w-full`"
         :src="imageSrc"
         :alt="alt"
     />
@@ -26,6 +26,10 @@ const props = defineProps({
     alt: {
         type: String,
         default: "image",
+    },
+    classes: {
+        type: String,
+        default: "rounded-lg",
     },
 });
 

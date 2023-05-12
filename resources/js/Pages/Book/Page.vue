@@ -15,6 +15,7 @@
 
         <LazyImage
             v-else-if="page.image_path"
+            class="rounded-top"
             :src="page.image_path"
             :alt="page.description"
         />

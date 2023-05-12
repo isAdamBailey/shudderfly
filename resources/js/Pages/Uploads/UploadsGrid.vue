@@ -33,6 +33,7 @@ defineProps({
                 </video>
                 <LazyImage
                     v-else-if="photo.image_path"
+                    classes="rounded-top"
                     :src="photo.image_path"
                 />
                 <div
