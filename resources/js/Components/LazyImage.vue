@@ -1,6 +1,6 @@
 <template>
     <img
-        v-if="isLoading || error"
+        v-if="isLoading"
         class="rounded-lg object-cover h-full w-full"
         :src="placeholder"
         alt="placeholder image"
@@ -42,5 +42,5 @@ useIntersectionObserver(target, ([{ isIntersecting }], observer) => {
     }
 });
 
-const { isLoading, error } = useImage({ src: computed(() => imageSrc.value) });
+const { isLoading } = useImage({ src: computed(() => imageSrc.value) });
 </script>
