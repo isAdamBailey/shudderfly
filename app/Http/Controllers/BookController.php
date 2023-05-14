@@ -20,20 +20,17 @@ class BookController extends Controller
 {
     /**
      * Display a listing of the resource.
-     *
-     * @param  Request  $request
-     * @return Response
      */
     public function index(Request $request): Response
     {
         $search = $request->search;
         $categories = Category::query()
             ->with(['books' => fn ($book) => $book
-                    ->with(['pages' => fn ($q) => $q->hasImage()])
-                    ->when($search,
-                        fn ($query) => $query->where('title', 'LIKE', '%'.$search.'%')
-                            ->orWhere('excerpt', 'LIKE', '%'.$search.'%')
-                    ),
+                ->with(['pages' => fn ($q) => $q->hasImage()])
+                ->when($search,
+                    fn ($query) => $query->where('title', 'LIKE', '%'.$search.'%')
+                        ->orWhere('excerpt', 'LIKE', '%'.$search.'%')
+                ),
             ])
             ->orderBy('name')
             ->get();
@@ -54,10 +51,37 @@ class BookController extends Controller
     }
 
     /**
+     * Display books by category.
+     */
+    public function category(Request $request): Response
+    {
+        $categoryName = $request->categoryName;
+        $category = Category::where('name', $categoryName)->first();
+        if ($category) {
+            $books = $category->books()
+                ->with(['pages' => fn ($q) => $q->hasImage()])
+                ->paginate();
+        } else {
+            $books = match ($categoryName) {
+                'popular' => Book::query()
+                    ->with(['pages' => fn ($q) => $q->hasImage()])
+                    ->orderBy('read_count', 'desc')
+                    ->paginate(),
+                default => Book::query()
+                    ->with(['pages' => fn ($q) => $q->hasImage()])
+                    ->paginate()
+            };
+        }
+        $books->appends($request->all())->links();
+
+        return Inertia::render('Books/Index', [
+            'books' => $books,
+        ]);
+    }
+
+    /**
      * Store a newly created resource in storage.
      *
-     * @param  StoreBookRequest  $request
-     * @return Application|RedirectResponse|Redirector
      *
      * @throws ValidationException
      */
@@ -70,9 +94,6 @@ class BookController extends Controller
 
     /**
      * Display the specified resource.
-     *
-     * @param  Book  $book
-     * @return Response
      */
     public function show(Book $book, Request $request): Response
     {
@@ -89,10 +110,6 @@ class BookController extends Controller
 
     /**
      * Update the specified resource in storage.
-     *
-     * @param  UpdateBookRequest  $request
-     * @param  Book  $book
-     * @return Application|Redirector|RedirectResponse
      */
     public function update(UpdateBookRequest $request, Book $book): Application|RedirectResponse|Redirector
     {
@@ -103,9 +120,6 @@ class BookController extends Controller
 
     /**
      * Remove the specified resource from storage.
-     *
-     * @param  Book  $book
-     * @return Application|Redirector|RedirectResponse
      */
     public function destroy(Book $book): Redirector|RedirectResponse|Application
     {

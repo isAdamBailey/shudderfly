@@ -6,6 +6,7 @@ use App\Models\Book;
 use App\Models\Category;
 use App\Models\Page;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\Sequence;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\DB;
@@ -17,10 +18,72 @@ class BooksTest extends TestCase
     use RefreshDatabase;
     use WithFaker;
 
+    public function test_popular_books_are_returned(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        DB::table('categories')->delete();
+        Category::factory()
+            ->has(
+                Book::factory()
+                    ->has(Page::factory(13))
+                    ->count(30)
+            )
+            ->count(2)
+            ->create();
+
+        $this->get(route('books.category', ['categoryName' => 'popular']))->assertInertia(
+            fn (Assert $category) => $category
+                ->component('Books/Index')
+                ->url('/books-category?categoryName=popular')
+                ->has('books.data', 15)
+                ->has('books.total')
+        );
+    }
+
+    public function test_books_are_returned_by_category_paginated(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        DB::table('categories')->delete();
+        Category::factory()
+            ->has(
+                Book::factory()
+                    ->has(Page::factory(13))
+                    ->count(40)
+            )
+            ->count(2)
+            ->state(new Sequence(
+                ['name' => 'test1'],
+                ['name' => 'test2'],
+            ))
+            ->create();
+
+        $this->get(route('books.category', ['categoryName' => 'test1']))->assertInertia(
+            fn (Assert $category) => $category
+                ->component('Books/Index')
+                ->url('/books-category?categoryName=test1')
+                ->has('books.data', 15)
+                ->has('books.total')
+        );
+        $this->get(route('books.category', ['categoryName' => 'test1', 'page' => '2']))->assertInertia(
+            fn (Assert $category) => $category
+                ->component('Books/Index')
+                ->url('/books-category?categoryName=test1&page=2')
+                ->has('books.data', 15)
+                ->has('books.total')
+        );
+        $this->get(route('books.category', ['categoryName' => 'test1', 'page' => '3']))->assertInertia(
+            fn (Assert $category) => $category
+                ->component('Books/Index')
+                ->url('/books-category?categoryName=test1&page=3')
+                ->has('books.data', 10)
+                ->has('books.total')
+        );
+    }
+
     /**
      * A basic feature test example.
-     *
-     * @return void
      */
     public function test_books_are_returned(): void
     {
@@ -60,7 +123,7 @@ class BooksTest extends TestCase
 
         $searchCategory = Category::factory()
             ->has(Book::factory(3, ['title' => 'Adam'])
-            )->create(["name" => "aaaaaa"]); // so it shows up first in the array of categories
+            )->create(['name' => 'aaaaaa']); // so it shows up first in the array of categories
 
         $searchTerm = 'Adam';
         $this->get(route('books.index', ['search' => $searchTerm]))->assertInertia(
