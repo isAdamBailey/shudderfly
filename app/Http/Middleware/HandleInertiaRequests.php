@@ -43,9 +43,7 @@ class HandleInertiaRequests extends Middleware
             'books' => $canEditPages
                 ? Book::all()->map->only(['id', 'title'])->toArray()
                 : null,
-            'categories' => $canEditPages
-                ? Category::all()->toArray()
-                : null,
+            'categories' => Category::all()->map->only(['id', 'name'])->toArray(),
             'ziggy' => function () use ($request) {
                 return array_merge((new Ziggy)->toArray(), [
                     'location' => $request->url(),

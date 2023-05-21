@@ -8,6 +8,7 @@ use App\Models\Book;
 use App\Models\Category;
 use App\Models\User;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
@@ -21,60 +22,60 @@ class BookController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request): Response
+    public function index(): Response
+    {
+        return Inertia::render('Books/Index');
+    }
+
+    /**
+     * Display a listing of the resource.
+     */
+    public function search(Request $request): Response|RedirectResponse
     {
         $search = $request->search;
+        if (! $search) {
+            return redirect()->route('books.index');
+        }
+
         $categories = Category::query()
             ->with(['books' => fn ($book) => $book
-                ->with(['pages' => fn ($q) => $q->hasImage()])
-                ->when($search,
-                    fn ($query) => $query->where('title', 'LIKE', '%'.$search.'%')
-                        ->orWhere('excerpt', 'LIKE', '%'.$search.'%')
-                ),
+                ->where('title', 'LIKE', '%'.$search.'%')
+                ->orWhere('excerpt', 'LIKE', '%'.$search.'%')
+                ->with(['pages' => fn ($q) => $q->hasImage()]),
             ])
             ->orderBy('name')
             ->get();
 
-        $mostPopular = ! $search ? Book::query()
-            ->with(['pages' => fn ($q) => $q->hasImage()])
-            ->orderBy('read_count', 'desc')
-            ->take(10)
-            ->get() : null;
-
         return Inertia::render('Books/Index', [
-            'categories' => [
-                'data' => $categories,
-                'mostPopular' => $mostPopular,
-                'search' => $search,
-            ],
+            'searchCategories' => $categories,
+            'search' => $search,
         ]);
     }
 
     /**
      * Display books by category.
      */
-    public function category(Request $request): Response
+    public function category(Request $request): JsonResponse
     {
         $categoryName = $request->categoryName;
         $category = Category::where('name', $categoryName)->first();
-        if ($category) {
-            $books = $category->books()
+        $books = match ($categoryName) {
+            'popular' => Book::query()
                 ->with(['pages' => fn ($q) => $q->hasImage()])
-                ->paginate();
-        } else {
-            $books = match ($categoryName) {
-                'popular' => Book::query()
-                    ->with(['pages' => fn ($q) => $q->hasImage()])
-                    ->orderBy('read_count', 'desc')
-                    ->paginate(),
-                default => Book::query()
+                ->orderBy('read_count', 'desc')
+                ->paginate(),
+            default => $category
+                ? $category->books()
                     ->with(['pages' => fn ($q) => $q->hasImage()])
                     ->paginate()
-            };
-        }
+                : Book::query()
+                    ->with(['pages' => fn ($q) => $q->hasImage()])
+                    ->paginate()
+        };
+
         $books->appends($request->all())->links();
 
-        return Inertia::render('Books/Index', [
+        return response()->json([
             'books' => $books,
         ]);
     }

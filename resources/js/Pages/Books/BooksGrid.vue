@@ -1,5 +1,5 @@
 <template>
-    <div v-if="category.books?.length">
+    <div v-if="workingBooks.length > 0">
         <h3
             class="pl-3 mt-3 text-xl text-gray-100 font-bold dark:text-gray-800"
         >
@@ -9,7 +9,7 @@
             class="flex snap-x space-x-5 overflow-x-scroll overflow-y-hidden pb-6 scrollbar scrollbar-thumb-gray-500 scrollbar-thumb-rounded"
         >
             <Link
-                v-for="book in category.books"
+                v-for="book in workingBooks"
                 :key="book.id"
                 :href="route('books.show', book.slug)"
                 class="relative w-48 shrink-0 snap-start rounded-lg bg-white shadow-gray-200/50 transition hover:opacity-80 hover:shadow hover:shadow-gray-300/50"
@@ -39,10 +39,36 @@
 <script setup>
 import LazyImage from "@/Components/LazyImage.vue";
 import { Link } from "@inertiajs/inertia-vue3";
+import { ref, onMounted, computed } from "vue";
+import axios from "axios";
 
-defineProps({
-    category: Object,
+const props = defineProps({
+    category: {
+        type: Object,
+        required: true,
+    },
 });
+
+const books = ref([]);
+
+onMounted(async () => {
+    const response = await fetchBooks();
+    books.value = response.data.books.data;
+});
+
+const workingBooks = computed(() => {
+    return props.category.books || books.value;
+});
+
+function fetchBooks() {
+    return axios.get(
+        books.value?.next_page_url ||
+            route("books.category", { categoryName: props.category.name }),
+        {
+            preserveState: true,
+        }
+    );
+}
 
 function capitalize(string) {
     return string[0].toUpperCase() + string.slice(1);

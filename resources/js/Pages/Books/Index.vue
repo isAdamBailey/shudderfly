@@ -12,15 +12,13 @@
                     </h2>
                 </Link>
 
-                <SearchInput class="mr-4" route-name="books.index" />
+                <SearchInput class="mr-4" route-name="books.search" />
             </div>
         </template>
 
-        <BooksGrid
-            :category="{ name: 'Most Popular', books: categories.mostPopular }"
-        />
+        <BooksGrid v-if="!searchCategories" :category="{ name: 'popular' }" />
 
-        <div v-for="(category, index) in categories.data" :key="index">
+        <div v-for="(category, index) in workingCategories" :key="index">
             <BooksGrid :category="category" />
         </div>
     </BreezeAuthenticatedLayout>
@@ -29,10 +27,18 @@
 <script setup>
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import BooksGrid from "@/Pages/Books/BooksGrid.vue";
-import { Head, Link } from "@inertiajs/inertia-vue3";
+import { Head, Link, usePage } from "@inertiajs/inertia-vue3";
 import SearchInput from "@/Components/SearchInput.vue";
+import { ref, computed } from "vue";
 
-defineProps({
-    categories: { type: Object, required: true },
+const categories = ref(usePage().props.value.categories);
+const props = defineProps({
+    searchCategories: {
+        type: Array,
+        default: null,
+    },
+});
+const workingCategories = computed(() => {
+    return props.searchCategories || categories.value;
 });
 </script>
