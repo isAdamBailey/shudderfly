@@ -51,7 +51,7 @@ defineProps({
                                 </div>
                                 <SearchInput
                                     class="mt-12"
-                                    route-name="books.index"
+                                    route-name="books.search"
                                 />
                             </div>
                             <div v-else class="flex justify-around">
