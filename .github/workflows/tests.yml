@@ -46,15 +46,5 @@ jobs:
       - name: Generate application key
         run: php artisan key:generate
 
-      - name: Start Laravel Sail
-        run: |
-          curl -s https://laravel.build/example-app | bash
-          cd example-app
-          echo "APP_ENV=testing" >> .env
-          ./vendor/bin/sail up -d
-
-      - name: Install dependencies
-        run: ./example-app/vendor/bin/sail composer install --no-interaction --prefer-dist --optimize-autoloader
-
       - name: Run unit tests
-        run: ./example-app/vendor/bin/sail test
+        run: ./vendor/bin/sail test
