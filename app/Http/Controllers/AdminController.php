@@ -35,8 +35,6 @@ class AdminController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param  Request  $request
-     * @return Application|Redirector|RedirectResponse
      *
      * @throws ValidationException
      */

@@ -19,7 +19,7 @@ class BookSeeder extends Seeder
         foreach (Category::all() as $category) {
             Book::factory()
                 ->state(['category_id' => $category->id])
-                ->count(10)
+                ->count(20)
                 ->has(Page::factory()->count(5))
                 ->create();
         }

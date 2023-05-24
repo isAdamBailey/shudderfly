@@ -28,6 +28,8 @@ Route::get('/', function () {
 
 Route::middleware('auth')->group(function () {
     Route::get('/books', [BookController::class, 'index'])->name('books.index');
+    Route::get('/books-category', [BookController::class, 'category'])->name('books.category');
+    Route::get('/books-search', [BookController::class, 'search'])->name('books.search');
     Route::get('/book/{book}', [BookController::class, 'show'])->name('books.show');
 
     Route::get('/photos', [PageController::class, 'index'])->name('pictures.index');

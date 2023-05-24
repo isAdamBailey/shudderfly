@@ -33,9 +33,6 @@ class PageController extends Controller
 
     /**
      * Store a newly created resource in storage.
-     *
-     * @param  StorePageRequest  $request
-     * @return Application|RedirectResponse|Redirector
      */
     public function store(StorePageRequest $request): Redirector|RedirectResponse|Application
     {
@@ -54,10 +51,6 @@ class PageController extends Controller
 
     /**
      * Update the specified resource in storage.
-     *
-     * @param  UpdatePageRequest  $request
-     * @param  Page  $page
-     * @return Application|Redirector|RedirectResponse
      */
     public function update(UpdatePageRequest $request, Page $page): Redirector|RedirectResponse|Application
     {
@@ -84,9 +77,6 @@ class PageController extends Controller
 
     /**
      * Remove the specified resource from storage.
-     *
-     * @param  Page  $page
-     * @return Application|Redirector|RedirectResponse
      */
     public function destroy(Page $page): Redirector|RedirectResponse|Application
     {

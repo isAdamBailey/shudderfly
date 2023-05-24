@@ -21,13 +21,13 @@ class PagesTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        Book::factory()->has(Page::factory(13))->count(3)->create();
+        Book::factory()->has(Page::factory(10))->count(3)->create();
 
         $this->get(route('pictures.index'))->assertInertia(
             fn (Assert $page) => $page
                 ->component('Uploads/Index')
                 ->url('/photos')
-                ->has('photos.data', 10)
+                ->has('photos.data', 30)
 
         );
     }

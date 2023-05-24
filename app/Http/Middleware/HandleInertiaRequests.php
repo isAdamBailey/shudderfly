@@ -20,7 +20,6 @@ class HandleInertiaRequests extends Middleware
     /**
      * Determine the current asset version.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return string|null
      */
     public function version(Request $request)
@@ -31,7 +30,6 @@ class HandleInertiaRequests extends Middleware
     /**
      * Define the props that are shared by default.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return mixed[]
      */
     public function share(Request $request)
@@ -45,9 +43,7 @@ class HandleInertiaRequests extends Middleware
             'books' => $canEditPages
                 ? Book::all()->map->only(['id', 'title'])->toArray()
                 : null,
-            'categories' => $canEditPages
-                ? Category::all()->toArray()
-                : null,
+            'categories' => Category::all()->map->only(['id', 'name'])->toArray(),
             'ziggy' => function () use ($request) {
                 return array_merge((new Ziggy)->toArray(), [
                     'location' => $request->url(),
