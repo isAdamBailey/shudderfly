@@ -40,6 +40,9 @@ jobs:
       - name: Copy environment file
         run: cp .env.example .env
 
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
       - name: Generate application key
         run: php artisan key:generate
 
