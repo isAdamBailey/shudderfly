@@ -13,9 +13,19 @@ jobs:
     name: Run Laravel Unit Tests
     runs-on: ubuntu-latest
 
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          DB_PASSWORD: "password"
+          DB_DATABASE: "testing"
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
@@ -23,14 +33,21 @@ jobs:
           php-version: '8.1'
           extensions: mbstring, pdo, sqlite3
 
-      - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader
-
       - name: Copy environment file
         run: cp .env.example .env
 
       - name: Generate application key
         run: php artisan key:generate
 
+      - name: Start Laravel Sail
+        run: |
+          curl -s https://laravel.build/example-app | bash
+          cd example-app
+          echo "APP_ENV=testing" >> .env
+          ./vendor/bin/sail up -d
+
+      - name: Install dependencies
+        run: ./example-app/vendor/bin/sail composer install --no-interaction --prefer-dist --optimize-autoloader
+
       - name: Run unit tests
-        run: vendor/bin/phpunit
+        run: ./example-app/vendor/bin/sail test
