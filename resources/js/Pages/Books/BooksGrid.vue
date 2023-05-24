@@ -6,7 +6,9 @@
             {{ capitalize(category.name) }}
         </h3>
         <div
+            ref="content"
             class="flex snap-x space-x-5 overflow-x-scroll overflow-y-hidden pb-6 scrollbar scrollbar-thumb-gray-500 scrollbar-thumb-rounded"
+            @scroll="handleScroll"
         >
             <Link
                 v-for="book in workingBooks"
@@ -50,10 +52,26 @@ const props = defineProps({
 });
 
 const books = ref([]);
+const content = ref(null);
+const nextUrl = ref(null);
+
+const handleScroll = async () => {
+    const contentWidth = content.value.offsetWidth;
+    const scrollLeft = content.value.scrollLeft;
+    const scrollWidth = content.value.scrollWidth;
+    if (nextUrl.value && scrollLeft >= scrollWidth - contentWidth) {
+        const response = await fetchBooks();
+        if (response?.data?.books) {
+            books.value = [...books.value, ...response.data.books.data];
+            nextUrl.value = response.data.books.next_page_url;
+        }
+    }
+};
 
 onMounted(async () => {
     const response = await fetchBooks();
     books.value = response.data.books.data;
+    nextUrl.value = response.data.books.next_page_url;
 });
 
 const workingBooks = computed(() => {
@@ -62,7 +80,7 @@ const workingBooks = computed(() => {
 
 function fetchBooks() {
     return axios.get(
-        books.value?.next_page_url ||
+        nextUrl.value ||
             route("books.category", { categoryName: props.category.name }),
         {
             preserveState: true,
