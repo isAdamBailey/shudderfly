@@ -42,14 +42,6 @@
             </Link>
         </div>
     </div>
-    <div
-        v-else-if="category.name !== 'uncategorized'"
-        class="h-36 flex justify-center"
-    >
-        <span class="text-xl text-gray-100 font-bold dark:text-gray-800"
-            >There was a problem loading {{ category.name }} books.</span
-        >
-    </div>
 </template>
 
 <script setup>
