@@ -20,7 +20,7 @@ jobs:
           MYSQL_ROOT_PASSWORD: "password"
           MYSQL_ROOT_HOST: "%"
           MYSQL_DATABASE: "testing"
-          MYSQL_USER: "sail"
+          MYSQL_USER: "root"
           MYSQL_PASSWORD: "password"
           MYSQL_ALLOW_EMPTY_PASSWORD: 1
         ports:
