@@ -47,4 +47,4 @@ jobs:
         run: php artisan key:generate
 
       - name: Run unit tests
-        run: ./vendor/bin/sail test
+        run: ./vendor/bin/phpunit test
