@@ -15,10 +15,14 @@ jobs:
 
     services:
       mysql:
-        image: mysql:8.0
+        image: "mysql/mysql-server:8.0"
         env:
-          DB_PASSWORD: "password"
-          DB_DATABASE: "testing"
+          MYSQL_ROOT_PASSWORD: "password"
+          MYSQL_ROOT_HOST: "%"
+          MYSQL_DATABASE: "testing"
+          MYSQL_USER: "sail"
+          MYSQL_PASSWORD: "password"
+          MYSQL_ALLOW_EMPTY_PASSWORD: 1
         ports:
           - 3306:3306
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
