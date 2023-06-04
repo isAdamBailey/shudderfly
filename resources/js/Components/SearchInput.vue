@@ -9,7 +9,7 @@
             :class="{ 'transition-border': search }"
             autocomplete="off"
             name="search"
-            placeholder="Search books!"
+            :placeholder="`Search ${typeName}!`"
             type="search"
             @keyup.esc="search = null"
         />
@@ -18,6 +18,7 @@
 
 <script>
 import { defineComponent } from "vue";
+import { usePage } from "@inertiajs/inertia-vue3";
 
 export default defineComponent({
     props: {
@@ -26,8 +27,14 @@ export default defineComponent({
 
     data() {
         return {
-            search: this.$inertia.page.props.books?.search || null,
+            search: usePage().props.value?.search || null,
         };
+    },
+
+    computed: {
+        typeName() {
+            return this.routeName.split(".")[0] || "something";
+        },
     },
 
     watch: {
