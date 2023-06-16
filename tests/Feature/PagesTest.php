@@ -32,6 +32,24 @@ class PagesTest extends TestCase
         );
     }
 
+    public function test_pictures_can_be_searched(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $searchTerm = 'Adam';
+
+        Book::factory()->has(Page::factory(10))->count(3)->create();
+        Page::first()->update(['content' => 'lorem '.$searchTerm.' ipsum dolor sit amet']);
+
+        $this->get(route('pictures.index', ['search' => $searchTerm]))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->url('/photos?search=Adam')
+                ->has('photos.data', 1)
+
+        );
+    }
+
     public function test_page_cannot_be_stored_without_permissions()
     {
         $this->actingAs(User::factory()->create());
