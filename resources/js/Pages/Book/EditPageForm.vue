@@ -33,6 +33,14 @@ const booksOptions = computed(() => {
         : [];
 });
 
+const optionLabel = computed(() => {
+    return (option) => option.label;
+});
+
+const optionId = computed(() => {
+    return (option) => option.value;
+});
+
 function selectNewImage() {
     imageInput.value.click();
 }
@@ -123,7 +131,10 @@ const submit = () => {
                     id="book"
                     v-model="form.book_id"
                     :options="booksOptions"
-                    track-by="value"
+                    :option-label="optionLabel"
+                    :option-id="optionId"
+                    placeholder="Search Books"
+                    searchable
                 />
             </div>
 
