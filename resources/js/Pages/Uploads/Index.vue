@@ -3,15 +3,15 @@
 
     <BreezeAuthenticatedLayout>
         <template #header>
-            <div class="flex justify-between flex-wrap">
-                <Link class="w-3/4" :href="route('pictures.index')">
+            <div class="flex justify-between items-center">
+                <Link :href="route('pictures.index')">
                     <h2
                         class="font-semibold text-2xl text-gray-900 dark:text-gray-100 leading-tight"
                     >
-                        {{ photos.per_page }}
-                        {{ isRandom ? "Random" : "Most Recent" }} Uploads
+                        {{ title }}
                     </h2>
                 </Link>
+                <SearchInput class="m-4" route-name="pictures.index" />
                 <Link
                     :href="
                         randomButtonDisabled
@@ -41,8 +41,10 @@ import { Head, Link } from "@inertiajs/inertia-vue3";
 import RoundArrowsIcon from "@/Components/svg/RoundArrowsIcon.vue";
 import Button from "@/Components/Button.vue";
 import { ref, computed } from "vue";
+import { usePage } from "@inertiajs/inertia-vue3";
+import SearchInput from "@/Components/SearchInput.vue";
 
-defineProps({
+const props = defineProps({
     photos: Object,
 });
 
@@ -52,4 +54,13 @@ const isRandom = computed(() => {
 });
 
 const randomButtonDisabled = ref(false);
+const title = computed(() => {
+    const search = usePage().props.value.search;
+    if (search) {
+        return `Uploads with "${search}"`;
+    }
+    return `${props.photos.per_page} ${
+        isRandom.value ? "Random" : "Most Recent"
+    } Uploads`;
+});
 </script>

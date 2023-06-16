@@ -3,16 +3,16 @@
 
     <BreezeAuthenticatedLayout>
         <template #header>
-            <div class="flex justify-between">
-                <Link class="w-3/4" :href="route('books.index')">
+            <div class="flex justify-between items-center">
+                <Link class="w-1/4" :href="route('books.index')">
                     <h2
                         class="font-semibold text-2xl text-gray-900 dark:text-gray-100 leading-tight"
                     >
-                        Books
+                        {{ title }}
                     </h2>
                 </Link>
 
-                <SearchInput class="mr-4" route-name="books.search" />
+                <SearchInput route-name="books.search" />
             </div>
         </template>
 
@@ -40,5 +40,13 @@ const props = defineProps({
 });
 const workingCategories = computed(() => {
     return props.searchCategories || categories.value;
+});
+
+const title = computed(() => {
+    const search = usePage().props.value.search;
+    if (search) {
+        return `Books with "${search}"`;
+    }
+    return "Books";
 });
 </script>

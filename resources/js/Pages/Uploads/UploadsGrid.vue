@@ -3,6 +3,7 @@ import { Link } from "@inertiajs/inertia-vue3";
 import Button from "@/Components/Button.vue";
 import LazyImage from "@/Components/LazyImage.vue";
 import { useMedia } from "@/mediaHelpers";
+import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 
 const { isVideo } = useMedia();
 
@@ -13,6 +14,7 @@ defineProps({
 
 <template>
     <div
+        v-if="photos.length"
         class="mt-3 md:mt-0 mx-auto grid max-w-7xl grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] gap-2 md:p-4"
     >
         <div
@@ -51,5 +53,13 @@ defineProps({
                 </Link>
             </div>
         </div>
+    </div>
+    <div v-else class="flex flex-col items-center mt-10">
+        <h2
+            class="font-semibold text-2xl text-gray-900 dark:text-gray-100 leading-tight"
+        >
+            I don't see anything here
+        </h2>
+        <ManEmptyCircle />
     </div>
 </template>
