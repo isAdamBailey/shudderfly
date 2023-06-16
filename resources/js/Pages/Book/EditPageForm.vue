@@ -133,6 +133,7 @@ const submit = () => {
                     :options="booksOptions"
                     :option-label="optionLabel"
                     :option-id="optionId"
+                    track-by="label"
                     placeholder="Search Books"
                     searchable
                 />
