@@ -50,6 +50,10 @@ class PageController extends Controller
             'image_path' => $image,
         ]);
 
+        if (! $book->cover_page) {
+            $this->resetCoverImage($book->id);
+        }
+
         return redirect(route('books.show', $book));
     }
 
@@ -58,6 +62,7 @@ class PageController extends Controller
      */
     public function update(UpdatePageRequest $request, Page $page): Redirector|RedirectResponse|Application
     {
+        $bookId = $page->book_id;
         if ($request->hasFile('image')) {
             if (Storage::exists($page->image_path)) {
                 Storage::delete($page->image_path);
@@ -71,10 +76,17 @@ class PageController extends Controller
         }
 
         if ($request->has('book_id')) {
-            $page->book_id = $request->input('book_id');
+            $page->book_id = $request->book_id;
         }
 
         $page->save();
+
+        if ($request->has('book_id')) {
+            // if we are changing the book, we need to reset the cover image
+            // for both the book we removed from and the book we added to
+            $this->resetCoverImage($bookId);
+            $this->resetCoverImage($page->book_id);
+        }
 
         return redirect(route('books.show', $page->book));
     }
@@ -87,6 +99,29 @@ class PageController extends Controller
         Storage::disk('s3')->delete($page->image_path);
         $page->delete();
 
+        $this->resetCoverImage($page->book_id);
         return redirect(route('books.show', $page->book));
+    }
+
+    private function resetCoverImage(int $bookId): void
+    {
+        $book = Book::find($bookId);
+        if (! $book) {
+            return;
+        }
+
+        $search = '%.jpg';
+        if (app()->environment('local')) {
+            // the seeded images are pngs
+            $search = '%.png%';
+        }
+        $page = $book->pages()
+            ->whereNotNull('image_path')
+            ->where('image_path', 'like', $search)
+            ->first();
+
+        if ($page) {
+            $book->update(['cover_page' => $page->id]);
+        }
     }
 }

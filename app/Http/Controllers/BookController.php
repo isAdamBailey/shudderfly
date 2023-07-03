@@ -41,7 +41,7 @@ class BookController extends Controller
             ->with(['books' => fn ($book) => $book
                 ->where('title', 'LIKE', '%'.$search.'%')
                 ->orWhere('excerpt', 'LIKE', '%'.$search.'%')
-                ->with('coverImage')
+                ->with('coverImage'),
             ])
             ->orderBy('name')
             ->get();
