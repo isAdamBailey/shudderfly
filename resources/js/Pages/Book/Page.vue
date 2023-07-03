@@ -42,6 +42,7 @@
             <EditPageForm
                 v-if="showPageSettings"
                 :page="page"
+                :book="book"
                 @close-page-form="showPageSettings = false"
             />
         </div>
@@ -63,6 +64,7 @@ const { short } = useDate();
 
 defineProps({
     page: Object,
+    book: Object,
 });
 
 let showPageSettings = ref(false);

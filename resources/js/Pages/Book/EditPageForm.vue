@@ -12,6 +12,7 @@ const emit = defineEmits(["close-page-form"]);
 
 const props = defineProps({
     page: { type: Object, required: true },
+    book: { type: Object, required: true },
     showPageSettings: { type: Boolean, default: false },
 });
 
@@ -39,6 +40,10 @@ const optionLabel = computed(() => {
 
 const optionId = computed(() => {
     return (option) => option.value;
+});
+
+const isCoverPage = computed(() => {
+    return props.book.cover_page === props.page.id;
 });
 
 function selectNewImage() {
@@ -94,7 +99,7 @@ const submit = () => {
                             imagePreview.startsWith('data:image') ||
                             imagePreview.startsWith('https')
                         "
-                        class="h-40 w-40 rounded bg-cover bg-center bg-no-repeat"
+                        class="h-40 rounded bg-cover bg-center bg-no-repeat mr-2"
                         :style="
                             'background-image: url(\'' + imagePreview + '\');'
                         "
@@ -139,7 +144,7 @@ const submit = () => {
                 />
             </div>
 
-            <div class="flex justify-center mt-5 md:mt-20">
+            <div class="flex justify-center mt-5 md:mt-10">
                 <Button
                     class="w-3/4 flex justify-center py-3"
                     :class="{ 'opacity-25': form.processing }"
@@ -149,6 +154,9 @@ const submit = () => {
                 </Button>
             </div>
         </form>
+        <div v-if="isCoverPage" class="mt-5 text-gray-800 dark:text-white">
+            This image is the cover page for this book
+        </div>
         <DeletePageForm
             :page="page"
             @close-page-form="$emit('close-page-form')"

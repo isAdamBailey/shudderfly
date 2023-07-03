@@ -80,7 +80,7 @@
                 :key="page.id"
                 class="overflow-hidden"
             >
-                <Page :page="page" />
+                <Page :page="page" :book="book" />
             </div>
         </div>
         <div

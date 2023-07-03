@@ -81,7 +81,7 @@ class PageController extends Controller
 
         $page->save();
 
-        if ($request->has('book_id')) {
+        if ($request->has('book_id') && $bookId !== $page->book_id) {
             // if we are changing the book, we need to reset the cover image
             // for both the book we removed from and the book we added to
             $this->resetCoverImage($bookId);
