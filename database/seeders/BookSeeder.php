@@ -21,7 +21,18 @@ class BookSeeder extends Seeder
                 ->state(['category_id' => $category->id])
                 ->count(20)
                 ->has(Page::factory()->count(5))
-                ->create();
+                ->create()
+                ->each(function ($book) {
+                    $page = $book->pages()
+                        ->whereNotNull('image_path')
+                        ->where('image_path', 'like', '%.png%')
+                        ->first();
+
+                    if ($page) {
+                        $book->cover_page = $page->id;
+                        $book->save();
+                    }
+                });
         }
     }
 }

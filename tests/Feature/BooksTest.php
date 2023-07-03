@@ -37,6 +37,7 @@ class BooksTest extends TestCase
             ->assertJson(fn (AssertableJson $json) => $json
                 ->has('books', fn (AssertableJson $json) => $json->where('next_page_url', 'http://localhost/books-category?categoryName=popular&page=2')
                     ->has('data', 15)
+                    ->has('data.0.cover_image')
                     ->etc()
                 )
             );
@@ -65,6 +66,7 @@ class BooksTest extends TestCase
                 ->has('books', fn (AssertableJson $json) => $json->where('next_page_url', 'http://localhost/books-category?categoryName=test1&page=2')
                     ->has('data', 15)
                     ->where('total', 40)
+                    ->has('data.0.cover_image')
                     ->etc()
                 )
             );
@@ -73,6 +75,7 @@ class BooksTest extends TestCase
                 ->has('books', fn (AssertableJson $json) => $json->where('next_page_url', 'http://localhost/books-category?categoryName=test1&page=3')
                     ->has('data', 15)
                     ->where('total', 40)
+                    ->has('data.0.cover_image')
                     ->etc()
                 )
             );
@@ -100,6 +103,7 @@ class BooksTest extends TestCase
                 ->component('Books/Index')
                 ->url('/books-search?search='.$searchTerm)
                 ->has('searchCategories.0.books', $searchCategory->books->count())
+                ->has('searchCategories.0.books.0.cover_image')
         );
     }
 

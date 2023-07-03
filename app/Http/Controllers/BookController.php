@@ -41,7 +41,7 @@ class BookController extends Controller
             ->with(['books' => fn ($book) => $book
                 ->where('title', 'LIKE', '%'.$search.'%')
                 ->orWhere('excerpt', 'LIKE', '%'.$search.'%')
-                ->with(['pages' => fn ($q) => $q->hasImage()]),
+                ->with('coverImage')
             ])
             ->orderBy('name')
             ->get();
@@ -61,15 +61,15 @@ class BookController extends Controller
         $category = Category::where('name', $categoryName)->first();
         $books = match ($categoryName) {
             'popular' => Book::query()
-                ->with(['pages' => fn ($q) => $q->hasImage()])
+                ->with('coverImage')
                 ->orderBy('read_count', 'desc')
                 ->paginate(),
             default => $category
                 ? $category->books()
-                    ->with(['pages' => fn ($q) => $q->hasImage()])
+                    ->with('coverImage')
                     ->paginate()
                 : Book::query()
-                    ->with(['pages' => fn ($q) => $q->hasImage()])
+                    ->with('coverImage')
                     ->paginate()
         };
 

@@ -35,7 +35,7 @@
                 </div>
                 <div class="h-36">
                     <LazyImage
-                        :src="book.pages[0]?.image_path"
+                        :src="book.cover_image?.image_path"
                         :alt="`${book.title} cover image`"
                     />
                 </div>

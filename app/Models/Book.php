@@ -15,13 +15,18 @@ class Book extends Model
     use HasSlug;
 
     protected $fillable = [
-        'title', 'excerpt', 'author', 'read_count', 'category_id',
+        'title', 'excerpt', 'author', 'read_count', 'category_id', 'cover_page'
     ];
 
     public function pages(): HasMany
     {
         return $this->hasMany(Page::class)
             ->orderBy('updated_at', 'desc');
+    }
+
+    public function coverImage(): BelongsTo
+    {
+        return $this->belongsTo(Page::class, 'cover_page')->select('id', 'image_path');
     }
 
     public function category(): BelongsTo
