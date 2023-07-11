@@ -16,10 +16,14 @@ const props = defineProps({
     showPageSettings: { type: Boolean, default: false },
 });
 
-const form = useForm({
+const pageForm = useForm({
     content: props.page.content,
     image: null,
     book_id: props.page.book_id,
+});
+
+const bookForm = useForm({
+    cover_page: props.book.cover_page,
 });
 
 const imagePreview = ref(props.page.image_path);
@@ -70,12 +74,22 @@ function clearImageFileInput() {
 
 const submit = () => {
     if (imageInput.value) {
-        form.image = imageInput.value.files[0];
+        pageForm.image = imageInput.value.files[0];
     }
-    form.post(route("pages.update", props.page), {
+    pageForm.post(route("pages.update", props.page), {
         onSuccess: () => {
             clearImageFileInput();
-            form.reset();
+            pageForm.reset();
+            emit("close-page-form");
+        },
+    });
+};
+
+const makeCoverPage = () => {
+    bookForm.cover_page = props.page.id;
+    bookForm.put(route("books.update", props.book), {
+        onSuccess: () => {
+            bookForm.reset();
             emit("close-page-form");
         },
     });
@@ -124,7 +138,7 @@ const submit = () => {
                     <BreezeLabel for="content" value="Words" />
                     <Wysiwyg
                         id="content"
-                        v-model="form.content"
+                        v-model="pageForm.content"
                         class="mt-1 block w-full"
                         autocomplete="content"
                     />
@@ -134,7 +148,7 @@ const submit = () => {
                 <BreezeLabel for="book" value="Move Books" />
                 <Multiselect
                     id="book"
-                    v-model="form.book_id"
+                    v-model="pageForm.book_id"
                     :options="booksOptions"
                     :option-label="optionLabel"
                     :option-id="optionId"
@@ -147,15 +161,35 @@ const submit = () => {
             <div class="flex justify-center mt-5 md:mt-10">
                 <Button
                     class="w-3/4 flex justify-center py-3"
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
+                    :class="{ 'opacity-25': pageForm.processing }"
+                    :disabled="pageForm.processing"
                 >
                     Update!
                 </Button>
             </div>
         </form>
-        <div v-if="isCoverPage" class="mt-5 text-gray-800 dark:text-white">
-            This image is the cover page for this book
+        <div
+            v-if="isCoverPage"
+            class="mt-5 text-gray-800 dark:text-white text-sm"
+        >
+            This image is the cover page for this book. To change the cover, go
+            to the page settings for another page and click "Make Cover Page".
+        </div>
+        <div
+            v-else-if="
+                page.image_path.includes('.jpg') ||
+                page.image_path.includes('.png')
+            "
+            class="flex justify-center mt-5 md:mt-10"
+        >
+            <Button
+                class="w-3/4 flex justify-center py-3"
+                :class="{ 'opacity-25': bookForm.processing }"
+                :disabled="bookForm.processing"
+                @click.prevent="makeCoverPage"
+            >
+                Make Cover Page
+            </Button>
         </div>
         <DeletePageForm
             :page="page"
