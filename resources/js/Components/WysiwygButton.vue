@@ -3,7 +3,7 @@
         :aria-label="props.title"
         :title="props.title"
         class="border-r border-b py-1 px-2"
-        :class="{ 'bg-blue-500 font-bold text-white': props.isActive }"
+        :class="{ 'bg-blue-700 font-bold text-white': props.isActive }"
     >
         <span class="font-bold">{{ props.icon }}</span>
     </button>

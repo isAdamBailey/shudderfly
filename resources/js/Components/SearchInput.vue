@@ -5,7 +5,7 @@
             id="search"
             ref="search"
             v-model="search"
-            class="h-8 w-full cursor-pointer rounded-full border border-blue-500 bg-gray-100 px-4 pb-0 pt-px text-gray-700 outline-none transition focus:border-blue-400"
+            class="h-8 w-full cursor-pointer rounded-full border border-blue-700 bg-gray-100 px-4 pb-0 pt-px text-gray-700 outline-none transition focus:border-blue-400"
             :class="{ 'transition-border': search }"
             autocomplete="off"
             name="search"

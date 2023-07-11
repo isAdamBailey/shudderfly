@@ -57,10 +57,10 @@ const randomButtonDisabled = ref(false);
 const title = computed(() => {
     const search = usePage().props.value.search;
     if (search) {
-        return `Uploads with "${search}"`;
+        return `Farts with "${search}"`;
     }
     return `${props.photos.per_page} ${
-        isRandom.value ? "Random" : "Most Recent"
-    } Uploads`;
+        isRandom.value ? "Random" : "Newest"
+    } Farts`;
 });
 </script>

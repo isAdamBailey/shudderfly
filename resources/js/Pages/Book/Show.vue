@@ -91,7 +91,7 @@
                 :href="pages.prev_page_url || pages.last_page_url"
                 as="button"
                 :disabled="prevButtonDisabled"
-                class="inline-flex border border-white items-center px-8 py-4 bg-blue-500 dark:bg-gray-800 dark:border-gray-500 rounded-md text-white hover:bg-blue-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:shadow-outline-blue disabled:opacity-25 transition ease-in-out duration-150"
+                class="inline-flex border border-white items-center px-8 py-4 bg-blue-700 dark:bg-gray-800 dark:border-gray-500 rounded-md text-white hover:bg-blue-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:shadow-outline-blue disabled:opacity-25 transition ease-in-out duration-150"
                 aria-label="previous page"
                 @click="prevButtonDisabled = true"
             >
@@ -101,7 +101,7 @@
                 :href="pages.next_page_url || pages.first_page_url"
                 as="button"
                 :disabled="nextButtonDisabled"
-                class="inline-flex border border-white items-center px-8 py-4 bg-blue-500 dark:bg-gray-800 border border-transparent dark:border-gray-500 rounded-md text-white hover:bg-blue-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:shadow-outline-blue disabled:opacity-25 transition ease-in-out duration-150"
+                class="inline-flex border border-white items-center px-8 py-4 bg-blue-700 dark:bg-gray-800 border border-transparent dark:border-gray-500 rounded-md text-white hover:bg-blue-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:shadow-outline-blue disabled:opacity-25 transition ease-in-out duration-150"
                 aria-label="next page"
                 @click="nextButtonDisabled = true"
             >

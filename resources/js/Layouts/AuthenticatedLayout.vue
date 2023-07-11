@@ -17,10 +17,10 @@ const username = ref(usePage().props.value.auth.user.name);
 <template>
     <div>
         <div
-            class="min-h-screen bg-gradient-to-r from-blue-500 dark:from-pink-500 dark:via-red-500 to-green-300 dark:to-yellow-500"
+            class="min-h-screen bg-gradient-to-r from-blue-700 dark:from-pink-500 dark:via-red-500 to-green-400 dark:to-yellow-500"
         >
             <nav
-                class="bg-blue-500 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700"
+                class="bg-blue-700 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700"
             >
                 <!-- Primary Navigation Menu -->
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -56,7 +56,7 @@ const username = ref(usePage().props.value.auth.user.name);
                                     :href="route('pictures.index')"
                                     :active="route().current('pictures.*')"
                                 >
-                                    Uploads
+                                    Farts
                                 </NavLink>
                             </div>
                         </div>
@@ -120,7 +120,7 @@ const username = ref(usePage().props.value.auth.user.name);
                         <!-- Hamburger -->
                         <div class="-mr-2 flex items-center sm:hidden">
                             <button
-                                class="inline-flex items-center justify-center p-2 rounded-md text-yellow-200 hover:text-yellow-400 hover:bg-blue-500 dark:text-gray-500 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 focus:outline-none focus:bg-yellow-100 dark:focus:bg-gray-900 focus:text-gray-500 dark:focus:text-gray-400 transition duration-150 ease-in-out"
+                                class="inline-flex items-center justify-center p-2 rounded-md text-yellow-200 hover:text-yellow-400 hover:bg-blue-700 dark:text-gray-500 dark:hover:text-gray-400 dark:hover:bg-gray-900 focus:outline-none focus:bg-yellow-100 dark:focus:bg-gray-900 focus:text-gray-500 dark:focus:text-gray-400 transition duration-150 ease-in-out"
                                 @click="
                                     showingNavigationDropdown =
                                         !showingNavigationDropdown
@@ -186,7 +186,7 @@ const username = ref(usePage().props.value.auth.user.name);
                             :href="route('pictures.index')"
                             :active="route().current('pictures.*')"
                         >
-                            Uploads
+                            Farts
                         </ResponsiveNavLink>
                     </div>
 
