@@ -20,7 +20,7 @@ defineProps({
     <Head title="Welcome" />
 
     <div
-        class="min-h-screen bg-gradient-to-r from-blue-700 dark:from-purple-900 dark:via-red-500 to-green-400 dark:to-yellow-500 items-center"
+        class="min-h-screen bg-gradient-to-r from-blue-700 dark:from-purple-900 via-green-500 dark:via-red-500 to-yellow-300 dark:to-yellow-500 items-center"
     >
         <div class="flex">
             <div
