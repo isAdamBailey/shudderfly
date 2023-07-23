@@ -16,11 +16,21 @@
             </div>
         </template>
 
-        <BooksGrid v-if="!searchCategories" :category="{ name: 'popular' }" />
+        <BooksGrid
+            v-if="!searchCategories"
+            :category="{ name: 'popular' }"
+            label="Your favorite books!"
+        />
 
         <div v-for="(category, index) in workingCategories" :key="index">
             <BooksGrid :category="category" />
         </div>
+
+        <BooksGrid
+            v-if="!searchCategories"
+            :category="{ name: 'forgotten' }"
+            label="Did you forget these?"
+        />
     </BreezeAuthenticatedLayout>
 </template>
 

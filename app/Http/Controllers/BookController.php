@@ -64,6 +64,10 @@ class BookController extends Controller
                 ->with('coverImage')
                 ->orderBy('read_count', 'desc')
                 ->paginate(),
+            'forgotten' => Book::query()
+                ->with('coverImage')
+                ->orderBy('read_count')
+                ->paginate(),
             default => $category
                 ? $category->books()
                     ->with('coverImage')

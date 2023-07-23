@@ -1,15 +1,12 @@
 <template>
     <div v-if="loading" class="h-36 flex justify-center pt-10">
-        <span
-            class="animate-pulse text-xl text-gray-100 font-bold dark:text-gray-800"
-            >Loading {{ category.name }} books...</span
+        <span class="animate-pulse text-xl text-gray-100 font-bold"
+            >Loading {{ title }} books...</span
         >
     </div>
     <div v-else-if="workingBooks.length > 0">
-        <h3
-            class="pl-3 mt-3 text-xl text-gray-100 font-bold dark:text-gray-800"
-        >
-            {{ capitalize(category.name) }}
+        <h3 class="pl-3 mt-3 text-xl text-gray-100 font-bold">
+            {{ title }}
         </h3>
         <div
             ref="content"
@@ -23,9 +20,9 @@
                 class="relative w-48 shrink-0 snap-start rounded-lg bg-white shadow-gray-200/50 transition hover:opacity-80 hover:shadow hover:shadow-gray-300/50"
             >
                 <div
-                    class="rounded-t-lg absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 text-center text-xl leading-4 text-black backdrop-blur-sm line-clamp-1"
+                    class="rounded-t-lg absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 text-center leading-4 text-black font-bold backdrop-blur-sm line-clamp-1"
                 >
-                    {{ book.title }}
+                    {{ book.title.toUpperCase() }}
                 </div>
                 <div
                     v-if="book.excerpt"
@@ -55,8 +52,18 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    label: {
+        type: String,
+        default: null,
+    },
 });
 
+const title = computed(() => {
+    if (props.label) {
+        return props.label;
+    }
+    return capitalize(props.category.name);
+});
 const books = ref([]);
 const content = ref(null);
 const nextUrl = ref(null);

@@ -17,7 +17,7 @@ const username = ref(usePage().props.value.auth.user.name);
 <template>
     <div>
         <div
-            class="min-h-screen bg-gradient-to-r from-blue-700 dark:from-pink-500 dark:via-red-500 to-green-400 dark:to-yellow-500"
+            class="min-h-screen bg-gradient-to-r from-blue-700 dark:from-purple-900 via-green-500 dark:via-red-500 to-yellow-300 dark:to-yellow-500"
         >
             <nav
                 class="bg-blue-700 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700"
