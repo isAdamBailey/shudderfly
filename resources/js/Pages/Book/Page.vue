@@ -1,13 +1,13 @@
 <template>
     <div
-        class="rounded-lg overflow-hidden bg-gradient-to-r from-white dark:from-gray-700 dark:via-gray-900 to-yellow-100 dark:to-black flex flex-col justify-between"
+        class="max-w-[50vw] rounded-lg overflow-hidden bg-gradient-to-r from-white dark:from-gray-700 dark:via-gray-900 to-yellow-100 dark:to-black flex flex-col justify-between"
     >
         <video
             v-if="isVideo(page.image_path)"
             controls
             preload="none"
             poster="/img/video-placeholder.png"
-            class="rounded-top"
+            class="rounded-top max-h-[50vh] object-contain"
         >
             <source :src="page.image_path" />
             Your browser does not support the video tag.
@@ -15,7 +15,7 @@
 
         <LazyImage
             v-else-if="page.image_path"
-            class="rounded-top"
+            class="rounded-top max-h-[50vh] object-contain"
             :src="page.image_path"
             :alt="page.description"
         />

@@ -17,10 +17,10 @@ const username = ref(usePage().props.value.auth.user.name);
 <template>
     <div>
         <div
-            class="min-h-screen bg-gradient-to-r from-blue-700 dark:from-purple-900 via-green-500 dark:via-red-500 to-yellow-300 dark:to-yellow-500"
+            class="min-h-screen bg-gradient-to-r from-yellow-900 dark:from-purple-900 via-green-500 dark:via-red-500 to-yellow-300 dark:to-yellow-500"
         >
             <nav
-                class="bg-blue-700 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700"
+                class="bg-yellow-900 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700"
             >
                 <!-- Primary Navigation Menu -->
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -30,6 +30,7 @@ const username = ref(usePage().props.value.auth.user.name);
                             <div class="shrink-0 flex items-center">
                                 <Link :href="route('welcome')">
                                     <ApplicationLogo
+                                        :is-poop="true"
                                         class="block h-9 w-auto fill-current text-gray-800 dark:text-gray-200"
                                     />
                                 </Link>
@@ -50,7 +51,7 @@ const username = ref(usePage().props.value.auth.user.name);
                                     :href="route('books.index')"
                                     :active="route().current('books.*')"
                                 >
-                                    Books
+                                    Poops
                                 </NavLink>
                                 <NavLink
                                     :href="route('pictures.index')"
@@ -180,7 +181,7 @@ const username = ref(usePage().props.value.auth.user.name);
                             :href="route('books.index')"
                             :active="route().current('books.*')"
                         >
-                            Books
+                            Poops
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             :href="route('pictures.index')"

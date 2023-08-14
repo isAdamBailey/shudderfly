@@ -153,7 +153,7 @@ const makeCoverPage = () => {
                     :option-label="optionLabel"
                     :option-id="optionId"
                     track-by="label"
-                    placeholder="Search Books"
+                    placeholder="Search Poops"
                     searchable
                 />
             </div>

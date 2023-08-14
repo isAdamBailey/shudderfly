@@ -1,7 +1,7 @@
 <template>
     <div v-if="loading" class="h-36 flex justify-center pt-10">
         <span class="animate-pulse text-xl text-gray-100 font-bold"
-            >Loading {{ title }} books...</span
+            >Loading {{ title }}...</span
         >
     </div>
     <div v-else-if="workingBooks.length > 0">

@@ -20,7 +20,7 @@ defineProps({
     <Head title="Welcome" />
 
     <div
-        class="min-h-screen bg-gradient-to-r from-blue-700 dark:from-purple-900 via-green-500 dark:via-red-500 to-yellow-300 dark:to-yellow-500 items-center"
+        class="min-h-screen bg-gradient-to-r from-yellow-900 dark:from-purple-900 via-green-500 dark:via-red-500 to-yellow-300 dark:to-yellow-500 items-center"
     >
         <div class="flex">
             <div
@@ -54,7 +54,7 @@ defineProps({
                             <div v-if="$page.props.auth.user">
                                 <div class="flex justify-around">
                                     <Link :href="route('books.index')">
-                                        <Button> View Books</Button>
+                                        <Button> View Poops</Button>
                                     </Link>
                                     <Link
                                         v-if="canEditPages"
@@ -90,9 +90,9 @@ defineProps({
                         width="321"
                         src="/img/colin.png"
                         :alt="`Picture of ${name}`"
-                        class="border-4 border-black rounded-lg cover md:ml-5"
+                        class="border-4 border-black rounded-full cover md:ml-5"
                     />
-                    <ApplicationLogo v-else title="click me!" />
+                    <ApplicationLogo v-else :is-poop="true" title="click me!" />
                 </div>
             </div>
         </div>

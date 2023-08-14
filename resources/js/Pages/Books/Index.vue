@@ -1,5 +1,5 @@
 <template>
-    <Head title="Books" />
+    <Head title="Poops" />
 
     <BreezeAuthenticatedLayout>
         <template #header>
@@ -19,7 +19,7 @@
         <BooksGrid
             v-if="!searchCategories"
             :category="{ name: 'popular' }"
-            label="Your favorite books!"
+            label="Your favorite poops!"
         />
 
         <div v-for="(category, index) in workingCategories" :key="index">
@@ -55,8 +55,8 @@ const workingCategories = computed(() => {
 const title = computed(() => {
     const search = usePage().props.value.search;
     if (search) {
-        return `Books with "${search}"`;
+        return `Poops with "${search}"`;
     }
-    return "Books";
+    return "Poops";
 });
 </script>

@@ -1,5 +1,25 @@
+<script setup>
+import { defineProps } from "vue";
+
+defineProps({
+    isPoop: {
+        type: Boolean,
+        default: false,
+    },
+});
+</script>
+
 <template>
+    <img
+        v-if="isPoop"
+        height="500"
+        width="500"
+        src="/img/emojipoo.png"
+        alt="poop emoji"
+        class="cover md:ml-5"
+    />
     <svg
+        v-else
         id="Capa_1"
         xmlns="http://www.w3.org/2000/svg"
         x="0px"

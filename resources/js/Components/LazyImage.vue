@@ -8,7 +8,7 @@
     <img
         v-else
         ref="target"
-        :class="`${classes} object-cover h-full w-full bg-yellow-300 dark:bg-gray-700`"
+        :class="`${classes} h-full w-full bg-yellow-300 dark:bg-gray-700`"
         :src="imageSrc"
         :alt="alt"
     />
