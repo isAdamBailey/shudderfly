@@ -107,7 +107,7 @@ class BookController extends Controller
         }
 
         return Inertia::render('Book/Show', [
-            'book' => $book,
+            'book' => $book->load('coverImage'),
             'pages' => $book->pages()->paginate(2),
             'authors' => User::all()->toArray(),
         ]);

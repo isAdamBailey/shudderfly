@@ -5,11 +5,18 @@
         <template #header>
             <Link :href="pages.first_page_url" class="w-full">
                 <div class="flex justify-between flex-wrap">
-                    <h2
-                        class="font-semibold text-2xl text-gray-900 dark:text-gray-100"
-                    >
-                        {{ book.title.toUpperCase() }}
-                    </h2>
+                    <div class="flex items-center">
+                        <img
+                            class="object-cover max-h-12 rounded mr-2"
+                            :src="book.cover_image.image_path"
+                            alt="cover image"
+                        />
+                        <h2
+                            class="font-semibold text-2xl text-gray-900 dark:text-gray-100"
+                        >
+                            {{ book.title.toUpperCase() }}
+                        </h2>
+                    </div>
                     <div>
                         <p
                             v-if="book.author"

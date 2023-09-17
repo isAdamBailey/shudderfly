@@ -120,6 +120,7 @@ class BooksTest extends TestCase
                 ->has('book.title')
                 ->has('book.excerpt')
                 ->has('book.author')
+                ->has('book.cover_image')
                 ->has('pages.data', 2)
                 ->has('pages.per_page')
                 ->has('pages.next_page_url')
