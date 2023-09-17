@@ -26,9 +26,10 @@ defineProps({
                 <video
                     v-if="isVideo(photo.image_path)"
                     controls
-                    preload="none"
-                    poster="/img/video-placeholder.png"
-                    class="rounded"
+                    disablepictureinpicture
+                    controlslist="nodownload"
+                    preload="auto"
+                    class="rounded object-cover"
                 >
                     <source :src="photo.image_path" />
                     Your browser does not support the video tag.
