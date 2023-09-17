@@ -5,9 +5,10 @@
         <video
             v-if="isVideo(page.image_path)"
             controls
-            preload="none"
-            poster="/img/video-placeholder.png"
-            class="rounded-top max-h-[90vh] object-contain"
+            preload="auto"
+            class="rounded-top max-h-[90vh] object-cover"
+            disablepictureinpicture
+            controlslist="nodownload"
         >
             <source :src="page.image_path" />
             Your browser does not support the video tag.
