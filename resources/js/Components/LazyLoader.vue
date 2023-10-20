@@ -5,6 +5,18 @@
         :src="placeholder"
         alt="placeholder image"
     />
+    <video
+        v-else-if="isVideo(imageSrc)"
+        ref="target"
+        :controls="!isCover"
+        disablepictureinpicture
+        controlslist="nodownload"
+        preload="auto"
+        class="rounded-t-lg object-cover"
+    >
+        <source :src="imageSrc" />
+        Your browser does not support the video tag.
+    </video>
     <img
         v-else
         ref="target"
@@ -17,6 +29,9 @@
 <script setup>
 import { useIntersectionObserver, useImage } from "@vueuse/core";
 import { ref, computed } from "vue";
+import { useMedia } from "@/mediaHelpers";
+
+const { isVideo } = useMedia();
 
 const props = defineProps({
     src: {
@@ -30,6 +45,10 @@ const props = defineProps({
     classes: {
         type: String,
         default: "rounded-lg",
+    },
+    isCover: {
+        type: Boolean,
+        default: false,
     },
 });
 

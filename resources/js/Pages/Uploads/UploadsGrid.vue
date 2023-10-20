@@ -1,11 +1,9 @@
 <script setup>
 import { Link } from "@inertiajs/inertia-vue3";
 import Button from "@/Components/Button.vue";
-import LazyImage from "@/Components/LazyImage.vue";
-import { useMedia } from "@/mediaHelpers";
-import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
+import LazyLoader from "@/Components/LazyLoader.vue";
 
-const { isVideo } = useMedia();
+import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 
 defineProps({
     photos: Array,
@@ -23,21 +21,11 @@ defineProps({
             class="shadow-sm rounded-lg overflow-hidden"
         >
             <div class="relative flex justify-center flex-wrap">
-                <video
-                    v-if="isVideo(photo.image_path)"
-                    controls
-                    disablepictureinpicture
-                    controlslist="nodownload"
-                    preload="auto"
-                    class="rounded object-cover"
-                >
-                    <source :src="photo.image_path" />
-                    Your browser does not support the video tag.
-                </video>
-                <LazyImage
-                    v-else-if="photo.image_path"
+                <LazyLoader
+                    v-if="photo.image_path"
                     classes="rounded-top"
                     :src="photo.image_path"
+                    :is-cover="true"
                 />
                 <div
                     v-if="photo.content"

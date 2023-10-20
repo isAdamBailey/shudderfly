@@ -31,9 +31,10 @@
                     {{ book.excerpt }}
                 </div>
                 <div class="h-36">
-                    <LazyImage
+                    <LazyLoader
                         :src="book.cover_image?.image_path"
                         :alt="`${book.title} cover image`"
+                        :is-cover="true"
                     />
                 </div>
             </Link>
@@ -42,7 +43,7 @@
 </template>
 
 <script setup>
-import LazyImage from "@/Components/LazyImage.vue";
+import LazyLoader from "@/Components/LazyLoader.vue";
 import { Link } from "@inertiajs/inertia-vue3";
 import { ref, onMounted, computed } from "vue";
 import axios from "axios";
