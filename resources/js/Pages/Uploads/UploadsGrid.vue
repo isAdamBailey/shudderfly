@@ -46,7 +46,12 @@ defineProps({
                 ></div>
                 <Link
                     class="w-full"
-                    :href="route('books.show', photo.book.slug)"
+                    :href="
+                        route('books.show', {
+                            book: photo.book.slug,
+                            pageId: photo.id,
+                        })
+                    "
                 >
                     <Button class="w-full rounded-t-none"
                         >See Book {{ photo.book.title }}</Button
