@@ -135,6 +135,23 @@ class BooksTest extends TestCase
         $this->assertSame($book->read_count + 1, $book->fresh()->read_count);
     }
 
+    public function test_when_book_is_returned_read_count_is_not_incremented_for_admins()
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        $book = Book::factory()->has(Page::factory())->create();
+
+        $this->get(route('books.show', $book))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Book/Show')
+                ->url('/book/'.$book->slug)
+        );
+
+        // make sure we do not increment admin view
+        $this->assertSame($book->read_count, $book->fresh()->read_count);
+    }
+
     public function test_book_cannot_be_stored_without_permissions()
     {
         $this->actingAs(User::factory()->create());
