@@ -21,9 +21,12 @@
                     <div>
                         <p
                             v-if="book.author"
-                            class="mr-3 text-gray-900 dark:text-gray-100"
+                            class="mr-3 font-bold text-gray-900 dark:text-gray-100"
                         >
                             by: {{ book.author }}
+                        </p>
+                        <p class="text-xs text-gray-900 dark:text-white">
+                            {{ short(book.created_at) }}
                         </p>
                         <p class="text-xs text-gray-900 dark:text-white">
                             {{ pages.total }} pages
@@ -34,21 +37,24 @@
         </template>
 
         <div
-            class="flex flex-wrap align-middle justify-between bg-yellow-200 dark:bg-gray-800"
+            :class="
+                canEditPages && !book.excerpt
+                    ? 'justify-end'
+                    : 'justify-between'
+            "
+            class="flex flex-wrap align-middle bg-yellow-200 dark:bg-gray-800"
         >
-            <div
-                v-if="book.excerpt"
-                class="italic px-6 pt-2 flex justify-between"
-            >
+            <div v-if="book.excerpt" class="px-6 pt-2">
                 <h2
-                    class="text-sm text-gray-900 dark:text-gray-100 leading-tight"
+                    class="italic text-sm text-gray-900 dark:text-gray-100 leading-tight"
                 >
                     {{ book.excerpt }}
                 </h2>
             </div>
-            <div v-if="canEditPages" class="">
+            <div v-if="canEditPages">
                 <Button
-                    class="rounded-none flex justify-center font-bold"
+                    class="rounded-b-none font-bold"
+                    :class="settingsOpen ? 'bg-pink-800 dark:bg-pink-800' : ''"
                     @click="settingsOpen = !settingsOpen"
                 >
                     <span v-if="settingsOpen">Close</span>
@@ -56,7 +62,7 @@
                 </Button>
             </div>
         </div>
-        <div v-if="canEditPages && settingsOpen" class="w-full mt-4">
+        <div v-if="canEditPages && settingsOpen" class="w-full mt-4 md:ml-2">
             <div>
                 <BreezeValidationErrors class="mb-4" />
             </div>
@@ -130,8 +136,10 @@ import EditForm from "@/Pages/Book/EditBookForm.vue";
 import { usePermissions } from "@/permissions";
 import Page from "@/Pages/Book/Page.vue";
 import ArrowIcon from "@/Components/svg/ArrowIcon.vue";
+import { useDate } from "@/dateHelpers";
 
 const { canEditPages } = usePermissions();
+const { short } = useDate();
 
 const props = defineProps({
     book: Object,
