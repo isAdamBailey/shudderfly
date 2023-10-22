@@ -7,7 +7,7 @@
                 <div class="flex justify-between flex-wrap">
                     <div class="flex items-center">
                         <img
-                            v-if="book.cover_image.image_path"
+                            v-if="book.cover_image?.image_path"
                             class="object-cover max-h-12 rounded mr-2"
                             :src="book.cover_image.image_path"
                             alt="cover image"
