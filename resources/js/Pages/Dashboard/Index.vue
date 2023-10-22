@@ -22,9 +22,7 @@ const lastClose = ref(false);
 
     <BreezeAuthenticatedLayout>
         <template #header>
-            <h2
-                class="font-semibold text-2xl text-gray-900 dark:text-gray-100 leading-tight"
-            >
+            <h2 class="font-bold text-2xl text-gray-900 leading-tight">
                 The Administrative Duties Of Colin's Books!
             </h2>
         </template>

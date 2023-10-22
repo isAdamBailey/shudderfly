@@ -229,7 +229,7 @@ const username = ref(usePage().props.value.auth.user.name);
             <!-- Page Heading -->
             <header
                 v-if="$slots.header"
-                class="border-gray-900 bg-yellow-300 dark:bg-gray-800 dark:shadow"
+                class="border-gray-900 bg-gradient-to-r from-yellow-300 dark:from-yellow-300 via-green-500 dark:via-red-500 to-yellow-900 dark:to-purple-900 dark:shadow"
             >
                 <div class="max-w-7xl mx-auto py-2 px-4 sm:px-6 lg:px-8">
                     <slot name="header" />

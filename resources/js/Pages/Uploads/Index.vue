@@ -5,9 +5,7 @@
         <template #header>
             <div class="flex justify-between items-center">
                 <Link :href="route('pictures.index')">
-                    <h2
-                        class="font-semibold text-2xl text-gray-900 dark:text-gray-100 leading-tight"
-                    >
+                    <h2 class="font-bold text-2xl text-gray-900 leading-tight">
                         {{ title }}
                     </h2>
                 </Link>

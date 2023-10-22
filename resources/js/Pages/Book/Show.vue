@@ -13,7 +13,7 @@
                             alt="cover image"
                         />
                         <h2
-                            class="font-semibold text-2xl text-gray-900 dark:text-gray-100"
+                            class="font-bold text-2xl text-gray-900 leading-tight"
                         >
                             {{ book.title.toUpperCase() }}
                         </h2>
@@ -21,14 +21,14 @@
                     <div>
                         <p
                             v-if="book.author"
-                            class="mr-3 font-bold text-gray-900 dark:text-gray-100"
+                            class="mr-3 font-bold text-gray-100"
                         >
                             by: {{ book.author }}
                         </p>
-                        <p class="text-xs text-gray-900 dark:text-white">
+                        <p class="text-xs text-gray-100">
                             {{ short(book.created_at) }}
                         </p>
-                        <p class="text-xs text-gray-900 dark:text-white">
+                        <p class="text-xs text-gray-100">
                             {{ pages.total }} pages
                         </p>
                     </div>
@@ -53,7 +53,7 @@
             </div>
             <div v-if="canEditPages">
                 <Button
-                    class="rounded-b-none font-bold"
+                    class="rounded-none font-bold px-12"
                     :class="settingsOpen ? 'bg-pink-800 dark:bg-pink-800' : ''"
                     @click="settingsOpen = !settingsOpen"
                 >
