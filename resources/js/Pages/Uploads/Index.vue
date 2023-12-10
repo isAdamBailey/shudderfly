@@ -3,31 +3,53 @@
 
     <BreezeAuthenticatedLayout>
         <template #header>
-            <div class="flex justify-between items-center">
-                <Link :href="route('pictures.index')">
+            <div class="flex justify-between items-center p-2">
+                <Link class="w-3/4" :href="route('pictures.index')">
                     <h2 class="font-bold text-2xl text-gray-900 leading-tight">
                         {{ title }}
                     </h2>
                 </Link>
-                <SearchInput class="m-4" route-name="pictures.index" />
-                <Link
-                    :href="
-                        randomButtonDisabled
-                            ? route('pictures.index', { filter: 'random' })
-                            : null
-                    "
-                >
-                    <Button
-                        :disabled="randomButtonDisabled"
-                        @click="randomButtonDisabled = true"
-                    >
-                        <span class="text-md mr-3">Mix</span>
-                        <RoundArrowsIcon />
-                    </Button>
-                </Link>
+                <SearchInput
+                    class="md:w-3/4 w-1/2"
+                    route-name="pictures.index"
+                />
             </div>
         </template>
 
+        <div class="p-2 pb-0 flex justify-around">
+            <Link
+                :href="
+                    randomButtonDisabled
+                        ? route('pictures.index', { filter: 'random' })
+                        : null
+                "
+            >
+                <Button
+                    class="rounded-full border-amber-50"
+                    :disabled="randomButtonDisabled"
+                    @click="randomButtonDisabled = true"
+                >
+                    <span class="text-md mr-3">Fart Mix</span>
+                    <RoundArrowsIcon />
+                </Button>
+            </Link>
+            <Link
+                :href="
+                    oldButtonDisabled
+                        ? route('pictures.index', { filter: 'old' })
+                        : null
+                "
+            >
+                <Button
+                    class="rounded-full"
+                    :disabled="oldButtonDisabled"
+                    @click="oldButtonDisabled = true"
+                >
+                    <span class="text-md mr-3">Oldest Farts!</span>
+                    <RoundArrowsIcon />
+                </Button>
+            </Link>
+        </div>
         <PhotosGrid :photos="photos.data" />
     </BreezeAuthenticatedLayout>
 </template>
@@ -51,14 +73,26 @@ const isRandom = computed(() => {
     return urlParams.get("filter") === "random";
 });
 
+const isOld = computed(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get("filter") === "old";
+});
+
+const oldButtonDisabled = ref(false);
 const randomButtonDisabled = ref(false);
 const title = computed(() => {
     const search = usePage().props.value.search;
     if (search) {
         return `Farts with "${search}"`;
     }
-    return `${props.photos.per_page} ${
-        isRandom.value ? "Random" : "Newest"
-    } Farts`;
+    if (props.photos.per_page) {
+        if (isRandom.value) {
+            return `${props.photos.per_page} Random Farts`;
+        }
+        if (isOld.value) {
+            return `${props.photos.per_page} Oldest Farts`;
+        }
+    }
+    return "Newest Farts";
 });
 </script>

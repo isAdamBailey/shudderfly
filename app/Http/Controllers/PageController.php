@@ -22,12 +22,11 @@ class PageController extends Controller
 
         $photos = Page::with('book')
             ->where('image_path', '!=', '')
-            ->when($request->filter === 'random',
-                fn ($query) => $query->inRandomOrder(),
-                fn ($query) => $query->latest()
-            )
             ->when($search, fn ($query) => $query->where('content', 'LIKE', '%'.$search.'%'))
-            ->paginate(50);
+            ->unless($request->filter, fn ($query) => $query->latest())
+            ->when($request->filter === 'old', fn ($query) => $query->oldest())
+            ->when($request->filter === 'random', fn ($query) => $query->inRandomOrder())
+            ->paginate(25);
 
         return Inertia::render('Uploads/Index', [
             'photos' => $photos,
