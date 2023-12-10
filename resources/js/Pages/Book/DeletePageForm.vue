@@ -1,6 +1,6 @@
 <template>
     <form class="text-center mt-10" @submit.prevent="submit">
-        <DangerButton>Delete</DangerButton>
+        <DangerButton>Delete Fart</DangerButton>
     </form>
 </template>
 
@@ -19,7 +19,7 @@ const form = useForm({});
 const submit = () => {
     if (
         window.confirm(
-            "Are you sure you want to delete this page? The picture will also be deleted."
+            "Are you sure you want to delete this fart? The media will also be deleted."
         )
     ) {
         form.delete(route("pages.destroy", props.page), {

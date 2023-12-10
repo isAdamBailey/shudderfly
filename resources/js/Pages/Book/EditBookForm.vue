@@ -44,7 +44,7 @@ const submit = () => {
 <template>
     <div class="bg-white dark:bg-gray-800 rounded p-5 md:mr-2">
         <h3 class="text-2xl dark:text-gray-100 w-full border-b mb-7">
-            Edit Book
+            Edit Poop
         </h3>
         <form @submit.prevent="submit">
             <div class="flex flex-col">
@@ -69,7 +69,7 @@ const submit = () => {
                     />
                 </div>
                 <div class="mt-4">
-                    <BreezeLabel for="category" value="Book Category" />
+                    <BreezeLabel for="category" value="Poop Category" />
                     <Multiselect
                         id="category"
                         v-model="form.category_id"
@@ -98,7 +98,7 @@ const submit = () => {
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                 >
-                    Save
+                    Save Poop
                 </BreezeButton>
             </div>
         </form>

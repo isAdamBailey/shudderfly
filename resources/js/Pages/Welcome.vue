@@ -48,7 +48,7 @@ defineProps({
                                 "
                                 @click="bookClicked = !bookClicked"
                                 >{{ name }}</span
-                            >'s very own app to make books!
+                            >'s very own app to make farts and poops!
                         </p>
                         <div class="mt-12">
                             <div v-if="$page.props.auth.user">

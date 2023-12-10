@@ -145,7 +145,7 @@ const makeCoverPage = () => {
                 </div>
             </div>
             <div class="mt-3">
-                <BreezeLabel for="book" value="Move Books" />
+                <BreezeLabel for="book" value="Move Fart to other Poop" />
                 <Multiselect
                     id="book"
                     v-model="pageForm.book_id"
@@ -164,7 +164,7 @@ const makeCoverPage = () => {
                     :class="{ 'opacity-25': pageForm.processing }"
                     :disabled="pageForm.processing"
                 >
-                    Update!
+                    Update Fart!
                 </Button>
             </div>
         </form>
@@ -172,8 +172,8 @@ const makeCoverPage = () => {
             v-if="isCoverPage"
             class="mt-5 text-gray-800 dark:text-white text-sm"
         >
-            This image is the cover page for this book. To change the cover, go
-            to the page settings for another page and click "Make Cover Page".
+            This image is the cover fart for this poop. To change the cover, go
+            to the page settings for another fart and click "Make Cover Fart".
         </div>
         <div
             v-else-if="
@@ -188,7 +188,7 @@ const makeCoverPage = () => {
                 :disabled="bookForm.processing"
                 @click.prevent="makeCoverPage"
             >
-                Make Cover Page
+                Make Cover Fart
             </Button>
         </div>
         <DeletePageForm

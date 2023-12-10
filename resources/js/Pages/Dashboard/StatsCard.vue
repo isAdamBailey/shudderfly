@@ -1,25 +1,27 @@
 <template>
     <div class="text-gray-900 dark:text-white">
         <div class="border-b py-4 flex justify-between">
-            <p>Total number of books</p>
+            <p>Total number of poops</p>
             <p>{{ props.stats.numberOfBooks.toLocaleString() }}</p>
         </div>
         <div class="border-b py-4 flex justify-between">
-            <p>Total number of pages / uploads</p>
+            <p>Total number of farts / uploads</p>
             <p>{{ props.stats.numberOfPages.toLocaleString() }}</p>
         </div>
         <div class="border-b mt-4 flex justify-between">
-            <p>Most popular book</p>
+            <p>Most popular poop</p>
             <Link
                 class="mb-4 border rounded px-3 py-2"
                 :href="route('books.show', props.stats.mostRead.slug)"
             >
                 {{ props.stats.mostRead.title }}
             </Link>
-            <p>Read {{ countAddS(props.stats.mostRead.read_count, "time") }}</p>
+            <p>
+                Smelled {{ countAddS(props.stats.mostRead.read_count, "time") }}
+            </p>
         </div>
         <div class="border-b mt-4 flex justify-between">
-            <p>Least popular book</p>
+            <p>Least popular poop</p>
             <Link
                 class="mb-4 border rounded px-3 py-2"
                 :href="route('books.show', props.stats.leastRead.slug)"
@@ -27,11 +29,12 @@
                 {{ props.stats.leastRead.title }}
             </Link>
             <p>
-                Read {{ countAddS(props.stats.leastRead.read_count, "time") }}
+                Smelled
+                {{ countAddS(props.stats.leastRead.read_count, "time") }}
             </p>
         </div>
         <div class="border-b mt-4 flex justify-between">
-            <p>Book with most pages</p>
+            <p>Book with most farts</p>
             <Link
                 class="mb-4 border rounded px-3 py-2"
                 :href="route('books.show', props.stats.mostPages.slug)"
@@ -42,20 +45,20 @@
                 {{
                     countAddS(
                         props.stats.mostPages.pages_count.toLocaleString(),
-                        "page"
+                        "fart"
                     )
                 }}
             </p>
         </div>
         <div class="border-b mt-4 flex justify-between">
-            <p>Book with least pages</p>
+            <p>Book with least farts</p>
             <Link
                 class="mb-4 border rounded px-3 py-2"
                 :href="route('books.show', props.stats.leastPages.slug)"
             >
                 {{ props.stats.leastPages.title }}
             </Link>
-            <p>{{ countAddS(props.stats.leastPages.pages_count, "page") }}</p>
+            <p>{{ countAddS(props.stats.leastPages.pages_count, "fart") }}</p>
         </div>
     </div>
 </template>

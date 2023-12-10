@@ -26,7 +26,7 @@
                 class="w-full rounded-t-none"
                 @click="showPageSettings = true"
             >
-                Edit Page
+                Edit Fart
             </Button>
             <EditPageForm
                 v-if="showPageSettings"

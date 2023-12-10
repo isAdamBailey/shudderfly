@@ -1,6 +1,6 @@
 <template>
     <form class="text-center mt-10" @submit.prevent="submit">
-        <DangerButton>Delete</DangerButton>
+        <DangerButton>Delete Poop</DangerButton>
     </form>
 </template>
 
@@ -17,7 +17,7 @@ const form = useForm({});
 const submit = () => {
     if (
         window.confirm(
-            "Are you sure you want to delete this book and all its pages?"
+            "Are you sure you want to delete this poop and all its farts?"
         )
     ) {
         form.delete(route("books.destroy", props.book.slug));

@@ -42,7 +42,7 @@ defineProps({
                     "
                 >
                     <Button class="w-full rounded-t-none"
-                        >See Book {{ photo.book.title }}</Button
+                        >See Fart in {{ photo.book.title }}</Button
                     >
                 </Link>
             </div>

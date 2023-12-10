@@ -60,7 +60,7 @@ const submit = () => {
         </div>
 
         <div class="mt-4">
-            <BreezeLabel for="category" value="Book Category" />
+            <BreezeLabel for="category" value="Poop Category" />
             <Multiselect
                 id="category"
                 v-model="form.category_id"
@@ -95,7 +95,7 @@ const submit = () => {
 
         <div class="my-8 dark:text-gray-100">
             Any text added to "title" or "excerpt" can be searched to find the
-            book later.
+            poop later.
         </div>
 
         <div class="flex items-center justify-end mt-4">
@@ -104,7 +104,7 @@ const submit = () => {
                 :class="{ 'opacity-25': form.processing }"
                 :disabled="form.processing"
             >
-                Create!
+                Create Poop!
             </BreezeButton>
         </div>
     </form>

@@ -23,7 +23,7 @@ const lastClose = ref(false);
     <BreezeAuthenticatedLayout>
         <template #header>
             <h2 class="font-bold text-2xl text-gray-900 leading-tight">
-                The Administrative Duties Of Colin's Books!
+                The Administrative Duties Of Colin's Poops!
             </h2>
         </template>
 
@@ -37,8 +37,8 @@ const lastClose = ref(false);
                 >
                     <span v-if="!firstClose"
                         >Thank you so much {{ $page.props.auth.user.name }} for
-                        helping with Colin's pictures and books. Colin and I
-                        love you for it.</span
+                        helping with Colin's farts and poops. Colin and I love
+                        you for it.</span
                     >
                     <span v-else>still love you.</span>
                 </h2>
@@ -69,7 +69,7 @@ const lastClose = ref(false);
                             <h3
                                 class="text-xl dark:text-gray-100 font-semibold border-b mb-10"
                             >
-                                New Book
+                                New Poop
                             </h3>
                             <NewBookForm :authors="props.users.data" />
                         </div>

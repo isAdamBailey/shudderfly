@@ -29,7 +29,7 @@
                             {{ short(book.created_at) }}
                         </p>
                         <p class="text-xs text-gray-100">
-                            {{ pages.total }} pages
+                            {{ pages.total }} farts
                         </p>
                     </div>
                 </div>
@@ -42,9 +42,9 @@
                     ? 'justify-end'
                     : 'justify-between'
             "
-            class="flex flex-wrap align-middle bg-yellow-200 dark:bg-gray-800"
+            class="p-2 flex flex-nowrap align-middle bg-yellow-200 dark:bg-gray-800"
         >
-            <div v-if="book.excerpt" class="px-6 pt-2">
+            <div v-if="book.excerpt">
                 <h2
                     class="italic text-sm text-gray-900 dark:text-gray-100 leading-tight"
                 >
