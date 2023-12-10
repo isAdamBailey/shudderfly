@@ -10,7 +10,7 @@
         </h3>
         <div
             ref="content"
-            class="flex snap-x space-x-5 overflow-x-scroll overflow-y-hidden pb-6 scrollbar scrollbar-thumb-gray-500 scrollbar-thumb-rounded"
+            class="flex snap-x space-x-5 overflow-y-hidden pb-6 scrollbar scrollbar-thumb-gray-500 scrollbar-thumb-rounded"
             @scroll="handleScroll"
         >
             <Link

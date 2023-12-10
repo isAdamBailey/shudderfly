@@ -12,6 +12,7 @@
                 <SearchInput
                     class="md:w-3/4 w-1/2"
                     route-name="pictures.index"
+                    label="Farts"
                 />
             </div>
         </template>
@@ -25,7 +26,7 @@
                 "
             >
                 <Button
-                    class="rounded-full border-amber-50"
+                    class="rounded-full border-amber-50 dark:border-gray-100 max-h-8"
                     :disabled="randomButtonDisabled"
                     @click="randomButtonDisabled = true"
                 >
@@ -41,7 +42,7 @@
                 "
             >
                 <Button
-                    class="rounded-full"
+                    class="rounded-full border-amber-50 dark:border-gray-100 max-h-8"
                     :disabled="oldButtonDisabled"
                     @click="oldButtonDisabled = true"
                 >

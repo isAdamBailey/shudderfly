@@ -10,7 +10,7 @@
                     </h2>
                 </Link>
 
-                <SearchInput route-name="books.search" />
+                <SearchInput route-name="books.search" label="Poops" />
             </div>
         </template>
 

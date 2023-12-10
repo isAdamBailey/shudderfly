@@ -66,6 +66,7 @@ defineProps({
                                 <SearchInput
                                     class="mt-12"
                                     route-name="books.search"
+                                    label="Poops"
                                 />
                             </div>
                             <div v-else class="flex justify-around">

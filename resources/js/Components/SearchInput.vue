@@ -22,7 +22,14 @@ import { usePage } from "@inertiajs/inertia-vue3";
 
 export default defineComponent({
     props: {
-        routeName: String,
+        routeName: {
+            type: String,
+            required: true,
+        },
+        label: {
+            type: String,
+            default: null,
+        },
     },
 
     data() {
@@ -33,7 +40,7 @@ export default defineComponent({
 
     computed: {
         typeName() {
-            return this.routeName.split(".")[0] || "something";
+            return this.label || this.routeName.split(".")[0] || "something";
         },
     },
 
