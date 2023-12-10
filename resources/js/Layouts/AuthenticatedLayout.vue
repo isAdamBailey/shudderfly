@@ -59,6 +59,12 @@ const username = ref(usePage().props.value.auth.user.name);
                                 >
                                     Farts
                                 </NavLink>
+                                <NavLink
+                                    :href="route('rules')"
+                                    :active="route().current('rules')"
+                                >
+                                    Rules
+                                </NavLink>
                             </div>
                         </div>
 
@@ -188,6 +194,12 @@ const username = ref(usePage().props.value.auth.user.name);
                             :active="route().current('pictures.*')"
                         >
                             Farts
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('rules')"
+                            :active="route().current('pictures')"
+                        >
+                            Rules
                         </ResponsiveNavLink>
                     </div>
 
