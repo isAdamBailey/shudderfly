@@ -59,12 +59,6 @@ const username = ref(usePage().props.value.auth.user.name);
                                 >
                                     Farts
                                 </NavLink>
-                                <NavLink
-                                    :href="route('rules')"
-                                    :active="route().current('rules')"
-                                >
-                                    Rules
-                                </NavLink>
                             </div>
                         </div>
 
@@ -195,12 +189,6 @@ const username = ref(usePage().props.value.auth.user.name);
                         >
                             Farts
                         </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            :href="route('rules')"
-                            :active="route().current('pictures')"
-                        >
-                            Rules
-                        </ResponsiveNavLink>
                     </div>
 
                     <!-- Responsive Settings Options -->
@@ -252,6 +240,21 @@ const username = ref(usePage().props.value.auth.user.name);
             <main>
                 <slot />
             </main>
+
+            <footer
+                class="border-gray-900 bg-gradient-to-r from-yellow-300 dark:from-yellow-300 via-green-500 dark:via-red-500 to-yellow-900 dark:to-purple-900 dark:shadow"
+            >
+                <div class="max-w-7xl mx-auto pt-12 lg:pt-20 pb-12">
+                    <div
+                        class="text-center text-sm underline hover:font-bold text-gray-900 pb-8"
+                    >
+                        <a :href="route('rules')">Rules and Instructions</a>
+                    </div>
+                    <div class="text-center text-sm font-bold text-gray-900">
+                        &copy; {{ new Date().getFullYear() }} Shudderfly
+                    </div>
+                </div>
+            </footer>
         </div>
     </div>
 </template>
