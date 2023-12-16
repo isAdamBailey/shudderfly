@@ -36,7 +36,7 @@ class BooksTest extends TestCase
         $this->getJson(route('books.category', ['categoryName' => 'popular']))
             ->assertJson(fn (AssertableJson $json) => $json
                 ->has('books', fn (AssertableJson $json) => $json->where('next_page_url', 'http://localhost/books-category?categoryName=popular&page=2')
-                    ->has('data', 15)
+                    ->has('data', 10)
                     ->has('data.0.cover_image')
                     ->etc()
                 )
@@ -64,7 +64,7 @@ class BooksTest extends TestCase
         $this->getJson(route('books.category', ['categoryName' => 'test1']))
             ->assertJson(fn (AssertableJson $json) => $json
                 ->has('books', fn (AssertableJson $json) => $json->where('next_page_url', 'http://localhost/books-category?categoryName=test1&page=2')
-                    ->has('data', 15)
+                    ->has('data', 10)
                     ->where('total', 40)
                     ->has('data.0.cover_image')
                     ->etc()
@@ -73,7 +73,7 @@ class BooksTest extends TestCase
         $this->getJson(route('books.category', ['categoryName' => 'test1', 'page' => '2']))
             ->assertJson(fn (AssertableJson $json) => $json
                 ->has('books', fn (AssertableJson $json) => $json->where('next_page_url', 'http://localhost/books-category?categoryName=test1&page=3')
-                    ->has('data', 15)
+                    ->has('data', 10)
                     ->where('total', 40)
                     ->has('data.0.cover_image')
                     ->etc()

@@ -63,18 +63,18 @@ class BookController extends Controller
             'popular' => Book::query()
                 ->with('coverImage')
                 ->orderBy('read_count', 'desc')
-                ->paginate(),
+                ->paginate(10),
             'forgotten' => Book::query()
                 ->with('coverImage')
                 ->orderBy('read_count')
-                ->paginate(),
+                ->paginate(10),
             default => $category
                 ? $category->books()
                     ->with('coverImage')
-                    ->paginate()
+                    ->paginate(10)
                 : Book::query()
                     ->with('coverImage')
-                    ->paginate()
+                    ->paginate(10)
         };
 
         $books->appends($request->all())->links();
