@@ -9,11 +9,7 @@
                         {{ title }}
                     </h2>
                 </Link>
-                <SearchInput
-                    class="md:w-3/4 w-1/2"
-                    route-name="pictures.index"
-                    label="Farts"
-                />
+                <SearchInput route-name="pictures.index" label="Farts" />
             </div>
         </template>
 
@@ -46,7 +42,7 @@
                     :disabled="oldButtonDisabled"
                     @click="oldButtonDisabled = true"
                 >
-                    <span class="text-md mr-3">Oldest Farts!</span>
+                    <span class="text-md mr-3">Year Old Farts!</span>
                     <RoundArrowsIcon />
                 </Button>
             </Link>
@@ -91,7 +87,7 @@ const title = computed(() => {
             return `${props.photos.per_page} Random Farts`;
         }
         if (isOld.value) {
-            return `${props.photos.per_page} Oldest Farts`;
+            return `${props.photos.per_page} Farts a Year Old`;
         }
     }
     return "Newest Farts";

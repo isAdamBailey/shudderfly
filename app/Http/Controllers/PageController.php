@@ -24,7 +24,14 @@ class PageController extends Controller
             ->where('image_path', '!=', '')
             ->when($search, fn ($query) => $query->where('content', 'LIKE', '%'.$search.'%'))
             ->unless($request->filter, fn ($query) => $query->latest())
-            ->when($request->filter === 'old', fn ($query) => $query->oldest())
+            ->when($request->filter === 'old', function ($query) {
+                $yearAgo = clone $query;
+                $yearAgo->whereDate('created_at', '<=', today()->subYear());
+                if (!$yearAgo->exists()) {
+                    return $query->oldest();
+                }
+                return $yearAgo;
+            })
             ->when($request->filter === 'random', fn ($query) => $query->inRandomOrder())
             ->paginate(25);
 
