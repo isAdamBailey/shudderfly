@@ -30,7 +30,7 @@ class PageController extends Controller
                 if (!$yearAgo->exists()) {
                     return $query->oldest();
                 }
-                return $yearAgo;
+                return $yearAgo->orderBy('created_at', 'desc');
             })
             ->when($request->filter === 'random', fn ($query) => $query->inRandomOrder())
             ->paginate(25);
