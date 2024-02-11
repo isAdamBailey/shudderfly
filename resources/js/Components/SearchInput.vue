@@ -6,15 +6,16 @@
             ref="search"
             v-model="search"
             class="h-8 w-full cursor-pointer rounded-full border border-blue-700 bg-gray-100 px-4 pb-0 pt-px text-gray-700 outline-none transition focus:border-blue-400"
-            :class="{ 'transition-border': search }"
+            :class="{ 'border-red-500 border-2': voiceActive }"
             autocomplete="off"
             name="search"
-            :placeholder="`Search ${typeName}!`"
+            :placeholder="searchPlaceholder"
             type="search"
             @keyup.esc="search = null"
         />
         <button
             class="self-center text-amber-200 dark:text-gray-100 ml-2 w-6 h-6"
+            :class="voiceActive ? ' animate-bounce' : 'animate-none'"
             @click="startVoiceRecognition"
         >
             <Microphone
@@ -56,6 +57,11 @@ export default defineComponent({
         typeName() {
             return this.label || this.routeName.split(".")[0] || "something";
         },
+        searchPlaceholder() {
+            return this.voiceActive
+                ? "Listening..."
+                : `Search ${this.typeName}!`;
+        },
     },
 
     watch: {
@@ -83,12 +89,14 @@ export default defineComponent({
             recognition.interimResults = true;
 
             recognition.addEventListener("result", (event) => {
-                const transcript = Array.from(event.results)
+                let transcript = Array.from(event.results)
                     .map((result) => result[0])
                     .map((result) => result.transcript)
                     .join("");
 
                 if (event.results[0].isFinal) {
+                    // Split the transcript into words, remove duplicates, and join back together
+                    transcript = [...new Set(transcript.split(" "))].join(" ");
                     this.search = transcript;
                 }
             });
@@ -110,6 +118,6 @@ export default defineComponent({
 
 <style scoped>
 .microphone-icon:active {
-    @apply text-red-500 animate-bounce;
+    @apply text-red-500;
 }
 </style>
