@@ -5,7 +5,6 @@ namespace App\Console\Commands;
 use App\Mail\WeeklyStatsMail;
 use App\Models\Book;
 use App\Models\Page;
-use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail;

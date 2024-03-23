@@ -8,6 +8,7 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Collection;
 
 class WeeklyStatsMail extends Mailable
 {
@@ -29,10 +30,10 @@ class WeeklyStatsMail extends Mailable
      * @param mixed $mostPages
      * @param mixed $mostRead
      * @param mixed $leastRead
-     * @param mixed $booksThisWeek
+     * @param Collection $booksThisWeek
      * @param mixed $pagesThisWeek
      */
-    public function __construct(mixed $user, mixed $leastPages, mixed $mostPages, mixed $mostRead, mixed $leastRead, mixed $booksThisWeek, mixed $pagesThisWeek)
+    public function __construct(mixed $user, mixed $leastPages, mixed $mostPages, mixed $mostRead, mixed $leastRead, Collection $booksThisWeek, mixed $pagesThisWeek)
     {
         $this->user = $user;
         $this->leastPages = $leastPages;

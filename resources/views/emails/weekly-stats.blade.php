@@ -4,15 +4,14 @@
     {{ $user->name }}, here is what was added this week:
 
     @foreach($booksThisWeek as $book)
-        dd($book);
-        {{--        - {{ $book->title }} by {{ $book->author->name }}--}}
-{{--        - {{ $book->title }} by {{ $book->author->name }}--}}
+        <div>
+            <x-hyperlink url="{{url('/book/' . $book->slug)}}" title="{{$book->title}}" /> by: {{ $book->author }}
+        </div>
     @endforeach
-{{--    {{ $booksThisWeek->count() }} new books--}}
 
-<x-mail::button :url="{{ config("app.url") }}">
-    {{ config("app.name") }}
-</x-mail::button>
+{{--<x-mail::button :url="{{ config("app.url") }}">--}}
+{{--    {{ config("app.name") }}--}}
+{{--</x-mail::button>--}}
 
 Thanks,<br>
 {{ config('app.name') }}
