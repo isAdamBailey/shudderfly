@@ -1,7 +1,7 @@
 <script setup>
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import BreezeValidationErrors from "@/Components/ValidationErrors.vue";
-import { Head } from "@inertiajs/inertia-vue3";
+import { Head } from "@inertiajs/vue3";
 import NewBookForm from "@/Pages/Dashboard/NewBookForm.vue";
 import UsersForm from "@/Pages/Dashboard/UsersForm.vue";
 import { ref } from "vue";

@@ -3,7 +3,7 @@ import BreezeButton from "@/Components/Button.vue";
 import BreezeInput from "@/Components/TextInput.vue";
 import BreezeLabel from "@/Components/InputLabel.vue";
 import DeleteForm from "@/Pages/Book/DeleteBookForm.vue";
-import { useForm, usePage } from "@inertiajs/inertia-vue3";
+import { useForm, usePage } from "@inertiajs/vue3";
 import TextArea from "@/Components/TextArea.vue";
 import Multiselect from "@vueform/multiselect";
 import { computed } from "vue";
@@ -29,8 +29,8 @@ const authorsOptions = computed(() => {
 });
 
 const categoriesOptions = computed(() => {
-    return usePage().props.value.categories
-        ? usePage().props.value.categories.map((category) => {
+    return usePage().props.categories
+        ? usePage().props.categories.map((category) => {
               return { value: category.id, label: category.name };
           })
         : [];

@@ -44,7 +44,7 @@
 
 <script setup>
 import LazyLoader from "@/Components/LazyLoader.vue";
-import { Link } from "@inertiajs/inertia-vue3";
+import { Link } from "@inertiajs/vue3";
 import { ref, onMounted, computed } from "vue";
 import axios from "axios";
 

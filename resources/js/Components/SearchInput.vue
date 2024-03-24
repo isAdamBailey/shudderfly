@@ -30,7 +30,7 @@
 
 <script>
 import { defineComponent } from "vue";
-import { usePage } from "@inertiajs/inertia-vue3";
+import { usePage } from "@inertiajs/vue3";
 import Microphone from "@/Components/svg/MicrophoneIcon.vue";
 
 export default defineComponent({
@@ -48,7 +48,7 @@ export default defineComponent({
 
     data() {
         return {
-            search: usePage().props.value?.search || null,
+            search: usePage().props?.search || null,
             voiceActive: false,
         };
     },

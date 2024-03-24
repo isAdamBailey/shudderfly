@@ -93,12 +93,12 @@
 
 <script setup>
 import DangerButton from "@/Components/DangerButton.vue";
-import { useForm, usePage } from "@inertiajs/inertia-vue3";
-import { Inertia } from "@inertiajs/inertia";
+import { useForm, usePage } from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue";
 
 const isCurrentUser = (user) =>
-    usePage().props.value.auth.user.name === user.name || user.email === "adamjbailey7@gmail.com";
+    usePage().props.auth.user.name === user.name ||
+    user.email === "adamjbailey7@gmail.com";
 
 const form = useForm({
     user: null,
@@ -112,7 +112,7 @@ const setPermissions = (user, permissions) => {
 };
 
 const deleteUser = (user) => {
-    Inertia.delete(route("admin.destroy", { email: user.email }), {
+    form.delete(route("admin.destroy", { email: user.email }), {
         onBefore: () =>
             confirm(
                 `Are you sure you want to delete ${user.name}? All data related to them will be deleted.`

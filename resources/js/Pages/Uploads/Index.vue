@@ -54,11 +54,11 @@
 <script setup>
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import PhotosGrid from "@/Pages/Uploads/UploadsGrid.vue";
-import { Head, Link } from "@inertiajs/inertia-vue3";
+import { Head, Link } from "@inertiajs/vue3";
 import RoundArrowsIcon from "@/Components/svg/RoundArrowsIcon.vue";
 import Button from "@/Components/Button.vue";
 import { ref, computed } from "vue";
-import { usePage } from "@inertiajs/inertia-vue3";
+import { usePage } from "@inertiajs/vue3";
 import SearchInput from "@/Components/SearchInput.vue";
 
 const props = defineProps({
@@ -78,7 +78,7 @@ const isOld = computed(() => {
 const oldButtonDisabled = ref(false);
 const randomButtonDisabled = ref(false);
 const title = computed(() => {
-    const search = usePage().props.value.search;
+    const search = usePage().props.search;
     if (search) {
         return `Farts with "${search}"`;
     }

@@ -128,7 +128,7 @@
 <script setup>
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import BreezeValidationErrors from "@/Components/ValidationErrors.vue";
-import { Head, Link } from "@inertiajs/inertia-vue3";
+import { Head, Link } from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue";
 import { onMounted, ref } from "vue";
 import NewPageForm from "@/Pages/Book/NewPageForm.vue";

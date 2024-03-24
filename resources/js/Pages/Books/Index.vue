@@ -35,11 +35,11 @@
 <script setup>
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import BooksGrid from "@/Pages/Books/BooksGrid.vue";
-import { Head, Link, usePage } from "@inertiajs/inertia-vue3";
+import { Head, Link, usePage } from "@inertiajs/vue3";
 import SearchInput from "@/Components/SearchInput.vue";
 import { ref, computed } from "vue";
 
-const categories = ref(usePage().props.value.categories);
+const categories = ref(usePage().props.categories);
 const props = defineProps({
     searchCategories: {
         type: Array,
@@ -51,7 +51,7 @@ const workingCategories = computed(() => {
 });
 
 const title = computed(() => {
-    const search = usePage().props.value.search;
+    const search = usePage().props.search;
     if (search) {
         return `Poops with "${search}"`;
     }

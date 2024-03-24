@@ -1,6 +1,6 @@
 <script setup>
 import BreezeLabel from "@/Components/InputLabel.vue";
-import { useForm, usePage } from "@inertiajs/inertia-vue3";
+import { useForm, usePage } from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue";
 import { computed, ref } from "vue";
 import DeletePageForm from "@/Pages/Book/DeletePageForm.vue";
@@ -31,8 +31,8 @@ const imagePreview = ref(props.page.image_path);
 const imageInput = ref(null);
 
 const booksOptions = computed(() => {
-    return usePage().props.value.books
-        ? usePage().props.value.books.map((book) => {
+    return usePage().props.books
+        ? usePage().props.books.map((book) => {
               return { value: book.id, label: book.title };
           })
         : [];

@@ -1,5 +1,5 @@
 <script setup>
-import { Link } from "@inertiajs/inertia-vue3";
+import { Link } from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 

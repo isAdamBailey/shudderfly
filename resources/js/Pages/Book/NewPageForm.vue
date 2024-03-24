@@ -1,6 +1,6 @@
 <script setup>
 import BreezeLabel from "@/Components/InputLabel.vue";
-import { useForm } from "@inertiajs/inertia-vue3";
+import { useForm } from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue";
 import { ref, computed } from "vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";

@@ -6,7 +6,7 @@
 
 <script setup>
 import DangerButton from "@/Components/DangerButton.vue";
-import { useForm } from "@inertiajs/inertia-vue3";
+import { useForm } from "@inertiajs/vue3";
 
 const props = defineProps({
     book: Object,

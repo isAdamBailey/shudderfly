@@ -6,12 +6,12 @@ import DropdownLink from "@/Components/DropdownLink.vue";
 import NavLink from "@/Components/NavLink.vue";
 import ThemeToggle from "@/Layouts/Nav/ThemeToggle.vue";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
-import { Link, usePage } from "@inertiajs/inertia-vue3";
+import { Link, usePage } from "@inertiajs/vue3";
 import { usePermissions } from "@/permissions";
 
 const { canEditPages } = usePermissions();
 const showingNavigationDropdown = ref(false);
-const username = ref(usePage().props.value.auth.user.name);
+const username = ref(usePage().props.auth.user.name);
 </script>
 
 <template>

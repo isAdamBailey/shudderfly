@@ -2,7 +2,7 @@
 import BreezeButton from "@/Components/Button.vue";
 import BreezeInput from "@/Components/TextInput.vue";
 import BreezeLabel from "@/Components/InputLabel.vue";
-import { useForm, usePage } from "@inertiajs/inertia-vue3";
+import { useForm, usePage } from "@inertiajs/vue3";
 import Multiselect from "@vueform/multiselect";
 import { computed } from "vue";
 
@@ -13,11 +13,11 @@ const props = defineProps({
     },
 });
 
-const currentUser = usePage().props.value.auth.user.name;
+const currentUser = usePage().props.auth.user.name;
 
 const categoriesOptions = computed(() => {
-    return usePage().props.value.categories
-        ? usePage().props.value.categories.map((category) => {
+    return usePage().props.categories
+        ? usePage().props.categories.map((category) => {
               return { value: category.id, label: category.name };
           })
         : [];
