@@ -25,7 +25,7 @@ class Page extends Model
         }
 
         return Storage::disk('cloudfront')->url($value);
-//        return Storage::url($value);
+        //        return Storage::url($value);
     }
 
     public function scopeHasImage($query)

@@ -27,9 +27,10 @@ class PageController extends Controller
             ->when($request->filter === 'old', function ($query) {
                 $yearAgo = clone $query;
                 $yearAgo->whereDate('created_at', '<=', today()->subYear());
-                if (!$yearAgo->exists()) {
+                if (! $yearAgo->exists()) {
                     return $query->oldest();
                 }
+
                 return $yearAgo->orderBy('created_at', 'desc');
             })
             ->when($request->filter === 'random', fn ($query) => $query->inRandomOrder())
@@ -106,6 +107,7 @@ class PageController extends Controller
         $page->delete();
 
         $this->resetCoverImage($page->book_id);
+
         return redirect(route('books.show', $page->book));
     }
 

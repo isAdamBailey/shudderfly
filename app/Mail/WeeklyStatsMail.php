@@ -3,7 +3,6 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -16,23 +15,21 @@ class WeeklyStatsMail extends Mailable
     use Queueable, SerializesModels;
 
     public Model $user;
+
     public Model $leastPages;
+
     public Model $mostPages;
+
     public Model $mostRead;
+
     public Model $leastRead;
+
     public Collection $booksThisWeek;
+
     public Collection $pagesThisWeek;
 
     /**
      * Create a new message instance.
-     *
-     * @param Model $user
-     * @param Model $leastPages
-     * @param Model $mostPages
-     * @param Model $mostRead
-     * @param Model $leastRead
-     * @param Collection $booksThisWeek
-     * @param Collection $pagesThisWeek
      */
     public function __construct(Model $user, Model $leastPages, Model $mostPages, Model $mostRead, Model $leastRead, Collection $booksThisWeek, Collection $pagesThisWeek)
     {
@@ -51,7 +48,7 @@ class WeeklyStatsMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: config("app.name").' Weekly Stats',
+            subject: config('app.name').' Weekly Stats',
         );
     }
 
