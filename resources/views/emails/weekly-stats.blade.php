@@ -15,6 +15,7 @@
 @endforeach
 @endif
 
+
 ## Pages Added This Week
 {{ $pagesThisWeek->count() }} new pages were added.
 
