@@ -21,7 +21,7 @@ class Book extends Model
     public function pages(): HasMany
     {
         return $this->hasMany(Page::class)
-            ->orderBy('updated_at', 'desc');
+            ->orderBy('created_at', 'desc');
     }
 
     public function coverImage(): BelongsTo
