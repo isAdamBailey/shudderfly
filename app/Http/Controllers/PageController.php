@@ -82,13 +82,8 @@ class PageController extends Controller
         }
 
         if ($request->has('book_id')) {
-            $originalBookId = $page->book_id;
-            if ($page->book->cover_page === $page->id && $originalBookId !== $request->book_id) {
-                $this->resetCoverImage($originalBookId);
-            }
             $page->book_id = $request->book_id;
         }
-
 
         $page->save();
 
