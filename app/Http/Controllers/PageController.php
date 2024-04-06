@@ -69,7 +69,6 @@ class PageController extends Controller
      */
     public function update(UpdatePageRequest $request, Page $page): Redirector|RedirectResponse|Application
     {
-        $bookId = $page->book_id;
         if ($request->hasFile('image')) {
             if (Storage::exists($page->image_path)) {
                 Storage::delete($page->image_path);
@@ -83,17 +82,15 @@ class PageController extends Controller
         }
 
         if ($request->has('book_id')) {
+            $originalBookId = $page->book_id;
+            if ($page->book->cover_page === $page->id && $originalBookId !== $request->book_id) {
+                $this->resetCoverImage($originalBookId);
+            }
             $page->book_id = $request->book_id;
         }
 
-        $page->save();
 
-        if ($request->has('book_id') && $bookId !== $page->book_id) {
-            // if we are changing the book, we need to reset the cover image
-            // for both the book we removed from and the book we added to
-            $this->resetCoverImage($bookId);
-            $this->resetCoverImage($page->book_id);
-        }
+        $page->save();
 
         return redirect(route('books.show', $page->book));
     }
@@ -106,7 +103,9 @@ class PageController extends Controller
         Storage::disk('s3')->delete($page->image_path);
         $page->delete();
 
-        $this->resetCoverImage($page->book_id);
+        if ($page->book->cover_page === $page->id) {
+            $this->resetCoverImage($page->book_id);
+        }
 
         return redirect(route('books.show', $page->book));
     }
@@ -118,14 +117,12 @@ class PageController extends Controller
             return;
         }
 
-        $search = '%.jpg';
-        if (app()->environment('local')) {
-            // the seeded images are pngs
-            $search = '%.png%';
-        }
         $page = $book->pages()
             ->whereNotNull('image_path')
-            ->where('image_path', 'like', $search)
+            ->where(function ($query) {
+                $query->where('image_path', 'like', '%.jpg')
+                    ->orWhere('image_path', 'like', '%.png');
+            })
             ->first();
 
         if ($page) {
