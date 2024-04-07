@@ -16,6 +16,10 @@ class WeeklyStatsMail extends Mailable
 
     public Model $user;
 
+    public int $totalBooks;
+
+    public int $totalPages;
+
     public Model $leastPages;
 
     public Model $mostPages;
@@ -31,9 +35,11 @@ class WeeklyStatsMail extends Mailable
     /**
      * Create a new message instance.
      */
-    public function __construct(Model $user, Model $leastPages, Model $mostPages, Model $mostRead, Model $leastRead, Collection $booksThisWeek, Collection $pagesThisWeek)
+    public function __construct(Model $user, int $totalBooks, int $totalPages, Model $leastPages, Model $mostPages, Model $mostRead, Model $leastRead, Collection $booksThisWeek, Collection $pagesThisWeek)
     {
         $this->user = $user;
+        $this->totalBooks = $totalBooks;
+        $this->totalPages = $totalPages;
         $this->leastPages = $leastPages;
         $this->mostPages = $mostPages;
         $this->mostRead = $mostRead;

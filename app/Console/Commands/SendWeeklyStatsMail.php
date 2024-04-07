@@ -34,6 +34,8 @@ class SendWeeklyStatsMail extends Command
         $permission = Permission::findByName('edit pages');
         $users = $permission->users;
 
+        $totalBooks = Book::count();
+        $totalPages = Page::count();
         $leastPages = Book::withCount('pages')
             ->orderBy('pages_count')
             ->orderBy('created_at')
@@ -58,12 +60,14 @@ class SendWeeklyStatsMail extends Command
         foreach ($users as $user) {
             Mail::to($user->email)->send(new WeeklyStatsMail(
                 $user,
+                $totalBooks,
+                $totalPages,
                 $leastPages,
                 $mostPages,
                 $mostRead,
                 $leastRead,
                 $booksThisWeek,
-                $pagesThisWeek,
+                $pagesThisWeek
             ));
         }
     }

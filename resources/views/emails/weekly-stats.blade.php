@@ -1,23 +1,23 @@
 <x-mail::message>
 # {{ config("app.name") }} Weekly Stats
 
-{{ $user->name }}, here is what was added this week:
+## {{ $user->name }}, here is what was added this week:
 
-{{ $booksThisWeek->count() }} new books were added this week.
+**{{ $booksThisWeek->count() }}** new books!
 
-@if($booksThisWeek->count() > 0)
-## Books Added This Week
-@foreach($booksThisWeek as $book)
-<div>
-    <x-email-hyperlink href="{{url('/book/' . $book->slug)}}">{{ $book->title }}</x-email-hyperlink>
-    by: {{ $book->author }}
-</div>
-@endforeach
-@endif
+{{--@if($booksThisWeek->count() > 0)--}}
+{{--@foreach($booksThisWeek as $book)--}}
+{{--<p>--}}
+{{--    <x-email-hyperlink href="{{url('/book/' . $book->slug)}}">{{ $book->title }}</x-email-hyperlink>--}}
+{{--    by: {{ $book->author }}--}}
+{{--</p>--}}
+{{--@endforeach--}}
+{{--@endif--}}
 
+**{{ $pagesThisWeek->count() }}** new pages!
 
-## Pages Added This Week
-{{ $pagesThisWeek->count() }} new pages were added.
+## {{ $totalBooks }} all time total books.
+## {{ $totalPages }} all time total pages.
 
 ## Most Read Book
 <x-email-hyperlink href="{{url('/book/' . $mostRead->slug)}}">{{ $mostRead->title }}</x-email-hyperlink>
