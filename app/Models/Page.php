@@ -15,6 +15,7 @@ class Page extends Model
     protected $fillable = [
         'content',
         'image_path',
+        'video_link',
         'book_id',
     ];
 

@@ -55,6 +55,7 @@ class PageController extends Controller
         $book->pages()->create([
             'content' => $request->input('content'),
             'image_path' => $image,
+            'video_link' => $request->input('video_link') ? trim($request->input('video_link')) : null,
         ]);
 
         if (! $book->cover_page) {
@@ -83,6 +84,10 @@ class PageController extends Controller
 
         if ($request->has('book_id')) {
             $page->book_id = $request->book_id;
+        }
+
+        if ($request->has('video_link')) {
+            $page->video_link = $request->video_link;
         }
 
         $page->save();
