@@ -23,10 +23,17 @@
         <div v-if="canEditPages">
             <Button
                 v-if="!showPageSettings"
-                class="w-full rounded-t-none"
+                class="w-full rounded-t-none bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
                 @click="showPageSettings = true"
             >
                 Edit Fart
+            </Button>
+            <Button
+                v-else
+                class="w-full rounded-b-none bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
+                @click="showPageSettings = false"
+            >
+                Close fart settings
             </Button>
             <EditPageForm
                 v-if="showPageSettings"
