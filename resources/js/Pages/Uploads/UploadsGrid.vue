@@ -8,6 +8,16 @@ import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 defineProps({
     photos: Array,
 });
+
+function embedUrl(link) {
+    if (link) {
+        const parts = link.split("/");
+        const idAndParams = parts[parts.length - 1];
+        const videoId = idAndParams.split("?")[0];
+        return `https://www.youtube.com/embed/${videoId}?controls=0&modestbranding=1&rel=0`;
+    }
+    return null;
+}
 </script>
 
 <template>
@@ -27,6 +37,14 @@ defineProps({
                     :src="photo.image_path"
                     :is-cover="true"
                 />
+                <div v-if="photo.video_link" class="video-container">
+                    <iframe
+                        :title="photo.description"
+                        :src="embedUrl(photo.video_link)"
+                        frameborder="0"
+                        allow="accelerometer; encrypted-media;"
+                    ></iframe>
+                </div>
                 <div
                     v-if="photo.content"
                     class="absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 text-center text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"

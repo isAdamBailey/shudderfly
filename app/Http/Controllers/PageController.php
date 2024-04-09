@@ -21,7 +21,10 @@ class PageController extends Controller
         $search = $request->search;
 
         $photos = Page::with('book')
-            ->where('image_path', '!=', '')
+            ->where(function ($query) {
+                $query->where('image_path', '!=', '')
+                    ->orWhereNotNull('video_link');
+            })
             ->when($search, fn ($query) => $query->where('content', 'LIKE', '%'.$search.'%'))
             ->unless($request->filter, fn ($query) => $query->latest())
             ->when($request->filter === 'old', function ($query) {
