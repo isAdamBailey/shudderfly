@@ -120,7 +120,10 @@ const submit = async () => {
                         v-else-if="imagePreview.startsWith('data:video')"
                         class="w-3/4"
                     >
-                        <VideoIcon class="text-blue-700" />
+                        <video controls class="w-full h-auto">
+                            <source :src="imagePreview" type="video/mp4" />
+                            <VideoIcon class="text-blue-700" />
+                        </video>
                     </div>
 
                     <Button
