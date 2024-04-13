@@ -88,7 +88,7 @@ const embedUrl = computed(() => {
         }
 
         return videoId
-            ? `https://www.youtube.com/embed/${videoId}?controls=0&modestbranding=1&rel=0`
+            ? `https://www.youtube.com/embed/${videoId}?modestbranding=1&rel=0`
             : null;
     }
     return null;
