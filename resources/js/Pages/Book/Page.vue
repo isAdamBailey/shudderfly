@@ -73,12 +73,23 @@ let showPageSettings = ref(false);
 
 const embedUrl = computed(() => {
     if (props.page.video_link) {
-        const parts = props.page.video_link.split("/");
-        const idAndParams = parts[parts.length - 1];
-        const videoId = idAndParams.includes("=")
-            ? new URLSearchParams(idAndParams).get("v")
-            : idAndParams;
-        return `https://www.youtube.com/embed/${videoId}?controls=0&modestbranding=1&rel=0`;
+        let videoId = null;
+
+        if (props.page.video_link.includes("watch?v=")) {
+            const urlObj = new URL(props.page.video_link);
+            const params = new URLSearchParams(urlObj.search);
+            videoId = params.get("v");
+        } else {
+            const parts = props.page.video_link.split("/");
+            const idAndParams = parts[parts.length - 1];
+            videoId = idAndParams.includes("=")
+                ? new URLSearchParams(idAndParams).get("v")
+                : idAndParams;
+        }
+
+        return videoId
+            ? `https://www.youtube.com/embed/${videoId}?controls=0&modestbranding=1&rel=0`
+            : null;
     }
     return null;
 });
