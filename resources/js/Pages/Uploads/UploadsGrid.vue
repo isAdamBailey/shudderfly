@@ -36,7 +36,9 @@ function fetchUploads() {
             preserveState: true,
             preserveScroll: true,
             onSuccess: (page) => {
-                uploads.value = [...uploads.value, ...page.props.photos.data];
+                page.props.photos.data.forEach((item) =>
+                    uploads.value.push(item)
+                );
             },
         }
     );
