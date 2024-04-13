@@ -18,6 +18,7 @@ class Kernel extends ConsoleKernel
             ->weekly()
             ->withoutOverlapping();
     }
+
     /**
      * Register the commands for the application.
      *

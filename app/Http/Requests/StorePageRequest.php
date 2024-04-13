@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\AtLeastOneField;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StorePageRequest extends FormRequest
@@ -25,12 +26,14 @@ class StorePageRequest extends FormRequest
     {
         return [
             'book_id' => 'integer|required',
-            'content' => 'string|nullable|required_without:image',
+            'content' => ['string', 'nullable', new AtLeastOneField(['content', 'image', 'video_link'])],
             'image' => [
+                'nullable',
                 'max:70000',
                 'mimes:jpg,jpeg,bmp,png,svg,webp,avi,gif,mpeg,quicktime,mp4',
-                'required_without:content',
+                new AtLeastOneField(['content', 'image', 'video_link']),
             ],
+            'video_link' => ['string', 'nullable', new AtLeastOneField(['content', 'image', 'video_link'])],
             'category_id' => 'integer',
         ];
     }

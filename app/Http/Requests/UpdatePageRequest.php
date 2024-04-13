@@ -31,6 +31,7 @@ class UpdatePageRequest extends FormRequest
                 'max:70000',
                 'mimes:jpg,jpeg,bmp,png,svg,webp,avi,gif,mpeg,quicktime,mp4',
             ],
+            'video_link' => 'string|nullable',
         ];
     }
 }

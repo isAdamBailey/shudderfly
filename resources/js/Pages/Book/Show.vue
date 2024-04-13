@@ -53,8 +53,7 @@
             </div>
             <div v-if="canEditPages">
                 <Button
-                    class="rounded-none font-bold px-12"
-                    :class="settingsOpen ? 'bg-pink-800 dark:bg-pink-800' : ''"
+                    class="rounded-none font-bold px-12 bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
                     @click="settingsOpen = !settingsOpen"
                 >
                     <span v-if="settingsOpen">Close</span>

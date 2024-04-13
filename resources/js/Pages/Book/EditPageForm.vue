@@ -2,11 +2,13 @@
 import BreezeLabel from "@/Components/InputLabel.vue";
 import { useForm, usePage } from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue";
-import { computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import DeletePageForm from "@/Pages/Book/DeletePageForm.vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
 import VideoIcon from "@/Components/svg/VideoIcon.vue";
 import Multiselect from "@vueform/multiselect";
+import InputLabel from "@/Components/InputLabel.vue";
+import TextInput from "@/Components/TextInput.vue";
 
 const emit = defineEmits(["close-page-form"]);
 
@@ -20,6 +22,7 @@ const pageForm = useForm({
     content: props.page.content,
     image: null,
     book_id: props.page.book_id,
+    video_link: props.page.video_link,
 });
 
 const bookForm = useForm({
@@ -29,6 +32,23 @@ const bookForm = useForm({
 const imagePreview = ref(props.page.image_path);
 
 const imageInput = ref(null);
+const mediaOption = ref("upload"); // upload , link
+
+onMounted(() => {
+    if (props.page.video_link) {
+        mediaOption.value = "link";
+    }
+});
+
+function selectLink() {
+    mediaOption.value = "link";
+    clearImageFileInput();
+}
+
+function selectUpload() {
+    mediaOption.value = "upload";
+    pageForm.video_link = null;
+}
 
 const booksOptions = computed(() => {
     return usePage().props.books
@@ -68,7 +88,8 @@ function updateImagePreview() {
 
 function clearImageFileInput() {
     if (imageInput.value) {
-        imageInput.value = null;
+        imageInput.value.value = null;
+        imagePreview.value = "";
     }
 }
 
@@ -99,8 +120,23 @@ const makeCoverPage = () => {
 <template>
     <div class="border-t-2 bg-white dark:bg-gray-800 rounded p-5 mt-10">
         <form @submit.prevent="submit">
+            <div class="mb-4">
+                <Button
+                    :is-active="mediaOption === 'upload'"
+                    class="mr-2"
+                    @click.prevent="selectUpload"
+                >
+                    Upload Media
+                </Button>
+                <Button
+                    :is-active="mediaOption === 'link'"
+                    @click.prevent="selectLink"
+                >
+                    YouTube Link
+                </Button>
+            </div>
             <div class="flex flex-wrap">
-                <div class="w-full md:w-1/4">
+                <div v-if="mediaOption === 'upload'" class="w-full">
                     <BreezeLabel for="imageInput" value="Media" />
                     <input
                         ref="imageInput"
@@ -118,11 +154,8 @@ const makeCoverPage = () => {
                             'background-image: url(\'' + imagePreview + '\');'
                         "
                     ></div>
-                    <div
-                        v-else-if="imagePreview.startsWith('data:video')"
-                        class="w-3/4"
-                    >
-                        <VideoIcon class="text-blue-700 dark:text-gray-200" />
+                    <div v-else class="w-32">
+                        <VideoIcon class="text-blue-700" />
                     </div>
 
                     <Button
@@ -134,7 +167,15 @@ const makeCoverPage = () => {
                     </Button>
                 </div>
 
-                <div class="w-full md:w-3/4">
+                <div v-if="mediaOption === 'link'" class="w-full mr-2">
+                    <InputLabel for="media-link" value="YouTube Link" />
+                    <TextInput
+                        id="media-link"
+                        v-model="pageForm.video_link"
+                        class="mt-1 block w-full"
+                    />
+                </div>
+                <div class="w-full">
                     <BreezeLabel for="content" value="Words" />
                     <Wysiwyg
                         id="content"

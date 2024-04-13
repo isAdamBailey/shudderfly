@@ -6,7 +6,9 @@ import { ref, computed } from "vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
 import VideoIcon from "@/Components/svg/VideoIcon.vue";
 import { useVuelidate } from "@vuelidate/core";
-import { requiredIf } from "@vuelidate/validators";
+import TextInput from "@/Components/TextInput.vue";
+import InputError from "@/Components/InputError.vue";
+import InputLabel from "@/Components/InputLabel.vue";
 
 const emit = defineEmits(["close-form"]);
 
@@ -18,6 +20,7 @@ const form = useForm({
     book_id: props.book.id,
     content: "",
     image: null,
+    video_link: null,
 });
 
 const imageInput = ref(null);
@@ -29,20 +32,24 @@ const rules = computed(() => {
         }
         return imageInput.value.files[0]?.size < 40714055;
     };
+    const atLeastOneRequired = () => {
+        return (
+            form.video_link ||
+            form.image ||
+            (form.content !== "" && form.content !== "<p></p>")
+        );
+    };
     return {
         form: {
+            video_link: {
+                required: atLeastOneRequired,
+            },
             image: {
-                required: requiredIf(
-                    (form.content === "" || form.content === "<p></p>") &&
-                        !form.image
-                ),
+                required: atLeastOneRequired,
                 file_size_validation,
             },
             content: {
-                required: requiredIf(
-                    !form.image &&
-                        (form.content === "" || form.content === "<p></p>")
-                ),
+                required: atLeastOneRequired,
             },
         },
     };
@@ -51,6 +58,17 @@ const rules = computed(() => {
 let v$ = useVuelidate(rules, form);
 
 const imagePreview = ref("");
+const mediaOption = ref("upload"); // upload , link
+
+function selectLink() {
+    mediaOption.value = "link";
+    clearImageFileInput();
+}
+
+function selectUpload() {
+    mediaOption.value = "upload";
+    form.video_link = null;
+}
 
 function selectNewImage() {
     v$.value.$reset();
@@ -71,7 +89,8 @@ function updateImagePreview() {
 
 function clearImageFileInput() {
     if (imageInput.value) {
-        imageInput.value = null;
+        imageInput.value.value = null;
+        imagePreview.value = "";
     }
 }
 
@@ -100,8 +119,23 @@ const submit = async () => {
             Add a New Fart
         </h3>
         <form @submit.prevent="submit">
+            <div class="mb-4">
+                <Button
+                    :is-active="mediaOption === 'upload'"
+                    class="mr-2"
+                    @click.prevent="selectUpload"
+                >
+                    Upload Media
+                </Button>
+                <Button
+                    :is-active="mediaOption === 'link'"
+                    @click.prevent="selectLink"
+                >
+                    YouTube Link
+                </Button>
+            </div>
             <div class="flex flex-wrap">
-                <div class="w-full md:w-1/4">
+                <div v-if="mediaOption === 'upload'" class="w-full mb-2">
                     <BreezeLabel for="imageInput" value="Media" />
                     <input
                         ref="imageInput"
@@ -135,7 +169,24 @@ const submit = async () => {
                     </Button>
                 </div>
 
-                <div class="w-full md:w-3/4">
+                <div v-if="mediaOption === 'link'" class="w-full mr-2">
+                    <InputLabel for="media-link" value="YouTube Link" />
+                    <TextInput
+                        id="media-link"
+                        v-model="form.video_link"
+                        class="mt-1 block w-full"
+                    />
+                    <InputError
+                        v-if="
+                            v$.$errors.length &&
+                            v$.form.video_link.required.$invalid
+                        "
+                        class="mt-2"
+                        message="A link to a video is required without any text or upload."
+                    />
+                </div>
+
+                <div class="w-full">
                     <BreezeLabel for="content" value="Words" />
                     <Wysiwyg
                         id="content"
@@ -164,6 +215,12 @@ const submit = async () => {
                 class="text-red-600"
             >
                 Some words are required without an upload.
+            </p>
+            <p
+                v-if="v$.$errors.length && v$.form.video_link.required.$invalid"
+                class="text-red-600"
+            >
+                A link to a video is required without any text or upload.
             </p>
 
             <div class="flex justify-center mt-5 md:mt-20">

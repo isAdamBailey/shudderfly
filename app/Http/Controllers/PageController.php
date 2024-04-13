@@ -21,7 +21,10 @@ class PageController extends Controller
         $search = $request->search;
 
         $photos = Page::with('book')
-            ->where('image_path', '!=', '')
+            ->where(function ($query) {
+                $query->where('image_path', '!=', '')
+                    ->orWhereNotNull('video_link');
+            })
             ->when($search, fn ($query) => $query->where('content', 'LIKE', '%'.$search.'%'))
             ->unless($request->filter, fn ($query) => $query->latest())
             ->when($request->filter === 'old', function ($query) {
@@ -55,6 +58,7 @@ class PageController extends Controller
         $book->pages()->create([
             'content' => $request->input('content'),
             'image_path' => $image,
+            'video_link' => $request->input('video_link') ? trim($request->input('video_link')) : null,
         ]);
 
         if (! $book->cover_page) {
@@ -70,11 +74,12 @@ class PageController extends Controller
     public function update(UpdatePageRequest $request, Page $page): Redirector|RedirectResponse|Application
     {
         if ($request->hasFile('image')) {
-            if (Storage::exists($page->image_path)) {
+            if ($page->image_path && Storage::exists($page->image_path)) {
                 Storage::delete($page->image_path);
             }
             $image = $request->file('image')->storePublicly('book/'.$page->book->slug);
             $page->image_path = $image;
+            $page->video_link = null;
         }
 
         if ($request->has('content')) {
@@ -83,6 +88,16 @@ class PageController extends Controller
 
         if ($request->has('book_id')) {
             $page->book_id = $request->book_id;
+        }
+
+        if ($request->has('video_link') && !is_null($request->video_link)) {
+            if ($page->image_path){
+                if (Storage::exists($page->image_path)) {
+                    Storage::delete($page->image_path);
+                }
+                $page->image_path = "";
+            }
+            $page->video_link = $request->video_link;
         }
 
         $page->save();
