@@ -1,5 +1,5 @@
 <script setup>
-import { Link, router } from "@inertiajs/vue3";
+import { Link, router, usePage } from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
@@ -18,10 +18,10 @@ const infiniteScroll = ref(null);
 let observer = null;
 
 watch(
-    () => props.photos,
-    (newPhotos) => {
-        if (newPhotos.search) {
-            uploads.value = newPhotos.data;
+    () => usePage().props.search,
+    (newSearch) => {
+        if (newSearch) {
+            uploads.value = props.photos.data;
         }
     },
     { immediate: true }
