@@ -30,13 +30,17 @@ onMounted(async () => {
 
 function fetchUploads() {
     const { props } = usePage();
-    router.get(props.photos.next_page_url, {
-        preserveState: true,
-        preserveScroll: true,
-        onSuccess: () => {
-            uploads.value = [...uploads.value, ...props.photos.data];
-        },
-    });
+    router.get(
+        props.photos.next_page_url,
+        {},
+        {
+            preserveState: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                uploads.value = [...uploads.value, ...props.photos.data];
+            },
+        }
+    );
 }
 
 function embedUrl(link) {
