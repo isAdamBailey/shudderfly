@@ -12,9 +12,7 @@ const props = defineProps({
     },
 });
 
-const uploads = computed(() => {
-    return props.photos.data;
-});
+const uploads = ref(props.photos.data);
 const infiniteScroll = ref(null);
 let observer = null;
 
@@ -36,9 +34,7 @@ function fetchUploads() {
             preserveState: true,
             preserveScroll: true,
             onSuccess: (page) => {
-                page.props.photos.data.forEach((item) =>
-                    uploads.value.push(item)
-                );
+                uploads.value = [...uploads.value, ...page.props.photos.data];
             },
         }
     );
