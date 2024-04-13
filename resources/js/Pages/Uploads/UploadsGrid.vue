@@ -3,7 +3,7 @@ import { Link, router } from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
-import { onMounted, ref, watch } from "vue";
+import { onMounted, ref } from "vue";
 
 const props = defineProps({
     photos: {
@@ -15,14 +15,6 @@ const props = defineProps({
 const uploads = ref(props.photos.data);
 const infiniteScroll = ref(null);
 let observer = null;
-
-watch(
-    () => props.photos.data,
-    (newData) => {
-        uploads.value = newData;
-    },
-    { immediate: true }
-);
 
 onMounted(async () => {
     uploads.value = props.photos.data;
