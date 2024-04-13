@@ -37,7 +37,9 @@ class PageController extends Controller
                 return $yearAgo->orderBy('created_at', 'desc');
             })
             ->when($request->filter === 'random', fn ($query) => $query->inRandomOrder())
-            ->paginate(25);
+            ->paginate(20);
+
+        $photos->appends($request->all())->links();
 
         return Inertia::render('Uploads/Index', [
             'photos' => $photos,

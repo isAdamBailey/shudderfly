@@ -30,7 +30,7 @@
 
 <script>
 import { defineComponent } from "vue";
-import { usePage } from "@inertiajs/vue3";
+import { usePage, router } from "@inertiajs/vue3";
 import Microphone from "@/Components/svg/MicrophoneIcon.vue";
 
 export default defineComponent({
@@ -69,14 +69,14 @@ export default defineComponent({
             if (this.search) {
                 this.searchMethod();
             } else {
-                this.$inertia.get(route(this.routeName));
+                router.get(route(this.routeName));
             }
         },
     },
 
     methods: {
         searchMethod: _.debounce(function () {
-            this.$inertia.get(
+            router.get(
                 route(this.routeName),
                 { search: this.search },
                 { preserveState: true }

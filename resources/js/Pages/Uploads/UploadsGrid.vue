@@ -1,13 +1,43 @@
 <script setup>
-import { Link } from "@inertiajs/vue3";
+import { Link, router, usePage } from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
-
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
+import { onMounted, ref, computed } from "vue";
 
-defineProps({
-    photos: Array,
+const props = defineProps({
+    photos: {
+        type: Object,
+        required: true,
+    },
 });
+
+const uploads = computed(() => {
+    return props.photos.data;
+});
+const infiniteScroll = ref(null);
+let observer = null;
+
+onMounted(async () => {
+    uploads.value = props.photos.data;
+    observer = new IntersectionObserver((entries) =>
+        entries.forEach((entry) => entry.isIntersecting && fetchUploads(), {
+            rootMargin: "-150px 0px 0px 0px",
+        })
+    );
+    observer.observe(infiniteScroll.value);
+});
+
+function fetchUploads() {
+    const { props } = usePage();
+    router.get(props.photos.next_page_url, {
+        preserveState: true,
+        preserveScroll: true,
+        onSuccess: () => {
+            uploads.value = [...uploads.value, ...props.photos.data];
+        },
+    });
+}
 
 function embedUrl(link) {
     if (link) {
@@ -35,11 +65,11 @@ function embedUrl(link) {
 
 <template>
     <div
-        v-if="photos.length"
+        v-if="uploads.length"
         class="mt-3 md:mt-0 mx-auto grid max-w-7xl grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] gap-2 md:p-4"
     >
         <div
-            v-for="photo in photos"
+            v-for="photo in uploads"
             :key="photo.id"
             class="shadow-sm rounded-lg overflow-hidden"
         >
@@ -87,4 +117,5 @@ function embedUrl(link) {
         </h2>
         <ManEmptyCircle />
     </div>
+    <div ref="infiniteScroll"></div>
 </template>

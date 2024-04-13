@@ -47,7 +47,7 @@
                 </Button>
             </Link>
         </div>
-        <PhotosGrid :photos="photos.data" />
+        <PhotosGrid :photos="photos" />
     </BreezeAuthenticatedLayout>
 </template>
 
