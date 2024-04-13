@@ -4,6 +4,7 @@ import Button from "@/Components/Button.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 import { onMounted, ref, watch } from "vue";
+import useGetYouTubeVideoId from "@/composables/useGetYouTubeVideoId";
 
 const props = defineProps({
     photos: {
@@ -51,26 +52,8 @@ function fetchUploads() {
 }
 
 function embedUrl(link) {
-    if (link) {
-        let videoId = null;
-
-        if (link.includes("watch?v=")) {
-            const urlObj = new URL(link);
-            const params = new URLSearchParams(urlObj.search);
-            videoId = params.get("v");
-        } else {
-            const parts = link.split("/");
-            const idAndParams = parts[parts.length - 1];
-            videoId = idAndParams.includes("=")
-                ? new URLSearchParams(idAndParams).get("v")
-                : idAndParams;
-        }
-
-        return videoId
-            ? `https://www.youtube.com/embed/${videoId}?controls=0&modestbranding=1&rel=0`
-            : null;
-    }
-    return null;
+    const { videoId } = useGetYouTubeVideoId(link);
+    return `https://www.youtube.com/embed/${videoId.value}?controls=0&modestbranding=1&rel=0`;
 }
 </script>
 

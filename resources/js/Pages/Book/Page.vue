@@ -55,11 +55,12 @@
 
 <script setup>
 import Button from "@/Components/Button.vue";
-import { ref, computed } from "vue";
+import { ref } from "vue";
 import EditPageForm from "@/Pages/Book/EditPageForm.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import { usePermissions } from "@/permissions";
 import { useDate } from "@/dateHelpers";
+import useGetYouTubeVideoId from "@/composables/useGetYouTubeVideoId";
 
 const { canEditPages } = usePermissions();
 const { short } = useDate();
@@ -70,29 +71,8 @@ const props = defineProps({
 });
 
 let showPageSettings = ref(false);
-
-const embedUrl = computed(() => {
-    if (props.page.video_link) {
-        let videoId = null;
-
-        if (props.page.video_link.includes("watch?v=")) {
-            const urlObj = new URL(props.page.video_link);
-            const params = new URLSearchParams(urlObj.search);
-            videoId = params.get("v");
-        } else {
-            const parts = props.page.video_link.split("/");
-            const idAndParams = parts[parts.length - 1];
-            videoId = idAndParams.includes("=")
-                ? new URLSearchParams(idAndParams).get("v")
-                : idAndParams;
-        }
-
-        return videoId
-            ? `https://www.youtube.com/embed/${videoId}?modestbranding=1&rel=0`
-            : null;
-    }
-    return null;
-});
+const { videoId } = useGetYouTubeVideoId(props.page.video_link);
+const embedUrl = `https://www.youtube.com/embed/${videoId.value}?modestbranding=1&rel=0`;
 
 function isEdited(page) {
     return page.updated_at !== page.created_at;
