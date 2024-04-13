@@ -1,5 +1,5 @@
 <script setup>
-import { Link, router, usePage } from "@inertiajs/vue3";
+import { Link, router } from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
@@ -29,15 +29,14 @@ onMounted(async () => {
 });
 
 function fetchUploads() {
-    const { props } = usePage();
     router.get(
         props.photos.next_page_url,
         {},
         {
             preserveState: true,
             preserveScroll: true,
-            onSuccess: () => {
-                uploads.value = [...uploads.value, ...props.photos.data];
+            onSuccess: (page) => {
+                uploads.value = [...uploads.value, ...page.props.photos.data];
             },
         }
     );
