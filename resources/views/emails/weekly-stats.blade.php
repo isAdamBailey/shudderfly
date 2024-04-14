@@ -5,14 +5,14 @@
 
 **{{ $booksThisWeek->count() }}** new books!
 
-{{--@if($booksThisWeek->count() > 0)--}}
-{{--@foreach($booksThisWeek as $book)--}}
-{{--<p>--}}
-{{--    <x-email-hyperlink href="{{url('/book/' . $book->slug)}}">{{ $book->title }}</x-email-hyperlink>--}}
-{{--    by: {{ $book->author }}--}}
-{{--</p>--}}
-{{--@endforeach--}}
-{{--@endif--}}
+@if($booksThisWeek->count() > 0)
+@foreach($booksThisWeek as $book)
+<p>
+    <x-email-hyperlink href="{{url('/book/' . $book->slug)}}">{{ $book->title }}</x-email-hyperlink>
+    by: {{ $book->author }}
+</p>
+@endforeach
+@endif
 
 **{{ $pagesThisWeek->count() }}** new pages!
 
