@@ -8,7 +8,7 @@
             :src="page.image_path"
             :alt="page.description"
         />
-        <div v-if="embedUrl" class="video-container">
+        <div v-else-if="embedUrl" class="video-container">
             <iframe
                 :title="page.description"
                 :src="embedUrl"
