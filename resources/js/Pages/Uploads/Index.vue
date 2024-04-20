@@ -41,6 +41,7 @@
             </Link>
         </div>
         <PhotosGrid :photos="photos" />
+        <ScrollTop />
     </BreezeAuthenticatedLayout>
 </template>
 
@@ -53,6 +54,7 @@ import Button from "@/Components/Button.vue";
 import { computed } from "vue";
 import { usePage } from "@inertiajs/vue3";
 import SearchInput from "@/Components/SearchInput.vue";
+import ScrollTop from "@/Components/ScrollTop.vue";
 
 const props = defineProps({
     photos: Object,
