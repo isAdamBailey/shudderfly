@@ -19,7 +19,7 @@
                     :is-active="isYouTube"
                     class="rounded-full border-amber-50 dark:border-gray-100 max-h-8 my-3"
                 >
-                    <span class="text-md mr-3">YouTube</span>
+                    <i class="ri-youtube-line text-3xl"></i>
                 </Button>
             </Link>
             <Link :href="route('pictures.index', { filter: 'random' })">
@@ -27,8 +27,7 @@
                     :is-active="isRandom"
                     class="rounded-full border-amber-50 dark:border-gray-100 max-h-8 my-3"
                 >
-                    <span class="text-md mr-3">Fart Mix</span>
-                    <RoundArrowsIcon />
+                    <i class="ri-dice-line text-3xl"></i>
                 </Button>
             </Link>
             <Link :href="route('pictures.index', { filter: 'old' })">
@@ -36,7 +35,7 @@
                     :is-active="isOld"
                     class="rounded-full border-amber-50 dark:border-gray-100 max-h-8 my-3"
                 >
-                    <span class="text-md mr-3">1 Year Ago</span>
+                    <i class="ri-history-line text-3xl"></i>
                 </Button>
             </Link>
         </div>
@@ -49,7 +48,6 @@
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import PhotosGrid from "@/Pages/Uploads/UploadsGrid.vue";
 import { Head, Link } from "@inertiajs/vue3";
-import RoundArrowsIcon from "@/Components/svg/RoundArrowsIcon.vue";
 import Button from "@/Components/Button.vue";
 import { computed } from "vue";
 import { usePage } from "@inertiajs/vue3";
