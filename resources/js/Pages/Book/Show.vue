@@ -3,6 +3,7 @@
 
     <BreezeAuthenticatedLayout>
         <template #header>
+            <SearchInput route-name="books.search" label="Poops" class="mb-2" />
             <Link :href="pages.first_page_url" class="w-full">
                 <div class="flex justify-between flex-wrap">
                     <div class="flex items-center">
@@ -98,27 +99,41 @@
         </div>
         <div
             v-if="pages.per_page < pages.total"
-            class="flex justify-around pb-20 mt-5"
+            class="flex justify-around pb-10 mt-5"
         >
             <Link
                 :href="pages.prev_page_url || pages.last_page_url"
                 as="button"
                 :disabled="prevButtonDisabled"
-                class="inline-flex items-center px-8 py-4 bg-yellow-900 dark:bg-gray-800 border border-transparent dark:border-gray-500 rounded-md text-white hover:bg-yellow-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:shadow-outline-blue disabled:opacity-25 transition ease-in-out duration-150"
+                class="inline-flex items-center text-white disabled:opacity-25 transition ease-in-out duration-150"
                 aria-label="previous page"
                 @click="prevButtonDisabled = true"
             >
-                <ArrowIcon class="rotate-180" />
+                <i
+                    class="ri-arrow-left-circle-fill text-7xl rounded-full bg-amber-50 text-amber-800 dark:text-gray-900"
+                ></i>
+            </Link>
+            <Link
+                :href="centerPageUrl"
+                as="button"
+                class="inline-flex items-center text-white transition ease-in-out duration-150"
+                aria-label="center page"
+            >
+                <i
+                    class="ri-contract-left-right-fill border-4 text-6xl rounded-full text-amber-50 dark:text-gray-100 bg-amber-800 dark:bg-gray-800"
+                ></i>
             </Link>
             <Link
                 :href="pages.next_page_url || pages.first_page_url"
                 as="button"
                 :disabled="nextButtonDisabled"
-                class="inline-flex items-center px-8 py-4 bg-yellow-900 dark:bg-gray-800 border border-transparent dark:border-gray-500 rounded-md text-white hover:bg-yellow-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:shadow-outline-blue disabled:opacity-25 transition ease-in-out duration-150"
+                class="inline-flex items-center text-white disabled:opacity-25 transition ease-in-out duration-150"
                 aria-label="next page"
                 @click="nextButtonDisabled = true"
             >
-                <ArrowIcon />
+                <i
+                    class="ri-arrow-right-circle-fill text-7xl rounded-full bg-amber-50 text-amber-800 dark:text-gray-900"
+                ></i>
             </Link>
         </div>
     </BreezeAuthenticatedLayout>
@@ -134,8 +149,8 @@ import NewPageForm from "@/Pages/Book/NewPageForm.vue";
 import EditForm from "@/Pages/Book/EditBookForm.vue";
 import { usePermissions } from "@/permissions";
 import Page from "@/Pages/Book/Page.vue";
-import ArrowIcon from "@/Components/svg/ArrowIcon.vue";
 import { useDate } from "@/dateHelpers";
+import SearchInput from "@/Components/SearchInput.vue";
 
 const { canEditPages } = usePermissions();
 const { short } = useDate();
@@ -146,6 +161,8 @@ const props = defineProps({
     authors: Array,
 });
 
+const centerPageNumber = Math.ceil(props.pages.total / 2 / 2);
+const centerPageUrl = `${props.pages.path}?page=${centerPageNumber}`;
 const prevButtonDisabled = ref(false);
 const nextButtonDisabled = ref(false);
 let settingsOpen = ref(false);
