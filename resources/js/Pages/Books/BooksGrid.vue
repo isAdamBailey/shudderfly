@@ -5,12 +5,12 @@
         >
     </div>
     <div v-else-if="workingBooks.length > 0">
-        <h3 class="pl-3 pt-2 text-2xl text-gray-100 font-bold">
+        <h3 class="pl-3 pt-2 text-2xl text-gray-100 font-bold uppercase">
             {{ title }}
         </h3>
         <div
             ref="content"
-            class="flex snap-x space-x-5 overflow-y-hidden pb-6 scrollbar scrollbar-thumb-gray-500 scrollbar-thumb-rounded"
+            class="flex snap-x space-x-1 overflow-y-hidden pb-2 scrollbar scrollbar-thumb-gray-500 scrollbar-thumb-rounded"
             @scroll="handleScroll"
         >
             <Link

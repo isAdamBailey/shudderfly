@@ -60,7 +60,7 @@ function embedUrl(link) {
 <template>
     <div
         v-if="uploads.length"
-        class="mt-3 md:mt-0 mx-auto grid max-w-7xl grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] gap-2 md:p-4"
+        class="mt-3 md:mt-0 mx-auto grid max-w-7xl grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] gap-1 md:p-4"
     >
         <div
             v-for="photo in uploads"
@@ -68,27 +68,8 @@ function embedUrl(link) {
             class="shadow-sm rounded-lg overflow-hidden"
         >
             <div class="relative flex justify-center flex-wrap">
-                <LazyLoader
-                    v-if="photo.image_path"
-                    classes="rounded-top"
-                    :src="photo.image_path"
-                    :is-cover="true"
-                />
-                <div v-if="photo.video_link" class="video-container">
-                    <iframe
-                        :title="photo.description"
-                        :src="embedUrl(photo.video_link)"
-                        frameborder="0"
-                        allow="accelerometer; encrypted-media;"
-                    ></iframe>
-                </div>
-                <div
-                    v-if="photo.content"
-                    class="absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 text-center text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
-                    v-html="photo.content"
-                ></div>
                 <Link
-                    class="w-full"
+                    class="w-full h-full"
                     :href="
                         route('books.show', {
                             book: photo.book.slug,
@@ -96,9 +77,32 @@ function embedUrl(link) {
                         })
                     "
                 >
-                    <Button class="w-full rounded-t-none"
-                        >See Fart in {{ photo.book.title }}</Button
+                    <LazyLoader
+                        v-if="photo.image_path"
+                        classes="rounded-top pointer-events-none"
+                        :src="photo.image_path"
+                        :is-cover="true"
+                    />
+                    <div
+                        v-if="photo.video_link"
+                        class="flex justify-center items-center pointer-events-none"
                     >
+                        <iframe
+                            :title="photo.description"
+                            :src="embedUrl(photo.video_link)"
+                            frameborder="0"
+                            allow="accelerometer; encrypted-media;"
+                        ></iframe>
+                    </div>
+                    <div
+                        v-if="photo.content"
+                        class="absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 text-center text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
+                        v-html="photo.content"
+                    ></div>
+
+                    <Button class="w-full rounded-t-none truncate">{{
+                        photo.book.title
+                    }}</Button>
                 </Link>
             </div>
         </div>
