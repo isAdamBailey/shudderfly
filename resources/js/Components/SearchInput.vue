@@ -3,7 +3,7 @@
         <label for="search" class="hidden">Search</label>
         <input
             id="search"
-            ref="search"
+            ref="searchRef"
             v-model="search"
             class="h-8 w-full cursor-pointer rounded-full border border-blue-700 bg-gray-100 px-4 pb-0 pt-px text-gray-700 outline-none transition focus:border-blue-400"
             :class="{ 'border-red-500 border-2': voiceActive }"
@@ -14,106 +14,90 @@
             @keyup.esc="search = null"
         />
         <button
-            class="self-center text-amber-200 dark:text-gray-100 ml-2 w-6 h-6"
-            :class="voiceActive ? ' animate-bounce' : 'animate-none'"
+            class="self-center flex items-center text-amber-200 dark:text-gray-100 ml-2 w-6 h-6"
+            :class="{
+                'text-red-500': voiceActive,
+                'microphone-icon': !voiceActive,
+            }"
             @click="startVoiceRecognition"
         >
-            <Microphone
-                :class="{
-                    'text-red-500': voiceActive,
-                    'microphone-icon': !voiceActive,
-                }"
-            />
+            <i class="ri-mic-line text-3xl"></i>
         </button>
     </div>
 </template>
 
-<script>
-import { defineComponent } from "vue";
+<script setup>
+import { ref, computed, watch } from "vue";
 import { usePage, router } from "@inertiajs/vue3";
-import Microphone from "@/Components/svg/MicrophoneIcon.vue";
 
-export default defineComponent({
-    components: { Microphone },
-    props: {
-        routeName: {
-            type: String,
-            required: true,
-        },
-        label: {
-            type: String,
-            default: null,
-        },
+const props = defineProps({
+    routeName: {
+        type: String,
+        required: true,
     },
-
-    data() {
-        return {
-            search: usePage().props?.search || null,
-            voiceActive: false,
-        };
-    },
-
-    computed: {
-        typeName() {
-            return this.label || this.routeName.split(".")[0] || "something";
-        },
-        searchPlaceholder() {
-            return this.voiceActive
-                ? "Listening..."
-                : `Search ${this.typeName}!`;
-        },
-    },
-
-    watch: {
-        search() {
-            if (this.search) {
-                this.searchMethod();
-            } else {
-                router.get(route(this.routeName));
-            }
-        },
-    },
-
-    methods: {
-        searchMethod: _.debounce(function () {
-            router.get(
-                route(this.routeName),
-                { search: this.search },
-                { preserveState: true }
-            );
-        }, 500),
-
-        startVoiceRecognition() {
-            const recognition = new (window.SpeechRecognition ||
-                window.webkitSpeechRecognition)();
-            recognition.interimResults = true;
-
-            recognition.addEventListener("result", (event) => {
-                let transcript = Array.from(event.results)
-                    .map((result) => result[0])
-                    .map((result) => result.transcript)
-                    .join("");
-
-                if (event.results[0].isFinal) {
-                    // Split the transcript into words, remove duplicates, and join back together
-                    transcript = [...new Set(transcript.split(" "))].join(" ");
-                    this.search = transcript;
-                }
-            });
-
-            // keep the voice active state in sync with the recognition state
-            recognition.addEventListener("start", () => {
-                this.voiceActive = true;
-            });
-
-            recognition.addEventListener("end", () => {
-                this.voiceActive = false;
-            });
-
-            recognition.start();
-        },
+    label: {
+        type: String,
+        default: null,
     },
 });
+
+let search = ref(usePage().props?.search || null);
+let voiceActive = ref(false);
+let searchRef = ref(null);
+
+const typeName = computed(() => {
+    return props.label || props.routeName.split(".")[0] || "something";
+});
+
+const searchPlaceholder = computed(() => {
+    return voiceActive.value ? "Listening..." : `Search ${typeName.value}!`;
+});
+
+watch(search, () => {
+    if (search.value) {
+        searchMethod();
+    } else {
+        router.get(route(props.routeName));
+    }
+});
+
+const searchMethod = _.debounce(function () {
+    router.get(
+        route(props.routeName),
+        { search: search.value },
+        { preserveState: true }
+    );
+}, 2000);
+
+const startVoiceRecognition = () => {
+    const recognition = new (window.SpeechRecognition ||
+        window.webkitSpeechRecognition)();
+    recognition.interimResults = true;
+
+    recognition.addEventListener("result", (event) => {
+        let transcript = Array.from(event.results)
+            .map((result) => result[0])
+            .map((result) => result.transcript)
+            .join("");
+
+        if (event.results[0].isFinal) {
+            // Split the transcript into words, remove duplicates, and join back together
+            transcript = [...new Set(transcript.split(" "))].join(" ");
+            search.value = transcript;
+        }
+    });
+
+    // keep the voice active state in sync with the recognition state
+    recognition.addEventListener("start", () => {
+        voiceActive.value = true;
+    });
+
+    recognition.addEventListener("end", () => {
+        voiceActive.value = false;
+    });
+
+    recognition.start();
+};
 </script>
 
 <style scoped>
