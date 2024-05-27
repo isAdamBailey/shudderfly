@@ -42,6 +42,7 @@ const props = defineProps({
 });
 
 let search = ref(usePage().props?.search || null);
+let filter = ref(usePage().props?.filter || null);
 let voiceActive = ref(false);
 let searchRef = ref(null);
 
@@ -64,7 +65,7 @@ watch(search, () => {
 const searchMethod = _.debounce(function () {
     router.get(
         route(props.routeName),
-        { search: search.value },
+        { search: search.value, filter: filter.value },
         { preserveState: true }
     );
 }, 2000);

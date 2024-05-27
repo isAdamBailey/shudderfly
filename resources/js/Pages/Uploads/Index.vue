@@ -17,25 +17,25 @@
             <Link :href="route('pictures.index', { filter: 'youtube' })">
                 <Button
                     :is-active="isYouTube"
-                    class="rounded-full border-amber-50 dark:border-gray-100 max-h-8 my-3"
+                    class="rounded-full border-amber-50 dark:border-gray-100 my-3 p-10"
                 >
-                    <i class="ri-youtube-line text-3xl"></i>
+                    <i class="ri-youtube-line text-4xl"></i>
                 </Button>
             </Link>
             <Link :href="route('pictures.index', { filter: 'random' })">
                 <Button
                     :is-active="isRandom"
-                    class="rounded-full border-amber-50 dark:border-gray-100 max-h-8 my-3"
+                    class="rounded-full border-amber-50 dark:border-gray-100 my-3 p-10"
                 >
-                    <i class="ri-dice-line text-3xl"></i>
+                    <i class="ri-dice-line text-4xl"></i>
                 </Button>
             </Link>
             <Link :href="route('pictures.index', { filter: 'old' })">
                 <Button
                     :is-active="isOld"
-                    class="rounded-full border-amber-50 dark:border-gray-100 max-h-8 my-3"
+                    class="rounded-full border-amber-50 dark:border-gray-100 my-3 p-10"
                 >
-                    <i class="ri-history-line text-3xl"></i>
+                    <i class="ri-history-line text-4xl"></i>
                 </Button>
             </Link>
         </div>
@@ -55,7 +55,7 @@ import SearchInput from "@/Components/SearchInput.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
 
 const props = defineProps({
-    photos: Object,
+    photos: { type: Object, required: true },
 });
 
 const isRandom = computed(() => {

@@ -19,6 +19,7 @@ class PageController extends Controller
     public function index(Request $request): Response
     {
         $search = $request->search;
+        $filter = $request->filter;
 
         $photos = Page::with('book')
             ->where(function ($query) {
@@ -26,8 +27,8 @@ class PageController extends Controller
                     ->orWhereNotNull('video_link');
             })
             ->when($search, fn ($query) => $query->where('content', 'LIKE', '%'.$search.'%'))
-            ->unless($request->filter, fn ($query) => $query->latest())
-            ->when($request->filter === 'old', function ($query) {
+            ->unless($filter, fn ($query) => $query->latest())
+            ->when($filter === 'old', function ($query) {
                 $yearAgo = clone $query;
                 $yearAgo->whereDate('created_at', '<=', today()->subYear());
                 if (! $yearAgo->exists()) {
@@ -36,15 +37,16 @@ class PageController extends Controller
 
                 return $yearAgo->orderBy('created_at', 'desc');
             })
-            ->when($request->filter === 'random', fn ($query) => $query->inRandomOrder())
-            ->when($request->filter === 'youtube', fn ($query) => $query->whereNotNull('video_link')->latest())
+            ->when($filter === 'random', fn ($query) => $query->inRandomOrder())
+            ->when($filter === 'youtube', fn ($query) => $query->whereNotNull('video_link')->latest())
             ->paginate(20);
 
-        $photos->appends($request->all())->links();
+        $photos->appends($request->all());
 
         return Inertia::render('Uploads/Index', [
             'photos' => $photos,
             'search' => $search,
+            'filter' => $filter,
         ]);
     }
 
