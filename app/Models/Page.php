@@ -25,14 +25,18 @@ class Page extends Model
             return $value;
         }
 
-        return Storage::disk('cloudfront')->url($value);
-        //        return Storage::url($value);
+        if (app()->environment('local')) {
+            return Storage::disk('s3')->url($value);
+        } else {
+            return Storage::disk('cloudfront')->url($value);
+        }
     }
 
     public function scopeHasImage($query)
     {
         return $query->where('image_path', 'like', '%.jpg%')
-            ->orWhere('image_path', 'like', '%.png%');
+            ->orWhere('image_path', 'like', '%.png%')
+            ->orWhere('image_path', 'like', '%.webp%');
     }
 
     public function book(): BelongsTo
