@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StorePageRequest;
 use App\Http\Requests\UpdatePageRequest;
+use App\Jobs\StoreImage;
 use App\Models\Book;
 use App\Models\Page;
 use Illuminate\Contracts\Foundation\Application;
@@ -11,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -56,13 +58,26 @@ class PageController extends Controller
     public function store(StorePageRequest $request): Redirector|RedirectResponse|Application
     {
         $book = Book::find($request->book_id);
-        $image = $request->hasFile('image')
-            ? $request->file('image')->storePublicly('book/'.$book->slug)
-            : '';
+
+        $imagePath = '';
+
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            if ($file->isValid()) {
+                $mimeType = $file->getMimeType();
+                if (Str::startsWith($mimeType, 'image/')) {
+                    $filename = pathinfo($file->hashName(), PATHINFO_FILENAME);
+                    $imagePath = 'book/'.$book->slug.'/'.$filename.'.webp';
+                    StoreImage::dispatch($file, $imagePath);
+                } elseif (Str::startsWith($mimeType, 'video/')) {
+                    $request->file('image')->storePublicly('book/'.$book->slug);
+                }
+            }
+        }
 
         $book->pages()->create([
             'content' => $request->input('content'),
-            'image_path' => $image,
+            'image_path' => $imagePath,
             'video_link' => $request->input('video_link') ? trim($request->input('video_link')) : null,
         ]);
 
@@ -79,12 +94,23 @@ class PageController extends Controller
     public function update(UpdatePageRequest $request, Page $page): Redirector|RedirectResponse|Application
     {
         if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            if ($file->isValid()) {
+                $imagePath = '';
+                $mimeType = $file->getMimeType();
+                if (Str::startsWith($mimeType, 'image/')) {
+                    $filename = pathinfo($file->hashName(), PATHINFO_FILENAME);
+                    $imagePath = 'book/'.$page->book->slug.'/'.$filename.'.webp';
+                    StoreImage::dispatch($file, $imagePath);
+                } elseif (Str::startsWith($mimeType, 'video/')) {
+                    $imagePath = $request->file('image')->storePublicly('book/'.$page->book->slug);
+                }
+                $page->image_path = $imagePath;
+                $page->video_link = null;
+            }
             if ($page->image_path && Storage::exists($page->image_path)) {
                 Storage::delete($page->image_path);
             }
-            $image = $request->file('image')->storePublicly('book/'.$page->book->slug);
-            $page->image_path = $image;
-            $page->video_link = null;
         }
 
         if ($request->has('content')) {
@@ -95,12 +121,12 @@ class PageController extends Controller
             $page->book_id = $request->book_id;
         }
 
-        if ($request->has('video_link') && !is_null($request->video_link)) {
-            if ($page->image_path){
+        if ($request->has('video_link') && ! is_null($request->video_link)) {
+            if ($page->image_path) {
                 if (Storage::exists($page->image_path)) {
                     Storage::delete($page->image_path);
                 }
-                $page->image_path = "";
+                $page->image_path = '';
             }
             $page->video_link = $request->video_link;
         }

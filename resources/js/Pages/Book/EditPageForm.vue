@@ -219,7 +219,8 @@ const makeCoverPage = () => {
         <div
             v-else-if="
                 page.image_path.includes('.jpg') ||
-                page.image_path.includes('.png')
+                page.image_path.includes('.png') ||
+                page.image_path.includes('.webp')
             "
             class="flex justify-center mt-5 md:mt-10"
         >
