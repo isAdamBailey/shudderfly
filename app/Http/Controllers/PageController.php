@@ -58,7 +58,6 @@ class PageController extends Controller
      */
     public function store(StorePageRequest $request): Redirector|RedirectResponse|Application
     {
-        Log::info('Queue configuration:', config('queue.connections.sqs'));
         $book = Book::find($request->book_id);
 
         $imagePath = '';
