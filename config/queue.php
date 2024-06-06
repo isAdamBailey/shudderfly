@@ -1,4 +1,5 @@
 <?php
+use Illuminate\Support\Facades\Log;
 
 return [
 
@@ -60,6 +61,11 @@ return [
             'suffix' => env('SQS_SUFFIX'),
             'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
             'after_commit' => false,
+            'queue_url' => function () {
+                $queueUrl = env('SQS_PREFIX') . '/' . env('SQS_QUEUE') . env('SQS_SUFFIX', '');
+                Log::info('SQS Queue URL: ' . $queueUrl);
+                return $queueUrl;
+            },
         ],
 
         'redis' => [
