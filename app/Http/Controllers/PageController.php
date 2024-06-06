@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Support\Facades\Log;
 
 class PageController extends Controller
 {
@@ -57,6 +58,7 @@ class PageController extends Controller
      */
     public function store(StorePageRequest $request): Redirector|RedirectResponse|Application
     {
+        Log::info('Queue configuration:', config('queue.connections.sqs'));
         $book = Book::find($request->book_id);
 
         $imagePath = '';
