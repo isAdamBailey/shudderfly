@@ -70,7 +70,7 @@ class PageController extends Controller
                     $imagePath = 'book/'.$book->slug.'/'.$filename.'.webp';
                     StoreImage::dispatch($file, $imagePath);
                 } elseif (Str::startsWith($mimeType, 'video/')) {
-                    $request->file('image')->storePublicly('book/'.$book->slug);
+                    $imagePath = $request->file('image')->storePublicly('book/'.$book->slug);
                 }
             }
         }
