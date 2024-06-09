@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StorePageRequest;
 use App\Http\Requests\UpdatePageRequest;
 use App\Jobs\StoreImage;
+use App\Jobs\StoreVideo;
 use App\Models\Book;
 use App\Models\Page;
 use Illuminate\Contracts\Foundation\Application;
@@ -71,7 +72,9 @@ class PageController extends Controller
                     $imagePath = 'book/'.$book->slug.'/'.$filename.'.webp';
                     StoreImage::dispatch($file, $imagePath);
                 } elseif (Str::startsWith($mimeType, 'video/')) {
-                    $imagePath = $request->file('image')->storePublicly('book/'.$book->slug);
+                    $filePath = Storage::disk('local')->put('temp', $file);
+                    $imagePath = 'book/'.$book->slug.'/'.$file->getClientOriginalName();
+                    StoreVideo::dispatch($filePath, $imagePath);
                 }
             }
         }
@@ -104,7 +107,8 @@ class PageController extends Controller
                     $imagePath = 'book/'.$page->book->slug.'/'.$filename.'.webp';
                     StoreImage::dispatch($file, $imagePath);
                 } elseif (Str::startsWith($mimeType, 'video/')) {
-                    $imagePath = $request->file('image')->storePublicly('book/'.$page->book->slug);
+                    $imagePath = 'book/'.$page->book->slug.'/'.$file->hashName();
+                    StoreVideo::dispatch($file, $imagePath);
                 }
                 $page->image_path = $imagePath;
                 $page->video_link = null;
