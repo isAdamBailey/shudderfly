@@ -136,12 +136,15 @@ class PageController extends Controller
                     $imagePath = 'books/'.$page->book->slug.'/'.$filename.'.webp';
                     StoreImage::dispatch($file, $imagePath);
                 } elseif (Str::startsWith($mimeType, 'video/')) {
-                    $imagePath = 'book/'.$page->book->slug.'/'.$file->hashName();
-                    StoreVideo::dispatch($file, $imagePath);
-                    $imagePath = $request->file('image')->storePublicly('books/'.$page->book->slug);
+                    $filePath = Storage::disk('local')->put('temp', $file);
+                    $imagePath = 'book/'.$page->book->slug.'/'.$file->getClientOriginalName();
+                    StoreVideo::dispatch($filePath, $imagePath);
                 }
                 $page->media_path = $imagePath;
                 $page->video_link = null;
+            }
+            if ($page->image_path && Storage::disk('s3')->exists($page->image_path)) {
+                Storage::disk('s3')->delete($page->image_path);
             }
         }
 
