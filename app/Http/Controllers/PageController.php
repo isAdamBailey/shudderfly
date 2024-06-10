@@ -106,14 +106,15 @@ class PageController extends Controller
                     $imagePath = 'book/'.$page->book->slug.'/'.$filename.'.webp';
                     StoreImage::dispatch($file, $imagePath);
                 } elseif (Str::startsWith($mimeType, 'video/')) {
-                    $imagePath = 'book/'.$page->book->slug.'/'.$file->hashName();
-                    StoreVideo::dispatch($file, $imagePath);
+                    $filePath = Storage::disk('local')->put('temp', $file);
+                    $imagePath = 'book/'.$page->book->slug.'/'.$file->getClientOriginalName();
+                    StoreVideo::dispatch($filePath, $imagePath);
                 }
                 $page->image_path = $imagePath;
                 $page->video_link = null;
             }
-            if ($page->image_path && Storage::exists($page->image_path)) {
-                Storage::delete($page->image_path);
+            if ($page->image_path && Storage::disk('s3')->exists($page->image_path)) {
+                Storage::disk('s3')->delete($page->image_path);
             }
         }
 
@@ -127,8 +128,8 @@ class PageController extends Controller
 
         if ($request->has('video_link') && ! is_null($request->video_link)) {
             if ($page->image_path) {
-                if (Storage::exists($page->image_path)) {
-                    Storage::delete($page->image_path);
+                if (Storage::disk('s3')->exists($page->image_path)) {
+                    Storage::disk('s3')->delete($page->image_path);
                 }
                 $page->image_path = '';
             }
@@ -166,7 +167,8 @@ class PageController extends Controller
             ->whereNotNull('image_path')
             ->where(function ($query) {
                 $query->where('image_path', 'like', '%.jpg')
-                    ->orWhere('image_path', 'like', '%.png');
+                    ->orWhere('image_path', 'like', '%.png')
+                    ->orWhere('image_path', 'like', '%.webp');
             })
             ->first();
 
