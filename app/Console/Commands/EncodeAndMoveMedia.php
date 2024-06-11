@@ -6,6 +6,7 @@ use App\Jobs\StoreImage;
 use App\Models\Page;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -30,6 +31,8 @@ class EncodeAndMoveMedia extends Command
      */
     public function handle(): int
     {
+        $startTime = microtime(true);
+
         Page::whereNotNull('image_path')->chunk(200, function ($pages) {
             foreach ($pages as $page) {
                 try {
@@ -61,6 +64,19 @@ class EncodeAndMoveMedia extends Command
                 }
             }
         });
+
+        $endTime = microtime(true);
+        $duration = $endTime - $startTime;
+        $durationInMinutes = $duration / 60;
+
+        try {
+            Mail::raw('All media has been moved and encoded. The process took ' . round($durationInMinutes, 2) . ' minutes.', function ($message) {
+                $message->to('adamjbailey7@gmail.com')
+                    ->subject('Media Processing Complete');
+            });
+        } catch (\Exception $e) {
+            Log::error('Error sending email: '.$e->getMessage());
+        }
 
         return 0;
     }
