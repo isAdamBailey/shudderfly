@@ -35,13 +35,20 @@ class EncodeAndMoveMedia extends Command
 
         $startTime = microtime(true);
 
-        Page::whereNotNull('image_path')->chunk(200, function ($pages) {
+        Page::whereNotNull('image_path')->chunk(100, function ($pages) {
             foreach ($pages as $page) {
                 try {
                     $imagePath = $page->image_path;
                     $mediaPath = '';
 
-                    if (Str::startsWith(Storage::mimeType($imagePath), 'image/')) {
+                    if (! Storage::disk('s3')->exists($imagePath)) {
+                        Log::error('File does not exist: '.$imagePath);
+
+                        continue;
+                    }
+
+                    $mimeType = Storage::disk('s3')->mimeType($imagePath);
+                    if (Str::startsWith($mimeType, 'image/')) {
                         if (! Str::endsWith($imagePath, '.webp')) {
                             $filename = pathinfo($imagePath, PATHINFO_FILENAME);
                             $mediaPath = 'books/'.$page->book->slug.'/'.$filename.'.webp';
@@ -51,7 +58,7 @@ class EncodeAndMoveMedia extends Command
                             $mediaPath = 'books/'.$page->book->slug.'/'.$filename;
                             Storage::disk('s3')->copy($imagePath, $mediaPath);
                         }
-                    } elseif (Str::startsWith(Storage::mimeType($imagePath), 'video/')) {
+                    } elseif (Str::startsWith($mimeType, 'video/')) {
                         $filename = pathinfo($imagePath, PATHINFO_EXTENSION);
                         $mediaPath = 'books/'.$page->book->slug.'/'.$filename;
                         Storage::disk('s3')->copy($imagePath, $mediaPath);
@@ -72,7 +79,7 @@ class EncodeAndMoveMedia extends Command
         $durationInMinutes = $duration / 60;
 
         try {
-            Mail::raw('All media has been moved and encoded. The process took ' . round($durationInMinutes, 2) . ' minutes.', function ($message) {
+            Mail::raw('All media has been moved and encoded. The process took '.round($durationInMinutes, 2).' minutes.', function ($message) {
                 $message->to('adamjbailey7@gmail.com')
                     ->subject('Media Processing Complete');
             });
