@@ -31,6 +31,8 @@ class EncodeAndMoveMedia extends Command
      */
     public function handle(): int
     {
+        set_time_limit(0);
+
         $startTime = microtime(true);
 
         Page::whereNotNull('image_path')->chunk(200, function ($pages) {
