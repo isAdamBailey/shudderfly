@@ -41,7 +41,8 @@ class EncodeAndMoveMedia extends Command
                     $imagePath = $page->image_path;
                     $mediaPath = '';
 
-                    if (! Storage::disk('s3')->exists($imagePath)) {
+                    $s3Path = str_replace(env('CLOUDFRONT_URL'), '', $imagePath);
+                    if (! Storage::disk('s3')->exists($s3Path)) {
                         Log::error('File does not exist: '.$imagePath);
 
                         continue;
