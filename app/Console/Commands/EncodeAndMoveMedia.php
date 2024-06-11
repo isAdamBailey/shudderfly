@@ -48,21 +48,21 @@ class EncodeAndMoveMedia extends Command
                         continue;
                     }
 
-                    $mimeType = Storage::disk('s3')->mimeType($imagePath);
+                    $mimeType = Storage::disk('s3')->mimeType($s3Path);
                     if (Str::startsWith($mimeType, 'image/')) {
-                        if (! Str::endsWith($imagePath, '.webp')) {
-                            $filename = pathinfo($imagePath, PATHINFO_FILENAME);
+                        if (! Str::endsWith($s3Path, '.webp')) {
+                            $filename = pathinfo($s3Path, PATHINFO_FILENAME);
                             $mediaPath = 'books/'.$page->book->slug.'/'.$filename.'.webp';
-                            StoreImage::dispatch(Storage::disk('s3')->get($imagePath), $mediaPath);
+                            StoreImage::dispatch(Storage::disk('s3')->get($s3Path), $mediaPath);
                         } else {
-                            $filename = pathinfo($imagePath, PATHINFO_EXTENSION);
+                            $filename = pathinfo($s3Path, PATHINFO_EXTENSION);
                             $mediaPath = 'books/'.$page->book->slug.'/'.$filename;
-                            Storage::disk('s3')->copy($imagePath, $mediaPath);
+                            Storage::disk('s3')->copy($s3Path, $mediaPath);
                         }
                     } elseif (Str::startsWith($mimeType, 'video/')) {
-                        $filename = pathinfo($imagePath, PATHINFO_EXTENSION);
+                        $filename = pathinfo($s3Path, PATHINFO_EXTENSION);
                         $mediaPath = 'books/'.$page->book->slug.'/'.$filename;
-                        Storage::disk('s3')->copy($imagePath, $mediaPath);
+                        Storage::disk('s3')->copy($s3Path, $mediaPath);
                     }
 
                     if ($mediaPath) {
