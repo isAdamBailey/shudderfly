@@ -8,6 +8,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Intervention\Image\Laravel\Facades\Image;
 
 class StoreImage implements ShouldQueue
@@ -36,7 +37,9 @@ class StoreImage implements ShouldQueue
      */
     public function handle()
     {
-        $image = Image::read($this->image);
+        $image = Str::startsWith($this->image, '/tmp')
+            ? Image::read($this->image)
+            : Image::read(Storage::disk('s3')->get($this->image));
 
         $encoded = $image->toWebp(60);
         Storage::disk('s3')->put($this->path, (string) $encoded, 'public');

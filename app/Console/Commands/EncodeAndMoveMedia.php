@@ -53,14 +53,14 @@ class EncodeAndMoveMedia extends Command
                         if (! Str::endsWith($s3Path, '.webp')) {
                             $filename = pathinfo($s3Path, PATHINFO_FILENAME);
                             $mediaPath = 'books/'.$page->book->slug.'/'.$filename.'.webp';
-                            StoreImage::dispatch(Storage::disk('s3')->get($s3Path), $mediaPath);
+                            StoreImage::dispatch($s3Path, $mediaPath);
                         } else {
                             $filename = pathinfo($s3Path, PATHINFO_EXTENSION);
                             $mediaPath = 'books/'.$page->book->slug.'/'.$filename;
                             Storage::disk('s3')->copy($s3Path, $mediaPath);
                         }
                     } elseif (Str::startsWith($mimeType, 'video/')) {
-                        $filename = pathinfo($s3Path, PATHINFO_EXTENSION);
+                        $filename = pathinfo($s3Path, PATHINFO_FILENAME);
                         $mediaPath = 'books/'.$page->book->slug.'/'.$filename;
                         Storage::disk('s3')->copy($s3Path, $mediaPath);
                     }
