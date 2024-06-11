@@ -3,9 +3,9 @@
         class="rounded-lg overflow-hidden bg-gradient-to-r from-white dark:from-gray-700 dark:via-gray-900 to-yellow-100 dark:to-black flex flex-col justify-between"
     >
         <LazyLoader
-            v-if="page.image_path"
+            v-if="page.media_path"
             class="rounded-top max-h-[90vh] object-contain"
-            :src="page.image_path"
+            :src="page.media_path"
             :alt="page.description"
         />
         <div v-else-if="embedUrl" class="video-container">
