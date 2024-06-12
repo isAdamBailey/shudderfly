@@ -14,14 +14,18 @@ class Page extends Model
 
     protected $fillable = [
         'content',
-        'image_path',
+        'media_path',
         'video_link',
         'book_id',
     ];
 
-    public function getImagePathAttribute($value): string
+    public function getMediaPathAttribute($value): string
     {
-        if (Str::startsWith($value, 'https://') || empty($value)) {
+        if (empty($value)) {
+            return '';
+        }
+
+        if (Str::startsWith($value, 'https://')) {
             return $value;
         }
 
@@ -34,9 +38,9 @@ class Page extends Model
 
     public function scopeHasImage($query)
     {
-        return $query->where('image_path', 'like', '%.jpg%')
-            ->orWhere('image_path', 'like', '%.png%')
-            ->orWhere('image_path', 'like', '%.webp%');
+        return $query->where('media_path', 'like', '%.jpg%')
+            ->orWhere('media_path', 'like', '%.png%')
+            ->orWhere('media_path', 'like', '%.webp%');
     }
 
     public function book(): BelongsTo
