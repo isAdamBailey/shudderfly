@@ -26,6 +26,7 @@ class PageController extends Controller
         $photos = Page::with('book')
             ->where(function ($query) {
                 $query->where('media_path', '!=', '')
+                    ->orWhereNotNull('media_path')
                     ->orWhereNotNull('video_link');
             })
             ->when($search, fn ($query) => $query->where('content', 'LIKE', '%'.$search.'%'))
@@ -108,8 +109,8 @@ class PageController extends Controller
                 $page->media_path = $imagePath;
                 $page->video_link = null;
             }
-            if ($page->media_path && Storage::exists($page->media_path)) {
-                Storage::delete($page->media_path);
+            if ($page->media_path && Storage::disk('s3')->exists($page->media_path)) {
+                Storage::disk('s3')->delete($page->media_path);
             }
         }
 
@@ -123,8 +124,8 @@ class PageController extends Controller
 
         if ($request->has('video_link') && ! is_null($request->video_link)) {
             if ($page->media_path) {
-                if (Storage::exists($page->media_path)) {
-                    Storage::delete($page->media_path);
+                if (Storage::disk('s3')->exists($page->media_path)) {
+                    Storage::disk('s3')->delete($page->media_path);
                 }
                 $page->media_path = '';
             }

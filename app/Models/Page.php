@@ -21,7 +21,11 @@ class Page extends Model
 
     public function getMediaPathAttribute($value): string
     {
-        if (Str::startsWith($value, 'https://') || empty($value)) {
+        if (empty($value)) {
+            return '';
+        }
+
+        if (Str::startsWith($value, 'https://')) {
             return $value;
         }
 
