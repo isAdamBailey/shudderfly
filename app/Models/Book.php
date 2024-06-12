@@ -26,7 +26,7 @@ class Book extends Model
 
     public function coverImage(): BelongsTo
     {
-        return $this->belongsTo(Page::class, 'cover_page')->select('id', 'image_path');
+        return $this->belongsTo(Page::class, 'cover_page')->select('id', 'media_path');
     }
 
     public function category(): BelongsTo
