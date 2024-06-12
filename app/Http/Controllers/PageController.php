@@ -143,8 +143,8 @@ class PageController extends Controller
                 $page->media_path = $imagePath;
                 $page->video_link = null;
             }
-            if ($page->image_path && Storage::disk('s3')->exists($page->image_path)) {
-                Storage::disk('s3')->delete($page->image_path);
+            if ($page->media_path && Storage::disk('s3')->exists($page->media_path)) {
+                Storage::disk('s3')->delete($page->media_path);
             }
         }
 
