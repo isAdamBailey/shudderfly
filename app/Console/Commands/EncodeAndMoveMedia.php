@@ -35,7 +35,7 @@ class EncodeAndMoveMedia extends Command
 
         $startTime = microtime(true);
 
-        Page::whereNotNull('image_path')->chunk(100, function ($pages) {
+        Page::where('image_path', '<>', '')->chunk(200, function ($pages) {
             foreach ($pages as $page) {
                 try {
                     $imagePath = $page->image_path;
@@ -55,12 +55,12 @@ class EncodeAndMoveMedia extends Command
                             $mediaPath = 'books/'.$page->book->slug.'/'.$filename.'.webp';
                             StoreImage::dispatch($s3Path, $mediaPath);
                         } else {
-                            $filename = pathinfo($s3Path, PATHINFO_EXTENSION);
+                            $filename = pathinfo($s3Path, PATHINFO_BASENAME);
                             $mediaPath = 'books/'.$page->book->slug.'/'.$filename;
                             Storage::disk('s3')->copy($s3Path, $mediaPath);
                         }
                     } elseif (Str::startsWith($mimeType, 'video/')) {
-                        $filename = pathinfo($s3Path, PATHINFO_FILENAME);
+                        $filename = pathinfo($s3Path, PATHINFO_BASENAME);
                         $mediaPath = 'books/'.$page->book->slug.'/'.$filename;
                         Storage::disk('s3')->copy($s3Path, $mediaPath);
                     }
@@ -77,10 +77,10 @@ class EncodeAndMoveMedia extends Command
 
         $endTime = microtime(true);
         $duration = $endTime - $startTime;
-        $durationInMinutes = $duration / 60;
+        $durationInHours = $duration / 3600;
 
         try {
-            Mail::raw('All media has been moved and encoded. The process took '.round($durationInMinutes, 2).' minutes.', function ($message) {
+            Mail::raw('All media has been moved and encoded. The process took '.round($durationInHours, 2).' hours.', function ($message) {
                 $message->to('adamjbailey7@gmail.com')
                     ->subject('Media Processing Complete');
             });
