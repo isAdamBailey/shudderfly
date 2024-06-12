@@ -25,7 +25,7 @@ class PageController extends Controller
 
         $photos = Page::with('book')
             ->where(function ($query) {
-                $query->where('image_path', '!=', '')
+                $query->where('media_path', '!=', '')
                     ->orWhereNotNull('video_link');
             })
             ->when($search, fn ($query) => $query->where('content', 'LIKE', '%'.$search.'%'))
@@ -77,7 +77,7 @@ class PageController extends Controller
 
         $book->pages()->create([
             'content' => $request->input('content'),
-            'image_path' => $imagePath,
+            'media_path' => $imagePath,
             'video_link' => $request->input('video_link') ? trim($request->input('video_link')) : null,
         ]);
 
@@ -105,11 +105,11 @@ class PageController extends Controller
                 } elseif (Str::startsWith($mimeType, 'video/')) {
                     $imagePath = $request->file('image')->storePublicly('book/'.$page->book->slug);
                 }
-                $page->image_path = $imagePath;
+                $page->media_path = $imagePath;
                 $page->video_link = null;
             }
-            if ($page->image_path && Storage::exists($page->image_path)) {
-                Storage::delete($page->image_path);
+            if ($page->media_path && Storage::exists($page->media_path)) {
+                Storage::delete($page->media_path);
             }
         }
 
@@ -122,11 +122,11 @@ class PageController extends Controller
         }
 
         if ($request->has('video_link') && ! is_null($request->video_link)) {
-            if ($page->image_path) {
-                if (Storage::exists($page->image_path)) {
-                    Storage::delete($page->image_path);
+            if ($page->media_path) {
+                if (Storage::exists($page->media_path)) {
+                    Storage::delete($page->media_path);
                 }
-                $page->image_path = '';
+                $page->media_path = '';
             }
             $page->video_link = $request->video_link;
         }
@@ -141,7 +141,7 @@ class PageController extends Controller
      */
     public function destroy(Page $page): Redirector|RedirectResponse|Application
     {
-        Storage::disk('s3')->delete($page->image_path);
+        Storage::disk('s3')->delete($page->media_path);
         $page->delete();
 
         if ($page->book->cover_page === $page->id) {
@@ -159,10 +159,11 @@ class PageController extends Controller
         }
 
         $page = $book->pages()
-            ->whereNotNull('image_path')
+            ->whereNotNull('media_path')
             ->where(function ($query) {
-                $query->where('image_path', 'like', '%.jpg')
-                    ->orWhere('image_path', 'like', '%.png');
+                $query->where('media_path', 'like', '%.jpg')
+                    ->orWhere('media_path', 'like', '%.png')
+                    ->orWhere('media_path', 'like', '%.webp');
             })
             ->first();
 
