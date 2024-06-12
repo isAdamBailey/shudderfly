@@ -32,7 +32,7 @@
                 </div>
                 <div class="h-36">
                     <LazyLoader
-                        :src="book.cover_image?.media_path"
+                        :src="book.cover_image?.image_path"
                         :alt="`${book.title} cover image`"
                         :is-cover="true"
                     />
