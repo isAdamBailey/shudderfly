@@ -77,7 +77,7 @@ class PagesTest extends TestCase
         Storage::disk('s3')->assertExists($filePath);
 
         $page = Book::find($book->id)->pages->first();
-        $this->assertSame($page->media_path, Storage::url($filePath));
+        $this->assertSame($page->image_path, Storage::url($filePath));
         $this->assertSame($page->content, $payload['content']);
 
         $response->assertRedirect(route('books.show', $book));
@@ -115,7 +115,7 @@ class PagesTest extends TestCase
 
         $freshPage = Page::where('book_id', $book->id)->first();
         $this->assertSame($freshPage->content, $payload['content']);
-        $this->assertSame($freshPage->media_path, Storage::url($filePath));
+        $this->assertSame($freshPage->image_path, Storage::url($filePath));
 
         $response->assertRedirect(route('books.show', $book));
     }
@@ -155,7 +155,7 @@ class PagesTest extends TestCase
         $page = $book->pages->first();
 
         $response = $this->delete(route('pages.destroy', $page));
-        Storage::disk('s3')->assertMissing($page->media_path);
+        Storage::disk('s3')->assertMissing($page->image_path);
 
         $this->assertNull(Page::find($page->id));
 

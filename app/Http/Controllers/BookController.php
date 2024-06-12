@@ -141,7 +141,7 @@ class BookController extends Controller
     public function destroy(Book $book): Redirector|RedirectResponse|Application
     {
         foreach ($book->pages() as $page) {
-            Storage::disk('s3')->delete($page->media_path);
+            Storage::disk('s3')->delete($page->image_path);
         }
         $book->pages()->delete();
         $book->delete();
