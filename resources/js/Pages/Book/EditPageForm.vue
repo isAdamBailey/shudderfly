@@ -29,7 +29,7 @@ const bookForm = useForm({
     cover_page: props.book.cover_page,
 });
 
-const imagePreview = ref(props.page.image_path);
+const imagePreview = ref(props.page.media_path);
 
 const imageInput = ref(null);
 const mediaOption = ref("upload"); // upload , link
@@ -218,9 +218,9 @@ const makeCoverPage = () => {
         </div>
         <div
             v-else-if="
-                page.image_path.includes('.jpg') ||
-                page.image_path.includes('.png') ||
-                page.image_path.includes('.webp')
+                page.media_path.includes('.jpg') ||
+                page.media_path.includes('.png') ||
+                page.media_path.includes('.webp')
             "
             class="flex justify-center mt-5 md:mt-10"
         >

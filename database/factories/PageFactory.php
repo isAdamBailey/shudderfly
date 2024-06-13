@@ -18,7 +18,7 @@ class PageFactory extends Factory
     {
         return [
             'content' => $this->faker->paragraphs(3, true),
-            'image_path' => $this->faker->imageUrl(),
+            'media_path' => $this->faker->imageUrl(),
         ];
     }
 }

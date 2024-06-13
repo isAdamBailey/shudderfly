@@ -19,7 +19,7 @@ class Page extends Model
         'book_id',
     ];
 
-    public function getImagePathAttribute($value): string
+    public function getMediaPathAttribute($value): string
     {
         if (empty($value)) {
             return '';

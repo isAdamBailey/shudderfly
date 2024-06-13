@@ -78,9 +78,9 @@ function embedUrl(link) {
                     "
                 >
                     <LazyLoader
-                        v-if="photo.image_path"
+                        v-if="photo.media_path"
                         classes="rounded-top pointer-events-none"
-                        :src="photo.image_path"
+                        :src="photo.media_path"
                         :is-cover="true"
                     />
                     <div
