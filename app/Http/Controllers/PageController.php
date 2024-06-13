@@ -68,10 +68,10 @@ class PageController extends Controller
                 $mimeType = $file->getMimeType();
                 if (Str::startsWith($mimeType, 'image/')) {
                     $filename = pathinfo($file->hashName(), PATHINFO_FILENAME);
-                    $imagePath = 'book/'.$book->slug.'/'.$filename.'.webp';
+                    $imagePath = 'books/'.$book->slug.'/'.$filename.'.webp';
                     StoreImage::dispatch($file, $imagePath);
                 } elseif (Str::startsWith($mimeType, 'video/')) {
-                    $imagePath = $request->file('image')->storePublicly('book/'.$book->slug);
+                    $imagePath = $request->file('image')->storePublicly('books/'.$book->slug);
                 }
             }
         }
@@ -101,10 +101,10 @@ class PageController extends Controller
                 $mimeType = $file->getMimeType();
                 if (Str::startsWith($mimeType, 'image/')) {
                     $filename = pathinfo($file->hashName(), PATHINFO_FILENAME);
-                    $imagePath = 'book/'.$page->book->slug.'/'.$filename.'.webp';
+                    $imagePath = 'books/'.$page->book->slug.'/'.$filename.'.webp';
                     StoreImage::dispatch($file, $imagePath);
                 } elseif (Str::startsWith($mimeType, 'video/')) {
-                    $imagePath = $request->file('image')->storePublicly('book/'.$page->book->slug);
+                    $imagePath = $request->file('image')->storePublicly('books/'.$page->book->slug);
                 }
                 $page->media_path = $imagePath;
                 $page->video_link = null;
