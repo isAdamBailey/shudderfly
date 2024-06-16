@@ -73,11 +73,11 @@ class PagesTest extends TestCase
 
         $response = $this->post(route('pages.store'), $payload);
 
-        $filePath = 'books/'.$book->slug.'/'.pathinfo($payload['image']->hashName(), PATHINFO_FILENAME).'.webp';
+        $filePath = 'book/'.$book->slug.'/'.$payload['image']->hashName();
         Storage::disk('s3')->assertExists($filePath);
 
         $page = Book::find($book->id)->pages->first();
-        $this->assertSame('/storage'.$page->media_path, Storage::disk('s3')->url($filePath));
+        $this->assertSame($page->media_path, Storage::url($filePath));
         $this->assertSame($page->content, $payload['content']);
 
         $response->assertRedirect(route('books.show', $book));
@@ -110,12 +110,12 @@ class PagesTest extends TestCase
 
         $response = $this->post(route('pages.update', $page), $payload);
 
-        $filePath = 'books/'.$book->slug.'/'.pathinfo($payload['image']->hashName(), PATHINFO_FILENAME).'.webp';
+        $filePath = 'book/'.$book->slug.'/'.$payload['image']->hashName();
         Storage::disk('s3')->assertExists($filePath);
 
         $freshPage = Page::where('book_id', $book->id)->first();
         $this->assertSame($freshPage->content, $payload['content']);
-        $this->assertSame('/storage'.$freshPage->media_path, Storage::disk('s3')->url($filePath));
+        $this->assertSame($freshPage->media_path, Storage::url($filePath));
 
         $response->assertRedirect(route('books.show', $book));
     }
