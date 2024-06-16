@@ -2,9 +2,9 @@
 /public/build
 /public/hot
 /public/storage
+/public/vendor/telescope/*
 /storage/*.key
 /vendor
-/vendor/telescope/*
 .env
 .env.backup
 .env.production
