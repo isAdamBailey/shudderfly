@@ -4,6 +4,7 @@ namespace Tests;
 
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Spatie\Permission\PermissionRegistrar;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -15,5 +16,6 @@ abstract class TestCase extends BaseTestCase
 
         // re-register all the roles and permissions (clears cache and reloads relations)
         $this->artisan('db:seed', ['--class' => RolesAndPermissionsSeeder::class]);
+        $this->app->make(PermissionRegistrar::class)->registerPermissions();
     }
 }
