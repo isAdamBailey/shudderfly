@@ -69,11 +69,11 @@ class PageController extends Controller
                 $mimeType = $file->getMimeType();
                 if (Str::startsWith($mimeType, 'image/')) {
                     $filename = pathinfo($file->hashName(), PATHINFO_FILENAME);
-                    $imagePath = 'book/'.$book->slug.'/'.$filename.'.webp';
+                    $imagePath = 'books/'.$book->slug.'/'.$filename.'.webp';
                     StoreImage::dispatch($file, $imagePath);
                 } elseif (Str::startsWith($mimeType, 'video/')) {
                     $filePath = Storage::disk('local')->put('temp', $file);
-                    $imagePath = 'book/'.$book->slug.'/'.$file->getClientOriginalName();
+                    $imagePath = 'books/'.$book->slug.'/'.$file->getClientOriginalName();
                     StoreVideo::dispatch($filePath, $imagePath);
                 }
             }
@@ -100,22 +100,22 @@ class PageController extends Controller
         if ($request->hasFile('image')) {
             $file = $request->file('image');
             if ($file->isValid()) {
+                if ($page->media_path && Storage::disk('s3')->exists($page->media_path)) {
+                    Storage::disk('s3')->delete($page->media_path);
+                }
                 $imagePath = '';
                 $mimeType = $file->getMimeType();
                 if (Str::startsWith($mimeType, 'image/')) {
                     $filename = pathinfo($file->hashName(), PATHINFO_FILENAME);
-                    $imagePath = 'book/'.$page->book->slug.'/'.$filename.'.webp';
+                    $imagePath = 'books/'.$page->book->slug.'/'.$filename.'.webp';
                     StoreImage::dispatch($file, $imagePath);
                 } elseif (Str::startsWith($mimeType, 'video/')) {
                     $filePath = Storage::disk('local')->put('temp', $file);
-                    $imagePath = 'book/'.$page->book->slug.'/'.$file->getClientOriginalName();
+                    $imagePath = 'books/'.$page->book->slug.'/'.$file->getClientOriginalName();
                     StoreVideo::dispatch($filePath, $imagePath);
                 }
                 $page->media_path = $imagePath;
                 $page->video_link = null;
-            }
-            if ($page->media_path && Storage::disk('s3')->exists($page->media_path)) {
-                Storage::disk('s3')->delete($page->media_path);
             }
         }
 
