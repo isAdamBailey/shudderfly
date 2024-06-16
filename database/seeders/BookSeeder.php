@@ -25,7 +25,6 @@ class BookSeeder extends Seeder
                 ->each(function ($book) {
                     $page = $book->pages()
                         ->whereNotNull('media_path')
-                        ->where('media_path', 'like', '%.png%')
                         ->first();
 
                     if ($page) {
