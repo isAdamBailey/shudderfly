@@ -54,21 +54,49 @@
             </div>
             <div v-if="canEditPages">
                 <Button
-                    class="rounded-none font-bold px-12 bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
-                    @click="settingsOpen = !settingsOpen"
+                    class="mb-3 md:mb-0 rounded-none font-bold px-12 bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
+                    @click="togglePageSettings"
                 >
-                    <span v-if="settingsOpen">Close</span>
-                    <span v-else>Add/Edit</span>
+                    <span v-if="pageSettingsOpen">Close</span>
+                    <span v-else>Add Page</span>
+                </Button>
+                <Button
+                    class="md:ml-4 rounded-none font-bold px-12 bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
+                    @click="toggleBookSettings"
+                >
+                    <span v-if="bookSettingsOpen">Close</span>
+                    <span v-else>Edit Book</span>
                 </Button>
             </div>
         </div>
-        <div v-if="canEditPages && settingsOpen" class="w-full mt-4 md:ml-2">
+        <div
+            v-if="canEditPages && pageSettingsOpen"
+            class="w-full mt-4 md:ml-2"
+        >
             <div>
                 <BreezeValidationErrors class="mb-4" />
             </div>
             <div class="flex flex-col md:flex-row justify-around">
-                <NewPageForm :book="book" @close-form="settingsOpen = false" />
-                <EditForm :book="book" :authors="authors" />
+                <NewPageForm
+                    :book="book"
+                    @close-form="pageSettingsOpen = false"
+                />
+            </div>
+        </div>
+
+        <div
+            v-if="canEditPages && bookSettingsOpen"
+            class="w-full mt-4 md:ml-2"
+        >
+            <div>
+                <BreezeValidationErrors class="mb-4" />
+            </div>
+            <div class="flex flex-col md:flex-row justify-around">
+                <EditBookForm
+                    :book="book"
+                    :authors="authors"
+                    @close-form="bookSettingsOpen = false"
+                />
             </div>
         </div>
 
@@ -146,7 +174,7 @@ import { Head, Link } from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue";
 import { onMounted, ref } from "vue";
 import NewPageForm from "@/Pages/Book/NewPageForm.vue";
-import EditForm from "@/Pages/Book/EditBookForm.vue";
+import EditBookForm from "@/Pages/Book/EditBookForm.vue";
 import { usePermissions } from "@/permissions";
 import Page from "@/Pages/Book/Page.vue";
 import { useDate } from "@/dateHelpers";
@@ -165,11 +193,26 @@ const centerPageNumber = Math.ceil(props.pages.total / 2 / 2);
 const centerPageUrl = `${props.pages.path}?page=${centerPageNumber}`;
 const prevButtonDisabled = ref(false);
 const nextButtonDisabled = ref(false);
-let settingsOpen = ref(false);
+let pageSettingsOpen = ref(false);
+let bookSettingsOpen = ref(false);
+
+const togglePageSettings = () => {
+    pageSettingsOpen.value = !pageSettingsOpen.value;
+    if (bookSettingsOpen.value) {
+        bookSettingsOpen.value = false;
+    }
+};
+
+const toggleBookSettings = () => {
+    bookSettingsOpen.value = !bookSettingsOpen.value;
+    if (pageSettingsOpen.value) {
+        pageSettingsOpen.value = false;
+    }
+};
 
 onMounted(() => {
     if (props.pages.total === 0) {
-        settingsOpen.value = true;
+        pageSettingsOpen.value = true;
     }
 });
 </script>

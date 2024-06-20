@@ -13,6 +13,8 @@ const props = defineProps({
     authors: Array,
 });
 
+const emit = defineEmits(["close-form"]);
+
 const form = useForm({
     title: props.book.title,
     excerpt: props.book.excerpt,
@@ -37,12 +39,17 @@ const categoriesOptions = computed(() => {
 });
 
 const submit = () => {
-    form.put(route("books.update", props.book.slug));
+    form.put(route("books.update", props.book.slug), {
+        onSuccess: () => {
+            form.reset();
+            emit("close-form");
+        },
+    });
 };
 </script>
 
 <template>
-    <div class="bg-white dark:bg-gray-800 rounded p-5 md:mr-2">
+    <div class="bg-white dark:bg-gray-800 rounded p-5 m-5 md:w-full">
         <h3 class="text-2xl dark:text-gray-100 w-full border-b mb-7">
             Edit Poop
         </h3>
@@ -69,7 +76,7 @@ const submit = () => {
                     />
                 </div>
                 <div class="mt-4">
-                    <BreezeLabel for="category" value="Poop Category" />
+                    <BreezeLabel for="category" value="Category" />
                     <Multiselect
                         id="category"
                         v-model="form.category_id"

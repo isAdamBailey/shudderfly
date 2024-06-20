@@ -127,7 +127,7 @@ const submit = async () => {
 </script>
 
 <template>
-    <div class="bg-white dark:bg-gray-800 rounded mb-5 md:mb-0 p-5 md:w-3/4">
+    <div class="bg-white dark:bg-gray-800 rounded m-5 md:w-full p-10">
         <h3 class="text-2xl dark:text-gray-100 w-full border-b mb-7">
             Add a New Fart
         </h3>
