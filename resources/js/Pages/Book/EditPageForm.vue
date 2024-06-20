@@ -2,13 +2,14 @@
 import BreezeLabel from "@/Components/InputLabel.vue";
 import { useForm, usePage } from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue";
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import DeletePageForm from "@/Pages/Book/DeletePageForm.vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
 import VideoIcon from "@/Components/svg/VideoIcon.vue";
 import Multiselect from "@vueform/multiselect";
 import InputLabel from "@/Components/InputLabel.vue";
 import TextInput from "@/Components/TextInput.vue";
+import useGetYouTubeVideo from "@/composables/useGetYouTubeVideo";
 
 const emit = defineEmits(["close-page-form"]);
 
@@ -30,6 +31,21 @@ const bookForm = useForm({
 });
 
 const imagePreview = ref(props.page.media_path);
+
+const embedUrl = ref(null);
+watch(
+    () => pageForm.video_link,
+    () => {
+        const { embedUrl: newEmbedUrl } = useGetYouTubeVideo(
+            pageForm.video_link,
+            {
+                noControls: true,
+            }
+        );
+        embedUrl.value = newEmbedUrl;
+    },
+    { immediate: true }
+);
 
 const imageInput = ref(null);
 const mediaOption = ref("upload"); // upload , link
@@ -174,6 +190,14 @@ const makeCoverPage = () => {
                         v-model="pageForm.video_link"
                         class="mt-1 block w-full"
                     />
+                    <div v-if="embedUrl" class="video-link-container">
+                        <iframe
+                            title="video preview"
+                            :src="embedUrl"
+                            frameborder="0"
+                            allow="accelerometer; encrypted-media;"
+                        ></iframe>
+                    </div>
                 </div>
                 <div class="w-full">
                     <BreezeLabel for="content" value="Words" />
@@ -241,3 +265,13 @@ const makeCoverPage = () => {
 </template>
 
 <style src="@vueform/multiselect/themes/default.css"></style>
+
+<style scoped>
+.video-link-container {
+    padding-bottom: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}
+</style>

@@ -21,7 +21,9 @@ export default function useGetYouTubeVideo(videoLink, settings = {}) {
 
     const controls = settings.noControls ? "&controls=0" : "";
 
-    const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId.value}?modestbranding=1&rel=0${controls}`;
-
+    let embedUrl = null;
+    if (videoId.value) {
+        embedUrl = `https://www.youtube-nocookie.com/embed/${videoId.value}?modestbranding=1&rel=0${controls}`;
+    }
     return { embedUrl };
 }
