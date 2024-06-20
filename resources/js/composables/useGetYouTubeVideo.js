@@ -1,6 +1,6 @@
 import { computed } from "vue";
 
-export default function useGetYouTubeVideoId(videoLink) {
+export default function useGetYouTubeVideo(videoLink, settings = {}) {
     const videoId = computed(() => {
         if (videoLink) {
             let id;
@@ -19,5 +19,9 @@ export default function useGetYouTubeVideoId(videoLink) {
         return null;
     });
 
-    return { videoId };
+    const controls = settings.noControls ? "&controls=0" : "";
+
+    const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId.value}?modestbranding=1&rel=0${controls}`;
+
+    return { embedUrl };
 }

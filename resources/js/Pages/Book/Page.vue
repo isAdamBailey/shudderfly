@@ -60,7 +60,7 @@ import EditPageForm from "@/Pages/Book/EditPageForm.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import { usePermissions } from "@/permissions";
 import { useDate } from "@/dateHelpers";
-import useGetYouTubeVideoId from "@/composables/useGetYouTubeVideoId";
+import useGetYouTubeVideo from "@/composables/useGetYouTubeVideo";
 
 const { canEditPages } = usePermissions();
 const { short } = useDate();
@@ -71,8 +71,7 @@ const props = defineProps({
 });
 
 let showPageSettings = ref(false);
-const { videoId } = useGetYouTubeVideoId(props.page.video_link);
-const embedUrl = `https://www.youtube.com/embed/${videoId.value}?modestbranding=1&rel=0`;
+const { embedUrl } = useGetYouTubeVideo(props.page.video_link);
 
 function isEdited(page) {
     return page.updated_at !== page.created_at;
