@@ -23,7 +23,7 @@ export default function useGetYouTubeVideo(videoLink, settings = {}) {
 
     let embedUrl = null;
     if (videoId.value) {
-        embedUrl = `https://www.youtube-nocookie.com/embed/${videoId.value}?modestbranding=1&rel=0${controls}`;
+        embedUrl = `https://www.youtube.com/embed/${videoId.value}?modestbranding=1&rel=0${controls}`;
     }
     return { embedUrl };
 }
