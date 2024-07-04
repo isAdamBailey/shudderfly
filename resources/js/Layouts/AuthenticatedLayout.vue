@@ -113,6 +113,21 @@ const username = ref(usePage().props.auth.user.name);
                                                 Daddy love you!!
                                             </h3>
                                         </div>
+                                        <DropdownLink
+                                            :href="
+                                                route(
+                                                    'profile.contact-admins-email',
+                                                    {
+                                                        message:
+                                                            'I love you mom and dad!',
+                                                    }
+                                                )
+                                            "
+                                            method="post"
+                                            as="button"
+                                        >
+                                            Tell mom and dad you love them
+                                        </DropdownLink>
                                     </template>
                                 </Dropdown>
                             </div>

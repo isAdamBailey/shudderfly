@@ -38,6 +38,8 @@ Route::middleware('auth')->group(function () {
     })->name('rules');
 
     Route::get('/photos', [PageController::class, 'index'])->name('pictures.index');
+    Route::post('/contact-admins-email', [ProfileController::class, 'contactAdminsEmail'])
+        ->name('profile.contact-admins-email');
 
     Route::group(['middleware' => ['can:edit pages']], function () {
         Route::get('/dashboard', [DashboardController::class, 'show'])->name('dashboard');
