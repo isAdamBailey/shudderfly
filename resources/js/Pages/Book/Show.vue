@@ -175,7 +175,7 @@ import Button from "@/Components/Button.vue";
 import { onMounted, ref } from "vue";
 import NewPageForm from "@/Pages/Book/NewPageForm.vue";
 import EditBookForm from "@/Pages/Book/EditBookForm.vue";
-import { usePermissions } from "@/permissions";
+import { usePermissions } from "@/composables/permissions";
 import Page from "@/Pages/Book/Page.vue";
 import { useDate } from "@/dateHelpers";
 import SearchInput from "@/Components/SearchInput.vue";

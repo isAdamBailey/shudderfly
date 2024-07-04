@@ -38,13 +38,14 @@ Route::middleware('auth')->group(function () {
     })->name('rules');
 
     Route::get('/photos', [PageController::class, 'index'])->name('pictures.index');
+
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::post('/contact-admins-email', [ProfileController::class, 'contactAdminsEmail'])
         ->name('profile.contact-admins-email');
 
     Route::group(['middleware' => ['can:edit pages']], function () {
         Route::get('/dashboard', [DashboardController::class, 'show'])->name('dashboard');
 
-        Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
         Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 

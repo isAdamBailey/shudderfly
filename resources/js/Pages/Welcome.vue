@@ -1,7 +1,7 @@
 <script setup>
 import { Head, Link } from "@inertiajs/vue3";
 import ApplicationLogo from "@/Components/ApplicationLogo.vue";
-import { usePermissions } from "@/permissions";
+import { usePermissions } from "@/composables/permissions";
 import Button from "@/Components/Button.vue";
 import SearchInput from "@/Components/SearchInput.vue";
 import { ref } from "vue";

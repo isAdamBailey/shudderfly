@@ -6,12 +6,11 @@ import DropdownLink from "@/Components/DropdownLink.vue";
 import NavLink from "@/Components/NavLink.vue";
 import ThemeToggle from "@/Layouts/Nav/ThemeToggle.vue";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
-import { Link, usePage } from "@inertiajs/vue3";
-import { usePermissions } from "@/permissions";
+import { Link } from "@inertiajs/vue3";
+import { usePermissions } from "@/composables/permissions";
 
 const { canEditPages } = usePermissions();
 const showingNavigationDropdown = ref(false);
-const username = ref(usePage().props.auth.user.name);
 </script>
 
 <template>
@@ -94,7 +93,6 @@ const username = ref(usePage().props.auth.user.name);
 
                                     <template #content>
                                         <DropdownLink
-                                            v-if="canEditPages"
                                             :href="route('profile.edit')"
                                         >
                                             Profile
@@ -106,27 +104,6 @@ const username = ref(usePage().props.auth.user.name);
                                             as="button"
                                         >
                                             Log Out
-                                        </DropdownLink>
-                                        <div v-else class="p-5 dark:text-white">
-                                            <h3>
-                                                Hi {{ username }} Mommy and
-                                                Daddy love you!!
-                                            </h3>
-                                        </div>
-                                        <DropdownLink
-                                            :href="
-                                                route(
-                                                    'profile.contact-admins-email',
-                                                    {
-                                                        message:
-                                                            'I love you mom and dad!',
-                                                    }
-                                                )
-                                            "
-                                            method="post"
-                                            as="button"
-                                        >
-                                            Tell mom and dad you love them
                                         </DropdownLink>
                                     </template>
                                 </Dropdown>
@@ -222,10 +199,7 @@ const username = ref(usePage().props.auth.user.name);
                         </div>
 
                         <div class="mt-3 space-y-1">
-                            <ResponsiveNavLink
-                                v-if="canEditPages"
-                                :href="route('profile.edit')"
-                            >
+                            <ResponsiveNavLink :href="route('profile.edit')">
                                 Profile
                             </ResponsiveNavLink>
                             <ResponsiveNavLink
