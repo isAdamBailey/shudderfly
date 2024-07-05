@@ -3,7 +3,6 @@
         <label for="search" class="hidden">Search</label>
         <input
             id="search"
-            ref="searchRef"
             v-model="search"
             class="h-8 w-full cursor-pointer rounded-full border border-blue-700 bg-gray-100 px-4 pb-0 pt-px text-gray-700 outline-none transition focus:border-blue-400"
             :class="{ 'border-red-500 border-2': voiceActive }"
@@ -45,7 +44,6 @@ const props = defineProps({
 let search = ref(usePage().props?.search || null);
 let filter = ref(usePage().props?.filter || null);
 let voiceActive = ref(false);
-let searchRef = ref(null);
 
 const typeName = computed(() => {
     return props.label || props.routeName.split(".")[0] || "something";
