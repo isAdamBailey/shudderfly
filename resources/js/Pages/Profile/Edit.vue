@@ -26,17 +26,17 @@ defineProps({
         </template>
 
         <div class="py-12">
-            <div
-                v-if="!canEditPages"
-                class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg"
-            >
-                Hi {{ $page.props.auth.user.name }}! Mommy and daddy love you!
-                😘
-            </div>
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
                 <div
                     class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg"
                 >
+                    <div
+                        v-if="!canEditPages"
+                        class="mb-10 text-gray-700 dark:text-gray-100"
+                    >
+                        Hi {{ $page.props.auth.user.name }}! Mommy and daddy
+                        love you! 😘
+                    </div>
                     <ContactAdminsForm />
                 </div>
                 <div
