@@ -6,8 +6,16 @@ import { ref, onMounted } from "vue";
 const buttonsDisabled = ref(true);
 
 function sendEmail(message) {
+    speak(message);
     router.post(route("profile.contact-admins-email", { message }));
     setTimestamp();
+}
+
+function speak(message) {
+    if ("speechSynthesis" in window) {
+        const utterance = new SpeechSynthesisUtterance(message);
+        window.speechSynthesis.speak(utterance);
+    }
 }
 
 function setTimestamp() {
