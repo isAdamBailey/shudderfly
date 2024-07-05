@@ -55,6 +55,21 @@ const searchPlaceholder = computed(() => {
     return voiceActive.value ? "Listening..." : `Search ${typeName.value}!`;
 });
 
+const speakSearch = (searchTerm) => {
+    if ("speechSynthesis" in window && searchTerm) {
+        const utterance = new SpeechSynthesisUtterance(searchTerm);
+        window.speechSynthesis.speak(utterance);
+    }
+};
+
+watch(search, (newValue) => {
+    if (!search.value) {
+        searchMethod();
+    } else {
+        speakSearch(newValue);
+    }
+});
+
 const searchMethod = () => {
     router.get(
         route(props.routeName),
