@@ -12,6 +12,7 @@
             :placeholder="searchPlaceholder"
             type="search"
             @keyup.esc="search = null"
+            @keyup.enter="searchMethod"
         />
         <button
             class="self-center flex items-center text-amber-200 dark:text-gray-100 ml-2 w-6 h-6"
@@ -54,21 +55,13 @@ const searchPlaceholder = computed(() => {
     return voiceActive.value ? "Listening..." : `Search ${typeName.value}!`;
 });
 
-watch(search, () => {
-    if (search.value) {
-        searchMethod();
-    } else {
-        router.get(route(props.routeName));
-    }
-});
-
-const searchMethod = _.debounce(function () {
+const searchMethod = () => {
     router.get(
         route(props.routeName),
         { search: search.value, filter: filter.value },
         { preserveState: true }
     );
-}, 2000);
+};
 
 const startVoiceRecognition = () => {
     const recognition = new (window.SpeechRecognition ||
