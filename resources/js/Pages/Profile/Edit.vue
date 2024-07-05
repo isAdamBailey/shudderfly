@@ -3,7 +3,11 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import DeleteUserForm from "./Partials/DeleteUserForm.vue";
 import UpdatePasswordForm from "./Partials/UpdatePasswordForm.vue";
 import UpdateProfileInformationForm from "./Partials/UpdateProfileInformationForm.vue";
+import ContactAdminsForm from "./Partials/ContactAdminsForm.vue";
 import { Head } from "@inertiajs/vue3";
+import { usePermissions } from "@/composables/permissions";
+
+const { canEditPages } = usePermissions();
 
 defineProps({
     mustVerifyEmail: Boolean,
@@ -22,8 +26,21 @@ defineProps({
         </template>
 
         <div class="py-12">
+            <div
+                v-if="!canEditPages"
+                class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg"
+            >
+                Hi {{ $page.props.auth.user.name }}! Mommy and daddy love you!
+                😘
+            </div>
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
                 <div
+                    class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg"
+                >
+                    <ContactAdminsForm />
+                </div>
+                <div
+                    v-if="canEditPages"
                     class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg"
                 >
                     <UpdateProfileInformationForm
@@ -34,12 +51,14 @@ defineProps({
                 </div>
 
                 <div
+                    v-if="canEditPages"
                     class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg"
                 >
                     <UpdatePasswordForm class="max-w-xl" />
                 </div>
 
                 <div
+                    v-if="canEditPages"
                     class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg"
                 >
                     <DeleteUserForm class="max-w-xl" />

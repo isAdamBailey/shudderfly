@@ -58,7 +58,7 @@ import Button from "@/Components/Button.vue";
 import { ref } from "vue";
 import EditPageForm from "@/Pages/Book/EditPageForm.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
-import { usePermissions } from "@/permissions";
+import { usePermissions } from "@/composables/permissions";
 import { useDate } from "@/dateHelpers";
 import useGetYouTubeVideo from "@/composables/useGetYouTubeVideo";
 
