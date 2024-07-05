@@ -27,7 +27,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { usePage, router } from "@inertiajs/vue3";
 
 const props = defineProps({
@@ -60,15 +60,16 @@ const speakSearch = (searchTerm) => {
     }
 };
 
-watch(search, (newValue) => {
+watch(search, () => {
     if (!search.value) {
         searchMethod();
-    } else {
-        speakSearch(newValue);
     }
 });
 
 const searchMethod = () => {
+    if (search.value) {
+        speakSearch(search.value);
+    }
     router.get(
         route(props.routeName),
         { search: search.value, filter: filter.value },
