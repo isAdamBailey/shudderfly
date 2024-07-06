@@ -27,9 +27,11 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch } from "vue";
 import { usePage, router } from "@inertiajs/vue3";
+import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 
+const { speak } = useSpeechSynthesis();
 const props = defineProps({
     routeName: {
         type: String,
@@ -53,13 +55,6 @@ const searchPlaceholder = computed(() => {
     return voiceActive.value ? "Listening..." : `Search ${typeName.value}!`;
 });
 
-const speakSearch = (searchTerm) => {
-    if ("speechSynthesis" in window && searchTerm) {
-        const utterance = new SpeechSynthesisUtterance(searchTerm);
-        window.speechSynthesis.speak(utterance);
-    }
-};
-
 watch(search, () => {
     if (!search.value) {
         searchMethod();
@@ -68,7 +63,7 @@ watch(search, () => {
 
 const searchMethod = () => {
     if (search.value) {
-        speakSearch(search.value);
+        speak(search.value);
     }
     router.get(
         route(props.routeName),
@@ -92,6 +87,7 @@ const startVoiceRecognition = () => {
             // Split the transcript into words, remove duplicates, and join back together
             transcript = [...new Set(transcript.split(" "))].join(" ");
             search.value = transcript;
+            searchMethod();
         }
     });
 
