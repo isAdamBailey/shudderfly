@@ -3,7 +3,7 @@
 
     <BreezeAuthenticatedLayout>
         <template #header>
-            <SearchInput route-name="books.search" label="Poops" class="mb-2" />
+            <SearchInput route-name="books.search" label="Books" class="mb-2" />
             <Link :href="pages.first_page_url" class="w-full">
                 <div class="flex justify-between flex-wrap">
                     <div class="flex items-center">
@@ -30,7 +30,7 @@
                             {{ short(book.created_at) }}
                         </p>
                         <p class="text-xs text-gray-100">
-                            {{ pages.total }} farts
+                            {{ pages.total }} pages
                         </p>
                     </div>
                 </div>

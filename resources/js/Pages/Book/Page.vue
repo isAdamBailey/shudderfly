@@ -34,14 +34,14 @@
                 class="w-full rounded-t-none bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
                 @click="showPageSettings = true"
             >
-                Edit Fart
+                Edit Page
             </Button>
             <Button
                 v-else
                 class="w-full rounded-b-none bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
                 @click="showPageSettings = false"
             >
-                Close fart settings
+                Close page settings
             </Button>
             <EditPageForm
                 v-if="showPageSettings"

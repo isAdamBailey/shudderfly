@@ -48,13 +48,13 @@ defineProps({
                                 "
                                 @click="bookClicked = !bookClicked"
                                 >{{ name }}</span
-                            >'s very own app to make farts and poops!
+                            >'s very own app to make books!
                         </p>
                         <div class="mt-12">
                             <div v-if="$page.props.auth.user">
                                 <div class="flex justify-around">
                                     <Link :href="route('books.index')">
-                                        <Button> View Poops</Button>
+                                        <Button> View Books</Button>
                                     </Link>
                                     <Link
                                         v-if="canEditPages"
@@ -66,7 +66,7 @@ defineProps({
                                 <SearchInput
                                     class="mt-12"
                                     route-name="books.search"
-                                    label="Poops"
+                                    label="Books"
                                 />
                             </div>
                             <div v-else class="flex justify-around">

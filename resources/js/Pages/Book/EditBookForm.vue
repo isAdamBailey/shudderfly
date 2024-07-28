@@ -51,7 +51,7 @@ const submit = () => {
 <template>
     <div class="bg-white dark:bg-gray-800 rounded p-5 m-5 md:w-full">
         <h3 class="text-2xl dark:text-gray-100 w-full border-b mb-7">
-            Edit Poop
+            Edit Book
         </h3>
         <form @submit.prevent="submit">
             <div class="flex flex-col">
@@ -105,7 +105,7 @@ const submit = () => {
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                 >
-                    Save Poop
+                    Save Book
                 </BreezeButton>
             </div>
         </form>

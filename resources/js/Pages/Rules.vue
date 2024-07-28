@@ -49,7 +49,7 @@ const name = "Colin";
                             environment, no hurting yourself.
                         </li>
                     </ul>
-                    <h3 class="pt-5 pb-2 text-xl">Huge Farts!</h3>
+                    <h3 class="pt-5 pb-2 text-xl">Huge Pages!</h3>
                     <ul class="pl-8 list-disc">
                         <li>
                             Sometimes the videos take a long time to load! Be
@@ -64,16 +64,16 @@ const name = "Colin";
                     <h3 class="pt-5 pb-2 text-xl">Stinky Names!</h3>
                     <ul class="pl-8 list-disc">
                         <li>
-                            Poops are collections of farts. Farts are the
+                            Books are collections of pages. Pages are the
                             pictures and videos you upload.
                         </li>
                         <li>
-                            If you search poops in the Poops page, you get all
-                            poops with that word in the title or excerpt.
+                            If you search books in the Books page, you get all
+                            books with that word in the title or excerpt.
                         </li>
                         <li>
-                            If you search farts in the Farts page, you get all
-                            farts with that word in the fart page.
+                            If you search pages, you get all pages with that
+                            word in the page.
                         </li>
                     </ul>
                 </div>

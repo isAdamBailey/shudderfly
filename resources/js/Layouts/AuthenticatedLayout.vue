@@ -50,13 +50,13 @@ const showingNavigationDropdown = ref(false);
                                     :href="route('books.index')"
                                     :active="route().current('books.*')"
                                 >
-                                    Poops
+                                    Books
                                 </NavLink>
                                 <NavLink
                                     :href="route('pictures.index')"
                                     :active="route().current('pictures.*')"
                                 >
-                                    Farts
+                                    Uploads
                                 </NavLink>
                             </div>
                         </div>
@@ -173,13 +173,13 @@ const showingNavigationDropdown = ref(false);
                             :href="route('books.index')"
                             :active="route().current('books.*')"
                         >
-                            Poops
+                            Books
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             :href="route('pictures.index')"
                             :active="route().current('pictures.*')"
                         >
-                            Farts
+                            Uploads
                         </ResponsiveNavLink>
                     </div>
 

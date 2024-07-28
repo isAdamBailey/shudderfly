@@ -9,7 +9,7 @@
                         {{ title }}
                     </h2>
                 </Link>
-                <SearchInput route-name="pictures.index" label="Farts" />
+                <SearchInput route-name="pictures.index" label="Pages" />
             </div>
         </template>
 
@@ -76,20 +76,20 @@ const isYouTube = computed(() => {
 const title = computed(() => {
     const search = usePage().props.search;
     if (search) {
-        return `Farts with "${search}"`;
+        return `Pages with "${search}"`;
     }
     if (props.photos.total) {
         const total = props.photos.total;
         if (isRandom.value) {
-            return `${total} Random Farts`;
+            return `${total} Random Uploads`;
         }
         if (isOld.value) {
-            return `${total} Farts a Year Old`;
+            return `${total} Uploads a Year Old`;
         }
         if (isYouTube.value) {
-            return `${total} YouTube Farts`;
+            return `${total} YouTube Videos`;
         }
     }
-    return "Newest Farts";
+    return "Newest Uploads";
 });
 </script>

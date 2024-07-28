@@ -129,7 +129,7 @@ const submit = async () => {
 <template>
     <div class="bg-white dark:bg-gray-800 rounded m-5 md:w-full p-10">
         <h3 class="text-2xl dark:text-gray-100 w-full border-b mb-7">
-            Add a New Fart
+            Add a New Page
         </h3>
         <form @submit.prevent="submit">
             <div class="mb-4">
@@ -224,7 +224,7 @@ const submit = async () => {
                 "
                 class="text-red-600"
             >
-                That fart is tooo biig (over 40MB of farts hurts my belly)
+                That video is tooo biig (over 40MB hurts my belly)
             </p>
             <p
                 v-if="v$.$errors.length && v$.form.image.required.$invalid"
@@ -251,7 +251,7 @@ const submit = async () => {
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing || v$.$error"
                 >
-                    Create Fart!
+                    Create Page!
                 </Button>
             </div>
         </form>
