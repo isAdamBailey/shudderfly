@@ -4,7 +4,7 @@
     <BreezeAuthenticatedLayout>
         <template #header>
             <div class="flex justify-between items-center p-2">
-                <Link :href="route('pictures.index')">
+                <Link @click="filter()">
                     <h2 class="font-bold text-2xl text-gray-900 leading-tight">
                         {{ title }}
                     </h2>
@@ -14,30 +14,30 @@
         </template>
 
         <div class="p-2 pb-0 flex flex-wrap justify-around">
-            <Link :href="route('pictures.index', { filter: 'youtube' })">
-                <Button
-                    :is-active="isYouTube"
-                    class="rounded-full border-amber-50 dark:border-gray-100 my-3 p-10"
-                >
-                    <i class="ri-youtube-line text-4xl"></i>
-                </Button>
-            </Link>
-            <Link :href="route('pictures.index', { filter: 'random' })">
-                <Button
-                    :is-active="isRandom"
-                    class="rounded-full border-amber-50 dark:border-gray-100 my-3 p-10"
-                >
-                    <i class="ri-dice-line text-4xl"></i>
-                </Button>
-            </Link>
-            <Link :href="route('pictures.index', { filter: 'old' })">
-                <Button
-                    :is-active="isOld"
-                    class="rounded-full border-amber-50 dark:border-gray-100 my-3 p-10"
-                >
-                    <i class="ri-history-line text-4xl"></i>
-                </Button>
-            </Link>
+            <Button
+                type="button"
+                :is-active="isYouTube"
+                class="rounded-full border-amber-50 dark:border-gray-100 my-3 p-10"
+                @click="filter('youtube')"
+            >
+                <i class="ri-youtube-line text-4xl"></i>
+            </Button>
+            <Button
+                type="button"
+                :is-active="isRandom"
+                class="rounded-full border-amber-50 dark:border-gray-100 my-3 p-10"
+                @click="filter('random')"
+            >
+                <i class="ri-dice-line text-4xl"></i>
+            </Button>
+            <Button
+                type="button"
+                :is-active="isOld"
+                class="rounded-full border-amber-50 dark:border-gray-100 my-3 p-10"
+                @click="filter('old')"
+            >
+                <i class="ri-history-line text-4xl"></i>
+            </Button>
         </div>
         <PhotosGrid :photos="photos" />
         <ScrollTop />
@@ -50,9 +50,12 @@ import PhotosGrid from "@/Pages/Uploads/UploadsGrid.vue";
 import { Head, Link } from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue";
 import { computed } from "vue";
-import { usePage } from "@inertiajs/vue3";
+import { usePage, router } from "@inertiajs/vue3";
 import SearchInput from "@/Components/SearchInput.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
+import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+
+const { speak } = useSpeechSynthesis();
 
 const props = defineProps({
     photos: { type: Object, required: true },
@@ -92,4 +95,21 @@ const title = computed(() => {
     }
     return "Newest Uploads";
 });
+
+function filter(filter) {
+    let phrase = " newest uploads";
+    switch (filter) {
+        case "youtube":
+            phrase = "YouTube videos";
+            break;
+        case "old":
+            phrase = "uploads a year old";
+            break;
+        case "random":
+            phrase = "random uploads";
+            break;
+    }
+    speak(phrase);
+    router.get(route("pictures.index", { filter }));
+}
 </script>
