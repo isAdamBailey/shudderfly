@@ -63,7 +63,7 @@ watch(search, () => {
 
 const searchMethod = () => {
     if (search.value) {
-        speak(`Here are some books with ${search.value}`);
+        speak(`Here are some ${props.label} including ${search.value}`);
     }
     router.get(
         route(props.routeName),

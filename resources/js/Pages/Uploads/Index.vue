@@ -9,7 +9,7 @@
                         {{ title }}
                     </h2>
                 </Link>
-                <SearchInput route-name="pictures.index" label="Pages" />
+                <SearchInput route-name="pictures.index" label="Uploads" />
             </div>
         </template>
 
