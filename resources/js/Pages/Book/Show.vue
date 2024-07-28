@@ -52,15 +52,17 @@
                     {{ book.excerpt }}
                 </h2>
             </div>
-            <div v-if="canEditPages">
+            <div v-if="canEditPages" class="flex max-h-10">
                 <Button
-                    class="mb-3 md:mb-0 rounded-none font-bold px-12 bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
+                    type="button"
+                    class="md:mb-0 mr-1 rounded-none font-bold px-12 bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
                     @click="togglePageSettings"
                 >
                     <span v-if="pageSettingsOpen">Close</span>
                     <span v-else>Add Page</span>
                 </Button>
                 <Button
+                    type="button"
                     class="md:ml-4 rounded-none font-bold px-12 bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
                     @click="toggleBookSettings"
                 >
