@@ -32,7 +32,7 @@ class ContactAdmins extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: config('app.name').' - Message from '.$this->user->name,
+            subject: 'Message from '.$this->user->name,
         );
     }
 
