@@ -13,6 +13,7 @@ defineProps({
     <LiteYouTubeEmbed
         :id="id"
         :title="title"
+        :cookie="true"
         :params="`modestbranding=1&rel=0${!controls ? '&controls=0' : ''}`"
     />
 </template>
