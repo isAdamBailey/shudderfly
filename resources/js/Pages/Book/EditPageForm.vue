@@ -6,6 +6,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import DeletePageForm from "@/Pages/Book/DeletePageForm.vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
 import VideoIcon from "@/Components/svg/VideoIcon.vue";
+import VideoWrapper from "@/Components/VideoWrapper.vue";
 import Multiselect from "@vueform/multiselect";
 import InputLabel from "@/Components/InputLabel.vue";
 import TextInput from "@/Components/TextInput.vue";
@@ -32,17 +33,12 @@ const bookForm = useForm({
 
 const imagePreview = ref(props.page.media_path);
 
-const embedUrl = ref(null);
+const videoId = ref(null);
 watch(
     () => pageForm.video_link,
     () => {
-        const { embedUrl: newEmbedUrl } = useGetYouTubeVideo(
-            pageForm.video_link,
-            {
-                noControls: true,
-            }
-        );
-        embedUrl.value = newEmbedUrl;
+        const { videoId: newVideoId } = useGetYouTubeVideo(pageForm.video_link);
+        videoId.value = newVideoId.value;
     },
     { immediate: true }
 );
@@ -188,15 +184,10 @@ const makeCoverPage = () => {
                     <TextInput
                         id="media-link"
                         v-model="pageForm.video_link"
-                        class="mt-1 block w-full"
+                        class="m-1 mb-3 block w-full"
                     />
-                    <div v-if="embedUrl" class="video-link-container">
-                        <iframe
-                            title="video preview"
-                            :src="embedUrl"
-                            frameborder="0"
-                            allow="accelerometer; encrypted-media;"
-                        ></iframe>
+                    <div v-if="videoId">
+                        <VideoWrapper :id="videoId" :controls="false" />
                     </div>
                 </div>
                 <div class="w-full">
@@ -265,13 +256,3 @@ const makeCoverPage = () => {
 </template>
 
 <style src="@vueform/multiselect/themes/default.css"></style>
-
-<style scoped>
-.video-link-container {
-    padding-bottom: 40px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100%;
-}
-</style>

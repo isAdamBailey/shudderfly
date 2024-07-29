@@ -25,5 +25,6 @@ export default function useGetYouTubeVideo(videoLink, settings = {}) {
     if (videoId.value) {
         embedUrl = `https://www.youtube.com/embed/${videoId.value}?modestbranding=1&rel=0${controls}`;
     }
-    return { embedUrl };
+
+    return { videoId, embedUrl };
 }

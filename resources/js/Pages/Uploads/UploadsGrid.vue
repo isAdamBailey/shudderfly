@@ -3,6 +3,7 @@ import { Link, router, usePage } from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
+import VideoWrapper from "@/Components/VideoWrapper.vue";
 import { onMounted, ref, watch } from "vue";
 import useGetYouTubeVideo from "@/composables/useGetYouTubeVideo";
 
@@ -51,9 +52,9 @@ function fetchUploads() {
     );
 }
 
-function embedUrl(link) {
-    const { embedUrl } = useGetYouTubeVideo(link, { noControls: true });
-    return embedUrl;
+function videoId(link) {
+    const { videoId } = useGetYouTubeVideo(link);
+    return videoId.value;
 }
 </script>
 
@@ -83,16 +84,11 @@ function embedUrl(link) {
                         :src="photo.media_path"
                         :is-cover="true"
                     />
-                    <div
-                        v-if="photo.video_link"
-                        class="flex justify-center items-center pointer-events-none"
-                    >
-                        <iframe
-                            :title="photo.description"
-                            :src="embedUrl(photo.video_link)"
-                            frameborder="0"
-                            allow="accelerometer; encrypted-media;"
-                        ></iframe>
+                    <div v-if="photo.video_link">
+                        <VideoWrapper
+                            :id="videoId(photo.video_link)"
+                            :controls="false"
+                        />
                     </div>
                     <div
                         v-if="photo.content"

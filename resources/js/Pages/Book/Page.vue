@@ -8,13 +8,8 @@
             :src="page.media_path"
             :alt="page.description"
         />
-        <div v-else-if="embedUrl" class="video-container">
-            <iframe
-                :title="page.description"
-                :src="embedUrl"
-                frameborder="0"
-                allow="accelerometer; encrypted-media;"
-            ></iframe>
+        <div v-else-if="videoId">
+            <VideoWrapper :id="videoId" :title="page.description" />
         </div>
         <div
             class="px-3 py-3 text-gray-900 dark:text-white"
@@ -58,6 +53,7 @@ import Button from "@/Components/Button.vue";
 import { ref } from "vue";
 import EditPageForm from "@/Pages/Book/EditPageForm.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
+import VideoWrapper from "@/Components/VideoWrapper.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useDate } from "@/dateHelpers";
 import useGetYouTubeVideo from "@/composables/useGetYouTubeVideo";
@@ -71,26 +67,9 @@ const props = defineProps({
 });
 
 let showPageSettings = ref(false);
-const { embedUrl } = useGetYouTubeVideo(props.page.video_link);
+const { videoId } = useGetYouTubeVideo(props.page.video_link);
 
 function isEdited(page) {
     return page.updated_at !== page.created_at;
 }
 </script>
-
-<style scoped>
-.video-container {
-    position: relative;
-    width: 100%;
-    padding-bottom: 56.25%; /* For a 16:9 aspect ratio */
-    overflow: hidden;
-}
-
-.video-container iframe {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-}
-</style>

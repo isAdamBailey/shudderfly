@@ -5,6 +5,7 @@ import Button from "@/Components/Button.vue";
 import { ref, computed, watch } from "vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
 import VideoIcon from "@/Components/svg/VideoIcon.vue";
+import VideoWrapper from "@/Components/VideoWrapper.vue";
 import { useVuelidate } from "@vuelidate/core";
 import TextInput from "@/Components/TextInput.vue";
 import InputError from "@/Components/InputError.vue";
@@ -26,15 +27,15 @@ const form = useForm({
 
 const imageInput = ref(null);
 
-const embedUrl = ref(null);
+const videoId = ref(null);
 
 watch(
     () => form.video_link,
     () => {
-        const { embedUrl: newEmbedUrl } = useGetYouTubeVideo(form.video_link, {
+        const { videoId: newVideoId } = useGetYouTubeVideo(form.video_link, {
             noControls: true,
         });
-        embedUrl.value = newEmbedUrl;
+        videoId.value = newVideoId.value;
     }
 );
 
@@ -187,7 +188,7 @@ const submit = async () => {
                     <TextInput
                         id="media-link"
                         v-model="form.video_link"
-                        class="mt-1 block w-full"
+                        class="mt-1 mb-3 block w-full"
                     />
                     <InputError
                         v-if="
@@ -198,13 +199,8 @@ const submit = async () => {
                         message="A link to a video is required without any text or upload."
                     />
 
-                    <div v-if="embedUrl" class="video-link-container">
-                        <iframe
-                            title="video preview"
-                            :src="embedUrl"
-                            frameborder="0"
-                            allow="accelerometer; encrypted-media;"
-                        ></iframe>
+                    <div v-if="videoId" class="w-1/2">
+                        <VideoWrapper :id="videoId" :controls="false" />
                     </div>
                 </div>
 
@@ -257,13 +253,3 @@ const submit = async () => {
         </form>
     </div>
 </template>
-
-<style scoped>
-.video-link-container {
-    padding-bottom: 40px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100%;
-}
-</style>

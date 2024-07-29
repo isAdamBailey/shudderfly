@@ -32,6 +32,7 @@
         "@vueuse/core": "^10.1.0",
         "date-fns": "^2.29.3",
         "lodash": "^4.17.19",
-        "remixicon": "^4.2.0"
+        "remixicon": "^4.2.0",
+        "vue-lite-youtube-embed": "^1.2.4"
     }
 }
