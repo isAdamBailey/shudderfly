@@ -23,6 +23,16 @@
                 Edited
             </span>
         </p>
+        <div v-if="hasContent" class="flex justify-center mb-8">
+            <Button
+                type="button"
+                class="flex justify-center w-1/2"
+                @click="speak(page.content)"
+            >
+                <span class="text-lg">Read Page</span>
+            </Button>
+        </div>
+
         <div v-if="canEditPages">
             <Button
                 v-if="!showPageSettings"
@@ -50,13 +60,14 @@
 
 <script setup>
 import Button from "@/Components/Button.vue";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import EditPageForm from "@/Pages/Book/EditPageForm.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useDate } from "@/dateHelpers";
 import useGetYouTubeVideo from "@/composables/useGetYouTubeVideo";
+import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 
 const { canEditPages } = usePermissions();
 const { short } = useDate();
@@ -68,6 +79,12 @@ const props = defineProps({
 
 let showPageSettings = ref(false);
 const { videoId } = useGetYouTubeVideo(props.page.video_link);
+
+const hasContent = computed(
+    () => props.page.content && props.page.content !== "<p></p>"
+);
+
+const { speak } = useSpeechSynthesis();
 
 function isEdited(page) {
     return page.updated_at !== page.created_at;
