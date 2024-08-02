@@ -27,7 +27,8 @@
             <Button
                 type="button"
                 class="flex justify-center w-1/2"
-                @click="speak(page.content)"
+                :disabled="speaking"
+                @click="speak(stripHtml(page.content))"
             >
                 <span class="text-lg">Read Page</span>
             </Button>
@@ -71,6 +72,7 @@ import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 
 const { canEditPages } = usePermissions();
 const { short } = useDate();
+const { speak, speaking } = useSpeechSynthesis();
 
 const props = defineProps({
     page: Object,
@@ -80,11 +82,11 @@ const props = defineProps({
 let showPageSettings = ref(false);
 const { videoId } = useGetYouTubeVideo(props.page.video_link);
 
-const hasContent = computed(
-    () => props.page.content && props.page.content !== "<p></p>"
-);
+const hasContent = computed(() => stripHtml(props.page.content));
 
-const { speak } = useSpeechSynthesis();
+const stripHtml = (html) => {
+    return html.replace(/<\/?[^>]+(>|$)/g, "");
+};
 
 function isEdited(page) {
     return page.updated_at !== page.created_at;
