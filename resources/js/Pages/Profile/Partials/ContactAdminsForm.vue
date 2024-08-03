@@ -3,7 +3,7 @@ import { router } from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue";
 import { ref, onMounted } from "vue";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
-const { speak } = useSpeechSynthesis();
+const { speak, speaking } = useSpeechSynthesis();
 
 const buttonsDisabled = ref(true);
 
@@ -50,6 +50,7 @@ onMounted(() => {
         <div>
             <Button
                 class="mb-8 mr-3"
+                :disabled="speaking"
                 @click="speak('I don\'t feel very good today.')"
             >
                 <i class="ri-speak-fill text-4xl mr-3"></i>Say it
@@ -72,6 +73,7 @@ onMounted(() => {
         <div>
             <Button
                 class="mb-8 mr-3"
+                :disabled="speaking"
                 @click="speak('I feel very excited today!')"
             >
                 <i class="ri-speak-fill text-4xl mr-3"></i>Say it
@@ -94,6 +96,7 @@ onMounted(() => {
         <div>
             <Button
                 class="mb-8 mr-3"
+                :disabled="speaking"
                 @click="speak('I feel really silly today!')"
             >
                 <i class="ri-speak-fill text-4xl mr-3"></i>Say it
@@ -111,7 +114,11 @@ onMounted(() => {
             <span class="text-2xl font-bold">Love mom and dad? Tell them!</span>
         </div>
         <div class="flex">
-            <Button class="mb-8 mr-3" @click="speak('I love you mom and dad!')">
+            <Button
+                class="mb-8 mr-3"
+                :disabled="speaking"
+                @click="speak('I love you mom and dad!')"
+            >
                 <i class="ri-speak-fill text-4xl mr-3"></i> Say it
             </Button>
             <Button
