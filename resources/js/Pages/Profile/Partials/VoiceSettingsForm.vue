@@ -22,7 +22,6 @@ const secondHalf = computed(() => filteredVoices.value.slice(halfLength.value));
         Choose from one of the voices below:
     </p>
     <div class="flex">
-        {{ firstHalf }}
         <ul class="w-1/2">
             <li v-for="voice in firstHalf" :key="voice.name" class="mb-3">
                 <input
