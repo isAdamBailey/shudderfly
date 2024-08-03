@@ -36,13 +36,16 @@ export function useSpeechSynthesis() {
     onMounted(() => {
         if ("speechSynthesis" in window) {
             window.speechSynthesis.onvoiceschanged = getVoices;
-            setTimeout(getVoices, 100);
-        }
-        if (voices.value.length > 0) {
-            const index = parseInt(savedIndex, 10);
-            if (index < voices.value.length) {
-                selectedVoice.value = voices.value[index];
-            }
+            getVoices();
+
+            // Fallback mechanism for mobile browsers
+            const intervalId = setInterval(() => {
+                if (voices.value.length > 0) {
+                    clearInterval(intervalId);
+                } else {
+                    getVoices();
+                }
+            }, 100);
         }
     });
 
