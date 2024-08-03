@@ -4,35 +4,29 @@ export function useSpeechSynthesis() {
     const speaking = ref(false);
     const voices = ref([]);
     const selectedVoice = ref(null);
-    const selectedVoiceIndex = ref(0);
-    const savedIndex = localStorage.getItem("selectedVoiceIndex");
+    const savedIndex = localStorage.getItem("selectedVoiceIndex") || "0";
 
     const getVoices = () => {
         if ("speechSynthesis" in window) {
             voices.value = window.speechSynthesis.getVoices();
-            if (savedIndex !== null) {
-                const index = parseInt(savedIndex, 10);
-                selectedVoiceIndex.value = index;
-                selectedVoice.value = voices.value[index];
-            }
+            const index = parseInt(savedIndex, 10);
+            selectedVoice.value = voices.value[index];
         }
     };
 
     const setVoice = (voice) => {
         const index = voices.value.findIndex((v) => v.name === voice.name);
         if (index !== -1) {
-            selectedVoiceIndex.value = index;
             selectedVoice.value = voice;
             localStorage.setItem("selectedVoiceIndex", index.toString());
+            window.location.reload();
         }
     };
 
     const speak = (phrase) => {
         if ("speechSynthesis" in window && phrase) {
             const utterance = new SpeechSynthesisUtterance(phrase);
-            if (selectedVoiceIndex.value) {
-                utterance.voice = voices.value[selectedVoiceIndex.value];
-            }
+            utterance.voice = voices.value[savedIndex];
             utterance.onstart = () => (speaking.value = true);
             utterance.onend = () => (speaking.value = false);
             window.speechSynthesis.speak(utterance);
@@ -44,17 +38,12 @@ export function useSpeechSynthesis() {
             window.speechSynthesis.onvoiceschanged = getVoices;
             setTimeout(getVoices, 100);
         }
-        setTimeout(() => {
-            if (voices.value.length > 0) {
-                if (savedIndex !== null) {
-                    const index = parseInt(savedIndex, 10);
-                    if (index >= 0 && index < voices.value.length) {
-                        selectedVoiceIndex.value = index;
-                        selectedVoice.value = voices.value[index];
-                    }
-                }
+        if (voices.value.length > 0) {
+            const index = parseInt(savedIndex, 10);
+            if (index < voices.value.length) {
+                selectedVoice.value = voices.value[index];
             }
-        }, 100);
+        }
     });
 
     return { speak, speaking, voices, setVoice, selectedVoice };
