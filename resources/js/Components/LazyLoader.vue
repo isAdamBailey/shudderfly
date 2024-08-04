@@ -12,7 +12,7 @@
         disablepictureinpicture
         controlslist="nodownload"
         preload="auto"
-        class="rounded-t-lg object-cover"
+        class="w-full rounded-t-lg object-cover"
     >
         <source :src="imageSrc" />
         Your browser does not support the video tag.

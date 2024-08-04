@@ -85,6 +85,9 @@ let showPageSettings = ref(false);
 const hasContent = computed(() => stripHtml(props.page.content));
 
 const stripHtml = (html) => {
+    if (!html) {
+        return "";
+    }
     return html.replace(/<\/?[^>]+(>|$)/g, "");
 };
 
