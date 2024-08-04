@@ -31,9 +31,11 @@ const secondHalf = computed(() => filteredVoices.value.slice(halfLength.value));
                     :value="voice"
                     @input="setVoice(voice)"
                 />
-                <label :for="voice.name" class="ml-3 font-bold text-lg">{{
-                    voice.name
-                }}</label>
+                <label
+                    :for="voice.name"
+                    class="dark:text-white ml-3 font-bold text-lg"
+                    >{{ voice.name }}</label
+                >
             </li>
         </ul>
         <ul class="w-1/2">
@@ -45,9 +47,11 @@ const secondHalf = computed(() => filteredVoices.value.slice(halfLength.value));
                     :value="voice"
                     @input="setVoice(voice)"
                 />
-                <label :for="voice.name" class="ml-3 font-bold text-lg">{{
-                    voice.name
-                }}</label>
+                <label
+                    :for="voice.name"
+                    class="dark:text-white ml-3 font-bold text-lg"
+                    >{{ voice.name }}</label
+                >
             </li>
         </ul>
     </div>
