@@ -38,6 +38,8 @@ Route::middleware('auth')->group(function () {
     })->name('rules');
 
     Route::get('/photos', [PageController::class, 'index'])->name('pictures.index');
+    Route::post('/photos/{page}/increment-read-count', [PageController::class, 'incrementReadCount'])
+        ->name('pictures.increment-read-count');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::post('/contact-admins-email', [ProfileController::class, 'contactAdminsEmail'])

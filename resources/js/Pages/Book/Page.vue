@@ -2,27 +2,26 @@
     <div
         class="rounded-lg overflow-hidden bg-gradient-to-r from-white dark:from-gray-700 dark:via-gray-900 to-yellow-100 dark:to-black flex flex-col justify-between"
     >
-        <LazyLoader
-            v-if="page.media_path"
-            class="rounded-top max-h-[90vh] object-contain"
-            :src="page.media_path"
-            :alt="page.description"
-        />
-        <div v-else-if="videoId">
-            <VideoWrapper :id="videoId" :title="page.description" />
-        </div>
-        <div
-            class="px-3 py-3 text-gray-900 dark:text-white"
-            v-html="page.content"
-        ></div>
-        <p class="px-3 py-3">
-            <span class="text-xs text-gray-900 dark:text-white">
-                {{ short(page.created_at) }}
-            </span>
-            <span v-if="isEdited(page)" class="pl-1 text-xs text-gray-400">
-                Edited
-            </span>
-        </p>
+        <span @click.once="incrementReadCount">
+            <LazyLoader
+                v-if="page.media_path"
+                class="rounded-top max-h-[90vh] object-contain"
+                :src="page.media_path"
+                :alt="page.description"
+            />
+            <div v-else-if="videoId">
+                <VideoWrapper :id="videoId" :title="page.description" />
+            </div>
+            <div
+                class="px-3 py-3 text-gray-900 dark:text-white"
+                v-html="page.content"
+            ></div>
+            <p class="px-3 py-3">
+                <span class="text-xs text-gray-900 dark:text-white">
+                    {{ short(page.created_at) }}
+                </span>
+            </p>
+        </span>
         <div v-if="hasContent" class="flex justify-center mb-8">
             <Button
                 type="button"
@@ -62,6 +61,7 @@
 <script setup>
 import Button from "@/Components/Button.vue";
 import { computed, ref } from "vue";
+import { router } from "@inertiajs/vue3";
 import EditPageForm from "@/Pages/Book/EditPageForm.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
@@ -75,12 +75,12 @@ const { short } = useDate();
 const { speak, speaking } = useSpeechSynthesis();
 
 const props = defineProps({
-    page: Object,
-    book: Object,
+    page: { type: Object, required: true },
+    book: { type: Object, required: true },
 });
 
-let showPageSettings = ref(false);
 const { videoId } = useGetYouTubeVideo(props.page.video_link);
+let showPageSettings = ref(false);
 
 const hasContent = computed(() => stripHtml(props.page.content));
 
@@ -88,7 +88,14 @@ const stripHtml = (html) => {
     return html.replace(/<\/?[^>]+(>|$)/g, "");
 };
 
-function isEdited(page) {
-    return page.updated_at !== page.created_at;
+function incrementReadCount() {
+    if (canEditPages) {
+        return;
+    }
+    router.post(
+        route("pictures.increment-read-count", { page: props.page }),
+        {},
+        { preserveScroll: true }
+    );
 }
 </script>

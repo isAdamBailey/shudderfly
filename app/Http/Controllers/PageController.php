@@ -172,4 +172,11 @@ class PageController extends Controller
             $book->update(['cover_page' => $page->id]);
         }
     }
+
+    public function incrementReadCount(Page $page): void
+    {
+        if (! auth()->user()->can('edit pages')) {
+            $page->increment('read_count');
+        }
+    }
 }
