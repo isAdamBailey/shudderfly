@@ -14,15 +14,15 @@
             </div>
         </template>
 
+        <div v-for="(category, index) in workingCategories" :key="index">
+            <BooksGrid :category="category" />
+        </div>
+
         <BooksGrid
             v-if="!searchCategories"
             :category="{ name: 'popular' }"
             label="Your favorite books!"
         />
-
-        <div v-for="(category, index) in workingCategories" :key="index">
-            <BooksGrid :category="category" />
-        </div>
 
         <BooksGrid
             v-if="!searchCategories"
