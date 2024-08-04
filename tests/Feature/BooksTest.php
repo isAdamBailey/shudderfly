@@ -132,7 +132,7 @@ class BooksTest extends TestCase
         );
 
         // make sure we recorded it being read
-        $this->assertSame($book->read_count + 1, $book->fresh()->read_count);
+        $this->assertSame($book->read_count + 1.0, $book->fresh()->read_count);
     }
 
     public function test_when_book_is_returned_read_count_is_not_incremented_for_admins()
@@ -149,6 +149,8 @@ class BooksTest extends TestCase
         );
 
         // make sure we do not increment admin view
+        $this->assertIsFloat($book->read_count);
+        $this->assertIsFloat($book->fresh()->read_count);
         $this->assertSame($book->read_count, $book->fresh()->read_count);
     }
 

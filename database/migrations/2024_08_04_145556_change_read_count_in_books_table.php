@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('books', function (Blueprint $table) {
-            $table->float('read_count')->change();
+            $table->float('read_count')->default(0)->change();
         });
     }
 

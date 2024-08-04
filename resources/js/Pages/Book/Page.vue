@@ -93,7 +93,7 @@ function incrementReadCount() {
         return;
     }
     router.post(
-        route("pictures.increment-read-count", { page: props.page }),
+        route("pages.increment-read-count", { page: props.page }),
         {},
         { preserveScroll: true }
     );

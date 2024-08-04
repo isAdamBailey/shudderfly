@@ -161,4 +161,16 @@ class PagesTest extends TestCase
 
         $response->assertRedirect(route('books.show', $book));
     }
+
+    public function test_page_read_count_is_incremented()
+    {
+        $this->actingAs($user = User::factory()->create());
+
+        $book = Book::factory()->has(Page::factory())->create();
+        $page = $book->pages->first();
+
+        $this->post(route('pages.increment-read-count', $page));
+
+        $this->assertSame(1.0, $page->fresh()->read_count);
+    }
 }
