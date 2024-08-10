@@ -2,7 +2,10 @@
     <div
         class="rounded-lg overflow-hidden bg-gradient-to-r from-white dark:from-gray-700 dark:via-gray-900 to-yellow-100 dark:to-black flex flex-col justify-between"
     >
-        <span @click.once="incrementReadCount">
+        <span
+            @click.once="incrementReadCount"
+            @touchstart.once="incrementReadCount"
+        >
             <LazyLoader
                 v-if="page.media_path"
                 class="rounded-top max-h-[90vh] object-contain"

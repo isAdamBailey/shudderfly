@@ -102,12 +102,15 @@ class BookController extends Controller
      */
     public function show(Book $book, Request $request): Response
     {
+        $pageNumber = $request->page ?? 1;
+
         if (! auth()->user()->can('edit pages')) {
-            $book->increment('read_count');
+            if ($pageNumber === 1) {
+                $book->increment('read_count');
+            }
         }
 
         $paginationSize = 2;
-        $pageNumber = $request->page ?? 1;
         if ($request->pageId) {
             $pageId = (int) $request->pageId;
             $pageNumberInBook = $book->pages()->pluck('id')->search($pageId);
