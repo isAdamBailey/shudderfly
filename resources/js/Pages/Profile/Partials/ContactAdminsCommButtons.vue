@@ -1,8 +1,11 @@
 <script setup>
 import Button from "@/Components/Button.vue";
-import { onMounted, ref } from "vue";
+import { onMounted } from "vue";
 import { router } from "@inertiajs/vue3";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { useButtonState } from "@/composables/useDisableButtonState";
+
+const { buttonsDisabled, setTimestamp, checkTimestamp } = useButtonState();
 const { speak, speaking } = useSpeechSynthesis();
 
 defineProps({
@@ -16,29 +19,11 @@ defineProps({
     },
 });
 
-const buttonsDisabled = ref(true);
-
 function sendEmail(message) {
     speak(message);
     router.post(route("profile.contact-admins-email", { message }));
     setTimestamp();
 }
-
-function setTimestamp() {
-    const futureTime = new Date().getTime() + 60 * 60 * 1000; // 1 hour from now
-    localStorage.setItem("buttonsDisabledUntil", futureTime);
-    checkTimestamp();
-}
-
-function checkTimestamp() {
-    const now = new Date().getTime();
-    const disabledUntil = localStorage.getItem("buttonsDisabledUntil");
-    buttonsDisabled.value = now < disabledUntil;
-}
-
-onMounted(() => {
-    checkTimestamp();
-});
 </script>
 
 <template>
