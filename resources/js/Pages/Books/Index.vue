@@ -13,6 +13,11 @@
                 <SearchInput route-name="books.search" label="Books" />
             </div>
         </template>
+        <BooksGrid
+            v-if="!searchCategories"
+            :category="{ name: 'forgotten' }"
+            label="Remember these books?"
+        />
 
         <div v-for="(category, index) in workingCategories" :key="index">
             <BooksGrid :category="category" />
@@ -22,12 +27,6 @@
             v-if="!searchCategories"
             :category="{ name: 'popular' }"
             label="Your favorite books!"
-        />
-
-        <BooksGrid
-            v-if="!searchCategories"
-            :category="{ name: 'forgotten' }"
-            label="Did you forget these?"
         />
     </BreezeAuthenticatedLayout>
 </template>
