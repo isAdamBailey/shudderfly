@@ -15,6 +15,8 @@ const props = defineProps({
 
 const firstClose = ref(false);
 const lastClose = ref(false);
+
+const buildTimestamp = __BUILD_TIMESTAMP__;
 </script>
 
 <template>
@@ -102,6 +104,9 @@ const lastClose = ref(false);
                         <StatsCard :stats="stats" />
                     </div>
                 </div>
+                <p class="font-bold mt-12 text-gray-100">
+                    Last Deployment: {{ buildTimestamp }}
+                </p>
             </div>
         </div>
     </BreezeAuthenticatedLayout>
