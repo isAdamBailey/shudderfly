@@ -77,18 +77,11 @@ const handleScroll = async () => {
     if (nextUrl.value && scrollLeft >= scrollWidth - contentWidth) {
         const response = await fetchBooks();
         if (response?.data?.books) {
-            const newBooks = response.data.books.data;
-            const uniqueBooks = newBooks.filter(
-                (book) => !bookIds.has(book.id)
-            );
-            books.value = [...books.value, ...uniqueBooks];
-            uniqueBooks.forEach((book) => bookIds.add(book.id));
+            books.value = [...books.value, ...response.data.books.data];
             nextUrl.value = response.data.books.next_page_url;
         }
     }
 };
-
-const bookIds = new Set();
 
 onMounted(async () => {
     const response = await fetchBooks();
