@@ -8,7 +8,9 @@ const { voices, selectedVoice, setVoice } = useSpeechSynthesis();
 const { canEditPages } = usePermissions();
 
 const filteredVoices = computed(() =>
-    voices.value.filter((voice) => voice.lang === "en-US")
+    voices.value.filter(
+        (voice) => voice.lang === "en-US" || voice.lang === "en_US"
+    )
 );
 const halfLength = computed(() => Math.ceil(filteredVoices.value.length / 2));
 const firstHalf = computed(() =>
@@ -17,13 +19,14 @@ const firstHalf = computed(() =>
 const secondHalf = computed(() => filteredVoices.value.slice(halfLength.value));
 
 function alertVoices() {
+    const filteredVoiceNames = new Set(
+        filteredVoices.value.map((voice) => voice.name)
+    );
     const voiceDetails = voices.value
-        .map(
-            ({ name, lang, default: isDefault }) =>
-                `Name: ${name}, Language: ${lang}, Default: ${isDefault}`
-        )
+        .filter((voice) => !filteredVoiceNames.has(voice.name))
+        .map(({ name, lang }) => `Name: ${name}, Language: ${lang}`)
         .join("\n");
-    alert("Here are all available voices in your browser:\n" + voiceDetails);
+    alert("Here are more available voices in your browser:\n\n" + voiceDetails);
 }
 </script>
 
