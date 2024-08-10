@@ -11,7 +11,6 @@ export function useButtonState() {
     }
 
     function checkTimestamp() {
-        console.log("Checking timestamp");
         const now = new Date().getTime();
         const disabledUntil = localStorage.getItem("buttonsDisabledUntil");
         buttonsDisabled.value = now < disabledUntil;
