@@ -1,11 +1,9 @@
 <template>
     <div
         class="rounded-lg overflow-hidden bg-gradient-to-r from-white dark:from-gray-700 dark:via-gray-900 to-yellow-100 dark:to-black flex flex-col justify-between"
+        @click.once="incrementReadCount"
     >
-        <span
-            @click.once="incrementReadCount"
-            @touchstart.once="incrementReadCount"
-        >
+        <span>
             <LazyLoader
                 v-if="page.media_path"
                 class="rounded-top max-h-[90vh] object-contain"
@@ -19,22 +17,21 @@
                 class="px-3 py-3 text-gray-900 dark:text-white"
                 v-html="page.content"
             ></div>
+            <div v-if="hasContent" class="mr-3 text-right">
+                <Button
+                    type="button"
+                    :disabled="speaking"
+                    @click="speak(stripHtml(page.content))"
+                >
+                    <i class="ri-speak-fill text-xl"></i>
+                </Button>
+            </div>
             <p class="px-3 py-3">
                 <span class="text-xs text-gray-900 dark:text-white">
                     {{ short(page.created_at) }}
                 </span>
             </p>
         </span>
-        <div v-if="hasContent" class="flex justify-center mb-8">
-            <Button
-                type="button"
-                class="flex justify-center w-1/2"
-                :disabled="speaking"
-                @click="speak(stripHtml(page.content))"
-            >
-                <span class="text-lg">Read Page</span>
-            </Button>
-        </div>
 
         <div v-if="canEditPages">
             <Button

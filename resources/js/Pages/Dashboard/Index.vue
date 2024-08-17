@@ -104,7 +104,7 @@ const buildTimestamp = __BUILD_TIMESTAMP__;
                         <StatsCard :stats="stats" />
                     </div>
                 </div>
-                <p class="font-bold mt-12 text-gray-100">
+                <p class="ml-5 md:ml-0 font-bold mt-12 text-gray-100">
                     Last Deployment: {{ buildTimestamp }}
                 </p>
             </div>
@@ -112,14 +112,4 @@ const buildTimestamp = __BUILD_TIMESTAMP__;
     </BreezeAuthenticatedLayout>
 </template>
 
-<style scoped>
-.v-enter-active,
-.v-leave-active {
-    transition: opacity 0.5s ease;
-}
-
-.v-enter-from,
-.v-leave-to {
-    opacity: 0;
-}
-</style>
+<style scoped></style>

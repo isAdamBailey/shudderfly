@@ -52,6 +52,14 @@
                     {{ book.excerpt }}
                 </h2>
             </div>
+            <Button
+                v-if="!canEditPages"
+                type="button"
+                :disabled="speaking"
+                @click="readTitleAndExcerpt"
+            >
+                <i class="ri-speak-fill text-xl"></i>
+            </Button>
             <div v-if="canEditPages" class="flex max-h-10">
                 <Button
                     type="button"
@@ -181,9 +189,11 @@ import { usePermissions } from "@/composables/permissions";
 import Page from "@/Pages/Book/Page.vue";
 import { useDate } from "@/dateHelpers";
 import SearchInput from "@/Components/SearchInput.vue";
+import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 
 const { canEditPages } = usePermissions();
 const { short } = useDate();
+const { speak, speaking } = useSpeechSynthesis();
 
 const props = defineProps({
     book: Object,
@@ -209,6 +219,20 @@ const toggleBookSettings = () => {
     bookSettingsOpen.value = !bookSettingsOpen.value;
     if (pageSettingsOpen.value) {
         pageSettingsOpen.value = false;
+    }
+};
+
+const stripHtml = (html) => {
+    if (!html) {
+        return "";
+    }
+    return html.replace(/<\/?[^>]+(>|$)/g, "");
+};
+
+const readTitleAndExcerpt = () => {
+    speak(stripHtml(props.book.title));
+    if (props.book.excerpt) {
+        speak(stripHtml(props.book.excerpt));
     }
 };
 
