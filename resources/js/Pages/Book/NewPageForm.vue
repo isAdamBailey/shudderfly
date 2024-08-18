@@ -40,11 +40,11 @@ watch(
 );
 
 const rules = computed(() => {
-    const file_size_validation = () => {
-        if (!imageInput.value?.files[0]) {
+    const fileSizeValidation = (image) => {
+        if (!image) {
             return true;
         }
-        return imageInput.value.files[0]?.size < 40714055;
+        return image.size < 40714055; // 40MB
     };
     const atLeastOneRequired = () => {
         return (
@@ -60,7 +60,7 @@ const rules = computed(() => {
             },
             image: {
                 required: atLeastOneRequired,
-                file_size_validation,
+                file_size_validation: () => fileSizeValidation(form.image),
             },
             content: {
                 required: atLeastOneRequired,
@@ -93,11 +93,13 @@ function updateImagePreview() {
     const photo = imageInput.value.files[0];
     if (!photo) return;
 
+    form.image = photo;
+    v$.value.$touch();
+
     const reader = new FileReader();
     reader.onload = (e) => {
         imagePreview.value = e.target.result;
     };
-
     reader.readAsDataURL(photo);
 }
 
