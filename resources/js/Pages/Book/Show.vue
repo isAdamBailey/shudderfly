@@ -5,59 +5,49 @@
         <template #header>
             <SearchInput route-name="books.search" label="Books" class="mb-2" />
             <Link :href="pages.path" class="w-full">
-                <div class="flex justify-between flex-wrap">
-                    <div class="flex items-center">
-                        <img
-                            v-if="book.cover_image?.media_path"
-                            class="object-cover max-h-12 rounded mr-2"
-                            :src="book.cover_image.media_path"
-                            alt="cover image"
-                        />
-                        <h2
-                            class="font-bold text-2xl text-gray-900 leading-tight"
-                        >
-                            {{ book.title.toUpperCase() }}
-                        </h2>
-                    </div>
+                <div class="flex justify-center mb-3">
+                    <h2 class="font-bold text-4xl text-gray-900 leading-tight">
+                        {{ book.title.toUpperCase() }}
+                    </h2>
+                </div>
+                <div class="flex justify-center items-center">
+                    <img
+                        v-if="book.cover_image?.media_path"
+                        class="object-cover max-h-48 rounded-lg mr-2"
+                        :src="book.cover_image.media_path"
+                        alt="cover image"
+                    />
                     <div>
-                        <p
-                            v-if="book.author"
-                            class="mr-3 font-bold text-gray-100"
-                        >
+                        <p v-if="book.author" class="mr-3 font-bold">
                             by: {{ book.author }}
                         </p>
-                        <p class="text-xs text-gray-100">
+                        <p>
                             {{ short(book.created_at) }}
                         </p>
-                        <p class="text-xs text-gray-100">
-                            {{ pages.total }} pages
-                        </p>
+                        <p>{{ pages.total }} pages</p>
                     </div>
+                </div>
+                <div v-if="book.excerpt" class="text-center mt-3">
+                    <h2 class="italic leading-tight">
+                        {{ book.excerpt }}
+                    </h2>
                 </div>
             </Link>
         </template>
 
         <div
-            :class="!book.excerpt ? 'justify-end' : 'justify-between'"
-            class="p-2 flex flex-nowrap align-middle bg-yellow-200 dark:bg-gray-800"
+            class="p-2 flex justify-end flex-nowrap align-middle bg-yellow-200 dark:bg-gray-800"
         >
-            <div v-if="book.excerpt">
-                <h2
-                    class="italic text-sm text-gray-900 dark:text-gray-100 leading-tight"
-                >
-                    {{ book.excerpt }}
-                </h2>
-            </div>
-            <Button
-                v-if="!canEditPages"
-                type="button"
-                :disabled="speaking"
-                @click="readTitleAndExcerpt"
-            >
-                <i class="ri-speak-fill text-xl"></i>
-            </Button>
-            <div v-if="canEditPages" class="flex max-h-10">
+            <div class="flex max-h-10">
                 <Button
+                    type="button"
+                    :disabled="speaking"
+                    @click="readTitleAndExcerpt"
+                >
+                    <i class="ri-speak-fill text-lg"></i>
+                </Button>
+                <Button
+                    v-if="canEditPages"
                     type="button"
                     class="ml-2 rounded-none font-bold px-12 bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
                     @click="togglePageSettings"
@@ -66,6 +56,7 @@
                     <span v-else>Add Page</span>
                 </Button>
                 <Button
+                    v-if="canEditPages"
                     type="button"
                     class="ml-2 rounded-none font-bold px-12 bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
                     @click="toggleBookSettings"
