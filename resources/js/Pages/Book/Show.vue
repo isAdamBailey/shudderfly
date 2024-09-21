@@ -5,7 +5,7 @@
         <template #header>
             <SearchInput route-name="books.search" label="Books" class="mb-2" />
             <Link :href="pages.path" class="w-full">
-                <div class="flex justify-center mb-3">
+                <div class="flex justify-center text-center mb-3">
                     <h2 class="font-bold text-4xl text-gray-900 leading-tight">
                         {{ book.title.toUpperCase() }}
                     </h2>
