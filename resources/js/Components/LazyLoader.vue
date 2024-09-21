@@ -14,7 +14,6 @@
         controlslist="nodownload"
         preload="metadata"
         class="h-full w-full rounded-lg object-cover"
-        loading="lazy"
     >
         <source :src="imageSrc" />
         Your browser does not support the video tag.
@@ -30,7 +29,7 @@
 
 <script setup>
 import { useImage } from "@vueuse/core";
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useMedia } from "@/mediaHelpers";
 
 const { isVideo } = useMedia();
@@ -57,6 +56,27 @@ const props = defineProps({
 const placeholder = "/img/photo-placeholder.png";
 const video = ref(null);
 const imageSrc = ref(props.src || placeholder);
+
+const handleIntersection = ([entry], observer) => {
+    if (entry.isIntersecting) {
+        imageSrc.value = props.src || placeholder;
+        observer.unobserve(entry.target);
+    }
+};
+
+const observer = new IntersectionObserver(handleIntersection);
+
+onMounted(() => {
+    if (video.value) {
+        observer.observe(video.value);
+    }
+});
+
+onUnmounted(() => {
+    if (video.value) {
+        observer.unobserve(video.value);
+    }
+});
 
 watch(video, (newVideo) => {
     if (newVideo) {
