@@ -39,14 +39,14 @@
                 <i class="ri-history-line text-4xl"></i>
             </Button>
         </div>
-        <PhotosGrid :photos="photos" />
+        <UploadsGrid :photos="photos" />
         <ScrollTop />
     </BreezeAuthenticatedLayout>
 </template>
 
 <script setup>
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import PhotosGrid from "@/Pages/Uploads/UploadsGrid.vue";
+import UploadsGrid from "@/Pages/Uploads/UploadsGrid.vue";
 import { Head, Link } from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue";
 import { computed } from "vue";

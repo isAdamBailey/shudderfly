@@ -53,6 +53,29 @@ class PageController extends Controller
         ]);
     }
 
+    public function show(Page $page, Request $request): Response
+    {
+        if (! auth()->user()->can('edit pages') && $request->input('increment')) {
+            $page->increment('read_count');
+        }
+
+        $page->load(['book', 'book.coverImage']);
+
+        $nextPage = Page::where('book_id', $page->book_id)
+            ->where('created_at', '<', $page->created_at)
+            ->first();
+
+        $previousPage = Page::where('book_id', $page->book_id)
+            ->where('created_at', '>', $page->created_at)
+            ->first();
+
+        return Inertia::render('Page/Show', [
+            'page' => $page,
+            'previousPage' => $previousPage,
+            'nextPage' => $nextPage,
+        ]);
+    }
+
     /**
      * Store a newly created resource in storage.
      */
@@ -170,13 +193,6 @@ class PageController extends Controller
 
         if ($page) {
             $book->update(['cover_page' => $page->id]);
-        }
-    }
-
-    public function incrementReadCount(Page $page): void
-    {
-        if (! auth()->user()->can('edit pages')) {
-            $page->increment('read_count');
         }
     }
 }

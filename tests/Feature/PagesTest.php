@@ -50,6 +50,28 @@ class PagesTest extends TestCase
         );
     }
 
+    public function test_page_is_returned()
+    {
+        $this->actingAs(User::factory()->create());
+
+        $book = Book::factory()->has(Page::factory())->create();
+        $page = $book->pages->first();
+
+        $this->get(route('pages.show', [$page, 'increment' => true]))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Page/Show')
+                ->has('page.content')
+                ->has('page.media_path')
+                ->has('page.video_link')
+                ->has('page.book')
+                ->has('page.book.cover_image')
+                ->has('previousPage')
+                ->has('nextPage')
+        );
+
+        $this->assertSame(1.0, $page->fresh()->read_count);
+    }
+
     public function test_page_cannot_be_stored_without_permissions()
     {
         $this->actingAs(User::factory()->create());
@@ -160,17 +182,5 @@ class PagesTest extends TestCase
         $this->assertNull(Page::find($page->id));
 
         $response->assertRedirect(route('books.show', $book));
-    }
-
-    public function test_page_read_count_is_incremented()
-    {
-        $this->actingAs($user = User::factory()->create());
-
-        $book = Book::factory()->has(Page::factory())->create();
-        $page = $book->pages->first();
-
-        $this->post(route('pages.increment-read-count', $page));
-
-        $this->assertSame(1.0, $page->fresh()->read_count);
     }
 }

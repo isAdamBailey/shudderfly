@@ -148,7 +148,7 @@ const makeCoverPage = () => {
                 </Button>
             </div>
             <div class="flex flex-wrap">
-                <div v-if="mediaOption === 'upload'" class="w-full">
+                <div v-if="mediaOption === 'upload'">
                     <BreezeLabel for="imageInput" value="Media" />
                     <input
                         ref="imageInput"
@@ -161,11 +161,20 @@ const makeCoverPage = () => {
                             imagePreview.startsWith('data:image') ||
                             imagePreview.startsWith('https')
                         "
-                        class="h-40 rounded bg-cover bg-center bg-no-repeat mr-2"
+                        class="h-60 w-60 rounded bg-cover bg-center bg-no-repeat mr-2"
                         :style="
                             'background-image: url(\'' + imagePreview + '\');'
                         "
                     ></div>
+                    <div
+                        v-else-if="imagePreview.startsWith('data:video')"
+                        class="w-3/4"
+                    >
+                        <video controls class="w-60">
+                            <source :src="imagePreview" type="video/mp4" />
+                            <VideoIcon class="text-blue-700" />
+                        </video>
+                    </div>
                     <div v-else class="w-32">
                         <VideoIcon class="text-blue-700" />
                     </div>
@@ -179,7 +188,7 @@ const makeCoverPage = () => {
                     </Button>
                 </div>
 
-                <div v-if="mediaOption === 'link'" class="w-full mr-2">
+                <div v-if="mediaOption === 'link'" class="w-60 mr-2">
                     <InputLabel for="media-link" value="YouTube Link" />
                     <TextInput
                         id="media-link"
@@ -216,7 +225,7 @@ const makeCoverPage = () => {
 
             <div class="flex justify-center mt-5 md:mt-10">
                 <Button
-                    class="w-3/4 flex justify-center py-3"
+                    class="w-full flex justify-center py-3"
                     :class="{ 'opacity-25': pageForm.processing }"
                     :disabled="pageForm.processing"
                 >
@@ -240,7 +249,7 @@ const makeCoverPage = () => {
             class="flex justify-center mt-5 md:mt-10"
         >
             <Button
-                class="w-3/4 flex justify-center py-3"
+                class="flex justify-center py-3"
                 :class="{ 'opacity-25': bookForm.processing }"
                 :disabled="bookForm.processing"
                 @click.prevent="makeCoverPage"
@@ -255,4 +264,6 @@ const makeCoverPage = () => {
     </div>
 </template>
 
-<style src="@vueform/multiselect/themes/default.css"></style>
+<style
+    src="../../../../node_modules/@vueform/multiselect/themes/default.css"
+></style>

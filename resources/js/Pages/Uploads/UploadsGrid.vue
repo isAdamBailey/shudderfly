@@ -70,13 +70,8 @@ function videoId(link) {
         >
             <div class="relative flex justify-center flex-wrap">
                 <Link
-                    class="w-full h-full"
-                    :href="
-                        route('books.show', {
-                            book: photo.book.slug,
-                            pageId: photo.id,
-                        })
-                    "
+                    class="w-full h-28"
+                    :href="route('books.show', photo.book.slug)"
                 >
                     <LazyLoader
                         v-if="photo.media_path"

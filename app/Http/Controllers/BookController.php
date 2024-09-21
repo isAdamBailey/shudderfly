@@ -102,24 +102,11 @@ class BookController extends Controller
      */
     public function show(Book $book, Request $request): Response
     {
-        $pageNumber = $request->page ?? 1;
-
-        if (! auth()->user()->can('edit pages')) {
-            if ($pageNumber === 1) {
-                $book->increment('read_count');
-            }
+        if (! auth()->user()->can('edit pages') && ! $request->has('page')) {
+            $book->increment('read_count');
         }
 
-        $paginationSize = 2;
-        if ($request->pageId) {
-            $pageId = (int) $request->pageId;
-            $pageNumberInBook = $book->pages()->pluck('id')->search($pageId);
-
-            if ($pageNumberInBook) {
-                $pageNumber = (int) floor($pageNumberInBook / $paginationSize) + 1;
-            }
-        }
-        $pages = $book->pages()->paginate($paginationSize, ['*'], 'page', $pageNumber);
+        $pages = $book->pages()->paginate(25);
 
         return Inertia::render('Book/Show', [
             'book' => $book->load('coverImage'),
