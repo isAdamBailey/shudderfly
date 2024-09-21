@@ -67,9 +67,6 @@ useIntersectionObserver(target, ([{ isIntersecting }], observer) => {
 
 watch(target, (newTarget) => {
     if (newTarget && newTarget.tagName === "VIDEO") {
-        newTarget.addEventListener("loadedmetadata", () => {
-            newTarget.currentTime = 0;
-        });
         newTarget.addEventListener("canplay", () => {
             newTarget.currentTime = 0;
         });
