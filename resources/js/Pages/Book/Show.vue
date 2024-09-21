@@ -111,7 +111,7 @@
         >
             <div v-for="page in items" :key="page.id" class="overflow-hidden">
                 <div class="relative flex justify-center flex-wrap">
-                    <Link class="w-full h-28" href="">
+                    <Link class="w-full h-28" :href="route('pages.show', page)">
                         <LazyLoader
                             v-if="page.media_path"
                             :src="page.media_path"

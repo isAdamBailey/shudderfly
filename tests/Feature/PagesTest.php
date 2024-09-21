@@ -64,6 +64,9 @@ class PagesTest extends TestCase
                 ->has('page.media_path')
                 ->has('page.video_link')
                 ->has('page.book')
+                ->has('page.book.cover_image')
+                ->has('previousPage')
+                ->has('nextPage')
         );
 
         $this->assertSame(1.0, $page->fresh()->read_count);

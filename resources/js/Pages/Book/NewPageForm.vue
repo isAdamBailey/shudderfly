@@ -161,7 +161,7 @@ const submit = async () => {
                     />
                     <div
                         v-if="imagePreview.startsWith('data:image')"
-                        class="h-40 w-40 rounded bg-cover bg-center bg-no-repeat"
+                        class="w-60 rounded bg-cover bg-center bg-no-repeat"
                         :style="
                             'background-image: url(\'' + imagePreview + '\');'
                         "
@@ -170,7 +170,7 @@ const submit = async () => {
                         v-else-if="imagePreview.startsWith('data:video')"
                         class="w-3/4"
                     >
-                        <video controls class="w-full h-auto">
+                        <video controls class="w-60">
                             <source :src="imagePreview" type="video/mp4" />
                             <VideoIcon class="text-blue-700" />
                         </video>

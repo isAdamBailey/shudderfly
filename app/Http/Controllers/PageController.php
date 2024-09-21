@@ -59,10 +59,20 @@ class PageController extends Controller
             $page->increment('read_count');
         }
 
-        $page->load('book');
+        $page->load(['book', 'book.coverImage']);
+
+        $nextPage = Page::where('book_id', $page->book_id)
+            ->where('created_at', '<', $page->created_at)
+            ->first();
+
+        $previousPage = Page::where('book_id', $page->book_id)
+            ->where('created_at', '>', $page->created_at)
+            ->first();
 
         return Inertia::render('Page/Show', [
             'page' => $page,
+            'previousPage' => $previousPage,
+            'nextPage' => $nextPage,
         ]);
     }
 
