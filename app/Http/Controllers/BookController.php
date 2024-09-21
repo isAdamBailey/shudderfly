@@ -33,14 +33,14 @@ class BookController extends Controller
     public function search(Request $request): Response|RedirectResponse
     {
         $search = $request->search;
-        if (!$search) {
+        if (! $search) {
             return redirect()->route('books.index');
         }
 
         $categories = Category::query()
-            ->with(['books' => fn($book) => $book
-                ->where('title', 'LIKE', '%' . $search . '%')
-                ->orWhere('excerpt', 'LIKE', '%' . $search . '%')
+            ->with(['books' => fn ($book) => $book
+                ->where('title', 'LIKE', '%'.$search.'%')
+                ->orWhere('excerpt', 'LIKE', '%'.$search.'%')
                 ->with('coverImage'),
             ])
             ->orderBy('name')
@@ -102,7 +102,7 @@ class BookController extends Controller
      */
     public function show(Book $book, Request $request): Response
     {
-        if (!auth()->user()->can('edit pages') && !$request->has('page')) {
+        if (! auth()->user()->can('edit pages') && ! $request->has('page')) {
             $book->increment('read_count');
         }
 

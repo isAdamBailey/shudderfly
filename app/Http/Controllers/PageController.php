@@ -53,6 +53,19 @@ class PageController extends Controller
         ]);
     }
 
+    public function show(Page $page): Response
+    {
+        if (! auth()->user()->can('edit pages')) {
+            $page->increment('read_count');
+        }
+
+        $page->load('book');
+
+        return Inertia::render('Page/Show', [
+            'page' => $page,
+        ]);
+    }
+
     /**
      * Store a newly created resource in storage.
      */
@@ -170,13 +183,6 @@ class PageController extends Controller
 
         if ($page) {
             $book->update(['cover_page' => $page->id]);
-        }
-    }
-
-    public function incrementReadCount(Page $page): void
-    {
-        if (! auth()->user()->can('edit pages')) {
-            $page->increment('read_count');
         }
     }
 }
