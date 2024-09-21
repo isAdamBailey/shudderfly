@@ -11,7 +11,7 @@
         :controls="!isCover"
         disablepictureinpicture
         controlslist="nodownload"
-        preload="auto"
+        preload="metadata"
         class="h-full w-full rounded-lg object-cover"
     >
         <source :src="imageSrc" />
