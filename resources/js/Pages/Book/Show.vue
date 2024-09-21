@@ -4,7 +4,7 @@
     <BreezeAuthenticatedLayout>
         <template #header>
             <SearchInput route-name="books.search" label="Books" class="mb-2" />
-            <Link :href="pages.first_page_url" class="w-full">
+            <Link :href="pages.path" class="w-full">
                 <div class="flex justify-between flex-wrap">
                     <div class="flex items-center">
                         <img
@@ -59,7 +59,7 @@
             <div v-if="canEditPages" class="flex max-h-10">
                 <Button
                     type="button"
-                    class="md:mb-0 ml-4 rounded-none font-bold px-12 bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
+                    class="ml-2 rounded-none font-bold px-12 bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
                     @click="togglePageSettings"
                 >
                     <span v-if="pageSettingsOpen">Close</span>
@@ -67,7 +67,7 @@
                 </Button>
                 <Button
                     type="button"
-                    class="md:ml-4 rounded-none font-bold px-12 bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
+                    class="ml-2 rounded-none font-bold px-12 bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
                     @click="toggleBookSettings"
                 >
                     <span v-if="bookSettingsOpen">Close</span>
@@ -128,6 +128,9 @@
             </div>
         </div>
         <div ref="infiniteScroll"></div>
+        <Link :href="pages.path">
+            <ScrollTop />
+        </Link>
     </BreezeAuthenticatedLayout>
 </template>
 
@@ -146,6 +149,7 @@ import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import useGetYouTubeVideo from "@/composables/useGetYouTubeVideo";
+import ScrollTop from "@/Components/ScrollTop.vue";
 
 const { canEditPages } = usePermissions();
 const { short } = useDate();

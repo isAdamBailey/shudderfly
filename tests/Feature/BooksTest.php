@@ -111,7 +111,7 @@ class BooksTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        $book = Book::factory()->has(Page::factory(23))->create();
+        $book = Book::factory()->has(Page::factory(27))->create();
 
         $this->get(route('books.show', $book))->assertInertia(
             fn (Assert $page) => $page
@@ -121,7 +121,8 @@ class BooksTest extends TestCase
                 ->has('book.excerpt')
                 ->has('book.author')
                 ->has('book.cover_image')
-                ->has('pages.data', 2)
+                ->has('pages.data', 25)
+                ->has('pages.path')
                 ->has('pages.per_page')
                 ->has('pages.next_page_url')
                 ->has('pages.prev_page_url')

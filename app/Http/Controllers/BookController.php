@@ -102,7 +102,7 @@ class BookController extends Controller
      */
     public function show(Book $book, Request $request): Response
     {
-        if (!auth()->user()->can('edit pages')) {
+        if (!auth()->user()->can('edit pages') && !$request->has('page')) {
             $book->increment('read_count');
         }
 

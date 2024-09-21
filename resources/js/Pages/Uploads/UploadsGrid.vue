@@ -70,7 +70,7 @@ function videoId(link) {
         >
             <div class="relative flex justify-center flex-wrap">
                 <Link
-                    class="w-full h-full"
+                    class="w-full h-28"
                     :href="
                         route('books.show', {
                             book: photo.book.slug,
