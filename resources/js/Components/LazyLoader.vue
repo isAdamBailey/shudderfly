@@ -80,7 +80,6 @@ onUnmounted(() => {
 
 watch(video, (newVideo) => {
     if (newVideo) {
-        // workaround to allow safari mobile to preload metadata only
         newVideo.addEventListener("loadedmetadata", () => {
             newVideo.currentTime = 0;
         });
