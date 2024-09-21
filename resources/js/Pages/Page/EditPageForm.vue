@@ -225,7 +225,7 @@ const makeCoverPage = () => {
 
             <div class="flex justify-center mt-5 md:mt-10">
                 <Button
-                    class="w-3/4 flex justify-center py-3"
+                    class="w-full flex justify-center py-3"
                     :class="{ 'opacity-25': pageForm.processing }"
                     :disabled="pageForm.processing"
                 >
@@ -249,7 +249,7 @@ const makeCoverPage = () => {
             class="flex justify-center mt-5 md:mt-10"
         >
             <Button
-                class="w-3/4 flex justify-center py-3"
+                class="flex justify-center py-3"
                 :class="{ 'opacity-25': bookForm.processing }"
                 :disabled="bookForm.processing"
                 @click.prevent="makeCoverPage"
