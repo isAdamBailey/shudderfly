@@ -106,7 +106,7 @@ class BookController extends Controller
             $book->increment('read_count');
         }
 
-        $pages = $book->pages()->paginate(25);
+        $pages = $book->pages()->paginate();
 
         return Inertia::render('Book/Show', [
             'book' => $book->load('coverImage'),

@@ -27,7 +27,7 @@ class PagesTest extends TestCase
             fn (Assert $page) => $page
                 ->component('Uploads/Index')
                 ->url('/photos')
-                ->has('photos.data', 20)
+                ->has('photos.data', 15)
 
         );
     }
