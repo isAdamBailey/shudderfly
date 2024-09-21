@@ -57,12 +57,20 @@ const placeholder = "/img/photo-placeholder.png";
 const video = ref(null);
 const imageSrc = ref(props.src || placeholder);
 
-const handleIntersection = ([entry], observer) => {
+const debounce = (func, wait) => {
+    let timeout;
+    return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+};
+
+const handleIntersection = debounce(([entry], observer) => {
     if (entry.isIntersecting) {
         imageSrc.value = props.src || placeholder;
         observer.unobserve(entry.target);
     }
-};
+}, 200);
 
 const observer = new IntersectionObserver(handleIntersection);
 
