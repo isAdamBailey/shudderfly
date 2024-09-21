@@ -11,7 +11,7 @@
         :controls="!isCover"
         disablepictureinpicture
         controlslist="nodownload"
-        preload="auto"
+        preload="metadata"
         class="h-full w-full rounded-lg object-cover"
     >
         <source :src="imageSrc" />
@@ -28,7 +28,7 @@
 
 <script setup>
 import { useIntersectionObserver, useImage } from "@vueuse/core";
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { useMedia } from "@/mediaHelpers";
 
 const { isVideo } = useMedia();
@@ -62,6 +62,17 @@ useIntersectionObserver(target, ([{ isIntersecting }], observer) => {
     if (isIntersecting) {
         imageSrc.value = props.src || placeholder;
         observer.unobserve(target.value);
+    }
+});
+
+watch(target, (newTarget) => {
+    if (newTarget && newTarget.tagName === "VIDEO") {
+        newTarget.addEventListener("loadedmetadata", () => {
+            newTarget.currentTime = 0;
+        });
+        newTarget.addEventListener("canplay", () => {
+            newTarget.currentTime = 0;
+        });
     }
 });
 
