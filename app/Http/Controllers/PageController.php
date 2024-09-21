@@ -53,9 +53,9 @@ class PageController extends Controller
         ]);
     }
 
-    public function show(Page $page): Response
+    public function show(Page $page, Request $request): Response
     {
-        if (! auth()->user()->can('edit pages')) {
+        if (! auth()->user()->can('edit pages') && $request->input('increment')) {
             $page->increment('read_count');
         }
 
