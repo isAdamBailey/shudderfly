@@ -106,103 +106,63 @@
             </div>
         </div>
 
-        <div v-if="pages.total > 0" class="flex justify-around mt-3">
-            <p
-                class="border border-gray-900 rounded-full w-8 h-8 text-sm text-center dark:text-white pt-1.5 bg-yellow-100 dark:bg-gray-800 font-bold"
-            >
-                {{ pages.from }}
-            </p>
-            <p
-                v-if="pages.from !== pages.to"
-                class="border border-gray-900 rounded-full w-8 h-8 text-sm text-center dark:text-white pt-1.5 bg-yellow-100 dark:bg-gray-800 font-bold"
-            >
-                {{ pages.to }}
-            </p>
-        </div>
-
         <div
-            class="mx-auto grid max-w-7xl grid-cols-[repeat(auto-fit,minmax(22rem,1fr))] gap-2 pt-3 md:p-3"
+            class="mx-auto grid max-w-7xl grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] gap-2 pt-3 md:p-3"
         >
-            <div
-                v-for="page in pages.data"
-                :key="page.id"
-                class="overflow-hidden"
-            >
-                <Page :page="page" :book="book" />
+            <div v-for="page in items" :key="page.id" class="overflow-hidden">
+                <div class="relative flex justify-center flex-wrap">
+                    <Link class="w-full h-28" href="">
+                        <LazyLoader
+                            v-if="page.media_path"
+                            :src="page.media_path"
+                            :is-cover="true"
+                        />
+                        <div v-if="page.video_link">
+                            <VideoWrapper
+                                :id="videoId(page.video_link)"
+                                :controls="false"
+                            />
+                        </div>
+                    </Link>
+                </div>
             </div>
         </div>
-        <div
-            v-if="pages.per_page < pages.total"
-            class="flex justify-around pb-10 mt-5"
-        >
-            <Link
-                :href="pages.prev_page_url || pages.last_page_url"
-                as="button"
-                :disabled="prevButtonDisabled"
-                class="inline-flex items-center text-white disabled:opacity-25 transition ease-in-out duration-150"
-                aria-label="previous page"
-                @click="prevButtonDisabled = true"
-            >
-                <i
-                    class="ri-arrow-left-circle-fill text-7xl rounded-full bg-amber-50 text-amber-800 dark:text-gray-900"
-                ></i>
-            </Link>
-            <Link
-                :href="centerPageUrl"
-                as="button"
-                class="inline-flex items-center text-white transition ease-in-out duration-150"
-                aria-label="center page"
-            >
-                <i
-                    class="ri-contract-left-right-fill border-4 text-6xl rounded-full text-amber-50 dark:text-gray-100 bg-amber-800 dark:bg-gray-800"
-                ></i>
-            </Link>
-            <Link
-                :href="pages.next_page_url || pages.first_page_url"
-                as="button"
-                :disabled="nextButtonDisabled"
-                class="inline-flex items-center text-white disabled:opacity-25 transition ease-in-out duration-150"
-                aria-label="next page"
-                @click="nextButtonDisabled = true"
-            >
-                <i
-                    class="ri-arrow-right-circle-fill text-7xl rounded-full bg-amber-50 text-amber-800 dark:text-gray-900"
-                ></i>
-            </Link>
-        </div>
+        <div ref="infiniteScroll"></div>
     </BreezeAuthenticatedLayout>
 </template>
 
 <script setup>
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import BreezeValidationErrors from "@/Components/ValidationErrors.vue";
-import { Head, Link } from "@inertiajs/vue3";
+import { Head, Link, router } from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue";
 import { onMounted, ref } from "vue";
 import NewPageForm from "@/Pages/Book/NewPageForm.vue";
 import EditBookForm from "@/Pages/Book/EditBookForm.vue";
 import { usePermissions } from "@/composables/permissions";
-import Page from "@/Pages/Book/Page.vue";
 import { useDate } from "@/dateHelpers";
 import SearchInput from "@/Components/SearchInput.vue";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import LazyLoader from "@/Components/LazyLoader.vue";
+import VideoWrapper from "@/Components/VideoWrapper.vue";
+import useGetYouTubeVideo from "@/composables/useGetYouTubeVideo";
 
 const { canEditPages } = usePermissions();
 const { short } = useDate();
 const { speak, speaking } = useSpeechSynthesis();
 
 const props = defineProps({
-    book: Object,
-    pages: Object,
-    authors: Array,
+    book: { type: Object, required: true },
+    pages: { type: Object, required: true },
+    authors: { type: Array, required: true },
 });
 
-const centerPageNumber = Math.ceil(props.pages.total / 2 / 2);
-const centerPageUrl = `${props.pages.path}?page=${centerPageNumber}`;
-const prevButtonDisabled = ref(false);
-const nextButtonDisabled = ref(false);
 let pageSettingsOpen = ref(false);
 let bookSettingsOpen = ref(false);
+
+const items = ref(props.pages.data);
+const infiniteScroll = ref(null);
+let observer = null;
 
 const togglePageSettings = () => {
     pageSettingsOpen.value = !pageSettingsOpen.value;
@@ -218,6 +178,20 @@ const toggleBookSettings = () => {
     }
 };
 
+function fetchPages() {
+    router.get(
+        props.pages.next_page_url,
+        {},
+        {
+            preserveState: true,
+            preserveScroll: true,
+            onSuccess: (page) => {
+                items.value = [...items.value, ...page.props.pages.data];
+            },
+        }
+    );
+}
+
 const stripHtml = (html) => {
     if (!html) {
         return "";
@@ -232,9 +206,22 @@ const readTitleAndExcerpt = () => {
     }
 };
 
+function videoId(link) {
+    const { videoId } = useGetYouTubeVideo(link);
+    return videoId.value;
+}
+
 onMounted(() => {
     if (props.pages.total === 0) {
         pageSettingsOpen.value = true;
     }
+
+    items.value = props.pages.data;
+    observer = new IntersectionObserver((entries) =>
+        entries.forEach((entry) => entry.isIntersecting && fetchPages(), {
+            rootMargin: "-150px 0px 0px 0px",
+        })
+    );
+    observer.observe(infiniteScroll.value);
 });
 </script>
