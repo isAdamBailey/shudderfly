@@ -8,11 +8,9 @@
     />
     <video
         v-else-if="isVideo(imageSrc)"
-        ref="video"
         :controls="!isCover"
         disablepictureinpicture
         controlslist="nodownload"
-        preload="metadata"
         class="h-full w-full rounded-lg object-cover"
     >
         <source :src="imageSrc" />
@@ -30,7 +28,7 @@
 
 <script setup>
 import { useImage } from "@vueuse/core";
-import { ref, computed, watch } from "vue";
+import { ref, computed } from "vue";
 import { useMedia } from "@/mediaHelpers";
 
 const { isVideo } = useMedia();
@@ -55,16 +53,7 @@ const props = defineProps({
 });
 
 const placeholder = "/img/photo-placeholder.png";
-const video = ref(null);
 const imageSrc = ref(props.src || placeholder);
-
-watch(video, (newVideo) => {
-    if (newVideo) {
-        newVideo.addEventListener("loadedmetadata", () => {
-            newVideo.currentTime = 0;
-        });
-    }
-});
 
 const { isLoading } = useImage({ src: computed(() => imageSrc.value) });
 </script>
