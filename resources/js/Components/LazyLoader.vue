@@ -12,7 +12,7 @@
         :controls="!isCover"
         disablepictureinpicture
         controlslist="nodownload"
-        preload="metadata"
+        preload="auto"
         class="h-full w-full rounded-lg object-cover"
     >
         <source :src="imageSrc" />
@@ -65,6 +65,7 @@ watch(video, (newVideo) => {
     if (newVideo) {
         newVideo.addEventListener("loadedmetadata", () => {
             newVideo.currentTime = 0;
+            newVideo.style.display = "block";
         });
     }
 });
