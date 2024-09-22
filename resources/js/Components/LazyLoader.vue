@@ -12,7 +12,7 @@
         :controls="!isCover"
         disablepictureinpicture
         controlslist="nodownload"
-        preload="auto"
+        preload="metadata"
         class="h-full w-full rounded-lg object-cover"
     >
         <source :src="imageSrc" />
@@ -20,6 +20,7 @@
     </video>
     <img
         v-else
+        ref="image"
         :class="`${classes} object-cover h-full w-full bg-yellow-300 dark:bg-gray-700`"
         :src="imageSrc"
         :alt="alt"
@@ -29,7 +30,7 @@
 
 <script setup>
 import { useImage } from "@vueuse/core";
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useMedia } from "@/mediaHelpers";
 
 const { isVideo } = useMedia();
@@ -57,15 +58,31 @@ const placeholder = "/img/photo-placeholder.png";
 const video = ref(null);
 const imageSrc = ref(props.src || placeholder);
 
+const handleIntersection = ([entry], observer) => {
+    if (entry.isIntersecting) {
+        imageSrc.value = props.src || placeholder;
+        observer.unobserve(entry.target);
+    }
+};
+
+const observer = new IntersectionObserver(handleIntersection);
+
 onMounted(() => {
-    imageSrc.value = props.src || placeholder;
+    if (video.value) {
+        observer.observe(video.value);
+    }
+});
+
+onUnmounted(() => {
+    if (video.value) {
+        observer.unobserve(video.value);
+    }
 });
 
 watch(video, (newVideo) => {
     if (newVideo) {
         newVideo.addEventListener("loadedmetadata", () => {
             newVideo.currentTime = 0;
-            newVideo.style.display = "block";
         });
     }
 });
