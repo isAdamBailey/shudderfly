@@ -29,7 +29,7 @@
 
 <script setup>
 import { useImage } from "@vueuse/core";
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { useMedia } from "@/mediaHelpers";
 
 const { isVideo } = useMedia();
@@ -57,33 +57,8 @@ const placeholder = "/img/photo-placeholder.png";
 const video = ref(null);
 const imageSrc = ref(props.src || placeholder);
 
-const debounce = (func, wait) => {
-    let timeout;
-    return (...args) => {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), wait);
-    };
-};
-
-const handleIntersection = debounce(([entry], observer) => {
-    if (entry.isIntersecting) {
-        imageSrc.value = props.src || placeholder;
-        observer.unobserve(entry.target);
-    }
-}, 200);
-
-const observer = new IntersectionObserver(handleIntersection);
-
 onMounted(() => {
-    if (video.value) {
-        observer.observe(video.value);
-    }
-});
-
-onUnmounted(() => {
-    if (video.value) {
-        observer.unobserve(video.value);
-    }
+    imageSrc.value = props.src || placeholder;
 });
 
 watch(video, (newVideo) => {
