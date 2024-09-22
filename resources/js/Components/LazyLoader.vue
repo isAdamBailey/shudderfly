@@ -30,7 +30,7 @@
 
 <script setup>
 import { useImage } from "@vueuse/core";
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch } from "vue";
 import { useMedia } from "@/mediaHelpers";
 
 const { isVideo } = useMedia();
@@ -57,35 +57,6 @@ const props = defineProps({
 const placeholder = "/img/photo-placeholder.png";
 const video = ref(null);
 const imageSrc = ref(props.src || placeholder);
-const isIntersecting = ref(false);
-
-const handleIntersection = (entries) => {
-    entries.forEach((entry) => {
-        isIntersecting.value = entry.isIntersecting;
-    });
-};
-
-let observer;
-
-onMounted(() => {
-    observer = new IntersectionObserver(handleIntersection, {
-        root: null, // relative to viewport
-        threshold: 0.1, // trigger when 10% is visible
-    });
-
-    if (video.value) {
-        observer.observe(video.value);
-    }
-});
-
-onUnmounted(() => {
-    if (video.value) {
-        observer.unobserve(video.value);
-    }
-    if (observer) {
-        observer.disconnect();
-    }
-});
 
 watch(video, (newVideo) => {
     if (newVideo) {
