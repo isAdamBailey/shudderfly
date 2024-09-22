@@ -57,17 +57,22 @@ const props = defineProps({
 const placeholder = "/img/photo-placeholder.png";
 const video = ref(null);
 const imageSrc = ref(props.src || placeholder);
+const isIntersecting = ref(false);
 
-const handleIntersection = ([entry], observer) => {
-    if (entry.isIntersecting) {
-        imageSrc.value = props.src || placeholder;
-        observer.unobserve(entry.target);
-    }
+const handleIntersection = (entries) => {
+    entries.forEach((entry) => {
+        isIntersecting.value = entry.isIntersecting;
+    });
 };
 
-const observer = new IntersectionObserver(handleIntersection);
+let observer;
 
 onMounted(() => {
+    observer = new IntersectionObserver(handleIntersection, {
+        root: null, // relative to viewport
+        threshold: 0.1, // trigger when 10% is visible
+    });
+
     if (video.value) {
         observer.observe(video.value);
     }
@@ -76,6 +81,9 @@ onMounted(() => {
 onUnmounted(() => {
     if (video.value) {
         observer.unobserve(video.value);
+    }
+    if (observer) {
+        observer.disconnect();
     }
 });
 
