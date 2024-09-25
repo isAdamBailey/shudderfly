@@ -4,7 +4,7 @@
     <BreezeAuthenticatedLayout>
         <template #header>
             <SearchInput route-name="books.search" label="Books" class="mb-2" />
-            <Link :href="pages.path" class="w-full">
+            <Link :href="removePageParam(pages.path)" class="w-full">
                 <div class="flex justify-center text-center mb-3">
                     <h2 class="font-bold text-4xl text-gray-900 leading-tight">
                         {{ book.title.toUpperCase() }}
@@ -183,9 +183,19 @@ function fetchPages() {
             preserveScroll: true,
             onSuccess: (page) => {
                 items.value = [...items.value, ...page.props.pages.data];
+                // Update the URL without the pagination parameter
+                const url = new URL(window.location);
+                url.searchParams.delete("page");
+                history.pushState({}, "", url);
             },
         }
     );
+}
+
+function removePageParam(url) {
+    const parsedUrl = new URL(url, window.location.origin);
+    parsedUrl.searchParams.delete("page");
+    return parsedUrl.toString();
 }
 
 const stripHtml = (html) => {
