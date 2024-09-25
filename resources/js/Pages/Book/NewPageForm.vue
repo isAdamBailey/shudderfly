@@ -161,7 +161,7 @@ const submit = async () => {
                     />
                     <div
                         v-if="imagePreview.startsWith('data:image')"
-                        class="w-60 rounded bg-cover bg-center bg-no-repeat"
+                        class="w-60 min-h-60 rounded bg-cover bg-center bg-no-repeat"
                         :style="
                             'background-image: url(\'' + imagePreview + '\');'
                         "
