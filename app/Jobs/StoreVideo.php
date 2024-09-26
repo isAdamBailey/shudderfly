@@ -33,11 +33,13 @@ class StoreVideo implements ShouldQueue
     /**
      * Execute the job.
      *
-     * @return void
+     * @return false|string
      */
     public function handle()
     {
-        $tempFile = tempnam(sys_get_temp_dir(), 'video').'.mp4';
+        $screenshotPath = null;
+        $tempFile = storage_path('app/temp/') . uniqid('video_', true) . '.mp4';
+        $screenshotFile = storage_path('app/temp/') . uniqid('screenshot_', true) . '.webp';
 
         try {
             $videoData = Storage::disk('local')->get($this->video);
@@ -50,16 +52,46 @@ class StoreVideo implements ShouldQueue
                 ->resize(512, 288)
                 ->save($tempFile);
 
-            $path_parts = pathinfo($this->path);
-            $directory = $path_parts['dirname'];
-            $filename = pathinfo($path_parts['basename'], PATHINFO_FILENAME).'.mp4';
-            $processedFilePath = Storage::disk('s3')->putFileAs($directory, new File($tempFile), $filename);
+            // Capture a screenshot
+            FFMpeg::fromDisk('local')
+                ->open($this->video)
+                ->getFrameFromSeconds(1)
+                ->export()
+                ->toDisk('local')
+                ->save('temp/' . basename($screenshotFile));
+
+            if (file_exists($screenshotFile)) {
+                // Upload screenshot to S3
+                $screenshotFilename = pathinfo($this->path, PATHINFO_FILENAME) . '.webp';
+                $screenshotPath = Storage::disk('s3')->putFileAs(
+                    pathinfo($this->path, PATHINFO_DIRNAME),
+                    new File($screenshotFile),
+                    $screenshotFilename
+                );
+                Storage::disk('s3')->setVisibility($screenshotPath, 'public');
+            } else {
+                throw new \Exception('Screenshot file does not exist');
+            }
+
+            $filename = pathinfo($this->path, PATHINFO_FILENAME) . '.mp4';
+            $processedFilePath = Storage::disk('s3')->putFileAs(
+                pathinfo($this->path, PATHINFO_DIRNAME),
+                new File($tempFile),
+                $filename
+            );
             Storage::disk('s3')->setVisibility($processedFilePath, 'public');
         } catch (\Exception $e) {
-            Log::error('FFmpeg failed: '.$e->getMessage());
+            Log::error('FFmpeg failed: ' . $e->getMessage());
         } finally {
-            Storage::disk('local')->delete($tempFile);
+            if (file_exists($tempFile)) {
+                @unlink($tempFile);
+            }
+            if (file_exists($screenshotFile)) {
+                @unlink($screenshotFile);
+            }
             Storage::disk('local')->delete($this->video);
         }
+        Log::info('Returning screenshot path: ' . $screenshotPath);
+        return $screenshotPath;
     }
 }
