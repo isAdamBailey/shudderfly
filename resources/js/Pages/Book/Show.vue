@@ -98,7 +98,7 @@
         </div>
 
         <div
-            class="mx-auto grid max-w-7xl grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] gap-2 pt-3 md:p-3"
+            class="mx-auto grid max-w-7xl grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-2 pt-3 md:p-3"
         >
             <div v-for="page in items" :key="page.id" class="overflow-hidden">
                 <div class="relative flex justify-center flex-wrap">
@@ -117,6 +117,11 @@
                                 :controls="false"
                             />
                         </div>
+                        <div
+                            v-if="page.content"
+                            class="absolute inset-x-0 top-0 rounded-t-lg w-full truncate bg-white/70 py-2.5 text-center text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
+                            v-html="page.content"
+                        ></div>
                     </Link>
                 </div>
             </div>
