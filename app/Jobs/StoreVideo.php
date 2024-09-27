@@ -43,7 +43,7 @@ class StoreVideo implements ShouldQueue
             file_put_contents($tempFile, $videoData);
 
             FFMpeg::fromDisk('local')
-                ->open($tempFile)
+                ->open($this->video)
                 ->export()
                 ->inFormat((new X264)->setKiloBitrate(400)->setAudioKiloBitrate(64))
                 ->resize(512, 288)
@@ -51,7 +51,7 @@ class StoreVideo implements ShouldQueue
 
             // Capture a screenshot
             FFMpeg::fromDisk('local')
-                ->open($tempFile)
+                ->open($this->video)
                 ->getFrameFromSeconds(1)
                 ->export()
                 ->toDisk('local')
