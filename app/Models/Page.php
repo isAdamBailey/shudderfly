@@ -15,11 +15,29 @@ class Page extends Model
     protected $fillable = [
         'content',
         'media_path',
+        'media_poster',
         'video_link',
         'book_id',
     ];
 
     public function getMediaPathAttribute($value): string
+    {
+        if (empty($value)) {
+            return '';
+        }
+
+        if (Str::startsWith($value, 'https://')) {
+            return $value;
+        }
+
+        if (app()->environment('local')) {
+            return Storage::disk('s3')->url($value);
+        } else {
+            return Storage::disk('cloudfront')->url($value);
+        }
+    }
+
+    public function getMediaPosterAttribute($value): string
     {
         if (empty($value)) {
             return '';
