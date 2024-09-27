@@ -128,6 +128,8 @@ class PageController extends Controller
         if ($request->hasFile('image')) {
             $file = $request->file('image');
             if ($file->isValid()) {
+                $oldMediaPath = $page->media_path;
+
                 if ($page->media_path && Storage::disk('s3')->exists($page->media_path)) {
                     Storage::disk('s3')->delete($page->media_path);
                 }
@@ -147,9 +149,10 @@ class PageController extends Controller
                 $page->media_path = $mediaPath;
                 $page->media_poster = $posterPath;
                 $page->video_link = null;
-            }
-            if ($page->media_path && Storage::disk('s3')->exists($page->media_path)) {
-                Storage::disk('s3')->delete($page->media_path);
+
+                if ($oldMediaPath && Storage::disk('s3')->exists($oldMediaPath)) {
+                    Storage::disk('s3')->delete($oldMediaPath);
+                }
             }
         }
 
@@ -188,7 +191,7 @@ class PageController extends Controller
     public function destroy(Page $page): Redirector|RedirectResponse|Application
     {
         Storage::disk('s3')->delete($page->media_path);
-        Storage::disk('s3')->delete($page->poster_path);
+        Storage::disk('s3')->delete($page->media_poster);
         $page->delete();
 
         if ($page->book->cover_page === $page->id) {
