@@ -98,17 +98,17 @@
         </div>
 
         <div
-            class="mx-auto grid max-w-7xl grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-2 pt-3 md:p-3"
+            class="mx-auto grid max-w-7xl grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] gap-2 pt-3 md:p-3"
         >
             <div v-for="page in items" :key="page.id" class="overflow-hidden">
                 <div class="relative flex justify-center flex-wrap">
                     <Link
-                        class="w-full h-28"
+                        class="w-full h-32"
                         :href="route('pages.show', { page, increment: true })"
                     >
                         <LazyLoader
-                            v-if="page.media_path"
-                            :src="page.media_path"
+                            v-if="mediaPath(page)"
+                            :src="mediaPath(page)"
                             :is-cover="true"
                         />
                         <div v-if="page.video_link">
@@ -220,6 +220,13 @@ const readTitleAndExcerpt = () => {
 function videoId(link) {
     const { videoId } = useGetYouTubeVideo(link);
     return videoId.value;
+}
+
+function mediaPath(page) {
+    if (page.media_poster) {
+        return page.media_poster;
+    }
+    return page.media_path;
 }
 
 onMounted(() => {

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StorePageRequest;
 use App\Http\Requests\UpdatePageRequest;
 use App\Jobs\StoreImage;
+use App\Jobs\StoreVideo;
 use App\Models\Book;
 use App\Models\Page;
 use Illuminate\Contracts\Foundation\Application;
@@ -85,7 +86,8 @@ class PageController extends Controller
     {
         $book = Book::find($request->book_id);
 
-        $imagePath = '';
+        $mediaPath = '';
+        $posterPath = null;
 
         if ($request->hasFile('image')) {
             $file = $request->file('image');
@@ -93,17 +95,21 @@ class PageController extends Controller
                 $mimeType = $file->getMimeType();
                 if (Str::startsWith($mimeType, 'image/')) {
                     $filename = pathinfo($file->hashName(), PATHINFO_FILENAME);
-                    $imagePath = 'books/'.$book->slug.'/'.$filename.'.webp';
-                    StoreImage::dispatch($file, $imagePath);
+                    $mediaPath = 'books/'.$book->slug.'/'.$filename.'.webp';
+                    StoreImage::dispatch($file, $mediaPath);
                 } elseif (Str::startsWith($mimeType, 'video/')) {
-                    $imagePath = $request->file('image')->storePublicly('books/'.$book->slug);
+                    $filePath = Storage::disk('local')->put('temp', $file);
+                    $mediaPath = 'books/'.$book->slug.'/'.$file->getClientOriginalName();
+                    $posterPath = 'books/'.$book->slug.'/'.pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME).'.webp';
+                    StoreVideo::dispatch($filePath, $mediaPath);
                 }
             }
         }
 
         $book->pages()->create([
             'content' => $request->input('content'),
-            'media_path' => $imagePath,
+            'media_path' => $mediaPath,
+            'media_poster' => $posterPath,
             'video_link' => $request->input('video_link') ? trim($request->input('video_link')) : null,
         ]);
 
@@ -122,20 +128,31 @@ class PageController extends Controller
         if ($request->hasFile('image')) {
             $file = $request->file('image');
             if ($file->isValid()) {
+                $oldMediaPath = $page->media_path;
+
                 if ($page->media_path && Storage::disk('s3')->exists($page->media_path)) {
                     Storage::disk('s3')->delete($page->media_path);
                 }
-                $imagePath = '';
+                $mediaPath = '';
+                $posterPath = null;
                 $mimeType = $file->getMimeType();
                 if (Str::startsWith($mimeType, 'image/')) {
                     $filename = pathinfo($file->hashName(), PATHINFO_FILENAME);
-                    $imagePath = 'books/'.$page->book->slug.'/'.$filename.'.webp';
-                    StoreImage::dispatch($file, $imagePath);
+                    $mediaPath = 'books/'.$page->book->slug.'/'.$filename.'.webp';
+                    StoreImage::dispatch($file, $mediaPath);
                 } elseif (Str::startsWith($mimeType, 'video/')) {
-                    $imagePath = $request->file('image')->storePublicly('books/'.$page->book->slug);
+                    $filePath = Storage::disk('local')->put('temp', $file);
+                    $mediaPath = 'books/'.$page->book->slug.'/'.$file->getClientOriginalName();
+                    $posterPath = 'books/'.$page->book->slug.'/'.pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME).'.webp';
+                    StoreVideo::dispatch($filePath, $mediaPath);
                 }
-                $page->media_path = $imagePath;
+                $page->media_path = $mediaPath;
+                $page->media_poster = $posterPath;
                 $page->video_link = null;
+
+                if ($oldMediaPath && Storage::disk('s3')->exists($oldMediaPath)) {
+                    Storage::disk('s3')->delete($oldMediaPath);
+                }
             }
         }
 
@@ -154,6 +171,12 @@ class PageController extends Controller
                 }
                 $page->media_path = '';
             }
+            if ($page->poster_path) {
+                if (Storage::disk('s3')->exists($page->poster_path)) {
+                    Storage::disk('s3')->delete($page->poster_path);
+                }
+                $page->poster_path = '';
+            }
             $page->video_link = $request->video_link;
         }
 
@@ -168,6 +191,7 @@ class PageController extends Controller
     public function destroy(Page $page): Redirector|RedirectResponse|Application
     {
         Storage::disk('s3')->delete($page->media_path);
+        Storage::disk('s3')->delete($page->media_poster);
         $page->delete();
 
         if ($page->book->cover_page === $page->id) {

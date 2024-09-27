@@ -16,6 +16,7 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.8.1",
         "league/flysystem-aws-s3-v3": "^3.12.2",
+        "pbmedia/laravel-ffmpeg": "^8.5",
         "spatie/laravel-permission": "^6.0",
         "spatie/laravel-sluggable": "^3.4.2",
         "tightenco/ziggy": "^1.5"
