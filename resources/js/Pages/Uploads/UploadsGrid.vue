@@ -56,6 +56,13 @@ function videoId(link) {
     const { videoId } = useGetYouTubeVideo(link);
     return videoId.value;
 }
+
+function mediaPath(photo) {
+    if (photo.media_poster) {
+        return photo.media_poster;
+    }
+    return photo.media_path;
+}
 </script>
 
 <template>
@@ -74,9 +81,9 @@ function videoId(link) {
                     :href="route('books.show', photo.book.slug)"
                 >
                     <LazyLoader
-                        v-if="photo.media_path"
+                        v-if="mediaPath(photo)"
                         classes="rounded-top pointer-events-none"
-                        :src="photo.media_path"
+                        :src="mediaPath(photo)"
                         :is-cover="true"
                     />
                     <div v-if="photo.video_link">

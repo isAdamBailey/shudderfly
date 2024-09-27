@@ -107,8 +107,8 @@
                         :href="route('pages.show', { page, increment: true })"
                     >
                         <LazyLoader
-                            v-if="page.media_path"
-                            :src="page.media_path"
+                            v-if="mediaPath(page)"
+                            :src="mediaPath(page)"
                             :is-cover="true"
                         />
                         <div v-if="page.video_link">
@@ -220,6 +220,13 @@ const readTitleAndExcerpt = () => {
 function videoId(link) {
     const { videoId } = useGetYouTubeVideo(link);
     return videoId.value;
+}
+
+function mediaPath(page) {
+    if (page.media_poster) {
+        return page.media_poster;
+    }
+    return page.media_path;
 }
 
 onMounted(() => {

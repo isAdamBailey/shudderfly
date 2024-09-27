@@ -32,14 +32,11 @@ class StoreVideo implements ShouldQueue
 
     /**
      * Execute the job.
-     *
-     * @return false|string
      */
-    public function handle()
+    public function handle(): void
     {
-        $screenshotPath = null;
-        $tempFile = storage_path('app/temp/') . uniqid('video_', true) . '.mp4';
-        $screenshotFile = storage_path('app/temp/') . uniqid('screenshot_', true) . '.webp';
+        $tempFile = storage_path('app/temp/').uniqid('video_', true).'.mp4';
+        $screenshotFile = storage_path('app/temp/').uniqid('screenshot_', true).'.webp';
 
         try {
             $videoData = Storage::disk('local')->get($this->video);
@@ -58,11 +55,11 @@ class StoreVideo implements ShouldQueue
                 ->getFrameFromSeconds(1)
                 ->export()
                 ->toDisk('local')
-                ->save('temp/' . basename($screenshotFile));
+                ->save('temp/'.basename($screenshotFile));
 
             if (file_exists($screenshotFile)) {
                 // Upload screenshot to S3
-                $screenshotFilename = pathinfo($this->path, PATHINFO_FILENAME) . '.webp';
+                $screenshotFilename = pathinfo($this->path, PATHINFO_FILENAME).'.webp';
                 $screenshotPath = Storage::disk('s3')->putFileAs(
                     pathinfo($this->path, PATHINFO_DIRNAME),
                     new File($screenshotFile),
@@ -73,7 +70,7 @@ class StoreVideo implements ShouldQueue
                 throw new \Exception('Screenshot file does not exist');
             }
 
-            $filename = pathinfo($this->path, PATHINFO_FILENAME) . '.mp4';
+            $filename = pathinfo($this->path, PATHINFO_FILENAME).'.mp4';
             $processedFilePath = Storage::disk('s3')->putFileAs(
                 pathinfo($this->path, PATHINFO_DIRNAME),
                 new File($tempFile),
@@ -81,7 +78,7 @@ class StoreVideo implements ShouldQueue
             );
             Storage::disk('s3')->setVisibility($processedFilePath, 'public');
         } catch (\Exception $e) {
-            Log::error('FFmpeg failed: ' . $e->getMessage());
+            Log::error('FFmpeg failed: '.$e->getMessage());
         } finally {
             if (file_exists($tempFile)) {
                 @unlink($tempFile);
@@ -91,7 +88,5 @@ class StoreVideo implements ShouldQueue
             }
             Storage::disk('local')->delete($this->video);
         }
-        Log::info('Returning screenshot path: ' . $screenshotPath);
-        return $screenshotPath;
     }
 }
