@@ -100,7 +100,7 @@ class PageController extends Controller
                 } elseif (Str::startsWith($mimeType, 'video/')) {
                     $filePath = Storage::disk('local')->put('temp', $file);
                     $mediaPath = 'books/'.$book->slug.'/'.$file->getClientOriginalName();
-                    $posterPath = 'books/'.$book->slug.'/'.pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME).'.webp';
+//                    $posterPath = 'books/'.$book->slug.'/'.pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME).'.webp';
                     StoreVideo::dispatch($filePath, $mediaPath);
                 }
             }
@@ -143,7 +143,7 @@ class PageController extends Controller
                 } elseif (Str::startsWith($mimeType, 'video/')) {
                     $filePath = Storage::disk('local')->put('temp', $file);
                     $mediaPath = 'books/'.$page->book->slug.'/'.$file->getClientOriginalName();
-                    $posterPath = 'books/'.$page->book->slug.'/'.pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME).'.webp';
+//                    $posterPath = 'books/'.$page->book->slug.'/'.pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME).'.webp';
                     StoreVideo::dispatch($filePath, $mediaPath);
                 }
                 $page->media_path = $mediaPath;
