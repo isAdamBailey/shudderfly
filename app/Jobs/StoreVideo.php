@@ -56,7 +56,8 @@ class StoreVideo implements ShouldQueue
                 ->getFrameContents();
 
             if($screenshotContents) {
-                $screenshotFilename = pathinfo($this->path, PATHINFO_FILENAME).'.jpg';
+                // needed to use .jpg extension, .webp triggered errors related to multiple frames
+                $screenshotFilename = pathinfo($this->path, PATHINFO_FILENAME).'_poster.jpg';
                 $screenshotPath = pathinfo($this->path, PATHINFO_DIRNAME).'/'.$screenshotFilename;
                 Storage::disk('s3')->put($screenshotPath, $screenshotContents, 'public');
             } else {
