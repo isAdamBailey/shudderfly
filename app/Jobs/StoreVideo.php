@@ -12,6 +12,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use ProtoneMedia\LaravelFFMpeg\Support\FFMpeg;
+use App\Filters\CustomFrameFilter;
 
 class StoreVideo implements ShouldQueue
 {
@@ -50,11 +51,19 @@ class StoreVideo implements ShouldQueue
                 ->save($tempFile);
 
             // Capture a screenshot
-            FFMpeg::fromDisk('local')
+//            FFMpeg::fromDisk('local')
+//                ->open($this->video)
+//                ->getFrameFromSeconds(1)
+//                ->export()
+//                ->addFilter('-frames:v', '1')
+//                ->toDisk('local')
+//                ->save('temp/'.basename($screenshotFile));
+
+            $frame = FFMpeg::fromDisk('local')
                 ->open($this->video)
-                ->getFrameFromSeconds(1)
-                ->export()
-                ->addFilter('-update', '1')
+                ->getFrameFromSeconds(1);
+            $frame->addFilter(new CustomFrameFilter('-frames:v'));
+            $frame->export()
                 ->toDisk('local')
                 ->save('temp/'.basename($screenshotFile));
 
