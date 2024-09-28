@@ -37,7 +37,10 @@ class StoreVideo implements ShouldQueue
     public function handle(): void
     {
         $tempFile = storage_path('app/temp/').uniqid('video_', true).'.mp4';
-        $screenshotFile = storage_path('app/temp/').'screenshot_001.webp';
+//        $screenshotFile = storage_path('app/temp/').'screenshot_001.webp';
+
+        $screenshotFileName = 'screenshot_'.uniqid().'.webp'; // Unique filename
+        $screenshotFilePath = 'temp/'.$screenshotFileName; // Save in temp directory
 
         try {
             $videoData = Storage::disk('local')->get($this->video);
@@ -71,21 +74,23 @@ class StoreVideo implements ShouldQueue
                 ->getFrameFromSeconds(1)
                 ->export()
                 ->toDisk('local')
-                ->save($screenshotFile);
+                ->save($screenshotFilePath); // Save to disk
 
-            Log::info('Screenshot file path: ' . $screenshotFile);
+            Log::info('Screenshot file path: ' . storage_path('app/'.$screenshotFilePath));
 
-            if (file_exists($screenshotFile)) {
+            // Check for the existence of the file
+            if (file_exists(storage_path('app/'.$screenshotFilePath))) {
                 $screenshotFilename = pathinfo($this->path, PATHINFO_FILENAME).'.webp';
                 $screenshotPath = Storage::disk('s3')->putFileAs(
                     pathinfo($this->path, PATHINFO_DIRNAME),
-                    new File(storage_path('app/'.$screenshotFile)),
+                    new File(storage_path('app/'.$screenshotFilePath)), // Use correct path
                     $screenshotFilename
                 );
                 Storage::disk('s3')->setVisibility($screenshotPath, 'public');
             } else {
                 throw new \Exception('Screenshot file does not exist');
             }
+
 
             $filename = pathinfo($this->path, PATHINFO_FILENAME).'.mp4';
             $processedFilePath = Storage::disk('s3')->putFileAs(
@@ -100,8 +105,8 @@ class StoreVideo implements ShouldQueue
             if (file_exists($tempFile)) {
                 @unlink($tempFile);
             }
-            if (file_exists($screenshotFile)) {
-                @unlink($screenshotFile);
+            if (file_exists($screenshotFilePath)) {
+                @unlink($screenshotFilePath);
             }
             Storage::disk('local')->delete($this->video);
         }
