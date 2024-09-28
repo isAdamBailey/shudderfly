@@ -33,39 +33,36 @@
                     </h2>
                 </div>
             </Link>
-        </template>
-
-        <div
-            class="p-2 flex justify-end flex-nowrap align-middle bg-yellow-200 dark:bg-gray-800"
-        >
-            <div class="flex max-h-10">
-                <Button
-                    type="button"
-                    :disabled="speaking"
-                    @click="readTitleAndExcerpt"
-                >
-                    <i class="ri-speak-fill text-lg"></i>
-                </Button>
-                <Button
-                    v-if="canEditPages"
-                    type="button"
-                    class="ml-2 rounded-none font-bold px-12 bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
-                    @click="togglePageSettings"
-                >
-                    <span v-if="pageSettingsOpen">Close</span>
-                    <span v-else>Add Page</span>
-                </Button>
-                <Button
-                    v-if="canEditPages"
-                    type="button"
-                    class="ml-2 rounded-none font-bold px-12 bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
-                    @click="toggleBookSettings"
-                >
-                    <span v-if="bookSettingsOpen">Close</span>
-                    <span v-else>Edit Book</span>
-                </Button>
+            <div class="p-2 flex justify-end flex-nowrap align-middle">
+                <div class="flex max-h-10">
+                    <Button
+                        type="button"
+                        :disabled="speaking"
+                        @click="readTitleAndExcerpt"
+                    >
+                        <i class="ri-speak-fill text-lg"></i>
+                    </Button>
+                    <Button
+                        v-if="canEditPages"
+                        type="button"
+                        class="ml-2 rounded-none font-bold px-12 bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
+                        @click="togglePageSettings"
+                    >
+                        <span v-if="pageSettingsOpen">Close</span>
+                        <span v-else>Add Page</span>
+                    </Button>
+                    <Button
+                        v-if="canEditPages"
+                        type="button"
+                        class="ml-2 rounded-none font-bold px-12 bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
+                        @click="toggleBookSettings"
+                    >
+                        <span v-if="bookSettingsOpen">Close</span>
+                        <span v-else>Edit Book</span>
+                    </Button>
+                </div>
             </div>
-        </div>
+        </template>
         <div
             v-if="canEditPages && pageSettingsOpen"
             class="w-full mt-4 md:ml-2"
@@ -103,7 +100,7 @@
             <div v-for="page in items" :key="page.id" class="overflow-hidden">
                 <div class="relative flex justify-center flex-wrap">
                     <Link
-                        class="w-full h-32"
+                        class="max-h-56"
                         :href="route('pages.show', { page, increment: true })"
                     >
                         <LazyLoader

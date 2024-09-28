@@ -216,10 +216,7 @@ const showingNavigationDropdown = ref(false);
             </nav>
 
             <!-- Page Heading -->
-            <header
-                v-if="$slots.header"
-                class="border-gray-900 bg-gradient-to-r from-yellow-300 dark:from-yellow-300 via-green-500 dark:via-red-500 to-yellow-900 dark:to-purple-900 dark:shadow"
-            >
+            <header v-if="$slots.header" class="border-gray-900">
                 <div class="max-w-7xl mx-auto py-2 px-4 sm:px-6 lg:px-8">
                     <slot name="header" />
                 </div>
@@ -230,16 +227,14 @@ const showingNavigationDropdown = ref(false);
                 <slot />
             </main>
 
-            <footer
-                class="border-gray-900 bg-gradient-to-r from-yellow-300 dark:from-yellow-300 via-green-500 dark:via-red-500 to-yellow-900 dark:to-purple-900 dark:shadow"
-            >
+            <footer class="mt-10 border-gray-900 bg-blue-600">
                 <div class="max-w-7xl mx-auto pt-12 lg:pt-20 pb-12">
                     <div
-                        class="text-center text-sm underline hover:font-bold text-gray-900 pb-8"
+                        class="text-center underline hover:font-bold text-gray-100 pb-8"
                     >
                         <a :href="route('rules')">Rules and Instructions</a>
                     </div>
-                    <div class="text-center text-sm font-bold text-gray-900">
+                    <div class="text-center text-sm font-bold text-gray-100">
                         &copy; {{ new Date().getFullYear() }} Shudderfly
                     </div>
                 </div>

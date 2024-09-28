@@ -1,8 +1,6 @@
 <template>
     <BreezeAuthenticatedLayout>
-        <div
-            class="p-4 overflow-hidden bg-gradient-to-r from-white dark:from-gray-700 dark:via-gray-900 to-yellow-100 dark:to-black flex flex-col justify-between"
-        >
+        <div class="p-4 overflow-hidden flex flex-col justify-between">
             <div v-if="canEditPages" class="mb-3">
                 <Button
                     v-if="!showPageSettings"
@@ -34,26 +32,28 @@
             <div v-else-if="videoId">
                 <VideoWrapper :id="videoId" :title="page.description" />
             </div>
-            <div
-                class="px-3 py-3 text-gray-900 dark:text-white"
-                v-html="page.content"
-            ></div>
-            <div v-if="hasContent" class="mr-3 text-right">
-                <Button
-                    type="button"
-                    :disabled="speaking"
-                    @click="speak(stripHtml(page.content))"
-                >
-                    <i class="ri-speak-fill text-xl"></i>
-                </Button>
+            <div class="flex justify-between">
+                <div
+                    class="px-3 py-3 text-lg text-white"
+                    v-html="page.content"
+                ></div>
+                <div v-if="hasContent" class="ml-3 mt-3 text-right">
+                    <Button
+                        type="button"
+                        :disabled="speaking"
+                        @click="speak(stripHtml(page.content))"
+                    >
+                        <i class="ri-speak-fill text-xl"></i>
+                    </Button>
+                </div>
             </div>
             <p class="px-3 py-3">
-                <span class="text-xs text-gray-900 dark:text-white">
+                <span class="text-xs text-white">
                     {{ short(page.created_at) }}
                 </span>
             </p>
 
-            <div class="flex justify-around pb-10 mt-5">
+            <div class="flex justify-around pb-10 mt-3">
                 <Link
                     v-if="previousPage"
                     :href="route('pages.show', previousPage)"
@@ -62,7 +62,7 @@
                     aria-label="previous page"
                 >
                     <i
-                        class="ri-arrow-left-circle-fill text-7xl rounded-full bg-amber-50 text-amber-800 dark:text-gray-900"
+                        class="ri-arrow-left-circle-fill text-8xl rounded-full bg-amber-50 text-amber-800 dark:text-gray-900"
                     ></i>
                 </Link>
                 <Link
@@ -73,7 +73,7 @@
                     aria-label="next page"
                 >
                     <i
-                        class="ri-arrow-right-circle-fill text-7xl rounded-full bg-amber-50 text-amber-800 dark:text-gray-900"
+                        class="ri-arrow-right-circle-fill text-8xl rounded-full bg-amber-50 text-amber-800 dark:text-gray-900"
                     ></i>
                 </Link>
             </div>
@@ -81,9 +81,9 @@
                 :href="route('books.show', { book: page.book.slug, page: 1 })"
                 class="flex items-center"
                 ><Button>
-                    <i class="ri-arrow-go-back-fill text-3xl text-gray-100"></i>
+                    <i class="ri-arrow-go-back-fill text-2xl text-gray-100"></i>
                     <span class="ml-3 text-lg font-bold text-gray-100"
-                        >Go back To book {{ page.book.title }}</span
+                        >Go back To book</span
                     >
                 </Button>
             </Link>
