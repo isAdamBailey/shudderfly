@@ -62,7 +62,7 @@ class StoreVideo implements ShouldQueue
             $frame = FFMpeg::fromDisk('local')
                 ->open($this->video)
                 ->getFrameFromSeconds(1);
-            $frame->addFilter(new CustomFrameFilter('-frames:v'));
+            $frame->addFilter(new CustomFrameFilter());
             $frame->export()
                 ->toDisk('local')
                 ->save('temp/'.basename($screenshotFile));

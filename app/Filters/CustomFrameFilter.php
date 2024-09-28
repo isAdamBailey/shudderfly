@@ -7,19 +7,12 @@ use FFMpeg\Media\Frame;
 
 class CustomFrameFilter implements FrameFilterInterface
 {
-    protected string $filter;
-
-    public function __construct($filter)
-    {
-        $this->filter = $filter;
-    }
-
     public function apply(Frame $frame): array
     {
-        return ['-vf', $this->filter];
+        return ['-vf', '-frames:v', '1'];
     }
 
-    public function getPriority()
+    public function getPriority(): int
     {
         return 10;
     }
