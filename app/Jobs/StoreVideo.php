@@ -51,12 +51,12 @@ class StoreVideo implements ShouldQueue
                 ->save($tempFile);
 
             // Capture a screenshot
-            FFMpeg::fromDisk('local')
-                ->open($this->video)
-                ->getFrameFromSeconds(1)
-                ->export()
-                ->toDisk('local')
-                ->save('temp/'.basename($screenshotFile));
+//            FFMpeg::fromDisk('local')
+//                ->open($this->video)
+//                ->getFrameFromSeconds(1)
+//                ->export()
+//                ->toDisk('local')
+//                ->save('temp/'.basename($screenshotFile));
 
 //            $frame = FFMpeg::fromDisk('local')
 //                ->open($this->video)
@@ -66,11 +66,21 @@ class StoreVideo implements ShouldQueue
 //                ->toDisk('local')
 //                ->save('temp/'.basename($screenshotFile));
 
-            if (file_exists($screenshotFile)) {
+            $screenshotFilePath = 'temp/screenshot_'.uniqid().'.webp';
+            FFMpeg::fromDisk('local')
+                ->open($this->video)
+                ->getFrameFromSeconds(1)
+                ->export()
+                ->toDisk('local')
+                ->save($screenshotFilePath);
+
+            Log::info('Screenshot file path: ' . storage_path('app/'.$screenshotFilePath));
+
+            if (file_exists(storage_path('app/'.$screenshotFilePath))) {
                 $screenshotFilename = pathinfo($this->path, PATHINFO_FILENAME).'.webp';
                 $screenshotPath = Storage::disk('s3')->putFileAs(
                     pathinfo($this->path, PATHINFO_DIRNAME),
-                    new File($screenshotFile),
+                    new File(storage_path('app/'.$screenshotFilePath)),
                     $screenshotFilename
                 );
                 Storage::disk('s3')->setVisibility($screenshotPath, 'public');
