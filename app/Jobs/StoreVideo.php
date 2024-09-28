@@ -36,7 +36,7 @@ class StoreVideo implements ShouldQueue
     public function handle(): void
     {
         $tempFile = storage_path('app/temp/').uniqid('video_', true).'.mp4';
-//        $screenshotFile = storage_path('app/temp/').'screenshot_001.webp';
+        $screenshotFile = storage_path('app/temp/').uniqid('screenshot_').'.webp';
 
         try {
             $videoData = Storage::disk('local')->get($this->video);
@@ -50,12 +50,12 @@ class StoreVideo implements ShouldQueue
                 ->save($tempFile);
 
             // Capture a screenshot
-//            FFMpeg::fromDisk('local')
-//                ->open($this->video)
-//                ->getFrameFromSeconds(1)
-//                ->export()
-//                ->toDisk('local')
-//                ->save($screenshotFile);
+            FFMpeg::fromDisk('local')
+                ->open($this->video)
+                ->getFrameFromString('00:00:01.00')
+                ->export()
+                ->toDisk('local')
+                ->save($screenshotFile);
 
             // Check for the existence of the screenshot
 //            if (file_exists($screenshotFile)) {
@@ -83,9 +83,9 @@ class StoreVideo implements ShouldQueue
             if (file_exists($tempFile)) {
                 @unlink($tempFile);
             }
-//            if (file_exists($screenshotFile)) {
-//                @unlink($screenshotFile);
-//            }
+            if (file_exists($screenshotFile)) {
+                @unlink($screenshotFile);
+            }
             Storage::disk('local')->delete($this->video);
         }
     }
