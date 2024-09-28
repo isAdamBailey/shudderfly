@@ -12,7 +12,6 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use ProtoneMedia\LaravelFFMpeg\Support\FFMpeg;
-use App\Filters\CustomFrameFilter;
 
 class StoreVideo implements ShouldQueue
 {
@@ -37,9 +36,7 @@ class StoreVideo implements ShouldQueue
     public function handle(): void
     {
         $tempFile = storage_path('app/temp/').uniqid('video_', true).'.mp4';
-//        $screenshotFile = storage_path('app/temp/').'screenshot_001.webp';
-        $screenshotFilePath = storage_path('app/temp/screenshot_001.webp'); // Use a specific filename
-
+        $screenshotFile = storage_path('app/temp/').'screenshot_001.webp';
 
         try {
             $videoData = Storage::disk('local')->get($this->video);
@@ -53,35 +50,19 @@ class StoreVideo implements ShouldQueue
                 ->save($tempFile);
 
             // Capture a screenshot
-//            FFMpeg::fromDisk('local')
-//                ->open($this->video)
-//                ->getFrameFromSeconds(1)
-//                ->export()
-//                ->toDisk('local')
-//                ->save('temp/'.basename($screenshotFile));
-
-//            $frame = FFMpeg::fromDisk('local')
-//                ->open($this->video)
-//                ->getFrameFromSeconds(1);
-//            $frame->addFilter(new CustomFrameFilter());
-//            $frame->export()
-//                ->toDisk('local')
-//                ->save('temp/'.basename($screenshotFile));
-
-            // Capture a screenshot
-            $frame = FFMpeg::fromDisk('local')
+            FFMpeg::fromDisk('local')
                 ->open($this->video)
-                ->getFrameFromSeconds(1);
-            $frame->export()
+                ->getFrameFromSeconds(1)
+                ->export()
                 ->toDisk('local')
-                ->save('temp/screenshot_001.webp'); // Save as a single file
+                ->save($screenshotFile);
 
             // Check for the existence of the screenshot
-            if (file_exists($screenshotFilePath)) {
+            if (file_exists($screenshotFile)) {
                 $screenshotFilename = pathinfo($this->path, PATHINFO_FILENAME).'.webp';
                 $screenshotPath = Storage::disk('s3')->putFileAs(
                     pathinfo($this->path, PATHINFO_DIRNAME),
-                    new File($screenshotFilePath),
+                    new File($screenshotFile),
                     $screenshotFilename
                 );
                 Storage::disk('s3')->setVisibility($screenshotPath, 'public');
@@ -102,8 +83,8 @@ class StoreVideo implements ShouldQueue
             if (file_exists($tempFile)) {
                 @unlink($tempFile);
             }
-            if (file_exists($screenshotFilePath)) {
-                @unlink($screenshotFilePath);
+            if (file_exists($screenshotFile)) {
+                @unlink($screenshotFile);
             }
             Storage::disk('local')->delete($this->video);
         }
