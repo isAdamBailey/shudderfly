@@ -58,17 +58,17 @@ class StoreVideo implements ShouldQueue
                 ->save($screenshotFile);
 
             // Check for the existence of the screenshot
-//            if (file_exists($screenshotFile)) {
-//                $screenshotFilename = pathinfo($this->path, PATHINFO_FILENAME).'.webp';
-//                $screenshotPath = Storage::disk('s3')->putFileAs(
-//                    pathinfo($this->path, PATHINFO_DIRNAME),
-//                    new File($screenshotFile),
-//                    $screenshotFilename
-//                );
-//                Storage::disk('s3')->setVisibility($screenshotPath, 'public');
-//            } else {
-//                throw new \Exception('Screenshot file does not exist');
-//            }
+            if (file_exists($screenshotFile)) {
+                $screenshotFilename = pathinfo($this->path, PATHINFO_FILENAME).'.webp';
+                $screenshotPath = Storage::disk('s3')->putFileAs(
+                    pathinfo($this->path, PATHINFO_DIRNAME),
+                    new File($screenshotFile),
+                    $screenshotFilename
+                );
+                Storage::disk('s3')->setVisibility($screenshotPath, 'public');
+            } else {
+                throw new \Exception('Screenshot file does not exist');
+            }
 
             $filename = pathinfo($this->path, PATHINFO_FILENAME).'.mp4';
             $processedFilePath = Storage::disk('s3')->putFileAs(

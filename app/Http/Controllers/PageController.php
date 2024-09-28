@@ -100,7 +100,7 @@ class PageController extends Controller
                 } elseif (Str::startsWith($mimeType, 'video/')) {
                     $filePath = Storage::disk('local')->put('temp', $file);
                     $mediaPath = 'books/'.$book->slug.'/'.$file->getClientOriginalName();
-//                    $posterPath = 'books/'.$book->slug.'/'.pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME).'.webp';
+                    $posterPath = 'books/'.$book->slug.'/'.pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME).'.jpg';
                     StoreVideo::dispatch($filePath, $mediaPath);
                 }
             }
@@ -143,7 +143,7 @@ class PageController extends Controller
                 } elseif (Str::startsWith($mimeType, 'video/')) {
                     $filePath = Storage::disk('local')->put('temp', $file);
                     $mediaPath = 'books/'.$page->book->slug.'/'.$file->getClientOriginalName();
-//                    $posterPath = 'books/'.$page->book->slug.'/'.pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME).'.webp';
+                    $posterPath = 'books/'.$page->book->slug.'/'.pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME).'.jpg';
                     StoreVideo::dispatch($filePath, $mediaPath);
                 }
                 $page->media_path = $mediaPath;
@@ -171,11 +171,11 @@ class PageController extends Controller
                 }
                 $page->media_path = '';
             }
-            if ($page->poster_path) {
-                if (Storage::disk('s3')->exists($page->poster_path)) {
-                    Storage::disk('s3')->delete($page->poster_path);
+            if ($page->media_poster) {
+                if (Storage::disk('s3')->exists($page->media_poster)) {
+                    Storage::disk('s3')->delete($page->media_poster);
                 }
-                $page->poster_path = '';
+                $page->media_poster = '';
             }
             $page->video_link = $request->video_link;
         }
