@@ -37,7 +37,7 @@ class StoreVideo implements ShouldQueue
     public function handle(): void
     {
         $tempFile = storage_path('app/temp/').uniqid('video_', true).'.mp4';
-        $screenshotFile = storage_path('app/temp/').uniqid('screenshot_', true).'.webp';
+        $screenshotFile = storage_path('app/temp/').'screenshot_%03d.webp';
 
         try {
             $videoData = Storage::disk('local')->get($this->video);
@@ -51,21 +51,20 @@ class StoreVideo implements ShouldQueue
                 ->save($tempFile);
 
             // Capture a screenshot
-//            FFMpeg::fromDisk('local')
-//                ->open($this->video)
-//                ->getFrameFromSeconds(1)
-//                ->export()
-//                ->addFilter('-frames:v', '1')
-//                ->toDisk('local')
-//                ->save('temp/'.basename($screenshotFile));
-
-            $frame = FFMpeg::fromDisk('local')
+            FFMpeg::fromDisk('local')
                 ->open($this->video)
-                ->getFrameFromSeconds(1);
-            $frame->addFilter(new CustomFrameFilter());
-            $frame->export()
+                ->getFrameFromSeconds(1)
+                ->export()
                 ->toDisk('local')
                 ->save('temp/'.basename($screenshotFile));
+
+//            $frame = FFMpeg::fromDisk('local')
+//                ->open($this->video)
+//                ->getFrameFromSeconds(1);
+//            $frame->addFilter(new CustomFrameFilter());
+//            $frame->export()
+//                ->toDisk('local')
+//                ->save('temp/'.basename($screenshotFile));
 
             if (file_exists($screenshotFile)) {
                 $screenshotFilename = pathinfo($this->path, PATHINFO_FILENAME).'.webp';
