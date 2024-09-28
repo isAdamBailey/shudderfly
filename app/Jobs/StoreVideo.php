@@ -36,7 +36,7 @@ class StoreVideo implements ShouldQueue
     public function handle(): void
     {
         $tempFile = storage_path('app/temp/').uniqid('video_', true).'.mp4';
-        $screenshotFile = storage_path('app/temp/').'test.webp';
+        $screenshotFile = storage_path('app/temp/').uniqid('screenshot_', true).'.webp';
 
         try {
             $videoData = Storage::disk('local')->get($this->video);
@@ -54,6 +54,7 @@ class StoreVideo implements ShouldQueue
                 ->open($this->video)
                 ->getFrameFromSeconds(1)
                 ->export()
+                ->addFilter('-frames:v', '1')
                 ->toDisk('local')
                 ->save('temp/'.basename($screenshotFile));
 
