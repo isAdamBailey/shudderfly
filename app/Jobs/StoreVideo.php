@@ -54,7 +54,7 @@ class StoreVideo implements ShouldQueue
                 ->open($this->video)
                 ->getFrameFromSeconds(1)
                 ->export()
-                ->addFilter('-frames:v', '1')
+                ->addFilter('-update', '1')
                 ->toDisk('local')
                 ->save('temp/'.basename($screenshotFile));
 
