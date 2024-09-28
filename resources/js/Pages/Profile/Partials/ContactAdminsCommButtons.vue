@@ -1,11 +1,10 @@
 <script setup>
 import Button from "@/Components/Button.vue";
-import { onMounted } from "vue";
 import { router } from "@inertiajs/vue3";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useButtonState } from "@/composables/useDisableButtonState";
 
-const { buttonsDisabled, setTimestamp, checkTimestamp } = useButtonState();
+const { buttonsDisabled, setTimestamp } = useButtonState();
 const { speak, speaking } = useSpeechSynthesis();
 
 defineProps({
@@ -20,7 +19,8 @@ defineProps({
 });
 
 function sendEmail(message) {
-    speak(message);
+    const emailMessage = `sending message ${message}`;
+    speak(emailMessage);
     router.post(route("profile.contact-admins-email", { message }));
     setTimestamp();
 }

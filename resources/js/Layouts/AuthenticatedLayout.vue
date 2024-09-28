@@ -19,7 +19,7 @@ const showingNavigationDropdown = ref(false);
             class="min-h-screen bg-gradient-to-r from-yellow-900 dark:from-purple-900 via-green-500 dark:via-red-500 to-yellow-300 dark:to-yellow-500"
         >
             <nav
-                class="bg-yellow-900 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700"
+                class="bg-blue-600 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700"
             >
                 <!-- Primary Navigation Menu -->
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -217,7 +217,7 @@ const showingNavigationDropdown = ref(false);
 
             <!-- Page Heading -->
             <header v-if="$slots.header" class="border-gray-900">
-                <div class="max-w-7xl mx-auto py-2 px-4 sm:px-6 lg:px-8">
+                <div class="max-w-7xl mx-auto py-2 px-4 sm:px-6 lg:px-8 mt-3">
                     <slot name="header" />
                 </div>
             </header>
@@ -227,7 +227,7 @@ const showingNavigationDropdown = ref(false);
                 <slot />
             </main>
 
-            <footer class="mt-10 border-gray-900 bg-blue-600">
+            <footer class="mt-10 border-gray-900 bg-blue-600 dark:bg-gray-800">
                 <div class="max-w-7xl mx-auto pt-12 lg:pt-20 pb-12">
                     <div
                         class="text-center underline hover:font-bold text-gray-100 pb-8"

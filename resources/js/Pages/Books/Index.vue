@@ -3,9 +3,9 @@
 
     <BreezeAuthenticatedLayout>
         <template #header>
-            <div class="flex justify-between items-center">
+            <div class="flex justify-between items-center mb-10">
                 <Link class="w-1/4" :href="route('books.index')">
-                    <h2 class="font-bold text-2xl text-gray-900 leading-tight">
+                    <h2 class="font-bold text-2xl text-gray-100 leading-tight">
                         {{ title }}
                     </h2>
                 </Link>

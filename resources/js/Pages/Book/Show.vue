@@ -13,7 +13,7 @@
                 <div class="flex justify-center items-center">
                     <img
                         v-if="book.cover_image?.media_path"
-                        class="object-cover max-h-48 rounded-lg mr-2"
+                        class="object-cover max-h-60 rounded-lg mr-2"
                         :src="book.cover_image.media_path"
                         alt="cover image"
                     />

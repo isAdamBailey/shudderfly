@@ -1,6 +1,6 @@
 <template>
     <button
-        class="my-5 mx-2 text-yellow-300 transition hover:text-gray-800 dark:text-yellow-300 dark:hover:text-indigo-400 focus:text-gray-800 dark:focus:text-yellow-300 md:mx-5"
+        class="my-5 mx-2 text-yellow-300 transition hover:text-gray-800 dark:text-yellow-300 dark:hover:text-indigo-400 focus:text-yellow-500 dark:focus:text-yellow-300 md:mx-5"
         aria-label="Toggle Dark Theme"
         @click="toggle()"
     >

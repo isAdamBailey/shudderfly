@@ -3,9 +3,9 @@
 
     <BreezeAuthenticatedLayout>
         <template #header>
-            <div class="flex justify-between items-center p-2">
+            <div class="flex justify-between items-center">
                 <Link @click="filter()">
-                    <h2 class="font-bold text-2xl text-gray-900 leading-tight">
+                    <h2 class="font-bold text-2xl text-gray-100 leading-tight">
                         {{ title }}
                     </h2>
                 </Link>
