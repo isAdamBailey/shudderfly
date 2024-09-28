@@ -38,9 +38,8 @@ class StoreVideo implements ShouldQueue
     {
         $tempFile = storage_path('app/temp/').uniqid('video_', true).'.mp4';
 //        $screenshotFile = storage_path('app/temp/').'screenshot_001.webp';
+        $screenshotFilePath = storage_path('app/temp/screenshot_001.webp'); // Use a specific filename
 
-        $screenshotFileName = 'screenshot_'.uniqid().'.webp'; // Unique filename
-        $screenshotFilePath = 'temp/'.$screenshotFileName; // Save in temp directory
 
         try {
             $videoData = Storage::disk('local')->get($this->video);
@@ -69,28 +68,26 @@ class StoreVideo implements ShouldQueue
 //                ->toDisk('local')
 //                ->save('temp/'.basename($screenshotFile));
 
-            FFMpeg::fromDisk('local')
+            // Capture a screenshot
+            $frame = FFMpeg::fromDisk('local')
                 ->open($this->video)
-                ->getFrameFromSeconds(1)
-                ->export()
+                ->getFrameFromSeconds(1);
+            $frame->export()
                 ->toDisk('local')
-                ->save($screenshotFilePath); // Save to disk
+                ->save('temp/screenshot_001.webp'); // Save as a single file
 
-            Log::info('Screenshot file path: ' . storage_path('app/'.$screenshotFilePath));
-
-            // Check for the existence of the file
-            if (file_exists(storage_path('app/'.$screenshotFilePath))) {
+            // Check for the existence of the screenshot
+            if (file_exists($screenshotFilePath)) {
                 $screenshotFilename = pathinfo($this->path, PATHINFO_FILENAME).'.webp';
                 $screenshotPath = Storage::disk('s3')->putFileAs(
                     pathinfo($this->path, PATHINFO_DIRNAME),
-                    new File(storage_path('app/'.$screenshotFilePath)), // Use correct path
+                    new File($screenshotFilePath),
                     $screenshotFilename
                 );
                 Storage::disk('s3')->setVisibility($screenshotPath, 'public');
             } else {
                 throw new \Exception('Screenshot file does not exist');
             }
-
 
             $filename = pathinfo($this->path, PATHINFO_FILENAME).'.mp4';
             $processedFilePath = Storage::disk('s3')->putFileAs(
