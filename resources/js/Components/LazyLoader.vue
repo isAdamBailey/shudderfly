@@ -11,6 +11,7 @@
         :controls="!isCover"
         disablepictureinpicture
         controlslist="nodownload"
+        :poster="poster"
         class="h-full w-full rounded-lg object-cover"
     >
         <source :src="imageSrc" />
@@ -35,6 +36,10 @@ const { isVideo } = useMedia();
 
 const props = defineProps({
     src: {
+        type: String,
+        default: null,
+    },
+    poster: {
         type: String,
         default: null,
     },

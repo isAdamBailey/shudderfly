@@ -27,6 +27,7 @@
                 v-if="page.media_path"
                 class="rounded-top max-h-[90vh] object-contain"
                 :src="page.media_path"
+                :poster="page.media_poster"
                 :alt="page.description"
             />
             <div v-else-if="videoId">
