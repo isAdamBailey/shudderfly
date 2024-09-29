@@ -7,6 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Intervention\Image\Laravel\Facades\Image;
@@ -15,18 +16,18 @@ class StoreImage implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    protected $image;
+    protected string $filePath;
 
-    protected $path;
+    protected string $path;
 
     /**
      * Create a new job instance.
      *
      * @return void
      */
-    public function __construct(string $image, string $path)
+    public function __construct(string $filePath, string $path)
     {
-        $this->image = $image;
+        $this->filePath = $filePath;
         $this->path = $path;
     }
 
@@ -35,13 +36,23 @@ class StoreImage implements ShouldQueue
      *
      * @return void
      */
-    public function handle()
+    public function handle(): void
     {
-        $image = Str::startsWith($this->image, '/tmp')
-            ? Image::read($this->image)
-            : Image::read(Storage::disk('s3')->get($this->image));
+        $tempFile = storage_path('app/temp/').uniqid('image_', true).'.webp';
 
-        $encoded = $image->toWebp(60);
-        Storage::disk('s3')->put($this->path, (string) $encoded, 'public');
+        try {
+            $imageData = Storage::disk('local')->get($this->filePath);
+            file_put_contents($tempFile, $imageData);
+
+            $image = Image::read($tempFile)->toWebp( 60);
+            Storage::disk('s3')->put($this->path, (string) $image, 'public');
+        } catch (\Exception $e) {
+            Log::error($e->getMessage());
+        } finally {
+            if (file_exists($tempFile)) {
+                @unlink($tempFile);
+            }
+            Storage::disk('local')->delete($this->filePath);
+        }
     }
 }

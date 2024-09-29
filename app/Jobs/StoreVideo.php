@@ -17,16 +17,16 @@ class StoreVideo implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    protected $video;
+    protected string $filePath;
 
-    protected $path;
+    protected string $path;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(string $video, string $path)
+    public function __construct(string $filePath, string $path)
     {
-        $this->video = $video;
+        $this->filePath = $filePath;
         $this->path = $path;
     }
 
@@ -38,11 +38,11 @@ class StoreVideo implements ShouldQueue
         $tempFile = storage_path('app/temp/').uniqid('video_', true).'.mp4';
 
         try {
-            $videoData = Storage::disk('local')->get($this->video);
+            $videoData = Storage::disk('local')->get($this->filePath);
             file_put_contents($tempFile, $videoData);
 
             FFMpeg::fromDisk('local')
-                ->open($this->video)
+                ->open($this->filePath)
                 ->export()
                 ->inFormat((new X264)->setKiloBitrate(400)->setAudioKiloBitrate(64))
                 ->resize(512, 288)
@@ -50,7 +50,7 @@ class StoreVideo implements ShouldQueue
 
             // Capture a screenshot
             $screenshotContents = FFMpeg::fromDisk('local')
-                ->open($this->video)
+                ->open($this->filePath)
                 ->getFrameFromSeconds(1)
                 ->export()
                 ->getFrameContents();
@@ -77,7 +77,7 @@ class StoreVideo implements ShouldQueue
             if (file_exists($tempFile)) {
                 @unlink($tempFile);
             }
-            Storage::disk('local')->delete($this->video);
+            Storage::disk('local')->delete($this->filePath);
         }
     }
 }
