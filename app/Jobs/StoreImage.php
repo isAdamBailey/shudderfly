@@ -9,7 +9,6 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Intervention\Image\Laravel\Facades\Image;
 
 class StoreImage implements ShouldQueue
@@ -17,13 +16,10 @@ class StoreImage implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected string $filePath;
-
     protected string $path;
 
     /**
      * Create a new job instance.
-     *
-     * @return void
      */
     public function __construct(string $filePath, string $path)
     {
@@ -33,26 +29,32 @@ class StoreImage implements ShouldQueue
 
     /**
      * Execute the job.
-     *
-     * @return void
      */
     public function handle(): void
     {
         $tempFile = storage_path('app/temp/').uniqid('image_', true).'.webp';
 
         try {
-            $imageData = Storage::disk('local')->get($this->filePath);
-            file_put_contents($tempFile, $imageData);
+            Log::info('StoreImage job started', ['filePath' => $this->filePath, 'path' => $this->path]);
 
-            $image = Image::read($tempFile)->toWebp( 60);
+            $imageData = Storage::disk('local')->get($this->filePath);
+            Log::info('Image data retrieved from local storage');
+
+            file_put_contents($tempFile, $imageData);
+            Log::info('Temporary image file saved', ['tempFile' => $tempFile]);
+
+            $image = Image::make($tempFile)->encode('webp', 60);
             Storage::disk('s3')->put($this->path, (string) $image, 'public');
+            Log::info('Image processed and saved to S3', ['path' => $this->path]);
         } catch (\Exception $e) {
-            Log::error($e->getMessage());
+            Log::error('Error processing image', ['exception' => $e->getMessage(), 'filePath' => $this->filePath, 'path' => $this->path]);
         } finally {
             if (file_exists($tempFile)) {
                 @unlink($tempFile);
+                Log::info('Temporary file deleted', ['tempFile' => $tempFile]);
             }
             Storage::disk('local')->delete($this->filePath);
+            Log::info('Original file deleted from local storage', ['filePath' => $this->filePath]);
         }
     }
 }
