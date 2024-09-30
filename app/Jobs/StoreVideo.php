@@ -55,7 +55,7 @@ class StoreVideo implements ShouldQueue
                 ->export()
                 ->getFrameContents();
 
-            if($screenshotContents) {
+            if ($screenshotContents) {
                 // needed to use .jpg extension, .webp triggered errors related to multiple frames
                 $screenshotFilename = pathinfo($this->path, PATHINFO_FILENAME).'_poster.jpg';
                 $screenshotPath = pathinfo($this->path, PATHINFO_DIRNAME).'/'.$screenshotFilename;
