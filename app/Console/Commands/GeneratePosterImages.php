@@ -13,6 +13,7 @@ use ProtoneMedia\LaravelFFMpeg\Support\FFMpeg;
 class GeneratePosterImages extends Command
 {
     protected $signature = 'media:generate-poster-images';
+
     protected $description = 'Iterates over all pages and generates a poster image of the media if it is a video';
 
     public function handle()
@@ -34,6 +35,7 @@ class GeneratePosterImages extends Command
 
                         if (! Storage::disk('s3')->exists($s3Path)) {
                             Log::error('File does not exist', ['s3Path' => $s3Path]);
+
                             continue;
                         }
 
@@ -52,6 +54,7 @@ class GeneratePosterImages extends Command
 
                             if (! file_exists($videoFullPath)) {
                                 Log::error('Temporary video file not found', ['path' => $videoFullPath]);
+
                                 continue;
                             }
 
