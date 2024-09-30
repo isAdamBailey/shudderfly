@@ -12,82 +12,76 @@ use ProtoneMedia\LaravelFFMpeg\Support\FFMpeg;
 
 class GeneratePosterImages extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
     protected $signature = 'media:generate-poster-images';
+    protected $description = 'Iterates over all pages and generates a poster image of the media if it is a video';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Command description';
-
-    /**
-     * Execute the console command.
-     */
     public function handle()
     {
         set_time_limit(0);
 
         $startTime = microtime(true);
 
-        Page::where('image_path', '<>', '')
+        Page::where('media_path', '<>', '')
             ->whereNull('media_poster')
+            ->where('media_path', 'not like', 'http%')
             ->chunk(200, function ($pages) {
-            foreach ($pages as $page) {
-                try {
-                    $imagePath = $page->image_path;
-                    $posterPath = '';
+                foreach ($pages as $page) {
+                    try {
+                        $mediaPath = $page->media_path;
+                        $posterPath = '';
 
-                    $s3Path = str_replace(env('CLOUDFRONT_URL'), '', $imagePath);
-                    if ( ! Storage::disk('s3')->exists($s3Path)) {
-                        Log::error('File does not exist: '.$imagePath);
+                        $s3Path = str_replace(env('CLOUDFRONT_URL'), '', $mediaPath);
 
-                        continue;
-                    }
-
-                    $mimeType = Storage::disk('s3')->mimeType($s3Path);
-                    if (Str::startsWith($mimeType, 'video/')) {
-                        $filename = pathinfo($s3Path, PATHINFO_BASENAME);
-                        $posterPath = 'books/'.$page->book->slug.'/'.$filename;
-
-                        // Download the video from S3
-                        $videoData = Storage::disk('s3')->get($s3Path);
-                        $tempVideoPath = storage_path('app/temp/').uniqid('video_', true).'.mp4';
-                        file_put_contents($tempVideoPath, $videoData);
-
-                        // Capture a frame using FFmpeg
-                        $frameContents = FFMpeg::fromDisk('local')
-                            ->open($tempVideoPath)
-                            ->getFrameFromSeconds(1)
-                            ->export()
-                            ->getFrameContents();
-
-                        if ($frameContents) {
-                            $posterFilename = pathinfo($posterPath, PATHINFO_FILENAME).'_poster.jpg';
-                            $posterPath = pathinfo($posterPath, PATHINFO_DIRNAME).'/'.$posterFilename;
-                            Storage::disk('s3')->put($posterPath, $frameContents, 'public');
-                        } else {
-                            Log::error('Frame contents were not generated');
+                        if (! Storage::disk('s3')->exists($s3Path)) {
+                            Log::error('File does not exist', ['s3Path' => $s3Path]);
+                            continue;
                         }
-                        if (file_exists($tempVideoPath)) {
-                            @unlink($tempVideoPath);
-                        }
-                    }
 
-                    if ($posterPath) {
-                        $page->media_poster = $posterPath;
-                        $page->save();
+                        $mimeType = Storage::disk('s3')->mimeType($s3Path);
+
+                        if (Str::startsWith($mimeType, 'video/')) {
+                            $filename = pathinfo($s3Path, PATHINFO_BASENAME);
+                            $posterPath = 'books/'.$page->book->slug.'/'.$filename;
+
+                            $videoData = Storage::disk('s3')->get($s3Path);
+
+                            $tempVideoPath = 'temp/'.uniqid('video_').'.mp4';  // Relative path for local storage
+                            Storage::disk('local')->put($tempVideoPath, $videoData);
+
+                            $videoFullPath = storage_path('app/'.$tempVideoPath);
+
+                            if (! file_exists($videoFullPath)) {
+                                Log::error('Temporary video file not found', ['path' => $videoFullPath]);
+                                continue;
+                            }
+
+                            $frameContents = FFMpeg::fromDisk('local')
+                                ->open($tempVideoPath)
+                                ->getFrameFromSeconds(1)
+                                ->export()
+                                ->getFrameContents();
+
+                            if ($frameContents) {
+                                $posterFilename = pathinfo($posterPath, PATHINFO_FILENAME).'_poster.jpg';
+                                $posterPath = pathinfo($posterPath, PATHINFO_DIRNAME).'/'.$posterFilename;
+
+                                Storage::disk('s3')->put($posterPath, $frameContents, 'public');
+                            } else {
+                                Log::error('Frame contents were not generated');
+                            }
+
+                            Storage::disk('local')->delete($tempVideoPath);
+                        }
+
+                        if ($posterPath) {
+                            $page->media_poster = $posterPath;
+                            $page->save();
+                        }
+                    } catch (\Exception $e) {
+                        Log::error('Error processing file', ['exception' => $e->getMessage(), 'page_id' => $page->id]);
                     }
-                } catch (\Exception $e) {
-                    Log::error('Error processing file: '.$e->getMessage());
                 }
-            }
-        });
+            });
 
         $endTime = microtime(true);
         $duration = $endTime - $startTime;
@@ -102,7 +96,7 @@ class GeneratePosterImages extends Command
                 }
             );
         } catch (\Exception $e) {
-            Log::error('Error sending email: '.$e->getMessage());
+            Log::error('Error sending email', ['exception' => $e->getMessage()]);
         }
 
         return 0;
