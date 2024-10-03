@@ -12,7 +12,7 @@
         disablepictureinpicture
         controlslist="nodownload"
         :poster="poster"
-        class="h-full w-full rounded-lg object-cover"
+        class="rounded-lg inline-block"
     >
         <source :src="imageSrc" />
         Your browser does not support the video tag.
