@@ -1,8 +1,8 @@
 <template>
     <img
         v-if="isLoading"
-        :class="`${classes} object-cover h-full w-full bg-yellow-300 dark:bg-gray-700`"
         :src="placeholder"
+        class="rounded-lg inline-block"
         alt="placeholder image"
         loading="lazy"
     />
@@ -20,7 +20,7 @@
     <img
         v-else
         ref="image"
-        :class="`${classes} object-cover h-full w-full bg-yellow-300 dark:bg-gray-700`"
+        class="rounded-lg inline-block"
         :src="imageSrc"
         :alt="alt"
         loading="lazy"
