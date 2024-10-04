@@ -14,9 +14,9 @@ const showingNavigationDropdown = ref(false);
 </script>
 
 <template>
-    <div>
+    <div class="flex flex-col min-h-screen">
         <div
-            class="min-h-screen bg-gradient-to-r from-yellow-900 dark:from-purple-900 via-green-500 dark:via-red-500 to-yellow-300 dark:to-yellow-500"
+            class="flex-grow bg-gradient-to-r from-yellow-900 dark:from-purple-900 via-green-500 dark:via-red-500 to-yellow-300 dark:to-yellow-500"
         >
             <nav
                 class="bg-blue-600 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700"
