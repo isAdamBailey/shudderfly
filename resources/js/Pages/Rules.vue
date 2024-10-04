@@ -13,9 +13,7 @@ const name = "Colin";
 
     <AuthenticatedLayout>
         <template #header>
-            <h2
-                class="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight"
-            >
+            <h2 class="font-semibold text-xl text-gray-100 leading-tight">
                 Rules of {{ appName }}
             </h2>
         </template>
@@ -42,38 +40,6 @@ const name = "Colin";
                         <li>
                             {{ appName }} is a place only for {{ name }}, but we
                             can't put any inappropriate pictures here.
-                        </li>
-                        <li>
-                            Inappropriate means no naked people, no hurting
-                            people, no hurting animals, no hurting the
-                            environment, no hurting yourself.
-                        </li>
-                    </ul>
-                    <h3 class="pt-5 pb-2 text-xl">Huge Pages!</h3>
-                    <ul class="pl-8 list-disc">
-                        <li>
-                            Sometimes the videos take a long time to load! Be
-                            patient if you want to see them.
-                        </li>
-                        <li>
-                            We have to limit the size of what can be uploaded to
-                            {{ appName }}. If you have a video that is too big,
-                            you can use a video editor to make it smaller.
-                        </li>
-                    </ul>
-                    <h3 class="pt-5 pb-2 text-xl">Stinky Names!</h3>
-                    <ul class="pl-8 list-disc">
-                        <li>
-                            Books are collections of pages. Pages are the
-                            pictures and videos you upload.
-                        </li>
-                        <li>
-                            If you search books in the Books page, you get all
-                            books with that word in the title or excerpt.
-                        </li>
-                        <li>
-                            If you search pages, you get all pages with that
-                            word in the page.
                         </li>
                     </ul>
                 </div>
