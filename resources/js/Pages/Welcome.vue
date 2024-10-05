@@ -93,7 +93,7 @@ defineProps({
                         :alt="`Picture of ${name}`"
                         class="border-4 border-black rounded-full cover md:ml-5"
                     />
-                    <ApplicationLogo v-else :is-poop="true" title="click me!" />
+                    <ApplicationLogo v-else title="click me!" />
                 </div>
             </div>
         </div>
