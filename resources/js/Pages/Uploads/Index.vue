@@ -97,16 +97,19 @@ const title = computed(() => {
     if (props.photos.total) {
         const total = props.photos.total;
         if (isRandom.value) {
-            return `${total} Random Uploads`;
+            return "Mixed";
         }
         if (isOld.value) {
-            return `${total} Uploads a Year Old`;
+            return "A year ago";
         }
         if (isYouTube.value) {
-            return `${total} YouTube Videos`;
+            return `${total} YouTube videos`;
+        }
+        if (isPopular.value) {
+            return "Your favorites";
         }
     }
-    return "Newest Uploads";
+    return "Newest uploads";
 });
 
 function filter(filter) {
