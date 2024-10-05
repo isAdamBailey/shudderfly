@@ -119,10 +119,13 @@ function filter(filter) {
             phrase = "YouTube videos";
             break;
         case "old":
-            phrase = "uploads a year old";
+            phrase = "a year ago";
             break;
         case "random":
-            phrase = "random uploads";
+            phrase = "mixed";
+            break;
+        case "popular":
+            phrase = "your favorites";
             break;
     }
     speak(phrase);
