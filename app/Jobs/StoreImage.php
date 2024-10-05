@@ -43,8 +43,9 @@ class StoreImage implements ShouldQueue
             file_put_contents($tempFile, $imageData);
             Log::info('Temporary image file saved', ['tempFile' => $tempFile]);
 
-            $image = Image::make($tempFile)->encode('webp', 60);
-            Storage::disk('s3')->put($this->path, (string) $image, 'public');
+            $image = Image::read($tempFile);
+            $encoded = $image->toWebp(60);
+            Storage::disk('s3')->put($this->path, (string) $encoded, 'public');
             Log::info('Image processed and saved to S3', ['path' => $this->path]);
         } catch (\Exception $e) {
             Log::error('Error processing image', ['exception' => $e->getMessage(), 'filePath' => $this->filePath, 'path' => $this->path]);
