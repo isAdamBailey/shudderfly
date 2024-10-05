@@ -9,9 +9,8 @@ Because other existing apps with this functionality include a lot of ways for ou
 links, we needed a way to be in better control of the pictures for his permission level,
 and add permissions for users who are able to upload and edit the content.
 
-Shudderfly connects to Amazon S3 for image/video storage.
-
-_NOTE: This application is not allowing registration from the public and requires a secret. This is for family members only._
+Images are resized and optimized for web, and videos are processed with FFMPEG before storage.
+Shudderfly connects to Amazon S3 for image/video storage, and uses SQS queue for processing the images and videos.
 
 ## Development
 
