@@ -159,7 +159,7 @@ const makeCoverPage = () => {
                     <div
                         v-if="
                             imagePreview.startsWith('data:image') ||
-                            imagePreview.startsWith('https')
+                            imagePreview.endsWith('.webp')
                         "
                         class="h-60 w-60 rounded bg-cover bg-center bg-no-repeat mr-2"
                         :style="
@@ -167,7 +167,10 @@ const makeCoverPage = () => {
                         "
                     ></div>
                     <div
-                        v-else-if="imagePreview.startsWith('data:video')"
+                        v-else-if="
+                            imagePreview.startsWith('data:video') ||
+                            imagePreview.endsWith('.mp4')
+                        "
                         class="w-3/4"
                     >
                         <video controls class="w-60">
