@@ -3,49 +3,59 @@
 
     <BreezeAuthenticatedLayout>
         <template #header>
-            <SearchInput route-name="books.search" label="Books" class="mb-2" />
-            <Link :href="removePageParam(pages.path)" class="w-full">
-                <div class="flex justify-center text-center mb-3">
-                    <h2 class="font-bold text-4xl text-gray-900 leading-tight">
-                        {{ book.title.toUpperCase() }}
-                    </h2>
-                </div>
-                <div class="flex justify-center items-center">
-                    <img
-                        v-if="book.cover_image?.media_path"
-                        class="object-cover max-h-60 rounded-lg mr-2"
-                        :src="book.cover_image.media_path"
-                        alt="cover image"
-                    />
-                    <div>
-                        <p v-if="book.author" class="mr-3 font-bold">
-                            by: {{ book.author }}
-                        </p>
-                        <p>
-                            {{ short(book.created_at) }}
-                        </p>
-                        <p>{{ pages.total }} pages</p>
+            <SearchInput route-name="books.search" label="Books" />
+            <div class="bg-gray-200 p-3 my-5 rounded-lg">
+                <Link :href="removePageParam(pages.path)" class="w-full">
+                    <div class="flex justify-center text-center mb-3">
+                        <h2
+                            class="font-bold text-4xl text-gray-900 leading-tight"
+                        >
+                            {{ book.title.toUpperCase() }}
+                        </h2>
                     </div>
-                </div>
-                <div v-if="book.excerpt" class="text-center mt-3">
-                    <h2 class="italic leading-tight">
-                        {{ book.excerpt }}
-                    </h2>
-                </div>
-            </Link>
+                    <div class="flex justify-center items-center flex-wrap">
+                        <img
+                            v-if="book.cover_image?.media_path"
+                            class="object-cover max-h-80 rounded-lg mr-2"
+                            :src="book.cover_image.media_path"
+                            alt="cover image"
+                        />
+                        <div>
+                            <p v-if="book.author" class="mr-3 font-bold">
+                                by: {{ book.author }}
+                            </p>
+                            <p>
+                                {{ short(book.created_at) }}
+                            </p>
+                            <p>{{ pages.total }} pages</p>
+                        </div>
+                    </div>
+                    <div class="flex justify-between">
+                        <div
+                            v-if="book.excerpt"
+                            class="flex-grow text-center mt-3"
+                        >
+                            <h2 class="italic leading-tight">
+                                {{ book.excerpt }}
+                            </h2>
+                        </div>
+                        <Button
+                            type="button"
+                            :disabled="speaking"
+                            @click="readTitleAndExcerpt"
+                        >
+                            <i class="ri-speak-fill text-lg"></i>
+                        </Button>
+                    </div>
+                </Link>
+            </div>
             <div class="p-2 flex justify-end flex-nowrap align-middle">
                 <div class="flex max-h-10">
                     <Button
-                        type="button"
-                        :disabled="speaking"
-                        @click="readTitleAndExcerpt"
-                    >
-                        <i class="ri-speak-fill text-lg"></i>
-                    </Button>
-                    <Button
                         v-if="canEditPages"
                         type="button"
-                        class="ml-2 rounded-none font-bold px-12 bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
+                        :class="pageSettingsOpen ? '!bg-red-700' : ''"
+                        class="ml-2 rounded-none font-bold px-12"
                         @click="togglePageSettings"
                     >
                         <span v-if="pageSettingsOpen">Close</span>
@@ -54,7 +64,8 @@
                     <Button
                         v-if="canEditPages"
                         type="button"
-                        class="ml-2 rounded-none font-bold px-12 bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
+                        :class="bookSettingsOpen ? '!bg-red-700' : ''"
+                        class="ml-2 rounded-none font-bold px-12"
                         @click="toggleBookSettings"
                     >
                         <span v-if="bookSettingsOpen">Close</span>
