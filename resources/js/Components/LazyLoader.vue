@@ -1,8 +1,8 @@
 <template>
     <img
         v-if="isLoading"
-        :class="`${classes} object-cover h-full w-full bg-yellow-300 dark:bg-gray-700`"
         :src="placeholder"
+        class="rounded-lg inline-block"
         alt="placeholder image"
         loading="lazy"
     />
@@ -12,7 +12,7 @@
         disablepictureinpicture
         controlslist="nodownload"
         :poster="poster"
-        class="h-full w-full rounded-lg object-cover"
+        class="rounded-lg inline-block"
     >
         <source :src="imageSrc" />
         Your browser does not support the video tag.
@@ -20,7 +20,7 @@
     <img
         v-else
         ref="image"
-        :class="`${classes} object-cover h-full w-full bg-yellow-300 dark:bg-gray-700`"
+        class="rounded-lg inline-block"
         :src="imageSrc"
         :alt="alt"
         loading="lazy"

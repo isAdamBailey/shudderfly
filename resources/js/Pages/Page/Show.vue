@@ -1,6 +1,6 @@
 <template>
     <BreezeAuthenticatedLayout>
-        <div class="p-4 overflow-hidden flex flex-col justify-between">
+        <div class="p-4 overflow-hidden text-center">
             <div v-if="canEditPages" class="mb-3">
                 <Button
                     v-if="!showPageSettings"
@@ -25,7 +25,7 @@
             </div>
             <LazyLoader
                 v-if="page.media_path"
-                class="rounded-top max-h-[90vh] object-contain"
+                class="max-h-[60vh]"
                 :src="page.media_path"
                 :poster="page.media_poster"
                 :alt="page.description"
@@ -54,16 +54,18 @@
                 </span>
             </p>
 
-            <div class="flex justify-around pb-10 mt-3">
+            <div class="flex justify-around my-3">
                 <Link
                     v-if="previousPage"
                     :href="route('pages.show', previousPage)"
                     as="button"
                     class="inline-flex items-center text-white disabled:opacity-25 transition ease-in-out duration-150"
                     aria-label="previous page"
+                    :disabled="backButtonDisabled"
+                    @click="backButtonDisabled = true"
                 >
                     <i
-                        class="ri-arrow-left-circle-fill text-8xl rounded-full bg-amber-50 text-amber-800 dark:text-gray-900"
+                        class="ri-arrow-left-circle-fill text-6xl rounded-full bg-amber-50 text-amber-800 dark:text-gray-900"
                     ></i>
                 </Link>
                 <Link
@@ -72,22 +74,30 @@
                     as="button"
                     class="inline-flex items-center text-white disabled:opacity-25 transition ease-in-out duration-150"
                     aria-label="next page"
+                    :disabled="nextButtonDisabled"
+                    @click="nextButtonDisabled = true"
                 >
                     <i
-                        class="ri-arrow-right-circle-fill text-8xl rounded-full bg-amber-50 text-amber-800 dark:text-gray-900"
+                        class="ri-arrow-right-circle-fill text-6xl rounded-full bg-amber-50 text-amber-800 dark:text-gray-900"
                     ></i>
                 </Link>
             </div>
-            <Link
-                :href="route('books.show', { book: page.book.slug, page: 1 })"
-                class="flex items-center"
-                ><Button>
-                    <i class="ri-arrow-go-back-fill text-2xl text-gray-100"></i>
-                    <span class="ml-3 text-lg font-bold text-gray-100"
-                        >Go back To book</span
-                    >
-                </Button>
-            </Link>
+            <div class="flex">
+                <Link
+                    :href="
+                        route('books.show', { book: page.book.slug, page: 1 })
+                    "
+                    class="flex items-center"
+                    ><Button>
+                        <i
+                            class="ri-arrow-go-back-fill text-xl text-gray-100"
+                        ></i>
+                        <span class="ml-3 font-bold text-gray-100"
+                            >Go to book</span
+                        >
+                    </Button>
+                </Link>
+            </div>
         </div>
     </BreezeAuthenticatedLayout>
 </template>
@@ -95,7 +105,7 @@
 <script setup>
 import Button from "@/Components/Button.vue";
 import { computed, ref } from "vue";
-import { Link } from "@inertiajs/vue3";
+import { Head, Link } from "@inertiajs/vue3";
 import EditPageForm from "@/Pages/Page/EditPageForm.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
@@ -117,6 +127,8 @@ const props = defineProps({
 
 const { videoId } = useGetYouTubeVideo(props.page.video_link);
 let showPageSettings = ref(false);
+const backButtonDisabled = ref(false);
+const nextButtonDisabled = ref(false);
 
 const hasContent = computed(() => stripHtml(props.page.content));
 

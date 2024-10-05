@@ -97,30 +97,27 @@
         <div
             class="mx-auto grid max-w-7xl grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] gap-2 pt-3 md:p-3"
         >
-            <div v-for="page in items" :key="page.id" class="overflow-hidden">
-                <div class="relative flex justify-center flex-wrap">
-                    <Link
-                        class="max-h-56"
-                        :href="route('pages.show', { page, increment: true })"
-                    >
-                        <LazyLoader
-                            v-if="mediaPath(page)"
-                            :src="mediaPath(page)"
-                            :is-cover="true"
-                        />
-                        <div v-if="page.video_link">
-                            <VideoWrapper
-                                :id="videoId(page.video_link)"
-                                :controls="false"
-                            />
-                        </div>
-                        <div
-                            v-if="page.content"
-                            class="absolute inset-x-0 top-0 rounded-t-lg w-full truncate bg-white/70 py-2.5 text-center text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
-                            v-html="page.content"
-                        ></div>
-                    </Link>
-                </div>
+            <div
+                v-for="page in items"
+                :key="page.id"
+                class="relative flex justify-center flex-wrap"
+            >
+                <Link
+                    class="w-full"
+                    :href="route('pages.show', { page, increment: true })"
+                >
+                    <LazyLoader v-if="mediaPath(page)" :src="mediaPath(page)" />
+                    <VideoWrapper
+                        v-if="page.video_link"
+                        :id="videoId(page.video_link)"
+                        :controls="false"
+                    />
+                    <div
+                        v-if="page.content"
+                        class="absolute inset-x-0 top-0 rounded-t-lg w-full truncate bg-white/70 py-2.5 text-center text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
+                        v-html="page.content"
+                    ></div>
+                </Link>
             </div>
         </div>
         <div ref="infiniteScroll"></div>
@@ -185,10 +182,6 @@ function fetchPages() {
             preserveScroll: true,
             onSuccess: (page) => {
                 items.value = [...items.value, ...page.props.pages.data];
-                // Update the URL without the pagination parameter
-                const url = new URL(window.location);
-                url.searchParams.delete("page");
-                history.pushState({}, "", url);
             },
         }
     );
