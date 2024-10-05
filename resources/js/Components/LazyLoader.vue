@@ -13,6 +13,7 @@
         controlslist="nodownload"
         :poster="poster"
         class="rounded-lg inline-block"
+        @error="handleMediaError"
     >
         <source :src="imageSrc" />
         Your browser does not support the video tag.
@@ -24,6 +25,7 @@
         :src="imageSrc"
         :alt="alt"
         loading="lazy"
+        @error="handleMediaError"
     />
 </template>
 
@@ -61,4 +63,7 @@ const placeholder = "/img/photo-placeholder.png";
 const imageSrc = ref(props.src || placeholder);
 
 const { isLoading } = useImage({ src: computed(() => imageSrc.value) });
+const handleMediaError = () => {
+    imageSrc.value = placeholder;
+};
 </script>
