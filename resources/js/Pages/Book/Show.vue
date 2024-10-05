@@ -30,24 +30,22 @@
                             <p>{{ pages.total }} pages</p>
                         </div>
                     </div>
-                    <div class="flex justify-between">
-                        <div
-                            v-if="book.excerpt"
-                            class="flex-grow text-center mt-3"
-                        >
-                            <h2 class="italic leading-tight">
-                                {{ book.excerpt }}
-                            </h2>
-                        </div>
-                        <Button
-                            type="button"
-                            :disabled="speaking"
-                            @click="readTitleAndExcerpt"
-                        >
-                            <i class="ri-speak-fill text-lg"></i>
-                        </Button>
-                    </div>
                 </Link>
+                <div class="flex justify-between">
+                    <div v-if="book.excerpt" class="flex-grow text-center mt-3">
+                        <h2 class="italic leading-tight">
+                            {{ book.excerpt }}
+                        </h2>
+                    </div>
+                    <Button
+                        type="button"
+                        class="max-h-12"
+                        :disabled="speaking"
+                        @click="readTitleAndExcerpt"
+                    >
+                        <i class="ri-speak-fill text-lg"></i>
+                    </Button>
+                </div>
             </div>
             <div class="p-2 flex justify-end flex-nowrap align-middle">
                 <div class="flex max-h-10">
