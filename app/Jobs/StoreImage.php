@@ -32,6 +32,11 @@ class StoreImage implements ShouldQueue
      */
     public function handle(): void
     {
+        if (empty($this->filePath)) {
+            Log::error('File path is null or empty');
+            return;
+        }
+
         $tempFile = storage_path('app/temp/').uniqid('image_', true).'.webp';
 
         try {
