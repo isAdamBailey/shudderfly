@@ -16,6 +16,14 @@
         <div class="p-2 pb-0 flex flex-wrap justify-around">
             <Button
                 type="button"
+                :is-active="isPopular"
+                class="rounded-full border-amber-50 dark:border-gray-100 my-3 p-10"
+                @click="filter('popular')"
+            >
+                <i class="ri-star-line text-4xl"></i>
+            </Button>
+            <Button
+                type="button"
                 :is-active="isYouTube"
                 class="rounded-full border-amber-50 dark:border-gray-100 my-3 p-10"
                 @click="filter('youtube')"
@@ -74,6 +82,11 @@ const isOld = computed(() => {
 const isYouTube = computed(() => {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get("filter") === "youtube";
+});
+
+const isPopular = computed(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get("filter") === "popular";
 });
 
 const title = computed(() => {

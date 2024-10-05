@@ -43,6 +43,7 @@ class PageController extends Controller
             })
             ->when($filter === 'random', fn ($query) => $query->inRandomOrder())
             ->when($filter === 'youtube', fn ($query) => $query->whereNotNull('video_link')->latest())
+            ->when($filter === 'popular', fn ($query) => $query->orderBy('read_count', 'desc'))
             ->paginate();
 
         $photos->appends($request->all());
