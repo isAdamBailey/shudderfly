@@ -42,13 +42,8 @@ class StoreVideo implements ShouldQueue
         $tempFile = storage_path('app/temp/').uniqid('video_', true).'.mp4';
 
         try {
-            Log::info('StoreVideo job started', ['filePath' => $this->filePath, 'path' => $this->path]);
-
             $videoData = Storage::disk('local')->get($this->filePath);
-            Log::info('Video data retrieved from local storage');
-
             file_put_contents($tempFile, $videoData);
-            Log::info('Temporary video file saved', ['tempFile' => $tempFile]);
 
             FFMpeg::fromDisk('local')
                 ->open($this->filePath)
@@ -56,20 +51,17 @@ class StoreVideo implements ShouldQueue
                 ->inFormat((new X264)->setKiloBitrate(400)->setAudioKiloBitrate(64))
                 ->resize(512, 288)
                 ->save($tempFile);
-            Log::info('Video processed and saved', ['tempFile' => $tempFile]);
 
             $screenshotContents = FFMpeg::fromDisk('local')
                 ->open($this->filePath)
                 ->getFrameFromSeconds(1)
                 ->export()
                 ->getFrameContents();
-            Log::info('Screenshot captured');
 
             if ($screenshotContents) {
                 $screenshotFilename = pathinfo($this->path, PATHINFO_FILENAME).'_poster.jpg';
                 $screenshotPath = pathinfo($this->path, PATHINFO_DIRNAME).'/'.$screenshotFilename;
                 Storage::disk('s3')->put($screenshotPath, $screenshotContents, 'public');
-                Log::info('Screenshot saved to S3', ['screenshotPath' => $screenshotPath]);
             } else {
                 Log::error('Screenshot contents were not generated');
             }
@@ -81,16 +73,13 @@ class StoreVideo implements ShouldQueue
                 $filename
             );
             Storage::disk('s3')->setVisibility($processedFilePath, 'public');
-            Log::info('Processed video saved to S3', ['processedFilePath' => $processedFilePath]);
         } catch (\Exception $e) {
             Log::error('FFmpeg failed', ['exception' => $e->getMessage(), 'filePath' => $this->filePath, 'path' => $this->path]);
         } finally {
             if (file_exists($tempFile)) {
                 @unlink($tempFile);
-                Log::info('Temporary file deleted', ['tempFile' => $tempFile]);
             }
             Storage::disk('local')->delete($this->filePath);
-            Log::info('Original file deleted from local storage', ['filePath' => $this->filePath]);
         }
     }
 }
