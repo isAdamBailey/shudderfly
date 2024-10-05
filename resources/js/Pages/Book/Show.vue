@@ -182,10 +182,6 @@ function fetchPages() {
             preserveScroll: true,
             onSuccess: (page) => {
                 items.value = [...items.value, ...page.props.pages.data];
-                // Update the URL without the pagination parameter
-                const url = new URL(window.location);
-                url.searchParams.delete("page");
-                history.pushState({}, "", url);
             },
         }
     );
