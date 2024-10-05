@@ -82,7 +82,7 @@
                     ></i>
                 </Link>
             </div>
-            <div class="flex justify-center">
+            <div class="flex">
                 <Link
                     :href="
                         route('books.show', { book: page.book.slug, page: 1 })
@@ -93,7 +93,7 @@
                             class="ri-arrow-go-back-fill text-xl text-gray-100"
                         ></i>
                         <span class="ml-3 font-bold text-gray-100"
-                            >Go back To book</span
+                            >Go to book</span
                         >
                     </Button>
                 </Link>

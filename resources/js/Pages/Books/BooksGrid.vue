@@ -17,7 +17,7 @@
                 v-for="book in workingBooks"
                 :key="book.id"
                 :href="route('books.show', book.slug)"
-                class="relative w-48 shrink-0 snap-start rounded-lg bg-white shadow-gray-200/50 transition hover:opacity-80 hover:shadow hover:shadow-gray-300/50"
+                class="relative w-48 overflow-hidden shrink-0 snap-start rounded-lg bg-white shadow-gray-200/50 transition hover:opacity-80 hover:shadow hover:shadow-gray-300/50"
             >
                 <div
                     class="rounded-t-lg absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 text-center leading-4 text-black font-bold backdrop-blur-sm line-clamp-1"
