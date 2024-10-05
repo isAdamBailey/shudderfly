@@ -188,10 +188,10 @@ class PageController extends Controller
      */
     public function destroy(Page $page): Redirector|RedirectResponse|Application
     {
-        if (Storage::disk('s3')->exists($page->media_poster)) {
+        if (!empty($page->media_poster) && Storage::disk('s3')->exists($page->media_poster)) {
             Storage::disk('s3')->delete($page->media_poster);
         }
-        if (Storage::disk('s3')->exists($page->media_path)) {
+        if (!empty($page->media_path) && Storage::disk('s3')->exists($page->media_path)) {
             Storage::disk('s3')->delete($page->media_path);
         }
         $page->delete();
