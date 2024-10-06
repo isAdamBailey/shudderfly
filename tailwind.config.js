@@ -14,6 +14,7 @@ module.exports = {
         extend: {
             fontFamily: {
                 sans: ["Nunito", ...defaultTheme.fontFamily.sans],
+                heading: ["Spicy Rice", ...defaultTheme.fontFamily.sans],
             },
         },
     },

@@ -30,16 +30,14 @@ defineProps({
                     class="flex flex-col items-center h-[400px] w-full md:flex-row md:w-3/4"
                 >
                     <div
-                        class="border-4 border-gray-900 bg-gradient-to-r from-white dark:from-gray-700 dark:via-gray-900 to-yellow-100 dark:to-black h-full p-10 rounded-lg"
+                        class="border-4 border-gray-900 bg-blue-600 h-full p-10 rounded-lg"
                     >
                         <h1
-                            class="text-3xl tracking-wide text-gray-800 dark:text-gray-100 md:text-7xl font-bold"
+                            class="text-5xl tracking-wide text-gray-100 md:text-7xl font-heading"
                         >
                             {{ appName }}
                         </h1>
-                        <p
-                            class="mt-10 dark:text-gray-100 text-2xl text-gray-600 font-bold"
-                        >
+                        <p class="mt-10 text-gray-100 text-2xl font-bold">
                             <span
                                 :class="
                                     bookClicked

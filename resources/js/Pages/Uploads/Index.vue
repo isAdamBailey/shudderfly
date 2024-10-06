@@ -5,7 +5,9 @@
         <template #header>
             <div class="flex justify-between items-center">
                 <Link @click="filter()">
-                    <h2 class="font-bold text-2xl text-gray-100 leading-tight">
+                    <h2
+                        class="font-heading text-2xl text-gray-100 leading-tight"
+                    >
                         {{ title }}
                     </h2>
                 </Link>

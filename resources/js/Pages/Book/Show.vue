@@ -8,7 +8,7 @@
                 <Link :href="removePageParam(pages.path)" class="w-full">
                     <div class="flex justify-center text-center mb-3">
                         <h2
-                            class="font-bold text-4xl text-gray-900 leading-tight"
+                            class="font-heading text-5xl text-gray-900 leading-tight"
                         >
                             {{ book.title.toUpperCase() }}
                         </h2>
