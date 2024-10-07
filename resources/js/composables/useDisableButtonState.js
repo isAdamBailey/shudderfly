@@ -5,8 +5,8 @@ export function useButtonState() {
     let pollingInterval = null;
 
     function setTimestamp() {
-        const futureTime = new Date().getTime() + 60 * 60 * 1000; // 1 hour from now
-        localStorage.setItem("buttonsDisabledUntil", futureTime);
+        const futureTime = new Date().getTime() + 4 * 60 * 60 * 1000; // 4 hours from now
+        localStorage.setItem("buttonsDisabledUntil", futureTime.toString());
         checkTimestamp();
     }
 
