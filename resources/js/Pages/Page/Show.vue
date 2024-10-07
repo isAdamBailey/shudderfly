@@ -1,29 +1,21 @@
 <template>
     <BreezeAuthenticatedLayout>
-        <div class="p-4 overflow-hidden">
-            <div v-if="canEditPages" class="mb-3">
-                <Button
-                    v-if="!showPageSettings"
-                    class="w-full rounded-none bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
-                    @click="showPageSettings = true"
-                >
-                    Edit Page
-                </Button>
-                <Button
-                    v-else
-                    class="w-full rounded-none bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
-                    @click="showPageSettings = false"
-                >
-                    Close page settings
-                </Button>
-                <EditPageForm
-                    v-if="showPageSettings"
-                    :page="page"
-                    :book="page.book"
-                    @close-page-form="showPageSettings = false"
-                />
-            </div>
+        <div class="py-4 md:px-4 overflow-hidden">
             <div class="text-center">
+                <Link
+                    :href="
+                        route('books.show', {
+                            book: page.book.slug,
+                            page: 1,
+                        })
+                    "
+                    class="flex justify-center flex-wrap mb-3 bg-gray-300 rounded-lg p-3"
+                >
+                    <span class="mr-3">Back to</span>
+                    <h2 class="font-heading text-5xl">
+                        {{ page.book.title }}
+                    </h2>
+                </Link>
                 <LazyLoader
                     v-if="page.media_path"
                     class="max-h-[60vh]"
@@ -34,12 +26,15 @@
                 <div v-else-if="videoId">
                     <VideoWrapper :id="videoId" :title="page.description" />
                 </div>
-                <div class="flex justify-between">
+                <div
+                    v-if="hasContent"
+                    class="flex justify-between bg-gray-300 rounded-lg p-3 my-3"
+                >
                     <div
-                        class="px-3 py-3 text-lg text-white"
+                        class="px-3 py-3 text-lg text-left"
                         v-html="page.content"
                     ></div>
-                    <div v-if="hasContent" class="ml-3 mt-3 text-right">
+                    <div class="ml-3 mt-3 text-right">
                         <Button
                             type="button"
                             :disabled="speaking"
@@ -55,7 +50,7 @@
                     </span>
                 </p>
 
-                <div class="flex justify-around my-3">
+                <div class="flex justify-around mb-10">
                     <Link
                         v-if="previousPage"
                         :href="route('pages.show', previousPage)"
@@ -83,25 +78,28 @@
                         ></i>
                     </Link>
                 </div>
-                <div class="flex">
-                    <Link
-                        :href="
-                            route('books.show', {
-                                book: page.book.slug,
-                                page: 1,
-                            })
-                        "
-                        class="flex items-center"
-                        ><Button>
-                            <i
-                                class="ri-arrow-go-back-fill text-xl text-gray-100"
-                            ></i>
-                            <span class="ml-3 font-bold text-gray-100"
-                                >Go to book</span
-                            >
-                        </Button>
-                    </Link>
-                </div>
+            </div>
+            <div v-if="canEditPages" class="mb-3">
+                <Button
+                    v-if="!showPageSettings"
+                    class="w-full rounded-none bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
+                    @click="showPageSettings = true"
+                >
+                    Edit Page
+                </Button>
+                <Button
+                    v-else
+                    class="w-full rounded-none bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
+                    @click="showPageSettings = false"
+                >
+                    Close page settings
+                </Button>
+                <EditPageForm
+                    v-if="showPageSettings"
+                    :page="page"
+                    :book="page.book"
+                    @close-page-form="showPageSettings = false"
+                />
             </div>
         </div>
     </BreezeAuthenticatedLayout>

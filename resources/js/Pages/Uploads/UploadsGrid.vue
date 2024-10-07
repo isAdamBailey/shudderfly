@@ -99,10 +99,6 @@ function mediaPath(photo) {
                         class="absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 text-center text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
                         v-html="photo.content"
                     ></div>
-
-                    <Button class="w-full rounded-t-none truncate">{{
-                        photo.book.title
-                    }}</Button>
                 </Link>
             </div>
         </div>
