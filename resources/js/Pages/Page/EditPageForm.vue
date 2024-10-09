@@ -33,12 +33,14 @@ const bookForm = useForm({
 
 const imagePreview = ref(props.page.media_path);
 
-const videoId = ref(null);
+const embedUrl = ref(null);
 watch(
     () => pageForm.video_link,
     () => {
-        const { videoId: newVideoId } = useGetYouTubeVideo(pageForm.video_link);
-        videoId.value = newVideoId.value;
+        const { embedUrl: newEmbedUrl } = useGetYouTubeVideo(
+            pageForm.video_link
+        );
+        embedUrl.value = newEmbedUrl;
     },
     { immediate: true }
 );
@@ -198,8 +200,8 @@ const makeCoverPage = () => {
                         v-model="pageForm.video_link"
                         class="m-1 mb-3 block w-full"
                     />
-                    <div v-if="videoId">
-                        <VideoWrapper :id="videoId" :controls="false" />
+                    <div v-if="embedUrl">
+                        <VideoWrapper :url="embedUrl" :controls="false" />
                     </div>
                 </div>
                 <div class="w-full">

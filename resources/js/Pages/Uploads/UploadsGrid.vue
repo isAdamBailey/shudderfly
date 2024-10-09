@@ -1,6 +1,5 @@
 <script setup>
 import { Link, router, usePage } from "@inertiajs/vue3";
-import Button from "@/Components/Button.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
@@ -52,9 +51,9 @@ function fetchUploads() {
     );
 }
 
-function videoId(link) {
-    const { videoId } = useGetYouTubeVideo(link);
-    return videoId.value;
+function embedUrl(link) {
+    const { embedUrl } = useGetYouTubeVideo(link, { noControls: true });
+    return embedUrl;
 }
 
 function mediaPath(photo) {
@@ -90,7 +89,7 @@ function mediaPath(photo) {
                     />
                     <div v-if="photo.video_link">
                         <VideoWrapper
-                            :id="videoId(photo.video_link)"
+                            :url="embedUrl(photo.video_link)"
                             :controls="false"
                         />
                     </div>

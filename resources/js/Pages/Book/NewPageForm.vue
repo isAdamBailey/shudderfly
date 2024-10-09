@@ -27,15 +27,15 @@ const form = useForm({
 
 const imageInput = ref(null);
 
-const videoId = ref(null);
+const embedUrl = ref(null);
 
 watch(
     () => form.video_link,
     () => {
-        const { videoId: newVideoId } = useGetYouTubeVideo(form.video_link, {
+        const { embedUrl: newEmbedUrl } = useGetYouTubeVideo(form.video_link, {
             noControls: true,
         });
-        videoId.value = newVideoId.value;
+        embedUrl.value = newEmbedUrl;
     }
 );
 
@@ -201,8 +201,8 @@ const submit = async () => {
                         message="A link to a video is required without any text or upload."
                     />
 
-                    <div v-if="videoId" class="w-1/2">
-                        <VideoWrapper :id="videoId" :controls="false" />
+                    <div v-if="embedUrl" class="w-1/2">
+                        <VideoWrapper :url="embedUrl" :controls="false" />
                     </div>
                 </div>
 

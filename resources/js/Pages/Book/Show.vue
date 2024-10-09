@@ -116,11 +116,14 @@
                     :href="route('pages.show', { page, increment: true })"
                 >
                     <LazyLoader v-if="mediaPath(page)" :src="mediaPath(page)" />
-                    <VideoWrapper
-                        v-if="page.video_link"
-                        :id="videoId(page.video_link)"
-                        :controls="false"
-                    />
+                    <div class="pointer-events-auto">
+                        <VideoWrapper
+                            v-if="page.video_link"
+                            class="pointer-events-none"
+                            :url="embedUrl(page.video_link)"
+                            :controls="false"
+                        />
+                    </div>
                     <div
                         v-if="page.content"
                         class="absolute inset-x-0 top-0 rounded-t-lg w-full truncate bg-white/70 py-2.5 text-center text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
@@ -216,9 +219,9 @@ const readTitleAndExcerpt = () => {
     }
 };
 
-function videoId(link) {
-    const { videoId } = useGetYouTubeVideo(link);
-    return videoId.value;
+function embedUrl(link) {
+    const { embedUrl } = useGetYouTubeVideo(link, { noControls: true });
+    return embedUrl;
 }
 
 function mediaPath(page) {

@@ -1,4 +1,6 @@
 <template>
+    <Head :title="page.book.title" />
+
     <BreezeAuthenticatedLayout>
         <div class="py-4 md:px-4 overflow-hidden">
             <div class="text-center">
@@ -23,8 +25,8 @@
                     :poster="page.media_poster"
                     :alt="page.description"
                 />
-                <div v-else-if="videoId">
-                    <VideoWrapper :id="videoId" :title="page.description" />
+                <div v-else-if="embedUrl">
+                    <VideoWrapper :url="embedUrl" :title="page.description" />
                 </div>
                 <div
                     v-if="hasContent"
@@ -128,7 +130,7 @@ const props = defineProps({
     nextPage: { type: Object, required: true },
 });
 
-const { videoId } = useGetYouTubeVideo(props.page.video_link);
+const { embedUrl } = useGetYouTubeVideo(props.page.video_link);
 let showPageSettings = ref(false);
 const backButtonDisabled = ref(false);
 const nextButtonDisabled = ref(false);
