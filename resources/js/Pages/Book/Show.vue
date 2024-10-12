@@ -28,14 +28,18 @@
                                 {{ short(book.created_at) }}
                             </p>
                             <p>{{ pages.total }} pages</p>
+                            <p>
+                                Read
+                                {{ book.read_count.toLocaleString() }} times
+                            </p>
                         </div>
                     </div>
                 </Link>
                 <div class="flex justify-between">
                     <div v-if="book.excerpt" class="flex-grow text-center mt-3">
-                        <h2 class="italic leading-tight">
+                        <p class="text-xl md:text-2xl italic leading-tight">
                             {{ book.excerpt }}
-                        </h2>
+                        </p>
                     </div>
                     <Button
                         type="button"
