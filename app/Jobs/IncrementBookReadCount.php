@@ -26,7 +26,7 @@ class IncrementBookReadCount implements ShouldQueue
     public function handle(): void
     {
         $maxReadCount = Book::max('read_count');
-        if ($this->book->read_count === 0.0 || $this->book->read_count < $maxReadCount) {
+        if ($this->book->read_count === 0.0 || $this->book->read_count <= $maxReadCount) {
             $this->book->increment('read_count');
         }
     }

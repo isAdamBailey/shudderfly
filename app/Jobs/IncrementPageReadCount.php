@@ -26,7 +26,7 @@ class IncrementPageReadCount implements ShouldQueue
     public function handle(): void
     {
         $maxReadCount = Page::max('read_count');
-        if ($this->page->read_count === 0.0 || $this->page->read_count < $maxReadCount) {
+        if ($this->page->read_count === 0.0 || $this->page->read_count <= $maxReadCount) {
             $this->page->increment('read_count');
         }
     }
