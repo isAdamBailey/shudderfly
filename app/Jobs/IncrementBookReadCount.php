@@ -36,7 +36,6 @@ class IncrementBookReadCount implements ShouldQueue
 
         if ($booksWithMaxReadCount->count() > 1 || ! $booksWithMaxReadCount->contains($this->book)) {
             $this->book->increment('read_count');
-            dd('Incremented book read count');
         }
     }
 }
