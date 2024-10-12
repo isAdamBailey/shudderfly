@@ -16,12 +16,12 @@
 
 **{{ $pagesThisWeek->count() }}** new pages!
 
-## {{ $totalBooks }} all time total books.
-## {{ $totalPages }} all time total pages.
+## {{ number_format($totalBooks) }} all time total books.
+## {{ number_format($totalPages) }} all time total pages.
 
 ## Most Read Book
 <x-email-hyperlink href="{{url('/book/' . $mostRead->slug)}}">{{ $mostRead->title }}</x-email-hyperlink>
-has been read {{ $mostRead->read_count }} times.
+has been read {{ number_format($mostRead->read_count) }} times.
 
 ## Least Read Book
 <x-email-hyperlink href="{{url('/book/' . $leastRead->slug)}}">{{ $leastRead->title }}</x-email-hyperlink>
@@ -29,7 +29,7 @@ has only been read {{ $leastRead->read_count }} times.
 
 ## Largest Book
 <x-email-hyperlink href="{{url('/book/' . $mostPages->slug)}}">{{ $mostPages->title }}</x-email-hyperlink>
-has {{ $mostPages->pages_count }} pages.
+has {{ number_format($mostPages->pages_count) }} pages.
 
 ## Smallest Book
 <x-email-hyperlink href="{{url('/book/' . $leastPages->slug)}}">{{ $leastPages->title }}</x-email-hyperlink>
