@@ -2,7 +2,7 @@
 import BreezeLabel from "@/Components/InputLabel.vue";
 import { useForm } from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue";
-import { ref, computed, watch } from "vue";
+import { ref, computed } from "vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
 import VideoIcon from "@/Components/svg/VideoIcon.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
@@ -10,7 +10,6 @@ import { useVuelidate } from "@vuelidate/core";
 import TextInput from "@/Components/TextInput.vue";
 import InputError from "@/Components/InputError.vue";
 import InputLabel from "@/Components/InputLabel.vue";
-import useGetYouTubeVideo from "@/composables/useGetYouTubeVideo";
 
 const emit = defineEmits(["close-form"]);
 
@@ -26,18 +25,6 @@ const form = useForm({
 });
 
 const imageInput = ref(null);
-
-const embedUrl = ref(null);
-
-watch(
-    () => form.video_link,
-    () => {
-        const { embedUrl: newEmbedUrl } = useGetYouTubeVideo(form.video_link, {
-            noControls: true,
-        });
-        embedUrl.value = newEmbedUrl;
-    }
-);
 
 const rules = computed(() => {
     const fileSizeValidation = (image) => {
@@ -201,8 +188,11 @@ const submit = async () => {
                         message="A link to a video is required without any text or upload."
                     />
 
-                    <div v-if="embedUrl" class="w-1/2">
-                        <VideoWrapper :url="embedUrl" :controls="false" />
+                    <div v-if="form.video_link" class="w-1/2">
+                        <VideoWrapper
+                            :url="form.video_link"
+                            :controls="false"
+                        />
                     </div>
                 </div>
 

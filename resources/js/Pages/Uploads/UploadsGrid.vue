@@ -4,7 +4,6 @@ import LazyLoader from "@/Components/LazyLoader.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import { onMounted, ref, watch } from "vue";
-import useGetYouTubeVideo from "@/composables/useGetYouTubeVideo";
 
 const props = defineProps({
     photos: {
@@ -51,11 +50,6 @@ function fetchUploads() {
     );
 }
 
-function embedUrl(link) {
-    const { embedUrl } = useGetYouTubeVideo(link, { noControls: true });
-    return embedUrl;
-}
-
 function mediaPath(photo) {
     if (photo.media_poster) {
         return photo.media_poster;
@@ -89,7 +83,7 @@ function mediaPath(photo) {
                     />
                     <div v-if="photo.video_link">
                         <VideoWrapper
-                            :url="embedUrl(photo.video_link)"
+                            :url="photo.video_link"
                             :controls="false"
                         />
                     </div>

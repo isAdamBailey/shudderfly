@@ -2,7 +2,7 @@
 import BreezeLabel from "@/Components/InputLabel.vue";
 import { useForm, usePage } from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue";
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref } from "vue";
 import DeletePageForm from "@/Pages/Book/DeletePageForm.vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
 import VideoIcon from "@/Components/svg/VideoIcon.vue";
@@ -10,7 +10,6 @@ import VideoWrapper from "@/Components/VideoWrapper.vue";
 import Multiselect from "@vueform/multiselect";
 import InputLabel from "@/Components/InputLabel.vue";
 import TextInput from "@/Components/TextInput.vue";
-import useGetYouTubeVideo from "@/composables/useGetYouTubeVideo";
 
 const emit = defineEmits(["close-page-form"]);
 
@@ -32,18 +31,6 @@ const bookForm = useForm({
 });
 
 const imagePreview = ref(props.page.media_path);
-
-const embedUrl = ref(null);
-watch(
-    () => pageForm.video_link,
-    () => {
-        const { embedUrl: newEmbedUrl } = useGetYouTubeVideo(
-            pageForm.video_link
-        );
-        embedUrl.value = newEmbedUrl;
-    },
-    { immediate: true }
-);
 
 const imageInput = ref(null);
 const mediaOption = ref("upload"); // upload , link
@@ -200,8 +187,11 @@ const makeCoverPage = () => {
                         v-model="pageForm.video_link"
                         class="m-1 mb-3 block w-full"
                     />
-                    <div v-if="embedUrl">
-                        <VideoWrapper :url="embedUrl" :controls="false" />
+                    <div v-if="pageForm.video_link">
+                        <VideoWrapper
+                            :url="pageForm.video_link"
+                            :controls="false"
+                        />
                     </div>
                 </div>
                 <div class="w-full">

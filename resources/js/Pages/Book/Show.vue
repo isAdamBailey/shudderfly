@@ -120,7 +120,7 @@
                         <VideoWrapper
                             v-if="page.video_link"
                             class="pointer-events-none"
-                            :url="embedUrl(page.video_link)"
+                            :url="page.video_link"
                             :controls="false"
                         />
                     </div>
@@ -151,7 +151,6 @@ import SearchInput from "@/Components/SearchInput.vue";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
-import useGetYouTubeVideo from "@/composables/useGetYouTubeVideo";
 import ScrollTop from "@/Components/ScrollTop.vue";
 
 const { canEditPages } = usePermissions();
@@ -218,11 +217,6 @@ const readTitleAndExcerpt = () => {
         speak(stripHtml(props.book.excerpt));
     }
 };
-
-function embedUrl(link) {
-    const { embedUrl } = useGetYouTubeVideo(link, { noControls: true });
-    return embedUrl;
-}
 
 function mediaPath(page) {
     if (page.media_poster) {

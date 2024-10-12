@@ -25,8 +25,11 @@
                     :poster="page.media_poster"
                     :alt="page.description"
                 />
-                <div v-else-if="embedUrl">
-                    <VideoWrapper :url="embedUrl" :title="page.description" />
+                <div v-else-if="page.video_link">
+                    <VideoWrapper
+                        :url="page.video_link"
+                        :title="page.description"
+                    />
                 </div>
                 <div
                     v-if="hasContent"
@@ -116,7 +119,6 @@ import LazyLoader from "@/Components/LazyLoader.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useDate } from "@/dateHelpers";
-import useGetYouTubeVideo from "@/composables/useGetYouTubeVideo";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 
@@ -130,7 +132,6 @@ const props = defineProps({
     nextPage: { type: Object, required: true },
 });
 
-const { embedUrl } = useGetYouTubeVideo(props.page.video_link);
 let showPageSettings = ref(false);
 const backButtonDisabled = ref(false);
 const nextButtonDisabled = ref(false);
