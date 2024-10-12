@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StorePageRequest;
 use App\Http\Requests\UpdatePageRequest;
+use App\Jobs\IncrementPageReadCount;
 use App\Jobs\StoreImage;
 use App\Jobs\StoreVideo;
 use App\Models\Book;
@@ -58,7 +59,7 @@ class PageController extends Controller
     public function show(Page $page, Request $request): Response
     {
         if (! auth()->user()->can('edit pages') && $request->input('increment')) {
-            $page->increment('read_count');
+            IncrementPageReadCount::dispatch($page);
         }
 
         $page->load(['book', 'book.coverImage']);
@@ -189,10 +190,10 @@ class PageController extends Controller
      */
     public function destroy(Page $page): Redirector|RedirectResponse|Application
     {
-        if (!empty($page->media_poster) && Storage::disk('s3')->exists($page->media_poster)) {
+        if (! empty($page->media_poster) && Storage::disk('s3')->exists($page->media_poster)) {
             Storage::disk('s3')->delete($page->media_poster);
         }
-        if (!empty($page->media_path) && Storage::disk('s3')->exists($page->media_path)) {
+        if (! empty($page->media_path) && Storage::disk('s3')->exists($page->media_path)) {
             Storage::disk('s3')->delete($page->media_path);
         }
         $page->delete();

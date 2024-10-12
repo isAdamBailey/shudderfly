@@ -18,6 +18,7 @@ class StoreVideo implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected string $filePath;
+
     protected string $path;
 
     /**
@@ -36,6 +37,7 @@ class StoreVideo implements ShouldQueue
     {
         if (empty($this->filePath)) {
             Log::error('File path is null or empty');
+
             return;
         }
 

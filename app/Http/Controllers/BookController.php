@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreBookRequest;
 use App\Http\Requests\UpdateBookRequest;
+use App\Jobs\IncrementBookReadCount;
 use App\Models\Book;
 use App\Models\Category;
 use App\Models\User;
@@ -103,7 +104,7 @@ class BookController extends Controller
     public function show(Book $book, Request $request): Response
     {
         if (! auth()->user()->can('edit pages') && ! $request->has('page')) {
-            $book->increment('read_count');
+            IncrementBookReadCount::dispatch($book);
         }
 
         $pages = $book->pages()->paginate();

@@ -16,6 +16,7 @@ class StoreImage implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected string $filePath;
+
     protected string $path;
 
     /**
@@ -34,6 +35,7 @@ class StoreImage implements ShouldQueue
     {
         if (empty($this->filePath)) {
             Log::error('File path is null or empty');
+
             return;
         }
 
