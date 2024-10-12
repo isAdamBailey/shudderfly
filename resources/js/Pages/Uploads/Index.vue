@@ -11,7 +11,11 @@
                         {{ title }}
                     </h2>
                 </Link>
-                <SearchInput route-name="pictures.index" label="Uploads" />
+                <SearchInput
+                    class="max-w-80"
+                    route-name="pictures.index"
+                    label="Uploads"
+                />
             </div>
         </template>
 
@@ -19,7 +23,7 @@
             <Button
                 type="button"
                 :is-active="isPopular"
-                class="rounded-full border-amber-50 dark:border-gray-100 my-3 p-10"
+                class="rounded-full border-amber-50 dark:border-gray-100 my-3"
                 @click="filter('popular')"
             >
                 <i class="ri-star-line text-4xl"></i>
@@ -27,7 +31,7 @@
             <Button
                 type="button"
                 :is-active="isYouTube"
-                class="rounded-full border-amber-50 dark:border-gray-100 my-3 p-10"
+                class="rounded-full border-amber-50 dark:border-gray-100 my-3"
                 @click="filter('youtube')"
             >
                 <i class="ri-youtube-line text-4xl"></i>
@@ -35,7 +39,7 @@
             <Button
                 type="button"
                 :is-active="isRandom"
-                class="rounded-full border-amber-50 dark:border-gray-100 my-3 p-10"
+                class="rounded-full border-amber-50 dark:border-gray-100 my-3"
                 @click="filter('random')"
             >
                 <i class="ri-dice-line text-4xl"></i>
@@ -43,7 +47,7 @@
             <Button
                 type="button"
                 :is-active="isOld"
-                class="rounded-full border-amber-50 dark:border-gray-100 my-3 p-10"
+                class="rounded-full border-amber-50 dark:border-gray-100 my-3"
                 @click="filter('old')"
             >
                 <i class="ri-history-line text-4xl"></i>

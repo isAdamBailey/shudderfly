@@ -66,7 +66,7 @@
                         @click="backButtonDisabled = true"
                     >
                         <i
-                            class="ri-arrow-left-circle-fill text-6xl rounded-full bg-amber-50 text-amber-800 dark:text-gray-900"
+                            class="ri-arrow-left-circle-fill text-6xl rounded-full bg-blue-600 dark:bg-gray-800"
                         ></i>
                     </Link>
                     <Link
@@ -79,7 +79,7 @@
                         @click="nextButtonDisabled = true"
                     >
                         <i
-                            class="ri-arrow-right-circle-fill text-6xl rounded-full bg-amber-50 text-amber-800 dark:text-gray-900"
+                            class="ri-arrow-right-circle-fill text-6xl rounded-full bg-blue-600 dark:bg-gray-800"
                         ></i>
                     </Link>
                 </div>

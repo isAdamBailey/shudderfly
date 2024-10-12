@@ -24,13 +24,11 @@ defineProps({
     >
         <div class="flex">
             <div
-                class="container flex-col md:flex-row flex items-center px-6 py-4 md:py-20"
+                class="container flex-col flex items-center px-6 py-4 md:py-20"
             >
-                <div
-                    class="flex flex-col items-center h-[400px] w-full md:flex-row md:w-3/4"
-                >
+                <div class="flex flex-col items-center w-full">
                     <div
-                        class="border-4 border-gray-900 bg-blue-600 h-full p-10 rounded-lg"
+                        class="border-4 border-gray-900 bg-blue-600 p-10 rounded-lg"
                     >
                         <h1
                             class="text-5xl tracking-wide text-gray-100 md:text-7xl font-heading"
@@ -52,7 +50,10 @@ defineProps({
                             <div v-if="$page.props.auth.user">
                                 <div class="flex justify-around">
                                     <Link :href="route('books.index')">
-                                        <Button> View Books</Button>
+                                        <Button>Books</Button>
+                                    </Link>
+                                    <Link :href="route('pictures.index')">
+                                        <Button> Uploads</Button>
                                     </Link>
                                     <Link
                                         v-if="canEditPages"
@@ -75,23 +76,22 @@ defineProps({
                                     <Button> Register</Button>
                                 </Link>
                             </div>
+                            <div
+                                class="w-full max-h-sm mt-10 max-w-sm cursor-pointer"
+                                @click="bookClicked = !bookClicked"
+                            >
+                                <img
+                                    v-if="bookClicked"
+                                    height="400"
+                                    width="321"
+                                    src="/img/colin.png"
+                                    :alt="`Picture of ${name}`"
+                                    class="border-4 border-black rounded-full cover md:ml-5"
+                                />
+                                <ApplicationLogo v-else title="click me!" />
+                            </div>
                         </div>
                     </div>
-                </div>
-
-                <div
-                    class="w-full max-h-sm mt-10 md:mt-0 max-w-sm cursor-pointer"
-                    @click="bookClicked = !bookClicked"
-                >
-                    <img
-                        v-if="bookClicked"
-                        height="400"
-                        width="321"
-                        src="/img/colin.png"
-                        :alt="`Picture of ${name}`"
-                        class="border-4 border-black rounded-full cover md:ml-5"
-                    />
-                    <ApplicationLogo v-else title="click me!" />
                 </div>
             </div>
         </div>
