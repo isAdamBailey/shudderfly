@@ -23,6 +23,10 @@ class DashboardController extends Controller
             ->orderBy('read_count', 'desc')
             ->orderBy('created_at')
             ->first();
+        $mostReadPage = Page::query()
+            ->orderBy('read_count', 'desc')
+            ->orderBy('created_at')
+            ->first();
         $leastRead = Book::query()
             ->orderBy('read_count')
             ->orderBy('created_at')
@@ -36,6 +40,7 @@ class DashboardController extends Controller
                 'leastPages' => $leastPages->toArray(),
                 'mostPages' => $mostPages->toArray(),
                 'mostRead' => $mostRead->toArray(),
+                'mostReadPage' => $mostReadPage->toArray(),
                 'leastRead' => $leastRead->toArray(),
             ],
         ]);

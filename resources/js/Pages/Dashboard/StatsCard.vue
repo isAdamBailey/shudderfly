@@ -2,41 +2,56 @@
     <div class="text-gray-900 dark:text-white">
         <div class="border-b py-4 flex justify-between">
             <p>Total number of books</p>
-            <p>{{ props.stats.numberOfBooks.toLocaleString() }}</p>
+            <p class="font-bold">
+                {{ props.stats.numberOfBooks.toLocaleString() }}
+            </p>
         </div>
         <div class="border-b py-4 flex justify-between">
-            <p>Total number of pages / uploads</p>
-            <p>{{ props.stats.numberOfPages.toLocaleString() }}</p>
+            <p>Total number of pages</p>
+            <p class="font-bold">
+                {{ props.stats.numberOfPages.toLocaleString() }}
+            </p>
         </div>
         <div class="border-b mt-4 flex justify-between">
             <p>Most popular book</p>
             <Link
-                class="mb-4 border rounded px-3 py-2"
+                class="mb-4 font-bold hover:text-blue-400 underline"
                 :href="route('books.show', props.stats.mostRead.slug)"
             >
                 {{ props.stats.mostRead.title }}
             </Link>
-            <p>
-                Smelled {{ countAddS(props.stats.mostRead.read_count, "time") }}
-            </p>
+            <p>Read {{ countAddS(props.stats.mostRead.read_count, "time") }}</p>
         </div>
         <div class="border-b mt-4 flex justify-between">
             <p>Least popular book</p>
             <Link
-                class="mb-4 border rounded px-3 py-2"
+                class="mb-4 font-bold hover:text-blue-400 underline"
                 :href="route('books.show', props.stats.leastRead.slug)"
             >
                 {{ props.stats.leastRead.title }}
             </Link>
             <p>
-                Smelled
+                Read
                 {{ countAddS(props.stats.leastRead.read_count, "time") }}
+            </p>
+        </div>
+        <div class="border-b mt-4 flex justify-between">
+            <p>Most popular page</p>
+            <Link
+                class="mb-4 font-bold hover:text-blue-400 underline"
+                :href="route('pages.show', props.stats.mostReadPage.id)"
+            >
+                {{ props.stats.mostReadPage.id }}
+            </Link>
+            <p>
+                Read
+                {{ countAddS(props.stats.mostReadPage.read_count, "time") }}
             </p>
         </div>
         <div class="border-b mt-4 flex justify-between">
             <p>Book with most pages</p>
             <Link
-                class="mb-4 border rounded px-3 py-2"
+                class="mb-4 font-bold hover:text-blue-400 underline"
                 :href="route('books.show', props.stats.mostPages.slug)"
             >
                 {{ props.stats.mostPages.title }}
@@ -53,7 +68,7 @@
         <div class="border-b mt-4 flex justify-between">
             <p>Book with least pages</p>
             <Link
-                class="mb-4 border rounded px-3 py-2"
+                class="mb-4 font-bold hover:text-blue-400 underline"
                 :href="route('books.show', props.stats.leastPages.slug)"
             >
                 {{ props.stats.leastPages.title }}
@@ -74,6 +89,6 @@ const props = defineProps({
 });
 
 function countAddS(count, word) {
-    return `${count} ${count == 1 ? word : `${word}s`}`;
+    return `${count.toLocaleString()} ${count == 1 ? word : `${word}s`}`;
 }
 </script>

@@ -99,7 +99,7 @@ const buildTimestamp = __BUILD_TIMESTAMP__;
                         <h3
                             class="text-xl dark:text-gray-100 font-semibold border-b"
                         >
-                            Nerd Stats
+                            Stats
                         </h3>
                         <StatsCard :stats="stats" />
                     </div>
