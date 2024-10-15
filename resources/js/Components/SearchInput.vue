@@ -14,7 +14,7 @@
             @keyup.enter="searchMethod"
         />
         <button
-            class="self-center flex items-center text-amber-200 dark:text-gray-100 ml-2 w-6 h-6"
+            class="self-center flex items-center text-blue-600 dark:text-gray-800 ml-2 w-6 h-6"
             :class="{
                 'text-red-500': voiceActive,
                 'microphone-icon': !voiceActive,
