@@ -22,7 +22,7 @@ const showingNavigationDropdown = ref(false);
             <div class="flex justify-between h-16">
                 <div class="flex">
                     <!-- Logo -->
-                    <div class="flex items-center">
+                    <div class="flex items-center max-w-12">
                         <Link :href="route('welcome')">
                             <ApplicationLogo class="h-14" />
                         </Link>
