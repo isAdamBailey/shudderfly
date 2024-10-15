@@ -116,7 +116,7 @@
                 class="relative flex justify-center flex-wrap"
             >
                 <Link
-                    class="w-full"
+                    class="w-full min-h-22"
                     :href="route('pages.show', { page, increment: true })"
                 >
                     <LazyLoader v-if="mediaPath(page)" :src="mediaPath(page)" />
