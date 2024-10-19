@@ -170,6 +170,7 @@ let bookSettingsOpen = ref(false);
 const items = ref(props.pages.data);
 const infiniteScroll = ref(null);
 let observer = null;
+const fetchedPages = new Set();
 
 const togglePageSettings = () => {
     pageSettingsOpen.value = !pageSettingsOpen.value;
@@ -186,8 +187,13 @@ const toggleBookSettings = () => {
 };
 
 function fetchPages() {
+    const nextPageUrl = props.pages.next_page_url;
+    if (fetchedPages.has(nextPageUrl)) {
+        return;
+    }
+    fetchedPages.add(nextPageUrl);
     router.get(
-        props.pages.next_page_url,
+        nextPageUrl,
         {},
         {
             preserveState: true,

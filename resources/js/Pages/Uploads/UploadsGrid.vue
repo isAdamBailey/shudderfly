@@ -15,6 +15,7 @@ const props = defineProps({
 const uploads = ref(props.photos.data);
 const infiniteScroll = ref(null);
 let observer = null;
+const fetchedPages = new Set();
 
 watch(
     () => usePage().props.search,
@@ -37,8 +38,13 @@ onMounted(async () => {
 });
 
 function fetchUploads() {
+    const nextPageUrl = props.photos.next_page_url;
+    if (fetchedPages.has(nextPageUrl)) {
+        return;
+    }
+    fetchedPages.add(nextPageUrl);
     router.get(
-        props.photos.next_page_url,
+        nextPageUrl,
         {},
         {
             preserveState: true,
