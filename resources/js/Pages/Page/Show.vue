@@ -2,7 +2,7 @@
     <Head :title="page.book.title" />
 
     <BreezeAuthenticatedLayout>
-        <div class="py-4 md:px-4 overflow-hidden bg-gray-200 relative">
+        <div class="pb-5 overflow-hidden bg-gray-200 relative">
             <div class="text-center">
                 <Link
                     :href="
@@ -11,7 +11,7 @@
                             page: 1,
                         })
                     "
-                    class="flex justify-center flex-wrap mb-3 border-2 rounded-lg border-gray-800 bg-gray-300 hover:bg-blue-600 hover:text-white"
+                    class="p-3 flex justify-center flex-wrap mb-3 border-b-2 border-gray-800 bg-gray-300 hover:bg-blue-600 hover:dark:bg-gray-800 hover:text-white"
                 >
                     <span class="mr-3 font-heading text-lg">Back to</span>
                     <h2 class="font-heading text-5xl uppercase">
@@ -19,31 +19,31 @@
                     </h2>
                 </Link>
                 <div class="min-h-[60vh]">
-                    <div class="relative mx-3 md:mx-10">
+                    <div class="relative mx-1 md:mx-10">
                         <Link
                             v-if="previousPage"
                             :href="route('pages.show', previousPage)"
                             as="button"
-                            class="z-10 absolute left-0 mt-20 md:mt-32 inline-flex items-center text-white disabled:opacity-25 transition ease-in-out duration-150"
+                            class="z-10 absolute left-0 mt-60 inline-flex items-center text-white hover:text-blue-600 hover:dark:text-gray-800 disabled:opacity-25 transition ease-in-out duration-150"
                             aria-label="previous page"
-                            :disabled="backButtonDisabled"
-                            @click="backButtonDisabled = true"
+                            :disabled="buttonDisabled"
+                            @click="buttonDisabled = true"
                         >
                             <i
-                                class="ri-arrow-left-circle-fill text-6xl rounded-full bg-blue-600 dark:bg-gray-800"
+                                class="ri-arrow-left-circle-fill text-6xl rounded-full bg-blue-600 hover:bg-white dark:bg-gray-800 hover:dark:bg-white"
                             ></i>
                         </Link>
                         <Link
                             v-if="nextPage"
                             :href="route('pages.show', nextPage)"
                             as="button"
-                            class="z-10 absolute right-0 mt-20 md:mt-32 inline-flex items-center text-white disabled:opacity-25 transition ease-in-out duration-150"
+                            class="z-10 absolute right-0 mt-60 inline-flex items-center text-white hover:text-blue-600 hover:dark:text-gray-800 disabled:opacity-25 transition ease-in-out duration-150"
                             aria-label="next page"
-                            :disabled="nextButtonDisabled"
-                            @click="nextButtonDisabled = true"
+                            :disabled="buttonDisabled"
+                            @click="buttonDisabled = true"
                         >
                             <i
-                                class="ri-arrow-right-circle-fill text-6xl rounded-full bg-blue-600 dark:bg-gray-800"
+                                class="ri-arrow-right-circle-fill text-6xl rounded-full bg-blue-600 hover:bg-white dark:bg-gray-800 hover:dark:bg-white"
                             ></i>
                         </Link>
                     </div>
@@ -59,13 +59,13 @@
                         :url="page.video_link"
                         :title="page.description"
                     />
-                    <p class="mb-3">
+                    <p class="mb-3 text-sm">
                         {{ short(page.created_at) }}
                     </p>
                 </div>
                 <div
                     v-if="hasContent"
-                    class="flex justify-between bg-gray-300 rounded-lg p-3 my-3"
+                    class="flex justify-between bg-gray-300 md:rounded-lg p-3 my-3"
                 >
                     <div
                         class="px-3 py-3 text-lg text-left"
@@ -131,8 +131,7 @@ const props = defineProps({
 });
 
 let showPageSettings = ref(false);
-const backButtonDisabled = ref(false);
-const nextButtonDisabled = ref(false);
+const buttonDisabled = ref(false);
 
 const hasContent = computed(() => stripHtml(props.page.content));
 
