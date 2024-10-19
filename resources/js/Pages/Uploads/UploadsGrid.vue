@@ -61,39 +61,33 @@ function mediaPath(photo) {
 <template>
     <div
         v-if="uploads.length"
-        class="mt-3 md:mt-0 mx-auto grid max-w-7xl grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] gap-1 md:p-4"
+        class="mt-3 md:mt-0 mx-auto grid max-w-7xl grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] gap-2 md:p-4"
     >
         <div
             v-for="photo in uploads"
             :key="photo.id"
-            class="shadow-sm rounded-lg overflow-hidden"
+            class="relative flex justify-center flex-wrap shadow-sm rounded-lg overflow-hidden bg-gray-300"
         >
-            <div class="relative flex justify-center flex-wrap">
-                <Link
-                    class="w-full h-28"
-                    :href="
-                        route('pages.show', { page: photo, increment: true })
-                    "
-                >
-                    <LazyLoader
-                        v-if="mediaPath(photo)"
-                        classes="rounded-top pointer-events-none"
-                        :src="mediaPath(photo)"
-                        :is-cover="true"
-                    />
-                    <div v-if="photo.video_link">
-                        <VideoWrapper
-                            :url="photo.video_link"
-                            :controls="false"
-                        />
-                    </div>
-                    <div
-                        v-if="photo.content"
-                        class="absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 text-center text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
-                        v-html="photo.content"
-                    ></div>
-                </Link>
-            </div>
+            <Link
+                class="w-full min-h-28 max-h-36"
+                :href="route('pages.show', { page: photo, increment: true })"
+            >
+                <LazyLoader
+                    v-if="mediaPath(photo)"
+                    :src="mediaPath(photo)"
+                    :is-cover="true"
+                />
+                <VideoWrapper
+                    v-if="photo.video_link"
+                    :url="photo.video_link"
+                    :controls="false"
+                />
+                <div
+                    v-if="photo.content"
+                    class="absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 text-center text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
+                    v-html="photo.content"
+                ></div>
+            </Link>
         </div>
     </div>
     <div v-else class="flex flex-col items-center mt-10">

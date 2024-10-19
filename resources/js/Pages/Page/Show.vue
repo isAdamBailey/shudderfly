@@ -2,7 +2,7 @@
     <Head :title="page.book.title" />
 
     <BreezeAuthenticatedLayout>
-        <div class="py-4 md:px-4 overflow-hidden">
+        <div class="py-4 md:px-4 overflow-hidden bg-gray-200 relative">
             <div class="text-center">
                 <Link
                     :href="
@@ -11,25 +11,57 @@
                             page: 1,
                         })
                     "
-                    class="flex justify-center flex-wrap mb-3 bg-gray-300 rounded-lg p-3"
+                    class="flex justify-center flex-wrap mb-3 border-2 rounded-lg border-gray-800 bg-gray-300 hover:bg-blue-600 hover:text-white"
                 >
-                    <span class="mr-3">Back to</span>
-                    <h2 class="font-heading text-5xl">
+                    <span class="mr-3 font-heading text-lg">Back to</span>
+                    <h2 class="font-heading text-5xl uppercase">
                         {{ page.book.title }}
                     </h2>
                 </Link>
-                <LazyLoader
-                    v-if="page.media_path"
-                    class="max-h-[60vh]"
-                    :src="page.media_path"
-                    :poster="page.media_poster"
-                    :alt="page.description"
-                />
-                <div v-else-if="page.video_link">
+                <div>
+                    <div class="relative mx-3 md:mx-10">
+                        <Link
+                            v-if="previousPage"
+                            :href="route('pages.show', previousPage)"
+                            as="button"
+                            class="z-10 absolute left-0 mt-32 inline-flex items-center text-white disabled:opacity-25 transition ease-in-out duration-150"
+                            aria-label="previous page"
+                            :disabled="backButtonDisabled"
+                            @click="backButtonDisabled = true"
+                        >
+                            <i
+                                class="ri-arrow-left-circle-fill text-6xl rounded-full bg-blue-600 dark:bg-gray-800"
+                            ></i>
+                        </Link>
+                        <Link
+                            v-if="nextPage"
+                            :href="route('pages.show', nextPage)"
+                            as="button"
+                            class="z-10 absolute right-0 mt-32 inline-flex items-center text-white disabled:opacity-25 transition ease-in-out duration-150"
+                            aria-label="next page"
+                            :disabled="nextButtonDisabled"
+                            @click="nextButtonDisabled = true"
+                        >
+                            <i
+                                class="ri-arrow-right-circle-fill text-6xl rounded-full bg-blue-600 dark:bg-gray-800"
+                            ></i>
+                        </Link>
+                    </div>
+                    <LazyLoader
+                        v-if="page.media_path"
+                        class="max-h-[70vh]"
+                        :src="page.media_path"
+                        :poster="page.media_poster"
+                        :alt="page.description"
+                    />
                     <VideoWrapper
+                        v-else-if="page.video_link"
                         :url="page.video_link"
                         :title="page.description"
                     />
+                    <p class="mb-3">
+                        {{ short(page.created_at) }}
+                    </p>
                 </div>
                 <div
                     v-if="hasContent"
@@ -48,40 +80,6 @@
                             <i class="ri-speak-fill text-xl"></i>
                         </Button>
                     </div>
-                </div>
-                <p class="px-3 py-3">
-                    <span class="text-xs text-white">
-                        {{ short(page.created_at) }}
-                    </span>
-                </p>
-
-                <div class="flex justify-around mb-10">
-                    <Link
-                        v-if="previousPage"
-                        :href="route('pages.show', previousPage)"
-                        as="button"
-                        class="inline-flex items-center text-white disabled:opacity-25 transition ease-in-out duration-150"
-                        aria-label="previous page"
-                        :disabled="backButtonDisabled"
-                        @click="backButtonDisabled = true"
-                    >
-                        <i
-                            class="ri-arrow-left-circle-fill text-6xl rounded-full bg-blue-600 dark:bg-gray-800"
-                        ></i>
-                    </Link>
-                    <Link
-                        v-if="nextPage"
-                        :href="route('pages.show', nextPage)"
-                        as="button"
-                        class="inline-flex items-center text-white disabled:opacity-25 transition ease-in-out duration-150"
-                        aria-label="next page"
-                        :disabled="nextButtonDisabled"
-                        @click="nextButtonDisabled = true"
-                    >
-                        <i
-                            class="ri-arrow-right-circle-fill text-6xl rounded-full bg-blue-600 dark:bg-gray-800"
-                        ></i>
-                    </Link>
                 </div>
             </div>
             <div v-if="canEditPages" class="mb-3">

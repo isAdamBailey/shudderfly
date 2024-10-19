@@ -113,21 +113,18 @@
             <div
                 v-for="page in items"
                 :key="page.id"
-                class="relative flex justify-center flex-wrap"
+                class="rounded-lg bg-gray-300 shadow-sm relative flex justify-center flex-wrap overflow-hidden"
             >
                 <Link
-                    class="w-full min-h-22"
+                    class="w-full min-h-28 max-h-36"
                     :href="route('pages.show', { page, increment: true })"
                 >
                     <LazyLoader v-if="mediaPath(page)" :src="mediaPath(page)" />
-                    <div class="pointer-events-auto">
-                        <VideoWrapper
-                            v-if="page.video_link"
-                            class="pointer-events-none"
-                            :url="page.video_link"
-                            :controls="false"
-                        />
-                    </div>
+                    <VideoWrapper
+                        v-if="page.video_link"
+                        :url="page.video_link"
+                        :controls="false"
+                    />
                     <div
                         v-if="page.content"
                         class="absolute inset-x-0 top-0 rounded-t-lg w-full truncate bg-white/70 py-2.5 text-center text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
