@@ -18,7 +18,7 @@
                         {{ page.book.title }}
                     </h2>
                 </Link>
-                <div class="min-h-[70vh]">
+                <div class="min-h-[60vh]">
                     <div class="relative mx-3 md:mx-10">
                         <Link
                             v-if="previousPage"
