@@ -23,6 +23,7 @@
             <Button
                 type="button"
                 :is-active="isPopular"
+                :disabled="loading"
                 class="rounded-full border-amber-50 dark:border-gray-100 my-3"
                 @click="filter('popular')"
             >
@@ -31,6 +32,7 @@
             <Button
                 type="button"
                 :is-active="isYouTube"
+                :disabled="loading"
                 class="rounded-full border-amber-50 dark:border-gray-100 my-3"
                 @click="filter('youtube')"
             >
@@ -39,6 +41,7 @@
             <Button
                 type="button"
                 :is-active="isRandom"
+                :disabled="loading"
                 class="rounded-full border-amber-50 dark:border-gray-100 my-3"
                 @click="filter('random')"
             >
@@ -47,6 +50,7 @@
             <Button
                 type="button"
                 :is-active="isOld"
+                :disabled="loading"
                 class="rounded-full border-amber-50 dark:border-gray-100 my-3"
                 @click="filter('old')"
             >
@@ -63,7 +67,7 @@ import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import UploadsGrid from "@/Pages/Uploads/UploadsGrid.vue";
 import { Head, Link } from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue";
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { usePage, router } from "@inertiajs/vue3";
 import SearchInput from "@/Components/SearchInput.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
@@ -74,6 +78,8 @@ const { speak } = useSpeechSynthesis();
 const props = defineProps({
     photos: { type: Object, required: true },
 });
+
+const loading = ref(false);
 
 const isRandom = computed(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -106,7 +112,7 @@ const title = computed(() => {
             return "Mixed";
         }
         if (isOld.value) {
-            return "A year ago";
+            return "Memories";
         }
         if (isYouTube.value) {
             return `${total} YouTube videos`;
@@ -119,19 +125,20 @@ const title = computed(() => {
 });
 
 function filter(filter) {
+    loading.value = true;
     let phrase = " newest uploads";
     switch (filter) {
         case "youtube":
             phrase = "YouTube videos";
             break;
         case "old":
-            phrase = "a year ago";
+            phrase = "memories from a year ago";
             break;
         case "random":
-            phrase = "mixed";
+            phrase = "mixed memories";
             break;
         case "popular":
-            phrase = "your favorites";
+            phrase = "your favorite memories";
             break;
     }
     speak(phrase);
