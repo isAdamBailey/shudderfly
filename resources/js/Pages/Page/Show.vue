@@ -18,13 +18,13 @@
                         {{ page.book.title }}
                     </h2>
                 </Link>
-                <div>
+                <div class="min-h-[70vh]">
                     <div class="relative mx-3 md:mx-10">
                         <Link
                             v-if="previousPage"
                             :href="route('pages.show', previousPage)"
                             as="button"
-                            class="z-10 absolute left-0 mt-32 inline-flex items-center text-white disabled:opacity-25 transition ease-in-out duration-150"
+                            class="z-10 absolute left-0 mt-20 md:mt-32 inline-flex items-center text-white disabled:opacity-25 transition ease-in-out duration-150"
                             aria-label="previous page"
                             :disabled="backButtonDisabled"
                             @click="backButtonDisabled = true"
@@ -37,7 +37,7 @@
                             v-if="nextPage"
                             :href="route('pages.show', nextPage)"
                             as="button"
-                            class="z-10 absolute right-0 mt-32 inline-flex items-center text-white disabled:opacity-25 transition ease-in-out duration-150"
+                            class="z-10 absolute right-0 mt-20 md:mt-32 inline-flex items-center text-white disabled:opacity-25 transition ease-in-out duration-150"
                             aria-label="next page"
                             :disabled="nextButtonDisabled"
                             @click="nextButtonDisabled = true"
@@ -49,7 +49,7 @@
                     </div>
                     <LazyLoader
                         v-if="page.media_path"
-                        class="max-h-[70vh] min-h-48"
+                        class="max-h-[70vh]"
                         :src="page.media_path"
                         :poster="page.media_poster"
                         :alt="page.description"
