@@ -49,7 +49,7 @@
                     </div>
                     <LazyLoader
                         v-if="page.media_path"
-                        class="max-h-[70vh]"
+                        class="h-[70vh]"
                         :src="page.media_path"
                         :poster="page.media_poster"
                         :alt="page.description"
