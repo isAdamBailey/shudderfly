@@ -119,7 +119,11 @@
                     class="w-full min-h-28 max-h-36"
                     :href="route('pages.show', { page, increment: true })"
                 >
-                    <LazyLoader v-if="mediaPath(page)" :src="mediaPath(page)" />
+                    <LazyLoader
+                        v-if="mediaPath(page)"
+                        :src="mediaPath(page)"
+                        class="h-full w-full object-cover"
+                    />
                     <VideoWrapper
                         v-if="page.video_link"
                         :url="page.video_link"

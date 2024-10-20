@@ -2,7 +2,9 @@
     <Head :title="page.book.title" />
 
     <BreezeAuthenticatedLayout>
-        <div class="pb-5 overflow-hidden bg-gray-200 relative">
+        <div
+            class="pb-5 overflow-hidden bg-gradient-to-t from-gray-200 to-gray-800 relative"
+        >
             <div class="text-center">
                 <Link
                     :href="

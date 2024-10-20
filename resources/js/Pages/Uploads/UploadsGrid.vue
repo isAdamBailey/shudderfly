@@ -82,6 +82,7 @@ function mediaPath(photo) {
                     v-if="mediaPath(photo)"
                     :src="mediaPath(photo)"
                     :is-cover="true"
+                    class="h-full w-full object-cover"
                 />
                 <VideoWrapper
                     v-if="photo.video_link"
