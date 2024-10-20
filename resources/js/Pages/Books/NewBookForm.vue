@@ -48,7 +48,7 @@ const submit = () => {
 </script>
 
 <template>
-    <div class="bg-white p-5">
+    <div class="bg-white dark:bg-gray-800 p-5">
         <form @submit.prevent="submit">
             <div>
                 <BreezeLabel for="author" value="Author Name" />

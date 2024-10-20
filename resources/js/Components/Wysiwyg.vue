@@ -1,7 +1,7 @@
 <template>
     <div
         v-if="editor"
-        class="rounded-md text-dark-800 dark:text-white border border-gray-300 bg-white dark:bg-gray-800 shadow-sm"
+        class="rounded-md text-dark-800 border border-gray-300 bg-white shadow-sm"
     >
         <WysiwygButton
             icon="B"
@@ -39,7 +39,7 @@ const props = defineProps({
 const editor = useEditor({
     editorProps: {
         attributes: {
-            class: "prose dark:text-white max-w-full h-48 my-2 mx-5 border-t overflow-y-auto focus:outline-none",
+            class: "prose max-w-full h-48 my-2 mx-5 border-t overflow-y-auto focus:outline-none",
         },
     },
     extensions: [StarterKit],
