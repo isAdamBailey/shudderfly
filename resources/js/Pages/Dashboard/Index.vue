@@ -2,7 +2,6 @@
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import BreezeValidationErrors from "@/Components/ValidationErrors.vue";
 import { Head } from "@inertiajs/vue3";
-import NewBookForm from "@/Pages/Dashboard/NewBookForm.vue";
 import UsersForm from "@/Pages/Dashboard/UsersForm.vue";
 import { ref } from "vue";
 import Close from "@/Components/svg/Close.vue";
@@ -63,22 +62,7 @@ const buildTimestamp = __BUILD_TIMESTAMP__;
             </div>
 
             <div class="flex flex-wrap justify-around space-y-2 md:space-y-0">
-                <div class="w-full md:w-1/2 sm:px-6 lg:px-8">
-                    <div
-                        class="bg-white overflow-hidden shadow-sm sm:rounded-lg"
-                    >
-                        <div class="p-6 bg-white dark:bg-gray-800">
-                            <h3
-                                class="text-xl dark:text-gray-100 font-semibold border-b mb-10"
-                            >
-                                New Book
-                            </h3>
-                            <NewBookForm :authors="props.users.data" />
-                        </div>
-                    </div>
-                </div>
-
-                <div class="w-full md:w-1/2 sm:px-6 lg:px-8">
+                <div class="w-full sm:px-6 lg:px-8">
                     <div
                         class="bg-white overflow-hidden shadow-sm sm:rounded-lg"
                     >

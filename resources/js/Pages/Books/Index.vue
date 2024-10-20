@@ -14,6 +14,27 @@
 
                 <SearchInput route-name="books.search" label="Books" />
             </div>
+            <div v-if="canEditPages" class="mb-3">
+                <Button
+                    v-if="!showNewBookForm"
+                    class="w-full rounded-none bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
+                    @click="showNewBookForm = true"
+                >
+                    Add a new book
+                </Button>
+                <Button
+                    v-else
+                    class="w-full rounded-none bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
+                    @click="showNewBookForm = false"
+                >
+                    Close book form
+                </Button>
+                <NewBookForm
+                    v-if="showNewBookForm"
+                    :authors="props.authors"
+                    @close-page-form="showNewBookForm = false"
+                />
+            </div>
         </template>
         <div class="mb-10">
             <BooksGrid
@@ -41,6 +62,11 @@ import BooksGrid from "@/Pages/Books/BooksGrid.vue";
 import { Head, Link, usePage } from "@inertiajs/vue3";
 import SearchInput from "@/Components/SearchInput.vue";
 import { ref, computed } from "vue";
+import NewBookForm from "@/Pages/Books/NewBookForm.vue";
+import Button from "@/Components/Button.vue";
+import { usePermissions } from "@/composables/permissions";
+
+const { canEditPages } = usePermissions();
 
 const categories = ref(usePage().props.categories);
 const props = defineProps({
@@ -48,7 +74,13 @@ const props = defineProps({
         type: Array,
         default: null,
     },
+    authors: {
+        type: Array,
+        required: true,
+    },
 });
+
+const showNewBookForm = ref(false);
 const workingCategories = computed(() => {
     return props.searchCategories || categories.value;
 });

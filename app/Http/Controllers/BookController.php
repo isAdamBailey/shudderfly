@@ -25,7 +25,11 @@ class BookController extends Controller
      */
     public function index(): Response
     {
-        return Inertia::render('Books/Index');
+        $authors = auth()->user()->can('edit pages') ? User::all() : [];
+
+        return Inertia::render('Books/Index', [
+            'authors' => $authors,
+        ]);
     }
 
     /**

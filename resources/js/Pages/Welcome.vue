@@ -1,15 +1,12 @@
 <script setup>
 import { Head, Link } from "@inertiajs/vue3";
 import ApplicationLogo from "@/Components/ApplicationLogo.vue";
-import { usePermissions } from "@/composables/permissions";
 import Button from "@/Components/Button.vue";
 import SearchInput from "@/Components/SearchInput.vue";
 import { ref } from "vue";
 
 const bookClicked = ref(false);
 const name = "Colin";
-
-const { canEditPages } = usePermissions();
 
 defineProps({
     appName: { type: String, default: "" },
@@ -54,12 +51,6 @@ defineProps({
                                     </Link>
                                     <Link :href="route('pictures.index')">
                                         <Button> Uploads</Button>
-                                    </Link>
-                                    <Link
-                                        v-if="canEditPages"
-                                        :href="route('dashboard')"
-                                    >
-                                        <Button> Admin</Button>
                                     </Link>
                                 </div>
                                 <SearchInput
