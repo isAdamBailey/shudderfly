@@ -6,7 +6,7 @@
             <div class="flex justify-between items-center mb-10">
                 <Link class="w-1/4" :href="route('books.index')">
                     <h2
-                        class="font-heading text-3xl text-gray-100 leading-tight"
+                        class="font-heading text-3xl text-yellow-200 dark:text-gray-100 leading-tight"
                     >
                         {{ title }}
                     </h2>

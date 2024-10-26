@@ -6,7 +6,7 @@ import Footer from "@/Layouts/Nav/Footer.vue";
 <template>
     <div class="flex flex-col min-h-screen">
         <div
-            class="flex flex-col flex-grow bg-gradient-to-r from-yellow-900 dark:from-purple-900 via-green-500 dark:via-red-500 to-yellow-300 dark:to-yellow-500"
+            class="flex flex-col flex-grow bg-gradient-to-r from-indigo-600 to-blue-200 dark:from-gray-900 dark:to-purple-500"
         >
             <Navigation />
 

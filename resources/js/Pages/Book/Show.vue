@@ -4,11 +4,13 @@
     <BreezeAuthenticatedLayout>
         <template #header>
             <SearchInput route-name="books.search" label="Books" />
-            <div class="bg-gray-200 p-3 my-5 rounded-lg">
+            <div
+                class="bg-blue-600 dark:bg-gray-800 p-3 my-5 border-2 rounded-lg"
+            >
                 <Link :href="removePageParam(pages.path)" class="w-full">
                     <div class="flex justify-center text-center mb-3">
                         <h2
-                            class="font-heading text-5xl text-gray-900 leading-tight"
+                            class="font-heading text-5xl text-yellow-200 dark:text-gray-100 leading-tight"
                         >
                             {{ book.title.toUpperCase() }}
                         </h2>
@@ -20,7 +22,7 @@
                             :src="book.cover_image.media_path"
                             alt="cover image"
                         />
-                        <div>
+                        <div class="text-white">
                             <p v-if="book.author" class="mr-3 font-bold">
                                 by: {{ book.author }}
                             </p>
@@ -37,7 +39,9 @@
                 </Link>
                 <div class="flex justify-between">
                     <div v-if="book.excerpt" class="flex-grow text-center mt-3">
-                        <p class="text-xl md:text-2xl italic leading-tight">
+                        <p
+                            class="text-xl md:text-2xl text-white italic leading-tight"
+                        >
                             {{ book.excerpt }}
                         </p>
                     </div>

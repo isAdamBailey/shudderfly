@@ -5,7 +5,9 @@
         >
     </div>
     <div v-else-if="workingBooks.length > 0">
-        <h3 class="pl-3 pt-2 text-2xl text-gray-100 font-heading">
+        <h3
+            class="pl-3 pt-2 text-2xl text-yellow-200 dark:text-gray-100 font-heading"
+        >
             {{ title }}
         </h3>
         <div

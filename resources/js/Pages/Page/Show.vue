@@ -3,7 +3,7 @@
 
     <BreezeAuthenticatedLayout>
         <div
-            class="pb-5 overflow-hidden bg-gradient-to-t from-gray-200 to-gray-800 relative"
+            class="pb-5 overflow-hidden bg-gradient-to-t from-blue-200 to-indigo-700 dark:from-gray-900 dark:to-purple-500 relative"
         >
             <div class="text-center">
                 <Link
@@ -13,7 +13,7 @@
                             page: 1,
                         })
                     "
-                    class="p-3 flex justify-center flex-wrap mb-3 border-b-2 border-gray-800 bg-gray-300 hover:bg-blue-600 hover:dark:bg-gray-800 hover:text-white"
+                    class="px-3 py-5 flex justify-center flex-wrap mb-3 border-b-2 border-gray-800 bg-blue-200 dark:bg-gray-300 hover:bg-blue-600 hover:dark:bg-gray-800 text-blue-600 dark:text-gray-800 hover:text-yellow-200 dark:hover:text-white transition"
                 >
                     <span class="mr-3 font-heading text-lg">Back to</span>
                     <h2 class="font-heading text-5xl uppercase">
@@ -21,7 +21,7 @@
                     </h2>
                 </Link>
                 <div class="min-h-[60vh]">
-                    <div class="relative mx-1 md:mx-10">
+                    <div class="relative mx-3 md:mx-32">
                         <Link
                             v-if="previousPage"
                             :href="route('pages.show', previousPage)"
@@ -67,7 +67,7 @@
                 </div>
                 <div
                     v-if="hasContent"
-                    class="flex justify-between bg-gray-300 md:rounded-lg p-3 my-3"
+                    class="m-5 flex justify-between bg-blue-200 dark:bg-gray-300 md:rounded-lg p-3 my-3"
                 >
                     <div
                         class="px-3 py-3 text-lg text-left"

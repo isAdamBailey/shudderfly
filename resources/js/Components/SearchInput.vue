@@ -15,13 +15,15 @@
         />
         <button
             class="self-center flex items-center text-blue-600 dark:text-gray-800 ml-2 w-6 h-6"
-            :class="{
-                'text-red-500': voiceActive,
-                'microphone-icon': !voiceActive,
-            }"
             @click="startVoiceRecognition"
         >
-            <i class="ri-mic-line text-3xl"></i>
+            <i
+                :class="{
+                    'bg-red-500 text-white border-red-500 dark:border-red-500':
+                        voiceActive,
+                }"
+                class="border-2 border-blue-600 dark:border-black px-1 bg-white rounded-full ri-mic-line text-3xl"
+            ></i>
         </button>
     </div>
 </template>
@@ -103,9 +105,3 @@ const startVoiceRecognition = () => {
     recognition.start();
 };
 </script>
-
-<style scoped>
-.microphone-icon:active {
-    @apply text-red-500;
-}
-</style>

@@ -1,5 +1,7 @@
 <template>
-    <footer class="mt-auto border-gray-900 bg-blue-600 dark:bg-gray-800">
+    <footer
+        class="mt-auto border-t border-gray-100 bg-blue-600 dark:bg-gray-800"
+    >
         <div class="max-w-7xl mx-auto pt-12 lg:pt-20 pb-12">
             <div
                 class="text-center underline hover:font-bold text-gray-100 pb-8"
