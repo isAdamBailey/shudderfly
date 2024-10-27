@@ -33,13 +33,19 @@ class StoreImage implements ShouldQueue
      */
     public function handle(): void
     {
-        if (empty($this->filePath)) {
-            Log::error('File path is null or empty');
+        if (empty($this->filePath) || ! Storage::disk('local')->exists($this->filePath)) {
+            Log::error('File path is null, empty, or does not exist', ['filePath' => $this->filePath]);
 
             return;
         }
 
-        $tempFile = storage_path('app/temp/').uniqid('image_', true).'.webp';
+        $tempDir = storage_path('app/temp/');
+        if (! is_dir($tempDir) && ! mkdir($tempDir, 0755, true)) {
+            Log::error('Failed to create temp directory', ['directory' => $tempDir]);
+
+            return;
+        }
+        $tempFile = $tempDir.uniqid('image_', true).'.webp';
 
         try {
             $imageData = Storage::disk('local')->get($this->filePath);
@@ -50,11 +56,17 @@ class StoreImage implements ShouldQueue
             Storage::disk('s3')->put($this->path, (string) $encoded, 'public');
         } catch (\Exception $e) {
             Log::error('Error processing image', ['exception' => $e->getMessage(), 'filePath' => $this->filePath, 'path' => $this->path]);
+            $this->fail($e);
         } finally {
             if (file_exists($tempFile)) {
-                @unlink($tempFile);
+                if (! @unlink($tempFile)) {
+                    Log::warning("Failed to delete temp file: $tempFile");
+                }
             }
-            Storage::disk('local')->delete($this->filePath);
+
+            if (Storage::disk('local')->exists($this->filePath)) {
+                Storage::disk('local')->delete($this->filePath);
+            }
         }
     }
 }

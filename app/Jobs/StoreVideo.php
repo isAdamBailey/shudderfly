@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use Aws\S3\Exception\S3Exception;
 use FFMpeg\Format\Video\X264;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -11,7 +12,9 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use ProtoneMedia\LaravelFFMpeg\Exporters\EncodingException;
 use ProtoneMedia\LaravelFFMpeg\Support\FFMpeg;
+use Throwable;
 
 class StoreVideo implements ShouldQueue
 {
@@ -21,67 +24,99 @@ class StoreVideo implements ShouldQueue
 
     protected string $path;
 
-    /**
-     * Create a new job instance.
-     */
     public function __construct(string $filePath, string $path)
     {
         $this->filePath = $filePath;
         $this->path = $path;
     }
 
-    /**
-     * Execute the job.
-     */
     public function handle(): void
     {
-        if (empty($this->filePath)) {
-            Log::error('File path is null or empty');
+        if (empty($this->filePath) || ! Storage::disk('local')->exists($this->filePath)) {
+            Log::error('File path is null, empty, or does not exist', ['filePath' => $this->filePath]);
 
             return;
         }
 
-        $tempFile = storage_path('app/temp/').uniqid('video_', true).'.mp4';
+        $tempDir = storage_path('app/temp/');
+        if (! is_dir($tempDir) && ! mkdir($tempDir, 0755, true)) {
+            Log::error('Failed to create temp directory', ['directory' => $tempDir]);
+
+            return;
+        }
+        $tempFile = $tempDir.uniqid('video_', true).'.mp4';
 
         try {
             $videoData = Storage::disk('local')->get($this->filePath);
             file_put_contents($tempFile, $videoData);
 
-            FFMpeg::fromDisk('local')
-                ->open($this->filePath)
-                ->export()
+            $media = FFMpeg::fromDisk('local')->open($this->filePath);
+
+            $media->export()
                 ->inFormat((new X264)->setKiloBitrate(400)->setAudioKiloBitrate(64))
                 ->resize(512, 288)
                 ->save($tempFile);
 
-            $screenshotContents = FFMpeg::fromDisk('local')
-                ->open($this->filePath)
-                ->getFrameFromSeconds(1)
+            $screenshotContents = $media->getFrameFromSeconds(1)
                 ->export()
                 ->getFrameContents();
 
+            $filename = pathinfo($this->path, PATHINFO_FILENAME).'.mp4';
+            $dirPath = pathinfo($this->path, PATHINFO_DIRNAME);
+
+            $processedFilePath = retry(3, function () use ($tempFile, $filename, $dirPath) {
+                Log::info("Attempting to upload video: $filename");
+
+                return Storage::disk('s3')->putFileAs($dirPath, new File($tempFile), $filename);
+            }, 1000);
+
+            Storage::disk('s3')->setVisibility($processedFilePath, 'public');
+
             if ($screenshotContents) {
                 $screenshotFilename = pathinfo($this->path, PATHINFO_FILENAME).'_poster.jpg';
-                $screenshotPath = pathinfo($this->path, PATHINFO_DIRNAME).'/'.$screenshotFilename;
-                Storage::disk('s3')->put($screenshotPath, $screenshotContents, 'public');
+                $screenshotPath = $dirPath.'/'.$screenshotFilename;
+
+                retry(3, function () use ($screenshotPath, $screenshotContents) {
+                    Log::info("Attempting to upload screenshot: $screenshotPath");
+                    Storage::disk('s3')->put($screenshotPath, $screenshotContents, 'public');
+                }, 1000);
             } else {
                 Log::error('Screenshot contents were not generated');
             }
 
-            $filename = pathinfo($this->path, PATHINFO_FILENAME).'.mp4';
-            $processedFilePath = Storage::disk('s3')->putFileAs(
-                pathinfo($this->path, PATHINFO_DIRNAME),
-                new File($tempFile),
-                $filename
-            );
-            Storage::disk('s3')->setVisibility($processedFilePath, 'public');
-        } catch (\Exception $e) {
-            Log::error('FFmpeg failed', ['exception' => $e->getMessage(), 'filePath' => $this->filePath, 'path' => $this->path]);
+        } catch (EncodingException $e) {
+            Log::error('FFMPEG encoding failed', [
+                'error_output' => $e->getErrorOutput(),
+                'command' => $e->getCommand(),
+                'filePath' => $this->filePath,
+                'path' => $this->path,
+            ]);
+            $this->fail($e);
+        } catch (S3Exception $e) {
+            Log::error('S3 operation failed', [
+                'exception' => $e->getMessage(),
+                'filePath' => $this->filePath,
+                'path' => $this->path,
+            ]);
+            $this->fail($e);
+        } catch (Throwable $e) {
+            Log::error('Unexpected error occurred', [
+                'exception' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'filePath' => $this->filePath,
+                'path' => $this->path,
+            ]);
+            $this->fail($e);
         } finally {
             if (file_exists($tempFile)) {
-                @unlink($tempFile);
+                if (! @unlink($tempFile)) {
+                    Log::warning("Failed to delete temp file: $tempFile");
+                }
             }
-            Storage::disk('local')->delete($this->filePath);
+
+            if (Storage::disk('local')->exists($this->filePath)) {
+                Storage::disk('local')->delete($this->filePath);
+            }
         }
     }
 }
