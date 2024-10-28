@@ -65,8 +65,6 @@ class StoreVideo implements ShouldQueue
             $dirPath = pathinfo($this->path, PATHINFO_DIRNAME);
 
             $processedFilePath = retry(3, function () use ($tempFile, $filename, $dirPath) {
-                Log::info("Attempting to upload video: $filename");
-
                 return Storage::disk('s3')->putFileAs($dirPath, new File($tempFile), $filename);
             }, 1000);
 
@@ -77,7 +75,6 @@ class StoreVideo implements ShouldQueue
                 $screenshotPath = $dirPath.'/'.$screenshotFilename;
 
                 retry(3, function () use ($screenshotPath, $screenshotContents) {
-                    Log::info("Attempting to upload screenshot: $screenshotPath");
                     Storage::disk('s3')->put($screenshotPath, $screenshotContents, 'public');
                 }, 1000);
             } else {
