@@ -61,8 +61,9 @@
                         :url="page.video_link"
                         :title="page.description"
                     />
-                    <p class="mb-3 text-sm">
-                        {{ short(page.created_at) }}
+                    <p class="mb-3 text-sm italic">
+                        Uploaded on {{ short(page.created_at) }}, viewed
+                        {{ page.read_count }} times
                     </p>
                 </div>
                 <div
