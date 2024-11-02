@@ -2,6 +2,7 @@
 import LiteYouTubeEmbed from "vue-lite-youtube-embed";
 import "vue-lite-youtube-embed/style.css";
 import useGetYouTubeVideo from "@/composables/useGetYouTubeVideo";
+import { computed } from "vue";
 
 const props = defineProps({
     url: { type: String, default: null },
@@ -10,14 +11,17 @@ const props = defineProps({
     controls: { type: Boolean, default: true },
 });
 
-const { embedUrl, videoId } = useGetYouTubeVideo(props.url, {
+const { embedUrl, videoId, isPlaylist } = useGetYouTubeVideo(props.url, {
     noControls: !props.controls,
 });
+
+// Always use iframe for playlists
+const useIframe = computed(() => isPlaylist.value || props.iframe);
 </script>
 
 <template>
     <div
-        v-if="iframe"
+        v-if="useIframe"
         :class="!controls ? 'pointer-events-none' : ''"
         class="video-container rounded-lg"
     >
@@ -27,6 +31,9 @@ const { embedUrl, videoId } = useGetYouTubeVideo(props.url, {
             frameborder="0"
             allow="accelerometer; encrypted-media;"
         ></iframe>
+        <div v-if="isPlaylist && !controls" class="playlist-banner">
+            Playlist
+        </div>
     </div>
     <LiteYouTubeEmbed
         v-else
@@ -37,18 +44,34 @@ const { embedUrl, videoId } = useGetYouTubeVideo(props.url, {
     />
 </template>
 
-<style scoped>
+<style>
 .video-container {
     position: relative;
     width: 100%;
+    height: 100%;
     padding-bottom: 56.25%; /* For a 16:9 aspect ratio */
     overflow: hidden;
 }
+
 .video-container iframe {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
+    height: 100%;
+}
+
+.playlist-banner {
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+    background-color: rgba(255, 248, 248, 0.7);
+    color: #000;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 14px;
+}
+article.yt-lite {
     height: 100%;
 }
 </style>
