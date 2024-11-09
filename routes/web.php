@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\BookController;
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProfileController;
@@ -58,6 +59,11 @@ Route::middleware('auth')->group(function () {
         Route::post('/pages', [PageController::class, 'store'])->name('pages.store');
         Route::post('/pages/{page}', [PageController::class, 'update'])->name('pages.update');
         Route::delete('/pages/{page}', [PageController::class, 'destroy'])->name('pages.destroy');
+
+        Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
+        Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
+        Route::put('/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
+        Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
 
         Route::put('/admin/permissions', [AdminController::class, 'update'])->name('admin.permissions');
         Route::delete('/admin', [AdminController::class, 'destroy'])->name('admin.destroy');

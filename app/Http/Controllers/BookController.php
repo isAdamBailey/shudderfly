@@ -141,6 +141,6 @@ class BookController extends Controller
         $book->pages()->delete();
         $book->delete();
 
-        return redirect(route('dashboard'));
+        return redirect(route('books.index'));
     }
 }
