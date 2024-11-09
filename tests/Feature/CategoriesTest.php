@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Book;
 use App\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -74,9 +75,24 @@ class CategoriesTest extends TestCase
         $this->actingAs($user = User::factory()->create());
         $user->givePermissionTo('edit pages');
 
-        $category = Category::factory()->create();
+        $category = Category::factory()
+            ->has(
+                Book::factory()->count(3)
+            )
+            ->create();
+
+        $books = Book::where('category_id', $category->id)->get();
+        $this->assertCount(3, $books);
+        foreach ($books as $book) {
+            $this->assertSame($category->id, $book->category_id);
+        }
 
         $response = $this->delete(route('categories.destroy', $category));
+
+        foreach ($books as $book) {
+            $book->refresh();
+            $this->assertSame('uncategorized', $book->category->name);
+        }
 
         $this->assertNull(Category::find($category->id));
 

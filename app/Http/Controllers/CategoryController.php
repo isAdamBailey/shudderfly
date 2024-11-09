@@ -9,6 +9,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Redirector;
+use Illuminate\Support\Str;
 
 class CategoryController extends Controller
 {
@@ -37,6 +38,12 @@ class CategoryController extends Controller
 
     public function destroy(Category $category): Redirector|RedirectResponse|Application
     {
+        $uncategorized = Category::where('name', 'uncategorized')->first();
+        foreach ($category->books as $book) {
+            $book->category()->associate($uncategorized);
+            $book->save();
+        }
+
         $category->delete();
 
         return redirect(route('dashboard'));
