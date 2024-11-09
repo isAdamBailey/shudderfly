@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Book;
+use App\Models\Category;
 use App\Models\Page;
 use App\Models\User;
 use Inertia\Inertia;
@@ -34,6 +35,7 @@ class DashboardController extends Controller
 
         return Inertia::render('Dashboard/Index', [
             'users' => ['data' => User::all()],
+            'categories' => ['data' => Category::all()],
             'stats' => [
                 'numberOfBooks' => Book::count(),
                 'numberOfPages' => Page::count(),

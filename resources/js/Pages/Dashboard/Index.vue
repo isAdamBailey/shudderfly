@@ -3,6 +3,7 @@ import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import BreezeValidationErrors from "@/Components/ValidationErrors.vue";
 import { Head } from "@inertiajs/vue3";
 import UsersForm from "@/Pages/Dashboard/UsersForm.vue";
+import CategoriesForm from "@/Pages/Dashboard/CategoriesForm.vue";
 import { ref } from "vue";
 import Close from "@/Components/svg/Close.vue";
 import StatsCard from "@/Pages/Dashboard/StatsCard.vue";
@@ -10,6 +11,7 @@ import StatsCard from "@/Pages/Dashboard/StatsCard.vue";
 const props = defineProps({
     users: { type: Object, required: true },
     stats: { type: Object, required: true },
+    categories: { type: Object, required: true },
 });
 
 const firstClose = ref(false);
@@ -63,7 +65,21 @@ const buildTimestamp = __BUILD_TIMESTAMP__;
                 <BreezeValidationErrors />
             </div>
 
-            <div class="flex flex-wrap justify-around space-y-2 md:space-y-0">
+            <div class="flex flex-wrap justify-around space-y-2">
+                <div class="w-full sm:px-6 lg:px-8">
+                    <div
+                        class="bg-white overflow-hidden shadow-sm sm:rounded-lg"
+                    >
+                        <div class="p-6 bg-white dark:bg-gray-800">
+                            <h3
+                                class="text-xl dark:text-gray-100 font-semibold border-b"
+                            >
+                                Categories
+                            </h3>
+                            <CategoriesForm :categories="categories" />
+                        </div>
+                    </div>
+                </div>
                 <div class="w-full sm:px-6 lg:px-8">
                     <div
                         class="bg-white overflow-hidden shadow-sm sm:rounded-lg"
@@ -78,21 +94,23 @@ const buildTimestamp = __BUILD_TIMESTAMP__;
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="w-full pt-6 sm:px-6 lg:px-8">
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-6 bg-white dark:bg-gray-800">
-                        <h3
-                            class="text-xl dark:text-gray-100 font-semibold border-b"
-                        >
-                            Stats
-                        </h3>
-                        <StatsCard :stats="stats" />
+                <div class="w-full sm:px-6 lg:px-8">
+                    <div
+                        class="bg-white overflow-hidden shadow-sm sm:rounded-lg"
+                    >
+                        <div class="p-6 bg-white dark:bg-gray-800">
+                            <h3
+                                class="text-xl dark:text-gray-100 font-semibold border-b"
+                            >
+                                Stats
+                            </h3>
+                            <StatsCard :stats="stats" />
+                        </div>
                     </div>
+                    <p class="ml-5 md:ml-0 font-bold mt-12 text-gray-100">
+                        Last Deployment: {{ buildTimestamp }}
+                    </p>
                 </div>
-                <p class="ml-5 md:ml-0 font-bold mt-12 text-gray-100">
-                    Last Deployment: {{ buildTimestamp }}
-                </p>
             </div>
         </div>
     </BreezeAuthenticatedLayout>
