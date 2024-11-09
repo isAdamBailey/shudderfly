@@ -49,4 +49,23 @@ class CategoriesTest extends TestCase
 
         $response->assertRedirect(route('dashboard'));
     }
+
+    public function test_category_is_updated()
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        $category = Category::factory()->create();
+
+        $payload = [
+            'name' => $this->faker->word(),
+        ];
+
+        $response = $this->put(route('categories.update', $category), $payload);
+
+        $freshCategory = Category::find($category->id);
+        $this->assertSame($freshCategory->name, $payload['name']);
+
+        $response->assertRedirect(route('dashboard'));
+    }
 }
