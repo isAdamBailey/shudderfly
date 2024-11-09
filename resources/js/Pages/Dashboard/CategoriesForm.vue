@@ -31,17 +31,29 @@
                                     @click="editCategory(index)"
                                 >
                                     <template v-if="editingIndex === index">
+                                        <InputLabel
+                                            for="category-list-name"
+                                            value="Change Category Name"
+                                        />
                                         <TextInput
+                                            id="category-list-name"
                                             v-model="localCategoryNames[index]"
                                             class="w-3/4"
-                                            @blur="updateCategory(category)"
                                             @keyup.enter="
                                                 updateCategory(category)
                                             "
                                         />
                                     </template>
                                     <template v-else>
-                                        {{ category.name }}
+                                        <span>{{
+                                            capitalizeFirstLetter(category.name)
+                                        }}</span>
+                                        <span class="ml-3"
+                                            >({{
+                                                category.books_count
+                                            }}
+                                            books)</span
+                                        >
                                     </template>
                                 </td>
                                 <td>
@@ -127,6 +139,10 @@ const editingIndex = ref(null);
 
 const editCategory = (index) => {
     editingIndex.value = index;
+};
+
+const capitalizeFirstLetter = (string) => {
+    return string.charAt(0).toUpperCase() + string.slice(1);
 };
 
 const updateCategory = async (category) => {

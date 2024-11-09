@@ -33,9 +33,11 @@ class DashboardController extends Controller
             ->orderBy('created_at')
             ->first();
 
+        $categories = Category::withCount('books')->get();
+
         return Inertia::render('Dashboard/Index', [
             'users' => ['data' => User::all()],
-            'categories' => ['data' => Category::all()],
+            'categories' => ['data' => $categories],
             'stats' => [
                 'numberOfBooks' => Book::count(),
                 'numberOfPages' => Page::count(),
