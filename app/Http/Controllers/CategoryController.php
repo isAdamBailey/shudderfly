@@ -9,7 +9,6 @@ use Illuminate\Foundation\Application;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Redirector;
-use Illuminate\Support\Str;
 
 class CategoryController extends Controller
 {

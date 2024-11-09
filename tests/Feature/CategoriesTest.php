@@ -26,7 +26,7 @@ class CategoriesTest extends TestCase
             ->count(20)
             ->create();
 
-        $this->getJson(route('categories.index',))
+        $this->getJson(route('categories.index'))
             ->assertJson(fn (AssertableJson $json) => $json
                 ->has('categories', 20)
             );
@@ -40,7 +40,7 @@ class CategoriesTest extends TestCase
         DB::table('categories')->delete();
 
         $payload = [
-            'name' => "test category",
+            'name' => 'test category',
         ];
 
         $response = $this->post(route('categories.store', $payload));
