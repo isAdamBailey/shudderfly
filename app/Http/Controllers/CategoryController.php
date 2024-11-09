@@ -34,4 +34,11 @@ class CategoryController extends Controller
 
         return redirect(route('dashboard'));
     }
+
+    public function destroy(Category $category): Redirector|RedirectResponse|Application
+    {
+        $category->delete();
+
+        return redirect(route('dashboard'));
+    }
 }

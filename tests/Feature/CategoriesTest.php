@@ -68,4 +68,18 @@ class CategoriesTest extends TestCase
 
         $response->assertRedirect(route('dashboard'));
     }
+
+    public function test_category_is_destroyed()
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        $category = Category::factory()->create();
+
+        $response = $this->delete(route('categories.destroy', $category));
+
+        $this->assertNull(Category::find($category->id));
+
+        $response->assertRedirect(route('dashboard'));
+    }
 }
