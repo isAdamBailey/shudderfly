@@ -228,6 +228,6 @@ class BooksTest extends TestCase
         $this->assertNull(Book::find($book->id));
         $this->assertCount(0, Page::where('book_id', $book->id)->get());
 
-        $response->assertRedirect(route('dashboard'));
+        $response->assertRedirect(route('books.index'));
     }
 }

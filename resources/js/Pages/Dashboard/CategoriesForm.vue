@@ -8,11 +8,16 @@
                             <tr>
                                 <th
                                     scope="col"
-                                    class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100"
+                                    class="px-6 py-4 text-left text-gray-900 dark:text-gray-100"
                                 >
                                     Name
                                 </th>
-                                <th scope="col"></th>
+                                <th
+                                    scope="col"
+                                    class="px-6 py-4 text-left text-gray-900 dark:text-gray-100"
+                                >
+                                    Actions
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -23,8 +28,21 @@
                             >
                                 <td
                                     class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900"
+                                    @click="editCategory(index)"
                                 >
-                                    {{ category.name }}
+                                    <template v-if="editingIndex === index">
+                                        <TextInput
+                                            v-model="localCategoryNames[index]"
+                                            class="w-3/4"
+                                            @blur="updateCategory(category)"
+                                            @keyup.enter="
+                                                updateCategory(category)
+                                            "
+                                        />
+                                    </template>
+                                    <template v-else>
+                                        {{ category.name }}
+                                    </template>
                                 </td>
                                 <td>
                                     <DangerButton
@@ -80,11 +98,12 @@ import Button from "@/Components/Button.vue";
 import TextInput from "@/Components/TextInput.vue";
 import InputError from "@/Components/InputError.vue";
 import InputLabel from "@/Components/InputLabel.vue";
-import { useForm } from "@inertiajs/vue3";
+import { useForm, router } from "@inertiajs/vue3";
 import { useVuelidate } from "@vuelidate/core";
 import { required } from "@vuelidate/validators";
+import { ref } from "vue";
 
-defineProps({
+const props = defineProps({
     categories: { type: Object, required: true },
 });
 
@@ -98,11 +117,31 @@ const form = useForm({
     name: null,
 });
 
+const localCategoryNames = ref(
+    props.categories.data.map((category) => category.name)
+);
+
 let v$ = useVuelidate(rules, form);
 
-const updateCategory = (category) => {
-    form.category = category;
-    form.put(route("categories.update"), {});
+const editingIndex = ref(null);
+
+const editCategory = (index) => {
+    editingIndex.value = index;
+};
+
+const updateCategory = async (category) => {
+    const name = localCategoryNames.value[editingIndex.value];
+    router.put(
+        route("categories.update", category),
+        { name },
+        {
+            onBefore: () =>
+                confirm(`Are you sure you want to change ${category.name}?`),
+            onSuccess: () => {
+                editingIndex.value = null;
+            },
+        }
+    );
 };
 
 const addCategory = async () => {
@@ -114,6 +153,7 @@ const addCategory = async () => {
             onSuccess: () => {
                 form.reset();
                 v$.value.$reset();
+                editingIndex.value = null;
             },
         });
     }
@@ -125,6 +165,9 @@ const deleteCategory = (category) => {
             confirm(
                 `Are you sure you want to delete ${category.name}? If it has existing books, they will be moved to uncategorized.`
             ),
+        onSuccess: () => {
+            editingIndex.value = null;
+        },
     });
 };
 </script>
