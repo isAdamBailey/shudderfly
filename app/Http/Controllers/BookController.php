@@ -111,10 +111,14 @@ class BookController extends Controller
             ? Category::all()->map->only(['id', 'name'])->sortBy('name')->values()->toArray()
             : null;
 
+        $authors = $canEditPages
+            ? User::all()->toArray()
+            : [];
+
         return Inertia::render('Book/Show', [
             'book' => $book->load('coverImage'),
             'pages' => $pages,
-            'authors' => User::all()->toArray(),
+            'authors' => $authors,
             'categories' => $categories,
         ]);
     }
