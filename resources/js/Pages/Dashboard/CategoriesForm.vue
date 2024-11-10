@@ -14,7 +14,7 @@
                                 </th>
                                 <th
                                     scope="col"
-                                    class="px-6 py-4 text-left text-gray-900 dark:text-gray-100"
+                                    class="px-6 py-4 text-right text-gray-900 dark:text-gray-100"
                                 >
                                     Actions
                                 </th>
@@ -56,8 +56,9 @@
                                         >
                                     </template>
                                 </td>
-                                <td>
+                                <td class="text-right">
                                     <DangerButton
+                                        class="mr-8"
                                         @click="deleteCategory(category)"
                                     >
                                         X
@@ -84,11 +85,12 @@
                                         message="A name is required to add a category."
                                     />
                                 </td>
-                                <td>
+                                <td class="text-right">
                                     <Button
                                         :class="{
                                             'opacity-25': form.processing,
                                         }"
+                                        class="mr-8"
                                         :disabled="form.processing || v$.$error"
                                         @click="addCategory(form.name)"
                                     >

@@ -98,12 +98,13 @@ class BooksTest extends TestCase
             )->create(['name' => 'aaaaaa']); // so it shows up first in the array of categories
 
         $searchTerm = 'Adam';
-        $this->get(route('books.search', ['search' => $searchTerm]))->assertInertia(
+        $this->get(route('books.index', ['search' => $searchTerm]))->assertInertia(
             fn (Assert $page) => $page
                 ->component('Books/Index')
-                ->url('/books-search?search='.$searchTerm)
+                ->url('/books?search='.$searchTerm)
                 ->has('searchCategories.0.books', $searchCategory->books->count())
                 ->has('searchCategories.0.books.0.cover_image')
+                ->has('categories')
         );
     }
 
@@ -130,6 +131,7 @@ class BooksTest extends TestCase
                 ->has('pages.last_page_url')
                 ->has('pages.total')
                 ->has('authors', 1)
+                ->has('categories')
         );
 
         // make sure we recorded it being read
@@ -147,6 +149,7 @@ class BooksTest extends TestCase
             fn (Assert $page) => $page
                 ->component('Book/Show')
                 ->url('/book/'.$book->slug)
+                ->has('categories', 10) // only admin has categories
         );
 
         // make sure we do not increment admin view

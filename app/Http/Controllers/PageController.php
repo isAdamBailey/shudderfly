@@ -58,7 +58,9 @@ class PageController extends Controller
 
     public function show(Page $page, Request $request): Response
     {
-        if (! auth()->user()->can('edit pages') && $request->input('increment')) {
+        $canEditPages = auth()->user()->can('edit pages');
+
+        if (! $canEditPages && $request->input('increment')) {
             IncrementPageReadCount::dispatch($page);
         }
 
@@ -74,10 +76,15 @@ class PageController extends Controller
             ->orderBy('created_at')
             ->first();
 
+        $books = $canEditPages
+            ? Book::all()->map->only(['id', 'title'])->sortBy('title')->values()->toArray()
+            : [];
+
         return Inertia::render('Page/Show', [
             'page' => $page,
             'previousPage' => $previousPage,
             'nextPage' => $nextPage,
+            'books' => $books,
         ]);
     }
 

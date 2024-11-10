@@ -3,7 +3,7 @@
 
     <BreezeAuthenticatedLayout>
         <template #header>
-            <SearchInput route-name="books.search" label="Books" />
+            <SearchInput route-name="books.index" label="Books" />
             <div
                 class="bg-blue-600 dark:bg-gray-800 p-3 my-5 border-2 rounded-lg"
             >
@@ -106,6 +106,7 @@
                 <EditBookForm
                     :book="book"
                     :authors="authors"
+                    :categories="categories"
                     @close-form="bookSettingsOpen = false"
                 />
             </div>
@@ -170,6 +171,7 @@ const props = defineProps({
     book: { type: Object, required: true },
     pages: { type: Object, required: true },
     authors: { type: Array, required: true },
+    categories: { type: Array, default: null },
 });
 
 let pageSettingsOpen = ref(false);

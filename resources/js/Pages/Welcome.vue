@@ -55,7 +55,7 @@ defineProps({
                                 </div>
                                 <SearchInput
                                     class="mt-12"
-                                    route-name="books.search"
+                                    route-name="books.index"
                                     label="Books"
                                 />
                             </div>

@@ -1,6 +1,6 @@
 <script setup>
 import BreezeLabel from "@/Components/InputLabel.vue";
-import { useForm, usePage } from "@inertiajs/vue3";
+import { useForm } from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue";
 import { computed, onMounted, ref } from "vue";
 import DeletePageForm from "@/Pages/Book/DeletePageForm.vue";
@@ -17,6 +17,7 @@ const props = defineProps({
     page: { type: Object, required: true },
     book: { type: Object, required: true },
     showPageSettings: { type: Boolean, default: false },
+    books: { type: Array, required: true },
 });
 
 const pageForm = useForm({
@@ -52,11 +53,9 @@ function selectUpload() {
 }
 
 const booksOptions = computed(() => {
-    return usePage().props.books
-        ? usePage().props.books.map((book) => {
-              return { value: book.id, label: book.title };
-          })
-        : [];
+    return props.books.map((book) => {
+        return { value: book.id, label: book.title };
+    });
 });
 
 const optionLabel = computed(() => {

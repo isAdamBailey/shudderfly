@@ -12,7 +12,7 @@
                     </h2>
                 </Link>
 
-                <SearchInput route-name="books.search" label="Books" />
+                <SearchInput route-name="books.index" label="Books" />
             </div>
             <div v-if="canEditPages" class="mb-3">
                 <Button
@@ -32,6 +32,7 @@
                 <NewBookForm
                     v-if="showNewBookForm"
                     :authors="props.authors"
+                    :categories="props.categories"
                     @close-page-form="showNewBookForm = false"
                 />
             </div>
@@ -68,8 +69,11 @@ import { usePermissions } from "@/composables/permissions";
 
 const { canEditPages } = usePermissions();
 
-const categories = ref(usePage().props.categories);
 const props = defineProps({
+    categories: {
+        type: Array,
+        required: true,
+    },
     searchCategories: {
         type: Array,
         default: null,
@@ -82,7 +86,7 @@ const props = defineProps({
 
 const showNewBookForm = ref(false);
 const workingCategories = computed(() => {
-    return props.searchCategories || categories.value;
+    return props.searchCategories || props.categories;
 });
 
 const title = computed(() => {

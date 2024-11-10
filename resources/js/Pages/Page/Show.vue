@@ -104,6 +104,7 @@
                     v-if="showPageSettings"
                     :page="page"
                     :book="page.book"
+                    :books="books"
                     @close-page-form="showPageSettings = false"
                 />
             </div>
@@ -131,6 +132,7 @@ const props = defineProps({
     page: { type: Object, required: true },
     previousPage: { type: Object, required: true },
     nextPage: { type: Object, required: true },
+    books: { type: Array, required: true },
 });
 
 let showPageSettings = ref(false);

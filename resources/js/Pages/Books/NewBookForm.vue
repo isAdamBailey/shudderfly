@@ -11,16 +11,18 @@ const props = defineProps({
         type: Array,
         default: null,
     },
+    categories: {
+        type: Array,
+        required: true,
+    },
 });
 
 const currentUser = usePage().props.auth.user.name;
 
 const categoriesOptions = computed(() => {
-    return usePage().props.categories
-        ? usePage().props.categories.map((category) => {
-              return { value: category.id, label: category.name };
-          })
-        : [];
+    return props.categories.map((category) => {
+        return { value: category.id, label: category.name };
+    });
 });
 
 const undefinedCategory = categoriesOptions.value.find(

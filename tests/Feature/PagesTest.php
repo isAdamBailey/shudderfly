@@ -67,6 +67,7 @@ class PagesTest extends TestCase
                 ->has('page.book.cover_image')
                 ->has('previousPage')
                 ->has('nextPage')
+                ->has('books')
         );
 
         $this->assertSame(1.0, $page->fresh()->read_count);

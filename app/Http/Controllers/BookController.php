@@ -23,36 +23,28 @@ class BookController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $search = $request->search;
+
+        if ($search) {
+            $searchCategories = Category::query()
+                ->with(['books' => fn ($book) => $book
+                    ->where('title', 'LIKE', '%'.$search.'%')
+                    ->orWhere('excerpt', 'LIKE', '%'.$search.'%')
+                    ->with('coverImage'),
+                ])
+                ->orderBy('name')
+                ->get();
+        }
+
         $authors = auth()->user()->can('edit pages') ? User::all() : [];
+        $categories = Category::all()->map->only(['id', 'name'])->sortBy('name')->values()->toArray();
 
         return Inertia::render('Books/Index', [
             'authors' => $authors,
-        ]);
-    }
-
-    /**
-     * Display a listing of the resource.
-     */
-    public function search(Request $request): Response|RedirectResponse
-    {
-        $search = $request->search;
-        if (! $search) {
-            return redirect()->route('books.index');
-        }
-
-        $categories = Category::query()
-            ->with(['books' => fn ($book) => $book
-                ->where('title', 'LIKE', '%'.$search.'%')
-                ->orWhere('excerpt', 'LIKE', '%'.$search.'%')
-                ->with('coverImage'),
-            ])
-            ->orderBy('name')
-            ->get();
-
-        return Inertia::render('Books/Index', [
-            'searchCategories' => $categories,
+            'categories' => $categories,
+            'searchCategories' => $searchCategories ?? null,
             'search' => $search,
         ]);
     }
@@ -107,16 +99,23 @@ class BookController extends Controller
      */
     public function show(Book $book, Request $request): Response
     {
-        if (! auth()->user()->can('edit pages') && ! $request->has('page')) {
+        $canEditPages = auth()->user()->can('edit pages');
+
+        if (! $canEditPages && ! $request->has('page')) {
             IncrementBookReadCount::dispatch($book);
         }
 
         $pages = $book->pages()->paginate();
 
+        $categories = $canEditPages
+            ? Category::all()->map->only(['id', 'name'])->sortBy('name')->values()->toArray()
+            : null;
+
         return Inertia::render('Book/Show', [
             'book' => $book->load('coverImage'),
             'pages' => $pages,
             'authors' => User::all()->toArray(),
+            'categories' => $categories,
         ]);
     }
 
