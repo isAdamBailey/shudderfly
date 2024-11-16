@@ -20,24 +20,35 @@
                 :key="book.id"
                 :href="route('books.show', book.slug)"
                 class="relative w-48 overflow-hidden shrink-0 snap-start rounded-lg bg-white shadow-gray-200/50 transition hover:opacity-80 hover:shadow hover:shadow-gray-300/50"
+                @click="setBookLoading(book)"
             >
                 <div
-                    class="rounded-t-lg absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 text-center leading-4 text-black font-bold backdrop-blur-sm line-clamp-1"
+                    v-if="book.loading"
+                    class="absolute inset-0 flex items-center justify-center bg-white/70"
                 >
-                    {{ book.title.toUpperCase() }}
+                    <span class="animate-spin text-black"
+                        ><i class="ri-loader-line text-3xl"></i
+                    ></span>
                 </div>
-                <div
-                    v-if="book.excerpt"
-                    class="rounded-b-lg absolute inset-x-0 bottom-0 w-full truncate bg-white/70 py-2.5 text-center text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
-                >
-                    {{ book.excerpt }}
-                </div>
-                <div class="h-36">
-                    <LazyLoader
-                        :src="book.cover_image?.media_path"
-                        :alt="`${book.title} cover image`"
-                        :is-cover="true"
-                    />
+                <div v-else>
+                    <div
+                        class="rounded-t-lg absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 text-center leading-4 text-black font-bold backdrop-blur-sm line-clamp-1"
+                    >
+                        {{ book.title.toUpperCase() }}
+                    </div>
+                    <div
+                        v-if="book.excerpt"
+                        class="rounded-b-lg absolute inset-x-0 bottom-0 w-full truncate bg-white/70 py-2.5 text-center text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
+                    >
+                        {{ book.excerpt }}
+                    </div>
+                    <div class="h-36">
+                        <LazyLoader
+                            :src="book.cover_image?.media_path"
+                            :alt="`${book.title} cover image`"
+                            :is-cover="true"
+                        />
+                    </div>
                 </div>
             </Link>
         </div>
@@ -87,26 +98,40 @@ const handleScroll = async () => {
 
 onMounted(async () => {
     const response = await fetchBooks();
-    books.value = response.data.books.data;
+    books.value = response.data.books.data.map((book) => ({
+        ...book,
+        loading: false,
+    }));
     nextUrl.value = response.data.books.next_page_url;
     loading.value = false;
 });
 
 const workingBooks = computed(() => {
-    return props.category.books || books.value;
+    return (
+        props.category.books?.map((book) => ({ ...book, loading: false })) ||
+        books.value
+    );
 });
 
-function fetchBooks() {
-    return axios.get(
+async function fetchBooks() {
+    const response = await axios.get(
         nextUrl.value ||
             route("books.category", { categoryName: props.category.name }),
         {
             preserveState: true,
         }
     );
+    if (response?.data?.books) {
+        response.data.books.data.forEach((book) => (book.loading = false));
+    }
+    return response;
 }
 
 function capitalize(string) {
     return string[0].toUpperCase() + string.slice(1);
+}
+
+function setBookLoading(book) {
+    book.loading = true;
 }
 </script>
