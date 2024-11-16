@@ -12,7 +12,9 @@ const props = defineProps({
     },
 });
 
-const uploads = ref(props.photos.data);
+const uploads = ref(
+    props.photos.data.map((photo) => ({ ...photo, loading: false }))
+);
 const infiniteScroll = ref(null);
 let observer = null;
 const fetchedPages = new Set();
@@ -21,14 +23,20 @@ watch(
     () => usePage().props.search,
     (newSearch) => {
         if (newSearch) {
-            uploads.value = props.photos.data;
+            uploads.value = props.photos.data.map((photo) => ({
+                ...photo,
+                loading: false,
+            }));
         }
     },
     { immediate: true }
 );
 
 onMounted(async () => {
-    uploads.value = props.photos.data;
+    uploads.value = props.photos.data.map((photo) => ({
+        ...photo,
+        loading: false,
+    }));
     observer = new IntersectionObserver((entries) =>
         entries.forEach((entry) => entry.isIntersecting && fetchUploads(), {
             rootMargin: "-150px 0px 0px 0px",
@@ -50,7 +58,13 @@ function fetchUploads() {
             preserveState: true,
             preserveScroll: true,
             onSuccess: (page) => {
-                uploads.value = [...uploads.value, ...page.props.photos.data];
+                uploads.value = [
+                    ...uploads.value,
+                    ...page.props.photos.data.map((photo) => ({
+                        ...photo,
+                        loading: false,
+                    })),
+                ];
             },
         }
     );
@@ -61,6 +75,10 @@ function mediaPath(photo) {
         return photo.media_poster;
     }
     return photo.media_path;
+}
+
+function setUploadLoading(photo) {
+    photo.loading = true;
 }
 </script>
 
@@ -77,7 +95,16 @@ function mediaPath(photo) {
             <Link
                 class="w-full min-h-28 max-h-36"
                 :href="route('pages.show', { page: photo, increment: true })"
+                @click="setUploadLoading(photo)"
             >
+                <div
+                    v-if="photo.loading"
+                    class="absolute inset-0 flex items-center justify-center bg-white/70"
+                >
+                    <span class="animate-spin text-black"
+                        ><i class="ri-loader-line text-3xl"></i
+                    ></span>
+                </div>
                 <LazyLoader
                     v-if="mediaPath(photo)"
                     :src="mediaPath(photo)"

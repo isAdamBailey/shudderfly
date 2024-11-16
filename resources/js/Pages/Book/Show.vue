@@ -123,7 +123,16 @@
                 <Link
                     class="w-full min-h-28 max-h-36"
                     :href="route('pages.show', { page, increment: true })"
+                    @click="setPageLoading(page)"
                 >
+                    <div
+                        v-if="page.loading"
+                        class="absolute inset-0 flex items-center justify-center bg-white/70"
+                    >
+                        <span class="animate-spin text-black"
+                            ><i class="ri-loader-line text-3xl"></i
+                        ></span>
+                    </div>
                     <LazyLoader
                         v-if="mediaPath(page)"
                         :src="mediaPath(page)"
@@ -177,7 +186,9 @@ const props = defineProps({
 let pageSettingsOpen = ref(false);
 let bookSettingsOpen = ref(false);
 
-const items = ref(props.pages.data);
+const items = ref(
+    props.pages.data.map((page) => ({ ...page, loading: false }))
+);
 const infiniteScroll = ref(null);
 let observer = null;
 const fetchedPages = new Set();
@@ -209,7 +220,13 @@ function fetchPages() {
             preserveState: true,
             preserveScroll: true,
             onSuccess: (page) => {
-                items.value = [...items.value, ...page.props.pages.data];
+                items.value = [
+                    ...items.value,
+                    ...page.props.pages.data.map((page) => ({
+                        ...page,
+                        loading: false,
+                    })),
+                ];
             },
         }
     );
@@ -242,12 +259,16 @@ function mediaPath(page) {
     return page.media_path;
 }
 
+function setPageLoading(page) {
+    page.loading = true;
+}
+
 onMounted(() => {
     if (props.pages.total === 0) {
         pageSettingsOpen.value = true;
     }
 
-    items.value = props.pages.data;
+    items.value = props.pages.data.map((page) => ({ ...page, loading: false }));
     observer = new IntersectionObserver((entries) =>
         entries.forEach((entry) => entry.isIntersecting && fetchPages(), {
             rootMargin: "-150px 0px 0px 0px",
