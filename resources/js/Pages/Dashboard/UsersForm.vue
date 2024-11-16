@@ -2,6 +2,22 @@
     <div class="mt-10 flex flex-col">
         <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
             <div class="inline-block min-w-full sm:px-6 lg:px-8">
+                <p class="text-gray-700 dark:text-gray-100 mb-3">
+                    This is where you can manage other users, as an
+                    administrator of this application.
+                </p>
+                <ul class="text-gray-700 dark:text-gray-100">
+                    <li>
+                        Making someone an admin lets them add, edit and delete
+                        books and pages, as well as edit other users (including
+                        you)! They have access to this page.
+                    </li>
+                    <li>
+                        Allowing someone to edit their profile gives them access
+                        to edit and delete their own profile and the ability to
+                        log out of the application.
+                    </li>
+                </ul>
                 <div class="overflow-hidden">
                     <table class="min-w-full">
                         <thead class="border-b">
@@ -43,24 +59,20 @@
                                 >
                                     {{ user.email }}
                                 </td>
-                                <td class="whitespace-nowrap px-6 py-4 text-sm">
-                                    <div
-                                        v-if="userIsAdmin(user)"
-                                        class="text-blue-600 font-bold"
-                                    >
+                                <td>
+                                    <div v-if="userIsAdmin(user)">
                                         <Button
                                             :disabled="isCurrentUser(user)"
                                             :class="{
                                                 'opacity-25':
                                                     isCurrentUser(user),
                                             }"
-                                            class="inline-flex items-center px-3 py-1 bg-blue-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:shadow-outline-blue transition ease-in-out duration-150"
                                             @click="setPermissions(user, [])"
                                         >
                                             Revoke Admin
                                         </Button>
                                     </div>
-                                    <div v-else>
+                                    <div v-else class="my-1">
                                         <DangerButton
                                             @click="
                                                 setPermissions(user, [
@@ -68,6 +80,28 @@
                                                 ])
                                             "
                                             >Make Admin</DangerButton
+                                        >
+                                    </div>
+                                    <div v-if="userCanEditProfile(user)">
+                                        <Button
+                                            :disabled="isCurrentUser(user)"
+                                            :class="{
+                                                'opacity-25':
+                                                    isCurrentUser(user),
+                                            }"
+                                            @click="setPermissions(user, [])"
+                                        >
+                                            Revoke Profile Editing
+                                        </Button>
+                                    </div>
+                                    <div v-else>
+                                        <DangerButton
+                                            @click="
+                                                setPermissions(user, [
+                                                    'edit profile',
+                                                ])
+                                            "
+                                            >Allow Profile Editing</DangerButton
                                         >
                                     </div>
                                 </td>
@@ -108,7 +142,9 @@ const form = useForm({
 const setPermissions = (user, permissions) => {
     form.user = user;
     form.permissions = permissions;
-    form.put(route("admin.permissions"), {});
+    form.put(route("admin.permissions"), {
+        preserveScroll: true,
+    });
 };
 
 const deleteUser = (user) => {
@@ -122,6 +158,10 @@ const deleteUser = (user) => {
 
 const userIsAdmin = (user) => {
     return user.permissions_list.includes("edit pages");
+};
+
+const userCanEditProfile = (user) => {
+    return user.permissions_list.includes("edit profile");
 };
 
 defineProps({
