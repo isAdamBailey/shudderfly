@@ -8,7 +8,7 @@ import VoiceSettingsForm from "./Partials/VoiceSettingsForm.vue";
 import { Head } from "@inertiajs/vue3";
 import { usePermissions } from "@/composables/permissions";
 
-const { canEditPages } = usePermissions();
+const { canEditProfile } = usePermissions();
 
 defineProps({
     mustVerifyEmail: Boolean,
@@ -34,7 +34,7 @@ defineProps({
                     class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg"
                 >
                     <div
-                        v-if="!canEditPages"
+                        v-if="!canEditProfile"
                         class="mb-10 text-gray-700 dark:text-gray-100"
                     >
                         Hi {{ $page.props.auth.user.name }}! Mommy and daddy
@@ -48,7 +48,7 @@ defineProps({
                     <VoiceSettingsForm />
                 </div>
                 <div
-                    v-if="canEditPages"
+                    v-if="canEditProfile"
                     class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg"
                 >
                     <UpdateProfileInformationForm
@@ -59,14 +59,14 @@ defineProps({
                 </div>
 
                 <div
-                    v-if="canEditPages"
+                    v-if="canEditProfile"
                     class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg"
                 >
                     <UpdatePasswordForm class="max-w-xl" />
                 </div>
 
                 <div
-                    v-if="canEditPages"
+                    v-if="canEditProfile"
                     class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg"
                 >
                     <DeleteUserForm class="max-w-xl" />

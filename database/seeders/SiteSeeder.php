@@ -19,6 +19,7 @@ class SiteSeeder extends Seeder
             'email' => 'test@test.com',
         ]);
         $user->givePermissionTo(['edit pages']);
+        $user->givePermissionTo(['edit profile']);
 
         // create a user who can only view
         User::factory()->create([

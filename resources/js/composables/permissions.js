@@ -8,5 +8,11 @@ export function usePermissions() {
         );
     });
 
-    return { canEditPages };
+    const canEditProfile = computed(() => {
+        return usePage().props.auth.user.permissions_list.includes(
+            "edit profile"
+        );
+    });
+
+    return { canEditPages, canEditProfile };
 }

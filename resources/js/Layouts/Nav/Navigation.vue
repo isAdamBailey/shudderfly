@@ -9,7 +9,7 @@ import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
 import { Link } from "@inertiajs/vue3";
 import { usePermissions } from "@/composables/permissions";
 
-const { canEditPages } = usePermissions();
+const { canEditPages, canEditProfile } = usePermissions();
 const showingNavigationDropdown = ref(false);
 </script>
 
@@ -87,7 +87,7 @@ const showingNavigationDropdown = ref(false);
                                     Profile
                                 </DropdownLink>
                                 <DropdownLink
-                                    v-if="canEditPages"
+                                    v-if="canEditProfile"
                                     :href="route('logout')"
                                     method="post"
                                     as="button"

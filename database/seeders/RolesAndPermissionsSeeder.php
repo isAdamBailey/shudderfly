@@ -19,5 +19,6 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // create permissions
         Permission::create(['name' => 'edit pages']);
+        Permission::create(['name' => 'edit profile']);
     }
 }
