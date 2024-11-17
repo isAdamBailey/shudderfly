@@ -18,7 +18,9 @@
             <Link
                 v-for="book in workingBooks"
                 :key="book.id"
-                :href="route('books.show', book.slug)"
+                :href="
+                    route('books.show', { book: book.slug, increment: true })
+                "
                 class="relative w-48 overflow-hidden shrink-0 snap-start rounded-lg bg-white shadow-gray-200/50 transition hover:opacity-80 hover:shadow hover:shadow-gray-300/50"
                 @click="setBookLoading(book)"
             >

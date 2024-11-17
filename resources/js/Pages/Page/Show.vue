@@ -11,6 +11,7 @@
                         route('books.show', {
                             book: page.book.slug,
                             page: 1,
+                            increment: true,
                         })
                     "
                     class="px-2 py-2 flex justify-center flex-wrap mb-3 border-b-2 border-gray-800 bg-blue-200 dark:bg-gray-300 hover:bg-blue-600 hover:dark:bg-gray-800 text-blue-600 dark:text-gray-800 hover:text-yellow-200 dark:hover:text-white transition"
@@ -61,7 +62,7 @@
                         :url="page.video_link"
                         :title="page.description"
                     />
-                    <p class="mb-3 text-sm italic">
+                    <p class="mb-3 text-sm italic dark:text-white">
                         Uploaded on {{ short(page.created_at) }}, viewed
                         {{ page.read_count }} times
                     </p>
