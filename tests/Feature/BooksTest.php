@@ -130,7 +130,7 @@ class BooksTest extends TestCase
                 ->has('pages.first_page_url')
                 ->has('pages.last_page_url')
                 ->has('pages.total')
-                ->has('authors', 1)
+                ->has('authors')
                 ->has('categories')
         );
 
@@ -142,6 +142,7 @@ class BooksTest extends TestCase
     {
         $this->actingAs($user = User::factory()->create());
         $user->givePermissionTo('edit pages');
+        $user->givePermissionTo('edit profile');
 
         $book = Book::factory()->has(Page::factory())->create();
 
@@ -150,6 +151,7 @@ class BooksTest extends TestCase
                 ->component('Book/Show')
                 ->url('/book/'.$book->slug)
                 ->has('categories', 10) // only admin has categories
+                ->has('authors', 1) // only admin has authors
         );
 
         // make sure we do not increment admin view

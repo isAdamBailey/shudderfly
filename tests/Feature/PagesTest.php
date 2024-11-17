@@ -140,7 +140,7 @@ class PagesTest extends TestCase
         $this->assertSame($freshPage->content, $payload['content']);
         $this->assertSame('/storage'.$freshPage->media_path, Storage::disk('s3')->url($filePath));
 
-        $response->assertRedirect(route('books.show', $book));
+        $response->assertRedirect(route('pages.show', $freshPage));
     }
 
     public function test_page_can_be_moved_to_different_book()
@@ -164,7 +164,7 @@ class PagesTest extends TestCase
         $this->assertSame($newBook->id, $freshPage->book_id);
 
         // takes us to the new book
-        $response->assertRedirect(route('books.show', $newBook));
+        $response->assertRedirect(route('pages.show', $page));
     }
 
     public function test_page_is_destroyed()

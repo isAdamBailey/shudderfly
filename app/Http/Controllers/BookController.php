@@ -100,8 +100,10 @@ class BookController extends Controller
     public function show(Book $book, Request $request): Response
     {
         $canEditPages = auth()->user()->can('edit pages');
+        $canIncrement = auth()->user()->cannot('edit profile')
+            && ! $request->has('page');
 
-        if (! $canEditPages && ! $request->has('page')) {
+        if ($canIncrement) {
             IncrementBookReadCount::dispatch($book);
         }
 
