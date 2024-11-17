@@ -44,8 +44,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/contact-admins-email', [ProfileController::class, 'contactAdminsEmail'])
         ->name('profile.contact-admins-email');
 
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+
     Route::group(['middleware' => ['can:edit profile']], function () {
-        Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
         Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     });

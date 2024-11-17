@@ -13,7 +13,6 @@ class ProfileTest extends TestCase
     public function test_profile_page_is_displayed()
     {
         $user = User::factory()->create();
-        $user->givePermissionTo('edit profile');
 
         $response = $this
             ->actingAs($user)
