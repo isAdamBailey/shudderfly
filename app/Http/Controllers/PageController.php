@@ -189,7 +189,7 @@ class PageController extends Controller
 
         $page->save();
 
-        return redirect(route('books.show', $page->book));
+        return redirect(route('pages.show', $page));
     }
 
     /**
