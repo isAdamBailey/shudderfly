@@ -41,15 +41,17 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/pages/{page}', [PageController::class, 'show'])->name('pages.show');
 
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::post('/contact-admins-email', [ProfileController::class, 'contactAdminsEmail'])
         ->name('profile.contact-admins-email');
 
-    Route::group(['middleware' => ['can:edit pages']], function () {
-        Route::get('/dashboard', [DashboardController::class, 'show'])->name('dashboard');
-
+    Route::group(['middleware' => ['can:edit profile']], function () {
+        Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
         Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    });
+
+    Route::group(['middleware' => ['can:edit pages']], function () {
+        Route::get('/dashboard', [DashboardController::class, 'show'])->name('dashboard');
 
         Route::post('/books', [BookController::class, 'store'])->name('books.store');
         Route::put('/books/{book}', [BookController::class, 'update'])->name('books.update');
