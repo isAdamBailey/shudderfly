@@ -48,12 +48,16 @@ const props = defineProps({
 let search = ref(usePage().props?.search || null);
 let filter = ref(usePage().props?.filter || null);
 let voiceActive = ref(false);
+let voiceHeard = ref(false);
 
 const typeName = computed(() => {
     return props.label || props.routeName.split(".")[0] || "something";
 });
 
 const searchPlaceholder = computed(() => {
+    if (voiceHeard.value) {
+        return "Searching...";
+    }
     return voiceActive.value ? "Listening..." : `Search ${typeName.value}!`;
 });
 
@@ -98,8 +102,13 @@ const startVoiceRecognition = () => {
         voiceActive.value = true;
     });
 
+    recognition.addEventListener("soundstart", () => {
+        voiceHeard.value = true;
+    });
+
     recognition.addEventListener("end", () => {
         voiceActive.value = false;
+        voiceHeard.value = false;
     });
 
     recognition.start();
