@@ -23,11 +23,7 @@ class AdminController extends Controller
             'name' => $request->user['name'],
         ])->first();
 
-        if (count($request->permissions) > 0) {
-            $user->givePermissionTo($request->permissions);
-        } else {
-            $user->syncPermissions();
-        }
+        $user->syncPermissions($request->permissions);
 
         return redirect(route('dashboard'));
     }

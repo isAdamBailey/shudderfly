@@ -67,7 +67,12 @@
                                                 'opacity-25':
                                                     isCurrentUser(user),
                                             }"
-                                            @click="setPermissions(user, [])"
+                                            @click="
+                                                removePermission(
+                                                    user,
+                                                    'edit pages'
+                                                )
+                                            "
                                         >
                                             Revoke Admin
                                         </Button>
@@ -75,9 +80,10 @@
                                     <div v-else class="my-1">
                                         <DangerButton
                                             @click="
-                                                setPermissions(user, [
-                                                    'edit pages',
-                                                ])
+                                                addPermission(
+                                                    user,
+                                                    'edit pages'
+                                                )
                                             "
                                             >Make Admin</DangerButton
                                         >
@@ -89,7 +95,12 @@
                                                 'opacity-25':
                                                     isCurrentUser(user),
                                             }"
-                                            @click="setPermissions(user, [])"
+                                            @click="
+                                                removePermission(
+                                                    user,
+                                                    'edit profile'
+                                                )
+                                            "
                                         >
                                             Revoke Profile Editing
                                         </Button>
@@ -97,9 +108,10 @@
                                     <div v-else>
                                         <DangerButton
                                             @click="
-                                                setPermissions(user, [
-                                                    'edit profile',
-                                                ])
+                                                addPermission(
+                                                    user,
+                                                    'edit profile'
+                                                )
                                             "
                                             >Allow Profile Editing</DangerButton
                                         >
@@ -139,9 +151,17 @@ const form = useForm({
     permissions: null,
 });
 
-const setPermissions = (user, permissions) => {
+const addPermission = (user, permission) => {
     form.user = user;
-    form.permissions = permissions;
+    form.permissions = [...new Set([...user.permissions_list, permission])];
+    form.put(route("admin.permissions"), {
+        preserveScroll: true,
+    });
+};
+
+const removePermission = (user, permission) => {
+    form.user = user;
+    form.permissions = user.permissions_list.filter((p) => p !== permission);
     form.put(route("admin.permissions"), {
         preserveScroll: true,
     });
