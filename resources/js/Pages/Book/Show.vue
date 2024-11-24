@@ -5,54 +5,45 @@
         <template #header>
             <SearchInput route-name="books.index" label="Books" />
             <div
-                class="bg-blue-600 dark:bg-gray-800 p-3 my-5 border-2 rounded-lg"
+                class="h-96 bg-blue-600 dark:bg-gray-800 p-3 mt-5 rounded-t-lg relative bg-cover bg-center"
+                :style="{
+                    backgroundImage: book.cover_image?.media_path
+                        ? `url(${book.cover_image.media_path})`
+                        : '',
+                }"
             >
-                <Link :href="removePageParam(pages.path)" class="w-full">
-                    <div class="flex justify-center text-center mb-3">
-                        <h2
-                            class="font-heading text-5xl text-yellow-200 dark:text-gray-100 leading-tight"
-                        >
-                            {{ book.title.toUpperCase() }}
-                        </h2>
-                    </div>
-                    <div class="flex justify-center items-center flex-wrap">
-                        <img
-                            v-if="book.cover_image?.media_path"
-                            class="object-cover max-h-80 rounded-lg mr-2"
-                            :src="book.cover_image.media_path"
-                            alt="cover image"
-                        />
-                        <div class="text-white">
-                            <p v-if="book.author" class="mr-3 font-bold">
-                                by: {{ book.author }}
-                            </p>
-                            <p>
-                                {{ short(book.created_at) }}
-                            </p>
-                            <p>{{ pages.total }} pages</p>
-                            <p>
-                                Read
-                                {{ book.read_count.toLocaleString() }} times
-                            </p>
+                <Link :href="removePageParam(pages.path)" class="w-full h-full">
+                    <div class="flex flex-col justify-between h-full">
+                        <div class="flex justify-center text-center mb-3">
+                            <h2
+                                class="font-heading text-5xl text-blue-600 dark:text-gray-800 leading-tight bg-white/70 backdrop-blur p-2 rounded"
+                            >
+                                {{ book.title.toUpperCase() }}
+                            </h2>
+                        </div>
+                        <div class="flex justify-center items-center flex-wrap">
+                            <div class="bg-white/70 backdrop-blur p-2 rounded">
+                                <p v-if="book.author" class="mr-3 font-bold">
+                                    by: {{ book.author }}
+                                </p>
+                                <p>
+                                    {{ short(book.created_at) }}
+                                </p>
+                                <p>{{ pages.total }} pages</p>
+                                <p>
+                                    Read
+                                    {{ book.read_count.toLocaleString() }} times
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </Link>
-                <div class="flex justify-between">
-                    <div v-if="book.excerpt" class="flex-grow text-center mt-3">
-                        <p
-                            class="text-xl md:text-2xl text-white italic leading-tight"
-                        >
-                            {{ book.excerpt }}
-                        </p>
-                    </div>
-                    <Button
-                        type="button"
-                        class="max-h-12"
-                        :disabled="speaking"
-                        @click="readTitleAndExcerpt"
-                    >
-                        <i class="ri-speak-fill text-lg"></i>
-                    </Button>
+            </div>
+            <div class="flex justify-between bg-gray-300 rounded-b-lg">
+                <div v-if="book.excerpt" class="flex-grow text-center my-3">
+                    <p class="italic leading-tight">
+                        {{ book.excerpt }}
+                    </p>
                 </div>
             </div>
             <div class="p-2 flex justify-end flex-nowrap align-middle">
@@ -61,7 +52,7 @@
                         v-if="canEditPages"
                         type="button"
                         :class="pageSettingsOpen ? '!bg-red-700' : ''"
-                        class="ml-2 rounded-none font-bold px-12"
+                        class="ml-2 font-bold px-12"
                         @click="togglePageSettings"
                     >
                         <span v-if="pageSettingsOpen">Close</span>
@@ -71,11 +62,19 @@
                         v-if="canEditPages"
                         type="button"
                         :class="bookSettingsOpen ? '!bg-red-700' : ''"
-                        class="ml-2 rounded-none font-bold px-12"
+                        class="ml-2 font-bold px-12"
                         @click="toggleBookSettings"
                     >
                         <span v-if="bookSettingsOpen">Close</span>
                         <span v-else>Edit Book</span>
+                    </Button>
+                    <Button
+                        type="button"
+                        class="ml-2"
+                        :disabled="speaking"
+                        @click="readTitleAndExcerpt"
+                    >
+                        <i class="ri-speak-fill text-lg"></i>
                     </Button>
                 </div>
             </div>
