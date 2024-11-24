@@ -9,8 +9,10 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Http\File;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use ProtoneMedia\LaravelFFMpeg\Exporters\EncodingException;
 use ProtoneMedia\LaravelFFMpeg\Support\FFMpeg;
@@ -34,14 +36,12 @@ class StoreVideo implements ShouldQueue
     {
         if (empty($this->filePath) || ! Storage::disk('local')->exists($this->filePath)) {
             Log::error('File path is null, empty, or does not exist', ['filePath' => $this->filePath]);
-
             return;
         }
 
         $tempDir = storage_path('app/temp/');
         if (! is_dir($tempDir) && ! mkdir($tempDir, 0755, true)) {
             Log::error('Failed to create temp directory', ['directory' => $tempDir]);
-
             return;
         }
         $tempFile = $tempDir.uniqid('video_', true).'.mp4';
@@ -64,11 +64,27 @@ class StoreVideo implements ShouldQueue
             $filename = pathinfo($this->path, PATHINFO_FILENAME).'.mp4';
             $dirPath = pathinfo($this->path, PATHINFO_DIRNAME);
 
-            $processedFilePath = retry(3, function () use ($tempFile, $filename, $dirPath) {
-                return Storage::disk('s3')->putFileAs($dirPath, new File($tempFile), $filename);
-            }, 1000);
+            try {
+                $processedFilePath = retry(3, function () use ($tempFile, $filename, $dirPath) {
+                    return Storage::disk('s3')->putFileAs($dirPath, new File($tempFile), $filename);
+                }, 1000);
 
-            Storage::disk('s3')->setVisibility($processedFilePath, 'public');
+                Storage::disk('s3')->setVisibility($processedFilePath, 'public');
+            } catch (Throwable $e) {
+                Mail::raw(
+                    $this->filePath.'" failed to upload to S3. Error: '.$e->getMessage(),
+                    function ($message) {
+                        $message->to('adamjbailey7@gmail.com')
+                            ->subject('S3 Upload Failure');
+                    }
+                );
+                Log::error('Failed to upload video to S3', [
+                    'exception' => $e->getMessage(),
+                    'filePath' => $this->filePath,
+                    'path' => $this->path,
+                ]);
+                throw $e;
+            }
 
             if ($screenshotContents) {
                 $screenshotFilename = pathinfo($this->path, PATHINFO_FILENAME).'_poster.jpg';
@@ -115,5 +131,10 @@ class StoreVideo implements ShouldQueue
                 Storage::disk('local')->delete($this->filePath);
             }
         }
+    }
+
+    public function middleware(): array
+    {
+        return [(new WithoutOverlapping)->expireAfter(180)];
     }
 }
