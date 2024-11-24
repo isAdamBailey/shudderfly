@@ -36,12 +36,14 @@ class StoreVideo implements ShouldQueue
     {
         if (empty($this->filePath) || ! Storage::disk('local')->exists($this->filePath)) {
             Log::error('File path is null, empty, or does not exist', ['filePath' => $this->filePath]);
+
             return;
         }
 
         $tempDir = storage_path('app/temp/');
         if (! is_dir($tempDir) && ! mkdir($tempDir, 0755, true)) {
             Log::error('Failed to create temp directory', ['directory' => $tempDir]);
+
             return;
         }
         $tempFile = $tempDir.uniqid('video_', true).'.mp4';
