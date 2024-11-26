@@ -26,6 +26,10 @@ class StoreVideo implements ShouldQueue
 
     protected string $path;
 
+    public int $tries = 5;
+
+    public int $memory = 1024;
+
     public function __construct(string $filePath, string $path)
     {
         $this->filePath = $filePath;
