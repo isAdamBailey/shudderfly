@@ -4,12 +4,25 @@
         class="rounded-md text-dark-800 border border-gray-300 bg-white shadow-sm"
     >
         <WysiwygButton
+            icon="P"
+            title="toggle paragraph"
+            :is-active="editor.isActive('paragraph')"
+            @click.prevent="editor.chain().focus().setParagraph().run()"
+        />
+        <WysiwygButton
+            icon="H"
+            title="toggle heading"
+            :is-active="editor.isActive('heading', { level: 2 })"
+            @click.prevent="
+                editor.chain().focus().toggleHeading({ level: 2 }).run()
+            "
+        />
+        <WysiwygButton
             icon="B"
             title="toggle bold"
             :is-active="editor.isActive('bold')"
             @click.prevent="editor.chain().focus().toggleBold().run()"
         />
-
         <WysiwygButton
             icon="I"
             title="toggle italic"

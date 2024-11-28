@@ -1,16 +1,16 @@
 <template>
     <button
-        :aria-label="props.title"
-        :title="props.title"
-        class="border-r border-b py-1 px-2"
-        :class="{ 'bg-blue-700 font-bold text-white': props.isActive }"
+        :aria-label="title"
+        :title="title"
+        class="border-r border-b py-1 px-4"
+        :class="{ 'bg-blue-700 font-bold text-white': isActive }"
     >
-        <span class="font-bold">{{ props.icon }}</span>
+        <span class="font-bold">{{ icon }}</span>
     </button>
 </template>
 
 <script setup>
-const props = defineProps({
+defineProps({
     icon: String,
     isActive: Boolean,
     title: {

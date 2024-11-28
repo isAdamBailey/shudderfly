@@ -123,16 +123,17 @@ const makeCoverPage = () => {
             <div class="mb-4">
                 <Button
                     :is-active="mediaOption === 'upload'"
-                    class="mr-2"
+                    class="rounded-none w-24 justify-center"
                     @click.prevent="selectUpload"
                 >
-                    Upload Media
+                    Upload
                 </Button>
                 <Button
                     :is-active="mediaOption === 'link'"
+                    class="rounded-none w-24 justify-center"
                     @click.prevent="selectLink"
                 >
-                    YouTube Link
+                    YouTube
                 </Button>
             </div>
             <div class="flex flex-wrap">
@@ -171,7 +172,7 @@ const makeCoverPage = () => {
                     </div>
 
                     <Button
-                        class="mt-2 mr-2"
+                        class="mt-2"
                         type="button"
                         @click.prevent="selectNewImage"
                     >
@@ -223,7 +224,7 @@ const makeCoverPage = () => {
                     :class="{ 'opacity-25': pageForm.processing }"
                     :disabled="pageForm.processing"
                 >
-                    Update Page!
+                    <span class="text-xl">Update Page</span>
                 </Button>
             </div>
         </form>

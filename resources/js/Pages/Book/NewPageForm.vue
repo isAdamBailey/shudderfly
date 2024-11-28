@@ -125,16 +125,17 @@ const submit = async () => {
             <div class="mb-4">
                 <Button
                     :is-active="mediaOption === 'upload'"
-                    class="mr-2"
+                    class="rounded-none w-24 justify-center"
                     @click.prevent="selectUpload"
                 >
-                    Upload Media
+                    Upload
                 </Button>
                 <Button
                     :is-active="mediaOption === 'link'"
+                    class="rounded-none w-24 justify-center"
                     @click.prevent="selectLink"
                 >
-                    YouTube Link
+                    YouTube
                 </Button>
             </div>
             <div class="flex flex-wrap">
@@ -239,7 +240,7 @@ const submit = async () => {
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing || v$.$error"
                 >
-                    Create Page!
+                    <span class="text-xl">Create Page!</span>
                 </Button>
             </div>
         </form>
