@@ -31,7 +31,7 @@ const rules = computed(() => {
         if (!image) {
             return true;
         }
-        return image.size < 40714055; // 40MB
+        return image.size < 62914560; // 60MB
     };
     const atLeastOneRequired = () => {
         return (
@@ -213,7 +213,7 @@ const submit = async () => {
                 "
                 class="text-red-600"
             >
-                That video is tooo biig (over 40MB hurts my belly)
+                That video should be less than 60 MB.
             </p>
             <p
                 v-if="v$.$errors.length && v$.form.image.required.$invalid"
