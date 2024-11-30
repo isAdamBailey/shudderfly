@@ -35,6 +35,12 @@ has {{ number_format($mostPages->pages_count) }} pages.
 <x-email-hyperlink href="{{url('/book/' . $leastPages->slug)}}">{{ $leastPages->title }}</x-email-hyperlink>
 only has {{ $leastPages->pages_count }} pages.
 
+## Total Number of Books Per User
+
+@foreach ($bookCounts as $userName => $count)
+**{{ $userName }}**, Books: **{{ $count }}**
+@endforeach
+
 <x-mail::button url="{{ config('app.url') }}">
     Go To {{ config("app.name") }}
 </x-mail::button>

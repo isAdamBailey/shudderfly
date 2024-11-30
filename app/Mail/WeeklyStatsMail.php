@@ -32,10 +32,12 @@ class WeeklyStatsMail extends Mailable
 
     public Collection $pagesThisWeek;
 
+    public array $bookCounts;
+
     /**
      * Create a new message instance.
      */
-    public function __construct(Model $user, int $totalBooks, int $totalPages, Model $leastPages, Model $mostPages, Model $mostRead, Model $leastRead, Collection $booksThisWeek, Collection $pagesThisWeek)
+    public function __construct(Model $user, int $totalBooks, int $totalPages, Model $leastPages, Model $mostPages, Model $mostRead, Model $leastRead, Collection $booksThisWeek, Collection $pagesThisWeek, array $bookCounts)
     {
         $this->user = $user;
         $this->totalBooks = $totalBooks;
@@ -46,6 +48,8 @@ class WeeklyStatsMail extends Mailable
         $this->leastRead = $leastRead;
         $this->booksThisWeek = $booksThisWeek;
         $this->pagesThisWeek = $pagesThisWeek;
+        $this->bookCounts = $bookCounts;
+
     }
 
     /**
@@ -73,6 +77,7 @@ class WeeklyStatsMail extends Mailable
                 'leastRead' => $this->leastRead,
                 'booksThisWeek' => $this->booksThisWeek,
                 'pagesThisWeek' => $this->pagesThisWeek,
+                'bookCounts' => $this->bookCounts,
             ],
         );
     }

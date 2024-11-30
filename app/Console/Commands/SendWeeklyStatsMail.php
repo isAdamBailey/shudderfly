@@ -53,6 +53,11 @@ class SendWeeklyStatsMail extends Command
             ->orderBy('created_at')
             ->first();
 
+        $bookCounts = [];
+        foreach ($users as $user) {
+            $bookCounts[$user->name] = Book::where('author', $user->name)->count();
+        }
+
         $oneWeekAgo = Carbon::now()->subWeek();
         $booksThisWeek = Book::where('created_at', '>=', $oneWeekAgo)->get();
         $pagesThisWeek = Page::where('created_at', '>=', $oneWeekAgo)->get();
@@ -67,7 +72,8 @@ class SendWeeklyStatsMail extends Command
                 $mostRead,
                 $leastRead,
                 $booksThisWeek,
-                $pagesThisWeek
+                $pagesThisWeek,
+                $bookCounts
             ));
         }
     }
