@@ -8,7 +8,7 @@ import { ref } from "vue";
 import Close from "@/Components/svg/Close.vue";
 import StatsCard from "@/Pages/Dashboard/StatsCard.vue";
 
-const props = defineProps({
+defineProps({
     users: { type: Object, required: true },
     stats: { type: Object, required: true },
     categories: { type: Object, required: true },

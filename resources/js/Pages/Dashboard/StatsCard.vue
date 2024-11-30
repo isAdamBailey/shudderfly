@@ -13,42 +13,6 @@
             </p>
         </div>
         <div class="border-b mt-4 flex justify-between">
-            <p>Most popular book</p>
-            <Link
-                class="mb-4 font-bold hover:text-blue-400 underline"
-                :href="route('books.show', props.stats.mostRead.slug)"
-            >
-                {{ props.stats.mostRead.title }}
-            </Link>
-            <p>Read {{ countAddS(props.stats.mostRead.read_count, "time") }}</p>
-        </div>
-        <div class="border-b mt-4 flex justify-between">
-            <p>Least popular book</p>
-            <Link
-                class="mb-4 font-bold hover:text-blue-400 underline"
-                :href="route('books.show', props.stats.leastRead.slug)"
-            >
-                {{ props.stats.leastRead.title }}
-            </Link>
-            <p>
-                Read
-                {{ countAddS(props.stats.leastRead.read_count, "time") }}
-            </p>
-        </div>
-        <div class="border-b mt-4 flex justify-between">
-            <p>Most popular page</p>
-            <Link
-                class="mb-4 font-bold hover:text-blue-400 underline"
-                :href="route('pages.show', props.stats.mostReadPage.id)"
-            >
-                {{ props.stats.mostReadPage.id }}
-            </Link>
-            <p>
-                Read
-                {{ countAddS(props.stats.mostReadPage.read_count, "time") }}
-            </p>
-        </div>
-        <div class="border-b mt-4 flex justify-between">
             <p>Book with most pages</p>
             <Link
                 class="mb-4 font-bold hover:text-blue-400 underline"
