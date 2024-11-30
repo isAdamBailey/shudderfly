@@ -32,7 +32,12 @@
                                 <p>{{ pages.total }} pages</p>
                                 <p>
                                     Read
-                                    {{ book.read_count.toLocaleString() }} times
+                                    {{
+                                        Math.round(
+                                            book.read_count
+                                        ).toLocaleString()
+                                    }}
+                                    times
                                 </p>
                             </div>
                         </div>
@@ -121,7 +126,7 @@
             >
                 <Link
                     class="w-full min-h-28 max-h-36"
-                    :href="route('pages.show', { page, increment: true })"
+                    :href="route('pages.show', { page })"
                     @click="setPageLoading(page)"
                 >
                     <div

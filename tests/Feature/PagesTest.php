@@ -57,7 +57,7 @@ class PagesTest extends TestCase
         $book = Book::factory()->has(Page::factory())->create();
         $page = $book->pages->first();
 
-        $this->get(route('pages.show', [$page, 'increment' => true]))->assertInertia(
+        $this->get(route('pages.show', $page))->assertInertia(
             fn (Assert $page) => $page
                 ->component('Page/Show')
                 ->has('page.content')

@@ -101,7 +101,7 @@ class BookController extends Controller
     {
         $canEditPages = auth()->user()->can('edit pages');
         $canIncrement = auth()->user()->cannot('edit profile')
-            && $request->input('increment');
+            && !$request->has('page');
 
         if ($canIncrement) {
             IncrementBookReadCount::dispatch($book);

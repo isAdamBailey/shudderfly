@@ -114,10 +114,10 @@ class BooksTest extends TestCase
 
         $book = Book::factory()->has(Page::factory(27))->create();
 
-        $this->get(route('books.show', [$book, 'increment' => true]))->assertInertia(
+        $this->get(route('books.show', $book))->assertInertia(
             fn (Assert $page) => $page
                 ->component('Book/Show')
-                ->url('/book/'.$book->slug.'?increment=1')
+                ->url('/book/'.$book->slug)
                 ->has('book.title')
                 ->has('book.excerpt')
                 ->has('book.author')

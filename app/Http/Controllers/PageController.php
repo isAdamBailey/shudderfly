@@ -59,8 +59,7 @@ class PageController extends Controller
     public function show(Page $page, Request $request): Response
     {
         $canEditPages = auth()->user()->can('edit pages');
-        $canIncrement = auth()->user()->cannot('edit profile')
-            && $request->input('increment');
+        $canIncrement = auth()->user()->cannot('edit profile');
 
         if ($canIncrement) {
             IncrementPageReadCount::dispatch($page);
