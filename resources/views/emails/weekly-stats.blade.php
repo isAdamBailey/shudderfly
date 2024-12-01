@@ -38,7 +38,9 @@ only has {{ $leastPages->pages_count }} pages.
 ## Total Number of Books Per User
 
 @foreach ($bookCounts as $userName => $count)
-**{{ $userName }}**, Books: **{{ $count }}**
+<p>
+    {{ $userName }}: **{{ $count }}**
+</p>
 @endforeach
 
 <x-mail::button url="{{ config('app.url') }}">

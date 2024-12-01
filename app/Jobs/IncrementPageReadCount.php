@@ -21,30 +21,25 @@ class IncrementPageReadCount implements ShouldQueue
     }
 
     /**
-     * Execute the job.
+     * Handle incrementing the pages based on popularity of the page
      */
     public function handle(): void
     {
         if ($this->page->read_count === 0.0) {
             $this->page->increment('read_count');
-
             return;
         }
 
-        // if one of the highest count, do not increment
-        $maxReadCount = Page::max('read_count');
-        $pagesWithMaxReadCount = Page::where('read_count', $maxReadCount)->get();
-        if ($pagesWithMaxReadCount->contains($this->page)) {
+        // highest read pages
+        $topPages = Page::orderBy('read_count', 'desc')->take(15)->pluck('id')->toArray();
+
+        // If the page is in the top 3, don't increment the read count
+        if (in_array($this->page->id, array_slice($topPages, 0, 3))) {
             return;
         }
 
-        // if in the top count, increment by 0.1, else increment by 1 to let newer pages catch up
-        $topPages = Page::orderBy('read_count', 'desc')->take(30)->pluck('id')->toArray();
-
-        if (! in_array($this->page->id, $topPages)) {
-            $this->page->increment('read_count');
-        } else {
-            $this->page->increment('read_count', 0.1);
-        }
+        // If the page is highly read, we only want to increment the read count by 0.1
+        $incrementValue = in_array($this->page->id, $topPages) ? 0.1 : 1;
+        $this->page->increment('read_count', $incrementValue);
     }
 }
