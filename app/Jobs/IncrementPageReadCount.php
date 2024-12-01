@@ -27,6 +27,7 @@ class IncrementPageReadCount implements ShouldQueue
     {
         if ($this->page->read_count === 0.0) {
             $this->page->increment('read_count');
+
             return;
         }
 

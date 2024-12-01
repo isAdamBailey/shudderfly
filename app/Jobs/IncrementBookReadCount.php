@@ -27,6 +27,7 @@ class IncrementBookReadCount implements ShouldQueue
     {
         if ($this->book->read_count === 0.0) {
             $this->book->increment('read_count');
+
             return;
         }
 
