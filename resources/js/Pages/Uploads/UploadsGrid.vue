@@ -126,9 +126,9 @@ function setUploadLoading(photo) {
     </div>
     <div v-else class="flex flex-col items-center mt-10">
         <h2
-            class="font-semibold text-2xl text-gray-900 dark:text-gray-100 leading-tight"
+            class="mb-8 font-semibold text-2xl text-gray-900 dark:text-gray-100 leading-tight"
         >
-            I don't see anything here
+            I don't see any uploads like that
         </h2>
         <ManEmptyCircle />
     </div>

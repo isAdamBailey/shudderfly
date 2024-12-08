@@ -37,7 +37,7 @@
                 />
             </div>
         </template>
-        <div class="mb-10">
+        <div v-if="!areAllBooksEmpty" class="mb-10">
             <BooksGrid
                 v-if="!searchCategories"
                 :category="{ name: 'forgotten' }"
@@ -54,6 +54,14 @@
                 label="Your favorite books!"
             />
         </div>
+        <div v-else class="flex flex-col items-center mt-10">
+            <h2
+                class="mb-8 font-semibold text-2xl text-gray-900 dark:text-gray-100 leading-tight"
+            >
+                I don't see any books like that
+            </h2>
+            <ManEmptyCircle />
+        </div>
     </BreezeAuthenticatedLayout>
 </template>
 
@@ -66,6 +74,7 @@ import { ref, computed } from "vue";
 import NewBookForm from "@/Pages/Books/NewBookForm.vue";
 import Button from "@/Components/Button.vue";
 import { usePermissions } from "@/composables/permissions";
+import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 
 const { canEditPages } = usePermissions();
 
@@ -87,6 +96,12 @@ const props = defineProps({
 const showNewBookForm = ref(false);
 const workingCategories = computed(() => {
     return props.searchCategories || props.categories;
+});
+
+const areAllBooksEmpty = computed(() => {
+    return workingCategories.value.every(
+        (category) => category.books?.length === 0
+    );
 });
 
 const title = computed(() => {
