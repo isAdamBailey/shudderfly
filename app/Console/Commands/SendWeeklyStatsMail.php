@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Mail\WeeklyStatsMail;
 use App\Models\Book;
 use App\Models\Page;
+use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail;
@@ -54,7 +55,7 @@ class SendWeeklyStatsMail extends Command
             ->first();
 
         $bookCounts = [];
-        foreach ($users as $user) {
+        foreach (User::all() as $user) {
             $bookCounts[$user->name] = Book::where('author', $user->name)->count();
         }
 
