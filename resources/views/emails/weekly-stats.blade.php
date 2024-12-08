@@ -39,7 +39,7 @@ only has {{ $leastPages->pages_count }} pages.
 
 @foreach ($bookCounts as $userName => $count)
 <p>
-    {{ $userName }}: **{{ $count }}**
+    {{ $userName }}: <strong>{{ $count }}</strong>
 </p>
 @endforeach
 
