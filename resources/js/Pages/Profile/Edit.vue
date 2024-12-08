@@ -5,10 +5,31 @@ import UpdatePasswordForm from "./Partials/UpdatePasswordForm.vue";
 import UpdateProfileInformationForm from "./Partials/UpdateProfileInformationForm.vue";
 import ContactAdminsForm from "./Partials/ContactAdminsForm.vue";
 import VoiceSettingsForm from "./Partials/VoiceSettingsForm.vue";
-import { Head } from "@inertiajs/vue3";
+import { Head, usePage } from "@inertiajs/vue3";
 import { usePermissions } from "@/composables/permissions";
+import { computed, onMounted, ref } from "vue";
+import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import Close from "@/Components/svg/Close.vue";
 
+const { speak } = useSpeechSynthesis();
 const { canEditProfile } = usePermissions();
+
+const close = ref(false);
+
+const title = computed(() => {
+    return ` Hi ${
+        usePage().props.auth.user.name
+    }! We love you! Welcome to your profile page`;
+});
+
+onMounted(() => {
+    speak(title.value);
+});
+
+const closeMessage = () => {
+    speak("fart");
+    close.value = true;
+};
 
 defineProps({
     mustVerifyEmail: Boolean,
@@ -29,17 +50,27 @@ defineProps({
         </template>
 
         <div class="py-10">
+            <Transition>
+                <div
+                    v-if="!close"
+                    class="mx-6 mb-3 p-6 flex justify-between bg-white dark:bg-gray-800 sm:rounded-lg"
+                >
+                    <h2
+                        class="font-semibold text-lg text-gray-900 dark:text-gray-100 leading-tight w-3/4 md:w-full"
+                    >
+                        {{ title }} 😘❤️
+                    </h2>
+                    <Close
+                        v-if="!close"
+                        class="text-gray-900 dark:text-gray-100"
+                        @click="closeMessage"
+                    />
+                </div>
+            </Transition>
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
                 <div
                     class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg"
                 >
-                    <div
-                        v-if="!canEditProfile"
-                        class="mb-10 text-gray-700 dark:text-gray-100"
-                    >
-                        Hi {{ $page.props.auth.user.name }}! Mommy and daddy
-                        love you! 😘
-                    </div>
                     <ContactAdminsForm />
                 </div>
                 <div

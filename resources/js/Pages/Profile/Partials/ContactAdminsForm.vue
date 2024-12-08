@@ -17,22 +17,26 @@ import ContactAdminsCommButtons from "@/Pages/Profile/Partials/ContactAdminsComm
             <ContactAdminsCommButtons
                 title="Dont feel very good today?"
                 message="I don't feel very good today."
+                icon="ri-emotion-sad-fill"
             />
 
             <ContactAdminsCommButtons
                 title="Feel excited today?"
                 message="I feel very excited today!"
+                icon="ri-emotion-laugh-fill"
             />
         </div>
         <div>
             <ContactAdminsCommButtons
                 title="Do you feel really silly today?"
                 message="I feel really silly today!"
+                icon="ri-emotion-happy-fill"
             />
 
             <ContactAdminsCommButtons
                 title="Love mom and dad?"
                 message="I love you mom and dad!"
+                icon="ri-hearts-fill"
             />
         </div>
     </div>

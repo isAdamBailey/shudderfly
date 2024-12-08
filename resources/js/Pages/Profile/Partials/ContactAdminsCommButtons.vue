@@ -16,6 +16,10 @@ defineProps({
         type: String,
         required: true,
     },
+    icon: {
+        type: String,
+        default: "ri-hearts-fill",
+    },
 });
 
 function sendEmail(message) {
@@ -27,8 +31,8 @@ function sendEmail(message) {
 </script>
 
 <template>
-    <div class="flex align-bottom mb-3 text-gray-700 dark:text-gray-100">
-        <i class="ri-emotion-sad-fill text-4xl mr-3"></i
+    <div class="flex mb-3 text-gray-700 dark:text-gray-100">
+        <i :class="`${icon} text-5xl mr-3 text-red-500`"></i
         ><span class="text-2xl font-bold">{{ title }} Tell them!</span>
     </div>
     <div>
