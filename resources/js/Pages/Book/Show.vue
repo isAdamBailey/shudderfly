@@ -156,6 +156,11 @@
             </div>
         </div>
         <div ref="infiniteScroll"></div>
+        <SimilarBooks
+            v-if="similarBooks"
+            :books="similarBooks"
+            label="You might also like these books"
+        />
         <ScrollTop />
     </BreezeAuthenticatedLayout>
 </template>
@@ -175,6 +180,7 @@ import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
+import SimilarBooks from "@/Pages/Book/SimilarBooks.vue";
 
 const { canEditPages } = usePermissions();
 const { short } = useDate();
@@ -185,6 +191,7 @@ const props = defineProps({
     pages: { type: Object, required: true },
     authors: { type: Array, required: true },
     categories: { type: Array, default: null },
+    similarBooks: { type: Array, default: null },
 });
 
 let pageSettingsOpen = ref(false);
@@ -213,7 +220,7 @@ const toggleBookSettings = () => {
 
 function fetchPages() {
     const nextPageUrl = props.pages.next_page_url;
-    if (fetchedPages.has(nextPageUrl)) {
+    if (!nextPageUrl || fetchedPages.has(nextPageUrl)) {
         return;
     }
     fetchedPages.add(nextPageUrl);
