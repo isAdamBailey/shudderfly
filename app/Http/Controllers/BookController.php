@@ -167,28 +167,22 @@ class BookController extends Controller
             explode(' ', $book->excerpt)
         ));
 
-        $words = array_filter($words, fn ($word) => ! is_numeric($word) && ! empty($word));
+        $words = array_filter($words, fn($word) => !is_numeric($word) && !empty($word));
 
-        $singleMatch = false;
-        foreach ($words as $word) {
-            if (Book::query()->where('id', '!=', $book->id)->where('title', 'LIKE', '%'.$word.'%')->exists()) {
-                $singleMatch = true;
-                break;
-            }
-        }
-
-        if (! $singleMatch) {
+        if (empty($words)) {
             return null;
         }
 
-        $query = Book::query()->where('id', '!=', $book->id);
+        $query = Book::query()
+            ->where('id', '!=', $book->id)
+            ->where(function ($q) use ($words) {
+                foreach ($words as $word) {
+                    $q->orWhere('title', 'LIKE', '%'.$word.'%');
+                }
+            });
 
-        $query->where(function ($q) use ($words) {
-            foreach ($words as $word) {
-                $q->orWhere('title', 'LIKE', '%'.$word.'%');
-            }
-        });
+        $similarBooks = $query->get();
 
-        return $query->get();
+        return $similarBooks->isEmpty() ? null : $similarBooks;
     }
 }
