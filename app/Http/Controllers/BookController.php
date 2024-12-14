@@ -163,8 +163,8 @@ class BookController extends Controller
     private function getSimilarBooks(Book $book): ?Collection
     {
         $words = array_unique(array_merge(
-            explode(' ', $book->title),
-            explode(' ', $book->excerpt)
+            explode(' ', strtolower($book->title)),
+            explode(' ', strtolower($book->excerpt))
         ));
 
         $stopWords = ['all', 'the', 'on', 'in', 'and', 'or', 'of', 'to', 'a', 'an'];
@@ -178,7 +178,7 @@ class BookController extends Controller
             ->with('coverImage')
             ->where(function ($q) use ($words) {
                 foreach ($words as $word) {
-                    $q->orWhere('title', 'LIKE', '%'.$word.'%');
+                    $q->orWhereRaw('LOWER(title) LIKE ?', ['%'.$word.'%']);
                 }
             });
 
