@@ -167,8 +167,8 @@ class BookController extends Controller
             explode(' ', $book->excerpt)
         ));
 
-        $words = array_filter($words, fn($word) => !is_numeric($word) && !empty($word));
-
+        $stopWords = ['all', 'the', 'on', 'in', 'and', 'or', 'of', 'to', 'a', 'an'];
+        $words = array_filter($words, fn ($word) => ! is_numeric($word) && ! empty($word) && ! in_array(strtolower($word), $stopWords));
         if (empty($words)) {
             return null;
         }
