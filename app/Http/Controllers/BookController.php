@@ -109,6 +109,26 @@ class BookController extends Controller
 
         $pages = $book->pages()->paginate();
 
+        // when at the last page, return all books that contain words
+        // from the current books title or excerpt in their title
+        $similarBooks = null;
+        if ($pages->currentPage() == $pages->lastPage()) {
+            $words = array_unique(array_merge(
+                explode(' ', $book->title),
+                explode(' ', $book->excerpt)
+            ));
+
+            $words = array_filter($words, fn($word) => !is_numeric($word));
+
+            $query = Book::query()->where('id', '!=', $book->id);
+            $query->where(function ($q) use ($words) {
+                foreach ($words as $word) {
+                    $q->orWhere('title', 'LIKE', '%'.$word.'%');
+                }
+            });
+            $similarBooks = $query->where('id', '!=', $book->id)->get();
+        }
+
         $categories = $canEditPages
             ? Category::all()->map->only(['id', 'name'])->sortBy('name')->values()->toArray()
             : null;
@@ -122,6 +142,7 @@ class BookController extends Controller
             'pages' => $pages,
             'authors' => $authors,
             'categories' => $categories,
+            'similarBooks' => $similarBooks,
         ]);
     }
 
