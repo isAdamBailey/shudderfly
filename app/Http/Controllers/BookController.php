@@ -175,6 +175,7 @@ class BookController extends Controller
 
         $query = Book::query()
             ->where('id', '!=', $book->id)
+            ->with('coverImage')
             ->where(function ($q) use ($words) {
                 foreach ($words as $word) {
                     $q->orWhere('title', 'LIKE', '%'.$word.'%');
