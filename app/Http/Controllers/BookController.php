@@ -9,6 +9,7 @@ use App\Models\Book;
 use App\Models\Category;
 use App\Models\User;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -110,23 +111,9 @@ class BookController extends Controller
         $pages = $book->pages()->paginate();
 
         // when at the last page, return all books that contain words
-        // from the current books title or excerpt in their title
         $similarBooks = null;
         if ($pages->currentPage() == $pages->lastPage()) {
-            $words = array_unique(array_merge(
-                explode(' ', $book->title),
-                explode(' ', $book->excerpt)
-            ));
-
-            $words = array_filter($words, fn($word) => !is_numeric($word));
-
-            $query = Book::query()->where('id', '!=', $book->id);
-            $query->where(function ($q) use ($words) {
-                foreach ($words as $word) {
-                    $q->orWhere('title', 'LIKE', '%'.$word.'%');
-                }
-            });
-            $similarBooks = $query->where('id', '!=', $book->id)->get();
+            $similarBooks = $this->getSimilarBooks($book);
         }
 
         $categories = $canEditPages
@@ -168,5 +155,40 @@ class BookController extends Controller
         $book->delete();
 
         return redirect(route('books.index'));
+    }
+
+    /**
+     * Get books with similar words in title or excerpt.
+     */
+    private function getSimilarBooks(Book $book): ?Collection
+    {
+        $words = array_unique(array_merge(
+            explode(' ', $book->title),
+            explode(' ', $book->excerpt)
+        ));
+
+        $words = array_filter($words, fn ($word) => ! is_numeric($word) && ! empty($word));
+
+        $singleMatch = false;
+        foreach ($words as $word) {
+            if (Book::query()->where('id', '!=', $book->id)->where('title', 'LIKE', '%'.$word.'%')->exists()) {
+                $singleMatch = true;
+                break;
+            }
+        }
+
+        if (! $singleMatch) {
+            return null;
+        }
+
+        $query = Book::query()->where('id', '!=', $book->id);
+
+        $query->where(function ($q) use ($words) {
+            foreach ($words as $word) {
+                $q->orWhere('title', 'LIKE', '%'.$word.'%');
+            }
+        });
+
+        return $query->get();
     }
 }
