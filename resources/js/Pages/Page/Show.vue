@@ -71,7 +71,7 @@
                     class="m-5 flex justify-between bg-blue-200 dark:bg-gray-300 md:rounded-lg p-3 my-3"
                 >
                     <div
-                        class="px-3 py-3 text-lg text-left"
+                        class="page-content px-3 py-3 text-lg text-left"
                         v-html="page.content"
                     ></div>
                     <div class="ml-3 mt-3 text-right">
