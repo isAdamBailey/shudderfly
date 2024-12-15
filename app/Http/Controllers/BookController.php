@@ -167,8 +167,12 @@ class BookController extends Controller
             explode(' ', strtolower($book->excerpt))
         ));
 
-        $stopWords = ['all', 'the', 'on', 'in', 'and', 'or', 'of', 'to', 'a', 'an'];
-        $words = array_filter($words, fn ($word) => ! is_numeric($word) && ! empty($word) && ! in_array(strtolower($word), $stopWords));
+        $ignoreWords = [
+            'all', 'the', 'on', 'in', 'and', 'or', 'of', 'to', 'a', 'an', 'up', 'down', 'is', 'it', 'as', 'at', 'by',
+            'for', 'from', 'with', 'be', 'are', 'were', 'was', 'will', 'can', 'may', 'have', 'has', 'had', 'do', 'does',
+            'did', 'not', 'no', 'so', 'if', 'but', 'how', 'why', 'what', 'who',
+        ];
+        $words = array_filter($words, fn ($word) => ! is_numeric($word) && ! empty($word) && ! in_array(strtolower($word), $ignoreWords));
         if (empty($words)) {
             return null;
         }
