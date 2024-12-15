@@ -51,7 +51,7 @@
 <script setup>
 import LazyLoader from "@/Components/LazyLoader.vue";
 import { Link } from "@inertiajs/vue3";
-import { computed } from "vue";
+import { computed, reactive } from "vue";
 
 const props = defineProps({
     books: {
@@ -65,7 +65,9 @@ const props = defineProps({
 });
 
 const workingBooks = computed(() => {
-    return props.books?.map((book) => ({ ...book, loading: false })) || [];
+    return (
+        props.books?.map((book) => reactive({ ...book, loading: false })) || []
+    );
 });
 
 function setBookLoading(book) {
