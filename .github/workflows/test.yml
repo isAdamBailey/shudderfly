@@ -5,6 +5,9 @@ on:
     branches:
       - main
 
+env:
+  NODE_ENV: production
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -13,12 +16,10 @@ jobs:
       mysql:
         image: mysql:latest
         env:
-          MYSQL_ROOT_PASSWORD: password
-          MYSQL_ROOT_HOST: "%"
+          MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: testing
-          MYSQL_USER: root
-          MYSQL_PASSWORD: password
-          MYSQL_ALLOW_EMPTY_PASSWORD: 1
+          MYSQL_USER: appuser
+          MYSQL_PASSWORD: apppassword
         options: >-
           --health-cmd="mysqladmin ping --silent"
           --health-interval=10s
@@ -29,6 +30,14 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v2
 
+      - name: Cache Node.js modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
@@ -37,7 +46,7 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run vitest tests
+      - name: Run Vitest tests
         env:
           NODE_ENV: test
         run: npm run vitest -- --passWithNoTests
@@ -47,24 +56,34 @@ jobs:
         with:
           php-version: '8.3'
 
+      - name: Cache Composer packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.composer/cache
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
       - name: Install PHP dependencies
         run: composer install
 
       - name: Prepare test database
         env:
           DB_CONNECTION: mysql
-          DB_DATABASE: testing
-          DB_USERNAME: sail
-          DB_PASSWORD: password
           DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: testing
+          DB_USERNAME: appuser
+          DB_PASSWORD: apppassword
         run: php artisan migrate --force
 
       - name: Run phpunit tests
         env:
           APP_ENV: testing
           DB_CONNECTION: mysql
-          DB_DATABASE: testing
-          DB_USERNAME: user
-          DB_PASSWORD: password
           DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: testing
+          DB_USERNAME: appuser
+          DB_PASSWORD: apppassword
         run: ./vendor/bin/phpunit
