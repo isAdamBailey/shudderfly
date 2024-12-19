@@ -9,6 +9,22 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      mysql:
+        image: mysql:latest
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_ROOT_HOST: "%"
+          MYSQL_DATABASE: testing
+          MYSQL_USER: root
+          MYSQL_PASSWORD: password
+          MYSQL_ALLOW_EMPTY_PASSWORD: 1
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v2
@@ -22,7 +38,9 @@ jobs:
         run: npm install
 
       - name: Run vitest tests
-        run: npx vitest
+        env:
+          NODE_ENV: test
+        run: npm run vitest -- --passWithNoTests
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
@@ -32,5 +50,21 @@ jobs:
       - name: Install PHP dependencies
         run: composer install
 
+      - name: Prepare test database
+        env:
+          DB_CONNECTION: mysql
+          DB_DATABASE: testing
+          DB_USERNAME: sail
+          DB_PASSWORD: password
+          DB_HOST: 127.0.0.1
+        run: php artisan migrate --force
+
       - name: Run phpunit tests
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: mysql
+          DB_DATABASE: testing
+          DB_USERNAME: user
+          DB_PASSWORD: password
+          DB_HOST: 127.0.0.1
         run: ./vendor/bin/phpunit
