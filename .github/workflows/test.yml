@@ -81,7 +81,7 @@ jobs:
         env:
           APP_ENV: testing
           DB_CONNECTION: mysql
-          DB_HOST: 127.0.0.1
+          DB_HOST: mysql
           DB_PORT: 3306
           DB_DATABASE: testing
           DB_USERNAME: appuser
@@ -117,7 +117,7 @@ jobs:
           APP_ENV: testing
           NODE_ENV: production
           DB_CONNECTION: mysql
-          DB_HOST: 127.0.0.1
+          DB_HOST: mysql
           DB_PORT: 3306
           DB_DATABASE: testing
           DB_USERNAME: appuser
