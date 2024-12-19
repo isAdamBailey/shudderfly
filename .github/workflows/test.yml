@@ -17,6 +17,12 @@ jobs:
           MYSQL_DATABASE: testing
           MYSQL_USER: appuser
           MYSQL_PASSWORD: apppassword
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-start-period=20s
+          --health-timeout=5s
+          --health-retries=3
 
     steps:
       - name: Check out repository
@@ -53,6 +59,20 @@ jobs:
 
       - name: Install PHP dependencies
         run: composer install
+
+      - name: Wait for MySQL
+        run: |
+          for i in {1..10}; do
+            if mysqladmin ping -h 127.0.0.1 -u root --password=root &> /dev/null; then
+              echo "MySQL is ready!";
+              break;
+            fi
+            echo "Waiting for MySQL...";
+            sleep 5;
+          done
+
+      - name: Clear Laravel cache
+        run: php artisan config:clear
 
       - name: Generate Ziggy routes
         run: php artisan ziggy:generate
