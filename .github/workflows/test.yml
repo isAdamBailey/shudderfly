@@ -38,9 +38,6 @@ jobs:
       - name: Install Node.js dependencies
         run: npm install
 
-      - name: Build Frontend Assets
-        run: npm run build
-
       - name: Cache Composer packages
         uses: actions/cache@v3
         with:
@@ -56,6 +53,15 @@ jobs:
 
       - name: Install PHP dependencies
         run: composer install
+
+      - name: Generate Ziggy routes
+        run: php artisan ziggy:generate
+
+      - name: Build Frontend Assets
+        env:
+          APP_ENV: production
+          NODE_ENV: production
+        run: npm run build
 
       - name: Run Migrations
         env:
