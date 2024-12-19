@@ -29,6 +29,28 @@ jobs:
       - name: Install Node.js dependencies
         run: npm install
 
+      - name: Cache Composer packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.composer/cache
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - name: Install PHP dependencies
+        run: composer install
+
+      - name: Clear Laravel Cache
+        run: php artisan config:clear
+
+      - name: Generate Ziggy Routes
+        run: php artisan ziggy:generate
+
       - name: Build Frontend Assets
         env:
           APP_ENV: production
