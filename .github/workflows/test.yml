@@ -61,18 +61,6 @@ jobs:
       - name: Install PHP dependencies
         run: composer install
 
-      - name: Wait for MySQL
-        run: |
-          for i in {1..12}; do
-            if mysqladmin ping -h 127.0.0.1 -u root --password=root &> /dev/null; then
-              echo "MySQL is ready!";
-              break;
-            fi
-            echo "Waiting for MySQL...";
-            sleep 5;
-          done
-          mysqladmin ping -h 127.0.0.1 -u root --password=root
-
       - name: Test MySQL Connection
         run: |
           mysql -h 127.0.0.1 -uroot -proot -e "SHOW DATABASES;"
