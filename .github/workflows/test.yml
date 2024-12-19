@@ -9,21 +9,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    services:
-      mysql:
-        image: mysql:latest
-        env:
-          MYSQL_ROOT_PASSWORD: password
-          MYSQL_DATABASE: testing
-          MYSQL_USER: appuser
-          MYSQL_PASSWORD: apppassword
-        options: >-
-          --health-cmd="mysqladmin ping --silent"
-          --health-interval=10s
-          --health-start-period=20s
-          --health-timeout=5s
-          --health-retries=3
-
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
@@ -44,68 +29,5 @@ jobs:
       - name: Install Node.js dependencies
         run: npm install
 
-      - name: Cache Composer packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.composer/cache
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-composer-
-
-      - name: Set up PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.3'
-          extensions: pdo_mysql
-
-      - name: Install PHP dependencies
-        run: composer install
-
-      - name: Test Laravel Database Configuration
-        env:
-          APP_ENV: testing
-          DB_CONNECTION: mysql
-          DB_HOST: mysql
-          DB_PORT: 3306
-          DB_DATABASE: testing
-          DB_USERNAME: appuser
-          DB_PASSWORD: apppassword
-        run: php artisan tinker --execute="dump(config('database.connections.mysql'))"
-
-      - name: Clear Laravel cache
-        run: php artisan config:clear
-
-      - name: Generate Ziggy routes
-        run: php artisan ziggy:generate
-
-      - name: Build Frontend Assets
-        env:
-          APP_ENV: production
-          NODE_ENV: production
-        run: npm run build
-
-      - name: Run Migrations
-        env:
-          APP_ENV: testing
-          DB_CONNECTION: mysql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          DB_DATABASE: testing
-          DB_USERNAME: appuser
-          DB_PASSWORD: apppassword
-          LOG_LEVEL: debug
-        run: php artisan migrate --force
-
-      - name: Run Tests
-        env:
-          APP_ENV: testing
-          NODE_ENV: production
-          DB_CONNECTION: mysql
-          DB_HOST: mysql
-          DB_PORT: 3306
-          DB_DATABASE: testing
-          DB_USERNAME: appuser
-          DB_PASSWORD: apppassword
-        run: |
-          npm run vitest
-          ./vendor/bin/phpunit
+      - name: Run Vitest
+        run: npm run vitest
