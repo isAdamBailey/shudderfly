@@ -29,5 +29,14 @@ jobs:
       - name: Install Node.js dependencies
         run: npm install
 
-      - name: Run Vitest
-        run: npm run vitest
+      - name: Build Frontend Assets
+        env:
+          APP_ENV: production
+          NODE_ENV: production
+        run: npm run build
+
+      - name: Run Tests
+        env:
+          NODE_ENV: production
+        run: |
+          npm run vitest
