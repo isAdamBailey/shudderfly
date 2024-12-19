@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import laravel from "laravel-vite-plugin";
 import vue from "@vitejs/plugin-vue";
+import { configDefaults } from "vitest/config";
 
 export default defineConfig({
     plugins: [
@@ -21,5 +22,10 @@ export default defineConfig({
         __BUILD_TIMESTAMP__: JSON.stringify(
             new Date().toISOString().split("T")[0]
         ),
+    },
+    test: {
+        globals: true,
+        environment: "jsdom",
+        exclude: configDefaults.exclude,
     },
 });
