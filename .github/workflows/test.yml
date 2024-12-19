@@ -38,6 +38,9 @@ jobs:
       - name: Install Node.js dependencies
         run: npm install
 
+      - name: Build Frontend Assets
+        run: npm run build
+
       - name: Cache Composer packages
         uses: actions/cache@v3
         with:
@@ -54,7 +57,27 @@ jobs:
       - name: Install PHP dependencies
         run: composer install
 
+      - name: Run Migrations
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: testing
+          DB_USERNAME: appuser
+          DB_PASSWORD: apppassword
+        run: php artisan migrate --force
+
       - name: Run Tests
+        env:
+          APP_ENV: testing
+          NODE_ENV: production
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: testing
+          DB_USERNAME: appuser
+          DB_PASSWORD: apppassword
         run: |
           npm run vitest
           ./vendor/bin/phpunit
