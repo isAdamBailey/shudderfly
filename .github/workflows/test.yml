@@ -56,13 +56,14 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
+          extensions: pdo_mysql
 
       - name: Install PHP dependencies
         run: composer install
 
       - name: Wait for MySQL
         run: |
-          for i in {1..10}; do
+          for i in {1..12}; do
             if mysqladmin ping -h 127.0.0.1 -u root --password=root &> /dev/null; then
               echo "MySQL is ready!";
               break;
@@ -70,6 +71,22 @@ jobs:
             echo "Waiting for MySQL...";
             sleep 5;
           done
+          mysqladmin ping -h 127.0.0.1 -u root --password=root
+
+      - name: Test MySQL Connection
+        run: |
+          mysql -h 127.0.0.1 -uroot -proot -e "SHOW DATABASES;"
+
+      - name: Test Laravel Database Configuration
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: testing
+          DB_USERNAME: appuser
+          DB_PASSWORD: apppassword
+        run: php artisan tinker --execute="dump(config('database.connections.mysql'))"
 
       - name: Clear Laravel cache
         run: php artisan config:clear
@@ -92,6 +109,7 @@ jobs:
           DB_DATABASE: testing
           DB_USERNAME: appuser
           DB_PASSWORD: apppassword
+          LOG_LEVEL: debug
         run: php artisan migrate --force
 
       - name: Run Tests
