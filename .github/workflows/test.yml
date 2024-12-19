@@ -61,10 +61,6 @@ jobs:
       - name: Install PHP dependencies
         run: composer install
 
-      - name: Test MySQL Connection
-        run: |
-          mysql -h 127.0.0.1 -uroot -proot -e "SHOW DATABASES;"
-
       - name: Test Laravel Database Configuration
         env:
           APP_ENV: testing
