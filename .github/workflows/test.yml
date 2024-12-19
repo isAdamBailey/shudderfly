@@ -5,9 +5,6 @@ on:
     branches:
       - main
 
-env:
-  NODE_ENV: production
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -20,15 +17,10 @@ jobs:
           MYSQL_DATABASE: testing
           MYSQL_USER: appuser
           MYSQL_PASSWORD: apppassword
-        options: >-
-          --health-cmd="mysqladmin ping --silent"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=3
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Cache Node.js modules
         uses: actions/cache@v3
@@ -43,18 +35,8 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install dependencies
+      - name: Install Node.js dependencies
         run: npm install
-
-      - name: Run Vitest tests
-        env:
-          NODE_ENV: test
-        run: npm run vitest -- --passWithNoTests
-
-      - name: Set up PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.3'
 
       - name: Cache Composer packages
         uses: actions/cache@v3
@@ -64,26 +46,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-composer-
 
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
       - name: Install PHP dependencies
         run: composer install
 
-      - name: Prepare test database
-        env:
-          DB_CONNECTION: mysql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          DB_DATABASE: testing
-          DB_USERNAME: appuser
-          DB_PASSWORD: apppassword
-        run: php artisan migrate --force
-
-      - name: Run phpunit tests
-        env:
-          APP_ENV: testing
-          DB_CONNECTION: mysql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          DB_DATABASE: testing
-          DB_USERNAME: appuser
-          DB_PASSWORD: apppassword
-        run: ./vendor/bin/phpunit
+      - name: Run Tests
+        run: |
+          npm run vitest
+          ./vendor/bin/phpunit
