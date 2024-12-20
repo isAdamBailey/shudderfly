@@ -6,7 +6,7 @@
             <div class="flex justify-between items-center mb-10">
                 <Link class="w-1/4" :href="route('books.index')">
                     <h2
-                        class="font-heading text-3xl text-yellow-200 dark:text-gray-100 leading-tight"
+                        class="font-heading text-3xl text-yellow-200 dark:text-gray-100 christmas:text-christmas-berry leading-tight"
                     >
                         {{ title }}
                     </h2>
@@ -66,15 +66,15 @@
 </template>
 
 <script setup>
+import Button from "@/Components/Button.vue";
+import SearchInput from "@/Components/SearchInput.vue";
+import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
+import { usePermissions } from "@/composables/permissions";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import BooksGrid from "@/Pages/Books/BooksGrid.vue";
-import { Head, Link, usePage } from "@inertiajs/vue3";
-import SearchInput from "@/Components/SearchInput.vue";
-import { ref, computed } from "vue";
 import NewBookForm from "@/Pages/Books/NewBookForm.vue";
-import Button from "@/Components/Button.vue";
-import { usePermissions } from "@/composables/permissions";
-import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
+import { Head, Link, usePage } from "@inertiajs/vue3";
+import { computed, ref } from "vue";
 
 const { canEditPages } = usePermissions();
 

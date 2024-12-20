@@ -1,8 +1,8 @@
 <script setup>
-import { Head, Link } from "@inertiajs/vue3";
 import ApplicationLogo from "@/Components/ApplicationLogo.vue";
 import Button from "@/Components/Button.vue";
 import SearchInput from "@/Components/SearchInput.vue";
+import { Head, Link } from "@inertiajs/vue3";
 import { ref } from "vue";
 
 const bookClicked = ref(false);
@@ -17,7 +17,7 @@ defineProps({
     <Head title="Welcome" />
 
     <div
-        class="min-h-screen bg-gradient-to-r from-indigo-600 to-blue-200 dark:from-gray-900 dark:to-purple-500 items-center"
+        class="min-h-screen bg-gradient-to-r from-indigo-600 to-blue-200 dark:from-gray-900 dark:to-purple-500 items-center christmas:bg-gradient-to-r christmas:from-christmas-snow christmas:to-christmas-gold"
     >
         <div class="flex">
             <div
@@ -25,18 +25,18 @@ defineProps({
             >
                 <div class="flex flex-col items-center w-full">
                     <div
-                        class="border-4 border-gray-900 bg-blue-600 p-10 rounded-lg"
+                        class="border-4 border-gray-900 bg-blue-600 christmas:bg-christmas-holly p-10 rounded-lg"
                     >
                         <h1
-                            class="text-5xl tracking-wide text-gray-100 md:text-7xl font-heading"
+                            class="text-5xl tracking-wide text-gray-100 christmas:text-christmas-gold md:text-7xl font-heading"
                         >
                             {{ appName }}
                         </h1>
-                        <p class="mt-10 text-gray-100 text-2xl font-bold">
+                        <p class="mt-10 text-gray-100 christmas:text-christmas-gold text-2xl font-bold">
                             <span
                                 :class="
                                     bookClicked
-                                        ? 'text-blue-600 dark:text-yellow-400'
+                                        ? 'text-blue-600 dark:text-yellow-400 christmas:text-christmas-silver'
                                         : null
                                 "
                                 @click="bookClicked = !bookClicked"

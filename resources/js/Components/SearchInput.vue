@@ -4,7 +4,7 @@
         <input
             id="search"
             v-model="search"
-            class="h-8 w-full cursor-pointer rounded-full border border-blue-700 bg-gray-100 px-4 pb-0 pt-px text-gray-700 outline-none transition focus:border-blue-400"
+            class="h-8 w-full cursor-pointer rounded-full border border-blue-700 christmas:border-christmas-holly bg-gray-100 px-4 pb-0 pt-px text-gray-700 outline-none transition focus:border-blue-400"
             :class="{ 'border-red-500 border-2': voiceActive }"
             autocomplete="off"
             name="search"
@@ -14,7 +14,7 @@
             @keyup.enter="searchMethod"
         />
         <button
-            class="self-center flex items-center text-blue-600 dark:text-gray-800 ml-2 w-6 h-6"
+            class="self-center flex items-center text-blue-600 dark:text-gray-800 christmas:text-christmas-berry ml-2 w-6 h-6"
             @click="startVoiceRecognition"
         >
             <i
@@ -22,16 +22,16 @@
                     'bg-red-500 text-white border-red-500 dark:border-red-500':
                         voiceActive,
                 }"
-                class="border-2 border-blue-600 dark:border-black px-1 bg-white rounded-full ri-mic-line text-3xl"
+                class="border-2 border-blue-600 dark:border-black christmas:border-christmas-holly px-1 bg-white rounded-full ri-mic-line text-3xl"
             ></i>
         </button>
     </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
-import { usePage, router } from "@inertiajs/vue3";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { router, usePage } from "@inertiajs/vue3";
+import { computed, ref, watch } from "vue";
 
 const { speak } = useSpeechSynthesis();
 const props = defineProps({

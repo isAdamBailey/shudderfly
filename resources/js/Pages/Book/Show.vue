@@ -5,7 +5,7 @@
         <template #header>
             <SearchInput route-name="books.index" label="Books" />
             <div
-                class="h-96 bg-blue-600 dark:bg-gray-800 p-3 mt-5 rounded-t-lg relative bg-cover bg-center"
+                class="h-96 bg-blue-600 dark:bg-gray-800 christmas:bg-christmas-green p-3 mt-5 rounded-t-lg relative bg-cover bg-center"
                 :style="{
                     backgroundImage: book.cover_image?.media_path
                         ? `url(${book.cover_image.media_path})`
@@ -16,13 +16,15 @@
                     <div class="flex flex-col justify-between h-full">
                         <div class="flex justify-center text-center mb-3">
                             <h2
-                                class="font-heading text-5xl text-blue-600 dark:text-gray-800 leading-tight bg-white/70 backdrop-blur p-2 rounded"
+                                class="font-heading text-5xl text-blue-600 dark:text-gray-800 christmas:text-christmas-berry leading-tight bg-white/70 backdrop-blur p-2 rounded"
                             >
                                 {{ book.title.toUpperCase() }}
                             </h2>
                         </div>
                         <div class="flex justify-center items-center flex-wrap">
-                            <div class="bg-white/70 backdrop-blur p-2 rounded">
+                            <div
+                                class="bg-white/70 backdrop-blur p-2 rounded christmas:text-christmas-berry"
+                            >
                                 <p v-if="book.author" class="mr-3 font-bold">
                                     by: {{ book.author }}
                                 </p>
@@ -44,8 +46,13 @@
                     </div>
                 </Link>
             </div>
-            <div class="flex justify-between bg-gray-300 rounded-b-lg">
-                <div v-if="book.excerpt" class="flex-grow text-center my-3">
+            <div
+                class="flex justify-between bg-gray-300 christmas:bg-christmas-holly rounded-b-lg"
+            >
+                <div
+                    v-if="book.excerpt"
+                    class="flex-grow text-center my-3 christmas:text-christmas-snow"
+                >
                     <p class="italic leading-tight">
                         {{ book.excerpt }}
                     </p>
@@ -166,21 +173,21 @@
 </template>
 
 <script setup>
-import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import BreezeValidationErrors from "@/Components/ValidationErrors.vue";
-import { Head, Link, router } from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue";
-import { onMounted, ref } from "vue";
-import NewPageForm from "@/Pages/Book/NewPageForm.vue";
-import EditBookForm from "@/Pages/Book/EditBookForm.vue";
-import { usePermissions } from "@/composables/permissions";
-import { useDate } from "@/dateHelpers";
-import SearchInput from "@/Components/SearchInput.vue";
-import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import LazyLoader from "@/Components/LazyLoader.vue";
-import VideoWrapper from "@/Components/VideoWrapper.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
+import SearchInput from "@/Components/SearchInput.vue";
+import BreezeValidationErrors from "@/Components/ValidationErrors.vue";
+import VideoWrapper from "@/Components/VideoWrapper.vue";
+import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import EditBookForm from "@/Pages/Book/EditBookForm.vue";
+import NewPageForm from "@/Pages/Book/NewPageForm.vue";
 import SimilarBooks from "@/Pages/Book/SimilarBooks.vue";
+import { usePermissions } from "@/composables/permissions";
+import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { useDate } from "@/dateHelpers";
+import { Head, Link, router } from "@inertiajs/vue3";
+import { onMounted, ref } from "vue";
 
 const { canEditPages } = usePermissions();
 const { short } = useDate();

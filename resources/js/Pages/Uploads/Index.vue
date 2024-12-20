@@ -6,7 +6,7 @@
             <div class="flex justify-between items-center">
                 <Link @click="filter()">
                     <h2
-                        class="font-heading text-2xl text-yellow-200 dark:text-gray-100 leading-tight"
+                        class="font-heading text-2xl text-yellow-200 dark:text-gray-100 christmas:text-christmas-berry leading-tight"
                     >
                         {{ title }}
                     </h2>
@@ -63,15 +63,14 @@
 </template>
 
 <script setup>
+import Button from "@/Components/Button.vue";
+import ScrollTop from "@/Components/ScrollTop.vue";
+import SearchInput from "@/Components/SearchInput.vue";
+import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import UploadsGrid from "@/Pages/Uploads/UploadsGrid.vue";
-import { Head, Link } from "@inertiajs/vue3";
-import Button from "@/Components/Button.vue";
+import { Head, Link, router, usePage } from "@inertiajs/vue3";
 import { computed, ref } from "vue";
-import { usePage, router } from "@inertiajs/vue3";
-import SearchInput from "@/Components/SearchInput.vue";
-import ScrollTop from "@/Components/ScrollTop.vue";
-import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 
 const { speak } = useSpeechSynthesis();
 

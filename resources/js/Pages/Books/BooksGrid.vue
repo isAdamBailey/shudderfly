@@ -6,7 +6,7 @@
     </div>
     <div v-else-if="workingBooks.length > 0">
         <h3
-            class="pl-3 pt-2 text-2xl text-yellow-200 dark:text-gray-100 font-heading"
+            class="pl-3 pt-2 text-2xl text-yellow-200 christmas:text-christmas-berry dark:text-gray-100 font-heading"
         >
             {{ title }}
         </h3>
@@ -58,8 +58,8 @@
 <script setup>
 import LazyLoader from "@/Components/LazyLoader.vue";
 import { Link } from "@inertiajs/vue3";
-import { ref, onMounted, computed } from "vue";
 import axios from "axios";
+import { computed, onMounted, ref } from "vue";
 
 const props = defineProps({
     category: {

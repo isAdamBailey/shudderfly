@@ -1,6 +1,6 @@
 <template>
     <footer
-        class="mt-auto border-t border-gray-100 bg-blue-600 dark:bg-gray-800"
+        class="mt-auto border-t border-gray-100 bg-blue-600 dark:bg-gray-800 christmas:bg-christmas-holly"
     >
         <div class="max-w-7xl mx-auto pt-12 lg:pt-20 pb-12">
             <div

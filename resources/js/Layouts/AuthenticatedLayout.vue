@@ -1,12 +1,12 @@
 <script setup>
-import Navigation from "@/Layouts/Nav/Navigation.vue";
 import Footer from "@/Layouts/Nav/Footer.vue";
+import Navigation from "@/Layouts/Nav/Navigation.vue";
 </script>
 
 <template>
     <div class="flex flex-col min-h-screen">
         <div
-            class="flex flex-col flex-grow bg-gradient-to-r from-indigo-600 to-blue-200 dark:from-gray-900 dark:to-purple-500"
+            class="flex flex-col flex-grow bg-gradient-to-r from-indigo-600 to-blue-200 dark:from-gray-900 dark:to-purple-500 christmas:bg-gradient-to-r christmas:from-christmas-snow christmas:to-christmas-gold"
         >
             <Navigation />
 

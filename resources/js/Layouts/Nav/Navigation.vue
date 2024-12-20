@@ -1,13 +1,13 @@
 <script setup>
-import { ref } from "vue";
 import ApplicationLogo from "@/Components/ApplicationLogo.vue";
 import Dropdown from "@/Components/Dropdown.vue";
 import DropdownLink from "@/Components/DropdownLink.vue";
 import NavLink from "@/Components/NavLink.vue";
-import ThemeToggle from "@/Layouts/Nav/ThemeToggle.vue";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
-import { Link } from "@inertiajs/vue3";
 import { usePermissions } from "@/composables/permissions";
+import ThemeToggle from "@/Layouts/Nav/ThemeToggle.vue";
+import { Link } from "@inertiajs/vue3";
+import { ref } from "vue";
 
 const { canEditPages, canEditProfile } = usePermissions();
 const showingNavigationDropdown = ref(false);
@@ -15,7 +15,7 @@ const showingNavigationDropdown = ref(false);
 
 <template>
     <nav
-        class="bg-blue-600 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700"
+        class="bg-blue-600 christmas:bg-christmas-green dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700"
     >
         <!-- Primary Navigation Menu -->
         <div class="px-4 sm:px-6 lg:px-8">

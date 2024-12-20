@@ -23,7 +23,7 @@
         <circle cx="30" cy="100" r="5" fill="white" />
         <circle cx="170" cy="100" r="5" fill="white" />
 
-        <!-- <g id="fly">
+        <g v-if="!isChristmas" id="fly">
             <g id="fly-body-and-wings">
 
                 <g id="fly-wings">
@@ -74,9 +74,10 @@
                         repeatCount="indefinite"
                     />
                 </g>
-            </g> -->
+            </g>
+        </g>
 
-            <g id="snowman">
+        <g v-if="isChristmas" id="snowman">
         
             <!-- Bottom snowball -->
             <circle cx="100" cy="140" r="30" fill="white" stroke="#e0e0e0" stroke-width="2"/>
@@ -133,3 +134,12 @@
         </g>
     </svg>
 </template>
+
+<script setup>
+import { computed } from "vue";
+
+const isChristmas = computed(() => {
+    const today = new Date();
+    return today.getMonth() === 11; // December
+});
+</script>

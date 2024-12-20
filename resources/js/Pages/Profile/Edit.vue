@@ -1,15 +1,15 @@
 <script setup>
+import Close from "@/Components/svg/Close.vue";
+import { usePermissions } from "@/composables/permissions";
+import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import { Head, usePage } from "@inertiajs/vue3";
+import { computed, onMounted, ref } from "vue";
+import ContactAdminsForm from "./Partials/ContactAdminsForm.vue";
 import DeleteUserForm from "./Partials/DeleteUserForm.vue";
 import UpdatePasswordForm from "./Partials/UpdatePasswordForm.vue";
 import UpdateProfileInformationForm from "./Partials/UpdateProfileInformationForm.vue";
-import ContactAdminsForm from "./Partials/ContactAdminsForm.vue";
 import VoiceSettingsForm from "./Partials/VoiceSettingsForm.vue";
-import { Head, usePage } from "@inertiajs/vue3";
-import { usePermissions } from "@/composables/permissions";
-import { computed, onMounted, ref } from "vue";
-import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
-import Close from "@/Components/svg/Close.vue";
 
 const { speak } = useSpeechSynthesis();
 const { canEditProfile } = usePermissions();
@@ -43,7 +43,7 @@ defineProps({
     <AuthenticatedLayout>
         <template #header>
             <h2
-                class="font-heading text-4xl text-yellow-200 dark:text-gray-100 leading-tight"
+                class="font-heading text-4xl text-yellow-200 dark:text-gray-100 christmas:text-christmas-berry leading-tight"
             >
                 Profile
             </h2>
