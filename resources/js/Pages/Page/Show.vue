@@ -3,7 +3,7 @@
 
     <BreezeAuthenticatedLayout>
         <div
-            class="pb-5 overflow-hidden bg-gradient-to-t from-blue-200 to-indigo-700 dark:from-gray-900 dark:to-purple-500 christmas:from-christmas-snow christmas:to-christmas-gold relative"
+            class="pb-5 overflow-hidden bg-gradient-to-t from-blue-200 to-indigo-700 dark:from-gray-900 dark:to-purple-500 christmas:bg-gradient-to-t christmas:from-christmas-snow christmas:to-christmas-gold relative"
         >
             <div class="text-center">
                 <Link
