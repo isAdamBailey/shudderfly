@@ -124,7 +124,9 @@
         </div>
 
         <div
-            class="mx-auto grid max-w-7xl grid-cols-[repeat(auto-fit,minmax(18rem,1fr))] gap-2 pt-3 md:p-3"
+            class="mt-3 md:mt-0 mx-auto grid max-w-7xl gap-2 md:p-4
+                grid-cols-[repeat(auto-fit,minmax(12rem,1fr))]
+                md:grid-cols-[repeat(auto-fit,minmax(18rem,1fr))]"
         >
             <div
                 v-for="page in items"
