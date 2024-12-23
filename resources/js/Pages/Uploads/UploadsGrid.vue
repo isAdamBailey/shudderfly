@@ -41,6 +41,8 @@ onMounted(async () => {
     observer.observe(infiniteScroll.value);
 });
 
+const initialUrl = usePage().url;
+
 function fetchUploads() {
     const nextPageUrl = props.photos.next_page_url;
     if (fetchedPages.has(nextPageUrl)) {
@@ -54,6 +56,7 @@ function fetchUploads() {
             preserveState: true,
             preserveScroll: true,
             onSuccess: () => {
+                window.history.replaceState({}, "", initialUrl);
                 uploads.value = [
                     ...uploads.value,
                     ...props.photos.data.map((photo) => ({
@@ -61,7 +64,6 @@ function fetchUploads() {
                         loading: false,
                     })),
                 ];
-                window.history.replaceState({}, "", usePage().url);
             },
         }
     );

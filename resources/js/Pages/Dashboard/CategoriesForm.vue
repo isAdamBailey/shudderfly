@@ -22,7 +22,7 @@
                         </thead>
                         <tbody>
                             <tr
-                                v-for="(category, index) in categories.data"
+                                v-for="(category, index) in categories"
                                 :key="index"
                                 class="border-b bg-white"
                             >
@@ -107,18 +107,18 @@
 </template>
 
 <script setup>
-import DangerButton from "@/Components/DangerButton.vue";
 import Button from "@/Components/Button.vue";
-import TextInput from "@/Components/TextInput.vue";
+import DangerButton from "@/Components/DangerButton.vue";
 import InputError from "@/Components/InputError.vue";
 import InputLabel from "@/Components/InputLabel.vue";
-import { useForm, router } from "@inertiajs/vue3";
+import TextInput from "@/Components/TextInput.vue";
+import { router, useForm } from "@inertiajs/vue3";
 import { useVuelidate } from "@vuelidate/core";
 import { required } from "@vuelidate/validators";
 import { ref } from "vue";
 
 const props = defineProps({
-    categories: { type: Object, required: true },
+    categories: { type: Array, required: true },
 });
 
 const rules = {
@@ -132,7 +132,7 @@ const form = useForm({
 });
 
 const localCategoryNames = ref(
-    props.categories.data.map((category) => category.name)
+    props.categories?.map((category) => category.name)
 );
 
 let v$ = useVuelidate(rules, form);

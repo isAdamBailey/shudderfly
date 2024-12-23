@@ -12,7 +12,7 @@
                         : '',
                 }"
             >
-                <Link :href="removePageParam(pages.path)" class="w-full h-full">
+                <Link :href="route('books.show', book)" class="w-full h-full">
                     <div class="flex flex-col justify-between h-full">
                         <div class="flex justify-center text-center mb-3">
                             <h2
@@ -132,7 +132,7 @@
                 class="rounded-lg bg-gray-300 shadow-sm relative flex justify-center flex-wrap overflow-hidden"
             >
                 <Link
-                    prefectch
+                    prefetch
                     class="w-full max-h-80"
                     :href="route('pages.show', page)"
                     @click="setPageLoading(page)"
@@ -164,11 +164,16 @@
             </div>
         </div>
         <div ref="infiniteScroll"></div>
-        <SimilarBooks
-            v-if="similarBooks"
-            :books="similarBooks"
-            label="You might also like these books"
-        />
+        <Deferred data="similarBooks">
+            <template #fallback>
+                <div class="text-gray-900 dark:text-gray-100">Loading...</div>
+            </template>
+            <SimilarBooks
+                v-if="similarBooks"
+                :books="similarBooks"
+                label="You might also like these books"
+            />
+        </Deferred>
         <ScrollTop />
     </BreezeAuthenticatedLayout>
 </template>
@@ -227,6 +232,8 @@ const toggleBookSettings = () => {
     }
 };
 
+const initialUrl = usePage().url;
+
 function fetchPages() {
     const nextPageUrl = props.pages.next_page_url;
     if (!nextPageUrl || fetchedPages.has(nextPageUrl)) {
@@ -240,6 +247,7 @@ function fetchPages() {
             preserveState: true,
             preserveScroll: true,
             onSuccess: () => {
+                window.history.replaceState({}, "", initialUrl);
                 items.value = [
                     ...items.value,
                     ...props.pages.data.map((page) => ({
@@ -250,12 +258,6 @@ function fetchPages() {
             },
         }
     );
-}
-
-function removePageParam(url) {
-    const parsedUrl = new URL(url, window.location.origin);
-    parsedUrl.searchParams.delete("page");
-    return parsedUrl.toString();
 }
 
 const stripHtml = (html) => {

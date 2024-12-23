@@ -5,13 +5,13 @@ import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import CategoriesForm from "@/Pages/Dashboard/CategoriesForm.vue";
 import StatsCard from "@/Pages/Dashboard/StatsCard.vue";
 import UsersForm from "@/Pages/Dashboard/UsersForm.vue";
-import { Head } from "@inertiajs/vue3";
+import { Deferred, Head } from "@inertiajs/vue3";
 import { ref } from "vue";
 
 defineProps({
-    users: { type: Object, required: true },
-    stats: { type: Object, required: true },
-    categories: { type: Object, required: true },
+    users: { type: Array, required: true },
+    stats: { type: Array, required: true },
+    categories: { type: Array, required: true },
 });
 
 const firstClose = ref(false);
@@ -76,7 +76,12 @@ const buildTimestamp = __BUILD_TIMESTAMP__;
                             >
                                 Categories
                             </h3>
-                            <CategoriesForm :categories="categories" />
+                            <Deferred data="categories">
+                                <template #fallback>
+                                    <div class="text-gray-900 dark:text-gray-100">Loading...</div>
+                                </template>
+                                <CategoriesForm :categories="categories" />
+                            </Deferred>
                         </div>
                     </div>
                 </div>
@@ -90,7 +95,12 @@ const buildTimestamp = __BUILD_TIMESTAMP__;
                             >
                                 Users
                             </h3>
-                            <UsersForm :users="users" />
+                            <Deferred data="users">
+                                <template #fallback>
+                                    <div class="text-gray-900 dark:text-gray-100">Loading...</div>
+                                </template>
+                                <UsersForm :users="users" />
+                            </Deferred>
                         </div>
                     </div>
                 </div>
@@ -104,7 +114,12 @@ const buildTimestamp = __BUILD_TIMESTAMP__;
                             >
                                 Stats
                             </h3>
-                            <StatsCard :stats="stats" />
+                            <Deferred data="stats">
+                                <template #fallback>
+                                    <div class="text-gray-900 dark:text-gray-100">Loading...</div>
+                                </template>
+                                <StatsCard :stats="stats" />
+                            </Deferred>
                         </div>
                     </div>
                     <p class="ml-5 md:ml-0 font-bold mt-12 text-gray-100">

@@ -45,7 +45,7 @@
                         </thead>
                         <tbody>
                             <tr
-                                v-for="(user, index) in users.data"
+                                v-for="(user, index) in users"
                                 :key="index"
                                 class="border-b bg-white"
                             >
@@ -138,9 +138,9 @@
 </template>
 
 <script setup>
+import Button from "@/Components/Button.vue";
 import DangerButton from "@/Components/DangerButton.vue";
 import { useForm, usePage } from "@inertiajs/vue3";
-import Button from "@/Components/Button.vue";
 
 const isCurrentUser = (user) =>
     usePage().props.auth.user.name === user.name ||
@@ -185,6 +185,6 @@ const userCanEditProfile = (user) => {
 };
 
 defineProps({
-    users: Object,
+    users: {type: Array, required: true},
 });
 </script>
