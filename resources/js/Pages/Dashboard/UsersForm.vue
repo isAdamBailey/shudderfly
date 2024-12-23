@@ -185,6 +185,6 @@ const userCanEditProfile = (user) => {
 };
 
 defineProps({
-    users: {type: Array, required: true},
+    users: { type: Array, required: true },
 });
 </script>

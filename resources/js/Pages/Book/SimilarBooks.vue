@@ -11,8 +11,9 @@
             <Link
                 v-for="book in workingBooks"
                 :key="book.id"
+                prefetch
                 :href="route('books.show', { book: book.slug })"
-                class="relative w-48 overflow-hidden shrink-0 snap-start rounded-lg bg-white shadow-gray-200/50 transition hover:opacity-80 hover:shadow hover:shadow-gray-300/50"
+                class="relative w-60 h-60 overflow-hidden shrink-0 snap-start rounded-lg bg-white shadow-gray-200/50 transition hover:opacity-80 hover:shadow hover:shadow-gray-300/50"
                 @click="setBookLoading(book)"
             >
                 <div
@@ -25,23 +26,22 @@
                 </div>
                 <div v-else>
                     <div
-                        class="rounded-t-lg absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 text-center leading-4 text-black font-bold backdrop-blur-sm line-clamp-1"
+                        class="rounded-t-lg absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 text-center leading-4 text-black font-bold backdrop-blur-sm line-clamp-1 z-10"
                     >
                         {{ book.title.toUpperCase() }}
                     </div>
                     <div
                         v-if="book.excerpt"
-                        class="rounded-b-lg absolute inset-x-0 bottom-0 w-full truncate bg-white/70 py-2.5 text-center text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
+                        class="rounded-b-lg absolute inset-x-0 bottom-0 w-full truncate bg-white/70 py-2.5 text-center text-sm leading-4 text-black backdrop-blur-sm line-clamp-1 z-10"
                     >
                         {{ book.excerpt }}
                     </div>
-                    <div class="h-36">
-                        <LazyLoader
-                            :src="book.cover_image?.media_path"
-                            :alt="`${book.title} cover image`"
-                            :is-cover="true"
-                        />
-                    </div>
+                    <LazyLoader
+                        :src="book.cover_image?.media_path"
+                        :alt="`${book.title} cover image`"
+                        :is-cover="true"
+                        class="w-full h-full object-cover absolute inset-0"
+                    />
                 </div>
             </Link>
         </div>

@@ -78,7 +78,11 @@ const buildTimestamp = __BUILD_TIMESTAMP__;
                             </h3>
                             <Deferred data="categories">
                                 <template #fallback>
-                                    <div class="text-gray-900 dark:text-gray-100">Loading...</div>
+                                    <div
+                                        class="text-gray-900 dark:text-gray-100"
+                                    >
+                                        Loading...
+                                    </div>
                                 </template>
                                 <CategoriesForm :categories="categories" />
                             </Deferred>
@@ -97,7 +101,11 @@ const buildTimestamp = __BUILD_TIMESTAMP__;
                             </h3>
                             <Deferred data="users">
                                 <template #fallback>
-                                    <div class="text-gray-900 dark:text-gray-100">Loading...</div>
+                                    <div
+                                        class="text-gray-900 dark:text-gray-100"
+                                    >
+                                        Loading...
+                                    </div>
                                 </template>
                                 <UsersForm :users="users" />
                             </Deferred>
@@ -116,7 +124,11 @@ const buildTimestamp = __BUILD_TIMESTAMP__;
                             </h3>
                             <Deferred data="stats">
                                 <template #fallback>
-                                    <div class="text-gray-900 dark:text-gray-100">Loading...</div>
+                                    <div
+                                        class="text-gray-900 dark:text-gray-100"
+                                    >
+                                        Loading...
+                                    </div>
                                 </template>
                                 <StatsCard :stats="stats" />
                             </Deferred>
