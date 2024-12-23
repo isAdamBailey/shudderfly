@@ -17,7 +17,6 @@ defineProps({
 
 const firstClose = ref(false);
 const lastClose = ref(false);
-const isCategoriesOpen = ref(false);
 
 const buildTimestamp = __BUILD_TIMESTAMP__;
 </script>
