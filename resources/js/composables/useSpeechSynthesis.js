@@ -4,29 +4,29 @@ export function useSpeechSynthesis() {
     const speaking = ref(false);
     const voices = ref([]);
     const selectedVoice = ref(null);
-    const savedIndex = localStorage.getItem("selectedVoiceIndex") || "0";
 
     const getVoices = () => {
         if ("speechSynthesis" in window) {
             voices.value = window.speechSynthesis.getVoices();
-            const index = parseInt(savedIndex, 10);
+            const index = parseInt(localStorage.getItem("selectedVoiceIndex") || "0", 10);
             selectedVoice.value = voices.value[index];
         }
     };
 
-    const setVoice = (voice) => {
+    const setVoice = async (voice) => {
         const index = voices.value.findIndex((v) => v.name === voice.name);
         if (index !== -1) {
             selectedVoice.value = voice;
             localStorage.setItem("selectedVoiceIndex", index.toString());
-            window.location.reload();
+            speak(`Voice changed to ${selectedVoice.value.name}`);
         }
     };
 
     const speak = (phrase) => {
         if ("speechSynthesis" in window && phrase) {
             const utterance = new SpeechSynthesisUtterance(phrase);
-            utterance.voice = voices.value[savedIndex];
+            const index = parseInt(localStorage.getItem("selectedVoiceIndex") || "0", 10);
+            utterance.voice = window.speechSynthesis.getVoices()[index];
             utterance.onstart = () => (speaking.value = true);
             utterance.onend = () => (speaking.value = false);
             window.speechSynthesis.speak(utterance);
