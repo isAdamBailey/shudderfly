@@ -1,5 +1,5 @@
 const defaultTheme = require("tailwindcss/defaultTheme");
-const plugin = require('tailwindcss/plugin');
+const plugin = require("tailwindcss/plugin");
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -19,15 +19,15 @@ module.exports = {
             },
             colors: {
                 christmas: {
-                    red: '#D42426',
-                    green: '#165B33',
-                    gold: '#FFD700',
-                    silver: '#C0C0C0',
-                    pine: '#2D5A27',
-                    holly: '#00843D',
-                    berry: '#BE0B31',
-                    snow: '#F8F8FF',
-                    candy: '#EE204D',
+                    red: "#D42426",
+                    green: "#165B33",
+                    gold: "#FFD700",
+                    silver: "#C0C0C0",
+                    pine: "#2D5A27",
+                    holly: "#00843D",
+                    berry: "#BE0B31",
+                    snow: "#F8F8FF",
+                    candy: "#EE204D",
                     mint: "#2AC8A4",
                 },
             },
@@ -37,8 +37,8 @@ module.exports = {
     plugins: [
         require("@tailwindcss/forms"),
         require("@tailwindcss/typography"),
-        plugin(function({ addVariant }) {
-            addVariant('christmas', '[data-theme="christmas"] &')
-        })
+        plugin(function ({ addVariant }) {
+            addVariant("christmas", '[data-theme="christmas"] &');
+        }),
     ],
 };

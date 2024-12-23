@@ -124,7 +124,7 @@
         </div>
 
         <div
-            class="mx-auto grid max-w-7xl grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] gap-2 pt-3 md:p-3"
+            class="mx-auto grid max-w-7xl grid-cols-[repeat(auto-fit,minmax(18rem,1fr))] gap-2 pt-3 md:p-3"
         >
             <div
                 v-for="page in items"
@@ -132,8 +132,9 @@
                 class="rounded-lg bg-gray-300 shadow-sm relative flex justify-center flex-wrap overflow-hidden"
             >
                 <Link
-                    class="w-full min-h-28 max-h-36"
-                    :href="route('pages.show', { page })"
+                    prefectch
+                    class="w-full max-h-80"
+                    :href="route('pages.show', page)"
                     @click="setPageLoading(page)"
                 >
                     <div
@@ -186,7 +187,7 @@ import SimilarBooks from "@/Pages/Book/SimilarBooks.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useDate } from "@/dateHelpers";
-import { Head, Link, router } from "@inertiajs/vue3";
+import { Head, Link, router, usePage } from "@inertiajs/vue3";
 import { onMounted, ref } from "vue";
 
 const { canEditPages } = usePermissions();
@@ -207,6 +208,7 @@ let bookSettingsOpen = ref(false);
 const items = ref(
     props.pages.data.map((page) => ({ ...page, loading: false }))
 );
+
 const infiniteScroll = ref(null);
 let observer = null;
 const fetchedPages = new Set();
@@ -237,14 +239,15 @@ function fetchPages() {
         {
             preserveState: true,
             preserveScroll: true,
-            onSuccess: (page) => {
+            onSuccess: () => {
                 items.value = [
                     ...items.value,
-                    ...page.props.pages.data.map((page) => ({
+                    ...props.pages.data.map((page) => ({
                         ...page,
                         loading: false,
                     })),
                 ];
+                window.history.replaceState({}, "", usePage().url);
             },
         }
     );
@@ -286,7 +289,6 @@ onMounted(() => {
         pageSettingsOpen.value = true;
     }
 
-    items.value = props.pages.data.map((page) => ({ ...page, loading: false }));
     observer = new IntersectionObserver((entries) =>
         entries.forEach((entry) => entry.isIntersecting && fetchPages(), {
             rootMargin: "-150px 0px 0px 0px",

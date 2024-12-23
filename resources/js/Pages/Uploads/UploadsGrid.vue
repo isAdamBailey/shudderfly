@@ -1,8 +1,8 @@
 <script setup>
-import { Link, router, usePage } from "@inertiajs/vue3";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
+import { Link, router, usePage } from "@inertiajs/vue3";
 import { onMounted, ref, watch } from "vue";
 
 const props = defineProps({
@@ -33,10 +33,6 @@ watch(
 );
 
 onMounted(async () => {
-    uploads.value = props.photos.data.map((photo) => ({
-        ...photo,
-        loading: false,
-    }));
     observer = new IntersectionObserver((entries) =>
         entries.forEach((entry) => entry.isIntersecting && fetchUploads(), {
             rootMargin: "-150px 0px 0px 0px",
@@ -57,14 +53,15 @@ function fetchUploads() {
         {
             preserveState: true,
             preserveScroll: true,
-            onSuccess: (page) => {
+            onSuccess: () => {
                 uploads.value = [
                     ...uploads.value,
-                    ...page.props.photos.data.map((photo) => ({
+                    ...props.photos.data.map((photo) => ({
                         ...photo,
                         loading: false,
                     })),
                 ];
+                window.history.replaceState({}, "", usePage().url);
             },
         }
     );
@@ -85,7 +82,7 @@ function setUploadLoading(photo) {
 <template>
     <div
         v-if="uploads.length"
-        class="mt-3 md:mt-0 mx-auto grid max-w-7xl grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] gap-2 md:p-4"
+        class="mt-3 md:mt-0 mx-auto grid max-w-7xl grid-cols-[repeat(auto-fit,minmax(18rem,1fr))] gap-2 md:p-4"
     >
         <div
             v-for="photo in uploads"
@@ -93,8 +90,9 @@ function setUploadLoading(photo) {
             class="relative flex justify-center flex-wrap shadow-sm rounded-lg overflow-hidden bg-gray-300"
         >
             <Link
-                class="w-full min-h-28 max-h-36"
-                :href="route('pages.show', { page: photo })"
+                prefetch
+                class="w-full max-h-80"
+                :href="route('pages.show', photo)"
                 @click="setUploadLoading(photo)"
             >
                 <div

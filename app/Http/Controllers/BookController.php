@@ -126,7 +126,9 @@ class BookController extends Controller
 
         return Inertia::render('Book/Show', [
             'book' => $book->load('coverImage'),
-            'pages' => $pages,
+            'pages' => Inertia::Merge(function () use ($pages) {
+                return $pages;
+            }),
             'authors' => $authors,
             'categories' => $categories,
             'similarBooks' => $similarBooks,

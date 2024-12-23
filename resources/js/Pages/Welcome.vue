@@ -32,7 +32,9 @@ defineProps({
                         >
                             {{ appName }}
                         </h1>
-                        <p class="mt-10 text-gray-100 christmas:text-christmas-gold text-2xl font-bold">
+                        <p
+                            class="mt-10 text-gray-100 christmas:text-christmas-gold text-2xl font-bold"
+                        >
                             <span
                                 :class="
                                     bookClicked
