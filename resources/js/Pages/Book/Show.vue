@@ -247,7 +247,6 @@ function fetchPages() {
                         loading: false,
                     })),
                 ];
-                window.history.replaceState({}, "", usePage().url);
             },
         }
     );
