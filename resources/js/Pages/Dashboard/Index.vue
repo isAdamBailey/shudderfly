@@ -1,4 +1,5 @@
 <script setup>
+import Accordion from "@/Components/Accordion.vue";
 import Close from "@/Components/svg/Close.vue";
 import BreezeValidationErrors from "@/Components/ValidationErrors.vue";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
@@ -16,6 +17,7 @@ defineProps({
 
 const firstClose = ref(false);
 const lastClose = ref(false);
+const isCategoriesOpen = ref(false);
 
 const buildTimestamp = __BUILD_TIMESTAMP__;
 </script>
@@ -70,12 +72,7 @@ const buildTimestamp = __BUILD_TIMESTAMP__;
                     <div
                         class="bg-white overflow-hidden shadow-sm sm:rounded-lg"
                     >
-                        <div class="p-6 bg-white dark:bg-gray-800">
-                            <h3
-                                class="text-xl dark:text-gray-100 font-semibold border-b"
-                            >
-                                Categories
-                            </h3>
+                        <Accordion title="Categories">
                             <Deferred data="categories">
                                 <template #fallback>
                                     <div
@@ -86,19 +83,14 @@ const buildTimestamp = __BUILD_TIMESTAMP__;
                                 </template>
                                 <CategoriesForm :categories="categories" />
                             </Deferred>
-                        </div>
+                        </Accordion>
                     </div>
                 </div>
                 <div class="w-full sm:px-6 lg:px-8">
                     <div
                         class="bg-white overflow-hidden shadow-sm sm:rounded-lg"
                     >
-                        <div class="p-6 bg-white dark:bg-gray-800">
-                            <h3
-                                class="text-xl dark:text-gray-100 font-semibold border-b"
-                            >
-                                Users
-                            </h3>
+                        <Accordion title="Users">
                             <Deferred data="users">
                                 <template #fallback>
                                     <div
@@ -109,7 +101,7 @@ const buildTimestamp = __BUILD_TIMESTAMP__;
                                 </template>
                                 <UsersForm :users="users" />
                             </Deferred>
-                        </div>
+                        </Accordion>
                     </div>
                 </div>
                 <div class="w-full sm:px-6 lg:px-8">
