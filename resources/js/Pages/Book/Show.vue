@@ -135,6 +135,8 @@
                     prefetch
                     class="w-full max-h-80"
                     :href="route('pages.show', page)"
+                    as="button"
+                    replace
                     @click="setPageLoading(page)"
                 >
                     <div

@@ -93,6 +93,8 @@ function setUploadLoading(photo) {
         >
             <Link
                 prefetch
+                replace
+                as="button"
                 class="w-full max-h-80"
                 :href="route('pages.show', photo)"
                 @click="setUploadLoading(photo)"
