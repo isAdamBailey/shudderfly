@@ -9,6 +9,12 @@
     christmas:text-christmas-berry;
     }
 
+    .text-theme-book-title {
+        @apply text-yellow-200
+    dark:text-gray-700
+    christmas:text-christmas-green;
+    }
+
     .text-theme-primary {
         @apply text-yellow-200
     dark:text-gray-100
@@ -104,13 +110,19 @@
     christmas:focus:shadow-outline-christmas-mint;
     }
 
+    .text-theme-button {
+        @apply text-yellow-200
+    dark:text-gray-100
+    christmas:text-christmas-snow;
+    }
+
     .text-theme-button-active {
         @apply text-gray-800
     dark:text-gray-900
     christmas:text-christmas-berry;
     }
 
-    .hover\:text-theme-button:hover {
+    .hover\:text-theme-button-hover {
         @apply hover:text-gray-800
     dark:hover:text-gray-900
     christmas:hover:text-christmas-berry;

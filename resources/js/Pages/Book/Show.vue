@@ -16,7 +16,7 @@
                     <div class="flex flex-col justify-between h-full">
                         <div class="flex justify-center text-center mb-3">
                             <h1
-                                class="font-heading text-5xl text-theme-primary leading-tight bg-white/70 backdrop-blur p-2 rounded"
+                                class="font-heading text-5xl text-theme-book-title leading-tight bg-white/70 backdrop-blur p-2 rounded"
                             >
                                 {{ book.title.toUpperCase() }}
                             </h1>
