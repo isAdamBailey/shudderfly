@@ -3,10 +3,16 @@
 
 @layer utilities {
     /* Text Colors */
+    .text-theme-title {
+        @apply text-yellow-200
+    dark:text-gray-100
+    christmas:text-christmas-berry;
+    }
+
     .text-theme-primary {
         @apply text-yellow-200
     dark:text-gray-100
-    christmas:text-christmas-snow;
+    christmas:text-christmas-berry;
     }
 
     .text-theme-secondary {

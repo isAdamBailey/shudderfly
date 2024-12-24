@@ -23,7 +23,7 @@
                         </div>
                         <div class="flex justify-center items-center flex-wrap">
                             <div
-                                class="bg-white/70 backdrop-blur p-2 rounded christmas:text-christmas-berry"
+                                class="bg-white/70 backdrop-blur p-2 rounded dark:text-gray-700 christmas:text-christmas-berry"
                             >
                                 <p v-if="book.author" class="mr-3 font-bold">
                                     by: {{ book.author }}
@@ -80,7 +80,7 @@
                     </Button>
                     <Button
                         type="button"
-                        class="ml-2"
+                        class="ml-2 text-gray-100"
                         :disabled="speaking"
                         @click="readTitleAndExcerpt"
                     >
