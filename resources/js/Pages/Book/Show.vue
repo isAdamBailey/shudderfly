@@ -283,10 +283,6 @@ function mediaPath(page) {
     return page.media_path;
 }
 
-function setPageLoading(page) {
-    page.loading = true;
-}
-
 onMounted(() => {
     if (props.pages.total === 0) {
         pageSettingsOpen.value = true;
