@@ -17,7 +17,7 @@ defineProps({
     <Head title="Welcome" />
 
     <div
-        class="min-h-screen bg-gradient-to-r from-indigo-600 to-blue-200 dark:from-gray-900 dark:to-purple-500 items-center christmas:bg-gradient-to-r christmas:from-christmas-snow christmas:to-christmas-gold"
+        class="min-h-screen bg-theme-gradient items-center"
     >
         <div class="flex">
             <div

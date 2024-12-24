@@ -27,7 +27,7 @@ const buildTimestamp = __BUILD_TIMESTAMP__;
     <BreezeAuthenticatedLayout>
         <template #header>
             <h2
-                class="font-heading text-2xl text-yellow-200 dark:text-gray-100 christmas:text-christmas-berry leading-tight"
+                class="font-heading text-2xl text-theme-primary leading-tight"
             >
                 The Administrative Duties Of Colin's Books!
             </h2>

@@ -63,7 +63,7 @@
                 </div>
                 <div
                     v-if="hasContent"
-                    class="m-5 flex justify-between bg-blue-200 dark:bg-gray-300 christmas:bg-christmas-snow md:rounded-lg p-3 my-3"
+                    class="m-5 flex justify-between bg-theme-content md:rounded-lg p-3 my-3"
                 >
                     <div
                         class="page-content px-3 py-3 text-lg text-left"

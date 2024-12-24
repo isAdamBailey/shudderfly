@@ -1,12 +1,12 @@
 <template>
     <div v-if="loading" class="h-36 flex justify-center pt-10">
-        <span class="animate-pulse text-2xl text-gray-100 font-bold"
+        <span class="animate-pulse text-2xl text-theme-primary font-bold"
             >Loading {{ title }}...</span
         >
     </div>
     <div v-else-if="workingBooks.length > 0">
         <h3
-            class="pl-3 pt-2 text-2xl text-yellow-200 christmas:text-christmas-berry dark:text-gray-100 font-heading"
+            class="pl-3 pt-2 text-2xl text-theme-primary font-heading"
         >
             {{ title }}
         </h3>

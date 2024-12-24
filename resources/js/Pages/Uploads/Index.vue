@@ -24,7 +24,7 @@
                 type="button"
                 :is-active="isPopular"
                 :disabled="loading"
-                class="rounded-full border-amber-50 dark:border-gray-100 my-3"
+                class="rounded-full my-3"
                 @click="filter('popular')"
             >
                 <i class="ri-star-line text-4xl"></i>
@@ -33,7 +33,7 @@
                 type="button"
                 :is-active="isYouTube"
                 :disabled="loading"
-                class="rounded-full border-amber-50 dark:border-gray-100 my-3"
+                class="rounded-full my-3"
                 @click="filter('youtube')"
             >
                 <i class="ri-youtube-line text-4xl"></i>
@@ -42,7 +42,7 @@
                 type="button"
                 :is-active="isRandom"
                 :disabled="loading"
-                class="rounded-full border-amber-50 dark:border-gray-100 my-3"
+                class="rounded-full my-3"
                 @click="filter('random')"
             >
                 <i class="ri-dice-line text-4xl"></i>
@@ -51,7 +51,7 @@
                 type="button"
                 :is-active="isOld"
                 :disabled="loading"
-                class="rounded-full border-amber-50 dark:border-gray-100 my-3"
+                class="rounded-full my-3"
                 @click="filter('old')"
             >
                 <i class="ri-history-line text-4xl"></i>

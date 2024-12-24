@@ -20,10 +20,10 @@ defineProps({
         :disabled="disabled"
         :type="type"
         :class="[
-            'inline-flex items-center px-6 py-3 border border-white rounded-md font-semibold text-xs uppercase tracking-widest transition ease-in-out duration-150',
+            'inline-flex items-center px-6 py-3 border rounded-md font-semibold text-xs uppercase tracking-widest transition ease-in-out duration-150',
             isActive
-                ? 'bg-yellow-400 dark:bg-amber-400 text-gray-800 hover:text-gray-800 border-blue-600 hover:border-yellow-500 dark:border-amber-400 hover:bg-yellow-500 dark:hover:bg-yellow-500 active:bg-green-900 focus:border-blue-900 focus:shadow-outline-blue'
-                : 'bg-blue-600 dark:bg-gray-800 christmas:bg-christmas-mint text-white christmas:text-christmas-berry hover:text-gray-800 dark:border-gray-500 hover:bg-yellow-400 dark:hover:bg-yellow-400 christmas:hover:bg-christmas-silver active:bg-yellow-900 christmas:border-christmas-berry focus:border-blue-900 focus:shadow-outline-blue',
+                ? 'bg-theme-button-active text-theme-button-active border-theme-button-active hover:bg-theme-button-active active:bg-theme-button focus:border-theme-button focus:shadow-theme-button'
+                : 'bg-theme-primary text-theme-primary border-theme-primary hover:text-theme-button hover:bg-theme-button active:bg-theme-button focus:border-theme-button focus:shadow-theme-button',
             disabled ? 'opacity-25' : '',
         ]"
     >

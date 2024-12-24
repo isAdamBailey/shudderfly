@@ -15,7 +15,7 @@ const showingNavigationDropdown = ref(false);
 
 <template>
     <nav
-        class="bg-blue-600 christmas:bg-christmas-green dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700"
+        class="bg-theme-primary border-b border-gray-100 dark:border-gray-700"
     >
         <!-- Primary Navigation Menu -->
         <div class="px-4 sm:px-6 lg:px-8">

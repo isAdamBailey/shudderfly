@@ -1,7 +1,124 @@
 @tailwind base;
 @tailwind components;
-@tailwind utilities;
+
+@layer utilities {
+  /* Text Colors */
+  .text-theme-primary {
+    @apply text-yellow-200
+    dark:text-gray-100
+    christmas:text-christmas-snow;
+  }
+
+  .text-theme-secondary {
+    @apply text-white
+    dark:text-gray-400
+    christmas:text-christmas-gold;
+  }
+
+  /* Background Colors */
+  .bg-theme-primary {
+    @apply bg-blue-600
+    dark:bg-gray-800
+    christmas:bg-christmas-green;
+  }
+
+  .bg-theme-gradient {
+    @apply bg-gradient-to-r from-indigo-600 to-blue-200
+    dark:from-gray-900 dark:to-purple-500
+    christmas:from-christmas-snow christmas:to-christmas-gold;
+  }
+
+  .bg-theme-secondary {
+    @apply bg-gray-300
+    dark:bg-gray-300
+    christmas:bg-christmas-holly;
+  }
+
+  .bg-theme-content {
+    @apply bg-blue-200
+    dark:bg-gray-300
+    christmas:bg-christmas-snow;
+  }
+
+  .bg-theme-button {
+    @apply bg-red-700
+    dark:bg-red-700
+    hover:bg-pink-400
+    dark:hover:bg-pink-400
+    christmas:hover:bg-christmas-mint;
+  }
+
+  /* Border Colors */
+  .border-theme-primary {
+    @apply border-yellow-200
+    dark:border-indigo-600
+    christmas:border-christmas-gold;
+  }
+
+  .border-theme-input {
+    @apply border-blue-700
+    dark:border-gray-800
+    christmas:border-christmas-holly;
+  }
+
+  /* Button States */
+  .bg-theme-button-active {
+    @apply bg-yellow-400
+    dark:bg-amber-400
+    christmas:bg-christmas-gold;
+  }
+
+  .border-theme-button-active {
+    @apply border-blue-600
+    dark:border-amber-400
+    christmas:border-christmas-berry;
+  }
+
+  .hover\:bg-theme-button-active:hover {
+    @apply hover:bg-yellow-500
+    dark:hover:bg-yellow-500
+    christmas:hover:bg-christmas-silver;
+  }
+
+  .active\:bg-theme-button:active {
+    @apply active:bg-yellow-900
+    dark:active:bg-yellow-700
+    christmas:active:bg-christmas-berry;
+  }
+
+  .focus\:border-theme-button:focus {
+    @apply focus:border-blue-900
+    dark:focus:border-amber-600
+    christmas:focus:border-christmas-gold;
+  }
+
+  .focus\:shadow-theme-button:focus {
+    @apply focus:shadow-outline-blue
+    dark:focus:shadow-outline-amber
+    christmas:focus:shadow-outline-christmas-mint;
+  }
+
+  .text-theme-button-active {
+    @apply text-gray-800
+    dark:text-gray-900
+    christmas:text-christmas-berry;
+  }
+
+  .hover\:text-theme-button:hover {
+    @apply hover:text-gray-800
+    dark:hover:text-gray-900
+    christmas:hover:text-christmas-berry;
+  }
+
+  .hover\:bg-theme-button:hover {
+    @apply hover:bg-yellow-400
+    dark:hover:bg-yellow-500
+    christmas:hover:bg-christmas-mint;
+  }
+}
 
 .page-content h2 {
     @apply text-2xl font-bold;
 }
+
+@tailwind utilities;

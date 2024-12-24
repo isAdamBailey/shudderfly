@@ -5,7 +5,7 @@
         <template #header>
             <SearchInput route-name="books.index" label="Books" />
             <div
-                class="h-96 bg-blue-600 dark:bg-gray-800 christmas:bg-christmas-green p-3 mt-5 rounded-t-lg relative bg-cover bg-center"
+                class="bg-theme-primary p-3 mt-5 rounded-t-lg relative bg-cover bg-center"
                 :style="{
                     backgroundImage: book.cover_image?.media_path
                         ? `url(${book.cover_image.media_path})`
@@ -15,11 +15,11 @@
                 <Link :href="route('books.show', book)" class="w-full h-full">
                     <div class="flex flex-col justify-between h-full">
                         <div class="flex justify-center text-center mb-3">
-                            <h2
-                                class="font-heading text-5xl text-blue-600 dark:text-gray-800 christmas:text-christmas-berry leading-tight bg-white/70 backdrop-blur p-2 rounded"
+                            <h1
+                                class="font-heading text-5xl text-theme-primary leading-tight bg-white/70 backdrop-blur p-2 rounded"
                             >
                                 {{ book.title.toUpperCase() }}
-                            </h2>
+                            </h1>
                         </div>
                         <div class="flex justify-center items-center flex-wrap">
                             <div
@@ -47,11 +47,11 @@
                 </Link>
             </div>
             <div
-                class="flex justify-between bg-gray-300 christmas:bg-christmas-holly rounded-b-lg"
+                class="flex justify-between bg-theme-secondary rounded-b-lg"
             >
                 <div
                     v-if="book.excerpt"
-                    class="flex-grow text-center my-3 christmas:text-christmas-snow"
+                    class="flex-grow text-center my-3 text-theme-secondary"
                 >
                     <p class="italic leading-tight">
                         {{ book.excerpt }}

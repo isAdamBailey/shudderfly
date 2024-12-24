@@ -17,14 +17,14 @@
             <div v-if="canEditPages" class="mb-3">
                 <Button
                     v-if="!showNewBookForm"
-                    class="w-full rounded-none bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
+                    class="w-full rounded-none bg-theme-button"
                     @click="showNewBookForm = true"
                 >
                     Add a new book
                 </Button>
                 <Button
                     v-else
-                    class="w-full rounded-none bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
+                    class="w-full rounded-none bg-theme-button"
                     @click="showNewBookForm = false"
                 >
                     Close book form
