@@ -46,9 +46,7 @@
                     </div>
                 </Link>
             </div>
-            <div
-                class="flex justify-between bg-theme-secondary rounded-b-lg"
-            >
+            <div class="flex justify-between bg-theme-secondary rounded-b-lg">
                 <div
                     v-if="book.excerpt"
                     class="flex-grow text-center my-3 text-theme-secondary"
@@ -137,7 +135,7 @@
                     :href="route('pages.show', page)"
                     as="button"
                     replace
-                    @click="setPageLoading(page)"
+                    @click="setItemLoading(page)"
                 >
                     <div
                         v-if="page.loading"
@@ -165,7 +163,7 @@
                 </Link>
             </div>
         </div>
-        <div ref="infiniteScroll"></div>
+        <div ref="infiniteScrollRef"></div>
         <Deferred data="similarBooks">
             <template #fallback>
                 <div class="text-gray-900 dark:text-gray-100">Loading...</div>
@@ -193,9 +191,10 @@ import NewPageForm from "@/Pages/Book/NewPageForm.vue";
 import SimilarBooks from "@/Pages/Book/SimilarBooks.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 import { useDate } from "@/dateHelpers";
-import { Head, Link, router, usePage } from "@inertiajs/vue3";
-import { onMounted, ref } from "vue";
+import { Head, Link } from "@inertiajs/vue3";
+import { onMounted, ref, computed } from "vue";
 
 const { canEditPages } = usePermissions();
 const { short } = useDate();
@@ -209,16 +208,13 @@ const props = defineProps({
     similarBooks: { type: Array, default: null },
 });
 
-let pageSettingsOpen = ref(false);
-let bookSettingsOpen = ref(false);
-
-const items = ref(
-    props.pages.data.map((page) => ({ ...page, loading: false }))
+const { items, infiniteScrollRef, setItemLoading } = useInfiniteScroll(
+    props.pages.data,
+    computed(() => props.pages)
 );
 
-const infiniteScroll = ref(null);
-let observer = null;
-const fetchedPages = new Set();
+let pageSettingsOpen = ref(false);
+let bookSettingsOpen = ref(false);
 
 const togglePageSettings = () => {
     pageSettingsOpen.value = !pageSettingsOpen.value;
@@ -233,34 +229,6 @@ const toggleBookSettings = () => {
         pageSettingsOpen.value = false;
     }
 };
-
-const initialUrl = usePage().url;
-
-function fetchPages() {
-    const nextPageUrl = props.pages.next_page_url;
-    if (!nextPageUrl || fetchedPages.has(nextPageUrl)) {
-        return;
-    }
-    fetchedPages.add(nextPageUrl);
-    router.get(
-        nextPageUrl,
-        {},
-        {
-            preserveState: true,
-            preserveScroll: true,
-            onSuccess: () => {
-                window.history.replaceState({}, "", initialUrl);
-                items.value = [
-                    ...items.value,
-                    ...props.pages.data.map((page) => ({
-                        ...page,
-                        loading: false,
-                    })),
-                ];
-            },
-        }
-    );
-}
 
 const stripHtml = (html) => {
     if (!html) {
@@ -287,12 +255,5 @@ onMounted(() => {
     if (props.pages.total === 0) {
         pageSettingsOpen.value = true;
     }
-
-    observer = new IntersectionObserver((entries) =>
-        entries.forEach((entry) => entry.isIntersecting && fetchPages(), {
-            rootMargin: "-150px 0px 0px 0px",
-        })
-    );
-    observer.observe(infiniteScroll.value);
 });
 </script>

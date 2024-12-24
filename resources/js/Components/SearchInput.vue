@@ -4,7 +4,7 @@
         <input
             id="search"
             v-model="search"
-            class="h-8 w-full cursor-pointer rounded-full border  bg-gray-100 px-4 pb-0 pt-px text-gray-700 outline-none transition focus:border-blue-400"
+            class="h-8 w-full cursor-pointer rounded-full border bg-gray-100 px-4 pb-0 pt-px text-gray-700 outline-none transition focus:border-blue-400"
             :class="{ 'border-red-500 border-2': voiceActive }"
             autocomplete="off"
             name="search"

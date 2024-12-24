@@ -5,9 +5,7 @@ import Navigation from "@/Layouts/Nav/Navigation.vue";
 
 <template>
     <div class="flex flex-col min-h-screen">
-        <div
-            class="flex flex-col flex-grow bg-theme-gradient"
-        >
+        <div class="flex flex-col flex-grow bg-theme-gradient">
             <Navigation />
 
             <!-- Page Heading -->

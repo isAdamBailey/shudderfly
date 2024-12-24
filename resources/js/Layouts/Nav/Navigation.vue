@@ -14,9 +14,7 @@ const showingNavigationDropdown = ref(false);
 </script>
 
 <template>
-    <nav
-        class="bg-theme-primary border-b border-gray-100 dark:border-gray-700"
-    >
+    <nav class="bg-theme-primary border-b border-gray-100 dark:border-gray-700">
         <!-- Primary Navigation Menu -->
         <div class="px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">

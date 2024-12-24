@@ -8,7 +8,10 @@ export function useSpeechSynthesis() {
     const getVoices = () => {
         if ("speechSynthesis" in window) {
             voices.value = window.speechSynthesis.getVoices();
-            const index = parseInt(localStorage.getItem("selectedVoiceIndex") || "0", 10);
+            const index = parseInt(
+                localStorage.getItem("selectedVoiceIndex") || "0",
+                10
+            );
             selectedVoice.value = voices.value[index];
         }
     };
@@ -25,7 +28,10 @@ export function useSpeechSynthesis() {
     const speak = (phrase) => {
         if ("speechSynthesis" in window && phrase) {
             const utterance = new SpeechSynthesisUtterance(phrase);
-            const index = parseInt(localStorage.getItem("selectedVoiceIndex") || "0", 10);
+            const index = parseInt(
+                localStorage.getItem("selectedVoiceIndex") || "0",
+                10
+            );
             utterance.voice = window.speechSynthesis.getVoices()[index];
             utterance.onstart = () => (speaking.value = true);
             utterance.onend = () => (speaking.value = false);

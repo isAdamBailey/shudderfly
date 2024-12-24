@@ -2,8 +2,9 @@
 import LazyLoader from "@/Components/LazyLoader.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
-import { Link, router, usePage } from "@inertiajs/vue3";
-import { onMounted, ref, watch } from "vue";
+import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
+import { Link, usePage } from "@inertiajs/vue3";
+import { watch, computed } from "vue";
 
 const props = defineProps({
     photos: {
@@ -12,18 +13,16 @@ const props = defineProps({
     },
 });
 
-const uploads = ref(
-    props.photos.data.map((photo) => ({ ...photo, loading: false }))
+const { items, infiniteScrollRef, setItemLoading } = useInfiniteScroll(
+    props.photos.data,
+    computed(() => props.photos)
 );
-const infiniteScroll = ref(null);
-let observer = null;
-const fetchedPages = new Set();
 
 watch(
     () => usePage().props.search,
     (newSearch) => {
         if (newSearch) {
-            uploads.value = props.photos.data.map((photo) => ({
+            items.value = props.photos.data.map((photo) => ({
                 ...photo,
                 loading: false,
             }));
@@ -32,62 +31,21 @@ watch(
     { immediate: true }
 );
 
-onMounted(async () => {
-    observer = new IntersectionObserver((entries) =>
-        entries.forEach((entry) => entry.isIntersecting && fetchUploads(), {
-            rootMargin: "-150px 0px 0px 0px",
-        })
-    );
-    observer.observe(infiniteScroll.value);
-});
-
-const initialUrl = usePage().url;
-
-function fetchUploads() {
-    const nextPageUrl = props.photos.next_page_url;
-    if (fetchedPages.has(nextPageUrl)) {
-        return;
-    }
-    fetchedPages.add(nextPageUrl);
-    router.get(
-        nextPageUrl,
-        {},
-        {
-            preserveState: true,
-            preserveScroll: true,
-            onSuccess: () => {
-                window.history.replaceState({}, "", initialUrl);
-                uploads.value = [
-                    ...uploads.value,
-                    ...props.photos.data.map((photo) => ({
-                        ...photo,
-                        loading: false,
-                    })),
-                ];
-            },
-        }
-    );
-}
-
 function mediaPath(photo) {
     if (photo.media_poster) {
         return photo.media_poster;
     }
     return photo.media_path;
 }
-
-function setUploadLoading(photo) {
-    photo.loading = true;
-}
 </script>
 
 <template>
     <div
-        v-if="uploads.length"
+        v-if="items.length"
         class="mt-3 md:mt-0 mx-auto grid max-w-7xl gap-2 md:p-4 grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] md:grid-cols-[repeat(auto-fit,minmax(18rem,1fr))]"
     >
         <div
-            v-for="photo in uploads"
+            v-for="photo in items"
             :key="photo.id"
             class="relative flex justify-center flex-wrap shadow-sm rounded-lg overflow-hidden bg-gray-300"
         >
@@ -97,7 +55,7 @@ function setUploadLoading(photo) {
                 as="button"
                 class="w-full max-h-80"
                 :href="route('pages.show', photo)"
-                @click="setUploadLoading(photo)"
+                @click="setItemLoading(photo)"
             >
                 <div
                     v-if="photo.loading"
@@ -134,5 +92,5 @@ function setUploadLoading(photo) {
         </h2>
         <ManEmptyCircle />
     </div>
-    <div ref="infiniteScroll"></div>
+    <div ref="infiniteScrollRef"></div>
 </template>
