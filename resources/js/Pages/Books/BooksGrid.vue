@@ -5,9 +5,14 @@
         >
     </div>
     <div v-else-if="workingBooks.length > 0">
-        <h3 class="pl-3 pt-2 text-2xl text-theme-primary font-heading">
-            {{ title }}
-        </h3>
+        <div class="flex items-center ml-3 my-3">
+            <button class="px-2 py-1 rounded-md bg-theme-primary text-theme-button" @click="speak(title)">
+                <i class="ri-speak-line text-xl"></i>
+            </button>
+            <h3 class="ml-2 text-2xl text-theme-primary font-heading">
+                {{ title }}
+            </h3>
+        </div>
         <div
             ref="content"
             class="flex snap-x space-x-1 overflow-y-hidden pb-2 scrollbar scrollbar-thumb-gray-500 scrollbar-thumb-rounded"
@@ -56,9 +61,12 @@
 
 <script setup>
 import LazyLoader from "@/Components/LazyLoader.vue";
+import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { Link } from "@inertiajs/vue3";
 import axios from "axios";
 import { computed, onMounted, ref } from "vue";
+
+const { speak } = useSpeechSynthesis();
 
 const props = defineProps({
     category: {
