@@ -1,8 +1,8 @@
 <script setup>
-import { computed } from "vue";
-import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
-import { usePermissions } from "@/composables/permissions";
 import Button from "@/Components/Button.vue";
+import { usePermissions } from "@/composables/permissions";
+import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { computed } from "vue";
 
 const { voices, selectedVoice, setVoice } = useSpeechSynthesis();
 const { canEditPages } = usePermissions();
@@ -31,11 +31,8 @@ function alertVoices() {
 </script>
 
 <template>
-    <div class="flex justify-between">
-        <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-            Voice Settings
-        </h2>
-        <Button v-if="canEditPages" class="ml-3" @click="alertVoices"
+    <div class="flex justify-end">
+        <Button v-if="canEditPages" @click="alertVoices"
             >Voices</Button
         >
     </div>

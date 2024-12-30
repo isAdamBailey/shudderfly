@@ -1,4 +1,5 @@
 <script setup>
+import Accordion from "@/Components/Accordion.vue";
 import Close from "@/Components/svg/Close.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
@@ -53,7 +54,7 @@ defineProps({
             <Transition>
                 <div
                     v-if="!close"
-                    class="mx-6 mb-3 p-6 flex justify-between bg-white dark:bg-gray-800 sm:rounded-lg"
+                    class="mx-6 mb-5 p-6 flex justify-between bg-white dark:bg-gray-800 sm:rounded-lg"
                 >
                     <h2
                         class="font-semibold text-lg text-gray-900 dark:text-gray-100 leading-tight w-3/4 md:w-full"
@@ -68,16 +69,12 @@ defineProps({
                 </div>
             </Transition>
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-                <div
-                    class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg"
-                >
+                <Accordion title="Contact Admins">
                     <ContactAdminsForm />
-                </div>
-                <div
-                    class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg"
-                >
+                </Accordion>
+                <Accordion title="Voice Settings">
                     <VoiceSettingsForm />
-                </div>
+                </Accordion>
                 <div
                     v-if="canEditProfile"
                     class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg"
