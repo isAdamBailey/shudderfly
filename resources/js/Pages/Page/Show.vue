@@ -7,6 +7,7 @@
         >
             <div class="text-center">
                 <Link
+                    prefetch="mount"
                     :href="route('books.show', page.book)"
                     class="px-2 py-2 flex justify-center flex-wrap mb-3 border-b-2 border-gray-800 bg-blue-200 dark:bg-gray-300 christmas:bg-christmas-snow hover:bg-blue-600 hover:dark:bg-gray-800 text-blue-600 dark:text-gray-800 christmas:text-christmas-holly hover:text-yellow-200 dark:hover:text-white transition"
                 >
@@ -19,6 +20,7 @@
                     <div class="relative mx-3 md:mx-32">
                         <Link
                             v-if="previousPage"
+                            prefectch="mount"
                             :href="route('pages.show', previousPage)"
                             as="button"
                             class="z-10 absolute left-0 mt-60 inline-flex items-center text-white hover:text-blue-600 hover:dark:text-gray-800 hover:christmas:text-christmas-gold disabled:opacity-25 transition ease-in-out duration-150"
@@ -32,6 +34,7 @@
                         </Link>
                         <Link
                             v-if="nextPage"
+                            prefetch="mount"
                             :href="route('pages.show', nextPage)"
                             as="button"
                             class="z-10 absolute right-0 mt-60 inline-flex items-center text-white hover:text-blue-600 hover:dark:text-gray-800 hover:christmas:text-christmas-gold disabled:opacity-25 transition ease-in-out duration-150"

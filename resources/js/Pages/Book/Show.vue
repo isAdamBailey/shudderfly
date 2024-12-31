@@ -5,14 +5,18 @@
         <template #header>
             <SearchInput route-name="books.index" label="Books" />
             <div
-                class="bg-theme-primary p-3 mt-5 rounded-t-lg relative bg-cover bg-center"
+                class="bg-theme-primary p-3 mt-5 rounded-t-lg relative bg-cover bg-center h-[70vh]"
                 :style="{
                     backgroundImage: book.cover_image?.media_path
                         ? `url(${book.cover_image.media_path})`
                         : '',
                 }"
             >
-                <Link :href="route('books.show', book)" class="w-full h-full">
+                <Link
+                    prefetch
+                    :href="route('books.show', book)"
+                    class="w-full h-full"
+                >
                     <div class="flex flex-col justify-between h-full">
                         <div class="flex justify-center text-center mb-3">
                             <h1
@@ -190,11 +194,11 @@ import EditBookForm from "@/Pages/Book/EditBookForm.vue";
 import NewPageForm from "@/Pages/Book/NewPageForm.vue";
 import SimilarBooks from "@/Pages/Book/SimilarBooks.vue";
 import { usePermissions } from "@/composables/permissions";
-import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
+import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useDate } from "@/dateHelpers";
 import { Head, Link } from "@inertiajs/vue3";
-import { onMounted, ref, computed } from "vue";
+import { computed, onMounted, ref } from "vue";
 
 const { canEditPages } = usePermissions();
 const { short } = useDate();
