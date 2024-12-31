@@ -11,15 +11,23 @@
                 aria-label="scroll to top of the page"
                 @click="scrollToTop"
             >
-                <i class="ri-arrow-up-circle-line text-5xl"></i>
+                <i class="ri-arrow-up-circle-line text-7xl"></i>
             </button>
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { router } from '@inertiajs/vue3';
 import debounce from "lodash/debounce";
+import { onBeforeUnmount, onMounted, ref } from "vue";
+
+const props = defineProps({
+    method: {
+        type: Function,
+        default: null,
+    },
+});
 
 const scrollTopButton = ref(null);
 
@@ -41,7 +49,21 @@ onBeforeUnmount(() => {
     window.removeEventListener("scroll", handleDebouncedScroll);
 });
 
-const scrollToTop = () => {
+const scrollToTop = async () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
+
+
+    if (props.method) {
+        await new Promise((resolve) => {
+            const checkIfScrollIsAtTop = setInterval(() => {
+                if (window.scrollY === 0) {
+                    clearInterval(checkIfScrollIsAtTop);
+                    resolve();
+                }
+            }, 10);
+        });
+        
+        router.visit(props.method);
+    }
 };
 </script>

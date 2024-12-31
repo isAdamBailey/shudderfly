@@ -49,7 +49,7 @@
                     </div>
                     <LazyLoader
                         v-if="page.media_path"
-                        class="max-h-[60vh]"
+                        class="max-h-[75vh]"
                         :src="page.media_path"
                         :poster="page.media_poster"
                         :alt="page.description"
@@ -59,7 +59,10 @@
                         :url="page.video_link"
                         :title="page.description"
                     />
-                    <p class="mb-3 text-sm italic dark:text-white">
+                    <p
+                        v-if="canEditPages"
+                        class="mb-3 text-sm italic dark:text-white"
+                    >
                         Uploaded on {{ short(page.created_at) }}, viewed
                         {{ Math.round(page.read_count).toLocaleString() }} times
                     </p>

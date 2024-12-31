@@ -35,16 +35,18 @@
                                 <p>
                                     {{ short(book.created_at) }}
                                 </p>
-                                <p>{{ pages.total }} pages</p>
-                                <p>
-                                    Read
-                                    {{
-                                        Math.round(
-                                            book.read_count
-                                        ).toLocaleString()
-                                    }}
-                                    times
-                                </p>
+                                <span v-if="canEditPages">
+                                    <p>{{ pages.total }} pages</p>
+                                    <p>
+                                        Read
+                                        {{
+                                            Math.round(
+                                                book.read_count
+                                            ).toLocaleString()
+                                        }}
+                                        times
+                                    </p>
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -178,7 +180,7 @@
                 label="You might also like these books"
             />
         </Deferred>
-        <ScrollTop />
+        <ScrollTop :method="route('books.show', book)" />
     </BreezeAuthenticatedLayout>
 </template>
 
