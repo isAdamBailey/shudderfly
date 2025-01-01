@@ -1,7 +1,7 @@
 <template>
     <div
         ref="scrollTopButton"
-        class="invisible sticky bottom-0 flex w-full justify-end pb-3 pr-5 transition"
+        class="invisible sticky bottom-0 flex w-full justify-end pb-3 pr-5 transition z-10"
     >
         <div
             class="cursor-pointer bg-gray-50 rounded-full text-blue-600 transition hover:text-blue-300 dark:text-purple-900 dark:hover:text-purple-500"

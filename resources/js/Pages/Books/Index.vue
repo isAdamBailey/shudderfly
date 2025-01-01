@@ -62,11 +62,13 @@
             </h2>
             <ManEmptyCircle />
         </div>
+        <ScrollTop />
     </BreezeAuthenticatedLayout>
 </template>
 
 <script setup>
 import Button from "@/Components/Button.vue";
+import ScrollTop from "@/Components/ScrollTop.vue";
 import SearchInput from "@/Components/SearchInput.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 import { usePermissions } from "@/composables/permissions";

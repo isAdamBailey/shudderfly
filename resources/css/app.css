@@ -10,7 +10,7 @@
     }
 
     .text-theme-book-title {
-        @apply text-yellow-200
+        @apply text-blue-600
     dark:text-gray-700
     christmas:text-christmas-green;
     }
