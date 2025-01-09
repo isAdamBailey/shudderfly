@@ -170,7 +170,7 @@ class BookController extends Controller
         $ignoreWords = [
             'all', 'the', 'on', 'in', 'and', 'or', 'of', 'to', 'a', 'an', 'up', 'down', 'is', 'it', 'as', 'at', 'by',
             'for', 'from', 'with', 'be', 'are', 'were', 'was', 'will', 'can', 'may', 'have', 'has', 'had', 'do', 'does',
-            'did', 'not', 'no', 'so', 'if', 'but', 'how', 'why', 'what', 'who',
+            'did', 'not', 'no', 'so', 'if', 'but', 'how', 'why', 'what', 'who', 'we', 'me', 'and',
         ];
         $words = array_filter($words, fn ($word) => ! is_numeric($word) && ! empty($word) && ! in_array(strtolower($word), $ignoreWords));
         if (empty($words)) {
