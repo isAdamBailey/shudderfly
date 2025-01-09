@@ -20,7 +20,7 @@ const close = ref(false);
 const title = computed(() => {
     return ` Hi ${
         usePage().props.auth.user.name
-    }! We love you! Welcome to your profile page`;
+    }! We love you! Welcome to your account page`;
 });
 
 onMounted(() => {
@@ -46,7 +46,7 @@ defineProps({
             <h2
                 class="font-heading text-4xl text-theme-title leading-tight"
             >
-                Profile
+                Account
             </h2>
         </template>
 
