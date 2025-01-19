@@ -13,7 +13,6 @@
                 }"
             >
                 <Link
-                    prefetch
                     :href="route('books.show', book)"
                     class="w-full h-full"
                 >
@@ -55,7 +54,7 @@
             <div class="flex justify-between bg-theme-secondary rounded-b-lg">
                 <div
                     v-if="book.excerpt"
-                    class="flex-grow text-center my-3 text-theme-secondary"
+                    class="flex-grow text-center my-3 text-gray-800"
                 >
                     <p class="italic leading-tight">
                         {{ book.excerpt }}

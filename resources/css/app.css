@@ -17,7 +17,7 @@
 
     .text-theme-primary {
         @apply text-yellow-200
-    dark:text-gray-100
+    dark:text-gray-400
     christmas:text-christmas-berry;
     }
 
