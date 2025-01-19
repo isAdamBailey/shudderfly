@@ -73,8 +73,12 @@ class PageController extends Controller
         
         $currentIndex = $siblingPages->search($page->id);
         
-        $nextPage = Page::find($siblingPages->wrap($currentIndex - 1));
-        $previousPage = Page::find($siblingPages->wrap($currentIndex + 1));
+        // Get next and previous indices, handling wrap-around
+        $nextIndex = ($currentIndex - 1 + $siblingPages->count()) % $siblingPages->count();
+        $previousIndex = ($currentIndex + 1) % $siblingPages->count();
+
+        $nextPage = $nextIndex !== $currentIndex ? Page::find($siblingPages[$nextIndex]) : null;
+        $previousPage = $previousIndex !== $currentIndex ? Page::find($siblingPages[$previousIndex]) : null;
 
         $books = $canEditPages
             ? Book::all()->map->only(['id', 'title'])->sortBy('title')->values()->toArray()
