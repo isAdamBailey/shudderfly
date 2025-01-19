@@ -42,6 +42,13 @@
                         fill="lightgray"
                         opacity="0.7"
                     />
+                    <animateTransform
+                        attributeName="transform"
+                        type="translate"
+                        values="0,-2; 0,2; 0,-2"
+                        dur="0.1s"
+                        repeatCount="indefinite"
+                    />
                 </g>
 
                 <g id="fly-body">
