@@ -42,13 +42,6 @@
                         fill="lightgray"
                         opacity="0.7"
                     />
-                    <animateTransform
-                        attributeName="transform"
-                        type="translate"
-                        values="0,-2; 0,2; 0,-2"
-                        dur="0.1s"
-                        repeatCount="indefinite"
-                    />
                 </g>
 
                 <g id="fly-body">
@@ -64,15 +57,17 @@
                         stroke-width="2"
                         fill="none"
                     />
-                    <animateTransform
-                        attributeName="transform"
-                        type="translate"
-                        values="0,-2; 0,2; 0,-2"
-                        dur="0.3s"
-                        repeatCount="indefinite"
-                    />
                 </g>
             </g>
+            <!-- Add rotation animation -->
+            <animateTransform
+                attributeName="transform"
+                type="rotate"
+                from="0 100 100"
+                to="360 100 100"
+                dur="30s"
+                repeatCount="indefinite"
+            />
         </g>
 
         <g v-if="isChristmas" id="snowman">
