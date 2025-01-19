@@ -43,7 +43,7 @@
                     </div>
                     <div
                         v-if="book.excerpt"
-                        class="rounded-b-lg absolute inset-x-0 bottom-0 w-full truncate bg-white/70 py-2.5 text-center text-sm leading-4 text-black backdrop-blur-sm line-clamp-1 z-10"
+                        class="rounded-b-lg absolute inset-x-0 bottom-0 w-full truncate bg-white/70 py-2.5 text-left px-2 text-sm leading-4 text-black backdrop-blur-sm line-clamp-1 z-10"
                     >
                         {{ book.excerpt }}
                     </div>

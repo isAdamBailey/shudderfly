@@ -162,7 +162,7 @@
                     />
                     <div
                         v-if="page.content"
-                        class="absolute inset-x-0 top-0 rounded-t-lg w-full truncate bg-white/70 py-2.5 text-center text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
+                        class="absolute inset-x-0 top-0 rounded-t-lg w-full truncate bg-white/70 py-2.5 text-left px-2 text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
                         v-html="page.content"
                     ></div>
                 </Link>

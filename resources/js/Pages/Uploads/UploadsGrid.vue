@@ -4,7 +4,7 @@ import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 import { Link, usePage } from "@inertiajs/vue3";
-import { watch, computed } from "vue";
+import { computed, watch } from "vue";
 
 const props = defineProps({
     photos: {
@@ -78,7 +78,7 @@ function mediaPath(photo) {
                 />
                 <div
                     v-if="photo.content"
-                    class="absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 text-center text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
+                    class="absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 px-2 text-left text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
                     v-html="photo.content"
                 ></div>
             </Link>
