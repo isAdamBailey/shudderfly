@@ -67,15 +67,14 @@ class PageController extends Controller
 
         $page->load(['book', 'book.coverImage']);
 
-        $nextPage = Page::where('book_id', $page->book_id)
-            ->where('created_at', '<', $page->created_at)
-            ->orderBy('created_at', 'desc')
-            ->first();
-
-        $previousPage = Page::where('book_id', $page->book_id)
-            ->where('created_at', '>', $page->created_at)
+        $siblingPages = Page::where('book_id', $page->book_id)
             ->orderBy('created_at')
-            ->first();
+            ->pluck('id');
+        
+        $currentIndex = $siblingPages->search($page->id);
+        
+        $nextPage = Page::find($siblingPages->wrap($currentIndex - 1));
+        $previousPage = Page::find($siblingPages->wrap($currentIndex + 1));
 
         $books = $canEditPages
             ? Book::all()->map->only(['id', 'title'])->sortBy('title')->values()->toArray()
