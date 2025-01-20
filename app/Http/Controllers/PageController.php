@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StorePageRequest;
 use App\Http\Requests\UpdatePageRequest;
+use App\Jobs\CreateVideoSnapshot;
 use App\Jobs\IncrementPageReadCount;
 use App\Jobs\StoreImage;
 use App\Jobs\StoreVideo;
@@ -70,9 +71,9 @@ class PageController extends Controller
         $siblingPages = Page::where('book_id', $page->book_id)
             ->orderBy('created_at')
             ->pluck('id');
-        
+
         $currentIndex = $siblingPages->search($page->id);
-        
+
         // Get next and previous indices, handling wrap-around
         $nextIndex = ($currentIndex - 1 + $siblingPages->count()) % $siblingPages->count();
         $previousIndex = ($currentIndex + 1) % $siblingPages->count();
@@ -235,5 +236,18 @@ class PageController extends Controller
         if ($page) {
             $book->update(['cover_page' => $page->id]);
         }
+    }
+
+    public function snapshot(Request $request)
+    {
+        $book = Book::find($request->book_id);
+
+        CreateVideoSnapshot::dispatch(
+            videoUrl: $request->video_url,
+            timeInSeconds: $request->video_time,
+            book: $book
+        );
+
+        return redirect(route('books.show', $book));
     }
 }

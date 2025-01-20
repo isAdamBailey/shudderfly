@@ -40,7 +40,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/photos', [PageController::class, 'index'])->name('pictures.index');
 
     Route::get('/pages/{page}', [PageController::class, 'show'])->name('pages.show');
-
+    Route::post('/pages/snapshot', [PageController::class, 'snapshot'])->name('pages.snapshot');
     Route::post('/contact-admins-email', [ProfileController::class, 'contactAdminsEmail'])
         ->name('profile.contact-admins-email');
 
