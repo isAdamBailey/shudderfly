@@ -15,15 +15,17 @@
             :poster="poster"
             class="rounded-lg max-h-[75vh] max-w-full h-auto"
             playsinline
+            @timeupdate="handleTimeUpdate"
             @error="handleMediaError"
         >
             <source :src="imageSrc" type="video/mp4" />
             Your browser does not support the video tag.
         </video>
-        <button
+        <Button
             v-if="!isCover && bookId"
-            class="absolute top-2 right-2 bg-blue-600/75 hover:bg-blue-700 text-white rounded-full p-2 z-10 backdrop-blur-sm"
+            class="absolute top-2 right-2 h-8"
             title="Take Snapshot"
+            :disabled="isOnCooldown || !canTakeSnapshot"
             @click="takeSnapshot"
         >
             <i class="ri-camera-line text-xl"></i>
@@ -41,10 +43,11 @@
 </template>
 
 <script setup>
+import Button from "@/Components/Button.vue";
 import { useMedia } from "@/mediaHelpers";
 import { useForm } from "@inertiajs/vue3";
 import { useImage } from "@vueuse/core";
-import { computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 
 const { isVideo } = useMedia();
 const videoRef = ref(null);
@@ -80,18 +83,57 @@ const placeholder = "/img/photo-placeholder.png";
 const imageSrc = ref(props.src || placeholder);
 const { isLoading } = useImage({ src: computed(() => imageSrc.value) });
 
+const COOLDOWN_MINUTES = 10;
+const COOLDOWN_KEY = 'global_snapshot_cooldown';
+const isOnCooldown = ref(false);
+
+onMounted(() => {
+    checkCooldown();
+});
+
 const form = useForm({
     book_id: props.bookId,
     video_time: null,
     video_url: null,
 });
 
+const canTakeSnapshot = ref(false);
+
 const handleMediaError = () => {
     imageSrc.value = placeholder;
 };
 
-const takeSnapshot = () => {
+const handleTimeUpdate = () => {
     if (!videoRef.value) return;
+    canTakeSnapshot.value = videoRef.value.currentTime > 0;
+};
+
+const checkCooldown = () => {
+    const lastSnapshot = localStorage.getItem(COOLDOWN_KEY);
+    if (lastSnapshot) {
+        const cooldownEnds = new Date(parseInt(lastSnapshot));
+        const now = new Date();
+        if (now < cooldownEnds) {
+            isOnCooldown.value = true;
+            // Set timeout to re-enable button when cooldown ends
+            setTimeout(() => {
+                isOnCooldown.value = false;
+                localStorage.removeItem(COOLDOWN_KEY);
+            }, cooldownEnds - now);
+        } else {
+            // Clean up expired cooldown
+            localStorage.removeItem(COOLDOWN_KEY);
+        }
+    }
+};
+
+const takeSnapshot = () => {
+    if (!canTakeSnapshot.value || isOnCooldown.value) return;
+    
+    // Set global cooldown timestamp
+    const cooldownEnds = new Date(Date.now() + COOLDOWN_MINUTES * 60 * 1000);
+    localStorage.setItem(COOLDOWN_KEY, cooldownEnds.getTime().toString());
+    isOnCooldown.value = true;
     
     form.video_time = videoRef.value.currentTime;
     form.video_url = imageSrc.value;
@@ -99,8 +141,12 @@ const takeSnapshot = () => {
     form.post(route('pages.snapshot'), {
         preserveScroll: true,
         onSuccess: () => {
+            console.log('Snapshot taken');
         },
         onError: (err) => {
+            // Reset cooldown on error
+            localStorage.removeItem(COOLDOWN_KEY);
+            isOnCooldown.value = false;
             console.error('Error taking snapshot:', err);
         }
     });
