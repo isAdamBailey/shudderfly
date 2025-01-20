@@ -61,8 +61,11 @@ class CreateVideoSnapshot implements ShouldQueue
                 // Include timestamp in final filename
                 $mediaPath = 'books/'.$this->book->slug."/snapshot_{$timestamp}_{$random}.webp";
 
-                // Pass the relative path that StoreImage expects
-                StoreImage::dispatch($tempImagePath, $mediaPath);
+                // Get the full storage path for the image
+                $fullTempImagePath = Storage::disk('local')->path($tempImagePath);
+
+                // Dispatch StoreImage job with the full path
+                StoreImage::dispatch($fullTempImagePath, $mediaPath);
 
                 // Create the page
                 $this->book->pages()->create([
@@ -76,12 +79,18 @@ class CreateVideoSnapshot implements ShouldQueue
                 'exception' => $e->getMessage(),
                 'video_url' => $this->videoUrl,
                 'time' => $this->timeInSeconds,
+                'temp_video_path' => $tempVideoPath ?? null,
+                'temp_image_path' => $tempImagePath ?? null,
             ]);
             throw $e;
         } finally {
             // Cleanup temp files using Storage facade
-            Storage::disk('local')->delete($tempVideoPath);
-            Storage::disk('local')->delete($tempImagePath);
+            if (isset($tempVideoPath) && Storage::disk('local')->exists($tempVideoPath)) {
+                Storage::disk('local')->delete($tempVideoPath);
+            }
+            if (isset($tempImagePath) && Storage::disk('local')->exists($tempImagePath)) {
+                Storage::disk('local')->delete($tempImagePath);
+            }
         }
     }
 }
