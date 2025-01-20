@@ -117,15 +117,23 @@ const handleTimeUpdate = () => {
 const takeSnapshot = () => {
     if (!canTakeSnapshot.value || isOnCooldown.value) return;
     
+    // Get the current video source URL
+    const videoElement = videoRef.value;
+    const videoSource = videoElement?.querySelector('source');
+    const videoUrl = videoSource?.src || imageSrc.value;
+    
+    if (!videoUrl || !videoElement?.currentTime) {
+        return;
+    }
+    
     setCooldown();
     
-    form.video_time = videoRef.value.currentTime;
-    form.video_url = imageSrc.value;
+    form.video_time = videoElement.currentTime;
+    form.video_url = videoUrl;
     
     form.post(route('pages.snapshot'), {
         preserveScroll: true,
         onSuccess: () => {
-            console.log('Snapshot taken');
         },
         onError: (err) => {
             resetCooldown();
