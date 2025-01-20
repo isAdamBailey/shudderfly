@@ -116,6 +116,8 @@ const handleTimeUpdate = () => {
 
 const takeSnapshot = () => {
     if (!canTakeSnapshot.value || isOnCooldown.value) return;
+    setCooldown();
+    canTakeSnapshot.value = false;
     
     // Get the current video source URL
     const videoElement = videoRef.value;
@@ -123,10 +125,10 @@ const takeSnapshot = () => {
     const videoUrl = videoSource?.src || imageSrc.value;
     
     if (!videoUrl || !videoElement?.currentTime) {
+        resetCooldown();
+        canTakeSnapshot.value = true;
         return;
     }
-    
-    setCooldown();
     
     form.video_time = videoElement.currentTime;
     form.video_url = videoUrl;
@@ -137,6 +139,7 @@ const takeSnapshot = () => {
         },
         onError: (err) => {
             resetCooldown();
+            canTakeSnapshot.value = true;
             console.error('Error taking snapshot:', err);
         }
     });
