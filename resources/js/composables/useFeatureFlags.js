@@ -1,5 +1,5 @@
 export const FEATURES = {
-    SNAPSHOTS_ENABLED: true
+    SNAPSHOTS_ENABLED: false
 };
 
 export function useFeatureFlags() {
