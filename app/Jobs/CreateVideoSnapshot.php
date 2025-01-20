@@ -41,7 +41,6 @@ class CreateVideoSnapshot implements ShouldQueue
         }
 
         try {
-            // Generate unique filenames with timestamp and random string
             $timestamp = now()->format('Ymd_His');
             $random = Str::random(8);
 
@@ -67,7 +66,7 @@ class CreateVideoSnapshot implements ShouldQueue
 
                 // Create the page
                 $this->book->pages()->create([
-                    'content' => '',
+                    'content' => '<p>This is a screenshot of one of the videos in this book.</p>',
                     'media_path' => $mediaPath,
                 ]);
             }
