@@ -40,6 +40,9 @@ class CreateVideoSnapshot implements ShouldQueue
             mkdir($tempDir, 0755, true);
         }
 
+        $tempVideoPath = null;
+        $tempImagePath = null;
+
         try {
             $timestamp = now()->format('Ymd_His');
             $random = Str::random(8);
@@ -57,11 +60,6 @@ class CreateVideoSnapshot implements ShouldQueue
                 throw new \Exception('Failed to save video to temp file');
             }
 
-            // Verify video file exists and is readable
-            if (! Storage::disk('local')->exists($tempVideoPath)) {
-                throw new \Exception('Video file not found after saving');
-            }
-
             // Extract frame using FFmpeg
             FFMpeg::fromDisk('local')
                 ->open($tempVideoPath)
@@ -74,14 +72,6 @@ class CreateVideoSnapshot implements ShouldQueue
                 throw new \Exception('Failed to create snapshot image');
             }
 
-            // Get the full storage path for the image
-            $fullTempImagePath = Storage::disk('local')->path($tempImagePath);
-
-            // Verify the full path exists
-            if (! file_exists($fullTempImagePath)) {
-                throw new \Exception("Full path to snapshot does not exist: {$fullTempImagePath}");
-            }
-
             // Include timestamp in final filename
             $mediaPath = 'books/'.$this->book->slug."/snapshot_{$timestamp}_{$random}.webp";
 
@@ -91,8 +81,34 @@ class CreateVideoSnapshot implements ShouldQueue
                 'media_path' => $mediaPath,
             ]);
 
-            // Dispatch StoreImage job on default queue
-            StoreImage::dispatch($fullTempImagePath, $mediaPath);
+            // Clean up video file as we don't need it anymore
+            if (Storage::disk('local')->exists($tempVideoPath)) {
+                Storage::disk('local')->delete($tempVideoPath);
+            }
+
+            // Dispatch StoreImage job
+            StoreImage::dispatch($tempImagePath, $mediaPath)
+                ->chain([
+                    // Only delete the temp image after StoreImage completes
+                    new class($tempImagePath) implements ShouldQueue
+                    {
+                        use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+                        private $pathToDelete;
+
+                        public function __construct($pathToDelete)
+                        {
+                            $this->pathToDelete = $pathToDelete;
+                        }
+
+                        public function handle()
+                        {
+                            if (Storage::disk('local')->exists($this->pathToDelete)) {
+                                Storage::disk('local')->delete($this->pathToDelete);
+                            }
+                        }
+                    },
+                ]);
 
         } catch (\Exception $e) {
             Log::error('Error creating video snapshot', [
@@ -101,19 +117,17 @@ class CreateVideoSnapshot implements ShouldQueue
                 'time' => $this->timeInSeconds,
                 'temp_video_path' => $tempVideoPath ?? null,
                 'temp_image_path' => $tempImagePath ?? null,
-                'full_temp_image_path' => $fullTempImagePath ?? null,
-                'storage_path' => storage_path(),
-                'exists' => isset($fullTempImagePath) ? file_exists($fullTempImagePath) : false,
             ]);
-            throw $e;
-        } finally {
-            // Cleanup temp files using Storage facade
-            if (isset($tempVideoPath) && Storage::disk('local')->exists($tempVideoPath)) {
+
+            // Clean up files in case of error
+            if ($tempVideoPath && Storage::disk('local')->exists($tempVideoPath)) {
                 Storage::disk('local')->delete($tempVideoPath);
             }
-            if (isset($tempImagePath) && Storage::disk('local')->exists($tempImagePath)) {
+            if ($tempImagePath && Storage::disk('local')->exists($tempImagePath)) {
                 Storage::disk('local')->delete($tempImagePath);
             }
+
+            throw $e;
         }
     }
 }
