@@ -2,18 +2,21 @@
 import Accordion from "@/Components/Accordion.vue";
 import Close from "@/Components/svg/Close.vue";
 import { usePermissions } from "@/composables/permissions";
+import { useFeatureFlags } from '@/composables/useFeatureFlags';
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, usePage } from "@inertiajs/vue3";
 import { computed, onMounted, ref } from "vue";
 import ContactAdminsForm from "./Partials/ContactAdminsForm.vue";
 import DeleteUserForm from "./Partials/DeleteUserForm.vue";
+import ScreenshotSettingsForm from "./Partials/ScreenshotSettingsForm.vue";
 import UpdatePasswordForm from "./Partials/UpdatePasswordForm.vue";
 import UpdateProfileInformationForm from "./Partials/UpdateProfileInformationForm.vue";
 import VoiceSettingsForm from "./Partials/VoiceSettingsForm.vue";
 
 const { speak } = useSpeechSynthesis();
 const { canEditProfile } = usePermissions();
+const { isSnapshotsEnabled } = useFeatureFlags();
 
 const close = ref(false);
 
@@ -74,6 +77,9 @@ defineProps({
                 </Accordion>
                 <Accordion title="Voice Settings">
                     <VoiceSettingsForm />
+                </Accordion>
+                <Accordion v-if="isSnapshotsEnabled" title="Screenshot Settings">
+                    <ScreenshotSettingsForm />
                 </Accordion>
                 <div
                     v-if="canEditProfile"

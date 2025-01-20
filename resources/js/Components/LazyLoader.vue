@@ -6,18 +6,33 @@
         alt="placeholder image"
         loading="lazy"
     />
-    <video
-        v-else-if="isVideo(imageSrc)"
-        :controls="!isCover"
-        disablepictureinpicture
-        controlslist="nodownload"
-        :poster="poster"
-        class="rounded-lg inline-block"
-        @error="handleMediaError"
-    >
-        <source :src="imageSrc" />
-        Your browser does not support the video tag.
-    </video>
+    <div v-else-if="isVideo(imageSrc)" class="relative inline-block">
+        <video
+            ref="videoRef"
+            :controls="!isCover"
+            disablepictureinpicture
+            controlslist="nodownload"
+            :poster="poster"
+            class="rounded-lg max-h-[75vh] max-w-full h-auto"
+            playsinline
+            @timeupdate="handleTimeUpdate"
+            @play="handlePlayPause"
+            @pause="handlePlayPause"
+            @error="handleMediaError"
+        >
+            <source :src="imageSrc" type="video/mp4" />
+            Your browser does not support the video tag.
+        </video>
+        <Button
+            v-if="!isCover && bookId && isSnapshotsEnabled"
+            class="absolute top-0 right-0 h-8"
+            title="Take Snapshot"
+            :disabled="isOnCooldown || !canTakeSnapshot || !isPaused"
+            @click="takeSnapshot"
+        >
+            <i class="ri-camera-line text-xl"></i>
+        </button>
+    </div>
     <img
         v-else
         ref="image"
@@ -30,11 +45,16 @@
 </template>
 
 <script setup>
-import { useImage } from "@vueuse/core";
-import { ref, computed } from "vue";
+import Button from "@/Components/Button.vue";
+import { useFeatureFlags } from '@/composables/useFeatureFlags';
+import { useSnapshotCooldown } from '@/composables/useSnapshotCooldown';
 import { useMedia } from "@/mediaHelpers";
+import { useForm } from "@inertiajs/vue3";
+import { useImage } from "@vueuse/core";
+import { computed, ref } from "vue";
 
 const { isVideo } = useMedia();
+const videoRef = ref(null);
 
 const props = defineProps({
     src: {
@@ -57,13 +77,60 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    bookId: {
+        type: String,
+        default: null,
+    },
 });
 
 const placeholder = "/img/photo-placeholder.png";
 const imageSrc = ref(props.src || placeholder);
-
 const { isLoading } = useImage({ src: computed(() => imageSrc.value) });
+
+const { isOnCooldown, setCooldown, resetCooldown } = useSnapshotCooldown();
+
+const form = useForm({
+    book_id: props.bookId,
+    video_time: null,
+    video_url: null,
+});
+
+const canTakeSnapshot = ref(false);
+const isPaused = ref(true);
+
+const { isSnapshotsEnabled } = useFeatureFlags();
+
 const handleMediaError = () => {
     imageSrc.value = placeholder;
+};
+
+const handlePlayPause = () => {
+    if (!videoRef.value) return;
+    isPaused.value = videoRef.value.paused;
+};
+
+const handleTimeUpdate = () => {
+    if (!videoRef.value) return;
+    canTakeSnapshot.value = videoRef.value.currentTime > 0;
+};
+
+const takeSnapshot = () => {
+    if (!canTakeSnapshot.value || isOnCooldown.value) return;
+    
+    setCooldown();
+    
+    form.video_time = videoRef.value.currentTime;
+    form.video_url = imageSrc.value;
+    
+    form.post(route('pages.snapshot'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            console.log('Snapshot taken');
+        },
+        onError: (err) => {
+            resetCooldown();
+            console.error('Error taking snapshot:', err);
+        }
+    });
 };
 </script>

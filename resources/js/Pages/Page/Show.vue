@@ -53,6 +53,7 @@
                         :src="page.media_path"
                         :poster="page.media_poster"
                         :alt="page.description"
+                        :book-id="page.book.id"
                     />
                     <VideoWrapper
                         v-else-if="page.video_link"

@@ -4,11 +4,10 @@ import InputLabel from "@/Components/InputLabel.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import TextInput from "@/Components/TextInput.vue";
 import { Link, useForm, usePage } from "@inertiajs/vue3";
-import { ref } from "vue";
 
 const props = defineProps({
-    mustVerifyEmail: Boolean,
-    status: String,
+    mustVerifyEmail: { type: Boolean, default: false },
+    status: { type: String, default: '' },
 });
 
 const user = usePage().props.auth.user;
@@ -42,7 +41,6 @@ const form = useForm({
                     type="text"
                     class="mt-1 block w-full"
                     required
-                    autofocus
                     autocomplete="name"
                 />
                 <InputError class="mt-2" :message="form.errors.name" />
