@@ -43,23 +43,23 @@ class CreateVideoSnapshot implements ShouldQueue
         try {
             $timestamp = now()->format('Ymd_His');
             $random = Str::random(8);
-            
+
             $tempVideoPath = "temp/temp_video_{$timestamp}_{$random}.mp4";
             $tempImagePath = "temp/snapshot_{$timestamp}_{$random}.jpg";
-            
+
             // Download video to temp file
             $videoContent = file_get_contents($this->videoUrl);
             if ($videoContent === false) {
                 throw new \Exception("Failed to download video from URL: {$this->videoUrl}");
             }
-            
-            if (!Storage::disk('local')->put($tempVideoPath, $videoContent)) {
-                throw new \Exception("Failed to save video to temp file");
+
+            if (! Storage::disk('local')->put($tempVideoPath, $videoContent)) {
+                throw new \Exception('Failed to save video to temp file');
             }
 
             // Verify video file exists and is readable
-            if (!Storage::disk('local')->exists($tempVideoPath)) {
-                throw new \Exception("Video file not found after saving");
+            if (! Storage::disk('local')->exists($tempVideoPath)) {
+                throw new \Exception('Video file not found after saving');
             }
 
             // Extract frame using FFmpeg
@@ -70,30 +70,29 @@ class CreateVideoSnapshot implements ShouldQueue
                 ->save($tempImagePath);
 
             // Verify snapshot was created
-            if (!Storage::disk('local')->exists($tempImagePath)) {
-                throw new \Exception("Failed to create snapshot image");
+            if (! Storage::disk('local')->exists($tempImagePath)) {
+                throw new \Exception('Failed to create snapshot image');
             }
 
             // Get the full storage path for the image
             $fullTempImagePath = Storage::disk('local')->path($tempImagePath);
-            
+
             // Verify the full path exists
-            if (!file_exists($fullTempImagePath)) {
+            if (! file_exists($fullTempImagePath)) {
                 throw new \Exception("Full path to snapshot does not exist: {$fullTempImagePath}");
             }
 
             // Include timestamp in final filename
-            $mediaPath = 'books/' . $this->book->slug . "/snapshot_{$timestamp}_{$random}.webp";
-            
+            $mediaPath = 'books/'.$this->book->slug."/snapshot_{$timestamp}_{$random}.webp";
+
             // Create the page first
             $page = $this->book->pages()->create([
                 'content' => '<p>This is a screenshot of one of the videos in this book.</p>',
                 'media_path' => $mediaPath,
             ]);
 
-            // Dispatch StoreImage job
-            StoreImage::dispatch($fullTempImagePath, $mediaPath)
-                ->onQueue('images'); // Ensure it runs on the images queue if you have one
+            // Dispatch StoreImage job on default queue
+            StoreImage::dispatch($fullTempImagePath, $mediaPath);
 
         } catch (\Exception $e) {
             Log::error('Error creating video snapshot', [
