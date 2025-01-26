@@ -2,7 +2,6 @@
 import Accordion from "@/Components/Accordion.vue";
 import Close from "@/Components/svg/Close.vue";
 import { usePermissions } from "@/composables/permissions";
-import { useFeatureFlags } from '@/composables/useFeatureFlags';
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, usePage } from "@inertiajs/vue3";
@@ -16,7 +15,6 @@ import VoiceSettingsForm from "./Partials/VoiceSettingsForm.vue";
 
 const { speak } = useSpeechSynthesis();
 const { canEditProfile } = usePermissions();
-const { isSnapshotsEnabled } = useFeatureFlags();
 
 const close = ref(false);
 
@@ -78,7 +76,10 @@ defineProps({
                 <Accordion title="Voice Settings">
                     <VoiceSettingsForm />
                 </Accordion>
-                <Accordion v-if="isSnapshotsEnabled" title="Screenshot Settings">
+                <Accordion 
+                    v-if="$page.props.settings.snapshot_enabled" 
+                    title="Screenshot Settings"
+                >
                     <ScreenshotSettingsForm />
                 </Accordion>
                 <div

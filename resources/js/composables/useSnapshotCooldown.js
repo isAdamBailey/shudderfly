@@ -1,11 +1,16 @@
+import { usePage } from '@inertiajs/vue3';
 import { onMounted, ref } from 'vue';
 
-export const COOLDOWN_MINUTES = 20;
 export const COOLDOWN_KEY = 'global_snapshot_cooldown';
 
 export function useSnapshotCooldown() {
+    const page = usePage();
     const isOnCooldown = ref(false);
     const remainingMinutes = ref(0);
+
+    const getCooldownMinutes = () => {
+        return page.props.settings.snapshot_cooldown;
+    };
 
     const updateRemainingTime = () => {
         const lastSnapshot = localStorage.getItem(COOLDOWN_KEY);
@@ -49,10 +54,10 @@ export function useSnapshotCooldown() {
     };
 
     const setCooldown = () => {
-        const cooldownEnds = new Date(Date.now() + COOLDOWN_MINUTES * 60 * 1000);
+        const cooldownEnds = new Date(Date.now() + getCooldownMinutes() * 60 * 1000);
         localStorage.setItem(COOLDOWN_KEY, cooldownEnds.getTime().toString());
         isOnCooldown.value = true;
-        remainingMinutes.value = COOLDOWN_MINUTES;
+        remainingMinutes.value = getCooldownMinutes();
     };
 
     const resetCooldown = () => {

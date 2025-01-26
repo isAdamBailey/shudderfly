@@ -40,7 +40,7 @@ class SiteSetting extends Model
 
         // Cast numeric strings
         if (is_numeric($value)) {
-            return $value * 1; // converts to int or float automatically
+            return $value * 1;
         }
 
         return $value;

@@ -22,7 +22,7 @@ return new class extends Migration
         DB::table('site_settings')->insert([
             [
                 'key' => 'snapshot_enabled',
-                'value' => '1',
+                'value' => '0',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],

@@ -24,7 +24,7 @@
             Your browser does not support the video tag.
         </video>
         <Button
-            v-if="!isCover && bookId && isSnapshotsEnabled"
+            v-if="!isCover && bookId && $page.props.settings.snapshot_enabled"
             class="absolute top-0 right-0 h-8"
             title="Take Snapshot"
             :disabled="isOnCooldown || !canTakeSnapshot || !isPaused"
@@ -46,7 +46,6 @@
 
 <script setup>
 import Button from "@/Components/Button.vue";
-import { useFeatureFlags } from '@/composables/useFeatureFlags';
 import { useSnapshotCooldown } from '@/composables/useSnapshotCooldown';
 import { useMedia } from "@/mediaHelpers";
 import { useForm } from "@inertiajs/vue3";
@@ -97,8 +96,6 @@ const form = useForm({
 
 const canTakeSnapshot = ref(false);
 const isPaused = ref(true);
-
-const { isSnapshotsEnabled } = useFeatureFlags();
 
 const handleMediaError = () => {
     imageSrc.value = placeholder;
