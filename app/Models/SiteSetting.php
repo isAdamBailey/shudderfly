@@ -11,7 +11,7 @@ class SiteSetting extends Model
     /**
      * List of settings that should be treated as booleans
      */
-    protected static $booleanSettings = [
+    public static $booleanSettings = [
         'snapshot_enabled',
         // Add more boolean settings here
     ];

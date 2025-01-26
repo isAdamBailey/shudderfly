@@ -4,15 +4,17 @@ import Close from "@/Components/svg/Close.vue";
 import BreezeValidationErrors from "@/Components/ValidationErrors.vue";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import CategoriesForm from "@/Pages/Dashboard/CategoriesForm.vue";
+import SettingsForm from "@/Pages/Dashboard/SettingsForm.vue";
 import StatsCard from "@/Pages/Dashboard/StatsCard.vue";
 import UsersForm from "@/Pages/Dashboard/UsersForm.vue";
 import { Deferred, Head } from "@inertiajs/vue3";
 import { ref } from "vue";
 
 defineProps({
-    users: { type: Array, required: true },
-    stats: { type: Array, required: true },
-    categories: { type: Array, required: true },
+    users: { type: [Array, Function], default: () => [] },
+    stats: { type: [Object, Function], default: () => ({}) },
+    categories: { type: [Array, Function], default: () => [] },
+    settings: { type: Array, default: () => [] },
 });
 
 const firstClose = ref(false);
@@ -26,9 +28,7 @@ const buildTimestamp = __BUILD_TIMESTAMP__;
 
     <BreezeAuthenticatedLayout>
         <template #header>
-            <h2
-                class="font-heading text-2xl text-theme-title leading-tight"
-            >
+            <h2 class="font-heading text-2xl text-theme-title leading-tight">
                 The Administrative Duties Of Colin's Books!
             </h2>
         </template>
@@ -103,6 +103,17 @@ const buildTimestamp = __BUILD_TIMESTAMP__;
                         </Accordion>
                     </div>
                 </div>
+
+                <div class="w-full sm:px-6 lg:px-8">
+                    <div
+                        class="bg-white overflow-hidden shadow-sm sm:rounded-lg"
+                    >
+                        <Accordion title="Site Settings">
+                            <SettingsForm :settings="settings" />
+                        </Accordion>
+                    </div>
+                </div>
+
                 <div class="w-full sm:px-6 lg:px-8">
                     <div
                         class="bg-white overflow-hidden shadow-sm sm:rounded-lg"

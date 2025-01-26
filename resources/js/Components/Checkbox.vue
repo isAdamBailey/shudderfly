@@ -9,6 +9,7 @@ const props = defineProps({
         default: false,
     },
     value: {
+        type: [String, Number],
         default: null,
     },
 });
