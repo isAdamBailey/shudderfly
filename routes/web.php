@@ -6,6 +6,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SettingsController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -70,7 +71,9 @@ Route::middleware('auth')->group(function () {
         Route::put('/admin/permissions', [AdminController::class, 'update'])->name('admin.permissions');
         Route::delete('/admin', [AdminController::class, 'destroy'])->name('admin.destroy');
 
-        Route::put('/settings', [DashboardController::class, 'updateSettings'])->name('settings.update');
+        Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
+        Route::post('/settings', [SettingsController::class, 'store'])->name('settings.store');
+        Route::delete('/settings/{setting}', [SettingsController::class, 'destroy'])->name('settings.destroy');
     });
 });
 

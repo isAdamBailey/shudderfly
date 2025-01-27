@@ -6,15 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class SiteSetting extends Model
 {
-    protected $fillable = ['key', 'value', 'description'];
-
-    /**
-     * List of settings that should be treated as booleans
-     */
-    public static $booleanSettings = [
-        'snapshot_enabled',
-        // Add more boolean settings here
-    ];
+    protected $fillable = ['key', 'value', 'description', 'type'];
 
     /**
      * The attributes that should be cast.
@@ -33,7 +25,7 @@ class SiteSetting extends Model
      */
     public function getValueAttribute($value)
     {
-        if (in_array($this->key, static::$booleanSettings)) {
+        if ($this->type === 'boolean') {
             return (bool) $value;
         }
 
