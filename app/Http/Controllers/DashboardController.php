@@ -5,10 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Book;
 use App\Models\Category;
 use App\Models\Page;
-use App\Models\User;
 use App\Models\SiteSetting;
-use Inertia\Inertia;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
@@ -36,9 +36,10 @@ class DashboardController extends Controller
                     'id' => $setting->id,
                     'key' => $setting->key,
                     'value' => $setting->value,
-                    'type' => in_array($setting->key, SiteSetting::$booleanSettings) ? 'boolean' : 'text'
+                    'description' => $setting->description,
+                    'type' => in_array($setting->key, SiteSetting::$booleanSettings) ? 'boolean' : 'text',
                 ];
-            })
+            }),
         ]);
     }
 
@@ -47,18 +48,25 @@ class DashboardController extends Controller
         $validated = $request->validate([
             'settings' => ['required', 'array'],
             'settings.*' => ['required', function ($attribute, $value, $fail) {
-                if (!is_string($value) && !is_numeric($value) && !is_bool($value) && $value !== '0' && $value !== '1') {
-                    $fail('The '.$attribute.' must be a string, numeric, or boolean value.');
+                if (!isset($value['value']) || (!is_string($value['value']) && !is_numeric($value['value']) && !is_bool($value['value']) && $value['value'] !== '0' && $value['value'] !== '1')) {
+                    $fail('The '.$attribute.' value must be a string, numeric, or boolean value.');
+                }
+                if (!isset($value['description']) || !is_string($value['description'])) {
+                    $fail('The '.$attribute.' description must be a string.');
                 }
             }],
         ]);
 
-        foreach ($validated['settings'] as $key => $value) {
+        foreach ($validated['settings'] as $key => $data) {
+            $value = $data['value'];
             if (is_bool($value)) {
                 $value = $value ? '1' : '0';
             }
-            
-            SiteSetting::where('key', $key)->update(['value' => $value]);
+
+            SiteSetting::where('key', $key)->update([
+                'value' => $value,
+                'description' => $data['description']
+            ]);
         }
 
         return redirect(route('dashboard'));

@@ -3,6 +3,7 @@ import Button from "@/Components/Button.vue";
 import Checkbox from "@/Components/Checkbox.vue";
 import Input from "@/Components/TextInput.vue";
 import { useForm } from "@inertiajs/vue3";
+import { ref } from 'vue';
 
 const props = defineProps({
     settings: {
@@ -11,12 +12,16 @@ const props = defineProps({
     },
 });
 
+const editingDescription = ref(null);
+
 const form = useForm({
     settings: props.settings.reduce((acc, setting) => {
-        acc[setting.key] =
-            setting.type === "boolean"
+        acc[setting.key] = {
+            value: setting.type === "boolean"
                 ? Boolean(Number(setting.value))
-                : setting.value;
+                : setting.value,
+            description: setting.description
+        };
         return acc;
     }, {}),
 });
@@ -25,22 +30,27 @@ const isBooleanSetting = (setting) => {
     return setting.type === "boolean";
 };
 
+const startEditing = (key) => {
+    editingDescription.value = key;
+};
+
+const stopEditing = () => {
+    editingDescription.value = null;
+};
+
 const submit = () => {
-    const formData = {
-        settings: Object.entries(form.data().settings).reduce((acc, [key, value]) => {
-            acc[key] = typeof value === 'boolean' ? (value ? '1' : '0') : value;
-            return acc;
-        }, {})
-    };
-    
-    form.put(route("settings.update"), formData, {
+    if (!confirm('Are you sure you want to update these settings?')) {
+        return;
+    }
+
+    form.put(route("settings.update"), {
         preserveScroll: true,
     });
 };
 </script>
 
 <template>
-    <form class="p-6" @submit.prevent="submit">
+    <div class="" @submit.prevent="submit">
         <div v-if="form.processing">Processing...</div>
         <Transition
             enter-from-class="opacity-0"
@@ -62,40 +72,78 @@ const submit = () => {
             {{ form.errors.settings }}
         </div>
 
-        <div class="space-y-4">
-            <div
-                v-for="setting in settings"
-                :key="setting.key"
-                class="space-y-2"
-            >
-                <label
-                    class="block font-medium text-sm text-gray-700 dark:text-gray-300"
+        <div class="flex">
+            <div class="space-y-6 w-full">
+                <div
+                    v-for="setting in settings"
+                    :key="setting.key"
+                    class="border-b border-gray-200 dark:border-gray-700 pb-6 last:border-0"
                 >
-                    {{ setting.key }}
-                </label>
+                    <label
+                        class="block font-medium text-sm text-gray-700 dark:text-gray-300"
+                    >
+                        {{ setting.key }}
+                    </label>
 
-                <template v-if="isBooleanSetting(setting)">
-                    <Checkbox
-                        v-model:checked="form.settings[setting.key]"
-                        :value="setting.key"
-                    />
-                </template>
-                <template v-else>
-                    <Input
-                        v-model="form.settings[setting.key]"
-                        type="text"
-                        class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
-                    />
-                </template>
+                    <div class="mt-2">
+                        <div v-if="editingDescription === setting.key">
+                            <Input
+                                ref="descriptionInput"
+                                v-model="form.settings[setting.key].description"
+                                v-focus
+                                type="text"
+                                class="block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                @blur="stopEditing"
+                                @keyup.enter="stopEditing"
+                            />
+                        </div>
+                        <div 
+                            v-else
+                            class="text-sm text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-200"
+                            @click="startEditing(setting.key)"
+                        >
+                            {{ form.settings[setting.key].description }}
+                        </div>
+                    </div>
+
+                    <div class="mt-2">
+                        <template v-if="isBooleanSetting(setting)">
+                            <Checkbox
+                                v-model:checked="form.settings[setting.key].value"
+                                :value="setting.key"
+                            />
+                        </template>
+                        <template v-else>
+                            <Input
+                                v-model="form.settings[setting.key].value"
+                                type="text"
+                                class="block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                            />
+                        </template>
+                    </div>
+                </div>
             </div>
         </div>
 
         <div class="mt-6">
             <Button
-                type="submit"
+                type="button"
+                @click="submit"
             >
                 Save Settings
-            </button>
+            </Button>
         </div>
-    </form>
+    </div>
 </template>
+
+<script>
+export default {
+    directives: {
+        focus: {
+            mounted(el) {
+                el.focus()
+            }
+        }
+    }
+}
+</script>

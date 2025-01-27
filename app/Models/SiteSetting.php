@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class SiteSetting extends Model
 {
-    protected $fillable = ['key', 'value'];
+    protected $fillable = ['key', 'value', 'description'];
 
     /**
      * List of settings that should be treated as booleans
@@ -33,16 +33,10 @@ class SiteSetting extends Model
      */
     public function getValueAttribute($value)
     {
-        // Cast boolean strings for designated boolean settings
-        if (in_array($this->key, static::$booleanSettings) && ($value === '1' || $value === '0')) {
+        if (in_array($this->key, static::$booleanSettings)) {
             return (bool) $value;
         }
 
-        // Cast numeric strings
-        if (is_numeric($value)) {
-            return $value * 1;
-        }
-
-        return $value;
+        return is_numeric($value) ? $value * 1 : $value;
     }
 }
