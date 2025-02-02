@@ -161,8 +161,9 @@ const deleteSetting = (setting) => {
                     <div class="mt-2">
                         <template v-if="form.settings[setting.key]?.type === 'boolean'">
                             <Checkbox
-                                v-model="form.settings[setting.key].value"
-                                :value="setting.key"
+                                class="p-3"
+                                :checked="form.settings[setting.key].value"
+                                @update:checked="v => form.settings[setting.key].value = v"
                             />
                         </template>
                         <template v-else-if="form.settings[setting.key]">
