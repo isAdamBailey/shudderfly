@@ -45,6 +45,9 @@
                                         }}
                                         times
                                     </p>
+                                    <p v-if="book.category" class="uppercase font-bold">
+                                        Category - {{ book.category.name }}
+                                    </p>
                                 </span>
                             </div>
                         </div>
