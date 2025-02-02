@@ -1,5 +1,6 @@
 <script setup>
 import Button from "@/Components/Button.vue";
+import DangerButton from "@/Components/DangerButton.vue";
 import Checkbox from "@/Components/Checkbox.vue";
 import Input from "@/Components/TextInput.vue";
 import { useForm } from "@inertiajs/vue3";
@@ -128,13 +129,13 @@ const deleteSetting = (setting) => {
                             {{ setting.key }}
                             <span class="text-xs text-gray-500 ml-2">({{ setting.type }})</span>
                         </label>
-                        <Button
+                        <DangerButton
                             type="button"
                             class="!bg-red-600 hover:!bg-red-500"
                             @click="deleteSetting(setting)"
                         >
-                            Delete
-                        </Button>
+                            X
+                        </DangerButton>
                     </div>
 
                     <div class="mt-2">
