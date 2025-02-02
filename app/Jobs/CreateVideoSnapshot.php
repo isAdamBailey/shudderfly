@@ -135,11 +135,20 @@ class CreateVideoSnapshot implements ShouldQueue
                 Storage::disk('local')->delete($tempVideoPath);
             }
 
-            // Dispatch StoreImage job
-            StoreImage::dispatch($tempImagePath, $mediaPath)
+            // Upload temp image to S3 first
+            $tempS3Path = "temp/snapshots/temp_{$timestamp}_{$random}.jpg";
+            Storage::disk('s3')->put($tempS3Path, Storage::disk('local')->get($tempImagePath), 'private');
+
+            // Clean up local temp image since it's now in S3
+            if (Storage::disk('local')->exists($tempImagePath)) {
+                Storage::disk('local')->delete($tempImagePath);
+            }
+
+            // Dispatch StoreImage job with S3 path
+            StoreImage::dispatch('s3://' . $tempS3Path, $mediaPath)
                 ->chain([
-                    // Only delete the temp image after StoreImage completes
-                    new class($tempImagePath) implements ShouldQueue
+                    // Delete the temp S3 file after StoreImage completes
+                    new class($tempS3Path) implements ShouldQueue
                     {
                         use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -152,8 +161,8 @@ class CreateVideoSnapshot implements ShouldQueue
 
                         public function handle()
                         {
-                            if (Storage::disk('local')->exists($this->pathToDelete)) {
-                                Storage::disk('local')->delete($this->pathToDelete);
+                            if (Storage::disk('s3')->exists($this->pathToDelete)) {
+                                Storage::disk('s3')->delete($this->pathToDelete);
                             }
                         }
                     },
