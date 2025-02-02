@@ -28,26 +28,26 @@ class CleanupTempSnapshot implements ShouldQueue
         try {
             if (Storage::disk('s3')->exists($pathToDelete)) {
                 $deleted = Storage::disk('s3')->delete($pathToDelete);
-                if (!$deleted) {
-                    Log::warning("Failed to delete temp file", [
-                        'path' => $pathToDelete
+                if (! $deleted) {
+                    Log::warning('Failed to delete temp file', [
+                        'path' => $pathToDelete,
                     ]);
                 }
             } else {
-                Log::warning("Temp file not found for deletion", [
-                    'path' => $pathToDelete
+                Log::warning('Temp file not found for deletion', [
+                    'path' => $pathToDelete,
                 ]);
             }
         } catch (\Exception $e) {
-            Log::error("Error deleting temp file", [
+            Log::error('Error deleting temp file', [
                 'path' => $pathToDelete,
-                'exception' => $e->getMessage()
+                'exception' => $e->getMessage(),
             ]);
         }
 
         // List all files in the temp/snapshots directory
         $tempFiles = Storage::disk('s3')->files('temp/snapshots');
-        
+
         // Delete any files older than 24 hours
         foreach ($tempFiles as $file) {
             try {
@@ -57,7 +57,7 @@ class CleanupTempSnapshot implements ShouldQueue
                 }
             } catch (\Exception $e) {
                 Log::warning("Failed to cleanup temp file: {$file}", [
-                    'exception' => $e->getMessage()
+                    'exception' => $e->getMessage(),
                 ]);
             }
         }
@@ -69,9 +69,9 @@ class CleanupTempSnapshot implements ShouldQueue
                 Storage::disk('s3')->deleteDirectory('temp/snapshots');
             }
         } catch (\Exception $e) {
-            Log::warning("Failed to cleanup temp directory", [
-                'exception' => $e->getMessage()
+            Log::warning('Failed to cleanup temp directory', [
+                'exception' => $e->getMessage(),
             ]);
         }
     }
-} 
+}

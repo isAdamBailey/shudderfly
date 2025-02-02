@@ -6,8 +6,6 @@ use App\Models\Book;
 use App\Models\Category;
 use App\Models\Page;
 use App\Models\User;
-use App\Http\Controllers\SettingsController;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class DashboardController extends Controller

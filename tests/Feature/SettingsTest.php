@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\SiteSetting;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -22,27 +22,27 @@ class SettingsTest extends TestCase
             'key' => 'test_boolean',
             'value' => '0',
             'type' => 'boolean',
-            'description' => 'Test boolean description'
+            'description' => 'Test boolean description',
         ]);
 
         $textSetting = SiteSetting::create([
             'key' => 'test_text',
             'value' => 'old value',
             'type' => 'text',
-            'description' => 'Test text description'
+            'description' => 'Test text description',
         ]);
 
         $response = $this->put('/settings', [
             'settings' => [
                 'test_boolean' => [
                     'value' => true,
-                    'description' => 'Updated boolean description'
+                    'description' => 'Updated boolean description',
                 ],
                 'test_text' => [
                     'value' => 'new value',
-                    'description' => 'Updated text description'
-                ]
-            ]
+                    'description' => 'Updated text description',
+                ],
+            ],
         ]);
 
         $response->assertRedirect(route('dashboard'));
@@ -52,7 +52,7 @@ class SettingsTest extends TestCase
             'key' => 'test_boolean',
             'value' => '1',
             'type' => 'boolean',
-            'description' => 'Updated boolean description'
+            'description' => 'Updated boolean description',
         ]);
 
         // Assert text setting was updated
@@ -60,7 +60,7 @@ class SettingsTest extends TestCase
             'key' => 'test_text',
             'value' => 'new value',
             'type' => 'text',
-            'description' => 'Updated text description'
+            'description' => 'Updated text description',
         ]);
     }
 
@@ -74,9 +74,9 @@ class SettingsTest extends TestCase
         $response = $this->put('/settings', [
             'settings' => [
                 'test_key' => [
-                    'description' => 'Some description'
-                ]
-            ]
+                    'description' => 'Some description',
+                ],
+            ],
         ]);
         $response->assertSessionHasErrors('settings.test_key');
 
@@ -84,9 +84,9 @@ class SettingsTest extends TestCase
         $response = $this->put('/settings', [
             'settings' => [
                 'test_key' => [
-                    'value' => 'some value'
-                ]
-            ]
+                    'value' => 'some value',
+                ],
+            ],
         ]);
         $response->assertSessionHasErrors('settings.test_key');
 
@@ -95,9 +95,9 @@ class SettingsTest extends TestCase
             'settings' => [
                 'test_key' => [
                     'value' => [],
-                    'description' => 'Some description'
-                ]
-            ]
+                    'description' => 'Some description',
+                ],
+            ],
         ]);
         $response->assertSessionHasErrors('settings.test_key');
     }
@@ -112,7 +112,7 @@ class SettingsTest extends TestCase
             'key' => 'new_setting',
             'value' => 'test value',
             'description' => 'A test setting',
-            'type' => 'text'
+            'type' => 'text',
         ]);
 
         $response->assertRedirect(route('dashboard'));
@@ -121,7 +121,7 @@ class SettingsTest extends TestCase
             'key' => 'new_setting',
             'value' => 'test value',
             'type' => 'text',
-            'description' => 'A test setting'
+            'description' => 'A test setting',
         ]);
 
         // Test creating boolean setting
@@ -129,14 +129,14 @@ class SettingsTest extends TestCase
             'key' => 'new_boolean_setting',
             'value' => true,
             'description' => 'A test boolean setting',
-            'type' => 'boolean'
+            'type' => 'boolean',
         ]);
 
         $this->assertDatabaseHas('site_settings', [
             'key' => 'new_boolean_setting',
             'value' => '1',
             'type' => 'boolean',
-            'description' => 'A test boolean setting'
+            'description' => 'A test boolean setting',
         ]);
     }
 
@@ -151,7 +151,7 @@ class SettingsTest extends TestCase
             'key' => 'existing_key',
             'value' => 'test',
             'type' => 'text',
-            'description' => 'test'
+            'description' => 'test',
         ]);
 
         // Test duplicate key
@@ -159,7 +159,7 @@ class SettingsTest extends TestCase
             'key' => 'existing_key',
             'value' => 'test',
             'description' => 'test',
-            'type' => 'text'
+            'type' => 'text',
         ]);
         $response->assertSessionHasErrors('key');
 
@@ -168,7 +168,7 @@ class SettingsTest extends TestCase
             'key' => 'invalid key with spaces',
             'value' => 'test',
             'description' => 'test',
-            'type' => 'text'
+            'type' => 'text',
         ]);
         $response->assertSessionHasErrors(['key' => 'The key cannot contain spaces.']);
 
@@ -176,7 +176,7 @@ class SettingsTest extends TestCase
         $response = $this->post('/settings', [
             'value' => 'test',
             'description' => 'test',
-            'type' => 'text'
+            'type' => 'text',
         ]);
         $response->assertSessionHasErrors('key');
 
@@ -185,7 +185,7 @@ class SettingsTest extends TestCase
             'key' => 'new_key',
             'value' => 'test',
             'description' => 'test',
-            'type' => 'invalid_type'
+            'type' => 'invalid_type',
         ]);
         $response->assertSessionHasErrors('type');
     }
@@ -200,14 +200,14 @@ class SettingsTest extends TestCase
             'key' => 'test_setting',
             'value' => 'test value',
             'type' => 'text',
-            'description' => 'Test setting description'
+            'description' => 'Test setting description',
         ]);
 
         $response = $this->delete("/settings/{$setting->id}");
 
         $response->assertRedirect(route('dashboard'));
         $this->assertDatabaseMissing('site_settings', [
-            'id' => $setting->id
+            'id' => $setting->id,
         ]);
     }
 
@@ -230,15 +230,15 @@ class SettingsTest extends TestCase
         // Test boolean setting with string "true"
         $response = $this->post('/settings', [
             'key' => 'test_bool_string',
-            'value' => "true",
+            'value' => 'true',
             'description' => 'Test boolean setting',
-            'type' => 'boolean'
+            'type' => 'boolean',
         ]);
 
         $this->assertDatabaseHas('site_settings', [
             'key' => 'test_bool_string',
             'value' => '1',
-            'type' => 'boolean'
+            'type' => 'boolean',
         ]);
 
         // Test boolean setting with boolean true
@@ -246,27 +246,27 @@ class SettingsTest extends TestCase
             'key' => 'test_bool_true',
             'value' => true,
             'description' => 'Test boolean setting',
-            'type' => 'boolean'
+            'type' => 'boolean',
         ]);
 
         $this->assertDatabaseHas('site_settings', [
             'key' => 'test_bool_true',
             'value' => '1',
-            'type' => 'boolean'
+            'type' => 'boolean',
         ]);
 
         // Test boolean setting with string "1"
         $response = $this->post('/settings', [
             'key' => 'test_bool_one',
-            'value' => "1",
+            'value' => '1',
             'description' => 'Test boolean setting',
-            'type' => 'boolean'
+            'type' => 'boolean',
         ]);
 
         $this->assertDatabaseHas('site_settings', [
             'key' => 'test_bool_one',
             'value' => '1',
-            'type' => 'boolean'
+            'type' => 'boolean',
         ]);
     }
-} 
+}

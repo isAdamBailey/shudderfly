@@ -38,12 +38,14 @@ class StoreImage implements ShouldQueue
 
         if (empty($filePath) || ! Storage::disk($disk)->exists($filePath)) {
             Log::error('File path is null, empty, or does not exist', ['filePath' => $filePath, 'disk' => $disk]);
+
             return;
         }
 
         $tempDir = storage_path('app/temp/');
         if (! is_dir($tempDir) && ! mkdir($tempDir, 0755, true)) {
             Log::error('Failed to create temp directory', ['directory' => $tempDir]);
+
             return;
         }
         $tempFile = $tempDir.uniqid('image_', true).'.webp';
@@ -57,10 +59,10 @@ class StoreImage implements ShouldQueue
             Storage::disk('s3')->put($this->path, (string) $encoded, 'public');
         } catch (\Exception $e) {
             Log::error('Error processing image', [
-                'exception' => $e->getMessage(), 
-                'filePath' => $filePath, 
+                'exception' => $e->getMessage(),
+                'filePath' => $filePath,
                 'disk' => $disk,
-                'path' => $this->path
+                'path' => $this->path,
             ]);
             $this->fail($e);
         } finally {

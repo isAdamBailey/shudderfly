@@ -25,10 +25,10 @@ class SettingsController extends Controller
         $validated = $request->validate([
             'settings' => ['required', 'array'],
             'settings.*' => ['required', function ($attribute, $value, $fail) {
-                if (!isset($value['value']) || (!is_string($value['value']) && !is_numeric($value['value']) && !is_bool($value['value']) && $value['value'] !== '0' && $value['value'] !== '1')) {
+                if (! isset($value['value']) || (! is_string($value['value']) && ! is_numeric($value['value']) && ! is_bool($value['value']) && $value['value'] !== '0' && $value['value'] !== '1')) {
                     $fail('The '.$attribute.' value must be a string, numeric, or boolean value.');
                 }
-                if (!isset($value['description']) || !is_string($value['description'])) {
+                if (! isset($value['description']) || ! is_string($value['description'])) {
                     $fail('The '.$attribute.' description must be a string.');
                 }
             }],
@@ -37,14 +37,14 @@ class SettingsController extends Controller
         foreach ($validated['settings'] as $key => $data) {
             $setting = SiteSetting::where('key', $key)->first();
             $value = $data['value'];
-            
+
             if ($setting->type === 'boolean') {
                 $value = filter_var($value, FILTER_VALIDATE_BOOLEAN) ? '1' : '0';
             }
 
             $setting->update([
                 'value' => $value,
-                'description' => $data['description']
+                'description' => $data['description'],
             ]);
         }
 
@@ -58,14 +58,14 @@ class SettingsController extends Controller
                 'required',
                 'string',
                 'unique:site_settings,key',
-                'regex:/^[^\s]+$/'
+                'regex:/^[^\s]+$/',
             ],
             'value' => ['required'],
             'description' => ['required', 'string'],
             'type' => ['required', 'string', 'in:boolean,text'],
         ], [
             'key.regex' => 'The key cannot contain spaces.',
-            'type.in' => 'The type must be either boolean or text.'
+            'type.in' => 'The type must be either boolean or text.',
         ]);
 
         $value = $validated['value'];
@@ -77,7 +77,7 @@ class SettingsController extends Controller
             'key' => $validated['key'],
             'value' => $value,
             'description' => $validated['description'],
-            'type' => $validated['type']
+            'type' => $validated['type'],
         ]);
 
         return redirect(route('dashboard'));
@@ -86,6 +86,7 @@ class SettingsController extends Controller
     public function destroy(SiteSetting $setting)
     {
         $setting->delete();
+
         return redirect(route('dashboard'));
     }
 }

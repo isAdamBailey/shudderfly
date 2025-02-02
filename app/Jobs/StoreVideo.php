@@ -58,7 +58,13 @@ class StoreVideo implements ShouldQueue
             $media = FFMpeg::fromDisk('local')->open($this->filePath);
 
             $media->export()
-                ->inFormat((new X264)->setKiloBitrate(400)->setAudioKiloBitrate(64))
+                ->inFormat((new X264)
+                    ->setKiloBitrate(300)
+                    ->setAudioKiloBitrate(64)
+                    ->setAdditionalParameters([
+                        '-preset', 'slow',
+                        '-crf', '28',
+                    ]))
                 ->resize(512, 288)
                 ->save($tempFile);
 

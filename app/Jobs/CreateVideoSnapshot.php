@@ -145,9 +145,9 @@ class CreateVideoSnapshot implements ShouldQueue
             }
 
             // Dispatch StoreImage job with S3 path
-            StoreImage::dispatch('s3://' . $tempS3Path, $mediaPath)
+            StoreImage::dispatch('s3://'.$tempS3Path, $mediaPath)
                 ->chain([
-                    new CleanupTempSnapshot($tempS3Path)
+                    new CleanupTempSnapshot($tempS3Path),
                 ]);
 
         } catch (\Exception $e) {
