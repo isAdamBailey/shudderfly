@@ -112,20 +112,37 @@ class CreateVideoSnapshot implements ShouldQueue
                 throw new \Exception("Failed to download video from URL: {$this->videoUrl}");
             }
 
+            // Ensure temp directory exists and is writable
+            $tempDir = storage_path('app/temp');
+            if (! is_dir($tempDir)) {
+                if (! mkdir($tempDir, 0755, true)) {
+                    throw new \Exception("Failed to create temp directory: {$tempDir}");
+                }
+            }
+
+            if (! is_writable($tempDir)) {
+                throw new \Exception("Temp directory is not writable: {$tempDir}");
+            }
+
+            // Save video file and verify it exists and has content
             if (! Storage::disk('local')->put($tempVideoPath, $videoContent)) {
                 throw new \Exception('Failed to save video to temp file');
             }
 
+            $videoSize = Storage::disk('local')->size($tempVideoPath);
+            if ($videoSize === 0) {
+                throw new \Exception('Downloaded video file is empty');
+            }
+
+            $fullVideoPath = storage_path('app/' . $tempVideoPath);
+            if (! file_exists($fullVideoPath)) {
+                throw new \Exception("Video file not found at expected path: {$fullVideoPath}");
+            }
+
             // Extract frame using FFmpeg
             try {
-                $ffmpeg = FFMpeg::fromDisk('local');
-                
-                // Configure FFmpeg with memory limits
-                $ffmpeg->getFFMpegDriver()
-                    ->addOption('-memory_limit', '256M')
-                    ->addOption('-max_memory', '512M');
-
-                $ffmpeg->open($tempVideoPath)
+                FFMpeg::fromDisk('local')
+                    ->open($tempVideoPath)
                     ->getFrameFromSeconds($this->timeInSeconds)
                     ->export()
                     ->save($tempImagePath);
