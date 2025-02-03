@@ -91,27 +91,10 @@ class CreateVideoSnapshot implements ShouldQueue
 
     public function handle(): void
     {
-        $tempDir = storage_path('app/temp');
-        if (! is_dir($tempDir)) {
-            mkdir($tempDir, 0755, true);
-        }
-
         $tempVideoPath = null;
         $tempImagePath = null;
 
         try {
-            $timestamp = now()->format('Ymd_His');
-            $random = Str::random(8);
-
-            $tempVideoPath = "temp/temp_video_{$timestamp}_{$random}.mp4";
-            $tempImagePath = "temp/snapshot_{$timestamp}_{$random}.jpg";
-
-            // Download video to temp file
-            $videoContent = file_get_contents($this->videoUrl);
-            if ($videoContent === false) {
-                throw new \Exception("Failed to download video from URL: {$this->videoUrl}");
-            }
-
             // Ensure temp directory exists and is writable
             $tempDir = storage_path('app/temp');
             if (! is_dir($tempDir)) {
@@ -122,6 +105,18 @@ class CreateVideoSnapshot implements ShouldQueue
 
             if (! is_writable($tempDir)) {
                 throw new \Exception("Temp directory is not writable: {$tempDir}");
+            }
+
+            $timestamp = now()->format('Ymd_His');
+            $random = Str::random(8);
+
+            $tempVideoPath = "temp/temp_video_{$timestamp}_{$random}.mp4";
+            $tempImagePath = "temp/snapshot_{$timestamp}_{$random}.jpg";
+
+            // Download video to temp file
+            $videoContent = file_get_contents($this->videoUrl);
+            if ($videoContent === false) {
+                throw new \Exception("Failed to download video from URL: {$this->videoUrl}");
             }
 
             // Save video file and verify it exists and has content
@@ -141,9 +136,17 @@ class CreateVideoSnapshot implements ShouldQueue
 
             // Extract frame using FFmpeg
             try {
-                FFMpeg::fromDisk('local')
-                    ->open($tempVideoPath)
-                    ->getFrameFromSeconds($this->timeInSeconds)
+                $ffmpeg = FFMpeg::fromDisk('local');
+                $media = $ffmpeg->open($tempVideoPath);
+
+                // Get video duration to validate timestamp
+                $duration = $media->getDurationInSeconds();
+                if ($this->timeInSeconds >= $duration) {
+                    throw new \Exception("Timestamp {$this->timeInSeconds} is beyond video duration {$duration}");
+                }
+
+                // Extract the frame
+                $media->getFrameFromSeconds($this->timeInSeconds)
                     ->export()
                     ->save($tempImagePath);
 
@@ -180,6 +183,8 @@ class CreateVideoSnapshot implements ShouldQueue
                         'limit' => ini_get('memory_limit'),
                     ],
                     'disk_free_space' => disk_free_space(storage_path('app')) / 1024 / 1024 . 'MB',
+                    'temp_dir_writable' => is_writable($tempDir),
+                    'temp_dir_permissions' => substr(sprintf('%o', fileperms($tempDir)), -4),
                 ]);
                 throw new \Exception('Failed to create snapshot: ' . $e->getMessage());
             }
@@ -240,7 +245,7 @@ class CreateVideoSnapshot implements ShouldQueue
     private function getVideoMetadata(string $videoPath): array
     {
         try {
-            $ffprobe = FFMpeg::open($videoPath);
+            $ffprobe = FFMpeg::fromDisk('local')->open($videoPath);
             return [
                 'duration' => $ffprobe->getDurationInSeconds(),
                 'dimensions' => $ffprobe->getVideoStream()->getDimensions(),
