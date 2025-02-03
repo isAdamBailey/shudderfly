@@ -23,14 +23,21 @@ class CreateVideoSnapshot implements ShouldQueue
      *
      * @var int
      */
-    public $tries = 1;
+    public $tries = 3;
 
     /**
      * The number of seconds the job can run before timing out.
      *
      * @var int
      */
-    public $timeout = 120;
+    public $timeout = 300; // 5 minutes
+
+    /**
+     * The maximum amount of memory the job should use.
+     *
+     * @var int
+     */
+    public $memory = 2048; // 2GB
 
     /**
      * Delete the job if its models no longer exist.
@@ -110,15 +117,54 @@ class CreateVideoSnapshot implements ShouldQueue
             }
 
             // Extract frame using FFmpeg
-            FFMpeg::fromDisk('local')
-                ->open($tempVideoPath)
-                ->getFrameFromSeconds($this->timeInSeconds)
-                ->export()
-                ->save($tempImagePath);
+            try {
+                $ffmpeg = FFMpeg::fromDisk('local');
+                
+                // Configure FFmpeg with memory limits
+                $ffmpeg->getFFMpegDriver()
+                    ->addOption('-memory_limit', '256M')
+                    ->addOption('-max_memory', '512M');
 
-            // Verify snapshot was created
-            if (! Storage::disk('local')->exists($tempImagePath)) {
-                throw new \Exception('Failed to create snapshot image');
+                $ffmpeg->open($tempVideoPath)
+                    ->getFrameFromSeconds($this->timeInSeconds)
+                    ->export()
+                    ->save($tempImagePath);
+
+                // Verify snapshot was created and has content
+                if (! Storage::disk('local')->exists($tempImagePath)) {
+                    throw new \Exception('Snapshot file was not created');
+                }
+
+                $fileSize = Storage::disk('local')->size($tempImagePath);
+                if ($fileSize === 0) {
+                    throw new \Exception('Snapshot file was created but is empty');
+                }
+
+                // Verify the file is a valid image
+                $fullPath = storage_path('app/' . $tempImagePath);
+                $mimeType = mime_content_type($fullPath);
+                if (! Str::startsWith($mimeType, 'image/')) {
+                    throw new \Exception("Invalid snapshot file type: {$mimeType}");
+                }
+
+            } catch (\Throwable $e) {
+                Log::error('FFmpeg snapshot creation failed', [
+                    'exception' => $e->getMessage(),
+                    'video_url' => $this->videoUrl,
+                    'time' => $this->timeInSeconds,
+                    'temp_video_path' => $tempVideoPath,
+                    'temp_image_path' => $tempImagePath,
+                    'video_exists' => Storage::disk('local')->exists($tempVideoPath),
+                    'video_size' => Storage::disk('local')->exists($tempVideoPath) ? Storage::disk('local')->size($tempVideoPath) : 0,
+                    'ffprobe_data' => $this->getVideoMetadata($tempVideoPath),
+                    'memory_usage' => [
+                        'current' => memory_get_usage(true) / 1024 / 1024 . 'MB',
+                        'peak' => memory_get_peak_usage(true) / 1024 / 1024 . 'MB',
+                        'limit' => ini_get('memory_limit'),
+                    ],
+                    'disk_free_space' => disk_free_space(storage_path('app')) / 1024 / 1024 . 'MB',
+                ]);
+                throw new \Exception('Failed to create snapshot: ' . $e->getMessage());
             }
 
             // Include timestamp in final filename
@@ -168,6 +214,24 @@ class CreateVideoSnapshot implements ShouldQueue
             }
 
             throw $e;
+        }
+    }
+
+    /**
+     * Get video metadata using FFprobe
+     */
+    private function getVideoMetadata(string $videoPath): array
+    {
+        try {
+            $ffprobe = FFMpeg::open($videoPath);
+            return [
+                'duration' => $ffprobe->getDurationInSeconds(),
+                'dimensions' => $ffprobe->getVideoStream()->getDimensions(),
+                'codec' => $ffprobe->getVideoStream()->get('codec_name'),
+                'format' => $ffprobe->getFormat(),
+            ];
+        } catch (\Throwable $e) {
+            return ['error' => $e->getMessage()];
         }
     }
 }
