@@ -139,19 +139,32 @@ class CreateVideoSnapshot implements ShouldQueue
                 $ffmpeg = FFMpeg::fromDisk('local');
                 $media = $ffmpeg->open($tempVideoPath);
 
-                // Get video duration to validate timestamp
+                // Get video duration and validate timestamp with more precision
                 $duration = $media->getDurationInSeconds();
-                if ($this->timeInSeconds >= $duration) {
-                    throw new \Exception("Timestamp {$this->timeInSeconds} is beyond video duration {$duration}");
+                $timestamp = (float) $this->timeInSeconds;
+                
+                // Ensure timestamp is valid with 3 decimal precision
+                if ($timestamp < 0 || $timestamp >= $duration) {
+                    throw new \Exception(sprintf(
+                        "Invalid timestamp %.3f for video duration %.3f",
+                        $timestamp,
+                        $duration
+                    ));
                 }
 
-                // Extract the frame
-                $media->getFrameFromSeconds($this->timeInSeconds)
+                // Use accurate frame seeking
+                $frameContents = $media->getFrameFromSeconds($timestamp)
                     ->export()
-                    ->save($tempImagePath);
+                    ->accurate()  // This is the only valid method for precise seeking
+                    ->getFrameContents();
 
-                // Verify snapshot was created and has content
-                if (! Storage::disk('local')->exists($tempImagePath)) {
+                // Save the frame contents to the temp image file
+                if (!Storage::disk('local')->put($tempImagePath, $frameContents)) {
+                    throw new \Exception('Failed to save frame contents to temp file');
+                }
+
+                // Verify snapshot quality
+                if (!Storage::disk('local')->exists($tempImagePath)) {
                     throw new \Exception('Snapshot file was not created');
                 }
 

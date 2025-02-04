@@ -32,7 +32,7 @@ onMounted(() => {
         <Button
             type="button"
             :disabled="speaking"
-            @click="speak(`${message} ${isOnCooldown ? remainingMessage : ''}`)"
+            @click="speak(`${isOnCooldown ? remainingMessage : 'You can take a screenshot now.'}`)"
         >
             <i class="ri-speak-fill text-xl"></i>
         </Button>
