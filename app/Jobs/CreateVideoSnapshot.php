@@ -143,19 +143,28 @@ class CreateVideoSnapshot implements ShouldQueue
                 $duration = $media->getDurationInSeconds();
                 $timestamp = (float) $this->timeInSeconds;
                 
-                // Ensure timestamp is valid with 3 decimal precision
-                if ($timestamp < 0 || $timestamp >= $duration) {
+                // If timestamp is beyond duration, use the last frame
+                if ($timestamp >= $duration) {
+                    $timestamp = max(0, $duration - 0.1); // Get frame slightly before end
+                    Log::info('Adjusted timestamp to end of video', [
+                        'original_timestamp' => $this->timeInSeconds,
+                        'adjusted_timestamp' => $timestamp,
+                        'duration' => $duration
+                    ]);
+                }
+
+                // Ensure timestamp is not negative
+                if ($timestamp < 0) {
                     throw new \Exception(sprintf(
-                        "Invalid timestamp %.3f for video duration %.3f",
-                        $timestamp,
-                        $duration
+                        "Invalid negative timestamp %.3f",
+                        $timestamp
                     ));
                 }
 
                 // Use accurate frame seeking
                 $frameContents = $media->getFrameFromSeconds($timestamp)
                     ->export()
-                    ->accurate()  // This is the only valid method for precise seeking
+                    ->accurate()
                     ->getFrameContents();
 
                 // Save the frame contents to the temp image file
