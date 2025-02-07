@@ -25,9 +25,13 @@ class StoreVideo implements ShouldQueue
 
     protected string $path;
 
-    public int $tries = 5;
+    public int $tries = 3;
 
-    public int $memory = 2048;
+    public int $maxExceptions = 3;
+
+    public int $timeout = 600;
+
+    public int $memory = 4096;
 
     public function __construct(string $filePath, string $path)
     {
@@ -38,27 +42,55 @@ class StoreVideo implements ShouldQueue
     public function handle(): void
     {
         if (empty($this->filePath) || ! Storage::disk('local')->exists($this->filePath)) {
-            Log::error('File path is null, empty, or does not exist', ['filePath' => $this->filePath]);
-
+            Log::error('Video file not found or path is empty', [
+                'filePath' => $this->filePath,
+                'exists' => Storage::disk('local')->exists($this->filePath)
+            ]);
+            $this->fail(new \RuntimeException('Video file not found or path is empty'));
             return;
         }
 
         $tempDir = storage_path('app/temp/');
         if (! is_dir($tempDir) && ! mkdir($tempDir, 0755, true)) {
             Log::error('Failed to create temp directory', ['directory' => $tempDir]);
-
+            $this->fail(new \RuntimeException('Failed to create temp directory'));
             return;
         }
+
         $tempFile = $tempDir.uniqid('video_', true).'.mp4';
 
         try {
+            Log::info('Starting video processing', [
+                'filePath' => $this->filePath,
+                'targetPath' => $this->path,
+                'tempFile' => $tempFile
+            ]);
+
             $videoData = Storage::disk('local')->get($this->filePath);
-            file_put_contents($tempFile, $videoData);
+            if (!$videoData) {
+                throw new \RuntimeException('Failed to read video data from storage');
+            }
+            
+            if (!file_put_contents($tempFile, $videoData)) {
+                throw new \RuntimeException('Failed to write video data to temp file');
+            }
 
             $media = FFMpeg::fromDisk('local')->open($this->filePath);
 
+            // Get video duration and size for logging
+            $durationInSeconds = $media->getDurationInSeconds();
+            $size = Storage::disk('local')->size($this->filePath);
+            
+            Log::info('Video metadata', [
+                'duration' => $durationInSeconds,
+                'size' => $size,
+                'path' => $this->filePath
+            ]);
+
             $media->export()
-                ->inFormat((new X264)->setKiloBitrate(300)->setAudioKiloBitrate(64))
+                ->inFormat((new X264)
+                    ->setKiloBitrate(300)
+                    ->setAudioKiloBitrate(64))
                 ->resize(512, 288)
                 ->save($tempFile);
 
@@ -75,11 +107,16 @@ class StoreVideo implements ShouldQueue
                 }, 1000);
 
                 Storage::disk('s3')->setVisibility($processedFilePath, 'public');
+                
+                Log::info('Successfully uploaded video to S3', [
+                    'processedPath' => $processedFilePath
+                ]);
             } catch (Throwable $e) {
                 Log::error('Failed to upload video to S3', [
                     'exception' => $e->getMessage(),
                     'filePath' => $this->filePath,
                     'path' => $this->path,
+                    'trace' => $e->getTraceAsString()
                 ]);
                 throw $e;
             }
@@ -91,8 +128,13 @@ class StoreVideo implements ShouldQueue
                 retry(3, function () use ($screenshotPath, $screenshotContents) {
                     Storage::disk('s3')->put($screenshotPath, $screenshotContents, 'public');
                 }, 1000);
+                
+                Log::info('Successfully uploaded screenshot', [
+                    'screenshotPath' => $screenshotPath
+                ]);
             } else {
                 Log::error('Screenshot contents were not generated');
+                // Don't fail the job just because screenshot failed
             }
 
         } catch (EncodingException $e) {
@@ -101,6 +143,7 @@ class StoreVideo implements ShouldQueue
                 'command' => $e->getCommand(),
                 'filePath' => $this->filePath,
                 'path' => $this->path,
+                'trace' => $e->getTraceAsString()
             ]);
             $this->fail($e);
         } catch (S3Exception $e) {
@@ -108,6 +151,7 @@ class StoreVideo implements ShouldQueue
                 'exception' => $e->getMessage(),
                 'filePath' => $this->filePath,
                 'path' => $this->path,
+                'trace' => $e->getTraceAsString()
             ]);
             $this->fail($e);
         } catch (Throwable $e) {
@@ -115,7 +159,7 @@ class StoreVideo implements ShouldQueue
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'filePath' => $this->filePath,
-                'path' => $this->path,
+                'path' => $this->path
             ]);
             $this->fail($e);
         } finally {
@@ -133,6 +177,6 @@ class StoreVideo implements ShouldQueue
 
     public function middleware(): array
     {
-        return [(new WithoutOverlapping)->expireAfter(180)];
+        return [(new WithoutOverlapping($this->filePath))->expireAfter(600)];
     }
 }
