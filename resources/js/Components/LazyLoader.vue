@@ -47,6 +47,7 @@
 <script setup>
 import Button from "@/Components/Button.vue";
 import { useSnapshotCooldown } from '@/composables/useSnapshotCooldown';
+import { speak } from "@/composables/useSpeechSynthesis";
 import { useMedia } from "@/mediaHelpers";
 import { useForm } from "@inertiajs/vue3";
 import { useImage } from "@vueuse/core";
@@ -86,7 +87,7 @@ const placeholder = "/img/photo-placeholder.png";
 const imageSrc = ref(props.src || placeholder);
 const { isLoading } = useImage({ src: computed(() => imageSrc.value) });
 
-const { isOnCooldown, setCooldown, resetCooldown } = useSnapshotCooldown();
+const { isOnCooldown, setCooldown, resetCooldown, remainingMinutes } = useSnapshotCooldown();
 
 const form = useForm({
     book_id: props.bookId,
@@ -112,7 +113,11 @@ const handleTimeUpdate = () => {
 };
 
 const takeSnapshot = () => {
-    if (!canTakeSnapshot.value || isOnCooldown.value) return;
+    if (!canTakeSnapshot.value) return;
+    if (isOnCooldown.value) {
+        speak(`Please wait ${remainingMinutes.value} minutes before taking another snapshot`);
+        return;
+    }
     setCooldown();
     canTakeSnapshot.value = false;
     
@@ -130,6 +135,7 @@ const takeSnapshot = () => {
     form.video_time = videoElement.currentTime;
     form.video_url = videoUrl;
     
+    speak('I got your screenshot. please wait a few minutes for it to be uploaded');
     form.post(route('pages.snapshot'), {
         preserveScroll: true,
         onSuccess: () => {
