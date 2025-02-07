@@ -245,9 +245,8 @@ class PageController extends Controller
         CreateVideoSnapshot::dispatch(
             videoUrl: $request->video_url,
             timeInSeconds: $request->video_time,
-            book: $book
+            book: $book,
+            user: $request->user()
         );
-
-        return redirect(route('books.show', $book));
     }
 }

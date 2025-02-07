@@ -27,7 +27,7 @@
             v-if="!isCover && bookId && $page.props.settings.snapshot_enabled"
             class="absolute top-0 right-0 h-8"
             title="Take Snapshot"
-            :disabled="isOnCooldown || !canTakeSnapshot || !isPaused"
+            :disabled="!canTakeSnapshot || !isPaused"
             @click="takeSnapshot"
         >
             <i class="ri-camera-line text-xl"></i>
@@ -47,14 +47,16 @@
 <script setup>
 import Button from "@/Components/Button.vue";
 import { useSnapshotCooldown } from '@/composables/useSnapshotCooldown';
-import { speak } from "@/composables/useSpeechSynthesis";
+import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useMedia } from "@/mediaHelpers";
-import { useForm } from "@inertiajs/vue3";
+import { useForm, usePage } from "@inertiajs/vue3";
 import { useImage } from "@vueuse/core";
 import { computed, ref } from "vue";
 
 const { isVideo } = useMedia();
 const videoRef = ref(null);
+const { speak } = useSpeechSynthesis();
+const user = usePage().props.auth.user;
 
 const props = defineProps({
     src: {
@@ -115,7 +117,7 @@ const handleTimeUpdate = () => {
 const takeSnapshot = () => {
     if (!canTakeSnapshot.value) return;
     if (isOnCooldown.value) {
-        speak(`Please wait ${remainingMinutes.value} minutes before taking another snapshot`);
+        speak(`Please wait ${remainingMinutes.value} minutes before taking another screenshot`);
         return;
     }
     setCooldown();
@@ -135,7 +137,7 @@ const takeSnapshot = () => {
     form.video_time = videoElement.currentTime;
     form.video_url = videoUrl;
     
-    speak('I got your screenshot. please wait a few minutes for it to be uploaded');
+    speak(`I got your screenshot, ${user.name}. please wait a few minutes for it to be uploaded`);
     form.post(route('pages.snapshot'), {
         preserveScroll: true,
         onSuccess: () => {

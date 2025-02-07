@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use ProtoneMedia\LaravelFFMpeg\Support\FFMpeg;
+use App\Models\User;
 
 class CreateVideoSnapshot implements ShouldQueue
 {
@@ -79,14 +80,18 @@ class CreateVideoSnapshot implements ShouldQueue
 
     protected Book $book;
 
+    protected User $user;
+
     public function __construct(
         string $videoUrl,
         float $timeInSeconds,
-        Book $book
+        Book $book,
+        User $user
     ) {
         $this->videoUrl = $videoUrl;
         $this->timeInSeconds = $timeInSeconds;
         $this->book = $book;
+        $this->user = $user;
     }
 
     public function handle(): void
@@ -215,9 +220,9 @@ class CreateVideoSnapshot implements ShouldQueue
             $mediaPath = 'books/'.$this->book->slug."/snapshot_{$timestamp}_{$random}.webp";
 
             // Create the page first
-            $page = $this->book->pages()->create([
-                'content' => '<p>This is a screenshot of one of the videos in this book.</p>',
-                'media_path' => $mediaPath,
+            $this->book->pages()->create([
+                'content' => "<p>{$this->user->name} took this snapshot of one of the videos in this book.</p>",
+                'media_path' => $mediaPath
             ]);
 
             // Clean up video file as we don't need it anymore
