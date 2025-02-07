@@ -60,12 +60,6 @@ class StoreVideo implements ShouldQueue
         $tempFile = $tempDir.uniqid('video_', true).'.mp4';
 
         try {
-            Log::info('Starting video processing', [
-                'filePath' => $this->filePath,
-                'targetPath' => $this->path,
-                'tempFile' => $tempFile
-            ]);
-
             $videoData = Storage::disk('local')->get($this->filePath);
             if (!$videoData) {
                 throw new \RuntimeException('Failed to read video data from storage');
@@ -76,16 +70,6 @@ class StoreVideo implements ShouldQueue
             }
 
             $media = FFMpeg::fromDisk('local')->open($this->filePath);
-
-            // Get video duration and size for logging
-            $durationInSeconds = $media->getDurationInSeconds();
-            $size = Storage::disk('local')->size($this->filePath);
-            
-            Log::info('Video metadata', [
-                'duration' => $durationInSeconds,
-                'size' => $size,
-                'path' => $this->filePath
-            ]);
 
             $media->export()
                 ->inFormat((new X264)
@@ -107,10 +91,6 @@ class StoreVideo implements ShouldQueue
                 }, 1000);
 
                 Storage::disk('s3')->setVisibility($processedFilePath, 'public');
-                
-                Log::info('Successfully uploaded video to S3', [
-                    'processedPath' => $processedFilePath
-                ]);
             } catch (Throwable $e) {
                 Log::error('Failed to upload video to S3', [
                     'exception' => $e->getMessage(),
@@ -128,13 +108,6 @@ class StoreVideo implements ShouldQueue
                 retry(3, function () use ($screenshotPath, $screenshotContents) {
                     Storage::disk('s3')->put($screenshotPath, $screenshotContents, 'public');
                 }, 1000);
-                
-                Log::info('Successfully uploaded screenshot', [
-                    'screenshotPath' => $screenshotPath
-                ]);
-            } else {
-                Log::error('Screenshot contents were not generated');
-                // Don't fail the job just because screenshot failed
             }
 
         } catch (EncodingException $e) {
