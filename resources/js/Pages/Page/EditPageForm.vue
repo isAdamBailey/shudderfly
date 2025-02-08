@@ -1,15 +1,14 @@
 <script setup>
-import BreezeLabel from "@/Components/InputLabel.vue";
-import { useForm } from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue";
-import { computed, onMounted, ref } from "vue";
-import DeletePageForm from "@/Pages/Book/DeletePageForm.vue";
-import Wysiwyg from "@/Components/Wysiwyg.vue";
+import { default as BreezeLabel, default as InputLabel } from "@/Components/InputLabel.vue";
 import VideoIcon from "@/Components/svg/VideoIcon.vue";
-import VideoWrapper from "@/Components/VideoWrapper.vue";
-import Multiselect from "@vueform/multiselect";
-import InputLabel from "@/Components/InputLabel.vue";
 import TextInput from "@/Components/TextInput.vue";
+import VideoWrapper from "@/Components/VideoWrapper.vue";
+import Wysiwyg from "@/Components/Wysiwyg.vue";
+import DeletePageForm from "@/Pages/Book/DeletePageForm.vue";
+import { useForm } from "@inertiajs/vue3";
+import Multiselect from "@vueform/multiselect";
+import { computed, onMounted, ref } from "vue";
 
 const emit = defineEmits(["close-page-form"]);
 
@@ -137,7 +136,7 @@ const makeCoverPage = () => {
                 </Button>
             </div>
             <div class="flex flex-wrap">
-                <div v-if="mediaOption === 'upload'">
+                <div v-if="mediaOption === 'upload'" class="w-full mb-2">
                     <BreezeLabel for="imageInput" value="Media" />
                     <input
                         ref="imageInput"
@@ -150,7 +149,7 @@ const makeCoverPage = () => {
                             imagePreview.startsWith('data:image') ||
                             imagePreview.endsWith('.webp')
                         "
-                        class="h-60 w-60 rounded bg-cover bg-center bg-no-repeat mr-2"
+                        class="w-full min-h-60 rounded bg-contain bg-center bg-no-repeat"
                         :style="
                             'background-image: url(\'' + imagePreview + '\');'
                         "
@@ -160,7 +159,7 @@ const makeCoverPage = () => {
                             imagePreview.startsWith('data:video') ||
                             imagePreview.endsWith('.mp4')
                         "
-                        class="w-3/4"
+                        class="w-full flex justify-center"
                     >
                         <video controls class="w-60">
                             <source :src="imagePreview" type="video/mp4" />
@@ -218,7 +217,7 @@ const makeCoverPage = () => {
                 />
             </div>
 
-            <div class="flex justify-center mt-5 md:mt-10">
+            <div class="flex justify-center mt-10">
                 <Button
                     class="w-full flex justify-center py-3"
                     :class="{ 'opacity-25': pageForm.processing }"

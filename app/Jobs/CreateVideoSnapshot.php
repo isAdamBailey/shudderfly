@@ -82,16 +82,20 @@ class CreateVideoSnapshot implements ShouldQueue
 
     protected User $user;
 
+    protected int $pageId;
+
     public function __construct(
         string $videoUrl,
         float $timeInSeconds,
         Book $book,
-        User $user
+        User $user,
+        int $pageId
     ) {
         $this->videoUrl = $videoUrl;
         $this->timeInSeconds = $timeInSeconds;
         $this->book = $book;
         $this->user = $user;
+        $this->pageId = $pageId;
     }
 
     public function handle(): void
@@ -221,7 +225,7 @@ class CreateVideoSnapshot implements ShouldQueue
 
             // Create the page first
             $this->book->pages()->create([
-                'content' => "<p>{$this->user->name} took this snapshot of one of the videos in this book.</p>",
+                'content' => "<p>{$this->user->name} took this screenshot from <a href='/pages/{$this->pageId}'>this video</a>.</p>",
                 'media_path' => $mediaPath
             ]);
 

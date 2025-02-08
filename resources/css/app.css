@@ -139,4 +139,8 @@
     @apply text-2xl font-bold;
 }
 
+.page-content a {
+    @apply text-blue-600 underline;
+}
+
 @tailwind utilities;

@@ -78,7 +78,7 @@ class StoreVideo implements ShouldQueue
                 ->resize(512, 288)
                 ->save($tempFile);
 
-            $screenshotContents = $media->getFrameFromSeconds(1)
+            $screenshotContents = $media->getFrameFromSeconds(0.5)
                 ->export()
                 ->getFrameContents();
 

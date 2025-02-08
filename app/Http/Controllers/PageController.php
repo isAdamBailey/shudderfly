@@ -246,7 +246,8 @@ class PageController extends Controller
             videoUrl: $request->video_url,
             timeInSeconds: $request->video_time,
             book: $book,
-            user: $request->user()
+            user: $request->user(),
+            pageId: $request->page_id
         );
     }
 }

@@ -25,12 +25,12 @@
         </video>
         <Button
             v-if="!isCover && bookId && $page.props.settings.snapshot_enabled"
-            class="absolute top-0 right-0 h-8"
+            class="absolute top-0 right-0 h-8 w-8 flex items-center justify-center"
             title="Take Snapshot"
             :disabled="!canTakeSnapshot || !isPaused"
             @click="takeSnapshot"
         >
-            <i class="ri-camera-line text-xl"></i>
+            <i :class="`${isOnCooldown ? 'ri-speak-fill' : 'ri-camera-line'} text-3xl`"></i>
         </button>
     </div>
     <img
@@ -83,6 +83,10 @@ const props = defineProps({
         type: String,
         default: null,
     },
+    pageId: {
+        type: String,
+        default: null,
+    },
 });
 
 const placeholder = "/img/photo-placeholder.png";
@@ -93,6 +97,7 @@ const { isOnCooldown, setCooldown, resetCooldown, remainingMinutes } = useSnapsh
 
 const form = useForm({
     book_id: props.bookId,
+    page_id: props.pageId,
     video_time: null,
     video_url: null,
 });
@@ -117,7 +122,10 @@ const handleTimeUpdate = () => {
 const takeSnapshot = () => {
     if (!canTakeSnapshot.value) return;
     if (isOnCooldown.value) {
-        speak(`Please wait ${remainingMinutes.value} minutes before taking another screenshot`);
+        const timeMessage = remainingMinutes.value <= 1 
+            ? 'less than one minute' 
+            : `${remainingMinutes.value} minutes`;
+        speak(`Please wait ${timeMessage} before taking another screenshot`);
         return;
     }
     setCooldown();
@@ -137,10 +145,10 @@ const takeSnapshot = () => {
     form.video_time = videoElement.currentTime;
     form.video_url = videoUrl;
     
-    speak(`I got your screenshot, ${user.name}. please wait a few minutes for it to be uploaded`);
     form.post(route('pages.snapshot'), {
         preserveScroll: true,
         onSuccess: () => {
+            speak(`I got your screenshot, ${user.name}. please wait a few minutes for it to be uploaded`);
         },
         onError: (err) => {
             resetCooldown();

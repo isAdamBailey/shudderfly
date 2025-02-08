@@ -54,6 +54,7 @@
                         :poster="page.media_poster"
                         :alt="page.description"
                         :book-id="page.book.id"
+                        :page-id="page.id"
                     />
                     <VideoWrapper
                         v-else-if="page.video_link"

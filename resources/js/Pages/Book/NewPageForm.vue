@@ -1,15 +1,14 @@
 <script setup>
-import BreezeLabel from "@/Components/InputLabel.vue";
-import { useForm } from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue";
-import { ref, computed } from "vue";
-import Wysiwyg from "@/Components/Wysiwyg.vue";
-import VideoIcon from "@/Components/svg/VideoIcon.vue";
-import VideoWrapper from "@/Components/VideoWrapper.vue";
-import { useVuelidate } from "@vuelidate/core";
-import TextInput from "@/Components/TextInput.vue";
 import InputError from "@/Components/InputError.vue";
-import InputLabel from "@/Components/InputLabel.vue";
+import { default as BreezeLabel, default as InputLabel } from "@/Components/InputLabel.vue";
+import VideoIcon from "@/Components/svg/VideoIcon.vue";
+import TextInput from "@/Components/TextInput.vue";
+import VideoWrapper from "@/Components/VideoWrapper.vue";
+import Wysiwyg from "@/Components/Wysiwyg.vue";
+import { useForm } from "@inertiajs/vue3";
+import { useVuelidate } from "@vuelidate/core";
+import { computed, ref } from "vue";
 
 const emit = defineEmits(["close-form"]);
 
@@ -149,14 +148,14 @@ const submit = async () => {
                     />
                     <div
                         v-if="imagePreview.startsWith('data:image')"
-                        class="w-60 min-h-60 rounded bg-cover bg-center bg-no-repeat"
+                        class="w-full min-h-60 rounded bg-contain bg-center bg-no-repeat"
                         :style="
                             'background-image: url(\'' + imagePreview + '\');'
                         "
                     ></div>
                     <div
                         v-else-if="imagePreview.startsWith('data:video')"
-                        class="w-3/4"
+                        class="w-full flex justify-center"
                     >
                         <video controls class="w-60">
                             <source :src="imagePreview" type="video/mp4" />
