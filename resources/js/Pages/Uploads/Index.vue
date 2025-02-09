@@ -40,6 +40,15 @@
             </Button>
             <Button
                 type="button"
+                :is-active="isSnapshot"
+                :disabled="loading"
+                class="rounded-full my-3"
+                @click="filter('snapshot')"
+            >
+                <i class="ri-camera-line text-4xl"></i>
+            </Button>
+            <Button
+                type="button"
                 :is-active="isRandom"
                 :disabled="loading"
                 class="rounded-full my-3"
@@ -95,6 +104,11 @@ const isYouTube = computed(() => {
     return urlParams.get("filter") === "youtube";
 });
 
+const isSnapshot= computed(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get("filter") === "snapshot";
+});
+
 const isPopular = computed(() => {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get("filter") === "popular";
@@ -105,20 +119,20 @@ const title = computed(() => {
     if (search) {
         return `Pages with "${search}"`;
     }
-    if (props.photos.total) {
-        const total = props.photos.total;
-        if (isRandom.value) {
-            return "Mixed";
-        }
-        if (isOld.value) {
-            return "Memories";
-        }
-        if (isYouTube.value) {
-            return `${total} YouTube videos`;
-        }
-        if (isPopular.value) {
-            return "Your favorites";
-        }
+    if (isRandom.value) {
+        return "Mixed";
+    }
+    if (isOld.value) {
+        return "Memories";
+    }
+    if (isYouTube.value) {
+        return "YouTube videos";
+    }
+    if (isSnapshot.value) {
+        return "Screenshots";
+    }
+    if (isPopular.value) {
+        return "Your favorites";
     }
     return "Newest uploads";
 });
@@ -138,6 +152,9 @@ function filter(filter) {
             break;
         case "popular":
             phrase = "your favorite memories";
+            break;
+        case "snapshot":
+            phrase = "your screenshots";
             break;
     }
     speak(phrase);
