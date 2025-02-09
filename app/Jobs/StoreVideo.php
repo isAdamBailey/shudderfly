@@ -44,9 +44,10 @@ class StoreVideo implements ShouldQueue
         if (empty($this->filePath) || ! Storage::disk('local')->exists($this->filePath)) {
             Log::error('Video file not found or path is empty', [
                 'filePath' => $this->filePath,
-                'exists' => Storage::disk('local')->exists($this->filePath)
+                'exists' => Storage::disk('local')->exists($this->filePath),
             ]);
             $this->fail(new \RuntimeException('Video file not found or path is empty'));
+
             return;
         }
 
@@ -54,6 +55,7 @@ class StoreVideo implements ShouldQueue
         if (! is_dir($tempDir) && ! mkdir($tempDir, 0755, true)) {
             Log::error('Failed to create temp directory', ['directory' => $tempDir]);
             $this->fail(new \RuntimeException('Failed to create temp directory'));
+
             return;
         }
 
@@ -61,11 +63,11 @@ class StoreVideo implements ShouldQueue
 
         try {
             $videoData = Storage::disk('local')->get($this->filePath);
-            if (!$videoData) {
+            if (! $videoData) {
                 throw new \RuntimeException('Failed to read video data from storage');
             }
-            
-            if (!file_put_contents($tempFile, $videoData)) {
+
+            if (! file_put_contents($tempFile, $videoData)) {
                 throw new \RuntimeException('Failed to write video data to temp file');
             }
 
@@ -96,7 +98,7 @@ class StoreVideo implements ShouldQueue
                     'exception' => $e->getMessage(),
                     'filePath' => $this->filePath,
                     'path' => $this->path,
-                    'trace' => $e->getTraceAsString()
+                    'trace' => $e->getTraceAsString(),
                 ]);
                 throw $e;
             }
@@ -116,7 +118,7 @@ class StoreVideo implements ShouldQueue
                 'command' => $e->getCommand(),
                 'filePath' => $this->filePath,
                 'path' => $this->path,
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
             $this->fail($e);
         } catch (S3Exception $e) {
@@ -124,7 +126,7 @@ class StoreVideo implements ShouldQueue
                 'exception' => $e->getMessage(),
                 'filePath' => $this->filePath,
                 'path' => $this->path,
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
             $this->fail($e);
         } catch (Throwable $e) {
@@ -132,7 +134,7 @@ class StoreVideo implements ShouldQueue
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'filePath' => $this->filePath,
-                'path' => $this->path
+                'path' => $this->path,
             ]);
             $this->fail($e);
         } finally {

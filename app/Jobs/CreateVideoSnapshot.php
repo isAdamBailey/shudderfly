@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Book;
+use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -13,7 +14,6 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use ProtoneMedia\LaravelFFMpeg\Support\FFMpeg;
-use App\Models\User;
 
 class CreateVideoSnapshot implements ShouldQueue
 {
@@ -138,7 +138,7 @@ class CreateVideoSnapshot implements ShouldQueue
                 throw new \Exception('Downloaded video file is empty');
             }
 
-            $fullVideoPath = storage_path('app/' . $tempVideoPath);
+            $fullVideoPath = storage_path('app/'.$tempVideoPath);
             if (! file_exists($fullVideoPath)) {
                 throw new \Exception("Video file not found at expected path: {$fullVideoPath}");
             }
@@ -151,21 +151,21 @@ class CreateVideoSnapshot implements ShouldQueue
                 // Get video duration and validate timestamp with more precision
                 $duration = $media->getDurationInSeconds();
                 $timestamp = (float) $this->timeInSeconds;
-                
+
                 // If timestamp is beyond duration, use the last frame
                 if ($timestamp >= $duration) {
                     $timestamp = max(0, $duration - 0.1); // Get frame slightly before end
                     Log::info('Adjusted timestamp to end of video', [
                         'original_timestamp' => $this->timeInSeconds,
                         'adjusted_timestamp' => $timestamp,
-                        'duration' => $duration
+                        'duration' => $duration,
                     ]);
                 }
 
                 // Ensure timestamp is not negative
                 if ($timestamp < 0) {
                     throw new \Exception(sprintf(
-                        "Invalid negative timestamp %.3f",
+                        'Invalid negative timestamp %.3f',
                         $timestamp
                     ));
                 }
@@ -177,12 +177,12 @@ class CreateVideoSnapshot implements ShouldQueue
                     ->getFrameContents();
 
                 // Save the frame contents to the temp image file
-                if (!Storage::disk('local')->put($tempImagePath, $frameContents)) {
+                if (! Storage::disk('local')->put($tempImagePath, $frameContents)) {
                     throw new \Exception('Failed to save frame contents to temp file');
                 }
 
                 // Verify snapshot quality
-                if (!Storage::disk('local')->exists($tempImagePath)) {
+                if (! Storage::disk('local')->exists($tempImagePath)) {
                     throw new \Exception('Snapshot file was not created');
                 }
 
@@ -192,7 +192,7 @@ class CreateVideoSnapshot implements ShouldQueue
                 }
 
                 // Verify the file is a valid image
-                $fullPath = storage_path('app/' . $tempImagePath);
+                $fullPath = storage_path('app/'.$tempImagePath);
                 $mimeType = mime_content_type($fullPath);
                 if (! Str::startsWith($mimeType, 'image/')) {
                     throw new \Exception("Invalid snapshot file type: {$mimeType}");
@@ -209,15 +209,15 @@ class CreateVideoSnapshot implements ShouldQueue
                     'video_size' => Storage::disk('local')->exists($tempVideoPath) ? Storage::disk('local')->size($tempVideoPath) : 0,
                     'ffprobe_data' => $this->getVideoMetadata($tempVideoPath),
                     'memory_usage' => [
-                        'current' => memory_get_usage(true) / 1024 / 1024 . 'MB',
-                        'peak' => memory_get_peak_usage(true) / 1024 / 1024 . 'MB',
+                        'current' => memory_get_usage(true) / 1024 / 1024 .'MB',
+                        'peak' => memory_get_peak_usage(true) / 1024 / 1024 .'MB',
                         'limit' => ini_get('memory_limit'),
                     ],
-                    'disk_free_space' => disk_free_space(storage_path('app')) / 1024 / 1024 . 'MB',
+                    'disk_free_space' => disk_free_space(storage_path('app')) / 1024 / 1024 .'MB',
                     'temp_dir_writable' => is_writable($tempDir),
                     'temp_dir_permissions' => substr(sprintf('%o', fileperms($tempDir)), -4),
                 ]);
-                throw new \Exception('Failed to create snapshot: ' . $e->getMessage());
+                throw new \Exception('Failed to create snapshot: '.$e->getMessage());
             }
 
             // Include timestamp in final filename
@@ -226,7 +226,7 @@ class CreateVideoSnapshot implements ShouldQueue
             // Create the page first
             $this->book->pages()->create([
                 'content' => "<p>{$this->user->name} took this screenshot from <a href='/pages/{$this->pageId}'>this video</a>.</p>",
-                'media_path' => $mediaPath
+                'media_path' => $mediaPath,
             ]);
 
             // Clean up video file as we don't need it anymore
@@ -277,6 +277,7 @@ class CreateVideoSnapshot implements ShouldQueue
     {
         try {
             $ffprobe = FFMpeg::fromDisk('local')->open($videoPath);
+
             return [
                 'duration' => $ffprobe->getDurationInSeconds(),
                 'dimensions' => $ffprobe->getVideoStream()->getDimensions(),

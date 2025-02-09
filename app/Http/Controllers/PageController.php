@@ -46,7 +46,7 @@ class PageController extends Controller
             ->when($filter === 'random', fn ($query) => $query->inRandomOrder())
             ->when($filter === 'youtube', fn ($query) => $query->whereNotNull('video_link')->latest())
             ->when($filter === 'popular', fn ($query) => $query->orderBy('read_count', 'desc'))
-            ->when($filter === 'snapshot', fn ($query) => $query->where('media_path', 'like', '%snapshot%'))
+            ->when($filter === 'snapshot', fn ($query) => $query->where('media_path', 'like', '%snapshot%')->latest())
             ->paginate(25);
 
         $photos->appends($request->all());
