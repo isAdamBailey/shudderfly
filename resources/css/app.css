@@ -34,12 +34,6 @@
     christmas:bg-christmas-green;
     }
 
-    .bg-theme-gradient {
-        @apply bg-gradient-to-r from-indigo-600 to-blue-200
-    dark:from-gray-900 dark:to-purple-500
-    christmas:from-christmas-snow christmas:to-christmas-gold;
-    }
-
     .bg-theme-secondary {
         @apply bg-gray-300
     dark:bg-gray-300

@@ -16,7 +16,7 @@ defineProps({
 <template>
     <Head title="Welcome" />
 
-    <div class="min-h-screen bg-theme-gradient items-center">
+    <div class="min-h-screen bg-gray-900 items-center">
         <div class="flex">
             <div
                 class="container flex-col flex items-center px-6 py-4 md:py-20"
