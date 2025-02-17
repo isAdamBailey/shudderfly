@@ -12,7 +12,7 @@ return new class extends Migration
     {
         DB::table('site_settings')->insert([
             'key' => 'youtube_enabled',
-            'value' => '0',
+            'value' => '1',
             'description' => 'Enable or disable YouTube video integration',
             'type' => 'boolean',
             'created_at' => now(),

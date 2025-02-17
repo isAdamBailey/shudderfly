@@ -6,7 +6,7 @@ import TextInput from "@/Components/TextInput.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
 import DeletePageForm from "@/Pages/Book/DeletePageForm.vue";
-import { useForm } from "@inertiajs/vue3";
+import { useForm, usePage } from "@inertiajs/vue3";
 import Multiselect from "@vueform/multiselect";
 import { computed, onMounted, ref } from "vue";
 
@@ -18,6 +18,8 @@ const props = defineProps({
     showPageSettings: { type: Boolean, default: false },
     books: { type: Array, required: true },
 });
+
+const isYouTubeEnabled = computed(() => usePage().props.settings["youtube_enabled"]);
 
 const pageForm = useForm({
     content: props.page.content,
@@ -119,7 +121,7 @@ const makeCoverPage = () => {
 <template>
     <div class="border-t-2 bg-white dark:bg-gray-800 rounded p-5 mt-10">
         <form @submit.prevent="submit">
-            <div class="mb-4">
+            <div v-if="isYouTubeEnabled" class="mb-4">
                 <Button
                     :is-active="mediaOption === 'upload'"
                     class="rounded-none w-24 justify-center"

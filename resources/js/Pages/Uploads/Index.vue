@@ -30,6 +30,7 @@
                 <i class="ri-star-line text-4xl"></i>
             </Button>
             <Button
+                v-if="isYouTubeEnabled"
                 type="button"
                 :is-active="isYouTube"
                 :disabled="loading"
@@ -39,6 +40,7 @@
                 <i class="ri-youtube-line text-4xl"></i>
             </Button>
             <Button
+                v-if="isSnapshotEnabled"
                 type="button"
                 :is-active="isSnapshot"
                 :disabled="loading"
@@ -86,6 +88,9 @@ const { speak } = useSpeechSynthesis();
 const props = defineProps({
     photos: { type: Object, required: true },
 });
+
+const isYouTubeEnabled = computed(() => usePage().props.settings["youtube_enabled"]);
+const isSnapshotEnabled = computed(() => usePage().props.settings["snapshot_enabled"]);
 
 const loading = ref(false);
 

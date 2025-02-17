@@ -6,7 +6,7 @@ import VideoIcon from "@/Components/svg/VideoIcon.vue";
 import TextInput from "@/Components/TextInput.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
-import { useForm } from "@inertiajs/vue3";
+import { useForm, usePage } from "@inertiajs/vue3";
 import { useVuelidate } from "@vuelidate/core";
 import { computed, ref } from "vue";
 
@@ -15,6 +15,8 @@ const emit = defineEmits(["close-form"]);
 const props = defineProps({
     book: { type: Object, required: true },
 });
+
+const isYouTubeEnabled = computed(() => usePage().props.settings["youtube_enabled"]);
 
 const form = useForm({
     book_id: props.book.id,
@@ -121,7 +123,7 @@ const submit = async () => {
             Add a New Page
         </h3>
         <form @submit.prevent="submit">
-            <div class="mb-4">
+            <div v-if="isYouTubeEnabled" class="mb-4">
                 <Button
                     :is-active="mediaOption === 'upload'"
                     class="rounded-none w-24 justify-center"
