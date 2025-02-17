@@ -28,7 +28,76 @@ class PagesTest extends TestCase
                 ->component('Uploads/Index')
                 ->url('/photos')
                 ->has('photos.data', 25)
+        );
+    }
 
+    public function test_youtube_videos_are_hidden_when_disabled(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        // Create a book with both regular pages and video pages
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->count(3)->create(); // Regular pages
+        Page::factory()->for($book)->count(2)->state(['video_link' => 'https://youtube.com/watch?v=123'])->create(); // Video pages
+
+        // Set youtube_enabled to false
+        \App\Models\SiteSetting::where('key', 'youtube_enabled')->update(['value' => '0']);
+
+        // Test index page - should only show regular pages
+        $this->get(route('pictures.index'))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 3) // Only regular pages
+        );
+
+        // Test youtube filter - should return empty
+        $this->get(route('pictures.index', ['filter' => 'youtube']))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 0) // No videos when disabled
+        );
+
+        // Enable YouTube
+        \App\Models\SiteSetting::where('key', 'youtube_enabled')->update(['value' => '1']);
+
+        // Test index page again - should now show all pages
+        $this->get(route('pictures.index'))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 5) // All pages
+        );
+
+        // Test youtube filter - should now show video pages
+        $this->get(route('pictures.index', ['filter' => 'youtube']))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 2) // Only video pages
+        );
+    }
+
+    public function test_video_pages_are_not_accessible_when_youtube_disabled(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $book = Book::factory()->create();
+        $regularPage = Page::factory()->for($book)->create();
+        $videoPage = Page::factory()->for($book)->state(['video_link' => 'https://youtube.com/watch?v=123'])->create();
+
+        // Set youtube_enabled to false
+        \App\Models\SiteSetting::where('key', 'youtube_enabled')->update(['value' => '0']);
+
+        // Regular page should be accessible
+        $this->get(route('pages.show', $regularPage))->assertStatus(200);
+
+        // Video page should return 404 when YouTube is disabled
+        $this->get(route('pages.show', $videoPage))->assertStatus(404);
+
+        // Test sibling navigation - video page should not be included
+        $response = $this->get(route('pages.show', $regularPage));
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Page/Show')
+                ->where('nextPage', null) // No next page since video page is excluded
         );
     }
 

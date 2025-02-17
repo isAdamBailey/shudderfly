@@ -235,4 +235,34 @@ class BooksTest extends TestCase
 
         $response->assertRedirect(route('books.index'));
     }
+
+    public function test_youtube_videos_are_hidden_in_book_when_disabled(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        // Create a book with both regular pages and video pages
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->count(3)->create(); // Regular pages
+        Page::factory()->for($book)->count(2)->state(['video_link' => 'https://youtube.com/watch?v=123'])->create(); // Video pages
+
+        // Set youtube_enabled to false
+        \App\Models\SiteSetting::where('key', 'youtube_enabled')->update(['value' => '0']);
+
+        // Test book show page - should only show regular pages
+        $this->get(route('books.show', $book))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Book/Show')
+                ->has('pages.data', 3) // Only regular pages
+        );
+
+        // Enable YouTube
+        \App\Models\SiteSetting::where('key', 'youtube_enabled')->update(['value' => '1']);
+
+        // Test book show page again - should now show all pages
+        $this->get(route('books.show', $book))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Book/Show')
+                ->has('pages.data', 5) // All pages
+        );
+    }
 }
