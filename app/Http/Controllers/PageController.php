@@ -30,26 +30,17 @@ class PageController extends Controller
 
         $photos = Page::with('book')
             ->when($filter === 'youtube', function ($query) use ($youtubeEnabled) {
-                // Return empty result set if YouTube is disabled and filter is youtube
-                if (!$youtubeEnabled) {
+                if (! $youtubeEnabled) {
                     $query->whereRaw('1 = 0');
                 } else {
                     $query->whereNotNull('video_link');
                 }
             })
-            ->when($filter !== 'youtube', function ($query) use ($youtubeEnabled) {
-                // Show media paths for non-youtube filter
-                $query->where(function ($q) {
-                    $q->where('media_path', '!=', '')
-                        ->orWhereNotNull('media_path');
-                });
-                
-                // Include video links only if YouTube is enabled
-                if ($youtubeEnabled) {
-                    $query->orWhereNotNull('video_link');
-                } else {
-                    $query->whereNull('video_link');
-                }
+            ->when($filter === 'snapshot', function ($query) {
+                $query->where('media_path', 'like', '%snapshot%');
+            })
+            ->when(! $youtubeEnabled, function ($query) {
+                $query->whereNull('video_link');
             })
             ->when($search, fn ($query) => $query->where('content', 'LIKE', '%'.$search.'%'))
             ->unless($filter, fn ($query) => $query->latest())
@@ -59,11 +50,11 @@ class PageController extends Controller
                 if (! $yearAgo->exists()) {
                     return $query->oldest();
                 }
+
                 return $yearAgo->orderBy('created_at', 'desc');
             })
             ->when($filter === 'random', fn ($query) => $query->inRandomOrder())
             ->when($filter === 'popular', fn ($query) => $query->orderBy('read_count', 'desc'))
-            ->when($filter === 'snapshot', fn ($query) => $query->where('media_path', 'like', '%snapshot%')->latest())
             ->latest();
 
         $photos = $photos->paginate(25);
@@ -79,8 +70,8 @@ class PageController extends Controller
     public function show(Page $page, Request $request): Response
     {
         $youtubeEnabled = SiteSetting::where('key', 'youtube_enabled')->first()->value;
-        
-        if (!$youtubeEnabled && $page->video_link) {
+
+        if (! $youtubeEnabled && $page->video_link) {
             abort(404);
         }
 
@@ -94,8 +85,8 @@ class PageController extends Controller
         $page->load(['book', 'book.coverImage']);
 
         $query = Page::where('book_id', $page->book_id);
-        
-        if (!$youtubeEnabled) {
+
+        if (! $youtubeEnabled) {
             $query->whereNull('video_link');
         }
 
@@ -104,9 +95,9 @@ class PageController extends Controller
         $nextPage = null;
         $previousPage = null;
 
-        if (!$siblingPages->isEmpty()) {
+        if (! $siblingPages->isEmpty()) {
             $currentIndex = $siblingPages->search($page->id);
-            
+
             // Get next and previous indices, handling wrap-around
             $nextIndex = ($currentIndex + 1) % $siblingPages->count();
             $previousIndex = ($currentIndex - 1 + $siblingPages->count()) % $siblingPages->count();

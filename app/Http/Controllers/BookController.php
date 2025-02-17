@@ -109,9 +109,9 @@ class BookController extends Controller
         }
 
         $youtubeEnabled = \App\Models\SiteSetting::where('key', 'youtube_enabled')->first()->value;
-        
+
         $pages = $book->pages()
-            ->when(!$youtubeEnabled, fn($query) => $query->whereNull('video_link'))
+            ->when(! $youtubeEnabled, fn ($query) => $query->whereNull('video_link'))
             ->paginate();
 
         // when at the last page, return all books that contain words

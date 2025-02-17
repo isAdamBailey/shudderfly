@@ -43,11 +43,11 @@ class PagesTest extends TestCase
         // Set youtube_enabled to false
         \App\Models\SiteSetting::where('key', 'youtube_enabled')->update(['value' => '0']);
 
-        // Test index page - should only show regular pages
+        // Test index page - should only show regular pages when YouTube is disabled
         $this->get(route('pictures.index'))->assertInertia(
             fn (Assert $page) => $page
                 ->component('Uploads/Index')
-                ->has('photos.data', 3) // Only regular pages
+                ->has('photos.data', 3) // Only regular pages when YouTube is disabled
         );
 
         // Test youtube filter - should return empty
@@ -64,7 +64,7 @@ class PagesTest extends TestCase
         $this->get(route('pictures.index'))->assertInertia(
             fn (Assert $page) => $page
                 ->component('Uploads/Index')
-                ->has('photos.data', 5) // All pages
+                ->has('photos.data', 5) // All pages when YouTube is enabled
         );
 
         // Test youtube filter - should now show video pages
@@ -98,6 +98,62 @@ class PagesTest extends TestCase
             fn (Assert $page) => $page
                 ->component('Page/Show')
                 ->where('nextPage', null) // No next page since video page is excluded
+        );
+    }
+
+    public function test_snapshot_filter_shows_only_snapshots(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        // Create a book with regular pages, video pages, and snapshots
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->count(2)->create(); // Regular pages
+        Page::factory()->for($book)->count(2)->state(['video_link' => 'https://youtube.com/watch?v=123'])->create(); // Video pages
+        Page::factory()->for($book)->count(3)->state(['media_path' => 'books/test/snapshot_123.jpg'])->create(); // Snapshots
+
+        // Test snapshot filter - should only show snapshot pages
+        $this->get(route('pictures.index', ['filter' => 'snapshot']))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 3) // Only snapshot pages
+        );
+
+        // Test that regular view shows all pages
+        $this->get(route('pictures.index'))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 7) // All pages (2 regular + 2 youtube + 3 snapshots)
+        );
+    }
+
+    public function test_filters_are_mutually_exclusive(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        // Create a book with regular pages, video pages, and snapshots
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->count(2)->create(); // Regular pages
+        Page::factory()->for($book)->count(2)->state(['video_link' => 'https://youtube.com/watch?v=123'])->create(); // Video pages
+        Page::factory()->for($book)->count(3)->state(['media_path' => 'books/test/snapshot_123.jpg'])->create(); // Snapshots
+
+        // Create a YouTube video that also has a snapshot
+        Page::factory()->for($book)->state([
+            'video_link' => 'https://youtube.com/watch?v=456',
+            'media_path' => 'books/test/snapshot_456.jpg',
+        ])->create();
+
+        // Test snapshot filter - should only show snapshot pages
+        $this->get(route('pictures.index', ['filter' => 'snapshot']))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 4) // All pages with snapshot in media_path
+        );
+
+        // Test youtube filter - should only show video pages
+        $this->get(route('pictures.index', ['filter' => 'youtube']))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 3) // All pages with video_link
         );
     }
 
