@@ -12,6 +12,30 @@
                 {{ props.stats.numberOfPages.toLocaleString() }}
             </p>
         </div>
+        <div class="border-b py-4 flex justify-between">
+            <p>Pages that are images</p>
+            <p class="font-bold">
+                {{ props.stats.numberOfImages.toLocaleString() }}
+            </p>
+        </div>
+        <div class="border-b py-4 flex justify-between">
+            <p>Pages that are videos</p>
+            <p class="font-bold">
+                {{ props.stats.numberOfVideos.toLocaleString() }}
+            </p>
+        </div>
+        <div class="border-b py-4 flex justify-between">
+            <p>Pages that are YouTube videos</p>
+            <p class="font-bold">
+                {{ props.stats.numberOfYouTubeVideos.toLocaleString() }}
+            </p>
+        </div>
+        <div class="border-b py-4 flex justify-between">
+            <p>Pages that are screenshots</p>
+            <p class="font-bold">
+                {{ props.stats.numberOfScreenshots.toLocaleString() }}
+            </p>
+        </div>
         <div class="border-b mt-4 flex justify-between">
             <p>Book with most pages</p>
             <Link

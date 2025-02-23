@@ -118,12 +118,7 @@ const buildTimestamp = __BUILD_TIMESTAMP__;
                     <div
                         class="bg-white overflow-hidden shadow-sm sm:rounded-lg"
                     >
-                        <div class="p-6 bg-white dark:bg-gray-800">
-                            <h3
-                                class="text-xl dark:text-gray-100 font-semibold border-b"
-                            >
-                                Stats
-                            </h3>
+                        <Accordion title="Site Statistics">
                             <Deferred data="stats">
                                 <template #fallback>
                                     <div
@@ -134,7 +129,7 @@ const buildTimestamp = __BUILD_TIMESTAMP__;
                                 </template>
                                 <StatsCard :stats="stats" />
                             </Deferred>
-                        </div>
+                        </Accordion>
                     </div>
                     <p class="ml-5 md:ml-0 font-bold mt-12 text-gray-100">
                         Last Deployment: {{ buildTimestamp }}

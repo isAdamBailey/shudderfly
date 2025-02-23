@@ -22,6 +22,10 @@ class DashboardController extends Controller
             'stats' => Inertia::defer(fn () => [
                 'numberOfBooks' => Book::count(),
                 'numberOfPages' => Page::count(),
+                'numberOfYouTubeVideos' => Page::whereNotNull('video_link')->count(),
+                'numberOfVideos' => Page::where('media_path', 'like', '%.mp4')->count(),
+                'numberOfImages' => Page::where('media_path', 'like', '%.webp')->count(),
+                'numberOfScreenshots' => Page::where('media_path', 'like', '%snapshot%')->count(),
                 'leastPages' => Book::withCount('pages')
                     ->orderBy('pages_count')
                     ->orderBy('created_at')
