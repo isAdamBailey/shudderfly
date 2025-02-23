@@ -14,7 +14,21 @@
 @endforeach
 @endif
 
-**{{ $pagesThisWeek->count() }}** new pages!
+@if($screenshotsThisWeek->count() > 0)
+**{{ $screenshotsThisWeek->count() }}** new screenshots!
+@endif
+
+@if($youTubeVideosThisWeek->count() > 0)
+**{{ $youTubeVideosThisWeek->count() }}** new YouTube videos!
+@endif
+
+@if($videosThisWeek->count() > 0)
+**{{ $videosThisWeek->count() }}** new videos!
+@endif
+
+@if($imagesThisWeek->count() > 0)
+**{{ $imagesThisWeek->count() }}** new images!
+@endif
 
 ## {{ number_format($totalBooks) }} all time total books.
 ## {{ number_format($totalPages) }} all time total pages.

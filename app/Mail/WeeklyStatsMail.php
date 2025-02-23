@@ -30,15 +30,34 @@ class WeeklyStatsMail extends Mailable
 
     public Collection $booksThisWeek;
 
-    public Collection $pagesThisWeek;
-
     public array $bookCounts;
+
+    public Collection $screenshotsThisWeek;
+
+    public Collection $youTubeVideosThisWeek;
+
+    public Collection $videosThisWeek;
+
+    public Collection $imagesThisWeek;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(Model $user, int $totalBooks, int $totalPages, Model $leastPages, Model $mostPages, Model $mostRead, Model $leastRead, Collection $booksThisWeek, Collection $pagesThisWeek, array $bookCounts)
-    {
+    public function __construct(
+        Model $user,
+        int $totalBooks,
+        int $totalPages,
+        Model $leastPages,
+        Model $mostPages,
+        Model $mostRead,
+        Model $leastRead,
+        Collection $booksThisWeek,
+        array $bookCounts,
+        Collection $screenshotsThisWeek,
+        Collection $youTubeVideosThisWeek,
+        Collection $videosThisWeek,
+        Collection $imagesThisWeek
+    ) {
         $this->user = $user;
         $this->totalBooks = $totalBooks;
         $this->totalPages = $totalPages;
@@ -47,9 +66,11 @@ class WeeklyStatsMail extends Mailable
         $this->mostRead = $mostRead;
         $this->leastRead = $leastRead;
         $this->booksThisWeek = $booksThisWeek;
-        $this->pagesThisWeek = $pagesThisWeek;
         $this->bookCounts = $bookCounts;
-
+        $this->screenshotsThisWeek = $screenshotsThisWeek;
+        $this->youTubeVideosThisWeek = $youTubeVideosThisWeek;
+        $this->videosThisWeek = $videosThisWeek;
+        $this->imagesThisWeek = $imagesThisWeek;
     }
 
     /**
@@ -76,8 +97,11 @@ class WeeklyStatsMail extends Mailable
                 'mostRead' => $this->mostRead,
                 'leastRead' => $this->leastRead,
                 'booksThisWeek' => $this->booksThisWeek,
-                'pagesThisWeek' => $this->pagesThisWeek,
                 'bookCounts' => $this->bookCounts,
+                'screenshotsThisWeek' => $this->screenshotsThisWeek,
+                'youTubeVideosThisWeek' => $this->youTubeVideosThisWeek,
+                'videosThisWeek' => $this->videosThisWeek,
+                'imagesThisWeek' => $this->imagesThisWeek,
             ],
         );
     }

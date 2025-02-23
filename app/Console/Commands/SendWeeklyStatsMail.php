@@ -61,8 +61,11 @@ class SendWeeklyStatsMail extends Command
 
         $oneWeekAgo = Carbon::now()->subWeek();
         $booksThisWeek = Book::where('created_at', '>=', $oneWeekAgo)->get();
-        $pagesThisWeek = Page::where('created_at', '>=', $oneWeekAgo)->get();
-
+        $screenshotsThisWeek = Page::where('media_path', 'like', '%snapshot%')->where('created_at', '>=', $oneWeekAgo)->get();
+        $youTubeVideosThisWeek = Page::whereNotNull('video_link')->where('created_at', '>=', $oneWeekAgo)->get();
+        $videosThisWeek = Page::where('media_path', 'like', '%.mp4')->where('created_at', '>=', $oneWeekAgo)->get();
+        $imagesThisWeek = Page::where('media_path', 'like', '%.webp')->where('created_at', '>=', $oneWeekAgo)->get();
+        
         foreach ($users as $user) {
             Mail::to($user->email)->send(new WeeklyStatsMail(
                 $user,
@@ -73,8 +76,11 @@ class SendWeeklyStatsMail extends Command
                 $mostRead,
                 $leastRead,
                 $booksThisWeek,
-                $pagesThisWeek,
-                $bookCounts
+                $bookCounts,
+                $screenshotsThisWeek,
+                $youTubeVideosThisWeek,
+                $videosThisWeek,
+                $imagesThisWeek
             ));
         }
     }
