@@ -14,17 +14,17 @@
 
                 <SearchInput route-name="books.index" label="Books" />
             </div>
-            <div v-if="canEditPages" class="mb-3">
+            <div v-if="canEditPages" class="mb-3 w-full md:w-1/2 mx-auto">
                 <Button
                     v-if="!showNewBookForm"
-                    class="w-full rounded-none bg-theme-button"
+                    class="w-full"
                     @click="showNewBookForm = true"
                 >
-                    Add a new book
+                    <span class="text-center">Add a new book</span>
                 </Button>
                 <Button
                     v-else
-                    class="w-full rounded-none bg-theme-button"
+                    class="w-full !bg-red-700"
                     @click="showNewBookForm = false"
                 >
                     Close book form

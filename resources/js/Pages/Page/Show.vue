@@ -6,16 +6,7 @@
             class="pb-5 overflow-hidden bg-gray-900 relative"
         >
             <div class="text-center">
-                <Link
-                    prefetch="mount"
-                    :href="route('books.show', page.book)"
-                    class="px-2 py-2 flex justify-center flex-wrap mb-3 border-b-2 border-gray-800 bg-blue-200 dark:bg-gray-300 christmas:bg-christmas-snow hover:bg-blue-600 hover:dark:bg-gray-800 text-blue-600 dark:text-gray-800 christmas:text-christmas-holly hover:text-yellow-200 dark:hover:text-white transition"
-                >
-                    <span class="mr-3 font-heading text-lg">Back to</span>
-                    <h2 class="font-heading text-5xl uppercase">
-                        {{ page.book.title }}
-                    </h2>
-                </Link>
+                <BookTitle :book="page.book" />
                 <div class="min-h-[60vh]">
                     <div class="relative mx-3 md:mx-32">
                         <Link
@@ -116,6 +107,7 @@
 </template>
 
 <script setup>
+import BookTitle from "@/Components/BookTitle.vue";
 import Button from "@/Components/Button.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";

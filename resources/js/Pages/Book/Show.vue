@@ -5,25 +5,17 @@
         <template #header>
             <SearchInput route-name="books.index" label="Books" />
             <div
-                class="bg-theme-primary p-3 mt-5 rounded-t-lg relative bg-cover bg-center h-[70vh]"
+                class="p-3 mt-5 rounded-t-lg relative"
+                :class="hasCoverImage ? 'bg-cover bg-center h-[70vh]' : ''"
                 :style="{
-                    backgroundImage: book.cover_image?.media_path
+                    backgroundImage: hasCoverImage
                         ? `url(${book.cover_image.media_path})`
                         : '',
                 }"
             >
-                <Link
-                    :href="route('books.show', book)"
-                    class="w-full h-full"
-                >
+                <div class="w-full h-full">
                     <div class="flex flex-col justify-between h-full">
-                        <div class="flex justify-center text-center mb-3">
-                            <h1
-                                class="font-heading text-5xl text-theme-book-title leading-tight bg-white/70 backdrop-blur p-2 rounded"
-                            >
-                                {{ book.title.toUpperCase() }}
-                            </h1>
-                        </div>
+                        <BookTitle :book="book" />
                         <div class="flex justify-center items-center flex-wrap">
                             <div
                                 class="bg-white/70 backdrop-blur p-2 rounded dark:text-gray-700 christmas:text-christmas-berry"
@@ -52,12 +44,15 @@
                             </div>
                         </div>
                     </div>
-                </Link>
+                </div>
             </div>
-            <div class="flex justify-between bg-theme-secondary rounded-b-lg">
+            <div 
+                v-if="book.excerpt"
+                class="flex justify-center  bg-theme-secondary"
+                :class="hasCoverImage ? 'rounded-b-lg' : 'rounded-full md:w-1/2 mx-auto'"
+            >
                 <div
-                    v-if="book.excerpt"
-                    class="flex-grow text-center my-3 text-gray-800"
+                    class="text-center my-3 text-gray-800"
                 >
                     <p class="italic leading-tight">
                         {{ book.excerpt }}
@@ -187,20 +182,21 @@
 </template>
 
 <script setup>
+import BookTitle from "@/Components/BookTitle.vue";
 import Button from "@/Components/Button.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
 import SearchInput from "@/Components/SearchInput.vue";
 import BreezeValidationErrors from "@/Components/ValidationErrors.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
-import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import EditBookForm from "@/Pages/Book/EditBookForm.vue";
-import NewPageForm from "@/Pages/Book/NewPageForm.vue";
-import SimilarBooks from "@/Pages/Book/SimilarBooks.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useDate } from "@/dateHelpers";
+import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import EditBookForm from "@/Pages/Book/EditBookForm.vue";
+import NewPageForm from "@/Pages/Book/NewPageForm.vue";
+import SimilarBooks from "@/Pages/Book/SimilarBooks.vue";
 import { Head, Link } from "@inertiajs/vue3";
 import { computed, onMounted, ref } from "vue";
 
@@ -223,6 +219,10 @@ const { items, infiniteScrollRef, setItemLoading } = useInfiniteScroll(
 
 let pageSettingsOpen = ref(false);
 let bookSettingsOpen = ref(false);
+
+const hasCoverImage = computed(() => {
+    return !!props.book.cover_image?.media_path;
+});
 
 const togglePageSettings = () => {
     pageSettingsOpen.value = !pageSettingsOpen.value;
