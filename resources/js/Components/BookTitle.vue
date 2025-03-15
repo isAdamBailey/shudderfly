@@ -2,14 +2,15 @@
     <Link 
         prefetch="mount"
         :href="route('books.show', book)"
-        class="flex justify-center"
+        class="flex justify-center group mx-5"
     >
-        <div
-            class="w-full md:w-1/2 rounded-full mt-3 px-2 py-2 flex justify-center flex-wrap mb-3 bg-theme-primary text-theme-button border-theme-primary hover:text-theme-button-hover hover:bg-theme-button active:bg-theme-button focus:border-theme-button focus:shadow-theme-button"
-        >
-            <h2 class="font-heading text-5xl uppercase">
-                {{ book.title }}
-            </h2>
+        <div class="relative w-full">
+            <div class="absolute inset-0 bg-theme-primary opacity-60 rounded-full mt-3 mb-3 transition-opacity duration-200 group-hover:opacity-100"></div>
+            <div class="relative w-full rounded-full mt-3 px-2 py-2 flex justify-center flex-wrap mb-3 border-theme-primary">
+                <h2 class="font-heading text-5xl uppercase text-theme-button">
+                    {{ book.title }}
+                </h2>
+            </div>
         </div>
     </Link>
 </template>
