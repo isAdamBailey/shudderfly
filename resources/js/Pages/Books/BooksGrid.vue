@@ -15,8 +15,10 @@
         </div>
         <div
             ref="content"
-            class="flex snap-x space-x-1 overflow-y-hidden pb-2 scrollbar scrollbar-thumb-gray-500 scrollbar-thumb-rounded"
+            class="flex snap-x space-x-1 overflow-x-auto overflow-y-hidden pb-2 scrollbar scrollbar-thumb-gray-500 scrollbar-thumb-rounded"
             @scroll="handleScroll"
+            @touchmove="handleScroll"
+            @touchend="handleScroll"
         >
             <Link
                 v-for="book in workingBooks"
@@ -64,6 +66,7 @@ import LazyLoader from "@/Components/LazyLoader.vue";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { Link } from "@inertiajs/vue3";
 import axios from "axios";
+import { debounce } from "lodash";
 import { computed, onMounted, ref } from "vue";
 
 const { speak } = useSpeechSynthesis();
@@ -90,18 +93,29 @@ const content = ref(null);
 const nextUrl = ref(null);
 let loading = ref(true);
 
-const handleScroll = async () => {
+const handleScroll = debounce(async () => {
+    if (!content.value) return;
+    
     const contentWidth = content.value.offsetWidth;
     const scrollLeft = content.value.scrollLeft;
     const scrollWidth = content.value.scrollWidth;
-    if (nextUrl.value && scrollLeft >= scrollWidth - contentWidth) {
-        const response = await fetchBooks();
-        if (response?.data?.books) {
-            books.value = [...books.value, ...response.data.books.data];
-            nextUrl.value = response.data.books.next_page_url;
+    
+    // Increase buffer zone for mobile devices
+    const scrollBuffer = 50;
+    const isNearEnd = (scrollLeft + contentWidth + scrollBuffer) >= scrollWidth;
+
+    if (nextUrl.value && isNearEnd) {
+        try {
+            const response = await fetchBooks();
+            if (response?.data?.books) {
+                books.value = [...books.value, ...response.data.books.data];
+                nextUrl.value = response.data.books.next_page_url;
+            }
+        } catch (error) {
+            console.error('Error fetching more books:', error);
         }
     }
-};
+}, 150, { leading: true, trailing: true });
 
 onMounted(async () => {
     const response = await fetchBooks();
