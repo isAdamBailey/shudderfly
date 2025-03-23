@@ -24,7 +24,9 @@ class DashboardController extends Controller
                 'numberOfPages' => Page::count(),
                 'numberOfYouTubeVideos' => Page::whereNotNull('video_link')->count(),
                 'numberOfVideos' => Page::where('media_path', 'like', '%.mp4')->count(),
-                'numberOfImages' => Page::where('media_path', 'like', '%.webp')->count(),
+                'numberOfImages' => Page::where('media_path', 'like', '%.webp')
+                    ->where('media_path', 'not like', '%snapshot%')
+                    ->count(),
                 'numberOfScreenshots' => Page::where('media_path', 'like', '%snapshot%')->count(),
                 'leastPages' => Book::withCount('pages')
                     ->orderBy('pages_count')
