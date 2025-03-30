@@ -15,7 +15,7 @@
         </div>
         <div
             ref="content"
-            class="flex snap-x space-x-1 overflow-x-auto overflow-y-hidden pb-2 scrollbar scrollbar-thumb-gray-500 scrollbar-thumb-rounded"
+            class="flex snap-x space-x-1 overflow-x-auto overflow-y-hidden pb-2 scrollbar scrollbar-thumb-gray-500 scrollbar-thumb-rounded -webkit-overflow-scrolling: touch overscroll-x-contain"
             @scroll="handleScroll"
             @touchmove="handleScroll"
             @touchend="handleScroll"
@@ -101,7 +101,7 @@ const handleScroll = debounce(async () => {
     const scrollWidth = content.value.scrollWidth;
     
     // Increase buffer zone for mobile devices
-    const scrollBuffer = 50;
+    const scrollBuffer = 100;
     const isNearEnd = (scrollLeft + contentWidth + scrollBuffer) >= scrollWidth;
 
     if (nextUrl.value && isNearEnd) {
@@ -115,7 +115,7 @@ const handleScroll = debounce(async () => {
             console.error('Error fetching more books:', error);
         }
     }
-}, 150, { leading: true, trailing: true });
+}, 50, { leading: true, trailing: true, maxWait: 100 });
 
 onMounted(async () => {
     const response = await fetchBooks();
