@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Book;
+use App\Models\Page;
 use Aws\S3\Exception\S3Exception;
 use FFMpeg\Format\Video\X264;
 use Illuminate\Bus\Queueable;
@@ -32,6 +33,8 @@ class StoreVideo implements ShouldQueue
 
     protected ?string $videoLink;
 
+    protected ?Page $page;
+
     public int $tries = 3;
 
     public int $maxExceptions = 3;
@@ -40,13 +43,14 @@ class StoreVideo implements ShouldQueue
 
     public int $memory = 4096;
 
-    public function __construct(string $filePath, string $path, ?Book $book = null, ?string $content = null, ?string $videoLink = null)
+    public function __construct(string $filePath, string $path, ?Book $book = null, ?string $content = null, ?string $videoLink = null, ?Page $page = null)
     {
         $this->filePath = $filePath;
         $this->path = $path;
         $this->book = $book;
         $this->content = $content;
         $this->videoLink = $videoLink;
+        $this->page = $page;
     }
 
     public function handle(): void
@@ -111,8 +115,16 @@ class StoreVideo implements ShouldQueue
                     }, 1000);
                 }
 
-                // Create the page if book is provided
-                if ($this->book) {
+                if ($this->page) {
+                    // Update existing page
+                    $this->page->update([
+                        'content' => $this->content,
+                        'media_path' => $processedFilePath,
+                        'media_poster' => $posterPath,
+                        'video_link' => $this->videoLink,
+                    ]);
+                } elseif ($this->book) {
+                    // Create new page
                     $this->book->pages()->create([
                         'content' => $this->content,
                         'media_path' => $processedFilePath,

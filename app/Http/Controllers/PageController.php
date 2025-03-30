@@ -171,13 +171,13 @@ class PageController extends Controller
                 if (Str::startsWith($mimeType, 'image/')) {
                     $filename = pathinfo($file->hashName(), PATHINFO_FILENAME);
                     $mediaPath = 'books/'.$page->book->slug.'/'.$filename.'.webp';
-                    StoreImage::dispatch($filePath, $mediaPath, $page->book, $request->input('content'), $request->input('video_link'))
+                    StoreImage::dispatch($filePath, $mediaPath, $page->book, $request->input('content'), $request->input('video_link'), $page)
                         ->chain([
                             new DeleteOldMedia($oldMediaPath, $oldPosterPath),
                         ]);
                 } elseif (Str::startsWith($mimeType, 'video/')) {
                     $mediaPath = 'books/'.$page->book->slug.'/'.$file->getClientOriginalName();
-                    StoreVideo::dispatch($filePath, $mediaPath, $page->book, $request->input('content'), $request->input('video_link'))
+                    StoreVideo::dispatch($filePath, $mediaPath, $page->book, $request->input('content'), $request->input('video_link'), $page)
                         ->chain([
                             new DeleteOldMedia($oldMediaPath, $oldPosterPath),
                         ]);
