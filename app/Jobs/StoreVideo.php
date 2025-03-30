@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use App\Models\Book;
+use App\Models\Page;
 use Aws\S3\Exception\S3Exception;
 use FFMpeg\Format\Video\X264;
 use Illuminate\Bus\Queueable;
@@ -25,6 +27,14 @@ class StoreVideo implements ShouldQueue
 
     protected string $path;
 
+    protected ?Book $book;
+
+    protected ?string $content;
+
+    protected ?string $videoLink;
+
+    protected ?Page $page;
+
     public int $tries = 3;
 
     public int $maxExceptions = 3;
@@ -33,10 +43,14 @@ class StoreVideo implements ShouldQueue
 
     public int $memory = 4096;
 
-    public function __construct(string $filePath, string $path)
+    public function __construct(string $filePath, string $path, ?Book $book = null, ?string $content = null, ?string $videoLink = null, ?Page $page = null)
     {
         $this->filePath = $filePath;
         $this->path = $path;
+        $this->book = $book;
+        $this->content = $content;
+        $this->videoLink = $videoLink;
+        $this->page = $page;
     }
 
     public function handle(): void
@@ -86,6 +100,7 @@ class StoreVideo implements ShouldQueue
 
             $filename = pathinfo($this->path, PATHINFO_FILENAME).'.mp4';
             $dirPath = pathinfo($this->path, PATHINFO_DIRNAME);
+            $posterPath = $dirPath.'/'.pathinfo($this->path, PATHINFO_FILENAME).'_poster.jpg';
 
             try {
                 $processedFilePath = retry(3, function () use ($tempFile, $filename, $dirPath) {
@@ -93,6 +108,30 @@ class StoreVideo implements ShouldQueue
                 }, 1000);
 
                 Storage::disk('s3')->setVisibility($processedFilePath, 'public');
+
+                if ($screenshotContents) {
+                    retry(3, function () use ($posterPath, $screenshotContents) {
+                        Storage::disk('s3')->put($posterPath, $screenshotContents, 'public');
+                    }, 1000);
+                }
+
+                if ($this->page) {
+                    // Update existing page
+                    $this->page->update([
+                        'content' => $this->content,
+                        'media_path' => $processedFilePath,
+                        'media_poster' => $posterPath,
+                        'video_link' => $this->videoLink,
+                    ]);
+                } elseif ($this->book) {
+                    // Create new page
+                    $this->book->pages()->create([
+                        'content' => $this->content,
+                        'media_path' => $processedFilePath,
+                        'media_poster' => $posterPath,
+                        'video_link' => $this->videoLink,
+                    ]);
+                }
             } catch (Throwable $e) {
                 Log::error('Failed to upload video to S3', [
                     'exception' => $e->getMessage(),
@@ -101,15 +140,6 @@ class StoreVideo implements ShouldQueue
                     'trace' => $e->getTraceAsString(),
                 ]);
                 throw $e;
-            }
-
-            if ($screenshotContents) {
-                $screenshotFilename = pathinfo($this->path, PATHINFO_FILENAME).'_poster.jpg';
-                $screenshotPath = $dirPath.'/'.$screenshotFilename;
-
-                retry(3, function () use ($screenshotPath, $screenshotContents) {
-                    Storage::disk('s3')->put($screenshotPath, $screenshotContents, 'public');
-                }, 1000);
             }
 
         } catch (EncodingException $e) {

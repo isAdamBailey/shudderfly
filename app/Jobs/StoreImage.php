@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use App\Models\Book;
+use App\Models\Page;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -19,13 +21,25 @@ class StoreImage implements ShouldQueue
 
     protected string $path;
 
+    protected ?Book $book;
+
+    protected ?string $content;
+
+    protected ?string $videoLink;
+
+    protected ?Page $page;
+
     /**
      * Create a new job instance.
      */
-    public function __construct(string $filePath, string $path)
+    public function __construct(string $filePath, string $path, ?Book $book = null, ?string $content = null, ?string $videoLink = null, ?Page $page = null)
     {
         $this->filePath = $filePath;
         $this->path = $path;
+        $this->book = $book;
+        $this->content = $content;
+        $this->videoLink = $videoLink;
+        $this->page = $page;
     }
 
     /**
@@ -57,6 +71,22 @@ class StoreImage implements ShouldQueue
             $image = Image::read($tempFile);
             $encoded = $image->toWebp(30, true);
             Storage::disk('s3')->put($this->path, (string) $encoded, 'public');
+
+            if ($this->page) {
+                // Update existing page
+                $this->page->update([
+                    'content' => $this->content,
+                    'media_path' => $this->path,
+                    'video_link' => $this->videoLink,
+                ]);
+            } elseif ($this->book) {
+                // Create new page
+                $this->book->pages()->create([
+                    'content' => $this->content,
+                    'media_path' => $this->path,
+                    'video_link' => $this->videoLink,
+                ]);
+            }
         } catch (\Exception $e) {
             Log::error('Error processing image', [
                 'exception' => $e->getMessage(),

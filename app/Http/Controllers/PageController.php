@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StorePageRequest;
 use App\Http\Requests\UpdatePageRequest;
 use App\Jobs\CreateVideoSnapshot;
+use App\Jobs\DeleteOldMedia;
 use App\Jobs\IncrementPageReadCount;
 use App\Jobs\StoreImage;
 use App\Jobs\StoreVideo;
@@ -125,9 +126,6 @@ class PageController extends Controller
     {
         $book = Book::find($request->book_id);
 
-        $mediaPath = '';
-        $posterPath = null;
-
         if ($request->hasFile('image')) {
             $file = $request->file('image');
             if ($file->isValid()) {
@@ -136,21 +134,19 @@ class PageController extends Controller
                 if (Str::startsWith($mimeType, 'image/')) {
                     $filename = pathinfo($file->hashName(), PATHINFO_FILENAME);
                     $mediaPath = 'books/'.$book->slug.'/'.$filename.'.webp';
-                    StoreImage::dispatch($filePath, $mediaPath);
+                    StoreImage::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'));
                 } elseif (Str::startsWith($mimeType, 'video/')) {
                     $mediaPath = 'books/'.$book->slug.'/'.$file->getClientOriginalName();
-                    $posterPath = 'books/'.$book->slug.'/'.pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME).'_poster.jpg';
-                    StoreVideo::dispatch($filePath, $mediaPath);
+                    StoreVideo::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'));
                 }
             }
+        } else {
+            // If no file is uploaded, create the page immediately
+            $book->pages()->create([
+                'content' => $request->input('content'),
+                'video_link' => $request->input('video_link') ? trim($request->input('video_link')) : null,
+            ]);
         }
-
-        $book->pages()->create([
-            'content' => $request->input('content'),
-            'media_path' => $mediaPath,
-            'media_poster' => $posterPath,
-            'video_link' => $request->input('video_link') ? trim($request->input('video_link')) : null,
-        ]);
 
         if (! $book->cover_page) {
             $this->resetCoverImage($book->id);
@@ -168,56 +164,48 @@ class PageController extends Controller
             $file = $request->file('image');
             if ($file->isValid()) {
                 $oldMediaPath = $page->media_path;
+                $oldPosterPath = $page->media_poster;
 
-                $mediaPath = '';
-                $posterPath = null;
                 $mimeType = $file->getMimeType();
                 $filePath = Storage::disk('local')->put('temp', $file);
                 if (Str::startsWith($mimeType, 'image/')) {
                     $filename = pathinfo($file->hashName(), PATHINFO_FILENAME);
                     $mediaPath = 'books/'.$page->book->slug.'/'.$filename.'.webp';
-                    StoreImage::dispatch($filePath, $mediaPath);
+                    StoreImage::dispatch($filePath, $mediaPath, $page->book, $request->input('content'), $request->input('video_link'), $page)
+                        ->chain([
+                            new DeleteOldMedia($oldMediaPath, $oldPosterPath),
+                        ]);
                 } elseif (Str::startsWith($mimeType, 'video/')) {
                     $mediaPath = 'books/'.$page->book->slug.'/'.$file->getClientOriginalName();
-                    $posterPath = 'books/'.$page->book->slug.'/'.pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME).'_poster.jpg';
-                    StoreVideo::dispatch($filePath, $mediaPath);
+                    StoreVideo::dispatch($filePath, $mediaPath, $page->book, $request->input('content'), $request->input('video_link'), $page)
+                        ->chain([
+                            new DeleteOldMedia($oldMediaPath, $oldPosterPath),
+                        ]);
                 }
-
-                if ($mediaPath && $oldMediaPath && Storage::disk('s3')->exists($oldMediaPath)) {
-                    Storage::disk('s3')->delete($oldMediaPath);
-                }
-
-                $page->media_path = $mediaPath;
-                $page->media_poster = $posterPath;
-                $page->video_link = null;
             }
-        }
+        } else {
+            if ($request->has('content')) {
+                $page->content = $request->input('content');
+            }
 
-        if ($request->has('content')) {
-            $page->content = $request->input('content');
-        }
+            if ($request->has('book_id')) {
+                $page->book_id = $request->book_id;
+            }
 
-        if ($request->has('book_id')) {
-            $page->book_id = $request->book_id;
-        }
+            if ($request->has('video_link') && ! is_null($request->video_link)) {
+                $oldMediaPath = $page->media_path;
+                $oldPosterPath = $page->media_poster;
 
-        if ($request->has('video_link') && ! is_null($request->video_link)) {
-            if ($page->media_path) {
-                if (Storage::disk('s3')->exists($page->media_path)) {
-                    Storage::disk('s3')->delete($page->media_path);
-                }
                 $page->media_path = '';
-            }
-            if ($page->media_poster) {
-                if (Storage::disk('s3')->exists($page->media_poster)) {
-                    Storage::disk('s3')->delete($page->media_poster);
-                }
                 $page->media_poster = '';
-            }
-            $page->video_link = $request->video_link;
-        }
+                $page->video_link = $request->video_link;
+                $page->save();
 
-        $page->save();
+                DeleteOldMedia::dispatch($oldMediaPath, $oldPosterPath);
+            } else {
+                $page->save();
+            }
+        }
 
         return redirect(route('pages.show', $page));
     }
