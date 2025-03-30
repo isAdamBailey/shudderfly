@@ -224,10 +224,15 @@ class CreateVideoSnapshot implements ShouldQueue
             $mediaPath = 'books/'.$this->book->slug."/snapshot_{$timestamp}_{$random}.webp";
 
             // Create the page first
-            $this->book->pages()->create([
+            $page = $this->book->pages()->create([
                 'content' => "<p>{$this->user->name} took this screenshot from <a href='/pages/{$this->pageId}'>this video</a>.</p>",
                 'media_path' => $mediaPath,
             ]);
+
+            // Set as cover image if book doesn't have one
+            if (! $this->book->cover_page) {
+                $this->book->update(['cover_page' => $page->id]);
+            }
 
             // Clean up video file as we don't need it anymore
             if (Storage::disk('local')->exists($tempVideoPath)) {
