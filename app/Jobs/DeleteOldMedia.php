@@ -15,6 +15,7 @@ class DeleteOldMedia implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected ?string $mediaPath;
+
     protected ?string $posterPath;
 
     public function __construct(?string $mediaPath = null, ?string $posterPath = null)
@@ -47,4 +48,4 @@ class DeleteOldMedia implements ShouldQueue
             }
         }
     }
-} 
+}

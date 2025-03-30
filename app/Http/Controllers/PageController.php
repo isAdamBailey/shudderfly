@@ -5,10 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StorePageRequest;
 use App\Http\Requests\UpdatePageRequest;
 use App\Jobs\CreateVideoSnapshot;
+use App\Jobs\DeleteOldMedia;
 use App\Jobs\IncrementPageReadCount;
 use App\Jobs\StoreImage;
 use App\Jobs\StoreVideo;
-use App\Jobs\DeleteOldMedia;
 use App\Models\Book;
 use App\Models\Page;
 use App\Models\SiteSetting;
@@ -195,7 +195,7 @@ class PageController extends Controller
             if ($request->has('video_link') && ! is_null($request->video_link)) {
                 $oldMediaPath = $page->media_path;
                 $oldPosterPath = $page->media_poster;
-                
+
                 $page->media_path = '';
                 $page->media_poster = '';
                 $page->video_link = $request->video_link;

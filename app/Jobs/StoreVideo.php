@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\Book;
 use Aws\S3\Exception\S3Exception;
 use FFMpeg\Format\Video\X264;
 use Illuminate\Bus\Queueable;
@@ -16,21 +17,27 @@ use Illuminate\Support\Facades\Storage;
 use ProtoneMedia\LaravelFFMpeg\Exporters\EncodingException;
 use ProtoneMedia\LaravelFFMpeg\Support\FFMpeg;
 use Throwable;
-use App\Models\Book;
 
 class StoreVideo implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected string $filePath;
+
     protected string $path;
+
     protected ?Book $book;
+
     protected ?string $content;
+
     protected ?string $videoLink;
 
     public int $tries = 3;
+
     public int $maxExceptions = 3;
+
     public int $timeout = 600;
+
     public int $memory = 4096;
 
     public function __construct(string $filePath, string $path, ?Book $book = null, ?string $content = null, ?string $videoLink = null)
@@ -50,6 +57,7 @@ class StoreVideo implements ShouldQueue
                 'exists' => Storage::disk('local')->exists($this->filePath),
             ]);
             $this->fail(new \RuntimeException('Video file not found or path is empty'));
+
             return;
         }
 
@@ -57,6 +65,7 @@ class StoreVideo implements ShouldQueue
         if (! is_dir($tempDir) && ! mkdir($tempDir, 0755, true)) {
             Log::error('Failed to create temp directory', ['directory' => $tempDir]);
             $this->fail(new \RuntimeException('Failed to create temp directory'));
+
             return;
         }
 

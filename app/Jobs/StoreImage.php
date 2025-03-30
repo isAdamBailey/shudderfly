@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\Book;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -10,16 +11,19 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Laravel\Facades\Image;
-use App\Models\Book;
 
 class StoreImage implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected string $filePath;
+
     protected string $path;
+
     protected ?Book $book;
+
     protected ?string $content;
+
     protected ?string $videoLink;
 
     /**
@@ -44,12 +48,14 @@ class StoreImage implements ShouldQueue
 
         if (empty($filePath) || ! Storage::disk($disk)->exists($filePath)) {
             Log::error('File path is null, empty, or does not exist', ['filePath' => $filePath, 'disk' => $disk]);
+
             return;
         }
 
         $tempDir = storage_path('app/temp/');
         if (! is_dir($tempDir) && ! mkdir($tempDir, 0755, true)) {
             Log::error('Failed to create temp directory', ['directory' => $tempDir]);
+
             return;
         }
         $tempFile = $tempDir.uniqid('image_', true).'.webp';
