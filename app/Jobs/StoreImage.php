@@ -10,22 +10,28 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Laravel\Facades\Image;
+use App\Models\Book;
 
 class StoreImage implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected string $filePath;
-
     protected string $path;
+    protected ?Book $book;
+    protected ?string $content;
+    protected ?string $videoLink;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(string $filePath, string $path)
+    public function __construct(string $filePath, string $path, ?Book $book = null, ?string $content = null, ?string $videoLink = null)
     {
         $this->filePath = $filePath;
         $this->path = $path;
+        $this->book = $book;
+        $this->content = $content;
+        $this->videoLink = $videoLink;
     }
 
     /**
@@ -38,14 +44,12 @@ class StoreImage implements ShouldQueue
 
         if (empty($filePath) || ! Storage::disk($disk)->exists($filePath)) {
             Log::error('File path is null, empty, or does not exist', ['filePath' => $filePath, 'disk' => $disk]);
-
             return;
         }
 
         $tempDir = storage_path('app/temp/');
         if (! is_dir($tempDir) && ! mkdir($tempDir, 0755, true)) {
             Log::error('Failed to create temp directory', ['directory' => $tempDir]);
-
             return;
         }
         $tempFile = $tempDir.uniqid('image_', true).'.webp';
@@ -57,6 +61,15 @@ class StoreImage implements ShouldQueue
             $image = Image::read($tempFile);
             $encoded = $image->toWebp(30, true);
             Storage::disk('s3')->put($this->path, (string) $encoded, 'public');
+
+            // Create the page if book is provided
+            if ($this->book) {
+                $this->book->pages()->create([
+                    'content' => $this->content,
+                    'media_path' => $this->path,
+                    'video_link' => $this->videoLink,
+                ]);
+            }
         } catch (\Exception $e) {
             Log::error('Error processing image', [
                 'exception' => $e->getMessage(),
