@@ -56,9 +56,9 @@
         </div>
         <div v-else class="flex flex-col items-center mt-10">
             <h2
-                class="mb-8 font-semibold text-2xl text-gray-900 dark:text-gray-100 leading-tight"
+                class="mb-8 font-semibold text-2xl text-gray-100 leading-tight"
             >
-                I don't see any books like that
+                {{ notFoundContent }}
             </h2>
             <ManEmptyCircle />
         </div>
@@ -72,13 +72,16 @@ import ScrollTop from "@/Components/ScrollTop.vue";
 import SearchInput from "@/Components/SearchInput.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 import { usePermissions } from "@/composables/permissions";
+import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import BooksGrid from "@/Pages/Books/BooksGrid.vue";
 import NewBookForm from "@/Pages/Books/NewBookForm.vue";
 import { Head, Link, usePage } from "@inertiajs/vue3";
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 
 const { canEditPages } = usePermissions();
+const { speak } = useSpeechSynthesis();
+const notFoundContent = "I can't find any books like that";
 
 const props = defineProps({
     categories: {
@@ -113,4 +116,14 @@ const title = computed(() => {
     }
     return "Books";
 });
+
+watch(
+    () => usePage().props.search,
+    (newSearch) => {
+        if (newSearch && areAllBooksEmpty.value) {
+            speak(notFoundContent);
+        }
+    },
+    { immediate: true }
+);
 </script>

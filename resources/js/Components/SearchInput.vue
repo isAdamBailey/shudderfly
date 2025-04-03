@@ -68,7 +68,7 @@ watch(search, () => {
 
 const searchMethod = () => {
     if (search.value) {
-        speak(`Here are some ${props.label} with ${search.value}`);
+        speak(`Searching for ${props.label} with ${search.value}`);
     }
     router.get(
         route(props.routeName),
@@ -88,6 +88,9 @@ const startVoiceRecognition = () => {
             .map((result) => result.transcript)
             .join("");
 
+        // Set voiceHeard to true when we get any result
+        voiceHeard.value = true;
+
         if (event.results[0].isFinal) {
             // Split the transcript into words, remove duplicates, and join back together
             transcript = [...new Set(transcript.split(" "))].join(" ");
@@ -99,10 +102,8 @@ const startVoiceRecognition = () => {
     // keep the voice active state in sync with the recognition state
     recognition.addEventListener("start", () => {
         voiceActive.value = true;
-    });
-
-    recognition.addEventListener("soundstart", () => {
-        voiceHeard.value = true;
+        voiceHeard.value = false;
+        search.value = null;
     });
 
     recognition.addEventListener("end", () => {

@@ -93,7 +93,6 @@ class StoreImage implements ShouldQueue
                 }
             }
 
-            
         } catch (\Exception $e) {
             Log::error('Error processing image', [
                 'exception' => $e->getMessage(),

@@ -3,6 +3,7 @@ import LazyLoader from "@/Components/LazyLoader.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
+import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { Link, usePage } from "@inertiajs/vue3";
 import { computed, watch } from "vue";
 
@@ -18,6 +19,10 @@ const { items, infiniteScrollRef, setItemLoading } = useInfiniteScroll(
     computed(() => props.photos)
 );
 
+const { speak } = useSpeechSynthesis();
+
+const notFountContent = "I can't find any uploads like that";
+
 watch(
     () => usePage().props.search,
     (newSearch) => {
@@ -26,6 +31,9 @@ watch(
                 ...photo,
                 loading: false,
             }));
+            if (items.value.length === 0) {
+                speak(notFountContent);
+            }
         }
     },
     { immediate: true }
@@ -86,9 +94,9 @@ function mediaPath(photo) {
     </div>
     <div v-else class="flex flex-col items-center mt-10">
         <h2
-            class="mb-8 font-semibold text-2xl text-gray-900 dark:text-gray-100 leading-tight"
+            class="mb-8 font-semibold text-2xl text-gray-100 leading-tight"
         >
-            I don't see any uploads like that
+            {{ notFountContent }}
         </h2>
         <ManEmptyCircle />
     </div>
