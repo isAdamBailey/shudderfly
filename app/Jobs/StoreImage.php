@@ -81,12 +81,19 @@ class StoreImage implements ShouldQueue
                 ]);
             } elseif ($this->book) {
                 // Create new page
-                $this->book->pages()->create([
+                $page = $this->book->pages()->create([
                     'content' => $this->content,
                     'media_path' => $this->path,
                     'video_link' => $this->videoLink,
                 ]);
+
+                // Set as cover page if book doesn't have one
+                if (! $this->book->cover_page) {
+                    $this->book->update(['cover_page' => $page->id]);
+                }
             }
+
+            
         } catch (\Exception $e) {
             Log::error('Error processing image', [
                 'exception' => $e->getMessage(),

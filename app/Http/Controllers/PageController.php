@@ -148,10 +148,6 @@ class PageController extends Controller
             ]);
         }
 
-        if (! $book->cover_page) {
-            $this->resetCoverImage($book->id);
-        }
-
         return redirect(route('books.show', $book));
     }
 
@@ -223,32 +219,7 @@ class PageController extends Controller
         }
         $page->delete();
 
-        if ($page->book->cover_page === $page->id) {
-            $this->resetCoverImage($page->book_id);
-        }
-
         return redirect(route('books.show', $page->book));
-    }
-
-    private function resetCoverImage(int $bookId): void
-    {
-        $book = Book::find($bookId);
-        if (! $book) {
-            return;
-        }
-
-        $page = $book->pages()
-            ->whereNotNull('media_path')
-            ->where(function ($query) {
-                $query->where('media_path', 'like', '%.jpg')
-                    ->orWhere('media_path', 'like', '%.png')
-                    ->orWhere('media_path', 'like', '%.webp');
-            })
-            ->first();
-
-        if ($page) {
-            $book->update(['cover_page' => $page->id]);
-        }
     }
 
     public function snapshot(Request $request)
