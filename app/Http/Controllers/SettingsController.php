@@ -50,43 +50,4 @@ class SettingsController extends Controller
 
         return redirect(route('dashboard'));
     }
-
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'key' => [
-                'required',
-                'string',
-                'unique:site_settings,key',
-                'regex:/^[^\s]+$/',
-            ],
-            'value' => ['required'],
-            'description' => ['required', 'string'],
-            'type' => ['required', 'string', 'in:boolean,text'],
-        ], [
-            'key.regex' => 'The key cannot contain spaces.',
-            'type.in' => 'The type must be either boolean or text.',
-        ]);
-
-        $value = $validated['value'];
-        if ($validated['type'] === 'boolean') {
-            $value = filter_var($value, FILTER_VALIDATE_BOOLEAN) ? '1' : '0';
-        }
-
-        SiteSetting::create([
-            'key' => $validated['key'],
-            'value' => $value,
-            'description' => $validated['description'],
-            'type' => $validated['type'],
-        ]);
-
-        return redirect(route('dashboard'));
-    }
-
-    public function destroy(SiteSetting $setting)
-    {
-        $setting->delete();
-
-        return redirect(route('dashboard'));
-    }
 }

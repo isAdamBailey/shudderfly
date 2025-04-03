@@ -1,10 +1,9 @@
 <script setup>
 import Button from "@/Components/Button.vue";
-import DangerButton from "@/Components/DangerButton.vue";
 import Checkbox from "@/Components/Checkbox.vue";
 import Input from "@/Components/TextInput.vue";
 import { useForm } from "@inertiajs/vue3";
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
     settings: {
@@ -14,17 +13,20 @@ const props = defineProps({
 });
 
 const editingDescription = ref(null);
-const showNewSettingForm = ref(false);
 
-const form = useForm({
-    settings: props.settings.reduce((acc, setting) => {
+const initialSettings = computed(() => {
+    return props.settings.reduce((acc, setting) => {
         acc[setting.key] = {
             value: setting.type === "boolean" ? Boolean(Number(setting.value)) : (setting.value || ''),
             description: setting.description || '',
             type: setting.type
         };
         return acc;
-    }, {}),
+    }, {});
+});
+
+const form = useForm({
+    settings: initialSettings.value,
 });
 
 // Watch for settings changes and update form data
@@ -39,19 +41,13 @@ watch(() => props.settings, (newSettings) => {
     }, {});
 }, { deep: true });
 
-const newSettingForm = useForm({
-    key: '',
-    value: '',
-    description: '',
-    type: 'text'
+const hasChanges = computed(() => {
+    return Object.keys(form.settings).some(key => {
+        const current = form.settings[key];
+        const initial = initialSettings.value[key];
+        return current.value !== initial.value || current.description !== initial.description;
+    });
 });
-
-// Watch for type changes in the new setting form
-watch(() => newSettingForm.type, (newType) => {
-    newSettingForm.value = newType === 'boolean' ? false : '';
-});
-
-const deleteForm = useForm({});
 
 const startEditing = (key) => {
     editingDescription.value = key;
@@ -67,26 +63,6 @@ const submit = () => {
     }
 
     form.put('/settings', {
-        preserveScroll: true,
-    });
-};
-
-const submitNewSetting = () => {
-    newSettingForm.post('/settings', {
-        preserveScroll: true,
-        onSuccess: () => {
-            showNewSettingForm.value = false;
-            newSettingForm.reset();
-        },
-    });
-};
-
-const deleteSetting = (setting) => {
-    if (!confirm(`Are you sure you want to delete the setting "${setting.key}"? This will break any existing code that depends on it.`)) {
-        return;
-    }
-
-    deleteForm.delete(`/settings/${setting.id}`, {
         preserveScroll: true,
     });
 };
@@ -129,13 +105,6 @@ const deleteSetting = (setting) => {
                             {{ setting.key }}
                             <span class="text-xs text-gray-500 ml-2">({{ setting.type }})</span>
                         </label>
-                        <DangerButton
-                            type="button"
-                            class="!bg-red-600 hover:!bg-red-500"
-                            @click="deleteSetting(setting)"
-                        >
-                            X
-                        </DangerButton>
                     </div>
 
                     <div class="mt-2">
@@ -152,7 +121,7 @@ const deleteSetting = (setting) => {
                         </div>
                         <div 
                             v-else
-                            class="text-sm text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-200"
+                            class="text-xl font-bold text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-200"
                             @click="startEditing(setting.key)"
                         >
                             {{ form.settings[setting.key]?.description || '' }}
@@ -182,97 +151,11 @@ const deleteSetting = (setting) => {
         <div class="mt-6 flex justify-between items-center">
             <Button
                 type="button"
+                :disabled="!hasChanges || form.processing"
                 @click="submit"
             >
                 Save Settings
             </Button>
-
-            <Button
-                type="button"
-                @click="showNewSettingForm = !showNewSettingForm"
-            >
-                {{ showNewSettingForm ? 'Cancel' : 'Add New Setting' }}
-            </Button>
-        </div>
-
-        <div v-if="showNewSettingForm" class="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <form class="space-y-4" @submit.prevent="submitNewSetting">
-                <div>
-                    <label class="block font-medium text-sm text-gray-700 dark:text-gray-300">
-                        Key
-                    </label>
-                    <Input
-                        v-model="newSettingForm.key"
-                        type="text"
-                        class="mt-1 block w-full"
-                        placeholder="setting_key_name"
-                    />
-                    <div v-if="newSettingForm.errors.key" class="text-red-600 text-sm mt-1">
-                        {{ newSettingForm.errors.key }}
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block font-medium text-sm text-gray-700 dark:text-gray-300">
-                        Type
-                    </label>
-                    <select
-                        v-model="newSettingForm.type"
-                        class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
-                    >
-                        <option value="text">Text</option>
-                        <option value="boolean">Boolean</option>
-                    </select>
-                    <div v-if="newSettingForm.errors.type" class="text-red-600 text-sm mt-1">
-                        {{ newSettingForm.errors.type }}
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block font-medium text-sm text-gray-700 dark:text-gray-300">
-                        Value
-                    </label>
-                    <template v-if="newSettingForm.type === 'boolean'">
-                        <Checkbox
-                            v-model="newSettingForm.value"
-                            class="mt-1"
-                        />
-                    </template>
-                    <template v-else>
-                        <Input
-                            v-model="newSettingForm.value"
-                            type="text"
-                            class="mt-1 block w-full"
-                        />
-                    </template>
-                    <div v-if="newSettingForm.errors.value" class="text-red-600 text-sm mt-1">
-                        {{ newSettingForm.errors.value }}
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block font-medium text-sm text-gray-700 dark:text-gray-300">
-                        Description
-                    </label>
-                    <Input
-                        v-model="newSettingForm.description"
-                        type="text"
-                        class="mt-1 block w-full"
-                    />
-                    <div v-if="newSettingForm.errors.description" class="text-red-600 text-sm mt-1">
-                        {{ newSettingForm.errors.description }}
-                    </div>
-                </div>
-
-                <div>
-                    <Button
-                        type="submit"
-                        :disabled="newSettingForm.processing"
-                    >
-                        Create Setting
-                    </Button>
-                </div>
-            </form>
         </div>
     </div>
 </template>

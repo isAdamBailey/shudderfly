@@ -72,8 +72,6 @@ Route::middleware('auth')->group(function () {
         Route::delete('/admin', [AdminController::class, 'destroy'])->name('admin.destroy');
 
         Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
-        Route::post('/settings', [SettingsController::class, 'store'])->name('settings.store');
-        Route::delete('/settings/{setting}', [SettingsController::class, 'destroy'])->name('settings.destroy');
     });
 });
 
