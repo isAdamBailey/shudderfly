@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "9fb3c0c0746c496b119c1983b03f7ad6",
+    "content-hash": "256f3c293ba2d4c5a4e32735d3062360",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -7651,6 +7651,62 @@
                 "source": "https://github.com/laravel/telescope/tree/v5.5.1"
             },
             "time": "2025-03-10T17:13:23+00:00"
+        },
+        {
+            "name": "mmo/faker-images",
+            "version": "v0.9.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/morawskim/faker-images.git",
+                "reference": "11b5c93403e9f0fc199a5859fc32cf61614ab421"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/morawskim/faker-images/zipball/11b5c93403e9f0fc199a5859fc32cf61614ab421",
+                "reference": "11b5c93403e9f0fc199a5859fc32cf61614ab421",
+                "shasum": ""
+            },
+            "require": {
+                "fakerphp/faker": "^1.9",
+                "php": "^7.1 || ^8.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^8.0",
+                "rector/rector": "^0.11.53",
+                "squizlabs/php_codesniffer": "^3.6"
+            },
+            "suggest": {
+                "ext-curl": "*",
+                "ext-gd": "*"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Mmo\\Faker\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Marcin Morawski",
+                    "email": "marcin@morawskim.pl"
+                }
+            ],
+            "description": "Different images provider for Faker",
+            "keywords": [
+                "faker",
+                "images",
+                "picsum",
+                "provider"
+            ],
+            "support": {
+                "issues": "https://github.com/morawskim/faker-images/issues",
+                "source": "https://github.com/morawskim/faker-images/tree/v0.9.0"
+            },
+            "time": "2023-10-04T15:07:07+00:00"
         },
         {
             "name": "mockery/mockery",

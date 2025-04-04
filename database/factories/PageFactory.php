@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Mmo\Faker\PicsumProvider;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Page>
@@ -16,9 +17,12 @@ class PageFactory extends Factory
      */
     public function definition()
     {
+        $faker = $this->faker;
+        $faker->addProvider(new PicsumProvider($faker));
+
         return [
-            'content' => $this->faker->paragraphs(3, true),
-            'media_path' => $this->faker->imageUrl(),
+            'content' => $faker->paragraphs(3, true),
+            'media_path' => $faker->picsumUrl(),
         ];
     }
 }
