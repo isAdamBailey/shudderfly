@@ -4,7 +4,7 @@
     <BreezeAuthenticatedLayout>
         <template #header>
             <div class="flex justify-between items-center mb-10">
-                <Link class="w-1/4" :href="route('books.index')">
+                <Link class="w-1/2" :href="route('books.index')">
                     <h2
                         class="font-heading text-3xl text-theme-title leading-tight"
                     >

@@ -54,6 +54,13 @@
     christmas:hover:bg-christmas-mint;
     }
 
+    /* Rainbow Gradient */
+    .bg-rainbow {
+        @apply bg-gradient-to-r from-red-500 via-orange-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500
+        dark:from-purple-900 dark:via-blue-900 dark:via-indigo-900 dark:via-cyan-900 dark:via-teal-900 dark:to-emerald-900
+        christmas:from-christmas-green christmas:via-christmas-green christmas:via-christmas-green christmas:via-christmas-holly christmas:via-christmas-holly christmas:via-christmas-holly christmas:via-christmas-pine christmas:via-christmas-pine christmas:via-christmas-pine christmas:to-christmas-berry;
+    }
+
     /* Border Colors */
     .border-theme-primary {
         @apply border-yellow-200
