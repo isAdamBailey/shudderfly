@@ -148,7 +148,7 @@ const takeSnapshot = () => {
     form.post(route('pages.snapshot'), {
         preserveScroll: true,
         onSuccess: () => {
-            speak(`I got your screenshot, ${user.name}. please wait a few minutes for it to be uploaded`);
+            speak(`${user.name}, I got your screenshot.`);
         },
         onError: (err) => {
             resetCooldown();
