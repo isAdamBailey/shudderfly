@@ -32,6 +32,7 @@ class UpdatePageRequest extends FormRequest
                 'mimes:jpg,jpeg,bmp,png,svg,webp,avi,gif,mpeg,quicktime,mp4',
             ],
             'video_link' => 'string|nullable',
+            'created_at' => 'date|nullable',
         ];
     }
 }

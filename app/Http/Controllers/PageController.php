@@ -188,6 +188,10 @@ class PageController extends Controller
                 $page->book_id = $request->book_id;
             }
 
+            if ($request->has('created_at')) {
+                $page->created_at = $request->created_at;
+            }
+
             if ($request->has('video_link') && ! is_null($request->video_link)) {
                 $oldMediaPath = $page->media_path;
                 $oldPosterPath = $page->media_poster;

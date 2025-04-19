@@ -18,6 +18,7 @@ class Page extends Model
         'media_poster',
         'video_link',
         'book_id',
+        'created_at',
     ];
 
     public function getMediaPathAttribute($value): string

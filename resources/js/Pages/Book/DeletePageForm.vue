@@ -1,5 +1,5 @@
 <template>
-    <form class="text-center mt-10" @submit.prevent="submit">
+    <form class="text-center" @submit.prevent="submit">
         <DangerButton>Delete Page</DangerButton>
     </form>
 </template>

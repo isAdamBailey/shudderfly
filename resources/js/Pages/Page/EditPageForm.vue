@@ -1,6 +1,10 @@
 <script setup>
+import Accordion from "@/Components/Accordion.vue";
 import Button from "@/Components/Button.vue";
-import { default as BreezeLabel, default as InputLabel } from "@/Components/InputLabel.vue";
+import {
+    default as BreezeLabel,
+    default as InputLabel,
+} from "@/Components/InputLabel.vue";
 import VideoIcon from "@/Components/svg/VideoIcon.vue";
 import TextInput from "@/Components/TextInput.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
@@ -19,13 +23,16 @@ const props = defineProps({
     books: { type: Array, required: true },
 });
 
-const isYouTubeEnabled = computed(() => usePage().props.settings["youtube_enabled"]);
+const isYouTubeEnabled = computed(
+    () => usePage().props.settings["youtube_enabled"]
+);
 
 const pageForm = useForm({
     content: props.page.content,
     image: null,
     book_id: props.page.book_id,
     video_link: props.page.video_link,
+    created_at: props.page.created_at,
 });
 
 const bookForm = useForm({
@@ -116,11 +123,15 @@ const makeCoverPage = () => {
         },
     });
 };
+
+const setCreatedAtToNow = () => {
+    pageForm.created_at = new Date().toISOString().slice(0, 16);
+};
 </script>
 
 <template>
     <div class="border-t-2 bg-white dark:bg-gray-800 rounded p-5 mt-10">
-        <form @submit.prevent="submit">
+        <form ref="pageFormRef">
             <div v-if="isYouTubeEnabled" class="mb-4">
                 <Button
                     :is-active="mediaOption === 'upload'"
@@ -195,6 +206,11 @@ const makeCoverPage = () => {
                         />
                     </div>
                 </div>
+            </div>
+        </form>
+
+        <Accordion title="More Settings">
+            <div class="mt-3">
                 <div class="w-full">
                     <BreezeLabel for="content" value="Words" />
                     <Wysiwyg
@@ -219,44 +235,57 @@ const makeCoverPage = () => {
                 />
             </div>
 
-            <div class="flex justify-center mt-10">
+            <div
+                v-if="isCoverPage"
+                class="mt-5 text-gray-800 dark:text-white text-sm"
+            >
+                This image is the cover image for this book. To change the
+                cover, go to the page settings for another page and click "Make
+                Cover Image".
+            </div>
+            <div
+                v-else-if="
+                    page.media_path.includes('.jpg') ||
+                    page.media_path.includes('.png') ||
+                    page.media_path.includes('.webp')
+                "
+                class="flex justify-center mt-5 md:mt-10"
+            >
                 <Button
-                    class="w-full flex justify-center py-3"
-                    :class="{ 'opacity-25': pageForm.processing }"
-                    :disabled="pageForm.processing"
+                    class="flex justify-center py-3"
+                    :class="{ 'opacity-25': bookForm.processing }"
+                    :disabled="bookForm.processing"
+                    @click.prevent="makeCoverPage"
                 >
-                    <span class="text-xl">Update Page</span>
+                    Make Cover Image
                 </Button>
             </div>
-        </form>
-        <div
-            v-if="isCoverPage"
-            class="mt-5 text-gray-800 dark:text-white text-sm"
-        >
-            This image is the cover image for this book. To change the cover, go
-            to the page settings for another page and click "Make Cover Image".
-        </div>
-        <div
-            v-else-if="
-                page.media_path.includes('.jpg') ||
-                page.media_path.includes('.png') ||
-                page.media_path.includes('.webp')
-            "
-            class="flex justify-center mt-5 md:mt-10"
-        >
+            <div class="mt-10">
+                <div class="flex justify-between items-center gap-2">
+                    <Button
+                        type="button"
+                        @click="setCreatedAtToNow"
+                    >
+                        Move Page to Top
+                    </Button>
+                    <DeletePageForm
+                        :page="page"
+                        @close-page-form="$emit('close-page-form')"
+                    />
+                </div>
+            </div>
+        </Accordion>
+
+        <div class="flex justify-center mt-10">
             <Button
-                class="flex justify-center py-3"
-                :class="{ 'opacity-25': bookForm.processing }"
-                :disabled="bookForm.processing"
-                @click.prevent="makeCoverPage"
+                class="w-full flex justify-center py-3"
+                :class="{ 'opacity-25': pageForm.processing }"
+                :disabled="pageForm.processing || !pageForm.isDirty"
+                @click="submit"
             >
-                Make Cover Image
+                <span class="text-xl">Update Page</span>
             </Button>
         </div>
-        <DeletePageForm
-            :page="page"
-            @close-page-form="$emit('close-page-form')"
-        />
     </div>
 </template>
 
