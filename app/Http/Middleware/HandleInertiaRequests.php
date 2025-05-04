@@ -45,6 +45,7 @@ class HandleInertiaRequests extends Middleware
             'settings' => SiteSetting::all()->mapWithKeys(function ($setting) {
                 return [$setting->key => $setting->value];
             }),
+            'theme' => now()->month === 12 ? 'christmas' : (now()->month === 7 ? 'fireworks' : ''),
         ]);
     }
 }

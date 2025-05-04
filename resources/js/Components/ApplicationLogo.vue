@@ -328,15 +328,10 @@
 </template>
 
 <script setup>
+import { usePage } from "@inertiajs/vue3";
 import { computed } from "vue";
 
-const isChristmas = computed(() => {
-    const today = new Date();
-    return today.getMonth() === 11; // December
-});
-
-const isJuly = computed(() => {
-    const today = new Date();
-    return today.getMonth() === 6; // July
-});
+const page = usePage();
+const isChristmas = computed(() => page.props.theme === 'christmas');
+const isJuly = computed(() => page.props.theme === 'fireworks');
 </script>

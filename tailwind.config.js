@@ -39,6 +39,7 @@ module.exports = {
         require("@tailwindcss/typography"),
         plugin(function ({ addVariant }) {
             addVariant("christmas", '[data-theme="christmas"] &');
+            addVariant("fireworks", '[data-theme="fireworks"] &');
         }),
     ],
 };
