@@ -3,12 +3,15 @@ import { computed, onMounted, onUnmounted, ref } from "vue";
 
 const props = defineProps({
     align: {
+        type: String,
         default: "right",
     },
     width: {
+        type: String,
         default: "48",
     },
     contentClasses: {
+        type: Array,
         default: () => ["py-1", "bg-gray-100 dark:bg-gray-800"],
     },
 });
@@ -64,9 +67,8 @@ const open = ref(false);
         >
             <div
                 v-show="open"
-                class="absolute z-50 mt-2 rounded-md shadow-lg"
+                class="fixed z-[9999] mt-2 rounded-md shadow-lg"
                 :class="[widthClass, alignmentClasses]"
-                style="display: none"
                 @click="open = false"
             >
                 <div
