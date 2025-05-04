@@ -23,7 +23,7 @@
         <circle cx="30" cy="100" r="5" fill="white" />
         <circle cx="170" cy="100" r="5" fill="white" />
 
-        <g v-if="!isChristmas" id="fly">
+        <g v-if="!isChristmas && !isJuly" id="fly">
             <g id="fly-body-and-wings">
                 <g id="fly-wings">
                     <ellipse
@@ -78,6 +78,16 @@
         </g>
 
         <g v-if="isChristmas" id="snowman">
+            <!-- Rotation Animation -->
+            <animateTransform
+                attributeName="transform"
+                type="rotate"
+                from="0 100 100"
+                to="360 100 100"
+                dur="30s"
+                repeatCount="indefinite"
+            />
+            
             <!-- Bottom snowball -->
             <circle
                 cx="100"
@@ -194,14 +204,123 @@
                 stroke="red"
                 stroke-width="4"
             />
+        </g>
 
-            <!-- Rotation Animation -->
+        <g v-if="isJuly" id="firework">
+            <!-- Rocket body -->
+            <rect x="90" y="60" width="20" height="80" fill="#333" />
+            
+            <!-- Rocket nose cone -->
+            <path d="M90 60 L100 45 L110 60 Z" fill="red" />
+            
+            <!-- Rocket fins -->
+            <path d="M90 140 L75 155 L90 155 Z" fill="red" />
+            <path d="M110 140 L125 155 L110 155 Z" fill="red" />
+            
+            <!-- Spark trail -->
+            <g id="sparks">
+                <!-- Main spark core -->
+                <circle cx="100" cy="140" r="4" fill="yellow">
+                    <animate attributeName="r" values="4;3;4" dur="0.3s" repeatCount="indefinite" />
+                </circle>
+                <circle cx="100" cy="145" r="3" fill="orange">
+                    <animate attributeName="r" values="3;2;3" dur="0.3s" repeatCount="indefinite" />
+                </circle>
+                <circle cx="100" cy="150" r="3" fill="red">
+                    <animate attributeName="r" values="3;2;3" dur="0.3s" repeatCount="indefinite" />
+                </circle>
+                
+                <!-- Spark particles with varied paths -->
+                <g id="spark-particles">
+                    <!-- Yellow sparks -->
+                    <circle cx="95" cy="145" r="1.2" fill="yellow">
+                        <animate attributeName="cy" values="145;155" dur="0.4s" repeatCount="indefinite" />
+                        <animate attributeName="cx" values="95;93;95" dur="0.4s" repeatCount="indefinite" />
+                    </circle>
+                    <circle cx="105" cy="145" r="1.2" fill="yellow">
+                        <animate attributeName="cy" values="145;155" dur="0.4s" repeatCount="indefinite" />
+                        <animate attributeName="cx" values="105;107;105" dur="0.4s" repeatCount="indefinite" />
+                    </circle>
+                    
+                    <!-- Orange sparks -->
+                    <circle cx="98" cy="148" r="1.2" fill="orange">
+                        <animate attributeName="cy" values="148;158" dur="0.5s" repeatCount="indefinite" />
+                        <animate attributeName="cx" values="98;96;98" dur="0.5s" repeatCount="indefinite" />
+                    </circle>
+                    <circle cx="102" cy="148" r="1.2" fill="orange">
+                        <animate attributeName="cy" values="148;158" dur="0.5s" repeatCount="indefinite" />
+                        <animate attributeName="cx" values="102;104;102" dur="0.5s" repeatCount="indefinite" />
+                    </circle>
+                    
+                    <!-- Red sparks -->
+                    <circle cx="97" cy="146" r="1.2" fill="red">
+                        <animate attributeName="cy" values="146;156" dur="0.6s" repeatCount="indefinite" />
+                        <animate attributeName="cx" values="97;95;97" dur="0.6s" repeatCount="indefinite" />
+                    </circle>
+                    <circle cx="103" cy="146" r="1.2" fill="red">
+                        <animate attributeName="cy" values="146;156" dur="0.6s" repeatCount="indefinite" />
+                        <animate attributeName="cx" values="103;105;103" dur="0.6s" repeatCount="indefinite" />
+                    </circle>
+                    
+                    <!-- Additional spark particles -->
+                    <circle cx="96" cy="144" r="1" fill="yellow">
+                        <animate attributeName="cy" values="144;154" dur="0.45s" repeatCount="indefinite" />
+                        <animate attributeName="cx" values="96;94;96" dur="0.45s" repeatCount="indefinite" />
+                    </circle>
+                    <circle cx="104" cy="144" r="1" fill="yellow">
+                        <animate attributeName="cy" values="144;154" dur="0.45s" repeatCount="indefinite" />
+                        <animate attributeName="cx" values="104;106;104" dur="0.45s" repeatCount="indefinite" />
+                    </circle>
+                    
+                    <!-- New spark particles -->
+                    <circle cx="94" cy="147" r="1" fill="orange">
+                        <animate attributeName="cy" values="147;157" dur="0.55s" repeatCount="indefinite" />
+                        <animate attributeName="cx" values="94;92;94" dur="0.55s" repeatCount="indefinite" />
+                    </circle>
+                    <circle cx="106" cy="147" r="1" fill="orange">
+                        <animate attributeName="cy" values="147;157" dur="0.55s" repeatCount="indefinite" />
+                        <animate attributeName="cx" values="106;108;106" dur="0.55s" repeatCount="indefinite" />
+                    </circle>
+                    
+                    <circle cx="93" cy="149" r="0.8" fill="red">
+                        <animate attributeName="cy" values="149;159" dur="0.65s" repeatCount="indefinite" />
+                        <animate attributeName="cx" values="93;91;93" dur="0.65s" repeatCount="indefinite" />
+                    </circle>
+                    <circle cx="107" cy="149" r="0.8" fill="red">
+                        <animate attributeName="cy" values="149;159" dur="0.65s" repeatCount="indefinite" />
+                        <animate attributeName="cx" values="107;109;107" dur="0.65s" repeatCount="indefinite" />
+                    </circle>
+                    
+                    <!-- Fast moving sparks -->
+                    <circle cx="92" cy="143" r="0.7" fill="yellow">
+                        <animate attributeName="cy" values="143;153" dur="0.35s" repeatCount="indefinite" />
+                        <animate attributeName="cx" values="92;90;92" dur="0.35s" repeatCount="indefinite" />
+                    </circle>
+                    <circle cx="108" cy="143" r="0.7" fill="yellow">
+                        <animate attributeName="cy" values="143;153" dur="0.35s" repeatCount="indefinite" />
+                        <animate attributeName="cx" values="108;110;108" dur="0.35s" repeatCount="indefinite" />
+                    </circle>
+                </g>
+            </g>
+            
+            <!-- Takeoff animation -->
+            <animateTransform
+                attributeName="transform"
+                type="translate"
+                values="0,0; 0,-40"
+                dur="2s"
+                begin="0s"
+                fill="freeze"
+            />
+            
+            <!-- Rotation animation -->
             <animateTransform
                 attributeName="transform"
                 type="rotate"
                 from="0 100 100"
                 to="360 100 100"
                 dur="30s"
+                begin="2s"
                 repeatCount="indefinite"
             />
         </g>
@@ -214,5 +333,10 @@ import { computed } from "vue";
 const isChristmas = computed(() => {
     const today = new Date();
     return today.getMonth() === 11; // December
+});
+
+const isJuly = computed(() => {
+    const today = new Date();
+    return today.getMonth() === 6; // July
 });
 </script>
