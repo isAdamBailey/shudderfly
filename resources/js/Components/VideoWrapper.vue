@@ -59,7 +59,10 @@ const useIframe = computed(() => isPlaylist.value || props.iframe);
     height: 100%;
 }
 
-article.yt-lite {
+.yt-lite {
+    position: relative;
+    display: block;
+    width: 100%;
     height: 100%;
 }
 </style>
