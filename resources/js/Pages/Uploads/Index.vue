@@ -4,13 +4,13 @@
     <BreezeAuthenticatedLayout>
         <template #header>
             <div class="flex justify-between items-center">
-                <Link @click="filter()">
+                <button @click="filter()">
                     <h2
                         class="font-heading text-2xl text-theme-title leading-tight"
                     >
                         {{ title }}
                     </h2>
-                </Link>
+                </button>
                 <SearchInput
                     class="max-w-80"
                     route-name="pictures.index"
@@ -80,12 +80,12 @@ import SearchInput from "@/Components/SearchInput.vue";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import UploadsGrid from "@/Pages/Uploads/UploadsGrid.vue";
-import { Head, Link, router, usePage } from "@inertiajs/vue3";
+import { Head, router, usePage } from "@inertiajs/vue3";
 import { computed, ref } from "vue";
 
 const { speak } = useSpeechSynthesis();
 
-const props = defineProps({
+defineProps({
     photos: { type: Object, required: true },
 });
 

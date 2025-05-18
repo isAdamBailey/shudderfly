@@ -1,9 +1,9 @@
 <script setup>
-import LiteYouTubeEmbed from "vue-lite-youtube-embed";
-import "vue-lite-youtube-embed/style.css";
+import TypePill from "@/Components/TypePill.vue";
 import useGetYouTubeVideo from "@/composables/useGetYouTubeVideo";
 import { computed } from "vue";
-
+import LiteYouTubeEmbed from "vue-lite-youtube-embed";
+import "vue-lite-youtube-embed/style.css";
 const props = defineProps({
     url: { type: String, default: null },
     iframe: { type: Boolean, default: false },
@@ -31,9 +31,7 @@ const useIframe = computed(() => isPlaylist.value || props.iframe);
             frameborder="0"
             allow="accelerometer; encrypted-media;"
         ></iframe>
-        <div v-if="isPlaylist && !controls" class="playlist-banner">
-            Playlist
-        </div>
+        <TypePill v-if="isPlaylist && !controls" type="Playlist" />
     </div>
     <LiteYouTubeEmbed
         v-else
@@ -61,16 +59,6 @@ const useIframe = computed(() => isPlaylist.value || props.iframe);
     height: 100%;
 }
 
-.playlist-banner {
-    position: absolute;
-    bottom: 5px;
-    left: 5px;
-    background-color: rgba(255, 248, 248, 0.7);
-    color: #000;
-    padding: 5px 10px;
-    border-radius: 5px;
-    font-size: 14px;
-}
 article.yt-lite {
     height: 100%;
 }

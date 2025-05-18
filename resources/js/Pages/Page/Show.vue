@@ -7,11 +7,11 @@
         >
             <div class="text-center">
                 <BookTitle :book="page.book" />
-                <div class="min-h-[60vh]">
+                <div class="relative min-h-[60vh]">
                     <div class="relative mx-3 md:mx-32">
                         <Link
                             v-if="previousPage"
-                            prefectch="mount"
+                            prefectch="hover"
                             :href="route('pages.show', previousPage)"
                             as="button"
                             class="z-10 absolute left-0 mt-60 inline-flex items-center text-white hover:text-blue-600 hover:dark:text-gray-800 hover:christmas:text-christmas-gold disabled:opacity-25 transition ease-in-out duration-150"
@@ -25,7 +25,7 @@
                         </Link>
                         <Link
                             v-if="nextPage"
-                            prefetch="mount"
+                            prefetch="hover"
                             :href="route('pages.show', nextPage)"
                             as="button"
                             class="z-10 absolute right-0 mt-60 inline-flex items-center text-white hover:text-blue-600 hover:dark:text-gray-800 hover:christmas:text-christmas-gold disabled:opacity-25 transition ease-in-out duration-150"
@@ -38,23 +38,25 @@
                             ></i>
                         </Link>
                     </div>
-                    <LazyLoader
-                        v-if="page.media_path"
-                        class="max-h-[75vh]"
-                        :src="page.media_path"
-                        :poster="page.media_poster"
-                        :alt="page.description"
-                        :book-id="page.book.id"
-                        :page-id="page.id"
-                    />
-                    <VideoWrapper
-                        v-else-if="page.video_link"
-                        :url="page.video_link"
-                        :title="page.description"
-                    />
+                    <div class="h-full w-full flex items-center justify-center">
+                        <LazyLoader
+                            v-if="page.media_path"
+                            class=" max-w-full"
+                            :src="page.media_path"
+                            :poster="page.media_poster"
+                            :alt="page.description"
+                            :book-id="page.book.id"
+                            :page-id="page.id"
+                        />
+                        <VideoWrapper
+                            v-else-if="page.video_link"
+                            :url="page.video_link"
+                            :title="page.description"
+                        />
+                    </div>
                     <p
                         v-if="canEditPages"
-                        class="mb-3 text-sm italic dark:text-white"
+                        class="w-full mb-3 text-sm italic text-white"
                     >
                         Uploaded on {{ short(page.created_at) }}, viewed
                         {{ Math.round(page.read_count).toLocaleString() }} times
@@ -62,7 +64,7 @@
                 </div>
                 <div
                     v-if="hasContent"
-                    class="m-5 flex justify-between bg-theme-content md:rounded-lg p-3 my-3"
+                    class="m-5 flex justify-between bg-theme-content md:rounded-lg p-3 my-3 relative z-20"
                 >
                     <div
                         class="page-content px-3 py-3 text-lg text-left"

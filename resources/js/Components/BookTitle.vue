@@ -1,6 +1,6 @@
 <template>
     <Link 
-        prefetch="mount"
+        prefetch="hover"
         :href="route('books.show', book)"
         class="flex justify-center group mx-5"
     >

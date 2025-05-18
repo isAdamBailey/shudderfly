@@ -5,5 +5,14 @@ export function useMedia() {
             return path.endsWith(suffix);
         });
     };
-    return { isVideo };
+    
+    const isPoster = (path) => {
+        return path.includes('poster');
+    };
+    
+    const isSnapshot = (path) => {
+        return path.includes('snapshot');
+    };
+
+    return { isVideo, isPoster, isSnapshot };
 }

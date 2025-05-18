@@ -1,51 +1,56 @@
 <template>
-    <img
-        v-if="isLoading"
-        :src="placeholder"
-        class="rounded-lg inline-block"
-        alt="placeholder image"
-        loading="lazy"
-    />
-    <div v-else-if="isVideo(imageSrc)" class="relative inline-block">
-        <video
-            ref="videoRef"
-            :controls="!isCover"
-            disablepictureinpicture
-            controlslist="nodownload"
-            :poster="poster"
-            class="rounded-lg max-h-[75vh] max-w-full h-auto"
-            playsinline
-            @timeupdate="handleTimeUpdate"
-            @play="handlePlayPause"
-            @pause="handlePlayPause"
+    <div class="relative  w-full h-full flex items-center justify-center">
+        <img
+            v-if="isLoading"
+            :src="placeholder"
+            class="rounded-lg w-auto h-auto max-h-[85vh] max-w-full"
+            alt="placeholder image"
+            loading="lazy"
+        />
+        <div v-else-if="isVideo(imageSrc)" class="relative w-full h-full flex items-center justify-center">
+            <video
+                ref="videoRef"
+                :controls="!isCover"
+                disablepictureinpicture
+                controlslist="nodownload"
+                :poster="poster"
+                class="rounded-lg w-auto h-auto max-h-[85vh] max-w-full"
+                playsinline
+                @timeupdate="handleTimeUpdate"
+                @play="handlePlayPause"
+                @pause="handlePlayPause"
+                @error="handleMediaError"
+            >
+                <source :src="imageSrc" type="video/mp4" />
+                Your browser does not support the video tag.
+            </video>
+            <Button
+                v-if="!isCover && bookId && $page.props.settings.snapshot_enabled"
+                class="absolute top-0 right-0 h-8 w-8 flex items-center justify-center"
+                title="Take Snapshot"
+                :disabled="!canTakeSnapshot || !isPaused"
+                @click="takeSnapshot"
+            >
+                <i :class="`${isOnCooldown ? 'ri-speak-fill' : 'ri-camera-line'} text-3xl`"></i>
+            </Button>
+        </div>
+        <img
+            v-else
+            ref="image"
+            class="rounded-lg w-auto h-auto max-h-[85vh] max-w-full"
+            :src="imageSrc"
+            :alt="alt"
+            loading="lazy"
             @error="handleMediaError"
-        >
-            <source :src="imageSrc" type="video/mp4" />
-            Your browser does not support the video tag.
-        </video>
-        <Button
-            v-if="!isCover && bookId && $page.props.settings.snapshot_enabled"
-            class="absolute top-0 right-0 h-8 w-8 flex items-center justify-center"
-            title="Take Snapshot"
-            :disabled="!canTakeSnapshot || !isPaused"
-            @click="takeSnapshot"
-        >
-            <i :class="`${isOnCooldown ? 'ri-speak-fill' : 'ri-camera-line'} text-3xl`"></i>
-        </button>
+        />
+        <TypePill v-if="isPoster(imageSrc)" type="Video" />
+        <TypePill v-if="isSnapshot(imageSrc) && !pageId" type="Screenshot" />
     </div>
-    <img
-        v-else
-        ref="image"
-        class="rounded-lg inline-block"
-        :src="imageSrc"
-        :alt="alt"
-        loading="lazy"
-        @error="handleMediaError"
-    />
 </template>
 
 <script setup>
 import Button from "@/Components/Button.vue";
+import TypePill from "@/Components/TypePill.vue";
 import { useSnapshotCooldown } from '@/composables/useSnapshotCooldown';
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useMedia } from "@/mediaHelpers";
@@ -53,7 +58,7 @@ import { useForm, usePage } from "@inertiajs/vue3";
 import { useImage } from "@vueuse/core";
 import { computed, ref } from "vue";
 
-const { isVideo } = useMedia();
+const { isVideo, isPoster, isSnapshot } = useMedia();
 const videoRef = ref(null);
 const { speak } = useSpeechSynthesis();
 const user = usePage().props.auth.user;
@@ -80,11 +85,11 @@ const props = defineProps({
         default: false,
     },
     bookId: {
-        type: String,
+        type: [String, Number],
         default: null,
     },
     pageId: {
-        type: String,
+        type: [String, Number],
         default: null,
     },
 });
