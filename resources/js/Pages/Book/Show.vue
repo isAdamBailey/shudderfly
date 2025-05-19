@@ -151,7 +151,8 @@
                     <LazyLoader
                         v-if="mediaPath(page)"
                         :src="mediaPath(page)"
-                        class="h-full w-full object-cover"
+                        class="h-full w-full"
+                        :object-fit="'cover'"
                     />
                     <VideoWrapper
                         v-if="page.video_link"

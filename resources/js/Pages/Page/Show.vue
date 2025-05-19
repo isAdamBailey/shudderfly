@@ -38,15 +38,16 @@
                             ></i>
                         </Link>
                     </div>
-                    <div class="h-full w-full flex items-center justify-center">
+                    <div class="h-screen w-full flex items-center justify-center">
                         <LazyLoader
                             v-if="page.media_path"
-                            class=" max-w-full"
+                            class="max-h-screen max-w-full"
                             :src="page.media_path"
                             :poster="page.media_poster"
                             :alt="page.description"
                             :book-id="page.book.id"
                             :page-id="page.id"
+                            :object-fit="'contain'"
                         />
                         <VideoWrapper
                             v-else-if="page.video_link"

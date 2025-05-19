@@ -1,20 +1,23 @@
 <template>
-    <div class="relative  w-full h-full flex items-center justify-center">
+    <div class="relative w-full h-full flex items-center justify-center">
         <img
             v-if="isLoading"
             :src="placeholder"
-            class="rounded-lg w-auto h-auto max-h-[85vh] max-w-full"
+            :class="`rounded-lg w-full h-full object-${objectFit}`"
             alt="placeholder image"
             loading="lazy"
         />
-        <div v-else-if="isVideo(imageSrc)" class="relative w-full h-full flex items-center justify-center">
+        <div
+            v-else-if="isVideo(imageSrc)"
+            class="relative w-full h-full flex items-center justify-center"
+        >
             <video
                 ref="videoRef"
                 :controls="!isCover"
                 disablepictureinpicture
                 controlslist="nodownload"
                 :poster="poster"
-                class="rounded-lg w-auto h-auto max-h-[85vh] max-w-full"
+                :class="`rounded-lg w-full h-full object-${objectFit}`"
                 playsinline
                 @timeupdate="handleTimeUpdate"
                 @play="handlePlayPause"
@@ -25,19 +28,25 @@
                 Your browser does not support the video tag.
             </video>
             <Button
-                v-if="!isCover && bookId && $page.props.settings.snapshot_enabled"
+                v-if="
+                    !isCover && bookId && $page.props.settings.snapshot_enabled
+                "
                 class="absolute top-0 right-0 h-8 w-8 flex items-center justify-center"
                 title="Take Snapshot"
                 :disabled="!canTakeSnapshot || !isPaused"
                 @click="takeSnapshot"
             >
-                <i :class="`${isOnCooldown ? 'ri-speak-fill' : 'ri-camera-line'} text-3xl`"></i>
+                <i
+                    :class="`${
+                        isOnCooldown ? 'ri-speak-fill' : 'ri-camera-line'
+                    } text-3xl`"
+                ></i>
             </Button>
         </div>
         <img
             v-else
             ref="image"
-            class="rounded-lg w-auto h-auto max-h-[85vh] max-w-full"
+            :class="`rounded-lg w-full h-full object-${objectFit}`"
             :src="imageSrc"
             :alt="alt"
             loading="lazy"
@@ -51,7 +60,7 @@
 <script setup>
 import Button from "@/Components/Button.vue";
 import TypePill from "@/Components/TypePill.vue";
-import { useSnapshotCooldown } from '@/composables/useSnapshotCooldown';
+import { useSnapshotCooldown } from "@/composables/useSnapshotCooldown";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useMedia } from "@/mediaHelpers";
 import { useForm, usePage } from "@inertiajs/vue3";
@@ -92,13 +101,20 @@ const props = defineProps({
         type: [String, Number],
         default: null,
     },
+    objectFit: {
+        type: String,
+        default: "contain",
+        validator: (value) =>
+            ["contain", "cover", "fill", "none", "scale-down"].includes(value),
+    },
 });
 
 const placeholder = "/img/photo-placeholder.png";
 const imageSrc = ref(props.src || placeholder);
 const { isLoading } = useImage({ src: computed(() => imageSrc.value) });
 
-const { isOnCooldown, setCooldown, resetCooldown, remainingMinutes } = useSnapshotCooldown();
+const { isOnCooldown, setCooldown, resetCooldown, remainingMinutes } =
+    useSnapshotCooldown();
 
 const form = useForm({
     book_id: props.bookId,
@@ -127,30 +143,31 @@ const handleTimeUpdate = () => {
 const takeSnapshot = () => {
     if (!canTakeSnapshot.value) return;
     if (isOnCooldown.value) {
-        const timeMessage = remainingMinutes.value <= 1 
-            ? 'less than one minute' 
-            : `${remainingMinutes.value} minutes`;
+        const timeMessage =
+            remainingMinutes.value <= 1
+                ? "less than one minute"
+                : `${remainingMinutes.value} minutes`;
         speak(`Please wait ${timeMessage} before taking another screenshot`);
         return;
     }
     setCooldown();
     canTakeSnapshot.value = false;
-    
+
     // Get the current video source URL
     const videoElement = videoRef.value;
-    const videoSource = videoElement?.querySelector('source');
+    const videoSource = videoElement?.querySelector("source");
     const videoUrl = videoSource?.src || imageSrc.value;
-    
+
     if (!videoUrl || !videoElement?.currentTime) {
         resetCooldown();
         canTakeSnapshot.value = true;
         return;
     }
-    
+
     form.video_time = videoElement.currentTime;
     form.video_url = videoUrl;
-    
-    form.post(route('pages.snapshot'), {
+
+    form.post(route("pages.snapshot"), {
         preserveScroll: true,
         onSuccess: () => {
             speak(`${user.name}, I got your screenshot.`);
@@ -158,8 +175,8 @@ const takeSnapshot = () => {
         onError: (err) => {
             resetCooldown();
             canTakeSnapshot.value = true;
-            console.error('Error taking snapshot:', err);
-        }
+            console.error("Error taking snapshot:", err);
+        },
     });
 };
 </script>
