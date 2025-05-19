@@ -37,7 +37,7 @@
                         ><i class="ri-loader-line text-3xl"></i
                     ></span>
                 </div>
-                <div v-else>
+                <div v-else class="w-full h-full">
                     <div
                         class="rounded-t-lg absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 text-center leading-4 text-black font-bold backdrop-blur-sm line-clamp-1 z-10"
                     >
@@ -53,7 +53,7 @@
                         :src="book.cover_image?.media_path"
                         :alt="`${book.title} cover image`"
                         :is-cover="true"
-                        class="w-full h-full absolute inset-0"
+                        class="w-full h-full"
                         :object-fit="'cover'"
                     />
                 </div>
