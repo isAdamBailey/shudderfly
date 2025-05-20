@@ -1,5 +1,5 @@
 <template>
-    <div class="relative w-full h-full flex items-center justify-center">
+    <div class="relative h-full flex items-center justify-center">
         <img
             v-if="isLoading"
             :src="placeholder"
@@ -9,7 +9,7 @@
         />
         <div
             v-else-if="isVideo(imageSrc)"
-            class="relative w-full h-full flex items-center justify-center"
+            class="relative h-full flex items-center justify-center"
         >
             <video
                 ref="videoRef"

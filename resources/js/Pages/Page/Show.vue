@@ -41,7 +41,7 @@
                     <div class="h-screen w-full flex items-center justify-center">
                         <LazyLoader
                             v-if="page.media_path"
-                            class="max-h-screen max-w-full w-auto"
+                            class="max-h-screen w-auto"
                             :src="page.media_path"
                             :poster="page.media_poster"
                             :alt="page.description"
