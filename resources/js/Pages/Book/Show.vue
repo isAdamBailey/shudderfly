@@ -130,11 +130,11 @@
             <div
                 v-for="page in items"
                 :key="page.id"
-                class="rounded-lg bg-gray-300 shadow-sm relative flex justify-center flex-wrap overflow-hidden"
+                class="rounded-lg bg-gray-300 shadow-sm relative overflow-hidden h-80"
             >
                 <Link
                     prefetch
-                    class="w-full max-h-80"
+                    class="w-full h-full block"
                     :href="route('pages.show', page)"
                     as="button"
                     replace
@@ -151,8 +151,8 @@
                     <LazyLoader
                         v-if="mediaPath(page)"
                         :src="mediaPath(page)"
-                        class="h-full w-full"
                         :object-fit="'cover'"
+                        :fill-container="true"
                     />
                     <VideoWrapper
                         v-if="page.video_link"

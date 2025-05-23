@@ -53,8 +53,8 @@
                         :src="book.cover_image?.media_path"
                         :alt="`${book.title} cover image`"
                         :is-cover="true"
-                        class="w-full h-full"
                         :object-fit="'cover'"
+                        :fill-container="true"
                     />
                 </div>
             </Link>

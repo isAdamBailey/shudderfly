@@ -1,15 +1,15 @@
 <template>
-    <div class="relative h-full flex items-center justify-center">
+    <div :class="containerClasses">
         <img
             v-if="isLoading"
             :src="placeholder"
-            :class="`w-full h-full object-${objectFit}`"
+            :class="imageClasses"
             alt="placeholder image"
             loading="lazy"
         />
         <div
             v-else-if="isVideo(imageSrc)"
-            class="relative h-full flex items-center justify-center"
+            :class="containerClasses"
         >
             <video
                 ref="videoRef"
@@ -17,7 +17,7 @@
                 disablepictureinpicture
                 controlslist="nodownload"
                 :poster="poster"
-                :class="`w-full h-full object-${objectFit}`"
+                :class="imageClasses"
                 playsinline
                 @timeupdate="handleTimeUpdate"
                 @play="handlePlayPause"
@@ -28,9 +28,7 @@
                 Your browser does not support the video tag.
             </video>
             <Button
-                v-if="
-                    !isCover && bookId && $page.props.settings.snapshot_enabled
-                "
+                v-if="isButtonVisible"
                 class="absolute top-0 right-0 h-8 w-8 flex items-center justify-center"
                 title="Take Snapshot"
                 :disabled="!canTakeSnapshot || !isPaused"
@@ -46,7 +44,7 @@
         <img
             v-else
             ref="image"
-            :class="`w-full h-full object-${objectFit}`"
+            :class="imageClasses"
             :src="imageSrc"
             :alt="alt"
             loading="lazy"
@@ -107,6 +105,10 @@ const props = defineProps({
         validator: (value) =>
             ["contain", "cover", "fill", "none", "scale-down"].includes(value),
     },
+    fillContainer: {
+        type: Boolean,
+        default: false,
+    },
 });
 
 const placeholder = "/img/photo-placeholder.png";
@@ -125,6 +127,36 @@ const form = useForm({
 
 const canTakeSnapshot = ref(false);
 const isPaused = ref(true);
+
+// Determine sizing classes based on fillContainer prop
+const imageClasses = computed(() => {
+    if (props.fillContainer) {
+        return `w-full h-full object-${props.objectFit}`;
+    }
+    return `w-auto h-[70vh] object-${props.objectFit}`;
+});
+
+const containerClasses = computed(() => {
+    if (props.fillContainer) {
+        return "relative w-full h-full flex items-center justify-center";
+    }
+    return "relative flex items-center justify-center";
+});
+
+// Debug: Log the conditions for button visibility
+const isButtonVisible = computed(() => {
+    const conditions = {
+        isVideo: isVideo(imageSrc.value),
+        isCover: props.isCover,
+        notCover: !props.isCover,
+        bookId: props.bookId,
+        snapshotEnabled: usePage().props.settings?.snapshot_enabled
+    };
+    
+    console.log('Button visibility conditions:', conditions);
+    
+    return !props.isCover && props.bookId && usePage().props.settings?.snapshot_enabled;
+});
 
 const handleMediaError = () => {
     imageSrc.value = placeholder;
@@ -167,6 +199,7 @@ const takeSnapshot = () => {
     form.video_time = videoElement.currentTime;
     form.video_url = videoUrl;
 
+    // eslint-disable-next-line no-undef
     form.post(route("pages.snapshot"), {
         preserveScroll: true,
         onSuccess: () => {

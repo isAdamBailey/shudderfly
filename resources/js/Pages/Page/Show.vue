@@ -8,13 +8,13 @@
             <div class="text-center">
                 <BookTitle :book="page.book" />
                 <div class="relative min-h-[60vh] mt-10">
-                    <div class="relative mx-3 md:mx-32">
+                    <div class="w-full flex items-center justify-center relative">
                         <Link
                             v-if="previousPage"
                             prefectch="hover"
                             :href="route('pages.show', previousPage)"
                             as="button"
-                            class="z-10 absolute left-0 mt-60 inline-flex items-center text-white hover:text-blue-600 hover:dark:text-gray-800 hover:christmas:text-christmas-gold disabled:opacity-25 transition ease-in-out duration-150"
+                            class="z-10 absolute left-3 md:left-8 top-1/2 transform -translate-y-1/2 inline-flex items-center text-white hover:text-blue-600 hover:dark:text-gray-800 hover:christmas:text-christmas-gold disabled:opacity-25 transition ease-in-out duration-150"
                             aria-label="previous page"
                             :disabled="buttonDisabled"
                             @click="buttonDisabled = true"
@@ -28,7 +28,7 @@
                             prefetch="hover"
                             :href="route('pages.show', nextPage)"
                             as="button"
-                            class="z-10 absolute right-0 mt-60 inline-flex items-center text-white hover:text-blue-600 hover:dark:text-gray-800 hover:christmas:text-christmas-gold disabled:opacity-25 transition ease-in-out duration-150"
+                            class="z-10 absolute right-3 md:right-8 top-1/2 transform -translate-y-1/2 inline-flex items-center text-white hover:text-blue-600 hover:dark:text-gray-800 hover:christmas:text-christmas-gold disabled:opacity-25 transition ease-in-out duration-150"
                             aria-label="next page"
                             :disabled="buttonDisabled"
                             @click="buttonDisabled = true"
@@ -37,11 +37,8 @@
                                 class="ri-arrow-right-circle-fill text-6xl rounded-full bg-blue-600 hover:bg-white dark:bg-gray-800 christmas:bg-christmas-red hover:dark:bg-white"
                             ></i>
                         </Link>
-                    </div>
-                    <div class="h-screen w-full flex items-center justify-center">
-                        <div v-if="page.media_path" class="rounded-lg overflow-hidden">
+                        <div v-if="page.media_path" class="rounded-lg overflow-hidden mx-16 md:mx-20">
                             <LazyLoader
-                                class="max-h-screen w-auto"
                                 :src="page.media_path"
                                 :poster="page.media_poster"
                                 :alt="page.description"
@@ -50,7 +47,7 @@
                                 :object-fit="'contain'"
                             />
                         </div>
-                        <div v-else-if="page.video_link" class="w-full max-w-4xl">
+                        <div v-else-if="page.video_link" class="w-full max-w-4xl mx-16 md:mx-20">
                             <VideoWrapper
                                 :url="page.video_link"
                                 :title="page.description"
