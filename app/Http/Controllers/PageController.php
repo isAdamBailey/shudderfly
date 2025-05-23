@@ -43,7 +43,14 @@ class PageController extends Controller
             ->when(! $youtubeEnabled, function ($query) {
                 $query->whereNull('video_link');
             })
-            ->when($search, fn ($query) => $query->where('content', 'LIKE', '%'.$search.'%'))
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('content', 'LIKE', '%'.$search.'%')
+                          ->orWhereHas('book', function ($query) use ($search) {
+                              $query->where('title', 'LIKE', '%'.$search.'%');
+                          });
+                });
+            })
             ->unless($filter, fn ($query) => $query->latest())
             ->when($filter === 'old', function ($query) {
                 $yearAgo = clone $query;
