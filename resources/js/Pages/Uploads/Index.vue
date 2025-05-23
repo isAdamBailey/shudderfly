@@ -122,7 +122,7 @@ const isPopular = computed(() => {
 const title = computed(() => {
     const search = usePage().props.search;
     if (search) {
-        return `Pages with "${search}"`;
+        return `Uploads with "${search}"`;
     }
     if (isRandom.value) {
         return "Mixed";
