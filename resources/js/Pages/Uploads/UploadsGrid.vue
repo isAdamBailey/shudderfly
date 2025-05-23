@@ -58,6 +58,14 @@ function mediaPath(photo) {
             :key="photo.id"
             class="relative flex flex-col justify-between shadow-sm rounded-lg overflow-hidden bg-gray-300 h-[400px]"
         >
+            <div
+                v-if="photo.loading"
+                class="absolute inset-0 flex items-center justify-center bg-white/70 z-10"
+            >
+                <span class="animate-spin text-black">
+                    <i class="ri-loader-line text-3xl"></i>
+                </span>
+            </div>
             <Link
                 prefetch="hover"
                 as="button"
@@ -65,14 +73,6 @@ function mediaPath(photo) {
                 :href="route('pages.show', photo)"
                 @click="setItemLoading(photo)"
             >
-                <div
-                    v-if="photo.loading"
-                    class="absolute inset-0 flex items-center justify-center bg-white/70"
-                >
-                    <span class="animate-spin text-black"
-                        ><i class="ri-loader-line text-3xl"></i
-                    ></span>
-                </div>
                 <LazyLoader
                     v-if="mediaPath(photo)"
                     :src="mediaPath(photo)"
@@ -95,8 +95,13 @@ function mediaPath(photo) {
                 :href="route('books.show', photo.book)"
                 prefetch="hover"
                 class="w-full h-[50px]"
+                :as="photo.loading ? 'span' : 'a'"
+                @click="setItemLoading(photo)"
             >
-                <Button class="w-full h-full rounded-t-none rounded-b-lg whitespace-normal text-left">
+                <Button
+                    :disabled="photo.loading"
+                    class="w-full h-full rounded-t-none rounded-b-lg whitespace-normal text-left"
+                >
                     <span class="line-clamp-2">{{ photo.book.title }}</span>
                 </Button>
             </Link>
