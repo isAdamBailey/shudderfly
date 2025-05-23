@@ -3,7 +3,7 @@
         <img
             v-if="isLoading"
             :src="placeholder"
-            :class="`rounded-lg w-full h-full object-${objectFit}`"
+            :class="`w-full h-full object-${objectFit}`"
             alt="placeholder image"
             loading="lazy"
         />
@@ -17,7 +17,7 @@
                 disablepictureinpicture
                 controlslist="nodownload"
                 :poster="poster"
-                :class="`rounded-lg w-full h-full object-${objectFit}`"
+                :class="`w-full h-full object-${objectFit}`"
                 playsinline
                 @timeupdate="handleTimeUpdate"
                 @play="handlePlayPause"
@@ -46,7 +46,7 @@
         <img
             v-else
             ref="image"
-            :class="`rounded-lg w-full h-full object-${objectFit}`"
+            :class="`w-full h-full object-${objectFit}`"
             :src="imageSrc"
             :alt="alt"
             loading="lazy"

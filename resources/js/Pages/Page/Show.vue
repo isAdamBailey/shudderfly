@@ -7,7 +7,7 @@
         >
             <div class="text-center">
                 <BookTitle :book="page.book" />
-                <div class="relative min-h-[60vh]">
+                <div class="relative min-h-[60vh] mt-10">
                     <div class="relative mx-3 md:mx-32">
                         <Link
                             v-if="previousPage"
@@ -39,21 +39,23 @@
                         </Link>
                     </div>
                     <div class="h-screen w-full flex items-center justify-center">
-                        <LazyLoader
-                            v-if="page.media_path"
-                            class="max-h-screen w-auto"
-                            :src="page.media_path"
-                            :poster="page.media_poster"
-                            :alt="page.description"
-                            :book-id="page.book.id"
-                            :page-id="page.id"
-                            :object-fit="'contain'"
-                        />
-                        <VideoWrapper
-                            v-else-if="page.video_link"
-                            :url="page.video_link"
-                            :title="page.description"
-                        />
+                        <div v-if="page.media_path" class="rounded-lg overflow-hidden">
+                            <LazyLoader
+                                class="max-h-screen w-auto"
+                                :src="page.media_path"
+                                :poster="page.media_poster"
+                                :alt="page.description"
+                                :book-id="page.book.id"
+                                :page-id="page.id"
+                                :object-fit="'contain'"
+                            />
+                        </div>
+                        <div v-else-if="page.video_link" class="w-full max-w-4xl">
+                            <VideoWrapper
+                                :url="page.video_link"
+                                :title="page.description"
+                            />
+                        </div>
                     </div>
                     <p
                         v-if="canEditPages"

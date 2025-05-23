@@ -1,4 +1,5 @@
 <script setup>
+import Button from "@/Components/Button.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
@@ -55,13 +56,12 @@ function mediaPath(photo) {
         <div
             v-for="photo in items"
             :key="photo.id"
-            class="relative flex justify-center flex-wrap shadow-sm rounded-lg overflow-hidden bg-gray-300"
+            class="relative flex flex-col justify-between shadow-sm rounded-lg overflow-hidden bg-gray-300 h-[400px]"
         >
             <Link
-                prefetch
-                replace
+                prefetch="hover"
                 as="button"
-                class="w-full max-h-80"
+                class="w-full h-[350px] rounded-b-lg"
                 :href="route('pages.show', photo)"
                 @click="setItemLoading(photo)"
             >
@@ -91,12 +91,19 @@ function mediaPath(photo) {
                     v-html="photo.content"
                 ></div>
             </Link>
+            <Link
+                :href="route('books.show', photo.book)"
+                prefetch="hover"
+                class="w-full h-[50px]"
+            >
+                <Button class="w-full h-full rounded-t-none rounded-b-lg whitespace-normal text-left">
+                    <span class="line-clamp-2">{{ photo.book.title }}</span>
+                </Button>
+            </Link>
         </div>
     </div>
     <div v-else class="flex flex-col items-center mt-10">
-        <h2
-            class="mb-8 font-semibold text-2xl text-gray-100 leading-tight"
-        >
+        <h2 class="mb-8 font-semibold text-2xl text-gray-100 leading-tight">
             {{ notFountContent }}
         </h2>
         <ManEmptyCircle />
