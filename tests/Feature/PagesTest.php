@@ -181,6 +181,7 @@ class PagesTest extends TestCase
 
         $book = Book::factory()->has(Page::factory())->create();
         $page = $book->pages->first();
+        $initialReadCount = $page->read_count; // Capture initial count
 
         $this->get(route('pages.show', $page))->assertInertia(
             fn (Assert $page) => $page
@@ -195,7 +196,39 @@ class PagesTest extends TestCase
                 ->has('books')
         );
 
-        $this->assertSame(1.0, $page->fresh()->read_count);
+        // New pages get 3x age boost (≤7 days old)
+        $this->assertSame($initialReadCount + 3.0, $page->fresh()->read_count);
+    }
+
+    public function test_age_based_read_count_multipliers()
+    {
+        $this->actingAs(User::factory()->create());
+
+        $book = Book::factory()->create();
+
+        // Create dummy pages with higher read counts to ensure our test pages aren't in top 3
+        Page::factory()->for($book)->count(3)->create(['read_count' => 100]);
+
+        // Create pages of different ages
+        $newPage = Page::factory()->for($book)->create(['created_at' => now()]);
+        $monthOldPage = Page::factory()->for($book)->create(['created_at' => now()->subDays(15)]);
+        $threeMonthOldPage = Page::factory()->for($book)->create(['created_at' => now()->subDays(60)]);
+        $yearOldPage = Page::factory()->for($book)->create(['created_at' => now()->subDays(200)]);
+        $veryOldPage = Page::factory()->for($book)->create(['created_at' => now()->subYears(2)]);
+
+        // Run jobs directly for testing
+        (new \App\Jobs\IncrementPageReadCount($newPage))->handle();
+        (new \App\Jobs\IncrementPageReadCount($monthOldPage))->handle();
+        (new \App\Jobs\IncrementPageReadCount($threeMonthOldPage))->handle();
+        (new \App\Jobs\IncrementPageReadCount($yearOldPage))->handle();
+        (new \App\Jobs\IncrementPageReadCount($veryOldPage))->handle();
+
+        // Verify age-based multipliers
+        $this->assertSame(3.0, $newPage->fresh()->read_count); // ≤7 days: 3x
+        $this->assertSame(2.0, $monthOldPage->fresh()->read_count); // ≤30 days: 2x
+        $this->assertSame(1.5, $threeMonthOldPage->fresh()->read_count); // ≤90 days: 1.5x
+        $this->assertSame(1.2, $yearOldPage->fresh()->read_count); // ≤365 days: 1.2x
+        $this->assertSame(1.0, $veryOldPage->fresh()->read_count); // >365 days: 1x
     }
 
     public function test_page_cannot_be_stored_without_permissions()

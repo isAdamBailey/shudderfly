@@ -46,9 +46,9 @@ class PageController extends Controller
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('content', 'LIKE', '%'.$search.'%')
-                          ->orWhereHas('book', function ($query) use ($search) {
-                              $query->where('title', 'LIKE', '%'.$search.'%');
-                          });
+                        ->orWhereHas('book', function ($query) use ($search) {
+                            $query->where('title', 'LIKE', '%'.$search.'%');
+                        });
                 });
             })
             ->unless($filter, fn ($query) => $query->latest())

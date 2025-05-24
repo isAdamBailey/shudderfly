@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Page;
+use Carbon\Carbon;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
@@ -26,21 +27,46 @@ class IncrementPageReadCount implements ShouldQueue
     public function handle(): void
     {
         if ($this->page->read_count === 0.0) {
-            $this->page->increment('read_count');
+            $baseIncrement = $this->calculateRecencyBoost();
+            $this->page->increment('read_count', $baseIncrement);
 
             return;
         }
-
-        // highest read pages
-        $topPages = Page::orderBy('read_count', 'desc')->take(15)->pluck('id')->toArray();
 
         // If the page is in the top 3, don't increment the read count
-        if (in_array($this->page->id, array_slice($topPages, 0, 3))) {
+        $topPages = Page::orderBy('read_count', 'desc')->take(3)->pluck('id')->toArray();
+        if (in_array($this->page->id, $topPages)) {
             return;
         }
 
-        // If the page is highly read, we only want to increment the read count by 0.1
-        $incrementValue = in_array($this->page->id, $topPages) ? 0.1 : 1;
+        // Apply recency boost
+        $incrementValue = $this->calculateRecencyBoost();
         $this->page->increment('read_count', $incrementValue);
+    }
+
+    /**
+     * Calculate a recency boost multiplier for newer pages
+     */
+    private function calculateRecencyBoost(): float
+    {
+        $pageAge = $this->page->created_at->diffInDays(Carbon::now());
+
+        // Apply different boost strategies based on age
+        if ($pageAge <= 7) {
+            // New pages (1 week) get 3x boost
+            return 3.0;
+        } elseif ($pageAge <= 30) {
+            // Recent pages (1 month) get 2x boost
+            return 2.0;
+        } elseif ($pageAge <= 90) {
+            // Semi-recent pages (3 months) get 1.5x boost
+            return 1.5;
+        } elseif ($pageAge <= 365) {
+            // Pages under 1 year get slight boost
+            return 1.2;
+        }
+
+        // Older pages get no boost
+        return 1.0;
     }
 }
