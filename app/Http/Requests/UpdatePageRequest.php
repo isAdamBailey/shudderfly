@@ -29,7 +29,7 @@ class UpdatePageRequest extends FormRequest
             'image' => [
                 'nullable',
                 'max:70000',
-                'mimes:jpg,jpeg,bmp,png,svg,webp,avi,gif,mpeg,quicktime,mp4',
+                'mimetypes:image/jpeg,image/jpg,image/png,image/bmp,image/gif,image/svg+xml,image/webp,video/mp4,video/avi,video/quicktime,video/mpeg,video/webm,video/x-matroska,application/octet-stream',
             ],
             'video_link' => 'string|nullable',
             'created_at' => 'date|nullable',

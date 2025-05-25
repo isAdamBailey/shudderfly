@@ -128,7 +128,6 @@ const form = useForm({
 const canTakeSnapshot = ref(false);
 const isPaused = ref(true);
 
-// Determine sizing classes based on fillContainer prop
 const imageClasses = computed(() => {
     if (props.fillContainer) {
         return `w-full h-full object-${props.objectFit}`;
@@ -143,18 +142,7 @@ const containerClasses = computed(() => {
     return "relative flex items-center justify-center";
 });
 
-// Debug: Log the conditions for button visibility
 const isButtonVisible = computed(() => {
-    const conditions = {
-        isVideo: isVideo(imageSrc.value),
-        isCover: props.isCover,
-        notCover: !props.isCover,
-        bookId: props.bookId,
-        snapshotEnabled: usePage().props.settings?.snapshot_enabled
-    };
-    
-    console.log('Button visibility conditions:', conditions);
-    
     return !props.isCover && props.bookId && usePage().props.settings?.snapshot_enabled;
 });
 
