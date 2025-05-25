@@ -6,6 +6,7 @@ import VideoIcon from "@/Components/svg/VideoIcon.vue";
 import TextInput from "@/Components/TextInput.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
+import { useVideoOptimization } from "@/composables/useVideoOptimization.js";
 import { useForm, usePage } from "@inertiajs/vue3";
 import { useVuelidate } from "@vuelidate/core";
 import { computed, ref } from "vue";
@@ -26,6 +27,10 @@ const form = useForm({
 });
 
 const imageInput = ref(null);
+const imagePreview = ref("");
+const mediaOption = ref("upload"); // upload , link
+
+const { compressionProgress, optimizationProgress, processMediaFile } = useVideoOptimization();
 
 const rules = computed(() => {
     const fileSizeValidation = (image) => {
@@ -59,9 +64,6 @@ const rules = computed(() => {
 
 let v$ = useVuelidate(rules, form);
 
-const imagePreview = ref("");
-const mediaOption = ref("upload"); // upload , link
-
 function selectLink() {
     mediaOption.value = "link";
     clearImageFileInput();
@@ -77,18 +79,23 @@ function selectNewImage() {
     imageInput.value.click();
 }
 
-function updateImagePreview() {
+async function updateImagePreview() {
     const photo = imageInput.value.files[0];
     if (!photo) return;
 
-    form.image = photo;
-    v$.value.$touch();
+    v$.value.$reset();
 
+    const processedFile = await processMediaFile(photo);
+    
     const reader = new FileReader();
     reader.onload = (e) => {
         imagePreview.value = e.target.result;
     };
-    reader.readAsDataURL(photo);
+    reader.readAsDataURL(processedFile);
+    
+    form.image = processedFile;
+
+    v$.value.$touch();
 }
 
 function clearImageFileInput() {
@@ -99,10 +106,6 @@ function clearImageFileInput() {
 }
 
 const submit = async () => {
-    if (imageInput.value) {
-        form.image = imageInput.value.files[0];
-    }
-
     const validated = await v$.value.$validate();
 
     if (validated) {
@@ -148,6 +151,24 @@ const submit = async () => {
                         class="hidden"
                         @change="updateImagePreview"
                     />
+                    
+                    <!-- Processing Progress -->
+                    <div v-if="compressionProgress" class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
+                        <div class="flex items-center justify-between text-sm text-blue-700 mb-2">
+                            <div class="flex items-center space-x-2">
+                                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                                <span>Optimizing video...</span>
+                            </div>
+                            <span class="font-medium">{{ optimizationProgress }}%</span>
+                        </div>
+                        <div class="w-full bg-blue-200 rounded-full h-2">
+                            <div 
+                                class="bg-blue-500 h-2 rounded-full transition-all duration-300 ease-out"
+                                :style="`width: ${optimizationProgress}%`"
+                            ></div>
+                        </div>
+                    </div>
+
                     <div
                         v-if="imagePreview.startsWith('data:image')"
                         class="w-full min-h-60 rounded bg-contain bg-center bg-no-repeat"
@@ -168,6 +189,7 @@ const submit = async () => {
                     <Button
                         class="mt-2 mr-2"
                         type="button"
+                        :disabled="compressionProgress"
                         @click.prevent="selectNewImage"
                     >
                         Select Media to Upload
@@ -239,9 +261,11 @@ const submit = async () => {
                 <Button
                     class="w-3/4 flex justify-center py-3"
                     :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing || v$.$error"
+                    :disabled="compressionProgress || form.processing || v$.$error"
                 >
-                    <span class="text-xl">Create Page!</span>
+                    <span class="text-xl">
+                        {{ compressionProgress ? `Optimizing... ${optimizationProgress}%` : 'Create Page!' }}
+                    </span>
                 </Button>
             </div>
         </form>

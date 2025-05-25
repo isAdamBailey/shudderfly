@@ -87,12 +87,74 @@ class StoreVideo implements ShouldQueue
 
             $media = FFMpeg::fromDisk('local')->open($this->filePath);
 
-            $media->export()
-                ->inFormat((new X264)
-                    ->setKiloBitrate(300)
-                    ->setAudioKiloBitrate(64))
-                ->resize(512, 288)
-                ->save($tempFile);
+            // Get video properties for resizing decision
+            $videoStream = $media->getVideoStream();
+            $width = $videoStream->get('width');
+            $height = $videoStream->get('height');
+
+            // Use raw FFmpeg command for guaranteed compression
+            $videoBitrate = 800; // Fixed lower bitrate for consistent compression
+            $audioBitrate = 96;  // Fixed audio bitrate
+            
+            // Build FFmpeg command with aggressive compression
+            $ffmpegParams = [
+                // Input
+                '-i', storage_path('app/' . $this->filePath),
+                
+                // Force re-encoding with compression
+                '-c:v', 'libx264',                  // Force H.264 video codec
+                '-c:a', 'aac',                      // Force AAC audio codec
+                '-b:v', $videoBitrate . 'k',        // Video bitrate
+                '-b:a', $audioBitrate . 'k',        // Audio bitrate
+                '-preset', 'medium',                // Balance speed vs compression
+                '-crf', '28',                       // Constant rate factor
+                '-profile:v', 'main',               // H.264 profile
+                '-level', '3.1',                    // H.264 level
+                
+                // Resizing if needed with even dimensions
+                ($width > 1280 || $height > 720) ? '-vf' : null,
+                ($width > 1280 || $height > 720) ? 'scale=1280:720:force_original_aspect_ratio=decrease:force_divisible_by=2' : null,
+                
+                // Remove privacy metadata
+                '-metadata', 'location=',
+                '-metadata', 'location-eng=',
+                '-metadata', 'GPS_COORDINATES=',
+                '-metadata', 'make=',
+                '-metadata', 'model=',
+                '-metadata', 'software=',
+                '-metadata', 'creation_time=',
+                '-metadata', 'date=',
+                '-metadata', 'comment=',
+                '-metadata', 'description=',
+                '-metadata', 'artist=',
+                '-metadata', 'author=',
+                '-metadata', 'copyright=',
+                
+                // Output optimization
+                '-movflags', '+faststart',
+                '-avoid_negative_ts', 'make_zero',
+                '-f', 'mp4',
+                '-y',                               // Overwrite output file
+                $tempFile
+            ];
+            
+            // Remove null values from params
+            $ffmpegParams = array_filter($ffmpegParams, function($value) {
+                return $value !== null;
+            });
+            
+
+            
+            // Execute FFmpeg command directly
+            $command = 'ffmpeg ' . implode(' ', array_map('escapeshellarg', $ffmpegParams));
+            
+            $output = [];
+            $returnCode = 0;
+            exec($command . ' 2>&1', $output, $returnCode);
+            
+            if ($returnCode !== 0) {
+                throw new \RuntimeException('FFmpeg processing failed: ' . implode("\n", $output));
+            }
 
             $screenshotContents = $media->getFrameFromSeconds(0.5)
                 ->export()
