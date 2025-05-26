@@ -92,22 +92,35 @@ class StoreVideo implements ShouldQueue
             $width = $videoStream->get('width');
             $height = $videoStream->get('height');
             
+            // Check for rotation metadata
+            $rotation = $videoStream->get('rotate') ?? 0;
+            
             // Determine if video needs resizing and calculate appropriate dimensions
             $isPortrait = $height > $width;
+            
+            // Build rotation filter based on metadata
+            $rotationFilter = '';
+            if ($rotation == 90 || $rotation == -270) {
+                $rotationFilter = 'transpose=1,'; // 90 degrees clockwise
+            } elseif ($rotation == 180 || $rotation == -180) {
+                $rotationFilter = 'transpose=2,transpose=2,'; // 180 degrees
+            } elseif ($rotation == 270 || $rotation == -90) {
+                $rotationFilter = 'transpose=2,'; // 90 degrees counter-clockwise
+            }
             
             if ($isPortrait) {
                 // For portrait videos, limit height to 1280 and width proportionally
                 if ($height > 1280 || $width > 720) {
-                    $videoFilter = 'scale=-2:1280:force_original_aspect_ratio=decrease:force_divisible_by=2';
+                    $videoFilter = $rotationFilter . 'scale=-2:1280:force_original_aspect_ratio=decrease:force_divisible_by=2';
                 } else {
-                    $videoFilter = 'scale=trunc(iw/2)*2:trunc(ih/2)*2';
+                    $videoFilter = $rotationFilter . 'scale=trunc(iw/2)*2:trunc(ih/2)*2';
                 }
             } else {
                 // For landscape videos, limit width to 1280 and height proportionally  
                 if ($width > 1280 || $height > 720) {
-                    $videoFilter = 'scale=1280:-2:force_original_aspect_ratio=decrease:force_divisible_by=2';
+                    $videoFilter = $rotationFilter . 'scale=1280:-2:force_original_aspect_ratio=decrease:force_divisible_by=2';
                 } else {
-                    $videoFilter = 'scale=trunc(iw/2)*2:trunc(ih/2)*2';
+                    $videoFilter = $rotationFilter . 'scale=trunc(iw/2)*2:trunc(ih/2)*2';
                 }
             }
 
@@ -117,9 +130,6 @@ class StoreVideo implements ShouldQueue
             
             // Build FFmpeg command with aggressive compression
             $ffmpegParams = [
-                // Enable autorotate before input
-                '-autorotate',
-                
                 // Input
                 '-i', storage_path('app/' . $this->filePath),
                 
