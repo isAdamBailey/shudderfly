@@ -94,7 +94,6 @@ class StoreVideo implements ShouldQueue
             
             // Determine if video needs resizing and calculate appropriate dimensions
             $isPortrait = $height > $width;
-            $videoFilter = '';
             
             if ($isPortrait) {
                 // For portrait videos, limit height to 1280 and width proportionally
@@ -118,8 +117,9 @@ class StoreVideo implements ShouldQueue
             
             // Build FFmpeg command with aggressive compression
             $ffmpegParams = [
-                // Input
+                // Input with autorotate enabled
                 '-i', storage_path('app/' . $this->filePath),
+                '-autorotate',
                 
                 // Force re-encoding with compression
                 '-c:v', 'libx264',                  // Force H.264 video codec
@@ -135,7 +135,7 @@ class StoreVideo implements ShouldQueue
                 '-vf',
                 $videoFilter,
                 
-                // Remove privacy metadata
+                // Remove privacy metadata and rotation
                 '-metadata', 'location=',
                 '-metadata', 'location-eng=',
                 '-metadata', 'GPS_COORDINATES=',
@@ -149,6 +149,7 @@ class StoreVideo implements ShouldQueue
                 '-metadata', 'artist=',
                 '-metadata', 'author=',
                 '-metadata', 'copyright=',
+                '-metadata:s:v:0', 'rotate=0',
                 
                 // Output optimization
                 '-movflags', '+faststart',
