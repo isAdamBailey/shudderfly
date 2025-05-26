@@ -94,20 +94,21 @@ class StoreVideo implements ShouldQueue
             
             // Determine if video needs resizing and calculate appropriate dimensions
             $isPortrait = $height > $width;
-            $needsResize = false;
-            $scaleFilter = null;
+            $videoFilter = '';
             
             if ($isPortrait) {
                 // For portrait videos, limit height to 1280 and width proportionally
                 if ($height > 1280 || $width > 720) {
-                    $needsResize = true;
-                    $scaleFilter = 'scale=-2:1280:force_original_aspect_ratio=decrease';
+                    $videoFilter = 'scale=-2:1280:force_original_aspect_ratio=decrease:force_divisible_by=2';
+                } else {
+                    $videoFilter = 'scale=trunc(iw/2)*2:trunc(ih/2)*2';
                 }
             } else {
                 // For landscape videos, limit width to 1280 and height proportionally  
                 if ($width > 1280 || $height > 720) {
-                    $needsResize = true;
-                    $scaleFilter = 'scale=1280:-2:force_original_aspect_ratio=decrease';
+                    $videoFilter = 'scale=1280:-2:force_original_aspect_ratio=decrease:force_divisible_by=2';
+                } else {
+                    $videoFilter = 'scale=trunc(iw/2)*2:trunc(ih/2)*2';
                 }
             }
 
@@ -117,9 +118,6 @@ class StoreVideo implements ShouldQueue
             
             // Build FFmpeg command with aggressive compression
             $ffmpegParams = [
-                // Disable automatic rotation to preserve original orientation
-                '-noautorotate',
-                
                 // Input
                 '-i', storage_path('app/' . $this->filePath),
                 
@@ -133,9 +131,9 @@ class StoreVideo implements ShouldQueue
                 '-profile:v', 'main',               // H.264 profile
                 '-level', '3.1',                    // H.264 level
                 
-                // Resizing if needed - preserves original orientation
-                $needsResize ? '-vf' : null,
-                $needsResize ? $scaleFilter : null,
+                // Apply video filters
+                '-vf',
+                $videoFilter,
                 
                 // Remove privacy metadata
                 '-metadata', 'location=',
