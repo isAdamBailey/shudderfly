@@ -120,6 +120,9 @@ class StoreVideo implements ShouldQueue
                 // Input
                 '-i', storage_path('app/' . $this->filePath),
                 
+                // Disable automatic rotation to preserve original orientation
+                '-noautorotate',
+                
                 // Force re-encoding with compression
                 '-c:v', 'libx264',                  // Force H.264 video codec
                 '-c:a', 'aac',                      // Force AAC audio codec
