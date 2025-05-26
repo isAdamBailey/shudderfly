@@ -132,6 +132,12 @@ const imageClasses = computed(() => {
     if (props.fillContainer) {
         return `w-full h-full object-${props.objectFit}`;
     }
+    
+    // For videos, use max dimensions instead of fixed height to preserve aspect ratio
+    if (isVideo(imageSrc.value)) {
+        return `max-w-full max-h-[70vh] object-${props.objectFit}`;
+    }
+    
     return `w-auto h-[70vh] object-${props.objectFit}`;
 });
 
