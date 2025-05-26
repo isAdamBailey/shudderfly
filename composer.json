@@ -26,7 +26,6 @@
         "laravel/breeze": "^2.0",
         "laravel/pint": "^1.6",
         "laravel/sail": "^1.21",
-        "laravel/telescope": "^5.0",
         "mmo/faker-images": "^0.9.0",
         "mockery/mockery": "^1.5.1",
         "nunomaduro/collision": "^8.1",
@@ -62,9 +61,7 @@
     },
     "extra": {
         "laravel": {
-            "dont-discover": [
-                "laravel/telescope"
-            ]
+            "dont-discover": []
         }
     },
     "config": {
