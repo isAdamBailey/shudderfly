@@ -26,7 +26,7 @@ class DeleteOldMedia implements ShouldQueue
 
     public function handle(): void
     {
-        if ($this->mediaPath && Storage::disk('s3')->exists($this->mediaPath)) {
+        if ($this->mediaPath) {
             try {
                 Storage::disk('s3')->delete($this->mediaPath);
             } catch (\Exception $e) {
@@ -37,7 +37,7 @@ class DeleteOldMedia implements ShouldQueue
             }
         }
 
-        if ($this->posterPath && Storage::disk('s3')->exists($this->posterPath)) {
+        if ($this->posterPath) {
             try {
                 Storage::disk('s3')->delete($this->posterPath);
             } catch (\Exception $e) {

@@ -152,9 +152,20 @@ class BookController extends Controller
      */
     public function destroy(Book $book): Redirector|RedirectResponse|Application
     {
-        foreach ($book->pages() as $page) {
-            Storage::disk('s3')->delete($page->media_path);
+        // Get all pages and delete their S3 assets
+        foreach ($book->pages as $page) {
+            // Get raw database values, not the accessor-transformed URLs
+            $rawMediaPoster = $page->getAttributes()['media_poster'] ?? null;
+            $rawMediaPath = $page->getAttributes()['media_path'] ?? null;
+
+            if (! empty($rawMediaPoster)) {
+                Storage::disk('s3')->delete($rawMediaPoster);
+            }
+            if (! empty($rawMediaPath)) {
+                Storage::disk('s3')->delete($rawMediaPath);
+            }
         }
+        
         $book->pages()->delete();
         $book->delete();
 

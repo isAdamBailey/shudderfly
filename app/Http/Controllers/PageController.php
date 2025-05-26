@@ -166,8 +166,9 @@ class PageController extends Controller
         if ($request->hasFile('image')) {
             $file = $request->file('image');
             if ($file->isValid()) {
-                $oldMediaPath = $page->media_path;
-                $oldPosterPath = $page->media_poster;
+                // Get raw database values, not the accessor-transformed URLs
+                $oldMediaPath = $page->getAttributes()['media_path'] ?? null;
+                $oldPosterPath = $page->getAttributes()['media_poster'] ?? null;
 
                 $mimeType = $file->getMimeType();
                 $filePath = Storage::disk('local')->put('temp', $file);
@@ -200,8 +201,9 @@ class PageController extends Controller
             }
 
             if ($request->has('video_link') && ! is_null($request->video_link)) {
-                $oldMediaPath = $page->media_path;
-                $oldPosterPath = $page->media_poster;
+                // Get raw database values, not the accessor-transformed URLs
+                $oldMediaPath = $page->getAttributes()['media_path'] ?? null;
+                $oldPosterPath = $page->getAttributes()['media_poster'] ?? null;
 
                 $page->media_path = '';
                 $page->media_poster = '';
@@ -222,11 +224,15 @@ class PageController extends Controller
      */
     public function destroy(Page $page): Redirector|RedirectResponse|Application
     {
-        if (! empty($page->media_poster) && Storage::disk('s3')->exists($page->media_poster)) {
-            Storage::disk('s3')->delete($page->media_poster);
+        // Get raw database values, not the accessor-transformed URLs
+        $rawMediaPoster = $page->getAttributes()['media_poster'] ?? null;
+        $rawMediaPath = $page->getAttributes()['media_path'] ?? null;
+
+        if (! empty($rawMediaPoster)) {
+            Storage::disk('s3')->delete($rawMediaPoster);
         }
-        if (! empty($page->media_path) && Storage::disk('s3')->exists($page->media_path)) {
-            Storage::disk('s3')->delete($page->media_path);
+        if (! empty($rawMediaPath)) {
+            Storage::disk('s3')->delete($rawMediaPath);
         }
         $page->delete();
 
