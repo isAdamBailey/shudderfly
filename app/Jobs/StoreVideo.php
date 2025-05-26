@@ -91,6 +91,25 @@ class StoreVideo implements ShouldQueue
             $videoStream = $media->getVideoStream();
             $width = $videoStream->get('width');
             $height = $videoStream->get('height');
+            
+            // Determine if video needs resizing and calculate appropriate dimensions
+            $isPortrait = $height > $width;
+            $needsResize = false;
+            $scaleFilter = null;
+            
+            if ($isPortrait) {
+                // For portrait videos, limit height to 1280 and width proportionally
+                if ($height > 1280 || $width > 720) {
+                    $needsResize = true;
+                    $scaleFilter = 'scale=-2:1280:force_original_aspect_ratio=decrease';
+                }
+            } else {
+                // For landscape videos, limit width to 1280 and height proportionally  
+                if ($width > 1280 || $height > 720) {
+                    $needsResize = true;
+                    $scaleFilter = 'scale=1280:-2:force_original_aspect_ratio=decrease';
+                }
+            }
 
             // Use raw FFmpeg command for guaranteed compression
             $videoBitrate = 800; // Fixed lower bitrate for consistent compression
@@ -111,9 +130,9 @@ class StoreVideo implements ShouldQueue
                 '-profile:v', 'main',               // H.264 profile
                 '-level', '3.1',                    // H.264 level
                 
-                // Resizing if needed - compatible with older FFmpeg versions
-                ($width > 1280 || $height > 720) ? '-vf' : null,
-                ($width > 1280 || $height > 720) ? 'scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2' : null,
+                // Resizing if needed - preserves original orientation
+                $needsResize ? '-vf' : null,
+                $needsResize ? $scaleFilter : null,
                 
                 // Remove privacy metadata
                 '-metadata', 'location=',
