@@ -111,9 +111,9 @@ class StoreVideo implements ShouldQueue
                 '-profile:v', 'main',               // H.264 profile
                 '-level', '3.1',                    // H.264 level
                 
-                // Resizing if needed with even dimensions
+                // Resizing if needed - compatible with older FFmpeg versions
                 ($width > 1280 || $height > 720) ? '-vf' : null,
-                ($width > 1280 || $height > 720) ? 'scale=1280:720:force_original_aspect_ratio=decrease:force_divisible_by=2' : null,
+                ($width > 1280 || $height > 720) ? 'scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2' : null,
                 
                 // Remove privacy metadata
                 '-metadata', 'location=',
