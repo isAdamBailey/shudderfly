@@ -117,11 +117,11 @@ class StoreVideo implements ShouldQueue
             
             // Build FFmpeg command with aggressive compression
             $ffmpegParams = [
-                // Input
-                '-i', storage_path('app/' . $this->filePath),
-                
                 // Disable automatic rotation to preserve original orientation
                 '-noautorotate',
+                
+                // Input
+                '-i', storage_path('app/' . $this->filePath),
                 
                 // Force re-encoding with compression
                 '-c:v', 'libx264',                  // Force H.264 video codec
