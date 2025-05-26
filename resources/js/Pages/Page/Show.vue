@@ -64,20 +64,22 @@
                 </div>
                 <div
                     v-if="hasContent"
-                    class="m-5 flex justify-between bg-theme-content md:rounded-lg p-3 my-3 relative z-20"
+                    class="mx-5 mt-8 mb-5 relative z-20"
                 >
-                    <div
-                        class="page-content px-3 py-3 text-lg text-left"
-                        v-html="page.content"
-                    ></div>
-                    <div class="ml-3 mt-3 text-right">
-                        <Button
-                            type="button"
-                            :disabled="speaking"
-                            @click="speak(stripHtml(page.content))"
-                        >
-                            <i class="ri-speak-fill text-xl"></i>
-                        </Button>
+                    <div class="text-container">
+                        <div
+                            class="page-content-columns max-w-5xl mx-auto text-lg text-left relative"
+                            v-html="page.content"
+                        ></div>
+                        <div class="flex justify-end mt-6">
+                            <Button
+                                type="button"
+                                :disabled="speaking"
+                                @click="speak(stripHtml(page.content))"
+                            >
+                                <i class="ri-speak-fill text-xl"></i>
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </div>
