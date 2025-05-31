@@ -39,7 +39,18 @@ class IncrementBookReadCount implements ShouldQueue
             return;
         }
 
-        // Apply recency boost
+        // Check if book is recent enough to deserve boost
+        $bookAge = $this->book->created_at->diffInDays(Carbon::now());
+        $isRecent = $bookAge <= 90; // Books under 3 months are considered recent
+
+        // If the book is in the top 20 but not recent, only increment by a tenth
+        $top20Books = Book::orderBy('read_count', 'desc')->take(20)->pluck('id')->toArray();
+        if (in_array($this->book->id, $top20Books) && !$isRecent) {
+            $this->book->increment('read_count', 0.1);
+            return;
+        }
+
+        // Apply recency boost (for recent books or books not in top 20)
         $incrementValue = $this->calculateRecencyBoost();
         $this->book->increment('read_count', $incrementValue);
     }
@@ -52,17 +63,17 @@ class IncrementBookReadCount implements ShouldQueue
         $bookAge = $this->book->created_at->diffInDays(Carbon::now());
 
         // Apply different boost strategies based on age
-        if ($bookAge <= 14) {
-            // New books (2 weeks) get 2.5x boost
+        if ($bookAge <= 7) {
+            // New books (1 week) get 2.5x boost
             return 2.5;
-        } elseif ($bookAge <= 60) {
-            // Recent books (2 months) get 1.8x boost
+        } elseif ($bookAge <= 30) {
+            // Recent books (1 month) get 1.8x boost
             return 1.8;
-        } elseif ($bookAge <= 180) {
-            // Semi-recent books (6 months) get 1.4x boost
+        } elseif ($bookAge <= 60) {
+            // Semi-recent books (2 months) get 1.4x boost
             return 1.4;
-        } elseif ($bookAge <= 365) {
-            // Books under 1 year get slight boost
+        } elseif ($bookAge <= 90) {
+            // Books under 3 months get slight boost
             return 1.2;
         }
 

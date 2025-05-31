@@ -39,7 +39,18 @@ class IncrementPageReadCount implements ShouldQueue
             return;
         }
 
-        // Apply recency boost
+        // Check if page is recent enough to deserve boost
+        $pageAge = $this->page->created_at->diffInDays(Carbon::now());
+        $isRecent = $pageAge <= 90; // Pages under 3 months are considered recent
+
+        // If the page is in the top 20 but not recent, only increment by a tenth
+        $top20Pages = Page::orderBy('read_count', 'desc')->take(20)->pluck('id')->toArray();
+        if (in_array($this->page->id, $top20Pages) && !$isRecent) {
+            $this->page->increment('read_count', 0.1);
+            return;
+        }
+
+        // Apply recency boost (for recent pages or pages not in top 20)
         $incrementValue = $this->calculateRecencyBoost();
         $this->page->increment('read_count', $incrementValue);
     }
@@ -58,11 +69,11 @@ class IncrementPageReadCount implements ShouldQueue
         } elseif ($pageAge <= 30) {
             // Recent pages (1 month) get 2x boost
             return 2.0;
-        } elseif ($pageAge <= 90) {
-            // Semi-recent pages (3 months) get 1.5x boost
+        } elseif ($pageAge <= 60) {
+            // Semi-recent pages (2 months) get 1.5x boost
             return 1.5;
-        } elseif ($pageAge <= 365) {
-            // Pages under 1 year get slight boost
+        } elseif ($pageAge <= 90) {
+            // Pages under 3 months get slight boost
             return 1.2;
         }
 
