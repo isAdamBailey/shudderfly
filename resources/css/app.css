@@ -143,7 +143,30 @@
 }
 
 .page-content a {
-    @apply text-blue-600 underline;
+    @apply text-blue-400 underline decoration-2 underline-offset-2;
+    transition: all 0.3s ease;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.page-content a:hover {
+    @apply text-blue-300;
+    text-decoration-color: rgba(59, 130, 246, 0.7);
+    text-shadow: 0 1px 4px rgba(59, 130, 246, 0.4);
+    transform: translateY(-1px);
+}
+
+.page-content a:active {
+    @apply text-blue-500;
+    transform: translateY(0);
+}
+
+.page-content a:visited {
+    @apply text-purple-400;
+}
+
+.page-content a:visited:hover {
+    @apply text-purple-300;
+    text-shadow: 0 1px 4px rgba(168, 85, 247, 0.4);
 }
 
 /* Elegant Book Text Container */
@@ -177,27 +200,23 @@
     );
 }
 
-/* Multi-column book layout */
-.page-content-columns {
-    columns: 2;
-    column-gap: 3rem;
-    column-rule: 1px solid rgba(255, 255, 255, 0.2);
-    font-family: "Georgia", serif;
+/* Single-column book layout */
+.page-content {
     font-size: 1.1rem;
     line-height: 1.8;
     text-align: justify;
     color: rgba(255, 255, 255, 0.95);
+    max-width: 800px;
+    margin: 0 auto;
 }
 
 /* Prevent headings from breaking across columns */
-.page-content-columns h1,
-.page-content-columns h2,
-.page-content-columns h3,
-.page-content-columns h4,
-.page-content-columns h5,
-.page-content-columns h6 {
-    break-after: avoid;
-    column-span: all;
+.page-content h1,
+.page-content h2,
+.page-content h3,
+.page-content h4,
+.page-content h5,
+.page-content h6 {
     margin-top: 2.5rem;
     margin-bottom: 1.5rem;
     font-weight: 600;
@@ -206,14 +225,14 @@
 }
 
 /* Auto-style paragraphs */
-.page-content-columns p {
+.page-content p {
     margin-bottom: 1.4rem;
     text-indent: 1.5rem;
     color: rgba(255, 255, 255, 0.92);
 }
 
 /* First paragraph special styling */
-.page-content-columns p:first-of-type {
+.page-content p:first-of-type {
     font-size: 1.25rem;
     font-weight: 300;
     text-indent: 0;
@@ -222,31 +241,70 @@
 }
 
 /* Drop cap for first letter */
-.page-content-columns p:first-of-type::first-letter {
-    font-size: 3.5em;
+.page-content p:first-of-type::first-letter {
+    font-size: 2.5em;
     float: left;
-    line-height: 0.8;
-    margin: 0.1em 0.1em 0 0;
+    line-height: 0.9;
+    margin: 0.05em 0.08em 0.02em 0;
     font-weight: 400;
     color: rgba(255, 255, 255, 0.98);
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    shape-outside: margin-box;
+}
+
+/* Anchor styles for page content */
+.page-content a {
+    @apply text-blue-400 underline decoration-2 underline-offset-2;
+    transition: all 0.3s ease;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    color: rgba(
+        96,
+        165,
+        250,
+        0.95
+    ) !important; /* Override any inherited colors */
+}
+
+.page-content a:hover {
+    @apply text-blue-300;
+    text-decoration-color: rgba(59, 130, 246, 0.7);
+    text-shadow: 0 1px 4px rgba(59, 130, 246, 0.4);
+    transform: translateY(-1px);
+    color: rgba(147, 197, 253, 0.98) !important;
+}
+
+.page-content a:active {
+    @apply text-blue-500;
+    transform: translateY(0);
+    color: rgba(59, 130, 246, 0.9) !important;
+}
+
+.page-content a:visited {
+    @apply text-purple-400;
+    color: rgba(196, 181, 253, 0.9) !important;
+}
+
+.page-content a:visited:hover {
+    @apply text-purple-300;
+    text-shadow: 0 1px 4px rgba(168, 85, 247, 0.4);
+    color: rgba(196, 181, 253, 0.95) !important;
 }
 
 /* Style bold text */
-.page-content-columns strong,
-.page-content-columns b {
-    font-weight: 600;
+.page-content strong,
+.page-content b {
+    font-weight: 700;
     color: rgba(255, 255, 255, 0.98);
 }
 
 /* Style italic text */
-.page-content-columns em,
-.page-content-columns i {
+.page-content em,
+.page-content i {
     font-style: italic;
     color: rgba(255, 255, 255, 0.95);
 }
 
-/* Responsive: single column on mobile */
+/* Responsive: mobile adjustments */
 @media (max-width: 768px) {
     .text-container {
         padding: 1.5rem;
@@ -254,20 +312,18 @@
         border-radius: 16px;
     }
 
-    .page-content-columns {
-        columns: 1;
-        column-gap: 0;
-        column-rule: none;
+    .page-content {
         font-size: 1rem;
+        max-width: 100%;
     }
 
-    .page-content-columns p {
+    .page-content p {
         text-indent: 0;
         margin-bottom: 1.2rem;
     }
 
-    .page-content-columns p:first-of-type::first-letter {
-        font-size: 2.5em;
+    .page-content p:first-of-type::first-letter {
+        font-size: 2em;
     }
 }
 

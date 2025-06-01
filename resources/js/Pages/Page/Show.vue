@@ -68,7 +68,7 @@
                 >
                     <div class="text-container">
                         <div
-                            class="page-content-columns max-w-5xl mx-auto text-lg text-left relative"
+                            class="font-content page-content max-w-5xl mx-auto text-lg text-left relative"
                             v-html="page.content"
                         ></div>
                         <div class="flex justify-end mt-6">

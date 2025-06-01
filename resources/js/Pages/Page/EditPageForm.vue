@@ -42,8 +42,6 @@ const bookForm = useForm({
 
 const imagePreview = ref(props.page.media_path);
 
-
-
 const imageInput = ref(null);
 const mediaOption = ref("upload"); // upload , link
 
@@ -95,24 +93,25 @@ async function updateImagePreview() {
 
     try {
         const processedFile = await processMediaFile(photo);
-        
+
         pageForm.image = processedFile;
-        
+
         const reader = new FileReader();
         reader.onload = (e) => {
             imagePreview.value = e.target.result;
-            console.log('Preview updated:', {
+            console.log("Preview updated:", {
                 fileType: processedFile.type,
-                fileSize: Math.round(processedFile.size / 1024 / 1024 * 100) / 100 + 'MB',
-                previewType: e.target.result.substring(0, 50) + '...'
+                fileSize:
+                    Math.round((processedFile.size / 1024 / 1024) * 100) / 100 +
+                    "MB",
+                previewType: e.target.result.substring(0, 50) + "...",
             });
         };
         reader.readAsDataURL(processedFile);
-        
     } catch (error) {
-        console.error('Error processing media file:', error);
+        console.error("Error processing media file:", error);
         pageForm.image = photo;
-        
+
         const reader = new FileReader();
         reader.onload = (e) => {
             imagePreview.value = e.target.result;
@@ -229,22 +228,29 @@ const setCreatedAtToNow = () => {
                         class="w-full flex flex-col items-center"
                     >
                         <!-- Show video player for data URLs (new uploads) -->
-                        <video 
+                        <video
                             v-if="imagePreview.startsWith('data:video')"
-                            :key="imagePreview" 
-                            controls 
+                            :key="imagePreview"
+                            controls
                             class="w-60"
                             preload="metadata"
                         >
                             <source :src="imagePreview" />
                             Your browser does not support the video tag.
                         </video>
-                        
+
                         <!-- Show placeholder for S3 URLs (existing videos) -->
-                        <div v-else class="w-60 h-40 bg-gray-100 border-2 border-dashed border-gray-300 rounded flex flex-col items-center justify-center">
+                        <div
+                            v-else
+                            class="w-60 h-40 bg-gray-100 border-2 border-dashed border-gray-300 rounded flex flex-col items-center justify-center"
+                        >
                             <VideoIcon class="text-gray-400 w-12 h-12 mb-2" />
-                            <p class="text-sm text-gray-600 text-center mb-2">Current Video</p>
-                            <p class="text-xs text-gray-500 text-center">Upload a new video to replace</p>
+                            <p class="text-sm text-gray-600 text-center mb-2">
+                                Current Video
+                            </p>
+                            <p class="text-xs text-gray-500 text-center">
+                                Upload a new video to replace
+                            </p>
                         </div>
                     </div>
                     <div v-else class="w-32">
@@ -278,67 +284,65 @@ const setCreatedAtToNow = () => {
             </div>
         </form>
 
-        <Accordion title="More Settings">
-            <div class="mt-3">
-                <div class="w-full">
-                    <BreezeLabel for="content" value="Words" />
-                    <Wysiwyg
-                        id="content"
-                        v-model="pageForm.content"
-                        class="mt-1 block w-full"
-                        autocomplete="content"
-                    />
-                </div>
-            </div>
-            <div class="mt-3">
-                <BreezeLabel for="book" value="Move page to other book" />
-                <Multiselect
-                    id="book"
-                    v-model="pageForm.book_id"
-                    :options="booksOptions"
-                    :option-label="optionLabel"
-                    :option-id="optionId"
-                    track-by="label"
-                    placeholder="Search books"
-                    searchable
+        <div class="mt-3">
+            <div class="w-full">
+                <BreezeLabel for="content" value="Words" />
+                <Wysiwyg
+                    id="content"
+                    v-model="pageForm.content"
+                    class="mt-1 block w-full"
+                    autocomplete="content"
                 />
             </div>
+        </div>
+        <div class="mt-3">
+            <BreezeLabel for="book" value="Move page to other book" />
+            <Multiselect
+                id="book"
+                v-model="pageForm.book_id"
+                :options="booksOptions"
+                :option-label="optionLabel"
+                :option-id="optionId"
+                track-by="label"
+                placeholder="Search books"
+                searchable
+            />
+        </div>
 
-            <div
-                v-if="isCoverPage"
-                class="mt-5 text-gray-800 dark:text-white text-sm"
+        <div
+            v-if="isCoverPage"
+            class="mt-5 text-gray-800 dark:text-white text-sm"
+        >
+            This image is the cover image for this book. To change the cover, go
+            to the page settings for another page and click "Make Cover Image".
+        </div>
+        <div
+            v-else-if="
+                page.media_path.includes('.jpg') ||
+                page.media_path.includes('.png') ||
+                page.media_path.includes('.webp')
+            "
+            class="flex justify-center mt-5 md:mt-10"
+        >
+            <Button
+                class="flex justify-center py-3"
+                :class="{ 'opacity-25': bookForm.processing }"
+                :disabled="bookForm.processing"
+                @click.prevent="makeCoverPage"
             >
-                This image is the cover image for this book. To change the
-                cover, go to the page settings for another page and click "Make
-                Cover Image".
-            </div>
-            <div
-                v-else-if="
-                    page.media_path.includes('.jpg') ||
-                    page.media_path.includes('.png') ||
-                    page.media_path.includes('.webp')
-                "
-                class="flex justify-center mt-5 md:mt-10"
-            >
-                <Button
-                    class="flex justify-center py-3"
-                    :class="{ 'opacity-25': bookForm.processing }"
-                    :disabled="bookForm.processing"
-                    @click.prevent="makeCoverPage"
-                >
-                    Make Cover Image
+                Make Cover Image
+            </Button>
+        </div>
+        
+        <Accordion title="More Settings">
+            <div class="flex justify-between items-center gap-2">
+                <Button type="button" @click="setCreatedAtToNow">
+                    Move Page to Top
                 </Button>
-            </div>
-            <div class="mt-10">
-                <div class="flex justify-between items-center gap-2">
-                    <Button type="button" @click="setCreatedAtToNow">
-                        Move Page to Top
-                    </Button>
-                    <DeletePageForm
-                        :page="page"
-                        @close-page-form="$emit('close-page-form')"
-                    />
-                </div>
+                <DeletePageForm
+                    :page="page"
+                    @close-page-form="$emit('close-page-form')"
+                />
             </div>
         </Accordion>
 

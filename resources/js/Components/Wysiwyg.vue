@@ -29,16 +29,32 @@
             :is-active="editor.isActive('italic')"
             @click.prevent="editor.chain().focus().toggleItalic().run()"
         />
+        <WysiwygButton
+            icon="L"
+            title="add link"
+            :is-active="editor.isActive('link')"
+            @click.prevent="setLink"
+        />
+        <WysiwygButton
+            icon="U"
+            title="remove link"
+            :is-active="editor.isActive('link')"
+            @click.prevent="editor.chain().focus().unsetLink().run()"
+        />
 
         <EditorContent :editor="editor" />
     </div>
 </template>
 
 <script setup>
-import { useEditor, EditorContent } from "@tiptap/vue-3";
-import StarterKit from "@tiptap/starter-kit";
-import { defineProps } from "vue";
 import WysiwygButton from "@/Components/WysiwygButton.vue";
+import Link from '@tiptap/extension-link';
+import StarterKit from "@tiptap/starter-kit";
+import { EditorContent, useEditor } from "@tiptap/vue-3";
+
+defineOptions({
+    name: 'WysiwygEditor'
+});
 
 const emit = defineEmits(["update:modelValue"]);
 
@@ -55,10 +71,34 @@ const editor = useEditor({
             class: "prose max-w-full h-48 my-2 mx-5 border-t overflow-y-auto focus:outline-none",
         },
     },
-    extensions: [StarterKit],
+    extensions: [
+        StarterKit,
+        Link.configure({
+          openOnClick: false,
+        }),
+    ],
+    content: props.modelValue,
     onUpdate: () => {
         emit("update:modelValue", editor.value.getHTML());
     },
-    content: props.modelValue,
 });
+
+const setLink = () => {
+    const previousUrl = editor.value.getAttributes('link').href;
+    const url = window.prompt('URL', previousUrl);
+
+    // cancelled
+    if (url === null) {
+        return;
+    }
+
+    // empty
+    if (url === '') {
+        editor.value.chain().focus().extendMarkRange('link').unsetLink().run();
+        return;
+    }
+
+    // update link
+    editor.value.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+};
 </script>

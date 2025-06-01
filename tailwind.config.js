@@ -16,6 +16,7 @@ module.exports = {
             fontFamily: {
                 sans: ["Nunito", ...defaultTheme.fontFamily.sans],
                 heading: ["Spicy Rice", ...defaultTheme.fontFamily.sans],
+                content: ["Newsreader", ...defaultTheme.fontFamily.sans],
             },
             colors: {
                 christmas: {
