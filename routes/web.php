@@ -3,6 +3,8 @@
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\BookController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CollageController;
+use App\Http\Controllers\CollagePageController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProfileController;
@@ -52,6 +54,11 @@ Route::middleware('auth')->group(function () {
         Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     });
 
+    Route::get('/collages', [CollageController::class, 'index'])->name('collages.index');
+    Route::post('/collage-page', [CollagePageController::class, 'store'])->name('collage-page.store');
+    Route::delete('/collage-page/{collage}/{page}', [CollagePageController::class, 'destroy'])->name('collage-page.destroy');
+    Route::patch('/collage-page/{collage}/{page}', [CollagePageController::class, 'update'])->name('collage-page.update');
+
     Route::group(['middleware' => ['can:edit pages']], function () {
         Route::get('/dashboard', [DashboardController::class, 'show'])->name('dashboard');
 
@@ -72,6 +79,11 @@ Route::middleware('auth')->group(function () {
         Route::delete('/admin', [AdminController::class, 'destroy'])->name('admin.destroy');
 
         Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
+
+        Route::post('/collages', [CollageController::class, 'store'])->name('collages.store');
+        Route::delete('/collages/{collage}', [CollageController::class, 'destroy'])->name('collages.destroy');
+        Route::post('/collages/{collage}/print', [CollageController::class, 'print'])->name('collages.print');
+        Route::post('/collages/{collage}/email', [CollageController::class, 'email'])->name('collages.email');
     });
 });
 

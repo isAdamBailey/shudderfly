@@ -106,6 +106,7 @@
                     @close-page-form="showPageSettings = false"
                 />
             </div>
+            <AddToCollageButton :collages="collages" :page-id="page.id" />
         </div>
     </BreezeAuthenticatedLayout>
 </template>
@@ -132,6 +133,7 @@ const props = defineProps({
     previousPage: { type: Object, required: true },
     nextPage: { type: Object, required: true },
     books: { type: Array, required: true },
+    collages: { type: Array, required: true },
 });
 
 let showPageSettings = ref(false);

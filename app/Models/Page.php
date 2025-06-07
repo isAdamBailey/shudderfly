@@ -66,4 +66,10 @@ class Page extends Model
     {
         return $this->belongsTo(Book::class);
     }
+
+    public function collages()
+    {
+        return $this->belongsToMany(Collage::class, 'collage_page')
+            ->withTimestamps();
+    }
 }

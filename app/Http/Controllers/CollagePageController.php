@@ -1,0 +1,40 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Collage;
+use App\Models\Page;
+use Illuminate\Http\Request;
+
+class CollagePageController extends Controller
+{
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'collage_id' => 'required|exists:collages,id',
+            'page_id' => 'required|exists:pages,id',
+        ]);
+        $collage = Collage::findOrFail($data['collage_id']);
+        $collage->pages()->syncWithoutDetaching($data['page_id']);
+
+        return back();
+    }
+
+    public function destroy(Collage $collage, Page $page)
+    {
+        $collage->pages()->detach($page->id);
+
+        return back();
+    }
+
+    public function update(Request $request, Collage $collage, Page $page)
+    {
+        $data = $request->validate([
+            'new_collage_id' => 'required|exists:collages,id',
+        ]);
+        $collage->pages()->detach($page->id);
+        Collage::findOrFail($data['new_collage_id'])->pages()->syncWithoutDetaching($page->id);
+
+        return back();
+    }
+}
