@@ -2,13 +2,13 @@
     <Head :title="page.book.title" />
 
     <BreezeAuthenticatedLayout>
-        <div
-            class="pb-5 overflow-hidden bg-gray-900 relative"
-        >
+        <div class="pb-5 overflow-hidden bg-gray-900 relative">
             <div class="text-center">
                 <BookTitle :book="page.book" />
                 <div class="relative min-h-[60vh] mt-10">
-                    <div class="w-full flex items-center justify-center relative">
+                    <div
+                        class="w-full flex items-center justify-center relative"
+                    >
                         <Link
                             v-if="previousPage"
                             prefectch="hover"
@@ -37,7 +37,10 @@
                                 class="ri-arrow-right-circle-fill text-6xl rounded-full bg-blue-600 hover:bg-white dark:bg-gray-800 christmas:bg-christmas-red hover:dark:bg-white"
                             ></i>
                         </Link>
-                        <div v-if="page.media_path" class="rounded-lg overflow-hidden mx-16 md:mx-20">
+                        <div
+                            v-if="page.media_path"
+                            class="rounded-lg overflow-hidden mx-16 md:mx-20"
+                        >
                             <LazyLoader
                                 :src="page.media_path"
                                 :poster="page.media_poster"
@@ -47,7 +50,10 @@
                                 :object-fit="'contain'"
                             />
                         </div>
-                        <div v-else-if="page.video_link" class="w-full max-w-4xl mx-16 md:mx-20">
+                        <div
+                            v-else-if="page.video_link"
+                            class="w-full max-w-4xl mx-16 md:mx-20"
+                        >
                             <VideoWrapper
                                 :url="page.video_link"
                                 :title="page.description"
@@ -62,10 +68,7 @@
                         {{ Math.round(page.read_count).toLocaleString() }} times
                     </p>
                 </div>
-                <div
-                    v-if="hasContent"
-                    class="mx-5 mt-8 mb-5 relative z-20"
-                >
+                <div v-if="hasContent" class="mx-5 mt-8 mb-5 relative z-20">
                     <div class="text-container">
                         <div
                             class="font-content page-content max-w-5xl mx-auto text-lg text-left relative"
@@ -106,12 +109,32 @@
                     @close-page-form="showPageSettings = false"
                 />
             </div>
-            <AddToCollageButton :collages="collages" :page-id="page.id" />
+            <div class="my-4">
+                <label class="block mb-2 text-sm font-medium text-white"
+                    >Add to collage:</label
+                >
+                <select v-model="selectedCollageId" class="rounded mr-2">
+                    <option :value="null" disabled>Select collage</option>
+                    <option
+                        v-for="collage in props.collages"
+                        :key="collage.id"
+                        :value="collage.id"
+                    >
+                        Collage #{{ collage.id }}
+                    </option>
+                </select>
+                <AddToCollageButton
+                    v-if="selectedCollageId"
+                    :collage-id="selectedCollageId"
+                    :page-id="props.page.id"
+                />
+            </div>
         </div>
     </BreezeAuthenticatedLayout>
 </template>
 
 <script setup>
+import AddToCollageButton from "@/Components/AddToCollageButton.vue";
 import BookTitle from "@/Components/BookTitle.vue";
 import Button from "@/Components/Button.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
@@ -138,6 +161,7 @@ const props = defineProps({
 
 let showPageSettings = ref(false);
 const buttonDisabled = ref(false);
+const selectedCollageId = ref(null);
 
 const hasContent = computed(() => stripHtml(props.page.content));
 
