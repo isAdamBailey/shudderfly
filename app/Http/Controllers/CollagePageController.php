@@ -14,8 +14,13 @@ class CollagePageController extends Controller
             'collage_id' => 'required|exists:collages,id',
             'page_id' => 'required|exists:pages,id',
         ]);
+
         $collage = Collage::findOrFail($data['collage_id']);
-        $collage->pages()->syncWithoutDetaching($data['page_id']);
+
+        // Check if the page already exists in the collage (safety check)
+        if (! $collage->pages()->where('page_id', $data['page_id'])->exists()) {
+            $collage->pages()->attach($data['page_id']);
+        }
 
         return back();
     }

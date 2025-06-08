@@ -1,30 +1,41 @@
 <template>
-    <div>
-        <h1 class="text-2xl font-bold mb-4">Collages</h1>
+    <AuthenticatedLayout>
+        <template #header>
+            <div class="flex justify-between items-center mb-3">
+                <h2
+                    class="font-heading text-2xl text-theme-title leading-tight"
+                >
+                    Collages
+                </h2>
+            </div>
+        </template>
+
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             <CollageCard
-                v-for="collage in collages"
+                v-for="(collage, index) in collages"
                 :key="collage.id"
                 :collage="collage"
+                :collage-number="index + 1"
             />
         </div>
-        <div v-if="canEditPages" class="mt-6">
-            <button
-                class="btn btn-primary"
+        <div v-if="canEditPages" class="my-6">
+            <Button
                 :disabled="createCollageForm.processing"
                 @click="createCollageForm.post(route('collages.store'))"
-            >
-                + Create New Collage
-            </button>
+                ><i class="ri-add-line text-xl mr-3"></i>
+                Create New Collage
+            </Button>
         </div>
-    </div>
+    </AuthenticatedLayout>
 </template>
 
 <script setup>
-import { useForm } from "@inertiajs/inertia-vue3";
+import Button from "@/Components/Button.vue";
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import { useForm } from "@inertiajs/vue3";
 
 import { usePermissions } from "@/composables/permissions";
-import CollageCard from "./CollageCard.vue";
+import CollageCard from "@/Pages/Collages/CollageCard.vue";
 
 const { canEditPages } = usePermissions();
 

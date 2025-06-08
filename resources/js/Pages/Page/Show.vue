@@ -110,23 +110,9 @@
                 />
             </div>
             <div class="my-4">
-                <label class="block mb-2 text-sm font-medium text-white"
-                    >Add to collage:</label
-                >
-                <select v-model="selectedCollageId" class="rounded mr-2">
-                    <option :value="null" disabled>Select collage</option>
-                    <option
-                        v-for="collage in props.collages"
-                        :key="collage.id"
-                        :value="collage.id"
-                    >
-                        Collage #{{ collage.id }}
-                    </option>
-                </select>
                 <AddToCollageButton
-                    v-if="selectedCollageId"
-                    :collage-id="selectedCollageId"
                     :page-id="props.page.id"
+                    :collages="props.collages"
                 />
             </div>
         </div>
@@ -161,7 +147,6 @@ const props = defineProps({
 
 let showPageSettings = ref(false);
 const buttonDisabled = ref(false);
-const selectedCollageId = ref(null);
 
 const hasContent = computed(() => stripHtml(props.page.content));
 
