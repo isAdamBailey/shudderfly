@@ -37,6 +37,12 @@ class CollagePageController extends Controller
         $data = $request->validate([
             'new_collage_id' => 'required|exists:collages,id',
         ]);
+
+        // Skip if the page is already in the target collage
+        if ($data['new_collage_id'] == $collage->id) {
+            return back();
+        }
+
         $collage->pages()->detach($page->id);
         Collage::findOrFail($data['new_collage_id'])->pages()->syncWithoutDetaching($page->id);
 

@@ -1,13 +1,24 @@
 <template>
     <div class="bg-white shadow rounded-lg p-4 flex flex-col space-y-2">
         <div class="flex justify-between items-center mb-2">
-            <h3 class="text-lg font-semibold text-gray-800">Collage #{{ collageNumber }}</h3>
-            <span class="text-sm text-gray-500">{{ collage.pages.length }} page{{ collage.pages.length !== 1 ? 's' : '' }}</span>
+            <h3 class="text-lg font-semibold text-gray-800">
+                Collage #{{ collageNumber }}
+            </h3>
+            <span class="text-sm text-gray-500"
+                >{{ collage.pages.length }} page{{
+                    collage.pages.length !== 1 ? "s" : ""
+                }}</span
+            >
         </div>
         <!-- 8.5 x 11 aspect ratio container -->
-        <div class="relative w-full" style="padding-bottom:129.4%"> <!-- 11/8.5 = 1.294 -->
+        <div class="relative w-full" style="padding-bottom: 129.4%">
+            <!-- 11/8.5 = 1.294 -->
             <div class="absolute inset-0 grid grid-cols-4 grid-rows-4 gap-1">
-                <div v-for="page in collage.pages.slice(0, 16)" :key="page.id" class="relative group">
+                <div
+                    v-for="page in collage.pages.slice(0, 16)"
+                    :key="page.id"
+                    class="relative group"
+                >
                     <img
                         :src="page.media_path"
                         class="w-full h-full object-cover rounded"
@@ -65,16 +76,23 @@ const printForm = useForm();
 const deleteForm = useForm();
 
 const removeImage = (pageId) => {
-    if (confirm('Remove this image from the collage?')) {
-        useForm().delete(route('collage-page.destroy', [props.collage.id, pageId]), {
-            preserveScroll: true,
-        });
+    if (confirm("Remove this image from the collage?")) {
+        useForm().delete(
+            route("collage-page.destroy", [props.collage.id, pageId]),
+            {
+                preserveScroll: true,
+            }
+        );
     }
 };
 
 const confirmDelete = () => {
-    if (confirm(`Are you sure you want to delete Collage #${props.collageNumber}? This action cannot be undone.`)) {
-        deleteForm.delete(route('collages.destroy', props.collage.id), {
+    if (
+        confirm(
+            `Are you sure you want to delete Collage #${props.collageNumber}? This action cannot be undone.`
+        )
+    ) {
+        deleteForm.delete(route("collages.destroy", props.collage.id), {
             preserveScroll: true,
         });
     }

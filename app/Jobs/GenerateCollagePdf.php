@@ -10,6 +10,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
@@ -50,6 +51,14 @@ class GenerateCollagePdf implements ShouldQueue
                     'path' => $localPath,
                     'page' => $page,
                 ];
+            } else {
+                \Log::error('Failed to download image for collage', [
+                    'collage_id' => $this->collage->id,
+                    'page_id' => $page->id,
+                    'media_path' => $page->media_path,
+                    'status_code' => $response->status(),
+                    'response_body' => $response->body(),
+                ]);
             }
         }
 
