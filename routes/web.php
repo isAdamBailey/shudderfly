@@ -83,7 +83,6 @@ Route::middleware('auth')->group(function () {
         Route::post('/collages', [CollageController::class, 'store'])->name('collages.store');
         Route::delete('/collages/{collage}', [CollageController::class, 'destroy'])->name('collages.destroy');
         Route::post('/collages/{collage}/print', [CollageController::class, 'print'])->name('collages.print');
-        Route::post('/collages/{collage}/email', [CollageController::class, 'email'])->name('collages.email');
     });
 });
 

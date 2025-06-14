@@ -46,6 +46,9 @@ class HandleInertiaRequests extends Middleware
                 return [$setting->key => $setting->value];
             }),
             'theme' => now()->month === 12 ? 'christmas' : (now()->month === 7 ? 'fireworks' : ''),
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+            ],
         ]);
     }
 }

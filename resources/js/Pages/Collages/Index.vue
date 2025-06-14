@@ -1,4 +1,6 @@
 <template>
+    <Head title="Collages" />
+
     <AuthenticatedLayout>
         <template #header>
             <div class="flex justify-between items-center mb-3">
@@ -32,14 +34,14 @@
 <script setup>
 import Button from "@/Components/Button.vue";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import { useForm } from "@inertiajs/vue3";
+import { Head, useForm } from "@inertiajs/vue3";
 
 import { usePermissions } from "@/composables/permissions";
 import CollageCard from "@/Pages/Collages/CollageCard.vue";
 
 const { canEditPages } = usePermissions();
 
-const props = defineProps({
+defineProps({
     collages: { type: Array, required: true },
 });
 

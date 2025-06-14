@@ -15,7 +15,7 @@
                     />
                     <button
                         v-if="canEditPages"
-                        class="absolute top-1 right-1 bg-white bg-opacity-80 hover:bg-red-500 hover:text-white text-gray-700 rounded-full p-1 shadow transition-opacity opacity-0 group-hover:opacity-100"
+                        class="absolute top-1 right-1 bg-white bg-opacity-80 hover:bg-red-500 hover:text-white text-gray-700 rounded-full px-1 shadow"
                         title="Remove image"
                         @click="removeImage(page.id)"
                     >
@@ -24,22 +24,14 @@
                 </div>
             </div>
         </div>
-        <div class="flex flex-wrap gap-2 mt-2">
+        <div class="flex flex-wrap justify-between mt-2">
             <Button
                 v-if="canEditPages"
                 class="btn btn-secondary"
                 :disabled="printForm.processing"
-                @click="printForm.post(window.route('collages.print', collage.id))"
+                @click="printForm.post(route('collages.print', collage.id))"
             >
-                Print PDF
-            </Button>
-            <Button
-                v-if="canEditPages"
-                class="btn btn-secondary"
-                :disabled="emailForm.processing"
-                @click="emailForm.post(window.route('collages.email', collage.id))"
-            >
-                Email PDF
+                Generate Collage
             </Button>
             <DangerButton
                 v-if="canEditPages"
@@ -47,7 +39,7 @@
                 :disabled="deleteForm.processing"
                 @click="confirmDelete"
             >
-                Delete Collage
+                <i class="ri-delete-bin-line mr-1"></i>
             </DangerButton>
         </div>
         <div v-if="canEditPages" class="flex flex-wrap gap-1 mt-2">
@@ -70,12 +62,11 @@ const props = defineProps({
 });
 
 const printForm = useForm();
-const emailForm = useForm();
 const deleteForm = useForm();
 
 const removeImage = (pageId) => {
     if (confirm('Remove this image from the collage?')) {
-        useForm().delete(window.route('collage-page.destroy', [props.collage.id, pageId]), {
+        useForm().delete(route('collage-page.destroy', [props.collage.id, pageId]), {
             preserveScroll: true,
         });
     }
@@ -83,7 +74,7 @@ const removeImage = (pageId) => {
 
 const confirmDelete = () => {
     if (confirm(`Are you sure you want to delete Collage #${props.collageNumber}? This action cannot be undone.`)) {
-        deleteForm.delete(window.route('collages.destroy', props.collage.id), {
+        deleteForm.delete(route('collages.destroy', props.collage.id), {
             preserveScroll: true,
         });
     }
