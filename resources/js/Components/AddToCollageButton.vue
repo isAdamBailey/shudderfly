@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <div class="ml-10">
         <!-- If page is already in any collage, just show the message -->
         <div v-if="isPageInAnyCollage" class="text-yellow-400 text-sm">
             <i class="ri-information-line mr-1"></i>
@@ -39,7 +39,7 @@
                 <Button
                     v-else
                     class="btn btn-primary"
-                    :disabled="form.processing"
+                    :disabled="form.processing || !selectedCollageId || !hasAvailableCollages"
                     @click="addToCollage"
                 >
                     <i class="ri-add-line mr-1"></i> Add to Collage
@@ -108,4 +108,8 @@ const getCollageDisplayNumber = (collageId) => {
     const index = activeCollages.findIndex(collage => collage.id === collageId);
     return index !== -1 ? index + 1 : collageId;
 };
+
+const hasAvailableCollages = computed(() => {
+    return props.collages.some(collage => !collage.deleted_at && collage.pages.length < 16);
+});
 </script>

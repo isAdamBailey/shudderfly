@@ -12,7 +12,7 @@
             </div>
         </template>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 p-10">
             <CollageCard
                 v-for="(collage, index) in collages"
                 :key="collage.id"

@@ -25,7 +25,6 @@
                         :alt="`Collage image ${page.id}`"
                     />
                     <button
-                        v-if="canEditPages"
                         class="absolute top-1 right-1 bg-white bg-opacity-80 hover:bg-red-500 hover:text-white text-gray-700 rounded-full px-1 shadow"
                         title="Remove image"
                         @click="removeImage(page.id)"
