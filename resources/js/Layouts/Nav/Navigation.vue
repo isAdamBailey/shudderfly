@@ -51,6 +51,12 @@ const showingNavigationDropdown = ref(false);
                             >
                                 Uploads
                             </NavLink>
+                            <NavLink
+                                :href="route('collages.index')"
+                                :active="route().current('collages.*')"
+                            >
+                                Collages
+                            </NavLink>
                         </div>
                     </div>
 
@@ -171,6 +177,12 @@ const showingNavigationDropdown = ref(false);
                         :active="route().current('pictures.*')"
                     >
                         Uploads
+                    </ResponsiveNavLink>
+                    <ResponsiveNavLink
+                        :href="route('collages.index')"
+                        :active="route().current('collages.*')"
+                    >
+                        Collages
                     </ResponsiveNavLink>
                 </div>
 

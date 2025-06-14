@@ -165,7 +165,7 @@ class BookController extends Controller
                 Storage::disk('s3')->delete($rawMediaPath);
             }
         }
-        
+
         $book->pages()->delete();
         $book->delete();
 

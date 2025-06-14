@@ -10,6 +10,7 @@ use App\Jobs\IncrementPageReadCount;
 use App\Jobs\StoreImage;
 use App\Jobs\StoreVideo;
 use App\Models\Book;
+use App\Models\Collage;
 use App\Models\Page;
 use App\Models\SiteSetting;
 use Illuminate\Contracts\Foundation\Application;
@@ -118,11 +119,14 @@ class PageController extends Controller
             ? Book::all()->map->only(['id', 'title'])->sortBy('title')->values()->toArray()
             : [];
 
+        $collages = Collage::with('pages')->latest()->limit(4)->get();
+
         return Inertia::render('Page/Show', [
             'page' => $page,
             'previousPage' => $previousPage,
             'nextPage' => $nextPage,
             'books' => $books,
+            'collages' => $collages,
         ]);
     }
 

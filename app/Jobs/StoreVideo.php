@@ -5,7 +5,6 @@ namespace App\Jobs;
 use App\Models\Book;
 use App\Models\Page;
 use Aws\S3\Exception\S3Exception;
-use FFMpeg\Format\Video\X264;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -91,13 +90,13 @@ class StoreVideo implements ShouldQueue
             $videoStream = $media->getVideoStream();
             $width = $videoStream->get('width');
             $height = $videoStream->get('height');
-            
+
             // Check for rotation metadata
             $rotation = $videoStream->get('rotate') ?? 0;
-            
+
             // Determine if video needs resizing and calculate appropriate dimensions
             $isPortrait = $height > $width;
-            
+
             // Build rotation filter based on metadata
             $rotationFilter = '';
             if ($rotation == 90 || $rotation == -270) {
@@ -107,46 +106,46 @@ class StoreVideo implements ShouldQueue
             } elseif ($rotation == 270 || $rotation == -90) {
                 $rotationFilter = 'transpose=2,'; // 90 degrees counter-clockwise
             }
-            
+
             if ($isPortrait) {
                 // For portrait videos, limit height to 1280 and width proportionally
                 if ($height > 1280 || $width > 720) {
-                    $videoFilter = $rotationFilter . 'scale=-2:1280:force_original_aspect_ratio=decrease:force_divisible_by=2';
+                    $videoFilter = $rotationFilter.'scale=-2:1280:force_original_aspect_ratio=decrease:force_divisible_by=2';
                 } else {
-                    $videoFilter = $rotationFilter . 'scale=trunc(iw/2)*2:trunc(ih/2)*2';
+                    $videoFilter = $rotationFilter.'scale=trunc(iw/2)*2:trunc(ih/2)*2';
                 }
             } else {
-                // For landscape videos, limit width to 1280 and height proportionally  
+                // For landscape videos, limit width to 1280 and height proportionally
                 if ($width > 1280 || $height > 720) {
-                    $videoFilter = $rotationFilter . 'scale=1280:-2:force_original_aspect_ratio=decrease:force_divisible_by=2';
+                    $videoFilter = $rotationFilter.'scale=1280:-2:force_original_aspect_ratio=decrease:force_divisible_by=2';
                 } else {
-                    $videoFilter = $rotationFilter . 'scale=trunc(iw/2)*2:trunc(ih/2)*2';
+                    $videoFilter = $rotationFilter.'scale=trunc(iw/2)*2:trunc(ih/2)*2';
                 }
             }
 
             // Use raw FFmpeg command for guaranteed compression
             $videoBitrate = 800; // Fixed lower bitrate for consistent compression
             $audioBitrate = 96;  // Fixed audio bitrate
-            
+
             // Build FFmpeg command with aggressive compression
             $ffmpegParams = [
                 // Input
-                '-i', storage_path('app/' . $this->filePath),
-                
+                '-i', storage_path('app/'.$this->filePath),
+
                 // Force re-encoding with compression
                 '-c:v', 'libx264',                  // Force H.264 video codec
                 '-c:a', 'aac',                      // Force AAC audio codec
-                '-b:v', $videoBitrate . 'k',        // Video bitrate
-                '-b:a', $audioBitrate . 'k',        // Audio bitrate
+                '-b:v', $videoBitrate.'k',        // Video bitrate
+                '-b:a', $audioBitrate.'k',        // Audio bitrate
                 '-preset', 'medium',                // Balance speed vs compression
                 '-crf', '28',                       // Constant rate factor
                 '-profile:v', 'main',               // H.264 profile
                 '-level', '3.1',                    // H.264 level
-                
+
                 // Apply video filters
                 '-vf',
                 $videoFilter,
-                
+
                 // Remove privacy metadata and rotation
                 '-metadata', 'location=',
                 '-metadata', 'location-eng=',
@@ -162,31 +161,29 @@ class StoreVideo implements ShouldQueue
                 '-metadata', 'author=',
                 '-metadata', 'copyright=',
                 '-metadata:s:v:0', 'rotate=0',
-                
+
                 // Output optimization
                 '-movflags', '+faststart',
                 '-avoid_negative_ts', 'make_zero',
                 '-f', 'mp4',
                 '-y',                               // Overwrite output file
-                $tempFile
+                $tempFile,
             ];
-            
+
             // Remove null values from params
-            $ffmpegParams = array_filter($ffmpegParams, function($value) {
+            $ffmpegParams = array_filter($ffmpegParams, function ($value) {
                 return $value !== null;
             });
-            
 
-            
             // Execute FFmpeg command directly
-            $command = 'ffmpeg ' . implode(' ', array_map('escapeshellarg', $ffmpegParams));
-            
+            $command = 'ffmpeg '.implode(' ', array_map('escapeshellarg', $ffmpegParams));
+
             $output = [];
             $returnCode = 0;
-            exec($command . ' 2>&1', $output, $returnCode);
-            
+            exec($command.' 2>&1', $output, $returnCode);
+
             if ($returnCode !== 0) {
-                throw new \RuntimeException('FFmpeg processing failed: ' . implode("\n", $output));
+                throw new \RuntimeException('FFmpeg processing failed: '.implode("\n", $output));
             }
 
             $screenshotContents = $media->getFrameFromSeconds(0.5)

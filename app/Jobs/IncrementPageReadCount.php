@@ -45,8 +45,9 @@ class IncrementPageReadCount implements ShouldQueue
 
         // If the page is in the top 20 but not recent, only increment by a tenth
         $top20Pages = Page::orderBy('read_count', 'desc')->take(20)->pluck('id')->toArray();
-        if (in_array($this->page->id, $top20Pages) && !$isRecent) {
+        if (in_array($this->page->id, $top20Pages) && ! $isRecent) {
             $this->page->increment('read_count', 0.1);
+
             return;
         }
 
