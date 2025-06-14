@@ -58,4 +58,4 @@ class CollagePdfMail extends Mailable
                 ->withMime('application/pdf'),
         ];
     }
-} 
+}

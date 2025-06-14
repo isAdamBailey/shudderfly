@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\GenerateCollagePdf;
 use App\Models\Collage;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use App\Jobs\GenerateCollagePdf;
 
 class CollageController extends Controller
 {
@@ -36,9 +36,9 @@ class CollageController extends Controller
     {
         $collage->is_printed = true;
         $collage->save();
-        
+
         GenerateCollagePdf::dispatch($collage);
-        
+
         return redirect()->route('collages.index')->with('success', 'PDF generation has been queued. You will receive an email when it\'s ready.');
     }
 }
