@@ -26,10 +26,10 @@
                         v-for="(collage, index) in props.collages"
                         :key="collage.id"
                         :value="collage.id"
-                        :disabled="collage.pages.length >= 16"
+                        :disabled="collage.pages.length >= MAX_COLLAGE_PAGES"
                     >
                         Collage #{{ index + 1 }}
-                        <span v-if="collage.pages.length >= 16"> (Full)</span>
+                        <span v-if="collage.pages.length >= MAX_COLLAGE_PAGES"> (Full)</span>
                     </option>
                 </select>
                 <div v-if="showSuccess" class="p-3 bg-green-100 text-green-700 rounded">
@@ -51,6 +51,7 @@
 
 <script setup>
 import Button from "@/Components/Button.vue";
+import { MAX_COLLAGE_PAGES } from "@/constants/collage";
 import { useForm } from "@inertiajs/vue3";
 import { computed, ref, watch } from "vue";
 
@@ -66,8 +67,6 @@ const form = useForm({
     collage_id: null,
     page_id: props.pageId,
 });
-
-const route = window.route;
 
 // Update form when collage selection changes
 watch(selectedCollageId, (newCollageId) => {
@@ -103,13 +102,11 @@ const addToCollage = () => {
 };
 
 const getCollageDisplayNumber = (collageId) => {
-    // Filter out deleted collages first
-    const activeCollages = props.collages.filter(collage => !collage.deleted_at);
-    const index = activeCollages.findIndex(collage => collage.id === collageId);
+    const index = props.collages?.findIndex(collage => collage.id === collageId);
     return index !== -1 ? index + 1 : collageId;
 };
 
 const hasAvailableCollages = computed(() => {
-    return props.collages.some(collage => !collage.deleted_at && collage.pages.length < 16);
+    return props.collages.some(collage => !collage.deleted_at && collage.pages.length < MAX_COLLAGE_PAGES);
 });
 </script>

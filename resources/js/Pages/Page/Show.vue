@@ -111,6 +111,7 @@
             </div>
             <div class="my-4">
                 <AddToCollageButton
+                    v-if="page.media_path && !isVideo(page.media_path) && !page.video_link"
                     :page-id="props.page.id"
                     :collages="props.collages"
                 />
@@ -129,6 +130,7 @@ import { usePermissions } from "@/composables/permissions";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useDate } from "@/dateHelpers";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import { useMedia } from "@/mediaHelpers";
 import EditPageForm from "@/Pages/Page/EditPageForm.vue";
 import { Head, Link } from "@inertiajs/vue3";
 import { computed, ref } from "vue";
@@ -136,6 +138,7 @@ import { computed, ref } from "vue";
 const { canEditPages } = usePermissions();
 const { short } = useDate();
 const { speak, speaking } = useSpeechSynthesis();
+const { isVideo } = useMedia();
 
 const props = defineProps({
     page: { type: Object, required: true },

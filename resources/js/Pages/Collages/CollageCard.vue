@@ -5,7 +5,7 @@
                 Collage #{{ collageNumber }}
             </h3>
             <span class="text-sm text-gray-500"
-                >{{ collage.pages.length }} page{{
+                >{{ collage.pages.length }}/{{ MAX_COLLAGE_PAGES }} image{{
                     collage.pages.length !== 1 ? "s" : ""
                 }}</span
             >
@@ -15,7 +15,7 @@
             <!-- 11/8.5 = 1.294 -->
             <div class="absolute inset-0 grid grid-cols-4 grid-rows-4 gap-1">
                 <div
-                    v-for="page in collage.pages.slice(0, 16)"
+                    v-for="page in collage.pages.slice(0, MAX_COLLAGE_PAGES)"
                     :key="page.id"
                     class="relative group"
                 >
@@ -62,6 +62,7 @@
 import Button from "@/Components/Button.vue";
 import DangerButton from "@/Components/DangerButton.vue";
 import { usePermissions } from "@/composables/permissions";
+import { MAX_COLLAGE_PAGES } from "@/constants/collage";
 import { useForm } from "@inertiajs/vue3";
 
 const { canEditPages } = usePermissions();

@@ -12,7 +12,7 @@
             </div>
         </template>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 p-10">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mx-10 my-5">
             <CollageCard
                 v-for="(collage, index) in collages"
                 :key="collage.id"
@@ -20,9 +20,9 @@
                 :collage-number="index + 1"
             />
         </div>
-        <div v-if="canEditPages" class="my-6">
+        <div v-if="canEditPages" class="ml-10 my-10">
             <Button
-                :disabled="createCollageForm.processing"
+                :disabled="createCollageForm.processing || collages.length >= 4"
                 @click="createCollageForm.post(route('collages.store'))"
                 ><i class="ri-add-line text-xl mr-3"></i>
                 Create New Collage

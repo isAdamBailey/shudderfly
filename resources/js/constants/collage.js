@@ -1,0 +1,1 @@
+export const MAX_COLLAGE_PAGES = 16; 
