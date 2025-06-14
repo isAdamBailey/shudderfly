@@ -148,11 +148,14 @@ class BooksTest extends TestCase
         Book::factory()->count(3)->create(['read_count' => 100]);
 
         // Create books of different ages
-        $newBook = Book::factory()->create(['created_at' => now()]);
-        $twoWeekOldBook = Book::factory()->create(['created_at' => now()->subDays(50)]); // Falls into 60-day category
-        $twoMonthOldBook = Book::factory()->create(['created_at' => now()->subDays(90)]);
-        $sixMonthOldBook = Book::factory()->create(['created_at' => now()->subDays(200)]);
-        $veryOldBook = Book::factory()->create(['created_at' => now()->subYears(2)]);
+        $newBook = Book::factory()->create(['created_at' => now()]); // ≤7 days: 2.5x
+        $twoWeekOldBook = Book::factory()->create(['created_at' => now()->subDays(15)]); // ≤30 days: 1.8x
+        $twoMonthOldBook = Book::factory()->create(['created_at' => now()->subDays(45)]); // ≤60 days: 1.4x
+        $sixMonthOldBook = Book::factory()->create(['created_at' => now()->subDays(85)]); // ≤90 days: 1.2x
+        $veryOldBook = Book::factory()->create(['created_at' => now()->subYears(2)]); // >90 days: 1.0x
+
+        // Create enough books to ensure our test books are in top 20 but not top 3
+        Book::factory()->count(20)->create(['read_count' => 300]);
 
         // Run jobs directly for testing
         (new \App\Jobs\IncrementBookReadCount($newBook))->handle();
@@ -162,11 +165,11 @@ class BooksTest extends TestCase
         (new \App\Jobs\IncrementBookReadCount($veryOldBook))->handle();
 
         // Verify age-based multipliers
-        $this->assertSame(2.5, $newBook->fresh()->read_count); // ≤14 days: 2.5x
-        $this->assertSame(1.8, $twoWeekOldBook->fresh()->read_count); // ≤60 days: 1.8x
-        $this->assertSame(1.4, $twoMonthOldBook->fresh()->read_count); // ≤180 days: 1.4x
-        $this->assertSame(1.2, $sixMonthOldBook->fresh()->read_count); // ≤365 days: 1.2x
-        $this->assertSame(1.0, $veryOldBook->fresh()->read_count); // >365 days: 1x
+        $this->assertSame(2.5, $newBook->fresh()->read_count); // ≤7 days: 2.5x
+        $this->assertSame(1.8, $twoWeekOldBook->fresh()->read_count); // ≤30 days: 1.8x
+        $this->assertSame(1.4, $twoMonthOldBook->fresh()->read_count); // ≤60 days: 1.4x
+        $this->assertSame(1.2, $sixMonthOldBook->fresh()->read_count); // ≤90 days: 1.2x
+        $this->assertSame(1.0, $veryOldBook->fresh()->read_count); // >90 days: 1.0x
     }
 
     public function test_when_book_is_returned_read_count_is_not_incremented_for_admins()
