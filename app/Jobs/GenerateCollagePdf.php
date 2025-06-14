@@ -126,9 +126,6 @@ class GenerateCollagePdf implements ShouldQueue
                 ));
             }
 
-            // Clean up temporary files
-            $this->cleanupTempFiles($tempDir);
-
             // Delete the PDF after email is sent
             Storage::disk('local')->delete($filename);
         } catch (\Exception $e) {
@@ -138,6 +135,9 @@ class GenerateCollagePdf implements ShouldQueue
                 'trace' => $e->getTraceAsString(),
             ]);
             throw $e;
+        } finally {
+            // Clean up temporary files
+            $this->cleanupTempFiles($tempDir);
         }
     }
 
