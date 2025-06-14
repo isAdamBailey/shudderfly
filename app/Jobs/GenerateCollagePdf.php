@@ -62,6 +62,13 @@ class GenerateCollagePdf implements ShouldQueue
             }
         }
 
+        // Ensure there are images to include in the PDF
+        if (empty($localImages)) {
+            \Log::error('No images were successfully downloaded for the collage', [
+                'collage_id' => $this->collage->id,
+            ]);
+            throw new \Exception('No images available to generate the PDF');
+        }
         // Generate PDF with local images
         try {
             $pdf = PDF::loadView('pdfs.collage', [
