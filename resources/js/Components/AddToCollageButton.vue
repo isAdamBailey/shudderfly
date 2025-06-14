@@ -21,7 +21,7 @@
             >
             <div class="flex items-center gap-2">
                 <select v-model="selectedCollageId" class="rounded">
-                    <option :value="null" disabled>Select collage</option>
+                    <option :value="''" disabled>Select collage</option>
                     <option
                         v-for="(collage, index) in props.collages"
                         :key="collage.id"
