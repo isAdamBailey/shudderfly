@@ -50,8 +50,10 @@
             loading="lazy"
             @error="handleMediaError"
         />
-        <TypePill v-if="isPoster(imageSrc)" type="Video" />
-        <TypePill v-if="isSnapshot(imageSrc) && !pageId" type="Screenshot" />
+        <span v-if="!isCover">
+            <TypePill v-if="isPoster(imageSrc)" type="Video" />
+            <TypePill v-if="isSnapshot(imageSrc) && !pageId" type="Screenshot" />
+        </span>
     </div>
 </template>
 
