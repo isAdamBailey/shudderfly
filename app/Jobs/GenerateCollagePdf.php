@@ -77,8 +77,8 @@ class GenerateCollagePdf implements ShouldQueue
                     $localPath = "{$tempDir}/{$imageName}";
 
                     try {
-                        // Extract S3 key from CloudFront URL
-                        $s3Path = str_replace(env('CLOUDFRONT_URL'), '', $page->media_path);
+                        // Extract S3 key from CloudFront URL and ensure no leading slash
+                        $s3Path = ltrim(str_replace(env('CLOUDFRONT_URL'), '', $page->media_path), '/');
                         
                         // Download from S3 using stream
                         $result = $s3->getObject([
