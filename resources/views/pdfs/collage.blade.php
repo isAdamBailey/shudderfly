@@ -4,26 +4,40 @@
     <meta charset="utf-8">
     <title>Collage #{{ $collage->id }}</title>
     <style>
+        @page {
+            size: 8.5in 11in;
+            margin: 0;
+            padding: 0;
+        }
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
+            width: 8.5in;
+            height: 11in;
         }
         table {
-            width: 100%;
+            width: 8.5in;
+            height: 11in;
             border-collapse: collapse;
             table-layout: fixed;
+            page-break-after: always;
         }
         td {
-            width: 25%;
-            padding: 5px;
+            width: 2.125in; /* 8.5in / 4 */
+            height: 2.75in; /* 11in / 4 */
+            padding: 0;
+            margin: 0;
             vertical-align: top;
+            position: relative;
         }
         td img {
             width: 100%;
-            height: 200px;
+            height: 100%;
             object-fit: cover;
             display: block;
+            margin: 0;
+            padding: 0;
         }
     </style>
 </head>
@@ -38,6 +52,12 @@
                     <img src="{{ $image['path'] }}" alt="Collage image {{ $image['page']->id }}">
                 </td>
             @endforeach
+            @for($i = count($localImages); $i < 16; $i++)
+                @if($i > 0 && $i % 4 === 0)
+                    </tr><tr>
+                @endif
+                <td></td>
+            @endfor
         </tr>
     </table>
 </body>
