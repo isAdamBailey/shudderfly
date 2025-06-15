@@ -53,9 +53,9 @@ class GenerateCollagePdf implements ShouldQueue
         }
 
         try {
-            // Download all images in batches
+            // Download all images in smaller batches
             $localImages = [];
-            $batchSize = 5; // Process 5 images at a time
+            $batchSize = 2; // Reduced batch size to 2 images at a time
             $pages = $this->collage->pages->chunk($batchSize);
 
             foreach ($pages as $pageBatch) {
@@ -63,26 +63,58 @@ class GenerateCollagePdf implements ShouldQueue
                     $imageName = basename($page->media_path);
                     $localPath = "{$tempDir}/{$imageName}";
 
-                    // Download image from S3/CloudFront with timeout
-                    $response = Http::timeout(30)->get($page->media_path);
-                    if ($response->successful()) {
-                        file_put_contents($localPath, $response->body());
-                        $localImages[] = [
-                            'path' => $localPath,
-                            'page' => $page,
-                        ];
-                    } else {
-                        Log::error('Failed to download image for collage', [
+                    try {
+                        // Download image from S3/CloudFront with timeout and memory management
+                        $response = Http::timeout(30)
+                            ->withHeaders([
+                                'Accept' => 'image/*',
+                                'Accept-Encoding' => 'gzip, deflate',
+                            ])
+                            ->get($page->media_path);
+
+                        if ($response->successful()) {
+                            // Write file in chunks to manage memory
+                            $handle = fopen($localPath, 'w');
+                            if ($handle) {
+                                $chunkSize = 1024 * 1024; // 1MB chunks
+                                $body = $response->body();
+                                $length = strlen($body);
+                                
+                                for ($i = 0; $i < $length; $i += $chunkSize) {
+                                    $chunk = substr($body, $i, $chunkSize);
+                                    fwrite($handle, $chunk);
+                                    unset($chunk); // Free memory after each chunk
+                                }
+                                
+                                fclose($handle);
+                                
+                                $localImages[] = [
+                                    'path' => $localPath,
+                                    'page' => $page,
+                                ];
+                            }
+                        } else {
+                            Log::error('Failed to download image for collage', [
+                                'collage_id' => $this->collage->id,
+                                'page_id' => $page->id,
+                                'media_path' => $page->media_path,
+                                'status_code' => $response->status(),
+                            ]);
+                        }
+                    } catch (\Exception $e) {
+                        Log::error('Error downloading image', [
                             'collage_id' => $this->collage->id,
                             'page_id' => $page->id,
-                            'media_path' => $page->media_path,
-                            'status_code' => $response->status(),
-                            'response_body' => $response->body(),
+                            'error' => $e->getMessage(),
                         ]);
+                        continue;
                     }
+
+                    // Force garbage collection after each image
+                    gc_collect_cycles();
                 }
 
-                // Force garbage collection after each batch
+                // Additional garbage collection after each batch
                 gc_collect_cycles();
             }
 
@@ -147,7 +179,6 @@ class GenerateCollagePdf implements ShouldQueue
                         'collage_id' => $this->collage->id,
                         'path' => $pdfPath,
                     ]);
-
                     continue;
                 }
 
