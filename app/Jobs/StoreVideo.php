@@ -182,15 +182,13 @@ class StoreVideo implements ShouldQueue
                 return $value !== null;
             });
 
-            // Execute FFmpeg command with proper process handling
-            $command = 'ffmpeg '.implode(' ', array_map('escapeshellarg', $ffmpegParams));
-
             Log::info('Starting FFmpeg processing', [
-                'command' => $command,
+                'params' => $ffmpegParams,
                 'filePath' => $this->filePath,
             ]);
 
-            $process = new \Symfony\Component\Process\Process(explode(' ', $command));
+            // Create process with array of arguments
+            $process = new \Symfony\Component\Process\Process(['ffmpeg', ...$ffmpegParams]);
             $process->setTimeout(5000);
             $process->run();
 
