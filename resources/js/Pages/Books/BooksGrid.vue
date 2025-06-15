@@ -26,7 +26,7 @@
                 prefetch
                 as="button"
                 :href="route('books.show', { book: book.slug })"
-                class="relative w-60 h-60 overflow-hidden shrink-0 snap-start rounded-lg bg-white shadow-gray-200/50 transition hover:opacity-80 hover:shadow hover:shadow-gray-300/50"
+                class="relative w-60 h-60 overflow-hidden shrink-0 snap-start rounded-lg transition hover:opacity-80 hover:shadow hover:shadow-gray-300/50"
                 @click="setBookLoading(book)"
             >
                 <div
@@ -39,7 +39,7 @@
                 </div>
                 <div v-else class="w-full h-full">
                     <div
-                        class="rounded-t-lg absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 text-center leading-4 text-black font-bold backdrop-blur-sm line-clamp-1 z-10"
+                        class="line-clamp-2 font-heading bg-theme-primary text-theme-button text-center uppercase text-2xl"
                     >
                         {{ book.title.toUpperCase() }}
                     </div>

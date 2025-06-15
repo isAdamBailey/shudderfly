@@ -102,7 +102,7 @@ function mediaPath(photo) {
                     :disabled="photo.loading"
                     class="w-full h-full rounded-t-none rounded-b-lg whitespace-normal text-left"
                 >
-                    <span class="line-clamp-2">{{ photo.book.title }}</span>
+                    <span class="line-clamp-2 font-heading text-theme-button uppercase text-lg">{{ photo.book.title }}</span>
                 </Button>
             </Link>
         </div>

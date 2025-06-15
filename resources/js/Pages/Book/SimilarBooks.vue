@@ -26,7 +26,7 @@
                 </div>
                 <div v-else>
                     <div
-                        class="rounded-t-lg absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 text-center leading-4 text-black font-bold backdrop-blur-sm line-clamp-1 z-10"
+                        class=" line-clamp-2 font-heading bg-theme-primary text-theme-button text-center uppercase text-2xl"
                     >
                         {{ book.title.toUpperCase() }}
                     </div>
