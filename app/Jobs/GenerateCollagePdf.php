@@ -46,6 +46,9 @@ class GenerateCollagePdf implements ShouldQueue
      */
     public function handle(): void
     {
+        // Increase memory limit to 2GB
+        ini_set('memory_limit', '2G');
+        
         // Create temporary directory for images
         $tempDir = storage_path("app/temp/collage-{$this->collage->id}");
         if (! file_exists($tempDir)) {
