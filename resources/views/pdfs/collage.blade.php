@@ -21,7 +21,6 @@
             height: 11in;
             border-collapse: collapse;
             table-layout: fixed;
-            page-break-after: always;
         }
         td {
             width: 2.125in; /* 8.5in / 4 */
