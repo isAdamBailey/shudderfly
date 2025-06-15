@@ -111,7 +111,7 @@
             </div>
             <div class="my-4">
                 <AddToCollageButton
-                    v-if="page.media_path && !isVideo(page.media_path) && !page.video_link"
+                    v-if="canAddToCollage"
                     :page-id="props.page.id"
                     :collages="props.collages"
                 />
@@ -159,4 +159,11 @@ const stripHtml = (html) => {
     }
     return html.replace(/<\/?[^>]+(>|$)/g, "");
 };
+
+const canAddToCollage = computed(() => {
+    return props.page.media_path && 
+           !isVideo(props.page.media_path) && 
+           !props.page.video_link && 
+           props.collages.length > 0;
+});
 </script>
