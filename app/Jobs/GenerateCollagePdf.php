@@ -10,11 +10,11 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
+use Aws\S3\S3Client;
 
 class GenerateCollagePdf implements ShouldQueue
 {
@@ -56,6 +56,16 @@ class GenerateCollagePdf implements ShouldQueue
         }
 
         try {
+            // Initialize S3 client
+            $s3 = new S3Client([
+                'version' => 'latest',
+                'region'  => config('filesystems.disks.s3.region'),
+                'credentials' => [
+                    'key'    => config('filesystems.disks.s3.key'),
+                    'secret' => config('filesystems.disks.s3.secret'),
+                ],
+            ]);
+
             // Download all images in smaller batches
             $localImages = [];
             $batchSize = 2; // Reduced batch size to 2 images at a time
@@ -67,47 +77,34 @@ class GenerateCollagePdf implements ShouldQueue
                     $localPath = "{$tempDir}/{$imageName}";
 
                     try {
-                        // Download image from S3/CloudFront with timeout and memory management
-                        $response = Http::timeout(30)
-                            ->withHeaders([
-                                'Accept' => 'image/*',
-                                'Accept-Encoding' => 'gzip, deflate',
-                            ])
-                            ->get($page->media_path);
+                        // Extract S3 key from CloudFront URL
+                        $s3Path = str_replace(env('CLOUDFRONT_URL'), '', $page->media_path);
+                        
+                        // Download from S3 using stream
+                        $result = $s3->getObject([
+                            'Bucket' => config('filesystems.disks.s3.bucket'),
+                            'Key'    => $s3Path,
+                            'SaveAs' => $localPath
+                        ]);
 
-                        if ($response->successful()) {
-                            // Write file in chunks to manage memory
-                            $handle = fopen($localPath, 'w');
-                            if ($handle) {
-                                $chunkSize = 1024 * 1024; // 1MB chunks
-                                $body = $response->body();
-                                $length = strlen($body);
-                                
-                                for ($i = 0; $i < $length; $i += $chunkSize) {
-                                    $chunk = substr($body, $i, $chunkSize);
-                                    fwrite($handle, $chunk);
-                                    unset($chunk); // Free memory after each chunk
-                                }
-                                
-                                fclose($handle);
-                                
-                                $localImages[] = [
-                                    'path' => $localPath,
-                                    'page' => $page,
-                                ];
-                            }
+                        if (file_exists($localPath)) {
+                            $localImages[] = [
+                                'path' => $localPath,
+                                'page' => $page,
+                            ];
                         } else {
-                            Log::error('Failed to download image for collage', [
+                            Log::error('Failed to save image locally', [
                                 'collage_id' => $this->collage->id,
                                 'page_id' => $page->id,
                                 'media_path' => $page->media_path,
-                                'status_code' => $response->status(),
+                                's3_path' => $s3Path,
                             ]);
                         }
                     } catch (\Exception $e) {
-                        Log::error('Error downloading image', [
+                        Log::error('Error downloading image from S3', [
                             'collage_id' => $this->collage->id,
                             'page_id' => $page->id,
+                            'media_path' => $page->media_path,
                             'error' => $e->getMessage(),
                         ]);
                         continue;
@@ -129,8 +126,14 @@ class GenerateCollagePdf implements ShouldQueue
                 throw new \Exception('No images available to generate the PDF');
             }
 
-            // Generate PDF with local images
-            $pdf = PDF::loadView('pdfs.collage', [
+            // Configure DomPDF for better performance
+            $pdf = PDF::setOptions([
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'isPhpEnabled' => true,
+                'dpi' => 150, // Lower DPI for better performance
+                'defaultFont' => 'sans-serif'
+            ])->loadView('pdfs.collage', [
                 'collage' => $this->collage,
                 'localImages' => $localImages,
             ]);
@@ -150,49 +153,35 @@ class GenerateCollagePdf implements ShouldQueue
                 throw new \Exception('Generated PDF content is empty');
             }
 
-            $saved = Storage::disk('local')->put($filename, $pdfContent);
+            // Save PDF to S3 instead of local storage
+            $s3Key = "collages/collage-{$this->collage->id}.pdf";
+            $s3Result = $s3->putObject([
+                'Bucket' => config('filesystems.disks.s3.bucket'),
+                'Key'    => $s3Key,
+                'Body'   => $pdfContent,
+                'ContentType' => 'application/pdf',
+                'ACL'    => 'public-read'
+            ]);
 
-            if (! $saved) {
-                Log::error('Failed to save PDF to storage', [
+            if (!isset($s3Result['ObjectURL'])) {
+                Log::error('Failed to upload PDF to S3', [
                     'collage_id' => $this->collage->id,
-                    'filename' => $filename,
+                    's3_key' => $s3Key,
                 ]);
-                throw new \Exception('Failed to save PDF to storage');
-            }
-
-            // Verify the file exists and is readable
-            if (! Storage::disk('local')->exists($filename)) {
-                Log::error('PDF file not found after saving', [
-                    'collage_id' => $this->collage->id,
-                    'filename' => $filename,
-                ]);
-                throw new \Exception('PDF file not found after saving');
+                throw new \Exception('Failed to upload PDF to S3');
             }
 
             // Get admin users
             $permission = Permission::findByName('edit pages');
             $admins = $permission->users;
 
-            // Send email to admins
+            // Send email to admins with download link
             foreach ($admins as $admin) {
-                $pdfPath = Storage::disk('local')->path($filename);
-
-                if (! file_exists($pdfPath)) {
-                    Log::error('PDF file not found at path', [
-                        'collage_id' => $this->collage->id,
-                        'path' => $pdfPath,
-                    ]);
-                    continue;
-                }
-
                 Mail::to($admin->email)->send(new CollagePdfMail(
                     $this->collage,
-                    $pdfPath
+                    $s3Result['ObjectURL']
                 ));
             }
-
-            // Delete the PDF after email is sent
-            Storage::disk('local')->delete($filename);
 
         } catch (\Exception $e) {
             Log::error('Error generating or sending PDF', [

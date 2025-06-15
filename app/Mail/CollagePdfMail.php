@@ -18,7 +18,7 @@ class CollagePdfMail extends Mailable
      */
     public function __construct(
         public Collage $collage,
-        public string $pdfPath
+        public string $pdfUrl
     ) {}
 
     /**
@@ -41,6 +41,7 @@ class CollagePdfMail extends Mailable
             with: [
                 'collageId' => $this->collage->id,
                 'imageCount' => $this->collage->pages->count(),
+                'pdfUrl' => $this->pdfUrl,
             ],
         );
     }
@@ -52,10 +53,6 @@ class CollagePdfMail extends Mailable
      */
     public function attachments(): array
     {
-        return [
-            \Illuminate\Mail\Mailables\Attachment::fromPath($this->pdfPath)
-                ->as("collage-{$this->collage->id}.pdf")
-                ->withMime('application/pdf'),
-        ];
+        return [];
     }
 }
