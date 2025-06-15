@@ -196,6 +196,11 @@ class GenerateCollagePdf implements ShouldQueue
                 throw new \Exception('Failed to upload PDF to S3');
             }
 
+            // Store the storage path in the collage record
+            $this->collage->update([
+                'storage_path' => $s3Key
+            ]);
+
             // Get admin users
             $permission = Permission::findByName('edit pages');
             $admins = $permission->users;
