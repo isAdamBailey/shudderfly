@@ -38,7 +38,7 @@ class StoreVideo implements ShouldQueue
 
     public int $maxExceptions = 3;
 
-    public int $timeout = 600;
+    public int $timeout = 5000;
 
     public int $memory = 4096;
 
@@ -54,6 +54,13 @@ class StoreVideo implements ShouldQueue
 
     public function handle(): void
     {
+        Log::info('Starting StoreVideo job', [
+            'filePath' => $this->filePath,
+            'path' => $this->path,
+            'book_id' => $this->book?->id,
+            'page_id' => $this->page?->id,
+        ]);
+
         if (empty($this->filePath) || ! Storage::disk('local')->exists($this->filePath)) {
             Log::error('Video file not found or path is empty', [
                 'filePath' => $this->filePath,
@@ -175,16 +182,31 @@ class StoreVideo implements ShouldQueue
                 return $value !== null;
             });
 
-            // Execute FFmpeg command directly
+            // Execute FFmpeg command with proper process handling
             $command = 'ffmpeg '.implode(' ', array_map('escapeshellarg', $ffmpegParams));
 
-            $output = [];
-            $returnCode = 0;
-            exec($command.' 2>&1', $output, $returnCode);
+            Log::info('Starting FFmpeg processing', [
+                'command' => $command,
+                'filePath' => $this->filePath,
+            ]);
 
-            if ($returnCode !== 0) {
-                throw new \RuntimeException('FFmpeg processing failed: '.implode("\n", $output));
+            $process = new \Symfony\Component\Process\Process(explode(' ', $command));
+            $process->setTimeout(5000);
+            $process->run();
+
+            if (! $process->isSuccessful()) {
+                Log::error('FFmpeg processing failed', [
+                    'error' => $process->getErrorOutput(),
+                    'output' => $process->getOutput(),
+                    'exitCode' => $process->getExitCode(),
+                ]);
+                throw new \RuntimeException('FFmpeg processing failed: '.$process->getErrorOutput());
             }
+
+            Log::info('FFmpeg processing completed successfully', [
+                'filePath' => $this->filePath,
+                'output' => $process->getOutput(),
+            ]);
 
             $screenshotContents = $media->getFrameFromSeconds(0.5)
                 ->export()
@@ -241,6 +263,8 @@ class StoreVideo implements ShouldQueue
                 'filePath' => $this->filePath,
                 'path' => $this->path,
                 'trace' => $e->getTraceAsString(),
+                'memory_usage' => memory_get_usage(true),
+                'peak_memory_usage' => memory_get_peak_usage(true),
             ]);
             $this->fail($e);
         } catch (S3Exception $e) {
@@ -249,6 +273,8 @@ class StoreVideo implements ShouldQueue
                 'filePath' => $this->filePath,
                 'path' => $this->path,
                 'trace' => $e->getTraceAsString(),
+                'memory_usage' => memory_get_usage(true),
+                'peak_memory_usage' => memory_get_peak_usage(true),
             ]);
             $this->fail($e);
         } catch (Throwable $e) {
@@ -257,10 +283,18 @@ class StoreVideo implements ShouldQueue
                 'trace' => $e->getTraceAsString(),
                 'filePath' => $this->filePath,
                 'path' => $this->path,
+                'memory_usage' => memory_get_usage(true),
+                'peak_memory_usage' => memory_get_peak_usage(true),
             ]);
             $this->fail($e);
         } finally {
-            if (file_exists($tempFile)) {
+            Log::info('StoreVideo job cleanup', [
+                'filePath' => $this->filePath,
+                'tempFile' => $tempFile ?? null,
+                'memory_usage' => memory_get_usage(true),
+            ]);
+
+            if (isset($tempFile) && file_exists($tempFile)) {
                 if (! @unlink($tempFile)) {
                     Log::warning("Failed to delete temp file: $tempFile");
                 }
