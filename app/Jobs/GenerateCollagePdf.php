@@ -89,30 +89,28 @@ class GenerateCollagePdf implements ShouldQueue
 
                         if (file_exists($localPath)) {
                             // Optimize image before converting to base64
-                            $image = Image::make($localPath);
-
+                            $image = Image::read($localPath);
+                            
                             // Resize image if it's too large (max 800px width/height)
                             if ($image->width() > 800 || $image->height() > 800) {
-                                $image->resize(800, 800, function ($constraint) {
-                                    $constraint->aspectRatio();
-                                    $constraint->upsize();
-                                });
+                                $image->resize(800, 800);
                             }
-
-                            // Optimize image quality
-                            $image->encode('jpg', 80); // Convert to JPG with 80% quality
-
+                            
+                            // Optimize image quality and convert to JPG
+                            $encoded = $image->toJpeg(80);
+                            
                             // Convert to base64
-                            $imageData = base64_encode($image->encode('jpg', 80));
+                            $imageData = base64_encode((string) $encoded);
                             $base64Image = "data:image/jpeg;base64,{$imageData}";
-
+                            
                             $localImages[] = [
                                 'path' => $base64Image,
                                 'page' => $page,
                             ];
-
+                            
                             // Free up memory
-                            $image->destroy();
+                            unset($image);
+                            unset($encoded);
                         } else {
                             Log::error('Failed to save image locally', [
                                 'collage_id' => $this->collage->id,
