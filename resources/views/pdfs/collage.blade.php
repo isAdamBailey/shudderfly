@@ -15,53 +15,42 @@
             padding: 0;
             width: 8.5in;
             height: 11in;
+            position: relative;
         }
-        table {
+        .grid {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 8.5in;
             height: 11in;
-            border-collapse: collapse;
-            table-layout: fixed;
         }
-        tr {
-            height: 25%; /* Each row takes up 1/4 of the page height */
-        }
-        td {
-            width: 25%; /* Each cell takes up 1/4 of the page width */
-            height: 100%; /* Each cell takes up full height of its row */
-            padding: 0;
-            margin: 0;
-            vertical-align: top;
-            position: relative;
+        .cell {
+            position: absolute;
+            width: 2.125in; /* 8.5in / 4 */
+            height: 2.75in; /* 11in / 4 */
             overflow: hidden;
         }
-        td img {
+        .cell img {
             width: 100%;
             height: 100%;
             object-fit: cover;
             display: block;
-            margin: 0;
-            padding: 0;
         }
     </style>
 </head>
 <body>
-    <table>
-        <tr>
-            @foreach($localImages as $index => $image)
-                @if($index > 0 && $index % 4 === 0)
-                    </tr><tr>
-                @endif
-                <td>
-                    <img src="{{ $image['path'] }}" alt="Collage image {{ $image['page']->id }}">
-                </td>
-            @endforeach
-            @for($i = count($localImages); $i < 16; $i++)
-                @if($i > 0 && $i % 4 === 0)
-                    </tr><tr>
-                @endif
-                <td></td>
-            @endfor
-        </tr>
-    </table>
+    <div class="grid">
+        @foreach($localImages as $index => $image)
+            @php
+                $row = floor($index / 4);
+                $col = $index % 4;
+                $top = $row * 2.75;
+                $left = $col * 2.125;
+            @endphp
+            <div class="cell" style="top: {{ $top }}in; left: {{ $left }}in;">
+                <img src="{{ $image['path'] }}" alt="Collage image {{ $image['page']->id }}">
+            </div>
+        @endforeach
+    </div>
 </body>
 </html> 
