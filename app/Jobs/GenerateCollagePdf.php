@@ -91,10 +91,13 @@ class GenerateCollagePdf implements ShouldQueue
                             // Optimize image before converting to base64
                             $image = Image::read($localPath);
                             
-                            // Resize image if it's too large (max 800px width/height)
-                            if ($image->width() > 800 || $image->height() > 800) {
-                                $image->resize(800, 800);
-                            }
+                            // Calculate dimensions for 4x4 grid on 8.5x11 page
+                            // Each image should be 2.125in x 2.75in at 100 DPI
+                            $targetWidth = 213;  // 2.125in * 100 DPI
+                            $targetHeight = 275; // 2.75in * 100 DPI
+                            
+                            // Resize image to fit the target dimensions
+                            $image->resize($targetWidth, $targetHeight);
                             
                             // Optimize image quality and convert to JPG
                             $encoded = $image->toJpeg(80);

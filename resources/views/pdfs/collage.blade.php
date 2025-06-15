@@ -22,13 +22,17 @@
             border-collapse: collapse;
             table-layout: fixed;
         }
+        tr {
+            height: 25%; /* Each row takes up 1/4 of the page height */
+        }
         td {
-            width: 2.125in; /* 8.5in / 4 */
-            height: 2.75in; /* 11in / 4 */
+            width: 25%; /* Each cell takes up 1/4 of the page width */
+            height: 100%; /* Each cell takes up full height of its row */
             padding: 0;
             margin: 0;
             vertical-align: top;
             position: relative;
+            overflow: hidden;
         }
         td img {
             width: 100%;
