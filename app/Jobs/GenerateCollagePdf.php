@@ -88,8 +88,13 @@ class GenerateCollagePdf implements ShouldQueue
                         ]);
 
                         if (file_exists($localPath)) {
+                            // Convert image to base64 for embedding in PDF
+                            $imageData = base64_encode(file_get_contents($localPath));
+                            $mimeType = mime_content_type($localPath);
+                            $base64Image = "data:{$mimeType};base64,{$imageData}";
+                            
                             $localImages[] = [
-                                'path' => $localPath,
+                                'path' => $base64Image,
                                 'page' => $page,
                             ];
                         } else {
