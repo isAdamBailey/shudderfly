@@ -13,6 +13,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Laravel\Facades\Image;
 use Spatie\Permission\Models\Permission;
 
@@ -55,8 +56,15 @@ class GenerateCollagePdf implements ShouldQueue
             mkdir($tempDir, 0755, true);
         }
 
+        $errorMessage = null;
+        $pdfUrl = null;
+
         try {
-            // Initialize S3 client
+            // Download all images in smaller batches
+            $localImages = [];
+            $batchSize = 2; // Reduced batch size to 2 images at a time
+            $pages = $this->collage->pages->chunk($batchSize);
+
             $s3 = new S3Client([
                 'version' => 'latest',
                 'region' => config('filesystems.disks.s3.region'),
@@ -66,19 +74,38 @@ class GenerateCollagePdf implements ShouldQueue
                 ],
             ]);
 
-            // Download all images in smaller batches
-            $localImages = [];
-            $batchSize = 2; // Reduced batch size to 2 images at a time
-            $pages = $this->collage->pages->chunk($batchSize);
-
             foreach ($pages as $pageBatch) {
                 foreach ($pageBatch as $page) {
                     $imageName = basename($page->media_path);
                     $localPath = "{$tempDir}/{$imageName}";
 
                     try {
-                        // Extract S3 key from CloudFront URL and ensure no leading slash
-                        $s3Path = ltrim(str_replace(env('CLOUDFRONT_URL'), '', $page->media_path), '/');
+                        // Extract S3 key from URL
+                        $mediaPath = $page->media_path;
+                        $cloudfrontUrl = env('CLOUDFRONT_URL');
+
+                        if ($cloudfrontUrl && str_contains($mediaPath, $cloudfrontUrl)) {
+                            // If it's a CloudFront URL, extract the path
+                            $s3Path = ltrim(str_replace($cloudfrontUrl, '', $mediaPath), '/');
+                        } else {
+                            // If it's an S3 URL, extract just the key part
+                            $s3Path = str_replace('https://'.config('filesystems.disks.s3.bucket').'.s3.us-west-2.amazonaws.com/', '', $mediaPath);
+                            // Remove any double-encoded URLs
+                            if (str_contains($s3Path, 'https%3A//')) {
+                                $s3Path = urldecode($s3Path);
+                                $s3Path = str_replace('https://'.config('filesystems.disks.s3.bucket').'.s3.us-west-2.amazonaws.com/', '', $s3Path);
+                            }
+
+                            // Ensure we have just the key part
+                            if (str_contains($s3Path, 'https://')) {
+                                $s3Path = str_replace('https://'.config('filesystems.disks.s3.bucket').'.s3.us-west-2.amazonaws.com/', '', $s3Path);
+                            }
+                        }
+
+                        Log::info('Attempting to download from S3', [
+                            'original_path' => $mediaPath,
+                            's3_path' => $s3Path,
+                        ]);
 
                         // Download from S3 using stream
                         $result = $s3->getObject([
@@ -90,27 +117,27 @@ class GenerateCollagePdf implements ShouldQueue
                         if (file_exists($localPath)) {
                             // Optimize image before converting to base64
                             $image = Image::read($localPath);
-                            
+
                             // Calculate dimensions for 4x4 grid on 8.5x11 page
                             // Each image should be 2.125in x 2.75in at 100 DPI
                             $targetWidth = 213;  // 2.125in * 100 DPI
                             $targetHeight = 275; // 2.75in * 100 DPI
-                            
+
                             // Resize image to fit the target dimensions
                             $image->resize($targetWidth, $targetHeight);
-                            
+
                             // Optimize image quality and convert to JPG
                             $encoded = $image->toJpeg(80);
-                            
+
                             // Convert to base64
                             $imageData = base64_encode((string) $encoded);
                             $base64Image = "data:image/jpeg;base64,{$imageData}";
-                            
+
                             $localImages[] = [
                                 'path' => $base64Image,
                                 'page' => $page,
                             ];
-                            
+
                             // Free up memory
                             unset($image);
                             unset($encoded);
@@ -141,12 +168,13 @@ class GenerateCollagePdf implements ShouldQueue
                 gc_collect_cycles();
             }
 
-            // Ensure there are images to include in the PDF
             if (empty($localImages)) {
                 Log::error('No images were successfully downloaded for the collage', [
                     'collage_id' => $this->collage->id,
                 ]);
-                throw new \Exception('No images available to generate the PDF');
+                $errorMessage = 'No images were available to generate the PDF';
+
+                return;
             }
 
             // Configure DomPDF for better performance and smaller size
@@ -170,48 +198,33 @@ class GenerateCollagePdf implements ShouldQueue
             }
 
             // Save PDF to storage
-            $filename = "collages/collage-{$this->collage->id}.pdf";
             $pdfContent = $pdf->output();
 
             if (empty($pdfContent)) {
                 Log::error('PDF content is empty', ['collage_id' => $this->collage->id]);
-                throw new \Exception('Generated PDF content is empty');
+                $errorMessage = 'Generated PDF content is empty';
+
+                return;
             }
 
-            // Save PDF to S3 instead of local storage
+            // Save PDF to S3
             $s3Key = "collages/collage-{$this->collage->id}.pdf";
-            $s3Result = $s3->putObject([
-                'Bucket' => config('filesystems.disks.s3.bucket'),
-                'Key' => $s3Key,
-                'Body' => $pdfContent,
-                'ContentType' => 'application/pdf',
-                'ACL' => 'public-read',
-            ]);
-
-            if (! isset($s3Result['ObjectURL'])) {
+            if (Storage::disk('s3')->put($s3Key, $pdfContent, ['visibility' => 'public'])) {
+                $pdfUrl = Storage::disk('s3')->url($s3Key);
+            } else {
                 Log::error('Failed to upload PDF to S3', [
                     'collage_id' => $this->collage->id,
                     's3_key' => $s3Key,
                 ]);
-                throw new \Exception('Failed to upload PDF to S3');
+                $errorMessage = 'Failed to upload PDF to S3';
+
+                return;
             }
 
             // Store the storage path in the collage record
             $this->collage->update([
-                'storage_path' => $s3Key
+                'storage_path' => $s3Key,
             ]);
-
-            // Get admin users
-            $permission = Permission::findByName('edit pages');
-            $admins = $permission->users;
-
-            // Send email to admins with download link
-            foreach ($admins as $admin) {
-                Mail::to($admin->email)->send(new CollagePdfMail(
-                    $this->collage,
-                    $s3Result['ObjectURL']
-                ));
-            }
 
         } catch (\Exception $e) {
             Log::error('Error generating or sending PDF', [
@@ -219,10 +232,24 @@ class GenerateCollagePdf implements ShouldQueue
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+            $errorMessage = 'Error generating PDF: '.$e->getMessage();
             throw $e;
         } finally {
             // Clean up temporary files
             $this->cleanupTempFiles($tempDir);
+
+            // Get admin users
+            $permission = Permission::findByName('edit pages');
+            $admins = $permission->users;
+
+            // Send email to admins
+            foreach ($admins as $admin) {
+                Mail::to('adamjbailey7@gmail.com')->send(new CollagePdfMail(
+                    $this->collage,
+                    $pdfUrl,
+                    $errorMessage
+                ));
+            }
         }
     }
 

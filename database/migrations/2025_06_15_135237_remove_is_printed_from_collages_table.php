@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('collages', function (Blueprint $table) {
-            $table->string('storage_path')->nullable()->after('id');
+            $table->dropColumn('is_printed');
         });
     }
 
@@ -22,7 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('collages', function (Blueprint $table) {
-            $table->dropColumn('storage_path');
+            $table->boolean('is_printed')->default(false);
         });
     }
 };

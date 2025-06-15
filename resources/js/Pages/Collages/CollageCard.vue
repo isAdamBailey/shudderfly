@@ -39,7 +39,7 @@
                 v-if="canEditPages"
                 class="btn btn-secondary"
                 :disabled="printForm.processing"
-                @click="printForm.post(route('collages.print', collage.id))"
+                @click="printForm.post(route('collages.generate-pdf', collage.id))"
             >
                 Generate Collage
             </Button>

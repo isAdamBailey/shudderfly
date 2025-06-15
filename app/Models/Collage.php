@@ -9,7 +9,7 @@ class Collage extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['is_printed'];
+    protected $fillable = ['storage_path'];
 
     /**
      * A collage has many pages (images) via the pivot table.

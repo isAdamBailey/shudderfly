@@ -32,11 +32,8 @@ class CollageController extends Controller
         return redirect()->route('collages.index');
     }
 
-    public function print(Collage $collage)
+    public function generatePdf(Collage $collage)
     {
-        $collage->is_printed = true;
-        $collage->save();
-
         GenerateCollagePdf::dispatch($collage);
 
         return redirect()->route('collages.index')->with('success', 'PDF generation has been queued. You will receive an email when it\'s ready.');

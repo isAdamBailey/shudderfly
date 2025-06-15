@@ -18,7 +18,8 @@ class CollagePdfMail extends Mailable
      */
     public function __construct(
         public Collage $collage,
-        public string $pdfUrl
+        public ?string $pdfUrl = null,
+        public ?string $errorMessage = null
     ) {}
 
     /**
@@ -27,7 +28,7 @@ class CollagePdfMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'New Collage PDF Generated',
+            subject: $this->errorMessage ? 'Collage PDF Generation Failed' : 'New Collage PDF Generated',
         );
     }
 
@@ -42,6 +43,7 @@ class CollagePdfMail extends Mailable
                 'collageId' => $this->collage->id,
                 'imageCount' => $this->collage->pages->count(),
                 'pdfUrl' => $this->pdfUrl,
+                'errorMessage' => $this->errorMessage,
             ],
         );
     }
