@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Mail\CollagePdfMail;
 use App\Models\Collage;
+use Aws\S3\S3Client;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -12,9 +13,8 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Intervention\Image\Laravel\Facades\Image;
 use Spatie\Permission\Models\Permission;
-use Aws\S3\S3Client;
-use Intervention\Image\Facades\Image;
 
 class GenerateCollagePdf implements ShouldQueue
 {
@@ -48,7 +48,7 @@ class GenerateCollagePdf implements ShouldQueue
     {
         // Increase memory limit to 2GB
         ini_set('memory_limit', '2G');
-        
+
         // Create temporary directory for images
         $tempDir = storage_path("app/temp/collage-{$this->collage->id}");
         if (! file_exists($tempDir)) {
@@ -59,9 +59,9 @@ class GenerateCollagePdf implements ShouldQueue
             // Initialize S3 client
             $s3 = new S3Client([
                 'version' => 'latest',
-                'region'  => config('filesystems.disks.s3.region'),
+                'region' => config('filesystems.disks.s3.region'),
                 'credentials' => [
-                    'key'    => config('filesystems.disks.s3.key'),
+                    'key' => config('filesystems.disks.s3.key'),
                     'secret' => config('filesystems.disks.s3.secret'),
                 ],
             ]);
@@ -79,18 +79,18 @@ class GenerateCollagePdf implements ShouldQueue
                     try {
                         // Extract S3 key from CloudFront URL and ensure no leading slash
                         $s3Path = ltrim(str_replace(env('CLOUDFRONT_URL'), '', $page->media_path), '/');
-                        
+
                         // Download from S3 using stream
                         $result = $s3->getObject([
                             'Bucket' => config('filesystems.disks.s3.bucket'),
-                            'Key'    => $s3Path,
-                            'SaveAs' => $localPath
+                            'Key' => $s3Path,
+                            'SaveAs' => $localPath,
                         ]);
 
                         if (file_exists($localPath)) {
                             // Optimize image before converting to base64
                             $image = Image::make($localPath);
-                            
+
                             // Resize image if it's too large (max 800px width/height)
                             if ($image->width() > 800 || $image->height() > 800) {
                                 $image->resize(800, 800, function ($constraint) {
@@ -98,19 +98,19 @@ class GenerateCollagePdf implements ShouldQueue
                                     $constraint->upsize();
                                 });
                             }
-                            
+
                             // Optimize image quality
                             $image->encode('jpg', 80); // Convert to JPG with 80% quality
-                            
+
                             // Convert to base64
                             $imageData = base64_encode($image->encode('jpg', 80));
                             $base64Image = "data:image/jpeg;base64,{$imageData}";
-                            
+
                             $localImages[] = [
                                 'path' => $base64Image,
                                 'page' => $page,
                             ];
-                            
+
                             // Free up memory
                             $image->destroy();
                         } else {
@@ -128,6 +128,7 @@ class GenerateCollagePdf implements ShouldQueue
                             'media_path' => $page->media_path,
                             'error' => $e->getMessage(),
                         ]);
+
                         continue;
                     }
 
@@ -180,13 +181,13 @@ class GenerateCollagePdf implements ShouldQueue
             $s3Key = "collages/collage-{$this->collage->id}.pdf";
             $s3Result = $s3->putObject([
                 'Bucket' => config('filesystems.disks.s3.bucket'),
-                'Key'    => $s3Key,
-                'Body'   => $pdfContent,
+                'Key' => $s3Key,
+                'Body' => $pdfContent,
                 'ContentType' => 'application/pdf',
-                'ACL'    => 'public-read'
+                'ACL' => 'public-read',
             ]);
 
-            if (!isset($s3Result['ObjectURL'])) {
+            if (! isset($s3Result['ObjectURL'])) {
                 Log::error('Failed to upload PDF to S3', [
                     'collage_id' => $this->collage->id,
                     's3_key' => $s3Key,
