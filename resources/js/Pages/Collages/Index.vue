@@ -12,7 +12,19 @@
             </div>
         </template>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mx-10 my-5">
+        <div
+            v-if="collages.length === 0"
+            class="flex flex-col items-center mt-10"
+        >
+            <h2 class="mb-8 font-semibold text-2xl text-gray-100 leading-tight">
+                No collages have been created yet.
+            </h2>
+            <ManEmptyCircle />
+        </div>
+
+        <div
+            class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mx-10 my-5"
+        >
             <CollageCard
                 v-for="(collage, index) in collages"
                 :key="collage.id"
@@ -33,6 +45,7 @@
 
 <script setup>
 import Button from "@/Components/Button.vue";
+import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, useForm } from "@inertiajs/vue3";
 
