@@ -102,11 +102,6 @@ class GenerateCollagePdf implements ShouldQueue
                             }
                         }
 
-                        Log::info('Attempting to download from S3', [
-                            'original_path' => $mediaPath,
-                            's3_path' => $s3Path,
-                        ]);
-
                         // Download from S3 using stream
                         $result = $s3->getObject([
                             'Bucket' => config('filesystems.disks.s3.bucket'),
@@ -244,7 +239,7 @@ class GenerateCollagePdf implements ShouldQueue
 
             // Send email to admins
             foreach ($admins as $admin) {
-                Mail::to('adamjbailey7@gmail.com')->send(new CollagePdfMail(
+                Mail::to($admin->email)->send(new CollagePdfMail(
                     $this->collage,
                     $pdfUrl,
                     $errorMessage
