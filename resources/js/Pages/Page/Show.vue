@@ -2,13 +2,13 @@
     <Head :title="page.book.title" />
 
     <BreezeAuthenticatedLayout>
-        <div
-            class="pb-5 overflow-hidden bg-gray-900 relative"
-        >
+        <div class="pb-5 overflow-hidden bg-gray-900 relative">
             <div class="text-center">
                 <BookTitle :book="page.book" />
                 <div class="relative min-h-[60vh] mt-10">
-                    <div class="w-full flex items-center justify-center relative">
+                    <div
+                        class="w-full flex items-center justify-center relative"
+                    >
                         <Link
                             v-if="previousPage"
                             prefectch="hover"
@@ -37,7 +37,10 @@
                                 class="ri-arrow-right-circle-fill text-6xl rounded-full bg-blue-600 hover:bg-white dark:bg-gray-800 christmas:bg-christmas-red hover:dark:bg-white"
                             ></i>
                         </Link>
-                        <div v-if="page.media_path" class="rounded-lg overflow-hidden mx-16 md:mx-20">
+                        <div
+                            v-if="page.media_path"
+                            class="rounded-lg overflow-hidden mx-16 md:mx-20"
+                        >
                             <LazyLoader
                                 :src="page.media_path"
                                 :poster="page.media_poster"
@@ -47,7 +50,10 @@
                                 :object-fit="'contain'"
                             />
                         </div>
-                        <div v-else-if="page.video_link" class="w-full max-w-4xl mx-16 md:mx-20">
+                        <div
+                            v-else-if="page.video_link"
+                            class="w-full max-w-4xl mx-16 md:mx-20"
+                        >
                             <VideoWrapper
                                 :url="page.video_link"
                                 :title="page.description"
@@ -62,10 +68,7 @@
                         {{ Math.round(page.read_count).toLocaleString() }} times
                     </p>
                 </div>
-                <div
-                    v-if="hasContent"
-                    class="mx-5 mt-8 mb-5 relative z-20"
-                >
+                <div v-if="hasContent" class="mx-5 mt-8 mb-5 relative z-20">
                     <div class="text-container">
                         <div
                             class="font-content page-content max-w-5xl mx-auto text-lg text-left relative"
@@ -106,11 +109,19 @@
                     @close-page-form="showPageSettings = false"
                 />
             </div>
+            <div class="my-4">
+                <AddToCollageButton
+                    v-if="canAddToCollage"
+                    :page-id="props.page.id"
+                    :collages="props.collages"
+                />
+            </div>
         </div>
     </BreezeAuthenticatedLayout>
 </template>
 
 <script setup>
+import AddToCollageButton from "@/Components/AddToCollageButton.vue";
 import BookTitle from "@/Components/BookTitle.vue";
 import Button from "@/Components/Button.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
@@ -119,6 +130,7 @@ import { usePermissions } from "@/composables/permissions";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useDate } from "@/dateHelpers";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import { useMedia } from "@/mediaHelpers";
 import EditPageForm from "@/Pages/Page/EditPageForm.vue";
 import { Head, Link } from "@inertiajs/vue3";
 import { computed, ref } from "vue";
@@ -126,12 +138,14 @@ import { computed, ref } from "vue";
 const { canEditPages } = usePermissions();
 const { short } = useDate();
 const { speak, speaking } = useSpeechSynthesis();
+const { isVideo } = useMedia();
 
 const props = defineProps({
     page: { type: Object, required: true },
     previousPage: { type: Object, required: true },
     nextPage: { type: Object, required: true },
     books: { type: Array, required: true },
+    collages: { type: Array, required: true },
 });
 
 let showPageSettings = ref(false);
@@ -145,4 +159,11 @@ const stripHtml = (html) => {
     }
     return html.replace(/<\/?[^>]+(>|$)/g, "");
 };
+
+const canAddToCollage = computed(() => {
+    return props.page.media_path && 
+           !isVideo(props.page.media_path) && 
+           !props.page.video_link && 
+           props.collages.length > 0;
+});
 </script>

@@ -45,8 +45,9 @@ class IncrementBookReadCount implements ShouldQueue
 
         // If the book is in the top 20 but not recent, only increment by a tenth
         $top20Books = Book::orderBy('read_count', 'desc')->take(20)->pluck('id')->toArray();
-        if (in_array($this->book->id, $top20Books) && !$isRecent) {
+        if (in_array($this->book->id, $top20Books) && ! $isRecent) {
             $this->book->increment('read_count', 0.1);
+
             return;
         }
 
