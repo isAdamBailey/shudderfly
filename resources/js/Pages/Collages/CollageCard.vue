@@ -34,17 +34,30 @@
                 </div>
             </div>
         </div>
-        <div class="flex flex-wrap justify-between mt-2">
+        <div
+            v-if="canEditPages"
+            class="flex flex-wrap justify-between items-center mt-2"
+        >
+            <a
+                v-if="collage.storage_path"
+                class="text-center"
+                :href="collage.storage_path"
+                target="_blank"
+            >
+                View
+                <i class="ri-external-link-line mr-1"></i>
+            </a>
             <Button
-                v-if="canEditPages"
                 class="btn btn-secondary"
                 :disabled="printForm.processing"
-                @click="printForm.post(route('collages.generate-pdf', collage.id))"
+                @click="
+                    printForm.post(route('collages.generate-pdf', collage.id))
+                "
             >
-                Generate Collage
+                {{ collage.storage_path ? "Regenerate" : "Generate PDF" }}
             </Button>
+
             <DangerButton
-                v-if="canEditPages"
                 class="btn btn-danger"
                 :disabled="deleteForm.processing"
                 @click="confirmDelete"
