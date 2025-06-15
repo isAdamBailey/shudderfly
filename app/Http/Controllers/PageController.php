@@ -159,7 +159,7 @@ class PageController extends Controller
             ]);
         }
 
-        return redirect(route('books.show', $book));
+        return redirect(route('books.show', $book))->with('success', 'New upload queued! It may take a few minutes to process.');
     }
 
     /**
