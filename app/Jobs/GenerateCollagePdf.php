@@ -12,9 +12,9 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Aws\S3\S3Client;
+use Intervention\Image\Facades\Image;
 
 class GenerateCollagePdf implements ShouldQueue
 {
@@ -88,15 +88,31 @@ class GenerateCollagePdf implements ShouldQueue
                         ]);
 
                         if (file_exists($localPath)) {
-                            // Convert image to base64 for embedding in PDF
-                            $imageData = base64_encode(file_get_contents($localPath));
-                            $mimeType = mime_content_type($localPath);
-                            $base64Image = "data:{$mimeType};base64,{$imageData}";
+                            // Optimize image before converting to base64
+                            $image = Image::make($localPath);
+                            
+                            // Resize image if it's too large (max 800px width/height)
+                            if ($image->width() > 800 || $image->height() > 800) {
+                                $image->resize(800, 800, function ($constraint) {
+                                    $constraint->aspectRatio();
+                                    $constraint->upsize();
+                                });
+                            }
+                            
+                            // Optimize image quality
+                            $image->encode('jpg', 80); // Convert to JPG with 80% quality
+                            
+                            // Convert to base64
+                            $imageData = base64_encode($image->encode('jpg', 80));
+                            $base64Image = "data:image/jpeg;base64,{$imageData}";
                             
                             $localImages[] = [
                                 'path' => $base64Image,
                                 'page' => $page,
                             ];
+                            
+                            // Free up memory
+                            $image->destroy();
                         } else {
                             Log::error('Failed to save image locally', [
                                 'collage_id' => $this->collage->id,
@@ -131,13 +147,15 @@ class GenerateCollagePdf implements ShouldQueue
                 throw new \Exception('No images available to generate the PDF');
             }
 
-            // Configure DomPDF for better performance
+            // Configure DomPDF for better performance and smaller size
             $pdf = PDF::setOptions([
                 'isHtml5ParserEnabled' => true,
                 'isRemoteEnabled' => true,
                 'isPhpEnabled' => true,
-                'dpi' => 150, // Lower DPI for better performance
-                'defaultFont' => 'sans-serif'
+                'dpi' => 100, // Reduced DPI for smaller file size
+                'defaultFont' => 'sans-serif',
+                'compress' => true, // Enable compression
+                'chroot' => storage_path('app'), // Restrict file access
             ])->loadView('pdfs.collage', [
                 'collage' => $this->collage,
                 'localImages' => $localImages,
