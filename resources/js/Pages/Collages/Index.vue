@@ -26,6 +26,12 @@
           </Button>
         </div>
       </div>
+      <p class="text-sm text-gray-400 mt-2">
+        You can build your own collages! Go to the page you want to add to the
+        collage and select the collage you want to use. Only 4 collages can be
+        added at a time, with maximum {{ MAX_COLLAGE_PAGES }} pages per collage.
+        Mom and Dad can print these collages for laminating once a month.
+      </p>
     </template>
 
     <div v-if="collages.length === 0" class="flex flex-col items-center mt-10">
@@ -85,6 +91,7 @@
 import Button from "@/Components/Button.vue";
 import DangerButton from "@/Components/DangerButton.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
+import { MAX_COLLAGE_PAGES } from "@/constants/collage";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, Link, useForm } from "@inertiajs/vue3";
 import CollageGrid from "./CollageGrid.vue";

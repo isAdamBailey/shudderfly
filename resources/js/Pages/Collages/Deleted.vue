@@ -16,6 +16,10 @@
           Back to Collages
         </Link>
       </div>
+      <p class="text-sm text-gray-400 mt-2">
+        Archived collages can no longer be edited, but you may still view and
+        print them.
+      </p>
     </template>
 
     <div v-if="collages.length === 0" class="flex flex-col items-center mt-10">
