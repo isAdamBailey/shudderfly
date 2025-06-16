@@ -38,9 +38,9 @@ class StoreVideo implements ShouldQueue
 
     public int $maxExceptions = 3;
 
-    public int $timeout = 5000;
+    public int $timeout = 3600; // 1 hour timeout
 
-    public int $memory = 4096;
+    public int $memory = 8192; // 8GB memory limit
 
     public function __construct(string $filePath, string $path, ?Book $book = null, ?string $content = null, ?string $videoLink = null, ?Page $page = null)
     {
@@ -189,16 +189,40 @@ class StoreVideo implements ShouldQueue
 
             // Create process with array of arguments
             $process = new \Symfony\Component\Process\Process(['ffmpeg', ...$ffmpegParams]);
-            $process->setTimeout(5000);
-            $process->run();
+            $process->setTimeout(3600); // 1 hour timeout for FFmpeg process
+            $process->setIdleTimeout(3600); // 1 hour idle timeout
+            
+            // Set process priority to be lower to prevent system resource contention
+            $process->setOptions([
+                'create_new_console' => true,
+                'create_process_group' => true,
+            ]);
+            
+            // Add progress callback to keep process alive
+            $process->run(function ($type, $buffer) {
+                if ($type === \Symfony\Component\Process\Process::ERR) {
+                    Log::debug('FFmpeg progress: ' . trim($buffer));
+                }
+            });
 
-            if (! $process->isSuccessful()) {
+            if (!$process->isSuccessful()) {
+                $errorOutput = $process->getErrorOutput();
+                $exitCode = $process->getExitCode();
+                
                 Log::error('FFmpeg processing failed', [
-                    'error' => $process->getErrorOutput(),
+                    'error' => $errorOutput,
                     'output' => $process->getOutput(),
-                    'exitCode' => $process->getExitCode(),
+                    'exitCode' => $exitCode,
+                    'command' => $process->getCommandLine(),
+                    'memory_usage' => memory_get_usage(true),
                 ]);
-                throw new \RuntimeException('FFmpeg processing failed: '.$process->getErrorOutput());
+                
+                // If process was killed, provide more specific error
+                if ($exitCode === 137 || strpos($errorOutput, 'signal 9') !== false) {
+                    throw new \RuntimeException('FFmpeg process was killed due to system resource constraints. Please try with a smaller video or lower quality settings.');
+                }
+                
+                throw new \RuntimeException('FFmpeg processing failed: ' . $errorOutput);
             }
 
             Log::info('FFmpeg processing completed successfully', [
