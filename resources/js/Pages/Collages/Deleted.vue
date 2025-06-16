@@ -3,7 +3,7 @@
 
   <AuthenticatedLayout>
     <template #header>
-      <div class="flex justify-between items-center mb-3">
+      <div class="flex justify-between flex-wrap items-center mb-3">
         <h2 class="font-heading text-2xl text-theme-title leading-tight">
           Archived Collages
         </h2>
@@ -12,7 +12,7 @@
           :href="route('collages.index')"
           class="text-white hover:text-blue-300"
         >
-          <i class="ri-arrow-left-line ml-1"></i>
+          <i class="ri-arrow-left-line mr-1"></i>
           Back to Collages
         </Link>
       </div>
@@ -34,7 +34,7 @@
           target="_blank"
         >
           View PDF
-          <i class="ri-external-link-line ml-1"></i>
+          <i class="ri-external-link-line mr-1"></i>
         </a>
       </template>
     </CollageGrid>
