@@ -19,15 +19,15 @@
         }
         .grid {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 8.5in;
-            height: 11in;
+            top: 0.25in;
+            left: 0.25in;
+            width: 8in;
+            height: 10.5in;
         }
         .cell {
             position: absolute;
-            width: 2.125in; /* 8.5in / 4 */
-            height: 2.75in; /* 11in / 4 */
+            width: 1.875in;
+            height: 2.5in;
             overflow: hidden;
         }
         .cell img {
@@ -44,8 +44,8 @@
             @php
                 $row = floor($index / 4);
                 $col = $index % 4;
-                $top = $row * 2.75;
-                $left = $col * 2.125;
+                $top = $row * 2.625;
+                $left = $col * 2;
             @endphp
             <div class="cell" style="top: {{ $top }}in; left: {{ $left }}in;">
                 <img src="{{ $image['path'] }}" alt="Collage image {{ $image['page']->id }}">

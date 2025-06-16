@@ -239,7 +239,7 @@ class GenerateCollagePdf implements ShouldQueue
 
             // Send email to admins
             foreach ($admins as $admin) {
-                Mail::to($admin->email)->send(new CollagePdfMail(
+                Mail::to("adamjbailey7@gmail.com")->send(new CollagePdfMail(
                     $this->collage,
                     $pdfUrl,
                     $errorMessage
