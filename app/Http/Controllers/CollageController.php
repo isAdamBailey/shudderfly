@@ -18,6 +18,15 @@ class CollageController extends Controller
         ]);
     }
 
+    public function deleted()
+    {
+        $collages = Collage::onlyTrashed()->with('pages')->latest()->get();
+
+        return Inertia::render('Collages/Deleted', [
+            'collages' => $collages,
+        ]);
+    }
+
     public function store(Request $request)
     {
         Collage::create();

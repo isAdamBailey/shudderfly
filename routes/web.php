@@ -55,6 +55,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::get('/collages', [CollageController::class, 'index'])->name('collages.index');
+    Route::get('/collages/deleted', [CollageController::class, 'deleted'])->name('collages.deleted');
     Route::post('/collage-page', [CollagePageController::class, 'store'])->name('collage-page.store');
     Route::delete('/collage-page/{collage}/{page}', [CollagePageController::class, 'destroy'])->name('collage-page.destroy');
     Route::patch('/collage-page/{collage}/{page}', [CollagePageController::class, 'update'])->name('collage-page.update');

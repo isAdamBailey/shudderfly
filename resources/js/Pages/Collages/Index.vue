@@ -8,13 +8,23 @@
           Collages
         </h2>
 
-        <Button
-          v-if="canEditPages"
-          :disabled="createCollageForm.processing || collages.length >= 4"
-          @click="createCollageForm.post(route('collages.store'))"
-          ><i class="ri-add-line text-xl mr-3"></i>
-          Create New Collage
-        </Button>
+        <div class="flex items-center gap-4">
+          <Link
+            :href="route('collages.deleted')"
+            class="text-white hover:text-blue-300"
+          >
+            <i class="ri-archive-line ml-1"></i>
+            View Archived Collages
+          </Link>
+
+          <Button
+            v-if="canEditPages"
+            :disabled="createCollageForm.processing || collages.length >= 4"
+            @click="createCollageForm.post(route('collages.store'))"
+            ><i class="ri-add-line text-xl mr-3"></i>
+            Create New Collage
+          </Button>
+        </div>
       </div>
     </template>
 
@@ -25,27 +35,61 @@
       <ManEmptyCircle />
     </div>
 
-    <div
-      class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mx-10 my-5"
-    >
-      <CollageCard
-        v-for="(collage, index) in collages"
-        :key="collage.id"
-        :collage="collage"
-        :collage-number="index + 1"
-      />
-    </div>
+    <CollageGrid :collages="collages">
+      <template #image-actions="{ page, collage }">
+        <button
+          v-if="canEditPages"
+          class="absolute top-1 right-1 bg-white bg-opacity-80 hover:bg-red-500 hover:text-white text-gray-700 rounded-full px-1 shadow"
+          title="Remove image"
+          @click="removeImage(collage.id, page.id)"
+        >
+          <i class="ri-close-line text-lg"></i>
+        </button>
+      </template>
+
+      <template #actions="{ collage }">
+        <div class="flex flex-wrap justify-between items-center gap-2">
+          <a
+            v-if="collage.storage_path"
+            class="text-center"
+            :href="collage.storage_path"
+            target="_blank"
+          >
+            View
+            <i class="ri-external-link-line mr-1"></i>
+          </a>
+          <Button
+            v-if="canEditPages"
+            class="btn btn-secondary"
+            :disabled="printForm.processing || !hasPages(collage)"
+            @click="printForm.post(route('collages.generate-pdf', collage.id))"
+          >
+            {{ collage.storage_path ? "Regenerate" : "Generate PDF" }}
+          </Button>
+
+          <DangerButton
+            v-if="canEditPages"
+            class="btn btn-danger"
+            :disabled="deleteForm.processing || !hasPages(collage)"
+            @click="confirmDelete(collage.id)"
+          >
+            <i class="ri-archive-line ml-1"></i>
+          </DangerButton>
+        </div>
+      </template>
+    </CollageGrid>
   </AuthenticatedLayout>
 </template>
 
 <script setup>
 import Button from "@/Components/Button.vue";
+import DangerButton from "@/Components/DangerButton.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import { Head, useForm } from "@inertiajs/vue3";
+import { Head, Link, useForm } from "@inertiajs/vue3";
+import CollageGrid from "./CollageGrid.vue";
 
 import { usePermissions } from "@/composables/permissions";
-import CollageCard from "@/Pages/Collages/CollageCard.vue";
 
 const { canEditPages } = usePermissions();
 
@@ -54,4 +98,34 @@ defineProps({
 });
 
 const createCollageForm = useForm();
+const printForm = useForm();
+const deleteForm = useForm();
+
+const hasPages = (collage) => {
+  return collage.pages.length > 0;
+};
+
+const removeImage = (collageId, pageId) => {
+  if (confirm("Remove this image from the collage?")) {
+    useForm().delete(route("collage-page.destroy", [collageId, pageId]), {
+      preserveScroll: true
+    });
+  }
+};
+
+const confirmDelete = (collageId) => {
+  if (
+    confirm(
+      `Are you sure you want to archive this collage? You will still be able to see the collage in the archive, but this action cannot be undone.`
+    )
+  ) {
+    deleteForm.delete(route("collages.destroy", collageId), {
+      preserveScroll: true
+    });
+  }
+};
+
+defineOptions({
+  name: "CollagesIndex"
+});
 </script>
