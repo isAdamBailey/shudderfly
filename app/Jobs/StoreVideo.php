@@ -200,9 +200,7 @@ class StoreVideo implements ShouldQueue
             
             // Add progress callback to keep process alive
             $process->run(function ($type, $buffer) {
-                if ($type === \Symfony\Component\Process\Process::ERR) {
-                    Log::debug('FFmpeg progress: ' . trim($buffer));
-                }
+                // Empty callback to keep process alive
             });
 
             if (!$process->isSuccessful()) {
