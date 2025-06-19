@@ -136,18 +136,36 @@ class PageController extends Controller
      */
     public function store(StorePageRequest $request): Redirector|RedirectResponse|Application
     {
+        Log::info('PageController@store called', [
+            'has_file' => $request->hasFile('image'),
+            'book_id' => $request->book_id,
+            'content' => $request->input('content'),
+            'video_link' => $request->input('video_link'),
+        ]);
+
         $book = Book::find($request->book_id);
 
         if ($request->hasFile('image')) {
             $file = $request->file('image');
+            Log::info('File received', [
+                'is_valid' => $file->isValid(),
+                'mime_type' => $file->getMimeType(),
+                'original_name' => $file->getClientOriginalName(),
+                'size' => $file->getSize(),
+            ]);
+            
             if ($file->isValid()) {
                 $mimeType = $file->getMimeType();
                 $filePath = Storage::disk('local')->put('temp', $file);
+                Log::info('File stored to temp', ['filePath' => $filePath]);
+                
                 if (Str::startsWith($mimeType, 'image/')) {
+                    Log::info('Processing as image');
                     $filename = pathinfo($file->hashName(), PATHINFO_FILENAME);
                     $mediaPath = 'books/'.$book->slug.'/'.$filename.'.webp';
                     StoreImage::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'));
                 } elseif (Str::startsWith($mimeType, 'video/')) {
+                    Log::info('Processing as video');
                     $mediaPath = 'books/'.$book->slug.'/'.$file->getClientOriginalName();
                     Log::info('About to dispatch StoreVideo job', [
                         'filePath' => $filePath,
@@ -173,6 +191,7 @@ class PageController extends Controller
                 }
             }
         } else {
+            Log::info('No file uploaded, creating page immediately');
             // If no file is uploaded, create the page immediately
             $book->pages()->create([
                 'content' => $request->input('content'),
@@ -188,8 +207,22 @@ class PageController extends Controller
      */
     public function update(UpdatePageRequest $request, Page $page): Redirector|RedirectResponse|Application
     {
+        Log::info('PageController@update called', [
+            'page_id' => $page->id,
+            'has_file' => $request->hasFile('image'),
+            'content' => $request->input('content'),
+            'video_link' => $request->input('video_link'),
+        ]);
+
         if ($request->hasFile('image')) {
             $file = $request->file('image');
+            Log::info('File received for update', [
+                'is_valid' => $file->isValid(),
+                'mime_type' => $file->getMimeType(),
+                'original_name' => $file->getClientOriginalName(),
+                'size' => $file->getSize(),
+            ]);
+            
             if ($file->isValid()) {
                 // Get raw database values, not the accessor-transformed URLs
                 $oldMediaPath = $page->getAttributes()['media_path'] ?? null;
@@ -197,7 +230,10 @@ class PageController extends Controller
 
                 $mimeType = $file->getMimeType();
                 $filePath = Storage::disk('local')->put('temp', $file);
+                Log::info('File stored to temp for update', ['filePath' => $filePath]);
+                
                 if (Str::startsWith($mimeType, 'image/')) {
+                    Log::info('Processing as image for update');
                     $filename = pathinfo($file->hashName(), PATHINFO_FILENAME);
                     $mediaPath = 'books/'.$page->book->slug.'/'.$filename.'.webp';
                     StoreImage::dispatch($filePath, $mediaPath, $page->book, $request->input('content'), $request->input('video_link'), $page)
@@ -205,14 +241,36 @@ class PageController extends Controller
                             new DeleteOldMedia($oldMediaPath, $oldPosterPath),
                         ]);
                 } elseif (Str::startsWith($mimeType, 'video/')) {
+                    Log::info('Processing as video for update');
                     $mediaPath = 'books/'.$page->book->slug.'/'.$file->getClientOriginalName();
-                    StoreVideo::dispatch($filePath, $mediaPath, $page->book, $request->input('content'), $request->input('video_link'), $page)
-                        ->chain([
+                    Log::info('About to dispatch StoreVideo job for update', [
+                        'filePath' => $filePath,
+                        'mediaPath' => $mediaPath,
+                        'book_id' => $page->book->id,
+                        'page_id' => $page->id,
+                        'content' => $request->input('content'),
+                        'video_link' => $request->input('video_link'),
+                        'queue_connection' => config('queue.default'),
+                        'queue_name' => 'book-pages',
+                    ]);
+                    try {
+                        $job = new StoreVideo($filePath, $mediaPath, $page->book, $request->input('content'), $request->input('video_link'), $page);
+                        Log::info('StoreVideo job instance created for update', ['job_class' => get_class($job)]);
+                        dispatch($job->chain([
                             new DeleteOldMedia($oldMediaPath, $oldPosterPath),
+                        ]));
+                        Log::info('StoreVideo job for update dispatched successfully');
+                    } catch (\Exception $e) {
+                        Log::error('Failed to dispatch StoreVideo job for update', [
+                            'exception' => $e->getMessage(),
+                            'trace' => $e->getTraceAsString(),
                         ]);
+                        throw $e;
+                    }
                 }
             }
         } else {
+            Log::info('No file uploaded for update, processing other fields');
             if ($request->has('content')) {
                 $page->content = $request->input('content');
             }
@@ -226,6 +284,7 @@ class PageController extends Controller
             }
 
             if ($request->has('video_link') && ! is_null($request->video_link)) {
+                Log::info('Updating video link only');
                 // Get raw database values, not the accessor-transformed URLs
                 $oldMediaPath = $page->getAttributes()['media_path'] ?? null;
                 $oldPosterPath = $page->getAttributes()['media_poster'] ?? null;
