@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Support\Facades\Log;
 
 class PageController extends Controller
 {
@@ -148,7 +149,27 @@ class PageController extends Controller
                     StoreImage::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'));
                 } elseif (Str::startsWith($mimeType, 'video/')) {
                     $mediaPath = 'books/'.$book->slug.'/'.$file->getClientOriginalName();
-                    StoreVideo::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'));
+                    Log::info('About to dispatch StoreVideo job', [
+                        'filePath' => $filePath,
+                        'mediaPath' => $mediaPath,
+                        'book_id' => $book->id,
+                        'content' => $request->input('content'),
+                        'video_link' => $request->input('video_link'),
+                        'queue_connection' => config('queue.default'),
+                        'queue_name' => 'book-pages',
+                    ]);
+                    try {
+                        $job = new StoreVideo($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'));
+                        Log::info('StoreVideo job instance created', ['job_class' => get_class($job)]);
+                        dispatch($job);
+                        Log::info('StoreVideo job dispatched successfully');
+                    } catch (\Exception $e) {
+                        Log::error('Failed to dispatch StoreVideo job', [
+                            'exception' => $e->getMessage(),
+                            'trace' => $e->getTraceAsString(),
+                        ]);
+                        throw $e;
+                    }
                 }
             }
         } else {
