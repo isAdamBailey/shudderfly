@@ -136,7 +136,8 @@ class PageController extends Controller
      */
     public function store(StorePageRequest $request): Redirector|RedirectResponse|Application
     {
-        Log::info('PageController@store called', [
+        Log::critical('=== STORE METHOD CALLED ===');
+        Log::error('PageController@store called', [
             'has_file' => $request->hasFile('image'),
             'book_id' => $request->book_id,
             'content' => $request->input('content'),
@@ -147,7 +148,7 @@ class PageController extends Controller
 
         if ($request->hasFile('image')) {
             $file = $request->file('image');
-            Log::info('File received', [
+            Log::error('File received', [
                 'is_valid' => $file->isValid(),
                 'mime_type' => $file->getMimeType(),
                 'original_name' => $file->getClientOriginalName(),
@@ -157,30 +158,29 @@ class PageController extends Controller
             if ($file->isValid()) {
                 $mimeType = $file->getMimeType();
                 $filePath = Storage::disk('local')->put('temp', $file);
-                Log::info('File stored to temp', ['filePath' => $filePath]);
+                Log::error('File stored to temp', ['filePath' => $filePath]);
                 
                 if (Str::startsWith($mimeType, 'image/')) {
-                    Log::info('Processing as image');
+                    Log::error('Processing as image');
                     $filename = pathinfo($file->hashName(), PATHINFO_FILENAME);
                     $mediaPath = 'books/'.$book->slug.'/'.$filename.'.webp';
                     StoreImage::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'));
                 } elseif (Str::startsWith($mimeType, 'video/')) {
-                    Log::info('Processing as video');
+                    Log::error('Processing as video');
                     $mediaPath = 'books/'.$book->slug.'/'.$file->getClientOriginalName();
-                    Log::info('About to dispatch StoreVideo job', [
+                    Log::error('About to dispatch StoreVideo job', [
                         'filePath' => $filePath,
                         'mediaPath' => $mediaPath,
                         'book_id' => $book->id,
                         'content' => $request->input('content'),
                         'video_link' => $request->input('video_link'),
                         'queue_connection' => config('queue.default'),
-                        'queue_name' => 'book-pages',
                     ]);
+                    
                     try {
-                        $job = new StoreVideo($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'));
-                        Log::info('StoreVideo job instance created', ['job_class' => get_class($job)]);
-                        dispatch($job);
-                        Log::info('StoreVideo job dispatched successfully');
+                        Log::error('Attempting to dispatch StoreVideo job...');
+                        StoreVideo::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'));
+                        Log::error('StoreVideo job dispatched successfully');
                     } catch (\Exception $e) {
                         Log::error('Failed to dispatch StoreVideo job', [
                             'exception' => $e->getMessage(),
@@ -191,7 +191,7 @@ class PageController extends Controller
                 }
             }
         } else {
-            Log::info('No file uploaded, creating page immediately');
+            Log::error('No file uploaded, creating page immediately');
             // If no file is uploaded, create the page immediately
             $book->pages()->create([
                 'content' => $request->input('content'),
@@ -251,14 +251,12 @@ class PageController extends Controller
                         'content' => $request->input('content'),
                         'video_link' => $request->input('video_link'),
                         'queue_connection' => config('queue.default'),
-                        'queue_name' => 'book-pages',
                     ]);
                     try {
-                        $job = new StoreVideo($filePath, $mediaPath, $page->book, $request->input('content'), $request->input('video_link'), $page);
-                        Log::info('StoreVideo job instance created for update', ['job_class' => get_class($job)]);
-                        dispatch($job->chain([
-                            new DeleteOldMedia($oldMediaPath, $oldPosterPath),
-                        ]));
+                        StoreVideo::dispatch($filePath, $mediaPath, $page->book, $request->input('content'), $request->input('video_link'), $page)
+                            ->chain([
+                                new DeleteOldMedia($oldMediaPath, $oldPosterPath),
+                            ]);
                         Log::info('StoreVideo job for update dispatched successfully');
                     } catch (\Exception $e) {
                         Log::error('Failed to dispatch StoreVideo job for update', [
