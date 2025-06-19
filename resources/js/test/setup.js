@@ -77,7 +77,8 @@ config.global.mocks = {
       auth: {
         user: { permissions_list: [] }
       },
-      search: null
+      search: null,
+      theme: ""
     }
   },
   route: (name) => `/${name}`
