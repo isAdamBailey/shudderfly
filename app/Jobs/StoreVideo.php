@@ -38,9 +38,14 @@ class StoreVideo implements ShouldQueue
 
     public int $maxExceptions = 3;
 
-    public int $timeout = 3600; // 1 hour timeout
+    public int $timeout = 1800;
 
-    public int $memory = 8192; // 8GB memory limit
+    public int $memory = 4096;
+
+    public function retryAfter()
+    {
+        return [60, 300];
+    }
 
     public function __construct(string $filePath, string $path, ?Book $book = null, ?string $content = null, ?string $videoLink = null, ?Page $page = null)
     {
@@ -59,15 +64,29 @@ class StoreVideo implements ShouldQueue
             'path' => $this->path,
             'book_id' => $this->book?->id,
             'page_id' => $this->page?->id,
+            'attempt' => $this->attempts(),
         ]);
 
         if (empty($this->filePath) || ! Storage::disk('local')->exists($this->filePath)) {
             Log::error('Video file not found or path is empty', [
                 'filePath' => $this->filePath,
                 'exists' => Storage::disk('local')->exists($this->filePath),
+                'attempt' => $this->attempts(),
             ]);
             $this->fail(new \RuntimeException('Video file not found or path is empty'));
+            return;
+        }
 
+        $freeSpace = disk_free_space(storage_path('app'));
+        $fileSize = Storage::disk('local')->size($this->filePath);
+        
+        if ($freeSpace < ($fileSize * 3)) {
+            Log::error('Insufficient disk space for video processing', [
+                'freeSpace' => $freeSpace,
+                'fileSize' => $fileSize,
+                'required' => $fileSize * 3,
+            ]);
+            $this->fail(new \RuntimeException('Insufficient disk space for video processing'));
             return;
         }
 
@@ -75,7 +94,6 @@ class StoreVideo implements ShouldQueue
         if (! is_dir($tempDir) && ! mkdir($tempDir, 0755, true)) {
             Log::error('Failed to create temp directory', ['directory' => $tempDir]);
             $this->fail(new \RuntimeException('Failed to create temp directory'));
-
             return;
         }
 
@@ -93,67 +111,60 @@ class StoreVideo implements ShouldQueue
 
             $media = FFMpeg::fromDisk('local')->open($this->filePath);
 
-            // Get video properties for resizing decision
             $videoStream = $media->getVideoStream();
+            if (!$videoStream) {
+                throw new \RuntimeException('No video stream found in file');
+            }
+            
             $width = $videoStream->get('width');
             $height = $videoStream->get('height');
+            
+            if (!$width || !$height) {
+                throw new \RuntimeException('Invalid video dimensions');
+            }
 
-            // Check for rotation metadata
             $rotation = $videoStream->get('rotate') ?? 0;
 
-            // Determine if video needs resizing and calculate appropriate dimensions
             $isPortrait = $height > $width;
 
-            // Build rotation filter based on metadata
             $rotationFilter = '';
             if ($rotation == 90 || $rotation == -270) {
-                $rotationFilter = 'transpose=1,'; // 90 degrees clockwise
+                $rotationFilter = 'transpose=1,';
             } elseif ($rotation == 180 || $rotation == -180) {
-                $rotationFilter = 'transpose=2,transpose=2,'; // 180 degrees
+                $rotationFilter = 'transpose=2,transpose=2,';
             } elseif ($rotation == 270 || $rotation == -90) {
-                $rotationFilter = 'transpose=2,'; // 90 degrees counter-clockwise
+                $rotationFilter = 'transpose=2,';
             }
 
             if ($isPortrait) {
-                // For portrait videos, limit height to 1280 and width proportionally
-                if ($height > 1280 || $width > 720) {
-                    $videoFilter = $rotationFilter.'scale=-2:1280:force_original_aspect_ratio=decrease:force_divisible_by=2';
+                if ($height > 960 || $width > 540) {
+                    $videoFilter = $rotationFilter.'scale=-2:960:force_original_aspect_ratio=decrease:force_divisible_by=2';
                 } else {
                     $videoFilter = $rotationFilter.'scale=trunc(iw/2)*2:trunc(ih/2)*2';
                 }
             } else {
-                // For landscape videos, limit width to 1280 and height proportionally
-                if ($width > 1280 || $height > 720) {
-                    $videoFilter = $rotationFilter.'scale=1280:-2:force_original_aspect_ratio=decrease:force_divisible_by=2';
+                if ($width > 960 || $height > 540) {
+                    $videoFilter = $rotationFilter.'scale=960:-2:force_original_aspect_ratio=decrease:force_divisible_by=2';
                 } else {
                     $videoFilter = $rotationFilter.'scale=trunc(iw/2)*2:trunc(ih/2)*2';
                 }
             }
 
-            // Use raw FFmpeg command for guaranteed compression
-            $videoBitrate = 800; // Fixed lower bitrate for consistent compression
-            $audioBitrate = 96;  // Fixed audio bitrate
+            $videoBitrate = 600;
+            $audioBitrate = 64;
 
-            // Build FFmpeg command with aggressive compression
             $ffmpegParams = [
-                // Input
                 '-i', storage_path('app/'.$this->filePath),
-
-                // Force re-encoding with compression
-                '-c:v', 'libx264',                  // Force H.264 video codec
-                '-c:a', 'aac',                      // Force AAC audio codec
-                '-b:v', $videoBitrate.'k',        // Video bitrate
-                '-b:a', $audioBitrate.'k',        // Audio bitrate
-                '-preset', 'medium',                // Balance speed vs compression
-                '-crf', '28',                       // Constant rate factor
-                '-profile:v', 'main',               // H.264 profile
-                '-level', '3.1',                    // H.264 level
-
-                // Apply video filters
+                '-c:v', 'libx264',
+                '-c:a', 'aac',
+                '-b:v', $videoBitrate.'k',
+                '-b:a', $audioBitrate.'k',
+                '-preset', 'faster',
+                '-crf', '30',
+                '-profile:v', 'baseline',
+                '-level', '3.0',
                 '-vf',
                 $videoFilter,
-
-                // Remove privacy metadata and rotation
                 '-metadata', 'location=',
                 '-metadata', 'location-eng=',
                 '-metadata', 'GPS_COORDINATES=',
@@ -168,16 +179,13 @@ class StoreVideo implements ShouldQueue
                 '-metadata', 'author=',
                 '-metadata', 'copyright=',
                 '-metadata:s:v:0', 'rotate=0',
-
-                // Output optimization
                 '-movflags', '+faststart',
                 '-avoid_negative_ts', 'make_zero',
                 '-f', 'mp4',
-                '-y',                               // Overwrite output file
+                '-y',
                 $tempFile,
             ];
 
-            // Remove null values from params
             $ffmpegParams = array_filter($ffmpegParams, function ($value) {
                 return $value !== null;
             });
@@ -185,20 +193,17 @@ class StoreVideo implements ShouldQueue
             Log::info('Starting FFmpeg processing', [
                 'params' => $ffmpegParams,
                 'filePath' => $this->filePath,
+                'attempt' => $this->attempts(),
             ]);
 
-            // Create process with array of arguments
             $process = new \Symfony\Component\Process\Process(['ffmpeg', ...$ffmpegParams]);
-            $process->setTimeout(3600); // 1 hour timeout for FFmpeg process
-            $process->setIdleTimeout(3600); // 1 hour idle timeout
-
-            // Set process priority to be lower to prevent system resource contention
+            $process->setTimeout(1800);
+            $process->setIdleTimeout(1800);
             $process->setOptions([
                 'create_new_console' => true,
                 'create_process_group' => true,
             ]);
 
-            // Add progress callback to keep process alive
             $process->run(function ($type, $buffer) {
                 // Empty callback to keep process alive
             });
@@ -213,9 +218,9 @@ class StoreVideo implements ShouldQueue
                     'exitCode' => $exitCode,
                     'command' => $process->getCommandLine(),
                     'memory_usage' => memory_get_usage(true),
+                    'attempt' => $this->attempts(),
                 ]);
 
-                // If process was killed, provide more specific error
                 if ($exitCode === 137 || strpos($errorOutput, 'signal 9') !== false) {
                     throw new \RuntimeException('FFmpeg process was killed due to system resource constraints. Please try with a smaller video or lower quality settings.');
                 }
@@ -226,11 +231,20 @@ class StoreVideo implements ShouldQueue
             Log::info('FFmpeg processing completed successfully', [
                 'filePath' => $this->filePath,
                 'output' => $process->getOutput(),
+                'attempt' => $this->attempts(),
             ]);
 
-            $screenshotContents = $media->getFrameFromSeconds(0.5)
-                ->export()
-                ->getFrameContents();
+            $screenshotContents = null;
+            try {
+                $screenshotContents = $media->getFrameFromSeconds(0.5)
+                    ->export()
+                    ->getFrameContents();
+            } catch (Throwable $e) {
+                Log::warning('Failed to generate screenshot, continuing without poster', [
+                    'error' => $e->getMessage(),
+                    'filePath' => $this->filePath,
+                ]);
+            }
 
             $filename = pathinfo($this->path, PATHINFO_FILENAME).'.mp4';
             $dirPath = pathinfo($this->path, PATHINFO_DIRNAME);
@@ -238,19 +252,25 @@ class StoreVideo implements ShouldQueue
 
             try {
                 $processedFilePath = retry(3, function () use ($tempFile, $filename, $dirPath) {
-                    return Storage::disk('s3')->putFileAs($dirPath, new File($tempFile), $filename);
-                }, 1000);
+                    $result = Storage::disk('s3')->putFileAs($dirPath, new File($tempFile), $filename);
+                    if (!$result) {
+                        throw new \RuntimeException('S3 upload returned false');
+                    }
+                    return $result;
+                }, 2000);
 
                 Storage::disk('s3')->setVisibility($processedFilePath, 'public');
 
                 if ($screenshotContents) {
                     retry(3, function () use ($posterPath, $screenshotContents) {
-                        Storage::disk('s3')->put($posterPath, $screenshotContents, 'public');
-                    }, 1000);
+                        $result = Storage::disk('s3')->put($posterPath, $screenshotContents, 'public');
+                        if (!$result) {
+                            throw new \RuntimeException('S3 poster upload returned false');
+                        }
+                    }, 2000);
                 }
 
                 if ($this->page) {
-                    // Update existing page
                     $this->page->update([
                         'content' => $this->content,
                         'media_path' => $processedFilePath,
@@ -258,7 +278,6 @@ class StoreVideo implements ShouldQueue
                         'video_link' => $this->videoLink,
                     ]);
                 } elseif ($this->book) {
-                    // Create new page
                     $this->book->pages()->create([
                         'content' => $this->content,
                         'media_path' => $processedFilePath,
@@ -266,12 +285,20 @@ class StoreVideo implements ShouldQueue
                         'video_link' => $this->videoLink,
                     ]);
                 }
+
+                Log::info('StoreVideo job completed successfully', [
+                    'filePath' => $this->filePath,
+                    'processedFilePath' => $processedFilePath,
+                    'attempt' => $this->attempts(),
+                ]);
+
             } catch (Throwable $e) {
                 Log::error('Failed to upload video to S3', [
                     'exception' => $e->getMessage(),
                     'filePath' => $this->filePath,
                     'path' => $this->path,
                     'trace' => $e->getTraceAsString(),
+                    'attempt' => $this->attempts(),
                 ]);
                 throw $e;
             }
@@ -285,6 +312,7 @@ class StoreVideo implements ShouldQueue
                 'trace' => $e->getTraceAsString(),
                 'memory_usage' => memory_get_usage(true),
                 'peak_memory_usage' => memory_get_peak_usage(true),
+                'attempt' => $this->attempts(),
             ]);
             $this->fail($e);
         } catch (S3Exception $e) {
@@ -295,6 +323,7 @@ class StoreVideo implements ShouldQueue
                 'trace' => $e->getTraceAsString(),
                 'memory_usage' => memory_get_usage(true),
                 'peak_memory_usage' => memory_get_peak_usage(true),
+                'attempt' => $this->attempts(),
             ]);
             $this->fail($e);
         } catch (Throwable $e) {
@@ -305,6 +334,7 @@ class StoreVideo implements ShouldQueue
                 'path' => $this->path,
                 'memory_usage' => memory_get_usage(true),
                 'peak_memory_usage' => memory_get_peak_usage(true),
+                'attempt' => $this->attempts(),
             ]);
             $this->fail($e);
         } finally {
@@ -312,6 +342,7 @@ class StoreVideo implements ShouldQueue
                 'filePath' => $this->filePath,
                 'tempFile' => $tempFile ?? null,
                 'memory_usage' => memory_get_usage(true),
+                'attempt' => $this->attempts(),
             ]);
 
             if (isset($tempFile) && file_exists($tempFile)) {
@@ -329,5 +360,15 @@ class StoreVideo implements ShouldQueue
     public function middleware(): array
     {
         return [(new WithoutOverlapping($this->filePath))->expireAfter(600)];
+    }
+
+    public function failed(Throwable $exception): void
+    {
+        Log::error('StoreVideo job failed permanently', [
+            'filePath' => $this->filePath,
+            'path' => $this->path,
+            'exception' => $exception->getMessage(),
+            'trace' => $exception->getTraceAsString(),
+        ]);
     }
 }
