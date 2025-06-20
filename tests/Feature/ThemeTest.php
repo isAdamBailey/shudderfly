@@ -160,7 +160,7 @@ class ThemeTest extends TestCase
         $pages = [
             route('dashboard'),
             route('books.index'),
-            route('welcome')
+            route('welcome'),
         ];
 
         foreach ($pages as $page) {
@@ -225,13 +225,13 @@ class ThemeTest extends TestCase
 
         // Debug: Let's see what's actually in the response
         $content = $response->getContent();
-        
+
         // Check if data-theme is present
         $this->assertStringContainsString('data-theme', $content);
-        
+
         // Check if fireworks theme is present
         $this->assertStringContainsString('data-theme="fireworks"', $content);
 
         $this->travelBack();
     }
-} 
+}

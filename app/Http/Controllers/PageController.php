@@ -17,11 +17,11 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Support\Facades\Log;
 
 class PageController extends Controller
 {
@@ -136,51 +136,23 @@ class PageController extends Controller
      */
     public function store(StorePageRequest $request): Redirector|RedirectResponse|Application
     {
-        Log::critical('=== STORE METHOD CALLED ===');
-        Log::error('PageController@store called', [
-            'has_file' => $request->hasFile('image'),
-            'book_id' => $request->book_id,
-            'content' => $request->input('content'),
-            'video_link' => $request->input('video_link'),
-        ]);
-
         $book = Book::find($request->book_id);
 
         if ($request->hasFile('image')) {
             $file = $request->file('image');
-            Log::error('File received', [
-                'is_valid' => $file->isValid(),
-                'mime_type' => $file->getMimeType(),
-                'original_name' => $file->getClientOriginalName(),
-                'size' => $file->getSize(),
-            ]);
-            
+
             if ($file->isValid()) {
                 $mimeType = $file->getMimeType();
                 $filePath = Storage::disk('local')->put('temp', $file);
-                Log::error('File stored to temp', ['filePath' => $filePath]);
-                
+
                 if (Str::startsWith($mimeType, 'image/')) {
-                    Log::error('Processing as image');
                     $filename = pathinfo($file->hashName(), PATHINFO_FILENAME);
                     $mediaPath = 'books/'.$book->slug.'/'.$filename.'.webp';
                     StoreImage::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'));
                 } elseif (Str::startsWith($mimeType, 'video/')) {
-                    Log::error('Processing as video');
                     $mediaPath = 'books/'.$book->slug.'/'.$file->getClientOriginalName();
-                    Log::error('About to dispatch StoreVideo job', [
-                        'filePath' => $filePath,
-                        'mediaPath' => $mediaPath,
-                        'book_id' => $book->id,
-                        'content' => $request->input('content'),
-                        'video_link' => $request->input('video_link'),
-                        'queue_connection' => config('queue.default'),
-                    ]);
-                    
                     try {
-                        Log::error('Attempting to dispatch StoreVideo job...');
                         StoreVideo::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'));
-                        Log::error('StoreVideo job dispatched successfully');
                     } catch (\Exception $e) {
                         Log::error('Failed to dispatch StoreVideo job', [
                             'exception' => $e->getMessage(),
@@ -191,7 +163,6 @@ class PageController extends Controller
                 }
             }
         } else {
-            Log::error('No file uploaded, creating page immediately');
             // If no file is uploaded, create the page immediately
             $book->pages()->create([
                 'content' => $request->input('content'),
@@ -222,7 +193,7 @@ class PageController extends Controller
                 'original_name' => $file->getClientOriginalName(),
                 'size' => $file->getSize(),
             ]);
-            
+
             if ($file->isValid()) {
                 // Get raw database values, not the accessor-transformed URLs
                 $oldMediaPath = $page->getAttributes()['media_path'] ?? null;
@@ -231,7 +202,7 @@ class PageController extends Controller
                 $mimeType = $file->getMimeType();
                 $filePath = Storage::disk('local')->put('temp', $file);
                 Log::info('File stored to temp for update', ['filePath' => $filePath]);
-                
+
                 if (Str::startsWith($mimeType, 'image/')) {
                     Log::info('Processing as image for update');
                     $filename = pathinfo($file->hashName(), PATHINFO_FILENAME);

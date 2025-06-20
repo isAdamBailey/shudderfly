@@ -15,7 +15,7 @@ class SettingsTest extends TestCase
     {
         $user = User::factory()->create();
         $this->actingAs($user);
-        $user->givePermissionTo('edit pages');
+        $user->givePermissionTo('admin');
 
         // Create test settings
         $booleanSetting = SiteSetting::create([
@@ -68,7 +68,7 @@ class SettingsTest extends TestCase
     {
         $user = User::factory()->create();
         $this->actingAs($user);
-        $user->givePermissionTo('edit pages');
+        $user->givePermissionTo('admin');
 
         // Test missing value
         $response = $this->put('/settings', [

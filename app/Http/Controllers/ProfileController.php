@@ -4,13 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Mail\ContactAdmins;
+use App\Models\User;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
-use Spatie\Permission\Models\Permission;
 
 class ProfileController extends Controller
 {
@@ -70,8 +70,7 @@ class ProfileController extends Controller
 
     public function contactAdminsEmail(Request $request): void
     {
-        $permission = Permission::findByName('edit pages');
-        $users = $permission->users;
+        $users = User::permission('admin')->get();
 
         foreach ($users as $user) {
             Mail::to($user->email)

@@ -27,7 +27,7 @@ class CollagesTest extends TestCase
         $collages = Collage::factory()
             ->count(5)
             ->create();
-        
+
         // Attach pages to collages
         foreach ($collages as $collage) {
             $pages = Page::factory()
@@ -60,7 +60,7 @@ class CollagesTest extends TestCase
         $collages = Collage::factory()
             ->count(3)
             ->create();
-        
+
         // Attach pages to collages
         foreach ($collages as $collage) {
             $pages = Page::factory()
@@ -86,13 +86,13 @@ class CollagesTest extends TestCase
         /** @var User $user */
         $user = User::factory()->create();
         $this->actingAs($user);
-        $user->givePermissionTo('edit pages'); // Add permission for collage creation
+        $user->givePermissionTo('admin'); // Add permission for collage creation
 
         $response = $this->post(route('collages.store'));
 
         $this->assertDatabaseCount('collages', 1);
         $this->assertDatabaseHas('collages', [
-            'storage_path' => null
+            'storage_path' => null,
         ]);
 
         $response->assertRedirect(route('collages.index'));
@@ -103,7 +103,7 @@ class CollagesTest extends TestCase
         /** @var User $user */
         $user = User::factory()->create();
         $this->actingAs($user);
-        $user->givePermissionTo('edit pages'); // Add permission for collage deletion
+        $user->givePermissionTo('admin'); // Add permission for collage deletion
 
         $collage = Collage::factory()->create();
 
@@ -119,7 +119,7 @@ class CollagesTest extends TestCase
         /** @var User $user */
         $user = User::factory()->create();
         $this->actingAs($user);
-        $user->givePermissionTo('edit pages'); // Add permission for PDF generation
+        $user->givePermissionTo('admin'); // Add permission for PDF generation
 
         $collage = Collage::factory()->create();
 
@@ -128,4 +128,4 @@ class CollagesTest extends TestCase
         $response->assertRedirect(route('collages.index'))
             ->assertSessionHas('success', 'PDF generation has been queued. You will receive an email when it\'s ready.');
     }
-} 
+}

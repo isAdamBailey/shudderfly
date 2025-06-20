@@ -13,7 +13,7 @@ class AdminPermissionsTest extends TestCase
     public function test_users_permissions_are_updated()
     {
         $this->actingAs($user = User::factory()->create());
-        $user->givePermissionTo('edit pages');
+        $user->givePermissionTo('admin');
 
         $editUser = User::factory()->create();
         $this->assertFalse($editUser->hasPermissionTo('edit pages'));
@@ -32,7 +32,7 @@ class AdminPermissionsTest extends TestCase
     public function test_users_permissions_are_revoked()
     {
         $this->actingAs($user = User::factory()->create());
-        $user->givePermissionTo('edit pages');
+        $user->givePermissionTo('admin');
 
         $editUser = User::factory()->create();
         $editUser->givePermissionTo('edit pages');
@@ -52,7 +52,7 @@ class AdminPermissionsTest extends TestCase
     public function test_users_can_be_deleted()
     {
         $this->actingAs($user = User::factory()->create());
-        $user->givePermissionTo('edit pages');
+        $user->givePermissionTo('admin');
 
         $deleteUser = User::factory()->create();
         $deleteUser->givePermissionTo('edit pages');

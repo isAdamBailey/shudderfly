@@ -234,7 +234,7 @@ class GenerateCollagePdf implements ShouldQueue
             $this->cleanupTempFiles($tempDir);
 
             // Get admin users
-            $permission = Permission::findByName('edit pages');
+            $permission = Permission::findByName('admin');
             $admins = $permission->users;
 
             // Send email to admins

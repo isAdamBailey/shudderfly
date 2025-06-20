@@ -57,8 +57,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/collages', [CollageController::class, 'index'])->name('collages.index');
     Route::get('/collages/deleted', [CollageController::class, 'deleted'])->name('collages.deleted');
     Route::post('/collage-page', [CollagePageController::class, 'store'])->name('collage-page.store');
-    Route::delete('/collage-page/{collage}/{page}', [CollagePageController::class, 'destroy'])->name('collage-page.destroy');
-    Route::patch('/collage-page/{collage}/{page}', [CollagePageController::class, 'update'])->name('collage-page.update');
 
     Route::group(['middleware' => ['can:edit pages']], function () {
         Route::get('/dashboard', [DashboardController::class, 'show'])->name('dashboard');
@@ -71,19 +69,24 @@ Route::middleware('auth')->group(function () {
         Route::post('/pages/{page}', [PageController::class, 'update'])->name('pages.update');
         Route::delete('/pages/{page}', [PageController::class, 'destroy'])->name('pages.destroy');
 
+        Route::delete('/collage-page/{collage}/{page}', [CollagePageController::class, 'destroy'])->name('collage-page.destroy');
+        Route::patch('/collage-page/{collage}/{page}', [CollagePageController::class, 'update'])->name('collage-page.update');
+    });
+
+    Route::group(['middleware' => ['can:admin']], function () {
         Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
         Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
         Route::put('/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
         Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
 
+        Route::post('/collages', [CollageController::class, 'store'])->name('collages.store');
+        Route::delete('/collages/{collage}', [CollageController::class, 'destroy'])->name('collages.destroy');
+        Route::post('/collages/{collage}/generate-pdf', [CollageController::class, 'generatePdf'])->name('collages.generate-pdf');
+
         Route::put('/admin/permissions', [AdminController::class, 'update'])->name('admin.permissions');
         Route::delete('/admin', [AdminController::class, 'destroy'])->name('admin.destroy');
 
         Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
-
-        Route::post('/collages', [CollageController::class, 'store'])->name('collages.store');
-        Route::delete('/collages/{collage}', [CollageController::class, 'destroy'])->name('collages.destroy');
-        Route::post('/collages/{collage}/generate-pdf', [CollageController::class, 'generatePdf'])->name('collages.generate-pdf');
     });
 });
 

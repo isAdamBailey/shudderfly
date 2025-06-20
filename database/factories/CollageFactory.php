@@ -2,7 +2,6 @@
 
 namespace Database\Factories;
 
-use App\Models\Collage;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -21,4 +20,4 @@ class CollageFactory extends Factory
             'storage_path' => null, // Initially null since PDFs are generated later
         ];
     }
-} 
+}

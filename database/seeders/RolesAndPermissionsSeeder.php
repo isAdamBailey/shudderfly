@@ -17,8 +17,15 @@ class RolesAndPermissionsSeeder extends Seeder
     {    // Reset cached roles and permissions
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // create permissions
-        Permission::create(['name' => 'edit pages']);
-        Permission::create(['name' => 'edit profile']);
+        // create permissions if they don't exist
+        $permissions = [
+            'edit pages',
+            'edit profile',
+            'admin',
+        ];
+
+        foreach ($permissions as $permission) {
+            Permission::findOrCreate($permission);
+        }
     }
 }

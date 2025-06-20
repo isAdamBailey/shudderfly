@@ -191,22 +191,22 @@ class StoreVideo implements ShouldQueue
             $process = new \Symfony\Component\Process\Process(['ffmpeg', ...$ffmpegParams]);
             $process->setTimeout(3600); // 1 hour timeout for FFmpeg process
             $process->setIdleTimeout(3600); // 1 hour idle timeout
-            
+
             // Set process priority to be lower to prevent system resource contention
             $process->setOptions([
                 'create_new_console' => true,
                 'create_process_group' => true,
             ]);
-            
+
             // Add progress callback to keep process alive
             $process->run(function ($type, $buffer) {
                 // Empty callback to keep process alive
             });
 
-            if (!$process->isSuccessful()) {
+            if (! $process->isSuccessful()) {
                 $errorOutput = $process->getErrorOutput();
                 $exitCode = $process->getExitCode();
-                
+
                 Log::error('FFmpeg processing failed', [
                     'error' => $errorOutput,
                     'output' => $process->getOutput(),
@@ -214,13 +214,13 @@ class StoreVideo implements ShouldQueue
                     'command' => $process->getCommandLine(),
                     'memory_usage' => memory_get_usage(true),
                 ]);
-                
+
                 // If process was killed, provide more specific error
                 if ($exitCode === 137 || strpos($errorOutput, 'signal 9') !== false) {
                     throw new \RuntimeException('FFmpeg process was killed due to system resource constraints. Please try with a smaller video or lower quality settings.');
                 }
-                
-                throw new \RuntimeException('FFmpeg processing failed: ' . $errorOutput);
+
+                throw new \RuntimeException('FFmpeg processing failed: '.$errorOutput);
             }
 
             Log::info('FFmpeg processing completed successfully', [

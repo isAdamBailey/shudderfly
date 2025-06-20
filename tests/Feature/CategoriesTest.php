@@ -18,7 +18,7 @@ class CategoriesTest extends TestCase
     public function test_category_is_stored()
     {
         $this->actingAs($user = User::factory()->create());
-        $user->givePermissionTo('edit pages');
+        $user->givePermissionTo('admin');
 
         DB::table('categories')->delete();
 
@@ -37,7 +37,7 @@ class CategoriesTest extends TestCase
     public function test_category_is_updated()
     {
         $this->actingAs($user = User::factory()->create());
-        $user->givePermissionTo('edit pages');
+        $user->givePermissionTo('admin');
 
         $category = Category::factory()->create();
 
@@ -56,7 +56,7 @@ class CategoriesTest extends TestCase
     public function test_category_is_destroyed()
     {
         $this->actingAs($user = User::factory()->create());
-        $user->givePermissionTo('edit pages');
+        $user->givePermissionTo('admin');
 
         $category = Category::factory()
             ->has(
