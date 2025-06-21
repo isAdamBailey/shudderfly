@@ -6,6 +6,4 @@
     Go To {{ config("app.name") }}
 </x-mail::button>
 
-Love you,<br>
-{{ $name }}
 </x-mail::message>

@@ -61,6 +61,13 @@ only has {{ $leastPages->pages_count }} pages.
     Go To {{ config("app.name") }}
 </x-mail::button>
 
+**NOTE:** If you don't see a book you created, or the title of a book you created has changed, that's our fault. We're often reorganizing and consolidating books.
+But if you want to report a bug in the platform, you can do so here:
+
+<x-mail::button url="mailto:adamjbailey7@gmail.com?subject=Shudderfly%20Bug%20Report">
+    Report a Bug
+</x-mail::button>
+
 Thanks and love you,<br>
 {{ config('app.name') }}
 </x-mail::message>

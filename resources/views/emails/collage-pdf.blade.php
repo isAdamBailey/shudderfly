@@ -6,9 +6,6 @@ The PDF generation for Collage #{{ $collageId }} failed.
 
 {{ $errorMessage }}
 
-<x-mail::button :url="route('collages.index')">
-    View Collages
-</x-mail::button>
 @else
 # New Collage PDF Generated
 
@@ -20,6 +17,10 @@ The PDF contains {{ $imageCount }} images and is ready for download.
     Download PDF
 </x-mail::button>
 @endif
+
+<x-mail::button :url="route('collages.index')">
+    View Collages
+</x-mail::button>
 
 Thanks and love you,<br>
 {{ config('app.name') }}

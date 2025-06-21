@@ -82,7 +82,7 @@ class StoreVideo implements ShouldQueue
         $freeSpace = disk_free_space(storage_path('app'));
         $memoryUsage = memory_get_usage(true);
         $memoryLimit = $this->getMemoryLimitInBytes();
-        
+
         Log::info('System resource check', [
             'freeSpace' => $freeSpace,
             'memoryUsage' => $memoryUsage,
@@ -277,7 +277,7 @@ class StoreVideo implements ShouldQueue
                     throw new \RuntimeException('FFmpeg binary not found or input file missing.');
                 }
 
-                throw new \RuntimeException('FFmpeg processing failed (exit code: ' . $exitCode . '): ' . $errorOutput);
+                throw new \RuntimeException('FFmpeg processing failed (exit code: '.$exitCode.'): '.$errorOutput);
             }
 
             Log::info('FFmpeg processing completed successfully', [
@@ -378,7 +378,7 @@ class StoreVideo implements ShouldQueue
                 'peak_memory_usage' => memory_get_peak_usage(true),
                 'attempt' => $this->attempts(),
             ]);
-            
+
             // Retry S3 operations as they might be temporary
             if ($this->attempts() < $this->tries) {
                 throw $e;
@@ -394,7 +394,7 @@ class StoreVideo implements ShouldQueue
                 'peak_memory_usage' => memory_get_peak_usage(true),
                 'attempt' => $this->attempts(),
             ]);
-            
+
             // Retry unexpected errors unless we've hit max attempts
             if ($this->attempts() < $this->tries) {
                 throw $e;
@@ -426,10 +426,10 @@ class StoreVideo implements ShouldQueue
         if ($memoryLimit === '-1') {
             return PHP_INT_MAX; // No limit
         }
-        
+
         $unit = strtolower(substr($memoryLimit, -1));
         $value = (int) substr($memoryLimit, 0, -1);
-        
+
         switch ($unit) {
             case 'g':
                 return $value * 1024 * 1024 * 1024;
@@ -463,7 +463,7 @@ class StoreVideo implements ShouldQueue
         // Clean up any temporary files that might have been created
         $tempDir = storage_path('app/temp/');
         if (is_dir($tempDir)) {
-            $tempFiles = glob($tempDir . 'video_*.mp4');
+            $tempFiles = glob($tempDir.'video_*.mp4');
             foreach ($tempFiles as $tempFile) {
                 if (file_exists($tempFile) && (time() - filemtime($tempFile)) > 3600) { // Older than 1 hour
                     @unlink($tempFile);

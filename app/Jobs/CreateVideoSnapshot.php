@@ -129,7 +129,7 @@ class CreateVideoSnapshot implements ShouldQueue
         $freeSpace = disk_free_space(storage_path('app'));
         $memoryUsage = memory_get_usage(true);
         $memoryLimit = $this->getMemoryLimitInBytes();
-        
+
         Log::info('System resource check for CreateVideoSnapshot', [
             'freeSpace' => $freeSpace,
             'memoryUsage' => $memoryUsage,
@@ -324,9 +324,6 @@ class CreateVideoSnapshot implements ShouldQueue
 
     /**
      * Handle a job failure.
-     *
-     * @param \Throwable $exception
-     * @return void
      */
     public function failed(\Throwable $exception): void
     {
@@ -347,15 +344,15 @@ class CreateVideoSnapshot implements ShouldQueue
         // Clean up any temporary files that might have been created
         $tempDir = storage_path('app/temp/');
         if (is_dir($tempDir)) {
-            $tempFiles = glob($tempDir . 'temp_video_*.mp4');
+            $tempFiles = glob($tempDir.'temp_video_*.mp4');
             foreach ($tempFiles as $tempFile) {
                 if (file_exists($tempFile) && (time() - filemtime($tempFile)) > 3600) { // Older than 1 hour
                     @unlink($tempFile);
                     Log::info('Cleaned up old temp video file', ['file' => $tempFile]);
                 }
             }
-            
-            $tempImageFiles = glob($tempDir . 'snapshot_*.jpg');
+
+            $tempImageFiles = glob($tempDir.'snapshot_*.jpg');
             foreach ($tempImageFiles as $tempFile) {
                 if (file_exists($tempFile) && (time() - filemtime($tempFile)) > 3600) { // Older than 1 hour
                     @unlink($tempFile);
@@ -386,8 +383,6 @@ class CreateVideoSnapshot implements ShouldQueue
 
     /**
      * Get the memory limit in bytes.
-     *
-     * @return int
      */
     private function getMemoryLimitInBytes(): int
     {
@@ -408,6 +403,7 @@ class CreateVideoSnapshot implements ShouldQueue
         if (strtolower(substr($memoryLimit, -1)) === 'm') {
             return $memoryLimit * 1024 * 1024;
         }
+
         return $memoryLimit * 1024; // Default to bytes if no suffix
     }
 }
