@@ -21,7 +21,7 @@ defineProps({
       :key="index"
       class="font-medium text-gray-900 dark:text-gray-100"
     >
-      {{ admin.name }}{{ index < adminUsers.length - 1 ? ", " : "" }}.
+      {{ admin.name }}{{ index < adminUsers.length - 1 ? ", " : "." }}
     </span>
   </p>
   <div class="flex flex-wrap gap-8">
