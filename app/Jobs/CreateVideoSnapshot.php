@@ -31,7 +31,7 @@ class CreateVideoSnapshot implements ShouldQueue
      *
      * @var int
      */
-    public $timeout = 300; // 5 minutes
+    public $timeout = 600; // Increased to 10 minutes
 
     /**
      * The maximum amount of memory the job should use.
@@ -62,7 +62,7 @@ class CreateVideoSnapshot implements ShouldQueue
      *
      * @var int
      */
-    public $uniqueFor = 300; // 5 minutes
+    public $uniqueFor = 600; // Increased to 10 minutes
 
     /**
      * Get the middleware the job should pass through.
@@ -72,6 +72,18 @@ class CreateVideoSnapshot implements ShouldQueue
     public function middleware()
     {
         return [new WithoutOverlapping($this->uniqueId())];
+    }
+
+    public function retryAfter()
+    {
+        // Exponential backoff: 1 minute, 2 minutes, 4 minutes, 8 minutes, 16 minutes
+        return [60, 120, 240, 480, 960];
+    }
+
+    public function backoff()
+    {
+        // Use exponential backoff for retries
+        return [60, 120, 240, 480, 960];
     }
 
     protected string $videoUrl;
@@ -100,6 +112,41 @@ class CreateVideoSnapshot implements ShouldQueue
 
     public function handle(): void
     {
+        Log::info('Starting CreateVideoSnapshot job', [
+            'video_url' => $this->videoUrl,
+            'time_in_seconds' => $this->timeInSeconds,
+            'book_id' => $this->book->id,
+            'user_id' => $this->user->id,
+            'page_id' => $this->pageId,
+            'attempt' => $this->attempts(),
+            'memory_limit' => ini_get('memory_limit'),
+            'max_execution_time' => ini_get('max_execution_time'),
+            'disk_free_space' => disk_free_space(storage_path('app')),
+            'disk_total_space' => disk_total_space(storage_path('app')),
+        ]);
+
+        // Check system resources before processing
+        $freeSpace = disk_free_space(storage_path('app'));
+        $memoryUsage = memory_get_usage(true);
+        $memoryLimit = $this->getMemoryLimitInBytes();
+        
+        Log::info('System resource check for CreateVideoSnapshot', [
+            'freeSpace' => $freeSpace,
+            'memoryUsage' => $memoryUsage,
+            'memoryLimit' => $memoryLimit,
+            'availableMemory' => $memoryLimit - $memoryUsage,
+        ]);
+
+        // Check if we have enough memory available (at least 512MB)
+        if (($memoryLimit - $memoryUsage) < (512 * 1024 * 1024)) {
+            Log::error('Insufficient memory for video snapshot creation', [
+                'availableMemory' => $memoryLimit - $memoryUsage,
+                'required' => 512 * 1024 * 1024,
+                'attempt' => $this->attempts(),
+            ]);
+            throw new \RuntimeException('Insufficient memory for video snapshot creation');
+        }
+
         $tempVideoPath = null;
         $tempImagePath = null;
 
@@ -276,6 +323,49 @@ class CreateVideoSnapshot implements ShouldQueue
     }
 
     /**
+     * Handle a job failure.
+     *
+     * @param \Throwable $exception
+     * @return void
+     */
+    public function failed(\Throwable $exception): void
+    {
+        Log::error('CreateVideoSnapshot job failed permanently', [
+            'video_url' => $this->videoUrl,
+            'time_in_seconds' => $this->timeInSeconds,
+            'book_id' => $this->book->id,
+            'user_id' => $this->user->id,
+            'page_id' => $this->pageId,
+            'exception' => $exception->getMessage(),
+            'exception_class' => get_class($exception),
+            'trace' => $exception->getTraceAsString(),
+            'final_attempt' => $this->attempts(),
+            'memory_usage' => memory_get_usage(true),
+            'peak_memory_usage' => memory_get_peak_usage(true),
+        ]);
+
+        // Clean up any temporary files that might have been created
+        $tempDir = storage_path('app/temp/');
+        if (is_dir($tempDir)) {
+            $tempFiles = glob($tempDir . 'temp_video_*.mp4');
+            foreach ($tempFiles as $tempFile) {
+                if (file_exists($tempFile) && (time() - filemtime($tempFile)) > 3600) { // Older than 1 hour
+                    @unlink($tempFile);
+                    Log::info('Cleaned up old temp video file', ['file' => $tempFile]);
+                }
+            }
+            
+            $tempImageFiles = glob($tempDir . 'snapshot_*.jpg');
+            foreach ($tempImageFiles as $tempFile) {
+                if (file_exists($tempFile) && (time() - filemtime($tempFile)) > 3600) { // Older than 1 hour
+                    @unlink($tempFile);
+                    Log::info('Cleaned up old temp snapshot file', ['file' => $tempFile]);
+                }
+            }
+        }
+    }
+
+    /**
      * Get video metadata using FFprobe
      */
     private function getVideoMetadata(string $videoPath): array
@@ -292,5 +382,32 @@ class CreateVideoSnapshot implements ShouldQueue
         } catch (\Throwable $e) {
             return ['error' => $e->getMessage()];
         }
+    }
+
+    /**
+     * Get the memory limit in bytes.
+     *
+     * @return int
+     */
+    private function getMemoryLimitInBytes(): int
+    {
+        $memoryLimit = ini_get('memory_limit');
+        if (strtolower($memoryLimit) === 'off') {
+            return PHP_INT_MAX; // Unlimited if memory_limit is 'off'
+        }
+
+        // Remove the 'M' or 'G' suffix if present
+        $memoryLimit = rtrim($memoryLimit, 'M');
+        $memoryLimit = rtrim($memoryLimit, 'G');
+
+        // Convert to bytes
+        $memoryLimit = (int) $memoryLimit;
+        if (strtolower(substr($memoryLimit, -1)) === 'g') {
+            return $memoryLimit * 1024 * 1024 * 1024;
+        }
+        if (strtolower(substr($memoryLimit, -1)) === 'm') {
+            return $memoryLimit * 1024 * 1024;
+        }
+        return $memoryLimit * 1024; // Default to bytes if no suffix
     }
 }

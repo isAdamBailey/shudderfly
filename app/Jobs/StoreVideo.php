@@ -40,11 +40,18 @@ class StoreVideo implements ShouldQueue
 
     public int $timeout = 1800;
 
-    public int $memory = 4096;
+    public int $memory = 2048; // Reduced memory usage
 
     public function retryAfter()
     {
-        return [60, 300];
+        // Exponential backoff: 2 minutes, 5 minutes, 10 minutes, 20 minutes, 40 minutes
+        return [120, 300, 600, 1200, 2400];
+    }
+
+    public function backoff()
+    {
+        // Use exponential backoff for retries
+        return [120, 300, 600, 1200, 2400];
     }
 
     public function __construct(string $filePath, string $path, ?Book $book = null, ?string $content = null, ?string $videoLink = null, ?Page $page = null)
@@ -65,6 +72,22 @@ class StoreVideo implements ShouldQueue
             'book_id' => $this->book?->id,
             'page_id' => $this->page?->id,
             'attempt' => $this->attempts(),
+            'memory_limit' => ini_get('memory_limit'),
+            'max_execution_time' => ini_get('max_execution_time'),
+            'disk_free_space' => disk_free_space(storage_path('app')),
+            'disk_total_space' => disk_total_space(storage_path('app')),
+        ]);
+
+        // Check system resources before processing
+        $freeSpace = disk_free_space(storage_path('app'));
+        $memoryUsage = memory_get_usage(true);
+        $memoryLimit = $this->getMemoryLimitInBytes();
+        
+        Log::info('System resource check', [
+            'freeSpace' => $freeSpace,
+            'memoryUsage' => $memoryUsage,
+            'memoryLimit' => $memoryLimit,
+            'availableMemory' => $memoryLimit - $memoryUsage,
         ]);
 
         if (empty($this->filePath) || ! Storage::disk('local')->exists($this->filePath)) {
@@ -78,16 +101,29 @@ class StoreVideo implements ShouldQueue
             return;
         }
 
-        $freeSpace = disk_free_space(storage_path('app'));
         $fileSize = Storage::disk('local')->size($this->filePath);
+        $requiredSpace = $fileSize * 4; // Increased buffer for processing
 
-        if ($freeSpace < ($fileSize * 3)) {
+        if ($freeSpace < $requiredSpace) {
             Log::error('Insufficient disk space for video processing', [
                 'freeSpace' => $freeSpace,
                 'fileSize' => $fileSize,
-                'required' => $fileSize * 3,
+                'required' => $requiredSpace,
+                'attempt' => $this->attempts(),
             ]);
             $this->fail(new \RuntimeException('Insufficient disk space for video processing'));
+
+            return;
+        }
+
+        // Check if we have enough memory available
+        if (($memoryLimit - $memoryUsage) < (1024 * 1024 * 1024)) { // Less than 1GB available
+            Log::error('Insufficient memory for video processing', [
+                'availableMemory' => $memoryLimit - $memoryUsage,
+                'required' => 1024 * 1024 * 1024,
+                'attempt' => $this->attempts(),
+            ]);
+            $this->fail(new \RuntimeException('Insufficient memory for video processing'));
 
             return;
         }
@@ -221,14 +257,27 @@ class StoreVideo implements ShouldQueue
                     'exitCode' => $exitCode,
                     'command' => $process->getCommandLine(),
                     'memory_usage' => memory_get_usage(true),
+                    'peak_memory_usage' => memory_get_peak_usage(true),
                     'attempt' => $this->attempts(),
                 ]);
 
                 if ($exitCode === 137 || strpos($errorOutput, 'signal 9') !== false) {
-                    throw new \RuntimeException('FFmpeg process was killed due to system resource constraints. Please try with a smaller video or lower quality settings.');
+                    throw new \RuntimeException('FFmpeg process was killed due to system resource constraints (OOM). Please try with a smaller video or lower quality settings.');
                 }
 
-                throw new \RuntimeException('FFmpeg processing failed: '.$errorOutput);
+                if ($exitCode === 124 || strpos($errorOutput, 'timeout') !== false) {
+                    throw new \RuntimeException('FFmpeg process timed out. The video may be too large or complex to process.');
+                }
+
+                if (strpos($errorOutput, 'Invalid data found') !== false) {
+                    throw new \RuntimeException('Invalid video file format or corrupted video data.');
+                }
+
+                if (strpos($errorOutput, 'No such file or directory') !== false) {
+                    throw new \RuntimeException('FFmpeg binary not found or input file missing.');
+                }
+
+                throw new \RuntimeException('FFmpeg processing failed (exit code: ' . $exitCode . '): ' . $errorOutput);
             }
 
             Log::info('FFmpeg processing completed successfully', [
@@ -329,6 +378,11 @@ class StoreVideo implements ShouldQueue
                 'peak_memory_usage' => memory_get_peak_usage(true),
                 'attempt' => $this->attempts(),
             ]);
+            
+            // Retry S3 operations as they might be temporary
+            if ($this->attempts() < $this->tries) {
+                throw $e;
+            }
             $this->fail($e);
         } catch (Throwable $e) {
             Log::error('Unexpected error occurred', [
@@ -340,6 +394,11 @@ class StoreVideo implements ShouldQueue
                 'peak_memory_usage' => memory_get_peak_usage(true),
                 'attempt' => $this->attempts(),
             ]);
+            
+            // Retry unexpected errors unless we've hit max attempts
+            if ($this->attempts() < $this->tries) {
+                throw $e;
+            }
             $this->fail($e);
         } finally {
             Log::info('StoreVideo job cleanup', [
@@ -361,6 +420,28 @@ class StoreVideo implements ShouldQueue
         }
     }
 
+    private function getMemoryLimitInBytes(): int
+    {
+        $memoryLimit = ini_get('memory_limit');
+        if ($memoryLimit === '-1') {
+            return PHP_INT_MAX; // No limit
+        }
+        
+        $unit = strtolower(substr($memoryLimit, -1));
+        $value = (int) substr($memoryLimit, 0, -1);
+        
+        switch ($unit) {
+            case 'g':
+                return $value * 1024 * 1024 * 1024;
+            case 'm':
+                return $value * 1024 * 1024;
+            case 'k':
+                return $value * 1024;
+            default:
+                return $value;
+        }
+    }
+
     public function middleware(): array
     {
         return [(new WithoutOverlapping($this->filePath))->expireAfter(600)];
@@ -372,7 +453,29 @@ class StoreVideo implements ShouldQueue
             'filePath' => $this->filePath,
             'path' => $this->path,
             'exception' => $exception->getMessage(),
+            'exception_class' => get_class($exception),
             'trace' => $exception->getTraceAsString(),
+            'final_attempt' => $this->attempts(),
+            'memory_usage' => memory_get_usage(true),
+            'peak_memory_usage' => memory_get_peak_usage(true),
         ]);
+
+        // Clean up any temporary files that might have been created
+        $tempDir = storage_path('app/temp/');
+        if (is_dir($tempDir)) {
+            $tempFiles = glob($tempDir . 'video_*.mp4');
+            foreach ($tempFiles as $tempFile) {
+                if (file_exists($tempFile) && (time() - filemtime($tempFile)) > 3600) { // Older than 1 hour
+                    @unlink($tempFile);
+                    Log::info('Cleaned up old temp file', ['file' => $tempFile]);
+                }
+            }
+        }
+
+        // Clean up the original uploaded file if it still exists
+        if (Storage::disk('local')->exists($this->filePath)) {
+            Storage::disk('local')->delete($this->filePath);
+            Log::info('Cleaned up original uploaded file', ['filePath' => $this->filePath]);
+        }
     }
 }
