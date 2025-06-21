@@ -21,9 +21,12 @@ class ProfileController extends Controller
      */
     public function edit(Request $request)
     {
+        $adminUsers = User::permission('admin')->get(['name']);
+
         return Inertia::render('Profile/Edit', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => session('status'),
+            'adminUsers' => $adminUsers,
         ]);
     }
 
