@@ -74,12 +74,13 @@ class StoreVideo implements ShouldQueue
                 'attempt' => $this->attempts(),
             ]);
             $this->fail(new \RuntimeException('Video file not found or path is empty'));
+
             return;
         }
 
         $freeSpace = disk_free_space(storage_path('app'));
         $fileSize = Storage::disk('local')->size($this->filePath);
-        
+
         if ($freeSpace < ($fileSize * 3)) {
             Log::error('Insufficient disk space for video processing', [
                 'freeSpace' => $freeSpace,
@@ -87,6 +88,7 @@ class StoreVideo implements ShouldQueue
                 'required' => $fileSize * 3,
             ]);
             $this->fail(new \RuntimeException('Insufficient disk space for video processing'));
+
             return;
         }
 
@@ -94,6 +96,7 @@ class StoreVideo implements ShouldQueue
         if (! is_dir($tempDir) && ! mkdir($tempDir, 0755, true)) {
             Log::error('Failed to create temp directory', ['directory' => $tempDir]);
             $this->fail(new \RuntimeException('Failed to create temp directory'));
+
             return;
         }
 
@@ -112,14 +115,14 @@ class StoreVideo implements ShouldQueue
             $media = FFMpeg::fromDisk('local')->open($this->filePath);
 
             $videoStream = $media->getVideoStream();
-            if (!$videoStream) {
+            if (! $videoStream) {
                 throw new \RuntimeException('No video stream found in file');
             }
-            
+
             $width = $videoStream->get('width');
             $height = $videoStream->get('height');
-            
-            if (!$width || !$height) {
+
+            if (! $width || ! $height) {
                 throw new \RuntimeException('Invalid video dimensions');
             }
 
@@ -253,9 +256,10 @@ class StoreVideo implements ShouldQueue
             try {
                 $processedFilePath = retry(3, function () use ($tempFile, $filename, $dirPath) {
                     $result = Storage::disk('s3')->putFileAs($dirPath, new File($tempFile), $filename);
-                    if (!$result) {
+                    if (! $result) {
                         throw new \RuntimeException('S3 upload returned false');
                     }
+
                     return $result;
                 }, 2000);
 
@@ -264,7 +268,7 @@ class StoreVideo implements ShouldQueue
                 if ($screenshotContents) {
                     retry(3, function () use ($posterPath, $screenshotContents) {
                         $result = Storage::disk('s3')->put($posterPath, $screenshotContents, 'public');
-                        if (!$result) {
+                        if (! $result) {
                             throw new \RuntimeException('S3 poster upload returned false');
                         }
                     }, 2000);
