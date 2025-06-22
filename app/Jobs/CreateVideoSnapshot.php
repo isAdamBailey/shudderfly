@@ -177,18 +177,88 @@ class CreateVideoSnapshot implements ShouldQueue
                 throw new \Exception('Downloaded video file is empty');
             }
 
+            // Check if video file is corrupted by trying to get basic info
             $fullVideoPath = storage_path('app/'.$tempVideoPath);
             if (! file_exists($fullVideoPath)) {
                 throw new \Exception("Video file not found at expected path: {$fullVideoPath}");
             }
 
+            // Validate video file format using file command
+            $fileInfo = shell_exec("file " . escapeshellarg($fullVideoPath) . " 2>/dev/null");
+            Log::info('Video file validation', [
+                'file_info' => trim($fileInfo ?? 'unknown'),
+                'file_size' => $videoSize,
+                'file_path' => $fullVideoPath,
+            ]);
+
+            // Check temp directory space and permissions
+            $tempDirSpace = disk_free_space($tempDir);
+            $requiredSpace = $videoSize * 2; // Need at least 2x video size for processing
+            
+            if ($tempDirSpace < $requiredSpace) {
+                throw new \Exception("Insufficient space in temp directory: available=" . round($tempDirSpace / 1024 / 1024, 2) . "MB, required=" . round($requiredSpace / 1024 / 1024, 2) . "MB");
+            }
+
+            Log::info('Temp directory check', [
+                'temp_dir' => $tempDir,
+                'available_space_mb' => round($tempDirSpace / 1024 / 1024, 2),
+                'required_space_mb' => round($requiredSpace / 1024 / 1024, 2),
+                'writable' => is_writable($tempDir),
+                'permissions' => substr(sprintf('%o', fileperms($tempDir)), -4),
+            ]);
+
             // Extract frame using FFmpeg
             try {
+                // Check if FFmpeg is available
+                $ffmpegBinary = config('laravel-ffmpeg.ffmpeg.binaries');
+                $ffprobeBinary = config('laravel-ffmpeg.ffprobe.binaries');
+                
+                // Test if FFmpeg binaries are available
+                $ffmpegAvailable = shell_exec("which {$ffmpegBinary} 2>/dev/null");
+                $ffprobeAvailable = shell_exec("which {$ffprobeBinary} 2>/dev/null");
+                
+                if (!$ffmpegAvailable || !$ffprobeAvailable) {
+                    throw new \Exception("FFmpeg binaries not found: ffmpeg=" . ($ffmpegAvailable ? 'available' : 'not found') . ", ffprobe=" . ($ffprobeAvailable ? 'available' : 'not found'));
+                }
+                
                 $ffmpeg = FFMpeg::fromDisk('local');
                 $media = $ffmpeg->open($tempVideoPath);
 
-                // Get video duration and validate timestamp with more precision
+                // Get video duration first
                 $duration = $media->getDurationInSeconds();
+
+                // Validate video file and get stream information
+                try {
+                    $videoStream = $media->getVideoStream();
+                    if (!$videoStream) {
+                        throw new \Exception('No video stream found in file');
+                    }
+                    
+                    $width = $videoStream->get('width');
+                    $height = $videoStream->get('height');
+                    $codec = $videoStream->get('codec_name');
+                    
+                    Log::info('Video stream information', [
+                        'width' => $width,
+                        'height' => $height,
+                        'codec' => $codec,
+                        'duration' => $duration,
+                        'video_path' => $tempVideoPath,
+                    ]);
+                    
+                    if (!$width || !$height) {
+                        throw new \Exception('Invalid video dimensions');
+                    }
+                } catch (\Throwable $streamError) {
+                    Log::error('Failed to get video stream information', [
+                        'error' => $streamError->getMessage(),
+                        'video_path' => $tempVideoPath,
+                        'video_size' => Storage::disk('local')->size($tempVideoPath),
+                    ]);
+                    throw $streamError;
+                }
+
+                // Validate timestamp with more precision
                 $timestamp = (float) $this->timeInSeconds;
 
                 // If timestamp is beyond duration, use the last frame
@@ -209,14 +279,89 @@ class CreateVideoSnapshot implements ShouldQueue
                     ));
                 }
 
-                // Use memory-efficient frame extraction
-                $media->getFrameFromSeconds($timestamp)
-                    ->export()
-                    ->accurate()
-                    ->save($tempImagePath);
+                // Log FFmpeg operation details
+                Log::info('Starting FFmpeg snapshot extraction', [
+                    'video_path' => $tempVideoPath,
+                    'image_path' => $tempImagePath,
+                    'timestamp' => $timestamp,
+                    'duration' => $duration,
+                    'video_size' => Storage::disk('local')->size($tempVideoPath),
+                    'ffmpeg_binary' => $ffmpegBinary,
+                    'ffprobe_binary' => $ffprobeBinary,
+                ]);
+
+                // Try primary FFmpeg method
+                $snapshotCreated = false;
+                try {
+                    // Set a timeout for the FFmpeg operation
+                    set_time_limit(300); // 5 minutes timeout
+                    
+                    $media->getFrameFromSeconds($timestamp)
+                        ->export()
+                        ->accurate()
+                        ->save($tempImagePath);
+                    $snapshotCreated = true;
+                } catch (\Throwable $ffmpegError) {
+                    Log::warning('Primary FFmpeg method failed, trying fallback', [
+                        'ffmpeg_error' => $ffmpegError->getMessage(),
+                        'video_path' => $tempVideoPath,
+                        'image_path' => $tempImagePath,
+                    ]);
+                    
+                    // Try fallback method using direct FFmpeg command with timeout
+                    $fullVideoPath = storage_path('app/'.$tempVideoPath);
+                    $fullImagePath = storage_path('app/'.$tempImagePath);
+                    
+                    $ffmpegCommand = sprintf(
+                        'timeout 300 %s -i %s -ss %.3f -vframes 1 -q:v 2 -y %s 2>&1',
+                        escapeshellarg($ffmpegBinary),
+                        escapeshellarg($fullVideoPath),
+                        $timestamp,
+                        escapeshellarg($fullImagePath)
+                    );
+                    
+                    $output = [];
+                    $returnCode = 0;
+                    exec($ffmpegCommand, $output, $returnCode);
+                    $outputString = implode("\n", $output);
+                    
+                    if ($returnCode === 0 && file_exists($fullImagePath) && filesize($fullImagePath) > 0) {
+                        $snapshotCreated = true;
+                        Log::info('Fallback FFmpeg method succeeded', [
+                            'command' => $ffmpegCommand,
+                            'output' => $outputString,
+                            'file_size' => filesize($fullImagePath),
+                        ]);
+                    } else {
+                        Log::error('Fallback FFmpeg method also failed', [
+                            'command' => $ffmpegCommand,
+                            'output' => $outputString,
+                            'return_code' => $returnCode,
+                            'file_exists' => file_exists($fullImagePath),
+                            'file_size' => file_exists($fullImagePath) ? filesize($fullImagePath) : 0,
+                        ]);
+                        throw $ffmpegError; // Re-throw the original error
+                    }
+                }
 
                 // Verify snapshot quality
-                if (! Storage::disk('local')->exists($tempImagePath)) {
+                if (!$snapshotCreated || !Storage::disk('local')->exists($tempImagePath)) {
+                    // Check if the file exists in the filesystem directly
+                    $fullImagePath = storage_path('app/'.$tempImagePath);
+                    $fileExists = file_exists($fullImagePath);
+                    $fileSize = $fileExists ? filesize($fullImagePath) : 0;
+                    
+                    Log::error('Snapshot file verification failed', [
+                        'snapshot_created' => $snapshotCreated,
+                        'storage_exists' => Storage::disk('local')->exists($tempImagePath),
+                        'file_exists' => $fileExists,
+                        'file_size' => $fileSize,
+                        'full_path' => $fullImagePath,
+                        'temp_dir_contents' => array_slice(scandir(storage_path('app/temp')), 0, 10), // First 10 files
+                        'video_path' => $tempVideoPath,
+                        'image_path' => $tempImagePath,
+                    ]);
+                    
                     throw new \Exception('Snapshot file was not created');
                 }
 
@@ -232,9 +377,17 @@ class CreateVideoSnapshot implements ShouldQueue
                     throw new \Exception("Invalid snapshot file type: {$mimeType}");
                 }
 
+                Log::info('FFmpeg snapshot extraction completed successfully', [
+                    'image_path' => $tempImagePath,
+                    'file_size' => $fileSize,
+                    'mime_type' => $mimeType,
+                ]);
+
             } catch (\Throwable $e) {
                 Log::error('FFmpeg snapshot creation failed', [
                     'exception' => $e->getMessage(),
+                    'exception_class' => get_class($e),
+                    'exception_trace' => $e->getTraceAsString(),
                     'video_url' => $this->videoUrl,
                     'time' => $this->timeInSeconds,
                     'temp_video_path' => $tempVideoPath,
@@ -249,6 +402,9 @@ class CreateVideoSnapshot implements ShouldQueue
                     'disk_free_space' => disk_free_space(storage_path('app')) / 1024 / 1024 .'MB',
                     'temp_dir_writable' => is_writable($tempDir),
                     'temp_dir_permissions' => substr(sprintf('%o', fileperms($tempDir)), -4),
+                    'ffmpeg_binary' => config('laravel-ffmpeg.ffmpeg.binaries'),
+                    'ffprobe_binary' => config('laravel-ffmpeg.ffprobe.binaries'),
+                    'ffmpeg_timeout' => config('laravel-ffmpeg.timeout'),
                 ]);
                 throw new \Exception('Failed to create snapshot: '.$e->getMessage());
             }
