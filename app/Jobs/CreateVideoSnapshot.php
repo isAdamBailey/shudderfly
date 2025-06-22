@@ -38,7 +38,7 @@ class CreateVideoSnapshot implements ShouldQueue
      *
      * @var int
      */
-    public $memory = 2048; // 2GB
+    public $memory = 1024; // 1GB
 
     /**
      * Delete the job if its models no longer exist.
@@ -112,39 +112,31 @@ class CreateVideoSnapshot implements ShouldQueue
 
     public function handle(): void
     {
-        Log::info('Starting CreateVideoSnapshot job', [
-            'video_url' => $this->videoUrl,
-            'time_in_seconds' => $this->timeInSeconds,
-            'book_id' => $this->book->id,
-            'user_id' => $this->user->id,
-            'page_id' => $this->pageId,
-            'attempt' => $this->attempts(),
-            'memory_limit' => ini_get('memory_limit'),
-            'max_execution_time' => ini_get('max_execution_time'),
-            'disk_free_space' => disk_free_space(storage_path('app')),
-            'disk_total_space' => disk_total_space(storage_path('app')),
-        ]);
-
         // Check system resources before processing
         $freeSpace = disk_free_space(storage_path('app'));
         $memoryUsage = memory_get_usage(true);
-        $memoryLimit = $this->getMemoryLimitInBytes();
+        $peakMemoryUsage = memory_get_peak_usage(true);
 
         Log::info('System resource check for CreateVideoSnapshot', [
+            'video_url' => $this->videoUrl,
+            'time_in_seconds' => $this->timeInSeconds,
+            'attempt' => $this->attempts(),
             'freeSpace' => $freeSpace,
             'memoryUsage' => $memoryUsage,
-            'memoryLimit' => $memoryLimit,
-            'availableMemory' => $memoryLimit - $memoryUsage,
+            'memoryUsageMB' => round($memoryUsage / 1024 / 1024, 2),
+            'peakMemoryUsage' => $peakMemoryUsage,
+            'peakMemoryUsageMB' => round($peakMemoryUsage / 1024 / 1024, 2),
         ]);
 
-        // Check if we have enough memory available (at least 512MB)
-        if (($memoryLimit - $memoryUsage) < (512 * 1024 * 1024)) {
-            Log::error('Insufficient memory for video snapshot creation', [
-                'availableMemory' => $memoryLimit - $memoryUsage,
-                'required' => 512 * 1024 * 1024,
+        // Simple memory check - fail if using more than 500MB
+        if ($memoryUsage > (500 * 1024 * 1024)) {
+            Log::error('Memory usage too high for video snapshot creation', [
+                'memoryUsageMB' => round($memoryUsage / 1024 / 1024, 2),
+                'peakMemoryUsageMB' => round($peakMemoryUsage / 1024 / 1024, 2),
+                'limitMB' => 500,
                 'attempt' => $this->attempts(),
             ]);
-            throw new \RuntimeException('Insufficient memory for video snapshot creation');
+            throw new \RuntimeException('Memory usage too high for video snapshot creation');
         }
 
         $tempVideoPath = null;
@@ -217,16 +209,11 @@ class CreateVideoSnapshot implements ShouldQueue
                     ));
                 }
 
-                // Use accurate frame seeking
-                $frameContents = $media->getFrameFromSeconds($timestamp)
+                // Use memory-efficient frame extraction
+                $media->getFrameFromSeconds($timestamp)
                     ->export()
                     ->accurate()
-                    ->getFrameContents();
-
-                // Save the frame contents to the temp image file
-                if (! Storage::disk('local')->put($tempImagePath, $frameContents)) {
-                    throw new \Exception('Failed to save frame contents to temp file');
-                }
+                    ->save($tempImagePath);
 
                 // Verify snapshot quality
                 if (! Storage::disk('local')->exists($tempImagePath)) {
@@ -254,7 +241,6 @@ class CreateVideoSnapshot implements ShouldQueue
                     'temp_image_path' => $tempImagePath,
                     'video_exists' => Storage::disk('local')->exists($tempVideoPath),
                     'video_size' => Storage::disk('local')->exists($tempVideoPath) ? Storage::disk('local')->size($tempVideoPath) : 0,
-                    'ffprobe_data' => $this->getVideoMetadata($tempVideoPath),
                     'memory_usage' => [
                         'current' => memory_get_usage(true) / 1024 / 1024 .'MB',
                         'peak' => memory_get_peak_usage(true) / 1024 / 1024 .'MB',
@@ -360,50 +346,5 @@ class CreateVideoSnapshot implements ShouldQueue
                 }
             }
         }
-    }
-
-    /**
-     * Get video metadata using FFprobe
-     */
-    private function getVideoMetadata(string $videoPath): array
-    {
-        try {
-            $ffprobe = FFMpeg::fromDisk('local')->open($videoPath);
-
-            return [
-                'duration' => $ffprobe->getDurationInSeconds(),
-                'dimensions' => $ffprobe->getVideoStream()->getDimensions(),
-                'codec' => $ffprobe->getVideoStream()->get('codec_name'),
-                'format' => $ffprobe->getFormat(),
-            ];
-        } catch (\Throwable $e) {
-            return ['error' => $e->getMessage()];
-        }
-    }
-
-    /**
-     * Get the memory limit in bytes.
-     */
-    private function getMemoryLimitInBytes(): int
-    {
-        $memoryLimit = ini_get('memory_limit');
-        if (strtolower($memoryLimit) === 'off') {
-            return PHP_INT_MAX; // Unlimited if memory_limit is 'off'
-        }
-
-        // Remove the 'M' or 'G' suffix if present
-        $memoryLimit = rtrim($memoryLimit, 'M');
-        $memoryLimit = rtrim($memoryLimit, 'G');
-
-        // Convert to bytes
-        $memoryLimit = (int) $memoryLimit;
-        if (strtolower(substr($memoryLimit, -1)) === 'g') {
-            return $memoryLimit * 1024 * 1024 * 1024;
-        }
-        if (strtolower(substr($memoryLimit, -1)) === 'm') {
-            return $memoryLimit * 1024 * 1024;
-        }
-
-        return $memoryLimit * 1024; // Default to bytes if no suffix
     }
 }
