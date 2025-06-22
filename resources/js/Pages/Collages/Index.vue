@@ -18,7 +18,7 @@
           </Link>
 
           <Button
-            v-if="canEditPages"
+            v-if="canAdmin"
             :disabled="createCollageForm.processing || collages.length >= 4"
             @click="createCollageForm.post(route('collages.store'))"
             ><i class="ri-add-line text-xl mr-3"></i>
@@ -44,7 +44,7 @@
     <CollageGrid :collages="collages">
       <template #image-actions="{ page, collage }">
         <button
-          v-if="canEditPages"
+          v-if="canAdmin"
           class="absolute top-1 right-1 bg-white bg-opacity-80 hover:bg-red-500 hover:text-white text-gray-700 rounded-full px-1 shadow"
           title="Remove image"
           @click="removeImage(collage.id, page.id)"
@@ -65,7 +65,7 @@
             <i class="ri-external-link-line mr-1"></i>
           </a>
           <Button
-            v-if="canEditPages"
+            v-if="canAdmin"
             class="btn btn-secondary"
             :disabled="printForm.processing || !hasPages(collage)"
             @click="printForm.post(route('collages.generate-pdf', collage.id))"
@@ -74,7 +74,7 @@
           </Button>
 
           <DangerButton
-            v-if="canEditPages"
+            v-if="canAdmin"
             class="btn btn-danger"
             :disabled="deleteForm.processing || !hasPages(collage)"
             @click="confirmDelete(collage.id)"
@@ -98,7 +98,7 @@ import CollageGrid from "./CollageGrid.vue";
 
 import { usePermissions } from "@/composables/permissions";
 
-const { canEditPages } = usePermissions();
+const { canAdmin } = usePermissions();
 
 defineProps({
   collages: { type: Array, required: true }
