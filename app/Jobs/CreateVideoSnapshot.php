@@ -268,23 +268,16 @@ class CreateVideoSnapshot implements ShouldQueue
             }
 
             // Clean up video file as we don't need it anymore
-            if (Storage::disk('local')->exists($tempVideoPath)) {
-                Storage::disk('local')->delete($tempVideoPath);
-            }
+            CleanupTempSnapshot::dispatch(null, $tempVideoPath, null);
 
             // Upload temp image to S3 first
             $tempS3Path = "temp/snapshots/temp_{$timestamp}_{$random}.jpg";
             Storage::disk('s3')->put($tempS3Path, Storage::disk('local')->get($tempImagePath), 'private');
 
-            // Clean up local temp image since it's now in S3
-            if (Storage::disk('local')->exists($tempImagePath)) {
-                Storage::disk('local')->delete($tempImagePath);
-            }
-
             // Dispatch StoreImage job with S3 path
             StoreImage::dispatch('s3://'.$tempS3Path, $mediaPath)
                 ->chain([
-                    new CleanupTempSnapshot($tempS3Path),
+                    new CleanupTempSnapshot($tempS3Path, null, $tempImagePath),
                 ]);
 
         } catch (\Exception $e) {
@@ -297,12 +290,7 @@ class CreateVideoSnapshot implements ShouldQueue
             ]);
 
             // Clean up files in case of error
-            if ($tempVideoPath && Storage::disk('local')->exists($tempVideoPath)) {
-                Storage::disk('local')->delete($tempVideoPath);
-            }
-            if ($tempImagePath && Storage::disk('local')->exists($tempImagePath)) {
-                Storage::disk('local')->delete($tempImagePath);
-            }
+            CleanupTempSnapshot::dispatch(null, $tempVideoPath ?? null, $tempImagePath ?? null);
 
             throw $e;
         }
@@ -327,24 +315,7 @@ class CreateVideoSnapshot implements ShouldQueue
             'peak_memory_usage' => memory_get_peak_usage(true),
         ]);
 
-        // Clean up any temporary files that might have been created
-        $tempDir = storage_path('app/temp/');
-        if (is_dir($tempDir)) {
-            $tempFiles = glob($tempDir.'temp_video_*.mp4');
-            foreach ($tempFiles as $tempFile) {
-                if (file_exists($tempFile) && (time() - filemtime($tempFile)) > 3600) { // Older than 1 hour
-                    @unlink($tempFile);
-                    Log::info('Cleaned up old temp video file', ['file' => $tempFile]);
-                }
-            }
-
-            $tempImageFiles = glob($tempDir.'snapshot_*.jpg');
-            foreach ($tempImageFiles as $tempFile) {
-                if (file_exists($tempFile) && (time() - filemtime($tempFile)) > 3600) { // Older than 1 hour
-                    @unlink($tempFile);
-                    Log::info('Cleaned up old temp snapshot file', ['file' => $tempFile]);
-                }
-            }
-        }
+        // Clean up any temp files that might have been created
+        CleanupTempSnapshot::dispatch();
     }
 }
