@@ -10,6 +10,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -54,7 +55,7 @@ class CreateVideoSnapshot implements ShouldQueue
      */
     public function uniqueId()
     {
-        return $this->videoUrl.'_'.$this->timeInSeconds.'_'.$this->book->id;
+        return 'video_snapshot_'.md5($this->videoUrl.'_'.$this->timeInSeconds.'_'.$this->book->id.'_'.$this->user->id);
     }
 
     /**
@@ -71,7 +72,11 @@ class CreateVideoSnapshot implements ShouldQueue
      */
     public function middleware()
     {
-        return [new WithoutOverlapping($this->uniqueId())];
+        return [
+            (new WithoutOverlapping($this->uniqueId()))
+                ->expireAfter(600) // Release lock after 10 minutes
+                ->releaseAfter(300), // Release lock after 5 minutes if job is still running
+        ];
     }
 
     public function retryAfter()
@@ -112,6 +117,18 @@ class CreateVideoSnapshot implements ShouldQueue
 
     public function handle(): void
     {
+        // Validate that models still exist
+        if (! $this->book->exists || ! $this->user->exists) {
+            Log::warning('Models no longer exist, skipping job', [
+                'book_exists' => $this->book->exists,
+                'user_exists' => $this->user->exists,
+                'book_id' => $this->book->id ?? 'null',
+                'user_id' => $this->user->id ?? 'null',
+            ]);
+
+            return;
+        }
+
         // Check system resources before processing
         $freeSpace = disk_free_space(storage_path('app'));
         $memoryUsage = memory_get_usage(true);
@@ -128,12 +145,12 @@ class CreateVideoSnapshot implements ShouldQueue
             'peakMemoryUsageMB' => round($peakMemoryUsage / 1024 / 1024, 2),
         ]);
 
-        // Simple memory check - fail if using more than 500MB
-        if ($memoryUsage > (500 * 1024 * 1024)) {
+        // Simple memory check - fail if using more than 800MB (leaving 200MB buffer)
+        if ($memoryUsage > (800 * 1024 * 1024)) {
             Log::error('Memory usage too high for video snapshot creation', [
                 'memoryUsageMB' => round($memoryUsage / 1024 / 1024, 2),
                 'peakMemoryUsageMB' => round($peakMemoryUsage / 1024 / 1024, 2),
-                'limitMB' => 500,
+                'limitMB' => 800,
                 'attempt' => $this->attempts(),
             ]);
             throw new \RuntimeException('Memory usage too high for video snapshot creation');
@@ -161,6 +178,14 @@ class CreateVideoSnapshot implements ShouldQueue
             $tempVideoPath = "temp/temp_video_{$timestamp}_{$random}.mp4";
             $tempImagePath = "temp/snapshot_{$timestamp}_{$random}.jpg";
 
+            // Ensure the temp directory structure exists for the image path
+            $tempImageDir = dirname(storage_path('app/'.$tempImagePath));
+            if (! is_dir($tempImageDir)) {
+                if (! mkdir($tempImageDir, 0755, true)) {
+                    throw new \Exception("Failed to create temp image directory: {$tempImageDir}");
+                }
+            }
+
             // Download video to temp file
             $videoContent = file_get_contents($this->videoUrl);
             if ($videoContent === false) {
@@ -184,7 +209,7 @@ class CreateVideoSnapshot implements ShouldQueue
             }
 
             // Validate video file format using file command
-            $fileInfo = shell_exec("file " . escapeshellarg($fullVideoPath) . " 2>/dev/null");
+            $fileInfo = shell_exec('file '.escapeshellarg($fullVideoPath).' 2>/dev/null');
             Log::info('Video file validation', [
                 'file_info' => trim($fileInfo ?? 'unknown'),
                 'file_size' => $videoSize,
@@ -194,9 +219,9 @@ class CreateVideoSnapshot implements ShouldQueue
             // Check temp directory space and permissions
             $tempDirSpace = disk_free_space($tempDir);
             $requiredSpace = $videoSize * 2; // Need at least 2x video size for processing
-            
+
             if ($tempDirSpace < $requiredSpace) {
-                throw new \Exception("Insufficient space in temp directory: available=" . round($tempDirSpace / 1024 / 1024, 2) . "MB, required=" . round($requiredSpace / 1024 / 1024, 2) . "MB");
+                throw new \Exception('Insufficient space in temp directory: available='.round($tempDirSpace / 1024 / 1024, 2).'MB, required='.round($requiredSpace / 1024 / 1024, 2).'MB');
             }
 
             Log::info('Temp directory check', [
@@ -212,15 +237,15 @@ class CreateVideoSnapshot implements ShouldQueue
                 // Check if FFmpeg is available
                 $ffmpegBinary = config('laravel-ffmpeg.ffmpeg.binaries');
                 $ffprobeBinary = config('laravel-ffmpeg.ffprobe.binaries');
-                
+
                 // Test if FFmpeg binaries are available
                 $ffmpegAvailable = shell_exec("which {$ffmpegBinary} 2>/dev/null");
                 $ffprobeAvailable = shell_exec("which {$ffprobeBinary} 2>/dev/null");
-                
-                if (!$ffmpegAvailable || !$ffprobeAvailable) {
-                    throw new \Exception("FFmpeg binaries not found: ffmpeg=" . ($ffmpegAvailable ? 'available' : 'not found') . ", ffprobe=" . ($ffprobeAvailable ? 'available' : 'not found'));
+
+                if (! $ffmpegAvailable || ! $ffprobeAvailable) {
+                    throw new \Exception('FFmpeg binaries not found: ffmpeg='.($ffmpegAvailable ? 'available' : 'not found').', ffprobe='.($ffprobeAvailable ? 'available' : 'not found'));
                 }
-                
+
                 $ffmpeg = FFMpeg::fromDisk('local');
                 $media = $ffmpeg->open($tempVideoPath);
 
@@ -230,14 +255,14 @@ class CreateVideoSnapshot implements ShouldQueue
                 // Validate video file and get stream information
                 try {
                     $videoStream = $media->getVideoStream();
-                    if (!$videoStream) {
+                    if (! $videoStream) {
                         throw new \Exception('No video stream found in file');
                     }
-                    
+
                     $width = $videoStream->get('width');
                     $height = $videoStream->get('height');
                     $codec = $videoStream->get('codec_name');
-                    
+
                     Log::info('Video stream information', [
                         'width' => $width,
                         'height' => $height,
@@ -245,8 +270,8 @@ class CreateVideoSnapshot implements ShouldQueue
                         'duration' => $duration,
                         'video_path' => $tempVideoPath,
                     ]);
-                    
-                    if (!$width || !$height) {
+
+                    if (! $width || ! $height) {
                         throw new \Exception('Invalid video dimensions');
                     }
                 } catch (\Throwable $streamError) {
@@ -295,23 +320,63 @@ class CreateVideoSnapshot implements ShouldQueue
                 try {
                     // Set a timeout for the FFmpeg operation
                     set_time_limit(300); // 5 minutes timeout
-                    
-                    $media->getFrameFromSeconds($timestamp)
-                        ->export()
-                        ->accurate()
-                        ->save($tempImagePath);
-                    $snapshotCreated = true;
+
+                    // Log the exact paths being used
+                    $fullImagePath = storage_path('app/'.$tempImagePath);
+                    Log::info('FFmpeg operation details', [
+                        'temp_image_path' => $tempImagePath,
+                        'full_image_path' => $fullImagePath,
+                        'temp_dir_exists' => is_dir(dirname($fullImagePath)),
+                        'temp_dir_writable' => is_writable(dirname($fullImagePath)),
+                        'timestamp' => $timestamp,
+                        'timeout' => 300,
+                    ]);
+
+                    // Use a timeout wrapper for the FFmpeg operation
+                    $result = $this->executeWithTimeout(function () use ($media, $timestamp, $fullImagePath) {
+                        $media->getFrameFromSeconds($timestamp)
+                            ->export()
+                            ->accurate()
+                            ->save($fullImagePath);
+                    }, 300);
+
+                    if (! $result) {
+                        throw new \Exception('FFmpeg operation timed out');
+                    }
+
+                    // Immediately check if file was created
+                    $fileExists = file_exists($fullImagePath);
+                    $fileSize = $fileExists ? filesize($fullImagePath) : 0;
+
+                    Log::info('Primary FFmpeg method result', [
+                        'storage_exists' => Storage::disk('local')->exists($tempImagePath),
+                        'file_exists' => $fileExists,
+                        'file_size' => $fileSize,
+                        'full_path' => $fullImagePath,
+                    ]);
+
+                    if ($fileExists && $fileSize > 0) {
+                        $snapshotCreated = true;
+                    } else {
+                        throw new \Exception("Primary method failed: file_exists={$fileExists}, size={$fileSize}");
+                    }
                 } catch (\Throwable $ffmpegError) {
                     Log::warning('Primary FFmpeg method failed, trying fallback', [
                         'ffmpeg_error' => $ffmpegError->getMessage(),
                         'video_path' => $tempVideoPath,
                         'image_path' => $tempImagePath,
                     ]);
-                    
+
                     // Try fallback method using direct FFmpeg command with timeout
                     $fullVideoPath = storage_path('app/'.$tempVideoPath);
                     $fullImagePath = storage_path('app/'.$tempImagePath);
-                    
+
+                    // Ensure the output directory exists
+                    $outputDir = dirname($fullImagePath);
+                    if (! is_dir($outputDir)) {
+                        mkdir($outputDir, 0755, true);
+                    }
+
                     $ffmpegCommand = sprintf(
                         'timeout 300 %s -i %s -ss %.3f -vframes 1 -q:v 2 -y %s 2>&1',
                         escapeshellarg($ffmpegBinary),
@@ -319,12 +384,20 @@ class CreateVideoSnapshot implements ShouldQueue
                         $timestamp,
                         escapeshellarg($fullImagePath)
                     );
-                    
+
                     $output = [];
                     $returnCode = 0;
                     exec($ffmpegCommand, $output, $returnCode);
                     $outputString = implode("\n", $output);
-                    
+
+                    Log::info('Fallback FFmpeg command executed', [
+                        'command' => $ffmpegCommand,
+                        'return_code' => $returnCode,
+                        'output' => $outputString,
+                        'file_exists_after' => file_exists($fullImagePath),
+                        'file_size_after' => file_exists($fullImagePath) ? filesize($fullImagePath) : 0,
+                    ]);
+
                     if ($returnCode === 0 && file_exists($fullImagePath) && filesize($fullImagePath) > 0) {
                         $snapshotCreated = true;
                         Log::info('Fallback FFmpeg method succeeded', [
@@ -345,34 +418,40 @@ class CreateVideoSnapshot implements ShouldQueue
                 }
 
                 // Verify snapshot quality
-                if (!$snapshotCreated || !Storage::disk('local')->exists($tempImagePath)) {
+                if (! $snapshotCreated || ! file_exists($fullImagePath)) {
                     // Check if the file exists in the filesystem directly
-                    $fullImagePath = storage_path('app/'.$tempImagePath);
                     $fileExists = file_exists($fullImagePath);
                     $fileSize = $fileExists ? filesize($fullImagePath) : 0;
-                    
+
+                    // List all files in temp directory to see what was actually created
+                    $tempFiles = [];
+                    if (is_dir(storage_path('app/temp'))) {
+                        $tempFiles = array_slice(scandir(storage_path('app/temp')), 0, 20); // First 20 files
+                    }
+
                     Log::error('Snapshot file verification failed', [
                         'snapshot_created' => $snapshotCreated,
                         'storage_exists' => Storage::disk('local')->exists($tempImagePath),
                         'file_exists' => $fileExists,
                         'file_size' => $fileSize,
                         'full_path' => $fullImagePath,
-                        'temp_dir_contents' => array_slice(scandir(storage_path('app/temp')), 0, 10), // First 10 files
+                        'temp_dir_contents' => $tempFiles,
                         'video_path' => $tempVideoPath,
                         'image_path' => $tempImagePath,
+                        'temp_dir_writable' => is_writable(storage_path('app/temp')),
+                        'temp_dir_permissions' => substr(sprintf('%o', fileperms(storage_path('app/temp'))), -4),
                     ]);
-                    
+
                     throw new \Exception('Snapshot file was not created');
                 }
 
-                $fileSize = Storage::disk('local')->size($tempImagePath);
+                $fileSize = filesize($fullImagePath);
                 if ($fileSize === 0) {
                     throw new \Exception('Snapshot file was created but is empty');
                 }
 
                 // Verify the file is a valid image
-                $fullPath = storage_path('app/'.$tempImagePath);
-                $mimeType = mime_content_type($fullPath);
+                $mimeType = mime_content_type($fullImagePath);
                 if (! Str::startsWith($mimeType, 'image/')) {
                     throw new \Exception("Invalid snapshot file type: {$mimeType}");
                 }
@@ -412,29 +491,50 @@ class CreateVideoSnapshot implements ShouldQueue
             // Include timestamp in final filename
             $mediaPath = 'books/'.$this->book->slug."/snapshot_{$timestamp}_{$random}.webp";
 
-            // Create the page first
-            $page = $this->book->pages()->create([
-                'content' => "<p>{$this->user->name} took this screenshot from <a href='/pages/{$this->pageId}'>this video</a>.</p>",
-                'media_path' => $mediaPath,
-            ]);
+            // Use database transaction for data consistency
+            DB::transaction(function () use ($mediaPath) {
+                // Create the page first
+                $page = $this->book->pages()->create([
+                    'content' => "<p>{$this->user->name} took this screenshot from <a href='/pages/{$this->pageId}'>this video</a>.</p>",
+                    'media_path' => $mediaPath,
+                ]);
 
-            // Set as cover image if book doesn't have one
-            if (! $this->book->cover_page) {
-                $this->book->update(['cover_page' => $page->id]);
-            }
+                // Set as cover image if book doesn't have one
+                if (! $this->book->cover_page) {
+                    $this->book->update(['cover_page' => $page->id]);
+                }
+            });
+
+            // Refresh models to ensure we have latest data
+            $this->book->refresh();
 
             // Clean up video file as we don't need it anymore
             CleanupTempSnapshot::dispatch(null, $tempVideoPath, null);
 
-            // Upload temp image to S3 first
+            // Upload temp image to S3 first using streaming to avoid memory issues
             $tempS3Path = "temp/snapshots/temp_{$timestamp}_{$random}.jpg";
-            Storage::disk('s3')->put($tempS3Path, Storage::disk('local')->get($tempImagePath), 'private');
+            $fileStream = fopen($fullImagePath, 'r');
+            Storage::disk('s3')->put($tempS3Path, $fileStream, 'private');
+            fclose($fileStream);
 
-            // Dispatch StoreImage job with S3 path
-            StoreImage::dispatch('s3://'.$tempS3Path, $mediaPath)
-                ->chain([
-                    new CleanupTempSnapshot($tempS3Path, null, $tempImagePath),
+            // Dispatch StoreImage job with S3 path and proper error handling
+            try {
+                StoreImage::dispatch('s3://'.$tempS3Path, $mediaPath)
+                    ->chain([
+                        new CleanupTempSnapshot($tempS3Path, null, $tempImagePath),
+                    ]);
+            } catch (\Exception $chainError) {
+                Log::error('Failed to dispatch StoreImage job chain', [
+                    'exception' => $chainError->getMessage(),
+                    'temp_s3_path' => $tempS3Path,
+                    'media_path' => $mediaPath,
                 ]);
+
+                // Clean up S3 temp file if chain fails
+                CleanupTempSnapshot::dispatch($tempS3Path, null, $tempImagePath);
+
+                throw $chainError;
+            }
 
         } catch (\Exception $e) {
             Log::error('Error creating video snapshot', [
@@ -473,5 +573,29 @@ class CreateVideoSnapshot implements ShouldQueue
 
         // Clean up any temp files that might have been created
         CleanupTempSnapshot::dispatch();
+    }
+
+    /**
+     * Execute a callback with a timeout.
+     */
+    private function executeWithTimeout(callable $callback, int $timeout): bool
+    {
+        $startTime = time();
+
+        try {
+            $callback();
+
+            return true;
+        } catch (\Exception $e) {
+            if ((time() - $startTime) >= $timeout) {
+                Log::warning('Operation timed out', [
+                    'timeout' => $timeout,
+                    'elapsed' => time() - $startTime,
+                ]);
+
+                return false;
+            }
+            throw $e;
+        }
     }
 }

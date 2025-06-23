@@ -12,6 +12,7 @@ use Illuminate\Http\File;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use ProtoneMedia\LaravelFFMpeg\Exporters\EncodingException;
@@ -40,7 +41,7 @@ class StoreVideo implements ShouldQueue
 
     public int $timeout = 1800;
 
-    public int $memory = 2048; // Reduced memory usage
+    public int $memory = 1024; // 1GB to match the memory check requirement
 
     public function retryAfter()
     {
@@ -66,6 +67,25 @@ class StoreVideo implements ShouldQueue
 
     public function handle(): void
     {
+        // Validate that models still exist if provided
+        if ($this->book && ! $this->book->exists) {
+            Log::warning('Book model no longer exists, skipping job', [
+                'book_id' => $this->book->id ?? 'null',
+                'filePath' => $this->filePath,
+            ]);
+
+            return;
+        }
+
+        if ($this->page && ! $this->page->exists) {
+            Log::warning('Page model no longer exists, skipping job', [
+                'page_id' => $this->page->id ?? 'null',
+                'filePath' => $this->filePath,
+            ]);
+
+            return;
+        }
+
         Log::info('Starting StoreVideo job', [
             'filePath' => $this->filePath,
             'path' => $this->path,
@@ -139,13 +159,26 @@ class StoreVideo implements ShouldQueue
         $tempFile = $tempDir.uniqid('video_', true).'.mp4';
 
         try {
-            $videoData = Storage::disk('local')->get($this->filePath);
-            if (! $videoData) {
-                throw new \RuntimeException('Failed to read video data from storage');
+            // Use streaming to avoid loading entire file into memory
+            $sourcePath = storage_path('app/'.$this->filePath);
+            if (! file_exists($sourcePath)) {
+                throw new \RuntimeException('Source video file not found: '.$sourcePath);
             }
 
-            if (! file_put_contents($tempFile, $videoData)) {
-                throw new \RuntimeException('Failed to write video data to temp file');
+            // Copy file using streams to avoid memory issues
+            $sourceStream = fopen($sourcePath, 'r');
+            $destStream = fopen($tempFile, 'w');
+
+            if (! $sourceStream || ! $destStream) {
+                throw new \RuntimeException('Failed to open file streams for copying');
+            }
+
+            $copied = stream_copy_to_stream($sourceStream, $destStream);
+            fclose($sourceStream);
+            fclose($destStream);
+
+            if ($copied === false) {
+                throw new \RuntimeException('Failed to copy video file to temp location');
             }
 
             $media = FFMpeg::fromDisk('local')->open($this->filePath);
@@ -323,21 +356,29 @@ class StoreVideo implements ShouldQueue
                     }, 2000);
                 }
 
-                if ($this->page) {
-                    $this->page->update([
-                        'content' => $this->content,
-                        'media_path' => $processedFilePath,
-                        'media_poster' => $posterPath,
-                        'video_link' => $this->videoLink,
-                    ]);
-                } elseif ($this->book) {
-                    $this->book->pages()->create([
-                        'content' => $this->content,
-                        'media_path' => $processedFilePath,
-                        'media_poster' => $posterPath,
-                        'video_link' => $this->videoLink,
-                    ]);
-                }
+                // Use database transaction for data consistency
+                DB::transaction(function () use ($processedFilePath, $posterPath) {
+                    if ($this->page) {
+                        $this->page->update([
+                            'content' => $this->content,
+                            'media_path' => $processedFilePath,
+                            'media_poster' => $posterPath,
+                            'video_link' => $this->videoLink,
+                        ]);
+                    } elseif ($this->book) {
+                        $page = $this->book->pages()->create([
+                            'content' => $this->content,
+                            'media_path' => $processedFilePath,
+                            'media_poster' => $posterPath,
+                            'video_link' => $this->videoLink,
+                        ]);
+
+                        // Set as cover page if book doesn't have one
+                        if (! $this->book->cover_page) {
+                            $this->book->update(['cover_page' => $page->id]);
+                        }
+                    }
+                });
 
                 Log::info('StoreVideo job completed successfully', [
                     'filePath' => $this->filePath,
@@ -444,7 +485,19 @@ class StoreVideo implements ShouldQueue
 
     public function middleware(): array
     {
-        return [(new WithoutOverlapping($this->filePath))->expireAfter(600)];
+        return [
+            (new WithoutOverlapping($this->getUniqueId()))
+                ->expireAfter(1800) // Release lock after 30 minutes
+                ->releaseAfter(900), // Release lock after 15 minutes if job is still running
+        ];
+    }
+
+    /**
+     * Get the unique ID for the job.
+     */
+    private function getUniqueId(): string
+    {
+        return 'store_video_'.md5($this->filePath.'_'.$this->path);
     }
 
     public function failed(Throwable $exception): void

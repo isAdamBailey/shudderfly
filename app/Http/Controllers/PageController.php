@@ -136,6 +136,16 @@ class PageController extends Controller
      */
     public function store(StorePageRequest $request): Redirector|RedirectResponse|Application
     {
+        Log::info('PageController store method called', [
+            'has_file' => $request->hasFile('image'),
+            'file_valid' => $request->hasFile('image') ? $request->file('image')->isValid() : false,
+            'mime_type' => $request->hasFile('image') ? $request->file('image')->getMimeType() : 'no file',
+            'file_size' => $request->hasFile('image') ? $request->file('image')->getSize() : 0,
+            'post_max_size' => ini_get('post_max_size'),
+            'upload_max_filesize' => ini_get('upload_max_filesize'),
+            'max_execution_time' => ini_get('max_execution_time'),
+        ]);
+
         $book = Book::find($request->book_id);
 
         if ($request->hasFile('image')) {
@@ -150,13 +160,32 @@ class PageController extends Controller
                     $mediaPath = 'books/'.$book->slug.'/'.$filename.'.webp';
                     StoreImage::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'));
                 } elseif (Str::startsWith($mimeType, 'video/')) {
+                    Log::info('Video file detected, processing video upload', [
+                        'mime_type' => $mimeType,
+                        'file_path' => $filePath,
+                        'original_name' => $file->getClientOriginalName(),
+                    ]);
+
                     $mediaPath = 'books/'.$book->slug.'/'.$file->getClientOriginalName();
+
+                    Log::info('Dispatching StoreVideo job', [
+                        'file_path' => $filePath,
+                        'media_path' => $mediaPath,
+                        'book_id' => $book->id,
+                        'file_size' => $file->getSize(),
+                        'mime_type' => $mimeType,
+                        'queue_connection' => config('queue.default'),
+                    ]);
+
                     try {
                         StoreVideo::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'));
+                        Log::info('StoreVideo job dispatched successfully');
                     } catch (\Exception $e) {
                         Log::error('Failed to dispatch StoreVideo job', [
                             'exception' => $e->getMessage(),
                             'trace' => $e->getTraceAsString(),
+                            'file_path' => $filePath,
+                            'media_path' => $mediaPath,
                         ]);
                         throw $e;
                     }
@@ -205,15 +234,28 @@ class PageController extends Controller
                 } elseif (Str::startsWith($mimeType, 'video/')) {
                     $mediaPath = 'books/'.$page->book->slug.'/'.$file->getClientOriginalName();
 
+                    Log::info('Dispatching StoreVideo job for update', [
+                        'file_path' => $filePath,
+                        'media_path' => $mediaPath,
+                        'book_id' => $page->book->id,
+                        'page_id' => $page->id,
+                        'file_size' => $file->getSize(),
+                        'mime_type' => $mimeType,
+                        'queue_connection' => config('queue.default'),
+                    ]);
+
                     try {
                         StoreVideo::dispatch($filePath, $mediaPath, $page->book, $request->input('content'), $request->input('video_link'), $page)
                             ->chain([
                                 new DeleteOldMedia($oldMediaPath, $oldPosterPath),
                             ]);
+                        Log::info('StoreVideo job dispatched successfully for update');
                     } catch (\Exception $e) {
                         Log::error('Failed to dispatch StoreVideo job for update', [
                             'exception' => $e->getMessage(),
                             'trace' => $e->getTraceAsString(),
+                            'file_path' => $filePath,
+                            'media_path' => $mediaPath,
                         ]);
                         throw $e;
                     }
