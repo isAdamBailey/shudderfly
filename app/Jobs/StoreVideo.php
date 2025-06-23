@@ -41,7 +41,7 @@ class StoreVideo implements ShouldQueue
 
     public int $timeout = 1800;
 
-    public int $memory = 1024; // 1GB to match the memory check requirement
+    public int $memory = 512; // Reduced to 512MB to match server memory limit
 
     public function retryAfter()
     {
@@ -137,10 +137,10 @@ class StoreVideo implements ShouldQueue
         }
 
         // Check if we have enough memory available
-        if (($memoryLimit - $memoryUsage) < (1024 * 1024 * 1024)) { // Less than 1GB available
+        if (($memoryLimit - $memoryUsage) < (400 * 1024 * 1024)) { // Reduced from 1GB to 400MB available
             Log::error('Insufficient memory for video processing', [
                 'availableMemory' => $memoryLimit - $memoryUsage,
-                'required' => 1024 * 1024 * 1024,
+                'required' => 400 * 1024 * 1024,
                 'attempt' => $this->attempts(),
             ]);
             $this->fail(new \RuntimeException('Insufficient memory for video processing'));
@@ -231,10 +231,11 @@ class StoreVideo implements ShouldQueue
                 '-c:a', 'aac',
                 '-b:v', $videoBitrate.'k',
                 '-b:a', $audioBitrate.'k',
-                '-preset', 'faster',
+                '-preset', 'ultrafast',
                 '-crf', '30',
                 '-profile:v', 'baseline',
                 '-level', '3.0',
+                '-threads', '1',
                 '-vf',
                 $videoFilter,
                 '-metadata', 'location=',
@@ -320,10 +321,18 @@ class StoreVideo implements ShouldQueue
             ]);
 
             $screenshotContents = null;
+            $tempScreenshotPath = null;
             try {
-                $screenshotContents = $media->getFrameFromSeconds(0.5)
+                // Generate screenshot to temp file instead of loading into memory
+                $tempScreenshotPath = $tempDir.uniqid('screenshot_', true).'.jpg';
+                $media->getFrameFromSeconds(0.5)
                     ->export()
-                    ->getFrameContents();
+                    ->save($tempScreenshotPath);
+
+                // Read the file contents only if it was created successfully
+                if (file_exists($tempScreenshotPath)) {
+                    $screenshotContents = file_get_contents($tempScreenshotPath);
+                }
             } catch (Throwable $e) {
                 Log::warning('Failed to generate screenshot, continuing without poster', [
                     'error' => $e->getMessage(),
@@ -445,6 +454,7 @@ class StoreVideo implements ShouldQueue
             Log::info('StoreVideo job cleanup', [
                 'filePath' => $this->filePath,
                 'tempFile' => $tempFile ?? null,
+                'tempScreenshotPath' => $tempScreenshotPath ?? null,
                 'memory_usage' => memory_get_usage(true),
                 'attempt' => $this->attempts(),
             ]);
@@ -452,6 +462,12 @@ class StoreVideo implements ShouldQueue
             if (isset($tempFile) && file_exists($tempFile)) {
                 if (! @unlink($tempFile)) {
                     Log::warning("Failed to delete temp file: $tempFile");
+                }
+            }
+
+            if (isset($tempScreenshotPath) && file_exists($tempScreenshotPath)) {
+                if (! @unlink($tempScreenshotPath)) {
+                    Log::warning("Failed to delete temp screenshot file: $tempScreenshotPath");
                 }
             }
 

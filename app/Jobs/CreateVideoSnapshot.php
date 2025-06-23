@@ -39,7 +39,7 @@ class CreateVideoSnapshot implements ShouldQueue
      *
      * @var int
      */
-    public $memory = 1024; // 1GB
+    public $memory = 512; // Reduced to 512MB to match server memory limit
 
     /**
      * Delete the job if its models no longer exist.
@@ -145,12 +145,12 @@ class CreateVideoSnapshot implements ShouldQueue
             'peakMemoryUsageMB' => round($peakMemoryUsage / 1024 / 1024, 2),
         ]);
 
-        // Simple memory check - fail if using more than 800MB (leaving 200MB buffer)
-        if ($memoryUsage > (800 * 1024 * 1024)) {
+        // Simple memory check - fail if using more than 400MB (leaving 112MB buffer)
+        if ($memoryUsage > (400 * 1024 * 1024)) {
             Log::error('Memory usage too high for video snapshot creation', [
                 'memoryUsageMB' => round($memoryUsage / 1024 / 1024, 2),
                 'peakMemoryUsageMB' => round($peakMemoryUsage / 1024 / 1024, 2),
-                'limitMB' => 800,
+                'limitMB' => 400,
                 'attempt' => $this->attempts(),
             ]);
             throw new \RuntimeException('Memory usage too high for video snapshot creation');
