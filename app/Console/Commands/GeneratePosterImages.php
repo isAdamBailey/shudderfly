@@ -68,7 +68,8 @@ class GeneratePosterImages extends Command
                                 $posterFilename = pathinfo($posterPath, PATHINFO_FILENAME).'_poster.jpg';
                                 $posterPath = pathinfo($posterPath, PATHINFO_DIRNAME).'/'.$posterFilename;
 
-                                Storage::disk('s3')->put($posterPath, $frameContents, 'public');
+                                Storage::disk('s3')->put($posterPath, $frameContents);
+                                Storage::disk('s3')->setVisibility($posterPath, 'public');
                             } else {
                                 Log::error('Frame contents were not generated');
                             }

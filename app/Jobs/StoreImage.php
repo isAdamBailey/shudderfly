@@ -70,7 +70,9 @@ class StoreImage implements ShouldQueue
 
             $image = Image::read($tempFile);
             $encoded = $image->toWebp(30, true);
-            Storage::disk('s3')->put($this->path, (string) $encoded, 'public');
+            Storage::disk('s3')->put($this->path, (string) $encoded);
+            // Explicitly set visibility to public
+            Storage::disk('s3')->setVisibility($this->path, 'public');
 
             if ($this->page) {
                 // Update existing page

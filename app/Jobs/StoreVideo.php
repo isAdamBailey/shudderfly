@@ -325,18 +325,75 @@ class StoreVideo implements ShouldQueue
             try {
                 // Generate screenshot to temp file instead of loading into memory
                 $tempScreenshotPath = $tempDir.uniqid('screenshot_', true).'.jpg';
-                $media->getFrameFromSeconds(0.5)
-                    ->export()
-                    ->save($tempScreenshotPath);
+                Log::info('Starting screenshot generation', [
+                    'tempScreenshotPath' => $tempScreenshotPath,
+                    'filePath' => $this->filePath,
+                ]);
+
+                // Try multiple timestamps for screenshot generation
+                $screenshotTimestamps = [0.5, 1.0, 2.0, 0.1];
+                $screenshotGenerated = false;
+
+                foreach ($screenshotTimestamps as $timestamp) {
+                    try {
+                        Log::info('Attempting screenshot at timestamp', [
+                            'timestamp' => $timestamp,
+                            'tempScreenshotPath' => $tempScreenshotPath,
+                        ]);
+
+                        $media->getFrameFromSeconds($timestamp)
+                            ->export()
+                            ->save($tempScreenshotPath);
+
+                        // Check if file was created and has content
+                        if (file_exists($tempScreenshotPath) && filesize($tempScreenshotPath) > 0) {
+                            $screenshotGenerated = true;
+                            Log::info('Screenshot generated successfully at timestamp', [
+                                'timestamp' => $timestamp,
+                                'tempScreenshotPath' => $tempScreenshotPath,
+                                'fileSize' => filesize($tempScreenshotPath),
+                            ]);
+                            break;
+                        } else {
+                            Log::warning('Screenshot file created but empty or missing', [
+                                'timestamp' => $timestamp,
+                                'tempScreenshotPath' => $tempScreenshotPath,
+                                'exists' => file_exists($tempScreenshotPath),
+                                'size' => file_exists($tempScreenshotPath) ? filesize($tempScreenshotPath) : 0,
+                            ]);
+                        }
+                    } catch (Throwable $timestampError) {
+                        Log::warning('Failed to generate screenshot at timestamp', [
+                            'timestamp' => $timestamp,
+                            'error' => $timestampError->getMessage(),
+                            'tempScreenshotPath' => $tempScreenshotPath,
+                        ]);
+
+                        continue;
+                    }
+                }
 
                 // Read the file contents only if it was created successfully
-                if (file_exists($tempScreenshotPath)) {
+                if ($screenshotGenerated && file_exists($tempScreenshotPath)) {
                     $screenshotContents = file_get_contents($tempScreenshotPath);
+                    $screenshotSize = filesize($tempScreenshotPath);
+                    Log::info('Screenshot ready for upload', [
+                        'tempScreenshotPath' => $tempScreenshotPath,
+                        'screenshotSize' => $screenshotSize,
+                        'screenshotContentsSize' => strlen($screenshotContents),
+                    ]);
+                } else {
+                    Log::warning('Screenshot generation failed for all timestamps', [
+                        'tempScreenshotPath' => $tempScreenshotPath,
+                        'filePath' => $this->filePath,
+                        'timestamps_tried' => $screenshotTimestamps,
+                    ]);
                 }
             } catch (Throwable $e) {
                 Log::warning('Failed to generate screenshot, continuing without poster', [
                     'error' => $e->getMessage(),
                     'filePath' => $this->filePath,
+                    'tempScreenshotPath' => $tempScreenshotPath ?? null,
                 ]);
             }
 
@@ -357,12 +414,32 @@ class StoreVideo implements ShouldQueue
                 Storage::disk('s3')->setVisibility($processedFilePath, 'public');
 
                 if ($screenshotContents) {
+                    Log::info('Starting poster upload to S3', [
+                        'posterPath' => $posterPath,
+                        'screenshotSize' => strlen($screenshotContents),
+                        'filePath' => $this->filePath,
+                    ]);
+
                     retry(3, function () use ($posterPath, $screenshotContents) {
-                        $result = Storage::disk('s3')->put($posterPath, $screenshotContents, 'public');
+                        $result = Storage::disk('s3')->put($posterPath, $screenshotContents);
                         if (! $result) {
                             throw new \RuntimeException('S3 poster upload returned false');
                         }
+
+                        // Explicitly set visibility to public
+                        Storage::disk('s3')->setVisibility($posterPath, 'public');
+
+                        Log::info('Poster upload completed successfully', [
+                            'posterPath' => $posterPath,
+                            'result' => $result,
+                            'visibility' => 'public',
+                        ]);
                     }, 2000);
+                } else {
+                    Log::warning('No screenshot contents available for poster upload', [
+                        'posterPath' => $posterPath,
+                        'filePath' => $this->filePath,
+                    ]);
                 }
 
                 // Use database transaction for data consistency
@@ -392,6 +469,8 @@ class StoreVideo implements ShouldQueue
                 Log::info('StoreVideo job completed successfully', [
                     'filePath' => $this->filePath,
                     'processedFilePath' => $processedFilePath,
+                    'posterPath' => $posterPath,
+                    'posterUploaded' => ! empty($screenshotContents),
                     'attempt' => $this->attempts(),
                 ]);
 
