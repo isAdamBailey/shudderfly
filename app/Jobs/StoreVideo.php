@@ -330,9 +330,6 @@ class StoreVideo implements ShouldQueue
                     'filePath' => $this->filePath,
                 ]);
 
-                // Create a fresh FFmpeg media object from the original video file
-                $screenshotMedia = FFMpeg::fromDisk('local')->open($this->filePath);
-
                 // Try multiple timestamps for screenshot generation
                 $screenshotTimestamps = [0.5, 1.0, 2.0, 0.1];
                 $screenshotGenerated = false;
@@ -343,6 +340,9 @@ class StoreVideo implements ShouldQueue
                             'timestamp' => $timestamp,
                             'tempScreenshotPath' => $tempScreenshotPath,
                         ]);
+
+                        // Create a fresh media object for each attempt
+                        $screenshotMedia = FFMpeg::fromDisk('local')->open($this->filePath);
 
                         $screenshotMedia->getFrameFromSeconds($timestamp)
                             ->export()
@@ -391,6 +391,54 @@ class StoreVideo implements ShouldQueue
                         'filePath' => $this->filePath,
                         'timestamps_tried' => $screenshotTimestamps,
                     ]);
+
+                    // Try fallback method using direct FFmpeg command
+                    try {
+                        Log::info('Attempting fallback FFmpeg screenshot method', [
+                            'tempScreenshotPath' => $tempScreenshotPath,
+                            'filePath' => $this->filePath,
+                        ]);
+
+                        $ffmpegBinary = config('laravel-ffmpeg.ffmpeg.binaries');
+                        $fullVideoPath = storage_path('app/'.$this->filePath);
+                        $fullImagePath = $tempScreenshotPath;
+
+                        $ffmpegCommand = sprintf(
+                            'timeout 60 %s -i %s -ss 1.0 -vframes 1 -q:v 2 -y %s 2>&1',
+                            escapeshellarg($ffmpegBinary),
+                            escapeshellarg($fullVideoPath),
+                            escapeshellarg($fullImagePath)
+                        );
+
+                        $output = [];
+                        $returnCode = 0;
+                        exec($ffmpegCommand, $output, $returnCode);
+                        $outputString = implode("\n", $output);
+
+                        Log::info('Fallback FFmpeg command executed', [
+                            'command' => $ffmpegCommand,
+                            'return_code' => $returnCode,
+                            'output' => $outputString,
+                            'file_exists_after' => file_exists($fullImagePath),
+                            'file_size_after' => file_exists($fullImagePath) ? filesize($fullImagePath) : 0,
+                        ]);
+
+                        if ($returnCode === 0 && file_exists($fullImagePath) && filesize($fullImagePath) > 0) {
+                            $screenshotGenerated = true;
+                            Log::info('Fallback FFmpeg method succeeded', [
+                                'file_size' => filesize($fullImagePath),
+                            ]);
+                        } else {
+                            Log::warning('Fallback FFmpeg method also failed', [
+                                'return_code' => $returnCode,
+                                'output' => $outputString,
+                            ]);
+                        }
+                    } catch (Throwable $fallbackError) {
+                        Log::warning('Fallback FFmpeg method failed with exception', [
+                            'error' => $fallbackError->getMessage(),
+                        ]);
+                    }
                 }
             } catch (Throwable $e) {
                 Log::warning('Failed to generate screenshot, continuing without poster', [
