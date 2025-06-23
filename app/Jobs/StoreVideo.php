@@ -376,16 +376,7 @@ class StoreVideo implements ShouldQueue
                     }
                 }
 
-                // Read the file contents only if it was created successfully
-                if ($screenshotGenerated && file_exists($tempScreenshotPath)) {
-                    $screenshotContents = file_get_contents($tempScreenshotPath);
-                    $screenshotSize = filesize($tempScreenshotPath);
-                    Log::info('Screenshot ready for upload', [
-                        'tempScreenshotPath' => $tempScreenshotPath,
-                        'screenshotSize' => $screenshotSize,
-                        'screenshotContentsSize' => strlen($screenshotContents),
-                    ]);
-                } else {
+                if (! $screenshotGenerated) {
                     Log::warning('Screenshot generation failed for all timestamps', [
                         'tempScreenshotPath' => $tempScreenshotPath,
                         'filePath' => $this->filePath,
@@ -439,6 +430,24 @@ class StoreVideo implements ShouldQueue
                             'error' => $fallbackError->getMessage(),
                         ]);
                     }
+                }
+
+                // Read the file contents only if it was created successfully (either by Laravel FFmpeg or fallback)
+                if ($screenshotGenerated && file_exists($tempScreenshotPath)) {
+                    $screenshotContents = file_get_contents($tempScreenshotPath);
+                    $screenshotSize = filesize($tempScreenshotPath);
+                    Log::info('Screenshot ready for upload', [
+                        'tempScreenshotPath' => $tempScreenshotPath,
+                        'screenshotSize' => $screenshotSize,
+                        'screenshotContentsSize' => strlen($screenshotContents),
+                    ]);
+                } else {
+                    Log::warning('Screenshot generation failed for all methods', [
+                        'tempScreenshotPath' => $tempScreenshotPath,
+                        'filePath' => $this->filePath,
+                        'screenshotGenerated' => $screenshotGenerated,
+                        'fileExists' => file_exists($tempScreenshotPath),
+                    ]);
                 }
             } catch (Throwable $e) {
                 Log::warning('Failed to generate screenshot, continuing without poster', [
