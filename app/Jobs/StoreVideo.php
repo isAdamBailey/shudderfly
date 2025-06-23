@@ -330,6 +330,9 @@ class StoreVideo implements ShouldQueue
                     'filePath' => $this->filePath,
                 ]);
 
+                // Create a fresh FFmpeg media object from the original video file
+                $screenshotMedia = FFMpeg::fromDisk('local')->open($this->filePath);
+
                 // Try multiple timestamps for screenshot generation
                 $screenshotTimestamps = [0.5, 1.0, 2.0, 0.1];
                 $screenshotGenerated = false;
@@ -341,7 +344,7 @@ class StoreVideo implements ShouldQueue
                             'tempScreenshotPath' => $tempScreenshotPath,
                         ]);
 
-                        $media->getFrameFromSeconds($timestamp)
+                        $screenshotMedia->getFrameFromSeconds($timestamp)
                             ->export()
                             ->save($tempScreenshotPath);
 
