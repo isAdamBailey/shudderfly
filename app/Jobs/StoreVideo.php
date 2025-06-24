@@ -86,29 +86,10 @@ class StoreVideo implements ShouldQueue
             return;
         }
 
-        Log::info('Starting StoreVideo job', [
-            'filePath' => $this->filePath,
-            'path' => $this->path,
-            'book_id' => $this->book?->id,
-            'page_id' => $this->page?->id,
-            'attempt' => $this->attempts(),
-            'memory_limit' => ini_get('memory_limit'),
-            'max_execution_time' => ini_get('max_execution_time'),
-            'disk_free_space' => disk_free_space(storage_path('app')),
-            'disk_total_space' => disk_total_space(storage_path('app')),
-        ]);
-
         // Check system resources before processing
         $freeSpace = disk_free_space(storage_path('app'));
         $memoryUsage = memory_get_usage(true);
         $memoryLimit = $this->getMemoryLimitInBytes();
-
-        Log::info('System resource check', [
-            'freeSpace' => $freeSpace,
-            'memoryUsage' => $memoryUsage,
-            'memoryLimit' => $memoryLimit,
-            'availableMemory' => $memoryLimit - $memoryUsage,
-        ]);
 
         if (empty($this->filePath) || ! Storage::disk('local')->exists($this->filePath)) {
             Log::error('Video file not found or path is empty', [
@@ -263,12 +244,6 @@ class StoreVideo implements ShouldQueue
                 return $value !== null;
             });
 
-            Log::info('Starting FFmpeg processing', [
-                'params' => $ffmpegParams,
-                'filePath' => $this->filePath,
-                'attempt' => $this->attempts(),
-            ]);
-
             $process = new \Symfony\Component\Process\Process(['ffmpeg', ...$ffmpegParams]);
             $process->setTimeout(1800);
             $process->setIdleTimeout(1800);
@@ -323,137 +298,49 @@ class StoreVideo implements ShouldQueue
             $screenshotContents = null;
             $tempScreenshotPath = null;
             try {
-                // Generate screenshot to temp file instead of loading into memory
+                // Generate screenshot using direct FFmpeg command (more reliable than Laravel FFmpeg library)
                 $tempScreenshotPath = $tempDir.uniqid('screenshot_', true).'.jpg';
-                Log::info('Starting screenshot generation', [
-                    'tempScreenshotPath' => $tempScreenshotPath,
-                    'filePath' => $this->filePath,
-                ]);
-
-                // Try multiple timestamps for screenshot generation
-                $screenshotTimestamps = [0.5, 1.0, 2.0, 0.1];
+                
+                $ffmpegBinary = config('laravel-ffmpeg.ffmpeg.binaries');
+                $fullVideoPath = storage_path('app/'.$this->filePath);
+                $fullImagePath = $tempScreenshotPath;
+                
+                // Try multiple timestamps for better success rate
+                $screenshotTimestamps = [1.0, 0.5, 2.0, 0.1];
                 $screenshotGenerated = false;
-
+                
                 foreach ($screenshotTimestamps as $timestamp) {
                     try {
-                        Log::info('Attempting screenshot at timestamp', [
-                            'timestamp' => $timestamp,
-                            'tempScreenshotPath' => $tempScreenshotPath,
-                        ]);
-
-                        // Create a fresh media object for each attempt
-                        $screenshotMedia = FFMpeg::fromDisk('local')->open($this->filePath);
-
-                        $screenshotMedia->getFrameFromSeconds($timestamp)
-                            ->export()
-                            ->save($tempScreenshotPath);
-
-                        // Check if file was created and has content
-                        if (file_exists($tempScreenshotPath) && filesize($tempScreenshotPath) > 0) {
-                            $screenshotGenerated = true;
-                            Log::info('Screenshot generated successfully at timestamp', [
-                                'timestamp' => $timestamp,
-                                'tempScreenshotPath' => $tempScreenshotPath,
-                                'fileSize' => filesize($tempScreenshotPath),
-                            ]);
-                            break;
-                        } else {
-                            Log::warning('Screenshot file created but empty or missing', [
-                                'timestamp' => $timestamp,
-                                'tempScreenshotPath' => $tempScreenshotPath,
-                                'exists' => file_exists($tempScreenshotPath),
-                                'size' => file_exists($tempScreenshotPath) ? filesize($tempScreenshotPath) : 0,
-                            ]);
-                        }
-                    } catch (Throwable $timestampError) {
-                        Log::warning('Failed to generate screenshot at timestamp', [
-                            'timestamp' => $timestamp,
-                            'error' => $timestampError->getMessage(),
-                            'tempScreenshotPath' => $tempScreenshotPath,
-                        ]);
-
-                        continue;
-                    }
-                }
-
-                if (! $screenshotGenerated) {
-                    Log::warning('Screenshot generation failed for all timestamps', [
-                        'tempScreenshotPath' => $tempScreenshotPath,
-                        'filePath' => $this->filePath,
-                        'timestamps_tried' => $screenshotTimestamps,
-                    ]);
-
-                    // Try fallback method using direct FFmpeg command
-                    try {
-                        Log::info('Attempting fallback FFmpeg screenshot method', [
-                            'tempScreenshotPath' => $tempScreenshotPath,
-                            'filePath' => $this->filePath,
-                        ]);
-
-                        $ffmpegBinary = config('laravel-ffmpeg.ffmpeg.binaries');
-                        $fullVideoPath = storage_path('app/'.$this->filePath);
-                        $fullImagePath = $tempScreenshotPath;
-
                         $ffmpegCommand = sprintf(
-                            'timeout 60 %s -i %s -ss 1.0 -vframes 1 -q:v 2 -y %s 2>&1',
+                            'timeout 60 %s -i %s -ss %.1f -vframes 1 -q:v 2 -y %s 2>&1',
                             escapeshellarg($ffmpegBinary),
                             escapeshellarg($fullVideoPath),
+                            $timestamp,
                             escapeshellarg($fullImagePath)
                         );
-
+                        
                         $output = [];
                         $returnCode = 0;
                         exec($ffmpegCommand, $output, $returnCode);
                         $outputString = implode("\n", $output);
-
-                        Log::info('Fallback FFmpeg command executed', [
-                            'command' => $ffmpegCommand,
-                            'return_code' => $returnCode,
-                            'output' => $outputString,
-                            'file_exists_after' => file_exists($fullImagePath),
-                            'file_size_after' => file_exists($fullImagePath) ? filesize($fullImagePath) : 0,
-                        ]);
-
+                        
                         if ($returnCode === 0 && file_exists($fullImagePath) && filesize($fullImagePath) > 0) {
                             $screenshotGenerated = true;
-                            Log::info('Fallback FFmpeg method succeeded', [
-                                'file_size' => filesize($fullImagePath),
-                            ]);
-                        } else {
-                            Log::warning('Fallback FFmpeg method also failed', [
-                                'return_code' => $returnCode,
-                                'output' => $outputString,
-                            ]);
+                            break;
                         }
-                    } catch (Throwable $fallbackError) {
-                        Log::warning('Fallback FFmpeg method failed with exception', [
-                            'error' => $fallbackError->getMessage(),
-                        ]);
+                    } catch (Throwable $timestampError) {
+                        continue;
                     }
                 }
 
-                // Read the file contents only if it was created successfully (either by Laravel FFmpeg or fallback)
+                // Read the file contents if screenshot was generated successfully
                 if ($screenshotGenerated && file_exists($tempScreenshotPath)) {
                     $screenshotContents = file_get_contents($tempScreenshotPath);
-                    $screenshotSize = filesize($tempScreenshotPath);
-                    Log::info('Screenshot ready for upload', [
-                        'tempScreenshotPath' => $tempScreenshotPath,
-                        'screenshotSize' => $screenshotSize,
-                        'screenshotContentsSize' => strlen($screenshotContents),
-                    ]);
-                } else {
-                    Log::warning('Screenshot generation failed for all methods', [
-                        'tempScreenshotPath' => $tempScreenshotPath,
-                        'filePath' => $this->filePath,
-                        'screenshotGenerated' => $screenshotGenerated,
-                        'fileExists' => file_exists($tempScreenshotPath),
-                    ]);
                 }
             } catch (Throwable $e) {
                 Log::warning('Failed to generate screenshot, continuing without poster', [
                     'error' => $e->getMessage(),
                     'filePath' => $this->filePath,
-                    'tempScreenshotPath' => $tempScreenshotPath ?? null,
                 ]);
             }
 
@@ -474,32 +361,15 @@ class StoreVideo implements ShouldQueue
                 Storage::disk('s3')->setVisibility($processedFilePath, 'public');
 
                 if ($screenshotContents) {
-                    Log::info('Starting poster upload to S3', [
-                        'posterPath' => $posterPath,
-                        'screenshotSize' => strlen($screenshotContents),
-                        'filePath' => $this->filePath,
-                    ]);
-
                     retry(3, function () use ($posterPath, $screenshotContents) {
                         $result = Storage::disk('s3')->put($posterPath, $screenshotContents);
                         if (! $result) {
                             throw new \RuntimeException('S3 poster upload returned false');
                         }
-
+                        
                         // Explicitly set visibility to public
                         Storage::disk('s3')->setVisibility($posterPath, 'public');
-
-                        Log::info('Poster upload completed successfully', [
-                            'posterPath' => $posterPath,
-                            'result' => $result,
-                            'visibility' => 'public',
-                        ]);
                     }, 2000);
-                } else {
-                    Log::warning('No screenshot contents available for poster upload', [
-                        'posterPath' => $posterPath,
-                        'filePath' => $this->filePath,
-                    ]);
                 }
 
                 // Use database transaction for data consistency
@@ -525,14 +395,6 @@ class StoreVideo implements ShouldQueue
                         }
                     }
                 });
-
-                Log::info('StoreVideo job completed successfully', [
-                    'filePath' => $this->filePath,
-                    'processedFilePath' => $processedFilePath,
-                    'posterPath' => $posterPath,
-                    'posterUploaded' => ! empty($screenshotContents),
-                    'attempt' => $this->attempts(),
-                ]);
 
             } catch (Throwable $e) {
                 Log::error('Failed to upload video to S3', [
@@ -590,14 +452,6 @@ class StoreVideo implements ShouldQueue
             }
             $this->fail($e);
         } finally {
-            Log::info('StoreVideo job cleanup', [
-                'filePath' => $this->filePath,
-                'tempFile' => $tempFile ?? null,
-                'tempScreenshotPath' => $tempScreenshotPath ?? null,
-                'memory_usage' => memory_get_usage(true),
-                'attempt' => $this->attempts(),
-            ]);
-
             if (isset($tempFile) && file_exists($tempFile)) {
                 if (! @unlink($tempFile)) {
                     Log::warning("Failed to delete temp file: $tempFile");
