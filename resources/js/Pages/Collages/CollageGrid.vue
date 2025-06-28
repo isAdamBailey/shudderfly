@@ -1,5 +1,5 @@
 <template>
-  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mx-10 my-5">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mx-10 my-5">
     <div
       v-for="(collage, index) in collages"
       :key="collage.id"

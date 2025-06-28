@@ -56,12 +56,12 @@
       <template #actions="{ collage }">
         <div class="flex flex-wrap justify-between items-center gap-2">
           <a
-            v-if="collage.storage_path"
+            v-if="collage.storage_path && canEditPages"
             class="text-center"
             :href="collage.storage_path"
             target="_blank"
           >
-            View
+            View PDF
             <i class="ri-external-link-line mr-1"></i>
           </a>
           <Button
@@ -70,7 +70,8 @@
             :disabled="printForm.processing || !hasPages(collage)"
             @click="printForm.post(route('collages.generate-pdf', collage.id))"
           >
-            {{ collage.storage_path ? "Regenerate" : "Generate PDF" }}
+            {{ collage.storage_path ? "Regenerate PDF" : "Generate PDF" }}
+            <i class="ri-file-pdf-line ml-1"></i>
           </Button>
 
           <DangerButton
@@ -79,6 +80,7 @@
             :disabled="deleteForm.processing || !hasPages(collage)"
             @click="confirmDelete(collage.id)"
           >
+            Archive Collage
             <i class="ri-archive-line ml-1"></i>
           </DangerButton>
         </div>
@@ -98,7 +100,7 @@ import CollageGrid from "./CollageGrid.vue";
 
 import { usePermissions } from "@/composables/permissions";
 
-const { canAdmin } = usePermissions();
+const { canAdmin, canEditPages } = usePermissions();
 
 defineProps({
   collages: { type: Array, required: true }
