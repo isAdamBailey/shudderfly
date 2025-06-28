@@ -71,25 +71,21 @@ class StoreImage implements ShouldQueue
             $image = Image::read($tempFile);
             $encoded = $image->toWebp(30, true);
             Storage::disk('s3')->put($this->path, (string) $encoded);
-            // Explicitly set visibility to public
             Storage::disk('s3')->setVisibility($this->path, 'public');
 
             if ($this->page) {
-                // Update existing page
                 $this->page->update([
                     'content' => $this->content,
                     'media_path' => $this->path,
                     'video_link' => $this->videoLink,
                 ]);
             } elseif ($this->book) {
-                // Create new page
                 $page = $this->book->pages()->create([
                     'content' => $this->content,
                     'media_path' => $this->path,
                     'video_link' => $this->videoLink,
                 ]);
 
-                // Set as cover page if book doesn't have one
                 if (! $this->book->cover_page) {
                     $this->book->update(['cover_page' => $page->id]);
                 }
@@ -110,7 +106,6 @@ class StoreImage implements ShouldQueue
                 }
             }
 
-            // Only delete from local disk if it exists and was a local file
             if ($disk === 'local' && Storage::disk('local')->exists($filePath)) {
                 Storage::disk('local')->delete($filePath);
             }

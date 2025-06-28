@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use ProtoneMedia\LaravelFFMpeg\Support\FFMpeg;
 
 class CreateVideoSnapshot implements ShouldQueue
 {
@@ -22,74 +21,28 @@ class CreateVideoSnapshot implements ShouldQueue
 
     /**
      * The number of times the job may be attempted.
-     *
-     * @var int
      */
     public $tries = 3;
 
     /**
      * The number of seconds the job can run before timing out.
-     *
-     * @var int
      */
-    public $timeout = 600; // Increased to 10 minutes
+    public $timeout = 600;
 
     /**
      * The maximum amount of memory the job should use.
-     *
-     * @var int
      */
-    public $memory = 512; // Reduced to 512MB to match server memory limit
+    public $memory = 512;
 
     /**
      * Delete the job if its models no longer exist.
-     *
-     * @var bool
      */
     public $deleteWhenMissingModels = true;
 
     /**
-     * Get the unique ID for the job.
-     *
-     * @return string
-     */
-    public function uniqueId()
-    {
-        return 'video_snapshot_'.md5($this->videoUrl.'_'.$this->timeInSeconds.'_'.$this->book->id.'_'.$this->user->id);
-    }
-
-    /**
      * The number of seconds after which the job's unique lock will be released.
-     *
-     * @var int
      */
-    public $uniqueFor = 600; // Increased to 10 minutes
-
-    /**
-     * Get the middleware the job should pass through.
-     *
-     * @return array
-     */
-    public function middleware()
-    {
-        return [
-            (new WithoutOverlapping($this->uniqueId()))
-                ->expireAfter(600) // Release lock after 10 minutes
-                ->releaseAfter(300), // Release lock after 5 minutes if job is still running
-        ];
-    }
-
-    public function retryAfter()
-    {
-        // Exponential backoff: 1 minute, 2 minutes, 4 minutes, 8 minutes, 16 minutes
-        return [60, 120, 240, 480, 960];
-    }
-
-    public function backoff()
-    {
-        // Use exponential backoff for retries
-        return [60, 120, 240, 480, 960];
-    }
+    public $uniqueFor = 600;
 
     protected string $videoUrl;
 
@@ -115,6 +68,34 @@ class CreateVideoSnapshot implements ShouldQueue
         $this->pageId = $pageId;
     }
 
+    /**
+     * Get the unique ID for the job.
+     */
+    public function uniqueId(): string
+    {
+        return 'video_snapshot_'.md5($this->videoUrl.'_'.$this->timeInSeconds.'_'.$this->book->id.'_'.$this->user->id);
+    }
+
+    /**
+     * Get the middleware the job should pass through.
+     */
+    public function middleware(): array
+    {
+        return [
+            (new WithoutOverlapping($this->uniqueId()))
+                ->expireAfter(600)
+                ->releaseAfter(300),
+        ];
+    }
+
+    /**
+     * Calculate the number of seconds to wait before retrying the job.
+     */
+    public function backoff(): array
+    {
+        return [60, 120, 240, 480, 960];
+    }
+
     public function handle(): void
     {
         // Validate that models still exist
@@ -129,36 +110,19 @@ class CreateVideoSnapshot implements ShouldQueue
             return;
         }
 
-        // Check system resources before processing
-        $freeSpace = disk_free_space(storage_path('app'));
-        $memoryUsage = memory_get_usage(true);
-        $peakMemoryUsage = memory_get_peak_usage(true);
-
-        // Simple memory check - fail if using more than 400MB (leaving 112MB buffer)
-        if ($memoryUsage > (400 * 1024 * 1024)) {
-            Log::error('Memory usage too high for video snapshot creation', [
-                'memoryUsageMB' => round($memoryUsage / 1024 / 1024, 2),
-                'peakMemoryUsageMB' => round($peakMemoryUsage / 1024 / 1024, 2),
-                'limitMB' => 400,
-                'attempt' => $this->attempts(),
-            ]);
-            throw new \RuntimeException('Memory usage too high for video snapshot creation');
-        }
-
         $tempVideoPath = null;
         $tempImagePath = null;
+        $successfulTimestamp = null;
 
         try {
             // Ensure temp directory exists and is writable
             $tempDir = storage_path('app/temp');
-            if (! is_dir($tempDir)) {
-                if (! mkdir($tempDir, 0755, true)) {
-                    throw new \Exception("Failed to create temp directory: {$tempDir}");
-                }
+            if (! is_dir($tempDir) && ! mkdir($tempDir, 0755, true)) {
+                throw new \RuntimeException("Failed to create temp directory: {$tempDir}");
             }
 
             if (! is_writable($tempDir)) {
-                throw new \Exception("Temp directory is not writable: {$tempDir}");
+                throw new \RuntimeException("Temp directory is not writable: {$tempDir}");
             }
 
             $timestamp = now()->format('Ymd_His');
@@ -167,45 +131,34 @@ class CreateVideoSnapshot implements ShouldQueue
             $tempVideoPath = "temp/temp_video_{$timestamp}_{$random}.mp4";
             $tempImagePath = "temp/snapshot_{$timestamp}_{$random}.jpg";
 
-            // Ensure the temp directory structure exists for the image path
-            $tempImageDir = dirname(storage_path('app/'.$tempImagePath));
-            if (! is_dir($tempImageDir)) {
-                if (! mkdir($tempImageDir, 0755, true)) {
-                    throw new \Exception("Failed to create temp image directory: {$tempImageDir}");
-                }
-            }
-
             // Download video to temp file
             $videoContent = file_get_contents($this->videoUrl);
             if ($videoContent === false) {
-                throw new \Exception("Failed to download video from URL: {$this->videoUrl}");
+                throw new \RuntimeException("Failed to download video from URL: {$this->videoUrl}");
             }
 
             // Save video file and verify it exists and has content
             if (! Storage::disk('local')->put($tempVideoPath, $videoContent)) {
-                throw new \Exception('Failed to save video to temp file');
+                throw new \RuntimeException('Failed to save video to temp file');
             }
 
             $videoSize = Storage::disk('local')->size($tempVideoPath);
             if ($videoSize === 0) {
-                throw new \Exception('Downloaded video file is empty');
+                throw new \RuntimeException('Downloaded video file is empty');
             }
 
-            // Check if video file is corrupted by trying to get basic info
+            // Check if video file exists
             $fullVideoPath = storage_path('app/'.$tempVideoPath);
             if (! file_exists($fullVideoPath)) {
-                throw new \Exception("Video file not found at expected path: {$fullVideoPath}");
+                throw new \RuntimeException("Video file not found at expected path: {$fullVideoPath}");
             }
 
-            // Validate video file format using file command
-            $fileInfo = shell_exec('file '.escapeshellarg($fullVideoPath).' 2>/dev/null');
-
-            // Check temp directory space and permissions
+            // Check temp directory space
             $tempDirSpace = disk_free_space($tempDir);
-            $requiredSpace = $videoSize * 2; // Need at least 2x video size for processing
+            $requiredSpace = $videoSize * 2;
 
             if ($tempDirSpace < $requiredSpace) {
-                throw new \Exception('Insufficient space in temp directory: available='.round($tempDirSpace / 1024 / 1024, 2).'MB, required='.round($requiredSpace / 1024 / 1024, 2).'MB');
+                throw new \RuntimeException('Insufficient space in temp directory: available='.round($tempDirSpace / 1024 / 1024, 2).'MB, required='.round($requiredSpace / 1024 / 1024, 2).'MB');
             }
 
             // Extract frame using FFmpeg
@@ -219,68 +172,65 @@ class CreateVideoSnapshot implements ShouldQueue
                 $ffprobeAvailable = shell_exec("which {$ffprobeBinary} 2>/dev/null");
 
                 if (! $ffmpegAvailable || ! $ffprobeAvailable) {
-                    throw new \Exception('FFmpeg binaries not found: ffmpeg='.($ffmpegAvailable ? 'available' : 'not found').', ffprobe='.($ffprobeAvailable ? 'available' : 'not found'));
+                    throw new \RuntimeException('FFmpeg binaries not found: ffmpeg='.($ffmpegAvailable ? 'available' : 'not found').', ffprobe='.($ffprobeAvailable ? 'available' : 'not found'));
                 }
 
                 // Get video duration using ffprobe
                 $durationCommand = sprintf(
                     '%s -v quiet -show_entries format=duration -of csv=p=0 %s',
                     escapeshellarg($ffprobeBinary),
-                    escapeshellarg(storage_path('app/'.$tempVideoPath))
+                    escapeshellarg($fullVideoPath)
                 );
-                
+
                 $duration = (float) shell_exec($durationCommand);
-                
+
                 if ($duration <= 0) {
-                    throw new \Exception('Invalid video duration: '.$duration);
+                    throw new \RuntimeException('Invalid video duration: '.$duration);
                 }
 
                 // Validate timestamp with more precision
-                $timestamp = (float) $this->timeInSeconds;
+                $requestedTimestamp = (float) $this->timeInSeconds;
 
                 // If timestamp is beyond duration, use the last frame
-                if ($timestamp >= $duration) {
-                    $timestamp = max(0, $duration - 0.1); // Get frame slightly before end
+                if ($requestedTimestamp >= $duration) {
+                    $requestedTimestamp = max(0, $duration - 0.1);
                 }
 
                 // Ensure timestamp is not negative
-                if ($timestamp < 0) {
-                    $originalTimestamp = $timestamp;
-                    $timestamp = 0.1;
+                if ($requestedTimestamp < 0) {
+                    $originalTimestamp = $requestedTimestamp;
+                    $requestedTimestamp = 0.1;
                     Log::warning('Negative timestamp adjusted to beginning of video', [
                         'original_timestamp' => $originalTimestamp,
-                        'adjusted_timestamp' => $timestamp,
+                        'adjusted_timestamp' => $requestedTimestamp,
                         'minimum_seconds' => 0.1,
                     ]);
                 }
 
                 // Ensure timestamp is not too close to the end of the video
-                // Leave at least 0.5 seconds buffer from the end
-                if ($timestamp > ($duration - 0.5)) {
-                    $originalTimestamp = $timestamp;
-                    $timestamp = max(0, $duration - 0.5);
+                if ($requestedTimestamp > ($duration - 0.5)) {
+                    $originalTimestamp = $requestedTimestamp;
+                    $requestedTimestamp = max(0, $duration - 0.5);
                     Log::warning('Timestamp adjusted to avoid end of video', [
                         'original_timestamp' => $originalTimestamp,
-                        'adjusted_timestamp' => $timestamp,
+                        'adjusted_timestamp' => $requestedTimestamp,
                         'video_duration' => $duration,
                         'buffer_seconds' => 0.5,
                     ]);
                 }
 
                 // Ensure timestamp is not too close to the beginning
-                // Start at least 0.1 seconds in
-                if ($timestamp < 0.1) {
-                    $originalTimestamp = $timestamp;
-                    $timestamp = 0.1;
+                if ($requestedTimestamp < 0.1) {
+                    $originalTimestamp = $requestedTimestamp;
+                    $requestedTimestamp = 0.1;
                     Log::warning('Timestamp adjusted to avoid beginning of video', [
                         'original_timestamp' => $originalTimestamp,
-                        'adjusted_timestamp' => $timestamp,
+                        'adjusted_timestamp' => $requestedTimestamp,
                         'minimum_seconds' => 0.1,
                     ]);
                 }
 
-                // Generate screenshot using direct FFmpeg command
-                $fullVideoPath = storage_path('app/'.$tempVideoPath);
+                // Generate screenshot using the same logic as StoreVideo
                 $fullImagePath = storage_path('app/'.$tempImagePath);
 
                 // Ensure the output directory exists
@@ -289,69 +239,74 @@ class CreateVideoSnapshot implements ShouldQueue
                     mkdir($outputDir, 0755, true);
                 }
 
-                $ffmpegCommand = sprintf(
-                    'timeout 300 %s -i %s -ss %.3f -vframes 1 -q:v 2 -y %s 2>&1',
-                    escapeshellarg($ffmpegBinary),
-                    escapeshellarg($fullVideoPath),
-                    $timestamp,
-                    escapeshellarg($fullImagePath)
-                );
+                // Try multiple timestamps for better success rate
+                $screenshotTimestamps = [$requestedTimestamp, 1.0, 0.5, 2.0, 0.1];
+                $snapshotCreated = false;
 
-                $output = [];
-                $returnCode = 0;
-                exec($ffmpegCommand, $output, $returnCode);
-                $outputString = implode("\n", $output);
+                foreach ($screenshotTimestamps as $timestamp) {
+                    try {
+                        // Ensure timestamp is within video bounds
+                        if ($timestamp >= $duration) {
+                            $timestamp = max(0, $duration - 0.1);
+                        }
+                        if ($timestamp < 0.1) {
+                            $timestamp = 0.1;
+                        }
 
-                if ($returnCode === 0 && file_exists($fullImagePath) && filesize($fullImagePath) > 0) {
-                    $snapshotCreated = true;
-                } else {
-                    Log::error('FFmpeg screenshot generation failed', [
-                        'command' => $ffmpegCommand,
-                        'output' => $outputString,
-                        'return_code' => $returnCode,
-                        'file_exists' => file_exists($fullImagePath),
-                        'file_size' => file_exists($fullImagePath) ? filesize($fullImagePath) : 0,
-                        'timestamp' => $timestamp,
+                        $ffmpegCommand = sprintf(
+                            'timeout 60 %s -i %s -ss %.3f -vframes 1 -q:v 2 -y %s 2>&1',
+                            escapeshellarg($ffmpegBinary),
+                            escapeshellarg($fullVideoPath),
+                            $timestamp,
+                            escapeshellarg($fullImagePath)
+                        );
+
+                        $returnCode = 0;
+                        exec($ffmpegCommand, $output, $returnCode);
+
+                        if ($returnCode === 0 && file_exists($fullImagePath) && filesize($fullImagePath) > 0) {
+                            $snapshotCreated = true;
+                            $successfulTimestamp = $timestamp;
+                            break;
+                        }
+                    } catch (\Throwable $timestampError) {
+                        Log::warning('Failed to generate snapshot at timestamp', [
+                            'timestamp' => $timestamp,
+                            'error' => $timestampError->getMessage(),
+                        ]);
+
+                        continue;
+                    }
+                }
+
+                if (! $snapshotCreated) {
+                    Log::error('FFmpeg screenshot generation failed for all timestamps', [
+                        'requested_timestamp' => $requestedTimestamp,
+                        'tried_timestamps' => $screenshotTimestamps,
                         'video_duration' => $duration,
+                        'video_path' => $fullVideoPath,
                     ]);
-                    throw new \Exception('FFmpeg screenshot generation failed');
+                    throw new \RuntimeException('FFmpeg screenshot generation failed for all attempted timestamps');
                 }
 
                 // Verify snapshot quality
-                if (! $snapshotCreated || ! file_exists($fullImagePath)) {
-                    throw new \Exception('Snapshot file was not created');
+                if (! file_exists($fullImagePath)) {
+                    throw new \RuntimeException('Snapshot file was not created');
                 }
 
                 $fileSize = filesize($fullImagePath);
                 if ($fileSize === 0) {
-                    throw new \Exception('Snapshot file was created but is empty');
+                    throw new \RuntimeException('Snapshot file was created but is empty');
                 }
 
                 // Verify the file is a valid image
                 $mimeType = mime_content_type($fullImagePath);
                 if (! Str::startsWith($mimeType, 'image/')) {
-                    throw new \Exception("Invalid snapshot file type: {$mimeType}");
+                    throw new \RuntimeException("Invalid snapshot file type: {$mimeType}");
                 }
 
-                // Include timestamp in final filename
-                $mediaPath = 'books/'.$this->book->slug."/snapshot_{$timestamp}_{$random}.webp";
-
-                // Use database transaction for data consistency
-                DB::transaction(function () use ($mediaPath) {
-                    // Create the page first
-                    $page = $this->book->pages()->create([
-                        'content' => "<p>{$this->user->name} took this screenshot from <a href='/pages/{$this->pageId}'>this video</a>.</p>",
-                        'media_path' => $mediaPath,
-                    ]);
-
-                    // Set as cover image if book doesn't have one
-                    if (! $this->book->cover_page) {
-                        $this->book->update(['cover_page' => $page->id]);
-                    }
-                });
-
-                // Refresh models to ensure we have latest data
-                $this->book->refresh();
+                // Include successful timestamp in final filename
+                $mediaPath = 'books/'.$this->book->slug."/snapshot_{$successfulTimestamp}_{$random}.webp";
 
                 // Clean up video file as we don't need it anymore
                 CleanupTempSnapshot::dispatch(null, $tempVideoPath, null);
@@ -359,8 +314,19 @@ class CreateVideoSnapshot implements ShouldQueue
                 // Upload temp image to S3 first using streaming to avoid memory issues
                 $tempS3Path = "temp/snapshots/temp_{$timestamp}_{$random}.jpg";
                 $fileStream = fopen($fullImagePath, 'r');
-                Storage::disk('s3')->put($tempS3Path, $fileStream, 'private');
-                fclose($fileStream);
+
+                if ($fileStream === false) {
+                    throw new \RuntimeException("Failed to open file stream for: {$fullImagePath}");
+                }
+
+                try {
+                    Storage::disk('s3')->put($tempS3Path, $fileStream, 'private');
+                } finally {
+                    // Only close the stream if it's still valid
+                    if (is_resource($fileStream)) {
+                        fclose($fileStream);
+                    }
+                }
 
                 // Dispatch StoreImage job with S3 path and proper error handling
                 try {
@@ -381,6 +347,23 @@ class CreateVideoSnapshot implements ShouldQueue
                     throw $chainError;
                 }
 
+                // Only create database entry after successful S3 upload and job dispatch
+                DB::transaction(function () use ($mediaPath) {
+                    // Create the page first
+                    $page = $this->book->pages()->create([
+                        'content' => "<p><strong>{$this->user->name}</strong> took this screenshot from <strong><a href='/pages/{$this->pageId}'>this video</a></strong>.</p>",
+                        'media_path' => $mediaPath,
+                    ]);
+
+                    // Set as cover image if book doesn't have one
+                    if (! $this->book->cover_page) {
+                        $this->book->update(['cover_page' => $page->id]);
+                    }
+                });
+
+                // Refresh models to ensure we have latest data
+                $this->book->refresh();
+
             } catch (\Throwable $e) {
                 Log::error('FFmpeg snapshot creation failed', [
                     'exception' => $e->getMessage(),
@@ -390,8 +373,6 @@ class CreateVideoSnapshot implements ShouldQueue
                     'time' => $this->timeInSeconds,
                     'temp_video_path' => $tempVideoPath,
                     'temp_image_path' => $tempImagePath,
-                    'video_exists' => Storage::disk('local')->exists($tempVideoPath),
-                    'video_size' => Storage::disk('local')->exists($tempVideoPath) ? Storage::disk('local')->size($tempVideoPath) : 0,
                     'memory_usage' => [
                         'current' => memory_get_usage(true) / 1024 / 1024 .'MB',
                         'peak' => memory_get_peak_usage(true) / 1024 / 1024 .'MB',
@@ -404,7 +385,7 @@ class CreateVideoSnapshot implements ShouldQueue
                     'ffprobe_binary' => config('laravel-ffmpeg.ffprobe.binaries'),
                     'ffmpeg_timeout' => config('laravel-ffmpeg.timeout'),
                 ]);
-                throw new \Exception('Failed to create snapshot: '.$e->getMessage());
+                throw new \RuntimeException('Failed to create snapshot: '.$e->getMessage());
             }
 
         } catch (\Exception $e) {

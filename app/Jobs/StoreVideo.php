@@ -300,15 +300,15 @@ class StoreVideo implements ShouldQueue
             try {
                 // Generate screenshot using direct FFmpeg command (more reliable than Laravel FFmpeg library)
                 $tempScreenshotPath = $tempDir.uniqid('screenshot_', true).'.jpg';
-                
+
                 $ffmpegBinary = config('laravel-ffmpeg.ffmpeg.binaries');
                 $fullVideoPath = storage_path('app/'.$this->filePath);
                 $fullImagePath = $tempScreenshotPath;
-                
+
                 // Try multiple timestamps for better success rate
                 $screenshotTimestamps = [1.0, 0.5, 2.0, 0.1];
                 $screenshotGenerated = false;
-                
+
                 foreach ($screenshotTimestamps as $timestamp) {
                     try {
                         $ffmpegCommand = sprintf(
@@ -318,12 +318,12 @@ class StoreVideo implements ShouldQueue
                             $timestamp,
                             escapeshellarg($fullImagePath)
                         );
-                        
+
                         $output = [];
                         $returnCode = 0;
                         exec($ffmpegCommand, $output, $returnCode);
                         $outputString = implode("\n", $output);
-                        
+
                         if ($returnCode === 0 && file_exists($fullImagePath) && filesize($fullImagePath) > 0) {
                             $screenshotGenerated = true;
                             break;
@@ -366,7 +366,7 @@ class StoreVideo implements ShouldQueue
                         if (! $result) {
                             throw new \RuntimeException('S3 poster upload returned false');
                         }
-                        
+
                         // Explicitly set visibility to public
                         Storage::disk('s3')->setVisibility($posterPath, 'public');
                     }, 2000);
