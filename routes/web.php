@@ -24,13 +24,8 @@ use Inertia\Inertia;
 |
 */
 
-Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'appName' => config('app.name'),
-    ]);
-})->name('welcome');
-
 Route::middleware('auth')->group(function () {
+    Route::get('/', [BookController::class, 'index'])->name('welcome');
     Route::get('/books', [BookController::class, 'index'])->name('books.index');
     Route::get('/books-category', [BookController::class, 'category'])->name('books.category');
     Route::get('/book/{book}', [BookController::class, 'show'])->name('books.show');

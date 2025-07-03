@@ -176,7 +176,7 @@ class ThemeTest extends TestCase
         // Mock the current date to be July
         $this->travelTo('2024-07-04');
 
-        $response = $this->get(route('welcome'));
+        $response = $this->get(route('login'));
 
         // Should have fireworks theme even for unauthenticated users
         $response->assertSee('<html', false);
