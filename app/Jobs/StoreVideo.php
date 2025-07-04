@@ -289,12 +289,6 @@ class StoreVideo implements ShouldQueue
                 throw new \RuntimeException('FFmpeg processing failed (exit code: '.$exitCode.'): '.$errorOutput);
             }
 
-            Log::info('FFmpeg processing completed successfully', [
-                'filePath' => $this->filePath,
-                'output' => $process->getOutput(),
-                'attempt' => $this->attempts(),
-            ]);
-
             $screenshotContents = null;
             $tempScreenshotPath = null;
             try {
