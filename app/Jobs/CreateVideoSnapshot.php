@@ -208,14 +208,14 @@ class CreateVideoSnapshot implements ShouldQueue
                 }
 
                 // Ensure timestamp is not too close to the end of the video
-                if ($requestedTimestamp > ($duration - 0.5)) {
+                if ($requestedTimestamp >= $duration) {
                     $originalTimestamp = $requestedTimestamp;
-                    $requestedTimestamp = max(0, $duration - 0.5);
+                    $requestedTimestamp = max(0, $duration - 0.1);
                     Log::warning('Timestamp adjusted to avoid end of video', [
                         'original_timestamp' => $originalTimestamp,
                         'adjusted_timestamp' => $requestedTimestamp,
                         'video_duration' => $duration,
-                        'buffer_seconds' => 0.5,
+                        'buffer_seconds' => 0.1,
                     ]);
                 }
 
