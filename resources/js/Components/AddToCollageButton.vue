@@ -1,21 +1,39 @@
 <template>
   <div class="ml-10">
     <div v-if="isPageInAnyCollage" class="text-yellow-400 text-sm">
-      <i class="ri-information-line mr-1"></i>
-      This page is in collage{{ pageExistingCollages.length > 1 ? "s" : "" }}:
+      <i class="ri-information-line mr-1 text-2xl"></i>
+      This page is in collage
       <span
-        v-for="(existingCollage, index) in pageExistingCollages"
+        v-for="existingCollage in pageExistingCollages"
         :key="existingCollage.id"
       >
         #{{ getCollageDisplayNumber(existingCollage.id)
         }}<span v-if="index < pageExistingCollages.length - 1">, </span>
       </span>
+      <Button
+        class="ml-3 py-0.5 px-0.5"
+        @click="
+          speak(
+            `This page is in collage #${getCollageDisplayNumber(
+              pageExistingCollages[0].id
+            )}`
+          )
+        "
+      >
+        <i class="ri-speak-fill text-2xl"></i>
+      </Button>
     </div>
 
     <div v-else>
-      <label class="block mb-2 text-sm font-medium text-white"
-        >Add to collage:</label
-      >
+      <label class="block mb-3 font-medium text-white"
+        >Add to collage:
+        <Button
+          class="ml-3 py-0.5 px-0.5"
+          @click="speak('Select a collage and click the add button')"
+        >
+          <i class="ri-speak-fill text-2xl"></i>
+        </Button>
+      </label>
       <div class="flex items-center gap-2">
         <select
           v-model="selectedCollageId"
@@ -45,13 +63,12 @@
         </div>
         <Button
           v-else
-          class="btn btn-primary"
           :disabled="
             form.processing || !selectedCollageId || !hasAvailableCollages
           "
           @click="addToCollage"
         >
-          <i class="ri-add-line mr-1"></i> Add to Collage
+          <i class="ri-add-line text-xl mr-1"></i> Add to Collage
         </Button>
       </div>
     </div>
@@ -60,9 +77,12 @@
 
 <script setup>
 import Button from "@/Components/Button.vue";
+import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { MAX_COLLAGE_PAGES } from "@/constants/collage";
 import { useForm } from "@inertiajs/vue3";
 import { computed, ref, watch } from "vue";
+
+const { speak } = useSpeechSynthesis();
 
 const props = defineProps({
   pageId: { type: Number, required: true },
@@ -96,6 +116,7 @@ const addToCollage = () => {
   form.post(route("collage-page.store"), {
     preserveScroll: true,
     onSuccess: () => {
+      speak("Picture successfully added to collage!");
       form.reset();
       showSuccess.value = true;
       setTimeout(() => {

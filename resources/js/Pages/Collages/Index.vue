@@ -26,12 +26,12 @@
           </Button>
         </div>
       </div>
-      <p class="text-sm text-gray-400 mt-2">
-        You can build your own collages! Go to the page you want to add to the
-        collage and select the collage you want to use. Only 4 collages can be
-        added at a time, with maximum {{ MAX_COLLAGE_PAGES }} pages per collage.
-        Mom and Dad can print these collages for laminating once a month.
-      </p>
+      <div class="flex justify-between items-center">
+        <p class="text-sm text-gray-400 mt-2">{{ text }}</p>
+        <Button class="ml-2" @click="speak(text)">
+          <i class="ri-speak-fill text-lg"></i>
+        </Button>
+      </div>
     </template>
 
     <div v-if="collages.length === 0" class="flex flex-col items-center mt-10">
@@ -45,7 +45,7 @@
       <template #image-actions="{ page, collage }">
         <button
           v-if="canAdmin"
-          class="absolute top-1 right-1 bg-white bg-opacity-80 hover:bg-red-500 hover:text-white text-gray-700 rounded-full px-1 shadow"
+          class="absolute top-1 right-1 bg-red-500 text-white rounded-full px-1 shadow"
           title="Remove image"
           @click="removeImage(collage.id, page.id)"
         >
@@ -93,14 +93,17 @@
 import Button from "@/Components/Button.vue";
 import DangerButton from "@/Components/DangerButton.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
+import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { MAX_COLLAGE_PAGES } from "@/constants/collage";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, Link, useForm } from "@inertiajs/vue3";
+import { ref } from "vue";
 import CollageGrid from "./CollageGrid.vue";
 
 import { usePermissions } from "@/composables/permissions";
 
 const { canAdmin, canEditPages } = usePermissions();
+const { speak } = useSpeechSynthesis();
 
 defineProps({
   collages: { type: Array, required: true }
@@ -109,6 +112,10 @@ defineProps({
 const createCollageForm = useForm();
 const printForm = useForm();
 const deleteForm = useForm();
+
+const text = ref(
+  `You can build your own collages! Go to the picture you want to add to the collage and select the collage you want. ${MAX_COLLAGE_PAGES} pages per collage. Mom and Dad can print these collages for laminating once a month.`
+);
 
 const hasPages = (collage) => {
   return collage.pages.length > 0;
