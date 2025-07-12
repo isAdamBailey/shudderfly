@@ -89,7 +89,8 @@ class PageController extends Controller
         $canIncrement = $request->user()?->cannot('edit profile');
 
         if ($canIncrement) {
-            IncrementPageReadCount::dispatch($page);
+            // Add a small delay to prevent rapid-fire job creation
+            IncrementPageReadCount::dispatch($page)->delay(now()->addSeconds(5));
         }
 
         $page->load(['book', 'book.coverImage']);

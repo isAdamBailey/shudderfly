@@ -105,7 +105,8 @@ class BookController extends Controller
             && ! $request->has('page');
 
         if ($canIncrement) {
-            IncrementBookReadCount::dispatch($book);
+            // Add a small delay to prevent rapid-fire job creation
+            IncrementBookReadCount::dispatch($book)->delay(now()->addSeconds(5));
         }
 
         $youtubeEnabled = \App\Models\SiteSetting::where('key', 'youtube_enabled')->first()->value;

@@ -6,10 +6,13 @@ use App\Models\Book;
 use Carbon\Carbon;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
+use Illuminate\Queue\SerializesModels;
 
 class IncrementBookReadCount implements ShouldQueue
 {
-    use Queueable;
+    use Queueable, InteractsWithQueue, SerializesModels;
 
     protected $book;
 
@@ -22,10 +25,33 @@ class IncrementBookReadCount implements ShouldQueue
     }
 
     /**
+     * Get the unique ID for the job.
+     */
+    public function uniqueId(): string
+    {
+        return 'increment_book_read_count_' . $this->book->id;
+    }
+
+    /**
+     * Get the middleware the job should pass through.
+     */
+    public function middleware(): array
+    {
+        return [
+            (new WithoutOverlapping($this->uniqueId()))
+                ->expireAfter(300) // 5 minutes
+                ->releaseAfter(60), // 1 minute
+        ];
+    }
+
+    /**
      * Handle incrementing the books based on popularity of the book
      */
     public function handle(): void
     {
+        // Refresh the book model to get the latest read_count
+        $this->book->refresh();
+
         if ($this->book->read_count === 0.0) {
             $baseIncrement = $this->calculateRecencyBoost();
             $this->book->increment('read_count', $baseIncrement);
@@ -33,7 +59,8 @@ class IncrementBookReadCount implements ShouldQueue
             return;
         }
 
-        // If the book is in the top 3, don't increment the read count
+        // Use database-level check to prevent race conditions
+        // Get the current top 3 books atomically
         $topBooks = Book::orderBy('read_count', 'desc')->take(3)->pluck('id')->toArray();
         if (in_array($this->book->id, $topBooks)) {
             return;

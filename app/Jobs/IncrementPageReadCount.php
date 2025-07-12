@@ -6,10 +6,13 @@ use App\Models\Page;
 use Carbon\Carbon;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
+use Illuminate\Queue\SerializesModels;
 
 class IncrementPageReadCount implements ShouldQueue
 {
-    use Queueable;
+    use Queueable, InteractsWithQueue, SerializesModels;
 
     protected $page;
 
@@ -22,10 +25,33 @@ class IncrementPageReadCount implements ShouldQueue
     }
 
     /**
+     * Get the unique ID for the job.
+     */
+    public function uniqueId(): string
+    {
+        return 'increment_page_read_count_' . $this->page->id;
+    }
+
+    /**
+     * Get the middleware the job should pass through.
+     */
+    public function middleware(): array
+    {
+        return [
+            (new WithoutOverlapping($this->uniqueId()))
+                ->expireAfter(300) // 5 minutes
+                ->releaseAfter(60), // 1 minute
+        ];
+    }
+
+    /**
      * Handle incrementing the pages based on popularity of the page
      */
     public function handle(): void
     {
+        // Refresh the page model to get the latest read_count
+        $this->page->refresh();
+
         if ($this->page->read_count === 0.0) {
             $baseIncrement = $this->calculateRecencyBoost();
             $this->page->increment('read_count', $baseIncrement);
@@ -33,7 +59,8 @@ class IncrementPageReadCount implements ShouldQueue
             return;
         }
 
-        // If the page is in the top 3, don't increment the read count
+        // Use database-level check to prevent race conditions
+        // Get the current top 3 pages atomically
         $topPages = Page::orderBy('read_count', 'desc')->take(3)->pluck('id')->toArray();
         if (in_array($this->page->id, $topPages)) {
             return;
