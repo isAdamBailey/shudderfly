@@ -2,7 +2,7 @@
   <div class="ml-10">
     <div v-if="isPageInAnyCollage" class="text-yellow-400 text-sm">
       <i class="ri-information-line mr-1 text-2xl"></i>
-      This page is in collage
+      This picture is in collage
       <span
         v-for="existingCollage in pageExistingCollages"
         :key="existingCollage.id"
@@ -12,9 +12,10 @@
       </span>
       <Button
         class="ml-3 py-0.5 px-0.5"
+        :disabled="speaking"
         @click="
           speak(
-            `This page is in collage #${getCollageDisplayNumber(
+            `This picture is in collage #${getCollageDisplayNumber(
               pageExistingCollages[0].id
             )}`
           )
@@ -28,8 +29,17 @@
       <label class="block mb-3 font-medium text-white"
         >Add to collage:
         <Button
-          class="ml-3 py-0.5 px-0.5"
-          @click="speak('Select a collage and click the add button')"
+          class="ml-3 py-0.5"
+          :disabled="speaking"
+          @click="
+            speak(
+              `${
+                !hasAvailableCollages
+                  ? 'All collages are full'
+                  : 'Select a collage and click the add button'
+              }`
+            )
+          "
         >
           <i class="ri-speak-fill text-2xl"></i>
         </Button>
@@ -82,7 +92,7 @@ import { MAX_COLLAGE_PAGES } from "@/constants/collage";
 import { useForm } from "@inertiajs/vue3";
 import { computed, ref, watch } from "vue";
 
-const { speak } = useSpeechSynthesis();
+const { speak, speaking } = useSpeechSynthesis();
 
 const props = defineProps({
   pageId: { type: Number, required: true },

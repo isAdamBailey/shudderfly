@@ -28,7 +28,7 @@
       </div>
       <div class="flex justify-between items-center">
         <p class="text-sm text-gray-400 mt-2">{{ text }}</p>
-        <Button class="ml-2" @click="speak(text)">
+        <Button class="ml-2" :disabled="speaking" @click="speak(text)">
           <i class="ri-speak-fill text-lg"></i>
         </Button>
       </div>
@@ -103,7 +103,7 @@ import CollageGrid from "./CollageGrid.vue";
 import { usePermissions } from "@/composables/permissions";
 
 const { canAdmin, canEditPages } = usePermissions();
-const { speak } = useSpeechSynthesis();
+const { speak, speaking } = useSpeechSynthesis();
 
 defineProps({
   collages: { type: Array, required: true }
