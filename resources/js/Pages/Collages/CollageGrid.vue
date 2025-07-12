@@ -16,10 +16,15 @@
           }}</span
         >
       </div>
-      <!-- 8.5 x 11 aspect ratio container -->
-      <div class="relative w-full" style="padding-bottom: 129.4%">
-        <!-- 11/8.5 = 1.294 -->
-        <div class="absolute inset-0 grid grid-cols-4 grid-rows-4 gap-1">
+      <!-- Responsive 8.5x11 aspect ratio container, always looks like a piece of paper and maintains aspect ratio -->
+      <div
+        class="relative bg-white overflow-hidden mx-auto"
+        style="aspect-ratio: 8.5 / 11; width: 100%; max-width: 850px"
+      >
+        <div
+          class="h-full w-full grid"
+          :style="getGridStyle(collage.pages.length)"
+        >
           <div
             v-for="page in collage.pages.slice(0, MAX_COLLAGE_PAGES)"
             :key="page.id"
@@ -27,7 +32,7 @@
           >
             <img
               :src="page.media_path"
-              class="w-full h-full object-cover"
+              class="w-full h-full object-contain bg-white"
               :alt="`Collage image ${page.id}`"
             />
             <slot name="image-actions" :page="page" :collage="collage" />
@@ -48,4 +53,41 @@ defineProps({
   collages: { type: Array, required: true },
   showIndex: { type: Boolean, default: true }
 });
+
+// Function to calculate optimal grid layout based on number of images
+const getGridStyle = (imageCount) => {
+  if (imageCount <= 0) return {};
+
+  const gridConfigs = {
+    1: { cols: 1, rows: 1 },
+    2: { cols: 2, rows: 1 },
+    3: { cols: 3, rows: 1 },
+    4: { cols: 2, rows: 2 },
+    5: { cols: 3, rows: 2 },
+    6: { cols: 3, rows: 2 },
+    7: { cols: 4, rows: 2 },
+    8: { cols: 4, rows: 2 },
+    9: { cols: 3, rows: 3 },
+    10: { cols: 4, rows: 3 },
+    11: { cols: 4, rows: 3 },
+    12: { cols: 4, rows: 3 },
+    13: { cols: 4, rows: 4 },
+    14: { cols: 4, rows: 4 },
+    15: { cols: 4, rows: 4 },
+    16: { cols: 4, rows: 4 }
+  };
+
+  const config = gridConfigs[imageCount] || gridConfigs[16];
+  const { cols, rows } = config;
+  const gap = 8; // px
+
+  return {
+    display: "grid",
+    gridTemplateColumns: `repeat(${cols}, 1fr)`,
+    gridTemplateRows: `repeat(${rows}, calc((100% - ${
+      (rows - 1) * gap
+    }px) / ${rows}))`,
+    gap: `${gap}px`
+  };
+};
 </script>

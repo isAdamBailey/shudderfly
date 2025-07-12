@@ -12,7 +12,7 @@ use Illuminate\Queue\SerializesModels;
 
 class IncrementPageReadCount implements ShouldQueue
 {
-    use Queueable, InteractsWithQueue, SerializesModels;
+    use InteractsWithQueue, Queueable, SerializesModels;
 
     protected $page;
 
@@ -29,7 +29,7 @@ class IncrementPageReadCount implements ShouldQueue
      */
     public function uniqueId(): string
     {
-        return 'increment_page_read_count_' . $this->page->id;
+        return 'increment_page_read_count_'.$this->page->id;
     }
 
     /**

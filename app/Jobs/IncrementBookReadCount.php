@@ -12,7 +12,7 @@ use Illuminate\Queue\SerializesModels;
 
 class IncrementBookReadCount implements ShouldQueue
 {
-    use Queueable, InteractsWithQueue, SerializesModels;
+    use InteractsWithQueue, Queueable, SerializesModels;
 
     protected $book;
 
@@ -29,7 +29,7 @@ class IncrementBookReadCount implements ShouldQueue
      */
     public function uniqueId(): string
     {
-        return 'increment_book_read_count_' . $this->book->id;
+        return 'increment_book_read_count_'.$this->book->id;
     }
 
     /**
