@@ -4,15 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
 
 class Collage extends Model
 {
     use HasFactory;
-    use SoftDeletes;
 
-    protected $fillable = ['storage_path'];
+    protected $fillable = ['storage_path', 'is_archived'];
 
     /**
      * Get the full URL for the PDF.

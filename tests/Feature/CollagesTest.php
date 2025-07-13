@@ -47,7 +47,7 @@ class CollagesTest extends TestCase
         );
     }
 
-    public function test_deleted_collages_page_is_displayed(): void
+    public function test_archived_collages_page_is_displayed(): void
     {
         /** @var User $user */
         $user = User::factory()->create();
@@ -68,14 +68,14 @@ class CollagesTest extends TestCase
                 ->count(2)
                 ->create();
             $collage->pages()->attach($pages);
-            $collage->delete();
+            $collage->update(['is_archived' => true]);
         }
 
-        $response = $this->get(route('collages.deleted'));
+        $response = $this->get(route('collages.archived'));
 
         $response->assertInertia(
             fn (Assert $page) => $page
-                ->component('Collages/Deleted')
+                ->component('Collages/Archived')
                 ->has('collages', 3)
                 ->has('collages.0.pages')
         );
@@ -98,7 +98,7 @@ class CollagesTest extends TestCase
         $response->assertRedirect(route('collages.index'));
     }
 
-    public function test_collage_can_be_deleted(): void
+    public function test_collage_can_be_archived(): void
     {
         /** @var User $user */
         $user = User::factory()->create();
@@ -107,11 +107,14 @@ class CollagesTest extends TestCase
 
         $collage = Collage::factory()->create();
 
-        $response = $this->delete(route('collages.destroy', $collage));
+        $response = $this->patch(route('collages.archive', $collage));
 
-        $this->assertSoftDeleted($collage);
+        $this->assertDatabaseHas('collages', [
+            'id' => $collage->id,
+            'is_archived' => true,
+        ]);
 
-        $response->assertRedirect(route('collages.index'));
+        $response->assertRedirect(route('collages.archived'));
     }
 
     public function test_collage_pdf_generation_can_be_queued(): void

@@ -114,7 +114,9 @@ watch(selectedCollageId, (newCollageId) => {
 
 const pageExistingCollages = computed(() => {
   return props.collages.filter((collage) =>
-    collage.pages.some((page) => page.id === props.pageId)
+    collage.pages.some(
+      (page) => page.id === props.pageId && !collage.is_archived
+    )
   );
 });
 
