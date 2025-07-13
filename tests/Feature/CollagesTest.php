@@ -42,7 +42,7 @@ class CollagesTest extends TestCase
         $response->assertInertia(
             fn (Assert $page) => $page
                 ->component('Collages/Index')
-                ->has('collages', 4) // Limited to 4 in controller
+                ->has('collages', 5)
                 ->has('collages.0.pages')
         );
     }
@@ -56,7 +56,7 @@ class CollagesTest extends TestCase
         // Create a book first
         $book = Book::factory()->create();
 
-        // Create some collages and soft delete them
+        // Create some collages and archive them
         $collages = Collage::factory()
             ->count(3)
             ->create();
@@ -93,6 +93,7 @@ class CollagesTest extends TestCase
         $this->assertDatabaseCount('collages', 1);
         $this->assertDatabaseHas('collages', [
             'storage_path' => null,
+            'is_archived' => false,
         ]);
 
         $response->assertRedirect(route('collages.index'));
@@ -103,9 +104,9 @@ class CollagesTest extends TestCase
         /** @var User $user */
         $user = User::factory()->create();
         $this->actingAs($user);
-        $user->givePermissionTo('admin'); // Add permission for collage deletion
+        $user->givePermissionTo('admin'); // Add permission for collage archiving
 
-        $collage = Collage::factory()->create();
+        $collage = Collage::factory()->create(['is_archived' => false]);
 
         $response = $this->patch(route('collages.archive', $collage));
 
@@ -115,6 +116,159 @@ class CollagesTest extends TestCase
         ]);
 
         $response->assertRedirect(route('collages.archived'));
+    }
+
+    public function test_collage_can_be_restored(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $user->givePermissionTo('admin'); // Add permission for collage restoration
+
+        $collage = Collage::factory()->create(['is_archived' => true]);
+
+        $response = $this->patch(route('collages.restore', $collage));
+
+        $this->assertDatabaseHas('collages', [
+            'id' => $collage->id,
+            'is_archived' => false,
+        ]);
+
+        $response->assertRedirect(route('collages.index'));
+    }
+
+    public function test_collage_can_be_permanently_deleted(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $user->givePermissionTo('admin'); // Add permission for collage deletion
+
+        $collage = Collage::factory()->create();
+
+        $response = $this->delete(route('collages.destroy', $collage));
+
+        $this->assertDatabaseMissing('collages', [
+            'id' => $collage->id,
+        ]);
+
+        $response->assertRedirect(route('collages.index'));
+    }
+
+    public function test_archived_collage_can_be_permanently_deleted(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $user->givePermissionTo('admin'); // Add permission for collage deletion
+
+        $collage = Collage::factory()->create(['is_archived' => true]);
+
+        $response = $this->delete(route('collages.destroy', $collage));
+
+        $this->assertDatabaseMissing('collages', [
+            'id' => $collage->id,
+        ]);
+
+        $response->assertRedirect(route('collages.index'));
+    }
+
+    public function test_index_only_shows_non_archived_collages(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        // Create active collages
+        $activeCollages = Collage::factory()->count(2)->create(['is_archived' => false]);
+
+        // Create archived collages
+        $archivedCollages = Collage::factory()->count(3)->create(['is_archived' => true]);
+
+        $response = $this->get(route('collages.index'));
+
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Collages/Index')
+                ->has('collages', 2) // Only active collages
+        );
+    }
+
+    public function test_archived_page_only_shows_archived_collages(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        // Create active collages
+        $activeCollages = Collage::factory()->count(2)->create(['is_archived' => false]);
+
+        // Create archived collages
+        $archivedCollages = Collage::factory()->count(3)->create(['is_archived' => true]);
+
+        $response = $this->get(route('collages.archived'));
+
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Collages/Archived')
+                ->has('collages', 3) // Only archived collages
+        );
+    }
+
+    public function test_unauthorized_user_cannot_archive_collage(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        // No admin permission
+
+        $collage = Collage::factory()->create(['is_archived' => false]);
+
+        $response = $this->patch(route('collages.archive', $collage));
+
+        $response->assertStatus(403);
+
+        $this->assertDatabaseHas('collages', [
+            'id' => $collage->id,
+            'is_archived' => false, // Should remain unchanged
+        ]);
+    }
+
+    public function test_unauthorized_user_cannot_restore_collage(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        // No admin permission
+
+        $collage = Collage::factory()->create(['is_archived' => true]);
+
+        $response = $this->patch(route('collages.restore', $collage));
+
+        $response->assertStatus(403);
+
+        $this->assertDatabaseHas('collages', [
+            'id' => $collage->id,
+            'is_archived' => true, // Should remain unchanged
+        ]);
+    }
+
+    public function test_unauthorized_user_cannot_delete_collage(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        // No admin permission
+
+        $collage = Collage::factory()->create();
+
+        $response = $this->delete(route('collages.destroy', $collage));
+
+        $response->assertStatus(403);
+
+        $this->assertDatabaseHas('collages', [
+            'id' => $collage->id, // Should still exist
+        ]);
     }
 
     public function test_collage_pdf_generation_can_be_queued(): void

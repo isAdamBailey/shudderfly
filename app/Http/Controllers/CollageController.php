@@ -11,7 +11,7 @@ class CollageController extends Controller
 {
     public function index()
     {
-        $collages = Collage::with('pages')->where('is_archived', false)->latest()->limit(4)->get();
+        $collages = Collage::with('pages')->where('is_archived', false)->latest()->get();
 
         return Inertia::render('Collages/Index', [
             'collages' => $collages,

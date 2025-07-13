@@ -123,6 +123,7 @@ const hasPages = (collage) => {
 
 const removeImage = (collageId, pageId) => {
   if (confirm("Remove this image from the collage?")) {
+    // eslint-disable-next-line no-undef
     router.delete(route("collage-page.destroy", [collageId, pageId]), {
       preserveScroll: true
     });
@@ -135,6 +136,7 @@ const confirmDelete = (collageId) => {
       `Are you sure you want to archive this collage? You will still be able to see the collage in the archive.`
     )
   ) {
+    // eslint-disable-next-line no-undef
     deleteForm.patch(route("collages.archive", collageId), {
       preserveScroll: true
     });

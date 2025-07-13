@@ -125,6 +125,7 @@ const isPageInAnyCollage = computed(() => {
 });
 
 const addToCollage = () => {
+  // eslint-disable-next-line no-undef
   form.post(route("collage-page.store"), {
     preserveScroll: true,
     onSuccess: () => {
@@ -147,7 +148,8 @@ const getCollageDisplayNumber = (collageId) => {
 
 const hasAvailableCollages = computed(() => {
   return props.collages.some(
-    (collage) => !collage.deleted_at && collage.pages.length < MAX_COLLAGE_PAGES
+    (collage) =>
+      !collage.is_archived && collage.pages.length < MAX_COLLAGE_PAGES
   );
 });
 </script>
