@@ -96,7 +96,7 @@ import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { MAX_COLLAGE_PAGES } from "@/constants/collage";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import { Head, Link, router, useForm } from "@inertiajs/vue3";
+import { Head, Link, useForm } from "@inertiajs/vue3";
 import { ref } from "vue";
 import CollageGrid from "./CollageGrid.vue";
 
@@ -124,7 +124,7 @@ const hasPages = (collage) => {
 const removeImage = (collageId, pageId) => {
   if (confirm("Remove this image from the collage?")) {
     // eslint-disable-next-line no-undef
-    router.delete(route("collage-page.destroy", [collageId, pageId]), {
+    useForm().delete(route("collage-page.destroy", [collageId, pageId]), {
       preserveScroll: true
     });
   }
