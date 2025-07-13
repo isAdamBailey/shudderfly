@@ -11,18 +11,18 @@ class CollageController extends Controller
 {
     public function index()
     {
-        $collages = Collage::with('pages')->latest()->limit(4)->get();
+        $collages = Collage::with('pages')->where('is_archived', false)->latest()->get();
 
         return Inertia::render('Collages/Index', [
             'collages' => $collages,
         ]);
     }
 
-    public function deleted()
+    public function archived()
     {
-        $collages = Collage::onlyTrashed()->with('pages')->latest()->get();
+        $collages = Collage::with('pages')->where('is_archived', true)->latest()->get();
 
-        return Inertia::render('Collages/Deleted', [
+        return Inertia::render('Collages/Archived', [
             'collages' => $collages,
         ]);
     }
@@ -34,9 +34,23 @@ class CollageController extends Controller
         return redirect()->route('collages.index');
     }
 
+    public function archive(Collage $collage)
+    {
+        $collage->update(['is_archived' => true]);
+
+        return redirect()->route('collages.archived');
+    }
+
     public function destroy(Collage $collage)
     {
         $collage->delete();
+
+        return redirect()->route('collages.index');
+    }
+
+    public function restore(Collage $collage)
+    {
+        $collage->update(['is_archived' => false]);
 
         return redirect()->route('collages.index');
     }

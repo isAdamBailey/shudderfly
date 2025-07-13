@@ -50,7 +50,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::get('/collages', [CollageController::class, 'index'])->name('collages.index');
-    Route::get('/collages/deleted', [CollageController::class, 'deleted'])->name('collages.deleted');
+    Route::get('/collages/archived', [CollageController::class, 'archived'])->name('collages.archived');
     Route::post('/collage-page', [CollagePageController::class, 'store'])->name('collage-page.store');
 
     Route::group(['middleware' => ['can:edit pages']], function () {
@@ -75,7 +75,9 @@ Route::middleware('auth')->group(function () {
         Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
 
         Route::post('/collages', [CollageController::class, 'store'])->name('collages.store');
+        Route::patch('/collages/{collage}/archive', [CollageController::class, 'archive'])->name('collages.archive');
         Route::delete('/collages/{collage}', [CollageController::class, 'destroy'])->name('collages.destroy');
+        Route::patch('/collages/{collage}/restore', [CollageController::class, 'restore'])->name('collages.restore');
         Route::post('/collages/{collage}/generate-pdf', [CollageController::class, 'generatePdf'])->name('collages.generate-pdf');
 
         Route::put('/admin/permissions', [AdminController::class, 'update'])->name('admin.permissions');

@@ -109,3 +109,12 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
   unobserve: vi.fn(),
   disconnect: vi.fn()
 }));
+
+if (typeof window !== "undefined") {
+  window.SpeechSynthesisUtterance = function () {};
+  window.speechSynthesis = {
+    speak: () => {},
+    getVoices: () => [],
+    cancel: () => {}
+  };
+}

@@ -10,7 +10,7 @@
 
         <div class="flex items-center gap-4">
           <Link
-            :href="route('collages.deleted')"
+            :href="route('collages.archived')"
             class="text-white hover:text-blue-300"
           >
             <i class="ri-archive-line mr-1"></i>
@@ -19,7 +19,7 @@
 
           <Button
             v-if="canAdmin"
-            :disabled="createCollageForm.processing || collages.length >= 4"
+            :disabled="createCollageForm.processing || collages.length >= 2"
             @click="createCollageForm.post(route('collages.store'))"
             ><i class="ri-add-line text-xl mr-3"></i>
             Create New Collage
@@ -123,6 +123,7 @@ const hasPages = (collage) => {
 
 const removeImage = (collageId, pageId) => {
   if (confirm("Remove this image from the collage?")) {
+    // eslint-disable-next-line no-undef
     useForm().delete(route("collage-page.destroy", [collageId, pageId]), {
       preserveScroll: true
     });
@@ -132,10 +133,11 @@ const removeImage = (collageId, pageId) => {
 const confirmDelete = (collageId) => {
   if (
     confirm(
-      `Are you sure you want to archive this collage? You will still be able to see the collage in the archive, but this action cannot be undone.`
+      `Are you sure you want to archive this collage? You will still be able to see the collage in the archive.`
     )
   ) {
-    deleteForm.delete(route("collages.destroy", collageId), {
+    // eslint-disable-next-line no-undef
+    deleteForm.patch(route("collages.archive", collageId), {
       preserveScroll: true
     });
   }
