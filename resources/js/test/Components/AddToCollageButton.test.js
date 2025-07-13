@@ -218,8 +218,10 @@ describe("AddToCollageButton", () => {
         }
       });
 
-      const button = wrapper.find("button");
-      expect(button.attributes("disabled")).toBeFalsy();
+      const addButton = wrapper
+        .findAll("button")
+        .find((btn) => btn.text().includes("Add to Collage"));
+      expect(addButton.attributes("disabled")).toBeDefined();
     });
 
     it("disables button when all collages are full", () => {
@@ -249,8 +251,10 @@ describe("AddToCollageButton", () => {
         }
       });
 
-      const button = wrapper.find("button");
-      expect(button.attributes("disabled")).toBeFalsy();
+      const addButton = wrapper
+        .findAll("button")
+        .find((btn) => btn.text().includes("Add to Collage"));
+      expect(addButton.attributes("disabled")).toBeDefined();
     });
 
     it("enables button when collage is selected and available", async () => {
@@ -266,8 +270,10 @@ describe("AddToCollageButton", () => {
       // Select a collage
       await wrapper.find("select").setValue(1);
 
-      const button = wrapper.find("button");
-      expect(button.attributes("disabled")).toBeUndefined();
+      const addButton = wrapper
+        .findAll("button")
+        .find((btn) => btn.text().includes("Add to Collage"));
+      expect(addButton.attributes("disabled")).toBeUndefined();
     });
 
     it("submits form when add button is clicked", async () => {
