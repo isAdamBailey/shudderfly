@@ -57,6 +57,9 @@ const typeName = computed(() => {
 });
 
 const isVoiceSupported = computed(() => {
+  if (typeof window === "undefined") {
+    return false;
+  }
   return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 });
 
