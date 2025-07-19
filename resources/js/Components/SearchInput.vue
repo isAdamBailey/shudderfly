@@ -3,7 +3,7 @@
     <label for="search" class="hidden">Search</label>
     <input
       id="search"
-      :value="voiceActive ? transcript : search"
+      :value="voiceActive && !search ? transcript : search"
       class="h-8 w-full cursor-pointer rounded-full border bg-gray-100 px-4 pb-0 pt-px text-gray-700 outline-none transition focus:border-blue-400"
       :class="{ 'border-red-500 border-2': voiceActive }"
       autocomplete="off"
