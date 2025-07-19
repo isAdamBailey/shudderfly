@@ -89,7 +89,7 @@ const searchMethod = () => {
 
 const startVoiceRecognition = () => {
   // Check if SpeechRecognition is supported
-  if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+  if (!isVoiceSupported.value) {
     speak("Voice recognition is not supported in this browser.");
     return;
   }
