@@ -26,14 +26,22 @@
           :style="getGridStyle(collage.pages.length)"
         >
           <div
-            v-for="page in collage.pages.slice(0, MAX_COLLAGE_PAGES)"
+            v-for="(page, pageIndex) in collage.pages.slice(
+              0,
+              MAX_COLLAGE_PAGES
+            )"
             :key="page.id"
             class="relative"
           >
-            <img
+            <!-- Use LazyLoader for optimized image loading -->
+            <LazyLoader
               :src="page.media_path"
-              class="w-full h-full object-contain bg-white"
               :alt="`Collage image ${page.id}`"
+              :classes="'w-full h-full object-contain bg-white'"
+              :fill-container="true"
+              :object-fit="'contain'"
+              :loading="pageIndex < 4 ? 'eager' : 'lazy'"
+              :fetch-priority="pageIndex < 2 ? 'high' : 'low'"
             />
             <slot name="image-actions" :page="page" :collage="collage" />
           </div>
@@ -47,6 +55,7 @@
 </template>
 
 <script setup>
+import LazyLoader from "@/Components/LazyLoader.vue";
 import { MAX_COLLAGE_PAGES } from "@/constants/collage";
 
 defineProps({
