@@ -50,7 +50,7 @@
       @error="handleMediaError"
       @load="handleImageLoad"
     />
-    <span v-if="!pageId">
+    <span v-if="!pageId && showPills">
       <TypePill v-if="isPoster(imageSrc)" type="Video" />
       <TypePill v-if="isSnapshot(imageSrc)" type="Screenshot" />
     </span>
@@ -125,6 +125,10 @@ const props = defineProps({
     type: String,
     default: "auto",
     validator: (value) => ["high", "low", "auto"].includes(value)
+  },
+  showPills: {
+    type: Boolean,
+    default: true
   }
 });
 
