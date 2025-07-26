@@ -234,8 +234,8 @@ class GenerateCollagePdf implements ShouldQueue
             // Save PDF to S3
             $s3Key = "collages/collage-{$this->collage->id}.pdf";
             if (Storage::disk('s3')->put($s3Key, $pdfContent, ['visibility' => 'public'])) {
-                // Generate preview image
-                $previewImage = $this->generatePreviewImage($localImages);
+                // Generate preview image using the same grid configuration as the PDF
+                $previewImage = $this->generatePreviewImage($localImages, $gridConfig);
                 $previewKey = "collages/collage-{$this->collage->id}-preview.jpg";
                 
                 // Prepare the update data
@@ -304,31 +304,11 @@ class GenerateCollagePdf implements ShouldQueue
     /**
      * Generate a preview image of the PDF layout.
      */
-    protected function generatePreviewImage(array $localImages): ?string
+    protected function generatePreviewImage(array $localImages, array $gridConfig): ?string
     {
         try {
-            $pageCount = count($localImages);
-            $gridConfigs = [
-                1 => ['cols' => 1, 'rows' => 1],    // 1 image = full page
-                2 => ['cols' => 2, 'rows' => 1],    // 2 images = side by side
-                3 => ['cols' => 3, 'rows' => 1],    // 3 images = three across
-                4 => ['cols' => 2, 'rows' => 2],    // 4 images = 2x2 grid
-                5 => ['cols' => 3, 'rows' => 2],    // 5 images = 3x2 grid
-                6 => ['cols' => 3, 'rows' => 2],    // 6 images = 3x2 grid
-                7 => ['cols' => 4, 'rows' => 2],    // 7 images = 4x2 grid
-                8 => ['cols' => 4, 'rows' => 2],    // 8 images = 4x2 grid
-                9 => ['cols' => 3, 'rows' => 3],    // 9 images = 3x3 grid
-                10 => ['cols' => 4, 'rows' => 3],   // 10 images = 4x3 grid
-                11 => ['cols' => 4, 'rows' => 3],   // 11 images = 4x3 grid
-                12 => ['cols' => 4, 'rows' => 3],   // 12 images = 4x3 grid
-                13 => ['cols' => 4, 'rows' => 4],   // 13 images = 4x4 grid
-                14 => ['cols' => 4, 'rows' => 4],   // 14 images = 4x4 grid
-                15 => ['cols' => 4, 'rows' => 4],   // 15 images = 4x4 grid
-                16 => ['cols' => 4, 'rows' => 4],    // 16 images = 4x4 grid
-            ];
-
-            // Use the specific config if available, otherwise use the largest available config
-            $config = $gridConfigs[$pageCount] ?? $gridConfigs[array_key_last($gridConfigs)];
+            // Use the passed grid configuration (same as PDF) instead of calculating based on downloaded images
+            $config = $gridConfig;
 
             // Calculate grid capacity (maximum number of images that can fit)
             $gridCapacity = $config['cols'] * $config['rows'];
