@@ -17,49 +17,35 @@
           }}</span
         >
       </div>
+
       <!-- Responsive 8.5x11 aspect ratio container, always looks like a piece of paper and maintains aspect ratio -->
       <div
         class="relative bg-white overflow-hidden mx-auto"
         style="aspect-ratio: 8.5 / 11; width: 100%; max-width: 850px"
       >
-        <!-- Show PDF directly if available (only in archived view) -->
+        <!-- Show PDF preview in archived view -->
         <div
-          v-if="collage && collage.storage_path && showScreenshots"
+          v-if="collage && collage.preview_path && showScreenshots"
           class="h-full w-full bg-white rounded-lg shadow-sm overflow-hidden"
           style="position: relative"
         >
-          <!-- Show PDF iframe only if browser supports it -->
-          <iframe
-            v-if="canEmbedPDF()"
-            :src="
-              collage.storage_path +
-              '#toolbar=0&navpanes=0&scrollbar=0&statusbar=0&messages=0&scrollbar=0&view=FitH&pagemode=none&embedded=true'
-            "
-            class="w-full h-full"
-            style="
-              border: none;
-              outline: none;
-              position: absolute;
-              top: 0;
-              left: 0;
-              width: 100%;
-              height: 100%;
-            "
-            frameborder="0"
-            scrolling="no"
-            allowfullscreen="false"
-          ></iframe>
+          <!-- Show preview image if available -->
+          <div v-if="collage.preview_path" class="relative w-full h-full">
+            <img
+              :src="collage.preview_path"
+              :alt="`Collage ${collage.id} preview`"
+              class="w-full h-full object-contain rounded-lg shadow-sm"
+            />
+          </div>
 
-          <!-- Fallback for mobile devices - show lightweight preview -->
+          <!-- Fallback if no preview image -->
           <div
             v-else
             class="h-full w-full flex flex-col items-center justify-center bg-gray-50 p-4"
           >
             <div class="text-center">
               <i class="ri-file-pdf-line text-6xl text-red-500 mb-4"></i>
-              <p class="text-gray-600 mb-4">
-                PDF preview not available on mobile
-              </p>
+              <p class="text-gray-600 mb-4">PDF preview not available</p>
               <div class="text-sm text-gray-500 mb-4">
                 {{ collage.pages.length }} images in this collage
               </div>
@@ -106,7 +92,6 @@
 
 <script setup>
 import LazyLoader from "@/Components/LazyLoader.vue";
-import { useMobileDetection } from "@/composables/useMobileDetection";
 import { MAX_COLLAGE_PAGES } from "@/constants/collage";
 import { useIntersectionObserver } from "@vueuse/core";
 import { onMounted, ref } from "vue";
@@ -116,9 +101,6 @@ const props = defineProps({
   showIndex: { type: Boolean, default: true },
   showScreenshots: { type: Boolean, default: false }
 });
-
-// Mobile detection
-const { canEmbedPDF } = useMobileDetection();
 
 // Track loaded images for each collage
 const loadedImages = ref(new Map());

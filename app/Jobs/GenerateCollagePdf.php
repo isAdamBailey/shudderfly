@@ -233,9 +233,18 @@ class GenerateCollagePdf implements ShouldQueue
             // Save PDF to S3
             $s3Key = "collages/collage-{$this->collage->id}.pdf";
             if (Storage::disk('s3')->put($s3Key, $pdfContent, ['visibility' => 'public'])) {
+                // Generate preview image
+                $previewImage = $this->generatePreviewImage($localImages);
+                $previewKey = "collages/collage-{$this->collage->id}-preview.jpg";
+                
+                if ($previewImage) {
+                    Storage::disk('s3')->put($previewKey, $previewImage, ['visibility' => 'public']);
+                }
+                
                 // Store the storage path in the collage record
                 $this->collage->update([
                     'storage_path' => $s3Key,
+                    'preview_path' => $previewKey,
                     'is_archived' => true,
                 ]);
             } else {
@@ -285,6 +294,102 @@ class GenerateCollagePdf implements ShouldQueue
                 unlink($file);
             }
             rmdir($dir);
+        }
+    }
+
+    /**
+     * Generate a preview image of the PDF layout.
+     */
+    protected function generatePreviewImage(array $localImages): ?string
+    {
+        try {
+            $pageCount = count($localImages);
+            $gridConfigs = [
+                1 => ['cols' => 1, 'rows' => 1],    // 1 image = full page
+                2 => ['cols' => 2, 'rows' => 1],    // 2 images = side by side
+                3 => ['cols' => 3, 'rows' => 1],    // 3 images = three across
+                4 => ['cols' => 2, 'rows' => 2],    // 4 images = 2x2 grid
+                5 => ['cols' => 3, 'rows' => 2],    // 5 images = 3x2 grid
+                6 => ['cols' => 3, 'rows' => 2],    // 6 images = 3x2 grid
+                7 => ['cols' => 4, 'rows' => 2],    // 7 images = 4x2 grid
+                8 => ['cols' => 4, 'rows' => 2],    // 8 images = 4x2 grid
+                9 => ['cols' => 3, 'rows' => 3],    // 9 images = 3x3 grid
+                10 => ['cols' => 4, 'rows' => 3],   // 10 images = 4x3 grid
+                11 => ['cols' => 4, 'rows' => 3],   // 11 images = 4x3 grid
+                12 => ['cols' => 4, 'rows' => 3],   // 12 images = 4x3 grid
+                13 => ['cols' => 4, 'rows' => 4],   // 13 images = 4x4 grid
+                14 => ['cols' => 4, 'rows' => 4],   // 14 images = 4x4 grid
+                15 => ['cols' => 4, 'rows' => 4],   // 15 images = 4x4 grid
+                16 => ['cols' => 4, 'rows' => 4],    // 16 images = 4x4 grid
+            ];
+
+            $config = $gridConfigs[$pageCount] ?? $gridConfigs[16];
+
+            // Match PDF dimensions: 8.5in x 11in with 0.25in margins = 8in x 10.5in grid
+            $previewWidth = 800; // 8in * 100 DPI
+            $previewHeight = 1050; // 10.5in * 100 DPI
+            
+            // Gap between cells (0.05in * 100 DPI = 5px)
+            $gap = 5;
+
+            // Calculate cell dimensions with gaps (matching PDF template)
+            $cellWidth = ($previewWidth - ($config['cols'] - 1) * $gap) / $config['cols'];
+            $cellHeight = ($previewHeight - ($config['rows'] - 1) * $gap) / $config['rows'];
+
+            // Use GD for compositing instead of Intervention Image
+            $canvas = imagecreatetruecolor($previewWidth, $previewHeight);
+            $white = imagecolorallocate($canvas, 255, 255, 255);
+            imagefill($canvas, 0, 0, $white);
+
+            foreach ($localImages as $index => $imageData) {
+                $base64Image = $imageData['path'];
+
+                // Decode base64 image
+                $imageBytes = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $base64Image));
+                
+                // Create image from string using GD
+                $image = imagecreatefromstring($imageBytes);
+                
+                if ($image === false) {
+                    continue; // Skip invalid images
+                }
+
+                // Calculate position for the current image (matching PDF template)
+                $row = floor($index / $config['cols']);
+                $col = $index % $config['cols'];
+                $x = $col * ($cellWidth + $gap);
+                $y = $row * ($cellHeight + $gap);
+
+                // Resize and copy image to canvas
+                imagecopyresampled(
+                    $canvas, 
+                    $image, 
+                    $x, $y, 
+                    0, 0, 
+                    $cellWidth, $cellHeight, 
+                    imagesx($image), imagesy($image)
+                );
+                
+                // Clean up
+                imagedestroy($image);
+            }
+
+            // Convert to JPEG
+            ob_start();
+            imagejpeg($canvas, null, 80);
+            $jpegData = ob_get_contents();
+            ob_end_clean();
+            
+            // Clean up
+            imagedestroy($canvas);
+
+            return $jpegData;
+        } catch (\Exception $e) {
+            Log::error('Failed to generate preview image', [
+                'collage_id' => $this->collage->id,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
         }
     }
 }
