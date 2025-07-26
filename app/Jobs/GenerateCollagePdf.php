@@ -330,6 +330,12 @@ class GenerateCollagePdf implements ShouldQueue
             // Use the specific config if available, otherwise use the largest available config
             $config = $gridConfigs[$pageCount] ?? $gridConfigs[array_key_last($gridConfigs)];
 
+            // Calculate grid capacity (maximum number of images that can fit)
+            $gridCapacity = $config['cols'] * $config['rows'];
+            
+            // Limit images to grid capacity to match PDF layout exactly
+            $imagesToProcess = array_slice($localImages, 0, $gridCapacity);
+
             // Match PDF dimensions: 8.5in x 11in with 0.25in margins = 8in x 10.5in grid
             $previewWidth = 800; // 8in * 100 DPI
             $previewHeight = 1050; // 10.5in * 100 DPI
@@ -346,7 +352,7 @@ class GenerateCollagePdf implements ShouldQueue
             $white = imagecolorallocate($canvas, 255, 255, 255);
             imagefill($canvas, 0, 0, $white);
 
-            foreach ($localImages as $index => $imageData) {
+            foreach ($imagesToProcess as $index => $imageData) {
                 $base64Image = $imageData['path'];
 
                 // Decode base64 image
