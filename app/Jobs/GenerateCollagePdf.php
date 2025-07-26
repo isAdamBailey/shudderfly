@@ -136,7 +136,8 @@ class GenerateCollagePdf implements ShouldQueue
                                 16 => ['cols' => 4, 'rows' => 4],    // 16 images = 4x4 grid
                             ];
 
-                            $config = $gridConfigs[$imageCount] ?? $gridConfigs[16];
+                            // Use the specific config if available, otherwise use the largest available config
+                            $config = $gridConfigs[$imageCount] ?? $gridConfigs[array_key_last($gridConfigs)];
 
                             // Calculate cell dimensions in inches (8in x 10.5in usable area)
                             $cellWidthInches = 8 / $config['cols'];
@@ -326,7 +327,8 @@ class GenerateCollagePdf implements ShouldQueue
                 16 => ['cols' => 4, 'rows' => 4],    // 16 images = 4x4 grid
             ];
 
-            $config = $gridConfigs[$pageCount] ?? $gridConfigs[16];
+            // Use the specific config if available, otherwise use the largest available config
+            $config = $gridConfigs[$pageCount] ?? $gridConfigs[array_key_last($gridConfigs)];
 
             // Match PDF dimensions: 8.5in x 11in with 0.25in margins = 8in x 10.5in grid
             $previewWidth = 800; // 8in * 100 DPI
