@@ -117,16 +117,16 @@ import { ref } from "vue";
 import CollageGrid from "./CollageGrid.vue";
 
 import { usePermissions } from "@/composables/permissions";
+import { useCollageProcessing } from "@/composables/useCollageProcessing";
 
 const { canAdmin, canEditPages } = usePermissions();
 const { speak, speaking } = useSpeechSynthesis();
+const { startProcessing, stopProcessing, isProcessing } =
+  useCollageProcessing();
 
 defineProps({
   collages: { type: Array, required: true }
 });
-
-// Track which collages are currently being generated
-const generatingCollages = ref(new Set());
 
 const createCollageForm = useForm();
 const printForm = useForm();
@@ -141,23 +141,31 @@ const hasPages = (collage) => {
 };
 
 const generatePdf = (collageId) => {
-  // Add to generating set immediately
-  generatingCollages.value.add(collageId);
+  startProcessing(collageId);
 
-  // Submit the form
+  // eslint-disable-next-line no-undef
   printForm.post(route("collages.generate-pdf", collageId), {
     onSuccess: () => {
-      // Keep it in generating state until page refresh or job completes
+      // Keep it in processing state until manually cleared or job completes
     },
     onError: () => {
-      // Remove from generating set if there's an error
-      generatingCollages.value.delete(collageId);
+      // Remove from processing state if there's an error
+      stopProcessing(collageId);
     }
   });
 };
 
 const isGenerating = (collage) => {
-  return generatingCollages.value.has(collage.id);
+  // Check if it's currently being processed (localStorage state)
+  const processing = isProcessing(collage.id);
+
+  // If it has a storage_path, the job completed, so clear processing state
+  if (processing && collage.storage_path) {
+    stopProcessing(collage.id);
+    return false;
+  }
+
+  return processing;
 };
 
 const removeImage = (collageId, pageId) => {
