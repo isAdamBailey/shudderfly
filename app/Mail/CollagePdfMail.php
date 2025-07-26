@@ -42,6 +42,7 @@ class CollagePdfMail extends Mailable
                 'collageId' => $this->collage->id,
                 'imageCount' => $this->collage->pages->count(),
                 'pdfUrl' => $this->collage->storage_path,
+                'previewUrl' => $this->collage->preview_path,
                 'errorMessage' => $this->errorMessage,
             ],
         );
