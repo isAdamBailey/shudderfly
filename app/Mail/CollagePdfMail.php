@@ -18,7 +18,6 @@ class CollagePdfMail extends Mailable
      */
     public function __construct(
         public Collage $collage,
-        public ?string $pdfUrl = null,
         public ?string $errorMessage = null
     ) {}
 
@@ -42,7 +41,7 @@ class CollagePdfMail extends Mailable
             with: [
                 'collageId' => $this->collage->id,
                 'imageCount' => $this->collage->pages->count(),
-                'pdfUrl' => $this->pdfUrl,
+                'pdfUrl' => $this->collage->storage_path,
                 'errorMessage' => $this->errorMessage,
             ],
         );

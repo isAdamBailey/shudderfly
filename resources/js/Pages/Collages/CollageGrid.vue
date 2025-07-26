@@ -22,7 +22,36 @@
         class="relative bg-white overflow-hidden mx-auto"
         style="aspect-ratio: 8.5 / 11; width: 100%; max-width: 850px"
       >
+        <!-- Show PDF directly if available (only in archived view) -->
         <div
+          v-if="collage && collage.storage_path && showScreenshots"
+          class="h-full w-full bg-white rounded-lg shadow-sm overflow-hidden"
+          style="position: relative"
+        >
+          <iframe
+            :src="
+              collage.storage_path +
+              '#toolbar=0&navpanes=0&scrollbar=0&statusbar=0&messages=0&scrollbar=0&view=FitH&pagemode=none&embedded=true'
+            "
+            class="w-full h-full"
+            style="
+              border: none;
+              outline: none;
+              position: absolute;
+              top: 0;
+              left: 0;
+              width: 100%;
+              height: 100%;
+            "
+            frameborder="0"
+            scrolling="no"
+            allowfullscreen="false"
+          ></iframe>
+        </div>
+
+        <!-- Show individual images grid if no PDF or not in archived view -->
+        <div
+          v-else
           class="h-full w-full grid"
           :style="getGridStyle(collage.pages.length)"
         >
@@ -65,7 +94,8 @@ import { onMounted, ref } from "vue";
 
 const props = defineProps({
   collages: { type: Array, required: true },
-  showIndex: { type: Boolean, default: true }
+  showIndex: { type: Boolean, default: true },
+  showScreenshots: { type: Boolean, default: false }
 });
 
 // Track loaded images for each collage

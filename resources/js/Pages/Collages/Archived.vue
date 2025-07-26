@@ -29,7 +29,11 @@
       <ManEmptyCircle />
     </div>
 
-    <CollageGrid :collages="collages" :show-index="false">
+    <CollageGrid
+      :collages="collages"
+      :show-index="false"
+      :show-screenshots="true"
+    >
       <template #actions="{ collage }">
         <div class="flex flex-wrap justify-between items-center gap-2">
           <a
@@ -79,6 +83,10 @@ import { usePermissions } from "@/composables/permissions";
 
 const { canEditPages, canAdmin } = usePermissions();
 
+defineProps({
+  collages: { type: Array, required: true }
+});
+
 const restoreForm = useForm();
 const deleteForm = useForm();
 
@@ -93,10 +101,6 @@ const confirmDelete = (collageId) => {
     });
   }
 };
-
-defineProps({
-  collages: { type: Array, required: true }
-});
 
 defineOptions({
   name: "ArchivedCollages"

@@ -46,7 +46,9 @@
         <button
           v-if="canAdmin"
           class="absolute top-1 right-1 bg-red-500 text-white rounded-full px-1 shadow"
+          :class="{ 'opacity-50 cursor-not-allowed': isGenerating(collage) }"
           title="Remove image"
+          :disabled="isGenerating(collage)"
           @click="removeImage(collage.id, page.id)"
         >
           <i class="ri-close-line text-lg"></i>
@@ -67,17 +69,31 @@
           <Button
             v-if="canAdmin"
             class="btn btn-secondary"
-            :disabled="printForm.processing || !hasPages(collage)"
-            @click="printForm.post(route('collages.generate-pdf', collage.id))"
+            :disabled="
+              printForm.processing ||
+              !hasPages(collage) ||
+              isGenerating(collage)
+            "
+            @click="generatePdf(collage.id)"
           >
-            {{ collage.storage_path ? "Regenerate PDF" : "Generate PDF" }}
+            {{
+              isGenerating(collage)
+                ? "Generating PDF..."
+                : collage.storage_path
+                ? "Regenerate PDF"
+                : "Generate PDF"
+            }}
             <i class="ri-file-pdf-line ml-1"></i>
           </Button>
 
           <DangerButton
             v-if="canAdmin"
             class="btn btn-danger"
-            :disabled="deleteForm.processing || !hasPages(collage)"
+            :disabled="
+              deleteForm.processing ||
+              !hasPages(collage) ||
+              isGenerating(collage)
+            "
             @click="confirmDelete(collage.id)"
           >
             Archive Collage
@@ -109,6 +125,9 @@ defineProps({
   collages: { type: Array, required: true }
 });
 
+// Track which collages are currently being generated
+const generatingCollages = ref(new Set());
+
 const createCollageForm = useForm();
 const printForm = useForm();
 const deleteForm = useForm();
@@ -119,6 +138,26 @@ const text = ref(
 
 const hasPages = (collage) => {
   return collage.pages.length > 0;
+};
+
+const generatePdf = (collageId) => {
+  // Add to generating set immediately
+  generatingCollages.value.add(collageId);
+
+  // Submit the form
+  printForm.post(route("collages.generate-pdf", collageId), {
+    onSuccess: () => {
+      // Keep it in generating state until page refresh or job completes
+    },
+    onError: () => {
+      // Remove from generating set if there's an error
+      generatingCollages.value.delete(collageId);
+    }
+  });
+};
+
+const isGenerating = (collage) => {
+  return generatingCollages.value.has(collage.id);
 };
 
 const removeImage = (collageId, pageId) => {
