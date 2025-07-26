@@ -57,7 +57,6 @@ class GenerateCollagePdf implements ShouldQueue
         }
 
         $errorMessage = null;
-        $pdfUrl = null;
 
         try {
             // Download all images in smaller batches
@@ -234,7 +233,11 @@ class GenerateCollagePdf implements ShouldQueue
             // Save PDF to S3
             $s3Key = "collages/collage-{$this->collage->id}.pdf";
             if (Storage::disk('s3')->put($s3Key, $pdfContent, ['visibility' => 'public'])) {
-                $pdfUrl = Storage::disk('s3')->url($s3Key);
+                // Store the storage path in the collage record
+                $this->collage->update([
+                    'storage_path' => $s3Key,
+                    'is_archived' => true,
+                ]);
             } else {
                 Log::error('Failed to upload PDF to S3', [
                     'collage_id' => $this->collage->id,
@@ -244,11 +247,6 @@ class GenerateCollagePdf implements ShouldQueue
 
                 return;
             }
-
-            // Store the storage path in the collage record
-            $this->collage->update([
-                'storage_path' => $s3Key,
-            ]);
 
         } catch (\Exception $e) {
             Log::error('Error generating or sending PDF', [
@@ -270,7 +268,6 @@ class GenerateCollagePdf implements ShouldQueue
             foreach ($admins as $admin) {
                 Mail::to($admin->email)->send(new CollagePdfMail(
                     $this->collage,
-                    $pdfUrl,
                     $errorMessage
                 ));
             }
