@@ -29,26 +29,26 @@
           class="h-full w-full bg-white rounded-lg shadow-sm overflow-hidden"
           style="position: relative"
         >
-          <!-- Show preview image if available -->
-          <div v-if="collage.preview_path" class="relative w-full h-full">
+          <!-- Show preview image -->
+          <div class="relative w-full h-full">
             <img
               :src="collage.preview_path"
               :alt="`Collage ${collage.id} preview`"
               class="w-full h-full object-contain rounded-lg shadow-sm"
             />
           </div>
+        </div>
 
-          <!-- Fallback if no preview image -->
-          <div
-            v-else
-            class="h-full w-full flex flex-col items-center justify-center bg-gray-50 p-4"
-          >
-            <div class="text-center">
-              <i class="ri-file-pdf-line text-6xl text-red-500 mb-4"></i>
-              <p class="text-gray-600 mb-4">PDF preview not available</p>
-              <div class="text-sm text-gray-500 mb-4">
-                {{ collage.pages.length }} images in this collage
-              </div>
+        <!-- Fallback when no preview image is available -->
+        <div
+          v-else-if="collage && collage.storage_path && showScreenshots"
+          class="h-full w-full flex flex-col items-center justify-center bg-gray-50 p-4"
+        >
+          <div class="text-center">
+            <i class="ri-file-pdf-line text-6xl text-red-500 mb-4"></i>
+            <p class="text-gray-600 mb-4">PDF preview not available</p>
+            <div class="text-sm text-gray-500 mb-4">
+              {{ collage.pages.length }} images in this collage
             </div>
           </div>
         </div>
