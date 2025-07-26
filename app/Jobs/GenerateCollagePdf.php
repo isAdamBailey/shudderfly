@@ -237,16 +237,19 @@ class GenerateCollagePdf implements ShouldQueue
                 $previewImage = $this->generatePreviewImage($localImages);
                 $previewKey = "collages/collage-{$this->collage->id}-preview.jpg";
                 
-                if ($previewImage) {
-                    Storage::disk('s3')->put($previewKey, $previewImage, ['visibility' => 'public']);
+                // Prepare the update data
+                $updateData = [
+                    'storage_path' => $s3Key,
+                    'is_archived' => true,
+                ];
+                
+                // Only set preview_path if generation succeeded AND S3 upload succeeded
+                if ($previewImage && Storage::disk('s3')->put($previewKey, $previewImage, ['visibility' => 'public'])) {
+                    $updateData['preview_path'] = $previewKey;
                 }
                 
                 // Store the storage path in the collage record
-                $this->collage->update([
-                    'storage_path' => $s3Key,
-                    'preview_path' => $previewKey,
-                    'is_archived' => true,
-                ]);
+                $this->collage->update($updateData);
             } else {
                 Log::error('Failed to upload PDF to S3', [
                     'collage_id' => $this->collage->id,
