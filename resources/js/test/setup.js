@@ -12,6 +12,10 @@ vi.mock("@inertiajs/vue3", () => ({
     template: "<a><slot /></a>",
     props: ["href"]
   },
+  Deferred: {
+    name: "Deferred",
+    template: "<div><slot /></div>"
+  },
   useForm: vi.fn(() => ({
     data: {},
     errors: {},
@@ -63,11 +67,6 @@ vi.mock("@/Layouts/AuthenticatedLayout.vue", () => ({
     template:
       "<div class='authenticated-layout'><header><slot name='header' /></header><main><slot /></main></div>"
   }
-}));
-
-// Mock Deferred component (used in Book/Show.vue)
-vi.mock("@/Components/Deferred.vue", () => ({
-  default: { name: "Deferred", template: "<div><slot /></div>" }
 }));
 
 // Provide $page and route as global mocks for all tests
