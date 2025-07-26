@@ -28,7 +28,9 @@
           class="h-full w-full bg-white rounded-lg shadow-sm overflow-hidden"
           style="position: relative"
         >
+          <!-- Show PDF iframe only if browser supports it -->
           <iframe
+            v-if="canEmbedPDF()"
             :src="
               collage.storage_path +
               '#toolbar=0&navpanes=0&scrollbar=0&statusbar=0&messages=0&scrollbar=0&view=FitH&pagemode=none&embedded=true'
@@ -47,6 +49,22 @@
             scrolling="no"
             allowfullscreen="false"
           ></iframe>
+
+          <!-- Fallback for mobile devices - show lightweight preview -->
+          <div
+            v-else
+            class="h-full w-full flex flex-col items-center justify-center bg-gray-50 p-4"
+          >
+            <div class="text-center">
+              <i class="ri-file-pdf-line text-6xl text-red-500 mb-4"></i>
+              <p class="text-gray-600 mb-4">
+                PDF preview not available on mobile
+              </p>
+              <div class="text-sm text-gray-500 mb-4">
+                {{ collage.pages.length }} images in this collage
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Show individual images grid if no PDF or not in archived view -->
@@ -88,6 +106,7 @@
 
 <script setup>
 import LazyLoader from "@/Components/LazyLoader.vue";
+import { useMobileDetection } from "@/composables/useMobileDetection";
 import { MAX_COLLAGE_PAGES } from "@/constants/collage";
 import { useIntersectionObserver } from "@vueuse/core";
 import { onMounted, ref } from "vue";
@@ -97,6 +116,9 @@ const props = defineProps({
   showIndex: { type: Boolean, default: true },
   showScreenshots: { type: Boolean, default: false }
 });
+
+// Mobile detection
+const { canEmbedPDF } = useMobileDetection();
 
 // Track loaded images for each collage
 const loadedImages = ref(new Map());
