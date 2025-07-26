@@ -371,13 +371,13 @@ class GenerateCollagePdf implements ShouldQueue
                 $x = $col * ($cellWidth + $gap);
                 $y = $row * ($cellHeight + $gap);
 
-                // Resize and copy image to canvas
+                // Resize and copy image to canvas (cast to integers for consistency)
                 imagecopyresampled(
                     $canvas, 
                     $image, 
-                    $x, $y, 
+                    (int) $x, (int) $y, 
                     0, 0, 
-                    $cellWidth, $cellHeight, 
+                    (int) $cellWidth, (int) $cellHeight, 
                     imagesx($image), imagesy($image)
                 );
                 
