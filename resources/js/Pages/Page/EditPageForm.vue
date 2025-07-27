@@ -302,14 +302,29 @@ const setCreatedAtToNow = () => {
       />
     </div>
 
-    <div class="flex gap-6">
-      <div class="flex-1">
+    <!-- Page Actions Section -->
+    <div class="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
+      <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+        Page Actions
+      </h3>
+
+      <!-- Cover Image Actions -->
+      <div class="mb-6">
         <div
           v-if="isCoverPage"
-          class="mt-5 text-gray-800 dark:text-white text-sm"
+          class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
         >
-          This image is the cover image for this book. To change the cover, go
-          to the page settings for another page and click "Make Cover Image".
+          <div class="flex items-start">
+            <div class="flex-shrink-0">
+              <i class="ri-information-line text-blue-400 text-xl"></i>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-blue-800 dark:text-blue-200">
+                This image is currently the cover image for this book. To change
+                the cover, go to another page and click "Make Cover Image".
+              </p>
+            </div>
+          </div>
         </div>
         <div
           v-else-if="
@@ -317,54 +332,67 @@ const setCreatedAtToNow = () => {
             page.media_path.includes('.png') ||
             page.media_path.includes('.webp')
           "
-          class="mt-5 md:mt-10"
+          class="flex items-center space-x-4"
         >
           <Button
-            class="py-3"
+            class="bg-green-600 hover:bg-green-700 focus:ring-green-500"
             :class="{ 'opacity-25': bookForm.processing }"
             :disabled="bookForm.processing"
             @click.prevent="makeCoverPage"
           >
+            <i class="ri-image-line mr-2"></i>
             Make Cover Image
           </Button>
-          <span class="text-gray-800 dark:text-white text-sm ml-3">
-            This image will be used as the cover image for this book.
-          </span>
-        </div>
-
-        <div class="my-5">
-          <Button type="button" @click="setCreatedAtToNow">
-            Move Page to Top
-          </Button>
-          <span class="text-gray-800 dark:text-white text-sm ml-3">
-            The media will appear to have been uploaded just now.
+          <span class="text-sm text-gray-600 dark:text-gray-400">
+            Use this image as the book's cover
           </span>
         </div>
       </div>
 
-      <div class="flex flex-col justify-center">
+      <!-- Page Management Actions -->
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+          <Button
+            type="button"
+            class="bg-gray-600 hover:bg-gray-700 focus:ring-gray-500"
+            @click="setCreatedAtToNow"
+          >
+            <i class="ri-arrow-up-line mr-2"></i>
+            Move to Top
+          </Button>
+          <span class="text-sm text-gray-600 dark:text-gray-400">
+            Update timestamp to now
+          </span>
+        </div>
+
         <DeletePageForm
           :page="page"
           @close-page-form="$emit('close-page-form')"
         />
       </div>
     </div>
-    <div class="flex justify-center mt-10">
+
+    <!-- Save Button -->
+    <div class="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
       <Button
-        class="w-full flex justify-center py-3"
+        class="w-full flex justify-center py-3 bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
         :class="{ 'opacity-25': pageForm.processing }"
         :disabled="
           compressionProgress || pageForm.processing || !pageForm.isDirty
         "
         @click="submit"
       >
-        <span class="text-xl">
+        <i
+          v-if="compressionProgress"
+          class="ri-loader-4-line animate-spin -ml-1 mr-3 text-xl text-white"
+        ></i>
+        <span class="text-lg font-medium">
           {{
             compressionProgress
               ? `Optimizing... ${optimizationProgress}%`
               : "Update Page"
-          }}</span
-        >
+          }}
+        </span>
       </Button>
     </div>
   </div>
