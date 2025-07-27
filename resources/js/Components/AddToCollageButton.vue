@@ -56,12 +56,12 @@
             }}
           </option>
           <option
-            v-for="(collage, index) in props.collages"
+            v-for="collage in availableCollages"
             :key="collage.id"
             :value="collage.id"
             :disabled="collage.pages.length >= MAX_COLLAGE_PAGES"
           >
-            Collage #{{ index + 1 }}
+            Collage #{{ getCollageDisplayNumber(collage.id) }}
             <span v-if="collage.pages.length >= MAX_COLLAGE_PAGES">
               (Full)</span
             >
@@ -146,10 +146,13 @@ const getCollageDisplayNumber = (collageId) => {
   return index !== -1 ? index + 1 : collageId;
 };
 
+const availableCollages = computed(() => {
+  return props.collages.filter((collage) => !collage.is_archived);
+});
+
 const hasAvailableCollages = computed(() => {
-  return props.collages.some(
-    (collage) =>
-      !collage.is_archived && collage.pages.length < MAX_COLLAGE_PAGES
+  return availableCollages.value.some(
+    (collage) => collage.pages.length < MAX_COLLAGE_PAGES
   );
 });
 </script>
