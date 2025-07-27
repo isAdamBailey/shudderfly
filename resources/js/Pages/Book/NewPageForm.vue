@@ -107,7 +107,7 @@ const loadDraft = () => {
       clearDraft();
     }
   } else {
-    //
+    // No draft found in localStorage; nothing to load.
   }
 };
 
