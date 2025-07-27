@@ -375,6 +375,9 @@ const processBatch = async () => {
   batchProcessing.value = true;
   currentFileIndex.value = 0;
 
+  // Store original content for first page
+  const originalContent = form.content;
+
   for (let i = 0; i < validFiles.length; i++) {
     const fileObj = validFiles[i];
 
@@ -382,15 +385,13 @@ const processBatch = async () => {
     batchProgress.value = Math.round((i / validFiles.length) * 100);
 
     try {
-      const fileForm = useForm({
-        book_id: props.book.id,
-        content: i === 0 ? form.content : "", // Only add content to first page
-        image: fileObj.processedFile || fileObj.file,
-        video_link: null
-      });
+      // Update the form with current file data
+      form.content = i === 0 ? originalContent : ""; // Only add content to first page
+      form.image = fileObj.processedFile || fileObj.file;
+      form.video_link = null;
 
       await new Promise((resolve, reject) => {
-        fileForm.post(route("pages.store"), {
+        form.post(route("pages.store"), {
           // eslint-disable-line no-undef
           onSuccess: resolve,
           onError: reject,
