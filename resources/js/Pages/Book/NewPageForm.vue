@@ -73,7 +73,8 @@ const saveDraft = () => {
         draftSaved.value = false;
       }, 2000);
     } catch (error) {
-      //
+      // Ignoring errors related to localStorage (e.g., quota exceeded or unavailable)
+      // as they do not impact the core functionality of the application.
     }
   } else {
     clearDraft();
