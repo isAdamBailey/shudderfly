@@ -65,7 +65,7 @@
             @click="togglePageSettings"
           >
             <span v-if="pageSettingsOpen">Close</span>
-            <span v-else>Add Page</span>
+            <span v-else>Add Pages</span>
           </Button>
           <Button
             v-if="canEditPages"

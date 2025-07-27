@@ -84,7 +84,7 @@ describe("AddToCollageButton", () => {
       expect(wrapper.text()).toContain("#1");
       expect(wrapper.text()).toContain("#2");
       const normalized = wrapper.text().replace(/\s+/g, "");
-      expect(normalized).toContain("#1#2");
+      expect(normalized).toContain("#1,#2");
     });
 
     it("does not show message when page is only in archived collages", () => {

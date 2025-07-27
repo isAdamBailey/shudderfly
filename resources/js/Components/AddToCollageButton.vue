@@ -4,7 +4,7 @@
       <i class="ri-information-line mr-1 text-2xl"></i>
       This picture is in collage
       <span
-        v-for="existingCollage in pageExistingCollages"
+        v-for="(existingCollage, index) in pageExistingCollages"
         :key="existingCollage.id"
       >
         #{{ getCollageDisplayNumber(existingCollage.id)
