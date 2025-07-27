@@ -159,13 +159,20 @@ const isGenerating = (collage) => {
   // Check if it's currently being processed (localStorage state)
   const processing = isProcessing(collage.id);
 
-  // If it has a storage_path, the job completed, so clear processing state
-  if (processing && collage.storage_path) {
+  // If it's in processing state AND has is_archived set to true,
+  // the job completed successfully, so clear the processing state
+  if (processing && collage.is_archived) {
     stopProcessing(collage.id);
     return false;
   }
 
-  return processing;
+  // If it's in processing state, it's generating (regardless of storage_path)
+  if (processing) {
+    return true;
+  }
+
+  // If it's not in processing state, it's not generating
+  return false;
 };
 
 const removeImage = (collageId, pageId) => {
