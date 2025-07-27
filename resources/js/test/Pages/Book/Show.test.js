@@ -1,6 +1,7 @@
 import Show from "@/Pages/Book/Show.vue";
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ref } from "vue";
 
 // Mock composables
 vi.mock("@/composables/useInfiniteScroll", () => ({
@@ -9,7 +10,7 @@ vi.mock("@/composables/useInfiniteScroll", () => ({
       { id: 1, title: "Page 1", content: "Content 1" },
       { id: 2, title: "Page 2", content: "Content 2" }
     ],
-    infiniteScrollRef: { value: null },
+    infiniteScrollRef: ref(null),
     setItemLoading: vi.fn()
   })
 }));

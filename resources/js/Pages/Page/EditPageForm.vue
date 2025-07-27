@@ -1,4 +1,5 @@
 <script setup>
+/* eslint-disable no-undef */
 import Button from "@/Components/Button.vue";
 import {
   default as BreezeLabel,
@@ -226,6 +227,7 @@ const setCreatedAtToNow = () => {
               v-if="imagePreview.startsWith('data:video')"
               :key="imagePreview"
               controls
+              muted
               class="w-60"
               preload="metadata"
             >
