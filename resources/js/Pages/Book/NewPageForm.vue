@@ -277,7 +277,7 @@ const generatePreview = async (fileObj) => {
   const file = fileObj.file;
 
   // Initial validation - more lenient for videos that might need optimization
-  if (!fileObj.validation.valid && !fileObj.validation.needsOptimization) {
+  if (!fileObj.validation?.valid && !fileObj.validation?.needsOptimization) {
     return;
   }
 
@@ -329,7 +329,7 @@ const generatePreview = async (fileObj) => {
       fileObj.validation = validateFile(fileObj.processedFile, true);
       fileObj.processed = true;
 
-      if (!fileObj.validation.valid) {
+      if (!fileObj.validation?.valid) {
         // Video still too large after processing
       }
     } catch (error) {
@@ -415,7 +415,7 @@ const processBatch = async () => {
 
   // Validate batch files before processing
   const validFiles = selectedFiles.value.filter(
-    (fileObj) => fileObj.validation.valid
+    (fileObj) => fileObj.validation?.valid
   );
   if (validFiles.length === 0) {
     return;
@@ -430,6 +430,7 @@ const processBatch = async () => {
   for (let i = 0; i < validFiles.length; i++) {
     const fileObj = validFiles[i];
 
+    // Update display to show which file is currently being uploaded
     currentFileIndex.value = i;
     batchProgress.value = Math.round((i / validFiles.length) * 100);
 
@@ -460,6 +461,9 @@ const processBatch = async () => {
       });
 
       fileObj.uploaded = true;
+
+      // Update progress to show completed uploads
+      batchProgress.value = Math.round(((i + 1) / validFiles.length) * 100);
     } catch (error) {
       fileObj.error = error;
       // Continue with next file instead of stopping the entire batch
@@ -509,9 +513,9 @@ const rules = computed(() => {
     if (mediaOption.value === "batch" && selectedFiles.value.length > 0) {
       return selectedFiles.value.every(
         (fileObj) =>
-          fileObj.validation.valid ||
-          (fileObj.validation.needsOptimization && !fileObj.processed) ||
-          (fileObj.processed && fileObj.validation.valid)
+          fileObj.validation?.valid ||
+          (fileObj.validation?.needsOptimization && !fileObj.processed) ||
+          (fileObj.processed && fileObj.validation?.valid)
       );
     }
     return true;
@@ -521,7 +525,7 @@ const rules = computed(() => {
     if (mediaOption.value === "batch") {
       return (
         selectedFiles.value.length > 0 &&
-        selectedFiles.value.some((fileObj) => fileObj.validation.valid)
+        selectedFiles.value.some((fileObj) => fileObj.validation?.valid)
       );
     }
     return (
@@ -662,6 +666,7 @@ onMounted(() => {
           <!-- Drag & Drop Zone -->
           <div
             ref="dropZone"
+            data-test="drop-zone"
             class="relative border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500"
             :class="{
               'border-blue-500 bg-blue-50 dark:bg-blue-900/20': isDragOver,
@@ -736,13 +741,13 @@ onMounted(() => {
                 class="relative border border-gray-200 dark:border-gray-600 rounded-lg p-3"
                 :class="{
                   'border-red-300 bg-red-50 dark:border-red-600 dark:bg-red-900/20':
-                    !fileObj.validation.valid &&
-                    !fileObj.validation.needsOptimization,
+                    !fileObj.validation?.valid &&
+                    !fileObj.validation?.needsOptimization,
                   'border-amber-300 bg-amber-50 dark:border-amber-600 dark:bg-amber-900/20':
-                    fileObj.validation.needsOptimization && !fileObj.processed,
+                    fileObj.validation?.needsOptimization && !fileObj.processed,
                   'border-green-300 bg-green-50 dark:border-green-600 dark:bg-green-900/20':
                     fileObj.uploaded ||
-                    (fileObj.processed && fileObj.validation.valid)
+                    (fileObj.processed && fileObj.validation?.valid)
                 }"
               >
                 <!-- Remove button -->
@@ -814,13 +819,13 @@ onMounted(() => {
                     ></div>
                     <span
                       v-if="
-                        fileObj.validation.needsOptimization &&
+                        fileObj.validation?.needsOptimization &&
                         optimizationProgress > 0
                       "
                     >
                       Optimizing... {{ optimizationProgress }}%
                     </span>
-                    <span v-else-if="fileObj.validation.needsOptimization">
+                    <span v-else-if="fileObj.validation?.needsOptimization">
                       Optimizing large video...
                     </span>
                     <span v-else>Processing...</span>
@@ -830,7 +835,7 @@ onMounted(() => {
                   <div
                     v-if="
                       fileObj.processing &&
-                      fileObj.validation.needsOptimization &&
+                      fileObj.validation?.needsOptimization &&
                       optimizationProgress > 0
                     "
                     class="mt-1"
@@ -846,7 +851,7 @@ onMounted(() => {
                   </div>
 
                   <div
-                    v-else-if="fileObj.processed && fileObj.validation.valid"
+                    v-else-if="fileObj.processed && fileObj.validation?.valid"
                     class="text-green-600"
                   >
                     <span
@@ -862,7 +867,7 @@ onMounted(() => {
                   </div>
                   <div
                     v-else-if="
-                      fileObj.validation.needsOptimization &&
+                      fileObj.validation?.needsOptimization &&
                       !fileObj.processing
                     "
                     class="text-amber-600"
@@ -876,14 +881,14 @@ onMounted(() => {
                   <!-- Validation errors -->
                   <div
                     v-if="
-                      !fileObj.validation.valid &&
-                      !fileObj.validation.needsOptimization
+                      !fileObj.validation?.valid &&
+                      !fileObj.validation?.needsOptimization
                     "
                     class="text-red-600"
                   >
                     <p
                       v-if="
-                        fileObj.validation.sizeError &&
+                        fileObj.validation?.sizeError &&
                         !fileObj.file.type.startsWith('video/')
                       "
                     >
@@ -891,14 +896,14 @@ onMounted(() => {
                     </p>
                     <p
                       v-if="
-                        fileObj.validation.sizeError &&
+                        fileObj.validation?.sizeError &&
                         fileObj.file.type.startsWith('video/') &&
                         fileObj.processed
                       "
                     >
                       Video still too large after optimization (max 60MB)
                     </p>
-                    <p v-if="fileObj.validation.typeError">
+                    <p v-if="fileObj.validation?.typeError">
                       Unsupported file type
                     </p>
                   </div>
