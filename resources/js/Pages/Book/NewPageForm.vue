@@ -195,7 +195,7 @@ const handleDragLeave = (e) => {
   }
 };
 
-const handleDrop = (e) => {
+const handleDrop = async (e) => {
   e.preventDefault();
   isDragOver.value = false;
 
@@ -215,14 +215,16 @@ const handleDrop = (e) => {
     selectedFiles.value.push(...newFileObjects);
     mediaOption.value = "batch";
 
-    // Generate previews for new files
-    newFileObjects.forEach(generatePreview);
+    // Generate previews for new files sequentially to avoid mobile memory issues
+    for (const fileObj of newFileObjects) {
+      await generatePreview(fileObj);
+    }
   } else {
     // No existing files, handle normally
     if (files.length === 1) {
-      handleSingleFile(files[0]);
+      await handleSingleFile(files[0]);
     } else if (files.length > 1) {
-      handleMultipleFiles(files);
+      await handleMultipleFiles(files);
     }
   }
 };
@@ -245,7 +247,7 @@ const handleSingleFile = async (file) => {
   form.image = selectedFiles.value[0].processedFile || file;
 };
 
-const handleMultipleFiles = (files) => {
+const handleMultipleFiles = async (files) => {
   mediaOption.value = "batch";
   selectedFiles.value = files.map((file) => ({
     file,
@@ -255,8 +257,20 @@ const handleMultipleFiles = (files) => {
     validation: validateFile(file)
   }));
 
-  // Generate previews for all files
-  selectedFiles.value.forEach(generatePreview);
+  // Generate previews for all files (sequentially to avoid mobile memory issues)
+  await generatePreviewsSequentially();
+};
+
+// Sequential processing to avoid mobile memory issues
+const generatePreviewsSequentially = async () => {
+  for (let i = 0; i < selectedFiles.value.length; i++) {
+    await generatePreview(selectedFiles.value[i]);
+
+    // Add small delay between files to prevent overwhelming mobile browsers
+    if (i < selectedFiles.value.length - 1) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
 };
 
 const generatePreview = async (fileObj) => {
@@ -267,27 +281,59 @@ const generatePreview = async (fileObj) => {
     return;
   }
 
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    fileObj.preview = e.target.result;
-  };
-  reader.readAsDataURL(file);
+  // Create preview with Promise-based FileReader for better mobile compatibility
+  await new Promise((resolve, reject) => {
+    const reader = new FileReader();
 
-  // Process video files
+    // Add timeout for mobile browsers that might hang
+    const timeout = setTimeout(() => {
+      reader.abort();
+      reject(new Error("FileReader timeout"));
+    }, 10000);
+
+    reader.onload = (e) => {
+      clearTimeout(timeout);
+      fileObj.preview = e.target.result;
+      resolve();
+    };
+
+    reader.onerror = () => {
+      clearTimeout(timeout);
+      reject(reader.error);
+    };
+
+    reader.readAsDataURL(file);
+  }).catch(() => {
+    // Continue without preview
+  });
+
+  // Process video files with timeout
   if (file.type.startsWith("video/")) {
     fileObj.processing = true;
+
+    // Add timeout to prevent infinite processing
+    const processingTimeout = setTimeout(() => {
+      fileObj.processing = false;
+      fileObj.processedFile = file;
+      fileObj.processed = false;
+      // Keep original validation if processing times out
+    }, 60000); // 60 second timeout
+
     try {
       fileObj.processedFile = await processMediaFile(file);
+
+      // Clear timeout since processing completed
+      clearTimeout(processingTimeout);
 
       // Re-validate the processed file
       fileObj.validation = validateFile(fileObj.processedFile, true);
       fileObj.processed = true;
 
       if (!fileObj.validation.valid) {
-        console.warn(`Processed video still too large: ${file.name}`);
+        // Video still too large after processing
       }
     } catch (error) {
-      console.error("Error processing video:", error);
+      clearTimeout(processingTimeout);
       fileObj.processedFile = file;
       fileObj.processed = false;
       // Keep original validation if processing fails
@@ -328,7 +374,7 @@ const selectNewImage = () => {
   imageInput.value.click();
 };
 
-const updateImagePreview = (event) => {
+const updateImagePreview = async (event) => {
   const files = Array.from(event.target.files);
 
   if (files.length === 0) return;
@@ -346,14 +392,16 @@ const updateImagePreview = (event) => {
     selectedFiles.value.push(...newFileObjects);
     mediaOption.value = "batch";
 
-    // Generate previews for new files
-    newFileObjects.forEach(generatePreview);
+    // Generate previews for new files sequentially to avoid mobile memory issues
+    for (const fileObj of newFileObjects) {
+      await generatePreview(fileObj);
+    }
   } else {
     // No existing files, handle normally
     if (files.length === 1) {
-      handleSingleFile(files[0]);
+      await handleSingleFile(files[0]);
     } else if (files.length > 1) {
-      handleMultipleFiles(files);
+      await handleMultipleFiles(files);
     }
   }
 
@@ -392,10 +440,21 @@ const processBatch = async () => {
       form.video_link = null;
 
       await new Promise((resolve, reject) => {
+        // Add timeout to prevent hanging
+        const timeout = setTimeout(() => {
+          reject(new Error("Upload timeout - request took too long"));
+        }, 30000); // 30 second timeout
+
         form.post(route("pages.store"), {
           // eslint-disable-line no-undef
-          onSuccess: resolve,
-          onError: reject,
+          onSuccess: () => {
+            clearTimeout(timeout);
+            resolve();
+          },
+          onError: (errors) => {
+            clearTimeout(timeout);
+            reject(errors);
+          },
           preserveState: false
         });
       });
@@ -403,6 +462,7 @@ const processBatch = async () => {
       fileObj.uploaded = true;
     } catch (error) {
       fileObj.error = error;
+      // Continue with next file instead of stopping the entire batch
     }
   }
 
