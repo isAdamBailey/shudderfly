@@ -418,16 +418,16 @@ const getDeviceUploadTimeout = () => {
 };
 
 // Batch processing with retry logic
-const processBatch = async () => {
+const processBatch = async (specificFiles = null) => {
   if (selectedFiles.value.length === 0) return;
 
   // Reset failed uploads (but keep retryCount for global tracking)
   failedUploads.value = [];
 
-  // Validate batch files before processing
-  const validFiles = selectedFiles.value.filter(
-    (fileObj) => fileObj.validation?.valid
-  );
+  // Use specific files for retry, or all valid files for initial upload
+  const validFiles =
+    specificFiles ||
+    selectedFiles.value.filter((fileObj) => fileObj.validation?.valid);
   if (validFiles.length === 0) {
     return;
   }
@@ -441,11 +441,6 @@ const processBatch = async () => {
 
   for (let i = 0; i < validFiles.length; i++) {
     const fileObj = validFiles[i];
-
-    // Skip if already uploaded
-    if (fileObj.uploaded) {
-      continue;
-    }
 
     // Update display to show which file is currently being uploaded
     currentFileIndex.value = i;
@@ -545,18 +540,19 @@ const retryFailedUploads = async () => {
 
   retryCount.value++;
   const originalFailedUploads = [...failedUploads.value];
-  failedUploads.value = [];
 
-  // Re-attempt failed uploads
-  for (const failed of originalFailedUploads) {
-    const fileObj = selectedFiles.value[failed.index];
-    if (fileObj && !fileObj.uploaded) {
-      fileObj.error = null; // Clear previous error
-    }
-  }
+  // Get the actual file objects that failed
+  const failedFileObjects = originalFailedUploads
+    .map((failed) => selectedFiles.value[failed.index])
+    .filter((fileObj) => fileObj && !fileObj.uploaded);
 
-  // Restart batch processing for failed files
-  await processBatch();
+  // Clear previous errors
+  failedFileObjects.forEach((fileObj) => {
+    fileObj.error = null;
+  });
+
+  // Process only the failed files
+  await processBatch(failedFileObjects);
 };
 
 // Single file submission
@@ -1013,9 +1009,13 @@ onMounted(() => {
                   {{ optimizationProgress }}%
                 </span>
                 <span v-else>
-                  Uploading files... ({{ currentFileIndex + 1 }}/{{
-                    selectedFiles.filter((f) => f.validation.valid).length
-                  }})
+                  {{
+                    retryCount > 0
+                      ? "Retrying failed uploads..."
+                      : `Uploading files... (${currentFileIndex + 1}/${
+                          selectedFiles.filter((f) => f.validation.valid).length
+                        })`
+                  }}
                 </span>
               </div>
               <span class="font-medium">{{ batchProgress }}%</span>
