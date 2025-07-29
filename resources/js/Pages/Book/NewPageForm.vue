@@ -32,6 +32,9 @@ const batchProgress = ref(0);
 const currentFileIndex = ref(0);
 const isDragOver = ref(false);
 const autoSaveTimeout = ref(null);
+const failedUploads = ref([]);
+const retryCount = ref(0);
+const maxRetries = ref(3);
 
 const form = useForm({
   book_id: props.book.id,
@@ -261,14 +264,14 @@ const handleMultipleFiles = async (files) => {
   await generatePreviewsSequentially();
 };
 
-// Sequential processing to avoid mobile memory issues
+// Sequential processing to avoid mobile memory issues (especially Samsung phones)
 const generatePreviewsSequentially = async () => {
   for (let i = 0; i < selectedFiles.value.length; i++) {
     await generatePreview(selectedFiles.value[i]);
 
-    // Add small delay between files to prevent overwhelming mobile browsers
+    // Add delay between files to prevent memory issues
     if (i < selectedFiles.value.length - 1) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 300)); // 300ms between files
     }
   }
 };
@@ -409,9 +412,18 @@ const updateImagePreview = async (event) => {
   event.target.value = "";
 };
 
-// Batch processing
+// Use longer timeouts for reliable batch uploads
+const getDeviceUploadTimeout = () => {
+  return 90000; // 90 seconds for all devices (increased from 30s)
+};
+
+// Batch processing with retry logic
 const processBatch = async () => {
   if (selectedFiles.value.length === 0) return;
+
+  // Reset state
+  failedUploads.value = [];
+  retryCount.value = 0;
 
   // Validate batch files before processing
   const validFiles = selectedFiles.value.filter(
@@ -426,58 +438,129 @@ const processBatch = async () => {
 
   // Store original content for first page
   const originalContent = form.content;
+  const uploadTimeout = getDeviceUploadTimeout();
 
   for (let i = 0; i < validFiles.length; i++) {
     const fileObj = validFiles[i];
+
+    // Skip if already uploaded
+    if (fileObj.uploaded) {
+      continue;
+    }
 
     // Update display to show which file is currently being uploaded
     currentFileIndex.value = i;
     batchProgress.value = Math.round((i / validFiles.length) * 100);
 
-    try {
-      // Update the form with current file data
-      form.content = i === 0 ? originalContent : ""; // Only add content to first page
-      form.image = fileObj.processedFile || fileObj.file;
-      form.video_link = null;
+    let uploadSuccess = false;
+    let attemptCount = 0;
 
-      await new Promise((resolve, reject) => {
-        // Add timeout to prevent hanging
-        const timeout = setTimeout(() => {
-          reject(new Error("Upload timeout - request took too long"));
-        }, 30000); // 30 second timeout
+    // Retry logic for individual files
+    while (!uploadSuccess && attemptCount < maxRetries.value) {
+      try {
+        // Add longer delay between attempts on retry
+        if (attemptCount > 0) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, 2000 * attemptCount)
+          ); // 2s, 4s, 6s delays
+        }
 
-        form.post(route("pages.store"), {
-          // eslint-disable-line no-undef
-          onSuccess: () => {
-            clearTimeout(timeout);
-            resolve();
-          },
-          onError: (errors) => {
-            clearTimeout(timeout);
-            reject(errors);
-          },
-          preserveState: false
+        // Update the form with current file data
+        form.content = i === 0 ? originalContent : ""; // Only add content to first page
+        form.image = fileObj.processedFile || fileObj.file;
+        form.video_link = null;
+
+        await new Promise((resolve, reject) => {
+          // Use dynamic timeout based on device
+          const timeout = setTimeout(() => {
+            reject(
+              new Error(
+                `Upload timeout after ${
+                  uploadTimeout / 1000
+                }s - try reducing file size or check connection`
+              )
+            );
+          }, uploadTimeout);
+
+          form.post(route("pages.store"), {
+            // eslint-disable-line no-undef
+            onSuccess: () => {
+              clearTimeout(timeout);
+              resolve();
+            },
+            onError: (errors) => {
+              clearTimeout(timeout);
+              reject(errors);
+            },
+            preserveState: false
+          });
         });
-      });
 
-      fileObj.uploaded = true;
+        fileObj.uploaded = true;
+        uploadSuccess = true;
 
-      // Update progress to show completed uploads
-      batchProgress.value = Math.round(((i + 1) / validFiles.length) * 100);
-    } catch (error) {
-      fileObj.error = error;
-      // Continue with next file instead of stopping the entire batch
+        // Add longer delay between successful uploads for mobile stability
+        if (i < validFiles.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 500)); // 500ms between uploads
+        }
+      } catch (error) {
+        attemptCount++;
+        fileObj.error = error;
+
+        if (attemptCount >= maxRetries.value) {
+          // Mark as failed after max retries
+          failedUploads.value.push({
+            index: i,
+            fileName: fileObj.file.name,
+            error: error.message || "Upload failed"
+          });
+        }
+      }
     }
+
+    // Update progress to show completed uploads
+    batchProgress.value = Math.round(((i + 1) / validFiles.length) * 100);
   }
 
   batchProgress.value = 100;
   batchProcessing.value = false;
 
-  // Close form and clear draft after successful batch upload
-  setTimeout(() => {
-    clearDraft();
-    emit("close-form");
-  }, 1000);
+  // Show results summary
+  const successCount = validFiles.filter((f) => f.uploaded).length;
+  const failedCount = failedUploads.value.length;
+
+  if (failedCount === 0) {
+    // All uploads successful
+    setTimeout(() => {
+      clearDraft();
+      emit("close-form");
+    }, 1000);
+  } else {
+    // Some uploads failed - show retry option
+    console.log(
+      `Batch upload completed: ${successCount} successful, ${failedCount} failed`
+    );
+  }
+};
+
+// Retry failed uploads
+const retryFailedUploads = async () => {
+  if (failedUploads.value.length === 0) return;
+
+  retryCount.value++;
+  const originalFailedUploads = [...failedUploads.value];
+  failedUploads.value = [];
+
+  // Re-attempt failed uploads
+  for (const failed of originalFailedUploads) {
+    const fileObj = selectedFiles.value[failed.index];
+    if (fileObj && !fileObj.uploaded) {
+      fileObj.error = null; // Clear previous error
+    }
+  }
+
+  // Restart batch processing for failed files
+  await processBatch();
 };
 
 // Single file submission
@@ -944,6 +1027,48 @@ onMounted(() => {
                 :style="`width: ${batchProgress}%`"
               ></div>
             </div>
+            <div
+              v-if="retryCount > 0"
+              class="mt-2 text-xs text-blue-600 dark:text-blue-400"
+            >
+              🔄 Using extended timeouts (attempt {{ retryCount + 1 }})
+            </div>
+          </div>
+
+          <!-- Failed Uploads Display -->
+          <div
+            v-if="failedUploads.length > 0 && !batchProcessing"
+            class="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded"
+          >
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="font-medium text-red-700 dark:text-red-300">
+                {{ failedUploads.length }} Upload{{
+                  failedUploads.length > 1 ? "s" : ""
+                }}
+                Failed
+              </h4>
+              <Button
+                type="button"
+                class="text-sm bg-red-600 hover:bg-red-700 text-white"
+                :disabled="retryCount >= 5"
+                @click="retryFailedUploads"
+              >
+                {{ retryCount >= 5 ? "Max Retries Reached" : "Retry Failed" }}
+              </Button>
+            </div>
+            <div class="space-y-2">
+              <div
+                v-for="failed in failedUploads"
+                :key="failed.index"
+                class="text-sm text-red-600 dark:text-red-400 flex items-start space-x-2"
+              >
+                <span class="font-mono">•</span>
+                <div>
+                  <div class="font-medium">{{ failed.fileName }}</div>
+                  <div class="text-xs opacity-75">{{ failed.error }}</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1051,6 +1176,12 @@ onMounted(() => {
                 : "Create Page!"
             }}
           </span>
+          <div
+            v-if="selectedFiles.length > 1 && !batchProcessing"
+            class="text-xs mt-1 opacity-75"
+          >
+            ⏱️ Extended timeouts enabled for batch uploads
+          </div>
         </Button>
       </div>
     </form>
