@@ -1176,12 +1176,6 @@ onMounted(() => {
                 : "Create Page!"
             }}
           </span>
-          <div
-            v-if="selectedFiles.length > 1 && !batchProcessing"
-            class="text-xs mt-1 opacity-75"
-          >
-            ⏱️ Extended timeouts enabled for batch uploads
-          </div>
         </Button>
       </div>
     </form>
