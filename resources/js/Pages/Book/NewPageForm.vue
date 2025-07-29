@@ -421,9 +421,8 @@ const getDeviceUploadTimeout = () => {
 const processBatch = async () => {
   if (selectedFiles.value.length === 0) return;
 
-  // Reset state
+  // Reset failed uploads (but keep retryCount for global tracking)
   failedUploads.value = [];
-  retryCount.value = 0;
 
   // Validate batch files before processing
   const validFiles = selectedFiles.value.filter(
@@ -532,6 +531,7 @@ const processBatch = async () => {
     // All uploads successful
     setTimeout(() => {
       clearDraft();
+      retryCount.value = 0; // Reset retry count on successful completion
       emit("close-form");
     }, 1000);
   } else {
@@ -562,6 +562,8 @@ const retryFailedUploads = async () => {
 // Single file submission
 const submit = async () => {
   if (mediaOption.value === "batch") {
+    // Reset retry count for fresh batch upload
+    retryCount.value = 0;
     await processBatch();
     return;
   }
@@ -575,6 +577,7 @@ const submit = async () => {
         selectedFiles.value = [];
         form.reset();
         clearDraft();
+        retryCount.value = 0; // Reset retry count on successful submission
         emit("close-form");
       }
     });
