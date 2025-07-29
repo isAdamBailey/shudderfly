@@ -536,10 +536,7 @@ const processBatch = async () => {
       emit("close-form");
     }, 1000);
   } else {
-    // Some uploads failed - show retry option
-    console.log(
-      `Batch upload completed: ${successCount} successful, ${failedCount} failed`
-    );
+    // Some uploads failed
   }
 };
 
