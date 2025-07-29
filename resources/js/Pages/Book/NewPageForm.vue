@@ -526,7 +526,6 @@ const processBatch = async () => {
   batchProcessing.value = false;
 
   // Show results summary
-  const successCount = validFiles.filter((f) => f.uploaded).length;
   const failedCount = failedUploads.value.length;
 
   if (failedCount === 0) {
@@ -1047,10 +1046,14 @@ onMounted(() => {
               <Button
                 type="button"
                 class="text-sm bg-red-600 hover:bg-red-700 text-white"
-                :disabled="retryCount >= 5"
+                :disabled="retryCount >= maxRetries"
                 @click="retryFailedUploads"
               >
-                {{ retryCount >= 5 ? "Max Retries Reached" : "Retry Failed" }}
+                {{
+                  retryCount >= maxRetries
+                    ? "Max Retries Reached"
+                    : "Retry Failed"
+                }}
               </Button>
             </div>
             <div class="space-y-2">
