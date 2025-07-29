@@ -390,12 +390,28 @@ describe("NewPageForm", () => {
         processedFile: file
       }));
 
-      // Mock first submission fails, second succeeds
+      // Mock setTimeout to speed up retry delays for testing
+      const originalSetTimeout = global.setTimeout;
+      global.setTimeout = vi.fn((callback, delay) => {
+        if (
+          delay === 2000 ||
+          delay === 4000 ||
+          delay === 6000 ||
+          delay === 500
+        ) {
+          // Speed up retry delays and inter-upload delays
+          return originalSetTimeout(callback, 10);
+        }
+        return originalSetTimeout(callback, delay);
+      });
+
+      // Mock first submission fails multiple times, second succeeds
       let callCount = 0;
       mockForm.post.mockImplementation((url, options) => {
         callCount++;
         setTimeout(() => {
-          if (callCount === 1) {
+          // First file fails all 3 retry attempts (calls 1, 2, 3), second file succeeds (call 4)
+          if (callCount <= 3) {
             options.onError("Server error");
           } else {
             options.onSuccess();
@@ -405,10 +421,15 @@ describe("NewPageForm", () => {
 
       await component.processBatch();
 
-      expect(mockForm.post).toHaveBeenCalledTimes(2);
+      // With retry logic: first file tries 3 times, second file succeeds on first try = 4 total calls
+      expect(mockForm.post).toHaveBeenCalledTimes(4);
       expect(component.selectedFiles[0].error).toBe("Server error");
       expect(component.selectedFiles[1].uploaded).toBe(true);
-    });
+      expect(component.failedUploads.length).toBe(1);
+      expect(component.failedUploads[0].fileName).toBe("test1.jpg");
+
+      global.setTimeout = originalSetTimeout;
+    }, 15000); // Increase timeout to 15 seconds to account for retry delays
 
     it("updates progress during batch processing", async () => {
       const component = wrapper.vm;
@@ -717,8 +738,8 @@ describe("NewPageForm", () => {
       // Mock setTimeout to immediately trigger timeout
       const originalSetTimeout = global.setTimeout;
       global.setTimeout = vi.fn((callback, delay) => {
-        if (delay === 30000) {
-          // Upload timeout
+        if (delay === 90000) {
+          // Upload timeout (changed from 30000 to 90000)
           setTimeout(callback, 0); // Trigger immediately
         }
         return originalSetTimeout(callback, delay);
@@ -728,8 +749,9 @@ describe("NewPageForm", () => {
 
       expect(component.selectedFiles[0].error).toBeInstanceOf(Error);
       expect(component.selectedFiles[0].error.message).toContain("timeout");
+      expect(component.failedUploads.length).toBe(1);
 
       global.setTimeout = originalSetTimeout;
-    });
+    }, 10000); // Increase test timeout to 10 seconds
   });
 });
