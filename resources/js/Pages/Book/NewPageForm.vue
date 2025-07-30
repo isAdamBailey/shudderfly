@@ -70,7 +70,7 @@ const ANDROID_PATTERN = /android/i;
 
 // Check if device is Samsung Android device
 const isSamsungAndroidDevice = () => {
-  const userAgent = navigator.userAgent.toLowerCase();
+  const userAgent = navigator.userAgent;
   const isSamsung =
     SAMSUNG_DEVICE_PATTERNS.test(userAgent) ||
     SAMSUNG_BROWSER_PATTERN.test(userAgent);
