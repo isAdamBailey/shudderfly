@@ -36,6 +36,10 @@ const failedUploads = ref([]);
 const retryCount = ref(0);
 const maxRetries = ref(3);
 
+// Samsung device compatibility
+const isSamsungDevice = ref(false);
+const isSequentialMode = ref(false);
+
 const form = useForm({
   book_id: props.book.id,
   content: "",
@@ -49,6 +53,40 @@ const mediaOption = ref("upload"); // upload, link, batch
 
 const { compressionProgress, optimizationProgress, processMediaFile } =
   useVideoOptimization();
+
+// Helper function to create file objects consistently
+const createFileObject = (file) => ({
+  file,
+  preview: null,
+  processed: false,
+  processing: false,
+  validation: validateFile(file)
+});
+
+// Samsung device detection constants
+const SAMSUNG_DEVICE_PATTERNS = /samsung|sm-|gt-|sch-/i;
+const SAMSUNG_BROWSER_PATTERN = /samsungbrowser/i;
+const ANDROID_PATTERN = /android/i;
+
+// Check if device is Samsung Android device
+const isSamsungAndroidDevice = () => {
+  const userAgent = navigator.userAgent;
+  const isSamsung =
+    SAMSUNG_DEVICE_PATTERNS.test(userAgent) ||
+    SAMSUNG_BROWSER_PATTERN.test(userAgent);
+  const isAndroid = ANDROID_PATTERN.test(userAgent);
+
+  return isSamsung && isAndroid;
+};
+
+// Initialize Samsung device detection and settings
+const initializeSamsungSupport = () => {
+  const isSamsung = isSamsungAndroidDevice();
+
+  isSamsungDevice.value = isSamsung;
+  // Samsung devices use sequential mode due to custom file picker interface
+  isSequentialMode.value = isSamsung;
+};
 
 // Auto-save draft functionality
 const draftKey = computed(() => `page-draft-${props.book.id}`);
@@ -207,13 +245,7 @@ const handleDrop = async (e) => {
 
   // If we already have files selected, add new ones to the existing array
   if (selectedFiles.value.length > 0) {
-    const newFileObjects = files.map((file) => ({
-      file,
-      preview: null,
-      processed: false,
-      processing: false,
-      validation: validateFile(file)
-    }));
+    const newFileObjects = files.map(createFileObject);
 
     selectedFiles.value.push(...newFileObjects);
     mediaOption.value = "batch";
@@ -233,32 +265,17 @@ const handleDrop = async (e) => {
 };
 
 const handleSingleFile = async (file) => {
-  const validation = validateFile(file);
-  if (!validation.valid) return;
+  const fileObject = createFileObject(file);
+  if (!fileObject.validation.valid) return;
 
-  selectedFiles.value = [
-    {
-      file,
-      preview: null,
-      processed: false,
-      processing: false,
-      validation
-    }
-  ];
-
-  await generatePreview(selectedFiles.value[0]);
-  form.image = selectedFiles.value[0].processedFile || file;
+  selectedFiles.value = [fileObject];
+  await generatePreview(fileObject);
+  form.image = fileObject.processedFile || file;
 };
 
 const handleMultipleFiles = async (files) => {
   mediaOption.value = "batch";
-  selectedFiles.value = files.map((file) => ({
-    file,
-    preview: null,
-    processed: false,
-    processing: false,
-    validation: validateFile(file)
-  }));
+  selectedFiles.value = files.map(createFileObject);
 
   // Generate previews for all files (sequentially to avoid mobile memory issues)
   await generatePreviewsSequentially();
@@ -377,38 +394,48 @@ const selectNewImage = () => {
   imageInput.value.click();
 };
 
+// Handle sequential file addition for Samsung devices
+const addFileSequentially = async (file) => {
+  const newFileObject = createFileObject(file);
+  selectedFiles.value.push(newFileObject);
+  mediaOption.value = selectedFiles.value.length > 1 ? "batch" : "upload";
+  await generatePreview(newFileObject);
+};
+
+// Handle adding files to existing collection
+const addFilesToExisting = async (files) => {
+  const newFileObjects = files.map(createFileObject);
+  selectedFiles.value.push(...newFileObjects);
+  mediaOption.value = "batch";
+
+  // Generate previews sequentially to avoid mobile memory issues
+  for (const fileObj of newFileObjects) {
+    await generatePreview(fileObj);
+  }
+};
+
+// Handle file selection based on device capabilities and file count
 const updateImagePreview = async (event) => {
   const files = Array.from(event.target.files);
 
   if (files.length === 0) return;
 
-  // If we already have files selected, add new ones to the existing array
-  if (selectedFiles.value.length > 0) {
-    const newFileObjects = files.map((file) => ({
-      file,
-      preview: null,
-      processed: false,
-      processing: false,
-      validation: validateFile(file)
-    }));
-
-    selectedFiles.value.push(...newFileObjects);
-    mediaOption.value = "batch";
-
-    // Generate previews for new files sequentially to avoid mobile memory issues
-    for (const fileObj of newFileObjects) {
-      await generatePreview(fileObj);
-    }
+  // Samsung devices: add single files sequentially
+  if (isSequentialMode.value && files.length === 1) {
+    await addFileSequentially(files[0]);
+  }
+  // Files exist: add to existing collection
+  else if (selectedFiles.value.length > 0) {
+    await addFilesToExisting(files);
+  }
+  // No existing files: handle normally
+  else if (files.length === 1) {
+    await handleSingleFile(files[0]);
   } else {
-    // No existing files, handle normally
-    if (files.length === 1) {
-      await handleSingleFile(files[0]);
-    } else if (files.length > 1) {
-      await handleMultipleFiles(files);
-    }
+    await handleMultipleFiles(files);
   }
 
-  // Clear the input so the same files can be selected again if needed
+  // Clear input for reselection
   event.target.value = "";
 };
 
@@ -630,6 +657,7 @@ let v$ = useVuelidate(rules, form);
 
 onMounted(() => {
   loadDraft();
+  initializeSamsungSupport();
 });
 </script>
 
@@ -736,7 +764,7 @@ onMounted(() => {
             ref="imageInput"
             type="file"
             class="hidden"
-            multiple
+            :multiple="!isSequentialMode"
             accept="image/*,video/*"
             @change="updateImagePreview"
           />
@@ -780,7 +808,11 @@ onMounted(() => {
               </div>
               <div>
                 <p class="text-lg font-medium text-gray-600 dark:text-gray-300">
-                  Drag and drop files here
+                  {{
+                    isSequentialMode
+                      ? "Add files one by one"
+                      : "Drag and drop files here"
+                  }}
                 </p>
                 <p class="text-sm text-gray-500 dark:text-gray-400">
                   or click to select files (images and videos up to 60MB)
@@ -791,7 +823,9 @@ onMounted(() => {
                 class="mt-4"
                 @click.prevent="selectNewImage"
               >
-                Select Media Files
+                {{
+                  isSequentialMode ? "Select Media File" : "Select Media Files"
+                }}
               </Button>
             </div>
           </div>
@@ -807,7 +841,7 @@ onMounted(() => {
                 class="text-sm"
                 @click.prevent="selectNewImage"
               >
-                Add More Files
+                {{ isSequentialMode ? "Add Another File" : "Add More Files" }}
               </Button>
             </div>
 
