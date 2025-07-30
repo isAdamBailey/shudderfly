@@ -86,8 +86,6 @@ const initializeSamsungSupport = () => {
   isSamsungDevice.value = isSamsung;
   // Samsung devices use sequential mode due to custom file picker interface
   isSequentialMode.value = isSamsung;
-
-  return isSamsung;
 };
 
 // Auto-save draft functionality
