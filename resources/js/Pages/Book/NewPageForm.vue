@@ -335,7 +335,7 @@ const handleDrop = async (e) => {
 };
 
 const handleSingleFile = async (file) => {
-  addDebugLog("📁 handleSingleFile called", {
+  addDebugLog("📁 File selected for upload", {
     fileName: file.name,
     fileSize: file.size,
     fileType: file.type
@@ -350,12 +350,6 @@ const handleSingleFile = async (file) => {
   selectedFiles.value = [fileObject];
   await generatePreview(fileObject);
   form.image = fileObject.processedFile || file;
-
-  addDebugLog("✅ form.image set", {
-    hasFormImage: !!form.image,
-    isProcessedFile: !!fileObject.processedFile,
-    imageType: form.image ? form.image.constructor.name : null
-  });
 };
 
 const handleMultipleFiles = async (files) => {
@@ -482,16 +476,12 @@ const selectNewImage = () => {
 const updateImagePreview = async (event) => {
   const files = Array.from(event.target.files);
 
-  addDebugLog("📎 File selection event", {
-    filesCount: files.length,
-    fileNames: files.map((f) => f.name),
-    existingFilesCount: selectedFiles.value.length
-  });
+  if (files.length === 0) return;
 
-  if (files.length === 0) {
-    addDebugLog("⚠️ No files selected, returning");
-    return;
-  }
+  addDebugLog("📎 Files selected", {
+    filesCount: files.length,
+    fileNames: files.map((f) => f.name)
+  });
 
   // If we already have files selected, add new ones to the existing array
   if (selectedFiles.value.length > 0) {
@@ -721,7 +711,7 @@ const handleFormSubmit = async (event) => {
 
 // Single file submission
 const submit = async () => {
-  addDebugLog("🚀 Submit function called", {
+  addDebugLog("🚀 Upload attempt started", {
     mediaOption: mediaOption.value,
     filesCount: selectedFiles.value.length,
     hasContent: !!form.content,
@@ -729,60 +719,45 @@ const submit = async () => {
   });
 
   if (mediaOption.value === "batch") {
-    addDebugLog("📦 Processing batch upload");
     // Reset retry count for fresh batch upload
     retryCount.value = 0;
     await processBatch();
     return;
   }
 
-  addDebugLog("🔍 Validating form...");
   const validated = await v$.value.$validate();
-  addDebugLog("Form validation result:", { validated });
 
   if (validated) {
-    addDebugLog("✅ Form valid, posting to server...");
-    addDebugLog("📤 Form data being sent:", {
-      book_id: form.book_id,
-      content: form.content,
-      video_link: form.video_link,
+    addDebugLog("📤 Submitting to server", {
       hasImage: !!form.image,
-      imageType: form.image ? form.image.constructor.name : null,
       imageSize: form.image ? form.image.size : null,
       imageName: form.image ? form.image.name : null
-    });
-
-    // Final check of all form properties
-    addDebugLog("🔍 Complete form object:", {
-      allKeys: Object.keys(form),
-      formData: Object.fromEntries(
-        Object.keys(form).map((key) => [key, typeof form[key]])
-      ),
-      isDirty: form.isDirty,
-      hasErrors: form.hasErrors,
-      processing: form.processing
     });
 
     form.post(route("pages.store"), {
       // eslint-disable-line no-undef
       onSuccess: () => {
-        addDebugLog("🎉 Upload successful");
+        addDebugLog("✅ Upload completed successfully");
         selectedFiles.value = [];
         form.reset();
         clearDraft();
-        retryCount.value = 0; // Reset retry count on successful submission
+        retryCount.value = 0;
 
         // Send session logs on successful form submission
-        sendSessionLogs("form-success");
+        sendSessionLogs("upload-success");
 
         emit("close-form");
       },
       onError: (errors) => {
-        addDebugLog("❌ Upload failed with errors:", errors);
+        addDebugLog("❌ Upload failed", errors);
+        // Send session logs on failed form submission
+        sendSessionLogs("upload-failed");
       }
     });
   } else {
     addDebugLog("❌ Form validation failed", { errors: v$.value.$errors });
+    // Send session logs on validation failure
+    sendSessionLogs("validation-failed");
   }
 };
 
@@ -846,56 +821,13 @@ onMounted(() => {
     addDebugLog("🔍 DEBUG MODE ENABLED");
   }
 
-  // Log device info and start monitoring (this will go to webhook)
-  addDebugLog("🔍 Device Logging ENABLED");
-  addDebugLog("Device info:", {
+  // Start logging session for upload debugging
+  addDebugLog("🔍 Upload session started", {
     userAgent: userAgent,
     platform: navigator.platform,
-    vendor: navigator.vendor,
-    cookieEnabled: navigator.cookieEnabled,
-    onLine: navigator.onLine,
-    touchSupport: "ontouchstart" in window,
     screenSize: `${screen.width}x${screen.height}`,
-    viewportSize: `${window.innerWidth}x${window.innerHeight}`,
-    pixelRatio: window.devicePixelRatio
+    viewportSize: `${window.innerWidth}x${window.innerHeight}`
   });
-
-  // Test button functionality
-  setTimeout(() => {
-    const submitButton = document.querySelector('button[type="submit"]');
-    if (submitButton) {
-      addDebugLog("🔘 Submit button found:", {
-        disabled: submitButton.disabled,
-        style: submitButton.style.cssText,
-        classes: submitButton.className
-      });
-    } else {
-      addDebugLog("❌ Submit button not found in DOM");
-    }
-  }, 1000);
-
-  // Add error listener for debugging
-  window.addEventListener("error", (event) => {
-    addDebugLog("❌ JavaScript error:", {
-      message: event.message,
-      filename: event.filename,
-      lineno: event.lineno,
-      colno: event.colno
-    });
-  });
-
-  // Add unhandled promise rejection listener
-  window.addEventListener("unhandledrejection", (event) => {
-    addDebugLog("❌ Promise rejection:", event.reason);
-  });
-
-  // Add manual submit trigger for debugging
-  window.debugSubmit = () => {
-    addDebugLog("🔧 Manual submit triggered for debugging");
-    submit();
-  };
-
-  addDebugLog("💡 Webhook logging enabled for all devices");
 
   // Auto-send session logs on page unload
   window.addEventListener("beforeunload", () => {
