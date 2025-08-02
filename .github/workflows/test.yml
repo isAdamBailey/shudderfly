@@ -1,18 +1,14 @@
-name: Run Unit Tests
+name: Run Tests
 
 on:
   pull_request:
     branches: [ main ]
-    paths:
-      - 'resources/js/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'vite.config.mjs'
-      - 'vitest.config.js'
-      - '.github/workflows/test.yml'
+  push:
+    branches: [ main ]
 
 jobs:
-  test:
+  frontend-tests:
+    name: Frontend Tests
     runs-on: ubuntu-latest
     
     steps:
@@ -40,4 +36,72 @@ jobs:
         name: test-results
         path: |
           coverage/
-        retention-days: 7 
+        retention-days: 7
+
+  backend-tests:
+    name: Backend Tests (PHPUnit)
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: testing
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+        extensions: bcmath, ctype, fileinfo, json, mbstring, openssl, pdo, pdo_mysql, tokenizer, xml
+        coverage: none
+
+    - name: Cache Composer dependencies
+      uses: actions/cache@v3
+      with:
+        path: vendor
+        key: composer-${{ hashFiles('composer.lock') }}
+        restore-keys: composer-
+
+    - name: Copy .env
+      run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+
+    - name: Install Dependencies
+      run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+
+    - name: Generate key
+      run: php artisan key:generate
+
+    - name: Directory Permissions
+      run: chmod -R 777 storage bootstrap/cache
+
+    - name: Create Database
+      run: |
+        mysql --host 127.0.0.1 --port 3306 -uroot -ppassword -e "CREATE DATABASE IF NOT EXISTS testing;"
+
+    - name: Run Migrations
+      env:
+        DB_CONNECTION: mysql
+        DB_HOST: 127.0.0.1
+        DB_PORT: 3306
+        DB_DATABASE: testing
+        DB_USERNAME: root
+        DB_PASSWORD: password
+      run: php artisan migrate --env=testing --force
+
+    - name: Execute PHPUnit tests
+      env:
+        DB_CONNECTION: mysql
+        DB_HOST: 127.0.0.1
+        DB_PORT: 3306
+        DB_DATABASE: testing
+        DB_USERNAME: root
+        DB_PASSWORD: password
+      run: vendor/bin/phpunit 
