@@ -36,14 +36,13 @@ const failedUploads = ref([]);
 const retryCount = ref(0);
 const maxRetries = ref(3);
 
-// Samsung device detection and debugging
-const isSamsungDevice = ref(false);
+// Upload debugging
 const showDebugPanel = ref(false);
 const debugLogs = ref([]);
 const sessionLogs = ref([]);
 const sessionStartTime = new Date().toISOString();
 
-// Logging for Samsung devices (webhook only)
+// Logging for upload debugging (webhook)
 const addDebugLog = (message, data = null) => {
   const timestamp = new Date().toLocaleTimeString();
   const fullTimestamp = new Date().toISOString();
@@ -64,20 +63,31 @@ const addDebugLog = (message, data = null) => {
     }
   }
 
-  // Collect logs for session-based webhook logging (Samsung devices or debug mode)
-  if (isSamsungDevice.value || showDebugPanel.value) {
-    sessionLogs.value.push({
-      timestamp: fullTimestamp,
-      localTime: timestamp,
-      message,
-      data
-    });
-  }
+  // Collect logs for session-based webhook logging (all devices)
+  sessionLogs.value.push({
+    timestamp: fullTimestamp,
+    localTime: timestamp,
+    message,
+    data
+  });
 };
 
 // Send entire session logs as one webhook
 const sendSessionLogs = async (reason = "manual") => {
-  if (sessionLogs.value.length === 0) return;
+  // If no logs and it's a manual test, create a minimal test log
+  if (sessionLogs.value.length === 0 && reason.includes("manual")) {
+    sessionLogs.value.push({
+      timestamp: new Date().toISOString(),
+      localTime: new Date().toLocaleTimeString(),
+      message: "🧪 Manual webhook test - no session logs available",
+      data: {
+        reason: "Testing webhook connectivity",
+        debugMode: showDebugPanel.value
+      }
+    });
+  } else if (sessionLogs.value.length === 0) {
+    return;
+  }
 
   try {
     const webhookUrl =
@@ -763,9 +773,7 @@ const submit = async () => {
         retryCount.value = 0; // Reset retry count on successful submission
 
         // Send session logs on successful form submission
-        if (isSamsungDevice.value || showDebugPanel.value) {
-          sendSessionLogs("form-success");
-        }
+        sendSessionLogs("form-success");
 
         emit("close-form");
       },
@@ -829,109 +837,77 @@ let v$ = useVuelidate(rules, form);
 onMounted(() => {
   loadDraft();
 
-  // Detect Samsung devices for webhook logging
+  // Enable logging for all devices to debug upload issues
   const userAgent = navigator.userAgent;
-  const isAndroid = /android/i.test(userAgent);
-
-  // Samsung detection (handles privacy-focused user agents)
-  const isSamsung =
-    /samsung|sm-|gt-|sch-/i.test(userAgent) ||
-    /samsungbrowser/i.test(userAgent) ||
-    // Chrome on Samsung often shows "Linux; Android X; K" due to privacy
-    (isAndroid &&
-      /linux.*android.*; k\)/i.test(userAgent) &&
-      navigator.vendor === "Google Inc.") ||
-    // Check for Samsung-specific browser features
-    (isAndroid &&
-      navigator.userAgentData &&
-      navigator.userAgentData.brands?.some((b) =>
-        b.brand.toLowerCase().includes("samsung")
-      ));
-
-  // Enable Samsung device logging (but not debug panel)
-  if (isSamsung && isAndroid) {
-    isSamsungDevice.value = true;
-  }
 
   // Only show debug panel when explicitly requested
   if (window.location.search.includes("force-debug=1")) {
     showDebugPanel.value = true;
-    isSamsungDevice.value = true; // Enable webhook logging in debug mode
     addDebugLog("🔍 DEBUG MODE ENABLED");
   }
 
   // Log device info and start monitoring (this will go to webhook)
-  if (isSamsungDevice.value) {
-    if (isSamsung && isAndroid) {
-      addDebugLog("🔍 Samsung Device DETECTED");
-    } else {
-      addDebugLog("🔍 Debug Mode ENABLED");
-    }
-    addDebugLog("Device info:", {
-      userAgent: userAgent,
-      platform: navigator.platform,
-      vendor: navigator.vendor,
-      cookieEnabled: navigator.cookieEnabled,
-      onLine: navigator.onLine,
-      touchSupport: "ontouchstart" in window,
-      screenSize: `${screen.width}x${screen.height}`,
-      viewportSize: `${window.innerWidth}x${window.innerHeight}`,
-      pixelRatio: window.devicePixelRatio
-    });
+  addDebugLog("🔍 Device Logging ENABLED");
+  addDebugLog("Device info:", {
+    userAgent: userAgent,
+    platform: navigator.platform,
+    vendor: navigator.vendor,
+    cookieEnabled: navigator.cookieEnabled,
+    onLine: navigator.onLine,
+    touchSupport: "ontouchstart" in window,
+    screenSize: `${screen.width}x${screen.height}`,
+    viewportSize: `${window.innerWidth}x${window.innerHeight}`,
+    pixelRatio: window.devicePixelRatio
+  });
 
-    // Test button functionality
-    setTimeout(() => {
-      const submitButton = document.querySelector('button[type="submit"]');
-      if (submitButton) {
-        addDebugLog("🔘 Submit button found:", {
-          disabled: submitButton.disabled,
-          style: submitButton.style.cssText,
-          classes: submitButton.className
-        });
-      } else {
-        addDebugLog("❌ Submit button not found in DOM");
-      }
-    }, 1000);
-
-    // Add error listener for Samsung debugging
-    window.addEventListener("error", (event) => {
-      addDebugLog("❌ JavaScript error:", {
-        message: event.message,
-        filename: event.filename,
-        lineno: event.lineno,
-        colno: event.colno
+  // Test button functionality
+  setTimeout(() => {
+    const submitButton = document.querySelector('button[type="submit"]');
+    if (submitButton) {
+      addDebugLog("🔘 Submit button found:", {
+        disabled: submitButton.disabled,
+        style: submitButton.style.cssText,
+        classes: submitButton.className
       });
-    });
-
-    // Add unhandled promise rejection listener
-    window.addEventListener("unhandledrejection", (event) => {
-      addDebugLog("❌ Promise rejection:", event.reason);
-    });
-
-    // Add manual submit trigger for debugging
-    window.debugSubmit = () => {
-      addDebugLog("🔧 Manual submit triggered for debugging");
-      submit();
-    };
-
-    if (isSamsung && isAndroid) {
-      addDebugLog("💡 Webhook logging enabled for Samsung device");
     } else {
-      addDebugLog("💡 Webhook logging enabled for debug mode");
+      addDebugLog("❌ Submit button not found in DOM");
     }
+  }, 1000);
 
-    // Auto-send session logs on page unload
-    window.addEventListener("beforeunload", () => {
-      sendSessionLogs("page-unload");
+  // Add error listener for debugging
+  window.addEventListener("error", (event) => {
+    addDebugLog("❌ JavaScript error:", {
+      message: event.message,
+      filename: event.filename,
+      lineno: event.lineno,
+      colno: event.colno
     });
+  });
 
-    // Auto-send session logs on visibility change (mobile background)
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "hidden") {
-        sendSessionLogs("page-hidden");
-      }
-    });
-  }
+  // Add unhandled promise rejection listener
+  window.addEventListener("unhandledrejection", (event) => {
+    addDebugLog("❌ Promise rejection:", event.reason);
+  });
+
+  // Add manual submit trigger for debugging
+  window.debugSubmit = () => {
+    addDebugLog("🔧 Manual submit triggered for debugging");
+    submit();
+  };
+
+  addDebugLog("💡 Webhook logging enabled for all devices");
+
+  // Auto-send session logs on page unload
+  window.addEventListener("beforeunload", () => {
+    sendSessionLogs("page-unload");
+  });
+
+  // Auto-send session logs on visibility change (mobile background)
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      sendSessionLogs("page-hidden");
+    }
+  });
 });
 </script>
 
@@ -957,8 +933,16 @@ onMounted(() => {
           <button
             type="button"
             class="text-xs px-2 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded"
-            :disabled="sessionLogs.length === 0"
-            @click="() => sendSessionLogs('manual')"
+            @click="
+              () => {
+                if (sessionLogs.length === 0) {
+                  addDebugLog('🧪 Manual test - no session logs, sending test');
+                  sendSessionLogs('manual-test');
+                } else {
+                  sendSessionLogs('manual');
+                }
+              }
+            "
           >
             Send Session ({{ sessionLogs.length }})
           </button>
@@ -992,9 +976,9 @@ onMounted(() => {
       </div>
 
       <div class="text-xs text-yellow-700 dark:text-yellow-300 mb-3">
-        Debug mode enabled with ?force-debug=1. Session logs are collected and
-        sent to webhook automatically on form completion or page exit. Use "Send
-        Session" to manually send {{ sessionLogs.length }} collected log{{
+        Upload debugging enabled. Session logs are collected and sent to webhook
+        automatically on form completion or page exit. Use "Send Session" to
+        manually send {{ sessionLogs.length }} collected log{{
           sessionLogs.length !== 1 ? "s" : ""
         }}.
       </div>
