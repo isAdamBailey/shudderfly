@@ -63,7 +63,7 @@ const addDebugLog = (message, data = null) => {
     }
   }
 
-  // Collect logs for session-based webhook logging (all devices)
+  // Collect logs for session-based webhook logging
   sessionLogs.value.push({
     timestamp: fullTimestamp,
     localTime: timestamp,
@@ -74,19 +74,18 @@ const addDebugLog = (message, data = null) => {
 
 // Send entire session logs as one webhook
 const sendSessionLogs = async (reason = "manual") => {
-  // If no logs and it's a manual test, create a minimal test log
-  if (sessionLogs.value.length === 0 && reason.includes("manual")) {
+  // Always create at least one log entry for testing
+  if (sessionLogs.value.length === 0) {
     sessionLogs.value.push({
       timestamp: new Date().toISOString(),
       localTime: new Date().toLocaleTimeString(),
-      message: "🧪 Manual webhook test - no session logs available",
+      message: `🧪 Webhook test - ${reason}`,
       data: {
-        reason: "Testing webhook connectivity",
-        debugMode: showDebugPanel.value
+        reason: reason,
+        debugMode: showDebugPanel.value,
+        url: window.location.href
       }
     });
-  } else if (sessionLogs.value.length === 0) {
-    return;
   }
 
   try {
@@ -350,6 +349,16 @@ const handleSingleFile = async (file) => {
   selectedFiles.value = [fileObject];
   await generatePreview(fileObject);
   form.image = fileObject.processedFile || file;
+
+  // Samsung debugging: Verify form.image assignment
+  addDebugLog("✅ form.image assigned", {
+    hasFormImage: !!form.image,
+    imageSize: form.image?.size,
+    imageName: form.image?.name,
+    isProcessedFile: !!fileObject.processedFile,
+    originalFileSize: file.size,
+    originalFileName: file.name
+  });
 };
 
 const handleMultipleFiles = async (files) => {
@@ -715,8 +724,36 @@ const submit = async () => {
     mediaOption: mediaOption.value,
     filesCount: selectedFiles.value.length,
     hasContent: !!form.content,
-    hasVideoLink: !!form.video_link
+    hasVideoLink: !!form.video_link,
+    hasFormImage: !!form.image,
+    formImageSize: form.image?.size,
+    formImageName: form.image?.name
   });
+
+  // Samsung debugging: Check if file was lost between selection and submission
+  if (
+    selectedFiles.value.length > 0 &&
+    !form.image &&
+    mediaOption.value === "upload"
+  ) {
+    const firstFile = selectedFiles.value[0];
+    addDebugLog("🔧 Samsung fix: Reassigning lost form.image", {
+      hasSelectedFile: !!firstFile,
+      hasOriginalFile: !!firstFile?.file,
+      hasProcessedFile: !!firstFile?.processedFile,
+      originalSize: firstFile?.file?.size,
+      processedSize: firstFile?.processedFile?.size
+    });
+
+    // Try to reassign the file from selectedFiles
+    if (firstFile) {
+      form.image = firstFile.processedFile || firstFile.file;
+      addDebugLog("✅ form.image reassigned", {
+        hasFormImage: !!form.image,
+        imageSize: form.image?.size
+      });
+    }
+  }
 
   if (mediaOption.value === "batch") {
     // Reset retry count for fresh batch upload
@@ -731,8 +768,45 @@ const submit = async () => {
     addDebugLog("📤 Submitting to server", {
       hasImage: !!form.image,
       imageSize: form.image ? form.image.size : null,
-      imageName: form.image ? form.image.name : null
+      imageName: form.image ? form.image.name : null,
+      imageType: form.image ? form.image.constructor.name : null,
+      imageLastModified: form.image ? form.image.lastModified : null
     });
+
+    // Samsung-specific debugging: Check if file is still valid right before submission
+    if (form.image) {
+      try {
+        // Try to read file properties to see if it's still valid
+        const fileCheck = {
+          canReadSize: form.image.size !== undefined,
+          canReadName: form.image.name !== undefined,
+          canReadType: form.image.type !== undefined,
+          hasBlob: form.image instanceof Blob,
+          hasFile: form.image instanceof File
+        };
+        addDebugLog("🔍 Pre-submit file validation", fileCheck);
+
+        // Try to create a URL to test if file is accessible
+        if (form.image instanceof Blob) {
+          try {
+            const url = URL.createObjectURL(form.image);
+            URL.revokeObjectURL(url); // Clean up immediately
+            addDebugLog("✅ File blob is accessible");
+          } catch (blobError) {
+            addDebugLog("❌ File blob test failed", {
+              error: blobError.message
+            });
+          }
+        }
+      } catch (error) {
+        addDebugLog("❌ File validation error", {
+          error: error.message,
+          fileExists: !!form.image
+        });
+      }
+    } else {
+      addDebugLog("❌ CRITICAL: form.image is null at submission time");
+    }
 
     form.post(route("pages.store"), {
       // eslint-disable-line no-undef
@@ -821,7 +895,7 @@ onMounted(() => {
     addDebugLog("🔍 DEBUG MODE ENABLED");
   }
 
-  // Start logging session for upload debugging
+  // Start upload session logging
   addDebugLog("🔍 Upload session started", {
     userAgent: userAgent,
     platform: navigator.platform,
@@ -866,17 +940,13 @@ onMounted(() => {
             type="button"
             class="text-xs px-2 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded"
             @click="
-              () => {
-                if (sessionLogs.length === 0) {
-                  addDebugLog('🧪 Manual test - no session logs, sending test');
-                  sendSessionLogs('manual-test');
-                } else {
-                  sendSessionLogs('manual');
-                }
+              async () => {
+                addDebugLog('🧪 Manual webhook test');
+                await sendSessionLogs('manual-test');
               }
             "
           >
-            Send Session ({{ sessionLogs.length }})
+            Test Webhook ({{ sessionLogs.length }})
           </button>
           <button
             type="button"
@@ -909,8 +979,9 @@ onMounted(() => {
 
       <div class="text-xs text-yellow-700 dark:text-yellow-300 mb-3">
         Upload debugging enabled. Session logs are collected and sent to webhook
-        automatically on form completion or page exit. Use "Send Session" to
-        manually send {{ sessionLogs.length }} collected log{{
+        automatically on form completion or page exit. Use "Test Webhook" to
+        manually test the connection with
+        {{ sessionLogs.length }} collected log{{
           sessionLogs.length !== 1 ? "s" : ""
         }}.
       </div>
