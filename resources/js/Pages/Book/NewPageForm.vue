@@ -325,12 +325,27 @@ const handleDrop = async (e) => {
 };
 
 const handleSingleFile = async (file) => {
+  addDebugLog("📁 handleSingleFile called", {
+    fileName: file.name,
+    fileSize: file.size,
+    fileType: file.type
+  });
+
   const fileObject = createFileObject(file);
-  if (!fileObject.validation.valid) return;
+  if (!fileObject.validation.valid) {
+    addDebugLog("❌ File validation failed", fileObject.validation);
+    return;
+  }
 
   selectedFiles.value = [fileObject];
   await generatePreview(fileObject);
   form.image = fileObject.processedFile || file;
+
+  addDebugLog("✅ form.image set", {
+    hasFormImage: !!form.image,
+    isProcessedFile: !!fileObject.processedFile,
+    imageType: form.image ? form.image.constructor.name : null
+  });
 };
 
 const handleMultipleFiles = async (files) => {
@@ -457,7 +472,16 @@ const selectNewImage = () => {
 const updateImagePreview = async (event) => {
   const files = Array.from(event.target.files);
 
-  if (files.length === 0) return;
+  addDebugLog("📎 File selection event", {
+    filesCount: files.length,
+    fileNames: files.map((f) => f.name),
+    existingFilesCount: selectedFiles.value.length
+  });
+
+  if (files.length === 0) {
+    addDebugLog("⚠️ No files selected, returning");
+    return;
+  }
 
   // If we already have files selected, add new ones to the existing array
   if (selectedFiles.value.length > 0) {
@@ -708,6 +732,27 @@ const submit = async () => {
 
   if (validated) {
     addDebugLog("✅ Form valid, posting to server...");
+    addDebugLog("📤 Form data being sent:", {
+      book_id: form.book_id,
+      content: form.content,
+      video_link: form.video_link,
+      hasImage: !!form.image,
+      imageType: form.image ? form.image.constructor.name : null,
+      imageSize: form.image ? form.image.size : null,
+      imageName: form.image ? form.image.name : null
+    });
+
+    // Final check of all form properties
+    addDebugLog("🔍 Complete form object:", {
+      allKeys: Object.keys(form),
+      formData: Object.fromEntries(
+        Object.keys(form).map((key) => [key, typeof form[key]])
+      ),
+      isDirty: form.isDirty,
+      hasErrors: form.hasErrors,
+      processing: form.processing
+    });
+
     form.post(route("pages.store"), {
       // eslint-disable-line no-undef
       onSuccess: () => {
@@ -786,10 +831,22 @@ onMounted(() => {
 
   // Detect Samsung devices for webhook logging
   const userAgent = navigator.userAgent;
+  const isAndroid = /android/i.test(userAgent);
+
+  // Samsung detection (handles privacy-focused user agents)
   const isSamsung =
     /samsung|sm-|gt-|sch-/i.test(userAgent) ||
-    /samsungbrowser/i.test(userAgent);
-  const isAndroid = /android/i.test(userAgent);
+    /samsungbrowser/i.test(userAgent) ||
+    // Chrome on Samsung often shows "Linux; Android X; K" due to privacy
+    (isAndroid &&
+      /linux.*android.*; k\)/i.test(userAgent) &&
+      navigator.vendor === "Google Inc.") ||
+    // Check for Samsung-specific browser features
+    (isAndroid &&
+      navigator.userAgentData &&
+      navigator.userAgentData.brands?.some((b) =>
+        b.brand.toLowerCase().includes("samsung")
+      ));
 
   // Enable Samsung device logging (but not debug panel)
   if (isSamsung && isAndroid) {
