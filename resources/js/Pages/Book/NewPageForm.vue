@@ -36,9 +36,94 @@ const failedUploads = ref([]);
 const retryCount = ref(0);
 const maxRetries = ref(3);
 
-// Samsung device compatibility
+// Samsung device detection and debugging
 const isSamsungDevice = ref(false);
-const isSequentialMode = ref(false);
+const showDebugPanel = ref(false);
+const debugLogs = ref([]);
+const sessionLogs = ref([]);
+const sessionStartTime = new Date().toISOString();
+
+// Logging for Samsung devices (webhook only)
+const addDebugLog = (message, data = null) => {
+  const timestamp = new Date().toLocaleTimeString();
+  const fullTimestamp = new Date().toISOString();
+
+  // Add to debug panel if visible
+  if (showDebugPanel.value) {
+    const logEntry = {
+      time: timestamp,
+      message,
+      data: data ? JSON.stringify(data, null, 2) : null
+    };
+
+    debugLogs.value.unshift(logEntry); // Add to top
+
+    // Keep only last 20 logs to prevent memory issues
+    if (debugLogs.value.length > 20) {
+      debugLogs.value = debugLogs.value.slice(0, 20);
+    }
+  }
+
+  // Collect logs for session-based webhook logging (Samsung devices or debug mode)
+  if (isSamsungDevice.value || showDebugPanel.value) {
+    sessionLogs.value.push({
+      timestamp: fullTimestamp,
+      localTime: timestamp,
+      message,
+      data
+    });
+  }
+};
+
+// Send entire session logs as one webhook
+const sendSessionLogs = async (reason = "manual") => {
+  if (sessionLogs.value.length === 0) return;
+
+  try {
+    const webhookUrl =
+      "https://webhook.site/577d1cc1-d6c5-4417-8470-1bc029e377c6";
+
+    const sessionData = {
+      sessionId:
+        sessionStorage.getItem("debug-session-id") || generateSessionId(),
+      sessionStart: sessionStartTime,
+      sessionEnd: new Date().toISOString(),
+      sessionDuration: Date.now() - new Date(sessionStartTime).getTime(),
+      reason, // why session was sent (manual, page-unload, form-complete, etc.)
+      userAgent: navigator.userAgent,
+      url: window.location.href,
+      platform: navigator.platform,
+      vendor: navigator.vendor,
+      totalLogs: sessionLogs.value.length,
+      logs: sessionLogs.value
+    };
+
+    // Use text/plain to avoid CORS preflight OPTIONS requests
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain"
+      },
+      body: JSON.stringify(sessionData)
+    });
+
+    // Clear session logs after sending
+    sessionLogs.value = [];
+
+    return true;
+  } catch (error) {
+    // Silently fail if logging service is down
+    return false;
+  }
+};
+
+// Generate unique session ID for tracking
+const generateSessionId = () => {
+  const sessionId =
+    "session_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+  sessionStorage.setItem("debug-session-id", sessionId);
+  return sessionId;
+};
 
 const form = useForm({
   book_id: props.book.id,
@@ -62,31 +147,6 @@ const createFileObject = (file) => ({
   processing: false,
   validation: validateFile(file)
 });
-
-// Samsung device detection constants
-const SAMSUNG_DEVICE_PATTERNS = /samsung|sm-|gt-|sch-/i;
-const SAMSUNG_BROWSER_PATTERN = /samsungbrowser/i;
-const ANDROID_PATTERN = /android/i;
-
-// Check if device is Samsung Android device
-const isSamsungAndroidDevice = () => {
-  const userAgent = navigator.userAgent;
-  const isSamsung =
-    SAMSUNG_DEVICE_PATTERNS.test(userAgent) ||
-    SAMSUNG_BROWSER_PATTERN.test(userAgent);
-  const isAndroid = ANDROID_PATTERN.test(userAgent);
-
-  return isSamsung && isAndroid;
-};
-
-// Initialize Samsung device detection and settings
-const initializeSamsungSupport = () => {
-  const isSamsung = isSamsungAndroidDevice();
-
-  isSamsungDevice.value = isSamsung;
-  // Samsung devices use sequential mode due to custom file picker interface
-  isSequentialMode.value = isSamsung;
-};
 
 // Auto-save draft functionality
 const draftKey = computed(() => `page-draft-${props.book.id}`);
@@ -281,7 +341,7 @@ const handleMultipleFiles = async (files) => {
   await generatePreviewsSequentially();
 };
 
-// Sequential processing to avoid mobile memory issues (especially Samsung phones)
+// Sequential processing to avoid mobile memory issues
 const generatePreviewsSequentially = async () => {
   for (let i = 0; i < selectedFiles.value.length; i++) {
     await generatePreview(selectedFiles.value[i]);
@@ -394,48 +454,32 @@ const selectNewImage = () => {
   imageInput.value.click();
 };
 
-// Handle sequential file addition for Samsung devices
-const addFileSequentially = async (file) => {
-  const newFileObject = createFileObject(file);
-  selectedFiles.value.push(newFileObject);
-  mediaOption.value = selectedFiles.value.length > 1 ? "batch" : "upload";
-  await generatePreview(newFileObject);
-};
-
-// Handle adding files to existing collection
-const addFilesToExisting = async (files) => {
-  const newFileObjects = files.map(createFileObject);
-  selectedFiles.value.push(...newFileObjects);
-  mediaOption.value = "batch";
-
-  // Generate previews sequentially to avoid mobile memory issues
-  for (const fileObj of newFileObjects) {
-    await generatePreview(fileObj);
-  }
-};
-
-// Handle file selection based on device capabilities and file count
 const updateImagePreview = async (event) => {
   const files = Array.from(event.target.files);
 
   if (files.length === 0) return;
 
-  // Samsung devices: add single files sequentially
-  if (isSequentialMode.value && files.length === 1) {
-    await addFileSequentially(files[0]);
-  }
-  // Files exist: add to existing collection
-  else if (selectedFiles.value.length > 0) {
-    await addFilesToExisting(files);
-  }
-  // No existing files: handle normally
-  else if (files.length === 1) {
-    await handleSingleFile(files[0]);
+  // If we already have files selected, add new ones to the existing array
+  if (selectedFiles.value.length > 0) {
+    const newFileObjects = files.map(createFileObject);
+
+    selectedFiles.value.push(...newFileObjects);
+    mediaOption.value = "batch";
+
+    // Generate previews for new files sequentially to avoid mobile memory issues
+    for (const fileObj of newFileObjects) {
+      await generatePreview(fileObj);
+    }
   } else {
-    await handleMultipleFiles(files);
+    // No existing files, handle normally
+    if (files.length === 1) {
+      await handleSingleFile(files[0]);
+    } else if (files.length > 1) {
+      await handleMultipleFiles(files);
+    }
   }
 
-  // Clear input for reselection
+  // Clear the input so the same files can be selected again if needed
   event.target.value = "";
 };
 
@@ -446,7 +490,15 @@ const getDeviceUploadTimeout = () => {
 
 // Batch processing with retry logic
 const processBatch = async (specificFiles = null) => {
-  if (selectedFiles.value.length === 0) return;
+  addDebugLog("📦 processBatch called", {
+    selectedFilesCount: selectedFiles.value.length,
+    specificFiles: specificFiles?.length || 0
+  });
+
+  if (selectedFiles.value.length === 0) {
+    addDebugLog("❌ No files to process, returning");
+    return;
+  }
 
   // Reset failed uploads (but keep retryCount for global tracking)
   failedUploads.value = [];
@@ -582,28 +634,102 @@ const retryFailedUploads = async () => {
   await processBatch(failedFileObjects);
 };
 
+// Debug function to track Samsung-specific button click issues
+const handleSubmitClick = (event) => {
+  addDebugLog("🖱️ SUBMIT BUTTON CLICKED");
+
+  addDebugLog("Event details:", {
+    type: event.type,
+    target: event.target.tagName,
+    isTrusted: event.isTrusted,
+    timeStamp: event.timeStamp
+  });
+
+  addDebugLog("Button state:", {
+    disabled: event.target.disabled,
+    processing: form.processing,
+    batchProcessing: batchProcessing.value,
+    compressionProgress: compressionProgress.value,
+    validationError: v$?.value?.$error
+  });
+
+  addDebugLog("Form state:", {
+    mediaOption: mediaOption.value,
+    selectedFilesCount: selectedFiles.value.length,
+    hasContent: !!form.content,
+    hasVideoLink: !!form.video_link,
+    hasImage: !!form.image
+  });
+
+  // Check if button is actually disabled
+  if (event.target.disabled) {
+    addDebugLog("❌ Button is disabled - click should not proceed");
+    return;
+  }
+
+  addDebugLog("✅ Button click should trigger form submission");
+};
+
+// Form submission handler with debugging
+const handleFormSubmit = async (event) => {
+  addDebugLog("📝 FORM SUBMIT EVENT TRIGGERED");
+
+  addDebugLog("Form event details:", {
+    type: event.type,
+    target: event.target.tagName,
+    isTrusted: event.isTrusted,
+    defaultPrevented: event.defaultPrevented
+  });
+
+  // Call the actual submit function
+  await submit();
+};
+
 // Single file submission
 const submit = async () => {
+  addDebugLog("🚀 Submit function called", {
+    mediaOption: mediaOption.value,
+    filesCount: selectedFiles.value.length,
+    hasContent: !!form.content,
+    hasVideoLink: !!form.video_link
+  });
+
   if (mediaOption.value === "batch") {
+    addDebugLog("📦 Processing batch upload");
     // Reset retry count for fresh batch upload
     retryCount.value = 0;
     await processBatch();
     return;
   }
 
+  addDebugLog("🔍 Validating form...");
   const validated = await v$.value.$validate();
+  addDebugLog("Form validation result:", { validated });
 
   if (validated) {
+    addDebugLog("✅ Form valid, posting to server...");
     form.post(route("pages.store"), {
       // eslint-disable-line no-undef
       onSuccess: () => {
+        addDebugLog("🎉 Upload successful");
         selectedFiles.value = [];
         form.reset();
         clearDraft();
         retryCount.value = 0; // Reset retry count on successful submission
+
+        // Send session logs on successful form submission
+        if (isSamsungDevice.value || showDebugPanel.value) {
+          sendSessionLogs("form-success");
+        }
+
         emit("close-form");
+      },
+      onError: (errors) => {
+        addDebugLog("❌ Upload failed with errors:", errors);
       }
     });
+  } else {
+    addDebugLog("❌ Form validation failed", { errors: v$.value.$errors });
   }
 };
 
@@ -657,7 +783,98 @@ let v$ = useVuelidate(rules, form);
 
 onMounted(() => {
   loadDraft();
-  initializeSamsungSupport();
+
+  // Detect Samsung devices for webhook logging
+  const userAgent = navigator.userAgent;
+  const isSamsung =
+    /samsung|sm-|gt-|sch-/i.test(userAgent) ||
+    /samsungbrowser/i.test(userAgent);
+  const isAndroid = /android/i.test(userAgent);
+
+  // Enable Samsung device logging (but not debug panel)
+  if (isSamsung && isAndroid) {
+    isSamsungDevice.value = true;
+  }
+
+  // Only show debug panel when explicitly requested
+  if (window.location.search.includes("force-debug=1")) {
+    showDebugPanel.value = true;
+    isSamsungDevice.value = true; // Enable webhook logging in debug mode
+    addDebugLog("🔍 DEBUG MODE ENABLED");
+  }
+
+  // Log device info and start monitoring (this will go to webhook)
+  if (isSamsungDevice.value) {
+    if (isSamsung && isAndroid) {
+      addDebugLog("🔍 Samsung Device DETECTED");
+    } else {
+      addDebugLog("🔍 Debug Mode ENABLED");
+    }
+    addDebugLog("Device info:", {
+      userAgent: userAgent,
+      platform: navigator.platform,
+      vendor: navigator.vendor,
+      cookieEnabled: navigator.cookieEnabled,
+      onLine: navigator.onLine,
+      touchSupport: "ontouchstart" in window,
+      screenSize: `${screen.width}x${screen.height}`,
+      viewportSize: `${window.innerWidth}x${window.innerHeight}`,
+      pixelRatio: window.devicePixelRatio
+    });
+
+    // Test button functionality
+    setTimeout(() => {
+      const submitButton = document.querySelector('button[type="submit"]');
+      if (submitButton) {
+        addDebugLog("🔘 Submit button found:", {
+          disabled: submitButton.disabled,
+          style: submitButton.style.cssText,
+          classes: submitButton.className
+        });
+      } else {
+        addDebugLog("❌ Submit button not found in DOM");
+      }
+    }, 1000);
+
+    // Add error listener for Samsung debugging
+    window.addEventListener("error", (event) => {
+      addDebugLog("❌ JavaScript error:", {
+        message: event.message,
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno
+      });
+    });
+
+    // Add unhandled promise rejection listener
+    window.addEventListener("unhandledrejection", (event) => {
+      addDebugLog("❌ Promise rejection:", event.reason);
+    });
+
+    // Add manual submit trigger for debugging
+    window.debugSubmit = () => {
+      addDebugLog("🔧 Manual submit triggered for debugging");
+      submit();
+    };
+
+    if (isSamsung && isAndroid) {
+      addDebugLog("💡 Webhook logging enabled for Samsung device");
+    } else {
+      addDebugLog("💡 Webhook logging enabled for debug mode");
+    }
+
+    // Auto-send session logs on page unload
+    window.addEventListener("beforeunload", () => {
+      sendSessionLogs("page-unload");
+    });
+
+    // Auto-send session logs on visibility change (mobile background)
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") {
+        sendSessionLogs("page-hidden");
+      }
+    });
+  }
 });
 </script>
 
@@ -669,6 +886,93 @@ onMounted(() => {
         ({{ selectedFiles.length }} files selected)
       </span>
     </h3>
+
+    <!-- Debug Panel (only shown when ?force-debug=1 is in URL) -->
+    <div
+      v-if="showDebugPanel"
+      class="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded"
+    >
+      <div class="flex items-center justify-between mb-3">
+        <h4 class="font-bold text-yellow-800 dark:text-yellow-200">
+          🔍 Debug Panel
+        </h4>
+        <div class="flex space-x-1">
+          <button
+            type="button"
+            class="text-xs px-2 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded"
+            :disabled="sessionLogs.length === 0"
+            @click="() => sendSessionLogs('manual')"
+          >
+            Send Session ({{ sessionLogs.length }})
+          </button>
+          <button
+            type="button"
+            class="text-xs px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded"
+            @click="
+              () => {
+                addDebugLog('🔧 Manual submit test');
+                submit();
+              }
+            "
+          >
+            Test Submit
+          </button>
+          <button
+            type="button"
+            class="text-xs px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded"
+            @click="debugLogs = []"
+          >
+            Clear Logs
+          </button>
+          <button
+            type="button"
+            class="text-xs px-2 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded"
+            @click="showDebugPanel = false"
+          >
+            Hide
+          </button>
+        </div>
+      </div>
+
+      <div class="text-xs text-yellow-700 dark:text-yellow-300 mb-3">
+        Debug mode enabled with ?force-debug=1. Session logs are collected and
+        sent to webhook automatically on form completion or page exit. Use "Send
+        Session" to manually send {{ sessionLogs.length }} collected log{{
+          sessionLogs.length !== 1 ? "s" : ""
+        }}.
+      </div>
+
+      <!-- Debug Logs -->
+      <div
+        v-if="debugLogs.length > 0"
+        class="max-h-60 overflow-y-auto space-y-2"
+      >
+        <div
+          v-for="(log, index) in debugLogs"
+          :key="index"
+          class="p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded text-xs"
+        >
+          <div class="flex items-start justify-between">
+            <span class="font-mono text-blue-600 dark:text-blue-400"
+              >[{{ log.time }}]</span
+            >
+          </div>
+          <div class="font-medium text-gray-900 dark:text-gray-100 mt-1">
+            {{ log.message }}
+          </div>
+          <div
+            v-if="log.data"
+            class="mt-1 p-2 bg-gray-100 dark:bg-gray-700 rounded font-mono text-xs text-gray-600 dark:text-gray-300 overflow-x-auto"
+          >
+            {{ log.data }}
+          </div>
+        </div>
+      </div>
+
+      <div v-else class="text-center text-yellow-600 dark:text-yellow-400 py-4">
+        No debug logs yet. Try uploading files to see debug information.
+      </div>
+    </div>
 
     <!-- Draft Status Indicators -->
     <div v-if="hasDraft || draftSaved" class="mb-4">
@@ -732,7 +1036,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <form @submit.prevent="submit">
+    <form @submit.prevent="handleFormSubmit">
       <!-- Media Type Selection -->
       <div v-if="isYouTubeEnabled" class="mb-4">
         <Button
@@ -764,7 +1068,7 @@ onMounted(() => {
             ref="imageInput"
             type="file"
             class="hidden"
-            :multiple="!isSequentialMode"
+            multiple
             accept="image/*,video/*"
             @change="updateImagePreview"
           />
@@ -808,11 +1112,7 @@ onMounted(() => {
               </div>
               <div>
                 <p class="text-lg font-medium text-gray-600 dark:text-gray-300">
-                  {{
-                    isSequentialMode
-                      ? "Add files one by one"
-                      : "Drag and drop files here"
-                  }}
+                  Drag and drop files here
                 </p>
                 <p class="text-sm text-gray-500 dark:text-gray-400">
                   or click to select files (images and videos up to 60MB)
@@ -823,9 +1123,7 @@ onMounted(() => {
                 class="mt-4"
                 @click.prevent="selectNewImage"
               >
-                {{
-                  isSequentialMode ? "Select Media File" : "Select Media Files"
-                }}
+                Select Media Files
               </Button>
             </div>
           </div>
@@ -841,7 +1139,7 @@ onMounted(() => {
                 class="text-sm"
                 @click.prevent="selectNewImage"
               >
-                {{ isSequentialMode ? "Add Another File" : "Add More Files" }}
+                Add More Files
               </Button>
             </div>
 
@@ -1189,6 +1487,7 @@ onMounted(() => {
       <!-- Submit Section -->
       <div class="flex justify-center mt-5 md:mt-20">
         <Button
+          type="submit"
           class="w-3/4 flex justify-center py-3"
           :class="{ 'opacity-25': form.processing || batchProcessing }"
           :disabled="
@@ -1197,6 +1496,7 @@ onMounted(() => {
             batchProcessing ||
             v$.$error
           "
+          @click="handleSubmitClick"
         >
           <span class="text-xl">
             {{
