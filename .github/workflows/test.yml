@@ -106,7 +106,6 @@ jobs:
         DB_DATABASE: testing
         DB_USERNAME: root
         DB_PASSWORD: password
-        REGISTRATION_SECRET: elevators
       run: php artisan migrate --env=testing --force
 
     - name: Execute PHPUnit tests
@@ -117,5 +116,4 @@ jobs:
         DB_DATABASE: testing
         DB_USERNAME: root
         DB_PASSWORD: password
-        REGISTRATION_SECRET: elevators
       run: vendor/bin/phpunit 
