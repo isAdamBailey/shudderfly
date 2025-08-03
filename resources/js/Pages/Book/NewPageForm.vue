@@ -6,11 +6,17 @@ import {
   default as BreezeLabel,
   default as InputLabel
 } from "@/Components/InputLabel.vue";
-import VideoIcon from "@/Components/svg/VideoIcon.vue";
+
 import TextInput from "@/Components/TextInput.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
 import { useVideoOptimization } from "@/composables/useVideoOptimization.js";
+import {
+  isAllowedFileType,
+  isFileSizeValid,
+  MAX_FILE_SIZE,
+  needsVideoOptimization
+} from "@/utils/fileValidation.js";
 import { useForm, usePage } from "@inertiajs/vue3";
 import { useVuelidate } from "@vuelidate/core";
 import { computed, onMounted, ref, watch } from "vue";
@@ -36,103 +42,41 @@ const failedUploads = ref([]);
 const retryCount = ref(0);
 const maxRetries = ref(3);
 
-// Upload debugging
-const showDebugPanel = ref(false);
-const debugLogs = ref([]);
-const sessionLogs = ref([]);
-const sessionStartTime = new Date().toISOString();
-
-// Logging for upload debugging (webhook)
-const addDebugLog = (message, data = null) => {
-  const timestamp = new Date().toLocaleTimeString();
-  const fullTimestamp = new Date().toISOString();
-
-  // Add to debug panel if visible
-  if (showDebugPanel.value) {
-    const logEntry = {
-      time: timestamp,
-      message,
-      data: data ? JSON.stringify(data, null, 2) : null
-    };
-
-    debugLogs.value.unshift(logEntry); // Add to top
-
-    // Keep only last 20 logs to prevent memory issues
-    if (debugLogs.value.length > 20) {
-      debugLogs.value = debugLogs.value.slice(0, 20);
-    }
-  }
-
-  // Collect logs for session-based webhook logging
-  sessionLogs.value.push({
-    timestamp: fullTimestamp,
-    localTime: timestamp,
-    message,
-    data
-  });
-};
-
-// Send entire session logs as one webhook
-const sendSessionLogs = async (reason = "manual") => {
-  // Always create at least one log entry for testing
-  if (sessionLogs.value.length === 0) {
-    sessionLogs.value.push({
-      timestamp: new Date().toISOString(),
-      localTime: new Date().toLocaleTimeString(),
-      message: `🧪 Webhook test - ${reason}`,
-      data: {
-        reason: reason,
-        debugMode: showDebugPanel.value,
-        url: window.location.href
+// Unified preview data - single upload will use this too (as single-item array)
+const previewFiles = computed(() => {
+  if (
+    mediaOption.value === "single" &&
+    (form.image || singleFilePreview.value)
+  ) {
+    // Format single file like multiple upload fileObj for unified template
+    return [
+      {
+        file: form.image ||
+          singleFileOriginal.value || {
+            name: "Loading...",
+            size: 0,
+            type: "unknown"
+          }, // Use original file info during processing
+        preview: singleFilePreview.value,
+        processing: singleFileProcessing.value,
+        processed: !singleFileProcessing.value,
+        processedFile: form.image, // Add processedFile for consistency with multiple upload
+        needsOptimization:
+          singleFileOriginal.value?.type?.startsWith("video/") &&
+          singleFileOriginal.value?.size > MAX_FILE_SIZE,
+        uploaded: false
       }
-    });
+    ];
+  } else if (mediaOption.value === "multiple") {
+    return selectedFiles.value;
   }
+  return [];
+});
 
-  try {
-    const webhookUrl =
-      "https://webhook.site/577d1cc1-d6c5-4417-8470-1bc029e377c6";
-
-    const sessionData = {
-      sessionId:
-        sessionStorage.getItem("debug-session-id") || generateSessionId(),
-      sessionStart: sessionStartTime,
-      sessionEnd: new Date().toISOString(),
-      sessionDuration: Date.now() - new Date(sessionStartTime).getTime(),
-      reason, // why session was sent (manual, page-unload, form-complete, etc.)
-      userAgent: navigator.userAgent,
-      url: window.location.href,
-      platform: navigator.platform,
-      vendor: navigator.vendor,
-      totalLogs: sessionLogs.value.length,
-      logs: sessionLogs.value
-    };
-
-    // Use text/plain to avoid CORS preflight OPTIONS requests
-    await fetch(webhookUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "text/plain"
-      },
-      body: JSON.stringify(sessionData)
-    });
-
-    // Clear session logs after sending
-    sessionLogs.value = [];
-
-    return true;
-  } catch (error) {
-    // Silently fail if logging service is down
-    return false;
-  }
-};
-
-// Generate unique session ID for tracking
-const generateSessionId = () => {
-  const sessionId =
-    "session_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
-  sessionStorage.setItem("debug-session-id", sessionId);
-  return sessionId;
-};
+// Single file preview (separate from selectedFiles array)
+const singleFilePreview = ref(null);
+const singleFileProcessing = ref(false);
+const singleFileOriginal = ref(null); // Store original file during processing
 
 const form = useForm({
   book_id: props.book.id,
@@ -143,10 +87,12 @@ const form = useForm({
 
 const imageInput = ref(null);
 const dropZone = ref(null);
-const mediaOption = ref("upload"); // upload, link, batch
+const mediaOption = ref("single"); // single, multiple, link
 
 const { compressionProgress, optimizationProgress, processMediaFile } =
   useVideoOptimization();
+
+// File size constant imported from shared utility
 
 // Helper function to create file objects consistently
 const createFileObject = (file) => ({
@@ -154,8 +100,45 @@ const createFileObject = (file) => ({
   preview: null,
   processed: false,
   processing: false,
-  validation: validateFile(file)
+  needsOptimization: needsVideoOptimization(file)
 });
+
+// Helper function to handle single file processing (eliminates duplicate validation logic)
+const processSingleFile = async (file) => {
+  // Store original file immediately for preview display during processing
+  singleFileOriginal.value = file;
+
+  // Generate preview FIRST (so user sees it immediately, even during video processing)
+  try {
+    // All files are images or videos, so always generate preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      singleFilePreview.value = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  } catch (error) {
+    singleFilePreview.value = null; // Continue without preview
+  }
+
+  // Process video AFTER generating preview (so preview shows during processing)
+  if (needsVideoOptimization(file)) {
+    singleFileProcessing.value = true;
+    try {
+      const processedFile = await processMediaFile(file);
+      form.image = processedFile;
+    } catch (error) {
+      // Fallback to original file if processing fails
+      form.image = file;
+    } finally {
+      singleFileProcessing.value = false;
+    }
+  } else {
+    // Direct assignment for images and smaller videos
+    form.image = file;
+  }
+
+  return true;
+};
 
 // Auto-save draft functionality
 const draftKey = computed(() => `page-draft-${props.book.id}`);
@@ -250,39 +233,7 @@ watch(
   { deep: true }
 );
 
-// File validation helpers
-const validateFile = (file, isProcessed = false) => {
-  const maxSize = 62914560; // 60MB
-  const allowedTypes = [
-    "image/jpeg",
-    "image/jpg",
-    "image/png",
-    "image/bmp",
-    "image/gif",
-    "image/svg+xml",
-    "image/webp",
-    "video/mp4",
-    "video/avi",
-    "video/quicktime",
-    "video/mpeg",
-    "video/webm",
-    "video/x-matroska"
-  ];
-
-  // For videos, be more lenient with initial size if they haven't been processed yet
-  const sizeLimit =
-    file.type.startsWith("video/") && !isProcessed ? 500000000 : maxSize; // 500MB for unprocessed videos
-
-  return {
-    valid: file.size <= sizeLimit && allowedTypes.includes(file.type),
-    sizeError: file.size > sizeLimit,
-    typeError: !allowedTypes.includes(file.type),
-    size: file.size,
-    type: file.type,
-    needsOptimization:
-      file.type.startsWith("video/") && file.size > maxSize && !isProcessed
-  };
-};
+// Simple helper to check if video needs optimization (imported from shared utility)
 
 const formatFileSize = (bytes) => {
   if (bytes === 0) return "0 Bytes";
@@ -312,57 +263,38 @@ const handleDrop = async (e) => {
   const files = Array.from(e.dataTransfer.files);
   if (files.length === 0) return;
 
-  // If we already have files selected, add new ones to the existing array
-  if (selectedFiles.value.length > 0) {
-    const newFileObjects = files.map(createFileObject);
+  // Handle based on selected mode
+  if (mediaOption.value === "single") {
+    // Simple single upload: Use centralized processing
+    const file = files[0];
+    await processSingleFile(file);
+    selectedFiles.value = []; // Clear any previous selections
+    return;
+  } else if (mediaOption.value === "multiple") {
+    // Multiple upload mode: Handle all files with full processing
+    if (selectedFiles.value.length > 0) {
+      // Add new files to existing array
+      const newFileObjects = files.map(createFileObject);
+      selectedFiles.value.push(...newFileObjects);
 
-    selectedFiles.value.push(...newFileObjects);
-    mediaOption.value = "batch";
+      // Generate previews for new files sequentially to avoid mobile memory issues
+      for (const fileObj of newFileObjects) {
+        await generatePreview(fileObj);
+      }
 
-    // Generate previews for new files sequentially to avoid mobile memory issues
-    for (const fileObj of newFileObjects) {
-      await generatePreview(fileObj);
-    }
-  } else {
-    // No existing files, handle normally
-    if (files.length === 1) {
-      await handleSingleFile(files[0]);
-    } else if (files.length > 1) {
+      // Force reactivity update
+      selectedFiles.value = [...selectedFiles.value];
+    } else {
+      // No existing files, handle as batch
       await handleMultipleFiles(files);
     }
   }
 };
 
-const handleSingleFile = async (file) => {
-  addDebugLog("📁 File selected for upload", {
-    fileName: file.name,
-    fileSize: file.size,
-    fileType: file.type
-  });
-
-  const fileObject = createFileObject(file);
-  if (!fileObject.validation.valid) {
-    addDebugLog("❌ File validation failed", fileObject.validation);
-    return;
-  }
-
-  selectedFiles.value = [fileObject];
-  await generatePreview(fileObject);
-  form.image = fileObject.processedFile || file;
-
-  // Samsung debugging: Verify form.image assignment
-  addDebugLog("✅ form.image assigned", {
-    hasFormImage: !!form.image,
-    imageSize: form.image?.size,
-    imageName: form.image?.name,
-    isProcessedFile: !!fileObject.processedFile,
-    originalFileSize: file.size,
-    originalFileName: file.name
-  });
-};
+// handleSingleFile removed - single mode now uses direct assignment for simplicity
 
 const handleMultipleFiles = async (files) => {
-  mediaOption.value = "batch";
+  // Keep current mode (should be "multiple"), don't change it automatically
   selectedFiles.value = files.map(createFileObject);
 
   // Generate previews for all files (sequentially to avoid mobile memory issues)
@@ -384,36 +316,37 @@ const generatePreviewsSequentially = async () => {
 const generatePreview = async (fileObj) => {
   const file = fileObj.file;
 
-  // Initial validation - more lenient for videos that might need optimization
-  if (!fileObj.validation?.valid && !fileObj.validation?.needsOptimization) {
-    return;
-  }
+  // Initial validation - only return early for truly invalid files
+  // Files that need optimization but aren't processed yet are valid and should continue
 
   // Create preview with Promise-based FileReader for better mobile compatibility
-  await new Promise((resolve, reject) => {
-    const reader = new FileReader();
+  try {
+    await new Promise((resolve, reject) => {
+      const reader = new FileReader();
 
-    // Add timeout for mobile browsers that might hang
-    const timeout = setTimeout(() => {
-      reader.abort();
-      reject(new Error("FileReader timeout"));
-    }, 10000);
+      // Add timeout for mobile browsers that might hang
+      const timeout = setTimeout(() => {
+        reader.abort();
+        reject(new Error("FileReader timeout"));
+      }, 10000);
 
-    reader.onload = (e) => {
-      clearTimeout(timeout);
-      fileObj.preview = e.target.result;
-      resolve();
-    };
+      reader.onload = (e) => {
+        clearTimeout(timeout);
+        fileObj.preview = e.target.result;
+        resolve();
+      };
 
-    reader.onerror = () => {
-      clearTimeout(timeout);
-      reject(reader.error);
-    };
+      reader.onerror = () => {
+        clearTimeout(timeout);
+        reject(reader.error);
+      };
 
-    reader.readAsDataURL(file);
-  }).catch(() => {
+      reader.readAsDataURL(file);
+    });
+  } catch (error) {
     // Continue without preview
-  });
+    console.warn("Preview generation failed:", error);
+  }
 
   // Process video files with timeout
   if (file.type.startsWith("video/")) {
@@ -433,13 +366,8 @@ const generatePreview = async (fileObj) => {
       // Clear timeout since processing completed
       clearTimeout(processingTimeout);
 
-      // Re-validate the processed file
-      fileObj.validation = validateFile(fileObj.processedFile, true);
+      // Mark as processed - validation is handled by needsOptimization property
       fileObj.processed = true;
-
-      if (!fileObj.validation?.valid) {
-        // Video still too large after processing
-      }
     } catch (error) {
       clearTimeout(processingTimeout);
       fileObj.processedFile = file;
@@ -455,27 +383,59 @@ const generatePreview = async (fileObj) => {
 };
 
 const removeFile = (index) => {
-  selectedFiles.value.splice(index, 1);
-  if (selectedFiles.value.length === 0) {
-    mediaOption.value = "upload";
+  if (mediaOption.value === "single") {
+    // Single upload mode: Clear all single file data
     form.image = null;
-  } else if (selectedFiles.value.length === 1) {
-    mediaOption.value = "upload";
-    form.image =
-      selectedFiles.value[0].processedFile || selectedFiles.value[0].file;
+    singleFilePreview.value = null;
+    singleFileOriginal.value = null;
+    singleFileProcessing.value = false;
+  } else {
+    // Multiple upload mode: Remove specific file from array
+    selectedFiles.value.splice(index, 1);
+
+    if (selectedFiles.value.length === 0) {
+      // Keep the current mode but clear files
+      form.image = null;
+    } else if (
+      selectedFiles.value.length === 1 &&
+      mediaOption.value === "single"
+    ) {
+      // In single mode with one file remaining, set form.image
+      const targetFile =
+        selectedFiles.value[0].processedFile || selectedFiles.value[0].file;
+      form.image = targetFile;
+    }
+    // For multiple files remaining, keep current mode and don't set form.image
   }
 };
 
-const selectUpload = () => {
-  mediaOption.value = "upload";
+const selectSingle = () => {
+  mediaOption.value = "single";
   form.video_link = null;
   selectedFiles.value = [];
+  form.image = null; // Clear any existing image when switching modes
+  singleFilePreview.value = null; // Clear preview
+  singleFileProcessing.value = false; // Clear processing state
+  singleFileOriginal.value = null; // Clear original file
+};
+
+const selectMultiple = () => {
+  mediaOption.value = "multiple";
+  form.video_link = null;
+  selectedFiles.value = [];
+  form.image = null; // Clear any existing image when switching modes
+  singleFilePreview.value = null; // Clear preview
+  singleFileProcessing.value = false; // Clear processing state
+  singleFileOriginal.value = null; // Clear original file
 };
 
 const selectLink = () => {
   mediaOption.value = "link";
   selectedFiles.value = [];
   form.image = null;
+  singleFilePreview.value = null; // Clear preview
+  singleFileProcessing.value = false; // Clear processing state
+  singleFileOriginal.value = null; // Clear original file
 };
 
 const selectNewImage = () => {
@@ -487,27 +447,29 @@ const updateImagePreview = async (event) => {
 
   if (files.length === 0) return;
 
-  addDebugLog("📎 Files selected", {
-    filesCount: files.length,
-    fileNames: files.map((f) => f.name)
-  });
+  // Handle based on selected mode
+  if (mediaOption.value === "single") {
+    // Simple single upload: Use centralized processing
+    const file = files[0];
+    await processSingleFile(file);
+    selectedFiles.value = []; // Clear any previous selections
+    return;
+  } else if (mediaOption.value === "multiple") {
+    // Multiple upload mode: Handle all files with full processing
+    if (selectedFiles.value.length > 0) {
+      // Add new files to existing array
+      const newFileObjects = files.map(createFileObject);
+      selectedFiles.value.push(...newFileObjects);
 
-  // If we already have files selected, add new ones to the existing array
-  if (selectedFiles.value.length > 0) {
-    const newFileObjects = files.map(createFileObject);
+      // Generate previews for new files sequentially to avoid mobile memory issues
+      for (const fileObj of newFileObjects) {
+        await generatePreview(fileObj);
+      }
 
-    selectedFiles.value.push(...newFileObjects);
-    mediaOption.value = "batch";
-
-    // Generate previews for new files sequentially to avoid mobile memory issues
-    for (const fileObj of newFileObjects) {
-      await generatePreview(fileObj);
-    }
-  } else {
-    // No existing files, handle normally
-    if (files.length === 1) {
-      await handleSingleFile(files[0]);
-    } else if (files.length > 1) {
+      // Force reactivity update
+      selectedFiles.value = [...selectedFiles.value];
+    } else {
+      // No existing files, handle as batch
       await handleMultipleFiles(files);
     }
   }
@@ -523,13 +485,7 @@ const getDeviceUploadTimeout = () => {
 
 // Batch processing with retry logic
 const processBatch = async (specificFiles = null) => {
-  addDebugLog("📦 processBatch called", {
-    selectedFilesCount: selectedFiles.value.length,
-    specificFiles: specificFiles?.length || 0
-  });
-
   if (selectedFiles.value.length === 0) {
-    addDebugLog("❌ No files to process, returning");
     return;
   }
 
@@ -539,7 +495,9 @@ const processBatch = async (specificFiles = null) => {
   // Use specific files for retry, or all valid files for initial upload
   const validFiles =
     specificFiles ||
-    selectedFiles.value.filter((fileObj) => fileObj.validation?.valid);
+    selectedFiles.value.filter(
+      (fileObj) => !fileObj.needsOptimization || fileObj.processed
+    );
   if (validFiles.length === 0) {
     return;
   }
@@ -669,169 +627,48 @@ const retryFailedUploads = async () => {
 
 // Debug function to track Samsung-specific button click issues
 const handleSubmitClick = (event) => {
-  addDebugLog("🖱️ SUBMIT BUTTON CLICKED");
-
-  addDebugLog("Event details:", {
-    type: event.type,
-    target: event.target.tagName,
-    isTrusted: event.isTrusted,
-    timeStamp: event.timeStamp
-  });
-
-  addDebugLog("Button state:", {
-    disabled: event.target.disabled,
-    processing: form.processing,
-    batchProcessing: batchProcessing.value,
-    compressionProgress: compressionProgress.value,
-    validationError: v$?.value?.$error
-  });
-
-  addDebugLog("Form state:", {
-    mediaOption: mediaOption.value,
-    selectedFilesCount: selectedFiles.value.length,
-    hasContent: !!form.content,
-    hasVideoLink: !!form.video_link,
-    hasImage: !!form.image
-  });
-
   // Check if button is actually disabled
   if (event.target.disabled) {
-    addDebugLog("❌ Button is disabled - click should not proceed");
     return;
   }
-
-  addDebugLog("✅ Button click should trigger form submission");
 };
 
-// Form submission handler with debugging
-const handleFormSubmit = async (event) => {
-  addDebugLog("📝 FORM SUBMIT EVENT TRIGGERED");
-
-  addDebugLog("Form event details:", {
-    type: event.type,
-    target: event.target.tagName,
-    isTrusted: event.isTrusted,
-    defaultPrevented: event.defaultPrevented
-  });
-
+// Form submission handler
+const handleFormSubmit = async () => {
   // Call the actual submit function
   await submit();
 };
 
-// Single file submission
+// Single or multiple file submission
 const submit = async () => {
-  addDebugLog("🚀 Upload attempt started", {
-    mediaOption: mediaOption.value,
-    filesCount: selectedFiles.value.length,
-    hasContent: !!form.content,
-    hasVideoLink: !!form.video_link,
-    hasFormImage: !!form.image,
-    formImageSize: form.image?.size,
-    formImageName: form.image?.name
-  });
-
-  // Samsung debugging: Check if file was lost between selection and submission
-  if (
-    selectedFiles.value.length > 0 &&
-    !form.image &&
-    mediaOption.value === "upload"
-  ) {
-    const firstFile = selectedFiles.value[0];
-    addDebugLog("🔧 Samsung fix: Reassigning lost form.image", {
-      hasSelectedFile: !!firstFile,
-      hasOriginalFile: !!firstFile?.file,
-      hasProcessedFile: !!firstFile?.processedFile,
-      originalSize: firstFile?.file?.size,
-      processedSize: firstFile?.processedFile?.size
-    });
-
-    // Try to reassign the file from selectedFiles
-    if (firstFile) {
-      form.image = firstFile.processedFile || firstFile.file;
-      addDebugLog("✅ form.image reassigned", {
-        hasFormImage: !!form.image,
-        imageSize: form.image?.size
-      });
-    }
-  }
-
-  if (mediaOption.value === "batch") {
+  if (mediaOption.value === "multiple") {
     // Reset retry count for fresh batch upload
     retryCount.value = 0;
     await processBatch();
     return;
   }
 
+  // For single mode: form.image should already be set directly
+  // No complex processing needed - ultra-simple path
+
   const validated = await v$.value.$validate();
 
   if (validated) {
-    addDebugLog("📤 Submitting to server", {
-      hasImage: !!form.image,
-      imageSize: form.image ? form.image.size : null,
-      imageName: form.image ? form.image.name : null,
-      imageType: form.image ? form.image.constructor.name : null,
-      imageLastModified: form.image ? form.image.lastModified : null
-    });
-
-    // Samsung-specific debugging: Check if file is still valid right before submission
-    if (form.image) {
-      try {
-        // Try to read file properties to see if it's still valid
-        const fileCheck = {
-          canReadSize: form.image.size !== undefined,
-          canReadName: form.image.name !== undefined,
-          canReadType: form.image.type !== undefined,
-          hasBlob: form.image instanceof Blob,
-          hasFile: form.image instanceof File
-        };
-        addDebugLog("🔍 Pre-submit file validation", fileCheck);
-
-        // Try to create a URL to test if file is accessible
-        if (form.image instanceof Blob) {
-          try {
-            const url = URL.createObjectURL(form.image);
-            URL.revokeObjectURL(url); // Clean up immediately
-            addDebugLog("✅ File blob is accessible");
-          } catch (blobError) {
-            addDebugLog("❌ File blob test failed", {
-              error: blobError.message
-            });
-          }
-        }
-      } catch (error) {
-        addDebugLog("❌ File validation error", {
-          error: error.message,
-          fileExists: !!form.image
-        });
-      }
-    } else {
-      addDebugLog("❌ CRITICAL: form.image is null at submission time");
-    }
-
+    // Universal submission using Inertia.js
     form.post(route("pages.store"), {
       // eslint-disable-line no-undef
+      preserveScroll: true,
       onSuccess: () => {
-        addDebugLog("✅ Upload completed successfully");
         selectedFiles.value = [];
         form.reset();
         clearDraft();
         retryCount.value = 0;
-
-        // Send session logs on successful form submission
-        sendSessionLogs("upload-success");
-
         emit("close-form");
       },
-      onError: (errors) => {
-        addDebugLog("❌ Upload failed", errors);
-        // Send session logs on failed form submission
-        sendSessionLogs("upload-failed");
+      onError: () => {
+        // Handle upload errors
       }
     });
-  } else {
-    addDebugLog("❌ Form validation failed", { errors: v$.value.$errors });
-    // Send session logs on validation failure
-    sendSessionLogs("validation-failed");
   }
 };
 
@@ -843,22 +680,24 @@ const rules = computed(() => {
   };
 
   const batchFilesValid = () => {
-    if (mediaOption.value === "batch" && selectedFiles.value.length > 0) {
+    if (mediaOption.value === "multiple" && selectedFiles.value.length > 0) {
       return selectedFiles.value.every(
         (fileObj) =>
-          fileObj.validation?.valid ||
-          (fileObj.validation?.needsOptimization && !fileObj.processed) ||
-          (fileObj.processed && fileObj.validation?.valid)
+          !fileObj.needsOptimization ||
+          (fileObj.needsOptimization && !fileObj.processed) ||
+          fileObj.processed
       );
     }
     return true;
   };
 
   const atLeastOneRequired = () => {
-    if (mediaOption.value === "batch") {
+    if (mediaOption.value === "multiple") {
       return (
         selectedFiles.value.length > 0 &&
-        selectedFiles.value.some((fileObj) => fileObj.validation?.valid)
+        selectedFiles.value.some(
+          (fileObj) => !fileObj.needsOptimization || fileObj.processed
+        )
       );
     }
     return (
@@ -885,35 +724,6 @@ let v$ = useVuelidate(rules, form);
 
 onMounted(() => {
   loadDraft();
-
-  // Enable logging for all devices to debug upload issues
-  const userAgent = navigator.userAgent;
-
-  // Only show debug panel when explicitly requested
-  if (window.location.search.includes("force-debug=1")) {
-    showDebugPanel.value = true;
-    addDebugLog("🔍 DEBUG MODE ENABLED");
-  }
-
-  // Start upload session logging
-  addDebugLog("🔍 Upload session started", {
-    userAgent: userAgent,
-    platform: navigator.platform,
-    screenSize: `${screen.width}x${screen.height}`,
-    viewportSize: `${window.innerWidth}x${window.innerHeight}`
-  });
-
-  // Auto-send session logs on page unload
-  window.addEventListener("beforeunload", () => {
-    sendSessionLogs("page-unload");
-  });
-
-  // Auto-send session logs on visibility change (mobile background)
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") {
-      sendSessionLogs("page-hidden");
-    }
-  });
 });
 </script>
 
@@ -926,98 +736,6 @@ onMounted(() => {
       </span>
     </h3>
 
-    <!-- Debug Panel (only shown when ?force-debug=1 is in URL) -->
-    <div
-      v-if="showDebugPanel"
-      class="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded"
-    >
-      <div class="flex items-center justify-between mb-3">
-        <h4 class="font-bold text-yellow-800 dark:text-yellow-200">
-          🔍 Debug Panel
-        </h4>
-        <div class="flex space-x-1">
-          <button
-            type="button"
-            class="text-xs px-2 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded"
-            @click="
-              async () => {
-                addDebugLog('🧪 Manual webhook test');
-                await sendSessionLogs('manual-test');
-              }
-            "
-          >
-            Test Webhook ({{ sessionLogs.length }})
-          </button>
-          <button
-            type="button"
-            class="text-xs px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded"
-            @click="
-              () => {
-                addDebugLog('🔧 Manual submit test');
-                submit();
-              }
-            "
-          >
-            Test Submit
-          </button>
-          <button
-            type="button"
-            class="text-xs px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded"
-            @click="debugLogs = []"
-          >
-            Clear Logs
-          </button>
-          <button
-            type="button"
-            class="text-xs px-2 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded"
-            @click="showDebugPanel = false"
-          >
-            Hide
-          </button>
-        </div>
-      </div>
-
-      <div class="text-xs text-yellow-700 dark:text-yellow-300 mb-3">
-        Upload debugging enabled. Session logs are collected and sent to webhook
-        automatically on form completion or page exit. Use "Test Webhook" to
-        manually test the connection with
-        {{ sessionLogs.length }} collected log{{
-          sessionLogs.length !== 1 ? "s" : ""
-        }}.
-      </div>
-
-      <!-- Debug Logs -->
-      <div
-        v-if="debugLogs.length > 0"
-        class="max-h-60 overflow-y-auto space-y-2"
-      >
-        <div
-          v-for="(log, index) in debugLogs"
-          :key="index"
-          class="p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded text-xs"
-        >
-          <div class="flex items-start justify-between">
-            <span class="font-mono text-blue-600 dark:text-blue-400"
-              >[{{ log.time }}]</span
-            >
-          </div>
-          <div class="font-medium text-gray-900 dark:text-gray-100 mt-1">
-            {{ log.message }}
-          </div>
-          <div
-            v-if="log.data"
-            class="mt-1 p-2 bg-gray-100 dark:bg-gray-700 rounded font-mono text-xs text-gray-600 dark:text-gray-300 overflow-x-auto"
-          >
-            {{ log.data }}
-          </div>
-        </div>
-      </div>
-
-      <div v-else class="text-center text-yellow-600 dark:text-yellow-400 py-4">
-        No debug logs yet. Try uploading files to see debug information.
-      </div>
-    </div>
-
     <!-- Draft Status Indicators -->
     <div v-if="hasDraft || draftSaved" class="mb-4">
       <div
@@ -1028,19 +746,7 @@ onMounted(() => {
           <div
             class="flex items-center space-x-2 text-blue-700 dark:text-blue-300"
           >
-            <svg
-              class="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
+            <i class="ri-file-text-line w-4 h-4"></i>
             <span
               >📝 Draft restored (text & YouTube links only - files need to be
               re-selected)</span
@@ -1062,19 +768,7 @@ onMounted(() => {
         <div
           class="flex items-center space-x-2 text-green-700 dark:text-green-300"
         >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
+          <i class="ri-check-line w-4 h-4"></i>
           <span>💾 Draft saved</span>
         </div>
       </div>
@@ -1083,26 +777,74 @@ onMounted(() => {
     <form @submit.prevent="handleFormSubmit">
       <!-- Media Type Selection -->
       <div v-if="isYouTubeEnabled" class="mb-4">
-        <Button
-          :is-active="mediaOption === 'upload'"
-          class="rounded-none w-24 justify-center"
-          @click.prevent="selectUpload"
-        >
-          Upload
-        </Button>
-        <Button
-          :is-active="mediaOption === 'link'"
-          class="rounded-none w-24 justify-center"
-          @click.prevent="selectLink"
-        >
-          YouTube
-        </Button>
+        <div class="flex flex-wrap gap-2 mb-2">
+          <Button
+            :is-active="mediaOption === 'single'"
+            class="rounded-none w-28 justify-center text-sm"
+            @click.prevent="selectSingle"
+          >
+            Single Upload
+          </Button>
+          <Button
+            :is-active="mediaOption === 'multiple'"
+            class="rounded-none w-28 justify-center text-sm"
+            @click.prevent="selectMultiple"
+          >
+            Multiple Upload
+          </Button>
+          <Button
+            :is-active="mediaOption === 'link'"
+            class="rounded-none w-24 justify-center"
+            @click.prevent="selectLink"
+          >
+            YouTube
+          </Button>
+        </div>
+        <div class="text-xs text-gray-500 dark:text-gray-400">
+          <span v-if="mediaOption === 'single'" class="block">
+            📱 Single upload mode
+          </span>
+          <span v-else-if="mediaOption === 'multiple'" class="block">
+            📚 Multiple upload mode (batch processing)
+          </span>
+          <span v-else-if="mediaOption === 'link'" class="block">
+            🎥 YouTube video embedding
+          </span>
+        </div>
+      </div>
+
+      <!-- Media Type Selection (when YouTube is disabled) -->
+      <div v-else class="mb-4">
+        <div class="flex flex-wrap gap-2 mb-2">
+          <Button
+            :is-active="mediaOption === 'single'"
+            class="rounded-none w-28 justify-center text-sm"
+            @click.prevent="selectSingle"
+          >
+            Single Upload
+          </Button>
+          <Button
+            :is-active="mediaOption === 'multiple'"
+            class="rounded-none w-28 justify-center text-sm"
+            @click.prevent="selectMultiple"
+          >
+            Multiple Upload
+          </Button>
+        </div>
+        <div class="text-xs text-gray-500 dark:text-gray-400">
+          <span v-if="mediaOption === 'single'" class="block">
+            📱 Single upload mode
+          </span>
+          <span v-else-if="mediaOption === 'multiple'" class="block">
+            📚 Multiple upload mode (batch processing)
+          </span>
+        </div>
       </div>
 
       <div class="flex flex-wrap">
         <!-- Upload Section -->
         <div
-          v-if="mediaOption === 'upload' || mediaOption === 'batch'"
+          v-if="mediaOption === 'single' || mediaOption === 'multiple'"
           class="w-full mb-2"
         >
           <BreezeLabel for="imageInput" value="Media" />
@@ -1112,7 +854,7 @@ onMounted(() => {
             ref="imageInput"
             type="file"
             class="hidden"
-            multiple
+            :multiple="mediaOption === 'multiple'"
             accept="image/*,video/*"
             @change="updateImagePreview"
           />
@@ -1137,29 +879,35 @@ onMounted(() => {
               class="absolute inset-0 bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-500 rounded-lg flex items-center justify-center"
             >
               <div class="text-blue-600 dark:text-blue-400 text-lg font-medium">
-                <i class="ri-cloud-upload-line"></i>
-                Drop files here to upload
+                <i class="ri-cloud-line text-6xl"></i>
+                <span v-if="mediaOption === 'single'"
+                  >Drop file here to upload</span
+                >
+                <span v-else>Drop files here to upload</span>
               </div>
             </div>
 
             <!-- Empty state -->
             <div v-if="selectedFiles.length === 0" class="space-y-4">
               <div class="mx-auto w-16 h-16 text-gray-400">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                  />
-                </svg>
+                <i class="ri-cloud-line text-6xl"></i>
               </div>
               <div>
                 <p class="text-lg font-medium text-gray-600 dark:text-gray-300">
-                  Drag and drop files here
+                  <span v-if="mediaOption === 'single'"
+                    >Drag and drop file here</span
+                  >
+                  <span v-else>Drag and drop files here</span>
                 </p>
                 <p class="text-sm text-gray-500 dark:text-gray-400">
-                  or click to select files (images and videos up to 60MB)
+                  <span v-if="mediaOption === 'single'"
+                    >or click to select a file (images and videos up to
+                    60MB)</span
+                  >
+                  <span v-else
+                    >or click to select files (images and videos up to
+                    60MB)</span
+                  >
                 </p>
               </div>
               <Button
@@ -1167,16 +915,20 @@ onMounted(() => {
                 class="mt-4"
                 @click.prevent="selectNewImage"
               >
-                Select Media Files
+                <span v-if="mediaOption === 'single'">Select Media File</span>
+                <span v-else>Select Media Files</span>
               </Button>
             </div>
           </div>
 
-          <!-- Selected Files Preview -->
-          <div v-if="selectedFiles.length > 0" class="mt-4 space-y-4">
-            <div class="flex items-center justify-between">
+          <!-- Unified File Preview (Single & Multiple) -->
+          <div v-if="previewFiles.length > 0" class="mt-4 space-y-4">
+            <div
+              v-if="mediaOption === 'multiple'"
+              class="flex items-center justify-between"
+            >
               <h4 class="font-medium text-gray-900 dark:text-gray-100">
-                Selected Files ({{ selectedFiles.length }})
+                Selected Files ({{ previewFiles.length }})
               </h4>
               <Button
                 type="button"
@@ -1190,18 +942,14 @@ onMounted(() => {
             <!-- Files Grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div
-                v-for="(fileObj, index) in selectedFiles"
+                v-for="(fileObj, index) in previewFiles"
                 :key="index"
                 class="relative border border-gray-200 dark:border-gray-600 rounded-lg p-3"
                 :class="{
-                  'border-red-300 bg-red-50 dark:border-red-600 dark:bg-red-900/20':
-                    !fileObj.validation?.valid &&
-                    !fileObj.validation?.needsOptimization,
                   'border-amber-300 bg-amber-50 dark:border-amber-600 dark:bg-amber-900/20':
-                    fileObj.validation?.needsOptimization && !fileObj.processed,
+                    fileObj.needsOptimization && !fileObj.processed,
                   'border-green-300 bg-green-50 dark:border-green-600 dark:bg-green-900/20':
-                    fileObj.uploaded ||
-                    (fileObj.processed && fileObj.validation?.valid)
+                    fileObj.uploaded || fileObj.processed
                 }"
               >
                 <!-- Remove button -->
@@ -1223,7 +971,7 @@ onMounted(() => {
                       :alt="fileObj.file.name"
                     />
                     <video
-                      v-else-if="fileObj.file.type.startsWith('video/')"
+                      v-else
                       :src="fileObj.preview"
                       class="w-full h-24 object-cover rounded"
                       muted
@@ -1233,30 +981,20 @@ onMounted(() => {
                     v-else
                     class="w-full h-24 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center"
                   >
-                    <VideoIcon
+                    <i
                       v-if="fileObj.file.type.startsWith('video/')"
-                      class="w-8 h-8 text-gray-400"
-                    />
-                    <svg
-                      v-else
-                      class="w-8 h-8 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      />
-                    </svg>
+                      class="ri-vidicon-line text-2xl text-gray-400"
+                    ></i>
+                    <i v-else class="ri-image text-2xl text-gray-400"></i>
                   </div>
                 </div>
 
                 <!-- File info -->
                 <div class="text-xs space-y-1">
-                  <p class="font-medium truncate" :title="fileObj.file.name">
+                  <p
+                    class="font-medium truncate dark:text-gray-300"
+                    :title="fileObj.file.name"
+                  >
                     {{ fileObj.file.name }}
                   </p>
                   <p class="text-gray-500">
@@ -1273,13 +1011,12 @@ onMounted(() => {
                     ></div>
                     <span
                       v-if="
-                        fileObj.validation?.needsOptimization &&
-                        optimizationProgress > 0
+                        fileObj.needsOptimization && optimizationProgress > 0
                       "
                     >
                       Optimizing... {{ optimizationProgress }}%
                     </span>
-                    <span v-else-if="fileObj.validation?.needsOptimization">
+                    <span v-else-if="fileObj.needsOptimization">
                       Optimizing large video...
                     </span>
                     <span v-else>Processing...</span>
@@ -1289,7 +1026,7 @@ onMounted(() => {
                   <div
                     v-if="
                       fileObj.processing &&
-                      fileObj.validation?.needsOptimization &&
+                      fileObj.needsOptimization &&
                       optimizationProgress > 0
                     "
                     class="mt-1"
@@ -1304,10 +1041,7 @@ onMounted(() => {
                     </div>
                   </div>
 
-                  <div
-                    v-else-if="fileObj.processed && fileObj.validation?.valid"
-                    class="text-green-600"
-                  >
+                  <div v-else-if="fileObj.processed" class="text-green-600">
                     <span
                       v-if="
                         fileObj.file.type.startsWith('video/') &&
@@ -1320,10 +1054,7 @@ onMounted(() => {
                     <span v-else>✓ Ready</span>
                   </div>
                   <div
-                    v-else-if="
-                      fileObj.validation?.needsOptimization &&
-                      !fileObj.processing
-                    "
+                    v-else-if="fileObj.needsOptimization && !fileObj.processing"
                     class="text-amber-600"
                   >
                     ⚠️ Large video - will be optimized
@@ -1334,15 +1065,12 @@ onMounted(() => {
 
                   <!-- Validation errors -->
                   <div
-                    v-if="
-                      !fileObj.validation?.valid &&
-                      !fileObj.validation?.needsOptimization
-                    "
+                    v-if="fileObj.needsOptimization && !fileObj.processed"
                     class="text-red-600"
                   >
                     <p
                       v-if="
-                        fileObj.validation?.sizeError &&
+                        !isFileSizeValid(fileObj.file.size) &&
                         !fileObj.file.type.startsWith('video/')
                       "
                     >
@@ -1350,14 +1078,14 @@ onMounted(() => {
                     </p>
                     <p
                       v-if="
-                        fileObj.validation?.sizeError &&
+                        !isFileSizeValid(fileObj.file.size) &&
                         fileObj.file.type.startsWith('video/') &&
                         fileObj.processed
                       "
                     >
                       Video still too large after optimization (max 60MB)
                     </p>
-                    <p v-if="fileObj.validation?.typeError">
+                    <p v-if="!isAllowedFileType(fileObj.file.type)">
                       Unsupported file type
                     </p>
                   </div>
@@ -1389,7 +1117,9 @@ onMounted(() => {
                     retryCount > 0
                       ? "Retrying failed uploads..."
                       : `Uploading files... (${currentFileIndex + 1}/${
-                          selectedFiles.filter((f) => f.validation.valid).length
+                          selectedFiles.filter(
+                            (f) => !f.needsOptimization || f.processed
+                          ).length
                         })`
                   }}
                 </span>
@@ -1546,13 +1276,17 @@ onMounted(() => {
             {{
               batchProcessing
                 ? `Uploading ${currentFileIndex + 1}/${
-                    selectedFiles.filter((f) => f.validation.valid).length
+                    selectedFiles.filter(
+                      (f) => !f.needsOptimization || f.processed
+                    ).length
                   }...`
                 : compressionProgress
                 ? `Optimizing... ${optimizationProgress}%`
-                : selectedFiles.length > 1
+                : previewFiles.length > 1
                 ? `Create ${
-                    selectedFiles.filter((f) => f.validation.valid).length
+                    previewFiles.filter(
+                      (f) => !f.needsOptimization || f.processed
+                    ).length
                   } Pages!`
                 : "Create Page!"
             }}
