@@ -312,7 +312,7 @@ const generatePreview = async (fileObj) => {
   const file = fileObj.file;
 
   // Initial validation - more lenient for videos that might need optimization
-  if (!fileObj.validation?.valid && !fileObj.validation?.needsOptimization) {
+  if (fileObj.needsOptimization && !fileObj.processed) {
     return;
   }
 
@@ -364,7 +364,7 @@ const generatePreview = async (fileObj) => {
       fileObj.validation = validateFile(fileObj.processedFile, true);
       fileObj.processed = true;
 
-      if (!fileObj.validation?.valid) {
+      if (fileObj.needsOptimization && !fileObj.processed) {
         // Video still too large after processing
       }
     } catch (error) {
@@ -491,7 +491,9 @@ const processBatch = async (specificFiles = null) => {
   // Use specific files for retry, or all valid files for initial upload
   const validFiles =
     specificFiles ||
-    selectedFiles.value.filter((fileObj) => fileObj.validation?.valid);
+    selectedFiles.value.filter(
+      (fileObj) => !fileObj.needsOptimization || fileObj.processed
+    );
   if (validFiles.length === 0) {
     return;
   }
@@ -1045,10 +1047,7 @@ onMounted(() => {
                     <span v-else>✓ Ready</span>
                   </div>
                   <div
-                    v-else-if="
-                      fileObj.validation?.needsOptimization &&
-                      !fileObj.processing
-                    "
+                    v-else-if="fileObj.needsOptimization && !fileObj.processing"
                     class="text-amber-600"
                   >
                     ⚠️ Large video - will be optimized
@@ -1059,15 +1058,12 @@ onMounted(() => {
 
                   <!-- Validation errors -->
                   <div
-                    v-if="
-                      !fileObj.validation?.valid &&
-                      !fileObj.validation?.needsOptimization
-                    "
+                    v-if="fileObj.needsOptimization && !fileObj.processed"
                     class="text-red-600"
                   >
                     <p
                       v-if="
-                        fileObj.validation?.sizeError &&
+                        fileObj.file.size > MAX_FILE_SIZE &&
                         !fileObj.file.type.startsWith('video/')
                       "
                     >
@@ -1075,14 +1071,32 @@ onMounted(() => {
                     </p>
                     <p
                       v-if="
-                        fileObj.validation?.sizeError &&
+                        fileObj.file.size > MAX_FILE_SIZE &&
                         fileObj.file.type.startsWith('video/') &&
                         fileObj.processed
                       "
                     >
                       Video still too large after optimization (max 60MB)
                     </p>
-                    <p v-if="fileObj.validation?.typeError">
+                    <p
+                      v-if="
+                        ![
+                          'image/jpeg',
+                          'image/jpg',
+                          'image/png',
+                          'image/bmp',
+                          'image/gif',
+                          'image/svg+xml',
+                          'image/webp',
+                          'video/mp4',
+                          'video/avi',
+                          'video/quicktime',
+                          'video/mpeg',
+                          'video/webm',
+                          'video/x-matroska'
+                        ].includes(fileObj.file.type)
+                      "
+                    >
                       Unsupported file type
                     </p>
                   </div>
@@ -1114,7 +1128,9 @@ onMounted(() => {
                     retryCount > 0
                       ? "Retrying failed uploads..."
                       : `Uploading files... (${currentFileIndex + 1}/${
-                          selectedFiles.filter((f) => f.validation.valid).length
+                          selectedFiles.filter(
+                            (f) => !f.needsOptimization || f.processed
+                          ).length
                         })`
                   }}
                 </span>
@@ -1271,13 +1287,17 @@ onMounted(() => {
             {{
               batchProcessing
                 ? `Uploading ${currentFileIndex + 1}/${
-                    selectedFiles.filter((f) => f.validation?.valid).length
+                    selectedFiles.filter(
+                      (f) => !f.needsOptimization || f.processed
+                    ).length
                   }...`
                 : compressionProgress
                 ? `Optimizing... ${optimizationProgress}%`
                 : previewFiles.length > 1
                 ? `Create ${
-                    previewFiles.filter((f) => f.validation?.valid).length
+                    previewFiles.filter(
+                      (f) => !f.needsOptimization || f.processed
+                    ).length
                   } Pages!`
                 : "Create Page!"
             }}
@@ -1287,11 +1307,3 @@ onMounted(() => {
     </form>
   </div>
 </template>
-
-// For test compatibility only export function validateFile(file) { const
-MAX_FILE_SIZE = 62914560; // 60MB const allowedTypes = [ "image/jpeg",
-"image/jpg", "image/png", "image/bmp", "image/gif", "image/svg+xml",
-"image/webp", "video/mp4", "video/avi", "video/quicktime", "video/mpeg",
-"video/webm", "video/x-matroska" ]; const sizeError = file.size > MAX_FILE_SIZE;
-const typeError = !allowedTypes.includes(file.type); return { valid: !sizeError
-&& !typeError, sizeError, typeError, size: file.size, type: file.type, }; }
