@@ -6,7 +6,7 @@ import {
   default as BreezeLabel,
   default as InputLabel
 } from "@/Components/InputLabel.vue";
-import VideoIcon from "@/Components/svg/VideoIcon.vue";
+
 import TextInput from "@/Components/TextInput.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
@@ -59,9 +59,9 @@ const previewFiles = computed(() => {
         processing: singleFileProcessing.value,
         processed: !singleFileProcessing.value,
         processedFile: form.image, // Add processedFile for consistency with multiple upload
-        needsOptimization: singleFileOriginal.value
-          ? needsVideoOptimization(singleFileOriginal.value)
-          : false,
+        needsOptimization:
+          singleFileOriginal.value?.type?.startsWith("video/") &&
+          singleFileOriginal.value?.size > MAX_FILE_SIZE,
         uploaded: false
       }
     ];
@@ -279,6 +279,9 @@ const handleDrop = async (e) => {
       for (const fileObj of newFileObjects) {
         await generatePreview(fileObj);
       }
+
+      // Force reactivity update
+      selectedFiles.value = [...selectedFiles.value];
     } else {
       // No existing files, handle as batch
       await handleMultipleFiles(files);
@@ -315,30 +318,33 @@ const generatePreview = async (fileObj) => {
   // Files that need optimization but aren't processed yet are valid and should continue
 
   // Create preview with Promise-based FileReader for better mobile compatibility
-  await new Promise((resolve, reject) => {
-    const reader = new FileReader();
+  try {
+    await new Promise((resolve, reject) => {
+      const reader = new FileReader();
 
-    // Add timeout for mobile browsers that might hang
-    const timeout = setTimeout(() => {
-      reader.abort();
-      reject(new Error("FileReader timeout"));
-    }, 10000);
+      // Add timeout for mobile browsers that might hang
+      const timeout = setTimeout(() => {
+        reader.abort();
+        reject(new Error("FileReader timeout"));
+      }, 10000);
 
-    reader.onload = (e) => {
-      clearTimeout(timeout);
-      fileObj.preview = e.target.result;
-      resolve();
-    };
+      reader.onload = (e) => {
+        clearTimeout(timeout);
+        fileObj.preview = e.target.result;
+        resolve();
+      };
 
-    reader.onerror = () => {
-      clearTimeout(timeout);
-      reject(reader.error);
-    };
+      reader.onerror = () => {
+        clearTimeout(timeout);
+        reject(reader.error);
+      };
 
-    reader.readAsDataURL(file);
-  }).catch(() => {
+      reader.readAsDataURL(file);
+    });
+  } catch (error) {
     // Continue without preview
-  });
+    console.warn("Preview generation failed:", error);
+  }
 
   // Process video files with timeout
   if (file.type.startsWith("video/")) {
@@ -358,13 +364,8 @@ const generatePreview = async (fileObj) => {
       // Clear timeout since processing completed
       clearTimeout(processingTimeout);
 
-      // Re-validate the processed file
-      fileObj.validation = validateFile(fileObj.processedFile, true);
+      // Mark as processed - validation is handled by needsOptimization property
       fileObj.processed = true;
-
-      if (fileObj.processedFile.size > MAX_FILE_SIZE) {
-        // Video still too large after processing
-      }
     } catch (error) {
       clearTimeout(processingTimeout);
       fileObj.processedFile = file;
@@ -462,6 +463,9 @@ const updateImagePreview = async (event) => {
       for (const fileObj of newFileObjects) {
         await generatePreview(fileObj);
       }
+
+      // Force reactivity update
+      selectedFiles.value = [...selectedFiles.value];
     } else {
       // No existing files, handle as batch
       await handleMultipleFiles(files);
@@ -873,7 +877,7 @@ onMounted(() => {
               class="absolute inset-0 bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-500 rounded-lg flex items-center justify-center"
             >
               <div class="text-blue-600 dark:text-blue-400 text-lg font-medium">
-                <i class="ri-cloud-upload-line"></i>
+                <i class="ri-cloud-line text-6xl"></i>
                 <span v-if="mediaOption === 'single'"
                   >Drop file here to upload</span
                 >
@@ -884,7 +888,7 @@ onMounted(() => {
             <!-- Empty state -->
             <div v-if="selectedFiles.length === 0" class="space-y-4">
               <div class="mx-auto w-16 h-16 text-gray-400">
-                <i class="ri-cloud-upload-line text-6xl"></i>
+                <i class="ri-cloud-line text-6xl"></i>
               </div>
               <div>
                 <p class="text-lg font-medium text-gray-600 dark:text-gray-300">
@@ -975,17 +979,20 @@ onMounted(() => {
                     v-else
                     class="w-full h-24 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center"
                   >
-                    <VideoIcon
+                    <i
                       v-if="fileObj.file.type.startsWith('video/')"
-                      class="w-8 h-8 text-gray-400"
-                    />
-                    <i v-else class="ri-image-line text-2xl text-gray-400"></i>
+                      class="ri-vidicon-line text-2xl text-gray-400"
+                    ></i>
+                    <i v-else class="ri-image text-2xl text-gray-400"></i>
                   </div>
                 </div>
 
                 <!-- File info -->
                 <div class="text-xs space-y-1">
-                  <p class="font-medium truncate" :title="fileObj.file.name">
+                  <p
+                    class="font-medium truncate dark:text-gray-300"
+                    :title="fileObj.file.name"
+                  >
                     {{ fileObj.file.name }}
                   </p>
                   <p class="text-gray-500">
