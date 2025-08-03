@@ -11,6 +11,10 @@ import TextInput from "@/Components/TextInput.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
 import { useVideoOptimization } from "@/composables/useVideoOptimization.js";
+import {
+  MAX_FILE_SIZE,
+  needsVideoOptimization
+} from "@/utils/fileValidation.js";
 import { useForm, usePage } from "@inertiajs/vue3";
 import { useVuelidate } from "@vuelidate/core";
 import { computed, onMounted, ref, watch } from "vue";
@@ -55,9 +59,9 @@ const previewFiles = computed(() => {
         processing: singleFileProcessing.value,
         processed: !singleFileProcessing.value,
         processedFile: form.image, // Add processedFile for consistency with multiple upload
-        needsOptimization:
-          singleFileOriginal.value?.type?.startsWith("video/") &&
-          singleFileOriginal.value?.size > MAX_FILE_SIZE,
+        needsOptimization: singleFileOriginal.value
+          ? needsVideoOptimization(singleFileOriginal.value)
+          : false,
         uploaded: false
       }
     ];
@@ -86,8 +90,7 @@ const mediaOption = ref("single"); // single, multiple, link
 const { compressionProgress, optimizationProgress, processMediaFile } =
   useVideoOptimization();
 
-// File size constant
-const MAX_FILE_SIZE = 62914560; // 60MB
+// File size constant imported from shared utility
 
 // Helper function to create file objects consistently
 const createFileObject = (file) => ({
@@ -228,10 +231,7 @@ watch(
   { deep: true }
 );
 
-// Simple helper to check if video needs optimization
-const needsVideoOptimization = (file) => {
-  return file.type.startsWith("video/") && file.size > MAX_FILE_SIZE;
-};
+// Simple helper to check if video needs optimization (imported from shared utility)
 
 const formatFileSize = (bytes) => {
   if (bytes === 0) return "0 Bytes";
@@ -311,10 +311,8 @@ const generatePreviewsSequentially = async () => {
 const generatePreview = async (fileObj) => {
   const file = fileObj.file;
 
-  // Initial validation - more lenient for videos that might need optimization
-  if (fileObj.needsOptimization && !fileObj.processed) {
-    return;
-  }
+  // Initial validation - only return early for truly invalid files
+  // Files that need optimization but aren't processed yet are valid and should continue
 
   // Create preview with Promise-based FileReader for better mobile compatibility
   await new Promise((resolve, reject) => {
@@ -364,7 +362,7 @@ const generatePreview = async (fileObj) => {
       fileObj.validation = validateFile(fileObj.processedFile, true);
       fileObj.processed = true;
 
-      if (fileObj.needsOptimization && !fileObj.processed) {
+      if (fileObj.processedFile.size > MAX_FILE_SIZE) {
         // Video still too large after processing
       }
     } catch (error) {

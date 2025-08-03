@@ -1,37 +1,9 @@
 import NewPageForm from "@/Pages/Book/NewPageForm.vue";
+import { validateFile } from "@/utils/fileValidation.js";
 import { useForm, usePage } from "@inertiajs/vue3";
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
-
-// Test helper function for validation (matches the logic in the component)
-function validateFile(file) {
-  const MAX_FILE_SIZE = 62914560; // 60MB
-  const allowedTypes = [
-    "image/jpeg",
-    "image/jpg",
-    "image/png",
-    "image/bmp",
-    "image/gif",
-    "image/svg+xml",
-    "image/webp",
-    "video/mp4",
-    "video/avi",
-    "video/quicktime",
-    "video/mpeg",
-    "video/webm",
-    "video/x-matroska"
-  ];
-  const sizeError = file.size > MAX_FILE_SIZE;
-  const typeError = !allowedTypes.includes(file.type);
-  return {
-    valid: !sizeError && !typeError,
-    sizeError,
-    typeError,
-    size: file.size,
-    type: file.type
-  };
-}
 
 global.route = (name) => `/${name}`;
 
