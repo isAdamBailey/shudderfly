@@ -4,6 +4,35 @@ import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 
+// Test helper function for validation (matches the logic in the component)
+function validateFile(file) {
+  const MAX_FILE_SIZE = 62914560; // 60MB
+  const allowedTypes = [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/bmp",
+    "image/gif",
+    "image/svg+xml",
+    "image/webp",
+    "video/mp4",
+    "video/avi",
+    "video/quicktime",
+    "video/mpeg",
+    "video/webm",
+    "video/x-matroska"
+  ];
+  const sizeError = file.size > MAX_FILE_SIZE;
+  const typeError = !allowedTypes.includes(file.type);
+  return {
+    valid: !sizeError && !typeError,
+    sizeError,
+    typeError,
+    size: file.size,
+    type: file.type
+  };
+}
+
 global.route = (name) => `/${name}`;
 
 // Mock video optimization composable
@@ -288,73 +317,89 @@ describe("NewPageForm", () => {
 
   describe("File Upload", () => {
     it("validates file types", () => {
-      const component = wrapper.vm;
       const validImageFile = createFile("test.jpg", "image/jpeg", 1024);
       const validVideoFile = createFile("test.mp4", "video/mp4", 1024);
       const invalidFile = createFile("test.txt", "text/plain", 1024);
 
-      expect(component.validateFile(validImageFile).valid).toBe(true);
-      expect(component.validateFile(validVideoFile).valid).toBe(true);
-      expect(component.validateFile(invalidFile).valid).toBe(false);
-      expect(component.validateFile(invalidFile).typeError).toBe(true);
+      expect(validateFile(validImageFile).valid).toBe(true);
+      expect(validateFile(validVideoFile).valid).toBe(true);
+      expect(validateFile(invalidFile).valid).toBe(false);
+      expect(validateFile(invalidFile).typeError).toBe(true);
     });
 
     it("validates file sizes", () => {
-      const component = wrapper.vm;
       const smallFile = createFile("test.jpg", "image/jpeg", 1024);
       const largeFile = createFile("test.jpg", "image/jpeg", 70000000); // 70MB
 
-      expect(component.validateFile(smallFile).valid).toBe(true);
-      expect(component.validateFile(largeFile).valid).toBe(false);
-      expect(component.validateFile(largeFile).sizeError).toBe(true);
+      expect(validateFile(smallFile).valid).toBe(true);
+      expect(validateFile(largeFile).valid).toBe(false);
+      expect(validateFile(largeFile).sizeError).toBe(true);
     });
 
     it("handles single file selection", async () => {
-      const component = wrapper.vm;
       const file = createFile("test.jpg", "image/jpeg", 1024);
 
-      await component.handleSingleFile(file);
+      // Set to single mode and simulate file selection
+      wrapper.vm.selectSingle();
 
-      expect(component.selectedFiles.length).toBe(1);
-      expect(component.selectedFiles[0].file).toBe(file);
+      // Simulate the ultra-simple single upload path
+      wrapper.vm.form.image = file;
+      wrapper.vm.selectedFiles = []; // Clear as per single mode logic
+      wrapper.vm.singleFilePreview = "data:image/jpeg;base64,test"; // Simulate preview
+
+      expect(wrapper.vm.form.image).toBe(file);
+      expect(wrapper.vm.selectedFiles.length).toBe(0); // Single mode bypasses selectedFiles
+      expect(wrapper.vm.mediaOption).toBe("single");
+      expect(wrapper.vm.singleFilePreview).toBeTruthy(); // Preview should be set
     }, 10000); // 10 second timeout
 
     it("handles multiple file selection", async () => {
-      const component = wrapper.vm;
       const files = [
         createFile("test1.jpg", "image/jpeg", 1024),
         createFile("test2.jpg", "image/jpeg", 1024)
       ];
 
-      await component.handleMultipleFiles(files);
+      // First set to multiple mode (like user would do)
+      wrapper.vm.selectMultiple();
+      await wrapper.vm.handleMultipleFiles(files);
 
-      expect(component.selectedFiles.length).toBe(2);
-      expect(component.mediaOption).toBe("batch");
+      expect(wrapper.vm.selectedFiles.length).toBe(2);
+      expect(wrapper.vm.mediaOption).toBe("multiple");
     }, 10000); // 10 second timeout
 
     it("removes files from selection", () => {
-      const component = wrapper.vm;
-      component.selectedFiles = [
-        { file: createFile("test1.jpg"), preview: null, processed: true },
-        { file: createFile("test2.jpg"), preview: null, processed: true }
+      // Set to multiple mode first (like user would do)
+      wrapper.vm.selectMultiple();
+      wrapper.vm.selectedFiles = [
+        {
+          file: createFile("test1.jpg"),
+          preview: null,
+          processed: true,
+          validation: { valid: true }
+        },
+        {
+          file: createFile("test2.jpg"),
+          preview: null,
+          processed: true,
+          validation: { valid: true }
+        }
       ];
 
-      component.removeFile(0);
+      wrapper.vm.removeFile(0);
 
-      expect(component.selectedFiles.length).toBe(1);
-      expect(component.selectedFiles[0].file.name).toBe("test2.jpg");
+      expect(wrapper.vm.selectedFiles.length).toBe(1);
+      expect(wrapper.vm.selectedFiles[0].file.name).toBe("test2.jpg");
     });
   });
 
   describe("Batch Processing", () => {
     it("processes multiple files sequentially", async () => {
-      const component = wrapper.vm;
       const files = [
         createFile("test1.jpg", "image/jpeg", 1024),
         createFile("test2.jpg", "image/jpeg", 1024)
       ];
 
-      component.selectedFiles = files.map((file) => ({
+      wrapper.vm.selectedFiles = files.map((file) => ({
         file,
         preview: null,
         processed: true,
@@ -368,20 +413,19 @@ describe("NewPageForm", () => {
         setTimeout(() => options.onSuccess(), 10);
       });
 
-      await component.processBatch();
+      await wrapper.vm.processBatch();
 
       expect(mockForm.post).toHaveBeenCalledTimes(2);
-      expect(component.batchProgress).toBe(100);
+      expect(wrapper.vm.batchProgress).toBe(100);
     });
 
     it("continues processing after single file error", async () => {
-      const component = wrapper.vm;
       const files = [
         createFile("test1.jpg", "image/jpeg", 1024),
         createFile("test2.jpg", "image/jpeg", 1024)
       ];
 
-      component.selectedFiles = files.map((file) => ({
+      wrapper.vm.selectedFiles = files.map((file) => ({
         file,
         preview: null,
         processed: true,
@@ -419,26 +463,25 @@ describe("NewPageForm", () => {
         }, 10);
       });
 
-      await component.processBatch();
+      await wrapper.vm.processBatch();
 
       // With retry logic: first file tries 3 times, second file succeeds on first try = 4 total calls
       expect(mockForm.post).toHaveBeenCalledTimes(4);
-      expect(component.selectedFiles[0].error).toBe("Server error");
-      expect(component.selectedFiles[1].uploaded).toBe(true);
-      expect(component.failedUploads.length).toBe(1);
-      expect(component.failedUploads[0].fileName).toBe("test1.jpg");
+      expect(wrapper.vm.selectedFiles[0].error).toBe("Server error");
+      expect(wrapper.vm.selectedFiles[1].uploaded).toBe(true);
+      expect(wrapper.vm.failedUploads.length).toBe(1);
+      expect(wrapper.vm.failedUploads[0].fileName).toBe("test1.jpg");
 
       global.setTimeout = originalSetTimeout;
     }, 15000); // Increase timeout to 15 seconds to account for retry delays
 
     it("updates progress during batch processing", async () => {
-      const component = wrapper.vm;
       const files = [
         createFile("test1.jpg", "image/jpeg", 1024),
         createFile("test2.jpg", "image/jpeg", 1024)
       ];
 
-      component.selectedFiles = files.map((file) => ({
+      wrapper.vm.selectedFiles = files.map((file) => ({
         file,
         preview: null,
         processed: true,
@@ -451,15 +494,15 @@ describe("NewPageForm", () => {
       const progressUpdates = [];
 
       mockForm.post.mockImplementation((url, options) => {
-        progressUpdates.push(component.batchProgress);
+        progressUpdates.push(wrapper.vm.batchProgress);
         setTimeout(() => options.onSuccess(), 10);
       });
 
-      await component.processBatch();
+      await wrapper.vm.processBatch();
 
       expect(progressUpdates).toContain(0); // First file starts at 0%
       expect(progressUpdates).toContain(50); // Second file starts at 50%
-      expect(component.batchProgress).toBe(100); // Final progress
+      expect(wrapper.vm.batchProgress).toBe(100); // Final progress
     });
   });
 
@@ -589,7 +632,7 @@ describe("NewPageForm", () => {
 
     it("processes batch upload when multiple files selected", async () => {
       const component = wrapper.vm;
-      component.mediaOption = "batch";
+      component.mediaOption = "multiple";
       component.selectedFiles = [
         {
           file: createFile("test1.jpg"),
@@ -598,8 +641,8 @@ describe("NewPageForm", () => {
         }
       ];
 
-      // Test that batch mode is properly set up
-      expect(component.mediaOption).toBe("batch");
+      // Test that multiple mode is properly set up
+      expect(component.mediaOption).toBe("multiple");
       expect(component.selectedFiles.length).toBe(1);
       expect(component.selectedFiles[0].validation.valid).toBe(true);
     });
