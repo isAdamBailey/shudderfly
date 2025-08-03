@@ -12,6 +12,8 @@ import VideoWrapper from "@/Components/VideoWrapper.vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
 import { useVideoOptimization } from "@/composables/useVideoOptimization.js";
 import {
+  isAllowedFileType,
+  isFileSizeValid,
   MAX_FILE_SIZE,
   needsVideoOptimization
 } from "@/utils/fileValidation.js";
@@ -1068,7 +1070,7 @@ onMounted(() => {
                   >
                     <p
                       v-if="
-                        fileObj.file.size > MAX_FILE_SIZE &&
+                        !isFileSizeValid(fileObj.file.size) &&
                         !fileObj.file.type.startsWith('video/')
                       "
                     >
@@ -1076,32 +1078,14 @@ onMounted(() => {
                     </p>
                     <p
                       v-if="
-                        fileObj.file.size > MAX_FILE_SIZE &&
+                        !isFileSizeValid(fileObj.file.size) &&
                         fileObj.file.type.startsWith('video/') &&
                         fileObj.processed
                       "
                     >
                       Video still too large after optimization (max 60MB)
                     </p>
-                    <p
-                      v-if="
-                        ![
-                          'image/jpeg',
-                          'image/jpg',
-                          'image/png',
-                          'image/bmp',
-                          'image/gif',
-                          'image/svg+xml',
-                          'image/webp',
-                          'video/mp4',
-                          'video/avi',
-                          'video/quicktime',
-                          'video/mpeg',
-                          'video/webm',
-                          'video/x-matroska'
-                        ].includes(fileObj.file.type)
-                      "
-                    >
+                    <p v-if="!isAllowedFileType(fileObj.file.type)">
                       Unsupported file type
                     </p>
                   </div>
