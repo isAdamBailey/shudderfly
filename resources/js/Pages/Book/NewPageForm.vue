@@ -39,16 +39,13 @@ const currentFileIndex = ref(0);
 const isDragOver = ref(false);
 const autoSaveTimeout = ref(null);
 const failedUploads = ref([]);
-const retryCount = ref(0);
-const maxRetries = ref(3);
+const isSubmitting = ref(false);
 
-// Unified preview data - single upload will use this too (as single-item array)
 const previewFiles = computed(() => {
   if (
     mediaOption.value === "single" &&
     (form.image || singleFilePreview.value)
   ) {
-    // Format single file like multiple upload fileObj for unified template
     return [
       {
         file: form.image ||
@@ -56,11 +53,11 @@ const previewFiles = computed(() => {
             name: "Loading...",
             size: 0,
             type: "unknown"
-          }, // Use original file info during processing
+          },
         preview: singleFilePreview.value,
         processing: singleFileProcessing.value,
         processed: !singleFileProcessing.value,
-        processedFile: form.image, // Add processedFile for consistency with multiple upload
+        processedFile: form.image,
         needsOptimization:
           singleFileOriginal.value?.type?.startsWith("video/") &&
           singleFileOriginal.value?.size > MAX_FILE_SIZE,
@@ -73,10 +70,9 @@ const previewFiles = computed(() => {
   return [];
 });
 
-// Single file preview (separate from selectedFiles array)
 const singleFilePreview = ref(null);
 const singleFileProcessing = ref(false);
-const singleFileOriginal = ref(null); // Store original file during processing
+const singleFileOriginal = ref(null); // Store original file during processing`
 
 const form = useForm({
   book_id: props.book.id,
@@ -92,9 +88,6 @@ const mediaOption = ref("single"); // single, multiple, link
 const { compressionProgress, optimizationProgress, processMediaFile } =
   useVideoOptimization();
 
-// File size constant imported from shared utility
-
-// Helper function to create file objects consistently
 const createFileObject = (file) => ({
   file,
   preview: null,
@@ -103,38 +96,33 @@ const createFileObject = (file) => ({
   needsOptimization: needsVideoOptimization(file)
 });
 
-// Helper function to handle single file processing (eliminates duplicate validation logic)
 const processSingleFile = async (file) => {
-  // Store original file immediately for preview display during processing
   singleFileOriginal.value = file;
 
-  // Generate preview FIRST (so user sees it immediately, even during video processing)
+  form.image = file;
+
   try {
-    // All files are images or videos, so always generate preview
     const reader = new FileReader();
     reader.onload = (e) => {
       singleFilePreview.value = e.target.result;
     };
     reader.readAsDataURL(file);
   } catch (error) {
-    singleFilePreview.value = null; // Continue without preview
+    singleFilePreview.value = null;
   }
 
-  // Process video AFTER generating preview (so preview shows during processing)
   if (needsVideoOptimization(file)) {
     singleFileProcessing.value = true;
     try {
       const processedFile = await processMediaFile(file);
       form.image = processedFile;
     } catch (error) {
-      // Fallback to original file if processing fails
       form.image = file;
     } finally {
       singleFileProcessing.value = false;
     }
   } else {
-    // Direct assignment for images and smaller videos
-    form.image = file;
+    //
   }
 
   return true;
@@ -212,7 +200,7 @@ const clearDraft = (resetForm = false) => {
   if (resetForm) {
     form.content = "";
     form.video_link = null;
-    mediaOption.value = "upload";
+    mediaOption.value = "single";
   }
 };
 
@@ -291,10 +279,7 @@ const handleDrop = async (e) => {
   }
 };
 
-// handleSingleFile removed - single mode now uses direct assignment for simplicity
-
 const handleMultipleFiles = async (files) => {
-  // Keep current mode (should be "multiple"), don't change it automatically
   selectedFiles.value = files.map(createFileObject);
 
   // Generate previews for all files (sequentially to avoid mobile memory issues)
@@ -308,7 +293,7 @@ const generatePreviewsSequentially = async () => {
 
     // Add delay between files to prevent memory issues
     if (i < selectedFiles.value.length - 1) {
-      await new Promise((resolve) => setTimeout(resolve, 300)); // 300ms between files
+      await new Promise((resolve) => setTimeout(resolve, 200)); // 300ms between files
     }
   }
 };
@@ -316,10 +301,6 @@ const generatePreviewsSequentially = async () => {
 const generatePreview = async (fileObj) => {
   const file = fileObj.file;
 
-  // Initial validation - only return early for truly invalid files
-  // Files that need optimization but aren't processed yet are valid and should continue
-
-  // Create preview with Promise-based FileReader for better mobile compatibility
   try {
     await new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -405,7 +386,6 @@ const removeFile = (index) => {
         selectedFiles.value[0].processedFile || selectedFiles.value[0].file;
       form.image = targetFile;
     }
-    // For multiple files remaining, keep current mode and don't set form.image
   }
 };
 
@@ -483,16 +463,14 @@ const getDeviceUploadTimeout = () => {
   return 90000; // 90 seconds for all devices (increased from 30s)
 };
 
-// Batch processing with retry logic
+// Batch processing - single attempt per file
 const processBatch = async (specificFiles = null) => {
   if (selectedFiles.value.length === 0) {
     return;
   }
 
-  // Reset failed uploads (but keep retryCount for global tracking)
   failedUploads.value = [];
 
-  // Use specific files for retry, or all valid files for initial upload
   const validFiles =
     specificFiles ||
     selectedFiles.value.filter(
@@ -516,70 +494,54 @@ const processBatch = async (specificFiles = null) => {
     currentFileIndex.value = i;
     batchProgress.value = Math.round((i / validFiles.length) * 100);
 
-    let uploadSuccess = false;
-    let attemptCount = 0;
+    try {
+      // Update the form with current file data
+      form.content = i === 0 ? originalContent : ""; // Only add content to first page
+      form.image = fileObj.processedFile || fileObj.file;
+      form.video_link = null;
 
-    // Retry logic for individual files
-    while (!uploadSuccess && attemptCount < maxRetries.value) {
-      try {
-        // Add longer delay between attempts on retry
-        if (attemptCount > 0) {
-          await new Promise((resolve) =>
-            setTimeout(resolve, 2000 * attemptCount)
-          ); // 2s, 4s, 6s delays
-        }
+      await new Promise((resolve, reject) => {
+        // Use dynamic timeout based on device
+        const timeout = setTimeout(() => {
+          reject(
+            new Error(
+              `Upload timeout after ${
+                uploadTimeout / 1000
+              }s - try reducing file size or check connection`
+            )
+          );
+        }, uploadTimeout);
 
-        // Update the form with current file data
-        form.content = i === 0 ? originalContent : ""; // Only add content to first page
-        form.image = fileObj.processedFile || fileObj.file;
-        form.video_link = null;
-
-        await new Promise((resolve, reject) => {
-          // Use dynamic timeout based on device
-          const timeout = setTimeout(() => {
-            reject(
-              new Error(
-                `Upload timeout after ${
-                  uploadTimeout / 1000
-                }s - try reducing file size or check connection`
-              )
-            );
-          }, uploadTimeout);
-
-          form.post(route("pages.store"), {
-            // eslint-disable-line no-undef
-            onSuccess: () => {
-              clearTimeout(timeout);
-              resolve();
-            },
-            onError: (errors) => {
-              clearTimeout(timeout);
-              reject(errors);
-            },
-            preserveState: false
-          });
+        // Post form directly as FormData
+        form.post(route("pages.store"), {
+          forceFormData: true,
+          onSuccess: () => {
+            clearTimeout(timeout);
+            resolve();
+          },
+          onError: (errors) => {
+            clearTimeout(timeout);
+            reject(errors);
+          },
+          preserveState: false
         });
+      });
 
-        fileObj.uploaded = true;
-        uploadSuccess = true;
+      fileObj.uploaded = true;
 
-        // Add longer delay between successful uploads for mobile stability
-        if (i < validFiles.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 500)); // 500ms between uploads
-        }
-      } catch (error) {
-        attemptCount++;
-        fileObj.error = error;
-
-        if (attemptCount >= maxRetries.value) {
-          // Mark as failed after max retries
-          failedUploads.value.push({
-            index: i,
-            fileName: fileObj.file.name,
-            error: error.message || "Upload failed"
-          });
-        }
+      // Delay between uploads for stability
+      if (i < validFiles.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
+    } catch (error) {
+      fileObj.error = error;
+      failedUploads.value.push({
+        index: i,
+        fileName: fileObj.file.name,
+        error:
+          (error && error.message) ||
+          (typeof error === "string" ? error : "Upload failed")
+      });
     }
 
     // Update progress to show completed uploads
@@ -589,47 +551,13 @@ const processBatch = async (specificFiles = null) => {
   batchProgress.value = 100;
   batchProcessing.value = false;
 
-  // Show results summary
-  const failedCount = failedUploads.value.length;
-
-  if (failedCount === 0) {
-    // All uploads successful
+  if (failedUploads.value.length === 0) {
     setTimeout(() => {
       clearDraft();
-      retryCount.value = 0; // Reset retry count on successful completion
       emit("close-form");
     }, 1000);
   } else {
     // Some uploads failed
-  }
-};
-
-// Retry failed uploads
-const retryFailedUploads = async () => {
-  if (failedUploads.value.length === 0) return;
-
-  retryCount.value++;
-  const originalFailedUploads = [...failedUploads.value];
-
-  // Get the actual file objects that failed
-  const failedFileObjects = originalFailedUploads
-    .map((failed) => selectedFiles.value[failed.index])
-    .filter((fileObj) => fileObj && !fileObj.uploaded);
-
-  // Clear previous errors
-  failedFileObjects.forEach((fileObj) => {
-    fileObj.error = null;
-  });
-
-  // Process only the failed files
-  await processBatch(failedFileObjects);
-};
-
-// Debug function to track Samsung-specific button click issues
-const handleSubmitClick = (event) => {
-  // Check if button is actually disabled
-  if (event.target.disabled) {
-    return;
   }
 };
 
@@ -642,31 +570,27 @@ const handleFormSubmit = async () => {
 // Single or multiple file submission
 const submit = async () => {
   if (mediaOption.value === "multiple") {
-    // Reset retry count for fresh batch upload
-    retryCount.value = 0;
     await processBatch();
     return;
   }
 
-  // For single mode: form.image should already be set directly
-  // No complex processing needed - ultra-simple path
-
   const validated = await v$.value.$validate();
 
   if (validated) {
-    // Universal submission using Inertia.js
+    if (isSubmitting.value) return;
+    isSubmitting.value = true;
     form.post(route("pages.store"), {
-      // eslint-disable-line no-undef
       preserveScroll: true,
+      forceFormData: true,
       onSuccess: () => {
         selectedFiles.value = [];
         form.reset();
         clearDraft();
-        retryCount.value = 0;
         emit("close-form");
       },
-      onError: () => {
-        // Handle upload errors
+      onError: () => {},
+      onFinish: () => {
+        isSubmitting.value = false;
       }
     });
   }
@@ -774,7 +698,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <form @submit.prevent="handleFormSubmit">
+    <form enctype="multipart/form-data" @submit.prevent>
       <!-- Media Type Selection -->
       <div v-if="isYouTubeEnabled" class="mb-4">
         <div class="flex flex-wrap gap-2 mb-2">
@@ -1112,17 +1036,7 @@ onMounted(() => {
                   Optimizing video {{ currentFileIndex + 1 }}...
                   {{ optimizationProgress }}%
                 </span>
-                <span v-else>
-                  {{
-                    retryCount > 0
-                      ? "Retrying failed uploads..."
-                      : `Uploading files... (${currentFileIndex + 1}/${
-                          selectedFiles.filter(
-                            (f) => !f.needsOptimization || f.processed
-                          ).length
-                        })`
-                  }}
-                </span>
+                <span v-else>Uploading files...</span>
               </div>
               <span class="font-medium">{{ batchProgress }}%</span>
             </div>
@@ -1131,52 +1045,6 @@ onMounted(() => {
                 class="bg-blue-500 h-2 rounded-full transition-all duration-300 ease-out"
                 :style="`width: ${batchProgress}%`"
               ></div>
-            </div>
-            <div
-              v-if="retryCount > 0"
-              class="mt-2 text-xs text-blue-600 dark:text-blue-400"
-            >
-              🔄 Using extended timeouts (attempt {{ retryCount + 1 }})
-            </div>
-          </div>
-
-          <!-- Failed Uploads Display -->
-          <div
-            v-if="failedUploads.length > 0 && !batchProcessing"
-            class="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded"
-          >
-            <div class="flex items-center justify-between mb-3">
-              <h4 class="font-medium text-red-700 dark:text-red-300">
-                {{ failedUploads.length }} Upload{{
-                  failedUploads.length > 1 ? "s" : ""
-                }}
-                Failed
-              </h4>
-              <Button
-                type="button"
-                class="text-sm bg-red-600 hover:bg-red-700 text-white"
-                :disabled="retryCount >= maxRetries"
-                @click="retryFailedUploads"
-              >
-                {{
-                  retryCount >= maxRetries
-                    ? "Max Retries Reached"
-                    : "Retry Failed"
-                }}
-              </Button>
-            </div>
-            <div class="space-y-2">
-              <div
-                v-for="failed in failedUploads"
-                :key="failed.index"
-                class="text-sm text-red-600 dark:text-red-400 flex items-start space-x-2"
-              >
-                <span class="font-mono">•</span>
-                <div>
-                  <div class="font-medium">{{ failed.fileName }}</div>
-                  <div class="text-xs opacity-75">{{ failed.error }}</div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -1261,25 +1129,22 @@ onMounted(() => {
       <!-- Submit Section -->
       <div class="flex justify-center mt-5 md:mt-20">
         <Button
-          type="submit"
+          type="button"
           class="w-3/4 flex justify-center py-3"
           :class="{ 'opacity-25': form.processing || batchProcessing }"
           :disabled="
-            compressionProgress ||
             form.processing ||
+            isSubmitting ||
             batchProcessing ||
+            singleFileProcessing ||
             v$.$error
           "
-          @click="handleSubmitClick"
+          @click="handleFormSubmit"
         >
           <span class="text-xl">
             {{
               batchProcessing
-                ? `Uploading ${currentFileIndex + 1}/${
-                    selectedFiles.filter(
-                      (f) => !f.needsOptimization || f.processed
-                    ).length
-                  }...`
+                ? `Uploading...`
                 : compressionProgress
                 ? `Optimizing... ${optimizationProgress}%`
                 : previewFiles.length > 1

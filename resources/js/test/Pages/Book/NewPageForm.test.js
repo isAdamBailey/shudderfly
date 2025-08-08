@@ -406,28 +406,13 @@ describe("NewPageForm", () => {
         processedFile: file
       }));
 
-      // Mock setTimeout to speed up retry delays for testing
-      const originalSetTimeout = global.setTimeout;
-      global.setTimeout = vi.fn((callback, delay) => {
-        if (
-          delay === 2000 ||
-          delay === 4000 ||
-          delay === 6000 ||
-          delay === 500
-        ) {
-          // Speed up retry delays and inter-upload delays
-          return originalSetTimeout(callback, 10);
-        }
-        return originalSetTimeout(callback, delay);
-      });
-
-      // Mock first submission fails multiple times, second succeeds
+      // Mock first submission fails, second succeeds (no retry logic anymore)
       let callCount = 0;
       mockForm.post.mockImplementation((url, options) => {
         callCount++;
         setTimeout(() => {
-          // First file fails all 3 retry attempts (calls 1, 2, 3), second file succeeds (call 4)
-          if (callCount <= 3) {
+          // First file fails (call 1), second file succeeds (call 2)
+          if (callCount === 1) {
             options.onError("Server error");
           } else {
             options.onSuccess();
@@ -437,14 +422,12 @@ describe("NewPageForm", () => {
 
       await wrapper.vm.processBatch();
 
-      // With retry logic: first file tries 3 times, second file succeeds on first try = 4 total calls
-      expect(mockForm.post).toHaveBeenCalledTimes(4);
+      // Without retry logic: one call per file (2 total)
+      expect(mockForm.post).toHaveBeenCalledTimes(2);
       expect(wrapper.vm.selectedFiles[0].error).toBe("Server error");
       expect(wrapper.vm.selectedFiles[1].uploaded).toBe(true);
       expect(wrapper.vm.failedUploads.length).toBe(1);
       expect(wrapper.vm.failedUploads[0].fileName).toBe("test1.jpg");
-
-      global.setTimeout = originalSetTimeout;
     }, 15000); // Increase timeout to 15 seconds to account for retry delays
 
     it("updates progress during batch processing", async () => {
