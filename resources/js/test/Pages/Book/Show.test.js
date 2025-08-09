@@ -185,9 +185,7 @@ describe("Book/Show.vue", () => {
     expect(wrapper.findComponent({ name: "ScrollTop" }).exists()).toBe(true);
   });
 
-  it("renders SearchInput component", () => {
-    expect(wrapper.findComponent({ name: "SearchInput" }).exists()).toBe(true);
-  });
+  // SearchInput is now in the global layout header, not inside Book/Show
 
   it("renders edit book form when bookSettingsOpen is true", async () => {
     wrapper.vm.bookSettingsOpen = true;

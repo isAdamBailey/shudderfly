@@ -3,7 +3,7 @@
 
   <BreezeAuthenticatedLayout>
     <template #header>
-      <SearchInput route-name="books.index" label="Books" />
+      <!-- Search moved to global layout -->
       <div
         class="p-3 mt-5 rounded-t-lg relative"
         :class="hasCoverImage ? 'bg-cover bg-center h-[70vh]' : ''"

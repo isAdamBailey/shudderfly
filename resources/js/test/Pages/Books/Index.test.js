@@ -74,7 +74,6 @@ describe("Books/Index.vue", () => {
 
   it("renders the header section", () => {
     expect(wrapper.find("h2").exists()).toBe(true);
-    expect(wrapper.findComponent({ name: "SearchInput" }).exists()).toBe(true);
   });
 
   it("renders BooksGrid for each category", () => {

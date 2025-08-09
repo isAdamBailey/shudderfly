@@ -57,7 +57,7 @@ vi.mock("@/Components/SearchInput.vue", () => ({
   default: {
     name: "SearchInput",
     template: "<div class='search-input' />",
-    props: ["routeName", "label", "class"]
+    props: ["label", "initialTarget"]
   }
 }));
 

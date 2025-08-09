@@ -1,5 +1,43 @@
 <template>
-  <div class="w-full px-2 bg-transparent flex">
+  <div class="w-full bg-transparent flex my-5">
+    <div class="self-center mr-2" role="radiogroup" aria-label="Search target">
+      <div
+        class="relative inline-flex items-center rounded-full bg-gray-200 dark:bg-gray-800 p-1 h-8"
+      >
+        <button
+          role="radio"
+          :aria-checked="isBooksTarget.toString()"
+          :tabindex="isBooksTarget ? 0 : -1"
+          class="px-3 h-6 rounded-full text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+          :class="
+            isBooksTarget
+              ? 'bg-blue-600 text-white dark:bg-white dark:text-gray-900 shadow'
+              : 'text-gray-700 dark:text-gray-300'
+          "
+          @click="setTarget('books')"
+          @keydown.enter.prevent="setTarget('books')"
+          @keydown.space.prevent="setTarget('books')"
+        >
+          Books
+        </button>
+        <button
+          role="radio"
+          :aria-checked="isUploadsTarget.toString()"
+          :tabindex="isUploadsTarget ? 0 : -1"
+          class="px-3 h-6 rounded-full text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+          :class="
+            isUploadsTarget
+              ? 'bg-blue-600 text-white dark:bg-white dark:text-gray-900 shadow'
+              : 'text-gray-700 dark:text-gray-300'
+          "
+          @click="setTarget('uploads')"
+          @keydown.enter.prevent="setTarget('uploads')"
+          @keydown.space.prevent="setTarget('uploads')"
+        >
+          Uploads
+        </button>
+      </div>
+    </div>
     <label for="search" class="hidden">Search</label>
     <input
       id="search"
@@ -30,19 +68,20 @@
 </template>
 
 <script setup>
+/* global route */
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { router, usePage } from "@inertiajs/vue3";
 import { computed, ref, watch } from "vue";
 
 const { speak } = useSpeechSynthesis();
 const props = defineProps({
-  routeName: {
-    type: String,
-    required: true
-  },
   label: {
     type: String,
     default: null
+  },
+  initialTarget: {
+    type: String,
+    default: null // 'books' | 'uploads'
   }
 });
 
@@ -51,9 +90,16 @@ let filter = ref(usePage().props?.filter || null);
 let voiceActive = ref(false);
 let voiceHeard = ref(false);
 let transcript = ref("");
+let target = ref(getDefaultTarget());
 
-const typeName = computed(() => {
-  return props.label || props.routeName.split(".")[0] || "something";
+const isBooksTarget = computed(() => target.value === "books");
+const isUploadsTarget = computed(() => target.value === "uploads");
+
+const currentLabel = computed(() => {
+  if (props.showTargetToggle) {
+    return target.value === "uploads" ? "Uploads" : "Books";
+  }
+  return props.label || (target.value === "uploads" ? "Uploads" : "Books");
 });
 
 const isVoiceSupported = computed(() => {
@@ -67,7 +113,7 @@ const searchPlaceholder = computed(() => {
   if (voiceActive.value && !voiceHeard.value) {
     return "Listening...";
   }
-  return `Search ${typeName.value}!`;
+  return `Search ${currentLabel.value}!`;
 });
 
 watch(search, () => {
@@ -77,15 +123,36 @@ watch(search, () => {
 });
 
 const searchMethod = () => {
+  const routeName =
+    target.value === "uploads" ? "pictures.index" : "books.index";
   if (search.value) {
-    speak(`Searching for ${props.label} with ${search.value}`);
+    speak(`Searching for ${currentLabel.value} with ${search.value}`);
   }
   router.get(
-    route(props.routeName),
-    { search: search.value, filter: filter.value },
+    route(routeName),
+    { search: search.value || null, filter: filter.value || null },
     { preserveState: true }
   );
 };
+
+function setTarget(newTarget) {
+  if (newTarget === target.value) return;
+  target.value = newTarget;
+}
+
+function getDefaultTarget() {
+  if (props.initialTarget === "books" || props.initialTarget === "uploads") {
+    return props.initialTarget;
+  }
+  // Infer based on page props (URL or server-provided context) if available
+  const currentUrl =
+    typeof window !== "undefined" ? window.location.pathname : "";
+  // Default to uploads, only switch to books on books index or book show
+  if (currentUrl.startsWith("/books") || currentUrl.startsWith("/book/")) {
+    return "books";
+  }
+  return "uploads";
+}
 
 const startVoiceRecognition = () => {
   // Check if SpeechRecognition is supported
