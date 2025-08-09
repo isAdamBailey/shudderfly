@@ -1,6 +1,6 @@
+import { router } from "@inertiajs/vue3";
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { router } from "@inertiajs/vue3";
 
 let SearchInput;
 
@@ -27,8 +27,8 @@ describe("Components/SearchInput.vue", () => {
     const wrapper = mount(SearchInput, {
       global: {
         // Use the mocked module
-        stubs: {},
-      },
+        stubs: {}
+      }
     });
     expect(wrapper.find('input[type="search"]').exists()).toBe(true);
     const radios = wrapper.findAll('[role="radio"]');
@@ -42,20 +42,22 @@ describe("Components/SearchInput.vue", () => {
     // Uploads should be selected by default
     const uploads = wrapper.findAll('[role="radio"]')[1];
     expect(uploads.attributes("aria-checked")).toBe("true");
-    expect(wrapper.find('input[type="search"]').attributes('placeholder')).toBe(
-      'Search Uploads!'
+    expect(wrapper.find('input[type="search"]').attributes("placeholder")).toBe(
+      "Search Uploads!"
     );
     // Switch to Books
-    await wrapper.findAll('[role="radio"]')[0].trigger('click');
-    expect(wrapper.findAll('[role="radio"]')[0].attributes("aria-checked")).toBe("true");
-    expect(wrapper.find('input[type="search"]').attributes('placeholder')).toBe(
-      'Search Books!'
+    await wrapper.findAll('[role="radio"]')[0].trigger("click");
+    expect(
+      wrapper.findAll('[role="radio"]')[0].attributes("aria-checked")
+    ).toBe("true");
+    expect(wrapper.find('input[type="search"]').attributes("placeholder")).toBe(
+      "Search Books!"
     );
   });
 
   it("does not navigate when toggling target", async () => {
     const wrapper = mount(SearchInput);
-    await wrapper.findAll('[role="radio"]')[0].trigger('click'); // Books
+    await wrapper.findAll('[role="radio"]')[0].trigger("click"); // Books
     expect(router.get).not.toHaveBeenCalled();
   });
 
@@ -72,7 +74,7 @@ describe("Components/SearchInput.vue", () => {
   it("navigates to books.index on Enter when target is books", async () => {
     const wrapper = mount(SearchInput);
     // Switch to Books
-    await wrapper.findAll('[role="radio"]')[0].trigger('click');
+    await wrapper.findAll('[role="radio"]')[0].trigger("click");
     const input = wrapper.find('input[type="search"]');
     await input.setValue("dogs");
     await input.trigger("keyup.enter");
@@ -81,5 +83,3 @@ describe("Components/SearchInput.vue", () => {
     expect(router.get.mock.calls[0][1]).toMatchObject({ search: "dogs" });
   });
 });
-
-
