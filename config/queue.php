@@ -59,6 +59,7 @@ return [
             'queue' => env('SQS_QUEUE', 'default'),
             'suffix' => env('SQS_SUFFIX'),
             'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+            'wait_time_seconds' => env('SQS_WAIT_TIME', 20),
             'after_commit' => false,
         ],
 

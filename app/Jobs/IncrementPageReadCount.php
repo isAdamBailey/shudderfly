@@ -4,15 +4,17 @@ namespace App\Jobs;
 
 use App\Models\Page;
 use Carbon\Carbon;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
 
-class IncrementPageReadCount implements ShouldQueue
+class IncrementPageReadCount implements ShouldBeUnique, ShouldQueue
 {
     use InteractsWithQueue, Queueable, SerializesModels;
+
+    public $uniqueFor = 300; // 5 minutes
 
     protected $page;
 
@@ -32,17 +34,7 @@ class IncrementPageReadCount implements ShouldQueue
         return 'increment_page_read_count_'.$this->page->id;
     }
 
-    /**
-     * Get the middleware the job should pass through.
-     */
-    public function middleware(): array
-    {
-        return [
-            (new WithoutOverlapping($this->uniqueId()))
-                ->expireAfter(300) // 5 minutes
-                ->releaseAfter(60), // 1 minute
-        ];
-    }
+    // No overlap middleware needed: ShouldBeUnique prevents duplicate enqueues
 
     /**
      * Handle incrementing the pages based on popularity of the page
@@ -63,24 +55,21 @@ class IncrementPageReadCount implements ShouldQueue
         // Get the current top 3 pages atomically
         $topPages = Page::orderBy('read_count', 'desc')->take(3)->pluck('id')->toArray();
         if (in_array($this->page->id, $topPages)) {
-            return;
+            return; // Top 3 stay steady
         }
 
-        // Check if page is recent enough to deserve boost
-        $pageAge = $this->page->created_at->diffInDays(Carbon::now());
-        $isRecent = $pageAge <= 90; // Pages under 3 months are considered recent
-
-        // If the page is in the top 20 but not recent, only increment by a tenth
+        // After the first increment, apply top-list damping:
+        // - Top 3: no further increments (stays steady)
+        // - Top 4-20: slow increment
+        // - Others: normal increment
         $top20Pages = Page::orderBy('read_count', 'desc')->take(20)->pluck('id')->toArray();
-        if (in_array($this->page->id, $top20Pages) && ! $isRecent) {
+        if (in_array($this->page->id, $top20Pages)) {
             $this->page->increment('read_count', 0.1);
 
             return;
         }
 
-        // Apply recency boost (for recent pages or pages not in top 20)
-        $incrementValue = $this->calculateRecencyBoost();
-        $this->page->increment('read_count', $incrementValue);
+        $this->page->increment('read_count', 1.0);
     }
 
     /**

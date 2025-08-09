@@ -4,15 +4,17 @@ namespace App\Jobs;
 
 use App\Models\Book;
 use Carbon\Carbon;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
 
-class IncrementBookReadCount implements ShouldQueue
+class IncrementBookReadCount implements ShouldBeUnique, ShouldQueue
 {
     use InteractsWithQueue, Queueable, SerializesModels;
+
+    public $uniqueFor = 300; // 5 minutes
 
     protected $book;
 
@@ -32,17 +34,7 @@ class IncrementBookReadCount implements ShouldQueue
         return 'increment_book_read_count_'.$this->book->id;
     }
 
-    /**
-     * Get the middleware the job should pass through.
-     */
-    public function middleware(): array
-    {
-        return [
-            (new WithoutOverlapping($this->uniqueId()))
-                ->expireAfter(300) // 5 minutes
-                ->releaseAfter(60), // 1 minute
-        ];
-    }
+    // No overlap middleware needed: ShouldBeUnique prevents duplicate enqueues
 
     /**
      * Handle incrementing the books based on popularity of the book
@@ -66,21 +58,18 @@ class IncrementBookReadCount implements ShouldQueue
             return;
         }
 
-        // Check if book is recent enough to deserve boost
-        $bookAge = $this->book->created_at->diffInDays(Carbon::now());
-        $isRecent = $bookAge <= 90; // Books under 3 months are considered recent
-
-        // If the book is in the top 20 but not recent, only increment by a tenth
+        // After the first increment, apply top-list damping:
+        // - Top 3: no further increments (stays steady)
+        // - Top 4-20: slow increment
+        // - Others: normal increment
         $top20Books = Book::orderBy('read_count', 'desc')->take(20)->pluck('id')->toArray();
-        if (in_array($this->book->id, $top20Books) && ! $isRecent) {
+        if (in_array($this->book->id, $top20Books)) {
             $this->book->increment('read_count', 0.1);
 
             return;
         }
 
-        // Apply recency boost (for recent books or books not in top 20)
-        $incrementValue = $this->calculateRecencyBoost();
-        $this->book->increment('read_count', $incrementValue);
+        $this->book->increment('read_count', 1.0);
     }
 
     /**

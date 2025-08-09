@@ -229,7 +229,7 @@ class PagesTest extends TestCase
         // Verify age-based multipliers
         $this->assertSame(3.0, $newPage->fresh()->read_count); // ≤7 days: 3.0x
         $this->assertSame(2.0, $monthOldPage->fresh()->read_count); // ≤30 days: 2.0x
-        $this->assertSame(201.5, $threeMonthOldPage->fresh()->read_count); // ≤60 days: 1.5x added to initial 200
+        $this->assertSame(200.1, $threeMonthOldPage->fresh()->read_count); // damping in top 20: +0.1 added to initial 200
         $this->assertSame(250.1, $yearOldPage->fresh()->read_count); // >90 days, in top 20: 0.1x added to initial 250
         $this->assertSame(250.1, $veryOldPage->fresh()->read_count); // >90 days, in top 20: 0.1x added to initial 250
     }
