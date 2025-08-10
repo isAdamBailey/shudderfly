@@ -36,7 +36,6 @@ const selectedFiles = ref([]);
 const batchProcessing = ref(false);
 const batchProgress = ref(0);
 const currentFileIndex = ref(0);
-const isDragOver = ref(false);
 const autoSaveTimeout = ref(null);
 const failedUploads = ref([]);
 const isSubmitting = ref(false);
@@ -82,7 +81,6 @@ const form = useForm({
 });
 
 const imageInput = ref(null);
-const dropZone = ref(null);
 const mediaOption = ref("single"); // single, multiple, link
 
 const { compressionProgress, optimizationProgress, processMediaFile } =
@@ -229,54 +227,6 @@ const formatFileSize = (bytes) => {
   const sizes = ["Bytes", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-};
-
-// Drag and drop functionality
-const handleDragOver = (e) => {
-  e.preventDefault();
-  isDragOver.value = true;
-};
-
-const handleDragLeave = (e) => {
-  e.preventDefault();
-  if (!dropZone.value.contains(e.relatedTarget)) {
-    isDragOver.value = false;
-  }
-};
-
-const handleDrop = async (e) => {
-  e.preventDefault();
-  isDragOver.value = false;
-
-  const files = Array.from(e.dataTransfer.files);
-  if (files.length === 0) return;
-
-  // Handle based on selected mode
-  if (mediaOption.value === "single") {
-    // Simple single upload: Use centralized processing
-    const file = files[0];
-    await processSingleFile(file);
-    selectedFiles.value = []; // Clear any previous selections
-    return;
-  } else if (mediaOption.value === "multiple") {
-    // Multiple upload mode: Handle all files with full processing
-    if (selectedFiles.value.length > 0) {
-      // Add new files to existing array
-      const newFileObjects = files.map(createFileObject);
-      selectedFiles.value.push(...newFileObjects);
-
-      // Generate previews for new files sequentially to avoid mobile memory issues
-      for (const fileObj of newFileObjects) {
-        await generatePreview(fileObj);
-      }
-
-      // Force reactivity update
-      selectedFiles.value = [...selectedFiles.value];
-    } else {
-      // No existing files, handle as batch
-      await handleMultipleFiles(files);
-    }
-  }
 };
 
 const handleMultipleFiles = async (files) => {
@@ -783,60 +733,41 @@ onMounted(() => {
             @change="updateImagePreview"
           />
 
-          <!-- Drag & Drop Zone -->
+          <!-- File Upload Zone -->
           <div
-            ref="dropZone"
             data-test="drop-zone"
-            class="relative border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500"
+            class="relative border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500"
             :class="{
-              'border-blue-500 bg-blue-50 dark:bg-blue-900/20': isDragOver,
               'border-green-500 bg-green-50 dark:bg-green-900/20':
-                selectedFiles.length > 0 && !isDragOver
+                selectedFiles.length > 0
             }"
-            @dragover="handleDragOver"
-            @dragleave="handleDragLeave"
-            @drop="handleDrop"
           >
-            <!-- Drag overlay -->
-            <div
-              v-if="isDragOver"
-              class="absolute inset-0 bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-500 rounded-lg flex items-center justify-center"
-            >
-              <div class="text-blue-600 dark:text-blue-400 text-lg font-medium">
-                <i class="ri-cloud-line text-6xl"></i>
-                <span v-if="mediaOption === 'single'"
-                  >Drop file here to upload</span
-                >
-                <span v-else>Drop files here to upload</span>
-              </div>
-            </div>
-
             <!-- Empty state -->
-            <div v-if="selectedFiles.length === 0" class="space-y-4">
-              <div class="mx-auto w-16 h-16 text-gray-400">
-                <i class="ri-cloud-line text-6xl"></i>
+            <div v-if="selectedFiles.length === 0" class="space-y-3">
+              <div class="mx-auto w-12 h-12 text-gray-400">
+                <i class="ri-cloud-line text-4xl"></i>
               </div>
               <div>
-                <p class="text-lg font-medium text-gray-600 dark:text-gray-300">
+                <p
+                  class="text-base font-medium text-gray-600 dark:text-gray-300"
+                >
                   <span v-if="mediaOption === 'single'"
-                    >Drag and drop file here</span
+                    >Select a file to upload</span
                   >
-                  <span v-else>Drag and drop files here</span>
+                  <span v-else>Select files to upload</span>
                 </p>
-                <p class="text-sm text-gray-500 dark:text-gray-400">
+                <p class="text-xs text-gray-500 dark:text-gray-400">
                   <span v-if="mediaOption === 'single'"
-                    >or click to select a file (images and videos up to
-                    60MB)</span
+                    >Click to select a file (images and videos up to 60MB)</span
                   >
                   <span v-else
-                    >or click to select files (images and videos up to
-                    60MB)</span
+                    >Click to select files (images and videos up to 60MB)</span
                   >
                 </p>
               </div>
               <Button
                 type="button"
-                class="mt-4"
+                class="mt-2"
                 @click.prevent="selectNewImage"
               >
                 <span v-if="mediaOption === 'single'">Select Media File</span>
@@ -1081,7 +1012,7 @@ onMounted(() => {
             <!-- Auto-save indicator -->
             <div
               v-if="autoSaveTimeout"
-              class="absolute top-2 right-2 text-xs text-gray-500 bg-white dark:bg-gray-800 px-2 py-1 rounded border"
+              class="absolute top-2 right-2 text-xs text-gray-500 bg-white px-2 py-1 rounded border"
             >
               ⏱️ Auto-saving in 1s...
             </div>

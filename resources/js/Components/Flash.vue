@@ -1,29 +1,39 @@
 <script setup>
-import { usePage } from "@inertiajs/vue3";
-import { onMounted, ref, watch } from "vue";
+import { router, usePage } from "@inertiajs/vue3";
+import { onBeforeUnmount, onMounted, ref } from "vue";
 
 const page = usePage();
 const show = ref(false);
+let hideTimeoutId = null;
 
 const close = () => {
   show.value = false;
+  if (hideTimeoutId) {
+    clearTimeout(hideTimeoutId);
+    hideTimeoutId = null;
+  }
 };
 
-watch(
-  () => page.props.flash?.success,
-  (newValue) => {
-    if (newValue) {
-      show.value = true;
-      setTimeout(close, 5000);
-    }
-  }
-);
-
-onMounted(() => {
-  if (page.props.flash?.success) {
+const triggerIfMessage = () => {
+  const message = page.props.flash?.success;
+  if (message) {
     show.value = true;
-    setTimeout(close, 5000);
+    if (hideTimeoutId) clearTimeout(hideTimeoutId);
+    hideTimeoutId = setTimeout(close, 5000);
   }
+};
+
+// Ensure first render (direct loads) shows the message
+onMounted(() => {
+  triggerIfMessage();
+
+  // Show after every successful Inertia navigation, regardless of identical text
+  router.on("success", triggerIfMessage);
+});
+
+onBeforeUnmount(() => {
+  router.off("success", triggerIfMessage);
+  if (hideTimeoutId) clearTimeout(hideTimeoutId);
 });
 </script>
 

@@ -138,23 +138,27 @@ class PageController extends Controller
     public function store(StorePageRequest $request): Redirector|RedirectResponse|Application
     {
         $book = Book::find($request->book_id);
+        $successMessage = 'Page created successfully!';
 
         if ($request->hasFile('image')) {
             $file = $request->file('image');
 
             if ($file->isValid()) {
                 $mimeType = $file->getMimeType();
+                $originalName = $file->getClientOriginalName();
                 $filePath = Storage::disk('local')->put('temp', $file);
 
                 if (Str::startsWith($mimeType, 'image/')) {
                     $filename = pathinfo($file->hashName(), PATHINFO_FILENAME);
                     $mediaPath = 'books/'.$book->slug.'/'.$filename.'.webp';
                     StoreImage::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'));
+                    $successMessage = 'Queued image: '.$originalName.'. It may take a few minutes to process.';
                 } elseif (Str::startsWith($mimeType, 'video/')) {
-                    $mediaPath = 'books/'.$book->slug.'/'.$file->getClientOriginalName();
+                    $mediaPath = 'books/'.$book->slug.'/'.$originalName;
 
                     try {
                         StoreVideo::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'));
+                        $successMessage = 'Queued video: '.$originalName.'. It may take a few minutes to process.';
                     } catch (\Exception $e) {
                         Log::error('Failed to dispatch StoreVideo job', [
                             'exception' => $e->getMessage(),
@@ -174,7 +178,7 @@ class PageController extends Controller
             ]);
         }
 
-        return redirect(route('books.show', $book))->with('success', 'New upload queued! It may take a few minutes to process.');
+        return redirect(route('books.show', $book))->with('success', $successMessage);
     }
 
     /**
@@ -248,7 +252,7 @@ class PageController extends Controller
             }
         }
 
-        return redirect(route('pages.show', $page));
+        return redirect(route('pages.show', $page))->with('success', 'Page updated successfully!');
     }
 
     /**
@@ -268,7 +272,7 @@ class PageController extends Controller
         }
         $page->delete();
 
-        return redirect(route('books.show', $page->book));
+        return redirect(route('books.show', $page->book))->with('success', 'Page deleted successfully!');
     }
 
     public function snapshot(Request $request)

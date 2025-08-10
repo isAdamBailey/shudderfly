@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full bg-transparent flex my-5">
+  <div class="w-full bg-transparent flex pl-2 sm:pl-6 lg:pl-8 mt-5 pr-8">
     <div class="self-center mr-2" role="radiogroup" aria-label="Search target">
       <div
         class="relative inline-flex items-center rounded-full bg-gray-200 dark:bg-gray-800 p-1 h-8"
@@ -61,14 +61,13 @@
         :class="{
           'bg-red-500 border-red-500': voiceActive
         }"
-        class="border-2 px-1 bg-white text-gray-700 rounded-full ri-mic-line text-3xl"
+        class="border-2 px-1 bg-blue-600 dark:bg-white dark:text-gray-900 text-white rounded-full ri-mic-line text-3xl"
       ></i>
     </button>
   </div>
 </template>
 
 <script setup>
-/* global route */
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { router, usePage } from "@inertiajs/vue3";
 import { computed, ref, watch } from "vue";
