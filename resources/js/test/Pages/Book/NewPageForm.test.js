@@ -717,39 +717,5 @@ describe("NewPageForm", () => {
       // Should continue without throwing
       expect(fileObj.preview).toBeNull();
     });
-
-    it("handles upload timeout gracefully", async () => {
-      const component = wrapper.vm;
-      component.selectedFiles = [
-        {
-          file: createFile("test.jpg"),
-          validation: { valid: true },
-          processedFile: createFile("test.jpg")
-        }
-      ];
-
-      // Mock form submission to never resolve (timeout scenario)
-      mockForm.post.mockImplementation(() => {
-        // Never call onSuccess or onError to simulate hanging
-      });
-
-      // Mock setTimeout to immediately trigger timeout
-      const originalSetTimeout = global.setTimeout;
-      global.setTimeout = vi.fn((callback, delay) => {
-        if (delay === 90000) {
-          // Upload timeout (changed from 30000 to 90000)
-          setTimeout(callback, 0); // Trigger immediately
-        }
-        return originalSetTimeout(callback, delay);
-      });
-
-      await component.processBatch();
-
-      expect(component.selectedFiles[0].error).toBeInstanceOf(Error);
-      expect(component.selectedFiles[0].error.message).toContain("timeout");
-      expect(component.failedUploads.length).toBe(1);
-
-      global.setTimeout = originalSetTimeout;
-    }, 10000); // Increase test timeout to 10 seconds
   });
 });

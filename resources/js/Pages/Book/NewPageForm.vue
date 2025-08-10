@@ -234,6 +234,14 @@ const handleMultipleFiles = async (files) => {
 
   // Generate previews for all files (sequentially to avoid mobile memory issues)
   await generatePreviewsSequentially();
+
+  // Mirror single-file processing: ensure processedFile is set for images
+  for (const fileObj of selectedFiles.value) {
+    if (!fileObj.file.type.startsWith("video/")) {
+      fileObj.processedFile = fileObj.file;
+      fileObj.processed = true;
+    }
+  }
 };
 
 // Sequential processing to avoid mobile memory issues
@@ -369,6 +377,9 @@ const selectLink = () => {
 };
 
 const selectNewImage = () => {
+  if (imageInput.value) {
+    imageInput.value.value = null;
+  }
   imageInput.value.click();
 };
 
@@ -403,17 +414,8 @@ const updateImagePreview = async (event) => {
       await handleMultipleFiles(files);
     }
   }
-
-  // Clear the input so the same files can be selected again if needed
-  event.target.value = "";
 };
 
-// Use longer timeouts for reliable batch uploads
-const getDeviceUploadTimeout = () => {
-  return 90000; // 90 seconds for all devices (increased from 30s)
-};
-
-// Batch processing - single attempt per file
 const processBatch = async (specificFiles = null) => {
   if (selectedFiles.value.length === 0) {
     return;
@@ -431,11 +433,12 @@ const processBatch = async (specificFiles = null) => {
   }
 
   batchProcessing.value = true;
+  if (isSubmitting.value) return;
+  isSubmitting.value = true;
   currentFileIndex.value = 0;
 
   // Store original content for first page
   const originalContent = form.content;
-  const uploadTimeout = getDeviceUploadTimeout();
 
   for (let i = 0; i < validFiles.length; i++) {
     const fileObj = validFiles[i];
@@ -450,30 +453,13 @@ const processBatch = async (specificFiles = null) => {
       form.image = fileObj.processedFile || fileObj.file;
       form.video_link = null;
 
+      // Post form directly as FormData (mirror single upload options)
       await new Promise((resolve, reject) => {
-        // Use dynamic timeout based on device
-        const timeout = setTimeout(() => {
-          reject(
-            new Error(
-              `Upload timeout after ${
-                uploadTimeout / 1000
-              }s - try reducing file size or check connection`
-            )
-          );
-        }, uploadTimeout);
-
-        // Post form directly as FormData
         form.post(route("pages.store"), {
           forceFormData: true,
-          onSuccess: () => {
-            clearTimeout(timeout);
-            resolve();
-          },
-          onError: (errors) => {
-            clearTimeout(timeout);
-            reject(errors);
-          },
-          preserveState: false
+          preserveScroll: true,
+          onSuccess: resolve,
+          onError: reject
         });
       });
 
@@ -500,6 +486,7 @@ const processBatch = async (specificFiles = null) => {
 
   batchProgress.value = 100;
   batchProcessing.value = false;
+  isSubmitting.value = false;
 
   if (failedUploads.value.length === 0) {
     setTimeout(() => {
@@ -735,15 +722,12 @@ onMounted(() => {
 
           <!-- File Upload Zone -->
           <div
+            v-if="previewFiles.length === 0"
             data-test="drop-zone"
             class="relative border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500"
-            :class="{
-              'border-green-500 bg-green-50 dark:bg-green-900/20':
-                selectedFiles.length > 0
-            }"
           >
             <!-- Empty state -->
-            <div v-if="selectedFiles.length === 0" class="space-y-3">
+            <div class="space-y-3">
               <div class="mx-auto w-12 h-12 text-gray-400">
                 <i class="ri-cloud-line text-4xl"></i>
               </div>
