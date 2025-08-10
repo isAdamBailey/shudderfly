@@ -35,6 +35,10 @@ class StoreVideo implements ShouldQueue
 
     protected ?Page $page;
 
+    protected ?string $oldMediaPath = null;
+
+    protected ?string $oldPosterPath = null;
+
     public int $tries = 3;
 
     public int $maxExceptions = 3;
@@ -55,7 +59,7 @@ class StoreVideo implements ShouldQueue
         return [120, 300, 600, 1200, 2400];
     }
 
-    public function __construct(string $filePath, string $path, ?Book $book = null, ?string $content = null, ?string $videoLink = null, ?Page $page = null)
+    public function __construct(string $filePath, string $path, ?Book $book = null, ?string $content = null, ?string $videoLink = null, ?Page $page = null, ?string $oldMediaPath = null, ?string $oldPosterPath = null)
     {
         $this->filePath = $filePath;
         $this->path = $path;
@@ -63,6 +67,8 @@ class StoreVideo implements ShouldQueue
         $this->content = $content;
         $this->videoLink = $videoLink;
         $this->page = $page;
+        $this->oldMediaPath = $oldMediaPath;
+        $this->oldPosterPath = $oldPosterPath;
     }
 
     public function handle(): void
@@ -389,6 +395,29 @@ class StoreVideo implements ShouldQueue
                         }
                     }
                 });
+
+                // After successful DB update, delete any old media/poster
+                try {
+                    if ($this->oldMediaPath) {
+                        Storage::disk('s3')->delete($this->oldMediaPath);
+                    }
+                } catch (Throwable $cleanupError) {
+                    Log::warning('Failed to delete old media after StoreVideo', [
+                        'path' => $this->oldMediaPath,
+                        'exception' => $cleanupError->getMessage(),
+                    ]);
+                }
+
+                try {
+                    if ($this->oldPosterPath) {
+                        Storage::disk('s3')->delete($this->oldPosterPath);
+                    }
+                } catch (Throwable $cleanupError) {
+                    Log::warning('Failed to delete old poster after StoreVideo', [
+                        'path' => $this->oldPosterPath,
+                        'exception' => $cleanupError->getMessage(),
+                    ]);
+                }
 
             } catch (Throwable $e) {
                 Log::error('Failed to upload video to S3', [

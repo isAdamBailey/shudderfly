@@ -113,6 +113,7 @@ class CreateVideoSnapshot implements ShouldQueue
         $tempVideoPath = null;
         $tempImagePath = null;
         $successfulTimestamp = null;
+        $tempS3Path = null;
 
         try {
             // Ensure temp directory exists and is writable
@@ -308,8 +309,17 @@ class CreateVideoSnapshot implements ShouldQueue
                 // Include successful timestamp in final filename
                 $mediaPath = 'books/'.$this->book->slug."/snapshot_{$successfulTimestamp}_{$random}.webp";
 
-                // Clean up video file as we don't need it anymore
-                CleanupTempSnapshot::dispatch(null, $tempVideoPath, null);
+                // Clean up local temp video immediately (no extra job)
+                try {
+                    if ($tempVideoPath && Storage::disk('local')->exists($tempVideoPath)) {
+                        Storage::disk('local')->delete($tempVideoPath);
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('Failed to delete local temp video during snapshot creation', [
+                        'path' => $tempVideoPath,
+                        'exception' => $e->getMessage(),
+                    ]);
+                }
 
                 // Upload temp image to S3 first using streaming to avoid memory issues
                 $tempS3Path = "temp/snapshots/temp_{$timestamp}_{$random}.jpg";
@@ -328,23 +338,49 @@ class CreateVideoSnapshot implements ShouldQueue
                     }
                 }
 
-                // Dispatch StoreImage job with S3 path and proper error handling
+                // Dispatch StoreImage job (StoreImage will remove its S3 source on success)
                 try {
-                    StoreImage::dispatch('s3://'.$tempS3Path, $mediaPath)
-                        ->chain([
-                            new CleanupTempSnapshot($tempS3Path, null, $tempImagePath),
-                        ]);
-                } catch (\Exception $chainError) {
-                    Log::error('Failed to dispatch StoreImage job chain', [
-                        'exception' => $chainError->getMessage(),
+                    StoreImage::dispatch('s3://'.$tempS3Path, $mediaPath);
+                } catch (\Exception $dispatchError) {
+                    Log::error('Failed to dispatch StoreImage job', [
+                        'exception' => $dispatchError->getMessage(),
                         'temp_s3_path' => $tempS3Path,
                         'media_path' => $mediaPath,
                     ]);
+                    // Clean up the S3 temp file and local image since dispatch failed
+                    try {
+                        if ($tempS3Path && Storage::disk('s3')->exists($tempS3Path)) {
+                            Storage::disk('s3')->delete($tempS3Path);
+                        }
+                    } catch (\Throwable $cleanupError) {
+                        Log::warning('Failed to delete temp S3 file after dispatch error', [
+                            'path' => $tempS3Path,
+                            'exception' => $cleanupError->getMessage(),
+                        ]);
+                    }
+                    try {
+                        if ($tempImagePath && Storage::disk('local')->exists($tempImagePath)) {
+                            Storage::disk('local')->delete($tempImagePath);
+                        }
+                    } catch (\Throwable $cleanupError) {
+                        Log::warning('Failed to delete local temp image after dispatch error', [
+                            'path' => $tempImagePath,
+                            'exception' => $cleanupError->getMessage(),
+                        ]);
+                    }
+                    throw $dispatchError;
+                }
 
-                    // Clean up S3 temp file if chain fails
-                    CleanupTempSnapshot::dispatch($tempS3Path, null, $tempImagePath);
-
-                    throw $chainError;
+                // Local temp image no longer needed after successful S3 upload and dispatch
+                try {
+                    if ($tempImagePath && Storage::disk('local')->exists($tempImagePath)) {
+                        Storage::disk('local')->delete($tempImagePath);
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('Failed to delete local temp image during snapshot creation', [
+                        'path' => $tempImagePath,
+                        'exception' => $e->getMessage(),
+                    ]);
                 }
 
                 // Only create database entry after successful S3 upload and job dispatch
@@ -397,33 +433,41 @@ class CreateVideoSnapshot implements ShouldQueue
                 'temp_image_path' => $tempImagePath ?? null,
             ]);
 
-            // Clean up files in case of error
-            CleanupTempSnapshot::dispatch();
+            // Inline cleanup on error to avoid extra jobs
+            try {
+                if ($tempVideoPath && Storage::disk('local')->exists($tempVideoPath)) {
+                    Storage::disk('local')->delete($tempVideoPath);
+                }
+            } catch (\Throwable $cleanupError) {
+                Log::warning('Failed to delete local temp video after error', [
+                    'path' => $tempVideoPath,
+                    'exception' => $cleanupError->getMessage(),
+                ]);
+            }
+
+            try {
+                if ($tempImagePath && Storage::disk('local')->exists($tempImagePath)) {
+                    Storage::disk('local')->delete($tempImagePath);
+                }
+            } catch (\Throwable $cleanupError) {
+                Log::warning('Failed to delete local temp image after error', [
+                    'path' => $tempImagePath,
+                    'exception' => $cleanupError->getMessage(),
+                ]);
+            }
+
+            try {
+                if ($tempS3Path && Storage::disk('s3')->exists($tempS3Path)) {
+                    Storage::disk('s3')->delete($tempS3Path);
+                }
+            } catch (\Throwable $cleanupError) {
+                Log::warning('Failed to delete temp S3 file after error', [
+                    'path' => $tempS3Path,
+                    'exception' => $cleanupError->getMessage(),
+                ]);
+            }
 
             throw $e;
         }
-    }
-
-    /**
-     * Handle a job failure.
-     */
-    public function failed(\Throwable $exception): void
-    {
-        Log::error('CreateVideoSnapshot job failed permanently', [
-            'video_url' => $this->videoUrl,
-            'time_in_seconds' => $this->timeInSeconds,
-            'book_id' => $this->book->id,
-            'user_id' => $this->user->id,
-            'page_id' => $this->pageId,
-            'exception' => $exception->getMessage(),
-            'exception_class' => get_class($exception),
-            'trace' => $exception->getTraceAsString(),
-            'final_attempt' => $this->attempts(),
-            'memory_usage' => memory_get_usage(true),
-            'peak_memory_usage' => memory_get_peak_usage(true),
-        ]);
-
-        // Clean up any temp files that might have been created
-        CleanupTempSnapshot::dispatch();
     }
 }

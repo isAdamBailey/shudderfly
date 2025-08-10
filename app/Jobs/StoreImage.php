@@ -29,10 +29,14 @@ class StoreImage implements ShouldQueue
 
     protected ?Page $page;
 
+    protected ?string $oldMediaPath;
+
+    protected ?string $oldPosterPath;
+
     /**
      * Create a new job instance.
      */
-    public function __construct(string $filePath, string $path, ?Book $book = null, ?string $content = null, ?string $videoLink = null, ?Page $page = null)
+    public function __construct(string $filePath, string $path, ?Book $book = null, ?string $content = null, ?string $videoLink = null, ?Page $page = null, ?string $oldMediaPath = null, ?string $oldPosterPath = null)
     {
         $this->filePath = $filePath;
         $this->path = $path;
@@ -40,6 +44,8 @@ class StoreImage implements ShouldQueue
         $this->content = $content;
         $this->videoLink = $videoLink;
         $this->page = $page;
+        $this->oldMediaPath = $oldMediaPath;
+        $this->oldPosterPath = $oldPosterPath;
     }
 
     /**
@@ -91,6 +97,29 @@ class StoreImage implements ShouldQueue
                 }
             }
 
+            // Delete old media/poster if provided (post-success)
+            try {
+                if ($this->oldMediaPath) {
+                    Storage::disk('s3')->delete($this->oldMediaPath);
+                }
+            } catch (\Throwable $cleanupError) {
+                Log::warning('Failed to delete old media after StoreImage', [
+                    'path' => $this->oldMediaPath,
+                    'exception' => $cleanupError->getMessage(),
+                ]);
+            }
+
+            try {
+                if ($this->oldPosterPath) {
+                    Storage::disk('s3')->delete($this->oldPosterPath);
+                }
+            } catch (\Throwable $cleanupError) {
+                Log::warning('Failed to delete old poster after StoreImage', [
+                    'path' => $this->oldPosterPath,
+                    'exception' => $cleanupError->getMessage(),
+                ]);
+            }
+
         } catch (\Exception $e) {
             Log::error('Error processing image', [
                 'exception' => $e->getMessage(),
@@ -106,8 +135,17 @@ class StoreImage implements ShouldQueue
                 }
             }
 
-            if ($disk === 'local' && Storage::disk('local')->exists($filePath)) {
-                Storage::disk('local')->delete($filePath);
+            // Always attempt to remove the source file after processing
+            try {
+                if (Storage::disk($disk)->exists($filePath)) {
+                    Storage::disk($disk)->delete($filePath);
+                }
+            } catch (\Throwable $cleanupError) {
+                Log::warning('Failed to delete source file after StoreImage', [
+                    'disk' => $disk,
+                    'path' => $filePath,
+                    'exception' => $cleanupError->getMessage(),
+                ]);
             }
         }
     }

@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StorePageRequest;
 use App\Http\Requests\UpdatePageRequest;
 use App\Jobs\CreateVideoSnapshot;
-use App\Jobs\DeleteOldMedia;
 use App\Jobs\IncrementPageReadCount;
 use App\Jobs\StoreImage;
 use App\Jobs\StoreVideo;
@@ -200,18 +199,30 @@ class PageController extends Controller
                 if (Str::startsWith($mimeType, 'image/')) {
                     $filename = pathinfo($file->hashName(), PATHINFO_FILENAME);
                     $mediaPath = 'books/'.$page->book->slug.'/'.$filename.'.webp';
-                    StoreImage::dispatch($filePath, $mediaPath, $page->book, $request->input('content'), $request->input('video_link'), $page)
-                        ->chain([
-                            new DeleteOldMedia($oldMediaPath, $oldPosterPath),
-                        ]);
+                    StoreImage::dispatch(
+                        $filePath,
+                        $mediaPath,
+                        $page->book,
+                        $request->input('content'),
+                        $request->input('video_link'),
+                        $page,
+                        $oldMediaPath,
+                        $oldPosterPath
+                    );
                 } elseif (Str::startsWith($mimeType, 'video/')) {
                     $mediaPath = 'books/'.$page->book->slug.'/'.$file->getClientOriginalName();
 
                     try {
-                        StoreVideo::dispatch($filePath, $mediaPath, $page->book, $request->input('content'), $request->input('video_link'), $page)
-                            ->chain([
-                                new DeleteOldMedia($oldMediaPath, $oldPosterPath),
-                            ]);
+                        StoreVideo::dispatch(
+                            $filePath,
+                            $mediaPath,
+                            $page->book,
+                            $request->input('content'),
+                            $request->input('video_link'),
+                            $page,
+                            $oldMediaPath,
+                            $oldPosterPath
+                        );
                     } catch (\Exception $e) {
                         Log::error('Failed to dispatch StoreVideo job for update', [
                             'exception' => $e->getMessage(),
@@ -243,10 +254,31 @@ class PageController extends Controller
 
                 $page->media_path = '';
                 $page->media_poster = '';
-                $page->video_link = $request->video_link;
+                $newVideoLink = trim((string) $request->video_link);
+                $page->video_link = $newVideoLink !== '' ? $newVideoLink : null;
                 $page->save();
 
-                DeleteOldMedia::dispatch($oldMediaPath, $oldPosterPath);
+                // Delete old media/poster inline
+                try {
+                    if ($oldMediaPath) {
+                        Storage::disk('s3')->delete($oldMediaPath);
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('Failed to delete old media after switching to video_link', [
+                        'path' => $oldMediaPath,
+                        'exception' => $e->getMessage(),
+                    ]);
+                }
+                try {
+                    if ($oldPosterPath) {
+                        Storage::disk('s3')->delete($oldPosterPath);
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('Failed to delete old poster after switching to video_link', [
+                        'path' => $oldPosterPath,
+                        'exception' => $e->getMessage(),
+                    ]);
+                }
             } else {
                 $page->save();
             }
