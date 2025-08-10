@@ -152,7 +152,7 @@ class GenerateCollagePdf implements ShouldQueue
 
             // Calculate grid configuration based on actual number of successfully downloaded images
             $actualImageCount = count($localImages);
-            
+
             // Define grid configurations for different image counts
             // Always maintaining 8.5x11 aspect ratio, images scale to fill available space
             $gridConfigs = [
@@ -176,7 +176,7 @@ class GenerateCollagePdf implements ShouldQueue
 
             // Use the specific config if available, otherwise use the largest available config
             $gridConfig = $gridConfigs[$actualImageCount] ?? $gridConfigs[array_key_last($gridConfigs)];
-            
+
             // Calculate cell dimensions in inches (8in x 10.5in usable area) once
             $cellWidthInches = 8 / $gridConfig['cols'];
             $cellHeightInches = 10.5 / $gridConfig['rows'];
@@ -256,18 +256,18 @@ class GenerateCollagePdf implements ShouldQueue
                 // Generate preview image using the same grid configuration as the PDF
                 $previewImage = $this->generatePreviewImage($localImages, $gridConfig);
                 $previewKey = "collages/collage-{$this->collage->id}-preview.jpg";
-                
+
                 // Prepare the update data
                 $updateData = [
                     'storage_path' => $s3Key,
                     'is_archived' => true,
                 ];
-                
+
                 // Only set preview_path if generation succeeded AND S3 upload succeeded
                 if ($previewImage && Storage::disk('s3')->put($previewKey, $previewImage, ['visibility' => 'public'])) {
                     $updateData['preview_path'] = $previewKey;
                 }
-                
+
                 // Store the storage path in the collage record
                 $this->collage->update($updateData);
             } else {
@@ -331,14 +331,14 @@ class GenerateCollagePdf implements ShouldQueue
 
             // Calculate grid capacity (maximum number of images that can fit)
             $gridCapacity = $config['cols'] * $config['rows'];
-            
+
             // Limit images to grid capacity to match PDF layout exactly
             $imagesToProcess = array_slice($localImages, 0, $gridCapacity);
 
             // Match PDF dimensions: 8.5in x 11in with 0.25in margins = 8in x 10.5in grid
             $previewWidth = 800; // 8in * 100 DPI
             $previewHeight = 1050; // 10.5in * 100 DPI
-            
+
             // Gap between cells (0.05in * 100 DPI = 5px)
             $gap = 5;
 
@@ -356,10 +356,10 @@ class GenerateCollagePdf implements ShouldQueue
 
                 // Decode base64 image
                 $imageBytes = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $base64Image));
-                
+
                 // Create image from string using GD
                 $image = imagecreatefromstring($imageBytes);
-                
+
                 if ($image === false) {
                     continue; // Skip invalid images
                 }
@@ -372,14 +372,14 @@ class GenerateCollagePdf implements ShouldQueue
 
                 // Resize and copy image to canvas (cast to integers for consistency)
                 imagecopyresampled(
-                    $canvas, 
-                    $image, 
-                    (int) $x, (int) $y, 
-                    0, 0, 
-                    (int) $cellWidth, (int) $cellHeight, 
+                    $canvas,
+                    $image,
+                    (int) $x, (int) $y,
+                    0, 0,
+                    (int) $cellWidth, (int) $cellHeight,
                     imagesx($image), imagesy($image)
                 );
-                
+
                 // Clean up
                 imagedestroy($image);
             }
@@ -389,7 +389,7 @@ class GenerateCollagePdf implements ShouldQueue
             imagejpeg($canvas, null, 80);
             $jpegData = ob_get_contents();
             ob_end_clean();
-            
+
             // Clean up
             imagedestroy($canvas);
 
@@ -399,6 +399,7 @@ class GenerateCollagePdf implements ShouldQueue
                 'collage_id' => $this->collage->id,
                 'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
