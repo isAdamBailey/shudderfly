@@ -448,8 +448,9 @@ const processBatch = async (specificFiles = null) => {
     return;
   }
 
-  batchProcessing.value = true;
+  // Prevent double-invocation; do not flip batchProcessing if already submitting
   if (isSubmitting.value) return;
+  batchProcessing.value = true;
   isSubmitting.value = true;
   currentFileIndex.value = 0;
 
@@ -499,6 +500,8 @@ const processBatch = async (specificFiles = null) => {
         form.post(route("pages.store"), {
           forceFormData: true,
           preserveScroll: true,
+          preserveState: true,
+          replace: true,
           onSuccess: resolve,
           onError: reject
         });
