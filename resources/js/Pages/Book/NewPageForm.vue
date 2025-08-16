@@ -87,6 +87,19 @@ const mediaOption = ref("single"); // single, multiple, link
 const { compressionProgress, optimizationProgress, processMediaFile } =
   useVideoOptimization();
 
+// Global optimizing state: true if any optimization is happening
+const isOptimizing = computed(() => {
+  // Single-file optimization
+  if (singleFileProcessing.value) return true;
+  // Multiple selection: any file currently processing
+  if (selectedFiles.value && selectedFiles.value.some((f) => f?.processing)) {
+    return true;
+  }
+  // Composable progress signal (1..99 means active)
+  const prog = Number(optimizationProgress?.value ?? optimizationProgress);
+  return prog > 0 && prog < 100;
+});
+
 const createFileObject = (file) => ({
   file,
   preview: null,
@@ -260,32 +273,38 @@ const generatePreviewsSequentially = async () => {
 const generatePreview = async (fileObj) => {
   const file = fileObj.file;
 
-  try {
-    await new Promise((resolve, reject) => {
-      const reader = new FileReader();
+  // For videos, skip DataURL preview to avoid huge memory usage on mobile
+  if (!file.type.startsWith("video/")) {
+    try {
+      await new Promise((resolve, reject) => {
+        const reader = new FileReader();
 
-      // Add timeout for mobile browsers that might hang
-      const timeout = setTimeout(() => {
-        reader.abort();
-        reject(new Error("FileReader timeout"));
-      }, 10000);
+        // Add timeout for mobile browsers that might hang
+        const timeout = setTimeout(() => {
+          reader.abort();
+          reject(new Error("FileReader timeout"));
+        }, 30000); // 30s for slower devices
 
-      reader.onload = (e) => {
-        clearTimeout(timeout);
-        fileObj.preview = e.target.result;
-        resolve();
-      };
+        reader.onload = (e) => {
+          clearTimeout(timeout);
+          fileObj.preview = e.target.result;
+          resolve();
+        };
 
-      reader.onerror = () => {
-        clearTimeout(timeout);
-        reject(reader.error);
-      };
+        reader.onerror = () => {
+          clearTimeout(timeout);
+          reject(reader.error);
+        };
 
-      reader.readAsDataURL(file);
-    });
-  } catch (error) {
-    // Continue without preview
-    console.warn("Preview generation failed:", error);
+        reader.readAsDataURL(file);
+      });
+    } catch (error) {
+      // Continue without preview
+      console.warn("Preview generation failed:", error);
+    }
+  } else {
+    // No preview thumbnail for videos to prevent memory pressure
+    fileObj.preview = null;
   }
 
   // Process video files with timeout
@@ -424,12 +443,8 @@ const processBatch = async (specificFiles = null) => {
 
   failedUploads.value = [];
 
-  const validFiles =
-    specificFiles ||
-    selectedFiles.value.filter(
-      (fileObj) => !fileObj.needsOptimization || fileObj.processed
-    );
-  if (validFiles.length === 0) {
+  const filesToUpload = specificFiles || selectedFiles.value;
+  if (filesToUpload.length === 0) {
     return;
   }
 
@@ -441,17 +456,42 @@ const processBatch = async (specificFiles = null) => {
   // Store original content for first page
   const originalContent = form.content;
 
-  for (let i = 0; i < validFiles.length; i++) {
-    const fileObj = validFiles[i];
+  for (let i = 0; i < filesToUpload.length; i++) {
+    const fileObj = filesToUpload[i];
 
     // Update display to show which file is currently being uploaded
     currentFileIndex.value = i;
-    batchProgress.value = Math.round((i / validFiles.length) * 100);
+    batchProgress.value = Math.round((i / filesToUpload.length) * 100);
 
     try {
+      // Ensure video optimization just-in-time if needed
+      const file = fileObj.file;
+      let fileForUpload = fileObj.processedFile || file;
+
+      if (file.type.startsWith("video/") && needsVideoOptimization(file) && !fileObj.processed) {
+        fileObj.processing = true;
+        const processingTimeout = setTimeout(() => {
+          fileObj.processing = false;
+        }, 60000); // 60s timeout
+        try {
+          fileForUpload = await processMediaFile(file);
+          fileObj.processedFile = fileForUpload;
+          fileObj.processed = true;
+        } catch (e) {
+          // Fall back to original file if optimization fails
+          fileForUpload = file;
+          fileObj.processedFile = file;
+          fileObj.processed = false;
+        } finally {
+          clearTimeout(processingTimeout);
+          fileObj.processing = false;
+        }
+      }
+
       // Update the form with current file data
-      form.content = i === 0 ? originalContent : ""; // Only add content to first page
-      form.image = fileObj.processedFile || fileObj.file;
+      // Apply the entered content to every page in the batch
+      form.content = originalContent;
+      form.image = fileForUpload;
       form.video_link = null;
 
       // Post form directly as FormData (mirror single upload options)
@@ -467,7 +507,7 @@ const processBatch = async (specificFiles = null) => {
       fileObj.uploaded = true;
 
       // Delay between uploads for stability
-      if (i < validFiles.length - 1) {
+      if (i < filesToUpload.length - 1) {
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
     } catch (error) {
@@ -482,7 +522,7 @@ const processBatch = async (specificFiles = null) => {
     }
 
     // Update progress to show completed uploads
-    batchProgress.value = Math.round(((i + 1) / validFiles.length) * 100);
+    batchProgress.value = Math.round(((i + 1) / filesToUpload.length) * 100);
   }
 
   batchProgress.value = 100;
@@ -543,12 +583,19 @@ const rules = computed(() => {
 
   const batchFilesValid = () => {
     if (mediaOption.value === "multiple" && selectedFiles.value.length > 0) {
-      return selectedFiles.value.every(
-        (fileObj) =>
-          !fileObj.needsOptimization ||
-          (fileObj.needsOptimization && !fileObj.processed) ||
-          fileObj.processed
-      );
+      return selectedFiles.value.every((fileObj) => {
+        const file = fileObj.file;
+        // Only allow allowed types
+        if (!isAllowedFileType(file)) return false;
+        // Images must be within size limit; videos can be any size (they will be optimized)
+        if (file.type.startsWith("image/")) {
+          return isFileSizeValid(file);
+        }
+        if (file.type.startsWith("video/")) {
+          return true;
+        }
+        return false;
+      });
     }
     return true;
   };
@@ -557,9 +604,17 @@ const rules = computed(() => {
     if (mediaOption.value === "multiple") {
       return (
         selectedFiles.value.length > 0 &&
-        selectedFiles.value.some(
-          (fileObj) => !fileObj.needsOptimization || fileObj.processed
-        )
+        selectedFiles.value.some((fileObj) => {
+          const file = fileObj.file;
+          if (!isAllowedFileType(file)) return false;
+          if (file.type.startsWith("image/")) {
+            return isFileSizeValid(file);
+          }
+          if (file.type.startsWith("video/")) {
+            return true; // allow even if large; optimization will occur
+          }
+          return false;
+        })
       );
     }
     return (
@@ -841,7 +896,10 @@ onMounted(() => {
 
         <!-- Content Section -->
         <div class="w-full">
-          <BreezeLabel for="content" value="Words" />
+          <BreezeLabel
+            for="content"
+            :value="mediaOption === 'multiple' ? 'Words (will be applied to all images in this batch)' : 'Words'"
+          />
           <div class="relative">
             <Wysiwyg
               id="content"
@@ -867,7 +925,7 @@ onMounted(() => {
           "
           class="text-red-600"
         >
-          That video should be less than 60 MB.
+          That file should be less than 60 MB.
         </p>
         <p
           v-if="v$.$errors.length && v$.form.image.batch_files_valid.$invalid"
@@ -901,12 +959,13 @@ onMounted(() => {
         <Button
           type="button"
           class="w-3/4 flex justify-center py-3"
-          :class="{ 'opacity-25': form.processing || batchProcessing }"
+          :class="{ 'opacity-25': form.processing || batchProcessing || isOptimizing }"
           :disabled="
             form.processing ||
             isSubmitting ||
             batchProcessing ||
             singleFileProcessing ||
+            isOptimizing ||
             v$.$error
           "
           @click="handleFormSubmit"

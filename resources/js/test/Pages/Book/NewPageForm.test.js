@@ -662,7 +662,7 @@ describe("NewPageForm", () => {
       const originalSetTimeout = global.setTimeout;
       const timeoutCallback = vi.fn();
       global.setTimeout = vi.fn((callback, delay) => {
-        if (delay === 10000) {
+        if (delay === 30000) {
           // FileReader timeout
           timeoutCallback.mockImplementation(callback);
         }
@@ -679,7 +679,7 @@ describe("NewPageForm", () => {
 
       expect(global.setTimeout).toHaveBeenCalledWith(
         expect.any(Function),
-        10000
+        30000
       );
 
       global.setTimeout = originalSetTimeout;
