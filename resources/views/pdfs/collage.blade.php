@@ -19,10 +19,10 @@
         }
         .grid {
             position: absolute;
-            top: 0.25in;
+            top: 0.5in;
             left: 0.25in;
             width: 8in;
-            height: 10.5in;
+            height: 10.25in;
         }
         .cell {
             position: absolute;
@@ -37,6 +37,11 @@
     </style>
 </head>
 <body>
+    <div style="position: absolute; top: 0; left: 0; right: 0; height: 0.5in; padding: 0 0.25in; display: flex; align-items: center; justify-content: flex-end; font-size: 10pt; color: #333;">
+        @isset($printedAt)
+            <div>{{ $printedAt }}</div>
+        @endisset
+    </div>
     <div class="grid">
         @php
             $imageCount = count($localImages);
@@ -64,10 +69,10 @@
             
             $config = $gridConfigs[$imageCount] ?? $gridConfigs[16];
             
-            // Always use 8in x 10.5in grid (8.5x11 page with 0.25in margins)
+            // Use 8in x 10.25in grid (8.5x11 page with 0.5in top header and 0.25in margins elsewhere)
             $gap = 0.05; // 0.05in gap between cells
             $cellWidth = (8 - ($config['cols'] - 1) * $gap) / $config['cols'];
-            $cellHeight = (10.5 - ($config['rows'] - 1) * $gap) / $config['rows'];
+            $cellHeight = (10.25 - ($config['rows'] - 1) * $gap) / $config['rows'];
         @endphp
         
         @foreach($localImages as $index => $image)

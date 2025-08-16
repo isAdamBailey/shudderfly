@@ -45,7 +45,7 @@ class CollageController extends Controller
     {
         $collage->delete();
 
-        return redirect()->route('collages.index');
+        return redirect()->route('collages.archived');
     }
 
     public function restore(Collage $collage)
@@ -59,6 +59,6 @@ class CollageController extends Controller
     {
         GenerateCollagePdf::dispatch($collage);
 
-        return redirect()->route('collages.index')->with('success', 'PDF generation has been queued. You will receive an email when it\'s ready.');
+        return redirect()->route('collages.archived')->with('success', 'PDF generation has been queued. You will receive an email when it\'s ready.');
     }
 }

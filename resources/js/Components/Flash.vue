@@ -5,6 +5,7 @@ import { onBeforeUnmount, onMounted, ref } from "vue";
 const page = usePage();
 const show = ref(false);
 let hideTimeoutId = null;
+let disposeSuccess = null; // disposer returned by router.on in newer Inertia versions
 
 const close = () => {
   show.value = false;
@@ -28,11 +29,20 @@ onMounted(() => {
   triggerIfMessage();
 
   // Show after every successful Inertia navigation, regardless of identical text
-  router.on("success", triggerIfMessage);
+  // router.on returns a disposer in newer versions; keep a reference for cleanup
+  const maybeDisposer = router.on("success", triggerIfMessage);
+  if (typeof maybeDisposer === "function") {
+    disposeSuccess = maybeDisposer;
+  }
 });
 
 onBeforeUnmount(() => {
-  router.off("success", triggerIfMessage);
+  // Prefer the disposer if available; otherwise fall back to router.off when supported
+  if (typeof disposeSuccess === "function") {
+    disposeSuccess();
+  } else if (typeof router.off === "function") {
+    router.off("success", triggerIfMessage);
+  }
   if (hideTimeoutId) clearTimeout(hideTimeoutId);
 });
 </script>

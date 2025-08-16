@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Laravel\Facades\Image;
 use Spatie\Permission\Models\Permission;
+use Illuminate\Support\Carbon;
 
 class GenerateCollagePdf implements ShouldQueue
 {
@@ -177,9 +178,9 @@ class GenerateCollagePdf implements ShouldQueue
             // Use the specific config if available, otherwise use the largest available config
             $gridConfig = $gridConfigs[$actualImageCount] ?? $gridConfigs[array_key_last($gridConfigs)];
 
-            // Calculate cell dimensions in inches (8in x 10.5in usable area) once
+            // Calculate cell dimensions in inches (8in x 10.25in usable area) once
             $cellWidthInches = 8 / $gridConfig['cols'];
-            $cellHeightInches = 10.5 / $gridConfig['rows'];
+            $cellHeightInches = 10.25 / $gridConfig['rows'];
 
             // Convert to pixels at 100 DPI once
             $targetWidth = (int) ($cellWidthInches * 100);
@@ -232,6 +233,7 @@ class GenerateCollagePdf implements ShouldQueue
             ])->loadView('pdfs.collage', [
                 'collage' => $this->collage,
                 'localImages' => $localImages,
+                'printedAt' => Carbon::now(config('app.timezone'))->format('M j, Y h:ia'),
             ]);
 
             // Create collages directory if it doesn't exist
@@ -335,9 +337,9 @@ class GenerateCollagePdf implements ShouldQueue
             // Limit images to grid capacity to match PDF layout exactly
             $imagesToProcess = array_slice($localImages, 0, $gridCapacity);
 
-            // Match PDF dimensions: 8.5in x 11in with 0.25in margins = 8in x 10.5in grid
+            // Match PDF dimensions: 8.5in x 11in with 0.5in top header and 0.25in margins elsewhere = 8in x 10.25in grid
             $previewWidth = 800; // 8in * 100 DPI
-            $previewHeight = 1050; // 10.5in * 100 DPI
+            $previewHeight = 1025; // 10.25in * 100 DPI
 
             // Gap between cells (0.05in * 100 DPI = 5px)
             $gap = 5;

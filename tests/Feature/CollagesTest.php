@@ -152,7 +152,7 @@ class CollagesTest extends TestCase
             'id' => $collage->id,
         ]);
 
-        $response->assertRedirect(route('collages.index'));
+        $response->assertRedirect(route('collages.archived'));
     }
 
     public function test_archived_collage_can_be_permanently_deleted(): void
@@ -170,7 +170,7 @@ class CollagesTest extends TestCase
             'id' => $collage->id,
         ]);
 
-        $response->assertRedirect(route('collages.index'));
+        $response->assertRedirect(route('collages.archived'));
     }
 
     public function test_index_only_shows_non_archived_collages(): void
@@ -282,7 +282,7 @@ class CollagesTest extends TestCase
 
         $response = $this->post(route('collages.generate-pdf', $collage));
 
-        $response->assertRedirect(route('collages.index'))
+        $response->assertRedirect(route('collages.archived'))
             ->assertSessionHas('success', 'PDF generation has been queued. You will receive an email when it\'s ready.');
     }
 }
