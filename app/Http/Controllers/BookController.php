@@ -14,8 +14,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -105,8 +105,18 @@ class BookController extends Controller
             && ! $request->has('page');
 
         if ($canIncrement) {
-            // Add a small delay to prevent rapid-fire job creation
-            IncrementBookReadCount::dispatch($book)->delay(now()->addSeconds(5));
+            // Per-actor throttle: only count one view per user/session/IP per 5 minutes (cache only)
+            $cacheKey = \App\Support\ReadThrottle::cacheKey('book', $book->id, $request);
+            $throttleSeconds = 5 * 60;
+
+            try {
+                if (Cache::add($cacheKey, 1, now()->addSeconds($throttleSeconds))) {
+                    // Added successfully => no recent view by this actor
+                    \App\Support\ReadThrottle::dispatchJob(new IncrementBookReadCount($book));
+                }
+            } catch (\Throwable $e) {
+                // If cache is unavailable/misconfigured, skip increment to avoid inflation
+            }
         }
 
         $youtubeEnabled = \App\Models\SiteSetting::where('key', 'youtube_enabled')->first()->value;
