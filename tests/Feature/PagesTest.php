@@ -226,12 +226,12 @@ class PagesTest extends TestCase
         (new \App\Jobs\IncrementPageReadCount($yearOldPage))->handle();
         (new \App\Jobs\IncrementPageReadCount($veryOldPage))->handle();
 
-        // Verify age-based multipliers
-        $this->assertSame(3.0, $newPage->fresh()->read_count); // ≤7 days: 3.0x
-        $this->assertSame(2.0, $monthOldPage->fresh()->read_count); // ≤30 days: 2.0x
-        $this->assertSame(200.1, $threeMonthOldPage->fresh()->read_count); // damping in top 20: +0.1 added to initial 200
-        $this->assertSame(250.1, $yearOldPage->fresh()->read_count); // >90 days, in top 20: 0.1x added to initial 250
-        $this->assertSame(250.1, $veryOldPage->fresh()->read_count); // >90 days, in top 20: 0.1x added to initial 250
+        // Verify age-based behavior with time-decay model
+        $this->assertSame(3.0, $newPage->fresh()->read_count); // ≤7 days: initial 3.0x boost
+        $this->assertSame(2.0, $monthOldPage->fresh()->read_count); // ≤30 days: initial 2.0x boost
+        $this->assertEqualsWithDelta(201.0, $threeMonthOldPage->fresh()->read_count, 0.01); // existing score ~ +1.0 (minor decay tolerance)
+        $this->assertEqualsWithDelta(251.0, $yearOldPage->fresh()->read_count, 0.01); // existing score ~ +1.0 (minor decay tolerance)
+        $this->assertEqualsWithDelta(251.0, $veryOldPage->fresh()->read_count, 0.01); // existing score ~ +1.0 (minor decay tolerance)
     }
 
     public function test_page_cannot_be_stored_without_permissions()

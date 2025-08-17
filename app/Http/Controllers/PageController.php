@@ -16,6 +16,7 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -88,8 +89,24 @@ class PageController extends Controller
         $canIncrement = $request->user()?->cannot('edit profile');
 
         if ($canIncrement) {
-            // Add a small delay to prevent rapid-fire job creation
-            IncrementPageReadCount::dispatch($page)->delay(now()->addSeconds(5));
+            // Per-actor throttle: only count one view per user/session/IP per 5 minutes (cache only)
+            $fingerprint = $request->user()?->id
+                ?? $request->session()->getId()
+                ?? $request->ip();
+            $cacheKey = sprintf('reads:page:%d:%s', $page->id, hash('sha256', (string) $fingerprint));
+            $throttleSeconds = 5 * 60;
+
+            try {
+                if (Cache::add($cacheKey, 1, now()->addSeconds($throttleSeconds))) {
+                    if (app()->environment('testing') || config('queue.default') === 'sync') {
+                        IncrementPageReadCount::dispatch($page);
+                    } else {
+                        IncrementPageReadCount::dispatch($page)->delay(now()->addSeconds(5));
+                    }
+                }
+            } catch (\Throwable $e) {
+                // If cache is unavailable/misconfigured, skip increment to avoid inflation
+            }
         }
 
         $page->load(['book', 'book.coverImage']);
