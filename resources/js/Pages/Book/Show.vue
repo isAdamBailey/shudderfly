@@ -4,57 +4,8 @@
   <BreezeAuthenticatedLayout>
     <template #header>
       <!-- Search moved to global layout -->
-      <div
-        class="p-3 mt-5 rounded-t-lg relative"
-        :class="hasCoverImage ? 'bg-cover bg-center h-[70vh]' : ''"
-        :style="{
-          backgroundImage: hasCoverImage
-            ? `url(${book.cover_image.media_path})`
-            : ''
-        }"
-      >
-        <div class="w-full h-full">
-          <div class="flex flex-col justify-between h-full">
-            <BookTitle :book="book" />
-            <div class="flex justify-center items-center flex-wrap">
-              <div
-                class="bg-white/70 backdrop-blur p-2 rounded dark:text-gray-700 christmas:text-christmas-berry"
-              >
-                <p v-if="book.author" class="mr-3 font-bold">
-                  by: {{ book.author }}
-                </p>
-                <p>
-                  {{ short(book.created_at) }}
-                </p>
-                <span v-if="canEditPages">
-                  <p>{{ pages.total }} pages</p>
-                  <p>
-                    Read
-                    {{ Math.round(book.read_count).toLocaleString() }}
-                    times
-                  </p>
-                  <p v-if="book.category" class="uppercase font-bold">
-                    Category - {{ book.category.name }}
-                  </p>
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div
-        v-if="book.excerpt"
-        class="flex justify-center bg-theme-secondary"
-        :class="
-          hasCoverImage ? 'rounded-b-lg' : 'rounded-full md:w-1/2 mx-auto'
-        "
-      >
-        <div class="text-center my-3 text-gray-800">
-          <p class="italic leading-tight">
-            {{ book.excerpt }}
-          </p>
-        </div>
-      </div>
+      <!-- Book Cover Section -->
+      <BookCover :book="book" :pages="pages" />
       <div class="p-2 flex justify-end flex-nowrap align-middle">
         <div class="flex max-h-10">
           <Button
@@ -170,17 +121,15 @@
 </template>
 
 <script setup>
-import BookTitle from "@/Components/BookTitle.vue";
+import BookCover from "@/Components/BookCover.vue";
 import Button from "@/Components/Button.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
-import SearchInput from "@/Components/SearchInput.vue";
 import BreezeValidationErrors from "@/Components/ValidationErrors.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
-import { useDate } from "@/dateHelpers";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import EditBookForm from "@/Pages/Book/EditBookForm.vue";
 import NewPageForm from "@/Pages/Book/NewPageForm.vue";
@@ -188,8 +137,12 @@ import SimilarBooks from "@/Pages/Book/SimilarBooks.vue";
 import { Deferred, Head, Link } from "@inertiajs/vue3";
 import { computed, onMounted, ref } from "vue";
 
+// Component name for linting
+defineOptions({
+  name: "BookShowPage"
+});
+
 const { canEditPages } = usePermissions();
-const { short } = useDate();
 const { speak, speaking } = useSpeechSynthesis();
 
 const props = defineProps({

@@ -164,8 +164,12 @@ describe("Book/Show.vue", () => {
     });
   });
 
-  it("renders the book title", () => {
-    expect(wrapper.findComponent({ name: "BookTitle" }).exists()).toBe(true);
+  it("renders the book cover", () => {
+    expect(wrapper.findComponent({ name: "BookCover" }).exists()).toBe(true);
+  });
+
+  it("renders the book title within the cover", () => {
+    expect(wrapper.text()).toContain("Test Book");
   });
 
   it("renders the book author", () => {
