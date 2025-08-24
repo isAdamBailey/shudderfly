@@ -424,8 +424,13 @@ describe("NewPageForm", () => {
 
       // Without retry logic: one call per file (2 total)
       expect(mockForm.post).toHaveBeenCalledTimes(2);
+
+      // After processing, successfully uploaded files are removed from selectedFiles
+      expect(wrapper.vm.selectedFiles.length).toBe(1);
+      expect(wrapper.vm.selectedFiles[0].file.name).toBe("test1.jpg");
       expect(wrapper.vm.selectedFiles[0].error).toBe("Server error");
-      expect(wrapper.vm.selectedFiles[1].uploaded).toBe(true);
+
+      // Failed uploads are recorded
       expect(wrapper.vm.failedUploads.length).toBe(1);
       expect(wrapper.vm.failedUploads[0].fileName).toBe("test1.jpg");
     }, 15000); // Increase timeout to 15 seconds to account for retry delays

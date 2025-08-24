@@ -19,7 +19,7 @@ import {
 } from "@/utils/fileValidation.js";
 import { useForm, usePage } from "@inertiajs/vue3";
 import { useVuelidate } from "@vuelidate/core";
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import PreviewsGrid from "./PreviewsGrid.vue";
 
 const emit = defineEmits(["close-form"]);
@@ -113,12 +113,21 @@ const processSingleFile = async (file) => {
 
   form.image = file;
 
+  // Revoke any prior object URL preview
+  revokeObjectURLIfNeeded(singleFilePreview.value);
+
   try {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      singleFilePreview.value = e.target.result;
-    };
-    reader.readAsDataURL(file);
+    if (file.type.startsWith("video/")) {
+      // Use object URL for video preview (lighter than DataURL)
+      singleFilePreview.value = URL.createObjectURL(file);
+    } else {
+      // Use DataURL for images for crisp thumbnails
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        singleFilePreview.value = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
   } catch (error) {
     singleFilePreview.value = null;
   }
@@ -243,6 +252,31 @@ const formatFileSize = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 };
 
+// Safely revoke object URLs to avoid memory leaks
+const revokeObjectURLIfNeeded = (url) => {
+  try {
+    if (url && typeof url === "string" && url.startsWith("blob:")) {
+      URL.revokeObjectURL(url);
+    }
+  } catch (e) {
+    // no-op
+  }
+};
+
+// Cleanup helper to revoke any previews we created via object URLs
+const cleanupPreviews = () => {
+  try {
+    // Single-file preview
+    revokeObjectURLIfNeeded(singleFilePreview.value);
+    // Multiple-file previews
+    if (selectedFiles.value && selectedFiles.value.length) {
+      selectedFiles.value.forEach((f) => revokeObjectURLIfNeeded(f?.preview));
+    }
+  } catch (e) {
+    // no-op
+  }
+};
+
 const handleMultipleFiles = async (files) => {
   selectedFiles.value = files.map(createFileObject);
 
@@ -273,8 +307,9 @@ const generatePreviewsSequentially = async () => {
 const generatePreview = async (fileObj) => {
   const file = fileObj.file;
 
-  // For videos, skip DataURL preview to avoid huge memory usage on mobile
+  // Generate preview
   if (!file.type.startsWith("video/")) {
+    // Image: use DataURL
     try {
       await new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -287,6 +322,8 @@ const generatePreview = async (fileObj) => {
 
         reader.onload = (e) => {
           clearTimeout(timeout);
+          // Revoke previous object URL if any
+          revokeObjectURLIfNeeded(fileObj.preview);
           fileObj.preview = e.target.result;
           resolve();
         };
@@ -303,8 +340,13 @@ const generatePreview = async (fileObj) => {
       console.warn("Preview generation failed:", error);
     }
   } else {
-    // No preview thumbnail for videos to prevent memory pressure
-    fileObj.preview = null;
+    // Video: use object URL preview (lightweight)
+    try {
+      revokeObjectURLIfNeeded(fileObj.preview);
+      fileObj.preview = URL.createObjectURL(file);
+    } catch (e) {
+      fileObj.preview = null;
+    }
   }
 
   // Process video files with timeout
@@ -344,12 +386,17 @@ const generatePreview = async (fileObj) => {
 const removeFile = (index) => {
   if (mediaOption.value === "single") {
     // Single upload mode: Clear all single file data
+    revokeObjectURLIfNeeded(singleFilePreview.value);
     form.image = null;
     singleFilePreview.value = null;
     singleFileOriginal.value = null;
     singleFileProcessing.value = false;
   } else {
     // Multiple upload mode: Remove specific file from array
+    const fileObj = selectedFiles.value[index];
+    if (fileObj) {
+      revokeObjectURLIfNeeded(fileObj.preview);
+    }
     selectedFiles.value.splice(index, 1);
 
     if (selectedFiles.value.length === 0) {
@@ -368,6 +415,7 @@ const removeFile = (index) => {
 };
 
 const selectSingle = () => {
+  cleanupPreviews();
   mediaOption.value = "single";
   form.video_link = null;
   selectedFiles.value = [];
@@ -378,6 +426,7 @@ const selectSingle = () => {
 };
 
 const selectMultiple = () => {
+  cleanupPreviews();
   mediaOption.value = "multiple";
   form.video_link = null;
   selectedFiles.value = [];
@@ -388,6 +437,7 @@ const selectMultiple = () => {
 };
 
 const selectLink = () => {
+  cleanupPreviews();
   mediaOption.value = "link";
   selectedFiles.value = [];
   form.image = null;
@@ -443,7 +493,7 @@ const processBatch = async (specificFiles = null) => {
 
   failedUploads.value = [];
 
-  const filesToUpload = specificFiles || selectedFiles.value;
+  const filesToUpload = [...(specificFiles || selectedFiles.value)];
   if (filesToUpload.length === 0) {
     return;
   }
@@ -509,6 +559,19 @@ const processBatch = async (specificFiles = null) => {
 
       fileObj.uploaded = true;
 
+      // Immediately remove preview as the file has been uploaded
+      try {
+        revokeObjectURLIfNeeded(fileObj.preview);
+      } catch (e) {
+        // no-op
+      }
+      fileObj.preview = null;
+
+      const liveIndex = selectedFiles.value.findIndex((f) => f === fileObj);
+      if (liveIndex !== -1) {
+        selectedFiles.value.splice(liveIndex, 1);
+      }
+
       // Delay between uploads for stability
       if (i < filesToUpload.length - 1) {
         await new Promise((resolve) => setTimeout(resolve, 500));
@@ -534,6 +597,8 @@ const processBatch = async (specificFiles = null) => {
 
   if (failedUploads.value.length === 0) {
     setTimeout(() => {
+      // Revoke any object URL previews before clearing state and closing
+      cleanupPreviews();
       clearDraft();
       emit("close-form");
     }, 1000);
@@ -564,6 +629,8 @@ const submit = async () => {
       preserveScroll: true,
       forceFormData: true,
       onSuccess: () => {
+        // Revoke any object URL previews before clearing state
+        cleanupPreviews();
         selectedFiles.value = [];
         form.reset();
         clearDraft();
@@ -644,6 +711,10 @@ let v$ = useVuelidate(rules, form);
 
 onMounted(() => {
   loadDraft();
+});
+
+onUnmounted(() => {
+  cleanupPreviews();
 });
 </script>
 
