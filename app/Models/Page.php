@@ -18,6 +18,7 @@ class Page extends Model
         'media_poster',
         'video_link',
         'book_id',
+        'read_count',
         'created_at',
     ];
 

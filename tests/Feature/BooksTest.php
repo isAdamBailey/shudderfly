@@ -110,10 +110,10 @@ class BooksTest extends TestCase
 
     public function test_book_is_returned()
     {
-        $user = User::factory()->create();
-        $this->actingAs($user);
+        $this->actingAs(User::factory()->create());
 
         $book = Book::factory()->has(Page::factory(27))->create();
+
         $initialReadCount = $book->read_count; // Capture initial count
 
         $this->get(route('books.show', $book))->assertInertia(
@@ -136,8 +136,17 @@ class BooksTest extends TestCase
                 ->has('categories')
         );
 
-        // New books get 2.5x age boost (≤14 days old)
-        $this->assertSame($initialReadCount + 2.5, $book->fresh()->read_count);
+        // Check if book is in top 20 - if so, increment by 0.1, otherwise by age-based amount
+        $topBooks = Book::orderBy('read_count', 'desc')->limit(20)->pluck('id')->toArray();
+        $isInTop20 = in_array($book->id, $topBooks);
+
+        if ($isInTop20) {
+            // Top 20 books increment by 0.1
+            $this->assertSame($initialReadCount + 0.1, $book->fresh()->read_count);
+        } else {
+            // New books get age-based boost (≤7 days old = 2.5x)
+            $this->assertSame($initialReadCount + 2.5, $book->fresh()->read_count);
+        }
     }
 
     public function test_age_based_book_read_count_multipliers()

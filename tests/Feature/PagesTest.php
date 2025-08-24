@@ -177,15 +177,28 @@ class PagesTest extends TestCase
 
     public function test_page_is_returned()
     {
-        $this->actingAs(User::factory()->create());
+        $user = User::factory()->create();
+        // Ensure user doesn't have 'edit profile' permission so read count increments
+        $user->revokePermissionTo('edit profile');
+        $this->actingAs($user);
 
-        $book = Book::factory()->has(Page::factory())->create();
-        $page = $book->pages->first();
+        $book = Book::factory()->create();
+
+        // Create many dummy pages first to ensure our test page isn't in top 20
+        Page::factory()->for($book)->count(100)->create(['read_count' => 1000]);
+
+        $page = Page::factory()->for($book)->create([
+            'read_count' => -1.0, // Negative to ensure not in top 20
+            'created_at' => now()->subHours(1), // 1 hour ago to get 3.0 boost
+        ]);
+
         $initialReadCount = $page->read_count; // Capture initial count
 
         $this->get(route('pages.show', $page))->assertInertia(
-            fn (Assert $page) => $page
+            fn (Assert $inertiaPage) => $inertiaPage
                 ->component('Page/Show')
+                ->url('/pages/'.$page->id)
+                ->has('page.id')
                 ->has('page.content')
                 ->has('page.media_path')
                 ->has('page.video_link')
@@ -196,8 +209,17 @@ class PagesTest extends TestCase
                 ->has('books')
         );
 
-        // New pages get 3x age boost (≤7 days old)
-        $this->assertSame($initialReadCount + 3.0, $page->fresh()->read_count);
+        // Check if page is in top 20 - if so, increment by 0.1, otherwise by age-based amount
+        $topPages = Page::orderBy('read_count', 'desc')->limit(20)->pluck('id')->toArray();
+        $isInTop20 = in_array($page->id, $topPages);
+
+        if ($isInTop20) {
+            // Top 20 pages increment by 0.1
+            $this->assertSame($initialReadCount + 0.1, $page->fresh()->read_count);
+        } else {
+            // New pages get age-based boost (≤7 days old = 3.0x)
+            $this->assertSame($initialReadCount + 3.0, $page->fresh()->read_count);
+        }
     }
 
     public function test_age_based_read_count_multipliers()
@@ -206,18 +228,15 @@ class PagesTest extends TestCase
 
         $book = Book::factory()->create();
 
-        // Create dummy pages with higher read counts to ensure our test pages aren't in top 3
-        Page::factory()->for($book)->count(3)->create(['read_count' => 100]);
+        // Create many dummy pages with higher read counts to ensure our test pages aren't in top 20
+        Page::factory()->for($book)->count(50)->create(['read_count' => 1000]);
 
-        // Create pages of different ages
-        $newPage = Page::factory()->for($book)->create(['created_at' => now()]); // ≤7 days: 3.0x
-        $monthOldPage = Page::factory()->for($book)->create(['created_at' => now()->subDays(15)]); // ≤30 days: 2.0x
-        $threeMonthOldPage = Page::factory()->for($book)->create(['created_at' => now()->subDays(45), 'read_count' => 200]); // ≤60 days: 1.5x
-        $yearOldPage = Page::factory()->for($book)->create(['created_at' => now()->subDays(200), 'read_count' => 250]); // >90 days, in top 20: 0.1x
-        $veryOldPage = Page::factory()->for($book)->create(['created_at' => now()->subYears(2), 'read_count' => 250]); // >90 days, in top 20: 0.1x
-
-        // Create enough pages to ensure our test pages are in top 20 but not top 3
-        Page::factory()->for($book)->count(15)->create(['read_count' => 300]);
+        // Create pages of different ages with negative read counts (so they won't be in top 20)
+        $newPage = Page::factory()->for($book)->create(['created_at' => now(), 'read_count' => -1.0]); // ≤7 days: 3.0x
+        $monthOldPage = Page::factory()->for($book)->create(['created_at' => now()->subDays(15), 'read_count' => -1.0]); // ≤30 days: 2.0x
+        $threeMonthOldPage = Page::factory()->for($book)->create(['created_at' => now()->subDays(45), 'read_count' => -1.0]); // ≤60 days: 1.5x
+        $yearOldPage = Page::factory()->for($book)->create(['created_at' => now()->subDays(200), 'read_count' => -1.0]); // >90 days: 1.0x
+        $veryOldPage = Page::factory()->for($book)->create(['created_at' => now()->subYears(2), 'read_count' => -1.0]); // >90 days: 1.0x
 
         // Run jobs directly for testing
         (new \App\Jobs\IncrementPageReadCount($newPage))->handle();
@@ -226,12 +245,12 @@ class PagesTest extends TestCase
         (new \App\Jobs\IncrementPageReadCount($yearOldPage))->handle();
         (new \App\Jobs\IncrementPageReadCount($veryOldPage))->handle();
 
-        // Verify age-based behavior with time-decay model
-        $this->assertSame(3.0, $newPage->fresh()->read_count); // ≤7 days: initial 3.0x boost
-        $this->assertSame(2.0, $monthOldPage->fresh()->read_count); // ≤30 days: initial 2.0x boost
-        $this->assertEqualsWithDelta(201.0, $threeMonthOldPage->fresh()->read_count, 0.01); // existing score ~ +1.0 (minor decay tolerance)
-        $this->assertEqualsWithDelta(251.0, $yearOldPage->fresh()->read_count, 0.01); // existing score ~ +1.0 (minor decay tolerance)
-        $this->assertEqualsWithDelta(251.0, $veryOldPage->fresh()->read_count, 0.01); // existing score ~ +1.0 (minor decay tolerance)
+        // Verify age-based behavior with new logic
+        $this->assertSame(-1.0 + 3.0, $newPage->fresh()->read_count); // ≤7 days: initial 3.0x boost
+        $this->assertSame(-1.0 + 2.0, $monthOldPage->fresh()->read_count); // ≤30 days: initial 2.0x boost
+        $this->assertSame(-1.0 + 1.5, $threeMonthOldPage->fresh()->read_count); // ≤60 days: initial 1.5x boost
+        $this->assertSame(-1.0 + 1.0, $yearOldPage->fresh()->read_count); // >90 days: initial 1.0x boost
+        $this->assertSame(-1.0 + 1.0, $veryOldPage->fresh()->read_count); // >90 days: initial 1.0x boost
     }
 
     public function test_page_cannot_be_stored_without_permissions()

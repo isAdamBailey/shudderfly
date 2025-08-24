@@ -13,18 +13,6 @@ class IncrementBookReadCount implements ShouldQueue
 {
     use InteractsWithQueue, Queueable, SerializesModels;
 
-    /**
-     * Half-life for the popularity decay in hours.
-     * With a 72h half-life, an item's score halves every 3 days without clicks.
-     * Tune this based on how quickly you want trends to change.
-     */
-    private const HALF_LIFE_HOURS = 72;
-
-    /**
-     * Weight of a single click when added to the decayed score.
-     */
-    private const CLICK_WEIGHT = 1.0;
-
     protected $book;
 
     /**
@@ -36,58 +24,58 @@ class IncrementBookReadCount implements ShouldQueue
     }
 
     /**
-     * Handle incrementing the book popularity using time-decayed scoring.
+     * Handle incrementing the book read count.
      *
-     * Formula (exponential decay with half-life):
-     *   new_score = old_score * pow(0.5, delta_hours / HALF_LIFE_HOURS) + CLICK_WEIGHT
-     *
-     * This ensures old items drift down unless they continue receiving clicks,
-     * allowing new items with recent activity to rise fairly.
+     * Rules:
+     * - Books in top 20: increment by 0.1
+     * - All other books: increment by age-based amount (larger for newer books)
      */
     public function handle(): void
     {
         // Ensure the latest values
         $this->book->refresh();
 
-        $now = Carbon::now();
-        // Use updated_at as a proxy for last score update; fallback to created_at
-        $last = $this->book->updated_at ?? $this->book->created_at ?? $now;
-
-        $deltaMinutes = max(0, $last->diffInMinutes($now));
-        $deltaHours = $deltaMinutes / 60.0;
-
-        // Exponential half-life decay factor
-        $decayFactor = pow(0.5, $deltaHours / self::HALF_LIFE_HOURS);
-
         $oldScore = (float) ($this->book->read_count ?? 0.0);
 
-        // If this is the first click (no prior score), apply an initial age-based boost to satisfy existing tests
-        if ($oldScore <= 0.0) {
-            $boost = $this->initialBoostForBook();
-            $newScore = self::CLICK_WEIGHT * $boost;
+        // Check if this book is in the top 20 by read count
+        $topBooks = Book::orderBy('read_count', 'desc')
+            ->limit(20)
+            ->pluck('id')
+            ->toArray();
+
+        $isInTop20 = in_array($this->book->id, $topBooks);
+
+        if ($isInTop20) {
+            // Top 20 books: increment by 0.1
+            $newScore = $oldScore + 0.1;
         } else {
-            $newScore = $oldScore * $decayFactor + self::CLICK_WEIGHT;
+            // All other books: use age-based increment
+            $ageBasedIncrement = $this->getAgeBasedIncrement();
+            $newScore = $oldScore + $ageBasedIncrement;
         }
 
-        // Persist the updated popularity score
+        // Persist the updated read count
         $this->book->update(['read_count' => $newScore]);
     }
 
-    private function initialBoostForBook(): float
+    /**
+     * Get the age-based increment amount for newer books.
+     */
+    private function getAgeBasedIncrement(): float
     {
         $created = $this->book->created_at ?? Carbon::now();
-        $ageDays = $created->diffInDays(Carbon::now());
+        $ageDays = $created->diffInHours(Carbon::now()) / 24.0; // Convert hours to days as float
 
         if ($ageDays <= 7) {
-            return 2.5; // 1 week
+            return 2.5; // 1 week: 2.5x boost
         } elseif ($ageDays <= 30) {
-            return 1.8; // 1 month
+            return 1.8; // 1 month: 1.8x boost
         } elseif ($ageDays <= 60) {
-            return 1.4; // 2 months
+            return 1.4; // 2 months: 1.4x boost
         } elseif ($ageDays <= 90) {
-            return 1.2; // 3 months
+            return 1.2; // 3 months: 1.2x boost
         }
 
-        return 1.0; // older
+        return 1.0; // older: 1.0x boost
     }
 }

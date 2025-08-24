@@ -13,16 +13,6 @@ class IncrementPageReadCount implements ShouldQueue
 {
     use InteractsWithQueue, Queueable, SerializesModels;
 
-    /**
-     * Half-life for the popularity decay in hours.
-     */
-    private const HALF_LIFE_HOURS = 72;
-
-    /**
-     * Weight of a single click when added to the decayed score.
-     */
-    private const CLICK_WEIGHT = 1.0;
-
     protected $page;
 
     /**
@@ -34,56 +24,58 @@ class IncrementPageReadCount implements ShouldQueue
     }
 
     /**
-     * Handle incrementing the page popularity using time-decayed scoring.
+     * Handle incrementing the page read count.
      *
-     * new_score = old_score * pow(0.5, delta_hours / HALF_LIFE_HOURS) + CLICK_WEIGHT
+     * Rules:
+     * - Pages in top 20: increment by 0.1
+     * - All other pages: increment by age-based amount (larger for newer pages)
      */
     public function handle(): void
     {
         // Ensure the latest values
         $this->page->refresh();
 
-        $now = Carbon::now();
-        $last = $this->page->updated_at ?? $this->page->created_at ?? $now;
-
-        $deltaMinutes = max(0, $last->diffInMinutes($now));
-        $deltaHours = $deltaMinutes / 60.0;
-
-        $decayFactor = pow(0.5, $deltaHours / self::HALF_LIFE_HOURS);
-
         $oldScore = (float) ($this->page->read_count ?? 0.0);
 
-        if ($oldScore <= 0.0) {
-            // First click: age-based initial boost
-            $boost = $this->initialBoostForPage();
-            $newScore = self::CLICK_WEIGHT * $boost;
-            $this->page->read_count = $newScore;
-            $this->page->save();
+        // Check if this page is in the top 20 by read count
+        $topPages = Page::orderBy('read_count', 'desc')
+            ->limit(20)
+            ->pluck('id')
+            ->toArray();
 
-            return;
+        $isInTop20 = in_array($this->page->id, $topPages);
+
+        if ($isInTop20) {
+            // Top 20 pages: increment by 0.1
+            $newScore = $oldScore + 0.1;
+        } else {
+            // All other pages: use age-based increment
+            $ageBasedIncrement = $this->getAgeBasedIncrement();
+            $newScore = $oldScore + $ageBasedIncrement;
         }
 
-        // Time-decayed increment for subsequent clicks
-        $newScore = $oldScore * $decayFactor + self::CLICK_WEIGHT;
-        $this->page->read_count = $newScore;
-        $this->page->save();
+        // Persist the updated read count
+        $this->page->update(['read_count' => $newScore]);
     }
 
-    private function initialBoostForPage(): float
+    /**
+     * Get the age-based increment amount for newer pages.
+     */
+    private function getAgeBasedIncrement(): float
     {
         $created = $this->page->created_at ?? Carbon::now();
-        $ageDays = $created->diffInDays(Carbon::now());
+        $ageDays = $created->diffInHours(Carbon::now()) / 24.0; // Convert hours to days as float
 
         if ($ageDays <= 7) {
-            return 3.0; // 1 week
+            return 3.0; // 1 week: 3.0x boost
         } elseif ($ageDays <= 30) {
-            return 2.0; // 1 month
+            return 2.0; // 1 month: 2.0x boost
         } elseif ($ageDays <= 60) {
-            return 1.5; // 2 months
+            return 1.5; // 2 months: 1.5x boost
         } elseif ($ageDays <= 90) {
-            return 1.2; // 3 months
+            return 1.2; // 3 months: 1.2x boost
         }
 
-        return 1.0; // older
+        return 1.0; // older: 1.0x boost
     }
 }
