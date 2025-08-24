@@ -116,4 +116,18 @@ if (typeof window !== "undefined") {
     getVoices: () => [],
     cancel: () => {}
   };
+
+  // Mock matchMedia for components that query media features (e.g., prefers-reduced-motion)
+  if (!window.matchMedia) {
+    window.matchMedia = (query) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(), // deprecated
+      removeListener: vi.fn(), // deprecated
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn()
+    });
+  }
 }
