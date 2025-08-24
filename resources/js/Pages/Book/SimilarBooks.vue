@@ -11,7 +11,7 @@
         :key="book.id"
         prefetch
         :href="route('books.show', { book: book.slug })"
-        class="relative w-60 h-60 overflow-hidden shrink-0 snap-start rounded-lg bg-white shadow-gray-200/50 transition hover:opacity-80 hover:shadow hover:shadow-gray-300/50"
+        class="relative w-60 h-60 overflow-hidden shrink-0 snap-start rounded-lg transition hover:opacity-80 hover:shadow hover:shadow-gray-300/50"
         @click="setBookLoading(book)"
       >
         <div
@@ -24,23 +24,34 @@
         </div>
         <div v-else class="w-full h-full">
           <div
-            class="line-clamp-2 font-heading bg-theme-primary text-theme-button text-center uppercase text-2xl"
+            class="mini-book mini-book__texture relative w-full h-full rounded-lg overflow-hidden shadow-xl"
           >
-            {{ book.title.toUpperCase() }}
+            <!-- Image -->
+            <LazyLoader
+              :src="book.cover_image?.media_path"
+              :alt="`${book.title} cover image`"
+              :is-cover="true"
+              :object-fit="'cover'"
+              :fill-container="true"
+            />
+
+            <!-- Dark overlay for text readability -->
+            <div class="absolute inset-0 bg-black/25"></div>
+
+            <!-- Centered title/excerpt like BookCover (smaller) -->
+            <div class="absolute inset-0 z-10 flex flex-col items-center justify-center text-center p-3">
+              <h2 class="mini-book__title font-heading uppercase text-white font-bold tracking-[0.08em] leading-tight text-lg sm:text-xl line-clamp-2">
+                {{ book.title }}
+              </h2>
+              <p v-if="book.excerpt" class="mt-1 text-white/90 text-xs italic line-clamp-2">
+                {{ book.excerpt }}
+              </p>
+            </div>
+
+            <!-- Static spine & border -->
+            <div class="mini-book__spine"></div>
+            <div class="mini-book__border absolute inset-0 rounded-lg pointer-events-none"></div>
           </div>
-          <div
-            v-if="book.excerpt"
-            class="rounded-b-lg absolute inset-x-0 bottom-0 w-full truncate bg-white/70 py-2.5 text-center text-sm leading-4 text-black backdrop-blur-sm line-clamp-1 z-10"
-          >
-            {{ book.excerpt }}
-          </div>
-          <LazyLoader
-            :src="book.cover_image?.media_path"
-            :alt="`${book.title} cover image`"
-            :is-cover="true"
-            :object-fit="'cover'"
-            :fill-container="true"
-          />
         </div>
       </Link>
     </div>
@@ -73,3 +84,4 @@ function setBookLoading(book) {
   book.loading = true;
 }
 </script>
+

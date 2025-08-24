@@ -76,7 +76,6 @@ function mediaPath(photo) {
                 <LazyLoader
                     v-if="mediaPath(photo)"
                     :src="mediaPath(photo)"
-                    :is-cover="true"
                     :object-fit="'cover'"
                     :fill-container="true"
                 />

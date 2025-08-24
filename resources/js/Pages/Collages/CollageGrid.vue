@@ -94,7 +94,7 @@
                             :object-fit="'contain'"
                             :loading="pageIndex < 2 ? 'eager' : 'lazy'"
                             :fetch-priority="pageIndex < 2 ? 'high' : 'low'"
-                            :show-pills="false"
+                            :is-cover="true"
                         />
                         <slot
                             name="image-actions"
