@@ -36,7 +36,10 @@ class CollageController extends Controller
 
     public function archive(Collage $collage)
     {
-        $collage->update(['is_archived' => true]);
+        $collage->update([
+            'is_archived' => true,
+            'is_locked' => false,
+        ]);
 
         return redirect()->route('collages.archived');
     }
@@ -53,6 +56,19 @@ class CollageController extends Controller
         $collage->update(['is_archived' => false]);
 
         return redirect()->route('collages.index');
+    }
+
+    public function update(Request $request, Collage $collage)
+    {
+        $data = $request->validate([
+            'is_locked' => 'required|boolean',
+        ]);
+
+        $collage->update($data);
+
+        $message = $data['is_locked'] ? 'Collage has been locked.' : 'Collage has been unlocked.';
+
+        return back()->with('success', $message);
     }
 
     public function generatePdf(Collage $collage)

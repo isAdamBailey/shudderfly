@@ -10,7 +10,12 @@ class Collage extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['storage_path', 'preview_path', 'is_archived'];
+    protected $fillable = ['storage_path', 'preview_path', 'is_archived', 'is_locked'];
+
+    protected $casts = [
+        'is_archived' => 'boolean',
+        'is_locked' => 'boolean',
+    ];
 
     /**
      * Get the full URL for the PDF.

@@ -78,6 +78,7 @@ Route::middleware('auth')->group(function () {
         Route::patch('/collages/{collage}/archive', [CollageController::class, 'archive'])->name('collages.archive');
         Route::delete('/collages/{collage}', [CollageController::class, 'destroy'])->name('collages.destroy');
         Route::patch('/collages/{collage}/restore', [CollageController::class, 'restore'])->name('collages.restore');
+        Route::put('/collages/{collage}', [CollageController::class, 'update'])->name('collages.update');
         Route::post('/collages/{collage}/generate-pdf', [CollageController::class, 'generatePdf'])->name('collages.generate-pdf');
 
         Route::put('/admin/permissions', [AdminController::class, 'update'])->name('admin.permissions');

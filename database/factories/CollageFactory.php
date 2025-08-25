@@ -18,6 +18,8 @@ class CollageFactory extends Factory
     {
         return [
             'storage_path' => null, // Initially null since PDFs are generated later
+            'is_locked' => false,
+            'is_archived' => false,
         ];
     }
 }

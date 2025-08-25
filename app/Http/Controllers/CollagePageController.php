@@ -17,6 +17,11 @@ class CollagePageController extends Controller
 
         $collage = Collage::findOrFail($data['collage_id']);
 
+        // Check if the collage is locked
+        if ($collage->is_locked) {
+            return back()->withErrors(['collage' => 'This collage is locked and cannot be modified.']);
+        }
+
         // Check if the page already exists in the collage (safety check)
         if (! $collage->pages()->where('page_id', $data['page_id'])->exists()) {
             $collage->pages()->attach($data['page_id']);
