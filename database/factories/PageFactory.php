@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Book;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Mmo\Faker\PicsumProvider;
 
@@ -21,8 +22,9 @@ class PageFactory extends Factory
         $faker->addProvider(new PicsumProvider($faker));
 
         return [
+            'book_id' => Book::factory(),
             'content' => $faker->paragraphs(3, true),
-            'media_path' => $faker->picsumUrl(),
+            'media_path' => $faker->picsumUrl(640, 480),
         ];
     }
 }
