@@ -38,7 +38,7 @@ class CollageController extends Controller
     {
         $collage->update([
             'is_archived' => true,
-            'is_locked' => false
+            'is_locked' => false,
         ]);
 
         return redirect()->route('collages.archived');

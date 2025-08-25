@@ -36,6 +36,20 @@
                     <i class="ri-speak-fill text-lg"></i>
                 </Button>
             </div>
+            <div v-if="canAdmin">
+                <p class="font-bold text-gray-400 mt-2 underline">
+                    ADMIN INSTRUCTIONS
+                </p>
+                <p class="text-sm text-gray-400 mt-2">
+                    Each collage holds up to {{ MAX_COLLAGE_PAGES }} pictures
+                    that automatically arrange to fill the space.
+                    <strong>Lock</strong> collages to prevent users from adding
+                    more pictures. <strong>Generate PDF</strong> takes a few
+                    minutes - you'll receive an email when ready.
+                    <strong>Archive</strong> collages to preserve them while
+                    preventing new additions (can be restored later).
+                </p>
+            </div>
         </template>
 
         <div
@@ -240,7 +254,6 @@
 
 <script setup>
 import Button from "@/Components/Button.vue";
-import DangerButton from "@/Components/DangerButton.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { MAX_COLLAGE_PAGES } from "@/constants/collage";
@@ -271,11 +284,6 @@ const updateForm = useForm({
 // Dropdown state management
 const activeDropdown = ref(null);
 
-const toggleDropdown = (collageId) => {
-    activeDropdown.value =
-        activeDropdown.value === collageId ? null : collageId;
-};
-
 // Close dropdown when clicking outside
 const closeDropdowns = () => {
     activeDropdown.value = null;
@@ -291,7 +299,7 @@ onUnmounted(() => {
 });
 
 const text = ref(
-    `You can build your own collages! Go to the picture you want to add to the collage and select the collage you want. ${MAX_COLLAGE_PAGES} pages per collage. Mom and Dad can print these collages for laminating once a month.`
+    `You can build your own collages! Go to the picture you want to add to the collage and select the collage you want. Mom and Dad can print these collages.`
 );
 
 const hasPages = (collage) => {

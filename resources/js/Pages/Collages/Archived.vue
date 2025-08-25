@@ -18,10 +18,28 @@
                     Back to Collages
                 </Link>
             </div>
-            <p class="text-sm text-gray-400 mt-2">
-                Archived collages can no longer be edited, but you may still
-                view and print them.
-            </p>
+            <div class="flex justify-between items-center">
+                <p class="text-sm text-gray-400 mt-2">{{ archivedText }}</p>
+                <Button
+                    class="ml-2"
+                    :disabled="speaking"
+                    @click="speak(archivedText)"
+                >
+                    <i class="ri-speak-fill text-lg"></i>
+                </Button>
+            </div>
+            <div v-if="canAdmin">
+                <p class="font-bold text-gray-400 mt-2 underline">
+                    ADMIN INSTRUCTIONS
+                </p>
+                <p class="text-sm text-gray-400 mt-2">
+                    Archived collages are preserved but cannot be edited.
+                    <strong>View/Print</strong> PDFs anytime.
+                    <strong>Restore</strong> to make editable again.
+                    <strong>Delete Permanently</strong> removes all data forever
+                    (irreversible).
+                </p>
+            </div>
         </template>
 
         <div
@@ -130,15 +148,18 @@
 
 <script setup>
 import Button from "@/Components/Button.vue";
-import DangerButton from "@/Components/DangerButton.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
+import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, Link, useForm } from "@inertiajs/vue3";
+import { ref } from "vue";
 import CollageGrid from "./CollageGrid.vue";
 
 import { usePermissions } from "@/composables/permissions";
+import { MAX_COLLAGE_PAGES } from "@/constants/collage";
 
 const { canEditPages, canAdmin } = usePermissions();
+const { speak, speaking } = useSpeechSynthesis();
 
 defineProps({
     collages: { type: Array, required: true },
@@ -146,6 +167,10 @@ defineProps({
 
 const restoreForm = useForm();
 const deleteForm = useForm();
+
+const archivedText = ref(
+    "These are old collages that are saved but can no longer be changed."
+);
 
 const confirmDelete = (collageId) => {
     if (
