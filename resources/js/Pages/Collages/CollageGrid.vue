@@ -6,27 +6,39 @@
             :ref="(el) => setCollageRef(el, collage.id)"
             class="bg-white shadow p-4 flex flex-col space-y-2"
         >
-            <div class="flex justify-between items-center mb-2 min-w-0">
-                <h3
-                    class="text-lg font-semibold text-gray-800 whitespace-nowrap truncate"
-                >
-                    <template v-if="showIndex">
-                        Collage #{{ index + 1 }}
-                    </template>
-                    <template v-else>
-                        ID: {{ collage.id }}
+            <div class="flex justify-between items-start mb-2 min-w-0">
+                <div class="flex flex-col">
+                    <h3
+                        class="text-lg font-semibold text-gray-800 whitespace-nowrap truncate"
+                    >
+                        <template v-if="showIndex">
+                            Collage #{{ index + 1 }}
+                        </template>
+                        <template v-else> ID: {{ collage.id }} </template>
+                    </h3>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span class="text-sm text-gray-500">
+                            {{ collage.pages.length }}/{{
+                                MAX_COLLAGE_PAGES
+                            }}
+                            image{{ collage.pages.length !== 1 ? "s" : "" }}
+                        </span>
                         <span
                             v-if="collage.updated_at"
-                            class="text-sm font-normal text-gray-500 whitespace-nowrap"
-                            >— {{ short(collage.updated_at) }}</span
+                            class="text-xs text-gray-400"
                         >
-                    </template>
-                </h3>
-                <span class="text-sm text-gray-500"
-                    >{{ collage.pages.length }}/{{ MAX_COLLAGE_PAGES }} image{{
-                        collage.pages.length !== 1 ? "s" : ""
-                    }}</span
-                >
+                            {{ short(collage.updated_at) }}
+                        </span>
+                        <span
+                            v-if="collage.is_locked"
+                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800"
+                            title="This collage is locked"
+                        >
+                            <i class="ri-lock-line mr-1"></i>
+                            Locked
+                        </span>
+                    </div>
+                </div>
             </div>
 
             <!-- Responsive 8.5x11 aspect ratio container, always looks like a piece of paper and maintains aspect ratio -->
