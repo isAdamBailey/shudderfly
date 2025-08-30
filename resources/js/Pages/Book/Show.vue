@@ -3,8 +3,6 @@
 
   <BreezeAuthenticatedLayout>
     <template #header>
-      <!-- Search moved to global layout -->
-      <!-- Book Cover Section -->
       <BookCover :book="book" :pages="pages" />
       <div class="p-2 flex justify-end flex-nowrap align-middle">
         <div class="flex max-h-10">
