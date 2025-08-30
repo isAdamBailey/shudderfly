@@ -1,70 +1,74 @@
 <template>
-  <div class="w-full bg-transparent flex pl-2 sm:pl-6 lg:pl-8 mt-5 pr-8">
-    <div class="self-center mr-2" role="radiogroup" aria-label="Search target">
-      <div
-        class="relative inline-flex items-center rounded-full bg-gray-200 dark:bg-gray-800 p-1 h-8"
-      >
-        <button
-          role="radio"
-          :aria-checked="isBooksTarget.toString()"
-          :tabindex="isBooksTarget ? 0 : -1"
-          class="px-3 h-6 rounded-full text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
-          :class="
-            isBooksTarget
-              ? 'bg-blue-600 text-white dark:bg-white dark:text-gray-900 shadow'
-              : 'text-gray-700 dark:text-gray-300'
-          "
-          @click="setTarget('books')"
-          @keydown.enter.prevent="setTarget('books')"
-          @keydown.space.prevent="setTarget('books')"
+    <div class="w-full bg-transparent flex pl-2 sm:pl-6 lg:pl-8 mt-5 pr-8 mb-2">
+        <div
+            class="self-center mr-2"
+            role="radiogroup"
+            aria-label="Search target"
         >
-          Books
-        </button>
+            <div
+                class="relative inline-flex items-center rounded-full bg-gray-200 dark:bg-gray-800 p-1 h-8"
+            >
+                <button
+                    role="radio"
+                    :aria-checked="isBooksTarget.toString()"
+                    :tabindex="isBooksTarget ? 0 : -1"
+                    class="px-3 h-6 rounded-full text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                    :class="
+                        isBooksTarget
+                            ? 'bg-blue-600 text-white dark:bg-white dark:text-gray-900 shadow'
+                            : 'text-gray-700 dark:text-gray-300'
+                    "
+                    @click="setTarget('books')"
+                    @keydown.enter.prevent="setTarget('books')"
+                    @keydown.space.prevent="setTarget('books')"
+                >
+                    Books
+                </button>
+                <button
+                    role="radio"
+                    :aria-checked="isUploadsTarget.toString()"
+                    :tabindex="isUploadsTarget ? 0 : -1"
+                    class="px-3 h-6 rounded-full text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                    :class="
+                        isUploadsTarget
+                            ? 'bg-blue-600 text-white dark:bg-white dark:text-gray-900 shadow'
+                            : 'text-gray-700 dark:text-gray-300'
+                    "
+                    @click="setTarget('uploads')"
+                    @keydown.enter.prevent="setTarget('uploads')"
+                    @keydown.space.prevent="setTarget('uploads')"
+                >
+                    Uploads
+                </button>
+            </div>
+        </div>
+        <label for="search" class="hidden">Search</label>
+        <input
+            id="search"
+            :value="voiceActive && !search ? transcript : search"
+            class="h-8 w-full cursor-pointer rounded-full border bg-gray-100 px-4 pb-0 pt-px text-gray-700 outline-none transition focus:border-blue-400"
+            :class="{ 'border-red-500 border-2': voiceActive }"
+            autocomplete="off"
+            name="search"
+            :placeholder="searchPlaceholder"
+            type="search"
+            @input="search = $event.target.value"
+            @keyup.esc="search = null"
+            @keyup.enter="searchMethod"
+        />
         <button
-          role="radio"
-          :aria-checked="isUploadsTarget.toString()"
-          :tabindex="isUploadsTarget ? 0 : -1"
-          class="px-3 h-6 rounded-full text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
-          :class="
-            isUploadsTarget
-              ? 'bg-blue-600 text-white dark:bg-white dark:text-gray-900 shadow'
-              : 'text-gray-700 dark:text-gray-300'
-          "
-          @click="setTarget('uploads')"
-          @keydown.enter.prevent="setTarget('uploads')"
-          @keydown.space.prevent="setTarget('uploads')"
+            v-if="isVoiceSupported"
+            class="self-center flex items-center ml-2 w-6 h-6"
+            @click="startVoiceRecognition"
         >
-          Uploads
+            <i
+                :class="{
+                    'bg-red-500 border-red-500': voiceActive,
+                }"
+                class="border-2 px-1 bg-blue-600 dark:bg-white dark:text-gray-900 text-white rounded-full ri-mic-line text-3xl"
+            ></i>
         </button>
-      </div>
     </div>
-    <label for="search" class="hidden">Search</label>
-    <input
-      id="search"
-      :value="voiceActive && !search ? transcript : search"
-      class="h-8 w-full cursor-pointer rounded-full border bg-gray-100 px-4 pb-0 pt-px text-gray-700 outline-none transition focus:border-blue-400"
-      :class="{ 'border-red-500 border-2': voiceActive }"
-      autocomplete="off"
-      name="search"
-      :placeholder="searchPlaceholder"
-      type="search"
-      @input="search = $event.target.value"
-      @keyup.esc="search = null"
-      @keyup.enter="searchMethod"
-    />
-    <button
-      v-if="isVoiceSupported"
-      class="self-center flex items-center ml-2 w-6 h-6"
-      @click="startVoiceRecognition"
-    >
-      <i
-        :class="{
-          'bg-red-500 border-red-500': voiceActive
-        }"
-        class="border-2 px-1 bg-blue-600 dark:bg-white dark:text-gray-900 text-white rounded-full ri-mic-line text-3xl"
-      ></i>
-    </button>
-  </div>
 </template>
 
 <script setup>
@@ -74,14 +78,14 @@ import { computed, ref, watch } from "vue";
 
 const { speak } = useSpeechSynthesis();
 const props = defineProps({
-  label: {
-    type: String,
-    default: null
-  },
-  initialTarget: {
-    type: String,
-    default: null // 'books' | 'uploads'
-  }
+    label: {
+        type: String,
+        default: null,
+    },
+    initialTarget: {
+        type: String,
+        default: null, // 'books' | 'uploads'
+    },
 });
 
 let search = ref(usePage().props?.search || null);
@@ -95,135 +99,138 @@ const isBooksTarget = computed(() => target.value === "books");
 const isUploadsTarget = computed(() => target.value === "uploads");
 
 const currentLabel = computed(() => {
-  if (props.showTargetToggle) {
-    return target.value === "uploads" ? "Uploads" : "Books";
-  }
-  return props.label || (target.value === "uploads" ? "Uploads" : "Books");
+    if (props.showTargetToggle) {
+        return target.value === "uploads" ? "Uploads" : "Books";
+    }
+    return props.label || (target.value === "uploads" ? "Uploads" : "Books");
 });
 
 const isVoiceSupported = computed(() => {
-  if (typeof window === "undefined") {
-    return false;
-  }
-  return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+    if (typeof window === "undefined") {
+        return false;
+    }
+    return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 });
 
 const searchPlaceholder = computed(() => {
-  if (voiceActive.value && !voiceHeard.value) {
-    return "Listening...";
-  }
-  return `Search ${currentLabel.value}!`;
+    if (voiceActive.value && !voiceHeard.value) {
+        return "Listening...";
+    }
+    return `Search ${currentLabel.value}!`;
 });
 
 watch(search, () => {
-  if (!search.value) {
-    searchMethod();
-  }
+    if (!search.value) {
+        searchMethod();
+    }
 });
 
 const searchMethod = () => {
-  const routeName =
-    target.value === "uploads" ? "pictures.index" : "books.index";
-  if (search.value) {
-    speak(`Searching for ${currentLabel.value} with ${search.value}`);
-  }
-  router.get(
-    route(routeName),
-    { search: search.value || null, filter: filter.value || null },
-    { preserveState: true }
-  );
+    const routeName =
+        target.value === "uploads" ? "pictures.index" : "books.index";
+    if (search.value) {
+        speak(`Searching for ${currentLabel.value} with ${search.value}`);
+    }
+    router.get(
+        route(routeName),
+        { search: search.value || null, filter: filter.value || null },
+        { preserveState: true }
+    );
 };
 
 function setTarget(newTarget) {
-  if (newTarget === target.value) return;
-  target.value = newTarget;
+    if (newTarget === target.value) return;
+    target.value = newTarget;
 }
 
 function getDefaultTarget() {
-  if (props.initialTarget === "books" || props.initialTarget === "uploads") {
-    return props.initialTarget;
-  }
-  // Infer based on page props (URL or server-provided context) if available
-  const currentUrl =
-    typeof window !== "undefined" ? window.location.pathname : "";
-  // Default to uploads, only switch to books on books index or book show
-  if (currentUrl.startsWith("/books") || currentUrl.startsWith("/book/")) {
-    return "books";
-  }
-  return "uploads";
+    if (props.initialTarget === "books" || props.initialTarget === "uploads") {
+        return props.initialTarget;
+    }
+    // Infer based on page props (URL or server-provided context) if available
+    const currentUrl =
+        typeof window !== "undefined" ? window.location.pathname : "";
+    // Default to uploads, only switch to books on books index or book show
+    if (currentUrl.startsWith("/books") || currentUrl.startsWith("/book/")) {
+        return "books";
+    }
+    return "uploads";
 }
 
 const startVoiceRecognition = () => {
-  // Check if SpeechRecognition is supported
-  if (!isVoiceSupported.value) {
-    speak("Voice recognition is not supported in this browser.");
-    return;
-  }
-
-  const recognition = new (window.SpeechRecognition ||
-    window.webkitSpeechRecognition)();
-  recognition.interimResults = true;
-  recognition.continuous = false;
-  recognition.lang = "en-US";
-
-  recognition.addEventListener("result", (event) => {
-    let currentTranscript = Array.from(event.results)
-      .map((result) => result[0])
-      .map((result) => result.transcript)
-      .join("");
-
-    // Set voiceHeard to true when we get any result
-    voiceHeard.value = true;
-
-    // Update the transcript in real-time
-    transcript.value = currentTranscript;
-
-    if (event.results[0].isFinal) {
-      // Split the transcript into words, remove duplicates, and join back together
-      currentTranscript = [...new Set(currentTranscript.split(" "))].join(" ");
-      search.value = currentTranscript;
-      transcript.value = "";
-      searchMethod();
+    // Check if SpeechRecognition is supported
+    if (!isVoiceSupported.value) {
+        speak("Voice recognition is not supported in this browser.");
+        return;
     }
-  });
 
-  // keep the voice active state in sync with the recognition state
-  recognition.addEventListener("start", () => {
-    voiceActive.value = true;
-    voiceHeard.value = false;
-    search.value = null;
-    transcript.value = "";
-  });
+    const recognition = new (window.SpeechRecognition ||
+        window.webkitSpeechRecognition)();
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.lang = "en-US";
 
-  recognition.addEventListener("end", () => {
-    voiceActive.value = false;
-    voiceHeard.value = false;
-    transcript.value = "";
-  });
+    recognition.addEventListener("result", (event) => {
+        let currentTranscript = Array.from(event.results)
+            .map((result) => result[0])
+            .map((result) => result.transcript)
+            .join("");
 
-  recognition.addEventListener("error", (event) => {
-    voiceActive.value = false;
-    voiceHeard.value = false;
-    transcript.value = "";
+        // Set voiceHeard to true when we get any result
+        voiceHeard.value = true;
 
-    let errorMessage = "Voice recognition error occurred.";
-    switch (event.error) {
-      case "not-allowed":
-        errorMessage = "Please allow microphone access for voice search.";
-        break;
-      case "no-speech":
-        errorMessage = "No speech detected. Please try again.";
-        break;
-      case "network":
-        errorMessage = "Network error. Please check your connection.";
-        break;
-      case "service-not-allowed":
-        errorMessage = "Voice recognition service not available.";
-        break;
-    }
-    speak(errorMessage);
-  });
+        // Update the transcript in real-time
+        transcript.value = currentTranscript;
 
-  recognition.start();
+        if (event.results[0].isFinal) {
+            // Split the transcript into words, remove duplicates, and join back together
+            currentTranscript = [...new Set(currentTranscript.split(" "))].join(
+                " "
+            );
+            search.value = currentTranscript;
+            transcript.value = "";
+            searchMethod();
+        }
+    });
+
+    // keep the voice active state in sync with the recognition state
+    recognition.addEventListener("start", () => {
+        voiceActive.value = true;
+        voiceHeard.value = false;
+        search.value = null;
+        transcript.value = "";
+    });
+
+    recognition.addEventListener("end", () => {
+        voiceActive.value = false;
+        voiceHeard.value = false;
+        transcript.value = "";
+    });
+
+    recognition.addEventListener("error", (event) => {
+        voiceActive.value = false;
+        voiceHeard.value = false;
+        transcript.value = "";
+
+        let errorMessage = "Voice recognition error occurred.";
+        switch (event.error) {
+            case "not-allowed":
+                errorMessage =
+                    "Please allow microphone access for voice search.";
+                break;
+            case "no-speech":
+                errorMessage = "No speech detected. Please try again.";
+                break;
+            case "network":
+                errorMessage = "Network error. Please check your connection.";
+                break;
+            case "service-not-allowed":
+                errorMessage = "Voice recognition service not available.";
+                break;
+        }
+        speak(errorMessage);
+    });
+
+    recognition.start();
 };
 </script>

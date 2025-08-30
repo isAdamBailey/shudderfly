@@ -5,231 +5,231 @@ import { ref } from "vue";
 
 // Mock composables
 vi.mock("@/composables/useInfiniteScroll", () => ({
-  useInfiniteScroll: () => ({
-    items: [
-      { id: 1, title: "Page 1", content: "Content 1" },
-      { id: 2, title: "Page 2", content: "Content 2" }
-    ],
-    infiniteScrollRef: ref(null),
-    setItemLoading: vi.fn()
-  })
+    useInfiniteScroll: () => ({
+        items: [
+            { id: 1, title: "Page 1", content: "Content 1" },
+            { id: 2, title: "Page 2", content: "Content 2" },
+        ],
+        infiniteScrollRef: ref(null),
+        setItemLoading: vi.fn(),
+    }),
 }));
 
 vi.mock("@/composables/permissions", () => ({
-  usePermissions: () => ({
-    canEditPages: true
-  })
+    usePermissions: () => ({
+        canEditPages: true,
+    }),
 }));
 
 vi.mock("@/composables/useSpeechSynthesis", () => ({
-  useSpeechSynthesis: () => ({
-    speak: vi.fn(),
-    speaking: false
-  })
+    useSpeechSynthesis: () => ({
+        speak: vi.fn(),
+        speaking: false,
+    }),
 }));
 
 vi.mock("@/dateHelpers", () => ({
-  useDate: () => ({
-    short: vi.fn(() => "Jan 1, 2023")
-  })
+    useDate: () => ({
+        short: vi.fn(() => "Jan 1, 2023"),
+    }),
 }));
 
 // Mock child components
 vi.mock("@/Components/Button.vue", () => ({
-  default: { name: "Button", template: "<button><slot /></button>" }
+    default: { name: "Button", template: "<button><slot /></button>" },
 }));
 
 vi.mock("@/Components/ScrollTop.vue", () => ({
-  default: { name: "ScrollTop", template: '<div class="scroll-top" />' }
-}));
-
-vi.mock("@/Components/BookTitle.vue", () => ({
-  default: {
-    name: "BookTitle",
-    template: '<div class="book-title"><slot /></div>',
-    props: ["book"]
-  }
+    default: { name: "ScrollTop", template: '<div class="scroll-top" />' },
 }));
 
 vi.mock("@/Components/SearchInput.vue", () => ({
-  default: {
-    name: "SearchInput",
-    template: '<div class="search-input" />',
-    props: ["routeName", "label"]
-  }
+    default: {
+        name: "SearchInput",
+        template: '<div class="search-input" />',
+        props: ["routeName", "label"],
+    },
 }));
 
 vi.mock("@/Components/LazyLoader.vue", () => ({
-  default: {
-    name: "LazyLoader",
-    template: '<div class="lazy-loader" />',
-    props: ["src", "object-fit", "fill-container"]
-  }
+    default: {
+        name: "LazyLoader",
+        template: '<div class="lazy-loader" />',
+        props: ["src", "object-fit", "fill-container"],
+    },
 }));
 
 vi.mock("@/Components/VideoWrapper.vue", () => ({
-  default: {
-    name: "VideoWrapper",
-    template: '<div class="video-wrapper" />',
-    props: ["url", "controls"]
-  }
+    default: {
+        name: "VideoWrapper",
+        template: '<div class="video-wrapper" />',
+        props: ["url", "controls"],
+    },
 }));
 
 vi.mock("@/Components/ValidationErrors.vue", () => ({
-  default: {
-    name: "BreezeValidationErrors",
-    template: '<div class="validation-errors" />'
-  }
+    default: {
+        name: "BreezeValidationErrors",
+        template: '<div class="validation-errors" />',
+    },
 }));
 
 vi.mock("@/Pages/Book/SimilarBooks.vue", () => ({
-  default: {
-    name: "SimilarBooks",
-    template: '<div class="similar-books" />',
-    props: ["books", "label"]
-  }
+    default: {
+        name: "SimilarBooks",
+        template: '<div class="similar-books" />',
+        props: ["books", "label"],
+    },
 }));
 
 vi.mock("@/Pages/Book/DeleteBookForm.vue", () => ({
-  default: {
-    name: "DeleteBookForm",
-    template: '<form class="delete-book-form" />',
-    props: ["book"]
-  }
+    default: {
+        name: "DeleteBookForm",
+        template: '<form class="delete-book-form" />',
+        props: ["book"],
+    },
 }));
 
 vi.mock("@/Pages/Book/EditBookForm.vue", () => ({
-  default: {
-    name: "EditBookForm",
-    template: '<form class="edit-book-form" />',
-    props: ["book", "authors", "categories"]
-  }
+    default: {
+        name: "EditBookForm",
+        template: '<form class="edit-book-form" />',
+        props: ["book", "authors", "categories"],
+    },
 }));
 
 vi.mock("@/Pages/Book/NewPageForm.vue", () => ({
-  default: {
-    name: "NewPageForm",
-    template: '<form class="new-page-form" />',
-    props: ["book"]
-  }
+    default: {
+        name: "NewPageForm",
+        template: '<form class="new-page-form" />',
+        props: ["book"],
+    },
 }));
 
 vi.mock("@/Pages/Book/DeletePageForm.vue", () => ({
-  default: {
-    name: "DeletePageForm",
-    template: '<form class="delete-page-form" />',
-    props: ["page"]
-  }
+    default: {
+        name: "DeletePageForm",
+        template: '<form class="delete-page-form" />',
+        props: ["page"],
+    },
 }));
 
 describe("Book/Show.vue", () => {
-  let wrapper;
-  const book = {
-    id: 1,
-    title: "Test Book",
-    author: "Test Author",
-    description: "Test description",
-    created_at: "2023-01-01T00:00:00.000000Z",
-    updated_at: "2023-01-01T00:00:00.000000Z",
-    read_count: 10
-  };
-  const pages = {
-    data: [
-      { id: 1, title: "Page 1", content: "Content 1" },
-      { id: 2, title: "Page 2", content: "Content 2" }
-    ],
-    total: 2
-  };
-  const authors = [{ id: 1, name: "Test Author" }];
-  const categories = [{ id: 1, name: "Test Category" }];
+    let wrapper;
+    const book = {
+        id: 1,
+        title: "Test Book",
+        author: "Test Author",
+        description: "Test description",
+        created_at: "2023-01-01T00:00:00.000000Z",
+        updated_at: "2023-01-01T00:00:00.000000Z",
+        read_count: 10,
+    };
+    const pages = {
+        data: [
+            { id: 1, title: "Page 1", content: "Content 1" },
+            { id: 2, title: "Page 2", content: "Content 2" },
+        ],
+        total: 2,
+    };
+    const authors = [{ id: 1, name: "Test Author" }];
+    const categories = [{ id: 1, name: "Test Category" }];
 
-  beforeEach(() => {
-    wrapper = mount(Show, {
-      props: {
-        book,
-        pages,
-        authors,
-        categories
-      },
-      global: {
-        mocks: {
-          $page: {
+    beforeEach(() => {
+        wrapper = mount(Show, {
             props: {
-              auth: { user: { permissions_list: [] } },
-              search: null
-            }
-          }
-        }
-      }
+                book,
+                pages,
+                authors,
+                categories,
+            },
+            global: {
+                mocks: {
+                    $page: {
+                        props: {
+                            auth: { user: { permissions_list: [] } },
+                            search: null,
+                        },
+                    },
+                },
+            },
+        });
     });
-  });
 
-  it("renders the book cover", () => {
-    expect(wrapper.findComponent({ name: "BookCover" }).exists()).toBe(true);
-  });
+    it("renders the book cover", () => {
+        expect(wrapper.findComponent({ name: "BookCover" }).exists()).toBe(
+            true
+        );
+    });
 
-  it("renders the book title within the cover", () => {
-    expect(wrapper.text()).toContain("Test Book");
-  });
+    it("renders the book title within the cover", () => {
+        expect(wrapper.text()).toContain("Test Book");
+    });
 
-  it("renders the book author", () => {
-    expect(wrapper.text()).toContain("Test Author");
-  });
+    it("renders the book author", () => {
+        expect(wrapper.text()).toContain("Test Author");
+    });
 
-  it("renders the book creation date", () => {
-    expect(wrapper.text()).toContain("Jan 1, 2023");
-  });
+    it("renders the book creation date", () => {
+        expect(wrapper.text()).toContain("Jan 1, 2023");
+    });
 
-  it("renders pages grid", () => {
-    expect(wrapper.text()).toContain("Content 1");
-    expect(wrapper.text()).toContain("Content 2");
-  });
+    it("renders pages grid", () => {
+        expect(wrapper.text()).toContain("Content 1");
+        expect(wrapper.text()).toContain("Content 2");
+    });
 
-  it("renders ScrollTop component", () => {
-    expect(wrapper.findComponent({ name: "ScrollTop" }).exists()).toBe(true);
-  });
+    it("renders ScrollTop component", () => {
+        expect(wrapper.findComponent({ name: "ScrollTop" }).exists()).toBe(
+            true
+        );
+    });
 
-  // SearchInput is now in the global layout header, not inside Book/Show
+    // SearchInput is now in the global layout header, not inside Book/Show
 
-  it("renders edit book form when bookSettingsOpen is true", async () => {
-    wrapper.vm.bookSettingsOpen = true;
-    await wrapper.vm.$nextTick();
+    it("renders edit book form when bookSettingsOpen is true", async () => {
+        wrapper.vm.bookSettingsOpen = true;
+        await wrapper.vm.$nextTick();
 
-    expect(wrapper.findComponent({ name: "EditBookForm" }).exists()).toBe(true);
-  });
+        expect(wrapper.findComponent({ name: "EditBookForm" }).exists()).toBe(
+            true
+        );
+    });
 
-  it("renders new page form when pageSettingsOpen is true", async () => {
-    wrapper.vm.pageSettingsOpen = true;
-    await wrapper.vm.$nextTick();
+    it("renders new page form when pageSettingsOpen is true", async () => {
+        wrapper.vm.pageSettingsOpen = true;
+        await wrapper.vm.$nextTick();
 
-    expect(wrapper.findComponent({ name: "NewPageForm" }).exists()).toBe(true);
-  });
+        expect(wrapper.findComponent({ name: "NewPageForm" }).exists()).toBe(
+            true
+        );
+    });
 
-  it("toggles book settings visibility", async () => {
-    expect(wrapper.vm.bookSettingsOpen).toBe(false);
+    it("toggles book settings visibility", async () => {
+        expect(wrapper.vm.bookSettingsOpen).toBe(false);
 
-    // Simulate clicking edit book button
-    wrapper.vm.bookSettingsOpen = true;
-    await wrapper.vm.$nextTick();
-    expect(wrapper.vm.bookSettingsOpen).toBe(true);
+        // Simulate clicking edit book button
+        wrapper.vm.bookSettingsOpen = true;
+        await wrapper.vm.$nextTick();
+        expect(wrapper.vm.bookSettingsOpen).toBe(true);
 
-    // Simulate closing form
-    wrapper.vm.bookSettingsOpen = false;
-    await wrapper.vm.$nextTick();
-    expect(wrapper.vm.bookSettingsOpen).toBe(false);
-  });
+        // Simulate closing form
+        wrapper.vm.bookSettingsOpen = false;
+        await wrapper.vm.$nextTick();
+        expect(wrapper.vm.bookSettingsOpen).toBe(false);
+    });
 
-  it("toggles page settings visibility", async () => {
-    expect(wrapper.vm.pageSettingsOpen).toBe(false);
+    it("toggles page settings visibility", async () => {
+        expect(wrapper.vm.pageSettingsOpen).toBe(false);
 
-    // Simulate clicking add page button
-    wrapper.vm.pageSettingsOpen = true;
-    await wrapper.vm.$nextTick();
-    expect(wrapper.vm.pageSettingsOpen).toBe(true);
+        // Simulate clicking add page button
+        wrapper.vm.pageSettingsOpen = true;
+        await wrapper.vm.$nextTick();
+        expect(wrapper.vm.pageSettingsOpen).toBe(true);
 
-    // Simulate closing form
-    wrapper.vm.pageSettingsOpen = false;
-    await wrapper.vm.$nextTick();
-    expect(wrapper.vm.pageSettingsOpen).toBe(false);
-  });
+        // Simulate closing form
+        wrapper.vm.pageSettingsOpen = false;
+        await wrapper.vm.$nextTick();
+        expect(wrapper.vm.pageSettingsOpen).toBe(false);
+    });
 });

@@ -2,16 +2,29 @@
     <Head :title="page.book.title" />
 
     <BreezeAuthenticatedLayout>
-        <div class="pb-5 overflow-hidden bg-gray-900 relative">
+        <div class="relative">
+            <div
+                class="w-full md:w-1/4 pl-2 lg:pl-8 pt-2 sticky top-0 z-30 text-left"
+            >
+                <Link
+                    class="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-blue-600 text-white dark:bg-white dark:text-gray-900 hover:bg-blue-500 dark:hover:bg-gray-100 shadow focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    :href="route('books.show', page.book)"
+                    prefetch="hover"
+                    aria-label="Back to Book"
+                >
+                    <i class="ri-book-2-fill text-lg"></i>
+                    <span class="font-medium">Back to Book</span>
+                </Link>
+            </div>
+
             <div class="text-center">
-                <BookTitle :book="page.book" />
-                <div class="relative min-h-[60vh] mt-10">
+                <div class="relative min-h-[60vh]">
                     <div
                         class="w-full flex items-center justify-center relative"
                     >
                         <Link
                             v-if="previousPage"
-                            prefectch="hover"
+                            prefetch="hover"
                             :href="route('pages.show', previousPage)"
                             as="button"
                             class="z-10 absolute left-3 md:left-8 top-1/2 transform -translate-y-1/2 inline-flex items-center text-white hover:text-blue-600 hover:dark:text-gray-800 hover:christmas:text-christmas-gold disabled:opacity-25 transition ease-in-out duration-150"
@@ -122,7 +135,6 @@
 
 <script setup>
 import AddToCollageButton from "@/Components/AddToCollageButton.vue";
-import BookTitle from "@/Components/BookTitle.vue";
 import Button from "@/Components/Button.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
@@ -161,9 +173,11 @@ const stripHtml = (html) => {
 };
 
 const canAddToCollage = computed(() => {
-    return props.page.media_path && 
-           !isVideo(props.page.media_path) && 
-           !props.page.video_link && 
-           props.collages.length > 0;
+    return (
+        props.page.media_path &&
+        !isVideo(props.page.media_path) &&
+        !props.page.video_link &&
+        props.collages.length > 0
+    );
 });
 </script>
