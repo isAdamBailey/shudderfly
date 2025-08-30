@@ -27,7 +27,10 @@
             <div class="text-center">
                 <div class="relative min-h-[60vh]">
                     <div
-                        class="w-full flex items-center justify-center relative"
+                        class="w-full flex items-center justify-center relative touch-pan-y"
+                        @touchstart.passive="onTouchStart"
+                        @touchmove.passive="onTouchMove"
+                        @touchend="onTouchEnd"
                     >
                         <Link
                             v-if="previousPage"
@@ -151,7 +154,7 @@ import { useDate } from "@/dateHelpers";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { useMedia } from "@/mediaHelpers";
 import EditPageForm from "@/Pages/Page/EditPageForm.vue";
-import { Head, Link } from "@inertiajs/vue3";
+import { Head, Link, router } from "@inertiajs/vue3";
 import { computed, ref } from "vue";
 
 const { canEditPages } = usePermissions();
@@ -187,4 +190,54 @@ const canAddToCollage = computed(() => {
         props.collages.length > 0
     );
 });
+
+// Swipe navigation (left/right) to go to previous/next page
+const touchStartX = ref(0);
+const touchStartY = ref(0);
+const touchStartTime = ref(0);
+const isSwiping = ref(false);
+
+const SWIPE_MIN_DISTANCE = 60; // px
+const SWIPE_MAX_DURATION = 800; // ms
+const SWIPE_MAX_VERTICAL = 40; // px
+
+function onTouchStart(event) {
+    const t =
+        (event.changedTouches && event.changedTouches[0]) || event.touches[0];
+    if (!t) return;
+    touchStartX.value = t.clientX;
+    touchStartY.value = t.clientY;
+    touchStartTime.value = Date.now();
+    isSwiping.value = true;
+}
+
+function onTouchMove() {
+    // Intentionally empty to keep the handler lightweight and passive for smooth scrolling.
+}
+
+function onTouchEnd(event) {
+    if (!isSwiping.value) return;
+    isSwiping.value = false;
+
+    const t = (event.changedTouches && event.changedTouches[0]) || event;
+    if (!t) return;
+    const dx = t.clientX - touchStartX.value;
+    const dy = t.clientY - touchStartY.value;
+    const dt = Date.now() - touchStartTime.value;
+
+    // Validate swipe intent: fast, mostly horizontal, and long enough
+    if (dt > SWIPE_MAX_DURATION) return;
+    if (Math.abs(dx) < SWIPE_MIN_DISTANCE) return;
+    if (Math.abs(dy) > SWIPE_MAX_VERTICAL) return;
+    if (buttonDisabled.value) return;
+
+    // Navigate: left swipe -> next page, right swipe -> previous page
+    if (dx < 0 && props.nextPage) {
+        buttonDisabled.value = true;
+        router.get(window.route("pages.show", props.nextPage));
+    } else if (dx > 0 && props.previousPage) {
+        buttonDisabled.value = true;
+        router.get(window.route("pages.show", props.previousPage));
+    }
+}
 </script>
