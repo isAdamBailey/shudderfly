@@ -4,17 +4,24 @@
     <BreezeAuthenticatedLayout>
         <div class="relative">
             <div
-                class="w-full md:w-1/4 pl-2 lg:pl-8 pt-2 sticky top-0 z-30 text-left"
+                class="w-full pl-2 sm:pl-6 lg:pl-8 pt-2 sticky top-0 z-30 text-left"
             >
-                <Link
-                    class="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-blue-600 text-white dark:bg-white dark:text-gray-900 hover:bg-blue-500 dark:hover:bg-gray-100 shadow focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                    :href="route('books.show', page.book)"
-                    prefetch="hover"
-                    aria-label="Back to Book"
-                >
-                    <i class="ri-book-2-fill text-lg"></i>
-                    <span class="font-medium">Back to Book</span>
-                </Link>
+                <div class="flex items-center gap-3 min-w-0">
+                    <Link
+                        class="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-blue-600 text-white dark:bg-white dark:text-gray-900 hover:bg-blue-500 dark:hover:bg-gray-100 shadow focus:outline-none focus:ring-2 focus:ring-blue-500 transition min-w-0 max-w-[90vw] sm:max-w-[70vw] md:max-w-[60vw] lg:max-w-[50vw]"
+                        :href="route('books.show', page.book)"
+                        prefetch="hover"
+                        :aria-label="`Back to Book: ${page.book.title}`"
+                    >
+                        <i class="ri-book-2-fill text-lg"></i>
+                        <span
+                            class="flex-1 basis-0 min-w-0 truncate font-heading uppercase text-base md:text-lg font-semibold"
+                            :title="page.book.title"
+                        >
+                            {{ page.book.title }}
+                        </span>
+                    </Link>
+                </div>
             </div>
 
             <div class="text-center">
