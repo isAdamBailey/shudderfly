@@ -9,7 +9,7 @@ const props = defineProps({
   optimizationProgress: { type: Number, default: 0 }
 });
 
-const emit = defineEmits(["remove-file"]);
+const emit = defineEmits(["remove-file", "retry-upload"]);
 
 const previewFiles = computed(() => props.files || []);
 const hasActiveProcessing = computed(() =>
@@ -135,6 +135,44 @@ const hasActiveProcessing = computed(() =>
         </div>
         <div v-else-if="fileObj.uploaded" class="text-green-600">
           ✓ Uploaded
+        </div>
+
+        <div
+          v-else-if="fileObj.error"
+          class="text-red-600 bg-red-50 dark:bg-red-900/20 p-2 rounded border border-red-200 dark:border-red-800"
+        >
+          <div class="font-medium">
+            {{
+              fileObj.postError
+                ? "🚫 Form Submission Failed"
+                : fileObj.timeoutError
+                ? "⏰ Upload Timed Out"
+                : "❌ Upload Failed"
+            }}
+          </div>
+          <div class="text-xs mt-1">
+            {{ fileObj.errorMessage || "Unknown error occurred" }}
+          </div>
+          <div
+            v-if="fileObj.postError"
+            class="text-xs mt-1 text-amber-600 dark:text-amber-400"
+          >
+            💡 The form submission never started - this usually indicates a
+            JavaScript error or form validation issue
+          </div>
+          <div
+            v-else-if="fileObj.timeoutError"
+            class="text-xs mt-1 text-amber-600 dark:text-amber-400"
+          >
+            💡 Try again or check your connection
+          </div>
+          <button
+            type="button"
+            class="mt-2 px-2 py-1 bg-red-100 hover:bg-red-200 dark:bg-red-800 dark:hover:bg-red-700 text-red-700 dark:text-red-300 text-xs rounded"
+            @click="emit('retry-upload', index)"
+          >
+            🔄 Retry
+          </button>
         </div>
 
         <div

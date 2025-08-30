@@ -32,7 +32,6 @@ const isYouTubeEnabled = computed(
   () => usePage().props.settings["youtube_enabled"]
 );
 
-// Multi-file state management
 const selectedFiles = ref([]);
 const batchProcessing = ref(false);
 const batchProgress = ref(0);
@@ -40,6 +39,7 @@ const currentFileIndex = ref(0);
 const autoSaveTimeout = ref(null);
 const failedUploads = ref([]);
 const isSubmitting = ref(false);
+const batchError = ref(null);
 
 const previewFiles = computed(() => {
   if (
@@ -142,8 +142,6 @@ const processSingleFile = async (file) => {
     } finally {
       singleFileProcessing.value = false;
     }
-  } else {
-    //
   }
 
   return true;
@@ -208,8 +206,6 @@ const loadDraft = () => {
     } catch (error) {
       clearDraft();
     }
-  } else {
-    // No draft found in localStorage; nothing to load.
   }
 };
 
@@ -233,7 +229,6 @@ watch(
     if (JSON.stringify(newValues) !== JSON.stringify(oldValues)) {
       clearTimeout(autoSaveTimeout.value);
 
-      // Show auto-saving indicator
       autoSaveTimeout.value = setTimeout(() => {
         saveDraft();
       }, 1000);
@@ -241,8 +236,6 @@ watch(
   },
   { deep: true }
 );
-
-// Simple helper to check if video needs optimization (imported from shared utility)
 
 const formatFileSize = (bytes) => {
   if (bytes === 0) return "0 Bytes";
@@ -297,7 +290,6 @@ const generatePreviewsSequentially = async () => {
   for (let i = 0; i < selectedFiles.value.length; i++) {
     await generatePreview(selectedFiles.value[i]);
 
-    // Add delay between files to prevent memory issues
     if (i < selectedFiles.value.length - 1) {
       await new Promise((resolve) => setTimeout(resolve, 200)); // 300ms between files
     }
@@ -307,14 +299,13 @@ const generatePreviewsSequentially = async () => {
 const generatePreview = async (fileObj) => {
   const file = fileObj.file;
 
-  // Generate preview
+  // Generate preview for images
   if (!file.type.startsWith("video/")) {
-    // Image: use DataURL
+    // Image: use DataURL for crisp thumbnails
     try {
       await new Promise((resolve, reject) => {
         const reader = new FileReader();
 
-        // Add timeout for mobile browsers that might hang
         const timeout = setTimeout(() => {
           reader.abort();
           reject(new Error("FileReader timeout"));
@@ -322,7 +313,6 @@ const generatePreview = async (fileObj) => {
 
         reader.onload = (e) => {
           clearTimeout(timeout);
-          // Revoke previous object URL if any
           revokeObjectURLIfNeeded(fileObj.preview);
           fileObj.preview = e.target.result;
           resolve();
@@ -336,11 +326,10 @@ const generatePreview = async (fileObj) => {
         reader.readAsDataURL(file);
       });
     } catch (error) {
-      // Continue without preview
       console.warn("Preview generation failed:", error);
     }
   } else {
-    // Video: use object URL preview (lightweight)
+    // Video: use object URL preview
     try {
       revokeObjectURLIfNeeded(fileObj.preview);
       fileObj.preview = URL.createObjectURL(file);
@@ -349,31 +338,25 @@ const generatePreview = async (fileObj) => {
     }
   }
 
-  // Process video files with timeout
   if (file.type.startsWith("video/")) {
     fileObj.processing = true;
 
-    // Add timeout to prevent infinite processing
     const processingTimeout = setTimeout(() => {
       fileObj.processing = false;
       fileObj.processedFile = file;
       fileObj.processed = false;
-      // Keep original validation if processing times out
     }, 60000); // 60 second timeout
 
     try {
       fileObj.processedFile = await processMediaFile(file);
 
-      // Clear timeout since processing completed
       clearTimeout(processingTimeout);
 
-      // Mark as processed - validation is handled by needsOptimization property
       fileObj.processed = true;
     } catch (error) {
       clearTimeout(processingTimeout);
       fileObj.processedFile = file;
       fileObj.processed = false;
-      // Keep original validation if processing fails
     } finally {
       fileObj.processing = false;
     }
@@ -460,27 +443,22 @@ const updateImagePreview = async (event) => {
 
   // Handle based on selected mode
   if (mediaOption.value === "single") {
-    // Simple single upload: Use centralized processing
     const file = files[0];
     await processSingleFile(file);
-    selectedFiles.value = []; // Clear any previous selections
+    selectedFiles.value = [];
     return;
   } else if (mediaOption.value === "multiple") {
     // Multiple upload mode: Handle all files with full processing
     if (selectedFiles.value.length > 0) {
-      // Add new files to existing array
       const newFileObjects = files.map(createFileObject);
       selectedFiles.value.push(...newFileObjects);
 
-      // Generate previews for new files sequentially to avoid mobile memory issues
       for (const fileObj of newFileObjects) {
         await generatePreview(fileObj);
       }
 
-      // Force reactivity update
       selectedFiles.value = [...selectedFiles.value];
     } else {
-      // No existing files, handle as batch
       await handleMultipleFiles(files);
     }
   }
@@ -492,128 +470,174 @@ const processBatch = async (specificFiles = null) => {
   }
 
   failedUploads.value = [];
+  batchError.value = null;
 
-  const filesToUpload = [...(specificFiles || selectedFiles.value)];
-  if (filesToUpload.length === 0) {
-    return;
-  }
+  try {
+    const filesToUpload = [...(specificFiles || selectedFiles.value)];
+    if (filesToUpload.length === 0) {
+      return;
+    }
 
-  // Prevent double-invocation; do not flip batchProcessing if already submitting
-  if (isSubmitting.value) return;
-  batchProcessing.value = true;
-  isSubmitting.value = true;
-  currentFileIndex.value = 0;
+    if (isSubmitting.value) return;
+    batchProcessing.value = true;
+    isSubmitting.value = true;
+    currentFileIndex.value = 0;
 
-  // Store original content for first page
-  const originalContent = form.content;
+    const originalContent = form.content;
 
-  for (let i = 0; i < filesToUpload.length; i++) {
-    const fileObj = filesToUpload[i];
+    for (let i = 0; i < filesToUpload.length; i++) {
+      const fileObj = filesToUpload[i];
 
-    // Update display to show which file is currently being uploaded
-    currentFileIndex.value = i;
-    batchProgress.value = Math.round((i / filesToUpload.length) * 100);
+      currentFileIndex.value = i;
+      batchProgress.value = Math.round((i / filesToUpload.length) * 100);
 
-    try {
-      // Ensure video optimization just-in-time if needed
-      const file = fileObj.file;
-      let fileForUpload = fileObj.processedFile || file;
+      try {
+        const file = fileObj.file;
+        let fileForUpload = fileObj.processedFile || file;
 
-      if (file.type.startsWith("video/") && needsVideoOptimization(file) && !fileObj.processed) {
-        fileObj.processing = true;
-        const processingTimeout = setTimeout(() => {
-          fileObj.processing = false;
-        }, 60000); // 60s timeout
+        if (
+          file.type.startsWith("video/") &&
+          needsVideoOptimization(file) &&
+          !fileObj.processed
+        ) {
+          fileObj.processing = true;
+          const processingTimeout = setTimeout(() => {
+            fileObj.processing = false;
+          }, 60000); // 60s timeout
+          try {
+            fileForUpload = await processMediaFile(file);
+            fileObj.processedFile = fileForUpload;
+            fileObj.processed = true;
+          } catch (e) {
+            fileForUpload = file;
+            fileObj.processedFile = file;
+            fileObj.processed = false;
+          } finally {
+            clearTimeout(processingTimeout);
+            fileObj.processing = false;
+          }
+        }
+        form.content = originalContent;
+        form.image = fileForUpload;
+        form.video_link = null;
+
+        await new Promise((resolve, reject) => {
+          const submissionTimeout = setTimeout(() => {
+            const timeoutError = new Error(
+              "Upload timed out - form submission took too long"
+            );
+            // Set a specific flag for timeout errors
+            fileObj.timeoutError = true;
+            reject(timeoutError);
+          }, 30000); // 30 second timeout
+
+          // Track form submission state to help diagnose hanging issues
+          let submissionStarted = false;
+
+          form.post(route("pages.store"), {
+            forceFormData: true,
+            preserveScroll: true,
+            preserveState: true,
+            replace: false,
+            onStart: () => {
+              submissionStarted = true;
+            },
+            onSuccess: () => {
+              clearTimeout(submissionTimeout);
+              resolve();
+            },
+            onError: (errors) => {
+              clearTimeout(submissionTimeout);
+              reject(errors);
+            },
+            onFinish: () => {
+              clearTimeout(submissionTimeout);
+            }
+          });
+
+          // Additional timeout to detect if form.post() itself hangs
+          setTimeout(() => {
+            if (!submissionStarted) {
+              clearTimeout(submissionTimeout);
+              const postError = new Error(
+                "Form submission failed to start - form.post() hung"
+              );
+              fileObj.postError = true;
+              reject(postError);
+            }
+          }, 5000); // 5 second timeout for form.post() to start
+        });
+
+        fileObj.uploaded = true;
+
+        // Remove the uploaded file from the selectedFiles array
+        // We need to find the file by matching the file object, not the fileObj reference
+        const liveIndex = selectedFiles.value.findIndex(
+          (f) => f.file === fileObj.file
+        );
+        if (liveIndex !== -1) {
+          selectedFiles.value.splice(liveIndex, 1);
+        }
+
+        // Immediately remove preview as the file has been uploaded
         try {
-          fileForUpload = await processMediaFile(file);
-          fileObj.processedFile = fileForUpload;
-          fileObj.processed = true;
+          revokeObjectURLIfNeeded(fileObj.preview);
         } catch (e) {
-          // Fall back to original file if optimization fails
-          fileForUpload = file;
-          fileObj.processedFile = file;
-          fileObj.processed = false;
-        } finally {
-          clearTimeout(processingTimeout);
-          fileObj.processing = false;
+          // no-op
+        }
+        fileObj.preview = null;
+
+        // Delay between uploads for stability
+        if (i < filesToUpload.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+      } catch (error) {
+        fileObj.error = error;
+        fileObj.errorMessage =
+          (error && error.message) ||
+          (typeof error === "string" ? error : "Upload failed");
+        failedUploads.value.push({
+          index: i,
+          fileName: fileObj.file.name,
+          error: fileObj.errorMessage
+        });
+
+        // Ensure the error is also set in the original selectedFiles array
+        const liveIndex = selectedFiles.value.findIndex(
+          (f) => f.file === fileObj.file
+        );
+        if (liveIndex !== -1) {
+          selectedFiles.value[liveIndex].error = error;
+          selectedFiles.value[liveIndex].errorMessage = fileObj.errorMessage;
         }
       }
 
-      // Update the form with current file data
-      // Apply the entered content to every page in the batch
-      form.content = originalContent;
-      form.image = fileForUpload;
-      form.video_link = null;
-
-      // Post form directly as FormData (mirror single upload options)
-      await new Promise((resolve, reject) => {
-        form.post(route("pages.store"), {
-          forceFormData: true,
-          preserveScroll: true,
-          preserveState: true,
-          replace: true,
-          onSuccess: resolve,
-          onError: reject
-        });
-      });
-
-      fileObj.uploaded = true;
-
-      // Immediately remove preview as the file has been uploaded
-      try {
-        revokeObjectURLIfNeeded(fileObj.preview);
-      } catch (e) {
-        // no-op
-      }
-      fileObj.preview = null;
-
-      const liveIndex = selectedFiles.value.findIndex((f) => f === fileObj);
-      if (liveIndex !== -1) {
-        selectedFiles.value.splice(liveIndex, 1);
-      }
-
-      // Delay between uploads for stability
-      if (i < filesToUpload.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      }
-    } catch (error) {
-      fileObj.error = error;
-      failedUploads.value.push({
-        index: i,
-        fileName: fileObj.file.name,
-        error:
-          (error && error.message) ||
-          (typeof error === "string" ? error : "Upload failed")
-      });
+      // Update progress to show completed uploads
+      batchProgress.value = Math.round(((i + 1) / filesToUpload.length) * 100);
     }
 
-    // Update progress to show completed uploads
-    batchProgress.value = Math.round(((i + 1) / filesToUpload.length) * 100);
-  }
+    batchProgress.value = 100;
+    batchProcessing.value = false;
+    isSubmitting.value = false;
 
-  batchProgress.value = 100;
-  batchProcessing.value = false;
-  isSubmitting.value = false;
-
-  if (failedUploads.value.length === 0) {
-    setTimeout(() => {
-      // Revoke any object URL previews before clearing state and closing
-      cleanupPreviews();
-      clearDraft();
-      emit("close-form");
-    }, 1000);
-  } else {
-    // Some uploads failed
+    if (failedUploads.value.length === 0) {
+      setTimeout(() => {
+        // Revoke any object URL previews before clearing state and closing
+        cleanupPreviews();
+        clearDraft();
+        emit("close-form");
+      }, 1000);
+    }
+  } catch (error) {
+    batchError.value =
+      error.message || "An unexpected error occurred during batch processing";
   }
 };
 
-// Form submission handler
 const handleFormSubmit = async () => {
-  // Call the actual submit function
   await submit();
 };
 
-// Single or multiple file submission
 const submit = async () => {
   if (mediaOption.value === "multiple") {
     await processBatch();
@@ -655,9 +679,7 @@ const rules = computed(() => {
     if (mediaOption.value === "multiple" && selectedFiles.value.length > 0) {
       return selectedFiles.value.every((fileObj) => {
         const file = fileObj.file;
-        // Only allow allowed types
         if (!isAllowedFileType(file)) return false;
-        // Images must be within size limit; videos can be any size (they will be optimized)
         if (file.type.startsWith("image/")) {
           return isFileSizeValid(file);
         }
@@ -681,7 +703,7 @@ const rules = computed(() => {
             return isFileSizeValid(file);
           }
           if (file.type.startsWith("video/")) {
-            return true; // allow even if large; optimization will occur
+            return true;
           }
           return false;
         })
@@ -946,6 +968,44 @@ onUnmounted(() => {
               ></div>
             </div>
           </div>
+
+          <!-- General Batch Error -->
+          <div
+            v-if="batchError"
+            class="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded"
+          >
+            <div
+              class="flex items-center justify-between text-sm text-red-700 dark:text-red-300 mb-2"
+            >
+              <div class="flex items-center space-x-2">
+                <i class="ri-error-warning-line w-4 h-4"></i>
+                <span class="font-medium">
+                  {{
+                    batchError.includes("timed out")
+                      ? "Upload Timeout Error"
+                      : "Batch Processing Error"
+                  }}
+                </span>
+              </div>
+              <button
+                type="button"
+                class="text-xs px-2 py-1 bg-red-100 hover:bg-red-200 dark:bg-red-800 dark:hover:bg-red-700 rounded text-red-700 dark:text-red-300"
+                @click="batchError = null"
+              >
+                Dismiss
+              </button>
+            </div>
+            <div class="text-sm text-red-600 dark:text-red-400">
+              {{ batchError }}
+            </div>
+            <div
+              v-if="batchError.includes('timed out')"
+              class="text-xs mt-2 text-amber-600 dark:text-amber-400"
+            >
+              💡 This usually means the upload is taking too long. Try again or
+              check your connection.
+            </div>
+          </div>
         </div>
 
         <!-- YouTube Link Section -->
@@ -972,7 +1032,11 @@ onUnmounted(() => {
         <div class="w-full">
           <BreezeLabel
             for="content"
-            :value="mediaOption === 'multiple' ? 'Words (will be applied to all images in this batch)' : 'Words'"
+            :value="
+              mediaOption === 'multiple'
+                ? 'Words (will be applied to all images in this batch)'
+                : 'Words'
+            "
           />
           <div class="relative">
             <Wysiwyg
@@ -1033,7 +1097,9 @@ onUnmounted(() => {
         <Button
           type="button"
           class="w-3/4 flex justify-center py-3"
-          :class="{ 'opacity-25': form.processing || batchProcessing || isOptimizing }"
+          :class="{
+            'opacity-25': form.processing || batchProcessing || isOptimizing
+          }"
           :disabled="
             form.processing ||
             isSubmitting ||
