@@ -62,34 +62,30 @@ const localSpeechRate = ref(speechRate.value);
 const localSpeechPitch = ref(speechPitch.value);
 const localSpeechVolume = ref(speechVolume.value);
 
-const debouncedSpeechRateUpdate = debounce((value) => {
-  setSpeechRateSilent(value);
-  const currentEffect = selectedEffect.value;
+function speakWithoutEffect(text, currentEffect) {
   selectedEffect.value = "";
-  speak(`Speech rate set to ${value}`);
+  speak(text);
   setTimeout(() => {
     selectedEffect.value = currentEffect;
   }, 100);
+}
+
+const debouncedSpeechRateUpdate = debounce((value) => {
+  setSpeechRateSilent(value);
+  speakWithoutEffect(`Speech rate set to ${value}x`, selectedEffect.value);
 }, 500);
 
 const debouncedSpeechPitchUpdate = debounce((value) => {
   setSpeechPitchSilent(value);
-  const currentEffect = selectedEffect.value;
-  selectedEffect.value = "";
-  speak(`Pitch set to ${value}`);
-  setTimeout(() => {
-    selectedEffect.value = currentEffect;
-  }, 100);
+  speakWithoutEffect(`Pitch set to ${value}`, selectedEffect.value);
 }, 500);
 
 const debouncedSpeechVolumeUpdate = debounce((value) => {
   setSpeechVolumeSilent(value);
-  const currentEffect = selectedEffect.value;
-  selectedEffect.value = "";
-  speak(`Volume set to ${Math.round(value * 100)}%`);
-  setTimeout(() => {
-    selectedEffect.value = currentEffect;
-  }, 100);
+  speakWithoutEffect(
+    `Volume set to ${Math.round(value * 100)}%`,
+    selectedEffect.value
+  );
 }, 500);
 
 function handleSpeechRateChange(value) {
@@ -418,7 +414,7 @@ function resetToDefaults() {
             class="mr-3"
             @change="setSelectedEffect('whisper')"
           />
-          <span class="text-gray-300">Whisper</span>
+          <span class="text-gray-700 dark:text-gray-300">Whisper</span>
         </label>
       </div>
     </div>
