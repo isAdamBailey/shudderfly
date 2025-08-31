@@ -29,7 +29,6 @@ const {
 } = useSpeechSynthesis();
 const { canEditPages } = usePermissions();
 
-// Add loading state for voices
 const voicesLoading = ref(true);
 
 const filteredVoices = computed(() =>
@@ -43,7 +42,6 @@ const firstHalf = computed(() =>
 );
 const secondHalf = computed(() => filteredVoices.value.slice(halfLength.value));
 
-// Watch for voices to load
 watch(
   voices,
   (newVoices) => {
@@ -54,32 +52,44 @@ watch(
   { immediate: true }
 );
 
-// Fallback: if voices don't load within 3 seconds, stop showing loading state
 setTimeout(() => {
   if (voicesLoading.value) {
     voicesLoading.value = false;
   }
 }, 3000);
 
-// Local slider values that are separate from the speech synthesis values
 const localSpeechRate = ref(speechRate.value);
 const localSpeechPitch = ref(speechPitch.value);
 const localSpeechVolume = ref(speechVolume.value);
 
-// Debounced functions for slider inputs using lodash
 const debouncedSpeechRateUpdate = debounce((value) => {
   setSpeechRateSilent(value);
-  speak(`Speech rate set to ${value}x`);
+  const currentEffect = selectedEffect.value;
+  selectedEffect.value = "";
+  speak(`Speech rate set to ${value}`);
+  setTimeout(() => {
+    selectedEffect.value = currentEffect;
+  }, 100);
 }, 500);
 
 const debouncedSpeechPitchUpdate = debounce((value) => {
   setSpeechPitchSilent(value);
+  const currentEffect = selectedEffect.value;
+  selectedEffect.value = "";
   speak(`Pitch set to ${value}`);
+  setTimeout(() => {
+    selectedEffect.value = currentEffect;
+  }, 100);
 }, 500);
 
 const debouncedSpeechVolumeUpdate = debounce((value) => {
   setSpeechVolumeSilent(value);
+  const currentEffect = selectedEffect.value;
+  selectedEffect.value = "";
   speak(`Volume set to ${Math.round(value * 100)}%`);
+  setTimeout(() => {
+    selectedEffect.value = currentEffect;
+  }, 100);
 }, 500);
 
 function handleSpeechRateChange(value) {
@@ -100,16 +110,13 @@ function handleSpeechVolumeChange(value) {
   debouncedSpeechVolumeUpdate(floatValue);
 }
 
-// Watch for changes in selectedEffect and speak the effect name
 watch(selectedEffect, (newEffect) => {
   if (newEffect) {
-    // Speak the effect name with the current voice settings
     const effectName = newEffect.charAt(0).toUpperCase() + newEffect.slice(1);
     speak(`Effect set to ${effectName}`);
   }
 });
 
-// Sync local values with speech synthesis values
 watch(speechRate, (newRate) => {
   localSpeechRate.value = newRate;
 });
@@ -137,9 +144,7 @@ function resetToDefaults() {
   setSpeechRate(1);
   setSpeechPitch(1);
   setSpeechVolume(1);
-
   setSelectedEffect("");
-
   if (voices.value.length > 0) {
     setVoice(voices.value[0]);
   }
@@ -205,9 +210,7 @@ function resetToDefaults() {
     </div>
   </div>
 
-  <!-- Speech Controls -->
   <div class="space-y-8 mb-8">
-    <!-- Speech Rate Control -->
     <div
       class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700"
     >
@@ -262,7 +265,6 @@ function resetToDefaults() {
       </div>
     </div>
 
-    <!-- Pitch Control -->
     <div
       class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700"
     >
@@ -317,7 +319,6 @@ function resetToDefaults() {
       </div>
     </div>
 
-    <!-- Volume Control -->
     <div
       class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700"
     >
@@ -370,7 +371,6 @@ function resetToDefaults() {
       </div>
     </div>
 
-    <!-- Voice Effects -->
     <div
       class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700"
     >
@@ -423,7 +423,6 @@ function resetToDefaults() {
       </div>
     </div>
 
-    <!-- Playback Controls -->
     <div
       v-if="speaking || isPaused"
       class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700"
@@ -457,7 +456,6 @@ function resetToDefaults() {
 </template>
 
 <style scoped>
-/* Custom range slider styles */
 .slider-custom {
   -webkit-appearance: none;
   appearance: none;
@@ -484,22 +482,18 @@ function resetToDefaults() {
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
 }
 
-/* Speech Rate slider thumb */
 .slider-custom[data-slider="rate"]::-webkit-slider-thumb {
   background: linear-gradient(135deg, #3b82f6, #1d4ed8);
 }
 
-/* Pitch slider thumb */
 .slider-custom[data-slider="pitch"]::-webkit-slider-thumb {
   background: linear-gradient(135deg, #10b981, #059669);
 }
 
-/* Volume slider thumb */
 .slider-custom[data-slider="volume"]::-webkit-slider-thumb {
   background: linear-gradient(135deg, #8b5cf6, #7c3aed);
 }
 
-/* Firefox support */
 .slider-custom::-moz-range-thumb {
   height: 24px;
   width: 24px;
@@ -514,7 +508,6 @@ function resetToDefaults() {
   transform: scale(1.1);
 }
 
-/* Firefox thumb colors */
 .slider-custom[data-slider="rate"]::-moz-range-thumb {
   background: linear-gradient(135deg, #3b82f6, #1d4ed8);
 }
@@ -527,7 +520,6 @@ function resetToDefaults() {
   background: linear-gradient(135deg, #8b5cf6, #7c3aed);
 }
 
-/* Smooth transitions for the progress bars */
 .bg-gradient-to-r {
   transition: width 0.2s ease;
 }
