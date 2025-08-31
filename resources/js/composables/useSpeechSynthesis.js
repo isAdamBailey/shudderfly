@@ -368,7 +368,6 @@ export function useSpeechSynthesis() {
         attempts++;
         if (voices.value.length > 0 || attempts >= maxAttempts) {
           clearInterval(intervalId);
-          console.log("Voice loading completed after", attempts, "attempts");
         } else {
           getVoices();
         }
