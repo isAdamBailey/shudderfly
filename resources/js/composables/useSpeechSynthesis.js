@@ -326,8 +326,12 @@ export function useSpeechSynthesis() {
           return text
             .split(" ")
             .map((word) => {
-              if (word.length > MIN_WORD_LENGTH_FOR_ROBOT_EFFECT) {
-                return `${word.slice(0, -1)}-${word.slice(-1)}`;
+              // Separate trailing punctuation
+              const match = word.match(/^(.+?)([.,!?;:]*)$/);
+              const core = match ? match[1] : word;
+              const punct = match ? match[2] : "";
+              if (core.length > MIN_WORD_LENGTH_FOR_ROBOT_EFFECT) {
+                return `${core.slice(0, -1)}-${core.slice(-1)}${punct}`;
               }
               return word;
             })
