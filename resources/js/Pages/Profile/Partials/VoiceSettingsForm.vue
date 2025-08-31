@@ -29,6 +29,9 @@ const {
 } = useSpeechSynthesis();
 const { canEditPages } = usePermissions();
 
+// Add loading state for voices
+const voicesLoading = ref(true);
+
 const filteredVoices = computed(() =>
   voices.value.filter(
     (voice) => voice.lang === "en-US" || voice.lang === "en_US"
@@ -39,6 +42,24 @@ const firstHalf = computed(() =>
   filteredVoices.value.slice(0, halfLength.value)
 );
 const secondHalf = computed(() => filteredVoices.value.slice(halfLength.value));
+
+// Watch for voices to load
+watch(
+  voices,
+  (newVoices) => {
+    if (newVoices.length > 0) {
+      voicesLoading.value = false;
+    }
+  },
+  { immediate: true }
+);
+
+// Fallback: if voices don't load within 3 seconds, stop showing loading state
+setTimeout(() => {
+  if (voicesLoading.value) {
+    voicesLoading.value = false;
+  }
+}, 3000);
 
 // Local slider values that are separate from the speech synthesis values
 const localSpeechRate = ref(speechRate.value);
@@ -137,7 +158,12 @@ function resetToDefaults() {
   </div>
 
   <div class="mb-6">
-    <div v-if="voices.length" class="flex">
+    <div v-if="voicesLoading" class="text-center py-4">
+      <p class="text-gray-600 dark:text-gray-400">
+        Loading available voices...
+      </p>
+    </div>
+    <div v-else-if="voices.length > 0" class="flex">
       <ul class="w-1/2">
         <li v-for="voice in firstHalf" :key="voice.name" class="mb-3">
           <input
@@ -189,17 +215,17 @@ function resetToDefaults() {
         Speech Rate: {{ localSpeechRate }}x
       </label>
       <div class="flex items-center gap-3">
-        <span class="text-xs text-gray-500">0.5x</span>
+        <span class="text-xs text-gray-500">0x</span>
         <input
           v-model="localSpeechRate"
           type="range"
-          min="0.5"
-          max="2"
+          min="0"
+          max="3"
           step="0.1"
           class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
           @input="handleSpeechRateChange($event.target.value)"
         />
-        <span class="text-xs text-gray-500">2x</span>
+        <span class="text-xs text-gray-500">3x</span>
       </div>
     </div>
 
@@ -211,17 +237,17 @@ function resetToDefaults() {
         Pitch: {{ localSpeechPitch }}
       </label>
       <div class="flex items-center gap-3">
-        <span class="text-xs text-gray-500">0.5</span>
+        <span class="text-xs text-gray-500">0</span>
         <input
           v-model="localSpeechPitch"
           type="range"
-          min="0.5"
-          max="1.5"
+          min="0"
+          max="3"
           step="0.1"
           class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
           @input="handleSpeechPitchChange($event.target.value)"
         />
-        <span class="text-xs text-gray-500">1.5</span>
+        <span class="text-xs text-gray-500">3</span>
       </div>
     </div>
 

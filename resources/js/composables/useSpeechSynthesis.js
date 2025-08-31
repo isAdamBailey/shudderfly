@@ -332,19 +332,32 @@ export function useSpeechSynthesis() {
 
   onMounted(() => {
     if ("speechSynthesis" in window) {
+      // Set up the voices changed event handler
       window.speechSynthesis.onvoiceschanged = getVoices;
+
+      // Try to get voices immediately
       getVoices();
 
+      // If no voices are available immediately, try again after a short delay
+      if (voices.value.length === 0) {
+        setTimeout(() => {
+          getVoices();
+        }, 100);
+      }
+
+      // Fallback: try a few more times with increasing delays
       let attempts = 0;
-      const maxAttempts = 20;
+      const maxAttempts = 5;
 
       const intervalId = setInterval(() => {
         attempts++;
         if (voices.value.length > 0 || attempts >= maxAttempts) {
           clearInterval(intervalId);
           console.log("Voice loading completed after", attempts, "attempts");
+        } else {
+          getVoices();
         }
-      }, 100);
+      }, 200);
     }
   });
 
