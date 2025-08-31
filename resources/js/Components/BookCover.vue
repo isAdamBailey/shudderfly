@@ -34,10 +34,10 @@
                 :data-text="book.title"
                 :style="{
                   transform: `translateY(${
-                    finalTilt * -8 - scrollProgress * 6
+                    finalTilt * -8 - scrollProgress * 12
                   }px)`,
                   opacity:
-                    0.9 + Math.abs(finalTilt) * 0.1 + scrollProgress * 0.1
+                    0.9 + Math.abs(finalTilt) * 0.1 + scrollProgress * 0.15
                 }"
               >
                 {{ book.title }}
@@ -47,10 +47,10 @@
                 class="text-white text-base md:text-lg lg:text-xl italic max-w-2xl mx-auto mb-3 md:mb-4 leading-relaxed drop-shadow-lg font-content"
                 :style="{
                   transform: `translateY(${
-                    finalTilt * -3 - scrollProgress * 3
+                    finalTilt * -3 - scrollProgress * 6
                   }px)`,
                   opacity:
-                    0.9 + Math.abs(finalTilt) * 0.08 + scrollProgress * 0.08
+                    0.9 + Math.abs(finalTilt) * 0.08 + scrollProgress * 0.12
                 }"
               >
                 {{ book.excerpt }}
@@ -63,10 +63,10 @@
               class="text-center space-y-1"
               :style="{
                 transform: `translateY(${
-                  finalTilt * 4 + scrollProgress * 4
+                  finalTilt * 4 + scrollProgress * 8
                 }px)`,
                 opacity:
-                  0.9 + Math.abs(finalTilt) * 0.08 + scrollProgress * 0.08
+                  0.9 + Math.abs(finalTilt) * 0.08 + scrollProgress * 0.12
               }"
             >
               <p
@@ -102,10 +102,10 @@
           class="book-spine"
           :style="{
             transform: `translateZ(${
-              Math.abs(finalTilt + finalRoll) * 15 + scrollProgress * 20
+              Math.abs(finalTilt + finalRoll) * 15 + scrollProgress * 35
             }px)`,
             width: `${
-              12 + Math.abs(finalTilt + finalRoll) * 8 + scrollProgress * 12
+              12 + Math.abs(finalTilt + finalRoll) * 8 + scrollProgress * 20
             }px`
           }"
         ></div>
@@ -121,9 +121,9 @@
           opacity:
             0.4 -
             Math.abs(finalTilt + finalRoll) * 0.15 -
-            scrollProgress * 0.15,
+            scrollProgress * 0.25,
           transform: `scaleX(${
-            1 + Math.abs(finalTilt + finalRoll) * 0.2 + scrollProgress * 0.25
+            1 + Math.abs(finalTilt + finalRoll) * 0.2 + scrollProgress * 0.4
           })`
         }"
       ></div>
@@ -153,20 +153,16 @@ const reloadBook = () => {
   window.location.reload();
 };
 
-// Use VueUse's useParallax for smooth parallax effects
 const bookCoverRef = ref(null);
 const { tilt, roll } = useParallax(bookCoverRef, {
-  // Customize the sensitivity of the parallax effect
-  mouseTiltAdjust: (i) => i * 1.2, // Increase mouse sensitivity for testing
-  mouseRollAdjust: (i) => i * 1.2,
-  deviceOrientationTiltAdjust: (i) => i * 1.5, // Increase device orientation sensitivity
-  deviceOrientationRollAdjust: (i) => i * 1.5
+  mouseTiltAdjust: (i) => i * 2.0,
+  mouseRollAdjust: (i) => i * 2.0,
+  deviceOrientationTiltAdjust: (i) => i * 2.5,
+  deviceOrientationRollAdjust: (i) => i * 2.5
 });
 
-// Add subtle scroll-based parallax for book opening effect
-const openDistance = ref(300);
+const openDistance = ref(150);
 
-// Use VueUse's useScroll for better performance
 import { usePreferredReducedMotion, useScroll } from "@vueuse/core";
 
 const { y: scrollY } = useScroll(window);
@@ -174,11 +170,9 @@ const prefersReducedMotion = usePreferredReducedMotion();
 
 const scrollProgress = computed(() => {
   if (prefersReducedMotion.value === "reduce") return 0;
-  // Scroll effect should work immediately - not dependent on user interaction
   return Math.max(0, Math.min(1, scrollY.value / openDistance.value));
 });
 
-// Track user interaction to prevent initial jumping
 const hasUserInteracted = ref(false);
 
 const handleUserInteraction = () => {
@@ -187,7 +181,6 @@ const handleUserInteraction = () => {
   }
 };
 
-// Listen for user interactions
 onMounted(() => {
   const handleMouseMove = () => handleUserInteraction();
   const handleScroll = () => handleUserInteraction();
@@ -223,10 +216,8 @@ onMounted(() => {
   });
 });
 
-// Use VueUse's useTransition for smooth parallax value changes
 import { useTransition } from "@vueuse/core";
 
-// Apply reduced motion to parallax effects and ensure smooth initial state
 const effectiveTilt = computed(() => {
   if (prefersReducedMotion.value === "reduce" || !hasUserInteracted.value)
     return 0;
@@ -239,11 +230,9 @@ const effectiveRoll = computed(() => {
   return Math.abs(roll.value) > 0.005 ? roll.value : 0;
 });
 
-// Smooth transitions for parallax values
 const smoothTilt = useTransition(effectiveTilt, { duration: 150 });
 const smoothRoll = useTransition(effectiveRoll, { duration: 150 });
 
-// Add hover effect for enhanced interactivity
 import { useElementHover } from "@vueuse/core";
 
 const isHovered = useElementHover(bookCoverRef);
@@ -252,28 +241,26 @@ const hoverScale = computed(() => {
   return isHovered.value ? 1.02 : 1;
 });
 
-// Use the smooth values directly - they will be 0 until user interaction
 const finalTilt = computed(() => (hasUserInteracted.value ? smoothTilt : 0));
 const finalRoll = computed(() => (hasUserInteracted.value ? smoothRoll : 0));
 
-// Force initial state to be completely flat
 const finalTransform = computed(() => {
   if (!hasUserInteracted.value) {
     return `perspective(1000px) scale(${
       hoverScale.value
     }) rotateX(0deg) rotateY(0deg) translateZ(${
-      scrollProgress.value * 25
-    }px) translateX(${scrollProgress.value * 12}px)`;
+      scrollProgress.value * 40
+    }px) translateX(${scrollProgress.value * 20}px)`;
   }
 
   return `perspective(1000px) scale(${hoverScale.value}) rotateX(${
-    smoothTilt.value * 15 + scrollProgress.value * 8
+    smoothTilt.value * 15 + scrollProgress.value * 15
   }deg) rotateY(${
-    smoothRoll.value * 25 + scrollProgress.value * 20
+    smoothRoll.value * 25 + scrollProgress.value * 35
   }deg) translateZ(${
     Math.abs(smoothTilt.value + smoothRoll.value) * 20 +
-    scrollProgress.value * 25
-  }px) translateX(${smoothRoll.value * 15 + scrollProgress.value * 12}px)`;
+    scrollProgress.value * 40
+  }px) translateX(${smoothRoll.value * 15 + scrollProgress.value * 20}px)`;
 });
 </script>
 
@@ -289,12 +276,10 @@ const finalTransform = computed(() => {
   transform-style: preserve-3d;
   transition: all 0.3s ease, transform 0.2s ease;
   animation: bookAppear 1.5s ease-out;
-  /* Force initial state to be completely flat - override any computed transforms */
   transform: perspective(1000px) scale(1) rotateX(0deg) rotateY(0deg)
     translateZ(0px) translateX(0px);
 }
 
-/* Ensure the book cover starts flat even during the appear animation */
 @keyframes bookAppear {
   0% {
     opacity: 0;
