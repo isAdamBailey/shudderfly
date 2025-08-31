@@ -11,6 +11,7 @@ export function useSpeechSynthesis() {
   const speechVolume = ref(
     parseFloat(localStorage.getItem("speechVolume") || "1")
   );
+  const selectedEffect = ref(localStorage.getItem("selectedEffect") || "");
   const isPaused = ref(false);
 
   const getVoices = () => {
@@ -68,6 +69,27 @@ export function useSpeechSynthesis() {
     speak(`Volume set to ${Math.round(volume * 100)}%`);
   };
 
+  // Silent versions for use with debounced updates
+  const setSpeechRateSilent = (rate) => {
+    speechRate.value = rate;
+    localStorage.setItem("speechRate", rate.toString());
+  };
+
+  const setSpeechPitchSilent = (pitch) => {
+    speechPitch.value = pitch;
+    localStorage.setItem("speechPitch", pitch.toString());
+  };
+
+  const setSpeechVolumeSilent = (volume) => {
+    speechVolume.value = volume;
+    localStorage.setItem("speechVolume", volume.toString());
+  };
+
+  const setSelectedEffect = (effect) => {
+    selectedEffect.value = effect;
+    localStorage.setItem("selectedEffect", effect);
+  };
+
   const pauseSpeech = () => {
     if ("speechSynthesis" in window) {
       window.speechSynthesis.pause();
@@ -98,7 +120,15 @@ export function useSpeechSynthesis() {
           return;
         }
 
-        const utterance = new SpeechSynthesisUtterance(phrase);
+        // Apply the selected effect to the phrase if one is selected
+        let modifiedPhrase = phrase;
+
+        if (selectedEffect.value) {
+          const effectFunction = applyVoiceEffect(selectedEffect.value);
+          modifiedPhrase = effectFunction(phrase);
+        }
+
+        const utterance = new SpeechSynthesisUtterance(modifiedPhrase);
 
         const index = parseInt(
           localStorage.getItem("selectedVoiceIndex") || "0",
@@ -111,9 +141,16 @@ export function useSpeechSynthesis() {
           utterance.voice = currentVoices[0];
         }
 
-        utterance.rate = speechRate.value;
+        // Apply whisper effect by temporarily adjusting volume and rate
+        if (selectedEffect.value === "whisper") {
+          utterance.volume = Math.max(0.3, speechVolume.value * 0.7);
+          utterance.rate = Math.max(0.5, speechRate.value * 0.8);
+        } else {
+          utterance.rate = speechRate.value;
+          utterance.volume = speechVolume.value;
+        }
+
         utterance.pitch = speechPitch.value;
-        utterance.volume = speechVolume.value;
 
         utterance.onstart = () => {
           speaking.value = true;
@@ -286,20 +323,8 @@ export function useSpeechSynthesis() {
             .join(" ");
         };
       case "whisper":
-        // Lower volume and rate for whisper effect
-        return (text) => {
-          const originalVolume = speechVolume.value;
-          const originalRate = speechRate.value;
-          speechVolume.value = Math.max(0.3, speechVolume.value * 0.7);
-          speechRate.value = Math.max(0.5, speechRate.value * 0.8);
-          speak(text);
-          // Restore original settings after a delay
-          setTimeout(() => {
-            speechVolume.value = originalVolume;
-            speechRate.value = originalRate;
-          }, 1000);
-          return text;
-        };
+        // Whisper effect is handled by adjusting volume and rate in the speak function
+        return (text) => text;
       default:
         return (text) => text;
     }
@@ -332,9 +357,14 @@ export function useSpeechSynthesis() {
     speechRate,
     speechPitch,
     speechVolume,
+    selectedEffect,
     setSpeechRate,
     setSpeechPitch,
     setSpeechVolume,
+    setSpeechRateSilent,
+    setSpeechPitchSilent,
+    setSpeechVolumeSilent,
+    setSelectedEffect,
     pauseSpeech,
     resumeSpeech,
     stopSpeech,

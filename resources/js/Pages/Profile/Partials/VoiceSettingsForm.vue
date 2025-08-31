@@ -2,7 +2,8 @@
 import Button from "@/Components/Button.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
-import { computed, ref } from "vue";
+import { debounce } from "lodash";
+import { computed, ref, watch } from "vue";
 
 const {
   voices,
@@ -11,16 +12,19 @@ const {
   speechRate,
   speechPitch,
   speechVolume,
+  selectedEffect,
   setSpeechRate,
   setSpeechPitch,
   setSpeechVolume,
+  setSpeechRateSilent,
+  setSpeechPitchSilent,
+  setSpeechVolumeSilent,
+  setSelectedEffect,
   pauseSpeech,
   resumeSpeech,
   stopSpeech,
   isPaused,
   speaking,
-  testVoice,
-  applyVoiceEffect,
   speak
 } = useSpeechSynthesis();
 const { canEditPages } = usePermissions();
@@ -36,7 +40,66 @@ const firstHalf = computed(() =>
 );
 const secondHalf = computed(() => filteredVoices.value.slice(halfLength.value));
 
-const selectedEffect = ref("");
+// Local slider values that are separate from the speech synthesis values
+const localSpeechRate = ref(speechRate.value);
+const localSpeechPitch = ref(speechPitch.value);
+const localSpeechVolume = ref(speechVolume.value);
+
+// Debounced functions for slider inputs using lodash
+const debouncedSpeechRateUpdate = debounce((value) => {
+  setSpeechRateSilent(value);
+  speak(`Speech rate set to ${value}x`);
+}, 500);
+
+const debouncedSpeechPitchUpdate = debounce((value) => {
+  setSpeechPitchSilent(value);
+  speak(`Pitch set to ${value}`);
+}, 500);
+
+const debouncedSpeechVolumeUpdate = debounce((value) => {
+  setSpeechVolumeSilent(value);
+  speak(`Volume set to ${Math.round(value * 100)}%`);
+}, 500);
+
+function handleSpeechRateChange(value) {
+  const floatValue = parseFloat(value);
+  localSpeechRate.value = floatValue;
+  debouncedSpeechRateUpdate(floatValue);
+}
+
+function handleSpeechPitchChange(value) {
+  const floatValue = parseFloat(value);
+  localSpeechPitch.value = floatValue;
+  debouncedSpeechPitchUpdate(floatValue);
+}
+
+function handleSpeechVolumeChange(value) {
+  const floatValue = parseFloat(value);
+  localSpeechVolume.value = floatValue;
+  debouncedSpeechVolumeUpdate(floatValue);
+}
+
+// Watch for changes in selectedEffect and speak the effect name
+watch(selectedEffect, (newEffect) => {
+  if (newEffect) {
+    // Speak the effect name with the current voice settings
+    const effectName = newEffect.charAt(0).toUpperCase() + newEffect.slice(1);
+    speak(`Effect set to ${effectName}`);
+  }
+});
+
+// Sync local values with speech synthesis values
+watch(speechRate, (newRate) => {
+  localSpeechRate.value = newRate;
+});
+
+watch(speechPitch, (newPitch) => {
+  localSpeechPitch.value = newPitch;
+});
+
+watch(speechVolume, (newVolume) => {
+  localSpeechVolume.value = newVolume;
+});
 
 function alertVoices() {
   const filteredVoiceNames = new Set(
@@ -54,25 +117,10 @@ function resetToDefaults() {
   setSpeechPitch(1);
   setSpeechVolume(1);
 
-  selectedEffect.value = "";
+  setSelectedEffect("");
 
   if (voices.value.length > 0) {
     setVoice(voices.value[0]);
-  }
-}
-
-function testVoiceWithEffect() {
-  const testPhrase =
-    "Hello! This is a test of your voice settings with effects!";
-  if (selectedEffect.value) {
-    const effectFunction = applyVoiceEffect(selectedEffect.value);
-    const modifiedPhrase = effectFunction(testPhrase);
-    if (selectedEffect.value === "whisper") {
-      return; // Whisper effect is handled in the composable
-    }
-    speak(modifiedPhrase);
-  } else {
-    testVoice();
   }
 }
 </script>
@@ -138,18 +186,18 @@ function testVoiceWithEffect() {
       <label
         class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
       >
-        Speech Rate: {{ speechRate }}x
+        Speech Rate: {{ localSpeechRate }}x
       </label>
       <div class="flex items-center gap-3">
         <span class="text-xs text-gray-500">0.5x</span>
         <input
-          v-model="speechRate"
+          v-model="localSpeechRate"
           type="range"
           min="0.5"
           max="2"
           step="0.1"
           class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-          @input="setSpeechRate(parseFloat($event.target.value))"
+          @input="handleSpeechRateChange($event.target.value)"
         />
         <span class="text-xs text-gray-500">2x</span>
       </div>
@@ -160,18 +208,18 @@ function testVoiceWithEffect() {
       <label
         class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
       >
-        Pitch: {{ speechPitch }}
+        Pitch: {{ localSpeechPitch }}
       </label>
       <div class="flex items-center gap-3">
         <span class="text-xs text-gray-500">0.5</span>
         <input
-          v-model="speechPitch"
+          v-model="localSpeechPitch"
           type="range"
           min="0.5"
           max="1.5"
           step="0.1"
           class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-          @input="setSpeechPitch(parseFloat($event.target.value))"
+          @input="handleSpeechPitchChange($event.target.value)"
         />
         <span class="text-xs text-gray-500">1.5</span>
       </div>
@@ -182,18 +230,18 @@ function testVoiceWithEffect() {
       <label
         class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
       >
-        Volume: {{ Math.round(speechVolume * 100) }}%
+        Volume: {{ Math.round(localSpeechVolume * 100) }}%
       </label>
       <div class="flex items-center gap-3">
         <span class="text-xs text-gray-500">0%</span>
         <input
-          v-model="speechVolume"
+          v-model="localSpeechVolume"
           type="range"
           min="0"
           max="1"
           step="0.1"
           class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-          @input="setSpeechVolume(parseFloat($event.target.value))"
+          @input="handleSpeechVolumeChange($event.target.value)"
         />
         <span class="text-xs text-gray-500">100%</span>
       </div>
@@ -208,7 +256,13 @@ function testVoiceWithEffect() {
       </label>
       <div class="space-y-2">
         <label class="flex items-center">
-          <input v-model="selectedEffect" type="radio" value="" class="mr-3" />
+          <input
+            v-model="selectedEffect"
+            type="radio"
+            value=""
+            class="mr-3"
+            @change="setSelectedEffect('')"
+          />
           <span class="text-gray-700 dark:text-gray-300">No Effect</span>
         </label>
         <label class="flex items-center">
@@ -217,6 +271,7 @@ function testVoiceWithEffect() {
             type="radio"
             value="echo"
             class="mr-3"
+            @change="setSelectedEffect('echo')"
           />
           <span class="text-gray-700 dark:text-gray-300">Echo</span>
         </label>
@@ -226,6 +281,7 @@ function testVoiceWithEffect() {
             type="radio"
             value="robot"
             class="mr-3"
+            @change="setSelectedEffect('robot')"
           />
           <span class="text-gray-700 dark:text-gray-300">Robot</span>
         </label>
@@ -235,14 +291,10 @@ function testVoiceWithEffect() {
             type="radio"
             value="whisper"
             class="mr-3"
+            @change="setSelectedEffect('whisper')"
           />
-          <span class="text-gray-300">Whisper</span>
+          <span class="text-gray-700 dark:text-gray-300">Whisper</span>
         </label>
-      </div>
-      <div class="mt-3">
-        <Button :disabled="speaking" @click="testVoiceWithEffect">
-          Test Effect
-        </Button>
       </div>
     </div>
 
