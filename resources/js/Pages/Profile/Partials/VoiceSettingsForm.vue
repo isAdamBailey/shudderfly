@@ -5,6 +5,9 @@ import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { debounce } from "lodash";
 import { computed, ref, watch } from "vue";
 
+const INITIAL_VOICE_RETRY_DELAY = 100;
+const VOICE_LOADING_TIMEOUT = 3000;
+
 const {
   voices,
   selectedVoice,
@@ -56,7 +59,7 @@ setTimeout(() => {
   if (voicesLoading.value) {
     voicesLoading.value = false;
   }
-}, 3000);
+}, VOICE_LOADING_TIMEOUT);
 
 const localSpeechRate = ref(speechRate.value);
 const localSpeechPitch = ref(speechPitch.value);
@@ -67,7 +70,7 @@ function speakWithoutEffect(text, currentEffect) {
   speak(text);
   setTimeout(() => {
     selectedEffect.value = currentEffect;
-  }, 100);
+  }, INITIAL_VOICE_RETRY_DELAY);
 }
 
 const debouncedSpeechRateUpdate = debounce((value) => {

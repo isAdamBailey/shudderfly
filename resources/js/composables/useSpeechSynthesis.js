@@ -1,5 +1,14 @@
 import { onMounted, ref } from "vue";
 
+const MIN_WORD_LENGTH_FOR_ROBOT_EFFECT = 3;
+const WHISPER_MIN_VOLUME = 0.3;
+const WHISPER_VOLUME_MULTIPLIER = 0.7;
+const WHISPER_MIN_RATE = 0.5;
+const WHISPER_RATE_MULTIPLIER = 0.8;
+const INITIAL_VOICE_RETRY_DELAY = 100;
+const VOICE_RETRY_INTERVAL = 200;
+const MAX_VOICE_LOADING_ATTEMPTS = 5;
+
 export function useSpeechSynthesis() {
   const speaking = ref(false);
   const voices = ref([]);
@@ -136,8 +145,14 @@ export function useSpeechSynthesis() {
 
         // Apply whisper effect by temporarily adjusting volume and rate
         if (selectedEffect.value === "whisper") {
-          utterance.volume = Math.max(0.3, speechVolume.value * 0.7);
-          utterance.rate = Math.max(0.5, speechRate.value * 0.8);
+          utterance.volume = Math.max(
+            WHISPER_MIN_VOLUME,
+            speechVolume.value * WHISPER_VOLUME_MULTIPLIER
+          );
+          utterance.rate = Math.max(
+            WHISPER_MIN_RATE,
+            speechRate.value * WHISPER_RATE_MULTIPLIER
+          );
         } else {
           utterance.rate = speechRate.value;
           utterance.volume = speechVolume.value;
@@ -311,7 +326,9 @@ export function useSpeechSynthesis() {
           return text
             .split(" ")
             .map((word) =>
-              word.length > 3 ? `${word.slice(0, -1)}-${word.slice(-1)}` : word
+              word.length > MIN_WORD_LENGTH_FOR_ROBOT_EFFECT
+                ? `${word.slice(0, -1)}-${word.slice(-1)}`
+                : word
             )
             .join(" ");
         };
@@ -335,12 +352,12 @@ export function useSpeechSynthesis() {
       if (voices.value.length === 0) {
         setTimeout(() => {
           getVoices();
-        }, 100);
+        }, INITIAL_VOICE_RETRY_DELAY);
       }
 
       // Fallback: try a few more times with increasing delays
       let attempts = 0;
-      const maxAttempts = 5;
+      const maxAttempts = MAX_VOICE_LOADING_ATTEMPTS;
 
       const intervalId = setInterval(() => {
         attempts++;
@@ -350,7 +367,7 @@ export function useSpeechSynthesis() {
         } else {
           getVoices();
         }
-      }, 200);
+      }, VOICE_RETRY_INTERVAL);
     }
   });
 
