@@ -15,12 +15,29 @@ export function useSpeechSynthesis() {
 
   const getVoices = () => {
     if ("speechSynthesis" in window) {
-      voices.value = window.speechSynthesis.getVoices();
-      const index = parseInt(
-        localStorage.getItem("selectedVoiceIndex") || "0",
-        10
-      );
-      selectedVoice.value = voices.value[index];
+      const availableVoices = window.speechSynthesis.getVoices();
+      console.log("getVoices called, found:", availableVoices.length, "voices");
+      voices.value = availableVoices;
+
+      if (availableVoices.length > 0) {
+        const index = parseInt(
+          localStorage.getItem("selectedVoiceIndex") || "0",
+          10
+        );
+
+        if (index >= 0 && index < availableVoices.length) {
+          selectedVoice.value = availableVoices[index];
+          console.log("Selected voice:", availableVoices[index].name);
+        } else {
+          selectedVoice.value = availableVoices[0];
+          localStorage.setItem("selectedVoiceIndex", "0");
+          console.log("Using default voice:", availableVoices[0].name);
+        }
+      } else {
+        console.log("No voices available yet");
+      }
+    } else {
+      console.log("Speech synthesis not supported");
     }
   };
 
@@ -75,27 +92,90 @@ export function useSpeechSynthesis() {
 
   const speak = (phrase) => {
     if ("speechSynthesis" in window && phrase) {
-      const utterance = new SpeechSynthesisUtterance(phrase);
-      const index = parseInt(
-        localStorage.getItem("selectedVoiceIndex") || "0",
-        10
-      );
-      utterance.voice = window.speechSynthesis.getVoices()[index];
-      utterance.rate = speechRate.value;
-      utterance.pitch = speechPitch.value;
-      utterance.volume = speechVolume.value;
-      utterance.onstart = () => (speaking.value = true);
-      utterance.onend = () => (speaking.value = false);
-      utterance.onpause = () => (isPaused.value = true);
-      utterance.onresume = () => (isPaused.value = false);
-      window.speechSynthesis.speak(utterance);
+      try {
+        const currentVoices = window.speechSynthesis.getVoices();
+        if (currentVoices.length === 0) {
+          return;
+        }
+
+        const utterance = new SpeechSynthesisUtterance(phrase);
+
+        const index = parseInt(
+          localStorage.getItem("selectedVoiceIndex") || "0",
+          10
+        );
+
+        if (index >= 0 && index < currentVoices.length) {
+          utterance.voice = currentVoices[index];
+        } else {
+          utterance.voice = currentVoices[0];
+        }
+
+        utterance.rate = speechRate.value;
+        utterance.pitch = speechPitch.value;
+        utterance.volume = speechVolume.value;
+
+        utterance.onstart = () => {
+          speaking.value = true;
+        };
+        utterance.onend = () => {
+          speaking.value = false;
+        };
+        utterance.onpause = () => {
+          isPaused.value = true;
+        };
+        utterance.onresume = () => {
+          isPaused.value = false;
+        };
+
+        utterance.onerror = (event) => {
+          console.error("Speech error:", event.error);
+          speaking.value = false;
+          isPaused.value = false;
+        };
+
+        window.speechSynthesis.speak(utterance);
+      } catch (error) {
+        speaking.value = false;
+      }
     }
   };
 
   const testVoice = () => {
-    const testPhrase =
-      "Hello! This is a test of your voice settings. How does it sound?";
-    speak(testPhrase);
+    const testPhrase = "Hello! This is a test.";
+
+    if ("speechSynthesis" in window) {
+      const utterance = new SpeechSynthesisUtterance(testPhrase);
+
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        utterance.voice = voices[0];
+      }
+
+      utterance.rate = 1;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+
+      utterance.onstart = () => console.log("Test speech started");
+      utterance.onend = () => console.log("Test speech ended");
+      utterance.onerror = (event) =>
+        console.error("Test speech error:", event.error);
+
+      window.speechSynthesis.speak(utterance);
+      console.log("Test speech initiated");
+    }
+  };
+
+  const listVoices = () => {
+    if ("speechSynthesis" in window) {
+      const voices = window.speechSynthesis.getVoices();
+      console.log("All available voices:");
+      voices.forEach((voice, index) => {
+        console.log(
+          `${index}: ${voice.name} (${voice.lang}) - default: ${voice.default}`
+        );
+      });
+    }
   };
 
   const savePreset = (name) => {
@@ -230,12 +310,14 @@ export function useSpeechSynthesis() {
       window.speechSynthesis.onvoiceschanged = getVoices;
       getVoices();
 
-      // Fallback mechanism for mobile browsers
+      let attempts = 0;
+      const maxAttempts = 20;
+
       const intervalId = setInterval(() => {
-        if (voices.value.length > 0) {
+        attempts++;
+        if (voices.value.length > 0 || attempts >= maxAttempts) {
           clearInterval(intervalId);
-        } else {
-          getVoices();
+          console.log("Voice loading completed after", attempts, "attempts");
         }
       }, 100);
     }
@@ -264,6 +346,7 @@ export function useSpeechSynthesis() {
     getPresets,
     exportPresets,
     importPresets,
-    applyVoiceEffect
+    applyVoiceEffect,
+    listVoices
   };
 }
