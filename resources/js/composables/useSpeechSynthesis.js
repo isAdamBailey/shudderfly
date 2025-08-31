@@ -17,7 +17,6 @@ export function useSpeechSynthesis() {
   const getVoices = () => {
     if ("speechSynthesis" in window) {
       const availableVoices = window.speechSynthesis.getVoices();
-      console.log("getVoices called, found:", availableVoices.length, "voices");
       voices.value = availableVoices;
 
       if (availableVoices.length > 0) {
@@ -28,17 +27,11 @@ export function useSpeechSynthesis() {
 
         if (index >= 0 && index < availableVoices.length) {
           selectedVoice.value = availableVoices[index];
-          console.log("Selected voice:", availableVoices[index].name);
         } else {
           selectedVoice.value = availableVoices[0];
           localStorage.setItem("selectedVoiceIndex", "0");
-          console.log("Using default voice:", availableVoices[0].name);
         }
-      } else {
-        console.log("No voices available yet");
       }
-    } else {
-      console.log("Speech synthesis not supported");
     }
   };
 

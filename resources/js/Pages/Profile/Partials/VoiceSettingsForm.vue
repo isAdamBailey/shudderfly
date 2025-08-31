@@ -206,81 +206,180 @@ function resetToDefaults() {
   </div>
 
   <!-- Speech Controls -->
-  <div class="space-y-6 mb-8">
+  <div class="space-y-8 mb-8">
     <!-- Speech Rate Control -->
-    <div>
-      <label
-        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-      >
-        Speech Rate: {{ localSpeechRate }}x
-      </label>
-      <div class="flex items-center gap-3">
-        <span class="text-xs text-gray-500">0x</span>
-        <input
-          v-model="localSpeechRate"
-          type="range"
-          min="0"
-          max="3"
-          step="0.1"
-          class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-          @input="handleSpeechRateChange($event.target.value)"
-        />
-        <span class="text-xs text-gray-500">3x</span>
+    <div
+      class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700"
+    >
+      <div class="flex items-center justify-between mb-4">
+        <label class="text-lg font-semibold text-gray-900 dark:text-white">
+          Speech Rate
+        </label>
+        <span
+          class="text-2xl font-bold text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-600"
+        >
+          {{ localSpeechRate }}x
+        </span>
+      </div>
+      <div class="space-y-3">
+        <div class="flex items-center gap-4">
+          <span
+            class="text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[2rem]"
+            >0x</span
+          >
+          <div class="flex-1 relative">
+            <input
+              v-model="localSpeechRate"
+              type="range"
+              min="0"
+              max="3"
+              step="0.1"
+              data-slider="rate"
+              class="w-full h-3 bg-gradient-to-r from-blue-200 to-blue-400 dark:from-blue-600 dark:to-blue-800 rounded-lg appearance-none cursor-pointer slider-custom relative z-20"
+              @input="handleSpeechRateChange($event.target.value)"
+            />
+            <div class="absolute inset-0 pointer-events-none z-10">
+              <div
+                class="h-3 bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-400 dark:to-blue-500 rounded-lg transition-all duration-200"
+                :style="{
+                  width: `${((localSpeechRate - 0) / (3 - 0)) * 100}%`
+                }"
+              ></div>
+            </div>
+          </div>
+          <span
+            class="text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[2rem]"
+            >3x</span
+          >
+        </div>
+        <div
+          class="flex justify-between text-xs text-gray-500 dark:text-gray-400"
+        >
+          <span>Very Slow</span>
+          <span>Normal</span>
+          <span>Very Fast</span>
+        </div>
       </div>
     </div>
 
     <!-- Pitch Control -->
-    <div>
-      <label
-        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-      >
-        Pitch: {{ localSpeechPitch }}
-      </label>
-      <div class="flex items-center gap-3">
-        <span class="text-xs text-gray-500">0</span>
-        <input
-          v-model="localSpeechPitch"
-          type="range"
-          min="0"
-          max="3"
-          step="0.1"
-          class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-          @input="handleSpeechPitchChange($event.target.value)"
-        />
-        <span class="text-xs text-gray-500">3</span>
+    <div
+      class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700"
+    >
+      <div class="flex items-center justify-between mb-4">
+        <label class="text-lg font-semibold text-gray-900 dark:text-white">
+          Pitch
+        </label>
+        <span
+          class="text-2xl font-bold text-green-600 dark:text-green-400 bg-white dark:bg-gray-700 px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-600"
+        >
+          {{ localSpeechPitch }}
+        </span>
+      </div>
+      <div class="space-y-3">
+        <div class="flex items-center gap-4">
+          <span
+            class="text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[2rem]"
+            >0</span
+          >
+          <div class="flex-1 relative">
+            <input
+              v-model="localSpeechPitch"
+              type="range"
+              min="0"
+              max="3"
+              step="0.1"
+              data-slider="pitch"
+              class="w-full h-3 bg-gradient-to-r from-green-200 to-green-400 dark:from-green-600 dark:to-green-800 rounded-lg appearance-none cursor-pointer slider-custom relative z-20"
+              @input="handleSpeechPitchChange($event.target.value)"
+            />
+            <div class="absolute inset-0 pointer-events-none z-10">
+              <div
+                class="h-3 bg-gradient-to-r from-green-500 to-green-600 dark:from-green-400 dark:to-green-500 rounded-lg transition-all duration-200"
+                :style="{
+                  width: `${((localSpeechPitch - 0) / (3 - 0)) * 100}%`
+                }"
+              ></div>
+            </div>
+          </div>
+          <span
+            class="text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[2rem]"
+            >3</span
+          >
+        </div>
+        <div
+          class="flex justify-between text-xs text-gray-500 dark:text-gray-400"
+        >
+          <span>Very Low</span>
+          <span>Normal</span>
+          <span>Very High</span>
+        </div>
       </div>
     </div>
 
     <!-- Volume Control -->
-    <div>
-      <label
-        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-      >
-        Volume: {{ Math.round(localSpeechVolume * 100) }}%
-      </label>
-      <div class="flex items-center gap-3">
-        <span class="text-xs text-gray-500">0%</span>
-        <input
-          v-model="localSpeechVolume"
-          type="range"
-          min="0"
-          max="1"
-          step="0.1"
-          class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-          @input="handleSpeechVolumeChange($event.target.value)"
-        />
-        <span class="text-xs text-gray-500">100%</span>
+    <div
+      class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700"
+    >
+      <div class="flex items-center justify-between mb-4">
+        <label class="text-lg font-semibold text-gray-900 dark:text-white">
+          Volume
+        </label>
+        <span
+          class="text-2xl font-bold text-purple-600 dark:text-purple-400 bg-white dark:bg-gray-700 px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-600"
+        >
+          {{ Math.round(localSpeechVolume * 100) }}%
+        </span>
+      </div>
+      <div class="space-y-3">
+        <div class="flex items-center gap-4">
+          <span
+            class="text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[2rem]"
+            >0%</span
+          >
+          <div class="flex-1 relative">
+            <input
+              v-model="localSpeechVolume"
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              data-slider="volume"
+              class="w-full h-3 bg-gradient-to-r from-purple-200 to-purple-400 dark:from-purple-600 dark:to-purple-800 rounded-lg appearance-none cursor-pointer slider-custom relative z-20"
+              @input="handleSpeechVolumeChange($event.target.value)"
+            />
+            <div class="absolute inset-0 pointer-events-none z-10">
+              <div
+                class="h-3 bg-gradient-to-r from-purple-500 to-purple-600 dark:from-purple-400 dark:to-purple-500 rounded-lg transition-all duration-200"
+                :style="{ width: `${localSpeechVolume * 100}%` }"
+              ></div>
+            </div>
+          </div>
+          <span
+            class="text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[2rem]"
+            >100%</span
+          >
+        </div>
+        <div
+          class="flex justify-between text-xs text-gray-500 dark:text-gray-400"
+        >
+          <span>Muted</span>
+          <span>Normal</span>
+          <span>Maximum</span>
+        </div>
       </div>
     </div>
 
     <!-- Voice Effects -->
-    <div>
+    <div
+      class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700"
+    >
       <label
-        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3"
+        class="block text-lg font-semibold text-gray-900 dark:text-white mb-4"
       >
         Voice Effects
       </label>
-      <div class="space-y-2">
+      <div class="space-y-3">
         <label class="flex items-center">
           <input
             v-model="selectedEffect"
@@ -319,22 +418,39 @@ function resetToDefaults() {
             class="mr-3"
             @change="setSelectedEffect('whisper')"
           />
-          <span class="text-gray-700 dark:text-gray-300">Whisper</span>
+          <span class="text-gray-300">Whisper</span>
         </label>
       </div>
     </div>
 
     <!-- Playback Controls -->
-    <div v-if="speaking || isPaused">
+    <div
+      v-if="speaking || isPaused"
+      class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700"
+    >
       <label
-        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+        class="block text-lg font-semibold text-gray-900 dark:text-white mb-4"
       >
         Playback Controls
       </label>
-      <div class="flex gap-2">
-        <Button v-if="!isPaused" @click="pauseSpeech"> ⏸️ Pause </Button>
-        <Button v-else @click="resumeSpeech"> ▶️ Resume </Button>
-        <Button @click="stopSpeech"> ⏹️ Stop </Button>
+      <div class="flex gap-3">
+        <Button
+          v-if="!isPaused"
+          class="bg-yellow-600 hover:bg-yellow-700"
+          @click="pauseSpeech"
+        >
+          ⏸️ Pause
+        </Button>
+        <Button
+          v-else
+          class="bg-green-600 hover:bg-green-700"
+          @click="resumeSpeech"
+        >
+          ▶️ Resume
+        </Button>
+        <Button class="bg-red-600 hover:bg-red-700" @click="stopSpeech">
+          ⏹️ Stop
+        </Button>
       </div>
     </div>
   </div>
@@ -342,74 +458,77 @@ function resetToDefaults() {
 
 <style scoped>
 /* Custom range slider styles */
-input[type="range"] {
+.slider-custom {
   -webkit-appearance: none;
   appearance: none;
   background: transparent;
   cursor: pointer;
+  position: relative;
+  z-index: 20;
 }
 
-input[type="range"]::-webkit-slider-track {
-  background: #e5e7eb;
-  height: 8px;
-  border-radius: 4px;
-}
-
-input[type="range"]::-webkit-slider-thumb {
+.slider-custom::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  background: #3b82f6;
-  height: 20px;
-  width: 20px;
+  height: 24px;
+  width: 24px;
   border-radius: 50%;
   cursor: pointer;
-  border: 2px solid #ffffff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 3px solid #ffffff;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
 }
 
-input[type="range"]::-webkit-slider-thumb:hover {
-  background: #2563eb;
+.slider-custom::-webkit-slider-thumb:hover {
   transform: scale(1.1);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
 }
 
-/* Dark mode support */
-.dark input[type="range"]::-webkit-slider-track {
-  background: #374151;
+/* Speech Rate slider thumb */
+.slider-custom[data-slider="rate"]::-webkit-slider-thumb {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
 }
 
-.dark input[type="range"]::-webkit-slider-thumb {
-  background: #60a5fa;
-  border-color: #1f2937;
+/* Pitch slider thumb */
+.slider-custom[data-slider="pitch"]::-webkit-slider-thumb {
+  background: linear-gradient(135deg, #10b981, #059669);
 }
 
-.dark input[type="range"]::-webkit-slider-thumb:hover {
-  background: #3b82f6;
+/* Volume slider thumb */
+.slider-custom[data-slider="volume"]::-webkit-slider-thumb {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
 }
 
 /* Firefox support */
-input[type="range"]::-moz-range-track {
-  background: #e5e7eb;
-  height: 8px;
-  border-radius: 4px;
-  border: none;
-}
-
-input[type="range"]::-moz-range-thumb {
-  background: #3b82f6;
-  height: 20px;
-  width: 20px;
+.slider-custom::-moz-range-thumb {
+  height: 24px;
+  width: 24px;
   border-radius: 50%;
   cursor: pointer;
-  border: 2px solid #ffffff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 3px solid #ffffff;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
 }
 
-.dark input[type="range"]::-moz-range-track {
-  background: #374151;
+.slider-custom::-moz-range-thumb:hover {
+  transform: scale(1.1);
 }
 
-.dark input[type="range"]::-moz-range-thumb {
-  background: #60a5fa;
-  border-color: #1f2937;
+/* Firefox thumb colors */
+.slider-custom[data-slider="rate"]::-moz-range-thumb {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+}
+
+.slider-custom[data-slider="pitch"]::-moz-range-thumb {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.slider-custom[data-slider="volume"]::-moz-range-thumb {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+}
+
+/* Smooth transitions for the progress bars */
+.bg-gradient-to-r {
+  transition: width 0.2s ease;
 }
 </style>
