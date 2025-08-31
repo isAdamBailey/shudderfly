@@ -325,11 +325,12 @@ export function useSpeechSynthesis() {
         return (text) => {
           return text
             .split(" ")
-            .map((word) =>
-              word.length > MIN_WORD_LENGTH_FOR_ROBOT_EFFECT
-                ? `${word.slice(0, -1)}-${word.slice(-1)}`
-                : word
-            )
+            .map((word) => {
+              if (word.length > MIN_WORD_LENGTH_FOR_ROBOT_EFFECT) {
+                return `${word.slice(0, -1)}-${word.slice(-1)}`;
+              }
+              return word;
+            })
             .join(" ");
         };
       case "whisper":

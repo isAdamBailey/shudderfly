@@ -3,7 +3,7 @@ import Button from "@/Components/Button.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { debounce } from "lodash";
-import { computed, ref, watch } from "vue";
+import { computed, onUnmounted, ref, watch } from "vue";
 
 const INITIAL_VOICE_RETRY_DELAY = 100;
 const VOICE_LOADING_TIMEOUT = 3000;
@@ -33,6 +33,7 @@ const {
 const { canEditPages } = usePermissions();
 
 const voicesLoading = ref(true);
+let voiceLoadingTimeoutId = null;
 
 const filteredVoices = computed(() =>
   voices.value.filter(
@@ -55,27 +56,51 @@ watch(
   { immediate: true }
 );
 
-setTimeout(() => {
-  if (voicesLoading.value) {
-    voicesLoading.value = false;
+watch(
+  () => voices.value.length,
+  (newLength) => {
+    if (newLength === 0) {
+      voiceLoadingTimeoutId = setTimeout(() => {
+        if (voicesLoading.value) {
+          voicesLoading.value = false;
+        }
+      }, VOICE_LOADING_TIMEOUT);
+    }
+  },
+  { immediate: true }
+);
+
+onUnmounted(() => {
+  if (voiceLoadingTimeoutId) {
+    clearTimeout(voiceLoadingTimeoutId);
   }
-}, VOICE_LOADING_TIMEOUT);
+});
 
 const localSpeechRate = ref(speechRate.value);
 const localSpeechPitch = ref(speechPitch.value);
 const localSpeechVolume = ref(speechVolume.value);
 
+let effectRestoreCounter = 0;
+let isRestoringEffect = false;
+
 function speakWithoutEffect(text, currentEffect) {
+  const currentCall = ++effectRestoreCounter;
+  isRestoringEffect = true;
   selectedEffect.value = "";
   speak(text);
   setTimeout(() => {
-    selectedEffect.value = currentEffect;
+    if (effectRestoreCounter === currentCall) {
+      selectedEffect.value = currentEffect;
+      setTimeout(() => {
+        isRestoringEffect = false;
+      }, 50);
+    }
   }, INITIAL_VOICE_RETRY_DELAY);
 }
 
 const debouncedSpeechRateUpdate = debounce((value) => {
   setSpeechRateSilent(value);
-  speakWithoutEffect(`Speech rate set to ${value}x`, selectedEffect.value);
+  speakWithoutEffect(`Speech rate set to ${value}`, selectedEffect.value);
 }, 500);
 
 const debouncedSpeechPitchUpdate = debounce((value) => {
@@ -110,7 +135,7 @@ function handleSpeechVolumeChange(value) {
 }
 
 watch(selectedEffect, (newEffect) => {
-  if (newEffect) {
+  if (newEffect && !isRestoringEffect) {
     const effectName = newEffect.charAt(0).toUpperCase() + newEffect.slice(1);
     speak(`Effect set to ${effectName}`);
   }
