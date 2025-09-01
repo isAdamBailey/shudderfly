@@ -1,10 +1,5 @@
 import { onMounted, ref } from "vue";
 
-const MIN_WORD_LENGTH_FOR_ROBOT_EFFECT = 3;
-const WHISPER_MIN_VOLUME = 0.3;
-const WHISPER_VOLUME_MULTIPLIER = 0.7;
-const WHISPER_MIN_RATE = 0.5;
-const WHISPER_RATE_MULTIPLIER = 0.8;
 const INITIAL_VOICE_RETRY_DELAY = 100;
 const VOICE_RETRY_INTERVAL = 200;
 const MAX_VOICE_LOADING_ATTEMPTS = 5;
@@ -20,7 +15,6 @@ export function useSpeechSynthesis() {
   const speechVolume = ref(
     parseFloat(localStorage.getItem("speechVolume") || "1")
   );
-  const selectedEffect = ref(localStorage.getItem("selectedEffect") || "");
   const isPaused = ref(false);
 
   const getVoices = () => {
@@ -87,11 +81,6 @@ export function useSpeechSynthesis() {
     localStorage.setItem("speechVolume", volume.toString());
   };
 
-  const setSelectedEffect = (effect) => {
-    selectedEffect.value = effect;
-    localStorage.setItem("selectedEffect", effect);
-  };
-
   const pauseSpeech = () => {
     if ("speechSynthesis" in window) {
       window.speechSynthesis.pause();
@@ -122,15 +111,7 @@ export function useSpeechSynthesis() {
           return;
         }
 
-        // Apply the selected effect to the phrase if one is selected
-        let modifiedPhrase = phrase;
-
-        if (selectedEffect.value) {
-          const effectFunction = applyVoiceEffect(selectedEffect.value);
-          modifiedPhrase = effectFunction(phrase);
-        }
-
-        const utterance = new SpeechSynthesisUtterance(modifiedPhrase);
+        const utterance = new SpeechSynthesisUtterance(phrase);
 
         const index = parseInt(
           localStorage.getItem("selectedVoiceIndex") || "0",
@@ -143,21 +124,8 @@ export function useSpeechSynthesis() {
           utterance.voice = currentVoices[0];
         }
 
-        // Apply whisper effect by temporarily adjusting volume and rate
-        if (selectedEffect.value === "whisper") {
-          utterance.volume = Math.max(
-            WHISPER_MIN_VOLUME,
-            speechVolume.value * WHISPER_VOLUME_MULTIPLIER
-          );
-          utterance.rate = Math.max(
-            WHISPER_MIN_RATE,
-            speechRate.value * WHISPER_RATE_MULTIPLIER
-          );
-        } else {
-          utterance.rate = speechRate.value;
-          utterance.volume = speechVolume.value;
-        }
-
+        utterance.rate = speechRate.value;
+        utterance.volume = speechVolume.value;
         utterance.pitch = speechPitch.value;
 
         utterance.onstart = () => {
@@ -183,43 +151,6 @@ export function useSpeechSynthesis() {
       } catch (error) {
         speaking.value = false;
       }
-    }
-  };
-
-  const testVoice = () => {
-    const testPhrase = "Hello! This is a test.";
-
-    if ("speechSynthesis" in window) {
-      const utterance = new SpeechSynthesisUtterance(testPhrase);
-
-      const voices = window.speechSynthesis.getVoices();
-      if (voices.length > 0) {
-        utterance.voice = voices[0];
-      }
-
-      utterance.rate = 1;
-      utterance.pitch = 1;
-      utterance.volume = 1;
-
-      utterance.onstart = () => console.log("Test speech started");
-      utterance.onend = () => console.log("Test speech ended");
-      utterance.onerror = (event) =>
-        console.error("Test speech error:", event.error);
-
-      window.speechSynthesis.speak(utterance);
-      console.log("Test speech initiated");
-    }
-  };
-
-  const listVoices = () => {
-    if ("speechSynthesis" in window) {
-      const voices = window.speechSynthesis.getVoices();
-      console.log("All available voices:");
-      voices.forEach((voice, index) => {
-        console.log(
-          `${index}: ${voice.name} (${voice.lang}) - default: ${voice.default}`
-        );
-      });
     }
   };
 
@@ -277,90 +208,18 @@ export function useSpeechSynthesis() {
     return JSON.parse(localStorage.getItem("voicePresets") || "[]");
   };
 
-  const exportPresets = () => {
-    const presets = getPresets();
-    const dataStr = JSON.stringify(presets, null, 2);
-    const dataBlob = new Blob([dataStr], { type: "application/json" });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "voice-presets.json";
-    link.click();
-    URL.revokeObjectURL(url);
-    speak("Presets exported successfully");
-  };
-
-  const importPresets = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const presets = JSON.parse(e.target.result);
-          if (Array.isArray(presets)) {
-            localStorage.setItem("voicePresets", JSON.stringify(presets));
-            speak(`Imported ${presets.length} presets successfully`);
-            resolve(presets);
-          } else {
-            reject(new Error("Invalid preset file format"));
-          }
-        } catch (error) {
-          reject(error);
-        }
-      };
-      reader.readAsText(file);
-    });
-  };
-
-  const applyVoiceEffect = (effect) => {
-    switch (effect) {
-      case "echo":
-        // Simulate echo by repeating the last word
-        return (text) => {
-          const words = text.split(" ");
-          const lastWord = words[words.length - 1];
-          return `${text}... ${lastWord}`;
-        };
-      case "robot":
-        // Add robot-like pauses and emphasis
-        return (text) => {
-          return text
-            .split(" ")
-            .map((word) => {
-              // Separate trailing punctuation
-              const match = word.match(/^(.+?)([.,!?;:]*)$/);
-              const core = match ? match[1] : word;
-              const punct = match ? match[2] : "";
-              if (core.length > MIN_WORD_LENGTH_FOR_ROBOT_EFFECT) {
-                return `${core.slice(0, -1)}-${core.slice(-1)}${punct}`;
-              }
-              return word;
-            })
-            .join(" ");
-        };
-      case "whisper":
-        // Whisper effect is handled by adjusting volume and rate in the speak function
-        return (text) => text;
-      default:
-        return (text) => text;
-    }
-  };
-
   onMounted(() => {
     if ("speechSynthesis" in window) {
-      // Set up the voices changed event handler
       window.speechSynthesis.onvoiceschanged = getVoices;
 
-      // Try to get voices immediately
       getVoices();
 
-      // If no voices are available immediately, try again after a short delay
       if (voices.value.length === 0) {
         setTimeout(() => {
           getVoices();
         }, INITIAL_VOICE_RETRY_DELAY);
       }
 
-      // Fallback: try a few more times with increasing delays
       let attempts = 0;
       const maxAttempts = MAX_VOICE_LOADING_ATTEMPTS;
 
@@ -384,26 +243,19 @@ export function useSpeechSynthesis() {
     speechRate,
     speechPitch,
     speechVolume,
-    selectedEffect,
     setSpeechRate,
     setSpeechPitch,
     setSpeechVolume,
     setSpeechRateSilent,
     setSpeechPitchSilent,
     setSpeechVolumeSilent,
-    setSelectedEffect,
     pauseSpeech,
     resumeSpeech,
     stopSpeech,
     isPaused,
-    testVoice,
     savePreset,
     loadPreset,
     deletePreset,
-    getPresets,
-    exportPresets,
-    importPresets,
-    applyVoiceEffect,
-    listVoices
+    getPresets
   };
 }

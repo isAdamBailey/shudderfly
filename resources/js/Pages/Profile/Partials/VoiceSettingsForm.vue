@@ -5,8 +5,43 @@ import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { debounce } from "lodash";
 import { computed, onUnmounted, ref, watch } from "vue";
 
-const INITIAL_VOICE_RETRY_DELAY = 100;
 const VOICE_LOADING_TIMEOUT = 3000;
+
+// Slider configuration constants
+const SPEECH_RATE_MIN = 0;
+const SPEECH_RATE_MAX = 1.5;
+const SPEECH_PITCH_MIN = 0;
+const SPEECH_PITCH_MAX = 2;
+const SPEECH_VOLUME_MIN = 0.1;
+const SPEECH_VOLUME_MAX = 1;
+
+// Helper functions to convert numeric values to descriptive words
+function getSpeechRateDescription(value) {
+  const range = SPEECH_RATE_MAX - SPEECH_RATE_MIN;
+  const third = range / 3;
+
+  if (value <= SPEECH_RATE_MIN + third) return "slow";
+  if (value <= SPEECH_RATE_MIN + 2 * third) return "normal";
+  return "fast";
+}
+
+function getSpeechPitchDescription(value) {
+  const range = SPEECH_PITCH_MAX - SPEECH_PITCH_MIN;
+  const third = range / 3;
+
+  if (value <= SPEECH_PITCH_MIN + third) return "low";
+  if (value <= SPEECH_PITCH_MIN + 2 * third) return "normal";
+  return "high";
+}
+
+function getSpeechVolumeDescription(value) {
+  const range = SPEECH_VOLUME_MAX - SPEECH_VOLUME_MIN;
+  const third = range / 3;
+
+  if (value <= SPEECH_VOLUME_MIN + third) return "quiet";
+  if (value <= SPEECH_VOLUME_MIN + 2 * third) return "normal";
+  return "loud";
+}
 
 const {
   voices,
@@ -15,19 +50,12 @@ const {
   speechRate,
   speechPitch,
   speechVolume,
-  selectedEffect,
   setSpeechRate,
   setSpeechPitch,
   setSpeechVolume,
   setSpeechRateSilent,
   setSpeechPitchSilent,
   setSpeechVolumeSilent,
-  setSelectedEffect,
-  pauseSpeech,
-  resumeSpeech,
-  stopSpeech,
-  isPaused,
-  speaking,
   speak
 } = useSpeechSynthesis();
 const { canEditPages } = usePermissions();
@@ -80,40 +108,19 @@ const localSpeechRate = ref(speechRate.value);
 const localSpeechPitch = ref(speechPitch.value);
 const localSpeechVolume = ref(speechVolume.value);
 
-let effectRestoreCounter = 0;
-let isRestoringEffect = false;
-
-function speakWithoutEffect(text, currentEffect) {
-  const currentCall = ++effectRestoreCounter;
-  isRestoringEffect = true;
-  selectedEffect.value = "";
-  speak(text);
-  setTimeout(() => {
-    if (effectRestoreCounter === currentCall) {
-      selectedEffect.value = currentEffect;
-      setTimeout(() => {
-        isRestoringEffect = false;
-      }, 50);
-    }
-  }, INITIAL_VOICE_RETRY_DELAY);
-}
-
 const debouncedSpeechRateUpdate = debounce((value) => {
   setSpeechRateSilent(value);
-  speakWithoutEffect(`Speech rate set to ${value}`, selectedEffect.value);
+  speak(`Speech rate set to ${getSpeechRateDescription(value)}`);
 }, 500);
 
 const debouncedSpeechPitchUpdate = debounce((value) => {
   setSpeechPitchSilent(value);
-  speakWithoutEffect(`Pitch set to ${value}`, selectedEffect.value);
+  speak(`Pitch set to ${getSpeechPitchDescription(value)}`);
 }, 500);
 
 const debouncedSpeechVolumeUpdate = debounce((value) => {
   setSpeechVolumeSilent(value);
-  speakWithoutEffect(
-    `Volume set to ${Math.round(value * 100)}%`,
-    selectedEffect.value
-  );
+  speak(`Volume set to ${getSpeechVolumeDescription(value)}`);
 }, 500);
 
 function handleSpeechRateChange(value) {
@@ -133,13 +140,6 @@ function handleSpeechVolumeChange(value) {
   localSpeechVolume.value = floatValue;
   debouncedSpeechVolumeUpdate(floatValue);
 }
-
-watch(selectedEffect, (newEffect) => {
-  if (newEffect && !isRestoringEffect) {
-    const effectName = newEffect.charAt(0).toUpperCase() + newEffect.slice(1);
-    speak(`Effect set to ${effectName}`);
-  }
-});
 
 watch(speechRate, (newRate) => {
   localSpeechRate.value = newRate;
@@ -165,13 +165,12 @@ function alertVoices() {
 }
 
 function resetToDefaults() {
-  setSpeechRate(1);
-  setSpeechPitch(1);
-  setSpeechVolume(1);
-  setSelectedEffect("");
   if (voices.value.length > 0) {
     setVoice(voices.value[0]);
   }
+  setSpeechRate(1);
+  setSpeechPitch(1);
+  setSpeechVolume(1);
 }
 </script>
 
@@ -252,14 +251,14 @@ function resetToDefaults() {
         <div class="flex items-center gap-4">
           <span
             class="text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[2rem]"
-            >0x</span
+            >Slow</span
           >
           <div class="flex-1 relative">
             <input
               v-model="localSpeechRate"
               type="range"
-              min="0"
-              max="3"
+              :min="SPEECH_RATE_MIN"
+              :max="SPEECH_RATE_MAX"
               step="0.1"
               data-slider="rate"
               class="w-full h-3 bg-gradient-to-r from-blue-200 to-blue-400 dark:from-blue-600 dark:to-blue-800 rounded-lg appearance-none cursor-pointer slider-custom relative z-20"
@@ -269,14 +268,18 @@ function resetToDefaults() {
               <div
                 class="h-3 bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-400 dark:to-blue-500 rounded-lg transition-all duration-200"
                 :style="{
-                  width: `${((localSpeechRate - 0) / (3 - 0)) * 100}%`
+                  width: `${
+                    ((localSpeechRate - SPEECH_RATE_MIN) /
+                      (SPEECH_RATE_MAX - SPEECH_RATE_MIN)) *
+                    100
+                  }%`
                 }"
               ></div>
             </div>
           </div>
           <span
             class="text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[2rem]"
-            >3x</span
+            >Fast</span
           >
         </div>
         <div
@@ -306,14 +309,14 @@ function resetToDefaults() {
         <div class="flex items-center gap-4">
           <span
             class="text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[2rem]"
-            >0</span
+            >Low</span
           >
           <div class="flex-1 relative">
             <input
               v-model="localSpeechPitch"
               type="range"
-              min="0"
-              max="3"
+              :min="SPEECH_PITCH_MIN"
+              :max="SPEECH_PITCH_MAX"
               step="0.1"
               data-slider="pitch"
               class="w-full h-3 bg-gradient-to-r from-green-200 to-green-400 dark:from-green-600 dark:to-green-800 rounded-lg appearance-none cursor-pointer slider-custom relative z-20"
@@ -323,14 +326,18 @@ function resetToDefaults() {
               <div
                 class="h-3 bg-gradient-to-r from-green-500 to-green-600 dark:from-green-400 dark:to-green-500 rounded-lg transition-all duration-200"
                 :style="{
-                  width: `${((localSpeechPitch - 0) / (3 - 0)) * 100}%`
+                  width: `${
+                    ((localSpeechPitch - SPEECH_PITCH_MIN) /
+                      (SPEECH_PITCH_MAX - SPEECH_PITCH_MIN)) *
+                    100
+                  }%`
                 }"
               ></div>
             </div>
           </div>
           <span
             class="text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[2rem]"
-            >3</span
+            >High</span
           >
         </div>
         <div
@@ -360,14 +367,14 @@ function resetToDefaults() {
         <div class="flex items-center gap-4">
           <span
             class="text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[2rem]"
-            >0%</span
+            >10%</span
           >
           <div class="flex-1 relative">
             <input
               v-model="localSpeechVolume"
               type="range"
-              min="0"
-              max="1"
+              :min="SPEECH_VOLUME_MIN"
+              :max="SPEECH_VOLUME_MAX"
               step="0.1"
               data-slider="volume"
               class="w-full h-3 bg-gradient-to-r from-purple-200 to-purple-400 dark:from-purple-600 dark:to-purple-800 rounded-lg appearance-none cursor-pointer slider-custom relative z-20"
@@ -376,7 +383,13 @@ function resetToDefaults() {
             <div class="absolute inset-0 pointer-events-none z-10">
               <div
                 class="h-3 bg-gradient-to-r from-purple-500 to-purple-600 dark:from-purple-400 dark:to-purple-500 rounded-lg transition-all duration-200"
-                :style="{ width: `${localSpeechVolume * 100}%` }"
+                :style="{
+                  width: `${
+                    ((localSpeechVolume - SPEECH_VOLUME_MIN) /
+                      (SPEECH_VOLUME_MAX - SPEECH_VOLUME_MIN)) *
+                    100
+                  }%`
+                }"
               ></div>
             </div>
           </div>
@@ -388,92 +401,10 @@ function resetToDefaults() {
         <div
           class="flex justify-between text-xs text-gray-500 dark:text-gray-400"
         >
-          <span>Muted</span>
+          <span>Quiet</span>
           <span>Normal</span>
           <span>Maximum</span>
         </div>
-      </div>
-    </div>
-
-    <div
-      class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700"
-    >
-      <label
-        class="block text-lg font-semibold text-gray-900 dark:text-white mb-4"
-      >
-        Voice Effects
-      </label>
-      <div class="space-y-3">
-        <label class="flex items-center">
-          <input
-            v-model="selectedEffect"
-            type="radio"
-            value=""
-            class="mr-3"
-            @change="setSelectedEffect('')"
-          />
-          <span class="text-gray-700 dark:text-gray-300">No Effect</span>
-        </label>
-        <label class="flex items-center">
-          <input
-            v-model="selectedEffect"
-            type="radio"
-            value="echo"
-            class="mr-3"
-            @change="setSelectedEffect('echo')"
-          />
-          <span class="text-gray-700 dark:text-gray-300">Echo</span>
-        </label>
-        <label class="flex items-center">
-          <input
-            v-model="selectedEffect"
-            type="radio"
-            value="robot"
-            class="mr-3"
-            @change="setSelectedEffect('robot')"
-          />
-          <span class="text-gray-700 dark:text-gray-300">Robot</span>
-        </label>
-        <label class="flex items-center">
-          <input
-            v-model="selectedEffect"
-            type="radio"
-            value="whisper"
-            class="mr-3"
-            @change="setSelectedEffect('whisper')"
-          />
-          <span class="text-gray-700 dark:text-gray-300">Whisper</span>
-        </label>
-      </div>
-    </div>
-
-    <div
-      v-if="speaking || isPaused"
-      class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700"
-    >
-      <label
-        class="block text-lg font-semibold text-gray-900 dark:text-white mb-4"
-      >
-        Playback Controls
-      </label>
-      <div class="flex gap-3">
-        <Button
-          v-if="!isPaused"
-          class="bg-yellow-600 hover:bg-yellow-700"
-          @click="pauseSpeech"
-        >
-          ⏸️ Pause
-        </Button>
-        <Button
-          v-else
-          class="bg-green-600 hover:bg-green-700"
-          @click="resumeSpeech"
-        >
-          ▶️ Resume
-        </Button>
-        <Button class="bg-red-600 hover:bg-red-700" @click="stopSpeech">
-          ⏹️ Stop
-        </Button>
       </div>
     </div>
   </div>
