@@ -50,12 +50,12 @@ const {
   speechRate,
   speechPitch,
   speechVolume,
-  setSpeechRate,
-  setSpeechPitch,
-  setSpeechVolume,
+  selectedEmotion,
+  speaking,
   setSpeechRateSilent,
   setSpeechPitchSilent,
   setSpeechVolumeSilent,
+  setSelectedEmotion,
   speak
 } = useSpeechSynthesis();
 const { canEditPages } = usePermissions();
@@ -163,15 +163,6 @@ function alertVoices() {
     .join("\n");
   alert("Here are more available voices in your browser:\n\n" + voiceDetails);
 }
-
-function resetToDefaults() {
-  if (voices.value.length > 0) {
-    setVoice(voices.value[0]);
-  }
-  setSpeechRate(1);
-  setSpeechPitch(1);
-  setSpeechVolume(1);
-}
 </script>
 
 <template>
@@ -181,7 +172,6 @@ function resetToDefaults() {
     </h3>
     <div class="flex gap-2">
       <Button v-if="canEditPages" @click="alertVoices">All Voices</Button>
-      <Button @click="resetToDefaults">Reset</Button>
     </div>
   </div>
 
@@ -234,6 +224,83 @@ function resetToDefaults() {
   </div>
 
   <div class="space-y-8 mb-8">
+    <div
+      class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700"
+    >
+      <label
+        class="block text-lg font-semibold text-gray-900 dark:text-white mb-4"
+      >
+        Emotional Effects
+      </label>
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <Button
+          :class="
+            selectedEmotion === 'excited'
+              ? 'bg-orange-600 hover:bg-orange-700'
+              : 'bg-gray-600 hover:bg-gray-700'
+          "
+          :disabled="speaking"
+          class="flex flex-col items-center justify-center py-1.5 px-1.5 min-h-[45px]"
+          @click="setSelectedEmotion('excited')"
+        >
+          <i class="ri-flashlight-line text-2xl mb-1"></i>
+          <span class="text-sm font-medium">Excited</span>
+        </Button>
+        <Button
+          :class="
+            selectedEmotion === 'calm'
+              ? 'bg-blue-600 hover:bg-blue-700'
+              : 'bg-gray-600 hover:bg-gray-700'
+          "
+          :disabled="speaking"
+          class="flex flex-col items-center justify-center py-1.5 px-1.5 min-h-[45px]"
+          @click="setSelectedEmotion('calm')"
+        >
+          <i class="ri-heart-line text-2xl mb-1"></i>
+          <span class="text-sm font-medium">Calm</span>
+        </Button>
+        <Button
+          :class="
+            selectedEmotion === 'mysterious'
+              ? 'bg-purple-600 hover:bg-purple-700'
+              : 'bg-gray-600 hover:bg-gray-700'
+          "
+          :disabled="speaking"
+          class="flex flex-col items-center justify-center py-1.5 px-1.5 min-h-[45px]"
+          @click="setSelectedEmotion('mysterious')"
+        >
+          <i class="ri-question-line text-2xl mb-1"></i>
+          <span class="text-sm font-medium">Mysterious</span>
+        </Button>
+        <Button
+          :class="
+            selectedEmotion === 'hyper'
+              ? 'bg-red-600 hover:bg-red-700'
+              : 'bg-gray-600 hover:bg-gray-700'
+          "
+          :disabled="speaking"
+          class="flex flex-col items-center justify-center py-1.5 px-1.5 min-h-[45px]"
+          @click="setSelectedEmotion('hyper')"
+        >
+          <i class="ri-fire-line text-2xl mb-1"></i>
+          <span class="text-sm font-medium">Hyper</span>
+        </Button>
+        <Button
+          :class="
+            selectedEmotion === ''
+              ? 'bg-green-600 hover:bg-green-700'
+              : 'bg-gray-600 hover:bg-gray-700'
+          "
+          :disabled="speaking"
+          class="flex flex-col items-center justify-center py-1.5 px-1.5 min-h-[45px]"
+          @click="setSelectedEmotion('')"
+        >
+          <i class="ri-check-line text-2xl mb-1"></i>
+          <span class="text-sm font-medium">Normal</span>
+        </Button>
+      </div>
+    </div>
+
     <div
       class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700"
     >

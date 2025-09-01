@@ -15,6 +15,7 @@ export function useSpeechSynthesis() {
   const speechVolume = ref(
     parseFloat(localStorage.getItem("speechVolume") || "1")
   );
+  const selectedEmotion = ref(localStorage.getItem("selectedEmotion") || "");
   const isPaused = ref(false);
 
   const getVoices = () => {
@@ -154,58 +155,57 @@ export function useSpeechSynthesis() {
     }
   };
 
-  const savePreset = (name) => {
-    const preset = {
-      name,
-      voiceIndex: parseInt(
-        localStorage.getItem("selectedVoiceIndex") || "0",
-        10
-      ),
-      rate: speechRate.value,
-      pitch: speechPitch.value,
-      volume: speechVolume.value,
-      timestamp: Date.now()
+  const setSelectedEmotion = (emotion) => {
+    selectedEmotion.value = emotion;
+    localStorage.setItem("selectedEmotion", emotion);
+
+    if (emotion) {
+      applyEmotionalEffect(emotion);
+      speak(`Emotion set to ${emotion}`);
+    } else {
+      // Reset to defaults when emotion is empty (Normal)
+      speechRate.value = 1;
+      speechPitch.value = 1;
+      speechVolume.value = 1;
+
+      localStorage.setItem("speechRate", "1");
+      localStorage.setItem("speechPitch", "1");
+      localStorage.setItem("speechVolume", "1");
+
+      speak("Emotion reset to normal");
+    }
+  };
+
+  const applyEmotionalEffect = (emotion) => {
+    const effects = {
+      excited: { rate: 1.2, pitch: 1.2, volume: 1.0 },
+      calm: { rate: 0.8, pitch: 0.9, volume: 0.8 },
+      mysterious: { rate: 0.9, pitch: 0.7, volume: 0.7 },
+      hyper: { rate: 1.5, pitch: 2.0, volume: 1.0 }
     };
 
-    const presets = JSON.parse(localStorage.getItem("voicePresets") || "[]");
-    const existingIndex = presets.findIndex((p) => p.name === name);
+    const effect = effects[emotion];
+    if (effect) {
+      speechRate.value = effect.rate;
+      speechPitch.value = effect.pitch;
+      speechVolume.value = effect.volume;
 
-    if (existingIndex !== -1) {
-      presets[existingIndex] = preset;
-    } else {
-      presets.push(preset);
+      localStorage.setItem("speechRate", effect.rate.toString());
+      localStorage.setItem("speechPitch", effect.pitch.toString());
+      localStorage.setItem("speechVolume", effect.volume.toString());
     }
-
-    localStorage.setItem("voicePresets", JSON.stringify(presets));
-    speak(`Preset "${name}" saved`);
   };
 
-  const loadPreset = (preset) => {
-    if (preset.voiceIndex < voices.value.length) {
-      selectedVoice.value = voices.value[preset.voiceIndex];
-      localStorage.setItem("selectedVoiceIndex", preset.voiceIndex.toString());
-    }
+  const resetToDefaults = () => {
+    speechRate.value = 1;
+    speechPitch.value = 1;
+    speechVolume.value = 1;
+    selectedEmotion.value = "";
 
-    speechRate.value = preset.rate;
-    speechPitch.value = preset.pitch;
-    speechVolume.value = preset.volume;
-
-    localStorage.setItem("speechRate", preset.rate.toString());
-    localStorage.setItem("speechPitch", preset.pitch.toString());
-    localStorage.setItem("speechVolume", preset.volume.toString());
-
-    speak(`Preset "${preset.name}" loaded`);
-  };
-
-  const deletePreset = (name) => {
-    const presets = JSON.parse(localStorage.getItem("voicePresets") || "[]");
-    const filteredPresets = presets.filter((p) => p.name !== name);
-    localStorage.setItem("voicePresets", JSON.stringify(filteredPresets));
-    speak(`Preset "${name}" deleted`);
-  };
-
-  const getPresets = () => {
-    return JSON.parse(localStorage.getItem("voicePresets") || "[]");
+    localStorage.setItem("speechRate", "1");
+    localStorage.setItem("speechPitch", "1");
+    localStorage.setItem("speechVolume", "1");
+    localStorage.setItem("selectedEmotion", "");
   };
 
   onMounted(() => {
@@ -243,19 +243,18 @@ export function useSpeechSynthesis() {
     speechRate,
     speechPitch,
     speechVolume,
+    selectedEmotion,
     setSpeechRate,
     setSpeechPitch,
     setSpeechVolume,
     setSpeechRateSilent,
     setSpeechPitchSilent,
     setSpeechVolumeSilent,
+    setSelectedEmotion,
+    resetToDefaults,
     pauseSpeech,
     resumeSpeech,
     stopSpeech,
-    isPaused,
-    savePreset,
-    loadPreset,
-    deletePreset,
-    getPresets
+    isPaused
   };
 }
