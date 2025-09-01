@@ -171,6 +171,7 @@ export function useSpeechSynthesis() {
       localStorage.setItem("speechRate", "1");
       localStorage.setItem("speechPitch", "1");
       localStorage.setItem("speechVolume", "1");
+      localStorage.setItem("selectedLanguage", "en-US");
 
       speak("Emotion reset to normal");
     }

@@ -63,10 +63,31 @@ const { canEditPages } = usePermissions();
 const voicesLoading = ref(true);
 let voiceLoadingTimeoutId = null;
 
+const selectedLanguage = ref(
+  localStorage.getItem("selectedLanguage") || "en-US"
+);
+
+const getLanguageDisplayName = (languageCode) => {
+  try {
+    return (
+      new Intl.DisplayNames(["en"], { type: "language" }).of(languageCode) ||
+      languageCode
+    );
+  } catch (error) {
+    return languageCode;
+  }
+};
+
+const availableLanguages = computed(() => {
+  const languages = new Set();
+  voices.value.forEach((voice) => {
+    languages.add(voice.lang);
+  });
+  return Array.from(languages).sort();
+});
+
 const filteredVoices = computed(() =>
-  voices.value.filter(
-    (voice) => voice.lang === "en-US" || voice.lang === "en_US"
-  )
+  voices.value.filter((voice) => voice.lang === selectedLanguage.value)
 );
 const halfLength = computed(() => Math.ceil(filteredVoices.value.length / 2));
 const firstHalf = computed(() =>
@@ -153,6 +174,38 @@ watch(speechVolume, (newVolume) => {
   localSpeechVolume.value = newVolume;
 });
 
+// Watch for language changes from the composable (when Normal emotion is selected)
+watch(selectedEmotion, (newEmotion) => {
+  if (newEmotion === "") {
+    // Normal emotion selected, reset language to en-US
+    selectedLanguage.value = "en-US";
+
+    // Small delay to ensure language change is processed
+    setTimeout(() => {
+      // Reset voice selection to first available English voice
+      const englishVoices = voices.value.filter(
+        (voice) => voice.lang === "en-US"
+      );
+      if (englishVoices.length > 0) {
+        setVoice(englishVoices[0]);
+      }
+    }, 100);
+  }
+});
+
+function handleLanguageChange(language) {
+  selectedLanguage.value = language;
+  localStorage.setItem("selectedLanguage", language);
+
+  // Reset voice selection to first available voice in new language
+  const voicesInLanguage = voices.value.filter(
+    (voice) => voice.lang === language
+  );
+  if (voicesInLanguage.length > 0) {
+    setVoice(voicesInLanguage[0]);
+  }
+}
+
 function alertVoices() {
   const filteredVoiceNames = new Set(
     filteredVoices.value.map((voice) => voice.name)
@@ -181,39 +234,64 @@ function alertVoices() {
         Loading available voices...
       </p>
     </div>
-    <div v-else-if="voices.length > 0" class="flex">
-      <ul class="w-1/2">
-        <li v-for="voice in firstHalf" :key="voice.name" class="mb-3">
-          <input
-            :id="voice.name"
-            v-model="selectedVoice"
-            type="radio"
-            :value="voice"
-            @input="setVoice(voice)"
-          />
-          <label
-            :for="voice.name"
-            class="dark:text-white ml-3 font-bold text-lg"
-            >{{ voice.name }}</label
+    <div v-else-if="voices.length > 0">
+      <!-- Language Selection -->
+      <div class="mb-4">
+        <label
+          class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+        >
+          Language
+        </label>
+        <select
+          v-model="selectedLanguage"
+          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          @change="handleLanguageChange($event.target.value)"
+        >
+          <option
+            v-for="language in availableLanguages"
+            :key="language"
+            :value="language"
           >
-        </li>
-      </ul>
-      <ul class="w-1/2">
-        <li v-for="voice in secondHalf" :key="voice.name" class="mb-3">
-          <input
-            :id="voice.name"
-            v-model="selectedVoice"
-            type="radio"
-            :value="voice"
-            @input="setVoice(voice)"
-          />
-          <label
-            :for="voice.name"
-            class="dark:text-white ml-3 font-bold text-lg"
-            >{{ voice.name }}</label
-          >
-        </li>
-      </ul>
+            {{ getLanguageDisplayName(language) }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Voice Selection -->
+      <div class="flex">
+        <ul class="w-1/2">
+          <li v-for="voice in firstHalf" :key="voice.name" class="mb-3">
+            <input
+              :id="voice.name"
+              v-model="selectedVoice"
+              type="radio"
+              :value="voice"
+              @input="setVoice(voice)"
+            />
+            <label
+              :for="voice.name"
+              class="dark:text-white ml-3 font-bold text-lg"
+              >{{ voice.name }}</label
+            >
+          </li>
+        </ul>
+        <ul class="w-1/2">
+          <li v-for="voice in secondHalf" :key="voice.name" class="mb-3">
+            <input
+              :id="voice.name"
+              v-model="selectedVoice"
+              type="radio"
+              :value="voice"
+              @input="setVoice(voice)"
+            />
+            <label
+              :for="voice.name"
+              class="dark:text-white ml-3 font-bold text-lg"
+              >{{ voice.name }}</label
+            >
+          </li>
+        </ul>
+      </div>
     </div>
     <div v-else>
       <p class="text-red-700 dark:text-red-300">
