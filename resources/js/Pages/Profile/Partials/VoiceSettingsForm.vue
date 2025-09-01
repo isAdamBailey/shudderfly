@@ -68,14 +68,135 @@ const selectedLanguage = ref(
 );
 
 const getLanguageDisplayName = (languageCode) => {
+  // Normalize language code to handle both hyphen and underscore formats
+  const normalizedCode = languageCode.replace("_", "-");
+
+  // Fallback mapping for common language codes
+  const languageMap = {
+    "en-US": "English (United States)",
+    "en-GB": "English (United Kingdom)",
+    "en-AU": "English (Australia)",
+    "en-CA": "English (Canada)",
+    "es-ES": "Spanish (Spain)",
+    "es-MX": "Spanish (Mexico)",
+    "fr-FR": "French (France)",
+    "fr-CA": "French (Canada)",
+    "de-DE": "German (Germany)",
+    "it-IT": "Italian (Italy)",
+    "pt-BR": "Portuguese (Brazil)",
+    "pt-PT": "Portuguese (Portugal)",
+    "ru-RU": "Russian (Russia)",
+    "ja-JP": "Japanese (Japan)",
+    "ko-KR": "Korean (South Korea)",
+    "zh-CN": "Chinese (China)",
+    "zh-TW": "Chinese (Taiwan)",
+    "ar-SA": "Arabic (Saudi Arabia)",
+    "hi-IN": "Hindi (India)",
+    "nl-NL": "Dutch (Netherlands)",
+    "sv-SE": "Swedish (Sweden)",
+    "da-DK": "Danish (Denmark)",
+    "no-NO": "Norwegian (Norway)",
+    "fi-FI": "Finnish (Finland)",
+    "pl-PL": "Polish (Poland)",
+    "tr-TR": "Turkish (Turkey)",
+    "cs-CZ": "Czech (Czech Republic)",
+    "sk-SK": "Slovak (Slovakia)",
+    "hu-HU": "Hungarian (Hungary)",
+    "ro-RO": "Romanian (Romania)",
+    "bg-BG": "Bulgarian (Bulgaria)",
+    "hr-HR": "Croatian (Croatia)",
+    "sl-SI": "Slovenian (Slovenia)",
+    "et-EE": "Estonian (Estonia)",
+    "lv-LV": "Latvian (Latvia)",
+    "lt-LT": "Lithuanian (Lithuania)",
+    "el-GR": "Greek (Greece)",
+    "he-IL": "Hebrew (Israel)",
+    "th-TH": "Thai (Thailand)",
+    "vi-VN": "Vietnamese (Vietnam)",
+    "id-ID": "Indonesian (Indonesia)",
+    "ms-MY": "Malay (Malaysia)",
+    "fil-PH": "Filipino (Philippines)",
+    "uk-UA": "Ukrainian (Ukraine)",
+    "be-BY": "Belarusian (Belarus)",
+    "kk-KZ": "Kazakh (Kazakhstan)",
+    "uz-UZ": "Uzbek (Uzbekistan)",
+    "ky-KG": "Kyrgyz (Kyrgyzstan)",
+    "mn-MN": "Mongolian (Mongolia)",
+    "ka-GE": "Georgian (Georgia)",
+    "hy-AM": "Armenian (Armenia)",
+    "az-AZ": "Azerbaijani (Azerbaijan)",
+    "fa-IR": "Persian (Iran)",
+    "ur-PK": "Urdu (Pakistan)",
+    "bn-BD": "Bengali (Bangladesh)",
+    "si-LK": "Sinhala (Sri Lanka)",
+    "my-MM": "Burmese (Myanmar)",
+    "km-KH": "Khmer (Cambodia)",
+    "lo-LA": "Lao (Laos)",
+    "ne-NP": "Nepali (Nepal)",
+    "gu-IN": "Gujarati (India)",
+    "pa-IN": "Punjabi (India)",
+    "ta-IN": "Tamil (India)",
+    "te-IN": "Telugu (India)",
+    "kn-IN": "Kannada (India)",
+    "ml-IN": "Malayalam (India)",
+    "as-IN": "Assamese (India)",
+    "or-IN": "Odia (India)",
+    "mr-IN": "Marathi (India)",
+    "sa-IN": "Sanskrit (India)",
+    "bo-CN": "Tibetan (China)",
+    "ug-CN": "Uyghur (China)",
+    "ii-CN": "Yi (China)",
+    "af-ZA": "Afrikaans (South Africa)",
+    "zu-ZA": "Zulu (South Africa)",
+    "xh-ZA": "Xhosa (South Africa)",
+    "sw-KE": "Swahili (Kenya)",
+    "am-ET": "Amharic (Ethiopia)",
+    "so-SO": "Somali (Somalia)",
+    "ha-NG": "Hausa (Nigeria)",
+    "yo-NG": "Yoruba (Nigeria)",
+    "ig-NG": "Igbo (Nigeria)",
+    "rw-RW": "Kinyarwanda (Rwanda)",
+    "ak-GH": "Akan (Ghana)",
+    "lg-UG": "Ganda (Uganda)",
+    "sn-ZW": "Shona (Zimbabwe)",
+    "st-ZA": "Southern Sotho (South Africa)",
+    "tn-BW": "Tswana (Botswana)",
+    "ts-ZA": "Tsonga (South Africa)",
+    "ve-ZA": "Venda (South Africa)",
+    "nr-ZA": "Southern Ndebele (South Africa)",
+    "ss-ZA": "Swati (South Africa)",
+    "qu-PE": "Quechua (Peru)",
+    "ay-BO": "Aymara (Bolivia)",
+    "gn-PY": "Guarani (Paraguay)",
+    "eu-ES": "Basque (Spain)",
+    "ca-ES": "Catalan (Spain)",
+    "gl-ES": "Galician (Spain)",
+    "cy-GB": "Welsh (United Kingdom)",
+    "ga-IE": "Irish (Ireland)",
+    "is-IS": "Icelandic (Iceland)",
+    "mt-MT": "Maltese (Malta)",
+    "sq-AL": "Albanian (Albania)",
+    "mk-MK": "Macedonian (North Macedonia)",
+    "sr-RS": "Serbian (Serbia)",
+    "bs-BA": "Bosnian (Bosnia and Herzegovina)",
+    "me-ME": "Montenegrin (Montenegro)"
+  };
+
+  // Try Intl.DisplayNames first (modern browsers)
   try {
-    return (
-      new Intl.DisplayNames(["en"], { type: "language" }).of(languageCode) ||
-      languageCode
-    );
+    if (typeof Intl !== "undefined" && Intl.DisplayNames) {
+      const displayName = new Intl.DisplayNames(["en"], {
+        type: "language"
+      }).of(normalizedCode);
+      if (displayName) {
+        return displayName;
+      }
+    }
   } catch (error) {
-    return languageCode;
+    // Fall through to manual mapping
   }
+
+  return languageMap[normalizedCode] || languageCode;
 };
 
 const availableLanguages = computed(() => {
