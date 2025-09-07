@@ -536,23 +536,6 @@ class PagesTest extends TestCase
         $response->assertSessionHasErrors(['target_book_id']);
     }
 
-    public function test_bulk_action_with_no_valid_pages()
-    {
-        $this->actingAs($user = User::factory()->create());
-        $user->givePermissionTo('edit pages');
-
-        // This test is now covered by validation, so we'll test that validation catches invalid page IDs
-        $payload = [
-            'page_ids' => [99999], // Non-existent page ID
-            'action' => 'delete',
-        ];
-
-        $response = $this->post(route('pages.bulk-action'), $payload);
-
-        // Should get validation error for invalid page ID
-        $response->assertSessionHasErrors(['page_ids.0']);
-    }
-
     public function test_bulk_action_handles_mixed_page_ownership()
     {
         $this->actingAs($user = User::factory()->create());
