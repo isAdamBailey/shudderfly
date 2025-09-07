@@ -357,7 +357,6 @@ class PageController extends Controller
         switch ($action) {
             case 'delete':
                 foreach ($pages as $page) {
-                    // Delete associated media files
                     if ($page->media_path) {
                         Storage::disk('public')->delete($page->media_path);
                     }
@@ -370,8 +369,6 @@ class PageController extends Controller
                 break;
 
             case 'move_to_top':
-                // Set all selected pages to current timestamp to move them to top
-                // Each call to now() will have slightly different milliseconds
                 foreach ($pages as $page) {
                     $page->update(['created_at' => now()]);
                 }
@@ -385,8 +382,6 @@ class PageController extends Controller
                 }
                 $message = count($pages).' page(s) moved to "'.$targetBook->title.'" successfully.';
                 break;
-
-            // No default case needed; validation restricts action to allowed values.
         }
 
         return redirect(route('books.show', $book))->with('success', $message);

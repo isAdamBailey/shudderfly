@@ -48,7 +48,6 @@ const canSubmit = computed(() => {
 const submit = () => {
   if (!canSubmit.value) return;
 
-  // Set the form data
   form.page_ids = props.selectedPages;
 
   form.post(route("pages.bulk-action"), {
@@ -61,7 +60,6 @@ const submit = () => {
   });
 };
 
-// Watch for action changes to reset target book
 watch(
   () => form.action,
   (newAction) => {
@@ -95,7 +93,6 @@ watch(
 
     <form v-else @submit.prevent="submit">
       <div class="space-y-6">
-        <!-- Action Selection -->
         <div>
           <BreezeLabel for="action" value="Action" />
           <Multiselect
@@ -109,7 +106,6 @@ watch(
           />
         </div>
 
-        <!-- Target Book Selection (only for move to book action) -->
         <div v-if="form.action === 'move_to_book'">
           <BreezeLabel for="target_book" value="Target Book" />
           <Multiselect
@@ -123,7 +119,6 @@ watch(
           />
         </div>
 
-        <!-- Action Description -->
         <div
           v-if="form.action"
           class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded"
@@ -156,7 +151,6 @@ watch(
         </div>
       </div>
 
-      <!-- Submit Section -->
       <div class="flex justify-center mt-8">
         <Button
           type="submit"
