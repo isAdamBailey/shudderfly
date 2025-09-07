@@ -348,7 +348,11 @@ class PageController extends Controller
 
         $pages = Page::whereIn('id', $pageIds)->get();
 
-        $book = $pages->first()->book;
+        $firstPage = $pages->first();
+        if (!$firstPage) {
+            return redirect()->back()->with('error', 'No pages found for the requested action.');
+        }
+        $book = $firstPage->book;
 
         switch ($action) {
             case 'delete':
