@@ -536,8 +536,8 @@ const processBatch = async (specificFiles = null) => {
 
           form.post(route("pages.store"), {
             forceFormData: true,
-            preserveScroll: true,
-            preserveState: true,
+            preserveState: false,
+            preserveScroll: false,
             replace: false,
             onStart: () => {
               submissionStarted = true;

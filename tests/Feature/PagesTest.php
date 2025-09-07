@@ -364,4 +364,284 @@ class PagesTest extends TestCase
 
         $response->assertRedirect(route('books.show', $book));
     }
+
+    // Bulk Actions Tests
+
+    public function test_bulk_actions_requires_permission()
+    {
+        $this->actingAs(User::factory()->create());
+
+        $book = Book::factory()->has(Page::factory(3))->create();
+        $pageIds = $book->pages->pluck('id')->toArray();
+
+        $payload = [
+            'page_ids' => $pageIds,
+            'action' => 'delete',
+        ];
+
+        $this->post(route('pages.bulk-action'), $payload)->assertStatus(403);
+    }
+
+    public function test_bulk_delete_pages()
+    {
+        Storage::fake('public');
+
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        $book = Book::factory()->create();
+
+        // Create pages with media files
+        $pages = Page::factory()->for($book)->count(3)->create([
+            'media_path' => 'books/test/image.jpg',
+            'media_poster' => 'books/test/poster.jpg',
+        ]);
+
+        // Mock the storage files
+        Storage::disk('public')->put('books/test/image.jpg', 'fake image content');
+        Storage::disk('public')->put('books/test/poster.jpg', 'fake poster content');
+
+        $pageIds = $pages->pluck('id')->toArray();
+
+        $payload = [
+            'page_ids' => $pageIds,
+            'action' => 'delete',
+        ];
+
+        $response = $this->post(route('pages.bulk-action'), $payload);
+
+        // Assert pages are deleted
+        foreach ($pageIds as $pageId) {
+            $this->assertNull(Page::find($pageId));
+        }
+
+        // Assert files are deleted
+        Storage::disk('public')->assertMissing('books/test/image.jpg');
+        Storage::disk('public')->assertMissing('books/test/poster.jpg');
+
+        $response->assertRedirect(route('books.show', $book))
+            ->assertSessionHas('success', '3 page(s) deleted successfully.');
+    }
+
+    public function test_bulk_move_to_top()
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        $book = Book::factory()->create();
+
+        // Create pages with different timestamps
+        $oldPage1 = Page::factory()->for($book)->create(['created_at' => now()->subDays(10)]);
+        $oldPage2 = Page::factory()->for($book)->create(['created_at' => now()->subDays(5)]);
+        $recentPage = Page::factory()->for($book)->create(['created_at' => now()->subDay()]);
+
+        $pageIds = [$oldPage1->id, $oldPage2->id];
+
+        $payload = [
+            'page_ids' => $pageIds,
+            'action' => 'move_to_top',
+        ];
+
+        $response = $this->post(route('pages.bulk-action'), $payload);
+
+        // Assert pages have been moved to top (newer timestamps)
+        $freshOldPage1 = $oldPage1->fresh();
+        $freshOldPage2 = $oldPage2->fresh();
+        $freshRecentPage = $recentPage->fresh();
+
+        $this->assertTrue($freshOldPage1->created_at->gt($freshRecentPage->created_at));
+        $this->assertTrue($freshOldPage2->created_at->gt($freshRecentPage->created_at));
+
+        $response->assertRedirect(route('books.show', $book))
+            ->assertSessionHas('success', '2 page(s) moved to top successfully.');
+    }
+
+    public function test_bulk_move_to_book()
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        $sourceBook = Book::factory()->create();
+        $targetBook = Book::factory()->create();
+
+        $pages = Page::factory()->for($sourceBook)->count(3)->create();
+        $pageIds = $pages->pluck('id')->toArray();
+
+        $payload = [
+            'page_ids' => $pageIds,
+            'action' => 'move_to_book',
+            'target_book_id' => $targetBook->id,
+        ];
+
+        $response = $this->post(route('pages.bulk-action'), $payload);
+
+        // Assert all pages have been moved to target book
+        foreach ($pageIds as $pageId) {
+            $page = Page::find($pageId);
+            $this->assertSame($targetBook->id, $page->book_id);
+        }
+
+        $response->assertRedirect(route('books.show', $sourceBook))
+            ->assertSessionHas('success', '3 page(s) moved to "'.$targetBook->title.'" successfully.');
+    }
+
+    public function test_bulk_action_validation_errors()
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        // Test missing page_ids
+        $response = $this->post(route('pages.bulk-action'), [
+            'action' => 'delete',
+        ]);
+        $response->assertSessionHasErrors(['page_ids']);
+
+        // Test empty page_ids array
+        $response = $this->post(route('pages.bulk-action'), [
+            'page_ids' => [],
+            'action' => 'delete',
+        ]);
+        $response->assertSessionHasErrors(['page_ids']);
+
+        // Test invalid action
+        $response = $this->post(route('pages.bulk-action'), [
+            'page_ids' => [1, 2, 3],
+            'action' => 'invalid_action',
+        ]);
+        $response->assertSessionHasErrors(['action']);
+
+        // Test move_to_book without target_book_id
+        $response = $this->post(route('pages.bulk-action'), [
+            'page_ids' => [1, 2, 3],
+            'action' => 'move_to_book',
+        ]);
+        $response->assertSessionHasErrors(['target_book_id']);
+
+        // Test non-existent page IDs
+        $response = $this->post(route('pages.bulk-action'), [
+            'page_ids' => [99999],
+            'action' => 'delete',
+        ]);
+        $response->assertSessionHasErrors(['page_ids.0']);
+
+        // Test non-existent target book
+        $book = Book::factory()->has(Page::factory())->create();
+        $pageId = $book->pages->first()->id;
+
+        $response = $this->post(route('pages.bulk-action'), [
+            'page_ids' => [$pageId],
+            'action' => 'move_to_book',
+            'target_book_id' => 99999,
+        ]);
+        $response->assertSessionHasErrors(['target_book_id']);
+    }
+
+    public function test_bulk_action_with_no_valid_pages()
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        // This test is now covered by validation, so we'll test that validation catches invalid page IDs
+        $payload = [
+            'page_ids' => [99999], // Non-existent page ID
+            'action' => 'delete',
+        ];
+
+        $response = $this->post(route('pages.bulk-action'), $payload);
+
+        // Should get validation error for invalid page ID
+        $response->assertSessionHasErrors(['page_ids.0']);
+    }
+
+    public function test_bulk_action_handles_mixed_page_ownership()
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        $book1 = Book::factory()->create();
+        $book2 = Book::factory()->create();
+
+        $pagesBook1 = Page::factory()->for($book1)->count(2)->create();
+        $pagesBook2 = Page::factory()->for($book2)->count(2)->create();
+
+        // Mix pages from different books
+        $pageIds = [
+            $pagesBook1->first()->id,
+            $pagesBook2->first()->id,
+        ];
+
+        $payload = [
+            'page_ids' => $pageIds,
+            'action' => 'delete',
+        ];
+
+        $response = $this->post(route('pages.bulk-action'), $payload);
+
+        // Should redirect to the book of the first page
+        $response->assertRedirect(route('books.show', $book1))
+            ->assertSessionHas('success', '2 page(s) deleted successfully.');
+
+        // Both pages should be deleted regardless of which book they belong to
+        foreach ($pageIds as $pageId) {
+            $this->assertNull(Page::find($pageId));
+        }
+    }
+
+    public function test_bulk_delete_handles_missing_media_files_gracefully()
+    {
+        Storage::fake('public');
+
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        $book = Book::factory()->create();
+
+        // Create pages with media paths but don't actually create the files
+        $pages = Page::factory()->for($book)->count(2)->create([
+            'media_path' => 'books/test/nonexistent.jpg',
+            'media_poster' => 'books/test/nonexistent_poster.jpg',
+        ]);
+
+        $pageIds = $pages->pluck('id')->toArray();
+
+        $payload = [
+            'page_ids' => $pageIds,
+            'action' => 'delete',
+        ];
+
+        // Should not throw an error even if files don't exist
+        $response = $this->post(route('pages.bulk-action'), $payload);
+
+        // Assert pages are still deleted
+        foreach ($pageIds as $pageId) {
+            $this->assertNull(Page::find($pageId));
+        }
+
+        $response->assertRedirect(route('books.show', $book))
+            ->assertSessionHas('success', '2 page(s) deleted successfully.');
+    }
+
+    public function test_bulk_action_preserves_original_book_context()
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        $sourceBook = Book::factory()->create();
+        $targetBook = Book::factory()->create();
+
+        $pages = Page::factory()->for($sourceBook)->count(3)->create();
+        $pageIds = $pages->pluck('id')->toArray();
+
+        $payload = [
+            'page_ids' => $pageIds,
+            'action' => 'move_to_book',
+            'target_book_id' => $targetBook->id,
+        ];
+
+        $response = $this->post(route('pages.bulk-action'), $payload);
+
+        // Should always redirect back to the original book (source book)
+        // regardless of the action performed
+        $response->assertRedirect(route('books.show', $sourceBook));
+    }
 }
