@@ -12,7 +12,6 @@ use App\Models\Book;
 use App\Models\Collage;
 use App\Models\Page;
 use App\Models\SiteSetting;
-use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
@@ -144,7 +143,7 @@ class PageController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StorePageRequest $request): Redirector|RedirectResponse|Application
+    public function store(StorePageRequest $request): Redirector|RedirectResponse
     {
         $book = Book::find($request->book_id);
         $successMessage = 'Page created successfully!';
@@ -193,7 +192,7 @@ class PageController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdatePageRequest $request, Page $page): Redirector|RedirectResponse|Application
+    public function update(UpdatePageRequest $request, Page $page): Redirector|RedirectResponse
     {
         if ($request->hasFile('image')) {
             $file = $request->file('image');
@@ -300,7 +299,7 @@ class PageController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Page $page): Redirector|RedirectResponse|Application
+    public function destroy(Page $page): Redirector|RedirectResponse
     {
         // Get raw database values, not the accessor-transformed URLs
         $rawMediaPoster = $page->getAttributes()['media_poster'] ?? null;
@@ -333,7 +332,7 @@ class PageController extends Controller
     /**
      * Handle bulk actions on pages
      */
-    public function bulkAction(Request $request): Redirector|RedirectResponse|Application
+    public function bulkAction(Request $request): Redirector|RedirectResponse
     {
         $request->validate([
             'page_ids' => 'required|array|min:1',
