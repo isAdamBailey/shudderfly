@@ -375,7 +375,7 @@ class PageController extends Controller
                 break;
 
             case 'move_to_book':
-                $targetBook = Book::find($targetBookId);
+                $targetBook = Book::findOrFail($targetBookId);
                 foreach ($pages as $page) {
                     $page->update(['book_id' => $targetBookId]);
                 }
