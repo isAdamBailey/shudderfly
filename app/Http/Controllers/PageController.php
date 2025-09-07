@@ -329,4 +329,67 @@ class PageController extends Controller
             pageId: $request->page_id
         );
     }
+
+    /**
+     * Handle bulk actions on pages
+     */
+    public function bulkAction(Request $request): Redirector|RedirectResponse|Application
+    {
+        $request->validate([
+            'page_ids' => 'required|array|min:1',
+            'page_ids.*' => 'integer|exists:pages,id',
+            'action' => 'required|string|in:delete,move_to_top,move_to_book',
+            'target_book_id' => 'required_if:action,move_to_book|nullable|integer|exists:books,id',
+        ]);
+
+        $pageIds = $request->page_ids;
+        $action = $request->action;
+        $targetBookId = $request->target_book_id;
+
+        $pages = Page::whereIn('id', $pageIds)->get();
+
+        if ($pages->isEmpty()) {
+            return redirect()->back()->with('error', 'No valid pages found.');
+        }
+
+        $book = $pages->first()->book;
+
+        switch ($action) {
+            case 'delete':
+                foreach ($pages as $page) {
+                    // Delete associated media files
+                    if ($page->media_path) {
+                        Storage::disk('public')->delete($page->media_path);
+                    }
+                    if ($page->media_poster) {
+                        Storage::disk('public')->delete($page->media_poster);
+                    }
+                    $page->delete();
+                }
+                $message = count($pages).' page(s) deleted successfully.';
+                break;
+
+            case 'move_to_top':
+                // Set all selected pages to current timestamp to move them to top
+                // Each call to now() will have slightly different milliseconds
+                foreach ($pages as $page) {
+                    $page->update(['created_at' => now()]);
+                }
+                $message = count($pages).' page(s) moved to top successfully.';
+                break;
+
+            case 'move_to_book':
+                $targetBook = Book::find($targetBookId);
+                foreach ($pages as $page) {
+                    $page->update(['book_id' => $targetBookId]);
+                }
+                $message = count($pages).' page(s) moved to "'.$targetBook->title.'" successfully.';
+                break;
+
+            default:
+                return redirect()->back()->with('error', 'Invalid action specified.');
+        }
+
+        return redirect(route('books.show', $book))->with('success', $message);
+    }
 }
