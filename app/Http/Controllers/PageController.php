@@ -382,8 +382,7 @@ class PageController extends Controller
                 $message = count($pages).' page(s) moved to "'.$targetBook->title.'" successfully.';
                 break;
 
-            default:
-                return redirect()->back()->with('error', 'Invalid action specified.');
+            // No default case needed; validation restricts action to allowed values.
         }
 
         return redirect(route('books.show', $book))->with('success', $message);
