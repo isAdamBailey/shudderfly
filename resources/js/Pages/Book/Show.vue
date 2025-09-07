@@ -27,6 +27,16 @@
             <span v-else>Edit Book</span>
           </Button>
           <Button
+            v-if="canEditPages"
+            type="button"
+            :class="bulkActionsOpen ? '!bg-red-700' : ''"
+            class="ml-2 font-bold px-12"
+            @click="toggleBulkActions"
+          >
+            <span v-if="bulkActionsOpen">Close</span>
+            <span v-else>Bulk Actions</span>
+          </Button>
+          <Button
             type="button"
             class="ml-2 text-gray-100"
             :disabled="speaking"
@@ -60,6 +70,21 @@
       </div>
     </div>
 
+    <div v-if="canEditPages && bulkActionsOpen" class="w-full mt-4 md:ml-2">
+      <div>
+        <BreezeValidationErrors class="mb-4" />
+      </div>
+      <div class="flex flex-col md:flex-row justify-around">
+        <BulkActionsForm
+          :book="book"
+          :books="books"
+          :selected-pages="selectedPages"
+          @close-form="bulkActionsOpen = false"
+          @selection-changed="handleSelectionChanged"
+        />
+      </div>
+    </div>
+
     <div
       class="mt-3 md:mt-0 mx-auto grid max-w-7xl gap-2 md:p-4 grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] md:grid-cols-[repeat(auto-fit,minmax(18rem,1fr))]"
     >
@@ -67,8 +92,24 @@
         v-for="page in items"
         :key="page.id"
         class="rounded-lg bg-gray-300 shadow-sm relative overflow-hidden h-80"
+        :class="{
+          'ring-2 ring-blue-500': selectedPages.includes(page.id),
+          'cursor-pointer': bulkActionsOpen
+        }"
+        @click="bulkActionsOpen ? togglePageSelection(page.id) : null"
       >
+        <!-- Bulk selection checkbox -->
+        <div v-if="bulkActionsOpen" class="absolute top-2 left-2 z-10">
+          <input
+            type="checkbox"
+            :checked="selectedPages.includes(page.id)"
+            class="w-5 h-5 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 pointer-events-none"
+            readonly
+          />
+        </div>
+
         <Link
+          v-if="!bulkActionsOpen"
           prefetch
           class="w-full h-full block"
           :href="route('pages.show', page)"
@@ -101,6 +142,34 @@
             v-html="page.content"
           ></div>
         </Link>
+
+        <!-- Content display when in bulk actions mode -->
+        <div v-else class="w-full h-full block">
+          <div
+            v-if="page.loading"
+            class="absolute inset-0 flex items-center justify-center bg-white/70"
+          >
+            <span class="animate-spin text-black"
+              ><i class="ri-loader-line text-3xl"></i
+            ></span>
+          </div>
+          <LazyLoader
+            v-if="mediaPath(page)"
+            :src="mediaPath(page)"
+            :object-fit="'cover'"
+            :fill-container="true"
+          />
+          <VideoWrapper
+            v-if="page.video_link"
+            :url="page.video_link"
+            :controls="false"
+          />
+          <div
+            v-if="page.content"
+            class="absolute inset-x-0 top-0 rounded-t-lg w-full truncate bg-white/70 py-2.5 text-left px-2 text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
+            v-html="page.content"
+          ></div>
+        </div>
       </div>
     </div>
     <div ref="infiniteScrollRef"></div>
@@ -129,6 +198,7 @@ import { usePermissions } from "@/composables/permissions";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import BulkActionsForm from "@/Pages/Book/BulkActionsForm.vue";
 import EditBookForm from "@/Pages/Book/EditBookForm.vue";
 import NewPageForm from "@/Pages/Book/NewPageForm.vue";
 import SimilarBooks from "@/Pages/Book/SimilarBooks.vue";
@@ -148,7 +218,8 @@ const props = defineProps({
   pages: { type: Object, required: true },
   authors: { type: Array, required: true },
   categories: { type: Array, default: null },
-  similarBooks: { type: Array, default: null }
+  similarBooks: { type: Array, default: null },
+  books: { type: Array, default: null }
 });
 
 const { items, infiniteScrollRef, setItemLoading } = useInfiniteScroll(
@@ -158,15 +229,16 @@ const { items, infiniteScrollRef, setItemLoading } = useInfiniteScroll(
 
 let pageSettingsOpen = ref(false);
 let bookSettingsOpen = ref(false);
-
-const hasCoverImage = computed(() => {
-  return !!props.book.cover_image?.media_path;
-});
+let bulkActionsOpen = ref(false);
+let selectedPages = ref([]);
 
 const togglePageSettings = () => {
   pageSettingsOpen.value = !pageSettingsOpen.value;
   if (bookSettingsOpen.value) {
     bookSettingsOpen.value = false;
+  }
+  if (bulkActionsOpen.value) {
+    bulkActionsOpen.value = false;
   }
 };
 
@@ -175,6 +247,35 @@ const toggleBookSettings = () => {
   if (pageSettingsOpen.value) {
     pageSettingsOpen.value = false;
   }
+  if (bulkActionsOpen.value) {
+    bulkActionsOpen.value = false;
+  }
+};
+
+const toggleBulkActions = () => {
+  bulkActionsOpen.value = !bulkActionsOpen.value;
+  if (pageSettingsOpen.value) {
+    pageSettingsOpen.value = false;
+  }
+  if (bookSettingsOpen.value) {
+    bookSettingsOpen.value = false;
+  }
+  if (!bulkActionsOpen.value) {
+    selectedPages.value = [];
+  }
+};
+
+const togglePageSelection = (pageId) => {
+  const index = selectedPages.value.indexOf(pageId);
+  if (index > -1) {
+    selectedPages.value.splice(index, 1);
+  } else {
+    selectedPages.value.push(pageId);
+  }
+};
+
+const handleSelectionChanged = (newSelection) => {
+  selectedPages.value = newSelection;
 };
 
 const stripHtml = (html) => {

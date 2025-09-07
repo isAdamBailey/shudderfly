@@ -61,6 +61,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/books/{book}', [BookController::class, 'destroy'])->name('books.destroy');
 
         Route::post('/pages', [PageController::class, 'store'])->name('pages.store');
+        Route::post('/pages/bulk-action', [PageController::class, 'bulkAction'])->name('pages.bulk-action');
         Route::post('/pages/{page}', [PageController::class, 'update'])->name('pages.update');
         Route::delete('/pages/{page}', [PageController::class, 'destroy'])->name('pages.destroy');
 
