@@ -348,10 +348,6 @@ class PageController extends Controller
 
         $pages = Page::whereIn('id', $pageIds)->get();
 
-        if ($pages->isEmpty()) {
-            return redirect()->back()->with('error', 'No valid pages found.');
-        }
-
         $book = $pages->first()->book;
 
         switch ($action) {
