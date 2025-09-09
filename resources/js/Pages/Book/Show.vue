@@ -4,13 +4,13 @@
   <BreezeAuthenticatedLayout>
     <template #header>
       <BookCover :book="book" :pages="pages" />
-      <div class="p-2 flex justify-end flex-nowrap align-middle">
-        <div class="flex max-h-10">
+      <div class="p-2 flex justify-end align-middle">
+        <div class="flex flex-wrap gap-2">
           <Button
             v-if="canEditPages"
             type="button"
             :class="pageSettingsOpen ? '!bg-red-700' : ''"
-            class="ml-2 font-bold px-12"
+            class="font-bold px-12"
             @click="togglePageSettings"
           >
             <span v-if="pageSettingsOpen">Close</span>
@@ -20,7 +20,7 @@
             v-if="canEditPages"
             type="button"
             :class="bookSettingsOpen ? '!bg-red-700' : ''"
-            class="ml-2 font-bold px-12"
+            class="font-bold px-12"
             @click="toggleBookSettings"
           >
             <span v-if="bookSettingsOpen">Close</span>
@@ -30,7 +30,7 @@
             v-if="canEditPages"
             type="button"
             :class="bulkActionsOpen ? '!bg-red-700' : ''"
-            class="ml-2 font-bold px-12"
+            class="font-bold px-12"
             @click="toggleBulkActions"
           >
             <span v-if="bulkActionsOpen">Close</span>
@@ -38,7 +38,7 @@
           </Button>
           <Button
             type="button"
-            class="ml-2 text-gray-100"
+            class="text-gray-100"
             :disabled="speaking"
             @click="readTitleAndExcerpt"
           >
