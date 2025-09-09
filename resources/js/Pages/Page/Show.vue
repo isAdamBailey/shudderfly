@@ -26,7 +26,8 @@
       <div class="text-center">
         <div class="relative min-h-[60vh]">
           <div
-            class="w-full flex items-center justify-center relative touch-pan-y"
+            class="w-full flex items-center justify-center relative"
+            style="touch-action: pan-y pinch-zoom"
             @touchstart.passive="onTouchStart"
             @touchmove.passive="onTouchMove"
             @touchend="onTouchEnd"
@@ -200,6 +201,12 @@ function goToBook() {
 }
 
 function onTouchStart(event) {
+  // Only handle single-finger touches to allow pinch-to-zoom
+  if (event.touches.length > 1) {
+    isSwiping.value = false;
+    return;
+  }
+
   const t =
     (event.changedTouches && event.changedTouches[0]) || event.touches[0];
   if (!t) return;
@@ -216,6 +223,9 @@ function onTouchMove() {
 function onTouchEnd(event) {
   if (!isSwiping.value) return;
   isSwiping.value = false;
+
+  // Don't handle multi-touch gestures (allow pinch-to-zoom)
+  if (event.touches.length > 1) return;
 
   const t = (event.changedTouches && event.changedTouches[0]) || event;
   if (!t) return;
