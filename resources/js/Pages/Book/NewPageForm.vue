@@ -82,6 +82,7 @@ const form = useForm({
 });
 
 const imageInput = ref(null);
+const addMoreInput = ref(null);
 const mediaOption = ref("single"); // single, multiple, link
 
 const { compressionProgress, optimizationProgress, processMediaFile } =
@@ -123,9 +124,25 @@ const processSingleFile = async (file) => {
     } else {
       // Use DataURL for images for crisp thumbnails
       const reader = new FileReader();
+
+      // Add timeout for FileReader operations
+      const timeoutDuration = 30000; // 30s timeout
+
+      const timeout = setTimeout(() => {
+        reader.abort();
+        singleFilePreview.value = null;
+      }, timeoutDuration);
+
       reader.onload = (e) => {
+        clearTimeout(timeout);
         singleFilePreview.value = e.target.result;
       };
+
+      reader.onerror = () => {
+        clearTimeout(timeout);
+        singleFilePreview.value = null;
+      };
+
       reader.readAsDataURL(file);
     }
   } catch (error) {
@@ -429,17 +446,13 @@ const selectLink = () => {
   singleFileOriginal.value = null; // Clear original file
 };
 
-const selectNewImage = () => {
-  if (imageInput.value) {
-    imageInput.value.value = null;
-  }
-  imageInput.value.click();
-};
-
 const updateImagePreview = async (event) => {
   const files = Array.from(event.target.files);
 
   if (files.length === 0) return;
+
+  // Add a small delay to ensure the file input is fully processed
+  await new Promise((resolve) => setTimeout(resolve, 50));
 
   // Handle based on selected mode
   if (mediaOption.value === "single") {
@@ -461,6 +474,13 @@ const updateImagePreview = async (event) => {
     } else {
       await handleMultipleFiles(files);
     }
+  }
+
+  // Reset the input value after processing to allow re-selecting the same files
+  if (event.target === imageInput.value) {
+    imageInput.value.value = "";
+  } else if (event.target === addMoreInput.value) {
+    addMoreInput.value.value = "";
   }
 };
 
@@ -631,6 +651,8 @@ const processBatch = async (specificFiles = null) => {
   } catch (error) {
     batchError.value =
       error.message || "An unexpected error occurred during batch processing";
+    batchProcessing.value = false;
+    isSubmitting.value = false;
   }
 };
 
@@ -733,6 +755,10 @@ let v$ = useVuelidate(rules, form);
 
 onMounted(() => {
   loadDraft();
+
+  // Reset any stuck submission states on mount (mobile recovery)
+  isSubmitting.value = false;
+  batchProcessing.value = false;
 });
 
 onUnmounted(() => {
@@ -862,21 +888,21 @@ onUnmounted(() => {
         >
           <BreezeLabel for="imageInput" value="Media" />
 
-          <!-- Hidden file input -->
-          <input
-            ref="imageInput"
-            type="file"
-            class="hidden"
-            :multiple="mediaOption === 'multiple'"
-            accept="image/*,video/*"
-            @change="updateImagePreview"
-          />
-
           <div
             v-if="previewFiles.length === 0"
             data-test="drop-zone"
             class="relative border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500"
           >
+            <!-- File input overlay for mobile compatibility -->
+            <input
+              ref="imageInput"
+              type="file"
+              class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              :multiple="mediaOption === 'multiple'"
+              accept="image/*,video/*"
+              @change="updateImagePreview"
+            />
+
             <!-- Empty state -->
             <div class="space-y-3">
               <div class="mx-auto w-12 h-12 text-gray-400">
@@ -893,18 +919,12 @@ onUnmounted(() => {
                 </p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">
                   <span v-if="mediaOption === 'single'"
-                    >Click to select a file (images and videos up to 60MB)</span
+                    >Tap to select a file</span
                   >
-                  <span v-else
-                    >Click to select files (images and videos up to 60MB)</span
-                  >
+                  <span v-else>Tap to select files</span>
                 </p>
               </div>
-              <Button
-                type="button"
-                class="mt-2"
-                @click.prevent="selectNewImage"
-              >
+              <Button type="button" class="mt-2 pointer-events-none">
                 <span v-if="mediaOption === 'single'">Select Media File</span>
                 <span v-else>Select Media Files</span>
               </Button>
@@ -920,13 +940,19 @@ onUnmounted(() => {
               <h4 class="font-medium text-gray-900 dark:text-gray-100">
                 Selected Files ({{ previewFiles.length }})
               </h4>
-              <Button
-                type="button"
-                class="text-sm"
-                @click.prevent="selectNewImage"
-              >
-                Add More Files
-              </Button>
+              <div class="relative">
+                <input
+                  ref="addMoreInput"
+                  type="file"
+                  class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  multiple
+                  accept="image/*,video/*"
+                  @change="updateImagePreview"
+                />
+                <Button type="button" class="text-sm pointer-events-none">
+                  Add More Files
+                </Button>
+              </div>
             </div>
 
             <PreviewsGrid
