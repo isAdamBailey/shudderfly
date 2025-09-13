@@ -33,6 +33,7 @@ final class ReadThrottle
 
     /**
      * Dispatch a queue job immediately in testing/sync environments, or with a small delay otherwise.
+     * Read count jobs are sent to database queue to avoid AWS SQS usage.
      * This consolidates the conditional logic used in controllers.
      */
     public static function dispatchJob(ShouldQueue $job, int $delaySeconds = 5): void
@@ -41,6 +42,12 @@ final class ReadThrottle
         if (app()->environment('testing') || config('queue.default') === 'sync') {
             dispatch($job);
 
+            return;
+        }
+
+        // Send read count jobs to database queue instead of SQS to save AWS costs
+        if ($job instanceof \App\Jobs\IncrementPageReadCount || $job instanceof \App\Jobs\IncrementBookReadCount) {
+            dispatch($job)->onConnection('database')->delay(now()->addSeconds($delaySeconds));
             return;
         }
 
