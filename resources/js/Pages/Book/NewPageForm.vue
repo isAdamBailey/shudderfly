@@ -89,6 +89,8 @@ const { compressionProgress, optimizationProgress, processMediaFile } =
   useVideoOptimization();
 
 // Global optimizing state: true if any optimization is happening
+// Removed mobile detection - using consistent behavior across all devices
+
 const isOptimizing = computed(() => {
   // Single-file optimization
   if (singleFileProcessing.value) return true;
@@ -541,75 +543,54 @@ const processBatch = async (specificFiles = null) => {
         form.image = fileForUpload;
         form.video_link = null;
 
-        await new Promise((resolve, reject) => {
-          const submissionTimeout = setTimeout(() => {
-            const timeoutError = new Error(
-              "Upload timed out - form submission took too long"
-            );
-            // Set a specific flag for timeout errors
-            fileObj.timeoutError = true;
-            reject(timeoutError);
-          }, 30000); // 30 second timeout
+        let uploadSuccessful = false;
+        let uploadError = null;
 
-          // Track form submission state to help diagnose hanging issues
-          let submissionStarted = false;
-
-          form.post(route("pages.store"), {
-            forceFormData: true,
-            preserveState: false,
-            preserveScroll: false,
-            replace: false,
-            onStart: () => {
-              submissionStarted = true;
-            },
-            onSuccess: () => {
-              clearTimeout(submissionTimeout);
-              resolve();
-            },
-            onError: (errors) => {
-              clearTimeout(submissionTimeout);
-              reject(errors);
-            },
-            onFinish: () => {
-              clearTimeout(submissionTimeout);
-            }
-          });
-
-          // Additional timeout to detect if form.post() itself hangs
-          setTimeout(() => {
-            if (!submissionStarted) {
-              clearTimeout(submissionTimeout);
-              const postError = new Error(
-                "Form submission failed to start - form.post() hung"
-              );
-              fileObj.postError = true;
-              reject(postError);
-            }
-          }, 5000); // 5 second timeout for form.post() to start
-        });
-
-        fileObj.uploaded = true;
-
-        // Remove the uploaded file from the selectedFiles array
-        // We need to find the file by matching the file object, not the fileObj reference
-        const liveIndex = selectedFiles.value.findIndex(
-          (f) => f.file === fileObj.file
-        );
-        if (liveIndex !== -1) {
-          selectedFiles.value.splice(liveIndex, 1);
-        }
-
-        // Immediately remove preview as the file has been uploaded
         try {
-          revokeObjectURLIfNeeded(fileObj.preview);
-        } catch (e) {
-          // no-op
+          await new Promise((resolve, reject) => {
+            form.post(route("pages.store"), {
+              forceFormData: true,
+              preserveState: true,
+              preserveScroll: true,
+              replace: false,
+              onSuccess: () => {
+                uploadSuccessful = true;
+                resolve();
+              },
+              onError: (errors) => {
+                uploadError = errors;
+                reject(errors);
+              }
+            });
+          });
+        } catch (error) {
+          uploadError = error;
         }
-        fileObj.preview = null;
 
-        // Delay between uploads for stability
-        if (i < filesToUpload.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 500));
+        if (uploadSuccessful) {
+          fileObj.uploaded = true;
+
+          // Remove the uploaded file from the selectedFiles array
+          const liveIndex = selectedFiles.value.findIndex(
+            (f) => f.file === fileObj.file
+          );
+          if (liveIndex !== -1) {
+            selectedFiles.value.splice(liveIndex, 1);
+          }
+
+          // Clean up preview
+          try {
+            revokeObjectURLIfNeeded(fileObj.preview);
+          } catch (e) {
+            // no-op
+          }
+          fileObj.preview = null;
+
+          if (i < filesToUpload.length - 1) {
+            await new Promise((resolve) => setTimeout(resolve, 500));
+          }
+        } else {
+          throw uploadError || new Error("Upload failed");
         }
       } catch (error) {
         fileObj.error = error;
@@ -656,8 +637,18 @@ const processBatch = async (specificFiles = null) => {
   }
 };
 
-const handleFormSubmit = async () => {
-  await submit();
+const handleFormSubmit = async (event) => {
+  if (isSubmitting.value || batchProcessing.value) {
+    if (event) event.preventDefault();
+    return;
+  }
+
+  try {
+    await submit();
+  } catch (error) {
+    isSubmitting.value = false;
+    batchProcessing.value = false;
+  }
 };
 
 const submit = async () => {
@@ -666,28 +657,24 @@ const submit = async () => {
     return;
   }
 
-  const validated = await v$.value.$validate();
+  if (isSubmitting.value) return;
+  isSubmitting.value = true;
 
-  if (validated) {
-    if (isSubmitting.value) return;
-    isSubmitting.value = true;
-    form.post(route("pages.store"), {
-      preserveScroll: true,
-      forceFormData: true,
-      onSuccess: () => {
-        // Revoke any object URL previews before clearing state
-        cleanupPreviews();
-        selectedFiles.value = [];
-        form.reset();
-        clearDraft();
-        emit("close-form");
-      },
-      onError: () => {},
-      onFinish: () => {
-        isSubmitting.value = false;
-      }
-    });
-  }
+  form.post(route("pages.store"), {
+    forceFormData: true,
+    preserveScroll: true,
+    onSuccess: () => {
+      // Revoke any object URL previews before clearing state
+      cleanupPreviews();
+      selectedFiles.value = [];
+      form.reset();
+      clearDraft();
+      emit("close-form");
+    },
+    onFinish: () => {
+      isSubmitting.value = false;
+    }
+  });
 };
 
 // Validation rules
@@ -1134,7 +1121,7 @@ onUnmounted(() => {
             isOptimizing ||
             v$.$error
           "
-          @click="handleFormSubmit"
+          @click.prevent="handleFormSubmit"
         >
           <span class="text-xl">
             {{
