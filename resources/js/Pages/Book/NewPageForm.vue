@@ -547,22 +547,67 @@ const processBatch = async (specificFiles = null) => {
         let uploadError = null;
 
         try {
-          await new Promise((resolve, reject) => {
-            form.post(route("pages.store"), {
-              forceFormData: true,
-              preserveState: true,
-              preserveScroll: true,
-              replace: false,
-              onSuccess: () => {
-                uploadSuccessful = true;
-                resolve();
-              },
-              onError: (errors) => {
-                uploadError = errors;
-                reject(errors);
+          // Track if form.post() was actually called
+          let formPostCalled = false;
+          let formPostStarted = false;
+
+          // Add timeout to prevent hanging uploads
+          await Promise.race([
+            new Promise((resolve, reject) => {
+              try {
+                formPostCalled = true;
+
+                form.post(route("pages.store"), {
+                  forceFormData: true,
+                  preserveState: true,
+                  preserveScroll: true,
+                  replace: false,
+                  onStart: () => {
+                    formPostStarted = true;
+                  },
+                  onSuccess: () => {
+                    uploadSuccessful = true;
+                    resolve();
+                  },
+                  onError: (errors) => {
+                    uploadError = errors;
+                    reject(errors);
+                  },
+                  onFinish: () => {
+                    // Ensure we always resolve/reject
+                    if (!uploadSuccessful && !uploadError) {
+                      uploadError = new Error(
+                        "Upload completed but status unclear"
+                      );
+                      reject(uploadError);
+                    }
+                  }
+                });
+              } catch (e) {
+                reject(
+                  new Error(`form.post() failed to execute: ${e.message}`)
+                );
               }
-            });
-          });
+            }),
+            // 30 second timeout to prevent hanging
+            new Promise((_, reject) => {
+              setTimeout(() => {
+                if (!formPostCalled) {
+                  reject(
+                    new Error(`form.post() was never called for file ${i + 1}`)
+                  );
+                } else if (!formPostStarted) {
+                  reject(
+                    new Error(
+                      `form.post() called but never started for file ${i + 1}`
+                    )
+                  );
+                } else {
+                  reject(new Error(`Upload timeout for file ${i + 1}`));
+                }
+              }, 30000);
+            })
+          ]);
         } catch (error) {
           uploadError = error;
         }
@@ -590,7 +635,50 @@ const processBatch = async (specificFiles = null) => {
             await new Promise((resolve) => setTimeout(resolve, 500));
           }
         } else {
-          throw uploadError || new Error("Upload failed");
+          // If upload was not successful, try a more direct approach for mobile
+          if (
+            uploadError &&
+            uploadError.message &&
+            uploadError.message.includes("form.post() was never called")
+          ) {
+            // Mobile browsers might be blocking form.post() - try manual FormData approach
+            try {
+              const formData = new FormData();
+              formData.append("book_id", form.book_id);
+              formData.append("content", form.content);
+              formData.append("image", fileForUpload);
+              formData.append(
+                "_token",
+                document
+                  .querySelector('meta[name="csrf-token"]')
+                  ?.getAttribute("content") || ""
+              );
+
+              const response = await fetch(route("pages.store"), {
+                method: "POST",
+                body: formData,
+                headers: {
+                  "X-Requested-With": "XMLHttpRequest"
+                }
+              });
+
+              if (response.ok) {
+                uploadSuccessful = true;
+                fileObj.uploaded = true;
+              } else {
+                throw new Error(`Manual upload failed: ${response.status}`);
+              }
+            } catch (fetchError) {
+              const errorMsg = `Fallback upload failed: ${fetchError.message}`;
+              throw new Error(`File ${i + 1}: ${errorMsg}`);
+            }
+          } else {
+            // If upload was not successful, provide clear error info
+            const errorMsg = uploadError
+              ? uploadError.message || "Upload failed"
+              : "Upload failed - no response received";
+            throw new Error(`File ${i + 1}: ${errorMsg}`);
+          }
         }
       } catch (error) {
         fileObj.error = error;
@@ -613,22 +701,30 @@ const processBatch = async (specificFiles = null) => {
         }
       }
 
-      // Update progress to show completed uploads
-      batchProgress.value = Math.round(((i + 1) / filesToUpload.length) * 100);
+      // Update progress to show completed uploads (regardless of success/failure)
+      const progressPercent = Math.round(
+        ((i + 1) / filesToUpload.length) * 100
+      );
+      batchProgress.value = progressPercent;
     }
 
+    // Ensure progress shows 100% and processing stops
     batchProgress.value = 100;
     batchProcessing.value = false;
     isSubmitting.value = false;
 
-    if (failedUploads.value.length === 0) {
-      setTimeout(() => {
-        // Revoke any object URL previews before clearing state and closing
+    // Always show results for a moment, then close if successful
+    setTimeout(() => {
+      if (failedUploads.value.length === 0) {
+        // All successful - clean up and close
         cleanupPreviews();
         clearDraft();
         emit("close-form");
-      }, 1000);
-    }
+      } else {
+        // Some failed - stay open to show errors
+        // User can manually close or retry failed uploads
+      }
+    }, 1500); // Longer delay to show final state
   } catch (error) {
     batchError.value =
       error.message || "An unexpected error occurred during batch processing";
@@ -660,21 +756,50 @@ const submit = async () => {
   if (isSubmitting.value) return;
   isSubmitting.value = true;
 
-  form.post(route("pages.store"), {
-    forceFormData: true,
-    preserveScroll: true,
-    onSuccess: () => {
-      // Revoke any object URL previews before clearing state
-      cleanupPreviews();
-      selectedFiles.value = [];
-      form.reset();
-      clearDraft();
-      emit("close-form");
-    },
-    onFinish: () => {
-      isSubmitting.value = false;
-    }
-  });
+  try {
+    // Track if form.post() was called for single uploads too
+    let formPostStarted = false;
+
+    await Promise.race([
+      new Promise((resolve, reject) => {
+        form.post(route("pages.store"), {
+          forceFormData: true,
+          preserveScroll: true,
+          onStart: () => {
+            formPostStarted = true;
+          },
+          onSuccess: () => {
+            // Revoke any object URL previews before clearing state
+            cleanupPreviews();
+            selectedFiles.value = [];
+            form.reset();
+            clearDraft();
+            emit("close-form");
+            resolve();
+          },
+          onError: (errors) => {
+            reject(errors);
+          },
+          onFinish: () => {
+            isSubmitting.value = false;
+          }
+        });
+      }),
+      // 30 second timeout for single uploads too
+      new Promise((_, reject) => {
+        setTimeout(() => {
+          if (!formPostStarted) {
+            reject(new Error("Single upload: form.post() never started"));
+          } else {
+            reject(new Error("Single upload timeout"));
+          }
+        }, 30000);
+      })
+    ]);
+  } catch (error) {
+    isSubmitting.value = false;
+    // Let errors be handled naturally by Inertia
+  }
 };
 
 // Validation rules
@@ -979,6 +1104,42 @@ onUnmounted(() => {
                 class="bg-blue-500 h-2 rounded-full transition-all duration-300 ease-out"
                 :style="`width: ${batchProgress}%`"
               ></div>
+            </div>
+          </div>
+
+          <!-- Individual Upload Failures -->
+          <div
+            v-if="failedUploads.length > 0"
+            class="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded"
+          >
+            <div
+              class="flex items-center justify-between text-sm text-red-700 dark:text-red-300 mb-3"
+            >
+              <div class="flex items-center space-x-2">
+                <i class="ri-error-warning-line w-4 h-4"></i>
+                <span class="font-medium">
+                  {{ failedUploads.length }} file(s) failed to upload
+                </span>
+              </div>
+              <button
+                type="button"
+                class="text-xs px-2 py-1 bg-red-100 hover:bg-red-200 dark:bg-red-800 dark:hover:bg-red-700 rounded text-red-700 dark:text-red-300"
+                @click="failedUploads = []"
+              >
+                Dismiss
+              </button>
+            </div>
+            <div class="space-y-2">
+              <div
+                v-for="failure in failedUploads"
+                :key="failure.index"
+                class="text-sm text-red-600 dark:text-red-400 p-2 bg-red-100 dark:bg-red-800/20 rounded"
+              >
+                <div class="font-medium">{{ failure.fileName }}</div>
+                <div class="text-xs text-red-500 dark:text-red-400">
+                  {{ failure.error }}
+                </div>
+              </div>
             </div>
           </div>
 
