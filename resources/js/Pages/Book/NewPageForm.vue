@@ -675,7 +675,9 @@ const processBatch = async (specificFiles = null) => {
           } else {
             // If upload was not successful, provide clear error info
             const errorMsg = uploadError
-              ? uploadError.message || "Upload failed"
+              ? typeof uploadError === "string"
+                ? uploadError
+                : uploadError.message || "Upload failed"
               : "Upload failed - no response received";
             throw new Error(`File ${i + 1}: ${errorMsg}`);
           }

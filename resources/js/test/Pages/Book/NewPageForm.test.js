@@ -168,8 +168,26 @@ describe("NewPageForm", () => {
       return mockReader;
     });
 
-    // Mock URL.createObjectURL
+    // Mock URL.createObjectURL and revokeObjectURL
     global.URL.createObjectURL = vi.fn(() => "blob:test-url");
+    global.URL.revokeObjectURL = vi.fn();
+
+    // Mock fetch for fallback upload functionality
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({})
+      })
+    );
+
+    // Mock DOM methods for CSRF token
+    global.document.querySelector = vi.fn((selector) => {
+      if (selector === 'meta[name="csrf-token"]') {
+        return { getAttribute: () => "mock-csrf-token" };
+      }
+      return null;
+    });
 
     wrapper = mount(NewPageForm, {
       props: { book },
@@ -380,8 +398,9 @@ describe("NewPageForm", () => {
         processedFile: file
       }));
 
-      // Mock successful form submission
+      // Mock successful form submission with onStart callback
       mockForm.post.mockImplementation((url, options) => {
+        if (options.onStart) options.onStart();
         setTimeout(() => options.onSuccess(), 10);
       });
 
@@ -410,9 +429,11 @@ describe("NewPageForm", () => {
       let callCount = 0;
       mockForm.post.mockImplementation((url, options) => {
         callCount++;
+        if (options.onStart) options.onStart();
         setTimeout(() => {
           // First file fails (call 1), second file succeeds (call 2)
           if (callCount === 1) {
+            // Pass error as string (which is how Inertia actually passes it)
             options.onError("Server error");
           } else {
             options.onSuccess();
@@ -428,11 +449,16 @@ describe("NewPageForm", () => {
       // After processing, successfully uploaded files are removed from selectedFiles
       expect(wrapper.vm.selectedFiles.length).toBe(1);
       expect(wrapper.vm.selectedFiles[0].file.name).toBe("test1.jpg");
-      expect(wrapper.vm.selectedFiles[0].error).toBe("Server error");
+
+      // With our new error handling, the error message is formatted as "File X: error"
+      expect(wrapper.vm.selectedFiles[0].errorMessage).toBe(
+        "File 1: Server error"
+      );
 
       // Failed uploads are recorded
       expect(wrapper.vm.failedUploads.length).toBe(1);
       expect(wrapper.vm.failedUploads[0].fileName).toBe("test1.jpg");
+      expect(wrapper.vm.failedUploads[0].error).toBe("File 1: Server error");
     }, 15000); // Increase timeout to 15 seconds to account for retry delays
 
     it("updates progress during batch processing", async () => {
@@ -455,6 +481,7 @@ describe("NewPageForm", () => {
 
       mockForm.post.mockImplementation((url, options) => {
         progressUpdates.push(wrapper.vm.batchProgress);
+        if (options.onStart) options.onStart();
         setTimeout(() => options.onSuccess(), 10);
       });
 
@@ -558,6 +585,7 @@ describe("NewPageForm", () => {
       component.form.image = createFile("test.jpg", "image/jpeg", 1024);
 
       mockForm.post.mockImplementation((url, options) => {
+        if (options.onStart) options.onStart();
         setTimeout(() => options.onSuccess(), 10);
       });
 
@@ -566,7 +594,8 @@ describe("NewPageForm", () => {
       expect(mockForm.post).toHaveBeenCalledWith(
         "/pages.store",
         expect.objectContaining({
-          onSuccess: expect.any(Function)
+          onSuccess: expect.any(Function),
+          onStart: expect.any(Function)
         })
       );
     });
@@ -577,6 +606,7 @@ describe("NewPageForm", () => {
       component.form.video_link = "https://youtube.com/watch?v=abc123";
 
       mockForm.post.mockImplementation((url, options) => {
+        if (options.onStart) options.onStart();
         setTimeout(() => options.onSuccess(), 10);
       });
 
@@ -585,7 +615,8 @@ describe("NewPageForm", () => {
       expect(mockForm.post).toHaveBeenCalledWith(
         "/pages.store",
         expect.objectContaining({
-          onSuccess: expect.any(Function)
+          onSuccess: expect.any(Function),
+          onStart: expect.any(Function)
         })
       );
     });
@@ -612,7 +643,8 @@ describe("NewPageForm", () => {
       component.form.content = "Test content";
 
       mockForm.post.mockImplementation((url, options) => {
-        // Immediately call onSuccess to trigger form reset and event emission
+        // Call onStart first, then onSuccess to trigger form reset and event emission
+        if (options.onStart) options.onStart();
         options.onSuccess();
       });
 
