@@ -939,9 +939,17 @@ const submit = async () => {
             preserveScroll: true,
             onStart: () => {
               formPostStarted = true;
+              // If it started but hangs, fallback after 20s
+              if (inflightTimer) clearTimeout(inflightTimer);
+              inflightTimer = setTimeout(() => {
+                if (!finished) {
+                  doFallback();
+                }
+              }, 20000);
             },
             onSuccess: () => {
               if (finalizeGuard()) return;
+              if (inflightTimer) clearTimeout(inflightTimer);
               // Revoke any object URL previews before clearing state
               cleanupPreviews();
               selectedFiles.value = [];
@@ -952,6 +960,7 @@ const submit = async () => {
             },
             onError: (errors) => {
               if (finalizeGuard()) return;
+              if (inflightTimer) clearTimeout(inflightTimer);
               const msg =
                 errors && typeof errors !== "string" ? errors.message : errors;
               const shouldRetry =
