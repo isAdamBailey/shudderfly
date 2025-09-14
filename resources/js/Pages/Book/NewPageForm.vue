@@ -103,7 +103,17 @@ const createFileObject = (file) => ({
 const processSingleFile = async (file) => {
   singleFileOriginal.value = file;
 
-  form.image = file;
+  // For images, compress before assigning when large
+  if (!file.type.startsWith("video/")) {
+    try {
+      const maybeCompressed = await compressImageFile(file);
+      form.image = maybeCompressed || file;
+    } catch (e) {
+      form.image = file;
+    }
+  } else {
+    form.image = file;
+  }
 
   // Revoke any prior object URL preview
   revokeObjectURLIfNeeded(singleFilePreview.value);
@@ -293,6 +303,86 @@ const toAbsoluteUrl = (url) => {
   }
 };
 
+// Image compression helpers (reduce payload for mobile reliability)
+const loadImageFromBlob = (file) => {
+  return new Promise((resolve, reject) => {
+    try {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve(img);
+      };
+      img.onerror = (e) => {
+        URL.revokeObjectURL(url);
+        reject(e);
+      };
+      img.src = url;
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
+
+const compressImageFile = async (file) => {
+  if (!file || !file.type || !file.type.startsWith("image/")) return file;
+
+  const maxBytes = 3 * 1024 * 1024; // 3MB
+  const maxDimension = 2048; // px
+  const quality = 0.85;
+
+  try {
+    // Skip tiny images
+    if (file.size <= maxBytes) return file;
+
+    const img = await loadImageFromBlob(file);
+    const { naturalWidth: srcW, naturalHeight: srcH } = img;
+    if (!srcW || !srcH) return file;
+
+    // Compute target size with aspect ratio preserved
+    let targetW = srcW;
+    let targetH = srcH;
+    if (Math.max(srcW, srcH) > maxDimension) {
+      if (srcW > srcH) {
+        targetW = maxDimension;
+        targetH = Math.round((srcH / srcW) * targetW);
+      } else {
+        targetH = maxDimension;
+        targetW = Math.round((srcW / srcH) * targetH);
+      }
+    }
+
+    // Draw to canvas
+    const canvas = document.createElement("canvas");
+    canvas.width = targetW;
+    canvas.height = targetH;
+    const ctx = canvas.getContext("2d", { alpha: true });
+    if (!ctx) return file;
+    ctx.drawImage(img, 0, 0, targetW, targetH);
+
+    // Convert to JPEG to maximize compatibility
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error("Canvas toBlob failed"))),
+        "image/jpeg",
+        quality
+      );
+    });
+
+    // If compression didn't help, keep original
+    if (!blob || blob.size >= file.size) return file;
+
+    const newName = file.name.replace(/\.[^/.]+$/, "") + ".jpg";
+    const compressed = new File([blob], newName, {
+      type: "image/jpeg",
+      lastModified: Date.now()
+    });
+    return compressed;
+  } catch (e) {
+    return file;
+  }
+};
+
 // XHR fallback for environments where fetch fails
 const xhrPostFormData = (url, formData, timeoutMs = 45000) => {
   return new Promise((resolve, reject) => {
@@ -330,7 +420,7 @@ const xhrPostFormData = (url, formData, timeoutMs = 45000) => {
 // Retryable POST for FormData fallbacks
 const postFormData = async (formData, onAttempt) => {
   const url = toAbsoluteUrl(route("pages.store"));
-  const maxAttempts = 5;
+  const maxAttempts = 6;
   let attempt = 0;
   let lastError = null;
   while (attempt < maxAttempts) {
@@ -338,7 +428,7 @@ const postFormData = async (formData, onAttempt) => {
       if (onAttempt) onAttempt(attempt + 1);
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 25000);
+      const timeoutId = setTimeout(() => controller.abort(), 120000);
 
       const response = await fetch(url, {
         method: "POST",
@@ -371,7 +461,7 @@ const postFormData = async (formData, onAttempt) => {
       // Try XHR immediately on network/abort errors before counting the attempt as failed
       if (isNetworkError) {
         try {
-          const xhrRes = await xhrPostFormData(url, formData, 45000);
+          const xhrRes = await xhrPostFormData(url, formData, 180000);
           return xhrRes;
         } catch (xhrErr) {
           // continue to retry/backoff
@@ -668,6 +758,12 @@ const processBatch = async (specificFiles = null) => {
             clearTimeout(processingTimeout);
             fileObj.processing = false;
           }
+        } else if (!file.type.startsWith("video/") && !fileObj.processed) {
+          // Compress large images before upload
+          const compressed = await compressImageFile(file);
+          fileForUpload = compressed;
+          fileObj.processedFile = compressed;
+          fileObj.processed = true;
         }
         form.content = originalContent;
         form.image = fileForUpload;
@@ -823,7 +919,7 @@ const processBatch = async (specificFiles = null) => {
                 fileObj.preview = null;
 
                 if (i < filesToUpload.length - 1) {
-                  await new Promise((resolve) => setTimeout(resolve, 500));
+                  await new Promise((resolve) => setTimeout(resolve, 1500));
                 }
               } else {
                 throw new Error(`Manual upload failed: ${response.status}`);
