@@ -4,37 +4,61 @@
   <BreezeAuthenticatedLayout>
     <template #header>
       <BookCover :book="book" :pages="pages" />
-      <div class="p-2 flex justify-end align-middle">
-        <div class="flex flex-wrap gap-2">
-          <Button
-            v-if="canEditPages"
+      <div
+        class="p-2 flex flex-col lg:flex-row lg:justify-between lg:items-center gap-3"
+      >
+        <!-- Tab Navigation -->
+        <div
+          v-if="canEditPages"
+          class="flex flex-wrap justify-center sm:justify-start bg-gray-800 rounded-lg p-1 gap-1"
+        >
+          <button
             type="button"
-            :class="pageSettingsOpen ? '!bg-red-700' : ''"
-            class="font-bold px-12"
-            @click="togglePageSettings"
+            :class="[
+              'px-3 py-2 rounded-md text-sm font-medium transition-colors flex-1 min-w-0 sm:flex-none',
+              activeTab === 'pages'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-300 hover:text-white hover:bg-gray-700'
+            ]"
+            @click="setActiveTab('pages')"
           >
-            <span v-if="pageSettingsOpen">Close</span>
-            <span v-else>Add Pages</span>
-          </Button>
-          <Button
-            v-if="canEditPages"
+            Add Pages
+          </button>
+          <button
             type="button"
-            :class="bookSettingsOpen ? '!bg-red-700' : ''"
-            class="font-bold px-12"
-            @click="toggleBookSettings"
+            :class="[
+              'px-3 py-2 rounded-md text-sm font-medium transition-colors flex-1 min-w-0 sm:flex-none',
+              activeTab === 'book'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-300 hover:text-white hover:bg-gray-700'
+            ]"
+            @click="setActiveTab('book')"
           >
-            <span v-if="bookSettingsOpen">Close</span>
-            <span v-else>Edit Book</span>
-          </Button>
-          <Button
-            v-if="canEditPages"
+            Edit Book
+          </button>
+          <button
             type="button"
-            :class="bulkActionsOpen ? '!bg-red-700' : ''"
-            class="font-bold px-12"
-            @click="toggleBulkActions"
+            :class="[
+              'px-3 py-2 rounded-md text-sm font-medium transition-colors flex-1 min-w-0 sm:flex-none',
+              activeTab === 'bulk'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-300 hover:text-white hover:bg-gray-700'
+            ]"
+            @click="setActiveTab('bulk')"
           >
-            <span v-if="bulkActionsOpen">Close</span>
-            <span v-else>Bulk Actions</span>
+            Bulk Actions
+          </button>
+        </div>
+
+        <!-- Right side actions -->
+        <div class="flex gap-2 flex-shrink-0">
+          <Button
+            v-if="canEditPages && activeTab"
+            type="button"
+            class="font-bold px-4 bg-red-600 hover:bg-red-700"
+            @click="closeAllTabs"
+          >
+            Close
           </Button>
           <Button
             type="button"
@@ -47,41 +71,37 @@
         </div>
       </div>
     </template>
-    <div v-if="canEditPages && pageSettingsOpen" class="w-full mt-4 md:ml-2">
+    <!-- Tab Content -->
+    <div v-if="canEditPages && activeTab" class="w-full mt-4 md:ml-2">
       <div>
         <BreezeValidationErrors class="mb-4" />
       </div>
       <div class="flex flex-col md:flex-row justify-around">
-        <NewPageForm :book="book" @close-form="pageSettingsOpen = false" />
-      </div>
-    </div>
+        <!-- Add Pages Tab -->
+        <div v-if="activeTab === 'pages'">
+          <NewPageForm :book="book" @close-form="closeAllTabs" />
+        </div>
 
-    <div v-if="canEditPages && bookSettingsOpen" class="w-full mt-4 md:ml-2">
-      <div>
-        <BreezeValidationErrors class="mb-4" />
-      </div>
-      <div class="flex flex-col md:flex-row justify-around">
-        <EditBookForm
-          :book="book"
-          :authors="authors"
-          :categories="categories"
-          @close-form="bookSettingsOpen = false"
-        />
-      </div>
-    </div>
+        <!-- Edit Book Tab -->
+        <div v-if="activeTab === 'book'">
+          <EditBookForm
+            :book="book"
+            :authors="authors"
+            :categories="categories"
+            @close-form="closeAllTabs"
+          />
+        </div>
 
-    <div v-if="canEditPages && bulkActionsOpen" class="w-full mt-4 md:ml-2">
-      <div>
-        <BreezeValidationErrors class="mb-4" />
-      </div>
-      <div class="flex flex-col md:flex-row justify-around">
-        <BulkActionsForm
-          :book="book"
-          :books="books"
-          :selected-pages="selectedPages"
-          @close-form="bulkActionsOpen = false"
-          @selection-changed="handleSelectionChanged"
-        />
+        <!-- Bulk Actions Tab -->
+        <div v-if="activeTab === 'bulk'">
+          <BulkActionsForm
+            :book="book"
+            :books="books"
+            :selected-pages="selectedPages"
+            @close-form="closeAllTabs"
+            @selection-changed="handleSelectionChanged"
+          />
+        </div>
       </div>
     </div>
 
@@ -94,12 +114,12 @@
         class="rounded-lg bg-gray-300 shadow-sm relative overflow-hidden h-80"
         :class="{
           'ring-2 ring-blue-500': selectedPages.includes(page.id),
-          'cursor-pointer': bulkActionsOpen
+          'cursor-pointer': activeTab === 'bulk'
         }"
-        @click="bulkActionsOpen ? togglePageSelection(page.id) : null"
+        @click="activeTab === 'bulk' ? togglePageSelection(page.id) : null"
       >
         <!-- Bulk selection checkbox -->
-        <div v-if="bulkActionsOpen" class="absolute top-2 left-2 z-10">
+        <div v-if="activeTab === 'bulk'" class="absolute top-2 left-2 z-10">
           <input
             type="checkbox"
             :checked="selectedPages.includes(page.id)"
@@ -109,7 +129,7 @@
         </div>
 
         <Link
-          v-if="!bulkActionsOpen"
+          v-if="activeTab !== 'bulk'"
           prefetch
           class="w-full h-full block"
           :href="route('pages.show', page)"
@@ -227,42 +247,25 @@ const { items, infiniteScrollRef, setItemLoading } = useInfiniteScroll(
   computed(() => props.pages)
 );
 
-let pageSettingsOpen = ref(false);
-let bookSettingsOpen = ref(false);
-let bulkActionsOpen = ref(false);
+let activeTab = ref(null);
 let selectedPages = ref([]);
 
-const togglePageSettings = () => {
-  pageSettingsOpen.value = !pageSettingsOpen.value;
-  if (bookSettingsOpen.value) {
-    bookSettingsOpen.value = false;
+const setActiveTab = (tab) => {
+  if (activeTab.value === tab) {
+    activeTab.value = null;
+  } else {
+    activeTab.value = tab;
   }
-  if (bulkActionsOpen.value) {
-    bulkActionsOpen.value = false;
-  }
-};
 
-const toggleBookSettings = () => {
-  bookSettingsOpen.value = !bookSettingsOpen.value;
-  if (pageSettingsOpen.value) {
-    pageSettingsOpen.value = false;
-  }
-  if (bulkActionsOpen.value) {
-    bulkActionsOpen.value = false;
-  }
-};
-
-const toggleBulkActions = () => {
-  bulkActionsOpen.value = !bulkActionsOpen.value;
-  if (pageSettingsOpen.value) {
-    pageSettingsOpen.value = false;
-  }
-  if (bookSettingsOpen.value) {
-    bookSettingsOpen.value = false;
-  }
-  if (!bulkActionsOpen.value) {
+  // Clear selections when switching away from bulk actions
+  if (activeTab.value !== "bulk") {
     selectedPages.value = [];
   }
+};
+
+const closeAllTabs = () => {
+  activeTab.value = null;
+  selectedPages.value = [];
 };
 
 const togglePageSelection = (pageId) => {
@@ -301,7 +304,7 @@ function mediaPath(page) {
 
 onMounted(() => {
   if (props.pages.total === 0) {
-    pageSettingsOpen.value = true;
+    activeTab.value = "pages";
   }
 });
 </script>
