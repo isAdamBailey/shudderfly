@@ -19,7 +19,7 @@ import {
 } from "@/utils/fileValidation.js";
 import { useForm, usePage } from "@inertiajs/vue3";
 import { useVuelidate } from "@vuelidate/core";
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import PreviewsGrid from "./PreviewsGrid.vue";
 
 const emit = defineEmits(["close-form"]);
@@ -449,8 +449,13 @@ const selectSingleUpload = () => {
   singleFilePreview.value = null; // Clear preview
   singleFileProcessing.value = false; // Clear processing state
   singleFileOriginal.value = null; // Clear original file
-  // Trigger file input for single file
-  imageInput.value?.click();
+
+  if (imageInput.value) {
+    imageInput.value.multiple = false;
+    nextTick(() => {
+      imageInput.value?.click();
+    });
+  }
 };
 
 const selectMultipleUpload = () => {
@@ -461,8 +466,13 @@ const selectMultipleUpload = () => {
   singleFilePreview.value = null; // Clear preview
   singleFileProcessing.value = false; // Clear processing state
   singleFileOriginal.value = null; // Clear original file
-  // Trigger file input for multiple files
-  imageInput.value?.click();
+
+  if (imageInput.value) {
+    imageInput.value.multiple = true;
+    nextTick(() => {
+      imageInput.value?.click();
+    });
+  }
 };
 
 const updateImagePreview = async (event) => {
