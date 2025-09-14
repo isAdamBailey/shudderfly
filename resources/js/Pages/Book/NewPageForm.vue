@@ -293,6 +293,49 @@ const toAbsoluteUrl = (url) => {
   }
 };
 
+// Retryable POST for FormData fallbacks
+const postFormData = async (formData) => {
+  const url = toAbsoluteUrl(route("pages.store"));
+  const maxAttempts = 3;
+  let attempt = 0;
+  let lastError = null;
+  while (attempt < maxAttempts) {
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        body: formData,
+        credentials: "same-origin",
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+          "X-CSRF-TOKEN": getCsrfToken(),
+          Accept: "application/json"
+        },
+        cache: "no-store"
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      return response;
+    } catch (err) {
+      lastError = err;
+      const msg = String(err?.message || err || "");
+      const isNetworkError =
+        msg.includes("Failed to fetch") ||
+        msg.includes("NetworkError") ||
+        err?.name === "TypeError";
+      attempt += 1;
+      if (!isNetworkError || attempt >= maxAttempts) {
+        throw new Error(`Fallback upload failed: ${msg}`);
+      }
+      // Exponential backoff: 800ms, 1600ms
+      const delayMs = 800 * Math.pow(2, attempt - 1);
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+  throw lastError || new Error("Fallback upload failed");
+};
+
 const handleMultipleFiles = async (files) => {
   selectedFiles.value = files.map(createFileObject);
 
@@ -692,20 +735,7 @@ const processBatch = async (specificFiles = null) => {
                   ?.getAttribute("content") || ""
               );
 
-              const response = await fetch(
-                toAbsoluteUrl(route("pages.store")),
-                {
-                  method: "POST",
-                  body: formData,
-                  credentials: "same-origin",
-                  headers: {
-                    "X-Requested-With": "XMLHttpRequest",
-                    "X-CSRF-TOKEN": getCsrfToken(),
-                    Accept: "application/json"
-                  },
-                  cache: "no-store"
-                }
-              );
+              const response = await postFormData(formData);
 
               if (response.ok) {
                 // Treat as successful and perform the same cleanup
@@ -872,17 +902,7 @@ const submit = async () => {
               ?.getAttribute("content") || ""
           );
 
-          const response = await fetch(toAbsoluteUrl(route("pages.store")), {
-            method: "POST",
-            body: formData,
-            credentials: "same-origin",
-            headers: {
-              "X-Requested-With": "XMLHttpRequest",
-              "X-CSRF-TOKEN": getCsrfToken(),
-              Accept: "application/json"
-            },
-            cache: "no-store"
-          });
+          const response = await postFormData(formData);
 
           if (!response.ok) {
             throw new Error(`Fallback upload failed: ${response.status}`);
@@ -974,17 +994,7 @@ const submit = async () => {
           .getAttribute("content") || ""
       );
 
-      const response = await fetch(toAbsoluteUrl(route("pages.store")), {
-        method: "POST",
-        body: formData,
-        credentials: "same-origin",
-        headers: {
-          "X-Requested-With": "XMLHttpRequest",
-          "X-CSRF-TOKEN": getCsrfToken(),
-          Accept: "application/json"
-        },
-        cache: "no-store"
-      });
+      const response = await postFormData(formData);
 
       if (!response.ok) {
         throw new Error(`Fallback upload failed: ${response.status}`);
