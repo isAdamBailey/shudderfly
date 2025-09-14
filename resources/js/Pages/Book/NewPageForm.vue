@@ -40,6 +40,7 @@ const autoSaveTimeout = ref(null);
 const failedUploads = ref([]);
 const isSubmitting = ref(false);
 const batchError = ref(null);
+const uploadStatus = ref("");
 
 const previewFiles = computed(() => {
   if (
@@ -89,20 +90,7 @@ const uploadMode = ref("single"); // single, multiple
 const { compressionProgress, optimizationProgress, processMediaFile } =
   useVideoOptimization();
 
-// Global optimizing state: true if any optimization is happening
-// Removed mobile detection - using consistent behavior across all devices
-
-const isOptimizing = computed(() => {
-  // Single-file optimization
-  if (singleFileProcessing.value) return true;
-  // Multiple selection: any file currently processing
-  if (selectedFiles.value && selectedFiles.value.some((f) => f?.processing)) {
-    return true;
-  }
-  // Composable progress signal (1..99 means active)
-  const prog = Number(optimizationProgress?.value ?? optimizationProgress);
-  return prog > 0 && prog < 100;
-});
+// Global optimizing state removed from disabled logic to avoid blocking on some mobile devices
 
 const createFileObject = (file) => ({
   file,
@@ -786,18 +774,101 @@ const submit = async () => {
   isSubmitting.value = true;
 
   try {
-    // Track if form.post() was called for single uploads too
-    let formPostStarted = false;
+    uploadStatus.value = "Preparing upload...";
 
-    await Promise.race([
-      new Promise((resolve, reject) => {
+    await new Promise((resolve, reject) => {
+      let finished = false;
+      let formPostStarted = false;
+
+      const clearAll = () => {
+        try {
+          clearTimeout(watchdog);
+        } catch (e) {
+          // no-op
+        }
+      };
+
+      const finalizeGuard = () => {
+        if (finished) return true;
+        finished = true;
+        clearAll();
+        return false;
+      };
+
+      const doFallback = async () => {
+        if (finished) return;
+        try {
+          uploadStatus.value = "Uploading (compat mode)...";
+
+          const targetFileObj = previewFiles.value[0] || null;
+          const fileForUpload =
+            form.image ||
+            targetFileObj?.processedFile ||
+            targetFileObj?.file ||
+            null;
+
+          const formData = new FormData();
+          formData.append("book_id", form.book_id);
+          formData.append("content", form.content || "");
+          if (fileForUpload) {
+            formData.append("image", fileForUpload);
+          }
+          if (form.video_link) {
+            formData.append("video_link", form.video_link);
+          }
+          formData.append(
+            "_token",
+            document
+              .querySelector('meta[name="csrf-token"]')
+              ?.getAttribute("content") || ""
+          );
+
+          const response = await fetch(route("pages.store"), {
+            method: "POST",
+            body: formData,
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+          });
+
+          if (!response.ok) {
+            throw new Error(`Fallback upload failed: ${response.status}`);
+          }
+
+          // Success cleanup
+          uploadStatus.value = "";
+          cleanupPreviews();
+          selectedFiles.value = [];
+          form.reset();
+          clearDraft();
+          emit("close-form");
+          finalizeGuard();
+          isSubmitting.value = false;
+          resolve();
+        } catch (e) {
+          finalizeGuard();
+          isSubmitting.value = false;
+          uploadStatus.value = "";
+          reject(e);
+        }
+      };
+
+      const watchdog = setTimeout(() => {
+        if (!formPostStarted) {
+          // Inertia didn't start quickly on this device; use fallback
+          doFallback();
+        }
+      }, 2000);
+
+      try {
         form.post(route("pages.store"), {
           forceFormData: true,
           preserveScroll: true,
           onStart: () => {
             formPostStarted = true;
+            uploadStatus.value = "Uploading...";
           },
           onSuccess: () => {
+            if (finalizeGuard()) return;
+            uploadStatus.value = "";
             // Revoke any object URL previews before clearing state
             cleanupPreviews();
             selectedFiles.value = [];
@@ -807,27 +878,70 @@ const submit = async () => {
             resolve();
           },
           onError: (errors) => {
+            if (finalizeGuard()) return;
+            uploadStatus.value = "";
             reject(errors);
           },
           onFinish: () => {
             isSubmitting.value = false;
           }
         });
-      }),
-      // 30 second timeout for single uploads too
-      new Promise((_, reject) => {
-        setTimeout(() => {
-          if (!formPostStarted) {
-            reject(new Error("Single upload: form.post() never started"));
-          } else {
-            reject(new Error("Single upload timeout"));
-          }
-        }, 30000);
-      })
-    ]);
+      } catch (e) {
+        // If calling form.post threw synchronously, fallback
+        doFallback();
+      }
+    });
   } catch (error) {
-    isSubmitting.value = false;
-    // Let errors be handled naturally by Inertia
+    // Fallback for mobile where Inertia post may not start
+    try {
+      const targetFileObj =
+        uploadMode.value === "single" ? previewFiles.value[0] : null;
+      const fileForUpload =
+        form.image || targetFileObj?.processedFile || targetFileObj?.file;
+
+      if (!fileForUpload && !(form.content || form.video_link)) {
+        throw error;
+      }
+
+      const formData = new FormData();
+      formData.append("book_id", form.book_id);
+      formData.append("content", form.content || "");
+      if (fileForUpload) {
+        formData.append("image", fileForUpload);
+      }
+      if (form.video_link) {
+        formData.append("video_link", form.video_link);
+      }
+      formData.append(
+        "_token",
+        document
+          .querySelector('meta[name="csrf-token"]')
+          .getAttribute("content") || ""
+      );
+
+      const response = await fetch(route("pages.store"), {
+        method: "POST",
+        body: formData,
+        headers: {
+          "X-Requested-With": "XMLHttpRequest"
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Fallback upload failed: ${response.status}`);
+      }
+
+      // Success: cleanup and close
+      cleanupPreviews();
+      selectedFiles.value = [];
+      form.reset();
+      clearDraft();
+      emit("close-form");
+    } catch (e) {
+      // Let errors be handled naturally by Inertia/UI
+    } finally {
+      isSubmitting.value = false;
+    }
   }
 };
 
@@ -1267,14 +1381,13 @@ onUnmounted(() => {
           type="button"
           class="w-3/4 flex justify-center py-3"
           :class="{
-            'opacity-25': form.processing || batchProcessing || isOptimizing
+            'opacity-25': form.processing || batchProcessing
           }"
           :disabled="
             form.processing ||
             isSubmitting ||
             batchProcessing ||
             singleFileProcessing ||
-            isOptimizing ||
             v$.$error
           "
           @click.prevent="handleFormSubmit"
