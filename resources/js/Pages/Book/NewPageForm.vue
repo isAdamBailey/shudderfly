@@ -651,16 +651,27 @@ const processBatch = async (specificFiles = null) => {
           }
         } else {
           // If upload was not successful, try a more direct approach for mobile
-          if (
-            uploadError &&
-            uploadError.message &&
-            uploadError.message.includes("form.post() was never called")
-          ) {
-            // Mobile browsers might be blocking form.post() - try manual FormData approach
+          const errorMessage =
+            uploadError && typeof uploadError !== "string"
+              ? uploadError.message
+              : uploadError;
+
+          const shouldAttemptFallback = (() => {
+            if (!errorMessage) return false;
+            if (typeof errorMessage !== "string") return false;
+            return (
+              errorMessage.includes("form.post() was never called") ||
+              errorMessage.includes("never started") ||
+              errorMessage.includes("status unclear") ||
+              errorMessage.includes("timeout")
+            );
+          })();
+
+          if (shouldAttemptFallback) {
             try {
               const formData = new FormData();
               formData.append("book_id", form.book_id);
-              formData.append("content", form.content);
+              formData.append("content", form.content || "");
               formData.append("image", fileForUpload);
               formData.append(
                 "_token",
@@ -678,8 +689,27 @@ const processBatch = async (specificFiles = null) => {
               });
 
               if (response.ok) {
+                // Treat as successful and perform the same cleanup
                 uploadSuccessful = true;
                 fileObj.uploaded = true;
+
+                const liveIndex = selectedFiles.value.findIndex(
+                  (f) => f.file === fileObj.file
+                );
+                if (liveIndex !== -1) {
+                  selectedFiles.value.splice(liveIndex, 1);
+                }
+
+                try {
+                  revokeObjectURLIfNeeded(fileObj.preview);
+                } catch (e) {
+                  // no-op
+                }
+                fileObj.preview = null;
+
+                if (i < filesToUpload.length - 1) {
+                  await new Promise((resolve) => setTimeout(resolve, 500));
+                }
               } else {
                 throw new Error(`Manual upload failed: ${response.status}`);
               }
