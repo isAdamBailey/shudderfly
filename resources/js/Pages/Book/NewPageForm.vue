@@ -293,6 +293,40 @@ const toAbsoluteUrl = (url) => {
   }
 };
 
+// XHR fallback for environments where fetch fails
+const xhrPostFormData = (url, formData, timeoutMs = 45000) => {
+  return new Promise((resolve, reject) => {
+    try {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", url, true);
+      xhr.withCredentials = true;
+      xhr.timeout = timeoutMs;
+      xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+      const csrf = getCsrfToken();
+      if (csrf) xhr.setRequestHeader("X-CSRF-TOKEN", csrf);
+      xhr.setRequestHeader("Accept", "application/json");
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve({
+            ok: true,
+            status: xhr.status,
+            responseText: xhr.responseText
+          });
+        } else {
+          reject(new Error(`HTTP ${xhr.status}`));
+        }
+      };
+      xhr.onerror = () => reject(new Error("XHR network error"));
+      xhr.ontimeout = () => reject(new Error("XHR timeout"));
+
+      xhr.send(formData);
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
+
 // Retryable POST for FormData fallbacks
 const postFormData = async (formData, onAttempt) => {
   const url = toAbsoluteUrl(route("pages.store"));
@@ -333,6 +367,17 @@ const postFormData = async (formData, onAttempt) => {
         err?.name === "TypeError" ||
         err?.name === "AbortError";
       const isRetryableHttp = msg.includes("HTTP 5");
+
+      // Try XHR immediately on network/abort errors before counting the attempt as failed
+      if (isNetworkError) {
+        try {
+          const xhrRes = await xhrPostFormData(url, formData, 45000);
+          return xhrRes;
+        } catch (xhrErr) {
+          // continue to retry/backoff
+          lastError = xhrErr;
+        }
+      }
       attempt += 1;
       if (!(isNetworkError || isRetryableHttp) || attempt >= maxAttempts) {
         const offlineHint =
