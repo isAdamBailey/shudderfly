@@ -43,7 +43,7 @@ const batchError = ref(null);
 
 const previewFiles = computed(() => {
   if (
-    mediaOption.value === "single" &&
+    uploadMode.value === "single" &&
     (form.image || singleFilePreview.value)
   ) {
     return [
@@ -64,7 +64,7 @@ const previewFiles = computed(() => {
         uploaded: false
       }
     ];
-  } else if (mediaOption.value === "multiple") {
+  } else if (uploadMode.value === "multiple") {
     return selectedFiles.value;
   }
   return [];
@@ -83,7 +83,8 @@ const form = useForm({
 
 const imageInput = ref(null);
 const addMoreInput = ref(null);
-const mediaOption = ref("single"); // single, multiple, link
+const mediaOption = ref("upload"); // upload, link
+const uploadMode = ref("single"); // single, multiple
 
 const { compressionProgress, optimizationProgress, processMediaFile } =
   useVideoOptimization();
@@ -218,6 +219,8 @@ const loadDraft = () => {
         // Set media option based on what was loaded
         if (draft.video_link) {
           mediaOption.value = "link";
+        } else {
+          mediaOption.value = "upload";
         }
       } else {
         clearDraft();
@@ -236,7 +239,8 @@ const clearDraft = (resetForm = false) => {
   if (resetForm) {
     form.content = "";
     form.video_link = null;
-    mediaOption.value = "single";
+    mediaOption.value = "upload";
+    uploadMode.value = "single";
   }
 };
 
@@ -386,7 +390,7 @@ const generatePreview = async (fileObj) => {
 };
 
 const removeFile = (index) => {
-  if (mediaOption.value === "single") {
+  if (uploadMode.value === "single") {
     // Single upload mode: Clear all single file data
     revokeObjectURLIfNeeded(singleFilePreview.value);
     form.image = null;
@@ -406,7 +410,7 @@ const removeFile = (index) => {
       form.image = null;
     } else if (
       selectedFiles.value.length === 1 &&
-      mediaOption.value === "single"
+      uploadMode.value === "single"
     ) {
       // In single mode with one file remaining, set form.image
       const targetFile =
@@ -416,20 +420,9 @@ const removeFile = (index) => {
   }
 };
 
-const selectSingle = () => {
+const selectUpload = () => {
   cleanupPreviews();
-  mediaOption.value = "single";
-  form.video_link = null;
-  selectedFiles.value = [];
-  form.image = null; // Clear any existing image when switching modes
-  singleFilePreview.value = null; // Clear preview
-  singleFileProcessing.value = false; // Clear processing state
-  singleFileOriginal.value = null; // Clear original file
-};
-
-const selectMultiple = () => {
-  cleanupPreviews();
-  mediaOption.value = "multiple";
+  mediaOption.value = "upload";
   form.video_link = null;
   selectedFiles.value = [];
   form.image = null; // Clear any existing image when switching modes
@@ -448,6 +441,30 @@ const selectLink = () => {
   singleFileOriginal.value = null; // Clear original file
 };
 
+const selectSingleUpload = () => {
+  cleanupPreviews();
+  uploadMode.value = "single";
+  selectedFiles.value = [];
+  form.image = null; // Clear any existing image when switching modes
+  singleFilePreview.value = null; // Clear preview
+  singleFileProcessing.value = false; // Clear processing state
+  singleFileOriginal.value = null; // Clear original file
+  // Trigger file input for single file
+  imageInput.value?.click();
+};
+
+const selectMultipleUpload = () => {
+  cleanupPreviews();
+  uploadMode.value = "multiple";
+  selectedFiles.value = [];
+  form.image = null; // Clear any existing image when switching modes
+  singleFilePreview.value = null; // Clear preview
+  singleFileProcessing.value = false; // Clear processing state
+  singleFileOriginal.value = null; // Clear original file
+  // Trigger file input for multiple files
+  imageInput.value?.click();
+};
+
 const updateImagePreview = async (event) => {
   const files = Array.from(event.target.files);
 
@@ -457,12 +474,12 @@ const updateImagePreview = async (event) => {
   await new Promise((resolve) => setTimeout(resolve, 50));
 
   // Handle based on selected mode
-  if (mediaOption.value === "single") {
+  if (uploadMode.value === "single") {
     const file = files[0];
     await processSingleFile(file);
     selectedFiles.value = [];
     return;
-  } else if (mediaOption.value === "multiple") {
+  } else if (uploadMode.value === "multiple") {
     // Multiple upload mode: Handle all files with full processing
     if (selectedFiles.value.length > 0) {
       const newFileObjects = files.map(createFileObject);
@@ -750,7 +767,7 @@ const handleFormSubmit = async (event) => {
 };
 
 const submit = async () => {
-  if (mediaOption.value === "multiple") {
+  if (uploadMode.value === "multiple") {
     await processBatch();
     return;
   }
@@ -812,7 +829,7 @@ const rules = computed(() => {
   };
 
   const batchFilesValid = () => {
-    if (mediaOption.value === "multiple" && selectedFiles.value.length > 0) {
+    if (uploadMode.value === "multiple" && selectedFiles.value.length > 0) {
       return selectedFiles.value.every((fileObj) => {
         const file = fileObj.file;
         if (!isAllowedFileType(file)) return false;
@@ -829,7 +846,7 @@ const rules = computed(() => {
   };
 
   const atLeastOneRequired = () => {
-    if (mediaOption.value === "multiple") {
+    if (uploadMode.value === "multiple") {
       return (
         selectedFiles.value.length > 0 &&
         selectedFiles.value.some((fileObj) => {
@@ -932,37 +949,19 @@ onUnmounted(() => {
       <div v-if="isYouTubeEnabled" class="mb-4">
         <div class="flex flex-wrap gap-2 mb-2">
           <Button
-            :is-active="mediaOption === 'single'"
-            class="rounded-none w-28 justify-center text-sm"
-            @click.prevent="selectSingle"
+            :is-active="mediaOption === 'upload'"
+            class="rounded-none w-24 justify-center text-sm"
+            @click.prevent="selectUpload"
           >
-            Single Upload
-          </Button>
-          <Button
-            :is-active="mediaOption === 'multiple'"
-            class="rounded-none w-28 justify-center text-sm"
-            @click.prevent="selectMultiple"
-          >
-            Multiple Upload
+            Upload
           </Button>
           <Button
             :is-active="mediaOption === 'link'"
-            class="rounded-none w-24 justify-center"
+            class="rounded-none w-24 justify-center text-sm"
             @click.prevent="selectLink"
           >
             YouTube
           </Button>
-        </div>
-        <div class="text-xs text-gray-500 dark:text-gray-400">
-          <span v-if="mediaOption === 'single'" class="block">
-            📱 Single upload mode
-          </span>
-          <span v-else-if="mediaOption === 'multiple'" class="block">
-            📚 Multiple upload mode (batch processing)
-          </span>
-          <span v-else-if="mediaOption === 'link'" class="block">
-            🎥 YouTube video embedding
-          </span>
         </div>
       </div>
 
@@ -970,36 +969,18 @@ onUnmounted(() => {
       <div v-else class="mb-4">
         <div class="flex flex-wrap gap-2 mb-2">
           <Button
-            :is-active="mediaOption === 'single'"
-            class="rounded-none w-28 justify-center text-sm"
-            @click.prevent="selectSingle"
+            :is-active="mediaOption === 'upload'"
+            class="rounded-none w-24 justify-center text-sm"
+            @click.prevent="selectUpload"
           >
-            Single Upload
+            Upload
           </Button>
-          <Button
-            :is-active="mediaOption === 'multiple'"
-            class="rounded-none w-28 justify-center text-sm"
-            @click.prevent="selectMultiple"
-          >
-            Multiple Upload
-          </Button>
-        </div>
-        <div class="text-xs text-gray-500 dark:text-gray-400">
-          <span v-if="mediaOption === 'single'" class="block">
-            📱 Single upload mode
-          </span>
-          <span v-else-if="mediaOption === 'multiple'" class="block">
-            📚 Multiple upload mode (batch processing)
-          </span>
         </div>
       </div>
 
       <div class="flex flex-wrap">
         <!-- Upload Section -->
-        <div
-          v-if="mediaOption === 'single' || mediaOption === 'multiple'"
-          class="w-full mb-2"
-        >
+        <div v-if="mediaOption === 'upload'" class="w-full mb-2">
           <BreezeLabel for="imageInput" value="Media" />
 
           <div
@@ -1007,12 +988,12 @@ onUnmounted(() => {
             data-test="drop-zone"
             class="relative border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500"
           >
-            <!-- File input overlay for mobile compatibility -->
+            <!-- Hidden file input -->
             <input
               ref="imageInput"
               type="file"
-              class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-              :multiple="mediaOption === 'multiple'"
+              class="hidden"
+              :multiple="uploadMode === 'multiple'"
               accept="image/*,video/*"
               @change="updateImagePreview"
             />
@@ -1026,29 +1007,31 @@ onUnmounted(() => {
                 <p
                   class="text-base font-medium text-gray-600 dark:text-gray-300"
                 >
-                  <span v-if="mediaOption === 'single'"
-                    >Select a file to upload</span
-                  >
-                  <span v-else>Select files to upload</span>
+                  Select a file to upload
                 </p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">
-                  <span v-if="mediaOption === 'single'"
-                    >Tap to select a file</span
-                  >
-                  <span v-else>Tap to select files</span>
+                  Tap to select a file
                 </p>
               </div>
-              <Button type="button" class="mt-2 pointer-events-none">
-                <span v-if="mediaOption === 'single'">Select Media File</span>
-                <span v-else>Select Media Files</span>
-              </Button>
+              <div class="flex gap-2 justify-center">
+                <Button type="button" class="mt-2" @click="selectSingleUpload">
+                  Select Media File
+                </Button>
+                <Button
+                  type="button"
+                  class="mt-2"
+                  @click="selectMultipleUpload"
+                >
+                  Select Multiple
+                </Button>
+              </div>
             </div>
           </div>
 
           <!-- Unified File Preview (Single & Multiple) -->
           <div v-if="previewFiles.length > 0" class="mt-4 space-y-4">
             <div
-              v-if="mediaOption === 'multiple'"
+              v-if="uploadMode === 'multiple'"
               class="flex items-center justify-between"
             >
               <h4 class="font-medium text-gray-900 dark:text-gray-100">
@@ -1209,7 +1192,7 @@ onUnmounted(() => {
           <BreezeLabel
             for="content"
             :value="
-              mediaOption === 'multiple'
+              uploadMode === 'multiple'
                 ? 'Words (will be applied to all images in this batch)'
                 : 'Words'
             "

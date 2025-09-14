@@ -269,6 +269,33 @@ describe("NewPageForm", () => {
     it("starts with upload mode selected", () => {
       const dropZone = wrapper.find('[data-test="drop-zone"]');
       expect(dropZone.exists()).toBe(true);
+      expect(wrapper.vm.mediaOption).toBe("upload");
+      expect(wrapper.vm.uploadMode).toBe("single");
+    });
+
+    it("shows single and multiple upload buttons inside media section", () => {
+      const buttons = wrapper.findAllComponents({ name: "Button" });
+      const selectMediaFileButton = buttons.find((btn) =>
+        btn.text().includes("Select Media File")
+      );
+      const selectMultipleButton = buttons.find((btn) =>
+        btn.text().includes("Select Multiple")
+      );
+
+      expect(selectMediaFileButton.exists()).toBe(true);
+      expect(selectMultipleButton.exists()).toBe(true);
+    });
+
+    it("switches upload mode when buttons are clicked", async () => {
+      const buttons = wrapper.findAllComponents({ name: "Button" });
+      const selectMultipleButton = buttons.find((btn) =>
+        btn.text().includes("Select Multiple")
+      );
+
+      await selectMultipleButton.trigger("click");
+      await nextTick();
+
+      expect(wrapper.vm.uploadMode).toBe("multiple");
     });
 
     it("switches to YouTube mode when YouTube button is clicked", async () => {
@@ -280,6 +307,7 @@ describe("NewPageForm", () => {
       await youtubeButton.trigger("click");
       await nextTick();
 
+      expect(wrapper.vm.mediaOption).toBe("link");
       expect(wrapper.findComponent({ name: "TextInput" }).exists()).toBe(true);
       expect(
         wrapper.findComponent({ name: "TextInput" }).props("placeholder")
@@ -300,6 +328,7 @@ describe("NewPageForm", () => {
       await uploadButton.trigger("click");
       await nextTick();
 
+      expect(wrapper.vm.mediaOption).toBe("upload");
       const dropZone = wrapper.find('[data-test="drop-zone"]');
       expect(dropZone.exists()).toBe(true);
     });
@@ -330,7 +359,7 @@ describe("NewPageForm", () => {
       const file = createFile("test.jpg", "image/jpeg", 1024);
 
       // Set to single mode and simulate file selection
-      wrapper.vm.selectSingle();
+      wrapper.vm.selectSingleUpload();
 
       // Simulate the ultra-simple single upload path
       wrapper.vm.form.image = file;
@@ -339,7 +368,8 @@ describe("NewPageForm", () => {
 
       expect(wrapper.vm.form.image).toBe(file);
       expect(wrapper.vm.selectedFiles.length).toBe(0); // Single mode bypasses selectedFiles
-      expect(wrapper.vm.mediaOption).toBe("single");
+      expect(wrapper.vm.mediaOption).toBe("upload");
+      expect(wrapper.vm.uploadMode).toBe("single");
       expect(wrapper.vm.singleFilePreview).toBeTruthy(); // Preview should be set
     }, 10000); // 10 second timeout
 
@@ -350,16 +380,17 @@ describe("NewPageForm", () => {
       ];
 
       // First set to multiple mode (like user would do)
-      wrapper.vm.selectMultiple();
+      wrapper.vm.selectMultipleUpload();
       await wrapper.vm.handleMultipleFiles(files);
 
       expect(wrapper.vm.selectedFiles.length).toBe(2);
-      expect(wrapper.vm.mediaOption).toBe("multiple");
+      expect(wrapper.vm.mediaOption).toBe("upload");
+      expect(wrapper.vm.uploadMode).toBe("multiple");
     }, 10000); // 10 second timeout
 
     it("removes files from selection", () => {
       // Set to multiple mode first (like user would do)
-      wrapper.vm.selectMultiple();
+      wrapper.vm.selectMultipleUpload();
       wrapper.vm.selectedFiles = [
         {
           file: createFile("test1.jpg"),
@@ -623,7 +654,8 @@ describe("NewPageForm", () => {
 
     it("processes batch upload when multiple files selected", async () => {
       const component = wrapper.vm;
-      component.mediaOption = "multiple";
+      component.mediaOption = "upload";
+      component.uploadMode = "multiple";
       component.selectedFiles = [
         {
           file: createFile("test1.jpg"),
@@ -633,7 +665,8 @@ describe("NewPageForm", () => {
       ];
 
       // Test that multiple mode is properly set up
-      expect(component.mediaOption).toBe("multiple");
+      expect(component.mediaOption).toBe("upload");
+      expect(component.uploadMode).toBe("multiple");
       expect(component.selectedFiles.length).toBe(1);
       expect(component.selectedFiles[0].validation.valid).toBe(true);
     });

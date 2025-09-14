@@ -216,20 +216,20 @@ describe("Book/Show.vue", () => {
       }
     });
 
-    expect(wrapperWithNoPages.vm.activeTab).toBe('pages');
+    expect(wrapperWithNoPages.vm.activeTab).toBe("pages");
   });
 
   // SearchInput is now in the global layout header, not inside Book/Show
 
   it("renders edit book form when activeTab is 'book'", async () => {
-    wrapper.vm.activeTab = 'book';
+    wrapper.vm.activeTab = "book";
     await wrapper.vm.$nextTick();
 
     expect(wrapper.findComponent({ name: "EditBookForm" }).exists()).toBe(true);
   });
 
   it("renders new page form when activeTab is 'pages'", async () => {
-    wrapper.vm.activeTab = 'pages';
+    wrapper.vm.activeTab = "pages";
     await wrapper.vm.$nextTick();
 
     expect(wrapper.findComponent({ name: "NewPageForm" }).exists()).toBe(true);
@@ -239,12 +239,12 @@ describe("Book/Show.vue", () => {
     expect(wrapper.vm.activeTab).toBe(null);
 
     // Simulate clicking edit book button
-    wrapper.vm.setActiveTab('book');
+    wrapper.vm.setActiveTab("book");
     await wrapper.vm.$nextTick();
-    expect(wrapper.vm.activeTab).toBe('book');
+    expect(wrapper.vm.activeTab).toBe("book");
 
     // Simulate clicking same tab again to close
-    wrapper.vm.setActiveTab('book');
+    wrapper.vm.setActiveTab("book");
     await wrapper.vm.$nextTick();
     expect(wrapper.vm.activeTab).toBe(null);
   });
@@ -253,12 +253,12 @@ describe("Book/Show.vue", () => {
     expect(wrapper.vm.activeTab).toBe(null);
 
     // Simulate clicking add page button
-    wrapper.vm.setActiveTab('pages');
+    wrapper.vm.setActiveTab("pages");
     await wrapper.vm.$nextTick();
-    expect(wrapper.vm.activeTab).toBe('pages');
+    expect(wrapper.vm.activeTab).toBe("pages");
 
     // Simulate clicking same tab again to close
-    wrapper.vm.setActiveTab('pages');
+    wrapper.vm.setActiveTab("pages");
     await wrapper.vm.$nextTick();
     expect(wrapper.vm.activeTab).toBe(null);
   });
@@ -266,7 +266,7 @@ describe("Book/Show.vue", () => {
   // Bulk Actions Tests
   describe("bulk actions functionality", () => {
     it("renders bulk actions tab when user can edit pages", () => {
-      const tabButtons = wrapper.findAll('button');
+      const tabButtons = wrapper.findAll("button");
       const bulkActionTab = tabButtons.find((button) =>
         button.text().includes("Bulk Actions")
       );
@@ -276,14 +276,14 @@ describe("Book/Show.vue", () => {
     it("toggles bulk actions mode using setActiveTab", async () => {
       expect(wrapper.vm.activeTab).toBe(null);
 
-      wrapper.vm.setActiveTab('bulk');
+      wrapper.vm.setActiveTab("bulk");
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.vm.activeTab).toBe('bulk');
+      expect(wrapper.vm.activeTab).toBe("bulk");
     });
 
     it("renders bulk actions form when activeTab is 'bulk'", async () => {
-      wrapper.vm.activeTab = 'bulk';
+      wrapper.vm.activeTab = "bulk";
       await wrapper.vm.$nextTick();
 
       expect(wrapper.findComponent({ name: "BulkActionsForm" }).exists()).toBe(
@@ -293,30 +293,30 @@ describe("Book/Show.vue", () => {
 
     it("switches between tabs correctly", async () => {
       // Start with pages tab
-      wrapper.vm.setActiveTab('pages');
+      wrapper.vm.setActiveTab("pages");
       await wrapper.vm.$nextTick();
-      expect(wrapper.vm.activeTab).toBe('pages');
+      expect(wrapper.vm.activeTab).toBe("pages");
 
       // Switch to bulk actions
-      wrapper.vm.setActiveTab('bulk');
+      wrapper.vm.setActiveTab("bulk");
       await wrapper.vm.$nextTick();
-      expect(wrapper.vm.activeTab).toBe('bulk');
+      expect(wrapper.vm.activeTab).toBe("bulk");
     });
 
     it("clears selected pages when switching away from bulk actions", async () => {
       wrapper.vm.selectedPages = [1, 2, 3];
-      wrapper.vm.activeTab = 'bulk';
+      wrapper.vm.activeTab = "bulk";
 
       // Switch to pages tab
-      wrapper.vm.setActiveTab('pages');
+      wrapper.vm.setActiveTab("pages");
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.vm.activeTab).toBe('pages');
+      expect(wrapper.vm.activeTab).toBe("pages");
       expect(wrapper.vm.selectedPages).toEqual([]);
     });
 
     it("closes all tabs using closeAllTabs", async () => {
-      wrapper.vm.activeTab = 'bulk';
+      wrapper.vm.activeTab = "bulk";
       wrapper.vm.selectedPages = [1, 2, 3];
 
       wrapper.vm.closeAllTabs();
@@ -340,7 +340,7 @@ describe("Book/Show.vue", () => {
     });
 
     it("shows checkboxes when in bulk actions mode", async () => {
-      wrapper.vm.activeTab = 'bulk';
+      wrapper.vm.activeTab = "bulk";
       await wrapper.vm.$nextTick();
 
       const checkboxes = wrapper.findAll('input[type="checkbox"]');
@@ -348,7 +348,7 @@ describe("Book/Show.vue", () => {
     });
 
     it("makes page containers clickable in bulk actions mode", async () => {
-      wrapper.vm.activeTab = 'bulk';
+      wrapper.vm.activeTab = "bulk";
       await wrapper.vm.$nextTick();
 
       const pageContainers = wrapper.findAll(".cursor-pointer");
