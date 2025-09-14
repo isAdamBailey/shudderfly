@@ -294,13 +294,18 @@ const toAbsoluteUrl = (url) => {
 };
 
 // Retryable POST for FormData fallbacks
-const postFormData = async (formData) => {
+const postFormData = async (formData, onAttempt) => {
   const url = toAbsoluteUrl(route("pages.store"));
-  const maxAttempts = 3;
+  const maxAttempts = 5;
   let attempt = 0;
   let lastError = null;
   while (attempt < maxAttempts) {
     try {
+      if (onAttempt) onAttempt(attempt + 1);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 25000);
+
       const response = await fetch(url, {
         method: "POST",
         body: formData,
@@ -310,12 +315,14 @@ const postFormData = async (formData) => {
           "X-CSRF-TOKEN": getCsrfToken(),
           Accept: "application/json"
         },
-        cache: "no-store"
+        cache: "no-store",
+        signal: controller.signal
       });
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
+      clearTimeout(timeoutId);
       return response;
     } catch (err) {
       lastError = err;
@@ -323,10 +330,18 @@ const postFormData = async (formData) => {
       const isNetworkError =
         msg.includes("Failed to fetch") ||
         msg.includes("NetworkError") ||
-        err?.name === "TypeError";
+        err?.name === "TypeError" ||
+        err?.name === "AbortError";
+      const isRetryableHttp = msg.includes("HTTP 5");
       attempt += 1;
-      if (!isNetworkError || attempt >= maxAttempts) {
-        throw new Error(`Fallback upload failed: ${msg}`);
+      if (!(isNetworkError || isRetryableHttp) || attempt >= maxAttempts) {
+        const offlineHint =
+          typeof navigator !== "undefined" &&
+          navigator &&
+          navigator.onLine === false
+            ? " (device appears offline)"
+            : "";
+        throw new Error(`Fallback upload failed: ${msg}${offlineHint}`);
       }
       // Exponential backoff: 800ms, 1600ms
       const delayMs = 800 * Math.pow(2, attempt - 1);
@@ -735,7 +750,13 @@ const processBatch = async (specificFiles = null) => {
                   ?.getAttribute("content") || ""
               );
 
-              const response = await postFormData(formData);
+              const response = await postFormData(formData, (n) => {
+                // Optionally surface per-attempt info in UI later
+                batchError.value =
+                  n > 1
+                    ? `Retrying upload (attempt ${n})...`
+                    : batchError.value;
+              });
 
               if (response.ok) {
                 // Treat as successful and perform the same cleanup
@@ -902,7 +923,10 @@ const submit = async () => {
               ?.getAttribute("content") || ""
           );
 
-          const response = await postFormData(formData);
+          const response = await postFormData(formData, (n) => {
+            uploadStatus.value =
+              n > 1 ? `Uploading (retry ${n})...` : uploadStatus.value;
+          });
 
           if (!response.ok) {
             throw new Error(`Fallback upload failed: ${response.status}`);
@@ -994,7 +1018,10 @@ const submit = async () => {
           .getAttribute("content") || ""
       );
 
-      const response = await postFormData(formData);
+      const response = await postFormData(formData, (n) => {
+        uploadStatus.value =
+          n > 1 ? `Uploading (retry ${n})...` : uploadStatus.value;
+      });
 
       if (!response.ok) {
         throw new Error(`Fallback upload failed: ${response.status}`);
