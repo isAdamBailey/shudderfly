@@ -281,6 +281,18 @@ const cleanupPreviews = () => {
   }
 };
 
+// Helpers for fallback uploads
+const getCsrfToken = () =>
+  document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") ||
+  "";
+const toAbsoluteUrl = (url) => {
+  try {
+    return new URL(url, window.location.origin).toString();
+  } catch (e) {
+    return url;
+  }
+};
+
 const handleMultipleFiles = async (files) => {
   selectedFiles.value = files.map(createFileObject);
 
@@ -680,13 +692,20 @@ const processBatch = async (specificFiles = null) => {
                   ?.getAttribute("content") || ""
               );
 
-              const response = await fetch(route("pages.store"), {
-                method: "POST",
-                body: formData,
-                headers: {
-                  "X-Requested-With": "XMLHttpRequest"
+              const response = await fetch(
+                toAbsoluteUrl(route("pages.store")),
+                {
+                  method: "POST",
+                  body: formData,
+                  credentials: "same-origin",
+                  headers: {
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-CSRF-TOKEN": getCsrfToken(),
+                    Accept: "application/json"
+                  },
+                  cache: "no-store"
                 }
-              });
+              );
 
               if (response.ok) {
                 // Treat as successful and perform the same cleanup
@@ -853,10 +872,16 @@ const submit = async () => {
               ?.getAttribute("content") || ""
           );
 
-          const response = await fetch(route("pages.store"), {
+          const response = await fetch(toAbsoluteUrl(route("pages.store")), {
             method: "POST",
             body: formData,
-            headers: { "X-Requested-With": "XMLHttpRequest" }
+            credentials: "same-origin",
+            headers: {
+              "X-Requested-With": "XMLHttpRequest",
+              "X-CSRF-TOKEN": getCsrfToken(),
+              Accept: "application/json"
+            },
+            cache: "no-store"
           });
 
           if (!response.ok) {
@@ -949,12 +974,16 @@ const submit = async () => {
           .getAttribute("content") || ""
       );
 
-      const response = await fetch(route("pages.store"), {
+      const response = await fetch(toAbsoluteUrl(route("pages.store")), {
         method: "POST",
         body: formData,
+        credentials: "same-origin",
         headers: {
-          "X-Requested-With": "XMLHttpRequest"
-        }
+          "X-Requested-With": "XMLHttpRequest",
+          "X-CSRF-TOKEN": getCsrfToken(),
+          Accept: "application/json"
+        },
+        cache: "no-store"
       });
 
       if (!response.ok) {
