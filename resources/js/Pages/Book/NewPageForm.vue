@@ -40,7 +40,6 @@ const autoSaveTimeout = ref(null);
 const failedUploads = ref([]);
 const isSubmitting = ref(false);
 const batchError = ref(null);
-const uploadStatus = ref("");
 
 const previewFiles = computed(() => {
   if (
@@ -90,7 +89,18 @@ const uploadMode = ref("single"); // single, multiple
 const { compressionProgress, optimizationProgress, processMediaFile } =
   useVideoOptimization();
 
-// Global optimizing state removed from disabled logic to avoid blocking on some mobile devices
+// Global optimizing state: true if any optimization is happening
+const isOptimizing = computed(() => {
+  // Single-file optimization
+  if (singleFileProcessing.value) return true;
+  // Multiple selection: any file currently processing
+  if (selectedFiles.value && selectedFiles.value.some((f) => f?.processing)) {
+    return true;
+  }
+  // Composable progress signal (1..99 means active)
+  const prog = Number(optimizationProgress?.value ?? optimizationProgress);
+  return prog > 0 && prog < 100;
+});
 
 const createFileObject = (file) => ({
   file,
@@ -103,17 +113,7 @@ const createFileObject = (file) => ({
 const processSingleFile = async (file) => {
   singleFileOriginal.value = file;
 
-  // For images, compress before assigning when large
-  if (!file.type.startsWith("video/")) {
-    try {
-      const maybeCompressed = await compressImageFile(file);
-      form.image = maybeCompressed || file;
-    } catch (e) {
-      form.image = file;
-    }
-  } else {
-    form.image = file;
-  }
+  form.image = file;
 
   // Revoke any prior object URL preview
   revokeObjectURLIfNeeded(singleFilePreview.value);
@@ -292,198 +292,12 @@ const cleanupPreviews = () => {
 };
 
 // Helpers for fallback uploads
-const getCsrfToken = () =>
-  document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") ||
-  "";
 const toAbsoluteUrl = (url) => {
   try {
     return new URL(url, window.location.origin).toString();
   } catch (e) {
     return url;
   }
-};
-
-// Image compression helpers (reduce payload for mobile reliability)
-const loadImageFromBlob = (file) => {
-  return new Promise((resolve, reject) => {
-    try {
-      const url = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        resolve(img);
-      };
-      img.onerror = (e) => {
-        URL.revokeObjectURL(url);
-        reject(e);
-      };
-      img.src = url;
-    } catch (e) {
-      reject(e);
-    }
-  });
-};
-
-const compressImageFile = async (file) => {
-  if (!file || !file.type || !file.type.startsWith("image/")) return file;
-
-  const maxBytes = 3 * 1024 * 1024; // 3MB
-  const maxDimension = 2048; // px
-  const quality = 0.85;
-
-  try {
-    // Skip tiny images
-    if (file.size <= maxBytes) return file;
-
-    const img = await loadImageFromBlob(file);
-    const { naturalWidth: srcW, naturalHeight: srcH } = img;
-    if (!srcW || !srcH) return file;
-
-    // Compute target size with aspect ratio preserved
-    let targetW = srcW;
-    let targetH = srcH;
-    if (Math.max(srcW, srcH) > maxDimension) {
-      if (srcW > srcH) {
-        targetW = maxDimension;
-        targetH = Math.round((srcH / srcW) * targetW);
-      } else {
-        targetH = maxDimension;
-        targetW = Math.round((srcW / srcH) * targetH);
-      }
-    }
-
-    // Draw to canvas
-    const canvas = document.createElement("canvas");
-    canvas.width = targetW;
-    canvas.height = targetH;
-    const ctx = canvas.getContext("2d", { alpha: true });
-    if (!ctx) return file;
-    ctx.drawImage(img, 0, 0, targetW, targetH);
-
-    // Convert to JPEG to maximize compatibility
-    const blob = await new Promise((resolve, reject) => {
-      canvas.toBlob(
-        (b) => (b ? resolve(b) : reject(new Error("Canvas toBlob failed"))),
-        "image/jpeg",
-        quality
-      );
-    });
-
-    // If compression didn't help, keep original
-    if (!blob || blob.size >= file.size) return file;
-
-    const newName = file.name.replace(/\.[^/.]+$/, "") + ".jpg";
-    const compressed = new File([blob], newName, {
-      type: "image/jpeg",
-      lastModified: Date.now()
-    });
-    return compressed;
-  } catch (e) {
-    return file;
-  }
-};
-
-// XHR fallback for environments where fetch fails
-const xhrPostFormData = (url, formData, timeoutMs = 45000) => {
-  return new Promise((resolve, reject) => {
-    try {
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", url, true);
-      xhr.withCredentials = true;
-      xhr.timeout = timeoutMs;
-      xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
-      const csrf = getCsrfToken();
-      if (csrf) xhr.setRequestHeader("X-CSRF-TOKEN", csrf);
-      xhr.setRequestHeader("Accept", "application/json");
-
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          resolve({
-            ok: true,
-            status: xhr.status,
-            responseText: xhr.responseText
-          });
-        } else {
-          reject(new Error(`HTTP ${xhr.status}`));
-        }
-      };
-      xhr.onerror = () => reject(new Error("XHR network error"));
-      xhr.ontimeout = () => reject(new Error("XHR timeout"));
-
-      xhr.send(formData);
-    } catch (e) {
-      reject(e);
-    }
-  });
-};
-
-// Retryable POST for FormData fallbacks
-const postFormData = async (formData, onAttempt) => {
-  const url = toAbsoluteUrl(route("pages.store"));
-  const maxAttempts = 6;
-  let attempt = 0;
-  let lastError = null;
-  while (attempt < maxAttempts) {
-    try {
-      if (onAttempt) onAttempt(attempt + 1);
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 120000);
-
-      const response = await fetch(url, {
-        method: "POST",
-        body: formData,
-        credentials: "same-origin",
-        headers: {
-          "X-Requested-With": "XMLHttpRequest",
-          "X-CSRF-TOKEN": getCsrfToken(),
-          Accept: "application/json"
-        },
-        cache: "no-store",
-        signal: controller.signal
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      clearTimeout(timeoutId);
-      return response;
-    } catch (err) {
-      lastError = err;
-      const msg = String(err?.message || err || "");
-      const isNetworkError =
-        msg.includes("Failed to fetch") ||
-        msg.includes("NetworkError") ||
-        err?.name === "TypeError" ||
-        err?.name === "AbortError";
-      const isRetryableHttp = msg.includes("HTTP 5");
-
-      // Try XHR immediately on network/abort errors before counting the attempt as failed
-      if (isNetworkError) {
-        try {
-          const xhrRes = await xhrPostFormData(url, formData, 180000);
-          return xhrRes;
-        } catch (xhrErr) {
-          // continue to retry/backoff
-          lastError = xhrErr;
-        }
-      }
-      attempt += 1;
-      if (!(isNetworkError || isRetryableHttp) || attempt >= maxAttempts) {
-        const offlineHint =
-          typeof navigator !== "undefined" &&
-          navigator &&
-          navigator.onLine === false
-            ? " (device appears offline)"
-            : "";
-        throw new Error(`Fallback upload failed: ${msg}${offlineHint}`);
-      }
-      // Exponential backoff: 800ms, 1600ms
-      const delayMs = 800 * Math.pow(2, attempt - 1);
-      await new Promise((r) => setTimeout(r, delayMs));
-    }
-  }
-  throw lastError || new Error("Fallback upload failed");
 };
 
 const handleMultipleFiles = async (files) => {
@@ -758,12 +572,6 @@ const processBatch = async (specificFiles = null) => {
             clearTimeout(processingTimeout);
             fileObj.processing = false;
           }
-        } else if (!file.type.startsWith("video/") && !fileObj.processed) {
-          // Compress large images before upload
-          const compressed = await compressImageFile(file);
-          fileForUpload = compressed;
-          fileObj.processedFile = compressed;
-          fileObj.processed = true;
         }
         form.content = originalContent;
         form.image = fileForUpload;
@@ -773,67 +581,104 @@ const processBatch = async (specificFiles = null) => {
         let uploadError = null;
 
         try {
-          // Track if form.post() was actually called
-          let formPostCalled = false;
-          let formPostStarted = false;
+          const maxAttempts = 3;
+          let lastError = null;
+          for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            // Track if form.post() was actually called
+            let formPostCalled = false;
+            let formPostStarted = false;
 
-          // Add timeout to prevent hanging uploads
-          await Promise.race([
-            new Promise((resolve, reject) => {
-              try {
-                formPostCalled = true;
+            try {
+              // Add timeout to prevent hanging uploads
+              await Promise.race([
+                new Promise((resolve, reject) => {
+                  try {
+                    formPostCalled = true;
 
-                form.post(route("pages.store"), {
-                  forceFormData: true,
-                  preserveState: true,
-                  preserveScroll: true,
-                  replace: false,
-                  onStart: () => {
-                    formPostStarted = true;
-                  },
-                  onSuccess: () => {
-                    uploadSuccessful = true;
-                    resolve();
-                  },
-                  onError: (errors) => {
-                    uploadError = errors;
-                    reject(errors);
-                  },
-                  onFinish: () => {
-                    // Ensure we always resolve/reject
-                    if (!uploadSuccessful && !uploadError) {
-                      uploadError = new Error(
-                        "Upload completed but status unclear"
-                      );
-                      reject(uploadError);
-                    }
+                    form.post(route("pages.store"), {
+                      forceFormData: true,
+                      preserveState: true,
+                      preserveScroll: true,
+                      replace: false,
+                      onStart: () => {
+                        formPostStarted = true;
+                      },
+                      onSuccess: () => {
+                        uploadSuccessful = true;
+                        resolve();
+                      },
+                      onError: (errors) => {
+                        uploadError = errors;
+                        reject(errors);
+                      },
+                      onFinish: () => {
+                        // Ensure we always resolve/reject
+                        if (!uploadSuccessful && !uploadError) {
+                          uploadError = new Error(
+                            "Upload completed but status unclear"
+                          );
+                          reject(uploadError);
+                        }
+                      }
+                    });
+                  } catch (e) {
+                    reject(
+                      new Error(`form.post() failed to execute: ${e.message}`)
+                    );
                   }
-                });
-              } catch (e) {
-                reject(
-                  new Error(`form.post() failed to execute: ${e.message}`)
-                );
-              }
-            }),
-            // 30 second timeout to prevent hanging
-            new Promise((_, reject) => {
-              setTimeout(() => {
-                if (!formPostCalled) {
-                  reject(
-                    new Error(`form.post() was never called for file ${i + 1}`)
-                  );
-                } else if (!formPostStarted) {
-                  reject(
-                    new Error(
-                      `form.post() called but never started for file ${i + 1}`
-                    )
-                  );
-                } else {
-                  reject(new Error(`Upload timeout for file ${i + 1}`));
-                }
-              }, 30000);
-            })
-          ]);
+                }),
+                // 30 second timeout to prevent hanging
+                new Promise((_, reject) => {
+                  setTimeout(() => {
+                    if (!formPostCalled) {
+                      reject(
+                        new Error(
+                          `form.post() was never called for file ${i + 1}`
+                        )
+                      );
+                    } else if (!formPostStarted) {
+                      reject(
+                        new Error(
+                          `form.post() called but never started for file ${
+                            i + 1
+                          }`
+                        )
+                      );
+                    } else {
+                      reject(new Error(`Upload timeout for file ${i + 1}`));
+                    }
+                  }, 30000);
+                })
+              ]);
+            } catch (error) {
+              uploadError = error;
+              lastError = error;
+            }
+
+            if (uploadSuccessful) break;
+
+            // Decide whether to retry: only when never-called, never-started, status-unclear, or timeout-before-start
+            const msg =
+              uploadError && typeof uploadError !== "string"
+                ? uploadError.message
+                : uploadError;
+            const shouldRetry =
+              !formPostStarted ||
+              (typeof msg === "string" &&
+                (msg.includes("never started") ||
+                  msg.includes("status unclear") ||
+                  msg.includes("timeout")));
+
+            if (shouldRetry && attempt < maxAttempts) {
+              // Exponential backoff: 600ms, 1200ms
+              await new Promise((r) => setTimeout(r, 600 * attempt));
+              continue;
+            }
+            // No retry
+            if (!uploadSuccessful) {
+              throw lastError || new Error("Upload failed");
+            }
+          }
         } catch (error) {
           uploadError = error;
         }
@@ -862,23 +707,11 @@ const processBatch = async (specificFiles = null) => {
           }
         } else {
           // If upload was not successful, try a more direct approach for mobile
-          const errorMessage =
-            uploadError && typeof uploadError !== "string"
-              ? uploadError.message
-              : uploadError;
-
-          const shouldAttemptFallback = (() => {
-            if (!errorMessage) return false;
-            if (typeof errorMessage !== "string") return false;
-            return (
-              errorMessage.includes("form.post() was never called") ||
-              errorMessage.includes("never started") ||
-              errorMessage.includes("status unclear") ||
-              errorMessage.includes("timeout")
-            );
-          })();
-
-          if (shouldAttemptFallback) {
+          if (
+            uploadError &&
+            uploadError.message &&
+            uploadError.message.includes("form.post() was never called")
+          ) {
             try {
               const formData = new FormData();
               formData.append("book_id", form.book_id);
@@ -891,13 +724,16 @@ const processBatch = async (specificFiles = null) => {
                   ?.getAttribute("content") || ""
               );
 
-              const response = await postFormData(formData, (n) => {
-                // Optionally surface per-attempt info in UI later
-                batchError.value =
-                  n > 1
-                    ? `Retrying upload (attempt ${n})...`
-                    : batchError.value;
-              });
+              const response = await fetch(
+                toAbsoluteUrl(route("pages.store")),
+                {
+                  method: "POST",
+                  body: formData,
+                  headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                  }
+                }
+              );
 
               if (response.ok) {
                 // Treat as successful and perform the same cleanup
@@ -919,7 +755,7 @@ const processBatch = async (specificFiles = null) => {
                 fileObj.preview = null;
 
                 if (i < filesToUpload.length - 1) {
-                  await new Promise((resolve) => setTimeout(resolve, 1500));
+                  await new Promise((resolve) => setTimeout(resolve, 500));
                 }
               } else {
                 throw new Error(`Manual upload failed: ${response.status}`);
@@ -1015,8 +851,6 @@ const submit = async () => {
   isSubmitting.value = true;
 
   try {
-    uploadStatus.value = "Preparing upload...";
-
     await new Promise((resolve, reject) => {
       let finished = false;
       let formPostStarted = false;
@@ -1039,8 +873,6 @@ const submit = async () => {
       const doFallback = async () => {
         if (finished) return;
         try {
-          uploadStatus.value = "Uploading (compat mode)...";
-
           const targetFileObj = previewFiles.value[0] || null;
           const fileForUpload =
             form.image ||
@@ -1064,9 +896,10 @@ const submit = async () => {
               ?.getAttribute("content") || ""
           );
 
-          const response = await postFormData(formData, (n) => {
-            uploadStatus.value =
-              n > 1 ? `Uploading (retry ${n})...` : uploadStatus.value;
+          const response = await fetch(toAbsoluteUrl(route("pages.store")), {
+            method: "POST",
+            body: formData,
+            headers: { "X-Requested-With": "XMLHttpRequest" }
           });
 
           if (!response.ok) {
@@ -1074,7 +907,6 @@ const submit = async () => {
           }
 
           // Success cleanup
-          uploadStatus.value = "";
           cleanupPreviews();
           selectedFiles.value = [];
           form.reset();
@@ -1086,7 +918,6 @@ const submit = async () => {
         } catch (e) {
           finalizeGuard();
           isSubmitting.value = false;
-          uploadStatus.value = "";
           reject(e);
         }
       };
@@ -1099,33 +930,47 @@ const submit = async () => {
       }, 2000);
 
       try {
-        form.post(route("pages.store"), {
-          forceFormData: true,
-          preserveScroll: true,
-          onStart: () => {
-            formPostStarted = true;
-            uploadStatus.value = "Uploading...";
-          },
-          onSuccess: () => {
-            if (finalizeGuard()) return;
-            uploadStatus.value = "";
-            // Revoke any object URL previews before clearing state
-            cleanupPreviews();
-            selectedFiles.value = [];
-            form.reset();
-            clearDraft();
-            emit("close-form");
-            resolve();
-          },
-          onError: (errors) => {
-            if (finalizeGuard()) return;
-            uploadStatus.value = "";
-            reject(errors);
-          },
-          onFinish: () => {
-            isSubmitting.value = false;
-          }
-        });
+        const maxAttempts = 3;
+        let attempt = 0;
+        const tryPost = () => {
+          attempt += 1;
+          form.post(route("pages.store"), {
+            forceFormData: true,
+            preserveScroll: true,
+            onStart: () => {
+              formPostStarted = true;
+            },
+            onSuccess: () => {
+              if (finalizeGuard()) return;
+              // Revoke any object URL previews before clearing state
+              cleanupPreviews();
+              selectedFiles.value = [];
+              form.reset();
+              clearDraft();
+              emit("close-form");
+              resolve();
+            },
+            onError: (errors) => {
+              if (finalizeGuard()) return;
+              const msg =
+                errors && typeof errors !== "string" ? errors.message : errors;
+              const shouldRetry =
+                typeof msg === "string" &&
+                (msg.includes("never started") ||
+                  msg.includes("status unclear") ||
+                  msg.includes("timeout"));
+              if (shouldRetry && attempt < maxAttempts) {
+                setTimeout(tryPost, 600 * attempt);
+              } else {
+                reject(errors);
+              }
+            },
+            onFinish: () => {
+              isSubmitting.value = false;
+            }
+          });
+        };
+        tryPost();
       } catch (e) {
         // If calling form.post threw synchronously, fallback
         doFallback();
@@ -1159,9 +1004,10 @@ const submit = async () => {
           .getAttribute("content") || ""
       );
 
-      const response = await postFormData(formData, (n) => {
-        uploadStatus.value =
-          n > 1 ? `Uploading (retry ${n})...` : uploadStatus.value;
+      const response = await fetch(toAbsoluteUrl(route("pages.store")), {
+        method: "POST",
+        body: formData,
+        headers: { "X-Requested-With": "XMLHttpRequest" }
       });
 
       if (!response.ok) {
@@ -1618,13 +1464,14 @@ onUnmounted(() => {
           type="button"
           class="w-3/4 flex justify-center py-3"
           :class="{
-            'opacity-25': form.processing || batchProcessing
+            'opacity-25': form.processing || batchProcessing || isOptimizing
           }"
           :disabled="
             form.processing ||
             isSubmitting ||
             batchProcessing ||
             singleFileProcessing ||
+            isOptimizing ||
             v$.$error
           "
           @click.prevent="handleFormSubmit"
