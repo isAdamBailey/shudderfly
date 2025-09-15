@@ -581,106 +581,80 @@ const processBatch = async (specificFiles = null) => {
         let uploadError = null;
 
         try {
-          const maxAttempts = 3;
-          let lastError = null;
-          for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-            // Track if form.post() was actually called
-            let formPostCalled = false;
-            let formPostStarted = false;
+          // Try fetch first (most reliable on affected devices)
+          const formData = new FormData();
+          formData.append("book_id", form.book_id);
+          formData.append("content", form.content || "");
+          formData.append("image", fileForUpload);
+          formData.append(
+            "_token",
+            document
+              .querySelector('meta[name="csrf-token"]')
+              ?.getAttribute("content") || ""
+          );
 
-            try {
-              // Add timeout to prevent hanging uploads
-              await Promise.race([
-                new Promise((resolve, reject) => {
-                  try {
-                    formPostCalled = true;
+          const response = await fetch(toAbsoluteUrl(route("pages.store")), {
+            method: "POST",
+            body: formData,
+            credentials: "same-origin",
+            headers: {
+              "X-Requested-With": "XMLHttpRequest",
+              Accept: "application/json"
+            },
+            cache: "no-store"
+          });
 
-                    form.post(route("pages.store"), {
-                      forceFormData: true,
-                      preserveState: true,
-                      preserveScroll: true,
-                      replace: false,
-                      onStart: () => {
-                        formPostStarted = true;
-                      },
-                      onSuccess: () => {
-                        uploadSuccessful = true;
-                        resolve();
-                      },
-                      onError: (errors) => {
-                        uploadError = errors;
-                        reject(errors);
-                      },
-                      onFinish: () => {
-                        // Ensure we always resolve/reject
-                        if (!uploadSuccessful && !uploadError) {
-                          uploadError = new Error(
-                            "Upload completed but status unclear"
-                          );
-                          reject(uploadError);
-                        }
-                      }
-                    });
-                  } catch (e) {
-                    reject(
-                      new Error(`form.post() failed to execute: ${e.message}`)
-                    );
-                  }
-                }),
-                // 30 second timeout to prevent hanging
-                new Promise((_, reject) => {
-                  setTimeout(() => {
-                    if (!formPostCalled) {
-                      reject(
-                        new Error(
-                          `form.post() was never called for file ${i + 1}`
-                        )
-                      );
-                    } else if (!formPostStarted) {
-                      reject(
-                        new Error(
-                          `form.post() called but never started for file ${
-                            i + 1
-                          }`
-                        )
-                      );
-                    } else {
-                      reject(new Error(`Upload timeout for file ${i + 1}`));
-                    }
-                  }, 30000);
-                })
-              ]);
-            } catch (error) {
-              uploadError = error;
-              lastError = error;
-            }
-
-            if (uploadSuccessful) break;
-
-            // Decide whether to retry: only when never-called, never-started, status-unclear, or timeout-before-start
-            const msg =
-              uploadError && typeof uploadError !== "string"
-                ? uploadError.message
-                : uploadError;
-            const shouldRetry =
-              !formPostStarted ||
-              (typeof msg === "string" &&
-                (msg.includes("never started") ||
-                  msg.includes("status unclear") ||
-                  msg.includes("timeout")));
-
-            if (shouldRetry && attempt < maxAttempts) {
-              // Exponential backoff: 600ms, 1200ms
-              await new Promise((r) => setTimeout(r, 600 * attempt));
-              continue;
-            }
-            // No retry
-            if (!uploadSuccessful) {
-              throw lastError || new Error("Upload failed");
-            }
+          if (response.ok) {
+            uploadSuccessful = true;
+          } else {
+            throw new Error(`Fetch upload failed: ${response.status}`);
           }
-        } catch (error) {
-          uploadError = error;
+        } catch (fetchError) {
+          uploadError = fetchError;
+
+          // Fallback to Inertia if fetch fails
+          try {
+            await new Promise((resolve, reject) => {
+              let finalized = false;
+              const end = (fn) => {
+                if (finalized) return true;
+                finalized = true;
+                fn();
+                return false;
+              };
+
+              try {
+                form.post(route("pages.store"), {
+                  forceFormData: true,
+                  preserveScroll: true,
+                  onSuccess: () => {
+                    if (end(() => {})) return;
+                    uploadSuccessful = true;
+                    resolve();
+                  },
+                  onError: (errors) => {
+                    if (end(() => {})) return;
+                    reject(errors);
+                  },
+                  onFinish: () => {
+                    // Ensure we always resolve/reject
+                    if (!uploadSuccessful && !finalized) {
+                      reject(
+                        new Error("Inertia upload completed but status unclear")
+                      );
+                    }
+                  }
+                });
+              } catch (e) {
+                reject(e);
+              }
+            });
+          } catch (inertiaError) {
+            // Both fetch and Inertia failed
+            throw new Error(
+              `Both fetch and Inertia upload failed. Fetch: ${fetchError.message}, Inertia: ${inertiaError.message}`
+            );
+          }
         }
 
         if (uploadSuccessful) {
@@ -706,73 +680,13 @@ const processBatch = async (specificFiles = null) => {
             await new Promise((resolve) => setTimeout(resolve, 500));
           }
         } else {
-          // If upload was not successful, try a more direct approach for mobile
-          if (
-            uploadError &&
-            uploadError.message &&
-            uploadError.message.includes("form.post() was never called")
-          ) {
-            try {
-              const formData = new FormData();
-              formData.append("book_id", form.book_id);
-              formData.append("content", form.content || "");
-              formData.append("image", fileForUpload);
-              formData.append(
-                "_token",
-                document
-                  .querySelector('meta[name="csrf-token"]')
-                  ?.getAttribute("content") || ""
-              );
-
-              const response = await fetch(
-                toAbsoluteUrl(route("pages.store")),
-                {
-                  method: "POST",
-                  body: formData,
-                  headers: {
-                    "X-Requested-With": "XMLHttpRequest"
-                  }
-                }
-              );
-
-              if (response.ok) {
-                // Treat as successful and perform the same cleanup
-                uploadSuccessful = true;
-                fileObj.uploaded = true;
-
-                const liveIndex = selectedFiles.value.findIndex(
-                  (f) => f.file === fileObj.file
-                );
-                if (liveIndex !== -1) {
-                  selectedFiles.value.splice(liveIndex, 1);
-                }
-
-                try {
-                  revokeObjectURLIfNeeded(fileObj.preview);
-                } catch (e) {
-                  // no-op
-                }
-                fileObj.preview = null;
-
-                if (i < filesToUpload.length - 1) {
-                  await new Promise((resolve) => setTimeout(resolve, 500));
-                }
-              } else {
-                throw new Error(`Manual upload failed: ${response.status}`);
-              }
-            } catch (fetchError) {
-              const errorMsg = `Fallback upload failed: ${fetchError.message}`;
-              throw new Error(`File ${i + 1}: ${errorMsg}`);
-            }
-          } else {
-            // If upload was not successful, provide clear error info
-            const errorMsg = uploadError
-              ? typeof uploadError === "string"
-                ? uploadError
-                : uploadError.message || "Upload failed"
-              : "Upload failed - no response received";
-            throw new Error(`File ${i + 1}: ${errorMsg}`);
-          }
+          // If upload was not successful, provide clear error info
+          const errorMsg = uploadError
+            ? typeof uploadError === "string"
+              ? uploadError
+              : uploadError.message || "Upload failed"
+            : "Upload failed - no response received";
+          throw new Error(`File ${i + 1}: ${errorMsg}`);
         }
       } catch (error) {
         fileObj.error = error;
