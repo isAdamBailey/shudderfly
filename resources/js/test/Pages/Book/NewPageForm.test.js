@@ -457,7 +457,7 @@ describe("NewPageForm", () => {
         processedFile: file
       }));
 
-      // Mock first fetch fails, second succeeds, then Inertia fallback for first file
+      // Mock first fetch fails, second succeeds (no Inertia fallback for multiple uploads)
       let callCount = 0;
       global.fetch.mockImplementation(() => {
         callCount++;
@@ -474,18 +474,12 @@ describe("NewPageForm", () => {
         }
       });
 
-      // Mock Inertia fallback for first file
-      mockForm.post.mockImplementation((url, options) => {
-        if (options.onStart) options.onStart();
-        setTimeout(() => options.onError("Server error"), 10);
-      });
-
       await wrapper.vm.processBatch();
 
-      // First file: fetch fails, then Inertia fallback fails
+      // First file: fetch fails (no Inertia fallback for multiple uploads)
       // Second file: fetch succeeds
       expect(global.fetch).toHaveBeenCalledTimes(2);
-      expect(mockForm.post).toHaveBeenCalledTimes(1);
+      expect(mockForm.post).toHaveBeenCalledTimes(0); // No Inertia calls for multiple uploads
 
       // After processing, successfully uploaded files are removed from selectedFiles
       expect(wrapper.vm.selectedFiles.length).toBe(1);
@@ -493,16 +487,16 @@ describe("NewPageForm", () => {
 
       // With our new error handling, the error message is formatted as "File X: error"
       expect(wrapper.vm.selectedFiles[0].errorMessage).toBe(
-        "Both fetch and Inertia upload failed. Fetch: Fetch failed, Inertia: undefined"
+        "Fetch upload failed: Fetch failed"
       );
 
       // Failed uploads are recorded
       expect(wrapper.vm.failedUploads.length).toBe(1);
       expect(wrapper.vm.failedUploads[0].fileName).toBe("test1.jpg");
       expect(wrapper.vm.failedUploads[0].error).toBe(
-        "Both fetch and Inertia upload failed. Fetch: Fetch failed, Inertia: undefined"
+        "Fetch upload failed: Fetch failed"
       );
-    }, 20000); // Increase timeout to 20 seconds to account for delays between uploads
+    }, 10000); // Reduced timeout since no Inertia fallback
 
     it("updates progress during batch processing", async () => {
       const files = [

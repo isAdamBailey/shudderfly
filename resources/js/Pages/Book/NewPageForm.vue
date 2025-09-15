@@ -583,12 +583,17 @@ const processBatch = async (specificFiles = null) => {
           formData.append("book_id", form.book_id);
           formData.append("content", originalContent || "");
           formData.append("image", fileForUpload);
-          formData.append(
-            "_token",
-            document
-              .querySelector('meta[name="csrf-token"]')
-              ?.getAttribute("content") || ""
-          );
+
+          // Get CSRF token
+          const csrfToken = document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute("content");
+
+          if (!csrfToken) {
+            throw new Error("CSRF token not found");
+          }
+
+          formData.append("_token", csrfToken);
 
           const response = await fetch(toAbsoluteUrl(route("pages.store")), {
             method: "POST",
@@ -604,68 +609,19 @@ const processBatch = async (specificFiles = null) => {
           if (response.ok) {
             uploadSuccessful = true;
           } else {
-            throw new Error(`Fetch upload failed: ${response.status}`);
+            const errorText = await response
+              .text()
+              .catch(() => "Unknown error");
+            throw new Error(
+              `Fetch upload failed: ${response.status} - ${errorText}`
+            );
           }
         } catch (fetchError) {
           uploadError = fetchError;
 
-          // Fallback to Inertia if fetch fails
-          try {
-            await new Promise((resolve, reject) => {
-              let finalized = false;
-              const end = (fn) => {
-                if (finalized) return true;
-                finalized = true;
-                fn();
-                return false;
-              };
-
-              try {
-                // Temporarily set form data for this upload only
-                const originalImage = form.image;
-                const originalFormContent = form.content;
-                const originalVideoLink = form.video_link;
-
-                form.image = fileForUpload;
-                form.content = originalContent || "";
-                form.video_link = null;
-
-                form.post(route("pages.store"), {
-                  forceFormData: true,
-                  preserveScroll: true,
-                  onSuccess: () => {
-                    if (end(() => {})) return;
-                    uploadSuccessful = true;
-                    resolve();
-                  },
-                  onError: (errors) => {
-                    if (end(() => {})) return;
-                    reject(errors);
-                  },
-                  onFinish: () => {
-                    // Restore original form state
-                    form.image = originalImage;
-                    form.content = originalFormContent;
-                    form.video_link = originalVideoLink;
-
-                    // Only reject if we haven't finalized yet and upload wasn't successful
-                    if (!finalized && !uploadSuccessful) {
-                      reject(
-                        new Error("Inertia upload completed but status unclear")
-                      );
-                    }
-                  }
-                });
-              } catch (e) {
-                reject(e);
-              }
-            });
-          } catch (inertiaError) {
-            // Both fetch and Inertia failed
-            throw new Error(
-              `Both fetch and Inertia upload failed. Fetch: ${fetchError.message}, Inertia: ${inertiaError.message}`
-            );
-          }
+          // For multiple uploads, don't use Inertia fallback to avoid form state conflicts
+          // Just fail with a clear error message
+          throw new Error(`Fetch upload failed: ${fetchError.message}`);
         }
 
         if (uploadSuccessful) {
