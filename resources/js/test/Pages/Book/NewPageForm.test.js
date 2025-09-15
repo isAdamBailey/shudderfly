@@ -499,7 +499,9 @@ describe("NewPageForm", () => {
       // Failed uploads are recorded
       expect(wrapper.vm.failedUploads.length).toBe(1);
       expect(wrapper.vm.failedUploads[0].fileName).toBe("test1.jpg");
-      expect(wrapper.vm.failedUploads[0].error).toBe("Both fetch and Inertia upload failed. Fetch: Fetch failed, Inertia: undefined");
+      expect(wrapper.vm.failedUploads[0].error).toBe(
+        "Both fetch and Inertia upload failed. Fetch: Fetch failed, Inertia: undefined"
+      );
     }, 15000); // Increase timeout to 15 seconds to account for retry delays
 
     it("updates progress during batch processing", async () => {
@@ -528,7 +530,7 @@ describe("NewPageForm", () => {
 
       // Check that progress was updated during processing
       expect(wrapper.vm.batchProgress).toBe(100); // Final progress should be 100%
-      
+
       // Verify that files were processed (selectedFiles should be empty after successful upload)
       expect(wrapper.vm.selectedFiles.length).toBe(0);
     });

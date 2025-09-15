@@ -637,8 +637,8 @@ const processBatch = async (specificFiles = null) => {
                     reject(errors);
                   },
                   onFinish: () => {
-                    // Ensure we always resolve/reject
-                    if (!uploadSuccessful && !finalized) {
+                    // Only reject if we haven't finalized yet and upload wasn't successful
+                    if (!finalized && !uploadSuccessful) {
                       reject(
                         new Error("Inertia upload completed but status unclear")
                       );
@@ -699,13 +699,15 @@ const processBatch = async (specificFiles = null) => {
           error: fileObj.errorMessage
         });
 
-        // Ensure the error is also set in the original selectedFiles array
+        // Remove the failed file from selectedFiles array
         const liveIndex = selectedFiles.value.findIndex(
           (f) => f.file === fileObj.file
         );
         if (liveIndex !== -1) {
           selectedFiles.value[liveIndex].error = error;
           selectedFiles.value[liveIndex].errorMessage = fileObj.errorMessage;
+          // Don't remove from selectedFiles - keep it so user can see the error
+          // selectedFiles.value.splice(liveIndex, 1);
         }
       }
 
