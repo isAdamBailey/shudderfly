@@ -606,7 +606,30 @@ const processBatch = async (specificFiles = null) => {
           }
 
           if (!freshCsrfToken) {
-            throw new Error("CSRF token not available for upload");
+            // Debug: show what's available on the page
+            const debugInfo = {
+              metaTag: document.querySelector('meta[name="csrf-token"]'),
+              allMetaTags: Array.from(document.querySelectorAll("meta")).map(
+                (m) => ({ name: m.name, content: m.content })
+              ),
+              allForms: Array.from(document.querySelectorAll("form")).map((f) =>
+                Array.from(f.querySelectorAll("input")).map((i) => ({
+                  name: i.name,
+                  value: i.value
+                }))
+              ),
+              windowLaravel: window.Laravel
+            };
+
+            const debugMessage = `CSRF Debug: Meta tag exists: ${!!debugInfo.metaTag}, All meta tags: ${debugInfo.allMetaTags
+              .map((m) => m.name)
+              .join(", ")}, Forms with inputs: ${
+              debugInfo.allForms.length
+            }, Laravel: ${!!debugInfo.windowLaravel}`;
+
+            throw new Error(
+              `CSRF token not available for upload. ${debugMessage}`
+            );
           }
 
           formData.append("_token", freshCsrfToken);
