@@ -541,6 +541,39 @@ const processBatch = async (specificFiles = null) => {
 
     const originalContent = form.content;
 
+    // Get CSRF token once at the beginning of batch processing
+    let csrfToken = document
+      .querySelector('meta[name="csrf-token"]')
+      ?.getAttribute("content");
+
+    // Fallback: try to get from form if meta tag is not available
+    if (!csrfToken) {
+      csrfToken = document
+        .querySelector('input[name="_token"]')
+        ?.getAttribute("value");
+    }
+
+    // If still no token, try to get from window.Laravel object
+    if (!csrfToken && window.Laravel && window.Laravel.csrfToken) {
+      csrfToken = window.Laravel.csrfToken;
+    }
+
+    if (!csrfToken) {
+      console.error("CSRF token not found. Available elements:", {
+        metaTag: document.querySelector('meta[name="csrf-token"]'),
+        formInput: document.querySelector('input[name="_token"]'),
+        windowLaravel: window.Laravel
+      });
+      throw new Error(
+        "CSRF token not found - tried meta tag, form input, and window.Laravel"
+      );
+    }
+
+    console.log(
+      "Using CSRF token for batch upload:",
+      csrfToken.substring(0, 10) + "..."
+    );
+
     for (let i = 0; i < filesToUpload.length; i++) {
       const fileObj = filesToUpload[i];
 
@@ -584,18 +617,13 @@ const processBatch = async (specificFiles = null) => {
           formData.append("content", originalContent || "");
           formData.append("image", fileForUpload);
 
-          // Get CSRF token
-          const csrfToken = document
-            .querySelector('meta[name="csrf-token"]')
-            ?.getAttribute("content");
-
-          if (!csrfToken) {
-            throw new Error("CSRF token not found");
-          }
-
+          // Use the CSRF token we got at the beginning of batch processing
           formData.append("_token", csrfToken);
 
-          const response = await fetch(toAbsoluteUrl(route("pages.store")), {
+          const url = toAbsoluteUrl(route("pages.store"));
+          console.log("Uploading to URL:", url);
+
+          const response = await fetch(url, {
             method: "POST",
             body: formData,
             credentials: "same-origin",
