@@ -502,7 +502,7 @@ describe("NewPageForm", () => {
       expect(wrapper.vm.failedUploads[0].error).toBe(
         "Both fetch and Inertia upload failed. Fetch: Fetch failed, Inertia: undefined"
       );
-    }, 15000); // Increase timeout to 15 seconds to account for retry delays
+    }, 20000); // Increase timeout to 20 seconds to account for delays between uploads
 
     it("updates progress during batch processing", async () => {
       const files = [

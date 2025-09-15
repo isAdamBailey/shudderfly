@@ -573,9 +573,6 @@ const processBatch = async (specificFiles = null) => {
             fileObj.processing = false;
           }
         }
-        form.content = originalContent;
-        form.image = fileForUpload;
-        form.video_link = null;
 
         let uploadSuccessful = false;
         let uploadError = null;
@@ -584,7 +581,7 @@ const processBatch = async (specificFiles = null) => {
           // Try fetch first (most reliable on affected devices)
           const formData = new FormData();
           formData.append("book_id", form.book_id);
-          formData.append("content", form.content || "");
+          formData.append("content", originalContent || "");
           formData.append("image", fileForUpload);
           formData.append(
             "_token",
@@ -624,6 +621,15 @@ const processBatch = async (specificFiles = null) => {
               };
 
               try {
+                // Temporarily set form data for this upload only
+                const originalImage = form.image;
+                const originalFormContent = form.content;
+                const originalVideoLink = form.video_link;
+
+                form.image = fileForUpload;
+                form.content = originalContent || "";
+                form.video_link = null;
+
                 form.post(route("pages.store"), {
                   forceFormData: true,
                   preserveScroll: true,
@@ -637,6 +643,11 @@ const processBatch = async (specificFiles = null) => {
                     reject(errors);
                   },
                   onFinish: () => {
+                    // Restore original form state
+                    form.image = originalImage;
+                    form.content = originalFormContent;
+                    form.video_link = originalVideoLink;
+
                     // Only reject if we haven't finalized yet and upload wasn't successful
                     if (!finalized && !uploadSuccessful) {
                       reject(
@@ -677,7 +688,7 @@ const processBatch = async (specificFiles = null) => {
           fileObj.preview = null;
 
           if (i < filesToUpload.length - 1) {
-            await new Promise((resolve) => setTimeout(resolve, 500));
+            await new Promise((resolve) => setTimeout(resolve, 100)); // Small delay between uploads to prevent race conditions
           }
         } else {
           // If upload was not successful, provide clear error info
