@@ -541,12 +541,8 @@ const processBatch = async (specificFiles = null) => {
 
     const originalContent = form.content;
 
-    // Get CSRF token once at the beginning of batch processing
-    // Use the same simple approach as single upload
-    const csrfToken =
-      document
-        .querySelector('meta[name="csrf-token"]')
-        ?.getAttribute("content") || "";
+    // Don't get CSRF token here - get it fresh for each upload
+    // This prevents CSRF token mismatch errors
 
     for (let i = 0; i < filesToUpload.length; i++) {
       const fileObj = filesToUpload[i];
@@ -591,8 +587,29 @@ const processBatch = async (specificFiles = null) => {
           formData.append("content", originalContent || "");
           formData.append("image", fileForUpload);
 
-          // Use the CSRF token we got at the beginning of batch processing
-          formData.append("_token", csrfToken);
+          // Get fresh CSRF token for each upload to prevent mismatch errors
+          // Try multiple sources to ensure we have a valid token
+          let freshCsrfToken = document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute("content");
+
+          // Fallback: try to get from any form on the page
+          if (!freshCsrfToken) {
+            const forms = document.querySelectorAll("form");
+            for (const formEl of forms) {
+              const tokenInput = formEl.querySelector('input[name="_token"]');
+              if (tokenInput) {
+                freshCsrfToken = tokenInput.getAttribute("value");
+                break;
+              }
+            }
+          }
+
+          if (!freshCsrfToken) {
+            throw new Error("CSRF token not available for upload");
+          }
+
+          formData.append("_token", freshCsrfToken);
 
           const url = toAbsoluteUrl(route("pages.store"));
 
@@ -645,7 +662,7 @@ const processBatch = async (specificFiles = null) => {
           fileObj.preview = null;
 
           if (i < filesToUpload.length - 1) {
-            await new Promise((resolve) => setTimeout(resolve, 100)); // Small delay between uploads to prevent race conditions
+            await new Promise((resolve) => setTimeout(resolve, 2000)); // Longer delay to prevent CSRF token mismatch
           }
         } else {
           // If upload was not successful, provide clear error info
