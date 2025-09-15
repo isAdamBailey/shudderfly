@@ -580,89 +580,96 @@ const processBatch = async (specificFiles = null) => {
         let uploadSuccessful = false;
         let uploadError = null;
 
+        let csrfToken = null;
+        
         try {
-          // Try fetch first (most reliable on affected devices)
-          const formData = new FormData();
-          formData.append("book_id", form.book_id);
-          formData.append("content", originalContent || "");
-          formData.append("image", fileForUpload);
-
-          // Get fresh CSRF token for each upload to prevent mismatch errors
-          // Try multiple sources to ensure we have a valid token
-          let freshCsrfToken = document
-            .querySelector('meta[name="csrf-token"]')
-            ?.getAttribute("content");
-
-          // Fallback: try to get from any form on the page
-          if (!freshCsrfToken) {
-            const forms = document.querySelectorAll("form");
-            for (const formEl of forms) {
-              const tokenInput = formEl.querySelector('input[name="_token"]');
-              if (tokenInput) {
-                freshCsrfToken = tokenInput.getAttribute("value");
-                break;
-              }
-            }
-          }
-
-          if (!freshCsrfToken) {
-            // Debug: show what's available on the page
-            const debugInfo = {
-              metaTag: document.querySelector('meta[name="csrf-token"]'),
-              allMetaTags: Array.from(document.querySelectorAll("meta")).map(
-                (m) => ({ name: m.name, content: m.content })
-              ),
-              allForms: Array.from(document.querySelectorAll("form")).map((f) =>
-                Array.from(f.querySelectorAll("input")).map((i) => ({
-                  name: i.name,
-                  value: i.value
-                }))
-              ),
-              windowLaravel: window.Laravel
+          // Try Inertia form.post first to get fresh CSRF token
+          await new Promise((resolve, reject) => {
+            let finalized = false;
+            const end = (fn) => {
+              if (finalized) return true;
+              finalized = true;
+              fn();
+              return false;
             };
 
-            const debugMessage = `CSRF Debug: Meta tag exists: ${!!debugInfo.metaTag}, All meta tags: ${debugInfo.allMetaTags
-              .map((m) => m.name)
-              .join(", ")}, Forms with inputs: ${
-              debugInfo.allForms.length
-            }, Laravel: ${!!debugInfo.windowLaravel}`;
-
-            throw new Error(
-              `CSRF token not available for upload. ${debugMessage}`
-            );
-          }
-
-          formData.append("_token", freshCsrfToken);
-
-          const url = toAbsoluteUrl(route("pages.store"));
-
-          const response = await fetch(url, {
-            method: "POST",
-            body: formData,
-            credentials: "same-origin",
-            headers: {
-              "X-Requested-With": "XMLHttpRequest",
-              Accept: "application/json"
-            },
-            cache: "no-store"
+            try {
+              // Temporarily set form data for this upload only
+              const originalImage = form.image;
+              const originalFormContent = form.content;
+              const originalVideoLink = form.video_link;
+              
+              form.image = fileForUpload;
+              form.content = originalContent || "";
+              form.video_link = null;
+              
+              form.post(route("pages.store"), {
+                forceFormData: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                  if (end(() => {})) return;
+                  uploadSuccessful = true;
+                  resolve();
+                },
+                onError: (errors) => {
+                  if (end(() => {})) return;
+                  // Extract CSRF token from the form before rejecting
+                  csrfToken = form._token || document.querySelector('meta[name="csrf-token"]')?.getAttribute("content");
+                  reject(errors);
+                },
+                onFinish: () => {
+                  // Restore original form state
+                  form.image = originalImage;
+                  form.content = originalFormContent;
+                  form.video_link = originalVideoLink;
+                  
+                  // Only reject if we haven't finalized yet and upload wasn't successful
+                  if (!finalized && !uploadSuccessful) {
+                    reject(
+                      new Error("Inertia upload completed but status unclear")
+                    );
+                  }
+                }
+              });
+            } catch (e) {
+              reject(e);
+            }
           });
+        } catch (inertiaError) {
+          uploadError = inertiaError;
+          
+          // If Inertia failed, try fetch with the CSRF token we got
+          if (csrfToken) {
+            try {
+              const formData = new FormData();
+              formData.append("book_id", form.book_id);
+              formData.append("content", originalContent || "");
+              formData.append("image", fileForUpload);
+              formData.append("_token", csrfToken);
 
-          if (response.ok) {
-            uploadSuccessful = true;
+              const response = await fetch(toAbsoluteUrl(route("pages.store")), {
+                method: "POST",
+                body: formData,
+                credentials: "same-origin",
+                headers: {
+                  "X-Requested-With": "XMLHttpRequest",
+                  Accept: "application/json"
+                },
+                cache: "no-store"
+              });
+
+              if (response.ok) {
+                uploadSuccessful = true;
+              } else {
+                const errorText = await response.text().catch(() => "Unknown error");
+                throw new Error(`Fetch fallback failed: ${response.status} - ${errorText}`);
+              }
+            } catch (fetchError) {
+              throw new Error(`Both Inertia and fetch failed. Inertia: ${inertiaError.message}, Fetch: ${fetchError.message}`);
+            }
           } else {
-            const errorText = await response
-              .text()
-              .catch(() => "Unknown error");
-            throw new Error(
-              `Fetch upload failed: ${response.status} - ${errorText}`
-            );
+            throw new Error(`Inertia failed and no CSRF token available: ${inertiaError.message}`);
           }
-        } catch (fetchError) {
-          uploadError = fetchError;
-
-          // For multiple uploads, don't use Inertia fallback to avoid form state conflicts
-          // Just fail with a clear error message
-          throw new Error(`Fetch upload failed: ${fetchError.message}`);
         }
 
         if (uploadSuccessful) {
@@ -685,7 +692,7 @@ const processBatch = async (specificFiles = null) => {
           fileObj.preview = null;
 
           if (i < filesToUpload.length - 1) {
-            await new Promise((resolve) => setTimeout(resolve, 2000)); // Longer delay to prevent CSRF token mismatch
+            await new Promise((resolve) => setTimeout(resolve, 500)); // Small delay between uploads
           }
         } else {
           // If upload was not successful, provide clear error info

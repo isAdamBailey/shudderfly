@@ -429,18 +429,16 @@ describe("NewPageForm", () => {
         processedFile: file
       }));
 
-      // Mock successful fetch requests
-      global.fetch.mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve({})
+      // Mock successful Inertia requests
+      mockForm.post.mockImplementation((url, options) => {
+        setTimeout(() => options.onSuccess(), 10);
       });
 
       await wrapper.vm.processBatch();
 
-      expect(global.fetch).toHaveBeenCalledTimes(2);
+      expect(mockForm.post).toHaveBeenCalledTimes(2);
       expect(wrapper.vm.batchProgress).toBe(100);
-    });
+    }, 10000); // Increase timeout for Inertia calls
 
     it("continues processing after single file error", async () => {
       const files = [
@@ -457,44 +455,45 @@ describe("NewPageForm", () => {
         processedFile: file
       }));
 
-      // Mock first fetch fails, second succeeds (no Inertia fallback for multiple uploads)
+      // Mock first Inertia fails, then fetch fallback fails, second Inertia succeeds
       let callCount = 0;
-      global.fetch.mockImplementation(() => {
+      mockForm.post.mockImplementation((url, options) => {
         callCount++;
         if (callCount === 1) {
-          // First file fetch fails
-          return Promise.reject(new Error("Fetch failed"));
+          // First file Inertia fails
+          setTimeout(() => options.onError("Inertia failed"), 10);
         } else {
-          // Second file fetch succeeds
-          return Promise.resolve({
-            ok: true,
-            status: 200,
-            json: () => Promise.resolve({})
-          });
+          // Second file Inertia succeeds
+          setTimeout(() => options.onSuccess(), 10);
         }
+      });
+      
+      global.fetch.mockImplementation(() => {
+        // Fetch fallback for first file also fails
+        return Promise.reject(new Error("Fetch fallback failed"));
       });
 
       await wrapper.vm.processBatch();
 
-      // First file: fetch fails (no Inertia fallback for multiple uploads)
-      // Second file: fetch succeeds
-      expect(global.fetch).toHaveBeenCalledTimes(2);
-      expect(mockForm.post).toHaveBeenCalledTimes(0); // No Inertia calls for multiple uploads
+      // First file: Inertia fails, then fetch fallback fails
+      // Second file: Inertia succeeds
+      expect(mockForm.post).toHaveBeenCalledTimes(2);
+      expect(global.fetch).toHaveBeenCalledTimes(1); // Only called for first file fallback
 
       // After processing, successfully uploaded files are removed from selectedFiles
       expect(wrapper.vm.selectedFiles.length).toBe(1);
       expect(wrapper.vm.selectedFiles[0].file.name).toBe("test1.jpg");
 
-      // With our new error handling, the error message is formatted as "File X: error"
+      // With our new error handling, the error message shows both failures
       expect(wrapper.vm.selectedFiles[0].errorMessage).toBe(
-        "Fetch upload failed: Fetch failed"
+        "Both Inertia and fetch failed. Inertia: undefined, Fetch: Fetch fallback failed"
       );
 
       // Failed uploads are recorded
       expect(wrapper.vm.failedUploads.length).toBe(1);
       expect(wrapper.vm.failedUploads[0].fileName).toBe("test1.jpg");
       expect(wrapper.vm.failedUploads[0].error).toBe(
-        "Fetch upload failed: Fetch failed"
+        "Both Inertia and fetch failed. Inertia: undefined, Fetch: Fetch fallback failed"
       );
     }, 10000); // Reduced timeout since no Inertia fallback
 
@@ -513,11 +512,9 @@ describe("NewPageForm", () => {
         processedFile: file
       }));
 
-      // Mock successful fetch requests
-      global.fetch.mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve({})
+      // Mock successful Inertia requests
+      mockForm.post.mockImplementation((url, options) => {
+        setTimeout(() => options.onSuccess(), 10);
       });
 
       await wrapper.vm.processBatch();
