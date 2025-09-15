@@ -851,189 +851,84 @@ const submit = async () => {
   isSubmitting.value = true;
 
   try {
+    // Prefer fetch on single uploads (most reliable on affected devices)
+    const targetFileObj = previewFiles.value[0] || null;
+    const fileForUpload =
+      form.image || targetFileObj?.processedFile || targetFileObj?.file || null;
+
+    const formData = new FormData();
+    formData.append("book_id", form.book_id);
+    formData.append("content", form.content || "");
+    if (fileForUpload) {
+      formData.append("image", fileForUpload);
+    }
+    if (form.video_link) {
+      formData.append("video_link", form.video_link);
+    }
+    formData.append(
+      "_token",
+      document
+        .querySelector('meta[name="csrf-token"]')
+        ?.getAttribute("content") || ""
+    );
+
+    const response = await fetch(toAbsoluteUrl(route("pages.store")), {
+      method: "POST",
+      body: formData,
+      credentials: "same-origin",
+      headers: {
+        "X-Requested-With": "XMLHttpRequest",
+        Accept: "application/json"
+      },
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      throw new Error(`Fetch upload failed: ${response.status}`);
+    }
+
+    // Success: cleanup and close
+    cleanupPreviews();
+    selectedFiles.value = [];
+    form.reset();
+    clearDraft();
+    emit("close-form");
+  } catch (error) {
+    // Fallback to Inertia if fetch fails (rare)
     await new Promise((resolve, reject) => {
-      let finished = false;
-      let formPostStarted = false;
-
-      const clearAll = () => {
-        try {
-          clearTimeout(watchdog);
-        } catch (e) {
-          // no-op
-        }
-      };
-
-      const finalizeGuard = () => {
-        if (finished) return true;
-        finished = true;
-        clearAll();
+      let finalized = false;
+      const end = (fn) => {
+        if (finalized) return true;
+        finalized = true;
+        fn();
         return false;
       };
 
-      const doFallback = async () => {
-        if (finished) return;
-        try {
-          const targetFileObj = previewFiles.value[0] || null;
-          const fileForUpload =
-            form.image ||
-            targetFileObj?.processedFile ||
-            targetFileObj?.file ||
-            null;
-
-          const formData = new FormData();
-          formData.append("book_id", form.book_id);
-          formData.append("content", form.content || "");
-          if (fileForUpload) {
-            formData.append("image", fileForUpload);
-          }
-          if (form.video_link) {
-            formData.append("video_link", form.video_link);
-          }
-          formData.append(
-            "_token",
-            document
-              .querySelector('meta[name="csrf-token"]')
-              ?.getAttribute("content") || ""
-          );
-
-          const response = await fetch(toAbsoluteUrl(route("pages.store")), {
-            method: "POST",
-            body: formData,
-            headers: { "X-Requested-With": "XMLHttpRequest" }
-          });
-
-          if (!response.ok) {
-            throw new Error(`Fallback upload failed: ${response.status}`);
-          }
-
-          // Success cleanup
-          cleanupPreviews();
-          selectedFiles.value = [];
-          form.reset();
-          clearDraft();
-          emit("close-form");
-          finalizeGuard();
-          isSubmitting.value = false;
-          resolve();
-        } catch (e) {
-          finalizeGuard();
-          isSubmitting.value = false;
-          reject(e);
-        }
-      };
-
-      const watchdog = setTimeout(() => {
-        if (!formPostStarted) {
-          // Inertia didn't start quickly on this device; use fallback
-          doFallback();
-        }
-      }, 2000);
-
       try {
-        const maxAttempts = 3;
-        let attempt = 0;
-        const tryPost = () => {
-          attempt += 1;
-          form.post(route("pages.store"), {
-            forceFormData: true,
-            preserveScroll: true,
-            onStart: () => {
-              formPostStarted = true;
-              // If it started but hangs, fallback after 20s
-              if (inflightTimer) clearTimeout(inflightTimer);
-              inflightTimer = setTimeout(() => {
-                if (!finished) {
-                  doFallback();
-                }
-              }, 20000);
-            },
-            onSuccess: () => {
-              if (finalizeGuard()) return;
-              if (inflightTimer) clearTimeout(inflightTimer);
-              // Revoke any object URL previews before clearing state
-              cleanupPreviews();
-              selectedFiles.value = [];
-              form.reset();
-              clearDraft();
-              emit("close-form");
-              resolve();
-            },
-            onError: (errors) => {
-              if (finalizeGuard()) return;
-              if (inflightTimer) clearTimeout(inflightTimer);
-              const msg =
-                errors && typeof errors !== "string" ? errors.message : errors;
-              const shouldRetry =
-                typeof msg === "string" &&
-                (msg.includes("never started") ||
-                  msg.includes("status unclear") ||
-                  msg.includes("timeout"));
-              if (shouldRetry && attempt < maxAttempts) {
-                setTimeout(tryPost, 600 * attempt);
-              } else {
-                reject(errors);
-              }
-            },
-            onFinish: () => {
-              isSubmitting.value = false;
-            }
-          });
-        };
-        tryPost();
+        form.post(route("pages.store"), {
+          forceFormData: true,
+          preserveScroll: true,
+          onSuccess: () => {
+            if (end(() => {})) return;
+            cleanupPreviews();
+            selectedFiles.value = [];
+            form.reset();
+            clearDraft();
+            emit("close-form");
+            resolve();
+          },
+          onError: (errors) => {
+            if (end(() => {})) return;
+            reject(errors);
+          },
+          onFinish: () => {
+            isSubmitting.value = false;
+          }
+        });
       } catch (e) {
-        // If calling form.post threw synchronously, fallback
-        doFallback();
+        reject(e);
       }
     });
-  } catch (error) {
-    // Fallback for mobile where Inertia post may not start
-    try {
-      const targetFileObj =
-        uploadMode.value === "single" ? previewFiles.value[0] : null;
-      const fileForUpload =
-        form.image || targetFileObj?.processedFile || targetFileObj?.file;
-
-      if (!fileForUpload && !(form.content || form.video_link)) {
-        throw error;
-      }
-
-      const formData = new FormData();
-      formData.append("book_id", form.book_id);
-      formData.append("content", form.content || "");
-      if (fileForUpload) {
-        formData.append("image", fileForUpload);
-      }
-      if (form.video_link) {
-        formData.append("video_link", form.video_link);
-      }
-      formData.append(
-        "_token",
-        document
-          .querySelector('meta[name="csrf-token"]')
-          .getAttribute("content") || ""
-      );
-
-      const response = await fetch(toAbsoluteUrl(route("pages.store")), {
-        method: "POST",
-        body: formData,
-        headers: { "X-Requested-With": "XMLHttpRequest" }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Fallback upload failed: ${response.status}`);
-      }
-
-      // Success: cleanup and close
-      cleanupPreviews();
-      selectedFiles.value = [];
-      form.reset();
-      clearDraft();
-      emit("close-form");
-    } catch (e) {
-      // Let errors be handled naturally by Inertia/UI
-    } finally {
-      isSubmitting.value = false;
-    }
   }
 };
 
