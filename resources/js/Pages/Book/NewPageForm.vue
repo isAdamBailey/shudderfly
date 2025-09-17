@@ -89,6 +89,48 @@ const uploadMode = ref("single"); // single, multiple
 const { compressionProgress, optimizationProgress, processMediaFile } =
   useVideoOptimization();
 
+// Function to get CSRF token (initially from meta tag, optionally refresh from Sanctum)
+const getCsrfToken = async (refresh = false) => {
+  try {
+    // Get token from meta tag
+    let token = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content");
+    
+    if (!token) {
+      console.warn('No CSRF token found in meta tag');
+      return "";
+    }
+    
+    // If refresh is requested, try to get a fresh token from Sanctum
+    if (refresh) {
+      try {
+        const response = await fetch('/sanctum/csrf-cookie', {
+          method: 'GET',
+          credentials: 'same-origin',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          // After Sanctum call, check if meta tag was updated
+          const refreshedToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content");
+          if (refreshedToken && refreshedToken !== token) {
+            return refreshedToken;
+          }
+        }
+      } catch (refreshError) {
+        console.warn('Failed to refresh CSRF token:', refreshError);
+      }
+    }
+    
+    return token;
+  } catch (error) {
+    console.warn('Failed to get CSRF token:', error);
+    return "";
+  }
+};
+
 // Global optimizing state: true if any optimization is happening
 const isOptimizing = computed(() => {
   // Single-file optimization
@@ -577,100 +619,37 @@ const processBatch = async (specificFiles = null) => {
           }
         }
 
-        let uploadSuccessful = false;
-        let uploadError = null;
-
-        let csrfToken = null;
+        // Get CSRF token (refresh for batch uploads to prevent token mismatch)
+        const csrfToken = await getCsrfToken(true);
         
-        try {
-          // Try Inertia form.post first to get fresh CSRF token
-          await new Promise((resolve, reject) => {
-            let finalized = false;
-            const end = (fn) => {
-              if (finalized) return true;
-              finalized = true;
-              fn();
-              return false;
-            };
-
-            try {
-              // Temporarily set form data for this upload only
-              const originalImage = form.image;
-              const originalFormContent = form.content;
-              const originalVideoLink = form.video_link;
-              
-              form.image = fileForUpload;
-              form.content = originalContent || "";
-              form.video_link = null;
-              
-              form.post(route("pages.store"), {
-                forceFormData: true,
-                preserveScroll: true,
-                onSuccess: () => {
-                  if (end(() => {})) return;
-                  uploadSuccessful = true;
-                  resolve();
-                },
-                onError: (errors) => {
-                  if (end(() => {})) return;
-                  // Extract CSRF token from the form before rejecting
-                  csrfToken = form._token || document.querySelector('meta[name="csrf-token"]')?.getAttribute("content");
-                  reject(errors);
-                },
-                onFinish: () => {
-                  // Restore original form state
-                  form.image = originalImage;
-                  form.content = originalFormContent;
-                  form.video_link = originalVideoLink;
-                  
-                  // Only reject if we haven't finalized yet and upload wasn't successful
-                  if (!finalized && !uploadSuccessful) {
-                    reject(
-                      new Error("Inertia upload completed but status unclear")
-                    );
-                  }
-                }
-              });
-            } catch (e) {
-              reject(e);
-            }
-          });
-        } catch (inertiaError) {
-          uploadError = inertiaError;
-          
-          // If Inertia failed, try fetch with the CSRF token we got
-          if (csrfToken) {
-            try {
-              const formData = new FormData();
-              formData.append("book_id", form.book_id);
-              formData.append("content", originalContent || "");
-              formData.append("image", fileForUpload);
-              formData.append("_token", csrfToken);
-
-              const response = await fetch(toAbsoluteUrl(route("pages.store")), {
-                method: "POST",
-                body: formData,
-                credentials: "same-origin",
-                headers: {
-                  "X-Requested-With": "XMLHttpRequest",
-                  Accept: "application/json"
-                },
-                cache: "no-store"
-              });
-
-              if (response.ok) {
-                uploadSuccessful = true;
-              } else {
-                const errorText = await response.text().catch(() => "Unknown error");
-                throw new Error(`Fetch fallback failed: ${response.status} - ${errorText}`);
-              }
-            } catch (fetchError) {
-              throw new Error(`Both Inertia and fetch failed. Inertia: ${inertiaError.message}, Fetch: ${fetchError.message}`);
-            }
-          } else {
-            throw new Error(`Inertia failed and no CSRF token available: ${inertiaError.message}`);
-          }
+        if (!csrfToken) {
+          throw new Error("Unable to obtain CSRF token for upload");
         }
+
+        // Use fetch directly instead of Inertia form (better mobile compatibility)
+        const formData = new FormData();
+        formData.append("book_id", form.book_id);
+        formData.append("content", originalContent || "");
+        formData.append("image", fileForUpload);
+        formData.append("_token", csrfToken);
+
+        const response = await fetch(toAbsoluteUrl(route("pages.store")), {
+          method: "POST",
+          body: formData,
+          credentials: "same-origin",
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            Accept: "application/json"
+          },
+          cache: "no-store"
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => "Unknown error");
+          throw new Error(`Upload failed: ${response.status} - ${errorText}`);
+        }
+
+        const uploadSuccessful = true;
 
         if (uploadSuccessful) {
           fileObj.uploaded = true;
@@ -787,6 +766,13 @@ const submit = async () => {
     const fileForUpload =
       form.image || targetFileObj?.processedFile || targetFileObj?.file || null;
 
+    // Get CSRF token for single upload
+    const csrfToken = await getCsrfToken(false);
+    
+    if (!csrfToken) {
+      throw new Error("Unable to obtain CSRF token for upload");
+    }
+
     const formData = new FormData();
     formData.append("book_id", form.book_id);
     formData.append("content", form.content || "");
@@ -796,12 +782,7 @@ const submit = async () => {
     if (form.video_link) {
       formData.append("video_link", form.video_link);
     }
-    formData.append(
-      "_token",
-      document
-        .querySelector('meta[name="csrf-token"]')
-        ?.getAttribute("content") || ""
-    );
+    formData.append("_token", csrfToken);
 
     const response = await fetch(toAbsoluteUrl(route("pages.store")), {
       method: "POST",
@@ -825,41 +806,10 @@ const submit = async () => {
     clearDraft();
     emit("close-form");
   } catch (error) {
-    // Fallback to Inertia if fetch fails (rare)
-    await new Promise((resolve, reject) => {
-      let finalized = false;
-      const end = (fn) => {
-        if (finalized) return true;
-        finalized = true;
-        fn();
-        return false;
-      };
-
-      try {
-        form.post(route("pages.store"), {
-          forceFormData: true,
-          preserveScroll: true,
-          onSuccess: () => {
-            if (end(() => {})) return;
-            cleanupPreviews();
-            selectedFiles.value = [];
-            form.reset();
-            clearDraft();
-            emit("close-form");
-            resolve();
-          },
-          onError: (errors) => {
-            if (end(() => {})) return;
-            reject(errors);
-          },
-          onFinish: () => {
-            isSubmitting.value = false;
-          }
-        });
-      } catch (e) {
-        reject(e);
-      }
-    });
+    // No fallback - fetch should work reliably on mobile
+    console.error("Upload failed:", error);
+    isSubmitting.value = false;
+    throw error;
   }
 };
 
