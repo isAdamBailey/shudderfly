@@ -429,16 +429,20 @@ describe("NewPageForm", () => {
         processedFile: file
       }));
 
-      // Mock successful Inertia requests
-      mockForm.post.mockImplementation((url, options) => {
-        setTimeout(() => options.onSuccess(), 10);
-      });
+      // Mock successful fetch requests
+      global.fetch.mockImplementation(() =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          text: () => Promise.resolve("success")
+        })
+      );
 
       await wrapper.vm.processBatch();
 
-      expect(mockForm.post).toHaveBeenCalledTimes(2);
+      expect(global.fetch).toHaveBeenCalledTimes(4); // 2 for CSRF token refresh + 2 for file uploads
       expect(wrapper.vm.batchProgress).toBe(100);
-    }, 10000); // Increase timeout for Inertia calls
+    }, 10000); // Increase timeout for fetch calls
 
     it("continues processing after single file error", async () => {
       const files = [
@@ -455,46 +459,49 @@ describe("NewPageForm", () => {
         processedFile: file
       }));
 
-      // Mock first Inertia fails, then fetch fallback fails, second Inertia succeeds
-      let callCount = 0;
-      mockForm.post.mockImplementation((url, options) => {
-        callCount++;
-        if (callCount === 1) {
-          // First file Inertia fails
-          setTimeout(() => options.onError("Inertia failed"), 10);
+      // Mock fetch to fail for first file upload, succeed for second file upload
+      let uploadCallCount = 0;
+      global.fetch.mockImplementation((url) => {
+        if (url.includes('/sanctum/csrf-cookie')) {
+          // CSRF token refresh calls always succeed
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            text: () => Promise.resolve("success")
+          });
         } else {
-          // Second file Inertia succeeds
-          setTimeout(() => options.onSuccess(), 10);
+          // This is a file upload call
+          uploadCallCount++;
+          if (uploadCallCount === 1) {
+            // First file upload fails
+            return Promise.reject(new Error("Fetch failed"));
+          } else {
+            // Second file upload succeeds
+            return Promise.resolve({
+              ok: true,
+              status: 200,
+              text: () => Promise.resolve("success")
+            });
+          }
         }
-      });
-      
-      global.fetch.mockImplementation(() => {
-        // Fetch fallback for first file also fails
-        return Promise.reject(new Error("Fetch fallback failed"));
       });
 
       await wrapper.vm.processBatch();
 
-      // First file: Inertia fails, then fetch fallback fails
-      // Second file: Inertia succeeds
-      expect(mockForm.post).toHaveBeenCalledTimes(2);
-      expect(global.fetch).toHaveBeenCalledTimes(1); // Only called for first file fallback
+      // Both files should attempt fetch (2 for CSRF token refresh + 2 for file uploads)
+      expect(global.fetch).toHaveBeenCalledTimes(4);
 
       // After processing, successfully uploaded files are removed from selectedFiles
       expect(wrapper.vm.selectedFiles.length).toBe(1);
       expect(wrapper.vm.selectedFiles[0].file.name).toBe("test1.jpg");
 
-      // With our new error handling, the error message shows both failures
-      expect(wrapper.vm.selectedFiles[0].errorMessage).toBe(
-        "Both Inertia and fetch failed. Inertia: undefined, Fetch: Fetch fallback failed"
-      );
+      // Check that the failed file has an error message
+      expect(wrapper.vm.selectedFiles[0].errorMessage).toBe("Fetch failed");
 
       // Failed uploads are recorded
       expect(wrapper.vm.failedUploads.length).toBe(1);
       expect(wrapper.vm.failedUploads[0].fileName).toBe("test1.jpg");
-      expect(wrapper.vm.failedUploads[0].error).toBe(
-        "Both Inertia and fetch failed. Inertia: undefined, Fetch: Fetch fallback failed"
-      );
+      expect(wrapper.vm.failedUploads[0].error).toBe("Fetch failed");
     }, 10000); // Reduced timeout since no Inertia fallback
 
     it("updates progress during batch processing", async () => {
@@ -512,10 +519,14 @@ describe("NewPageForm", () => {
         processedFile: file
       }));
 
-      // Mock successful Inertia requests
-      mockForm.post.mockImplementation((url, options) => {
-        setTimeout(() => options.onSuccess(), 10);
-      });
+      // Mock successful fetch requests
+      global.fetch.mockImplementation(() =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          text: () => Promise.resolve("success")
+        })
+      );
 
       await wrapper.vm.processBatch();
 
