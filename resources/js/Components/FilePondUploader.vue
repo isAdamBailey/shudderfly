@@ -283,9 +283,6 @@ const oninit = () => {
         @processfilestart="$emit('processing-start')"
         @processfiles="
             () => {
-                console.log(
-                    '[FilePondUploader] Emitting all-done from @processfiles'
-                );
                 $emit('all-done');
             }
         "
