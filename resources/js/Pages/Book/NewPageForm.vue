@@ -15,7 +15,7 @@ import { useForm, usePage } from "@inertiajs/vue3";
 import { useVuelidate } from "@vuelidate/core";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import FilePondUploader from "@/Components/FilePondUploader.vue";
-import { getCsrfToken, refreshCsrf, buildCsrfHeaders } from "@/utils/csrf.js";
+import { refreshCsrf, buildCsrfHeaders } from "@/utils/csrf.js";
 
 const emit = defineEmits(["close-form"]);
 

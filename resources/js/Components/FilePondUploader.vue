@@ -205,7 +205,6 @@ watch(files, (newFiles) => {
     }
     const stillProcessing = newFiles.some((f) => f.status && f.status < 5);
     if (!stillProcessing && newFiles.length > 0) {
-        console.log("[FilePondUploader] Emitting all-done from watcher"); // DEBUG
         emit("all-done");
     }
 });
