@@ -15,6 +15,7 @@ import { useForm, usePage } from "@inertiajs/vue3";
 import { useVuelidate } from "@vuelidate/core";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import FilePondUploader from "@/Components/FilePondUploader.vue";
+import { getCsrfToken, refreshCsrf, buildCsrfHeaders } from "@/utils/csrf.js";
 
 const emit = defineEmits(["close-form"]);
 
@@ -36,45 +37,6 @@ const form = useForm({
 const mediaOption = ref("upload"); // upload, link
 
 const { processMediaFile } = useVideoOptimization();
-
-// Function to get CSRF token (initially from meta tag, optionally refresh from Sanctum)
-const getCsrfToken = async (refresh = false) => {
-    try {
-        let token = document
-            .querySelector('meta[name="csrf-token"]')
-            ?.getAttribute("content");
-        if (!token) {
-            console.warn("No CSRF token found in meta tag");
-            return "";
-        }
-        if (refresh) {
-            try {
-                const response = await fetch("/sanctum/csrf-cookie", {
-                    method: "GET",
-                    credentials: "same-origin",
-                    headers: {
-                        "X-Requested-With": "XMLHttpRequest",
-                        Accept: "application/json",
-                    },
-                });
-                if (response.ok) {
-                    const refreshedToken = document
-                        .querySelector('meta[name="csrf-token"]')
-                        ?.getAttribute("content");
-                    if (refreshedToken && refreshedToken !== token) {
-                        return refreshedToken;
-                    }
-                }
-            } catch (refreshError) {
-                console.warn("Failed to refresh CSRF token:", refreshError);
-            }
-        }
-        return token;
-    } catch (error) {
-        console.warn("Failed to get CSRF token:", error);
-        return "";
-    }
-};
 
 const getPagesStoreUrl = () => {
     return route("pages.store");
@@ -197,7 +159,9 @@ const onPondProcessed = () => {
 const onPondAllDone = () => {
     try {
         uploaderRef.value?.removeFiles?.();
-    } catch (e) {}
+    } catch (e) {
+        // ignore remove files error
+    }
     clearDraft();
     form.reset();
     isUploading.value = false;
@@ -212,7 +176,9 @@ const scrollToSingleError = () => {
         if (el && typeof el.scrollIntoView === "function") {
             el.scrollIntoView({ behavior: "smooth", block: "center" });
         }
-    } catch (e) {}
+    } catch (e) {
+        // ignore scroll errors
+    }
 };
 
 // Validation rules (rely on FilePond for file type/size)
@@ -292,21 +258,25 @@ const submitTextOrLinkOnly = async () => {
         throw new Error("Please add some words or a YouTube link.");
     }
 
-    let csrfToken = await getCsrfToken(false);
-    if (!csrfToken) csrfToken = await getCsrfToken(true);
-    if (!csrfToken) throw new Error("Unable to obtain CSRF token");
+    // Build CSRF headers; refresh if neither CSRF nor XSRF are present
+    let { headers, csrfToken } = buildCsrfHeaders();
+    if (!headers["X-CSRF-TOKEN"] && !headers["X-XSRF-TOKEN"]) {
+        await refreshCsrf();
+        ({ headers, csrfToken } = buildCsrfHeaders());
+    }
 
     const url = getPagesStoreUrl();
+    const fd = buildSingleFormData(csrfToken || "");
+
     const response = await fetchWithTimeout(
         url,
         {
             method: "POST",
-            body: buildSingleFormData(csrfToken),
+            body: fd,
             credentials: "same-origin",
             headers: {
-                "X-Requested-With": "XMLHttpRequest",
+                ...headers,
                 Accept: "application/json",
-                "X-CSRF-TOKEN": csrfToken,
             },
             cache: "no-store",
         },

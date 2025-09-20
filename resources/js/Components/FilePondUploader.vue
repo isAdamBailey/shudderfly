@@ -1,6 +1,7 @@
 <script setup>
 import { ref, watch, onMounted, defineExpose } from "vue";
 import vueFilePond from "vue-filepond";
+import { buildCsrfHeaders, refreshCsrf } from "@/utils/csrf.js";
 // Import FilePond styles
 import "filepond/dist/filepond.min.css";
 import "filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css";
@@ -42,34 +43,6 @@ const FilePond = vueFilePond(
 
 const pond = ref(null);
 
-const getCsrfToken = () => {
-    return (
-        document
-            .querySelector('meta[name="csrf-token"]')
-            ?.getAttribute("content") || ""
-    );
-};
-
-const refreshCsrf = async () => {
-    try {
-        const resp = await fetch("/sanctum/csrf-cookie", {
-            method: "GET",
-            credentials: "same-origin",
-            headers: {
-                "X-Requested-With": "XMLHttpRequest",
-                Accept: "application/json",
-            },
-        });
-        if (resp.ok) {
-            return getCsrfToken();
-        }
-    } catch (e) {
-        // ignore refresh errors; will fall back to current CSRF token
-        console.warn("CSRF refresh failed", e);
-    }
-    return getCsrfToken();
-};
-
 // Custom server process using XHR (for progress + retry on 419)
 const server = {
     process: (
@@ -85,7 +58,7 @@ const server = {
         let xhr = null;
         let retried = false;
 
-        const send = async (csrfToken) => {
+        const send = async () => {
             let file = originalFile;
             try {
                 // If it's a video and larger than the threshold, optimize before upload
@@ -130,12 +103,8 @@ const server = {
                     error(msg);
                     return;
                 }
-            } catch (prepErr) {
-                // If processing fails, continue with original file
-                console.warn(
-                    "Video preprocessing failed; uploading original",
-                    prepErr
-                );
+            } catch (_prepErr) {
+                // If processing fails, continue with original file (may fail backend if >60MB)
                 file = originalFile;
             }
 
@@ -145,14 +114,22 @@ const server = {
                 if (v !== undefined && v !== null) formData.append(k, v);
             });
             formData.append("image", file, file.name);
+
+            // Build CSRF/XSRF headers; refresh if missing
+            let { headers, csrfToken } = buildCsrfHeaders();
+            if (!headers["X-CSRF-TOKEN"] && !headers["X-XSRF-TOKEN"]) {
+                await refreshCsrf();
+                ({ headers, csrfToken } = buildCsrfHeaders());
+            }
             if (csrfToken) formData.append("_token", csrfToken);
 
             xhr = new XMLHttpRequest();
             xhr.open("POST", props.uploadUrl, true);
             xhr.withCredentials = true;
-            xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
-            if (csrfToken) xhr.setRequestHeader("X-CSRF-TOKEN", csrfToken);
-            xhr.setRequestHeader("Accept", "application/json");
+            // Apply headers
+            Object.entries({ ...headers, Accept: "application/json" }).forEach(
+                ([k, v]) => xhr.setRequestHeader(k, v)
+            );
 
             xhr.upload.onprogress = (e) => {
                 if (!aborted && e.lengthComputable) {
@@ -162,8 +139,8 @@ const server = {
 
             xhr.onerror = () => {
                 if (aborted) return;
-                emit("error", "Network error while uploading.");
                 error("Network error while uploading.");
+                emit("error", "Network error while uploading.");
             };
 
             xhr.onload = async () => {
@@ -172,8 +149,8 @@ const server = {
                     // refresh once and retry
                     if (!retried) {
                         retried = true;
-                        const newToken = await refreshCsrf();
-                        send(newToken);
+                        await refreshCsrf();
+                        await send();
                         return;
                     }
                 }
@@ -187,7 +164,7 @@ const server = {
                             size: file.size,
                             type: file.type,
                         });
-                    } catch (e) {
+                    } catch (_e) {
                         load(`${Date.now()}`);
                     }
                 } else {
@@ -200,16 +177,15 @@ const server = {
             xhr.send(formData);
         };
 
-        // initial send with current csrf token
-        const initialToken = getCsrfToken();
-        send(initialToken);
+        // initial send
+        send();
 
         return {
             abort: () => {
                 aborted = true;
                 try {
                     xhr && xhr.abort();
-                } catch (e) {
+                } catch (_e) {
                     // ignore abort errors
                 }
                 abort();
@@ -224,11 +200,12 @@ const files = ref([]);
 watch(files, (newFiles) => {
     try {
         emit("queue-update", Array.isArray(newFiles) ? newFiles.length : 0);
-    } catch (e) {
+    } catch (_e) {
         // ignore emit failures in tests
     }
     const stillProcessing = newFiles.some((f) => f.status && f.status < 5);
     if (!stillProcessing && newFiles.length > 0) {
+        console.log("[FilePondUploader] Emitting all-done from watcher"); // DEBUG
         emit("all-done");
     }
 });
@@ -261,7 +238,7 @@ const beforeAddFile = async (item) => {
                 return new File([transformed], name, { type });
             }
         }
-    } catch (e) {
+    } catch (_e) {
         // fallback to original file on preprocessing error
     }
     return item;
@@ -273,10 +250,13 @@ const oninit = () => {
         const instance = pond.value;
         if (instance && typeof instance.on === "function") {
             instance.on("processfiles", () => {
+                console.log(
+                    "[FilePondUploader] Emitting all-done from processfiles event"
+                ); // DEBUG
                 emit("all-done");
             });
         }
-    } catch (e) {
+    } catch (_e) {
         // ignore event binding errors
     }
 };
@@ -295,6 +275,13 @@ const oninit = () => {
         :oninit="oninit"
         credits="false"
         @processfilestart="$emit('processing-start')"
-        @processfiles="$emit('all-done')"
+        @processfiles="
+            () => {
+                console.log(
+                    '[FilePondUploader] Emitting all-done from @processfiles'
+                );
+                $emit('all-done');
+            }
+        "
     />
 </template>

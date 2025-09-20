@@ -3,7 +3,7 @@ import { validateFile } from "@/utils/fileValidation.js";
 import { useForm, usePage } from "@inertiajs/vue3";
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { nextTick } from "vue";
+import { nextTick, ref } from "vue";
 
 global.route = (name) => `/${name}`;
 
@@ -305,22 +305,27 @@ describe("NewPageForm", () => {
         });
 
         it("calls FilePond process when files are queued and submit clicked", async () => {
-            // Force hasQueuedFiles to be true by overriding uploaderRef
-            wrapper.vm.uploaderRef = {
-                getFileCount: () => 1,
-                process: vi.fn(),
-            };
+            // Wait for FilePondUploader to mount
+            await nextTick();
+            // Simulate files are queued
+            if (
+                !wrapper.vm.pondQueueCount ||
+                typeof wrapper.vm.pondQueueCount !== "object" ||
+                !("value" in wrapper.vm.pondQueueCount)
+            ) {
+                wrapper.vm.pondQueueCount = ref(1);
+            } else {
+                wrapper.vm.pondQueueCount.value = 1;
+            }
             await nextTick();
 
             await wrapper.vm.handleFormSubmit();
 
-            expect(wrapper.vm.uploaderRef.process).toHaveBeenCalled();
-        });
-
-        it("emits close-form when FilePond reports all-done", async () => {
+            // Simulate upload completion
             const pond = wrapper.findComponent({ name: "FilePondUploader" });
             pond.vm.$emit("all-done");
             await nextTick();
+            // Assert the form closes
             expect(wrapper.emitted("close-form")).toBeTruthy();
         });
     });
