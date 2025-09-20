@@ -36,13 +36,14 @@ const props = defineProps({
     processVideo: { type: Function, default: null },
     videoThresholdBytes: { type: Number, default: 41943040 }, // ~40MB
     maxFileSize: { type: [String, Number], default: null }, // e.g. '60MB' or 62914560
+    // CSRF endpoint configuration - defaults to Sanctum standard
+    csrfEndpoint: { type: String, default: "/sanctum/csrf-cookie" },
 });
 
 const FilePond = vueFilePond(
     FilePondPluginFileValidateType,
     FilePondPluginImagePreview,
     FilePondPluginFilePoster
-    // Removed FilePondPluginFileValidateSize - we'll handle size validation manually after optimization
 );
 
 const pond = ref(null);
@@ -63,11 +64,11 @@ const server = {
         let retryCount = 0;
         const maxRetries = 2;
 
-        // Function to get fresh CSRF token
+        // Function to get fresh CSRF token using configurable endpoint
         const getFreshCsrfToken = async () => {
             try {
-                // Try to refresh CSRF token by making a small request to get fresh token
-                const response = await fetch("/csrf-token", {
+                // For Sanctum, we need to call the csrf-cookie endpoint to refresh the XSRF token
+                const response = await fetch(props.csrfEndpoint, {
                     method: "GET",
                     credentials: "same-origin",
                     headers: {
@@ -77,28 +78,20 @@ const server = {
                 });
 
                 if (response.ok) {
-                    const data = await response.json();
-                    if (data.csrf_token) {
-                        // Update the meta tag for future requests
-                        const metaTag = document.querySelector(
-                            'meta[name="csrf-token"]'
-                        );
-                        if (metaTag) {
-                            metaTag.setAttribute("content", data.csrf_token);
-                        }
-                        return data.csrf_token;
-                    }
+                    // For Sanctum, the CSRF token is set in cookies, not returned in response
+                    // So we just need to re-read the meta tag after the request
+                    return document
+                        .querySelector('meta[name="csrf-token"]')
+                        ?.getAttribute("content");
                 }
             } catch (e) {
-                console.warn("Failed to refresh CSRF token:", e);
+                // Silently handle CSRF token refresh failures
             }
 
-            // Fallback to existing token
-            return (
-                document
-                    .querySelector('meta[name="csrf-token"]')
-                    ?.getAttribute("content") || window?.Laravel?.csrfToken
-            );
+            // Fallback to existing token from meta tag only (modern Laravel standard)
+            return document
+                .querySelector('meta[name="csrf-token"]')
+                ?.getAttribute("content");
         };
 
         const send = async (isRetry = false) => {
@@ -140,7 +133,7 @@ const server = {
                         emit("error", msg);
                         error(msg);
                     }
-                    return; // do not proceed
+                    return;
                 }
             } catch (_prepErr) {
                 // If processing fails, continue with original file but check size again
@@ -170,12 +163,12 @@ const server = {
                 formData.append(key, props.extraData[key]);
             });
 
-            // Get fresh CSRF token, especially important for retries
+            // Get CSRF token - use fresh token for retries, meta tag for initial attempts
             const csrfToken = isRetry
                 ? await getFreshCsrfToken()
                 : document
                       .querySelector('meta[name="csrf-token"]')
-                      ?.getAttribute("content") || window?.Laravel?.csrfToken;
+                      ?.getAttribute("content");
 
             if (csrfToken) {
                 formData.append("_token", csrfToken);
