@@ -132,7 +132,7 @@ const pondUploadUrl = computed(() => getPagesStoreUrl());
 const pondExtraData = computed(() => ({
     book_id: form.book_id,
     content: form.content || "",
-    video_link: form.video_link || "",
+    // Don't pass video_link to file uploads since that's for text-only submissions
 }));
 
 const hasQueuedFiles = computed(() => {
@@ -398,7 +398,7 @@ onUnmounted(() => {
                             :upload-url="pondUploadUrl"
                             :allow-multiple="true"
                             :accepted-file-types="['image/*', 'video/*']"
-                            :instant-upload="true"
+                            :instant-upload="false"
                             :extra-data="pondExtraData"
                             :process-video="processMediaFile"
                             :video-threshold-bytes="41943040"
