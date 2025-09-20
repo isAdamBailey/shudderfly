@@ -272,7 +272,7 @@ const oninit = () => {
         :label-idle="labelIdle"
         :before-add-file="beforeAddFile"
         :oninit="oninit"
-        credits="false"
+        :credits="false"
         @processfilestart="$emit('processing-start')"
         @processfiles="
             () => {
