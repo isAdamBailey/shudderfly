@@ -1,7 +1,6 @@
 <script setup>
 import { ref, watch, onMounted, defineExpose } from "vue";
 import vueFilePond from "vue-filepond";
-import { buildCsrfHeaders, refreshCsrf } from "@/utils/csrf.js";
 // Import FilePond styles
 import "filepond/dist/filepond.min.css";
 import "filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css";
@@ -11,7 +10,6 @@ import "filepond-plugin-file-poster/dist/filepond-plugin-file-poster.css";
 import FilePondPluginFileValidateType from "filepond-plugin-file-validate-type";
 import FilePondPluginImagePreview from "filepond-plugin-image-preview";
 import FilePondPluginFilePoster from "filepond-plugin-file-poster";
-import FilePondPluginFileValidateSize from "filepond-plugin-file-validate-size";
 
 const emit = defineEmits([
     "error",
@@ -38,18 +36,19 @@ const props = defineProps({
     processVideo: { type: Function, default: null },
     videoThresholdBytes: { type: Number, default: 41943040 }, // ~40MB
     maxFileSize: { type: [String, Number], default: null }, // e.g. '60MB' or 62914560
+    // CSRF endpoint configuration - defaults to Sanctum standard
+    csrfEndpoint: { type: String, default: "/sanctum/csrf-cookie" },
 });
 
 const FilePond = vueFilePond(
     FilePondPluginFileValidateType,
     FilePondPluginImagePreview,
-    FilePondPluginFilePoster,
-    FilePondPluginFileValidateSize
+    FilePondPluginFilePoster
 );
 
 const pond = ref(null);
 
-// Custom server process using XHR (for progress + retry on 419)
+// Custom server process using traditional XMLHttpRequest with Inertia CSRF token
 const server = {
     process: (
         fieldName,
@@ -62,9 +61,40 @@ const server = {
     ) => {
         let aborted = false;
         let xhr = null;
-        let retried = false;
+        let retryCount = 0;
+        const maxRetries = 2;
 
-        const send = async () => {
+        // Function to get fresh CSRF token using configurable endpoint
+        const getFreshCsrfToken = async () => {
+            try {
+                // For Sanctum, we need to call the csrf-cookie endpoint to refresh the XSRF token
+                const response = await fetch(props.csrfEndpoint, {
+                    method: "GET",
+                    credentials: "same-origin",
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest",
+                        Accept: "application/json",
+                    },
+                });
+
+                if (response.ok) {
+                    // For Sanctum, the CSRF token is set in cookies, not returned in response
+                    // So we just need to re-read the meta tag after the request
+                    return document
+                        .querySelector('meta[name="csrf-token"]')
+                        ?.getAttribute("content");
+                }
+            } catch (e) {
+                // Silently handle CSRF token refresh failures
+            }
+
+            // Fallback to existing token from meta tag only (modern Laravel standard)
+            return document
+                .querySelector('meta[name="csrf-token"]')
+                ?.getAttribute("content");
+        };
+
+        const send = async (isRetry = false) => {
             let file = originalFile;
             try {
                 // If it's a video and larger than the threshold, optimize before upload
@@ -85,85 +115,83 @@ const server = {
                     }
                 }
 
-                // Final client-side size gate: never send if still over 60MB
+                // Final client-side size gate: never send if still over 60MB AFTER optimization
                 if (
                     file &&
                     typeof file.size === "number" &&
                     file.size > MAX_UPLOAD_BYTES
                 ) {
-                    const msg =
-                        "Processed video is still larger than 60MB. Please choose a shorter clip or compress further.";
-                    emit("error", msg);
-                    error(msg);
-                    return; // do not proceed
+                    // For videos, give a more specific message since they should have been optimized
+                    if (file.type?.startsWith("video/")) {
+                        const msg =
+                            "Video is still larger than 60MB after optimization. Please choose a shorter clip or compress further.";
+                        emit("error", msg);
+                        error(msg);
+                    } else {
+                        const msg =
+                            "File is larger than 60MB and cannot be uploaded.";
+                        emit("error", msg);
+                        error(msg);
+                    }
+                    return;
                 }
+            } catch (_prepErr) {
+                // If processing fails, continue with original file but check size again
+                file = originalFile;
 
-                // Optional: reject oversized images as well (rare)
+                // If optimization failed and original file is still too large, reject it
                 if (
-                    !file?.type?.startsWith("video/") &&
-                    file?.size > MAX_UPLOAD_BYTES
+                    file &&
+                    typeof file.size === "number" &&
+                    file.size > MAX_UPLOAD_BYTES
                 ) {
-                    const msg =
-                        "Image is larger than 60MB and cannot be uploaded.";
+                    const msg = file.type?.startsWith("video/")
+                        ? "Video optimization failed and file is too large (>60MB). Please choose a smaller file."
+                        : "File is larger than 60MB and cannot be uploaded.";
                     emit("error", msg);
                     error(msg);
                     return;
                 }
-            } catch (_prepErr) {
-                // If processing fails, continue with original file (may fail backend if >60MB)
-                file = originalFile;
             }
 
+            // Create FormData and get fresh CSRF token (especially important for retries)
             const formData = new FormData();
-            // Append backend-expected fields
-            Object.entries(props.extraData || {}).forEach(([k, v]) => {
-                if (v !== undefined && v !== null) formData.append(k, v);
+            formData.append("image", file);
+
+            // Add extra data
+            Object.keys(props.extraData).forEach((key) => {
+                formData.append(key, props.extraData[key]);
             });
-            formData.append("image", file, file.name);
 
-            // Build CSRF/XSRF headers; refresh if missing
-            let { headers, csrfToken } = buildCsrfHeaders();
-            if (!headers["X-CSRF-TOKEN"] && !headers["X-XSRF-TOKEN"]) {
-                await refreshCsrf();
-                ({ headers, csrfToken } = buildCsrfHeaders());
+            // Get CSRF token - use fresh token for retries, meta tag for initial attempts
+            const csrfToken = isRetry
+                ? await getFreshCsrfToken()
+                : document
+                      .querySelector('meta[name="csrf-token"]')
+                      ?.getAttribute("content");
+
+            if (csrfToken) {
+                formData.append("_token", csrfToken);
             }
-            if (csrfToken) formData.append("_token", csrfToken);
 
+            // Create and configure XMLHttpRequest
             xhr = new XMLHttpRequest();
-            xhr.open("POST", props.uploadUrl, true);
-            xhr.withCredentials = true;
-            // Apply headers
-            Object.entries({ ...headers, Accept: "application/json" }).forEach(
-                ([k, v]) => xhr.setRequestHeader(k, v)
-            );
 
-            xhr.upload.onprogress = (e) => {
+            // Upload progress
+            xhr.upload.addEventListener("progress", (e) => {
                 if (!aborted && e.lengthComputable) {
                     progress(true, e.loaded, e.total);
                 }
-            };
+            });
 
-            xhr.onerror = () => {
+            // Handle response
+            xhr.addEventListener("load", () => {
                 if (aborted) return;
-                error("Network error while uploading.");
-                emit("error", "Network error while uploading.");
-            };
 
-            xhr.onload = async () => {
-                if (aborted) return;
-                if (xhr.status === 419 || xhr.status === 401) {
-                    // refresh once and retry
-                    if (!retried) {
-                        retried = true;
-                        await refreshCsrf();
-                        await send();
-                        return;
-                    }
-                }
-                // Consider 2xx and 3xx as success (Laravel may return 302 redirects)
-                if (xhr.status >= 200 && xhr.status < 400) {
+                if (xhr.status >= 200 && xhr.status < 300) {
                     try {
-                        const serverId = xhr.responseText || `${Date.now()}`;
+                        const response = JSON.parse(xhr.responseText);
+                        const serverId = response?.id || `${Date.now()}`;
                         load(serverId);
                         emit("processed", {
                             name: file.name,
@@ -173,12 +201,64 @@ const server = {
                     } catch (_e) {
                         load(`${Date.now()}`);
                     }
+                } else if (xhr.status === 419 || xhr.status === 403) {
+                    // CSRF token mismatch - try to retry with fresh token
+                    if (retryCount < maxRetries) {
+                        retryCount++;
+                        emit(
+                            "error",
+                            `Retrying upload (${retryCount}/${maxRetries}) - refreshing session...`
+                        );
+                        setTimeout(() => send(true), 1000 * retryCount); // Exponential backoff
+                        return;
+                    }
+                    const errorMsg = `Upload failed - session expired (${xhr.status})`;
+                    emit("error", errorMsg);
+                    error(errorMsg);
                 } else {
-                    const msg = `Upload failed (${xhr.status}).`;
-                    emit("error", msg);
-                    error(msg);
+                    // Other errors - try once more if it's the first attempt
+                    if (retryCount < maxRetries && xhr.status >= 500) {
+                        retryCount++;
+                        emit(
+                            "error",
+                            `Retrying upload (${retryCount}/${maxRetries}) - server error...`
+                        );
+                        setTimeout(() => send(true), 1000 * retryCount);
+                        return;
+                    }
+                    const errorMsg = `Upload failed (${xhr.status})`;
+                    emit("error", errorMsg);
+                    error(errorMsg);
                 }
-            };
+            });
+
+            // Handle errors
+            xhr.addEventListener("error", () => {
+                if (aborted) return;
+
+                // Network error - try once more if it's the first attempt
+                if (retryCount < maxRetries) {
+                    retryCount++;
+                    emit(
+                        "error",
+                        `Retrying upload (${retryCount}/${maxRetries}) - network error...`
+                    );
+                    setTimeout(() => send(true), 1000 * retryCount);
+                    return;
+                }
+
+                const errorMsg = "Upload failed due to network error";
+                emit("error", errorMsg);
+                error(errorMsg);
+            });
+
+            // Send request
+            xhr.open("POST", props.uploadUrl);
+            xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+
+            if (csrfToken) {
+                xhr.setRequestHeader("X-CSRF-TOKEN", csrfToken);
+            }
 
             xhr.send(formData);
         };
@@ -189,10 +269,8 @@ const server = {
         return {
             abort: () => {
                 aborted = true;
-                try {
-                    xhr && xhr.abort();
-                } catch (_e) {
-                    // ignore abort errors
+                if (xhr) {
+                    xhr.abort();
                 }
                 abort();
             },
@@ -255,9 +333,6 @@ const oninit = () => {
         const instance = pond.value;
         if (instance && typeof instance.on === "function") {
             instance.on("processfiles", () => {
-                console.log(
-                    "[FilePondUploader] Emitting all-done from processfiles event"
-                ); // DEBUG
                 emit("all-done");
             });
         }
@@ -279,12 +354,7 @@ const oninit = () => {
         :before-add-file="beforeAddFile"
         :oninit="oninit"
         credits="false"
-        :max-file-size="maxFileSize"
         @processfilestart="$emit('processing-start')"
-        @processfiles="
-            () => {
-                $emit('all-done');
-            }
-        "
+        @processfiles="$emit('all-done')"
     />
 </template>

@@ -15,7 +15,6 @@ import { useForm, usePage } from "@inertiajs/vue3";
 import { useVuelidate } from "@vuelidate/core";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import FilePondUploader from "@/Components/FilePondUploader.vue";
-import { refreshCsrf, buildCsrfHeaders } from "@/utils/csrf.js";
 
 const emit = defineEmits(["close-form"]);
 
@@ -133,7 +132,7 @@ const pondUploadUrl = computed(() => getPagesStoreUrl());
 const pondExtraData = computed(() => ({
     book_id: form.book_id,
     content: form.content || "",
-    video_link: form.video_link || "",
+    // Don't pass video_link to file uploads since that's for text-only submissions
 }));
 
 const hasQueuedFiles = computed(() => {
@@ -231,23 +230,6 @@ const handleFormSubmit = async (event) => {
     }
 };
 
-const buildSingleFormData = (csrfToken) => {
-    const fd = new FormData();
-    fd.append("book_id", form.book_id);
-    fd.append("content", form.content || "");
-    if (form.video_link) fd.append("video_link", form.video_link);
-    fd.append("_token", csrfToken);
-    return fd;
-};
-
-const fetchWithTimeout = (url, options = {}, timeoutMs = 35000) => {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeoutMs);
-    return fetch(url, { ...options, signal: controller.signal }).finally(() =>
-        clearTimeout(id)
-    );
-};
-
 const submitTextOrLinkOnly = async () => {
     // Guard: require content or video_link
     const hasText =
@@ -256,41 +238,23 @@ const submitTextOrLinkOnly = async () => {
         throw new Error("Please add some words or a YouTube link.");
     }
 
-    // Build CSRF headers; refresh if neither CSRF nor XSRF are present
-    let { headers, csrfToken } = buildCsrfHeaders();
-    if (!headers["X-CSRF-TOKEN"] && !headers["X-XSRF-TOKEN"]) {
-        await refreshCsrf();
-        ({ headers, csrfToken } = buildCsrfHeaders());
-    }
-
-    const url = getPagesStoreUrl();
-    const fd = buildSingleFormData(csrfToken || "");
-
-    const response = await fetchWithTimeout(
-        url,
-        {
-            method: "POST",
-            body: fd,
-            credentials: "same-origin",
-            headers: {
-                ...headers,
-                Accept: "application/json",
-            },
-            cache: "no-store",
+    // Use Inertia form to submit - it handles CSRF automatically
+    form.post(route("pages.store"), {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+            clearDraft();
+            form.reset();
+            emit("close-form");
         },
-        45000
-    );
-
-    if (!response.ok) {
-        const text = await response.text().catch(() => "");
-        throw new Error(
-            `Submit failed (${response.status})${text ? `: ${text}` : ""}`
-        );
-    }
-
-    clearDraft();
-    form.reset();
-    emit("close-form");
+        onError: (errors) => {
+            const errorMessage =
+                errors?.message ||
+                Object.values(errors)[0] ||
+                "Submission failed.";
+            throw new Error(errorMessage);
+        },
+    });
 };
 
 // FilePond event handlers
@@ -525,7 +489,7 @@ onUnmounted(() => {
                 <Button
                     type="button"
                     class="w-3/4 flex justify-center py-3"
-                    :disabled="isUploading"
+                    :disabled="isUploading || form.processing"
                     @click.prevent="handleFormSubmit"
                 >
                     <span class="text-xl">
