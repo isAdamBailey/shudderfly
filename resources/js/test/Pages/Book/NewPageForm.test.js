@@ -418,26 +418,28 @@ describe("NewPageForm", () => {
     });
 
     describe("Form Submission", () => {
-        it("submits YouTube link", async () => {
+        it("submits YouTube link using Inertia form", async () => {
             const component = wrapper.vm;
             component.mediaOption = "link";
             component.form.video_link = "https://youtube.com/watch?v=abc123";
 
-            // Mock successful fetch request
-            global.fetch.mockResolvedValue({
-                ok: true,
-                status: 200,
-                text: () => Promise.resolve(""),
-                json: () => Promise.resolve({}),
+            // Mock Inertia form post method
+            mockForm.post = vi.fn((url, options) => {
+                // Simulate successful submission
+                if (options && options.onSuccess) {
+                    options.onSuccess();
+                }
             });
 
             await component.handleFormSubmit();
 
-            expect(global.fetch).toHaveBeenCalledWith(
-                expect.stringContaining("/pages.store"),
+            expect(mockForm.post).toHaveBeenCalledWith(
+                "/pages.store",
                 expect.objectContaining({
-                    method: "POST",
-                    body: expect.any(FormData),
+                    preserveScroll: true,
+                    preserveState: true,
+                    onSuccess: expect.any(Function),
+                    onError: expect.any(Function),
                 })
             );
         });
@@ -447,16 +449,76 @@ describe("NewPageForm", () => {
             component.form.content = "Test content";
             component.mediaOption = "link"; // so no queued files path
 
-            // Mock successful fetch request
-            global.fetch.mockResolvedValue({
-                ok: true,
-                status: 200,
-                text: () => Promise.resolve(""),
+            // Mock Inertia form post method
+            mockForm.post = vi.fn((url, options) => {
+                // Simulate successful submission
+                if (options && options.onSuccess) {
+                    options.onSuccess();
+                }
             });
 
             await component.handleFormSubmit();
 
             expect(wrapper.emitted("close-form")).toBeTruthy();
+        });
+
+        it("disables submit button when form is processing", async () => {
+            // Set form to processing state and remount to ensure reactivity
+            mockForm.processing = true;
+            useForm.mockReturnValue(mockForm);
+
+            // Remount wrapper with processing form
+            wrapper = mount(NewPageForm, {
+                props: { book },
+                global: {
+                    mocks: {
+                        $page: {
+                            props: {
+                                settings: { youtube_enabled: true },
+                            },
+                        },
+                    },
+                },
+            });
+
+            await nextTick();
+
+            const buttons = wrapper.findAllComponents({ name: "Button" });
+            const createButton = buttons.find((btn) =>
+                btn.text().includes("Create Page!")
+            );
+
+            expect(createButton.props("disabled")).toBe(true);
+        });
+
+        it("disables submit button when uploading", async () => {
+            const component = wrapper.vm;
+            component.isUploading = true;
+
+            await nextTick();
+
+            const buttons = wrapper.findAllComponents({ name: "Button" });
+            const createButton = buttons.find((btn) =>
+                btn.text().includes("Create Page!")
+            );
+
+            expect(createButton.props("disabled")).toBe(true);
+        });
+
+        it("enables submit button when not processing and not uploading", async () => {
+            // Ensure both states are false
+            mockForm.processing = false;
+            const component = wrapper.vm;
+            component.isUploading = false;
+
+            await nextTick();
+
+            const buttons = wrapper.findAllComponents({ name: "Button" });
+            const createButton = buttons.find((btn) =>
+                btn.text().includes("Create Page!")
+            );
+
+            expect(createButton.props("disabled")).toBe(false);
         });
     });
 });

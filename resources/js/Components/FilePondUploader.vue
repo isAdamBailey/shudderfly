@@ -1,7 +1,6 @@
 <script setup>
 import { ref, watch, onMounted, defineExpose } from "vue";
 import vueFilePond from "vue-filepond";
-import { buildCsrfHeaders, refreshCsrf } from "@/utils/csrf.js";
 // Import FilePond styles
 import "filepond/dist/filepond.min.css";
 import "filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css";
@@ -49,7 +48,7 @@ const FilePond = vueFilePond(
 
 const pond = ref(null);
 
-// Custom server process using XHR (for progress + retry on 419)
+// Custom server process using traditional XMLHttpRequest with Inertia CSRF token
 const server = {
     process: (
         fieldName,
@@ -62,7 +61,6 @@ const server = {
     ) => {
         let aborted = false;
         let xhr = null;
-        let retried = false;
 
         const send = async () => {
             let file = originalFile;
@@ -114,56 +112,43 @@ const server = {
                 file = originalFile;
             }
 
+            // Create FormData and add CSRF token from Inertia
             const formData = new FormData();
-            // Append backend-expected fields
-            Object.entries(props.extraData || {}).forEach(([k, v]) => {
-                if (v !== undefined && v !== null) formData.append(k, v);
+            formData.append("image", file);
+
+            // Add extra data
+            Object.keys(props.extraData).forEach((key) => {
+                formData.append(key, props.extraData[key]);
             });
-            formData.append("image", file, file.name);
 
-            // Build CSRF/XSRF headers; refresh if missing
-            let { headers, csrfToken } = buildCsrfHeaders();
-            if (!headers["X-CSRF-TOKEN"] && !headers["X-XSRF-TOKEN"]) {
-                await refreshCsrf();
-                ({ headers, csrfToken } = buildCsrfHeaders());
+            // Get CSRF token from Inertia's page props or meta tag
+            const csrfToken =
+                document
+                    .querySelector('meta[name="csrf-token"]')
+                    ?.getAttribute("content") || window?.Laravel?.csrfToken;
+
+            if (csrfToken) {
+                formData.append("_token", csrfToken);
             }
-            if (csrfToken) formData.append("_token", csrfToken);
 
+            // Create and configure XMLHttpRequest
             xhr = new XMLHttpRequest();
-            xhr.open("POST", props.uploadUrl, true);
-            xhr.withCredentials = true;
-            // Apply headers
-            Object.entries({ ...headers, Accept: "application/json" }).forEach(
-                ([k, v]) => xhr.setRequestHeader(k, v)
-            );
 
-            xhr.upload.onprogress = (e) => {
+            // Upload progress
+            xhr.upload.addEventListener("progress", (e) => {
                 if (!aborted && e.lengthComputable) {
                     progress(true, e.loaded, e.total);
                 }
-            };
+            });
 
-            xhr.onerror = () => {
+            // Handle response
+            xhr.addEventListener("load", () => {
                 if (aborted) return;
-                error("Network error while uploading.");
-                emit("error", "Network error while uploading.");
-            };
 
-            xhr.onload = async () => {
-                if (aborted) return;
-                if (xhr.status === 419 || xhr.status === 401) {
-                    // refresh once and retry
-                    if (!retried) {
-                        retried = true;
-                        await refreshCsrf();
-                        await send();
-                        return;
-                    }
-                }
-                // Consider 2xx and 3xx as success (Laravel may return 302 redirects)
-                if (xhr.status >= 200 && xhr.status < 400) {
+                if (xhr.status >= 200 && xhr.status < 300) {
                     try {
-                        const serverId = xhr.responseText || `${Date.now()}`;
+                        const response = JSON.parse(xhr.responseText);
+                        const serverId = response?.id || `${Date.now()}`;
                         load(serverId);
                         emit("processed", {
                             name: file.name,
@@ -174,11 +159,27 @@ const server = {
                         load(`${Date.now()}`);
                     }
                 } else {
-                    const msg = `Upload failed (${xhr.status}).`;
-                    emit("error", msg);
-                    error(msg);
+                    const errorMsg = `Upload failed (${xhr.status})`;
+                    emit("error", errorMsg);
+                    error(errorMsg);
                 }
-            };
+            });
+
+            // Handle errors
+            xhr.addEventListener("error", () => {
+                if (aborted) return;
+                const errorMsg = "Upload failed due to network error";
+                emit("error", errorMsg);
+                error(errorMsg);
+            });
+
+            // Send request
+            xhr.open("POST", props.uploadUrl);
+            xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+
+            if (csrfToken) {
+                xhr.setRequestHeader("X-CSRF-TOKEN", csrfToken);
+            }
 
             xhr.send(formData);
         };
@@ -189,10 +190,8 @@ const server = {
         return {
             abort: () => {
                 aborted = true;
-                try {
-                    xhr && xhr.abort();
-                } catch (_e) {
-                    // ignore abort errors
+                if (xhr) {
+                    xhr.abort();
                 }
                 abort();
             },
@@ -281,10 +280,6 @@ const oninit = () => {
         credits="false"
         :max-file-size="maxFileSize"
         @processfilestart="$emit('processing-start')"
-        @processfiles="
-            () => {
-                $emit('all-done');
-            }
-        "
+        @processfiles="$emit('all-done')"
     />
 </template>
