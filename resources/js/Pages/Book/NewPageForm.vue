@@ -125,7 +125,6 @@ watch(
 );
 
 // FilePond integration
-const usingFilePond = ref(true);
 const uploaderRef = ref(null);
 const pondQueueCount = ref(0);
 const isUploading = ref(false);
@@ -138,7 +137,6 @@ const pondExtraData = computed(() => ({
 }));
 
 const hasQueuedFiles = computed(() => {
-    if (!usingFilePond.value) return false;
     const count = Number(pondQueueCount.value) || 0;
     const refCount = Number(uploaderRef.value?.getFileCount?.() || 0);
     return count > 0 || refCount > 0;

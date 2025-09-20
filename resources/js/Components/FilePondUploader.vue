@@ -5,10 +5,13 @@ import { buildCsrfHeaders, refreshCsrf } from "@/utils/csrf.js";
 // Import FilePond styles
 import "filepond/dist/filepond.min.css";
 import "filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css";
+import "filepond-plugin-file-poster/dist/filepond-plugin-file-poster.css";
 
 // Import FilePond plugins
 import FilePondPluginFileValidateType from "filepond-plugin-file-validate-type";
 import FilePondPluginImagePreview from "filepond-plugin-image-preview";
+import FilePondPluginFilePoster from "filepond-plugin-file-poster";
+import FilePondPluginFileValidateSize from "filepond-plugin-file-validate-size";
 
 const emit = defineEmits([
     "error",
@@ -34,11 +37,14 @@ const props = defineProps({
     // Client-side video processing hook
     processVideo: { type: Function, default: null },
     videoThresholdBytes: { type: Number, default: 41943040 }, // ~40MB
+    maxFileSize: { type: [String, Number], default: null }, // e.g. '60MB' or 62914560
 });
 
 const FilePond = vueFilePond(
     FilePondPluginFileValidateType,
-    FilePondPluginImagePreview
+    FilePondPluginImagePreview,
+    FilePondPluginFilePoster,
+    FilePondPluginFileValidateSize
 );
 
 const pond = ref(null);
@@ -272,7 +278,8 @@ const oninit = () => {
         :label-idle="labelIdle"
         :before-add-file="beforeAddFile"
         :oninit="oninit"
-        :credits="false"
+        credits="false"
+        :max-file-size="maxFileSize"
         @processfilestart="$emit('processing-start')"
         @processfiles="
             () => {
