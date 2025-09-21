@@ -24,7 +24,7 @@ class WeeklyStatsMail extends Mailable
 
     public Model $mostPages;
 
-    public Model $mostRead;
+    public Collection $mostRead;
 
     public Model $leastRead;
 
@@ -49,7 +49,7 @@ class WeeklyStatsMail extends Mailable
         int $totalPages,
         Model $leastPages,
         Model $mostPages,
-        Model $mostRead,
+        Collection $mostRead,
         Model $leastRead,
         Collection $booksThisWeek,
         array $bookCounts,

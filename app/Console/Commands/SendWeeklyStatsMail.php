@@ -48,7 +48,8 @@ class SendWeeklyStatsMail extends Command
         $mostRead = Book::query()
             ->orderBy('read_count', 'desc')
             ->orderBy('created_at')
-            ->first();
+            ->take(5)
+            ->get();
         $leastRead = Book::query()
             ->orderBy('read_count')
             ->orderBy('created_at')
