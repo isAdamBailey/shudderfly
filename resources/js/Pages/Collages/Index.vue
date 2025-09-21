@@ -31,8 +31,12 @@
                 </div>
             </div>
             <div class="flex justify-between items-center">
-                <p class="text-sm text-gray-400 mt-2">{{ text }}</p>
-                <Button class="ml-2" :disabled="speaking" @click="speak(text)">
+                <p class="text-gray-400 mt-2">{{ collageMessage }}</p>
+                <Button
+                    class="ml-2"
+                    :disabled="speaking"
+                    @click="speak(collageMessage)"
+                >
                     <i class="ri-speak-fill text-lg"></i>
                 </Button>
             </div>
@@ -62,7 +66,7 @@
             <ManEmptyCircle />
         </div>
 
-        <CollageGrid :collages="collages">
+        <CollageGrid :collages="collages" :message="collageMessage">
             <template #image-actions="{ page, collage }">
                 <button
                     v-if="canAdmin && !collage.is_locked"
@@ -259,9 +263,8 @@ import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { MAX_COLLAGE_PAGES } from "@/constants/collage";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, Link, useForm } from "@inertiajs/vue3";
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import CollageGrid from "./CollageGrid.vue";
-
 import { usePermissions } from "@/composables/permissions";
 import { useCollageProcessing } from "@/composables/useCollageProcessing";
 
@@ -270,7 +273,7 @@ const { speak, speaking } = useSpeechSynthesis();
 const { startProcessing, stopProcessing, isProcessing } =
     useCollageProcessing();
 
-defineProps({
+const props = defineProps({
     collages: { type: Array, required: true },
 });
 
@@ -298,9 +301,30 @@ onUnmounted(() => {
     document.removeEventListener("click", closeDropdowns);
 });
 
-const text = ref(
-    `You can build your own collages! Go to the picture you want to add to the collage and select the collage you want. Mom and Dad can print these collages.`
-);
+const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+];
+
+const collageMessage = computed(() => {
+    const now = new Date();
+    const nextMonthName = monthNames[(now.getMonth() + 1) % 12];
+    const isSingle = props.collages.length === 1;
+    const prefix = isSingle
+        ? "This is the collage for"
+        : "These are the collages for";
+    return `${prefix} ${nextMonthName}!`;
+});
 
 const hasPages = (collage) => {
     return collage.pages.length > 0;

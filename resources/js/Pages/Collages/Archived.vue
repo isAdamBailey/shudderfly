@@ -19,7 +19,7 @@
                 </Link>
             </div>
             <div class="flex justify-between items-center">
-                <p class="text-sm text-gray-400 mt-2">{{ archivedText }}</p>
+                <p class="text-gray-400 mt-2">{{ archivedText }}</p>
                 <Button
                     class="ml-2"
                     :disabled="speaking"
@@ -156,7 +156,6 @@ import { ref } from "vue";
 import CollageGrid from "./CollageGrid.vue";
 
 import { usePermissions } from "@/composables/permissions";
-import { MAX_COLLAGE_PAGES } from "@/constants/collage";
 
 const { canEditPages, canAdmin } = usePermissions();
 const { speak, speaking } = useSpeechSynthesis();
@@ -169,7 +168,7 @@ const restoreForm = useForm();
 const deleteForm = useForm();
 
 const archivedText = ref(
-    "These are old collages that are saved but can no longer be changed."
+    "These are old collages that we have already laminated."
 );
 
 const confirmDelete = (collageId) => {
