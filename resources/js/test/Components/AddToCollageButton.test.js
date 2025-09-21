@@ -8,517 +8,595 @@ global.route = (name) => `/${name}`;
 
 // Mock the constants
 vi.mock("@/constants/collage", () => ({
-  MAX_COLLAGE_PAGES: 10
+    MAX_COLLAGE_PAGES: 10,
 }));
 
 // Mock the speech synthesis composable
+let mockSpeak = vi.fn();
 vi.mock("@/composables/useSpeechSynthesis", () => ({
-  useSpeechSynthesis: () => ({
-    speak: vi.fn(),
-    speaking: false
-  })
+    useSpeechSynthesis: () => ({
+        speak: mockSpeak,
+        speaking: false,
+    }),
 }));
 
 describe("AddToCollageButton", () => {
-  let wrapper;
-  let mockForm;
+    let wrapper;
+    let mockForm;
 
-  const createMockForm = () => ({
-    data: { collage_id: null, page_id: 1 },
-    errors: {},
-    processing: false,
-    post: vi.fn(),
-    reset: vi.fn()
-  });
-
-  const createCollages = (overrides = []) => {
-    const defaultCollages = [
-      { id: 1, pages: [], is_archived: false },
-      { id: 2, pages: [], is_archived: false },
-      { id: 3, pages: [], is_archived: false }
-    ];
-
-    return defaultCollages.map((collage, index) => ({
-      ...collage,
-      ...(overrides[index] || {})
-    }));
-  };
-
-  beforeEach(() => {
-    mockForm = createMockForm();
-    useForm.mockReturnValue(mockForm);
-  });
-
-  describe("Page already in collage", () => {
-    it("shows message when page is in one collage", () => {
-      const collages = createCollages([
-        { id: 1, pages: [{ id: 1 }], is_archived: false }
-      ]);
-
-      wrapper = mount(AddToCollageButton, {
-        props: {
-          pageId: 1,
-          collages
-        }
-      });
-
-      expect(wrapper.text()).toContain("This picture is in collage");
-      expect(wrapper.text()).toContain("#1");
-      expect(wrapper.find("select").exists()).toBe(false);
+    const createMockForm = () => ({
+        data: { collage_id: null, page_id: 1 },
+        errors: {},
+        processing: false,
+        post: vi.fn(),
+        reset: vi.fn(),
     });
 
-    it("shows message when page is in multiple collages", () => {
-      const collages = createCollages([
-        { id: 1, pages: [{ id: 1 }], is_archived: false },
-        { id: 2, pages: [{ id: 1 }], is_archived: false }
-      ]);
+    const createCollages = (overrides = []) => {
+        const defaultCollages = [
+            { id: 1, pages: [], is_archived: false, is_locked: false },
+            { id: 2, pages: [], is_archived: false, is_locked: false },
+            { id: 3, pages: [], is_archived: false, is_locked: false },
+        ];
 
-      wrapper = mount(AddToCollageButton, {
-        props: {
-          pageId: 1,
-          collages
-        }
-      });
+        return defaultCollages.map((collage, index) => ({
+            ...collage,
+            ...(overrides[index] || {}),
+        }));
+    };
 
-      expect(wrapper.text()).toContain("This picture is in collage");
-      expect(wrapper.text()).toContain("#1");
-      expect(wrapper.text()).toContain("#2");
-      const normalized = wrapper.text().replace(/\s+/g, "");
-      expect(normalized).toContain("#1,#2");
+    beforeEach(() => {
+        mockForm = createMockForm();
+        useForm.mockReturnValue(mockForm);
+        mockSpeak.mockClear(); // Reset the mock between tests
     });
 
-    it("does not show message when page is only in archived collages", () => {
-      const collages = [
-        {
-          id: 1,
-          pages: [{ id: 1 }],
-          is_archived: true
-        }
-      ];
+    describe("Page already in collage", () => {
+        it("shows message when page is in one collage", () => {
+            const collages = createCollages([
+                { id: 1, pages: [{ id: 1 }], is_archived: false },
+            ]);
 
-      wrapper = mount(AddToCollageButton, {
-        props: {
-          pageId: 1,
-          collages
-        }
-      });
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+            });
 
-      expect(wrapper.text()).not.toMatch(/This picture is in collage/);
-      expect(wrapper.find("select").exists()).toBe(true);
-    });
-  });
+            expect(wrapper.text()).toContain("This picture is in collage");
+            expect(wrapper.text()).toContain("#1");
+            expect(wrapper.find("select").exists()).toBe(false);
+            // Should not show the add to collage section
+            expect(wrapper.text()).not.toContain("Add to collage:");
+        });
 
-  describe("Collage selection", () => {
-    it("shows select dropdown when page is not in any collage", () => {
-      const collages = createCollages();
+        it("shows message when page is in multiple collages", () => {
+            const collages = createCollages([
+                { id: 1, pages: [{ id: 1 }], is_archived: false },
+                { id: 2, pages: [{ id: 1 }], is_archived: false },
+            ]);
 
-      wrapper = mount(AddToCollageButton, {
-        props: {
-          pageId: 1,
-          collages
-        }
-      });
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+            });
 
-      expect(wrapper.find("select").exists()).toBe(true);
-      expect(wrapper.find("option[value='null']").text()).toBe(
-        "Select collage"
-      );
-    });
+            expect(wrapper.text()).toContain("This picture is in collage");
+            expect(wrapper.text()).toContain("#1");
+            expect(wrapper.text()).toContain("#2");
+            const normalized = wrapper.text().replace(/\s+/g, "");
+            expect(normalized).toContain("#1,#2");
+        });
 
-    it("disables full collages in dropdown", () => {
-      // Page is not in any collage
-      const collages = [
-        {
-          id: 1,
-          pages: Array(10).fill({ id: 2 }),
-          is_archived: false
-        },
-        { id: 2, pages: [], is_archived: false }
-      ];
+        it("does not show message when page is only in archived collages", () => {
+            const collages = [
+                {
+                    id: 1,
+                    pages: [{ id: 1 }],
+                    is_archived: true,
+                    is_locked: false,
+                },
+            ];
 
-      wrapper = mount(AddToCollageButton, {
-        props: {
-          pageId: 1,
-          collages
-        }
-      });
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+            });
 
-      const options = wrapper.findAll("option");
-      expect(options.length).toBeGreaterThanOrEqual(3);
-      expect(options[1].attributes("disabled")).toBeDefined();
-      expect(options[1].text()).toContain("(Full)");
-      expect(options[2].attributes("disabled")).toBeUndefined();
-    });
-
-    it("disables entire select when all collages are full", () => {
-      // Page is not in any collage
-      const collages = [
-        {
-          id: 1,
-          pages: Array(10).fill({ id: 2 }),
-          is_archived: false
-        },
-        {
-          id: 2,
-          pages: Array(10).fill({ id: 2 }),
-          is_archived: false
-        }
-      ];
-
-      wrapper = mount(AddToCollageButton, {
-        props: {
-          pageId: 1,
-          collages
-        }
-      });
-
-      const select = wrapper.find("select");
-      expect(select.exists()).toBe(true);
-      expect(select.attributes("disabled")).toBeDefined();
-      expect(wrapper.find("option[value='null']").text()).toBe(
-        "All collages are full"
-      );
+            expect(wrapper.text()).not.toMatch(/This picture is in collage/);
+            // Since the archived collage is filtered out, there are no available collages,
+            // so no select should be shown either
+            expect(wrapper.find("select").exists()).toBe(false);
+        });
     });
 
-    it("ignores archived collages when checking availability", () => {
-      // Page is not in any collage
-      const collages = [
-        {
-          id: 1,
-          pages: Array(10).fill({ id: 2 }),
-          is_archived: true
-        },
-        { id: 2, pages: [], is_archived: false }
-      ];
+    describe("Single collage auto-selection", () => {
+        it("hides select dropdown when only one collage is available", () => {
+            const collages = [
+                { id: 1, pages: [], is_archived: false, is_locked: false },
+            ];
 
-      wrapper = mount(AddToCollageButton, {
-        props: {
-          pageId: 1,
-          collages
-        }
-      });
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+            });
 
-      const select = wrapper.find("select");
-      expect(select.exists()).toBe(true);
-      expect(select.attributes("disabled")).toBeUndefined();
-      expect(wrapper.find("option[value='null']").text()).toBe(
-        "Select collage"
-      );
-    });
-  });
+            expect(wrapper.find("select").exists()).toBe(false);
+            expect(wrapper.text()).toContain("Add to Collage #1");
+        });
 
-  describe("Add to collage functionality", () => {
-    it("disables button when no collage is selected", () => {
-      const collages = createCollages();
+        it("shows specific collage number in button text for single collage", () => {
+            const collages = [
+                { id: 5, pages: [], is_archived: false, is_locked: false },
+            ];
 
-      wrapper = mount(AddToCollageButton, {
-        props: {
-          pageId: 1,
-          collages
-        }
-      });
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+            });
 
-      const addButton = wrapper
-        .findAll("button")
-        .find((btn) => btn.text().includes("Add to Collage"));
-      expect(addButton.attributes("disabled")).toBeDefined();
-    });
+            const addButton = wrapper
+                .findAll("button")
+                .find((btn) => btn.text().includes("Add to Collage"));
+            expect(addButton.text()).toContain("Add to Collage #1"); // Display number is index-based
+        });
 
-    it("disables button when all collages are full", () => {
-      // Page is not in any collage
-      const collages = [
-        {
-          id: 1,
-          pages: Array(10).fill({ id: 2 }),
-          is_archived: false
-        },
-        {
-          id: 2,
-          pages: Array(10).fill({ id: 2 }),
-          is_archived: false
-        },
-        {
-          id: 3,
-          pages: Array(10).fill({ id: 2 }),
-          is_archived: false
-        }
-      ];
+        it("enables button when only one collage is available", () => {
+            const collages = [
+                { id: 1, pages: [], is_archived: false, is_locked: false },
+            ];
 
-      wrapper = mount(AddToCollageButton, {
-        props: {
-          pageId: 1,
-          collages
-        }
-      });
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+            });
 
-      const addButton = wrapper
-        .findAll("button")
-        .find((btn) => btn.text().includes("Add to Collage"));
-      expect(addButton.attributes("disabled")).toBeDefined();
-    });
+            const addButton = wrapper
+                .findAll("button")
+                .find((btn) => btn.text().includes("Add to Collage"));
+            expect(addButton.attributes("disabled")).toBeUndefined();
+        });
 
-    it("enables button when collage is selected and available", async () => {
-      const collages = createCollages();
+        it("automatically sets collage_id when single collage button is clicked", async () => {
+            const collages = [
+                { id: 3, pages: [], is_archived: false, is_locked: false },
+            ];
 
-      wrapper = mount(AddToCollageButton, {
-        props: {
-          pageId: 1,
-          collages
-        }
-      });
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+            });
 
-      // Select a collage
-      await wrapper.find("select").setValue(1);
+            const addButton = wrapper
+                .findAll("button")
+                .find((btn) => btn.text().includes("Add to Collage"));
+            await addButton.trigger("click");
 
-      const addButton = wrapper
-        .findAll("button")
-        .find((btn) => btn.text().includes("Add to Collage"));
-      expect(addButton.attributes("disabled")).toBeUndefined();
-    });
+            expect(mockForm.post).toHaveBeenCalledWith("/collage-page.store", {
+                preserveScroll: true,
+                onSuccess: expect.any(Function),
+            });
+            // The form should have been updated with the collage ID before posting
+            expect(mockForm.collage_id).toBe(3);
+        });
 
-    it("submits form when add button is clicked", async () => {
-      const collages = createCollages();
+        it("ignores locked collages when determining single collage scenario", () => {
+            const collages = [
+                { id: 1, pages: [], is_archived: false, is_locked: true },
+                { id: 2, pages: [], is_archived: false, is_locked: false },
+            ];
 
-      wrapper = mount(AddToCollageButton, {
-        props: {
-          pageId: 1,
-          collages
-        }
-      });
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+            });
 
-      // Select a collage
-      const select = wrapper.find("select");
-      await select.setValue(1);
-      await nextTick();
-
-      // Check if button is enabled before clicking
-      const button = wrapper
-        .findAll("button")
-        .find((btn) => btn.text().includes("Add to Collage"));
-      expect(button.attributes("disabled")).toBeUndefined();
-
-      // Click add button
-      await button.trigger("click");
-
-      expect(mockForm.post).toHaveBeenCalledWith("/collage-page.store", {
-        preserveScroll: true,
-        onSuccess: expect.any(Function)
-      });
+            expect(wrapper.find("select").exists()).toBe(false);
+            expect(wrapper.text()).toContain("Add to Collage #2");
+        });
     });
 
-    it("shows success message after successful submission", async () => {
-      const collages = createCollages();
+    describe("Collage selection", () => {
+        it("shows select dropdown when multiple collages are available", () => {
+            const collages = createCollages();
 
-      wrapper = mount(AddToCollageButton, {
-        props: {
-          pageId: 1,
-          collages
-        }
-      });
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+            });
 
-      // Select a collage
-      await wrapper.find("select").setValue(1);
-      await nextTick();
+            expect(wrapper.find("select").exists()).toBe(true);
+            expect(wrapper.find("option[value='null']").text()).toBe(
+                "Select collage"
+            );
+        });
 
-      // Click add button
-      const button = wrapper
-        .findAll("button")
-        .find((btn) => btn.text().includes("Add to Collage"));
-      await button.trigger("click");
+        it("shows generic button text when multiple collages are available", () => {
+            const collages = createCollages();
 
-      // Simulate successful submission
-      expect(mockForm.post).toHaveBeenCalled();
-      const onSuccessCallback = mockForm.post.mock.calls[0][1].onSuccess;
-      onSuccessCallback();
-      await nextTick();
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+            });
 
-      expect(wrapper.text()).toContain("Page successfully added to collage!");
-      expect(mockForm.reset).toHaveBeenCalled();
+            const addButton = wrapper
+                .findAll("button")
+                .find((btn) => btn.text().includes("Add to Collage"));
+            expect(addButton.text()).toBe("Add to Collage");
+        });
+
+        it("disables full collages in dropdown", () => {
+            const collages = [
+                {
+                    id: 1,
+                    pages: Array(10).fill({ id: 2 }),
+                    is_archived: false,
+                    is_locked: false,
+                },
+                { id: 2, pages: [], is_archived: false, is_locked: false },
+            ];
+
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+            });
+
+            const options = wrapper.findAll("option");
+            expect(options.length).toBeGreaterThanOrEqual(3);
+            expect(options[1].attributes("disabled")).toBeDefined();
+            expect(options[1].text()).toContain("(Full)");
+            expect(options[2].attributes("disabled")).toBeUndefined();
+        });
+
+        it("disables entire select when all collages are full", () => {
+            const collages = [
+                {
+                    id: 1,
+                    pages: Array(10).fill({ id: 2 }),
+                    is_archived: false,
+                    is_locked: false,
+                },
+                {
+                    id: 2,
+                    pages: Array(10).fill({ id: 2 }),
+                    is_archived: false,
+                    is_locked: false,
+                },
+            ];
+
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+            });
+
+            const select = wrapper.find("select");
+            expect(select.exists()).toBe(true);
+            expect(select.attributes("disabled")).toBeDefined();
+            expect(wrapper.find("option[value='null']").text()).toBe(
+                "All collages are full"
+            );
+        });
+
+        it("ignores archived and locked collages when checking availability", () => {
+            const collages = [
+                {
+                    id: 1,
+                    pages: Array(10).fill({ id: 2 }),
+                    is_archived: true,
+                    is_locked: false,
+                },
+                {
+                    id: 2,
+                    pages: Array(10).fill({ id: 2 }),
+                    is_archived: false,
+                    is_locked: true,
+                },
+                { id: 3, pages: [], is_archived: false, is_locked: false },
+            ];
+
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+            });
+
+            // Should show single collage behavior since only collage 3 is available
+            expect(wrapper.find("select").exists()).toBe(false);
+            expect(wrapper.text()).toContain("Add to Collage #3");
+        });
     });
 
-    it("hides success message after 3 seconds", async () => {
-      vi.useFakeTimers();
+    describe("Add to collage functionality", () => {
+        it("disables button when no collage is selected in multi-collage scenario", () => {
+            const collages = createCollages();
 
-      const collages = createCollages();
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+            });
 
-      wrapper = mount(AddToCollageButton, {
-        props: {
-          pageId: 1,
-          collages
-        }
-      });
+            const addButton = wrapper
+                .findAll("button")
+                .find((btn) => btn.text().includes("Add to Collage"));
+            expect(addButton.attributes("disabled")).toBeDefined();
+        });
 
-      // Select a collage and submit
-      await wrapper.find("select").setValue(1);
-      await nextTick();
-      const button = wrapper
-        .findAll("button")
-        .find((btn) => btn.text().includes("Add to Collage"));
-      await button.trigger("click");
+        it("disables button when all collages are full", () => {
+            const collages = [
+                {
+                    id: 1,
+                    pages: Array(10).fill({ id: 2 }),
+                    is_archived: false,
+                    is_locked: false,
+                },
+                {
+                    id: 2,
+                    pages: Array(10).fill({ id: 2 }),
+                    is_archived: false,
+                    is_locked: false,
+                },
+            ];
 
-      // Simulate successful submission
-      expect(mockForm.post).toHaveBeenCalled();
-      const onSuccessCallback = mockForm.post.mock.calls[0][1].onSuccess;
-      onSuccessCallback();
-      await nextTick();
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+            });
 
-      expect(wrapper.text()).toContain("Page successfully added to collage!");
+            const addButton = wrapper
+                .findAll("button")
+                .find((btn) => btn.text().includes("Add to Collage"));
+            expect(addButton.attributes("disabled")).toBeDefined();
+        });
 
-      // Fast forward 3 seconds
-      vi.advanceTimersByTime(3000);
-      await nextTick();
+        it("enables button when collage is selected and available", async () => {
+            const collages = createCollages();
 
-      expect(wrapper.text()).not.toContain(
-        "Page successfully added to collage!"
-      );
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+            });
 
-      vi.useRealTimers();
+            await wrapper.find("select").setValue(1);
+
+            const addButton = wrapper
+                .findAll("button")
+                .find((btn) => btn.text().includes("Add to Collage"));
+            expect(addButton.attributes("disabled")).toBeUndefined();
+        });
+
+        it("submits form when add button is clicked with selected collage", async () => {
+            const collages = createCollages();
+
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+            });
+
+            const select = wrapper.find("select");
+            await select.setValue(1);
+            await nextTick();
+
+            const button = wrapper
+                .findAll("button")
+                .find((btn) => btn.text().includes("Add to Collage"));
+            await button.trigger("click");
+
+            expect(mockForm.post).toHaveBeenCalledWith("/collage-page.store", {
+                preserveScroll: true,
+                onSuccess: expect.any(Function),
+            });
+        });
+
+        it("shows success message after successful submission", async () => {
+            const collages = createCollages();
+
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+            });
+
+            await wrapper.find("select").setValue(1);
+            await nextTick();
+
+            const button = wrapper
+                .findAll("button")
+                .find((btn) => btn.text().includes("Add to Collage"));
+            await button.trigger("click");
+
+            expect(mockForm.post).toHaveBeenCalled();
+            const onSuccessCallback = mockForm.post.mock.calls[0][1].onSuccess;
+            onSuccessCallback();
+            await nextTick();
+
+            expect(wrapper.text()).toContain(
+                "Page successfully added to collage!"
+            );
+            expect(mockForm.reset).toHaveBeenCalled();
+        });
+
+        it("hides success message after 3 seconds", async () => {
+            vi.useFakeTimers();
+
+            const collages = createCollages();
+
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+            });
+
+            await wrapper.find("select").setValue(1);
+            await nextTick();
+            const button = wrapper
+                .findAll("button")
+                .find((btn) => btn.text().includes("Add to Collage"));
+            await button.trigger("click");
+
+            expect(mockForm.post).toHaveBeenCalled();
+            const onSuccessCallback = mockForm.post.mock.calls[0][1].onSuccess;
+            onSuccessCallback();
+            await nextTick();
+
+            expect(wrapper.text()).toContain(
+                "Page successfully added to collage!"
+            );
+
+            vi.advanceTimersByTime(3000);
+            await nextTick();
+
+            expect(wrapper.text()).not.toContain(
+                "Page successfully added to collage!"
+            );
+
+            vi.useRealTimers();
+        });
+
+        it("resets success message when collage selection changes", async () => {
+            const collages = createCollages();
+
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+            });
+
+            await wrapper.find("select").setValue(1);
+            await nextTick();
+            const button = wrapper
+                .findAll("button")
+                .find((btn) => btn.text().includes("Add to Collage"));
+            await button.trigger("click");
+
+            expect(mockForm.post).toHaveBeenCalled();
+            const onSuccessCallback = mockForm.post.mock.calls[0][1].onSuccess;
+            onSuccessCallback();
+            await nextTick();
+
+            expect(wrapper.text()).toContain(
+                "Page successfully added to collage!"
+            );
+
+            // Change selection
+            await wrapper.find("select").setValue(2);
+            await nextTick();
+
+            expect(wrapper.text()).not.toContain(
+                "Page successfully added to collage!"
+            );
+        });
     });
 
-    it("resets success message when collage selection changes", async () => {
-      const collages = createCollages();
+    describe("Speech synthesis integration", () => {
+        it("provides appropriate speech text for single collage scenario", async () => {
+            const collages = [
+                { id: 1, pages: [], is_archived: false, is_locked: false },
+            ];
 
-      wrapper = mount(AddToCollageButton, {
-        props: {
-          pageId: 1,
-          collages
-        }
-      });
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+            });
 
-      // Select a collage and submit
-      await wrapper.find("select").setValue(1);
-      await nextTick();
-      const button = wrapper
-        .findAll("button")
-        .find((btn) => btn.text().includes("Add to Collage"));
-      await button.trigger("click");
+            const speakButton = wrapper
+                .findAll("button")
+                .find((btn) => btn.find("i.ri-speak-fill").exists());
 
-      // Simulate successful submission
-      expect(mockForm.post).toHaveBeenCalled();
-      const onSuccessCallback = mockForm.post.mock.calls[0][1].onSuccess;
-      onSuccessCallback();
-      await nextTick();
+            await speakButton.trigger("click");
 
-      expect(wrapper.text()).toContain("Page successfully added to collage!");
+            // The mock speak function should be called with the expected text
+            expect(mockSpeak).toHaveBeenCalledWith(
+                "Click the add button to add to the collage"
+            );
+        });
 
-      // Change collage selection
-      await wrapper.find("select").setValue(2);
-      await nextTick();
+        it("provides appropriate speech text when page is already in collage", async () => {
+            const collages = [
+                {
+                    id: 1,
+                    pages: [{ id: 1 }],
+                    is_archived: false,
+                    is_locked: false,
+                },
+            ];
 
-      expect(wrapper.text()).not.toContain(
-        "Page successfully added to collage!"
-      );
-    });
-  });
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+            });
 
-  describe("Computed properties", () => {
-    it("correctly identifies when page is in any collage", () => {
-      const collages = createCollages([
-        { id: 1, pages: [{ id: 1 }], deleted_at: null, is_archived: false }
-      ]);
+            const speakButton = wrapper
+                .findAll("button")
+                .find((btn) => btn.find("i.ri-speak-fill").exists());
 
-      wrapper = mount(AddToCollageButton, {
-        props: {
-          pageId: 1,
-          collages
-        }
-      });
+            await speakButton.trigger("click");
 
-      expect(wrapper.text()).toContain("This picture is in collage");
-    });
-
-    it("correctly identifies when page is not in any collage", () => {
-      const collages = createCollages();
-
-      wrapper = mount(AddToCollageButton, {
-        props: {
-          pageId: 1,
-          collages
-        }
-      });
-
-      expect(wrapper.text()).not.toContain("This picture is in collage");
-      expect(wrapper.find("select").exists()).toBe(true);
+            // The mock speak function should be called with the expected text
+            expect(mockSpeak).toHaveBeenCalledWith(
+                "This picture is in collage #1"
+            );
+        });
     });
 
-    it("correctly identifies available collages", () => {
-      // Page is not in any collage
-      const collages = [
-        {
-          id: 1,
-          pages: Array(10).fill({ id: 2 }),
-          deleted_at: null,
-          is_archived: false
-        },
-        { id: 2, pages: [], deleted_at: null, is_archived: false }
-      ];
+    describe("Collage display number calculation", () => {
+        it("calculates display numbers correctly based on array index", () => {
+            const collages = [
+                { id: 5, pages: [], is_archived: false, is_locked: false },
+                { id: 3, pages: [], is_archived: false, is_locked: false },
+                { id: 1, pages: [], is_archived: false, is_locked: false },
+            ];
 
-      wrapper = mount(AddToCollageButton, {
-        props: {
-          pageId: 1,
-          collages
-        }
-      });
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+            });
 
-      const select = wrapper.find("select");
-      expect(select.exists()).toBe(true);
-      expect(select.attributes("disabled")).toBeUndefined();
+            const options = wrapper.findAll("option");
+            // First option is the placeholder, so check the actual collage options
+            expect(options[1].text()).toContain("Collage #1"); // collage id 5, index 0
+            expect(options[2].text()).toContain("Collage #2"); // collage id 3, index 1
+            expect(options[3].text()).toContain("Collage #3"); // collage id 1, index 2
+        });
     });
-
-    it("correctly identifies when no collages are available", () => {
-      // Page is not in any collage
-      const collages = [
-        {
-          id: 1,
-          pages: Array(10).fill({ id: 2 }),
-          deleted_at: null,
-          is_archived: false
-        },
-        {
-          id: 2,
-          pages: Array(10).fill({ id: 2 }),
-          deleted_at: null,
-          is_archived: false
-        }
-      ];
-
-      wrapper = mount(AddToCollageButton, {
-        props: {
-          pageId: 1,
-          collages
-        }
-      });
-
-      const select = wrapper.find("select");
-      expect(select.exists()).toBe(true);
-      expect(select.attributes("disabled")).toBeDefined();
-    });
-  });
-
-  describe("Display number calculation", () => {
-    it("returns correct display number for collage", () => {
-      const collages = createCollages();
-
-      wrapper = mount(AddToCollageButton, {
-        props: {
-          pageId: 1,
-          collages
-        }
-      });
-
-      // Add page to first collage
-      const collagesWithPage = createCollages([
-        { id: 1, pages: [{ id: 1 }], deleted_at: null, is_archived: false }
-      ]);
-
-      wrapper = mount(AddToCollageButton, {
-        props: {
-          pageId: 1,
-          collages: collagesWithPage
-        }
-      });
-
-      expect(wrapper.text()).toContain("#1");
-    });
-  });
 });

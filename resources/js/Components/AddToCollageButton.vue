@@ -36,6 +36,8 @@
                             `${
                                 !hasAvailableCollages
                                     ? 'All collages are full'
+                                    : availableCollages.length === 1
+                                    ? 'Click the add button to add to the collage'
                                     : 'Select a collage and click the add button'
                             }`
                         )
@@ -46,6 +48,7 @@
             </label>
             <div class="flex items-center gap-2">
                 <select
+                    v-if="availableCollages.length > 1"
                     v-model="selectedCollageId"
                     class="rounded"
                     :disabled="!hasAvailableCollages"
@@ -80,12 +83,19 @@
                     v-else
                     :disabled="
                         form.processing ||
-                        !selectedCollageId ||
+                        (availableCollages.length > 1 && !selectedCollageId) ||
                         !hasAvailableCollages
                     "
                     @click="addToCollage"
                 >
-                    <i class="ri-add-line text-xl mr-1"></i> Add to Collage
+                    <i class="ri-add-line text-xl mr-1"></i>
+                    {{
+                        availableCollages.length === 1
+                            ? `Add to Collage #${getCollageDisplayNumber(
+                                  availableCollages[0].id
+                              )}`
+                            : "Add to Collage"
+                    }}
                 </Button>
             </div>
         </div>
@@ -132,6 +142,11 @@ const isPageInAnyCollage = computed(() => {
 });
 
 const addToCollage = () => {
+    // If there's only one available collage, use it automatically
+    if (availableCollages.value.length === 1) {
+        form.collage_id = availableCollages.value[0].id;
+    }
+
     // eslint-disable-next-line no-undef
     form.post(route("collage-page.store"), {
         preserveScroll: true,
