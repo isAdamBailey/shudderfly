@@ -1,5 +1,6 @@
 <script setup>
 import { ref, watch, onMounted, defineExpose } from "vue";
+import { usePage } from "@inertiajs/vue3";
 import vueFilePond from "vue-filepond";
 // Import FilePond styles
 import "filepond/dist/filepond.min.css";
@@ -36,8 +37,6 @@ const props = defineProps({
     processVideo: { type: Function, default: null },
     videoThresholdBytes: { type: Number, default: 41943040 }, // ~40MB
     maxFileSize: { type: [String, Number], default: null }, // e.g. '60MB' or 62914560
-    // CSRF endpoint configuration - defaults to Sanctum standard
-    csrfEndpoint: { type: String, default: "/sanctum/csrf-cookie" },
 });
 
 const FilePond = vueFilePond(
@@ -47,6 +46,7 @@ const FilePond = vueFilePond(
 );
 
 const pond = ref(null);
+const page = usePage();
 
 // Custom server process using traditional XMLHttpRequest with Inertia CSRF token
 const server = {
@@ -61,40 +61,8 @@ const server = {
     ) => {
         let aborted = false;
         let xhr = null;
-        let retryCount = 0;
-        const maxRetries = 2;
 
-        // Function to get fresh CSRF token using configurable endpoint
-        const getFreshCsrfToken = async () => {
-            try {
-                // For Sanctum, we need to call the csrf-cookie endpoint to refresh the XSRF token
-                const response = await fetch(props.csrfEndpoint, {
-                    method: "GET",
-                    credentials: "same-origin",
-                    headers: {
-                        "X-Requested-With": "XMLHttpRequest",
-                        Accept: "application/json",
-                    },
-                });
-
-                if (response.ok) {
-                    // For Sanctum, the CSRF token is set in cookies, not returned in response
-                    // So we just need to re-read the meta tag after the request
-                    return document
-                        .querySelector('meta[name="csrf-token"]')
-                        ?.getAttribute("content");
-                }
-            } catch (e) {
-                // Silently handle CSRF token refresh failures
-            }
-
-            // Fallback to existing token from meta tag only (modern Laravel standard)
-            return document
-                .querySelector('meta[name="csrf-token"]')
-                ?.getAttribute("content");
-        };
-
-        const send = async (isRetry = false) => {
+        const send = async () => {
             let file = originalFile;
             try {
                 // If it's a video and larger than the threshold, optimize before upload
@@ -154,7 +122,7 @@ const server = {
                 }
             }
 
-            // Create FormData and get fresh CSRF token (especially important for retries)
+            // Create FormData
             const formData = new FormData();
             formData.append("image", file);
 
@@ -162,17 +130,6 @@ const server = {
             Object.keys(props.extraData).forEach((key) => {
                 formData.append(key, props.extraData[key]);
             });
-
-            // Get CSRF token - use fresh token for retries, meta tag for initial attempts
-            const csrfToken = isRetry
-                ? await getFreshCsrfToken()
-                : document
-                      .querySelector('meta[name="csrf-token"]')
-                      ?.getAttribute("content");
-
-            if (csrfToken) {
-                formData.append("_token", csrfToken);
-            }
 
             // Create and configure XMLHttpRequest
             xhr = new XMLHttpRequest();
@@ -201,31 +158,7 @@ const server = {
                     } catch (_e) {
                         load(`${Date.now()}`);
                     }
-                } else if (xhr.status === 419 || xhr.status === 403) {
-                    // CSRF token mismatch - try to retry with fresh token
-                    if (retryCount < maxRetries) {
-                        retryCount++;
-                        emit(
-                            "error",
-                            `Retrying upload (${retryCount}/${maxRetries}) - refreshing session...`
-                        );
-                        setTimeout(() => send(true), 1000 * retryCount); // Exponential backoff
-                        return;
-                    }
-                    const errorMsg = `Upload failed - session expired (${xhr.status})`;
-                    emit("error", errorMsg);
-                    error(errorMsg);
                 } else {
-                    // Other errors - try once more if it's the first attempt
-                    if (retryCount < maxRetries && xhr.status >= 500) {
-                        retryCount++;
-                        emit(
-                            "error",
-                            `Retrying upload (${retryCount}/${maxRetries}) - server error...`
-                        );
-                        setTimeout(() => send(true), 1000 * retryCount);
-                        return;
-                    }
                     const errorMsg = `Upload failed (${xhr.status})`;
                     emit("error", errorMsg);
                     error(errorMsg);
@@ -235,18 +168,6 @@ const server = {
             // Handle errors
             xhr.addEventListener("error", () => {
                 if (aborted) return;
-
-                // Network error - try once more if it's the first attempt
-                if (retryCount < maxRetries) {
-                    retryCount++;
-                    emit(
-                        "error",
-                        `Retrying upload (${retryCount}/${maxRetries}) - network error...`
-                    );
-                    setTimeout(() => send(true), 1000 * retryCount);
-                    return;
-                }
-
                 const errorMsg = "Upload failed due to network error";
                 emit("error", errorMsg);
                 error(errorMsg);
@@ -255,10 +176,7 @@ const server = {
             // Send request
             xhr.open("POST", props.uploadUrl);
             xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
-
-            if (csrfToken) {
-                xhr.setRequestHeader("X-CSRF-TOKEN", csrfToken);
-            }
+            xhr.setRequestHeader("X-CSRF-TOKEN", page.props.csrf_token);
 
             xhr.send(formData);
         };
