@@ -6,6 +6,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CollageController;
 use App\Http\Controllers\CollagePageController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\MusicController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SettingsController;
@@ -53,6 +54,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/collages/archived', [CollageController::class, 'archived'])->name('collages.archived');
     Route::post('/collage-page', [CollagePageController::class, 'store'])->name('collage-page.store');
 
+    Route::get('/music', [MusicController::class, 'index'])->name('music.index');
+
     Route::group(['middleware' => ['can:edit pages']], function () {
         Route::get('/dashboard', [DashboardController::class, 'show'])->name('dashboard');
 
@@ -81,6 +84,8 @@ Route::middleware('auth')->group(function () {
         Route::patch('/collages/{collage}/restore', [CollageController::class, 'restore'])->name('collages.restore');
         Route::put('/collages/{collage}', [CollageController::class, 'update'])->name('collages.update');
         Route::post('/collages/{collage}/generate-pdf', [CollageController::class, 'generatePdf'])->name('collages.generate-pdf');
+
+        Route::post('/music/sync', [MusicController::class, 'sync'])->name('music.sync');
 
         Route::put('/admin/permissions', [AdminController::class, 'update'])->name('admin.permissions');
         Route::delete('/admin', [AdminController::class, 'destroy'])->name('admin.destroy');

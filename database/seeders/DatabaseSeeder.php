@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             RolesAndPermissionsSeeder::class,
             SiteSeeder::class,
             BookSeeder::class,
+            SongSeeder::class,
         ]);
     }
 }
