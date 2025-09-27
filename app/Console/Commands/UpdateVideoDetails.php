@@ -28,11 +28,16 @@ class UpdateVideoDetails extends Command
     {
         $limit = $this->option('limit');
 
-        $this->info("Updating video details for up to {$limit} songs...");
+        $this->info("Updating video details for up to {$limit} songs using batch processing...");
 
         try {
-            $updated = $youTubeService->updateVideoDetails($limit);
+            $updated = $youTubeService->batchUpdateVideoDetails($limit);
             $this->info("Successfully updated details for {$updated} songs");
+
+            if ($updated === 0) {
+                $this->info("No songs needed updating - all video details are current");
+            }
+
             return Command::SUCCESS;
         } catch (\Exception $e) {
             $this->error('Failed to update video details: ' . $e->getMessage());

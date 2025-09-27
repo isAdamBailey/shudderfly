@@ -3,13 +3,17 @@
 namespace App\Services;
 
 use App\Models\Song;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class YouTubeService
 {
     private $apiKey;
     private $playlistId;
+    private const BATCH_SIZE = 50; // YouTube allows up to 50 video IDs per request
+    private const CACHE_TTL = 3600; // 1 hour cache for playlist data
 
     public function __construct()
     {
@@ -18,7 +22,7 @@ class YouTubeService
     }
 
     /**
-     * Sync playlist videos from YouTube
+     * Sync playlist videos from YouTube with quota optimization
      */
     public function syncPlaylist()
     {
@@ -26,59 +30,249 @@ class YouTubeService
             throw new \Exception('YouTube API key or playlist ID not configured');
         }
 
+        // Check if we've synced recently to avoid unnecessary API calls
+        $lastSyncKey = "youtube_playlist_last_sync_{$this->playlistId}";
+        $lastSync = Cache::get($lastSyncKey);
+
+        if ($lastSync && $lastSync > now()->subHours(1)) {
+            Log::info('Playlist synced recently, skipping sync to save quota');
+            return 0;
+        }
+
         $nextPageToken = null;
         $totalSynced = 0;
-        $quotaExceeded = false;
+        $videoIds = [];
+        $playlistItems = [];
 
+        // First pass: Collect all video IDs from playlist without fetching details
         do {
             $response = $this->getPlaylistItems($nextPageToken);
 
             if (!$response->successful()) {
-                $error = $response->json();
-
-                // Check if quota exceeded
-                if (isset($error['error']['errors'][0]['reason']) &&
-                    $error['error']['errors'][0]['reason'] === 'quotaExceeded') {
-                    Log::warning('YouTube API quota exceeded. Stopping sync.');
-                    $quotaExceeded = true;
-                    break;
-                }
-
-                Log::error('YouTube API error: ' . $response->body());
+                $this->handleApiError($response);
                 break;
             }
 
             $data = $response->json();
 
             if (empty($data['items'])) {
-                Log::info('No items found in playlist response');
                 break;
             }
 
             foreach ($data['items'] as $item) {
-                try {
-                    $this->createOrUpdateSong($item);
-                    $totalSynced++;
-                } catch (\Exception $e) {
-                    Log::error('Error creating song: ' . $e->getMessage());
+                $videoId = $item['snippet']['resourceId']['videoId'];
+
+                // Skip if we already have this video and it hasn't been updated recently
+                if ($this->shouldSkipVideo($videoId, $item['snippet']['publishedAt'])) {
                     continue;
                 }
+
+                $videoIds[] = $videoId;
+                $playlistItems[$videoId] = $item;
             }
 
             $nextPageToken = $data['nextPageToken'] ?? null;
 
-            // Add small delay to avoid rate limiting
-            if ($nextPageToken) {
-                usleep(100000); // 100ms delay
-            }
+        } while ($nextPageToken);
 
-        } while ($nextPageToken && !$quotaExceeded);
-
-        if ($quotaExceeded) {
-            throw new \Exception('YouTube API quota exceeded. Please try again tomorrow or request a quota increase.');
+        if (empty($videoIds)) {
+            Log::info('No new videos to sync');
+            Cache::put($lastSyncKey, now(), self::CACHE_TTL);
+            return 0;
         }
 
+        // Second pass: Batch fetch video details for new/updated videos only
+        $videoDetails = $this->batchGetVideoDetails($videoIds);
+
+        // Create or update songs with combined data
+        foreach ($videoIds as $videoId) {
+            try {
+                if (isset($playlistItems[$videoId])) {
+                    $playlistItem = $playlistItems[$videoId];
+                    $details = $videoDetails[$videoId] ?? null;
+
+                    $this->createOrUpdateSongWithDetails($playlistItem, $details);
+                    $totalSynced++;
+                }
+            } catch (\Exception $e) {
+                Log::error("Error creating song for video {$videoId}: " . $e->getMessage());
+                continue;
+            }
+        }
+
+        Cache::put($lastSyncKey, now(), self::CACHE_TTL);
         return $totalSynced;
+    }
+
+    /**
+     * Check if we should skip syncing a video (already exists and unchanged)
+     */
+    private function shouldSkipVideo($videoId, $publishedAt)
+    {
+        $existingSong = Song::where('youtube_video_id', $videoId)->first();
+
+        if (!$existingSong) {
+            return false; // New video, don't skip
+        }
+
+        // Skip if we have complete data and video hasn't been updated recently
+        $hasCompleteData = !empty($existingSong->duration) &&
+                          !empty($existingSong->view_count) &&
+                          !is_null($existingSong->tags);
+
+        if ($hasCompleteData) {
+            $videoPublished = Carbon::parse($publishedAt);
+            $lastUpdated = $existingSong->updated_at;
+
+            // Skip if video is old and we've updated it recently
+            if ($videoPublished->lt(now()->subDays(30)) && $lastUpdated->gt(now()->subDays(7))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Batch fetch video details to minimize API calls
+     */
+    private function batchGetVideoDetails($videoIds)
+    {
+        if (empty($videoIds)) {
+            return [];
+        }
+
+        $allVideoDetails = [];
+        $batches = array_chunk($videoIds, self::BATCH_SIZE);
+
+        foreach ($batches as $batch) {
+            try {
+                $response = Http::withHeaders([
+                    'User-Agent' => 'Laravel-App/1.0',
+                    'Accept' => 'application/json',
+                ])->get('https://www.googleapis.com/youtube/v3/videos', [
+                    'part' => 'contentDetails,statistics,snippet',
+                    'id' => implode(',', $batch),
+                    'key' => $this->apiKey,
+                ]);
+
+                if (!$response->successful()) {
+                    Log::error('Error fetching video details batch: ' . $response->body());
+                    continue;
+                }
+
+                $data = $response->json();
+
+                foreach ($data['items'] ?? [] as $video) {
+                    $allVideoDetails[$video['id']] = [
+                        'duration' => $video['contentDetails']['duration'] ?? null,
+                        'view_count' => (int) ($video['statistics']['viewCount'] ?? 0),
+                        'tags' => isset($video['snippet']['tags']) ? json_encode($video['snippet']['tags']) : null,
+                    ];
+                }
+
+                // Rate limiting between batch requests
+                if (count($batches) > 1) {
+                    usleep(200000); // 200ms delay between batches
+                }
+
+            } catch (\Exception $e) {
+                Log::error('Error in batch video details request: ' . $e->getMessage());
+                continue;
+            }
+        }
+
+        return $allVideoDetails;
+    }
+
+    /**
+     * Create or update song with playlist and video details combined
+     */
+    private function createOrUpdateSongWithDetails($playlistItem, $videoDetails = null)
+    {
+        $snippet = $playlistItem['snippet'];
+        $videoId = $snippet['resourceId']['videoId'];
+
+        $songData = [
+            'youtube_video_id' => $videoId,
+            'title' => $snippet['title'],
+            'description' => $snippet['description'],
+            'channel_title' => $snippet['channelTitle'],
+            'published_at' => $snippet['publishedAt'],
+        ];
+
+        // Add video details if available
+        if ($videoDetails) {
+            $songData = array_merge($songData, $videoDetails);
+        }
+
+        // Add thumbnails with fallback URL generation
+        if (isset($snippet['thumbnails'])) {
+            foreach (['default', 'medium', 'high', 'standard', 'maxres'] as $quality) {
+                if (isset($snippet['thumbnails'][$quality])) {
+                    $songData["thumbnail_{$quality}"] = $snippet['thumbnails'][$quality]['url'];
+                }
+            }
+        }
+
+        // Fallback thumbnail URL if none provided
+        if (empty($songData['thumbnail_high'])) {
+            $songData['thumbnail_url'] = "https://img.youtube.com/vi/{$videoId}/hqdefault.jpg";
+        }
+
+        $existingSong = Song::where('youtube_video_id', $videoId)->first();
+
+        if ($existingSong) {
+            // Only update fields that might have changed
+            $updateData = [
+                'title' => $songData['title'],
+                'description' => $songData['description'],
+            ];
+
+            // Add video details if we have them and they're missing
+            if ($videoDetails) {
+                if (empty($existingSong->duration) && !empty($videoDetails['duration'])) {
+                    $updateData['duration'] = $videoDetails['duration'];
+                }
+                if (empty($existingSong->view_count) && !empty($videoDetails['view_count'])) {
+                    $updateData['view_count'] = $videoDetails['view_count'];
+                }
+                if (empty($existingSong->tags) && !empty($videoDetails['tags'])) {
+                    $updateData['tags'] = $videoDetails['tags'];
+                }
+            }
+
+            $existingSong->update($updateData);
+            return $existingSong;
+        }
+
+        return Song::create($songData);
+    }
+
+    /**
+     * Handle API errors with quota awareness
+     */
+    private function handleApiError($response)
+    {
+        $error = $response->json();
+
+        if (isset($error['error']['errors'][0]['reason'])) {
+            $reason = $error['error']['errors'][0]['reason'];
+
+            if ($reason === 'quotaExceeded') {
+                Log::warning('YouTube API quota exceeded. Stopping sync.');
+                throw new \Exception('YouTube API quota exceeded. Please try again tomorrow or request a quota increase.');
+            }
+
+            if ($reason === 'rateLimitExceeded') {
+                Log::warning('YouTube API rate limit exceeded. Adding delay and retrying.');
+                sleep(5); // Wait 5 seconds before retry
+                return;
+            }
+        }
+
+        Log::error('YouTube API error: ' . $response->body());
+        throw new \Exception('YouTube API error: ' . ($error['error']['message'] ?? 'Unknown error'));
     }
 
     /**
@@ -104,99 +298,47 @@ class YouTubeService
     }
 
     /**
-     * Create or update song from YouTube item
+     * Batch update video details for existing songs (quota-efficient version)
      */
-    private function createOrUpdateSong($item)
+    public function batchUpdateVideoDetails($limit = 50)
     {
-        $snippet = $item['snippet'];
-        $videoId = $snippet['resourceId']['videoId'];
+        // Get songs that need details updated
+        $songs = Song::where(function($query) {
+            $query->whereNull('duration')
+                  ->orWhere('view_count', 0)
+                  ->orWhereNull('tags');
+        })->limit($limit)->get();
 
-        $songData = [
-            'youtube_video_id' => $videoId,
-            'title' => $snippet['title'],
-            'description' => $snippet['description'],
-            'channel_title' => $snippet['channelTitle'],
-            'published_at' => $snippet['publishedAt'],
-            'view_count' => 0, // Default value, can be updated later if needed
-        ];
-
-        // Add thumbnails
-        if (isset($snippet['thumbnails'])) {
-            foreach (['default', 'medium', 'high', 'standard', 'maxres'] as $quality) {
-                if (isset($snippet['thumbnails'][$quality])) {
-                    $songData["thumbnail_$quality"] = $snippet['thumbnails'][$quality]['url'];
-                }
-            }
+        if ($songs->isEmpty()) {
+            return 0;
         }
 
-        // Check if song already exists to avoid unnecessary updates
-        $existingSong = Song::where('youtube_video_id', $videoId)->first();
+        $videoIds = $songs->pluck('youtube_video_id')->toArray();
+        Log::info("Found {$songs->count()} songs needing video details update");
 
-        if ($existingSong) {
-            // Only update the title and description in case they changed
-            $existingSong->update([
-                'title' => $songData['title'],
-                'description' => $songData['description'],
-            ]);
-            return $existingSong;
-        }
-
-        return Song::create($songData);
-    }
-
-    /**
-     * Get additional video details (optional, uses more quota)
-     * Only call this method if you specifically need duration, view count, and tags
-     */
-    private function getVideoDetails($videoId)
-    {
-        $response = Http::withHeaders([
-            'User-Agent' => 'Laravel-App/1.0',
-            'Accept' => 'application/json',
-        ])->get('https://www.googleapis.com/youtube/v3/videos', [
-            'part' => 'contentDetails,statistics,snippet',
-            'id' => $videoId,
-            'key' => $this->apiKey,
-        ]);
-
-        if (!$response->successful() || empty($response->json()['items'])) {
-            return null;
-        }
-
-        $video = $response->json()['items'][0];
-
-        return [
-            'duration' => $video['contentDetails']['duration'] ?? null,
-            'view_count' => $video['statistics']['viewCount'] ?? 0,
-            'tags' => $video['snippet']['tags'] ?? null,
-        ];
-    }
-
-    /**
-     * Batch update video details for existing songs
-     * This method can be called separately to add duration/view counts without affecting the main sync
-     */
-    public function updateVideoDetails($limit = 50)
-    {
-        $songs = Song::whereNull('duration')
-            ->orWhere('view_count', 0)
-            ->limit($limit)
-            ->get();
+        // Batch fetch all video details at once
+        $videoDetails = $this->batchGetVideoDetails($videoIds);
 
         $updated = 0;
         foreach ($songs as $song) {
-            try {
-                $details = $this->getVideoDetails($song->youtube_video_id);
-                if ($details) {
-                    $song->update($details);
-                    $updated++;
+            if (isset($videoDetails[$song->youtube_video_id])) {
+                $details = $videoDetails[$song->youtube_video_id];
+
+                $updateData = [];
+                if (empty($song->duration) && !empty($details['duration'])) {
+                    $updateData['duration'] = $details['duration'];
+                }
+                if (empty($song->view_count) && !empty($details['view_count'])) {
+                    $updateData['view_count'] = $details['view_count'];
+                }
+                if (empty($song->tags) && !empty($details['tags'])) {
+                    $updateData['tags'] = $details['tags'];
                 }
 
-                // Add delay to avoid rate limiting
-                usleep(200000); // 200ms delay
-
-            } catch (\Exception $e) {
-                Log::error("Error updating details for video {$song->youtube_video_id}: " . $e->getMessage());
+                if (!empty($updateData)) {
+                    $song->update($updateData);
+                    $updated++;
+                }
             }
         }
 
