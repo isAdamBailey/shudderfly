@@ -1,6 +1,6 @@
 <template>
     <div
-        class="flex items-center p-4 bg-white hover:bg-gray-50 border-b border-gray-100 cursor-pointer transition-colors duration-200"
+        class="flex items-center p-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border-b-2 border-gray-300 dark:border-gray-600 cursor-pointer transition-colors duration-200"
         @click="$emit('play', song)"
     >
         <!-- Thumbnail -->
@@ -14,18 +14,24 @@
             />
             <div
                 v-else
-                class="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center"
+                class="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center"
             >
-                <i class="ri-music-2-line text-2xl text-gray-400"></i>
+                <i
+                    class="ri-music-2-line text-2xl text-gray-400 dark:text-gray-500"
+                ></i>
             </div>
         </div>
 
         <!-- Song Info -->
         <div class="flex-1 min-w-0">
-            <h3 class="text-base font-medium text-gray-900 truncate mb-1">
+            <h3
+                class="text-base font-medium text-gray-900 dark:text-gray-100 truncate mb-1"
+            >
                 {{ song.title }}
             </h3>
-            <div class="flex items-center text-xs text-gray-500 space-x-4">
+            <div
+                class="flex items-center text-xs text-gray-500 dark:text-gray-400 space-x-4"
+            >
                 <span v-if="song.published_at">
                     {{ formatDate(song.published_at) }}
                 </span>
@@ -41,9 +47,9 @@
         <!-- Play Button -->
         <div class="flex-shrink-0 ml-4">
             <div
-                class="w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center transition-colors duration-200"
+                class="w-10 h-10 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-colors duration-200"
                 :class="{
-                    'bg-green-600 hover:bg-green-700':
+                    'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600':
                         isCurrentSong && isPlaying,
                 }"
             >
@@ -61,7 +67,7 @@
                 <div
                     v-for="i in 3"
                     :key="i"
-                    class="w-1 bg-blue-600 rounded-full animate-pulse"
+                    class="w-1 bg-blue-600 dark:bg-blue-400 rounded-full animate-pulse"
                     :class="isPlaying ? 'h-4' : 'h-2'"
                     :style="{ animationDelay: `${i * 0.1}s` }"
                 ></div>

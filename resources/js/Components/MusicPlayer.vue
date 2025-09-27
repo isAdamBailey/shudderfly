@@ -1,7 +1,7 @@
 <template>
     <div
         v-if="currentSong"
-        class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40"
+        class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky top-0 z-40"
     >
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center py-4 space-x-4">
@@ -16,9 +16,11 @@
                     />
                     <div
                         v-else
-                        class="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center"
+                        class="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center"
                     >
-                        <i class="ri-music-2-line text-2xl text-gray-400"></i>
+                        <i
+                            class="ri-music-2-line text-2xl text-gray-400 dark:text-gray-500"
+                        ></i>
                     </div>
                 </div>
 
@@ -26,7 +28,9 @@
                 <div class="flex-1 min-w-0">
                     <div class="flex items-start justify-between">
                         <div class="flex-1 min-w-0">
-                            <h3 class="text-xl text-gray-900 truncate">
+                            <h3
+                                class="text-xl text-gray-900 dark:text-gray-100 truncate"
+                            >
                                 {{ currentSong.title }}
                             </h3>
                         </div>
@@ -35,15 +39,15 @@
                     <!-- Progress Bar -->
                     <div class="mt-2">
                         <div
-                            class="flex items-center space-x-2 text-xs text-gray-500"
+                            class="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400"
                         >
                             <span>{{ formatTime(currentTime) }}</span>
                             <div
-                                class="flex-1 bg-gray-200 rounded-full h-2 cursor-pointer"
+                                class="flex-1 bg-gray-200 dark:bg-gray-600 rounded-full h-2 cursor-pointer"
                                 @click="seekTo"
                             >
                                 <div
-                                    class="bg-blue-600 h-2 rounded-full transition-all duration-100"
+                                    class="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all duration-100"
                                     :style="{ width: progressPercentage + '%' }"
                                 ></div>
                             </div>
@@ -55,14 +59,14 @@
                 <!-- Playback Controls -->
                 <div class="flex items-center space-x-2">
                     <button
-                        class="w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full flex items-center justify-center transition-all duration-200"
+                        class="w-8 h-8 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200"
                         @click="seekBackward"
                     >
                         <i class="ri-skip-back-mini-fill text-lg"></i>
                     </button>
 
                     <button
-                        class="w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center transition-all duration-200"
+                        class="w-10 h-10 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-all duration-200"
                         @click="togglePlayPause"
                     >
                         <i v-if="!isPlaying" class="ri-play-fill text-xl"></i>
@@ -70,14 +74,14 @@
                     </button>
 
                     <button
-                        class="w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full flex items-center justify-center transition-all duration-200"
+                        class="w-8 h-8 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200"
                         @click="seekForward"
                     >
                         <i class="ri-skip-forward-mini-fill text-lg"></i>
                     </button>
 
                     <button
-                        class="w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full flex items-center justify-center transition-all duration-200"
+                        class="w-8 h-8 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200"
                         @click="closePlayer"
                     >
                         <i class="ri-close-line text-lg"></i>
@@ -99,12 +103,18 @@
             class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-75 z-50"
         >
             <div
-                class="bg-white rounded-lg shadow-md p-6 max-w-sm w-full text-center"
+                class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 max-w-sm w-full text-center"
             >
-                <h2 class="text-lg font-semibold text-red-600 mb-4">Error</h2>
-                <p class="text-sm text-gray-700 mb-4">{{ playerError }}</p>
+                <h2
+                    class="text-lg font-semibold text-red-600 dark:text-red-400 mb-4"
+                >
+                    Error
+                </h2>
+                <p class="text-sm text-gray-700 dark:text-gray-300 mb-4">
+                    {{ playerError }}
+                </p>
                 <button
-                    class="w-full bg-red-600 hover:bg-red-700 text-white text-sm py-2 px-4 rounded transition-colors duration-200"
+                    class="w-full bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white text-sm py-2 px-4 rounded transition-colors duration-200"
                     @click="playerError = null"
                 >
                     Close
@@ -116,6 +126,7 @@
 
 <script setup>
 import { ref, computed, onUnmounted, watch, nextTick } from "vue";
+import { router } from "@inertiajs/vue3";
 
 const props = defineProps({
     currentSong: {
@@ -279,8 +290,7 @@ const onPlayerReady = (event) => {
     console.log("Player ready for:", props.currentSong.title);
 
     // Get duration
-    const videoDuration = event.target.getDuration();
-    duration.value = videoDuration;
+    duration.value = event.target.getDuration();
 
     // Start time tracking
     updateInterval = setInterval(() => {
@@ -384,15 +394,18 @@ const incrementReadCount = async () => {
     if (!props.currentSong || hasIncrementedReadCount.value) return;
 
     try {
-        await fetch(route("music.increment-read-count", props.currentSong.id), {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRF-TOKEN": document
-                    .querySelector('meta[name="csrf-token"]')
-                    .getAttribute("content"),
-            },
-        });
+        await fetch(
+            window.route("music.increment-read-count", props.currentSong.id),
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": document
+                        .querySelector('meta[name="csrf-token"]')
+                        .getAttribute("content"),
+                },
+            }
+        );
 
         hasIncrementedReadCount.value = true;
         console.log("Read count incremented for:", props.currentSong.title);
