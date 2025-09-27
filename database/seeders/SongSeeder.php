@@ -66,7 +66,6 @@ class SongSeeder extends Seeder
                 'thumbnail_standard' => "https://i.ytimg.com/vi/{$videoId}/sddefault.jpg",
                 'thumbnail_maxres' => "https://i.ytimg.com/vi/{$videoId}/maxresdefault.jpg",
                 'duration' => $duration,
-                'channel_title' => $artist,
                 'published_at' => $publishedAt,
                 'view_count' => $viewCount,
                 'read_count' => rand(0, 100) / 10, // Add some initial read counts
