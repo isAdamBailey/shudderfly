@@ -2,6 +2,13 @@
     <Head title="Music" />
 
     <BreezeAuthenticatedLayout>
+        <!-- Music Player (sticky at top when playing) -->
+        <MusicPlayer
+            :current-song="currentSong"
+            @close="closeMusicPlayer"
+            @playing="handlePlayingState"
+        />
+
         <template #header>
             <div class="flex justify-between items-center mb-10">
                 <Link class="w-1/2" :href="route('music.index')">
@@ -15,7 +22,7 @@
 
             <!-- Search Bar -->
             <div class="mb-6 w-full md:w-1/2 mx-auto">
-                <form @submit.prevent="search">
+                <form @submit.prevent="performSearch">
                     <div class="relative">
                         <input
                             v-model="searchQuery"
@@ -53,12 +60,19 @@
             </div>
         </template>
 
-        <!-- Songs Grid -->
+        <!-- Songs List -->
         <div
-            v-if="songs.data.length > 0"
-            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+            v-if="songs.data && songs.data.length > 0"
+            class="bg-white rounded-lg shadow-sm border border-gray-200"
         >
-            <SongCard v-for="song in songs.data" :key="song.id" :song="song" />
+            <SongListItem
+                v-for="song in songs.data"
+                :key="song.id"
+                :song="song"
+                :current-song="currentSong"
+                :is-playing="isPlaying"
+                @play="playSong"
+            />
         </div>
 
         <!-- Empty State -->
@@ -96,22 +110,50 @@
 
 <script setup>
 import { Head, Link, router } from "@inertiajs/vue3";
-import { ref, computed } from "vue";
+import { ref } from "vue";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import Button from "@/Components/Button.vue";
-import SongCard from "@/Pages/Music/SongCard.vue";
+import MusicPlayer from "@/Components/MusicPlayer.vue";
+import SongListItem from "@/Components/SongListItem.vue";
 import Pagination from "@/Components/Pagination.vue";
 
 const props = defineProps({
-    songs: Object,
-    search: String,
-    canSync: Boolean,
+    songs: {
+        type: Object,
+        default: () => ({}),
+    },
+    search: {
+        type: String,
+        default: "",
+    },
+    canSync: {
+        type: Boolean,
+        default: false,
+    },
 });
 
 const searchQuery = ref(props.search || "");
 const syncing = ref(false);
+const currentSong = ref(null);
+const isPlaying = ref(false);
 
-const search = () => {
+const playSong = (song) => {
+    console.log("Playing song:", song.title);
+    currentSong.value = song;
+    // isPlaying will be set by the MusicPlayer component
+};
+
+const closeMusicPlayer = () => {
+    console.log("Closing music player");
+    currentSong.value = null;
+    isPlaying.value = false;
+};
+
+const handlePlayingState = (playing) => {
+    isPlaying.value = playing;
+};
+
+const performSearch = () => {
     router.get(
         route("music.index"),
         {
