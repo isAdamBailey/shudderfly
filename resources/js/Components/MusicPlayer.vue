@@ -137,6 +137,7 @@ const currentTime = ref(0);
 const duration = ref(0);
 const imageError = ref(false);
 const playerError = ref(null);
+const hasIncrementedReadCount = ref(false);
 
 let updateInterval = null;
 
@@ -320,6 +321,11 @@ const onPlayerStateChange = (event) => {
             isPlaying.value = true;
             emit("playing", true);
             console.log("Music is now playing!");
+
+            // Increment read count when song starts playing (only once per song)
+            if (props.currentSong && !hasIncrementedReadCount.value) {
+                incrementReadCount();
+            }
             break;
         case window.YT.PlayerState.PAUSED:
             isPlaying.value = false;
@@ -379,6 +385,27 @@ const onPlayerError = (event) => {
     playerError.value = errorMessage;
 };
 
+const incrementReadCount = async () => {
+    if (!props.currentSong || hasIncrementedReadCount.value) return;
+
+    try {
+        await fetch(route("music.increment-read-count", props.currentSong.id), {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-TOKEN": document
+                    .querySelector('meta[name="csrf-token"]')
+                    .getAttribute("content"),
+            },
+        });
+
+        hasIncrementedReadCount.value = true;
+        console.log("Read count incremented for:", props.currentSong.title);
+    } catch (error) {
+        console.error("Failed to increment read count:", error);
+    }
+};
+
 // Watch for song changes
 watch(
     () => props.currentSong,
@@ -390,6 +417,7 @@ watch(
             isPlaying.value = false;
             currentTime.value = 0;
             duration.value = 0;
+            hasIncrementedReadCount.value = false; // Reset for new song
 
             // Clear existing interval
             if (updateInterval) {

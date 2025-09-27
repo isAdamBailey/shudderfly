@@ -81,4 +81,26 @@ class MusicController extends Controller
             return back()->with('error', 'An unexpected error occurred during sync. Please try again later.');
         }
     }
+
+    /**
+     * Increment read count for a song when it's played
+     */
+    public function incrementReadCount(Song $song)
+    {
+        // Create a cache key to prevent duplicate increments within a short time period
+        $cacheKey = "song_read_count_increment_{$song->id}_" . auth()->id();
+
+        // Check if we've already incremented this song for this user recently (within 5 minutes)
+        if (\Cache::has($cacheKey)) {
+            return response()->json(['success' => true, 'message' => 'Already counted recently']);
+        }
+
+        // Set cache to prevent duplicate increments for 5 minutes
+        \Cache::put($cacheKey, true, now()->addMinutes(5));
+
+        // Dispatch the job to increment read count
+        $song->incrementReadCount();
+
+        return response()->json(['success' => true]);
+    }
 }

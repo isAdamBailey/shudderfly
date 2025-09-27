@@ -55,6 +55,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/collage-page', [CollagePageController::class, 'store'])->name('collage-page.store');
 
     Route::get('/music', [MusicController::class, 'index'])->name('music.index');
+    Route::post('/music/{song}/increment-read-count', [MusicController::class, 'incrementReadCount'])->name('music.increment-read-count');
 
     Route::group(['middleware' => ['can:edit pages']], function () {
         Route::get('/dashboard', [DashboardController::class, 'show'])->name('dashboard');

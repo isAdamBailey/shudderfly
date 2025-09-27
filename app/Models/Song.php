@@ -20,6 +20,7 @@ class Song extends Model
         'channel_title',
         'published_at',
         'view_count',
+        'read_count',
         'tags',
     ];
 
@@ -60,5 +61,13 @@ class Song extends Model
         return $query->where('title', 'LIKE', '%' . $search . '%')
                     ->orWhere('description', 'LIKE', '%' . $search . '%')
                     ->orWhere('channel_title', 'LIKE', '%' . $search . '%');
+    }
+
+    /**
+     * Increment the read count for this song via queued job
+     */
+    public function incrementReadCount(): void
+    {
+        \App\Jobs\IncrementSongReadCount::dispatch($this);
     }
 }

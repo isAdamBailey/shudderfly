@@ -40,7 +40,6 @@ class YouTubeService
         $lastSync = Cache::get($lastSyncKey);
 
         if ($lastSync && $lastSync > now()->subHours(1)) {
-            Log::info('Playlist synced recently, skipping sync to save quota');
             return [
                 'success' => true,
                 'message' => 'Playlist synced recently, skipping to save quota',

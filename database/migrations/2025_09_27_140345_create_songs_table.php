@@ -25,6 +25,7 @@ return new class extends Migration
             $table->string('channel_title')->nullable();
             $table->timestamp('published_at')->nullable();
             $table->integer('view_count')->default(0);
+            $table->decimal('read_count', 10, 2)->default(0.00);
             $table->json('tags')->nullable();
             $table->timestamps();
         });

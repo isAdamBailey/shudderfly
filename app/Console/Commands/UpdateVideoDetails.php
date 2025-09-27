@@ -12,14 +12,14 @@ class UpdateVideoDetails extends Command
      *
      * @var string
      */
-    protected $signature = 'music:update-details {--limit=50 : Number of songs to update per run}';
+    protected $signature = 'music:backfill-details {--limit=50 : Number of songs to update per run}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Update video details (duration, view count, tags) for songs missing this data';
+    protected $description = 'Backfill missing video details (duration, view count, tags) for existing songs';
 
     /**
      * Execute the console command.
