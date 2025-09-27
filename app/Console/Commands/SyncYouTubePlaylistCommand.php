@@ -31,9 +31,11 @@ class SyncYouTubePlaylistCommand extends Command
         try {
             $totalSynced = $youTubeService->syncPlaylist();
             $this->info("Successfully synced {$totalSynced} songs from YouTube playlist");
+
             return Command::SUCCESS;
         } catch (\Exception $e) {
-            $this->error('Failed to sync YouTube playlist: ' . $e->getMessage());
+            $this->error('Failed to sync YouTube playlist: '.$e->getMessage());
+
             return Command::FAILURE;
         }
     }

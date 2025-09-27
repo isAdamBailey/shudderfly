@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Model;
 
 class Song extends Model
 {
@@ -58,9 +58,9 @@ class Song extends Model
      */
     public function scopeSearch($query, $search)
     {
-        return $query->where('title', 'LIKE', '%' . $search . '%')
-                    ->orWhere('description', 'LIKE', '%' . $search . '%')
-                    ->orWhere('channel_title', 'LIKE', '%' . $search . '%');
+        return $query->where('title', 'LIKE', '%'.$search.'%')
+            ->orWhere('description', 'LIKE', '%'.$search.'%')
+            ->orWhere('channel_title', 'LIKE', '%'.$search.'%');
     }
 
     /**

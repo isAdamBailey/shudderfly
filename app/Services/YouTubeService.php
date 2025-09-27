@@ -4,15 +4,18 @@ namespace App\Services;
 
 use App\Models\Song;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
 
 class YouTubeService
 {
     private $apiKey;
+
     private $playlistId;
+
     private const BATCH_SIZE = 50; // YouTube allows up to 50 video IDs per request
+
     private const CACHE_TTL = 3600; // 1 hour cache for playlist data
 
     public function __construct()
@@ -26,12 +29,12 @@ class YouTubeService
      */
     public function syncPlaylist()
     {
-        if (!$this->apiKey || !$this->playlistId) {
+        if (! $this->apiKey || ! $this->playlistId) {
             return [
                 'success' => false,
                 'error' => 'YouTube API key or playlist ID not configured',
                 'quota_exceeded' => false,
-                'synced' => 0
+                'synced' => 0,
             ];
         }
 
@@ -44,7 +47,7 @@ class YouTubeService
                 'success' => true,
                 'message' => 'Playlist synced recently, skipping to save quota',
                 'synced' => 0,
-                'quota_exceeded' => false
+                'quota_exceeded' => false,
             ];
         }
 
@@ -58,7 +61,7 @@ class YouTubeService
         do {
             $response = $this->getPlaylistItems($nextPageToken);
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
                 $errorResult = $this->handleApiError($response);
                 if ($errorResult['quota_exceeded']) {
                     $quotaExceeded = true;
@@ -88,21 +91,22 @@ class YouTubeService
 
             $nextPageToken = $data['nextPageToken'] ?? null;
 
-        } while ($nextPageToken && !$quotaExceeded);
+        } while ($nextPageToken && ! $quotaExceeded);
 
         if (empty($videoIds)) {
             Log::info('No new videos to sync');
             Cache::put($lastSyncKey, now(), self::CACHE_TTL);
+
             return [
                 'success' => true,
                 'message' => 'No new videos to sync',
                 'synced' => 0,
-                'quota_exceeded' => $quotaExceeded
+                'quota_exceeded' => $quotaExceeded,
             ];
         }
 
         // Second pass: Batch fetch video details for new/updated videos only
-        if (!$quotaExceeded) {
+        if (! $quotaExceeded) {
             $videoDetailsResult = $this->batchGetVideoDetails($videoIds);
 
             if (isset($videoDetailsResult['quota_exceeded']) && $videoDetailsResult['quota_exceeded']) {
@@ -126,7 +130,8 @@ class YouTubeService
                     $totalSynced++;
                 }
             } catch (\Exception $e) {
-                Log::error("Error creating song for video {$videoId}: " . $e->getMessage());
+                Log::error("Error creating song for video {$videoId}: ".$e->getMessage());
+
                 continue;
             }
         }
@@ -139,7 +144,7 @@ class YouTubeService
             'quota_exceeded' => $quotaExceeded,
             'message' => $quotaExceeded
                 ? "Synced {$totalSynced} songs before quota limit reached"
-                : "Successfully synced {$totalSynced} songs"
+                : "Successfully synced {$totalSynced} songs",
         ];
     }
 
@@ -150,14 +155,14 @@ class YouTubeService
     {
         $existingSong = Song::where('youtube_video_id', $videoId)->first();
 
-        if (!$existingSong) {
+        if (! $existingSong) {
             return false; // New video, don't skip
         }
 
         // Skip if we have complete data and video hasn't been updated recently
-        $hasCompleteData = !empty($existingSong->duration) &&
-                          !empty($existingSong->view_count) &&
-                          !is_null($existingSong->tags);
+        $hasCompleteData = ! empty($existingSong->duration) &&
+                          ! empty($existingSong->view_count) &&
+                          ! is_null($existingSong->tags);
 
         if ($hasCompleteData) {
             $videoPublished = Carbon::parse($publishedAt);
@@ -195,8 +200,9 @@ class YouTubeService
                     'key' => $this->apiKey,
                 ]);
 
-                if (!$response->successful()) {
-                    Log::error('Error fetching video details batch: ' . $response->body());
+                if (! $response->successful()) {
+                    Log::error('Error fetching video details batch: '.$response->body());
+
                     continue;
                 }
 
@@ -216,7 +222,8 @@ class YouTubeService
                 }
 
             } catch (\Exception $e) {
-                Log::error('Error in batch video details request: ' . $e->getMessage());
+                Log::error('Error in batch video details request: '.$e->getMessage());
+
                 continue;
             }
         }
@@ -270,18 +277,19 @@ class YouTubeService
 
             // Add video details if we have them and they're missing
             if ($videoDetails) {
-                if (empty($existingSong->duration) && !empty($videoDetails['duration'])) {
+                if (empty($existingSong->duration) && ! empty($videoDetails['duration'])) {
                     $updateData['duration'] = $videoDetails['duration'];
                 }
-                if (empty($existingSong->view_count) && !empty($videoDetails['view_count'])) {
+                if (empty($existingSong->view_count) && ! empty($videoDetails['view_count'])) {
                     $updateData['view_count'] = $videoDetails['view_count'];
                 }
-                if (empty($existingSong->tags) && !empty($videoDetails['tags'])) {
+                if (empty($existingSong->tags) && ! empty($videoDetails['tags'])) {
                     $updateData['tags'] = $videoDetails['tags'];
                 }
             }
 
             $existingSong->update($updateData);
+
             return $existingSong;
         }
 
@@ -300,6 +308,7 @@ class YouTubeService
 
             if ($reason === 'quotaExceeded') {
                 Log::warning('YouTube API quota exceeded. Stopping sync.');
+
                 return [
                     'success' => false,
                     'error' => 'YouTube API quota exceeded. Please try again tomorrow or request a quota increase.',
@@ -310,6 +319,7 @@ class YouTubeService
             if ($reason === 'rateLimitExceeded') {
                 Log::warning('YouTube API rate limit exceeded. Adding delay and retrying.');
                 sleep(5); // Wait 5 seconds before retry
+
                 return [
                     'success' => false,
                     'error' => 'YouTube API rate limit exceeded. Please wait and retry.',
@@ -318,10 +328,11 @@ class YouTubeService
             }
         }
 
-        Log::error('YouTube API error: ' . $response->body());
+        Log::error('YouTube API error: '.$response->body());
+
         return [
             'success' => false,
-            'error' => 'YouTube API error: ' . ($error['error']['message'] ?? 'Unknown error'),
+            'error' => 'YouTube API error: '.($error['error']['message'] ?? 'Unknown error'),
             'quota_exceeded' => false,
         ];
     }
@@ -354,10 +365,10 @@ class YouTubeService
     public function batchUpdateVideoDetails($limit = 50)
     {
         // Get songs that need details updated
-        $songs = Song::where(function($query) {
+        $songs = Song::where(function ($query) {
             $query->whereNull('duration')
-                  ->orWhere('view_count', 0)
-                  ->orWhereNull('tags');
+                ->orWhere('view_count', 0)
+                ->orWhereNull('tags');
         })->limit($limit)->get();
 
         if ($songs->isEmpty()) {
@@ -376,17 +387,17 @@ class YouTubeService
                 $details = $videoDetails[$song->youtube_video_id];
 
                 $updateData = [];
-                if (empty($song->duration) && !empty($details['duration'])) {
+                if (empty($song->duration) && ! empty($details['duration'])) {
                     $updateData['duration'] = $details['duration'];
                 }
-                if (empty($song->view_count) && !empty($details['view_count'])) {
+                if (empty($song->view_count) && ! empty($details['view_count'])) {
                     $updateData['view_count'] = $details['view_count'];
                 }
-                if (empty($song->tags) && !empty($details['tags'])) {
+                if (empty($song->tags) && ! empty($details['tags'])) {
                     $updateData['tags'] = $details['tags'];
                 }
 
-                if (!empty($updateData)) {
+                if (! empty($updateData)) {
                     $song->update($updateData);
                     $updated++;
                 }

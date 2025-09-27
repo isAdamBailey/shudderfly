@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\Song;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class SongSeeder extends Seeder
@@ -37,54 +36,17 @@ class SongSeeder extends Seeder
             ['id' => 'tbNlMtqrYS0', 'title' => 'Africa', 'artist' => 'Toto', 'duration' => 'PT4M55S'],
         ];
 
-        // Generate additional song titles to mix with embeddable videos
-        $songTitles = [
-            'Dancing in the Dark', 'Midnight Dreams', 'Golden Hour', 'Electric Nights',
-            'Heartbreak Hotel', 'Summer Vibes', 'Neon Lights', 'Fading Away',
-            'Better Days', 'Lost in Time', 'Fire and Ice', 'Sweet Escape',
-            'City Lights', 'Ocean Waves', 'Mountain High', 'Desert Rose',
-            'Starlight', 'Moonbeam', 'Sunshine', 'Rainbow',
-            'Love Me Tonight', 'Break My Heart', 'Stay With Me', 'Let Me Go',
-            'Run Away', 'Come Back Home', 'Never Give Up', 'Always Remember',
-            'First Kiss', 'Last Dance', 'New Beginning', 'Final Chapter',
-            'Wild Spirit', 'Free Bird', 'Caged Heart', 'Open Road',
-            'Perfect Storm', 'Calm Waters', 'Thunder Roll', 'Lightning Strike',
-        ];
-
-        $artists = [
-            'The Beatles', 'Taylor Swift', 'Ed Sheeran', 'Drake', 'Billie Eilish',
-            'Post Malone', 'Ariana Grande', 'The Weeknd', 'Dua Lipa', 'Harry Styles',
-            'Olivia Rodrigo', 'Lorde', 'Imagine Dragons', 'Coldplay', 'Maroon 5',
-            'OneRepublic', 'Bruno Mars', 'John Mayer', 'Adele', 'Sam Smith',
-        ];
-
         $songs = [];
-        $videoIdChars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_';
 
-        for ($i = 0; $i < 500; $i++) {
-            // Use embeddable video for first 20 entries, then generate fake ones
-            if ($i < count($embeddableVideos)) {
-                $video = $embeddableVideos[$i];
-                $videoId = $video['id'];
-                $title = $video['title'];
-                $artist = $video['artist'];
-                $duration = $video['duration'];
-            } else {
-                // Generate fake video ID for additional entries
-                $videoId = '';
-                for ($j = 0; $j < 11; $j++) {
-                    $videoId .= $videoIdChars[rand(0, strlen($videoIdChars) - 1)];
-                }
-                $title = $songTitles[array_rand($songTitles)];
-                $artist = $artists[array_rand($artists)];
-                $minutes = rand(2, 6);
-                $seconds = rand(0, 59);
-                $duration = "PT{$minutes}M{$seconds}S";
-            }
+        foreach ($embeddableVideos as $video) {
+            $videoId = $video['id'];
+            $title = $video['title'];
+            $artist = $video['artist'];
+            $duration = $video['duration'];
 
-            // Generate view count and date
-            $viewCount = rand(1000, 1000000000);
-            $publishedAt = date('Y-m-d H:i:s', strtotime('-' . rand(0, 3650) . ' days'));
+            // Generate realistic view count and date
+            $viewCount = rand(1000000, 1000000000); // Higher view counts for real videos
+            $publishedAt = date('Y-m-d H:i:s', strtotime('-'.rand(365, 3650).' days')); // 1-10 years ago
 
             $descriptions = [
                 "Official music video for \"{$title}\" by {$artist}",
@@ -107,23 +69,16 @@ class SongSeeder extends Seeder
                 'channel_title' => $artist,
                 'published_at' => $publishedAt,
                 'view_count' => $viewCount,
+                'read_count' => rand(0, 100) / 10, // Add some initial read counts
                 'tags' => json_encode(['music', 'official', strtolower($artist)]),
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
-
-            // Insert in batches of 100
-            if (count($songs) >= 100) {
-                Song::insert($songs);
-                $songs = [];
-            }
         }
 
-        // Insert remaining songs
-        if (!empty($songs)) {
-            Song::insert($songs);
-        }
+        // Insert all embeddable songs
+        Song::insert($songs);
 
-        $this->command->info('Created 500 test songs (first 20 with embeddable YouTube videos) for pagination testing');
+        $this->command->info('Created '.count($embeddableVideos).' songs with confirmed embeddable YouTube videos');
     }
 }

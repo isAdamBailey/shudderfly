@@ -60,62 +60,68 @@
             </div>
         </template>
 
-        <!-- Songs List -->
-        <div
-            v-if="songs.data && songs.data.length > 0"
-            class="bg-white rounded-lg shadow-sm border border-gray-200"
-        >
-            <SongListItem
-                v-for="song in songs.data"
-                :key="song.id"
-                :song="song"
-                :current-song="currentSong"
-                :is-playing="isPlaying"
-                @play="playSong"
-            />
-        </div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div
+                v-if="items.length > 0"
+                class="bg-white rounded-lg shadow-sm border border-gray-200"
+            >
+                <SongListItem
+                    v-for="song in items"
+                    :key="song.id"
+                    :song="song"
+                    :current-song="currentSong"
+                    :is-playing="isPlaying"
+                    @play="playSong"
+                />
 
-        <!-- Empty State -->
-        <div v-else class="text-center py-12">
-            <div class="max-w-md mx-auto">
-                <h3 class="text-lg font-medium text-gray-900 mb-2">
-                    No songs found
-                </h3>
-                <p class="text-gray-600 mb-4">
-                    <span v-if="props.search">
-                        No songs match your search criteria. Try a different
-                        search term.
-                    </span>
-                    <span v-else>
-                        No songs have been added yet.
-                        <span v-if="canSync"
-                            >Sync your YouTube playlist to get started.</span
-                        >
-                    </span>
-                </p>
+                <div
+                    ref="infiniteScrollRef"
+                    class="h-10 flex items-center justify-center"
+                >
+                    <div
+                        v-if="props.songs.next_page_url"
+                        class="text-sm text-gray-500"
+                    >
+                        Loading more songs...
+                    </div>
+                </div>
+            </div>
+
+            <div v-else class="text-center py-12">
+                <div class="max-w-md mx-auto">
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">
+                        No songs found
+                    </h3>
+                    <p class="text-gray-600 mb-4">
+                        <span v-if="props.search">
+                            No songs match your search criteria. Try a different
+                            search term.
+                        </span>
+                        <span v-else>
+                            No songs have been added yet.
+                            <span v-if="canSync"
+                                >Sync your YouTube playlist to get
+                                started.</span
+                            >
+                        </span>
+                    </p>
+                </div>
             </div>
         </div>
 
-        <!-- Pagination -->
-        <div v-if="songs.data.length > 0" class="mt-8">
-            <Pagination
-                :links="songs.links"
-                :from="songs.from"
-                :to="songs.to"
-                :total="songs.total"
-            />
-        </div>
+        <ScrollTop />
     </BreezeAuthenticatedLayout>
 </template>
 
 <script setup>
-import { Head, Link, router } from "@inertiajs/vue3";
-import { ref } from "vue";
+import { Head, Link, router, usePage } from "@inertiajs/vue3";
+import { ref, computed, watch } from "vue";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import Button from "@/Components/Button.vue";
 import MusicPlayer from "@/Components/MusicPlayer.vue";
 import SongListItem from "@/Components/SongListItem.vue";
-import Pagination from "@/Components/Pagination.vue";
+import ScrollTop from "@/Components/ScrollTop.vue";
+import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 
 const props = defineProps({
     songs: {
@@ -137,10 +143,26 @@ const syncing = ref(false);
 const currentSong = ref(null);
 const isPlaying = ref(false);
 
+const { items, infiniteScrollRef } = useInfiniteScroll(
+    props.songs.data || [],
+    computed(() => props.songs)
+);
+
+watch(
+    () => usePage().props.search,
+    (newSearch) => {
+        if (newSearch !== undefined) {
+            items.value = (props.songs.data || []).map((song) => ({
+                ...song,
+                loading: false,
+            }));
+        }
+    }
+);
+
 const playSong = (song) => {
     console.log("Playing song:", song.title);
     currentSong.value = song;
-    // isPlaying will be set by the MusicPlayer component
 };
 
 const closeMusicPlayer = () => {
@@ -154,25 +176,31 @@ const handlePlayingState = (playing) => {
 };
 
 const performSearch = () => {
+    // Reset infinite scroll state before search
+    items.value = [];
+
     router.get(
         route("music.index"),
         {
             search: searchQuery.value || undefined,
         },
         {
-            preserveState: true,
+            preserveState: false, // Don't preserve state to ensure fresh data
             replace: true,
         }
     );
 };
 
 const clearSearch = () => {
+    // Reset infinite scroll state before clearing search
+    items.value = [];
     searchQuery.value = "";
+
     router.get(
         route("music.index"),
         {},
         {
-            preserveState: true,
+            preserveState: false, // Don't preserve state to ensure fresh data
             replace: true,
         }
     );

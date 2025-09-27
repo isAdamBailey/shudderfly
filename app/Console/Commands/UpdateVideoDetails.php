@@ -35,12 +35,13 @@ class UpdateVideoDetails extends Command
             $this->info("Successfully updated details for {$updated} songs");
 
             if ($updated === 0) {
-                $this->info("No songs needed updating - all video details are current");
+                $this->info('No songs needed updating - all video details are current');
             }
 
             return Command::SUCCESS;
         } catch (\Exception $e) {
-            $this->error('Failed to update video details: ' . $e->getMessage());
+            $this->error('Failed to update video details: '.$e->getMessage());
+
             return Command::FAILURE;
         }
     }

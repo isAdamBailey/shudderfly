@@ -48,6 +48,7 @@ final class ReadThrottle
         // Send read count jobs to database queue instead of SQS to save AWS costs
         if ($job instanceof \App\Jobs\IncrementPageReadCount || $job instanceof \App\Jobs\IncrementBookReadCount) {
             dispatch($job)->onConnection('database')->delay(now()->addSeconds($delaySeconds));
+
             return;
         }
 
