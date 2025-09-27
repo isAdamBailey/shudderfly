@@ -25,9 +25,6 @@
             <h3 class="text-base font-medium text-gray-900 truncate mb-1">
                 {{ song.title }}
             </h3>
-            <p class="text-sm text-gray-600 truncate mb-1">
-                {{ song.channel_title }}
-            </p>
             <div class="flex items-center text-xs text-gray-500 space-x-4">
                 <span v-if="song.published_at">
                     {{ formatDate(song.published_at) }}
@@ -45,24 +42,21 @@
         <div class="flex-shrink-0 ml-4">
             <div
                 class="w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center transition-colors duration-200"
-                :class="{ 'bg-green-600 hover:bg-green-700': isCurrentSong && isPlaying }"
+                :class="{
+                    'bg-green-600 hover:bg-green-700':
+                        isCurrentSong && isPlaying,
+                }"
             >
                 <i
                     v-if="!isCurrentSong || !isPlaying"
                     class="ri-play-fill text-lg"
                 ></i>
-                <i
-                    v-else
-                    class="ri-pause-fill text-lg"
-                ></i>
+                <i v-else class="ri-pause-fill text-lg"></i>
             </div>
         </div>
 
         <!-- Currently Playing Indicator -->
-        <div
-            v-if="isCurrentSong"
-            class="flex-shrink-0 ml-2"
-        >
+        <div v-if="isCurrentSong" class="flex-shrink-0 ml-2">
             <div class="flex items-center space-x-1">
                 <div
                     v-for="i in 3"
@@ -94,7 +88,7 @@ const props = defineProps({
     },
 });
 
-defineEmits(['play']);
+defineEmits(["play"]);
 
 const imageError = ref(false);
 
@@ -103,8 +97,10 @@ const isCurrentSong = computed(() => {
 });
 
 const thumbnailUrl = computed(() => {
-    return props.song.thumbnail_url ||
-           `https://img.youtube.com/vi/${props.song.youtube_video_id}/maxresdefault.jpg`;
+    return (
+        props.song.thumbnail_url ||
+        `https://img.youtube.com/vi/${props.song.youtube_video_id}/maxresdefault.jpg`
+    );
 });
 
 const formattedDuration = computed(() => {

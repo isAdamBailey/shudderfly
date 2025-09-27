@@ -26,14 +26,9 @@
                 <div class="flex-1 min-w-0">
                     <div class="flex items-start justify-between">
                         <div class="flex-1 min-w-0">
-                            <h3
-                                class="text-sm font-medium text-gray-900 truncate"
-                            >
+                            <h3 class="text-xl text-gray-900 truncate">
                                 {{ currentSong.title }}
                             </h3>
-                            <p class="text-sm text-gray-500 truncate">
-                                {{ currentSong.channel_title }}
-                            </p>
                         </div>
                     </div>
 

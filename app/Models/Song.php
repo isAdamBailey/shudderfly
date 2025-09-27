@@ -17,7 +17,6 @@ class Song extends Model
         'thumbnail_standard',
         'thumbnail_maxres',
         'duration',
-        'channel_title',
         'published_at',
         'view_count',
         'read_count',
@@ -59,8 +58,7 @@ class Song extends Model
     public function scopeSearch($query, $search)
     {
         return $query->where('title', 'LIKE', '%'.$search.'%')
-            ->orWhere('description', 'LIKE', '%'.$search.'%')
-            ->orWhere('channel_title', 'LIKE', '%'.$search.'%');
+            ->orWhere('description', 'LIKE', '%'.$search.'%');
     }
 
     /**

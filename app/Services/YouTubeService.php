@@ -243,7 +243,6 @@ class YouTubeService
             'youtube_video_id' => $videoId,
             'title' => $snippet['title'],
             'description' => $snippet['description'],
-            'channel_title' => $snippet['channelTitle'],
             'published_at' => $snippet['publishedAt'],
         ];
 
