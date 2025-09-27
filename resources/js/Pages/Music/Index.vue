@@ -182,7 +182,7 @@ const performSearch = () => {
     items.value = [];
 
     router.get(
-        route("music.index"),
+        window.route("music.index"),
         {
             search: searchQuery.value || undefined,
         },
@@ -199,7 +199,7 @@ const clearSearch = () => {
     searchQuery.value = "";
 
     router.get(
-        route("music.index"),
+        window.route("music.index"),
         {},
         {
             preserveState: false, // Don't preserve state to ensure fresh data
@@ -213,7 +213,7 @@ const syncPlaylist = () => {
 
     syncing.value = true;
     router.post(
-        route("music.sync"),
+        window.route("music.sync"),
         {},
         {
             onFinish: () => {

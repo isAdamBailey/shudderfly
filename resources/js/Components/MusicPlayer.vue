@@ -4,88 +4,98 @@
         class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky top-0 z-40"
     >
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center py-4 space-x-4">
+            <div
+                class="flex flex-col sm:flex-row items-center py-4 space-y-4 sm:space-y-0 sm:space-x-6"
+            >
                 <!-- Song Thumbnail -->
-                <div class="flex-shrink-0">
+                <div
+                    class="flex-shrink-0 w-full sm:w-auto flex justify-center sm:justify-start"
+                >
                     <img
                         v-if="thumbnailUrl && !imageError"
                         :src="thumbnailUrl"
                         :alt="currentSong.title"
-                        class="w-16 h-16 rounded-lg object-cover"
+                        class="w-48 h-48 sm:w-56 sm:h-56 rounded-lg object-cover"
                         @error="handleImageError"
                     />
                     <div
                         v-else
-                        class="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center"
+                        class="w-48 h-48 sm:w-56 sm:h-56 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center"
                     >
                         <i
-                            class="ri-music-2-line text-2xl text-gray-400 dark:text-gray-500"
+                            class="ri-music-2-line text-7xl sm:text-8xl text-gray-400 dark:text-gray-500"
                         ></i>
                     </div>
                 </div>
 
-                <!-- Song Info -->
-                <div class="flex-1 min-w-0">
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1 min-w-0">
-                            <h3
-                                class="text-xl text-gray-900 dark:text-gray-100 truncate"
-                            >
-                                {{ currentSong.title }}
-                            </h3>
-                        </div>
-                    </div>
-
-                    <!-- Progress Bar -->
-                    <div class="mt-2">
-                        <div
-                            class="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400"
+                <!-- Song Info and Controls Container -->
+                <div class="flex-1 w-full min-w-0 space-y-4">
+                    <!-- Song Info -->
+                    <div class="text-center sm:text-left">
+                        <h3
+                            class="text-lg sm:text-xl text-gray-900 dark:text-gray-100 truncate"
                         >
-                            <span>{{ formatTime(currentTime) }}</span>
+                            {{ currentSong.title }}
+                        </h3>
+
+                        <!-- Progress Bar -->
+                        <div class="mt-2">
                             <div
-                                class="flex-1 bg-gray-200 dark:bg-gray-600 rounded-full h-2 cursor-pointer"
-                                @click="seekTo"
+                                class="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400"
                             >
+                                <span>{{ formatTime(currentTime) }}</span>
                                 <div
-                                    class="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all duration-100"
-                                    :style="{ width: progressPercentage + '%' }"
-                                ></div>
+                                    class="flex-1 bg-gray-200 dark:bg-gray-600 rounded-full h-2 cursor-pointer"
+                                    @click="seekTo"
+                                >
+                                    <div
+                                        class="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all duration-100"
+                                        :style="{
+                                            width: progressPercentage + '%',
+                                        }"
+                                    ></div>
+                                </div>
+                                <span>{{ formatTime(duration) }}</span>
                             </div>
-                            <span>{{ formatTime(duration) }}</span>
                         </div>
                     </div>
-                </div>
 
-                <!-- Playback Controls -->
-                <div class="flex items-center space-x-2">
-                    <button
-                        class="w-8 h-8 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200"
-                        @click="seekBackward"
+                    <!-- Playback Controls -->
+                    <div
+                        class="flex items-center justify-center sm:justify-start space-x-6"
                     >
-                        <i class="ri-skip-back-mini-fill text-lg"></i>
-                    </button>
+                        <button
+                            class="w-10 h-10 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200"
+                            @click="seekBackward"
+                        >
+                            <i class="ri-skip-back-mini-fill text-xl"></i>
+                        </button>
 
-                    <button
-                        class="w-10 h-10 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-all duration-200"
-                        @click="togglePlayPause"
-                    >
-                        <i v-if="!isPlaying" class="ri-play-fill text-xl"></i>
-                        <i v-else class="ri-pause-fill text-xl"></i>
-                    </button>
+                        <button
+                            class="w-16 h-16 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-all duration-200"
+                            @click="togglePlayPause"
+                        >
+                            <i
+                                v-if="!isPlaying"
+                                class="ri-play-fill text-3xl"
+                            ></i>
+                            <i v-else class="ri-pause-fill text-3xl"></i>
+                        </button>
 
-                    <button
-                        class="w-8 h-8 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200"
-                        @click="seekForward"
-                    >
-                        <i class="ri-skip-forward-mini-fill text-lg"></i>
-                    </button>
+                        <button
+                            class="w-10 h-10 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200"
+                            @click="seekForward"
+                        >
+                            <i class="ri-skip-forward-mini-fill text-xl"></i>
+                        </button>
 
-                    <button
-                        class="w-8 h-8 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200"
-                        @click="closePlayer"
-                    >
-                        <i class="ri-close-line text-lg"></i>
-                    </button>
+                        <button
+                            class="w-10 h-10 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200"
+                            @click="closePlayer"
+                        >
+                            <i class="ri-close-line text-xl"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -126,7 +136,6 @@
 
 <script setup>
 import { ref, computed, onUnmounted, watch, nextTick } from "vue";
-import { router } from "@inertiajs/vue3";
 
 const props = defineProps({
     currentSong: {
