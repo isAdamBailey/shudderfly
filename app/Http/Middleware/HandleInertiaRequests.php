@@ -49,6 +49,10 @@ class HandleInertiaRequests extends Middleware
             'theme' => now()->month === 12 ? 'christmas' : (now()->month === 7 ? 'fireworks' : ''),
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
+                'warning' => fn () => $request->session()->get('warning'),
+                'info' => fn () => $request->session()->get('info'),
+                'quota_exceeded' => fn () => $request->session()->get('quota_exceeded'),
             ],
         ]);
     }

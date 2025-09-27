@@ -27,7 +27,12 @@ class YouTubeService
     public function syncPlaylist()
     {
         if (!$this->apiKey || !$this->playlistId) {
-            throw new \Exception('YouTube API key or playlist ID not configured');
+            return [
+                'success' => false,
+                'error' => 'YouTube API key or playlist ID not configured',
+                'quota_exceeded' => false,
+                'synced' => 0
+            ];
         }
 
         // Check if we've synced recently to avoid unnecessary API calls
@@ -36,21 +41,32 @@ class YouTubeService
 
         if ($lastSync && $lastSync > now()->subHours(1)) {
             Log::info('Playlist synced recently, skipping sync to save quota');
-            return 0;
+            return [
+                'success' => true,
+                'message' => 'Playlist synced recently, skipping to save quota',
+                'synced' => 0,
+                'quota_exceeded' => false
+            ];
         }
 
         $nextPageToken = null;
         $totalSynced = 0;
         $videoIds = [];
         $playlistItems = [];
+        $quotaExceeded = false;
 
         // First pass: Collect all video IDs from playlist without fetching details
         do {
             $response = $this->getPlaylistItems($nextPageToken);
 
             if (!$response->successful()) {
-                $this->handleApiError($response);
-                break;
+                $errorResult = $this->handleApiError($response);
+                if ($errorResult['quota_exceeded']) {
+                    $quotaExceeded = true;
+                    break;
+                } else {
+                    return $errorResult;
+                }
             }
 
             $data = $response->json();
@@ -73,16 +89,32 @@ class YouTubeService
 
             $nextPageToken = $data['nextPageToken'] ?? null;
 
-        } while ($nextPageToken);
+        } while ($nextPageToken && !$quotaExceeded);
 
         if (empty($videoIds)) {
             Log::info('No new videos to sync');
             Cache::put($lastSyncKey, now(), self::CACHE_TTL);
-            return 0;
+            return [
+                'success' => true,
+                'message' => 'No new videos to sync',
+                'synced' => 0,
+                'quota_exceeded' => $quotaExceeded
+            ];
         }
 
         // Second pass: Batch fetch video details for new/updated videos only
-        $videoDetails = $this->batchGetVideoDetails($videoIds);
+        if (!$quotaExceeded) {
+            $videoDetailsResult = $this->batchGetVideoDetails($videoIds);
+
+            if (isset($videoDetailsResult['quota_exceeded']) && $videoDetailsResult['quota_exceeded']) {
+                $quotaExceeded = true;
+                $videoDetails = $videoDetailsResult['data'] ?? [];
+            } else {
+                $videoDetails = $videoDetailsResult;
+            }
+        } else {
+            $videoDetails = [];
+        }
 
         // Create or update songs with combined data
         foreach ($videoIds as $videoId) {
@@ -101,7 +133,15 @@ class YouTubeService
         }
 
         Cache::put($lastSyncKey, now(), self::CACHE_TTL);
-        return $totalSynced;
+
+        return [
+            'success' => true,
+            'synced' => $totalSynced,
+            'quota_exceeded' => $quotaExceeded,
+            'message' => $quotaExceeded
+                ? "Synced {$totalSynced} songs before quota limit reached"
+                : "Successfully synced {$totalSynced} songs"
+        ];
     }
 
     /**
@@ -261,18 +301,30 @@ class YouTubeService
 
             if ($reason === 'quotaExceeded') {
                 Log::warning('YouTube API quota exceeded. Stopping sync.');
-                throw new \Exception('YouTube API quota exceeded. Please try again tomorrow or request a quota increase.');
+                return [
+                    'success' => false,
+                    'error' => 'YouTube API quota exceeded. Please try again tomorrow or request a quota increase.',
+                    'quota_exceeded' => true,
+                ];
             }
 
             if ($reason === 'rateLimitExceeded') {
                 Log::warning('YouTube API rate limit exceeded. Adding delay and retrying.');
                 sleep(5); // Wait 5 seconds before retry
-                return;
+                return [
+                    'success' => false,
+                    'error' => 'YouTube API rate limit exceeded. Please wait and retry.',
+                    'quota_exceeded' => false,
+                ];
             }
         }
 
         Log::error('YouTube API error: ' . $response->body());
-        throw new \Exception('YouTube API error: ' . ($error['error']['message'] ?? 'Unknown error'));
+        return [
+            'success' => false,
+            'error' => 'YouTube API error: ' . ($error['error']['message'] ?? 'Unknown error'),
+            'quota_exceeded' => false,
+        ];
     }
 
     /**

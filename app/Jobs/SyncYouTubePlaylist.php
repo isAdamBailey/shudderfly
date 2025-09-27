@@ -25,11 +25,28 @@ class SyncYouTubePlaylist implements ShouldQueue
     public function handle(YouTubeService $youTubeService): void
     {
         try {
-            $totalSynced = $youTubeService->syncPlaylist();
-            Log::info("Successfully synced {$totalSynced} songs from YouTube playlist");
+            $result = $youTubeService->syncPlaylist();
+
+            if (!$result['success']) {
+                if ($result['quota_exceeded']) {
+                    Log::warning("YouTube sync stopped due to quota limit: " . $result['error']);
+                } else {
+                    Log::error("YouTube sync failed: " . $result['error']);
+                }
+                return;
+            }
+
+            $message = "Successfully synced {$result['synced']} songs from YouTube playlist";
+            if ($result['quota_exceeded']) {
+                $message .= " (quota limit reached)";
+                Log::warning($message);
+            } else {
+                Log::info($message);
+            }
+
         } catch (\Exception $e) {
             Log::error('Failed to sync YouTube playlist: ' . $e->getMessage());
-            throw $e;
+            // Don't re-throw the exception to prevent job failure
         }
     }
 }
