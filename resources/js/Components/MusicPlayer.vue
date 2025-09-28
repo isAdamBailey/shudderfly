@@ -225,31 +225,33 @@ const closePlayer = () => {
 
 const loadYouTubeAPI = () => {
     return new Promise((resolve) => {
+        // Use a global array to store callbacks
+        if (!window._onYouTubeIframeAPIReadyCallbacks) {
+            window._onYouTubeIframeAPIReadyCallbacks = [];
+        }
+        window._onYouTubeIframeAPIReadyCallbacks.push(resolve);
+
         if (window.YT && window.YT.Player) {
-            resolve();
+            // API already loaded, execute all callbacks
+            while (window._onYouTubeIframeAPIReadyCallbacks.length) {
+                window._onYouTubeIframeAPIReadyCallbacks.shift()();
+            }
             return;
         }
 
-        if (document.querySelector('script[src*="youtube.com/iframe_api"]')) {
-            // Script is already loading, wait for it
-            const checkYT = () => {
-                if (window.YT && window.YT.Player) {
-                    resolve();
-                } else {
-                    setTimeout(checkYT, 100);
+        if (!window.onYouTubeIframeAPIReady) {
+            window.onYouTubeIframeAPIReady = function () {
+                while (window._onYouTubeIframeAPIReadyCallbacks.length) {
+                    window._onYouTubeIframeAPIReadyCallbacks.shift()();
                 }
             };
-            checkYT();
-            return;
         }
 
-        const script = document.createElement("script");
-        script.src = "https://www.youtube.com/iframe_api";
-        document.head.appendChild(script);
-
-        window.onYouTubeIframeAPIReady = () => {
-            resolve();
-        };
+        if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
+            const script = document.createElement("script");
+            script.src = "https://www.youtube.com/iframe_api";
+            document.head.appendChild(script);
+        }
     });
 };
 
