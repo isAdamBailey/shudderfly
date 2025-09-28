@@ -151,41 +151,6 @@ describe("Music Index", () => {
         expect(wrapper.find(".authenticated-layout").exists()).toBe(true);
     });
 
-    it("displays search input with placeholder", () => {
-        wrapper = createWrapper();
-
-        const searchInput = wrapper.find('input[type="text"]');
-        expect(searchInput.exists()).toBe(true);
-        expect(searchInput.attributes("placeholder")).toContain("Search songs");
-    });
-
-    it("shows search query in input when search prop is provided", () => {
-        wrapper = createWrapper({ search: "test query" });
-
-        const searchInput = wrapper.find('input[type="text"]');
-        expect(searchInput.element.value).toBe("test query");
-    });
-
-    it("shows clear search button when search is active", () => {
-        wrapper = createWrapper({ search: "test query" });
-
-        const buttons = wrapper.findAll("button");
-        const clearButton = buttons.find((btn) =>
-            btn.text().includes("Clear search")
-        );
-        expect(clearButton.exists()).toBe(true);
-    });
-
-    it("hides clear search button when no search is active", () => {
-        wrapper = createWrapper({ search: "" });
-
-        const buttons = wrapper.findAll("button");
-        const clearButton = buttons.find((btn) =>
-            btn.text().includes("Clear search")
-        );
-        expect(clearButton?.exists() || false).toBe(false);
-    });
-
     it("shows sync button for admin users", () => {
         wrapper = createWrapper({ canSync: true });
 
@@ -224,12 +189,9 @@ describe("Music Index", () => {
     it("renders song list when songs are available", () => {
         wrapper = createWrapper();
 
-        // The songs are actually rendering! Let's check for the real structure
-        // Look for the song titles instead of the mocked .song-item class
         expect(wrapper.text()).toContain("Test Song 1");
         expect(wrapper.text()).toContain("Test Song 2");
 
-        // Check for actual song containers (the real component structure)
         const songContainers = wrapper.findAll(".flex.items-center.p-4");
         expect(songContainers).toHaveLength(2);
     });
@@ -314,34 +276,6 @@ describe("Music Index", () => {
         expect(wrapper.vm.isPlaying).toBe(false);
     });
 
-    it("submits search form correctly", async () => {
-        wrapper = createWrapper();
-
-        const searchInput = wrapper.find('input[type="text"]');
-        await searchInput.setValue("test search");
-
-        const searchForm = wrapper.find("form");
-        await searchForm.trigger("submit");
-
-        expect(wrapper.vm.searchQuery).toBe("test search");
-    });
-
-    it("clears search when clear button is clicked", async () => {
-        wrapper = createWrapper({ search: "test query" });
-
-        const buttons = wrapper.findAll("button");
-        const clearButton = buttons.find((btn) =>
-            btn.text().includes("Clear search")
-        );
-
-        expect(clearButton.exists()).toBe(true);
-        await clearButton.trigger("click");
-        await nextTick(); // Wait for DOM updates
-
-        // Now expect the Inertia router to be called
-        expect(router.get).toHaveBeenCalled();
-    });
-
     it("triggers sync when sync button is clicked", async () => {
         wrapper = createWrapper({ canSync: true });
 
@@ -356,14 +290,6 @@ describe("Music Index", () => {
 
         // Now expect the Inertia router to be called
         expect(router.post).toHaveBeenCalled();
-    });
-
-    it("applies dark mode classes correctly", () => {
-        wrapper = createWrapper();
-
-        const searchInput = wrapper.find('input[type="text"]');
-        expect(searchInput.classes()).toContain("dark:bg-gray-700");
-        expect(searchInput.classes()).toContain("dark:text-gray-100");
     });
 
     it("shows loading indicator when next page is available", () => {

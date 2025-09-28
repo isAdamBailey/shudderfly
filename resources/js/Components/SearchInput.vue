@@ -40,6 +40,22 @@
                 >
                     Uploads
                 </button>
+                <button
+                    role="radio"
+                    :aria-checked="isMusicTarget.toString()"
+                    :tabindex="isMusicTarget ? 0 : -1"
+                    class="px-3 h-6 rounded-full text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                    :class="
+                        isMusicTarget
+                            ? 'bg-blue-600 text-white dark:bg-white dark:text-gray-900 shadow'
+                            : 'text-gray-700 dark:text-gray-300'
+                    "
+                    @click="setTarget('music')"
+                    @keydown.enter.prevent="setTarget('music')"
+                    @keydown.space.prevent="setTarget('music')"
+                >
+                    Music
+                </button>
             </div>
         </div>
         <label for="search" class="hidden">Search</label>
@@ -97,11 +113,14 @@ let target = ref(getDefaultTarget());
 
 const isBooksTarget = computed(() => target.value === "books");
 const isUploadsTarget = computed(() => target.value === "uploads");
+const isMusicTarget = computed(() => target.value === "music");
 
 const currentLabel = computed(() => {
     if (props.showTargetToggle) {
+        if (target.value === "music") return "Music";
         return target.value === "uploads" ? "Uploads" : "Books";
     }
+    if (target.value === "music") return "Music";
     return props.label || (target.value === "uploads" ? "Uploads" : "Books");
 });
 
@@ -126,8 +145,15 @@ watch(search, () => {
 });
 
 const searchMethod = () => {
-    const routeName =
-        target.value === "uploads" ? "pictures.index" : "books.index";
+    let routeName;
+    if (target.value === "uploads") {
+        routeName = "pictures.index";
+    } else if (target.value === "music") {
+        routeName = "music.index";
+    } else {
+        routeName = "books.index";
+    }
+
     if (search.value) {
         speak(`Searching for ${currentLabel.value} with ${search.value}`);
     }
@@ -144,16 +170,25 @@ function setTarget(newTarget) {
 }
 
 function getDefaultTarget() {
-    if (props.initialTarget === "books" || props.initialTarget === "uploads") {
+    if (
+        props.initialTarget === "books" ||
+        props.initialTarget === "uploads" ||
+        props.initialTarget === "music"
+    ) {
         return props.initialTarget;
     }
     // Infer based on page props (URL or server-provided context) if available
     const currentUrl =
         typeof window !== "undefined" ? window.location.pathname : "";
-    // Default to uploads, only switch to books on books index or book show
+    // Check for music pages
+    if (currentUrl.startsWith("/music")) {
+        return "music";
+    }
+    // Check for books pages
     if (currentUrl.startsWith("/books") || currentUrl.startsWith("/book/")) {
         return "books";
     }
+    // Default to uploads
     return "uploads";
 }
 
