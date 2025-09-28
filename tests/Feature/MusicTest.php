@@ -138,7 +138,7 @@ class MusicTest extends TestCase
         $response2->assertStatus(200)
             ->assertJson([
                 'success' => true,
-                'message' => 'Already counted recently'
+                'message' => 'Already counted recently',
             ]);
     }
 
@@ -182,7 +182,7 @@ class MusicTest extends TestCase
             ->willReturn([
                 'success' => true,
                 'message' => 'Test sync completed successfully',
-                'synced' => 5
+                'synced' => 5,
             ]);
 
         $this->app->instance(\App\Services\YouTubeService::class, $mock);

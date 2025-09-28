@@ -2,7 +2,6 @@
 
 namespace Tests\Unit;
 
-use App\Jobs\IncrementSongReadCount;
 use App\Models\Song;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;

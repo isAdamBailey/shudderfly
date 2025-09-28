@@ -42,7 +42,7 @@ class IncrementSongReadCountJobTest extends TestCase
 
         $testSong = Song::factory()->create([
             'read_count' => 5,
-            'created_at' => now()->subDays(3) // 3 days old, should get 3.0 boost
+            'created_at' => now()->subDays(3), // 3 days old, should get 3.0 boost
         ]);
 
         $job = new IncrementSongReadCount($testSong);
@@ -58,7 +58,7 @@ class IncrementSongReadCountJobTest extends TestCase
 
         $song = Song::factory()->create([
             'read_count' => 0,
-            'created_at' => now()->subDays(5) // 5 days old
+            'created_at' => now()->subDays(5), // 5 days old
         ]);
 
         $job = new IncrementSongReadCount($song);
@@ -74,7 +74,7 @@ class IncrementSongReadCountJobTest extends TestCase
 
         $song = Song::factory()->create([
             'read_count' => 0,
-            'created_at' => now()->subDays(20) // 20 days old
+            'created_at' => now()->subDays(20), // 20 days old
         ]);
 
         $job = new IncrementSongReadCount($song);
@@ -90,7 +90,7 @@ class IncrementSongReadCountJobTest extends TestCase
 
         $song = Song::factory()->create([
             'read_count' => 0,
-            'created_at' => now()->subDays(45) // 45 days old
+            'created_at' => now()->subDays(45), // 45 days old
         ]);
 
         $job = new IncrementSongReadCount($song);
@@ -106,7 +106,7 @@ class IncrementSongReadCountJobTest extends TestCase
 
         $song = Song::factory()->create([
             'read_count' => 0,
-            'created_at' => now()->subDays(75) // 75 days old
+            'created_at' => now()->subDays(75), // 75 days old
         ]);
 
         $job = new IncrementSongReadCount($song);
@@ -122,7 +122,7 @@ class IncrementSongReadCountJobTest extends TestCase
 
         $song = Song::factory()->create([
             'read_count' => 0,
-            'created_at' => now()->subDays(120) // 120 days old
+            'created_at' => now()->subDays(120), // 120 days old
         ]);
 
         $job = new IncrementSongReadCount($song);
@@ -153,7 +153,7 @@ class IncrementSongReadCountJobTest extends TestCase
 
         $song = Song::factory()->create([
             'read_count' => 5,
-            'created_at' => now()->subDays(120) // Old song for 1.0 increment
+            'created_at' => now()->subDays(120), // Old song for 1.0 increment
         ]);
 
         // Simulate external update to the song
@@ -174,7 +174,7 @@ class IncrementSongReadCountJobTest extends TestCase
         // Test with read_count = 0 since the job treats null as 0.0 anyway
         $song = Song::factory()->create([
             'read_count' => 0,
-            'created_at' => now()->subDays(120)
+            'created_at' => now()->subDays(120),
         ]);
 
         $job = new IncrementSongReadCount($song);
@@ -190,7 +190,7 @@ class IncrementSongReadCountJobTest extends TestCase
 
         $song = Song::factory()->create([
             'read_count' => 0,
-            'created_at' => null
+            'created_at' => null,
         ]);
 
         $job = new IncrementSongReadCount($song);
@@ -209,7 +209,7 @@ class IncrementSongReadCountJobTest extends TestCase
         // Create a song with read count 49 (should be rank 21, not in top 20)
         $song21 = Song::factory()->create([
             'read_count' => 49,
-            'created_at' => now()->subDays(120) // Old song for 1.0 increment
+            'created_at' => now()->subDays(120), // Old song for 1.0 increment
         ]);
 
         // Create a song with read count 51 (should be rank 1, in top 20)

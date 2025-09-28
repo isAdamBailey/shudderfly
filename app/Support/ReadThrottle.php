@@ -2,6 +2,9 @@
 
 namespace App\Support;
 
+use App\Jobs\IncrementBookReadCount;
+use App\Jobs\IncrementPageReadCount;
+use App\Jobs\IncrementSongReadCount;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Http\Request;
 
@@ -46,7 +49,7 @@ final class ReadThrottle
         }
 
         // Send read count jobs to database queue instead of SQS to save AWS costs
-        if ($job instanceof \App\Jobs\IncrementPageReadCount || $job instanceof \App\Jobs\IncrementBookReadCount) {
+        if ($job instanceof IncrementPageReadCount || $job instanceof IncrementBookReadCount || $job instanceof IncrementSongReadCount) {
             dispatch($job)->onConnection('database')->delay(now()->addSeconds($delaySeconds));
 
             return;
