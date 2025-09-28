@@ -13,7 +13,7 @@ class IncrementSongReadCount implements ShouldQueue
 {
     use InteractsWithQueue, Queueable, SerializesModels;
 
-    protected $song;
+    public $song;
 
     /**
      * Create a new job instance.

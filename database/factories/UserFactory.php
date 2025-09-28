@@ -37,4 +37,26 @@ class UserFactory extends Factory
             'email_verified_at' => null,
         ]);
     }
+
+    /**
+     * Create an admin user for testing
+     *
+     * @return static
+     */
+    public function admin()
+    {
+        return $this->afterCreating(function ($user) {
+            // Create the admin permission if it doesn't exist
+            $adminPermission = \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'admin']);
+
+            // Create the admin role if it doesn't exist
+            $adminRole = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'admin']);
+
+            // Give the admin role the admin permission
+            $adminRole->givePermissionTo($adminPermission);
+
+            // Assign the admin role to the user
+            $user->assignRole($adminRole);
+        });
+    }
 }
