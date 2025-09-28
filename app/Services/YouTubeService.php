@@ -126,13 +126,13 @@ class YouTubeService
                 if (isset($playlistItems[$videoId])) {
                     $playlistItem = $playlistItems[$videoId];
                     $details = $videoDetails[$videoId] ?? null;
-
-                    $this->createOrUpdateSongWithDetails($playlistItem, $details);
-                    $totalSynced++;
+                    $result = $this->createOrUpdateSongWithDetails($playlistItem, $details);
+                    if ($result instanceof Song) {
+                        $totalSynced++;
+                    }
                 }
             } catch (\Exception $e) {
                 Log::error("Error creating song for video {$videoId}: ".$e->getMessage());
-
                 continue;
             }
         }
