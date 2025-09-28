@@ -79,9 +79,10 @@ class YouTubeService
 
             foreach ($data['items'] as $item) {
                 $videoId = $item['snippet']['resourceId']['videoId'];
+                $title = $item['snippet']['title'];
 
                 // Skip if we already have this video and it hasn't been updated recently
-                if ($this->shouldSkipVideo($videoId, $item['snippet']['publishedAt'])) {
+                if ($this->shouldSkipVideo($videoId, $item['snippet']['publishedAt'], $title)) {
                     continue;
                 }
 
@@ -151,8 +152,12 @@ class YouTubeService
     /**
      * Check if we should skip syncing a video (already exists and unchanged)
      */
-    private function shouldSkipVideo($videoId, $publishedAt)
+    private function shouldSkipVideo($videoId, $publishedAt, $title = null)
     {
+        // Skip if the title is 'Private video'
+        if ($title !== null && strtolower(trim($title)) === 'private video') {
+            return true;
+        }
         $existingSong = Song::where('youtube_video_id', $videoId)->first();
 
         if (! $existingSong) {
