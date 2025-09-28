@@ -216,9 +216,8 @@ class YouTubeService
                     ];
                 }
 
-                // Rate limiting between batch requests
-                if (count($batches) > 1) {
-                    usleep(200000); // 200ms delay between batches
+                if ($i < count($batches) - 1) {
+                    usleep(200000); // 200ms delay
                 }
 
             } catch (\Exception $e) {
