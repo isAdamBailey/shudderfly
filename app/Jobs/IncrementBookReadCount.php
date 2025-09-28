@@ -64,14 +64,14 @@ class IncrementBookReadCount implements ShouldQueue
     private function getAgeBasedIncrement(): float
     {
         $created = $this->book->created_at ?? Carbon::now();
-        $ageDays = $created->diffInHours(Carbon::now()) / 24.0; // Convert hours to days as float
+        $ageDays = $created->diffInDays(Carbon::now()); // Use integer days
 
         if ($ageDays <= 7) {
-            return 2.5; // 1 week: 2.5x boost
+            return 3.0; // 1 week: 3.0x boost
         } elseif ($ageDays <= 30) {
-            return 1.8; // 1 month: 1.8x boost
+            return 2.0; // 1 month: 2.0x boost
         } elseif ($ageDays <= 60) {
-            return 1.4; // 2 months: 1.4x boost
+            return 1.5; // 2 months: 1.5x boost
         } elseif ($ageDays <= 90) {
             return 1.2; // 3 months: 1.2x boost
         }

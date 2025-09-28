@@ -64,7 +64,7 @@ class IncrementPageReadCount implements ShouldQueue
     private function getAgeBasedIncrement(): float
     {
         $created = $this->page->created_at ?? Carbon::now();
-        $ageDays = $created->diffInHours(Carbon::now()) / 24.0; // Convert hours to days as float
+        $ageDays = $created->diffInDays(Carbon::now()); // Use integer days
 
         if ($ageDays <= 7) {
             return 3.0; // 1 week: 3.0x boost

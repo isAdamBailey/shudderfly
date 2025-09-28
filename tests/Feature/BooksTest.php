@@ -174,9 +174,9 @@ class BooksTest extends TestCase
         (new \App\Jobs\IncrementBookReadCount($veryOldBook))->handle();
 
         // Verify age-based multipliers
-        $this->assertSame(2.5, $newBook->fresh()->read_count); // ≤7 days: 2.5x
-        $this->assertSame(1.8, $twoWeekOldBook->fresh()->read_count); // ≤30 days: 1.8x
-        $this->assertSame(1.4, $twoMonthOldBook->fresh()->read_count); // ≤60 days: 1.4x
+        $this->assertSame(3.0, $newBook->fresh()->read_count);
+        $this->assertSame(2.0, $twoWeekOldBook->fresh()->read_count);
+        $this->assertSame(1.5, $twoMonthOldBook->fresh()->read_count); // ≤60 days: 1.4x
         $this->assertSame(1.2, $sixMonthOldBook->fresh()->read_count); // ≤90 days: 1.2x
         $this->assertSame(1.0, $veryOldBook->fresh()->read_count); // >90 days: 1.0x
     }
