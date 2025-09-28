@@ -74,8 +74,8 @@ global.route = vi.fn((name, params) => {
     const routes = {
         "music.index": "/music",
         "music.sync": "/music/sync",
-        "music.increment-read-count": (id) =>
-            `/music/${id}/increment-read-count`,
+        "music.increment-read-count": (params) =>
+            `/music/${params}/increment-read-count`,
     };
 
     if (typeof routes[name] === "function") {
