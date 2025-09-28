@@ -236,6 +236,10 @@ class YouTubeService
     private function createOrUpdateSongWithDetails($playlistItem, $videoDetails = null)
     {
         $snippet = $playlistItem['snippet'];
+        $title = strtolower(trim($snippet['title']));
+        if ($title === 'private video') {
+            return;
+        }
         $videoId = $snippet['resourceId']['videoId'];
 
         $songData = [
