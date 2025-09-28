@@ -15,7 +15,10 @@ const showingNavigationDropdown = ref(false);
 </script>
 
 <template>
-    <nav class="bg-rainbow border-b border-gray-100 dark:border-gray-700" :class="{ fireworks: $page.props.theme === 'fireworks' }">
+    <nav
+        class="bg-rainbow border-b border-gray-100 dark:border-gray-700"
+        :class="{ fireworks: $page.props.theme === 'fireworks' }"
+    >
         <FireworksAnimation>
             <!-- Primary Navigation Menu -->
             <div class="px-4 sm:px-6 lg:px-8">
@@ -50,6 +53,12 @@ const showingNavigationDropdown = ref(false);
                                 :active="route().current('pictures.*')"
                             >
                                 Uploads
+                            </NavLink>
+                            <NavLink
+                                :href="route('music.index')"
+                                :active="route().current('music.*')"
+                            >
+                                Music
                             </NavLink>
                             <NavLink
                                 :href="route('collages.index')"
@@ -177,6 +186,12 @@ const showingNavigationDropdown = ref(false);
                         :active="route().current('pictures.*')"
                     >
                         Uploads
+                    </ResponsiveNavLink>
+                    <ResponsiveNavLink
+                        :href="route('music.index')"
+                        :active="route().current('music.*')"
+                    >
+                        Music
                     </ResponsiveNavLink>
                     <ResponsiveNavLink
                         :href="route('collages.index')"

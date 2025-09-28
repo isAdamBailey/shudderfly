@@ -2,68 +2,78 @@
 
 namespace App\Jobs;
 
-use App\Models\Book;
+use App\Models\Song;
 use Carbon\Carbon;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 
-class IncrementBookReadCount implements ShouldQueue
+class IncrementSongReadCount implements ShouldQueue
 {
     use InteractsWithQueue, Queueable, SerializesModels;
 
-    protected $book;
+    public $song;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(Book $book)
+    public function __construct(Song $song)
     {
-        $this->book = $book;
+        $this->song = $song;
     }
 
     /**
-     * Handle incrementing the book read count.
+     * Handle incrementing the song read count.
      *
      * Rules:
-     * - Books in top 20: increment by 0.1
-     * - All other books: increment by age-based amount (larger for newer books)
+     * - Songs in top 20: increment by 0.1
+     * - All other songs: increment by age-based amount (larger for newer songs)
      */
     public function handle(): void
     {
+        // Additional cache check at job level to prevent duplicate processing
+        $jobCacheKey = "song_read_count_job_{$this->song->id}";
+
+        if (\Cache::has($jobCacheKey)) {
+            return;
+        }
+
+        // Set a short cache to prevent duplicate job processing (5 minutes)
+        \Cache::put($jobCacheKey, true, now()->addMinutes(5));
+
         // Ensure the latest values
-        $this->book->refresh();
+        $this->song->refresh();
 
-        $oldScore = (float) ($this->book->read_count ?? 0.0);
+        $oldScore = (float) ($this->song->read_count ?? 0.0);
 
-        // Check if this book is in the top 20 by read count
-        $topBooks = Book::orderBy('read_count', 'desc')
+        // Check if this song is in the top 20 by read count
+        $topSongs = Song::orderBy('read_count', 'desc')
             ->limit(20)
             ->pluck('id')
             ->toArray();
 
-        $isInTop20 = in_array($this->book->id, $topBooks);
+        $isInTop20 = in_array($this->song->id, $topSongs);
 
         if ($isInTop20) {
-            // Top 20 books: increment by 0.1
+            // Top 20 songs: increment by 0.1
             $newScore = $oldScore + 0.1;
         } else {
-            // All other books: use age-based increment
+            // All other songs: use age-based increment
             $ageBasedIncrement = $this->getAgeBasedIncrement();
             $newScore = $oldScore + $ageBasedIncrement;
         }
 
         // Persist the updated read count
-        $this->book->update(['read_count' => $newScore]);
+        $this->song->update(['read_count' => $newScore]);
     }
 
     /**
-     * Get the age-based increment amount for newer books.
+     * Get the age-based increment amount for newer songs.
      */
     private function getAgeBasedIncrement(): float
     {
-        $created = $this->book->created_at ?? Carbon::now();
+        $created = $this->song->created_at ?? Carbon::now();
         $ageDays = $created->diffInDays(Carbon::now()); // Use integer days
 
         if ($ageDays <= 7) {
