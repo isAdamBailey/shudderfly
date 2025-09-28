@@ -185,7 +185,7 @@ describe("Music Index", () => {
     });
 
     it("shows no songs message when songs array is empty", () => {
-        // Mock empty items
+        // Mock empty items before wrapper creation
         useInfiniteScroll.mockReturnValue({
             items: { value: [] },
             infiniteScrollRef: { value: null },
@@ -199,11 +199,7 @@ describe("Music Index", () => {
     });
 
     it("shows search-specific no results message", () => {
-        wrapper = createWrapper({
-            songs: { data: [], next_page_url: null },
-            search: "nonexistent song",
-        });
-
+        // Mock empty items before wrapper creation
         useInfiniteScroll.mockReturnValue({
             items: { value: [] },
             infiniteScrollRef: { value: null },
