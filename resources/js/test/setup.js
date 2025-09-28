@@ -70,20 +70,25 @@ vi.mock("@/Layouts/AuthenticatedLayout.vue", () => ({
 }));
 
 // Enhanced route mocking for Laravel routes
-global.route = vi.fn((name, params) => {
-    const routes = {
-        "music.index": "/music",
-        "music.sync": "/music/sync",
-        "music.increment-read-count": (params) =>
-            `/music/${params}/increment-read-count`,
-    };
+export const ROUTE_MAPPINGS = {
+    "music.index": "/music",
+    "music.sync": "/music/sync",
+    "music.increment-read-count": (params) =>
+        `/music/${params}/increment-read-count`,
+    "pictures.index": "/pictures",
+    "books.index": "/books",
+};
 
-    if (typeof routes[name] === "function") {
-        return routes[name](params);
-    }
+export const createRouteMock = () =>
+    vi.fn((name, params) => {
+        if (typeof ROUTE_MAPPINGS[name] === "function") {
+            return ROUTE_MAPPINGS[name](params);
+        }
 
-    return routes[name] || `/${name}`;
-});
+        return ROUTE_MAPPINGS[name] || name;
+    });
+
+global.route = createRouteMock();
 
 // Mock window.route for global access
 window.route = global.route;

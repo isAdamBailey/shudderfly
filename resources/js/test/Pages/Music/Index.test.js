@@ -10,22 +10,10 @@ vi.mock("@/composables/useInfiniteScroll", () => ({
 
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 import { router } from "@inertiajs/vue3";
+import { createRouteMock } from "../../setup.js";
 
-// Mock route function like other tests
-global.route = vi.fn((name, params) => {
-    const routes = {
-        "music.index": "/music",
-        "music.sync": "/music/sync",
-        "pictures.index": "/pictures",
-        "books.index": "/books",
-    };
-
-    if (routes[name]) {
-        return routes[name];
-    }
-
-    return `/${name}`;
-});
+// Use the shared route mock function from setup.js
+global.route = createRouteMock();
 
 // Mock window.route for the component
 window.route = global.route;

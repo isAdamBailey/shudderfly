@@ -68,7 +68,7 @@ describe("Components/SearchInput.vue", () => {
         await input.setValue("cats");
         await input.trigger("keyup.enter");
         expect(router.get).toHaveBeenCalledTimes(1);
-        expect(router.get.mock.calls[0][0]).toBe("/pictures.index");
+        expect(router.get.mock.calls[0][0]).toBe("/pictures");
         expect(router.get.mock.calls[0][1]).toMatchObject({ search: "cats" });
     });
 
@@ -80,7 +80,7 @@ describe("Components/SearchInput.vue", () => {
         await input.setValue("dogs");
         await input.trigger("keyup.enter");
         expect(router.get).toHaveBeenCalledTimes(1);
-        expect(router.get.mock.calls[0][0]).toBe("/books.index");
+        expect(router.get.mock.calls[0][0]).toBe("/books");
         expect(router.get.mock.calls[0][1]).toMatchObject({ search: "dogs" });
     });
 });
