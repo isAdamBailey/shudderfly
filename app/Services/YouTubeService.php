@@ -126,8 +126,8 @@ class YouTubeService
                 if (isset($playlistItems[$videoId])) {
                     $playlistItem = $playlistItems[$videoId];
                     $details = $videoDetails[$videoId] ?? null;
-                    $result = $this->createOrUpdateSongWithDetails($playlistItem, $details);
-                    if ($result instanceof Song) {
+                    $isNew = $this->createOrUpdateSongWithDetails($playlistItem, $details);
+                    if ($isNew) {
                         $totalSynced++;
                     }
                 }
@@ -237,13 +237,14 @@ class YouTubeService
 
     /**
      * Create or update song with playlist and video details combined
+     * Returns true if a new song was created, false otherwise
      */
     private function createOrUpdateSongWithDetails($playlistItem, $videoDetails = null)
     {
         $snippet = $playlistItem['snippet'];
         $title = strtolower(trim($snippet['title']));
         if ($title === 'private video') {
-            return;
+            return false; // Explicitly return false for skipped videos
         }
         $videoId = $snippet['resourceId']['videoId'];
 
@@ -296,11 +297,11 @@ class YouTubeService
             }
 
             $existingSong->update($updateData);
-
-            return $existingSong;
+            return false; // Not a new song
         }
 
-        return Song::create($songData);
+        Song::create($songData);
+        return true; // New song created
     }
 
     /**
