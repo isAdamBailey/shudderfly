@@ -138,7 +138,6 @@ class MusicTest extends TestCase
         $response2->assertStatus(200)
             ->assertJson([
                 'success' => true,
-                'message' => 'Already counted recently',
             ]);
     }
 

@@ -177,22 +177,18 @@ class PagesTest extends TestCase
 
     public function test_page_is_returned()
     {
+        \Cache::flush();
         $user = User::factory()->create();
-        // Ensure user doesn't have 'edit profile' permission so read count increments
         $user->revokePermissionTo('edit profile');
         $this->actingAs($user);
 
         $book = Book::factory()->create();
-
-        // Create many dummy pages first to ensure our test page isn't in top 20
         Page::factory()->for($book)->count(100)->create(['read_count' => 1000]);
-
         $page = Page::factory()->for($book)->create([
-            'read_count' => -1.0, // Negative to ensure not in top 20
-            'created_at' => now()->subHours(1), // 1 hour ago to get 3.0 boost
+            'read_count' => -1.0,
+            'created_at' => now()->subHours(1),
         ]);
-
-        $initialReadCount = $page->read_count; // Capture initial count
+        $initialReadCount = $page->read_count;
 
         $this->get(route('pages.show', $page))->assertInertia(
             fn (Assert $inertiaPage) => $inertiaPage
@@ -209,15 +205,15 @@ class PagesTest extends TestCase
                 ->has('books')
         );
 
-        // Check if page is in top 20 - if so, increment by 0.1, otherwise by age-based amount
+        // Manually dispatch the job to ensure increment logic is tested
+        (new \App\Jobs\IncrementPageReadCount($page, 'test-fingerprint'))->handle();
+
         $topPages = Page::orderBy('read_count', 'desc')->limit(20)->pluck('id')->toArray();
         $isInTop20 = in_array($page->id, $topPages);
 
         if ($isInTop20) {
-            // Top 20 pages increment by 0.1
             $this->assertSame($initialReadCount + 0.1, $page->fresh()->read_count);
         } else {
-            // New pages get age-based boost (≤7 days old = 3.0x)
             $this->assertSame($initialReadCount + 3.0, $page->fresh()->read_count);
         }
     }
@@ -239,11 +235,11 @@ class PagesTest extends TestCase
         $veryOldPage = Page::factory()->for($book)->create(['created_at' => now()->subYears(2), 'read_count' => -1.0]); // >90 days: 1.0x
 
         // Run jobs directly for testing
-        (new \App\Jobs\IncrementPageReadCount($newPage))->handle();
-        (new \App\Jobs\IncrementPageReadCount($monthOldPage))->handle();
-        (new \App\Jobs\IncrementPageReadCount($threeMonthOldPage))->handle();
-        (new \App\Jobs\IncrementPageReadCount($yearOldPage))->handle();
-        (new \App\Jobs\IncrementPageReadCount($veryOldPage))->handle();
+        (new \App\Jobs\IncrementPageReadCount($newPage, 'test-fingerprint'))->handle();
+        (new \App\Jobs\IncrementPageReadCount($monthOldPage, 'test-fingerprint'))->handle();
+        (new \App\Jobs\IncrementPageReadCount($threeMonthOldPage, 'test-fingerprint'))->handle();
+        (new \App\Jobs\IncrementPageReadCount($yearOldPage, 'test-fingerprint'))->handle();
+        (new \App\Jobs\IncrementPageReadCount($veryOldPage, 'test-fingerprint'))->handle();
 
         // Verify age-based behavior with new logic
         $this->assertSame(-1.0 + 3.0, $newPage->fresh()->read_count); // ≤7 days: initial 3.0x boost

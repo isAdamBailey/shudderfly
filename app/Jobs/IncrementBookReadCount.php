@@ -14,13 +14,15 @@ class IncrementBookReadCount implements ShouldQueue
     use InteractsWithQueue, Queueable, SerializesModels;
 
     protected $book;
+    protected $fingerprint;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(Book $book)
+    public function __construct(Book $book, string $fingerprint)
     {
         $this->book = $book;
+        $this->fingerprint = $fingerprint;
     }
 
     /**
@@ -32,6 +34,12 @@ class IncrementBookReadCount implements ShouldQueue
      */
     public function handle(): void
     {
+        $jobCacheKey = \App\Support\ReadThrottle::cacheKey('book', $this->book->id, $this->fingerprint);
+        if (\Cache::has($jobCacheKey)) {
+            return;
+        }
+        \Cache::put($jobCacheKey, true, now()->addMinutes(5));
+
         // Ensure the latest values
         $this->book->refresh();
 

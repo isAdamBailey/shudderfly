@@ -25,10 +25,15 @@ final class ReadThrottle
 
     /**
      * Build the cache key for read throttling: reads:{entity}:{id}:{sha256(fingerprint)}
+     * Accepts either a Request or a fingerprint string.
      */
-    public static function cacheKey(string $entity, int|string $id, Request $request): string
+    public static function cacheKey(string $entity, int|string $id, Request|string $actor): string
     {
-        $fingerprint = self::fingerprint($request);
+        if ($actor instanceof Request) {
+            $fingerprint = self::fingerprint($actor);
+        } else {
+            $fingerprint = (string) $actor;
+        }
         $hash = hash('sha256', $fingerprint);
 
         return sprintf('reads:%s:%s:%s', $entity, $id, $hash);

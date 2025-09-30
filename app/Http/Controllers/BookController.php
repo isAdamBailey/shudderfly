@@ -108,11 +108,11 @@ class BookController extends Controller
             // Per-actor throttle: only count one view per user/session/IP per 5 minutes (cache only)
             $cacheKey = \App\Support\ReadThrottle::cacheKey('book', $book->id, $request);
             $throttleSeconds = 5 * 60;
-
+            $fingerprint = \App\Support\ReadThrottle::fingerprint($request);
             try {
                 if (Cache::add($cacheKey, 1, now()->addSeconds($throttleSeconds))) {
                     // Added successfully => no recent view by this actor
-                    \App\Support\ReadThrottle::dispatchJob(new IncrementBookReadCount($book));
+                    \App\Support\ReadThrottle::dispatchJob(new IncrementBookReadCount($book, $fingerprint));
                 }
             } catch (\Throwable $e) {
                 // If cache is unavailable/misconfigured, skip increment to avoid inflation

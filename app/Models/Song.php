@@ -67,8 +67,13 @@ class Song extends Model
     /**
      * Increment the read count for this song via queued job
      */
-    public function incrementReadCount(): void
+    public function incrementReadCount($actor = null): void
     {
-        \App\Jobs\IncrementSongReadCount::dispatch($this);
+        if ($actor instanceof \Illuminate\Http\Request) {
+            $fingerprint = \App\Support\ReadThrottle::fingerprint($actor);
+        } else {
+            $fingerprint = (string) $actor;
+        }
+        \App\Jobs\IncrementSongReadCount::dispatch($this, $fingerprint);
     }
 }

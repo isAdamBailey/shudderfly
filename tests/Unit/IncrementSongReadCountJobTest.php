@@ -28,7 +28,7 @@ class IncrementSongReadCountJobTest extends TestCase
         $topSong = $topSongs->first();
         $originalCount = $topSong->read_count;
 
-        $job = new IncrementSongReadCount($topSong);
+        $job = new IncrementSongReadCount($topSong, 'test-fingerprint');
         $job->handle();
 
         $topSong->refresh();
@@ -45,7 +45,7 @@ class IncrementSongReadCountJobTest extends TestCase
             'created_at' => now()->subDays(3), // 3 days old, should get 3.0 boost
         ]);
 
-        $job = new IncrementSongReadCount($testSong);
+        $job = new IncrementSongReadCount($testSong, 'test-fingerprint');
         $job->handle();
 
         $testSong->refresh();
@@ -61,7 +61,7 @@ class IncrementSongReadCountJobTest extends TestCase
             'created_at' => now()->subDays(5), // 5 days old
         ]);
 
-        $job = new IncrementSongReadCount($song);
+        $job = new IncrementSongReadCount($song, 'test-fingerprint');
         $job->handle();
 
         $song->refresh();
@@ -77,7 +77,7 @@ class IncrementSongReadCountJobTest extends TestCase
             'created_at' => now()->subDays(20), // 20 days old
         ]);
 
-        $job = new IncrementSongReadCount($song);
+        $job = new IncrementSongReadCount($song, 'test-fingerprint');
         $job->handle();
 
         $song->refresh();
@@ -93,7 +93,7 @@ class IncrementSongReadCountJobTest extends TestCase
             'created_at' => now()->subDays(45), // 45 days old
         ]);
 
-        $job = new IncrementSongReadCount($song);
+        $job = new IncrementSongReadCount($song, 'test-fingerprint');
         $job->handle();
 
         $song->refresh();
@@ -109,7 +109,7 @@ class IncrementSongReadCountJobTest extends TestCase
             'created_at' => now()->subDays(75), // 75 days old
         ]);
 
-        $job = new IncrementSongReadCount($song);
+        $job = new IncrementSongReadCount($song, 'test-fingerprint');
         $job->handle();
 
         $song->refresh();
@@ -125,7 +125,7 @@ class IncrementSongReadCountJobTest extends TestCase
             'created_at' => now()->subDays(120), // 120 days old
         ]);
 
-        $job = new IncrementSongReadCount($song);
+        $job = new IncrementSongReadCount($song, 'test-fingerprint');
         $job->handle();
 
         $song->refresh();
@@ -137,9 +137,11 @@ class IncrementSongReadCountJobTest extends TestCase
         $song = Song::factory()->create(['read_count' => 5]);
 
         // Set cache to simulate job already running
-        Cache::put("song_read_count_job_{$song->id}", true, now()->addMinutes(5));
+        $fingerprint = 'test-fingerprint';
+        $cacheKey = \App\Support\ReadThrottle::cacheKey('song', $song->id, $fingerprint);
+        Cache::put($cacheKey, true, now()->addMinutes(5));
 
-        $job = new IncrementSongReadCount($song);
+        $job = new IncrementSongReadCount($song, $fingerprint);
         $job->handle();
 
         $song->refresh();
@@ -159,7 +161,7 @@ class IncrementSongReadCountJobTest extends TestCase
         // Simulate external update to the song
         Song::where('id', $song->id)->update(['read_count' => 10]);
 
-        $job = new IncrementSongReadCount($song);
+        $job = new IncrementSongReadCount($song, 'test-fingerprint');
         $job->handle();
 
         $song->refresh();
@@ -177,7 +179,7 @@ class IncrementSongReadCountJobTest extends TestCase
             'created_at' => now()->subDays(120),
         ]);
 
-        $job = new IncrementSongReadCount($song);
+        $job = new IncrementSongReadCount($song, 'test-fingerprint');
         $job->handle();
 
         $song->refresh();
@@ -193,7 +195,7 @@ class IncrementSongReadCountJobTest extends TestCase
             'created_at' => null,
         ]);
 
-        $job = new IncrementSongReadCount($song);
+        $job = new IncrementSongReadCount($song, 'test-fingerprint');
         $job->handle();
 
         $song->refresh();
@@ -215,10 +217,10 @@ class IncrementSongReadCountJobTest extends TestCase
         // Create a song with read count 51 (should be rank 1, in top 20)
         $song1 = Song::factory()->create(['read_count' => 51]);
 
-        $job21 = new IncrementSongReadCount($song21);
+        $job21 = new IncrementSongReadCount($song21, 'test-fingerprint');
         $job21->handle();
 
-        $job1 = new IncrementSongReadCount($song1);
+        $job1 = new IncrementSongReadCount($song1, 'test-fingerprint');
         $job1->handle();
 
         $song21->refresh();

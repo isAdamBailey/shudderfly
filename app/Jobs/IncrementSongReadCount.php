@@ -14,13 +14,15 @@ class IncrementSongReadCount implements ShouldQueue
     use InteractsWithQueue, Queueable, SerializesModels;
 
     public $song;
+    protected $fingerprint;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(Song $song)
+    public function __construct(Song $song, string $fingerprint)
     {
         $this->song = $song;
+        $this->fingerprint = $fingerprint;
     }
 
     /**
@@ -32,14 +34,10 @@ class IncrementSongReadCount implements ShouldQueue
      */
     public function handle(): void
     {
-        // Additional cache check at job level to prevent duplicate processing
-        $jobCacheKey = "song_read_count_job_{$this->song->id}";
-
+        $jobCacheKey = \App\Support\ReadThrottle::cacheKey('song', $this->song->id, $this->fingerprint);
         if (\Cache::has($jobCacheKey)) {
             return;
         }
-
-        // Set a short cache to prevent duplicate job processing (5 minutes)
         \Cache::put($jobCacheKey, true, now()->addMinutes(5));
 
         // Ensure the latest values

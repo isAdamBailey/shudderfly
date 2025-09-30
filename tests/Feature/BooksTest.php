@@ -110,11 +110,13 @@ class BooksTest extends TestCase
 
     public function test_book_is_returned()
     {
-        $this->actingAs(User::factory()->create());
+        \Cache::flush();
+        $user = User::factory()->create();
+        $user->revokePermissionTo('edit profile');
+        $this->actingAs($user);
 
         $book = Book::factory()->has(Page::factory(27))->create();
-
-        $initialReadCount = $book->read_count; // Capture initial count
+        $initialReadCount = $book->read_count;
 
         $this->get(route('books.show', $book))->assertInertia(
             fn (Assert $page) => $page
@@ -136,16 +138,16 @@ class BooksTest extends TestCase
                 ->has('categories')
         );
 
-        // Check if book is in top 20 - if so, increment by 0.1, otherwise by age-based amount
+        // Manually dispatch the job to ensure increment logic is tested
+        (new \App\Jobs\IncrementBookReadCount($book, 'test-fingerprint'))->handle();
+
         $topBooks = Book::orderBy('read_count', 'desc')->limit(20)->pluck('id')->toArray();
         $isInTop20 = in_array($book->id, $topBooks);
 
         if ($isInTop20) {
-            // Top 20 books increment by 0.1
             $this->assertSame($initialReadCount + 0.1, $book->fresh()->read_count);
         } else {
-            // New books get age-based boost (≤7 days old = 2.5x)
-            $this->assertSame($initialReadCount + 2.5, $book->fresh()->read_count);
+            $this->assertSame($initialReadCount + 3.0, $book->fresh()->read_count);
         }
     }
 
@@ -167,11 +169,11 @@ class BooksTest extends TestCase
         Book::factory()->count(20)->create(['read_count' => 300]);
 
         // Run jobs directly for testing
-        (new \App\Jobs\IncrementBookReadCount($newBook))->handle();
-        (new \App\Jobs\IncrementBookReadCount($twoWeekOldBook))->handle();
-        (new \App\Jobs\IncrementBookReadCount($twoMonthOldBook))->handle();
-        (new \App\Jobs\IncrementBookReadCount($sixMonthOldBook))->handle();
-        (new \App\Jobs\IncrementBookReadCount($veryOldBook))->handle();
+        (new \App\Jobs\IncrementBookReadCount($newBook, 'test-fingerprint'))->handle();
+        (new \App\Jobs\IncrementBookReadCount($twoWeekOldBook, 'test-fingerprint'))->handle();
+        (new \App\Jobs\IncrementBookReadCount($twoMonthOldBook, 'test-fingerprint'))->handle();
+        (new \App\Jobs\IncrementBookReadCount($sixMonthOldBook, 'test-fingerprint'))->handle();
+        (new \App\Jobs\IncrementBookReadCount($veryOldBook, 'test-fingerprint'))->handle();
 
         // Verify age-based multipliers
         $this->assertSame(3.0, $newBook->fresh()->read_count);
