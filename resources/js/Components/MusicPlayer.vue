@@ -1,7 +1,7 @@
 <template>
     <div
         v-if="currentSong"
-        class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky top-0 z-40"
+        class="relative bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky top-0 z-40"
     >
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div
@@ -37,6 +37,12 @@
                         >
                             {{ currentSong.title }}
                         </h3>
+                        <p
+                            v-if="currentSong.description"
+                            class="mt-1 text-sm text-gray-600 dark:text-gray-300 truncate"
+                        >
+                            {{ currentSong.description }}
+                        </p>
 
                         <!-- Progress Bar -->
                         <div class="mt-2">
@@ -66,6 +72,7 @@
                     >
                         <button
                             class="w-10 h-10 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200"
+                            :disabled="isLoading"
                             @click="seekBackward"
                         >
                             <i class="ri-skip-back-mini-fill text-xl"></i>
@@ -73,6 +80,7 @@
 
                         <button
                             class="w-16 h-16 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-all duration-200"
+                            :disabled="isLoading"
                             @click="togglePlayPause"
                         >
                             <i
@@ -84,6 +92,7 @@
 
                         <button
                             class="w-10 h-10 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200"
+                            :disabled="isLoading"
                             @click="seekForward"
                         >
                             <i class="ri-skip-forward-mini-fill text-xl"></i>
@@ -91,6 +100,7 @@
 
                         <button
                             class="w-10 h-10 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200"
+                            :disabled="isLoading"
                             @click="closePlayer"
                         >
                             <i class="ri-close-line text-xl"></i>
@@ -131,6 +141,20 @@
                 </button>
             </div>
         </div>
+
+        <!-- Loading Overlay (only covers the player, not the whole page) -->
+        <div
+            v-if="isLoading"
+            class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 z-20 rounded-lg"
+            style="pointer-events: all"
+        >
+            <div class="flex flex-col items-center">
+                <i
+                    class="ri-loader-4-line animate-spin text-blue-600 text-4xl mb-2"
+                ></i>
+                <span class="text-white text-sm">Loading song...</span>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -153,6 +177,7 @@ const duration = ref(0);
 const imageError = ref(false);
 const playerError = ref(null);
 const hasIncrementedReadCount = ref(false);
+const isLoading = ref(true);
 
 let updateInterval = null;
 
@@ -258,6 +283,7 @@ const loadYouTubeAPI = () => {
 const createPlayer = async () => {
     if (!props.currentSong) return;
 
+    isLoading.value = true;
     try {
         await loadYouTubeAPI();
 
@@ -294,6 +320,7 @@ const createPlayer = async () => {
     } catch (error) {
         console.error("Error creating YouTube player:", error);
         playerError.value = "Failed to create video player: " + error.message;
+        isLoading.value = false;
     }
 };
 
@@ -327,6 +354,8 @@ const onPlayerReady = (event) => {
             }
         }
     }, 1000);
+
+    isLoading.value = false;
 };
 
 const onPlayerStateChange = (event) => {
@@ -465,5 +494,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* Add any component-specific styles here */
+.music-player-relative {
+    position: relative;
+}
 </style>
