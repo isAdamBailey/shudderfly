@@ -37,12 +37,22 @@
                         >
                             {{ currentSong.title }}
                         </h3>
-                        <p
+                        <div
                             v-if="currentSong.description"
-                            class="mt-1 text-sm text-gray-600 dark:text-gray-300 truncate"
+                            class="mt-1 text-sm text-gray-600 dark:text-gray-300 overflow-hidden whitespace-nowrap"
                         >
-                            {{ currentSong.description }}
-                        </p>
+                            <p
+                                class="animate-marquee inline-block"
+                                :style="{
+                                    animationDuration: `${Math.max(
+                                        10,
+                                        currentSong.description.length * 0.1
+                                    )}s`,
+                                }"
+                            >
+                                {{ currentSong.description }}
+                            </p>
+                        </div>
 
                         <!-- Progress Bar -->
                         <div class="mt-2">
@@ -496,5 +506,20 @@ onUnmounted(() => {
 <style scoped>
 .music-player-relative {
     position: relative;
+}
+
+.animate-marquee {
+    display: inline-block;
+    white-space: nowrap;
+    overflow: hidden;
+    box-sizing: border-box;
+    animation: marquee linear infinite;
+}
+
+@keyframes marquee {
+    0% {
+        transform: translateX(100%);
+        transform: translateX(-100%);
+    }
 }
 </style>
