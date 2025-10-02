@@ -14,6 +14,7 @@ class IncrementPageReadCount implements ShouldQueue
     use InteractsWithQueue, Queueable, SerializesModels;
 
     protected $page;
+
     protected $fingerprint;
 
     /**

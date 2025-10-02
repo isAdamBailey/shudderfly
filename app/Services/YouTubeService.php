@@ -16,7 +16,9 @@ class YouTubeService
 
     private const BATCH_SIZE = 50; // YouTube allows up to 50 video IDs per request
 
-    private const CACHE_TTL = 3600; // 1 hour cache for playlist data
+    private const SYNC_INTERVAL_MINUTES = 10;
+
+    private const CACHE_TTL = self::SYNC_INTERVAL_MINUTES * 60; // seconds
 
     public function __construct()
     {
@@ -42,7 +44,7 @@ class YouTubeService
         $lastSyncKey = "youtube_playlist_last_sync_{$this->playlistId}";
         $lastSync = Cache::get($lastSyncKey);
 
-        if ($lastSync && $lastSync > now()->subHours(1)) {
+        if ($lastSync && $lastSync > now()->subMinutes(self::SYNC_INTERVAL_MINUTES)) {
             return [
                 'success' => true,
                 'message' => 'Playlist synced recently, skipping to save quota',
@@ -133,6 +135,7 @@ class YouTubeService
                 }
             } catch (\Exception $e) {
                 Log::error("Error creating song for video {$videoId}: ".$e->getMessage());
+
                 continue;
             }
         }
@@ -297,10 +300,12 @@ class YouTubeService
             }
 
             $existingSong->update($updateData);
+
             return false; // Not a new song
         }
 
         Song::create($songData);
+
         return true; // New song created
     }
 

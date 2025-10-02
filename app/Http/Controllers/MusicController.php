@@ -81,6 +81,7 @@ class MusicController extends Controller
     {
         $fingerprint = \App\Support\ReadThrottle::fingerprint($request);
         \App\Support\ReadThrottle::dispatchJob(new \App\Jobs\IncrementSongReadCount($song, $fingerprint));
+
         return response()->json(['success' => true]);
     }
 }

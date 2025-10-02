@@ -14,6 +14,7 @@ class IncrementBookReadCount implements ShouldQueue
     use InteractsWithQueue, Queueable, SerializesModels;
 
     protected $book;
+
     protected $fingerprint;
 
     /**

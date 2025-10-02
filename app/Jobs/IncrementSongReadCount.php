@@ -14,6 +14,7 @@ class IncrementSongReadCount implements ShouldQueue
     use InteractsWithQueue, Queueable, SerializesModels;
 
     public $song;
+
     protected $fingerprint;
 
     /**
