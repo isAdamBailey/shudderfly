@@ -61,6 +61,9 @@ const mockComponents = {
     ScrollTop: {
         template: '<div class="scroll-top">Scroll Top</div>',
     },
+    ManEmptyCircle: {
+        template: '<div class="man-empty-circle">Man Empty Circle</div>',
+    },
 };
 
 describe("Music Index", () => {
@@ -135,7 +138,7 @@ describe("Music Index", () => {
     it("renders the music page with title", () => {
         wrapper = createWrapper();
 
-        expect(wrapper.find("h2").text()).toBe("Music");
+        expect(wrapper.find("h2").text()).toBe("Latest music");
         expect(wrapper.find(".authenticated-layout").exists()).toBe(true);
     });
 
@@ -144,7 +147,7 @@ describe("Music Index", () => {
 
         const buttons = wrapper.findAll("button");
         const syncButton = buttons.find((btn) =>
-            btn.text().includes("Sync YouTube Playlist")
+            btn.text().includes("Sync")
         );
         expect(syncButton.exists()).toBe(true);
     });
@@ -154,7 +157,7 @@ describe("Music Index", () => {
 
         const buttons = wrapper.findAll("button");
         const syncButton = buttons.find((btn) =>
-            btn.text().includes("Sync YouTube Playlist")
+            btn.text().includes("Sync")
         );
         expect(syncButton?.exists() || false).toBe(false);
     });
@@ -168,7 +171,7 @@ describe("Music Index", () => {
 
         const buttons = wrapper.findAll("button");
         const syncButton = buttons.find((btn) =>
-            btn.text().includes("Syncing YouTube Playlist")
+            btn.text().includes("Syncing")
         );
         expect(syncButton.exists()).toBe(true);
         expect(syncButton.attributes("disabled")).toBeDefined();
@@ -195,7 +198,7 @@ describe("Music Index", () => {
             songs: { data: [], next_page_url: null },
         });
 
-        expect(wrapper.text()).toContain("No songs found");
+        expect(wrapper.text()).toContain("I can't find any music like that");
     });
 
     it("shows search-specific no results message", () => {
@@ -210,7 +213,7 @@ describe("Music Index", () => {
             search: "nonexistent song",
         });
 
-        expect(wrapper.text()).toContain("No songs match your search criteria");
+        expect(wrapper.text()).toContain("I can't find any music like that");
     });
 
     it("updates current song when song is played", async () => {
@@ -265,7 +268,7 @@ describe("Music Index", () => {
 
         const buttons = wrapper.findAll("button");
         const syncButton = buttons.find((btn) =>
-            btn.text().includes("Sync YouTube Playlist")
+            btn.text().includes("Sync")
         );
 
         expect(syncButton.exists()).toBe(true);
