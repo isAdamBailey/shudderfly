@@ -136,23 +136,16 @@ const props = defineProps({
     },
 });
 
-const {
-    isSupported,
-    isListening,
-    isFinal,
-    result,
-    error,
-    start,
-    stop,
-} = useSpeechRecognition({
-    continuous: false,
-    interimResults: true,
-    lang: "en-US",
-    maxAlternatives: 1,
-});
+const { isSupported, isListening, isFinal, result, error, start, stop } =
+    useSpeechRecognition({
+        continuous: false,
+        interimResults: true,
+        lang: "en-US",
+        maxAlternatives: 1,
+    });
 
 // Extract values from VueUse result
-const finalTranscript = computed(() => result.value || '');
+const finalTranscript = computed(() => result.value || "");
 const lastError = computed(() => error.value);
 const hasGoodResult = computed(() => finalTranscript.value && isFinal.value);
 const currentTranscript = computed(() => finalTranscript.value);
@@ -197,13 +190,30 @@ const displayValue = computed(() => {
 
 watch(result, (newResult) => {
     if (newResult && newResult.trim()) {
-        search.value = newResult;
+        search.value = deduplicateWords(newResult);
     }
 });
+
+// Function to deduplicate repeated words
+const deduplicateWords = (text) => {
+    const words = text.trim().split(/\s+/);
+    const uniqueWords = [];
+
+    for (let i = 0; i < words.length; i++) {
+        const word = words[i];
+        // Only add if it's different from the previous word
+        if (i === 0 || word !== words[i - 1]) {
+            uniqueWords.push(word);
+        }
+    }
+
+    return uniqueWords.join(" ");
+};
 
 // Watch for when recognition stops to trigger search
 watch(isListening, (listening) => {
     if (!listening && result.value && result.value.trim()) {
+        search.value = deduplicateWords(result.value);
         searchMethod();
     }
 });
@@ -216,7 +226,7 @@ watch(result, (newResult) => {
         if (speechTimeout) {
             clearTimeout(speechTimeout);
         }
-        
+
         // Set new timeout to stop recognition after 2 seconds of silence
         speechTimeout = setTimeout(() => {
             if (isListening.value) {
@@ -290,7 +300,7 @@ const toggleVoiceRecognition = async () => {
         if (isListening.value) {
             stop();
         } else {
-            await start();
+            start();
         }
     } catch (error) {
         console.error("Voice recognition error:", error);
