@@ -1,5 +1,5 @@
 <template>
-    <div class="w-full bg-transparent flex pl-2 sm:pl-6 lg:pl-8 mt-5 pr-8 mb-2">
+    <div class="w-full bg-transparent flex pl-2 md:pl-8 mt-5 pr-3 md:pr-8 mb-2">
         <div
             class="self-center mr-2"
             role="radiogroup"
@@ -59,38 +59,70 @@
             </div>
         </div>
         <label for="search" class="hidden">Search</label>
-        <input
-            id="search"
-            :value="voiceActive && !search ? transcript : search"
-            class="h-8 w-full cursor-pointer rounded-full border bg-gray-100 px-4 pb-0 pt-px text-gray-700 outline-none transition focus:border-blue-400"
-            :class="{ 'border-red-500 border-2': voiceActive }"
-            autocomplete="off"
-            name="search"
-            :placeholder="searchPlaceholder"
-            type="search"
-            @input="search = $event.target.value"
-            @keyup.esc="search = null"
-            @keyup.enter="searchMethod"
-        />
+        <div class="relative w-full">
+            <input
+                id="search"
+                :value="displayValue"
+                class="h-10 w-full cursor-pointer rounded-full border bg-gray-100 px-4 pb-0 pt-px text-gray-700 outline-none transition focus:border-blue-400"
+                :class="{
+                    'border-red-500 border-2': isListening,
+                    'border-green-500 border-2': hasGoodResult && !isListening,
+                    'pr-5': isSupported, // Add right padding when voice is supported
+                }"
+                autocomplete="off"
+                name="search"
+                :placeholder="searchPlaceholder"
+                type="search"
+                @input="search = $event.target.value"
+                @keyup.esc="clearSearch"
+                @keyup.enter="searchMethod"
+            />
+
+            <!-- Error Indicator inside the input -->
+            <div
+                v-if="isSupported && lastError"
+                class="absolute right-2 top-1/2 transform -translate-y-1/2"
+            >
+                <div
+                    class="bg-red-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center"
+                    :title="lastError"
+                >
+                    !
+                </div>
+            </div>
+        </div>
+
+        <!-- Voice Recognition Button -->
         <button
-            v-if="isVoiceSupported"
-            class="self-center flex items-center ml-2 w-6 h-6"
-            @click="startVoiceRecognition"
+            v-if="isSupported"
+            class="self-center ml-2 w-14 h-10 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center justify-center"
+            :class="{
+                'bg-red-500 hover:bg-red-600 text-white': isListening,
+                'bg-green-500 hover:bg-green-600 text-white':
+                    hasGoodResult && !isListening,
+                'bg-blue-600 hover:bg-blue-700 text-white':
+                    !isListening && !hasGoodResult,
+            }"
+            :disabled="isProcessing"
+            @click="toggleVoiceRecognition"
         >
             <i
                 :class="{
-                    'bg-red-500 border-red-500': voiceActive,
+                    'ri-mic-line': !isListening,
+                    'ri-mic-fill animate-pulse': isListening,
+                    'ri-check-line': hasGoodResult && !isListening,
                 }"
-                class="border-2 px-1 bg-blue-600 dark:bg-white dark:text-gray-900 text-white rounded-full ri-mic-line text-3xl"
+                class="text-lg"
             ></i>
         </button>
     </div>
 </template>
 
 <script setup>
+import { useSpeechRecognition } from "@vueuse/core";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { router, usePage } from "@inertiajs/vue3";
-import { computed, ref, watch } from "vue";
+import { computed, ref, watch, onUnmounted } from "vue";
 
 const { speak } = useSpeechSynthesis();
 const props = defineProps({
@@ -100,15 +132,34 @@ const props = defineProps({
     },
     initialTarget: {
         type: String,
-        default: null, // 'books' | 'uploads'
+        default: null, // 'books' | 'uploads' | 'music'
     },
 });
 
+const {
+    isSupported,
+    isListening,
+    isFinal,
+    result,
+    error,
+    start,
+    stop,
+} = useSpeechRecognition({
+    continuous: false,
+    interimResults: true,
+    lang: "en-US",
+    maxAlternatives: 1,
+});
+
+// Extract values from VueUse result
+const finalTranscript = computed(() => result.value || '');
+const lastError = computed(() => error.value);
+const hasGoodResult = computed(() => finalTranscript.value && isFinal.value);
+const currentTranscript = computed(() => finalTranscript.value);
+const isProcessing = computed(() => isListening.value);
+
 let search = ref(usePage().props?.search || null);
 let filter = ref(usePage().props?.filter || null);
-let voiceActive = ref(false);
-let voiceHeard = ref(false);
-let transcript = ref("");
 let target = ref(getDefaultTarget());
 
 const isBooksTarget = computed(() => target.value === "books");
@@ -124,18 +175,55 @@ const currentLabel = computed(() => {
     return props.label || (target.value === "uploads" ? "Uploads" : "Books");
 });
 
-const isVoiceSupported = computed(() => {
-    if (typeof window === "undefined") {
-        return false;
-    }
-    return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-});
-
 const searchPlaceholder = computed(() => {
-    if (voiceActive.value && !voiceHeard.value) {
-        return "Listening...";
+    if (isListening.value) {
+        return `Listening...`;
+    }
+    if (isProcessing.value) {
+        return "Processing speech...";
     }
     return `Search ${currentLabel.value}!`;
+});
+
+const displayValue = computed(() => {
+    if (isListening.value && currentTranscript.value) {
+        return currentTranscript.value;
+    }
+    if (finalTranscript.value && !search.value) {
+        return finalTranscript.value;
+    }
+    return search.value || "";
+});
+
+watch(result, (newResult) => {
+    if (newResult && newResult.trim()) {
+        search.value = newResult;
+    }
+});
+
+// Watch for when recognition stops to trigger search
+watch(isListening, (listening) => {
+    if (!listening && result.value && result.value.trim()) {
+        searchMethod();
+    }
+});
+
+// Auto-stop recognition after a pause in speech
+let speechTimeout = null;
+watch(result, (newResult) => {
+    if (newResult && newResult.trim() && isListening.value) {
+        // Clear existing timeout
+        if (speechTimeout) {
+            clearTimeout(speechTimeout);
+        }
+        
+        // Set new timeout to stop recognition after 2 seconds of silence
+        speechTimeout = setTimeout(() => {
+            if (isListening.value) {
+                stop();
+            }
+        }, 2000);
+    }
 });
 
 watch(search, () => {
@@ -192,80 +280,32 @@ function getDefaultTarget() {
     return "uploads";
 }
 
-const startVoiceRecognition = () => {
-    // Check if SpeechRecognition is supported
-    if (!isVoiceSupported.value) {
+const toggleVoiceRecognition = async () => {
+    if (!isSupported.value) {
         speak("Voice recognition is not supported in this browser.");
         return;
     }
 
-    const recognition = new (window.SpeechRecognition ||
-        window.webkitSpeechRecognition)();
-    recognition.interimResults = true;
-    recognition.continuous = false;
-    recognition.lang = "en-US";
-
-    recognition.addEventListener("result", (event) => {
-        let currentTranscript = Array.from(event.results)
-            .map((result) => result[0])
-            .map((result) => result.transcript)
-            .join("");
-
-        // Set voiceHeard to true when we get any result
-        voiceHeard.value = true;
-
-        // Update the transcript in real-time
-        transcript.value = currentTranscript;
-
-        if (event.results[0].isFinal) {
-            // Split the transcript into words, remove duplicates, and join back together
-            currentTranscript = [...new Set(currentTranscript.split(" "))].join(
-                " "
-            );
-            search.value = currentTranscript;
-            transcript.value = "";
-            searchMethod();
+    try {
+        if (isListening.value) {
+            stop();
+        } else {
+            await start();
         }
-    });
-
-    // keep the voice active state in sync with the recognition state
-    recognition.addEventListener("start", () => {
-        voiceActive.value = true;
-        voiceHeard.value = false;
-        search.value = null;
-        transcript.value = "";
-    });
-
-    recognition.addEventListener("end", () => {
-        voiceActive.value = false;
-        voiceHeard.value = false;
-        transcript.value = "";
-    });
-
-    recognition.addEventListener("error", (event) => {
-        voiceActive.value = false;
-        voiceHeard.value = false;
-        transcript.value = "";
-
-        let errorMessage = "Voice recognition error occurred.";
-        switch (event.error) {
-            case "not-allowed":
-                errorMessage =
-                    "Please allow microphone access for voice search.";
-                break;
-            case "no-speech":
-                errorMessage = "No speech detected. Please try again.";
-                break;
-            case "network":
-                errorMessage = "Network error. Please check your connection.";
-                break;
-            case "service-not-allowed":
-                errorMessage = "Voice recognition service not available.";
-                break;
-        }
-        speak(errorMessage);
-    });
-
-    recognition.start();
+    } catch (error) {
+        console.error("Voice recognition error:", error);
+        speak(`Failed to start voice recognition: ${error.message}`);
+    }
 };
+
+const clearSearch = () => {
+    search.value = null;
+};
+
+// Cleanup timeout on unmount
+onUnmounted(() => {
+    if (speechTimeout) {
+        clearTimeout(speechTimeout);
+    }
+});
 </script>
