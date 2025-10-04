@@ -68,27 +68,11 @@
                 </div>
             </div>
 
-            <div v-else class="text-center py-12">
-                <div class="max-w-md mx-auto">
-                    <h3
-                        class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2"
-                    >
-                        No songs found
-                    </h3>
-                    <p class="text-gray-600 dark:text-gray-400 mb-4">
-                        <span v-if="props.search">
-                            No songs match your search criteria. Try a different
-                            search term.
-                        </span>
-                        <span v-else>
-                            No songs have been added yet.
-                            <span v-if="canSync"
-                                >Sync your YouTube playlist to get
-                                started.</span
-                            >
-                        </span>
-                    </p>
-                </div>
+            <div v-else class="flex flex-col items-center mt-10">
+                <h2 class="mb-8 font-semibold text-2xl text-gray-100 leading-tight">
+                    {{ notFoundContent }}
+                </h2>
+                <ManEmptyCircle />
             </div>
         </div>
 
@@ -104,10 +88,13 @@ import Button from "@/Components/Button.vue";
 import MusicPlayer from "@/Components/MusicPlayer.vue";
 import SongListItem from "@/Components/SongListItem.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
+import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 
 const { speak } = useSpeechSynthesis();
+
+const notFoundContent = "I can't find any music like that";
 
 const props = defineProps({
     songs: {
@@ -162,8 +149,12 @@ watch(
                 ...song,
                 loading: false,
             }));
+            if (items.value.length === 0) {
+                speak(notFoundContent);
+            }
         }
-    }
+    },
+    { immediate: true }
 );
 
 const playSong = (song) => {
