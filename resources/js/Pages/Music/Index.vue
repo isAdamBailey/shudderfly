@@ -10,19 +10,21 @@
         />
 
         <template #header>
-            <div class="flex justify-between items-center mb-10">
-                <button @click="filter()">
+            <div class="flex justify-between items-center">
+                <button @click="applyFilter()">
                     <h2
                         class="font-heading text-3xl text-theme-title leading-tight"
                     >
                         {{ title }}
                     </h2>
                 </button>
-            </div>
-            <div v-if="canSync" class="flex justify-center mb-6 w-full mx-auto">
-                <Button :disabled="syncing" @click="syncPlaylist">
-                    <span v-if="syncing">Syncing YouTube Playlist...</span>
-                    <span v-else>Sync YouTube Playlist</span>
+                <Button
+                    v-if="canSync"
+                    :disabled="syncing"
+                    @click="syncPlaylist"
+                >
+                    <span v-if="syncing">Syncing...</span>
+                    <span v-else>Sync</span>
                 </Button>
             </div>
         </template>
@@ -33,7 +35,7 @@
                 :is-active="isFavorites"
                 :disabled="loading"
                 class="rounded-full my-3"
-                @click="filter('favorites')"
+                @click="applyFilter('favorites')"
             >
                 <i class="ri-star-line text-4xl"></i>
             </Button>
@@ -95,7 +97,7 @@
 </template>
 
 <script setup>
-import { Head, Link, router, usePage } from "@inertiajs/vue3";
+import { Head, router, usePage } from "@inertiajs/vue3";
 import { ref, computed, watch } from "vue";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import Button from "@/Components/Button.vue";
@@ -103,6 +105,9 @@ import MusicPlayer from "@/Components/MusicPlayer.vue";
 import SongListItem from "@/Components/SongListItem.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
+import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+
+const { speak } = useSpeechSynthesis();
 
 const props = defineProps({
     songs: {
@@ -176,8 +181,9 @@ const handlePlayingState = (playing) => {
     isPlaying.value = playing;
 };
 
-const filter = (filter) => {
+const applyFilter = (filter) => {
     loading.value = true;
+    speak(title.value);
     router.get(route("music.index", { filter }));
 };
 
