@@ -69,7 +69,9 @@
             </div>
 
             <div v-else class="flex flex-col items-center mt-10">
-                <h2 class="mb-8 font-semibold text-2xl text-gray-100 leading-tight">
+                <h2
+                    class="mb-8 font-semibold text-2xl text-gray-100 leading-tight"
+                >
                     {{ notFoundContent }}
                 </h2>
                 <ManEmptyCircle />
@@ -125,15 +127,21 @@ const isFavorites = computed(() => {
     return urlParams.get("filter") === "favorites";
 });
 
-const title = computed(() => {
-    const search = usePage().props.search;
+// Helper function to compute title based on search and filter
+const getTitle = (search, filter) => {
     if (search) {
         return `Music with "${search}"`;
     }
-    if (isFavorites.value) {
+    if (filter === "favorites") {
         return "Your favorite songs";
     }
     return "Latest music";
+};
+
+const title = computed(() => {
+    const search = usePage().props.search;
+    const filter = isFavorites.value ? "favorites" : "";
+    return getTitle(search, filter);
 });
 
 const { items, infiniteScrollRef } = useInfiniteScroll(
@@ -174,7 +182,11 @@ const handlePlayingState = (playing) => {
 
 const applyFilter = (filter) => {
     loading.value = true;
-    speak(title.value);
+
+    const search = usePage().props.search;
+    const titleToSpeak = getTitle(search, filter);
+
+    speak(titleToSpeak);
     router.get(route("music.index", { filter }));
 };
 
