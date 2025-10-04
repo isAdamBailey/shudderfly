@@ -17,6 +17,11 @@ class Kernel extends ConsoleKernel
         $schedule->command('send:weekly-stats-mail')
             ->weekly()
             ->withoutOverlapping();
+
+        $schedule->command('music:sync-youtube')
+            ->dailyAt('14:00')
+            ->timezone('America/Los_Angeles')
+            ->withoutOverlapping();
     }
 
     /**
