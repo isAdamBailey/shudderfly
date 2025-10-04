@@ -15,19 +15,24 @@ class MusicController extends Controller
     public function index(Request $request): Response
     {
         $search = $request->search;
+        $filter = $request->filter;
 
-        $songsQuery = Song::query()
-            ->orderBy('created_at', 'desc');
+        $songsQuery = Song::query();
 
         if ($search) {
             $songsQuery->search($search);
         }
+
+        // Apply filters
+        $songsQuery->unless($filter, fn ($query) => $query->orderBy('created_at', 'desc'))
+            ->when($filter === 'favorites', fn ($query) => $query->orderBy('read_count', 'desc'));
 
         $songs = $songsQuery->paginate(20)->withQueryString();
 
         return Inertia::render('Music/Index', [
             'songs' => $songs,
             'search' => $search,
+            'filter' => $filter,
             'canSync' => auth()->user()->can('admin'),
         ]);
     }

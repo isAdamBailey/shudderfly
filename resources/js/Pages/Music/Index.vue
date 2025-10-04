@@ -11,13 +11,13 @@
 
         <template #header>
             <div class="flex justify-between items-center mb-10">
-                <Link class="w-1/2" :href="route('music.index')">
+                <button @click="filter()">
                     <h2
                         class="font-heading text-3xl text-theme-title leading-tight"
                     >
-                        Music
+                        {{ title }}
                     </h2>
-                </Link>
+                </button>
             </div>
             <div v-if="canSync" class="flex justify-center mb-6 w-full mx-auto">
                 <Button :disabled="syncing" @click="syncPlaylist">
@@ -26,6 +26,18 @@
                 </Button>
             </div>
         </template>
+
+        <div class="p-2 pb-0 flex flex-wrap justify-around">
+            <Button
+                type="button"
+                :is-active="isFavorites"
+                :disabled="loading"
+                class="rounded-full my-3"
+                @click="filter('favorites')"
+            >
+                <i class="ri-star-line text-4xl"></i>
+            </Button>
+        </div>
 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div
@@ -101,6 +113,10 @@ const props = defineProps({
         type: String,
         default: "",
     },
+    filter: {
+        type: String,
+        default: "",
+    },
     canSync: {
         type: Boolean,
         default: false,
@@ -110,6 +126,23 @@ const props = defineProps({
 const syncing = ref(false);
 const currentSong = ref(null);
 const isPlaying = ref(false);
+const loading = ref(false);
+
+const isFavorites = computed(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get("filter") === "favorites";
+});
+
+const title = computed(() => {
+    const search = usePage().props.search;
+    if (search) {
+        return `Music with "${search}"`;
+    }
+    if (isFavorites.value) {
+        return "Your favorite songs";
+    }
+    return "Latest music";
+});
 
 const { items, infiniteScrollRef } = useInfiniteScroll(
     props.songs.data || [],
@@ -141,6 +174,11 @@ const closeMusicPlayer = () => {
 
 const handlePlayingState = (playing) => {
     isPlaying.value = playing;
+};
+
+const filter = (filter) => {
+    loading.value = true;
+    router.get(route("music.index", { filter }));
 };
 
 const syncPlaylist = () => {
