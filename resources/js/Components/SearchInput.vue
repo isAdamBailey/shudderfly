@@ -1,18 +1,84 @@
 <template>
-    <div class="w-full bg-transparent flex pl-2 md:pl-8 mt-5 pr-3 md:pr-8 mb-2">
+    <div
+        class="w-full bg-transparent flex flex-wrap pl-2 md:pl-8 mt-5 pr-3 md:pr-8 mb-2 gap-2"
+    >
+        <!-- Microphone + Search Input Container (stays together) -->
+        <div class="flex gap-2 flex-1 min-w-[250px]">
+            <!-- Voice Recognition Button - LEFT -->
+            <button
+                v-if="isSupported"
+                class="self-center w-8 h-8 flex-shrink-0 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center justify-center"
+                :class="{
+                    'bg-red-500 hover:bg-red-600 text-white': isListening,
+                    'bg-green-500 hover:bg-green-600 text-white':
+                        hasGoodResult && !isListening,
+                    'bg-blue-600 hover:bg-blue-700 text-white':
+                        !isListening && !hasGoodResult,
+                }"
+                :disabled="isProcessing"
+                @click="toggleVoiceRecognition"
+            >
+                <i
+                    :class="{
+                        'ri-mic-line': !isListening,
+                        'ri-mic-fill animate-pulse': isListening,
+                        'ri-check-line': hasGoodResult && !isListening,
+                    }"
+                    class="text-lg"
+                ></i>
+            </button>
+
+            <!-- Search Input - MIDDLE -->
+            <label for="search" class="hidden">Search</label>
+            <div class="relative flex-1 min-w-0">
+                <input
+                    id="search"
+                    :value="displayValue"
+                    class="h-8 w-full cursor-pointer rounded-full border bg-gray-100 px-4 pb-0 pt-px text-gray-700 outline-none transition focus:border-blue-400"
+                    :class="{
+                        'border-red-500 border-2': isListening,
+                        'border-green-500 border-2':
+                            hasGoodResult && !isListening,
+                        'pr-5': isSupported, // Add right padding when voice is supported
+                    }"
+                    autocomplete="off"
+                    name="search"
+                    :placeholder="searchPlaceholder"
+                    type="search"
+                    @input="search = $event.target.value"
+                    @keyup.esc="clearSearch"
+                    @keyup.enter="searchMethod"
+                />
+
+                <!-- Error Indicator inside the input -->
+                <div
+                    v-if="isSupported && lastError"
+                    class="absolute right-2 top-1/2 transform -translate-y-1/2"
+                >
+                    <div
+                        class="bg-red-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center"
+                        :title="lastError"
+                    >
+                        !
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toggle Group - RIGHT (wraps down on smaller screens) -->
         <div
-            class="self-center mr-2"
+            class="self-center min-w-[250px] max-w-[250px]"
             role="radiogroup"
             aria-label="Search target"
         >
             <div
-                class="relative inline-flex items-center rounded-full bg-gray-200 dark:bg-gray-800 p-1 h-8"
+                class="relative inline-flex items-center rounded-full bg-gray-200 dark:bg-gray-800 p-1 h-8 w-full"
             >
                 <button
                     role="radio"
                     :aria-checked="isBooksTarget.toString()"
                     :tabindex="isBooksTarget ? 0 : -1"
-                    class="px-3 h-6 rounded-full text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                    class="flex-1 px-3 h-6 rounded-full text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
                     :class="
                         isBooksTarget
                             ? 'bg-blue-600 text-white dark:bg-white dark:text-gray-900 shadow'
@@ -28,7 +94,7 @@
                     role="radio"
                     :aria-checked="isUploadsTarget.toString()"
                     :tabindex="isUploadsTarget ? 0 : -1"
-                    class="px-3 h-6 rounded-full text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                    class="flex-1 px-3 h-6 rounded-full text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
                     :class="
                         isUploadsTarget
                             ? 'bg-blue-600 text-white dark:bg-white dark:text-gray-900 shadow'
@@ -44,7 +110,7 @@
                     role="radio"
                     :aria-checked="isMusicTarget.toString()"
                     :tabindex="isMusicTarget ? 0 : -1"
-                    class="px-3 h-6 rounded-full text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                    class="flex-1 px-3 h-6 rounded-full text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
                     :class="
                         isMusicTarget
                             ? 'bg-blue-600 text-white dark:bg-white dark:text-gray-900 shadow'
@@ -58,63 +124,6 @@
                 </button>
             </div>
         </div>
-        <label for="search" class="hidden">Search</label>
-        <div class="relative w-full">
-            <input
-                id="search"
-                :value="displayValue"
-                class="h-10 w-full cursor-pointer rounded-full border bg-gray-100 px-4 pb-0 pt-px text-gray-700 outline-none transition focus:border-blue-400"
-                :class="{
-                    'border-red-500 border-2': isListening,
-                    'border-green-500 border-2': hasGoodResult && !isListening,
-                    'pr-5': isSupported, // Add right padding when voice is supported
-                }"
-                autocomplete="off"
-                name="search"
-                :placeholder="searchPlaceholder"
-                type="search"
-                @input="search = $event.target.value"
-                @keyup.esc="clearSearch"
-                @keyup.enter="searchMethod"
-            />
-
-            <!-- Error Indicator inside the input -->
-            <div
-                v-if="isSupported && lastError"
-                class="absolute right-2 top-1/2 transform -translate-y-1/2"
-            >
-                <div
-                    class="bg-red-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center"
-                    :title="lastError"
-                >
-                    !
-                </div>
-            </div>
-        </div>
-
-        <!-- Voice Recognition Button -->
-        <button
-            v-if="isSupported"
-            class="self-center ml-2 w-14 h-10 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center justify-center"
-            :class="{
-                'bg-red-500 hover:bg-red-600 text-white': isListening,
-                'bg-green-500 hover:bg-green-600 text-white':
-                    hasGoodResult && !isListening,
-                'bg-blue-600 hover:bg-blue-700 text-white':
-                    !isListening && !hasGoodResult,
-            }"
-            :disabled="isProcessing"
-            @click="toggleVoiceRecognition"
-        >
-            <i
-                :class="{
-                    'ri-mic-line': !isListening,
-                    'ri-mic-fill animate-pulse': isListening,
-                    'ri-check-line': hasGoodResult && !isListening,
-                }"
-                class="text-lg"
-            ></i>
-        </button>
     </div>
 </template>
 
