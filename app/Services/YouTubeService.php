@@ -303,14 +303,14 @@ class YouTubeService
                     $newPublishedAt = Carbon::parse($videoDetails['published_at']);
                     $existingPublishedAt = $existingSong->published_at ? Carbon::parse($existingSong->published_at) : null;
 
-                    if (!$existingPublishedAt || !$newPublishedAt->equalTo($existingPublishedAt)) {
+                    if (! $existingPublishedAt || ! $newPublishedAt->equalTo($existingPublishedAt)) {
                         $updateData['published_at'] = $videoDetails['published_at'];
                     }
                 }
             }
 
             // Only perform update if there's actually something to update
-            if (!empty($updateData)) {
+            if (! empty($updateData)) {
                 $existingSong->update($updateData);
             }
 

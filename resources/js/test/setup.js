@@ -77,6 +77,8 @@ export const ROUTE_MAPPINGS = {
         `/music/${params}/increment-read-count`,
     "pictures.index": "/pictures",
     "books.index": "/books",
+    "books.show": (params) => `/books/${params.book}`,
+    "categories.show": (params) => `/categories/${params.categoryName}`,
 };
 
 export const createRouteMock = () =>

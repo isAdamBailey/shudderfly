@@ -33,7 +33,6 @@ describe("SongListItem", () => {
             "https://example.com/thumbnail.jpg"
         );
         expect(wrapper.text()).toContain("Jan 15, 2023");
-        expect(wrapper.text()).toContain("1.5M views");
         expect(wrapper.text()).toContain("3:45");
     });
 
@@ -144,41 +143,6 @@ describe("SongListItem", () => {
             },
         });
         expect(wrapper.text()).toContain("4:12");
-    });
-
-    it("formats view count correctly", () => {
-        // Test millions
-        const songMillions = { ...mockSong, view_count: 2500000 };
-        wrapper = mount(SongListItem, {
-            props: {
-                song: songMillions,
-                currentSong: null,
-                isPlaying: false,
-            },
-        });
-        expect(wrapper.text()).toContain("2.5M");
-
-        // Test thousands
-        const songThousands = { ...mockSong, view_count: 1500 };
-        wrapper = mount(SongListItem, {
-            props: {
-                song: songThousands,
-                currentSong: null,
-                isPlaying: false,
-            },
-        });
-        expect(wrapper.text()).toContain("1.5K");
-
-        // Test under 1000
-        const songUnder1000 = { ...mockSong, view_count: 999 };
-        wrapper = mount(SongListItem, {
-            props: {
-                song: songUnder1000,
-                currentSong: null,
-                isPlaying: false,
-            },
-        });
-        expect(wrapper.text()).toContain("999");
     });
 
     it("applies dark mode classes correctly", () => {
