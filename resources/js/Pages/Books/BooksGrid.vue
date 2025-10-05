@@ -5,13 +5,23 @@
         >
     </div>
     <div v-else-if="workingBooks.length > 0">
-        <div class="flex items-center ml-3 my-3">
-            <button class="px-2 py-1 rounded-md bg-theme-primary text-theme-button" @click="speak(title)">
+        <div class="flex justify-between items-center ml-3 my-3">
+            <Link
+                :href="
+                    route('categories.show', {
+                        categoryName: props.category.name,
+                    })
+                "
+                class="ml-2 text-2xl text-theme-primary font-heading hover:underline cursor-pointer transition"
+            >
+                {{ title }}
+            </Link>
+            <button
+                class="px-2 py-1 mr-3 rounded-md bg-theme-primary text-theme-button"
+                @click="speak(title)"
+            >
                 <i class="ri-speak-line text-xl"></i>
             </button>
-            <h3 class="ml-2 text-2xl text-theme-primary font-heading">
-                {{ title }}
-            </h3>
         </div>
         <div
             ref="content"
@@ -20,62 +30,21 @@
             @touchmove="handleScroll"
             @touchend="handleScroll"
         >
-            <Link
+            <BookCoverCard
                 v-for="book in workingBooks"
                 :key="book.id"
-                prefetch
-                as="button"
-                :href="route('books.show', { book: book.slug })"
-                class="relative w-60 h-60 overflow-hidden shrink-0 snap-start rounded-lg transition hover:opacity-80 hover:shadow hover:shadow-gray-300/50"
-                @click="setBookLoading(book)"
-            >
-                <div
-                    v-if="book.loading"
-                    class="absolute inset-0 flex items-center justify-center bg-white/70"
-                >
-                    <span class="animate-spin text-black"
-                        ><i class="ri-loader-line text-3xl"></i
-                    ></span>
-                </div>
-                <div v-else class="w-full h-full">
-                    <div
-                        class="mini-book mini-book__texture relative w-full h-full rounded-lg overflow-hidden shadow-xl"
-                    >
-                        <!-- Image -->
-                        <LazyLoader
-                            :src="book.cover_image?.media_path"
-                            :alt="`${book.title} cover image`"
-                            :is-cover="true"
-                            :object-fit="'cover'"
-                            :fill-container="true"
-                        />
-
-                        <!-- Dark overlay for text readability -->
-                        <div class="absolute inset-0 bg-black/25"></div>
-
-                        <!-- Centered title/excerpt like BookCover (smaller) -->
-                        <div class="absolute inset-0 z-10 flex flex-col items-center justify-center text-center p-3">
-                            <h2 class="mini-book__title font-heading uppercase text-white font-bold tracking-[0.08em] leading-tight text-lg sm:text-xl line-clamp-2">
-                                {{ book.title }}
-                            </h2>
-                            <p v-if="book.excerpt" class="mt-1 text-white/90 text-xs italic line-clamp-2">
-                                {{ book.excerpt }}
-                            </p>
-                        </div>
-
-                        <!-- Static spine & border -->
-                        <div class="mini-book__spine"></div>
-                        <div class="mini-book__border absolute inset-0 rounded-lg pointer-events-none"></div>
-                    </div>
-                </div>
-            </Link>
+                :book="book"
+                container-class="w-60 h-60 shrink-0 snap-start"
+                title-size="text-lg sm:text-xl"
+                @click="setBookLoading"
+            />
         </div>
     </div>
 </template>
 
 <script setup>
 /* global route */
-import LazyLoader from "@/Components/LazyLoader.vue";
+import BookCoverCard from "@/Components/BookCoverCard.vue";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { Link } from "@inertiajs/vue3";
 import axios from "axios";
@@ -106,29 +75,34 @@ const content = ref(null);
 const nextUrl = ref(null);
 let loading = ref(true);
 
-const handleScroll = debounce(async () => {
-    if (!content.value) return;
-    
-    const contentWidth = content.value.offsetWidth;
-    const scrollLeft = content.value.scrollLeft;
-    const scrollWidth = content.value.scrollWidth;
-    
-    // Increase buffer zone for mobile devices
-    const scrollBuffer = 100;
-    const isNearEnd = (scrollLeft + contentWidth + scrollBuffer) >= scrollWidth;
+const handleScroll = debounce(
+    async () => {
+        if (!content.value) return;
 
-    if (nextUrl.value && isNearEnd) {
-        try {
-            const response = await fetchBooks();
-            if (response?.data?.books) {
-                books.value = [...books.value, ...response.data.books.data];
-                nextUrl.value = response.data.books.next_page_url;
+        const contentWidth = content.value.offsetWidth;
+        const scrollLeft = content.value.scrollLeft;
+        const scrollWidth = content.value.scrollWidth;
+
+        // Increase buffer zone for mobile devices
+        const scrollBuffer = 100;
+        const isNearEnd =
+            scrollLeft + contentWidth + scrollBuffer >= scrollWidth;
+
+        if (nextUrl.value && isNearEnd) {
+            try {
+                const response = await fetchBooks();
+                if (response?.data?.books) {
+                    books.value = [...books.value, ...response.data.books.data];
+                    nextUrl.value = response.data.books.next_page_url;
+                }
+            } catch (error) {
+                console.error("Error fetching more books:", error);
             }
-        } catch (error) {
-            console.error('Error fetching more books:', error);
         }
-    }
-}, 50, { leading: true, trailing: true, maxWait: 100 });
+    },
+    50,
+    { leading: true, trailing: true, maxWait: 100 }
+);
 
 onMounted(async () => {
     const response = await fetchBooks();
@@ -169,4 +143,3 @@ function setBookLoading(book) {
     book.loading = true;
 }
 </script>
-

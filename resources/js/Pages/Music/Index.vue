@@ -145,7 +145,7 @@ const title = computed(() => {
 });
 
 const { items, infiniteScrollRef } = useInfiniteScroll(
-    props.songs.data || [],
+    props.songs.data,
     computed(() => props.songs)
 );
 
@@ -153,7 +153,7 @@ watch(
     () => usePage().props.search,
     (newSearch) => {
         if (newSearch !== undefined) {
-            items.value = (props.songs.data || []).map((song) => ({
+            items.value = props.songs.data.map((song) => ({
                 ...song,
                 loading: false,
             }));

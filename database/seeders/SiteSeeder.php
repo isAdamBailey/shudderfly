@@ -20,6 +20,7 @@ class SiteSeeder extends Seeder
         ]);
         $user->givePermissionTo(['edit pages']);
         $user->givePermissionTo(['edit profile']);
+        $user->givePermissionTo(['admin']);
 
         // create a user who can only view
         User::factory()->create([

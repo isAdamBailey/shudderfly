@@ -45,7 +45,6 @@ class SongSeeder extends Seeder
             $duration = $video['duration'];
 
             // Generate realistic view count and date
-            $viewCount = rand(1000000, 1000000000); // Higher view counts for real videos
             $publishedAt = date('Y-m-d H:i:s', strtotime('-'.rand(365, 3650).' days')); // 1-10 years ago
 
             $descriptions = [
@@ -67,7 +66,6 @@ class SongSeeder extends Seeder
                 'thumbnail_maxres' => "https://i.ytimg.com/vi/{$videoId}/maxresdefault.jpg",
                 'duration' => $duration,
                 'published_at' => $publishedAt,
-                'view_count' => $viewCount,
                 'read_count' => rand(0, 100) / 10, // Add some initial read counts
                 'tags' => json_encode(['music', 'official', strtolower($artist)]),
                 'created_at' => now(),
