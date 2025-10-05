@@ -30,7 +30,6 @@ class SongFactory extends Factory
             'thumbnail_maxres' => $this->faker->imageUrl(1280, 720),
             'duration' => $this->faker->randomElement(['PT3M25S', 'PT4M12S', 'PT2M45S', 'PT5M33S']),
             'published_at' => $this->faker->dateTimeBetween('-2 years', 'now'),
-            'view_count' => $this->faker->numberBetween(100, 1000000),
             'read_count' => $this->faker->randomFloat(1, 0, 100) ?: 0,
             'tags' => $this->faker->randomElements(['music', 'rock', 'pop', 'jazz', 'electronic', 'classical'], $this->faker->numberBetween(1, 3)),
         ];

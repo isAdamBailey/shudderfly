@@ -169,7 +169,6 @@ class YouTubeService
 
         // Skip if we have complete data and video hasn't been updated recently
         $hasCompleteData = ! empty($existingSong->duration) &&
-                          ! empty($existingSong->view_count) &&
                           ! is_null($existingSong->tags);
 
         if ($hasCompleteData) {
@@ -197,13 +196,13 @@ class YouTubeService
         $allVideoDetails = [];
         $batches = array_chunk($videoIds, self::BATCH_SIZE);
 
-        foreach ($batches as $batch) {
+        foreach ($batches as $batchIndex => $batch) {
             try {
                 $response = Http::withHeaders([
                     'User-Agent' => 'Laravel-App/1.0',
                     'Accept' => 'application/json',
                 ])->get('https://www.googleapis.com/youtube/v3/videos', [
-                    'part' => 'contentDetails,statistics,snippet',
+                    'part' => 'contentDetails,snippet',
                     'id' => implode(',', $batch),
                     'key' => $this->apiKey,
                 ]);
@@ -219,12 +218,12 @@ class YouTubeService
                 foreach ($data['items'] ?? [] as $video) {
                     $allVideoDetails[$video['id']] = [
                         'duration' => $video['contentDetails']['duration'] ?? null,
-                        'view_count' => (int) ($video['statistics']['viewCount'] ?? 0),
+                        'published_at' => $video['snippet']['publishedAt'] ?? null,
                         'tags' => isset($video['snippet']['tags']) ? json_encode($video['snippet']['tags']) : null,
                     ];
                 }
 
-                if ($i < count($batches) - 1) {
+                if ($batchIndex < count($batches) - 1) {
                     usleep(200000); // 200ms delay
                 }
 
@@ -280,26 +279,40 @@ class YouTubeService
         $existingSong = Song::where('youtube_video_id', $videoId)->first();
 
         if ($existingSong) {
-            // Only update fields that might have changed
-            $updateData = [
-                'title' => $songData['title'],
-                'description' => $songData['description'],
-            ];
+            // Build update data, only including fields that have actually changed
+            $updateData = [];
 
-            // Add video details if we have them and they're missing
+            // Check if title or description changed
+            if ($existingSong->title !== $songData['title']) {
+                $updateData['title'] = $songData['title'];
+            }
+            if ($existingSong->description !== $songData['description']) {
+                $updateData['description'] = $songData['description'];
+            }
+
+            // Add video details if we have them and they're missing or different
             if ($videoDetails) {
                 if (empty($existingSong->duration) && ! empty($videoDetails['duration'])) {
                     $updateData['duration'] = $videoDetails['duration'];
                 }
-                if (empty($existingSong->view_count) && ! empty($videoDetails['view_count'])) {
-                    $updateData['view_count'] = $videoDetails['view_count'];
-                }
                 if (empty($existingSong->tags) && ! empty($videoDetails['tags'])) {
                     $updateData['tags'] = $videoDetails['tags'];
                 }
+                // Update published_at only if we have the real video publish date and it's different
+                if (! empty($videoDetails['published_at'])) {
+                    $newPublishedAt = Carbon::parse($videoDetails['published_at']);
+                    $existingPublishedAt = $existingSong->published_at ? Carbon::parse($existingSong->published_at) : null;
+
+                    if (!$existingPublishedAt || !$newPublishedAt->equalTo($existingPublishedAt)) {
+                        $updateData['published_at'] = $videoDetails['published_at'];
+                    }
+                }
             }
 
-            $existingSong->update($updateData);
+            // Only perform update if there's actually something to update
+            if (!empty($updateData)) {
+                $existingSong->update($updateData);
+            }
 
             return false; // Not a new song
         }
@@ -370,53 +383,5 @@ class YouTubeService
             'User-Agent' => 'Laravel-App/1.0',
             'Accept' => 'application/json',
         ])->get('https://www.googleapis.com/youtube/v3/playlistItems', $params);
-    }
-
-    /**
-     * Batch update video details for existing songs (quota-efficient version)
-     */
-    public function batchUpdateVideoDetails($limit = 50)
-    {
-        // Get songs that need details updated
-        $songs = Song::where(function ($query) {
-            $query->whereNull('duration')
-                ->orWhere('view_count', 0)
-                ->orWhereNull('tags');
-        })->limit($limit)->get();
-
-        if ($songs->isEmpty()) {
-            return 0;
-        }
-
-        $videoIds = $songs->pluck('youtube_video_id')->toArray();
-        Log::info("Found {$songs->count()} songs needing video details update");
-
-        // Batch fetch all video details at once
-        $videoDetails = $this->batchGetVideoDetails($videoIds);
-
-        $updated = 0;
-        foreach ($songs as $song) {
-            if (isset($videoDetails[$song->youtube_video_id])) {
-                $details = $videoDetails[$song->youtube_video_id];
-
-                $updateData = [];
-                if (empty($song->duration) && ! empty($details['duration'])) {
-                    $updateData['duration'] = $details['duration'];
-                }
-                if (empty($song->view_count) && ! empty($details['view_count'])) {
-                    $updateData['view_count'] = $details['view_count'];
-                }
-                if (empty($song->tags) && ! empty($details['tags'])) {
-                    $updateData['tags'] = $details['tags'];
-                }
-
-                if (! empty($updateData)) {
-                    $song->update($updateData);
-                    $updated++;
-                }
-            }
-        }
-
-        return $updated;
     }
 }

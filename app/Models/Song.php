@@ -21,7 +21,6 @@ class Song extends Model
         'thumbnail_maxres',
         'duration',
         'published_at',
-        'view_count',
         'read_count',
         'tags',
     ];

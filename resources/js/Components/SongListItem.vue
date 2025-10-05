@@ -35,9 +35,6 @@
                 <span v-if="song.published_at">
                     {{ formatDate(song.published_at) }}
                 </span>
-                <span v-if="song.view_count > 0">
-                    {{ formatViews(song.view_count) }} views
-                </span>
                 <span v-if="formattedDuration">
                     {{ formattedDuration }}
                 </span>
@@ -138,15 +135,6 @@ const formatDate = (dateString) => {
         month: "short",
         day: "numeric",
     });
-};
-
-const formatViews = (views) => {
-    if (views >= 1000000) {
-        return (views / 1000000).toFixed(1) + "M";
-    } else if (views >= 1000) {
-        return (views / 1000).toFixed(1) + "K";
-    }
-    return views.toString();
 };
 
 const handleImageError = () => {
