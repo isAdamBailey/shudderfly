@@ -29,12 +29,31 @@ class SyncYouTubePlaylistCommand extends Command
         $this->info('Starting YouTube playlist sync...');
 
         try {
-            $totalSynced = $youTubeService->syncPlaylist();
-            $this->info("Successfully synced {$totalSynced} songs from YouTube playlist");
+            $result = $youTubeService->syncPlaylist();
+
+            // Handle the result array from the service
+            if (!isset($result['success']) || !$result['success']) {
+                $errorMessage = $result['error'] ?? 'Unknown error occurred';
+                $this->error('Failed to sync YouTube playlist: ' . $errorMessage);
+                return Command::FAILURE;
+            }
+
+            $totalSynced = $result['synced'] ?? 0;
+            $message = $result['message'] ?? "Successfully synced {$totalSynced} songs from YouTube playlist";
+
+            if (isset($result['quota_exceeded']) && $result['quota_exceeded']) {
+                $this->warn($message);
+            } else {
+                $this->info($message);
+            }
 
             return Command::SUCCESS;
         } catch (\Exception $e) {
             $this->error('Failed to sync YouTube playlist: '.$e->getMessage());
+            \Log::error('YouTube sync command failed: ' . $e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString()
+            ]);
 
             return Command::FAILURE;
         }
