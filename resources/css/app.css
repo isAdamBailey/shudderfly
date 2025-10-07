@@ -6,44 +6,51 @@
     .text-theme-title {
         @apply text-yellow-200
     dark:text-gray-100
-    christmas:text-christmas-berry;
+    christmas:text-christmas-berry
+    halloween:text-halloween-pumpkin;
     }
 
     .text-theme-book-title {
         @apply text-blue-600
     dark:text-gray-700
-    christmas:text-christmas-green;
+    christmas:text-christmas-green
+    halloween:text-halloween-purple;
     }
 
     .text-theme-primary {
         @apply text-yellow-200
     dark:text-gray-400
-    christmas:text-christmas-berry;
+    christmas:text-christmas-berry
+    halloween:text-halloween-orange;
     }
 
     .text-theme-secondary {
         @apply text-white
     dark:text-gray-400
-    christmas:text-christmas-gold;
+    christmas:text-christmas-gold
+    halloween:text-halloween-moonlight;
     }
 
     /* Background Colors */
     .bg-theme-primary {
         @apply bg-blue-600
     dark:bg-gray-800
-    christmas:bg-christmas-green;
+    christmas:bg-christmas-green
+    halloween:bg-halloween-midnight;
     }
 
     .bg-theme-secondary {
         @apply bg-gray-300
     dark:bg-gray-300
-    christmas:bg-christmas-holly;
+    christmas:bg-christmas-holly
+    halloween:bg-halloween-witch;
     }
 
     .bg-theme-content {
         @apply bg-blue-200
     dark:bg-gray-300
-    christmas:bg-christmas-snow;
+    christmas:bg-christmas-snow
+    halloween:bg-halloween-ghost;
     }
 
     .bg-theme-button {
@@ -51,7 +58,8 @@
     dark:bg-red-700
     hover:bg-purple-400
     dark:hover:bg-purple-400
-    christmas:hover:bg-christmas-mint;
+    christmas:hover:bg-christmas-mint
+    halloween:hover:bg-halloween-spooky;
     }
 
     /* Rainbow Gradient */
@@ -59,81 +67,94 @@
         @apply bg-gradient-to-r from-red-500 via-orange-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500
         dark:from-purple-900 dark:via-blue-900 dark:via-indigo-900 dark:via-cyan-900 dark:via-teal-900 dark:to-emerald-900
         christmas:from-christmas-green christmas:via-christmas-green christmas:via-christmas-green christmas:via-christmas-holly christmas:via-christmas-holly christmas:via-christmas-holly christmas:via-christmas-pine christmas:via-christmas-pine christmas:via-christmas-pine christmas:to-christmas-berry
-        fireworks:from-red-500 fireworks:via-red-500 fireworks:via-blue-500 fireworks:via-blue-500 fireworks:via-red-500 fireworks:via-red-500 fireworks:via-blue-500 fireworks:via-blue-500 fireworks:via-red-500 fireworks:via-red-500 fireworks:via-blue-500 fireworks:via-blue-500 fireworks:to-red-500;
+        fireworks:from-red-500 fireworks:via-red-500 fireworks:via-blue-500 fireworks:via-blue-500 fireworks:via-red-500 fireworks:via-red-500 fireworks:via-blue-500 fireworks:via-blue-500 fireworks:via-red-500 fireworks:via-red-500 fireworks:via-blue-500 fireworks:via-blue-500 fireworks:to-red-500
+        halloween:from-halloween-orange halloween:via-halloween-orange halloween:via-halloween-pumpkin halloween:via-halloween-pumpkin halloween:via-halloween-purple halloween:via-halloween-purple halloween:via-halloween-witch halloween:via-halloween-witch halloween:via-halloween-midnight halloween:via-halloween-midnight halloween:via-halloween-black halloween:via-halloween-black halloween:to-halloween-orange;
     }
 
     /* Border Colors */
     .border-theme-primary {
         @apply border-yellow-200
     dark:border-indigo-600
-    christmas:border-christmas-gold;
+    christmas:border-christmas-gold
+    halloween:border-halloween-pumpkin;
     }
 
     .border-theme-input {
         @apply border-blue-700
     dark:border-gray-800
-    christmas:border-christmas-holly;
+    christmas:border-christmas-holly
+    halloween:border-halloween-purple;
     }
 
     /* Button States */
     .bg-theme-button-active {
         @apply bg-yellow-400
     dark:bg-amber-400
-    christmas:bg-christmas-gold;
+    christmas:bg-christmas-gold
+    halloween:bg-halloween-candy;
     }
 
     .border-theme-button-active {
         @apply border-blue-600
     dark:border-amber-400
-    christmas:border-christmas-berry;
+    christmas:border-christmas-berry
+    halloween:border-halloween-pumpkin;
     }
 
     .hover\:bg-theme-button-active:hover {
         @apply hover:bg-yellow-500
     dark:hover:bg-yellow-500
-    christmas:hover:bg-christmas-silver;
+    christmas:hover:bg-christmas-silver
+    halloween:hover:bg-halloween-orange;
     }
 
     .active\:bg-theme-button:active {
         @apply active:bg-yellow-900
     dark:active:bg-yellow-700
-    christmas:active:bg-christmas-berry;
+    christmas:active:bg-christmas-berry
+    halloween:active:bg-halloween-witch;
     }
 
     .focus\:border-theme-button:focus {
         @apply focus:border-blue-900
     dark:focus:border-amber-600
-    christmas:focus:border-christmas-gold;
+    christmas:focus:border-christmas-gold
+    halloween:focus:border-halloween-candy;
     }
 
     .focus\:shadow-theme-button:focus {
         @apply focus:shadow-outline-blue
     dark:focus:shadow-outline-amber
-    christmas:focus:shadow-outline-christmas-mint;
+    christmas:focus:shadow-outline-christmas-mint
+    halloween:focus:shadow-outline-halloween-spooky;
     }
 
     .text-theme-button {
         @apply text-yellow-200
     dark:text-gray-100
-    christmas:text-christmas-snow;
+    christmas:text-christmas-snow
+    halloween:text-halloween-ghost;
     }
 
     .text-theme-button-active {
         @apply text-gray-800
     dark:text-gray-900
-    christmas:text-christmas-berry;
+    christmas:text-christmas-berry
+    halloween:text-halloween-black;
     }
 
     .hover\:text-theme-button-hover {
         @apply hover:text-gray-800
     dark:hover:text-gray-900
-    christmas:hover:text-christmas-berry;
+    christmas:hover:text-christmas-berry
+    halloween:hover:text-halloween-midnight;
     }
 
     .hover\:bg-theme-button:hover {
         @apply hover:bg-yellow-400
     dark:hover:bg-yellow-500
-    christmas:hover:bg-christmas-mint;
+    christmas:hover:bg-christmas-mint
+    halloween:hover:bg-halloween-candy;
     }
 }
 

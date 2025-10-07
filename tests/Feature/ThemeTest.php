@@ -43,6 +43,12 @@ class ThemeTest extends TestCase
         $response->assertSee('<html', false);
         $this->assertMatchesRegularExpression('/<html[^>]+data-theme="fireworks"/', $response->getContent());
 
+        // Simulate October for 'halloween' theme
+        $this->travelTo('2024-10-31');
+        $response = $this->get(route('dashboard'));
+        $response->assertSee('<html', false);
+        $this->assertMatchesRegularExpression('/<html[^>]+data-theme="halloween"/', $response->getContent());
+
         // Simulate March for no theme
         $this->travelTo('2024-03-15');
         $response = $this->get(route('dashboard'));
@@ -84,6 +90,24 @@ class ThemeTest extends TestCase
 
         // Should have fireworks theme
         $this->assertStringContainsString('data-theme="fireworks"', $response->getContent());
+
+        $this->travelBack();
+    }
+
+    public function test_halloween_theme_in_october(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        $user->givePermissionTo('edit pages');
+        $this->actingAs($user);
+
+        // Mock the current date to be October
+        $this->travelTo('2024-10-31');
+
+        $response = $this->get(route('dashboard'));
+
+        // Should have halloween theme
+        $this->assertStringContainsString('data-theme="halloween"', $response->getContent());
 
         $this->travelBack();
     }
@@ -202,6 +226,12 @@ class ThemeTest extends TestCase
         $this->travelTo('2024-07-04');
         $response = $this->get(route('dashboard'));
         $this->assertStringContainsString('data-theme="fireworks"', $response->getContent());
+        $this->travelBack();
+
+        // Test October
+        $this->travelTo('2024-10-31');
+        $response = $this->get(route('dashboard'));
+        $this->assertStringContainsString('data-theme="halloween"', $response->getContent());
         $this->travelBack();
 
         // Test March (no theme)
