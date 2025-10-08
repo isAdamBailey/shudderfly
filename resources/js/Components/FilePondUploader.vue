@@ -258,6 +258,12 @@ const oninit = () => {
         // ignore event binding errors
     }
 };
+
+// Track file additions/removals
+const onUpdateFiles = (newFileList) => {
+    // You can emit an event here if needed, or handle logic for file updates
+    emit("queue-update", newFileList.length);
+};
 </script>
 
 <template>
@@ -274,5 +280,6 @@ const oninit = () => {
         credits="false"
         @processfilestart="$emit('processing-start')"
         @processfiles="$emit('all-done')"
+        @updatefiles="onUpdateFiles"
     />
 </template>

@@ -199,6 +199,18 @@ const rules = computed(() => {
 
 let v$ = useVuelidate(rules, form);
 
+// Computed property to determine if submit button should be shown
+// Hide button when there are files in the FilePond preview
+// Show button only for text-only or YouTube link submissions
+const shouldShowSubmitButton = computed(() => {
+    // Hide button when in upload mode and files are queued
+    if (mediaOption.value === "upload" && hasQueuedFiles.value) {
+        return false;
+    }
+    // Show button for YouTube link mode or text-only submissions
+    return true;
+});
+
 // Submit handlers
 const handleFormSubmit = async (event) => {
     if (event) event.preventDefault();
@@ -487,18 +499,13 @@ onUnmounted(() => {
             <!-- Submit Section -->
             <div class="flex justify-center mt-5 md:mt-20">
                 <Button
+                    v-if="shouldShowSubmitButton"
                     type="button"
                     class="w-3/4 flex justify-center py-3"
                     :disabled="isUploading || form.processing"
                     @click.prevent="handleFormSubmit"
                 >
-                    <span class="text-xl">
-                        {{
-                            mediaOption === "upload" && hasQueuedFiles
-                                ? `Create Pages!`
-                                : "Create Page!"
-                        }}
-                    </span>
+                    <span class="text-xl"> Create Page! </span>
                 </Button>
             </div>
         </form>
