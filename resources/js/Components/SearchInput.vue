@@ -7,12 +7,13 @@
             <!-- Voice Recognition Button - LEFT -->
             <button
                 v-if="isSupported"
-                class="self-center w-8 h-8 flex-shrink-0 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center justify-center"
+                class="self-center w-8 h-8 flex-shrink-0 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 christmas:focus:ring-christmas-gold halloween:focus:ring-halloween-orange flex items-center justify-center"
                 :class="{
-                    'bg-red-500 hover:bg-red-600 text-white': isListening,
-                    'bg-green-500 hover:bg-green-600 text-white':
+                    'bg-red-500 hover:bg-red-600 text-white christmas:bg-christmas-berry christmas:hover:bg-christmas-red halloween:bg-halloween-candy halloween:hover:bg-halloween-pumpkin':
+                        isListening,
+                    'bg-green-500 hover:bg-green-600 text-white christmas:bg-christmas-holly christmas:hover:bg-christmas-green halloween:bg-halloween-witch halloween:hover:bg-halloween-purple':
                         hasGoodResult && !isListening,
-                    'bg-blue-600 hover:bg-blue-700 text-white':
+                    'bg-blue-600 hover:bg-blue-700 text-white christmas:bg-christmas-red christmas:hover:bg-christmas-gold halloween:bg-halloween-orange halloween:hover:bg-halloween-purple':
                         !isListening && !hasGoodResult,
                 }"
                 :disabled="isProcessing"
@@ -34,10 +35,11 @@
                 <input
                     id="search"
                     :value="displayValue"
-                    class="h-8 w-full cursor-pointer rounded-full border bg-gray-100 px-4 pb-0 pt-px text-gray-700 outline-none transition focus:border-blue-400"
+                    class="h-8 w-full cursor-pointer rounded-full border bg-gray-100 dark:bg-gray-800 px-4 pb-0 pt-px text-gray-700 dark:text-gray-300 outline-none transition focus:border-blue-400 christmas:focus:border-christmas-gold halloween:focus:border-halloween-orange"
                     :class="{
-                        'border-red-500 border-2': isListening,
-                        'border-green-500 border-2':
+                        'border-red-500 border-2 christmas:border-christmas-berry halloween:border-halloween-candy':
+                            isListening,
+                        'border-green-500 border-2 christmas:border-christmas-holly halloween:border-halloween-witch':
                             hasGoodResult && !isListening,
                         'pr-5': isSupported, // Add right padding when voice is supported
                     }"
@@ -56,7 +58,7 @@
                     class="absolute right-2 top-1/2 transform -translate-y-1/2"
                 >
                     <div
-                        class="bg-red-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center"
+                        class="bg-red-600 text-white christmas:bg-christmas-berry halloween:bg-halloween-candy text-xs rounded-full w-4 h-4 flex items-center justify-center"
                         :title="lastError"
                     >
                         !
@@ -78,10 +80,10 @@
                     role="radio"
                     :aria-checked="isBooksTarget.toString()"
                     :tabindex="isBooksTarget ? 0 : -1"
-                    class="flex-1 px-3 h-6 rounded-full text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                    class="flex-1 px-3 h-6 rounded-full text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 christmas:focus-visible:ring-christmas-gold halloween:focus-visible:ring-halloween-orange"
                     :class="
                         isBooksTarget
-                            ? 'bg-blue-600 text-white dark:bg-white dark:text-gray-900 shadow'
+                            ? 'bg-blue-600 text-white dark:bg-white dark:text-gray-900 christmas:bg-christmas-red christmas:text-white halloween:bg-halloween-orange halloween:text-white shadow'
                             : 'text-gray-700 dark:text-gray-300'
                     "
                     @click="setTarget('books')"
@@ -94,10 +96,10 @@
                     role="radio"
                     :aria-checked="isUploadsTarget.toString()"
                     :tabindex="isUploadsTarget ? 0 : -1"
-                    class="flex-1 px-3 h-6 rounded-full text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                    class="flex-1 px-3 h-6 rounded-full text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 christmas:focus-visible:ring-christmas-gold halloween:focus-visible:ring-halloween-orange"
                     :class="
                         isUploadsTarget
-                            ? 'bg-blue-600 text-white dark:bg-white dark:text-gray-900 shadow'
+                            ? 'bg-blue-600 text-white dark:bg-white dark:text-gray-900 christmas:bg-christmas-red christmas:text-white halloween:bg-halloween-orange halloween:text-white shadow'
                             : 'text-gray-700 dark:text-gray-300'
                     "
                     @click="setTarget('uploads')"
@@ -110,10 +112,10 @@
                     role="radio"
                     :aria-checked="isMusicTarget.toString()"
                     :tabindex="isMusicTarget ? 0 : -1"
-                    class="flex-1 px-3 h-6 rounded-full text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                    class="flex-1 px-3 h-6 rounded-full text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 christmas:focus-visible:ring-christmas-gold halloween:focus-visible:ring-halloween-orange"
                     :class="
                         isMusicTarget
-                            ? 'bg-blue-600 text-white dark:bg-white dark:text-gray-900 shadow'
+                            ? 'bg-blue-600 text-white dark:bg-white dark:text-gray-900 christmas:bg-christmas-red christmas:text-white halloween:bg-halloween-orange halloween:text-white shadow'
                             : 'text-gray-700 dark:text-gray-300'
                     "
                     @click="setTarget('music')"
