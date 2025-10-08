@@ -9,7 +9,7 @@
                 <div class="flex items-center gap-3 min-w-0">
                     <button
                         type="button"
-                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-600/85 text-white dark:bg-white/85 dark:text-gray-900 hover:bg-blue-500/90 dark:hover:bg-gray-100/90 backdrop-blur-sm shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition min-w-0 max-w-[90vw] sm:max-w-[70vw] md:max-w-[60vw] lg:max-w-[50vw] disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400/85 dark:disabled:bg-gray-600/85"
+                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-600/40 text-white dark:bg-white/40 dark:text-gray-900 hover:bg-blue-500/50 dark:hover:bg-gray-100/50 christmas:bg-christmas-red/40 christmas:hover:bg-christmas-gold/50 halloween:bg-halloween-orange/40 halloween:hover:bg-halloween-purple/50 backdrop-blur-md shadow-xl drop-shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition min-w-0 max-w-[90vw] sm:max-w-[70vw] md:max-w-[60vw] lg:max-w-[50vw] disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400/40 dark:disabled:bg-gray-600/40"
                         :aria-label="`Back to Book: ${page.book.title}`"
                         :disabled="buttonDisabled"
                         @click="goToBook"
