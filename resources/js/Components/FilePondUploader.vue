@@ -261,7 +261,6 @@ const oninit = () => {
 
 // Track file additions/removals
 const onUpdateFiles = (newFileList) => {
-    // You can emit an event here if needed, or handle logic for file updates
     emit("queue-update", newFileList.length);
 };
 </script>
