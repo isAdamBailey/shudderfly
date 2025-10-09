@@ -499,9 +499,10 @@ describe("NewPageForm", () => {
 
             const buttons = wrapper.findAllComponents({ name: "Button" });
             const createButton = buttons.find((btn) =>
-                btn.text().includes("Create Page!")
+                btn.text().includes("Uploading...")
             );
 
+            expect(createButton).toBeDefined();
             expect(createButton.props("disabled")).toBe(true);
         });
 
