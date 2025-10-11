@@ -35,12 +35,6 @@ class IncrementPageReadCount implements ShouldQueue
      */
     public function handle(): void
     {
-        $jobCacheKey = \App\Support\ReadThrottle::cacheKey('page', $this->page->id, $this->fingerprint);
-        if (\Cache::has($jobCacheKey)) {
-            return;
-        }
-        \Cache::put($jobCacheKey, true, now()->addMinutes(5));
-
         // Ensure the latest values
         $this->page->refresh();
 
