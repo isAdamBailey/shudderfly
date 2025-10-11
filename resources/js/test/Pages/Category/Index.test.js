@@ -9,6 +9,7 @@ vi.mock("@/composables/useInfiniteScroll", () => ({
 }));
 
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
+import { usePage } from "@inertiajs/vue3";
 import { createRouteMock } from "../../setup.js";
 
 // Use the shared route mock function from setup.js
@@ -60,6 +61,14 @@ describe("Category Index", () => {
             setItemLoading: mockSetItemLoading,
         });
 
+        // Mock usePage with default theme
+        usePage.mockReturnValue({
+            props: {
+                auth: { user: { permissions_list: [] } },
+                theme: "",
+            },
+        });
+
         wrapper = mount(CategoryIndex, {
             props: {
                 categoryName: "fiction",
@@ -70,6 +79,7 @@ describe("Category Index", () => {
                     $page: {
                         props: {
                             auth: { user: { permissions_list: [] } },
+                            theme: "",
                         },
                     },
                 },
@@ -180,5 +190,211 @@ describe("Category Index", () => {
     it("renders books with correct structure", () => {
         const books = wrapper.findAll(".mini-book");
         expect(books.length).toBeGreaterThan(0);
+    });
+
+    it("displays themed category title with Halloween theme", async () => {
+        usePage.mockReturnValue({
+            props: {
+                auth: { user: { permissions_list: [] } },
+                theme: "halloween",
+            },
+        });
+
+        const themedWrapper = mount(CategoryIndex, {
+            props: {
+                categoryName: "themed",
+                books: mockBooks,
+            },
+            global: {
+                mocks: {
+                    $page: {
+                        props: {
+                            auth: { user: { permissions_list: [] } },
+                            theme: "halloween",
+                        },
+                    },
+                },
+            },
+        });
+
+        expect(themedWrapper.text()).toContain("Halloween Books");
+    });
+
+    it("displays themed category title with Christmas theme", async () => {
+        usePage.mockReturnValue({
+            props: {
+                auth: { user: { permissions_list: [] } },
+                theme: "christmas",
+            },
+        });
+
+        const themedWrapper = mount(CategoryIndex, {
+            props: {
+                categoryName: "themed",
+                books: mockBooks,
+            },
+            global: {
+                mocks: {
+                    $page: {
+                        props: {
+                            auth: { user: { permissions_list: [] } },
+                            theme: "christmas",
+                        },
+                    },
+                },
+            },
+        });
+
+        expect(themedWrapper.text()).toContain("Christmas Books");
+    });
+
+    it("displays themed category title with fireworks theme", async () => {
+        usePage.mockReturnValue({
+            props: {
+                auth: { user: { permissions_list: [] } },
+                theme: "fireworks",
+            },
+        });
+
+        const themedWrapper = mount(CategoryIndex, {
+            props: {
+                categoryName: "themed",
+                books: mockBooks,
+            },
+            global: {
+                mocks: {
+                    $page: {
+                        props: {
+                            auth: { user: { permissions_list: [] } },
+                            theme: "fireworks",
+                        },
+                    },
+                },
+            },
+        });
+
+        expect(themedWrapper.text()).toContain("4th of July Books");
+    });
+
+    it("displays fallback title for themed category when no theme is active", async () => {
+        usePage.mockReturnValue({
+            props: {
+                auth: { user: { permissions_list: [] } },
+                theme: "",
+            },
+        });
+
+        const themedWrapper = mount(CategoryIndex, {
+            props: {
+                categoryName: "themed",
+                books: mockBooks,
+            },
+            global: {
+                mocks: {
+                    $page: {
+                        props: {
+                            auth: { user: { permissions_list: [] } },
+                            theme: "",
+                        },
+                    },
+                },
+            },
+        });
+
+        expect(themedWrapper.text()).toContain("Themed Books");
+    });
+
+    it("renders ApplicationLogo for themed category", async () => {
+        const themedWrapper = mount(CategoryIndex, {
+            props: {
+                categoryName: "themed",
+                books: mockBooks,
+            },
+            global: {
+                mocks: {
+                    $page: {
+                        props: {
+                            auth: { user: { permissions_list: [] } },
+                            theme: "halloween",
+                        },
+                    },
+                },
+            },
+        });
+
+        const logo = themedWrapper.findComponent({ name: "ApplicationLogo" });
+        expect(logo.exists()).toBe(true);
+        expect(logo.classes()).toContain("w-12");
+        expect(logo.classes()).toContain("h-12");
+    });
+
+    it("does not render ApplicationLogo for non-themed categories", async () => {
+        const regularWrapper = mount(CategoryIndex, {
+            props: {
+                categoryName: "fiction",
+                books: mockBooks,
+            },
+            global: {
+                mocks: {
+                    $page: {
+                        props: {
+                            auth: { user: { permissions_list: [] } },
+                            theme: "halloween",
+                        },
+                    },
+                },
+            },
+        });
+
+        const logo = regularWrapper.findComponent({ name: "ApplicationLogo" });
+        expect(logo.exists()).toBe(false);
+    });
+
+    it("does not render ApplicationLogo for popular category", async () => {
+        const popularWrapper = mount(CategoryIndex, {
+            props: {
+                categoryName: "popular",
+                books: mockBooks,
+            },
+            global: {
+                mocks: {
+                    $page: {
+                        props: {
+                            auth: { user: { permissions_list: [] } },
+                            theme: "",
+                        },
+                    },
+                },
+            },
+        });
+
+        const logo = popularWrapper.findComponent({ name: "ApplicationLogo" });
+        expect(logo.exists()).toBe(false);
+    });
+
+    it("renders themed category with proper flex layout including logo", async () => {
+        const themedWrapper = mount(CategoryIndex, {
+            props: {
+                categoryName: "themed",
+                books: mockBooks,
+            },
+            global: {
+                mocks: {
+                    $page: {
+                        props: {
+                            auth: { user: { permissions_list: [] } },
+                            theme: "christmas",
+                        },
+                    },
+                },
+            },
+        });
+
+        const flexContainer = themedWrapper.find(".flex.items-center.gap-3");
+        expect(flexContainer.exists()).toBe(true);
+        expect(
+            flexContainer.findComponent({ name: "ApplicationLogo" }).exists()
+        ).toBe(true);
+        expect(flexContainer.find("h2").exists()).toBe(true);
     });
 });
