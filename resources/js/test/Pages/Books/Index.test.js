@@ -1,6 +1,55 @@
 import Index from "@/Pages/Books/Index.vue";
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { usePage } from "@inertiajs/vue3";
+
+// Mock usePage with a dynamic implementation
+const mockPageData = {
+    props: {
+        auth: { user: { permissions_list: [] } },
+        search: null,
+        theme: "",
+    },
+};
+
+vi.mock("@inertiajs/vue3", async () => {
+    const actual = await vi.importActual("@inertiajs/vue3");
+    return {
+        ...actual,
+        Head: {
+            name: "Head",
+            template: "<div></div>",
+        },
+        Link: {
+            name: "Link",
+            template: "<a><slot /></a>",
+            props: ["href"],
+        },
+        usePage: vi.fn(() => mockPageData),
+        useForm: vi.fn(() => ({
+            data: {},
+            errors: {},
+            processing: false,
+            post: vi.fn(),
+            get: vi.fn(),
+            put: vi.fn(),
+            patch: vi.fn(),
+            delete: vi.fn(),
+            reset: vi.fn(),
+            clearErrors: vi.fn(),
+            setError: vi.fn(),
+            setData: vi.fn(),
+            transform: vi.fn(),
+        })),
+        router: {
+            get: vi.fn(),
+            post: vi.fn(),
+            put: vi.fn(),
+            patch: vi.fn(),
+            delete: vi.fn(),
+        },
+    };
+});
 
 // Mock composables
 vi.mock("@/composables/permissions", () => ({
@@ -49,21 +98,15 @@ describe("Books/Index.vue", () => {
     const authors = [{ id: 1, name: "Author 1" }];
 
     beforeEach(() => {
+        // Reset mockPageData before each test
+        mockPageData.props.search = null;
+        mockPageData.props.theme = "";
+
         wrapper = mount(Index, {
             props: {
                 categories,
                 authors,
                 searchCategories: null,
-            },
-            global: {
-                mocks: {
-                    $page: {
-                        props: {
-                            auth: { user: { permissions_list: [] } },
-                            search: null,
-                        },
-                    },
-                },
             },
         });
     });
@@ -92,16 +135,6 @@ describe("Books/Index.vue", () => {
                 authors,
                 searchCategories: null,
             },
-            global: {
-                mocks: {
-                    $page: {
-                        props: {
-                            auth: { user: { permissions_list: [] } },
-                            search: null,
-                        },
-                    },
-                },
-            },
         });
         expect(wrapper.text()).toContain("I can't find any books like that");
         expect(wrapper.findComponent({ name: "ManEmptyCircle" }).exists()).toBe(
@@ -123,86 +156,50 @@ describe("Books/Index.vue", () => {
     });
 
     it("shows correct title when search is present", async () => {
+        mockPageData.props.search = "foo";
+
         wrapper = mount(Index, {
             props: { categories, authors, searchCategories: null },
-            global: {
-                mocks: {
-                    $page: {
-                        props: {
-                            auth: { user: { permissions_list: [] } },
-                            search: "foo",
-                        },
-                    },
-                },
-            },
         });
-        // Since the computed property uses usePage() directly, we'll just test that the component renders
-        // The search functionality would need more complex mocking of usePage
+
         expect(wrapper.text()).toContain("Books");
     });
 
-    it("renders themed books section when themedBooks prop is provided", async () => {
-        const themedBooks = [
-            { id: 1, title: "Halloween Party" },
-            { id: 2, title: "Spooky Stories" },
-        ];
+    it("renders themed books section when theme is active", async () => {
+        mockPageData.props.theme = "halloween";
 
         wrapper = mount(Index, {
             props: {
                 categories,
                 authors,
                 searchCategories: null,
-                themedBooks,
                 themeLabel: "Halloween Books",
-            },
-            global: {
-                mocks: {
-                    $page: {
-                        props: {
-                            auth: { user: { permissions_list: [] } },
-                            search: null,
-                        },
-                    },
-                },
             },
         });
 
         const booksGrids = wrapper.findAllComponents({ name: "BooksGrid" });
-        // Should have themed books grid plus other grids (forgotten, categories, popular)
         expect(booksGrids.length).toBeGreaterThan(0);
 
-        // Find the themed books grid by checking props
         const themedGrid = booksGrids.find(
             (grid) => grid.props("label") === "Halloween Books"
         );
         expect(themedGrid).toBeTruthy();
         expect(themedGrid.props("category").name).toBe("themed");
-        expect(themedGrid.props("category").books).toEqual(themedBooks);
     });
 
-    it("does not render themed books section when themedBooks is null", async () => {
+    it("does not render themed books section when theme is not active", async () => {
+        mockPageData.props.theme = "";
+
         wrapper = mount(Index, {
             props: {
                 categories,
                 authors,
                 searchCategories: null,
-                themedBooks: null,
                 themeLabel: null,
-            },
-            global: {
-                mocks: {
-                    $page: {
-                        props: {
-                            auth: { user: { permissions_list: [] } },
-                            search: null,
-                        },
-                    },
-                },
             },
         });
 
         const booksGrids = wrapper.findAllComponents({ name: "BooksGrid" });
-        // Should not have any grid with Halloween/Christmas/Fireworks label
         const themedGrid = booksGrids.find(
             (grid) =>
                 grid.props("label") &&
@@ -213,24 +210,15 @@ describe("Books/Index.vue", () => {
         expect(themedGrid).toBeFalsy();
     });
 
-    it("does not render themed books section when themedBooks is empty array", async () => {
+    it("does not render themed books section when theme is empty string", async () => {
+        mockPageData.props.theme = "";
+
         wrapper = mount(Index, {
             props: {
                 categories,
                 authors,
                 searchCategories: null,
-                themedBooks: [],
                 themeLabel: "Halloween Books",
-            },
-            global: {
-                mocks: {
-                    $page: {
-                        props: {
-                            auth: { user: { permissions_list: [] } },
-                            search: null,
-                        },
-                    },
-                },
             },
         });
 
@@ -238,33 +226,18 @@ describe("Books/Index.vue", () => {
         const themedGrid = booksGrids.find(
             (grid) => grid.props("label") === "Halloween Books"
         );
-        // Should not render themed section when array is empty
         expect(themedGrid).toBeFalsy();
     });
 
     it("renders themed books with different theme labels", async () => {
-        const christmasBooks = [
-            { id: 1, title: "Christmas Carol" },
-            { id: 2, title: "Santa's Workshop" },
-        ];
+        mockPageData.props.theme = "christmas";
 
         wrapper = mount(Index, {
             props: {
                 categories,
                 authors,
                 searchCategories: null,
-                themedBooks: christmasBooks,
                 themeLabel: "Christmas Books",
-            },
-            global: {
-                mocks: {
-                    $page: {
-                        props: {
-                            auth: { user: { permissions_list: [] } },
-                            search: null,
-                        },
-                    },
-                },
             },
         });
 
@@ -273,14 +246,12 @@ describe("Books/Index.vue", () => {
             (grid) => grid.props("label") === "Christmas Books"
         );
         expect(themedGrid).toBeTruthy();
-        expect(themedGrid.props("category").books).toEqual(christmasBooks);
+        expect(themedGrid.props("category").name).toBe("themed");
     });
 
     it("does not render themed books section when search is active", async () => {
-        const themedBooks = [
-            { id: 1, title: "Halloween Party" },
-            { id: 2, title: "Spooky Stories" },
-        ];
+        mockPageData.props.theme = "halloween";
+        mockPageData.props.search = "something";
 
         wrapper = mount(Index, {
             props: {
@@ -292,18 +263,7 @@ describe("Books/Index.vue", () => {
                         books: [{ id: 3, title: "Search Result" }],
                     },
                 ],
-                themedBooks,
                 themeLabel: "Halloween Books",
-            },
-            global: {
-                mocks: {
-                    $page: {
-                        props: {
-                            auth: { user: { permissions_list: [] } },
-                            search: "test search",
-                        },
-                    },
-                },
             },
         });
 
@@ -311,7 +271,6 @@ describe("Books/Index.vue", () => {
         const themedGrid = booksGrids.find(
             (grid) => grid.props("label") === "Halloween Books"
         );
-        // Should not render themed section when search is active
         expect(themedGrid).toBeFalsy();
     });
 });

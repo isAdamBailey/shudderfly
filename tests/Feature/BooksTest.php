@@ -329,13 +329,19 @@ class BooksTest extends TestCase
         // Mock the current month to be October (Halloween)
         $this->travelTo(now()->setMonth(10));
 
+        // Test that the index page has the theme label
         $this->get(route('books.index'))->assertInertia(
             fn (Assert $page) => $page
                 ->component('Books/Index')
-                ->has('themedBooks', 3) // Should have 3 Halloween books
                 ->where('themeLabel', 'Halloween Books')
                 ->has('categories')
         );
+
+        // Test that the API endpoint returns the correct themed books
+        $response = $this->get(route('books.category', ['categoryName' => 'themed']));
+        $response->assertStatus(200);
+        $books = $response->json('books.data');
+        $this->assertCount(3, $books);
 
         $this->travelBack();
     }
@@ -356,7 +362,6 @@ class BooksTest extends TestCase
         $this->get(route('books.index'))->assertInertia(
             fn (Assert $page) => $page
                 ->component('Books/Index')
-                ->where('themedBooks', null)
                 ->where('themeLabel', null)
                 ->has('categories')
         );
@@ -381,12 +386,18 @@ class BooksTest extends TestCase
         // Mock the current month to be December (Christmas)
         $this->travelTo(now()->setMonth(12));
 
+        // Test that the index page has the theme label
         $this->get(route('books.index'))->assertInertia(
             fn (Assert $page) => $page
                 ->component('Books/Index')
-                ->has('themedBooks', 3) // Should have 3 Christmas books
                 ->where('themeLabel', 'Christmas Books')
         );
+
+        // Test that the API endpoint returns the correct themed books
+        $response = $this->get(route('books.category', ['categoryName' => 'themed']));
+        $response->assertStatus(200);
+        $books = $response->json('books.data');
+        $this->assertCount(3, $books);
 
         $this->travelBack();
     }
@@ -408,12 +419,18 @@ class BooksTest extends TestCase
         // Mock the current month to be July (Fireworks)
         $this->travelTo(now()->setMonth(7));
 
+        // Test that the index page has the theme label
         $this->get(route('books.index'))->assertInertia(
             fn (Assert $page) => $page
                 ->component('Books/Index')
-                ->has('themedBooks', 3) // Should have 3 July books
                 ->where('themeLabel', '4th of July Books')
         );
+
+        // Test that the API endpoint returns the correct themed books
+        $response = $this->get(route('books.category', ['categoryName' => 'themed']));
+        $response->assertStatus(200);
+        $books = $response->json('books.data');
+        $this->assertCount(3, $books);
 
         $this->travelBack();
     }
@@ -432,13 +449,19 @@ class BooksTest extends TestCase
         // Mock the current month to be October (Halloween theme is active)
         $this->travelTo(now()->setMonth(10));
 
+        // Test that the index page still has the theme label
         $this->get(route('books.index'))->assertInertia(
             fn (Assert $page) => $page
                 ->component('Books/Index')
-                ->where('themedBooks', null) // Should be null when no books match
                 ->where('themeLabel', 'Halloween Books') // Label should still be set
                 ->has('categories')
         );
+
+        // Test that the API endpoint returns empty results
+        $response = $this->get(route('books.category', ['categoryName' => 'themed']));
+        $response->assertStatus(200);
+        $books = $response->json('books.data');
+        $this->assertCount(0, $books);
 
         $this->travelBack();
     }

@@ -367,15 +367,12 @@ const createPlayer = async () => {
             },
         });
     } catch (error) {
-        console.error("Error creating YouTube player:", error);
-        playerError.value = "Failed to create video player: " + error.message;
+        playerError.value = "Failed to create video player";
         isLoading.value = false;
     }
 };
 
 const onPlayerReady = (event) => {
-    console.log("Player ready for:", props.currentSong.title);
-
     // Get duration
     duration.value = event.target.getDuration();
 
@@ -388,7 +385,7 @@ const onPlayerReady = (event) => {
                     currentTime.value = currentTimeValue;
                 }
             } catch (error) {
-                console.error("Error getting current time:", error);
+                // Silent error - just skip this update
             }
         }
     }, 500);
@@ -399,7 +396,7 @@ const onPlayerReady = (event) => {
             try {
                 player.value.playVideo();
             } catch (error) {
-                console.error("Error calling playVideo():", error);
+                // Silent error
             }
         }
     }, 1000);
@@ -408,13 +405,10 @@ const onPlayerReady = (event) => {
 };
 
 const onPlayerStateChange = (event) => {
-    console.log("Player state changed:", event.data);
-
     switch (event.data) {
         case window.YT.PlayerState.PLAYING:
             isPlaying.value = true;
             emit("playing", true);
-            console.log("Music is now playing!");
 
             // Increment read count when song starts playing (only once per song)
             if (props.currentSong && !hasIncrementedReadCount.value) {
@@ -424,19 +418,15 @@ const onPlayerStateChange = (event) => {
         case window.YT.PlayerState.PAUSED:
             isPlaying.value = false;
             emit("playing", false);
-            console.log("Music is paused");
             break;
         case window.YT.PlayerState.BUFFERING:
-            console.log("Player is buffering...");
             break;
         case window.YT.PlayerState.ENDED:
             isPlaying.value = false;
             emit("playing", false);
             currentTime.value = 0;
-            console.log("Song ended");
             break;
         case window.YT.PlayerState.CUED:
-            console.log("Video cued, attempting to play...");
             setTimeout(() => {
                 if (
                     player.value &&
@@ -445,10 +435,7 @@ const onPlayerStateChange = (event) => {
                     try {
                         player.value.playVideo();
                     } catch (error) {
-                        console.error(
-                            "Error in cued state playVideo():",
-                            error
-                        );
+                        // Silent error
                     }
                 }
             }, 500);
@@ -457,7 +444,6 @@ const onPlayerStateChange = (event) => {
 };
 
 const onPlayerError = (event) => {
-    console.error("YouTube player error:", event.data);
     let errorMessage = "This video cannot be played.";
 
     switch (event.data) {
@@ -497,9 +483,8 @@ const incrementReadCount = async () => {
         );
 
         hasIncrementedReadCount.value = true;
-        console.log("Read count incremented for:", props.currentSong.title);
     } catch (error) {
-        console.error("Failed to increment read count:", error);
+        // Silent error
     }
 };
 
@@ -508,7 +493,6 @@ watch(
     () => props.currentSong,
     async (newSong, oldSong) => {
         if (newSong && newSong !== oldSong) {
-            console.log("Song changed to:", newSong.title);
             playerError.value = null;
             imageError.value = false;
             isPlaying.value = false;

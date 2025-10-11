@@ -30,7 +30,9 @@ class CategoryController extends Controller
                 ->with('coverImage')
                 ->orderBy('read_count', 'asc')
                 ->paginate(),
-            'themed' => ThemeBooks::getBooksForThemeAsPaginator(),
+            'themed' => ThemeBooks::getBooksForThemePaginated(
+                \App\Http\Middleware\HandleInertiaRequests::getCurrentTheme() ?? ''
+            ),
             default => Category::where('name', $categoryName)
                 ->firstOrFail()
                 ->books()

@@ -23,14 +23,14 @@ class ThemeBooks
     }
 
     /**
-     * Get books related to a specific theme.
+     * Get books related to a specific theme with pagination support.
      */
-    public static function getBooksForTheme(string $theme, int $limit = 10): ?Collection
+    public static function getBooksForThemePaginated(string $theme, int $perPage = 15): LengthAwarePaginator
     {
         $keywords = self::getKeywords($theme);
 
         if (empty($keywords)) {
-            return null;
+            return new LengthAwarePaginator(collect([]), 0, $perPage, 1);
         }
 
         $query = Book::query()
@@ -42,40 +42,9 @@ class ThemeBooks
                             ->orWhereRaw('LOWER(excerpt) LIKE ?', ['%'.strtolower($keyword).'%']);
                     });
                 }
-            })
-            ->limit($limit);
+            });
 
-        $books = $query->get();
-
-        return $books->isEmpty() ? null : $books;
-    }
-
-    /**
-     * Get themed books as a paginated collection.
-     * Converts the Collection from getBooksForTheme into a LengthAwarePaginator
-     * to match the format expected by category pages.
-     */
-    public static function getBooksForThemeAsPaginator(): LengthAwarePaginator
-    {
-        $currentTheme = HandleInertiaRequests::getCurrentTheme();
-
-        if (! $currentTheme) {
-            return new LengthAwarePaginator(collect([]), 0, 15, 1);
-        }
-
-        $books = self::getBooksForTheme($currentTheme, 1000);
-
-        if (! $books) {
-            return new LengthAwarePaginator(collect([]), 0, 15, 1);
-        }
-
-        return new LengthAwarePaginator(
-            $books,
-            $books->count(),
-            15,
-            1,
-            ['path' => request()->url()]
-        );
+        return $query->paginate($perPage);
     }
 
     /**

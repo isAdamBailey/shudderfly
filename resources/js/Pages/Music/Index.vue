@@ -166,12 +166,10 @@ watch(
 );
 
 const playSong = (song) => {
-    console.log("Playing song:", song.title);
     currentSong.value = song;
 };
 
 const closeMusicPlayer = () => {
-    console.log("Closing music player");
     currentSong.value = null;
     isPlaying.value = false;
 };

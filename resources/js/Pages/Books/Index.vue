@@ -38,14 +38,8 @@
             </div>
         </template>
         <!-- Themed Books Section -->
-        <div
-            v-if="themedBooks && themedBooks.length > 0 && !searchCategories"
-            class="mb-4"
-        >
-            <BooksGrid
-                :category="{ name: 'themed', books: themedBooks }"
-                :label="themeLabel"
-            />
+        <div v-if="currentTheme && !searchCategories" class="mb-4">
+            <BooksGrid :category="{ name: 'themed' }" :label="themeLabel" />
         </div>
 
         <div v-if="!areAllBooksEmpty" class="mb-10">
@@ -104,10 +98,6 @@ const props = defineProps({
         type: Array,
         required: true,
     },
-    themedBooks: {
-        type: Array,
-        default: null,
-    },
     themeLabel: {
         type: String,
         default: "Themed Books",
@@ -118,7 +108,9 @@ const showNewBookForm = ref(false);
 const workingCategories = computed(() => {
     return props.searchCategories || props.categories;
 });
-
+const currentTheme = computed(() => {
+    return usePage().props.theme;
+});
 const areAllBooksEmpty = computed(() => {
     return workingCategories.value.every(
         (category) => category.books?.length === 0

@@ -44,12 +44,10 @@ class BookController extends Controller
         $authors = auth()->user()->can('edit pages') ? User::all() : [];
         $categories = Category::all()->map->only(['id', 'name'])->sortBy('name')->values()->toArray();
 
-        // Get themed books if a theme is active
+        // Get theme label if a theme is active
         $currentTheme = HandleInertiaRequests::getCurrentTheme();
-        $themedBooks = null;
         $themeLabel = null;
         if ($currentTheme) {
-            $themedBooks = ThemeBooks::getBooksForTheme($currentTheme);
             $themeLabel = ThemeBooks::getLabel($currentTheme);
         }
 
@@ -58,7 +56,6 @@ class BookController extends Controller
             'categories' => $categories,
             'searchCategories' => $searchCategories ?? null,
             'search' => $search,
-            'themedBooks' => $themedBooks,
             'themeLabel' => $themeLabel,
         ]);
     }
@@ -79,6 +76,10 @@ class BookController extends Controller
                 ->with('coverImage')
                 ->orderBy('read_count')
                 ->paginate(10),
+            'themed' => ThemeBooks::getBooksForThemePaginated(
+                HandleInertiaRequests::getCurrentTheme() ?? '',
+                10
+            ),
             default => $category
                 ? $category->books()
                     ->with('coverImage')
