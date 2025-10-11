@@ -38,7 +38,10 @@
             </div>
         </template>
         <!-- Themed Books Section -->
-        <div v-if="themedBooks && themedBooks.length > 0" class="mb-4">
+        <div
+            v-if="themedBooks && themedBooks.length > 0 && !searchCategories"
+            class="mb-4"
+        >
             <BooksGrid
                 :category="{ name: 'themed', books: themedBooks }"
                 :label="themeLabel"

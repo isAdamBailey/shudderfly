@@ -275,4 +275,43 @@ describe("Books/Index.vue", () => {
         expect(themedGrid).toBeTruthy();
         expect(themedGrid.props("category").books).toEqual(christmasBooks);
     });
+
+    it("does not render themed books section when search is active", async () => {
+        const themedBooks = [
+            { id: 1, title: "Halloween Party" },
+            { id: 2, title: "Spooky Stories" },
+        ];
+
+        wrapper = mount(Index, {
+            props: {
+                categories,
+                authors,
+                searchCategories: [
+                    {
+                        name: "Fiction",
+                        books: [{ id: 3, title: "Search Result" }],
+                    },
+                ],
+                themedBooks,
+                themeLabel: "Halloween Books",
+            },
+            global: {
+                mocks: {
+                    $page: {
+                        props: {
+                            auth: { user: { permissions_list: [] } },
+                            search: "test search",
+                        },
+                    },
+                },
+            },
+        });
+
+        const booksGrids = wrapper.findAllComponents({ name: "BooksGrid" });
+        const themedGrid = booksGrids.find(
+            (grid) => grid.props("label") === "Halloween Books"
+        );
+        // Should not render themed section when search is active
+        expect(themedGrid).toBeFalsy();
+    });
 });
