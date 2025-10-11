@@ -159,13 +159,13 @@ class PageController extends Controller
                 if (Str::startsWith($mimeType, 'image/')) {
                     $filename = pathinfo($file->hashName(), PATHINFO_FILENAME);
                     $mediaPath = 'books/'.$book->slug.'/'.$filename.'.webp';
-                    StoreImage::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'));
+                    StoreImage::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'))->onConnection('sqs');
                     $successMessage = 'Queued image: '.$originalName.'. It may take a few minutes to process.';
                 } elseif (Str::startsWith($mimeType, 'video/')) {
                     $mediaPath = 'books/'.$book->slug.'/'.$originalName;
 
                     try {
-                        StoreVideo::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'));
+                        StoreVideo::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'))->onConnection('sqs');
                         $successMessage = 'Queued video: '.$originalName.'. It may take a few minutes to process.';
                     } catch (\Exception $e) {
                         Log::error('Failed to dispatch StoreVideo job', [
@@ -217,7 +217,7 @@ class PageController extends Controller
                         $page,
                         $oldMediaPath,
                         $oldPosterPath
-                    );
+                    )->onConnection('sqs');
                 } elseif (Str::startsWith($mimeType, 'video/')) {
                     $mediaPath = 'books/'.$page->book->slug.'/'.$file->getClientOriginalName();
 
@@ -231,7 +231,7 @@ class PageController extends Controller
                             $page,
                             $oldMediaPath,
                             $oldPosterPath
-                        );
+                        )->onConnection('sqs');
                     } catch (\Exception $e) {
                         Log::error('Failed to dispatch StoreVideo job for update', [
                             'exception' => $e->getMessage(),
@@ -326,7 +326,7 @@ class PageController extends Controller
             book: $book,
             user: $request->user(),
             pageId: $request->page_id
-        );
+        )->onConnection('sqs');
     }
 
     /**

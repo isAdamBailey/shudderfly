@@ -41,22 +41,12 @@ class StoreVideo implements ShouldQueue
 
     public int $tries = 3;
 
-    public int $maxExceptions = 3;
-
-    public int $timeout = 1800;
-
-    public int $memory = 512; // Reduced to 512MB to match server memory limit
-
-    public function retryAfter()
-    {
-        // Exponential backoff: 2 minutes, 5 minutes, 10 minutes, 20 minutes, 40 minutes
-        return [120, 300, 600, 1200, 2400];
-    }
+    public int $timeout = 1800; // 30 minutes for video processing
 
     public function backoff()
     {
-        // Use exponential backoff for retries
-        return [120, 300, 600, 1200, 2400];
+        // Exponential backoff for retries: 2, 5, 10 minutes
+        return [120, 300, 600];
     }
 
     public function __construct(string $filePath, string $path, ?Book $book = null, ?string $content = null, ?string $videoLink = null, ?Page $page = null, ?string $oldMediaPath = null, ?string $oldPosterPath = null)
