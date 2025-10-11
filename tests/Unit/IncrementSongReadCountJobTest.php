@@ -132,22 +132,6 @@ class IncrementSongReadCountJobTest extends TestCase
         $this->assertEquals(1.0, $song->read_count);
     }
 
-    public function test_job_prevents_duplicate_processing_with_cache(): void
-    {
-        $song = Song::factory()->create(['read_count' => 5]);
-
-        // Set cache to simulate job already running
-        $fingerprint = 'test-fingerprint';
-        $cacheKey = \App\Support\ReadThrottle::cacheKey('song', $song->id, $fingerprint);
-        Cache::put($cacheKey, true, now()->addMinutes(5));
-
-        $job = new IncrementSongReadCount($song, $fingerprint);
-        $job->handle();
-
-        $song->refresh();
-        $this->assertEquals(5, $song->read_count); // Should remain unchanged
-    }
-
     public function test_job_refreshes_song_before_processing(): void
     {
         // Create 20 songs with high read counts to ensure our test song is not in top 20

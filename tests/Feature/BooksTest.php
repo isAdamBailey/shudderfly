@@ -138,8 +138,8 @@ class BooksTest extends TestCase
                 ->has('categories')
         );
 
-        // Manually dispatch the job to ensure increment logic is tested
-        (new \App\Jobs\IncrementBookReadCount($book, 'test-fingerprint'))->handle();
+        // Process the dispatched job (it was dispatched by the controller with a delay)
+        $this->artisan('queue:work --stop-when-empty --once');
 
         $topBooks = Book::orderBy('read_count', 'desc')->limit(20)->pluck('id')->toArray();
         $isInTop20 = in_array($book->id, $topBooks);
