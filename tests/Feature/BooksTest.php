@@ -310,4 +310,136 @@ class BooksTest extends TestCase
                 ->has('pages.data', 5) // All pages
         );
     }
+
+    public function test_themed_books_are_returned_in_books_index_when_theme_is_active()
+    {
+        $this->actingAs(User::factory()->create());
+
+        DB::table('categories')->delete();
+
+        // Create books with Halloween-themed titles
+        Book::factory()->create(['title' => 'Halloween Party']);
+        Book::factory()->create(['title' => 'Spooky Stories']);
+        Book::factory()->create(['title' => 'The Haunted House']);
+
+        // Create books without theme keywords
+        Book::factory()->create(['title' => 'Regular Book']);
+        Book::factory()->create(['title' => 'Another Book']);
+
+        // Mock the current month to be October (Halloween)
+        $this->travelTo(now()->setMonth(10));
+
+        $this->get(route('books.index'))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Books/Index')
+                ->has('themedBooks', 3) // Should have 3 Halloween books
+                ->where('themeLabel', 'Halloween Books')
+                ->has('categories')
+        );
+
+        $this->travelBack();
+    }
+
+    public function test_themed_books_are_not_returned_when_no_theme_is_active()
+    {
+        $this->actingAs(User::factory()->create());
+
+        DB::table('categories')->delete();
+
+        // Create books with Halloween-themed titles
+        Book::factory()->create(['title' => 'Halloween Party']);
+        Book::factory()->create(['title' => 'Spooky Stories']);
+
+        // Mock the current month to be March (no theme)
+        $this->travelTo(now()->setMonth(3));
+
+        $this->get(route('books.index'))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Books/Index')
+                ->where('themedBooks', null)
+                ->where('themeLabel', null)
+                ->has('categories')
+        );
+
+        $this->travelBack();
+    }
+
+    public function test_themed_books_match_christmas_keywords()
+    {
+        $this->actingAs(User::factory()->create());
+
+        DB::table('categories')->delete();
+
+        // Create books with Christmas-themed titles and excerpts
+        Book::factory()->create(['title' => 'Christmas Carol']);
+        Book::factory()->create(['title' => 'The Santa Adventure']);
+        Book::factory()->create(['excerpt' => 'A story about winter snow and reindeer']);
+
+        // Create books without theme keywords
+        Book::factory()->create(['title' => 'Summer Fun']);
+
+        // Mock the current month to be December (Christmas)
+        $this->travelTo(now()->setMonth(12));
+
+        $this->get(route('books.index'))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Books/Index')
+                ->has('themedBooks', 3) // Should have 3 Christmas books
+                ->where('themeLabel', 'Christmas Books')
+        );
+
+        $this->travelBack();
+    }
+
+    public function test_themed_books_match_fireworks_keywords()
+    {
+        $this->actingAs(User::factory()->create());
+
+        DB::table('categories')->delete();
+
+        // Create books with 4th of July themed content
+        Book::factory()->create(['title' => '4th of July Celebration']);
+        Book::factory()->create(['title' => 'Fireworks Show']);
+        Book::factory()->create(['excerpt' => 'A story about independence and summer fun']);
+
+        // Create books without theme keywords
+        Book::factory()->create(['title' => 'Winter Tales']);
+
+        // Mock the current month to be July (Fireworks)
+        $this->travelTo(now()->setMonth(7));
+
+        $this->get(route('books.index'))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Books/Index')
+                ->has('themedBooks', 3) // Should have 3 July books
+                ->where('themeLabel', '4th of July Books')
+        );
+
+        $this->travelBack();
+    }
+
+    public function test_themed_books_returns_null_when_theme_active_but_no_matching_books()
+    {
+        $this->actingAs(User::factory()->create());
+
+        DB::table('categories')->delete();
+
+        // Create books without any theme keywords
+        Book::factory()->create(['title' => 'Regular Book']);
+        Book::factory()->create(['title' => 'Another Book']);
+        Book::factory()->create(['title' => 'Yet Another Book']);
+
+        // Mock the current month to be October (Halloween theme is active)
+        $this->travelTo(now()->setMonth(10));
+
+        $this->get(route('books.index'))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Books/Index')
+                ->where('themedBooks', null) // Should be null when no books match
+                ->where('themeLabel', 'Halloween Books') // Label should still be set
+                ->has('categories')
+        );
+
+        $this->travelBack();
+    }
 }

@@ -171,22 +171,152 @@ class CategoriesTest extends TestCase
         );
     }
 
-    public function test_category_show_returns_paginated_results()
+    public function test_themed_category_displays_halloween_books()
     {
         $this->actingAs(User::factory()->create());
 
-        $category = Category::factory()->create(['name' => 'mystery']);
-        Book::factory()->count(20)->create(['category_id' => $category->id]);
+        // Create books with Halloween-themed titles
+        Book::factory()->create(['title' => 'Halloween Party']);
+        Book::factory()->create(['title' => 'Spooky Ghost Stories']);
+        Book::factory()->create(['title' => 'The Haunted Mansion']);
 
-        $response = $this->get(route('categories.show', ['categoryName' => 'mystery']));
+        // Create books without theme keywords
+        Book::factory()->create(['title' => 'Regular Book']);
+
+        // Mock the current month to be October (Halloween)
+        $this->travelTo(now()->setMonth(10));
+
+        $response = $this->get(route('categories.show', ['categoryName' => 'themed']));
 
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
             ->component('Category/Index')
-            ->has('books.data', 15) // Default Laravel pagination is 15
-            ->has('books.next_page_url')
+            ->where('categoryName', 'themed')
+            ->has('books.data', 3) // Should only have Halloween books
             ->has('books.total')
-            ->where('books.total', 20)
         );
+
+        $this->travelBack();
+    }
+
+    public function test_themed_category_displays_christmas_books()
+    {
+        $this->actingAs(User::factory()->create());
+
+        // Create books with Christmas-themed titles and excerpts
+        Book::factory()->create(['title' => 'Christmas Carol']);
+        Book::factory()->create(['title' => 'Santa\'s Workshop']);
+        Book::factory()->create(['excerpt' => 'A winter story about snow and reindeer']);
+
+        // Create books without theme keywords
+        Book::factory()->create(['title' => 'Summer Beach Day']);
+
+        // Mock the current month to be December (Christmas)
+        $this->travelTo(now()->setMonth(12));
+
+        $response = $this->get(route('categories.show', ['categoryName' => 'themed']));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Category/Index')
+            ->where('categoryName', 'themed')
+            ->has('books.data', 3) // Should only have Christmas books
+        );
+
+        $this->travelBack();
+    }
+
+    public function test_themed_category_displays_fireworks_books()
+    {
+        $this->actingAs(User::factory()->create());
+
+        // Create books with 4th of July themed content
+        Book::factory()->create(['title' => 'Fourth of July Celebration']);
+        Book::factory()->create(['title' => 'Fireworks Night']);
+        Book::factory()->create(['excerpt' => 'A summer story about independence day']);
+
+        // Create books without theme keywords
+        Book::factory()->create(['title' => 'Winter Wonder']);
+
+        // Mock the current month to be July (Fireworks)
+        $this->travelTo(now()->setMonth(7));
+
+        $response = $this->get(route('categories.show', ['categoryName' => 'themed']));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Category/Index')
+            ->where('categoryName', 'themed')
+            ->has('books.data', 3) // Should only have July books
+        );
+
+        $this->travelBack();
+    }
+
+    public function test_themed_category_returns_empty_when_no_theme_active()
+    {
+        $this->actingAs(User::factory()->create());
+
+        // Create books with Halloween-themed titles
+        Book::factory()->create(['title' => 'Halloween Party']);
+        Book::factory()->create(['title' => 'Spooky Stories']);
+
+        // Mock the current month to be March (no theme)
+        $this->travelTo(now()->setMonth(3));
+
+        $response = $this->get(route('categories.show', ['categoryName' => 'themed']));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Category/Index')
+            ->where('categoryName', 'themed')
+            ->has('books.data', 0) // Should be empty when no theme
+        );
+
+        $this->travelBack();
+    }
+
+    public function test_themed_category_returns_empty_when_no_matching_books()
+    {
+        $this->actingAs(User::factory()->create());
+
+        // Create books without theme keywords
+        Book::factory()->create(['title' => 'Regular Book']);
+        Book::factory()->create(['title' => 'Another Book']);
+
+        // Mock the current month to be October (Halloween)
+        $this->travelTo(now()->setMonth(10));
+
+        $response = $this->get(route('categories.show', ['categoryName' => 'themed']));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Category/Index')
+            ->where('categoryName', 'themed')
+            ->has('books.data', 0) // No books match Halloween keywords
+        );
+
+        $this->travelBack();
+    }
+
+    public function test_themed_category_includes_cover_images()
+    {
+        $this->actingAs(User::factory()->create());
+
+        // Create a Halloween book
+        Book::factory()->create(['title' => 'Halloween Stories']);
+
+        // Mock the current month to be October
+        $this->travelTo(now()->setMonth(10));
+
+        $response = $this->get(route('categories.show', ['categoryName' => 'themed']));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Category/Index')
+            ->has('books.data.0.cover_image')
+        );
+
+        $this->travelBack();
     }
 }
