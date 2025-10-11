@@ -15,7 +15,7 @@ class ThemeBooks
     public static function getKeywords(string $theme): array
     {
         return match ($theme) {
-            'halloween' => ['halloween', 'trick', 'treat', 'spooky', 'pumpkin', 'monster', 'haunted', 'october', 'fall'],
+            'halloween' => ['halloween', 'trick or treat', 'spooky', 'pumpkin', 'monster', 'haunted', 'october', 'fall'],
             'fireworks' => ['4th', 'fourth', 'july', 'fireworks', 'independence', 'summer'],
             'christmas' => ['christmas', 'santa', 'xmas', 'winter', 'snow', 'reindeer', 'elf', 'december', 'snowman'],
             default => [],
