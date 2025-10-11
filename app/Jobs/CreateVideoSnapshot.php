@@ -336,7 +336,7 @@ class CreateVideoSnapshot implements ShouldQueue
 
                 // Dispatch StoreImage job (StoreImage will remove its S3 source on success)
                 try {
-                    StoreImage::dispatch('s3://'.$tempS3Path, $mediaPath)->onConnection('sqs');
+                    StoreImage::dispatch('s3://'.$tempS3Path, $mediaPath);
                 } catch (\Exception $dispatchError) {
                     Log::error('Failed to dispatch StoreImage job', [
                         'exception' => $dispatchError->getMessage(),

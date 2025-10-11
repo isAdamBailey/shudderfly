@@ -73,7 +73,7 @@ class CollageController extends Controller
 
     public function generatePdf(Collage $collage)
     {
-        GenerateCollagePdf::dispatch($collage)->onConnection('sqs');
+        GenerateCollagePdf::dispatch($collage);
 
         return redirect()->route('collages.archived')->with('success', 'PDF generation has been queued. You will receive an email when it\'s ready.');
     }
