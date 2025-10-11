@@ -1,15 +1,15 @@
 <template>
     <div
         v-if="currentSong"
-        class="relative bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky top-0 z-40"
+        class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky top-0 z-40"
     >
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div
                 class="flex flex-col sm:flex-row items-center py-4 space-y-4 sm:space-y-0 sm:space-x-6"
             >
-                <!-- Song Thumbnail -->
+                <!-- Song Thumbnail with Visualizer Overlay -->
                 <div
-                    class="flex-shrink-0 w-full sm:w-auto flex justify-center sm:justify-start"
+                    class="flex-shrink-0 w-full sm:w-auto flex justify-center sm:justify-start relative"
                 >
                     <img
                         v-if="thumbnailUrl && !imageError"
@@ -25,6 +25,26 @@
                         <i
                             class="ri-music-2-line text-7xl sm:text-8xl text-gray-400 dark:text-gray-500"
                         ></i>
+                    </div>
+
+                    <!-- Visualizer Overlay -->
+                    <div
+                        v-if="isPlaying"
+                        class="absolute inset-0 flex items-end justify-center pb-4 pointer-events-none"
+                    >
+                        <div class="flex items-end space-x-1 h-16">
+                            <div
+                                v-for="i in 20"
+                                :key="i"
+                                class="visualizer-bar bg-blue-500/70 dark:bg-blue-400/70 w-1 rounded-full"
+                                :style="{
+                                    animationDelay: `${i * 0.05}s`,
+                                    animationDuration: `${
+                                        0.4 + Math.random() * 0.3
+                                    }s`,
+                                }"
+                            ></div>
+                        </div>
                     </div>
                 </div>
 
@@ -54,12 +74,31 @@
                             </p>
                         </div>
 
-                        <!-- Progress Bar -->
+                        <!-- Progress Bar with Inline Visualizer -->
                         <div class="mt-2">
                             <div
                                 class="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400"
                             >
                                 <span>{{ formatTime(currentTime) }}</span>
+
+                                <!-- Mini Visualizer next to progress bar -->
+                                <div
+                                    v-if="isPlaying"
+                                    class="flex items-center space-x-0.5 px-2"
+                                >
+                                    <div
+                                        v-for="i in 5"
+                                        :key="i"
+                                        class="visualizer-bar-small bg-blue-500 dark:bg-blue-400 w-0.5 rounded-full"
+                                        :style="{
+                                            animationDelay: `${i * 0.1}s`,
+                                            animationDuration: `${
+                                                0.5 + Math.random() * 0.3
+                                            }s`,
+                                        }"
+                                    ></div>
+                                </div>
+
                                 <div
                                     class="flex-1 bg-gray-200 dark:bg-gray-600 rounded-full h-2 cursor-pointer"
                                     @click="seekTo"
@@ -504,10 +543,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.music-player-relative {
-    position: relative;
-}
-
 .animate-marquee {
     display: inline-block;
     white-space: nowrap;
@@ -519,7 +554,37 @@ onUnmounted(() => {
 @keyframes marquee {
     0% {
         transform: translateX(100%);
+    }
+    100% {
         transform: translateX(-100%);
+    }
+}
+
+/* Visualizer animations */
+.visualizer-bar {
+    animation: visualizer ease-in-out infinite alternate;
+}
+
+@keyframes visualizer {
+    0% {
+        height: 8px;
+    }
+    100% {
+        height: 64px;
+    }
+}
+
+.visualizer-bar-small {
+    animation: visualizer-small ease-in-out infinite alternate;
+    height: 4px;
+}
+
+@keyframes visualizer-small {
+    0% {
+        height: 2px;
+    }
+    100% {
+        height: 12px;
     }
 }
 </style>
