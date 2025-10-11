@@ -5,11 +5,17 @@
         <template #header>
             <div class="flex justify-between items-center mb-10">
                 <Link class="w-1/2" :href="route('books.index')">
-                    <h2
-                        class="font-heading text-3xl text-theme-title leading-tight"
-                    >
-                        {{ categoryTitle }}
-                    </h2>
+                    <div class="flex items-center gap-3">
+                        <ApplicationLogo
+                            v-if="props.categoryName === 'themed'"
+                            class="w-12 h-12 flex-shrink-0"
+                        />
+                        <h2
+                            class="font-heading text-3xl text-theme-title leading-tight"
+                        >
+                            {{ categoryTitle }}
+                        </h2>
+                    </div>
                 </Link>
             </div>
         </template>
@@ -40,12 +46,13 @@
 </template>
 
 <script setup>
+import ApplicationLogo from "@/Components/ApplicationLogo.vue";
 import BookCoverCard from "@/Components/BookCoverCard.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
-import { Head, Link } from "@inertiajs/vue3";
+import { Head, Link, usePage } from "@inertiajs/vue3";
 import { computed } from "vue";
 
 const props = defineProps({
@@ -65,6 +72,17 @@ const { items, infiniteScrollRef, setItemLoading } = useInfiniteScroll(
 );
 
 const categoryTitle = computed(() => {
+    // Handle special themed category
+    if (props.categoryName === "themed") {
+        const page = usePage();
+        const theme = page.props.theme || "";
+        if (theme === "halloween") return "Halloween Books";
+        if (theme === "fireworks") return "4th of July Books";
+        if (theme === "christmas") return "Christmas Books";
+        return "Themed Books";
+    }
+
+    // Default: capitalize the category name
     return (
         props.categoryName.charAt(0).toUpperCase() + props.categoryName.slice(1)
     );

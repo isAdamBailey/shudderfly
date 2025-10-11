@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Requests\StoreBookRequest;
 use App\Http\Requests\UpdateBookRequest;
 use App\Jobs\IncrementBookReadCount;
 use App\Models\Book;
 use App\Models\Category;
 use App\Models\User;
+use App\Support\ThemeBooks;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
@@ -42,11 +44,22 @@ class BookController extends Controller
         $authors = auth()->user()->can('edit pages') ? User::all() : [];
         $categories = Category::all()->map->only(['id', 'name'])->sortBy('name')->values()->toArray();
 
+        // Get themed books if a theme is active
+        $currentTheme = HandleInertiaRequests::getCurrentTheme();
+        $themedBooks = null;
+        $themeLabel = null;
+        if ($currentTheme) {
+            $themedBooks = ThemeBooks::getBooksForTheme($currentTheme);
+            $themeLabel = ThemeBooks::getLabel($currentTheme);
+        }
+
         return Inertia::render('Books/Index', [
             'authors' => $authors,
             'categories' => $categories,
             'searchCategories' => $searchCategories ?? null,
             'search' => $search,
+            'themedBooks' => $themedBooks,
+            'themeLabel' => $themeLabel,
         ]);
     }
 

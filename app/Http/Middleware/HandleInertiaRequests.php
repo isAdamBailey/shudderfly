@@ -27,6 +27,19 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
+     * Get the current theme based on the date.
+     */
+    public static function getCurrentTheme(): string
+    {
+        return match (now()->month) {
+            12 => 'christmas',
+            7 => 'fireworks',
+            10 => 'halloween',
+            default => '',
+        };
+    }
+
+    /**
      * Define the props that are shared by default.
      *
      * @return mixed[]
@@ -46,7 +59,7 @@ class HandleInertiaRequests extends Middleware
             'settings' => SiteSetting::all()->mapWithKeys(function ($setting) {
                 return [$setting->key => $setting->value];
             }),
-            'theme' => now()->month === 12 ? 'christmas' : (now()->month === 7 ? 'fireworks' : (now()->month === 10 ? 'halloween' : '')),
+            'theme' => self::getCurrentTheme(),
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),

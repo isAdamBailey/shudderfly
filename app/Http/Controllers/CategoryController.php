@@ -6,6 +6,7 @@ use App\Http\Requests\StoreCategoryRequest;
 use App\Http\Requests\UpdateCategoryRequest;
 use App\Models\Book;
 use App\Models\Category;
+use App\Support\ThemeBooks;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Redirector;
@@ -29,6 +30,7 @@ class CategoryController extends Controller
                 ->with('coverImage')
                 ->orderBy('read_count', 'asc')
                 ->paginate(),
+            'themed' => ThemeBooks::getBooksForThemeAsPaginator(),
             default => Category::where('name', $categoryName)
                 ->firstOrFail()
                 ->books()
