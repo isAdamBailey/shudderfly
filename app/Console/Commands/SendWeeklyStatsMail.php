@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Mail\WeeklyStatsMail;
 use App\Models\Book;
 use App\Models\Page;
+use App\Models\Song;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
@@ -37,6 +38,7 @@ class SendWeeklyStatsMail extends Command
 
         $totalBooks = Book::count();
         $totalPages = Page::count();
+        $totalSongs = Song::count();
         $leastPages = Book::withCount('pages')
             ->orderBy('pages_count')
             ->orderBy('created_at')
@@ -69,6 +71,10 @@ class SendWeeklyStatsMail extends Command
             ->where('media_path', 'not like', '%snapshot%')
             ->where('created_at', '>=', $oneWeekAgo)
             ->get();
+        $mostReadSongs = Song::query()
+            ->orderBy('read_count', 'desc')
+            ->take(5)
+            ->get();
 
         foreach ($users as $user) {
             Mail::to($user->email)->send(new WeeklyStatsMail(
@@ -84,7 +90,9 @@ class SendWeeklyStatsMail extends Command
                 $screenshotsThisWeek,
                 $youTubeVideosThisWeek,
                 $videosThisWeek,
-                $imagesThisWeek
+                $imagesThisWeek,
+                $totalSongs,
+                $mostReadSongs
             ));
         }
     }

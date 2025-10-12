@@ -40,6 +40,10 @@ class WeeklyStatsMail extends Mailable
 
     public Collection $imagesThisWeek;
 
+    public int $totalSongs;
+
+    public Collection $mostReadSongs;
+
     /**
      * Create a new message instance.
      */
@@ -56,7 +60,9 @@ class WeeklyStatsMail extends Mailable
         Collection $screenshotsThisWeek,
         Collection $youTubeVideosThisWeek,
         Collection $videosThisWeek,
-        Collection $imagesThisWeek
+        Collection $imagesThisWeek,
+        int $totalSongs,
+        Collection $mostReadSongs
     ) {
         $this->user = $user;
         $this->totalBooks = $totalBooks;
@@ -71,6 +77,8 @@ class WeeklyStatsMail extends Mailable
         $this->youTubeVideosThisWeek = $youTubeVideosThisWeek;
         $this->videosThisWeek = $videosThisWeek;
         $this->imagesThisWeek = $imagesThisWeek;
+        $this->totalSongs = $totalSongs;
+        $this->mostReadSongs = $mostReadSongs;
     }
 
     /**
@@ -102,6 +110,8 @@ class WeeklyStatsMail extends Mailable
                 'youTubeVideosThisWeek' => $this->youTubeVideosThisWeek,
                 'videosThisWeek' => $this->videosThisWeek,
                 'imagesThisWeek' => $this->imagesThisWeek,
+                'totalSongs' => $this->totalSongs,
+                'mostReadSongs' => $this->mostReadSongs,
             ],
         );
     }

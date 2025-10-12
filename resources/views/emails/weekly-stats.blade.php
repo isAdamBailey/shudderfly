@@ -32,12 +32,20 @@
 
 ## {{ number_format($totalBooks) }} all time total books.
 ## {{ number_format($totalPages) }} all time total pages.
+## {{ number_format($totalSongs) }} all time total songs.
 
 ## Top 5 Most Read Books
 @foreach($mostRead as $book)
 <p>
     <x-email-hyperlink href="{{ url('/book/' . $book->slug) }}">{{ $book->title }}</x-email-hyperlink>
-    by: {{ $book->author }} ({{ number_format($book->read_count, 0) }} reads)
+    by: {{ $book->author }}
+</p>
+@endforeach
+
+## Top 5 Most Popular Songs
+@foreach($mostReadSongs as $song)
+<p>
+    <x-email-hyperlink href="{{ url('/music?song=' . $song->id) }}">{{ $song->title }}</x-email-hyperlink>
 </p>
 @endforeach
 
