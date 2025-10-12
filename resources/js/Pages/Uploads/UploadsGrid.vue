@@ -54,7 +54,7 @@ function mediaPath(photo) {
 
 function getItemLink(item) {
     if (item.type === "song") {
-        return route("music.index", { song: item.id });
+        return route("music.show", item.id);
     }
     return route("pages.show", item);
 }

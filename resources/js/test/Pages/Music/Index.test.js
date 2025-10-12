@@ -288,147 +288,51 @@ describe("Music Index", () => {
         expect(wrapper.text()).toContain("Loading more songs");
     });
 
-    // New tests for song query parameter functionality
-    it("auto-plays song when song query parameter is present", async () => {
-        // Mock URLSearchParams to return a song ID
-        const originalURLSearchParams = global.URLSearchParams;
-        global.URLSearchParams = vi.fn().mockImplementation(() => ({
-            get: vi.fn((key) => (key === "song" ? "1" : null)),
-        }));
+    // New tests for specificSong prop functionality
+    it("auto-plays song when specificSong prop is provided", async () => {
+        const specificSong = mockSongs.data[0];
 
-        // Mock URL and history
-        global.window = {
-            addEventListener: vi.fn(),
-            removeEventListener: vi.fn(),
-            location: {
-                search: "?song=1",
-                href: "http://localhost/music?song=1",
-            },
-            history: {
-                replaceState: vi.fn(),
-            },
-        };
-        global.URL = vi.fn().mockImplementation((url) => ({
-            searchParams: {
-                delete: vi.fn(),
-            },
-            toString: () => "http://localhost/music",
-        }));
-
-        wrapper = createWrapper();
+        wrapper = createWrapper({ specificSong });
 
         // Wait for the watch to trigger
         await nextTick();
-        await nextTick();
 
         // The song should be set as current
-        expect(wrapper.vm.currentSong).toEqual(
-            expect.objectContaining({ id: 1, title: "Test Song 1" })
-        );
-
-        // URL should be cleaned up
-        expect(window.history.replaceState).toHaveBeenCalled();
-
-        // Restore
-        global.URLSearchParams = originalURLSearchParams;
+        expect(wrapper.vm.currentSong).toEqual(specificSong);
     });
 
-    it("does not auto-play when no song query parameter is present", async () => {
-        // Mock URLSearchParams to return null
-        const originalURLSearchParams = global.URLSearchParams;
-        global.URLSearchParams = vi.fn().mockImplementation(() => ({
-            get: vi.fn(() => null),
-        }));
-
-        wrapper = createWrapper();
+    it("does not auto-play when specificSong prop is null", async () => {
+        wrapper = createWrapper({ specificSong: null });
         await nextTick();
 
         expect(wrapper.vm.currentSong).toBe(null);
-
-        // Restore
-        global.URLSearchParams = originalURLSearchParams;
     });
 
-    it("does not auto-play when song ID is not found", async () => {
-        // Mock URLSearchParams to return a non-existent song ID
-        const originalURLSearchParams = global.URLSearchParams;
-        global.URLSearchParams = vi.fn().mockImplementation(() => ({
-            get: vi.fn((key) => (key === "song" ? "999" : null)),
-        }));
-
-        wrapper = createWrapper();
-        await nextTick();
-
-        expect(wrapper.vm.currentSong).toBe(null);
-
-        // Restore
-        global.URLSearchParams = originalURLSearchParams;
-    });
-
-    it("does not auto-play if a song is already playing", async () => {
-        // Mock URLSearchParams to return a song ID
-        const originalURLSearchParams = global.URLSearchParams;
-        global.URLSearchParams = vi.fn().mockImplementation(() => ({
-            get: vi.fn((key) => (key === "song" ? "2" : null)),
-        }));
-
-        wrapper = createWrapper();
+    it("does not auto-play specificSong if a song is already playing", async () => {
+        wrapper = createWrapper({ specificSong: null });
 
         // Manually set a current song first
         wrapper.vm.currentSong = mockSongs.data[0];
         await nextTick();
+
+        // Now update the prop with a different song
+        await wrapper.setProps({ specificSong: mockSongs.data[1] });
         await nextTick();
 
-        // Should still be the first song, not the one from query param
+        // Should still be the first song, not the one from the prop
         expect(wrapper.vm.currentSong.id).toBe(1);
-
-        // Restore
-        global.URLSearchParams = originalURLSearchParams;
     });
 
-    it("cleans up URL after auto-playing song", async () => {
-        // Mock URLSearchParams
-        const originalURLSearchParams = global.URLSearchParams;
-        const mockSearchParams = {
-            get: vi.fn((key) => (key === "song" ? "1" : null)),
-            delete: vi.fn(),
-        };
-        global.URLSearchParams = vi
-            .fn()
-            .mockImplementation(() => mockSearchParams);
-
-        // Mock URL and history
-        const mockUrl = {
-            searchParams: mockSearchParams,
-            toString: () => "http://localhost/music",
-        };
-        global.URL = vi.fn().mockImplementation(() => mockUrl);
-
-        global.window = {
-            addEventListener: vi.fn(),
-            removeEventListener: vi.fn(),
-            location: {
-                search: "?song=1",
-                href: "http://localhost/music?song=1",
-            },
-            history: {
-                replaceState: vi.fn(),
-            },
-        };
-
-        wrapper = createWrapper();
-        await nextTick();
+    it("auto-plays specificSong when provided after mount", async () => {
+        wrapper = createWrapper({ specificSong: null });
         await nextTick();
 
-        // URL should be cleaned up
-        expect(mockSearchParams.delete).toHaveBeenCalledWith("song");
-        expect(window.history.replaceState).toHaveBeenCalledWith(
-            {},
-            "",
-            mockUrl
-        );
+        expect(wrapper.vm.currentSong).toBe(null);
 
-        // Restore
-        global.URLSearchParams = originalURLSearchParams;
+        // Now provide a specific song
+        await wrapper.setProps({ specificSong: mockSongs.data[1] });
+        await nextTick();
+
+        expect(wrapper.vm.currentSong).toEqual(mockSongs.data[1]);
     });
 });

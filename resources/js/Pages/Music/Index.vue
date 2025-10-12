@@ -115,6 +115,10 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    specificSong: {
+        type: Object,
+        default: null,
+    },
 });
 
 const syncing = ref(false);
@@ -203,27 +207,12 @@ const syncPlaylist = () => {
     );
 };
 
-// Check for song query parameter and auto-play on mount
-// This must be after playSong is defined
+// Auto-play specific song if provided via props
 watch(
-    () => items.value,
-    (newItems) => {
-        if (newItems.length > 0 && !currentSong.value) {
-            const urlParams = new URLSearchParams(window.location.search);
-            const songId = urlParams.get("song");
-
-            if (songId) {
-                const songToPlay = newItems.find(
-                    (song) => song.id === parseInt(songId)
-                );
-                if (songToPlay) {
-                    playSong(songToPlay);
-                    // Clean up the URL without reloading
-                    const url = new URL(window.location);
-                    url.searchParams.delete("song");
-                    window.history.replaceState({}, "", url);
-                }
-            }
+    () => props.specificSong,
+    (song) => {
+        if (song && !currentSong.value) {
+            playSong(song);
         }
     },
     { immediate: true }

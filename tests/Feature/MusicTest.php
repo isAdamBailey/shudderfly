@@ -155,20 +155,32 @@ class MusicTest extends TestCase
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        // Create songs with different creation times
-        $oldSong = Song::factory()->create(['created_at' => now()->subDays(5)]);
-        $newSong = Song::factory()->create(['created_at' => now()->subDay()]);
-        $newestSong = Song::factory()->create(['created_at' => now()]);
+        // Create songs with different creation dates
+        $oldSong = Song::factory()->create(['title' => 'Old Song', 'created_at' => now()->subDays(5)]);
+        $newSong = Song::factory()->create(['title' => 'New Song', 'created_at' => now()]);
+        $middleSong = Song::factory()->create(['title' => 'Middle Song', 'created_at' => now()->subDays(2)]);
 
         $response = $this->get(route('music.index'));
 
         $response->assertStatus(200)
             ->assertInertia(fn (Assert $page) => $page
                 ->has('songs.data', 3)
-                ->where('songs.data.0.id', $newestSong->id)
-                ->where('songs.data.1.id', $newSong->id)
-                ->where('songs.data.2.id', $oldSong->id)
+                ->where('songs.data.0.title', 'New Song')
+                ->where('songs.data.1.title', 'Middle Song')
+                ->where('songs.data.2.title', 'Old Song')
             );
+    }
+
+    public function test_music_show_route_redirects_to_index_with_song_param(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $song = Song::factory()->create(['title' => 'Test Song']);
+
+        $response = $this->get(route('music.show', $song));
+
+        $response->assertRedirect(route('music.index', ['song' => $song->id]));
     }
 
     /**

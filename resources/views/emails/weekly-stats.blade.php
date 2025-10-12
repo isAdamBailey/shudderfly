@@ -45,7 +45,7 @@
 ## Top 5 Most Popular Songs
 @foreach($mostReadSongs as $song)
 <p>
-    <x-email-hyperlink href="{{ url('/music?song=' . $song->id) }}">{{ $song->title }}</x-email-hyperlink>
+    <x-email-hyperlink href="{{ route('music.show', $song['id']) }}">{{ $song['title'] }}</x-email-hyperlink>
 </p>
 @endforeach
 

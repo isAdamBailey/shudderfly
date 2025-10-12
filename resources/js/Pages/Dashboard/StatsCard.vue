@@ -99,7 +99,7 @@
                 >
                 <Link
                     class="flex-1 font-medium hover:text-blue-400 underline"
-                    :href="`/music?song=${song.id}`"
+                    :href="route('music.show', song.id)"
                 >
                     {{ song.title }}
                 </Link>

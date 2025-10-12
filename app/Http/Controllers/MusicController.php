@@ -19,6 +19,7 @@ class MusicController extends Controller
     {
         $search = $request->search;
         $filter = $request->filter;
+        $songId = $request->song;
 
         $songsQuery = Song::query();
 
@@ -32,12 +33,27 @@ class MusicController extends Controller
 
         $songs = $songsQuery->paginate(20)->withQueryString();
 
+        // If a specific song is requested, load it separately
+        $specificSong = null;
+        if ($songId) {
+            $specificSong = Song::find($songId);
+        }
+
         return Inertia::render('Music/Index', [
             'songs' => $songs,
             'search' => $search,
             'filter' => $filter,
             'canSync' => auth()->user()->can('admin'),
+            'specificSong' => $specificSong,
         ]);
+    }
+
+    /**
+     * Get a single song by ID - redirects to music index with song parameter
+     */
+    public function show(Song $song)
+    {
+        return redirect()->route('music.index', ['song' => $song->id]);
     }
 
     /**
