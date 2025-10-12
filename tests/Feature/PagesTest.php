@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Book;
 use App\Models\Page;
+use App\Models\Song;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
@@ -632,7 +633,7 @@ class PagesTest extends TestCase
         Page::factory()->for($book)->count(5)->create();
 
         // Create songs
-        \App\Models\Song::factory()->count(3)->create();
+        Song::factory()->count(3)->create();
 
         $this->get(route('pictures.index'))->assertInertia(
             fn (Assert $page) => $page
@@ -650,7 +651,7 @@ class PagesTest extends TestCase
         Page::factory()->for($book)->count(5)->create();
 
         // Create songs
-        \App\Models\Song::factory()->count(3)->create();
+        Song::factory()->count(3)->create();
 
         $this->get(route('pictures.index', ['filter' => 'music']))->assertInertia(
             fn (Assert $page) => $page
@@ -669,7 +670,7 @@ class PagesTest extends TestCase
         Page::factory()->for($book)->count(3)->state(['media_path' => 'books/test/snapshot_123.jpg'])->create();
 
         // Create songs
-        \App\Models\Song::factory()->count(2)->create();
+        Song::factory()->count(2)->create();
 
         $this->get(route('pictures.index', ['filter' => 'snapshot']))->assertInertia(
             fn (Assert $page) => $page
@@ -688,7 +689,7 @@ class PagesTest extends TestCase
         Page::factory()->for($book)->count(2)->state(['video_link' => 'https://youtube.com/watch?v=123'])->create();
 
         // Create songs
-        \App\Models\Song::factory()->count(3)->create();
+        Song::factory()->count(3)->create();
 
         $this->get(route('pictures.index', ['filter' => 'youtube']))->assertInertia(
             fn (Assert $page) => $page
@@ -703,13 +704,13 @@ class PagesTest extends TestCase
 
         // Create pages with different read counts
         $book = Book::factory()->create();
-        $page1 = Page::factory()->for($book)->create(['read_count' => 10.5]);
-        $page2 = Page::factory()->for($book)->create(['read_count' => 5.0]);
-        $page3 = Page::factory()->for($book)->create(['read_count' => 15.0]);
+        Page::factory()->for($book)->create(['read_count' => 10.5]);
+        Page::factory()->for($book)->create(['read_count' => 5.0]);
+        Page::factory()->for($book)->create(['read_count' => 15.0]);
 
         // Create songs with different read counts
-        $song1 = \App\Models\Song::factory()->create(['read_count' => 20.0]);
-        $song2 = \App\Models\Song::factory()->create(['read_count' => 8.0]);
+        Song::factory()->create(['read_count' => 20.0]);
+        Song::factory()->create(['read_count' => 8.0]);
 
         $response = $this->get(route('pictures.index', ['filter' => 'popular']));
 
@@ -717,11 +718,11 @@ class PagesTest extends TestCase
             fn (Assert $page) => $page
                 ->component('Uploads/Index')
                 ->has('photos.data', 5)
-                ->where('photos.data.0.read_count', 20) // Song with highest read count (int or float)
-                ->where('photos.data.1.read_count', 15) // Page with second highest
-                ->where('photos.data.2.read_count', 10.5)
-                ->where('photos.data.3.read_count', 8)
-                ->where('photos.data.4.read_count', 5)
+                ->where('photos.data.0.read_count', fn ($value) => (float) $value === 20.0) // Song with highest read count
+                ->where('photos.data.1.read_count', fn ($value) => (float) $value === 15.0) // Page with second highest
+                ->where('photos.data.2.read_count', fn ($value) => (float) $value === 10.5)
+                ->where('photos.data.3.read_count', fn ($value) => (float) $value === 8.0)
+                ->where('photos.data.4.read_count', fn ($value) => (float) $value === 5.0)
         );
     }
 
@@ -734,7 +735,7 @@ class PagesTest extends TestCase
         Page::factory()->for($book)->count(10)->create();
 
         // Create songs
-        \App\Models\Song::factory()->count(5)->create();
+        Song::factory()->count(5)->create();
 
         $response = $this->get(route('pictures.index', ['filter' => 'random']));
 
@@ -764,10 +765,10 @@ class PagesTest extends TestCase
         Page::factory()->for($book)->create(['created_at' => now()]);
 
         // Create old songs
-        $oldSong = \App\Models\Song::factory()->create(['created_at' => $yearAgo->copy()->subWeek()]);
+        $oldSong = Song::factory()->create(['created_at' => $yearAgo->copy()->subWeek()]);
 
         // Create recent song
-        \App\Models\Song::factory()->create(['created_at' => now()]);
+        Song::factory()->create(['created_at' => now()]);
 
         $response = $this->get(route('pictures.index', ['filter' => 'old']));
 
@@ -787,7 +788,7 @@ class PagesTest extends TestCase
         Page::factory()->for($book)->count(3)->create(['created_at' => now()]);
 
         // Create recent songs only
-        \App\Models\Song::factory()->count(2)->create(['created_at' => now()]);
+        Song::factory()->count(2)->create(['created_at' => now()]);
 
         $response = $this->get(route('pictures.index', ['filter' => 'old']));
 
@@ -839,7 +840,7 @@ class PagesTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        $song = \App\Models\Song::factory()->create([
+        $song = Song::factory()->create([
             'title' => 'Test Song',
             'description' => 'Test Description',
             'youtube_video_id' => 'test123',
@@ -874,16 +875,16 @@ class PagesTest extends TestCase
         Page::factory()->for($book)->create(['content' => 'Regular page']);
 
         // Create song with search term in title
-        \App\Models\Song::factory()->create(['title' => 'Special Song']);
+        Song::factory()->create(['title' => 'Special Song']);
 
         // Create song with search term in description
-        \App\Models\Song::factory()->create([
+        Song::factory()->create([
             'title' => 'Regular Song',
-            'description' => 'This has a Special description'
+            'description' => 'This has a Special description',
         ]);
 
         // Create song without search term
-        \App\Models\Song::factory()->create(['title' => 'Another Song']);
+        Song::factory()->create(['title' => 'Another Song']);
 
         $response = $this->get(route('pictures.index', ['search' => $searchTerm]));
 
@@ -901,7 +902,7 @@ class PagesTest extends TestCase
         // Create more items than per page (25)
         $book = Book::factory()->create();
         Page::factory()->for($book)->count(30)->create();
-        \App\Models\Song::factory()->count(10)->create();
+        Song::factory()->count(10)->create();
 
         // Test first page
         $response = $this->get(route('pictures.index'));

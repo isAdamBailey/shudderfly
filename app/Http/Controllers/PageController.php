@@ -35,6 +35,7 @@ class PageController extends Controller
         } elseif ($page->media_path && str_contains($page->media_path, 'snapshot')) {
             return 'screenshot';
         }
+
         return 'page';
     }
 
@@ -81,13 +82,15 @@ class PageController extends Controller
     {
         switch ($filter) {
             case 'popular':
-                $pages = $pagesQuery->orderBy('read_count', 'desc')->get()->map(fn($page) => $this->mapPageToArray($page));
-                $songs = $songsQuery->orderBy('read_count', 'desc')->get()->map(fn($song) => $this->mapSongToArray($song));
+                $pages = $pagesQuery->orderBy('read_count', 'desc')->get()->map(fn ($page) => $this->mapPageToArray($page));
+                $songs = $songsQuery->orderBy('read_count', 'desc')->get()->map(fn ($song) => $this->mapSongToArray($song));
+
                 return $pages->concat($songs)->sortByDesc('read_count')->values();
 
             case 'random':
-                $pages = $pagesQuery->inRandomOrder()->limit($perPage * 2)->get()->map(fn($page) => $this->mapPageToArray($page));
-                $songs = $songsQuery->inRandomOrder()->limit($perPage)->get()->map(fn($song) => $this->mapSongToArray($song));
+                $pages = $pagesQuery->inRandomOrder()->limit($perPage * 2)->get()->map(fn ($page) => $this->mapPageToArray($page));
+                $songs = $songsQuery->inRandomOrder()->limit($perPage)->get()->map(fn ($song) => $this->mapSongToArray($song));
+
                 return $pages->concat($songs)->shuffle()->take($perPage);
 
             case 'old':
@@ -97,22 +100,25 @@ class PageController extends Controller
                 $pagesQueryClone = clone $pagesQuery;
                 $songsQueryClone = clone $songsQuery;
 
-                $pages = $pagesQuery->whereDate('created_at', '<=', $yearAgo)->orderBy('created_at', 'desc')->get()->map(fn($page) => $this->mapPageToArray($page));
-                $songs = $songsQuery->whereDate('created_at', '<=', $yearAgo)->orderBy('created_at', 'desc')->get()->map(fn($song) => $this->mapSongToArray($song));
+                $pages = $pagesQuery->whereDate('created_at', '<=', $yearAgo)->orderBy('created_at', 'desc')->get()->map(fn ($page) => $this->mapPageToArray($page));
+                $songs = $songsQuery->whereDate('created_at', '<=', $yearAgo)->orderBy('created_at', 'desc')->get()->map(fn ($song) => $this->mapSongToArray($song));
                 $items = $pages->concat($songs)->sortByDesc('created_at')->values();
 
                 // If no old items found, fallback to oldest
                 if ($items->isEmpty()) {
-                    $pages = $pagesQueryClone->oldest()->get()->map(fn($page) => $this->mapPageToArray($page));
-                    $songs = $songsQueryClone->oldest()->get()->map(fn($song) => $this->mapSongToArray($song));
+                    $pages = $pagesQueryClone->oldest()->get()->map(fn ($page) => $this->mapPageToArray($page));
+                    $songs = $songsQueryClone->oldest()->get()->map(fn ($song) => $this->mapSongToArray($song));
+
                     return $pages->concat($songs)->sortBy('created_at')->values();
                 }
+
                 return $items;
 
             default:
                 // Latest items from both tables
-                $pages = $pagesQuery->latest()->get()->map(fn($page) => $this->mapPageToArray($page));
-                $songs = $songsQuery->latest()->get()->map(fn($song) => $this->mapSongToArray($song));
+                $pages = $pagesQuery->latest()->get()->map(fn ($page) => $this->mapPageToArray($page));
+                $songs = $songsQuery->latest()->get()->map(fn ($song) => $this->mapSongToArray($song));
+
                 return $pages->concat($songs)->sortByDesc('created_at')->values();
         }
     }
