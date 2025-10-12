@@ -78,48 +78,107 @@ class PageController extends Controller
     /**
      * Get items based on filter type
      */
-    private function getFilteredItems($pagesQuery, $songsQuery, $filter, $perPage)
+    private function getFilteredItems($pagesQuery, $songsQuery, $filter, $perPage, $currentPage)
     {
+        $offset = ($currentPage - 1) * $perPage;
+
         switch ($filter) {
             case 'popular':
-                $pages = $pagesQuery->orderBy('read_count', 'desc')->get()->map(fn ($page) => $this->mapPageToArray($page));
-                $songs = $songsQuery->orderBy('read_count', 'desc')->get()->map(fn ($song) => $this->mapSongToArray($song));
+                // Get total count efficiently
+                $pagesCount = $pagesQuery->count();
+                $songsCount = $songsQuery->count();
+                $total = $pagesCount + $songsCount;
 
-                return $pages->concat($songs)->sortByDesc('read_count')->values();
+                // Fetch more than needed, then sort and slice
+                $fetchLimit = min($offset + $perPage + 50, $pagesCount + $songsCount);
+
+                $pages = $pagesQuery->orderBy('read_count', 'desc')->limit($fetchLimit)->get()->map(fn ($page) => $this->mapPageToArray($page));
+                $songs = $songsQuery->orderBy('read_count', 'desc')->limit($fetchLimit)->get()->map(fn ($song) => $this->mapSongToArray($song));
+
+                $items = $pages->concat($songs)->sortByDesc('read_count')->values();
+
+                return [
+                    'items' => $items->slice($offset, $perPage)->values(),
+                    'total' => $total
+                ];
 
             case 'random':
-                $pages = $pagesQuery->inRandomOrder()->limit($perPage * 2)->get()->map(fn ($page) => $this->mapPageToArray($page));
-                $songs = $songsQuery->inRandomOrder()->limit($perPage)->get()->map(fn ($song) => $this->mapSongToArray($song));
+                // For random, we need to fetch and shuffle, but limit the initial fetch
+                $pagesCount = $pagesQuery->count();
+                $songsCount = $songsQuery->count();
+                $total = $pagesCount + $songsCount;
 
-                return $pages->concat($songs)->shuffle()->take($perPage);
+                // Fetch a reasonable amount to randomize from
+                $fetchLimit = min(100, $total);
+
+                $pages = $pagesQuery->inRandomOrder()->limit($fetchLimit)->get()->map(fn ($page) => $this->mapPageToArray($page));
+                $songs = $songsQuery->inRandomOrder()->limit($fetchLimit)->get()->map(fn ($song) => $this->mapSongToArray($song));
+
+                $items = $pages->concat($songs)->shuffle()->slice($offset, $perPage)->values();
+
+                return [
+                    'items' => $items,
+                    'total' => $total
+                ];
 
             case 'old':
                 $yearAgo = now()->subYear();
 
-                // Clone queries for potential fallback
-                $pagesQueryClone = clone $pagesQuery;
-                $songsQueryClone = clone $songsQuery;
+                // Get counts for old items
+                $pagesQueryOld = clone $pagesQuery;
+                $songsQueryOld = clone $songsQuery;
 
-                $pages = $pagesQuery->whereDate('created_at', '<=', $yearAgo)->orderBy('created_at', 'desc')->get()->map(fn ($page) => $this->mapPageToArray($page));
-                $songs = $songsQuery->whereDate('created_at', '<=', $yearAgo)->orderBy('created_at', 'desc')->get()->map(fn ($song) => $this->mapSongToArray($song));
-                $items = $pages->concat($songs)->sortByDesc('created_at')->values();
+                $oldPagesCount = $pagesQueryOld->whereDate('created_at', '<=', $yearAgo)->count();
+                $oldSongsCount = $songsQueryOld->whereDate('created_at', '<=', $yearAgo)->count();
 
-                // If no old items found, fallback to oldest
-                if ($items->isEmpty()) {
-                    $pages = $pagesQueryClone->oldest()->get()->map(fn ($page) => $this->mapPageToArray($page));
-                    $songs = $songsQueryClone->oldest()->get()->map(fn ($song) => $this->mapSongToArray($song));
+                if ($oldPagesCount + $oldSongsCount > 0) {
+                    // We have old items
+                    $total = $oldPagesCount + $oldSongsCount;
+                    $fetchLimit = $offset + $perPage + 50;
 
-                    return $pages->concat($songs)->sortBy('created_at')->values();
+                    $pages = $pagesQuery->whereDate('created_at', '<=', $yearAgo)->orderBy('created_at', 'desc')->limit($fetchLimit)->get()->map(fn ($page) => $this->mapPageToArray($page));
+                    $songs = $songsQuery->whereDate('created_at', '<=', $yearAgo)->orderBy('created_at', 'desc')->limit($fetchLimit)->get()->map(fn ($song) => $this->mapSongToArray($song));
+
+                    $items = $pages->concat($songs)->sortByDesc('created_at')->values();
+
+                    return [
+                        'items' => $items->slice($offset, $perPage)->values(),
+                        'total' => $total
+                    ];
+                } else {
+                    // Fallback to oldest
+                    $total = $pagesQuery->count() + $songsQuery->count();
+                    $fetchLimit = $offset + $perPage + 50;
+
+                    $pages = $pagesQuery->oldest()->limit($fetchLimit)->get()->map(fn ($page) => $this->mapPageToArray($page));
+                    $songs = $songsQuery->oldest()->limit($fetchLimit)->get()->map(fn ($song) => $this->mapSongToArray($song));
+
+                    $items = $pages->concat($songs)->sortBy('created_at')->values();
+
+                    return [
+                        'items' => $items->slice($offset, $perPage)->values(),
+                        'total' => $total
+                    ];
                 }
 
-                return $items;
-
             default:
-                // Latest items from both tables
-                $pages = $pagesQuery->latest()->get()->map(fn ($page) => $this->mapPageToArray($page));
-                $songs = $songsQuery->latest()->get()->map(fn ($song) => $this->mapSongToArray($song));
+                // Latest items - most common case, optimize heavily
+                $pagesCount = $pagesQuery->count();
+                $songsCount = $songsQuery->count();
+                $total = $pagesCount + $songsCount;
 
-                return $pages->concat($songs)->sortByDesc('created_at')->values();
+                // Fetch enough records to properly interleave by date
+                $fetchLimit = $offset + $perPage + 50;
+
+                $pages = $pagesQuery->latest()->limit($fetchLimit)->get()->map(fn ($page) => $this->mapPageToArray($page));
+                $songs = $songsQuery->latest()->limit($fetchLimit)->get()->map(fn ($song) => $this->mapSongToArray($song));
+
+                $items = $pages->concat($songs)->sortByDesc('created_at')->values();
+
+                return [
+                    'items' => $items->slice($offset, $perPage)->values(),
+                    'total' => $total
+                ];
         }
     }
 
@@ -178,16 +237,12 @@ class PageController extends Controller
         $perPage = 25;
         $currentPage = $request->input('page', 1);
 
-        // Get filtered items
-        $items = $this->getFilteredItems($pagesQuery, $songsQuery, $filter, $perPage);
-
-        // Manually paginate the combined collection
-        $total = $items->count();
-        $items = $items->slice(($currentPage - 1) * $perPage, $perPage)->values();
+        // Get filtered items with pagination
+        $result = $this->getFilteredItems($pagesQuery, $songsQuery, $filter, $perPage, $currentPage);
 
         $photos = new \Illuminate\Pagination\LengthAwarePaginator(
-            $items,
-            $total,
+            $result['items'],
+            $result['total'],
             $perPage,
             $currentPage,
             ['path' => $request->url(), 'query' => $request->query()]
