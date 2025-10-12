@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Song;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -15,8 +14,6 @@ class YouTubeService
     private $playlistId;
 
     private const BATCH_SIZE = 50; // YouTube allows up to 50 video IDs per request
-
-    private const SYNC_INTERVAL_MINUTES = 10;
 
     public function __construct()
     {
@@ -123,7 +120,6 @@ class YouTubeService
                 continue;
             }
         }
-
 
         return [
             'success' => true,

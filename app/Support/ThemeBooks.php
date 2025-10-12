@@ -2,9 +2,7 @@
 
 namespace App\Support;
 
-use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Book;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class ThemeBooks
