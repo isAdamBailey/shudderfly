@@ -13,6 +13,12 @@
             </p>
         </div>
         <div class="border-b py-4 flex justify-between">
+            <p>Total number of songs</p>
+            <p class="font-bold">
+                {{ props.stats.numberOfSongs.toLocaleString() }}
+            </p>
+        </div>
+        <div class="border-b py-4 flex justify-between">
             <p>Pages that are images</p>
             <p class="font-bold">
                 {{ props.stats.numberOfImages.toLocaleString() }}
@@ -62,6 +68,42 @@
                 {{ props.stats.leastPages.title }}
             </Link>
             <p>{{ countAddS(props.stats.leastPages.pages_count, "page") }}</p>
+        </div>
+        <div class="mt-6">
+            <p class="font-bold text-lg mb-2">Top 5 Most Popular Books</p>
+            <div
+                v-for="(book, index) in props.stats.mostReadBooks"
+                :key="book.id"
+                class="border-b py-2 flex items-center"
+            >
+                <span class="text-gray-500 dark:text-gray-400 mr-2"
+                    >{{ index + 1 }}.</span
+                >
+                <Link
+                    class="flex-1 font-medium hover:text-blue-400 underline"
+                    :href="route('books.show', book.slug)"
+                >
+                    {{ book.title }}
+                </Link>
+            </div>
+        </div>
+        <div class="mt-6">
+            <p class="font-bold text-lg mb-2">Top 5 Most Popular Songs</p>
+            <div
+                v-for="(song, index) in props.stats.mostReadSongs"
+                :key="song.id"
+                class="border-b py-2 flex items-center"
+            >
+                <span class="text-gray-500 dark:text-gray-400 mr-2"
+                    >{{ index + 1 }}.</span
+                >
+                <Link
+                    class="flex-1 font-medium hover:text-blue-400 underline"
+                    :href="`/music?song=${song.id}`"
+                >
+                    {{ song.title }}
+                </Link>
+            </div>
         </div>
     </div>
 </template>

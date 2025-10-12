@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Book;
 use App\Models\Category;
 use App\Models\Page;
+use App\Models\Song;
 use App\Models\User;
 use Inertia\Inertia;
 
@@ -22,12 +23,24 @@ class DashboardController extends Controller
             'stats' => Inertia::defer(fn () => [
                 'numberOfBooks' => Book::count(),
                 'numberOfPages' => Page::count(),
+                'numberOfSongs' => Song::count(),
                 'numberOfYouTubeVideos' => Page::whereNotNull('video_link')->count(),
                 'numberOfVideos' => Page::where('media_path', 'like', '%.mp4')->count(),
                 'numberOfImages' => Page::where('media_path', 'like', '%.webp')
                     ->where('media_path', 'not like', '%snapshot%')
                     ->count(),
                 'numberOfScreenshots' => Page::where('media_path', 'like', '%snapshot%')->count(),
+                'mostReadBooks' => Book::query()
+                    ->orderBy('read_count', 'desc')
+                    ->orderBy('created_at')
+                    ->take(5)
+                    ->get()
+                    ->toArray(),
+                'mostReadSongs' => Song::query()
+                    ->orderBy('read_count', 'desc')
+                    ->take(5)
+                    ->get()
+                    ->toArray(),
                 'leastPages' => Book::withCount('pages')
                     ->orderBy('pages_count')
                     ->orderBy('created_at')
