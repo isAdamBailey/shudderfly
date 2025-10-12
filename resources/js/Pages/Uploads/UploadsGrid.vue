@@ -8,6 +8,8 @@ import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { Link, usePage } from "@inertiajs/vue3";
 import { computed, watch } from "vue";
 
+/* global route */
+
 const props = defineProps({
     photos: {
         type: Object,
@@ -41,10 +43,36 @@ watch(
 );
 
 function mediaPath(photo) {
+    // For songs, return the thumbnail
+    if (photo.type === "song" && photo.thumbnail) {
+        return photo.thumbnail;
+    }
+    // For pages, return poster or media path
     if (photo.media_poster) {
         return photo.media_poster;
     }
     return photo.media_path;
+}
+
+function getItemLink(item) {
+    if (item.type === "song") {
+        return route("music.index");
+    }
+    return route("pages.show", item);
+}
+
+function getFooterLink(item) {
+    if (item.type === "song") {
+        return route("music.index");
+    }
+    return route("books.show", item.book);
+}
+
+function getFooterText(item) {
+    if (item.type === "song") {
+        return "Music";
+    }
+    return item.book?.title || "";
 }
 </script>
 
@@ -55,7 +83,7 @@ function mediaPath(photo) {
     >
         <div
             v-for="photo in items"
-            :key="photo.id"
+            :key="`${photo.type}-${photo.id}`"
             class="relative flex flex-col justify-between shadow-sm rounded-lg overflow-hidden bg-gray-300 h-[400px]"
         >
             <div
@@ -70,7 +98,7 @@ function mediaPath(photo) {
                 prefetch="hover"
                 as="button"
                 class="w-full h-[350px] rounded-b-lg"
-                :href="route('pages.show', photo)"
+                :href="getItemLink(photo)"
                 @click="setItemLoading(photo)"
             >
                 <LazyLoader
@@ -78,6 +106,7 @@ function mediaPath(photo) {
                     :src="mediaPath(photo)"
                     :object-fit="'cover'"
                     :fill-container="true"
+                    :item-type="photo.type"
                 />
                 <VideoWrapper
                     v-if="photo.video_link"
@@ -91,7 +120,7 @@ function mediaPath(photo) {
                 ></div>
             </Link>
             <Link
-                :href="route('books.show', photo.book)"
+                :href="getFooterLink(photo)"
                 prefetch="hover"
                 class="w-full h-[50px]"
                 :as="photo.loading ? 'span' : 'a'"
@@ -101,7 +130,10 @@ function mediaPath(photo) {
                     :disabled="photo.loading"
                     class="w-full h-full rounded-t-none rounded-b-lg whitespace-normal text-left"
                 >
-                    <span class="line-clamp-2 font-heading text-theme-button uppercase text-lg">{{ photo.book.title }}</span>
+                    <span
+                        class="line-clamp-2 font-heading text-theme-button uppercase text-lg"
+                        >{{ getFooterText(photo) }}</span
+                    >
                 </Button>
             </Link>
         </div>

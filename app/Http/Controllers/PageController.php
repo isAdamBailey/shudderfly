@@ -12,6 +12,7 @@ use App\Models\Book;
 use App\Models\Collage;
 use App\Models\Page;
 use App\Models\SiteSetting;
+use App\Models\Song;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
@@ -24,13 +25,101 @@ use Inertia\Response;
 
 class PageController extends Controller
 {
+    /**
+     * Determine the type of page based on its media properties
+     */
+    private function getPageType($page): string
+    {
+        if ($page->media_poster) {
+            return 'video';
+        } elseif ($page->media_path && str_contains($page->media_path, 'snapshot')) {
+            return 'screenshot';
+        }
+        return 'page';
+    }
+
+    /**
+     * Map a page model to array format for the feed
+     */
+    private function mapPageToArray($page): array
+    {
+        return [
+            'id' => $page->id,
+            'type' => $this->getPageType($page),
+            'content' => $page->content,
+            'media_path' => $page->media_path,
+            'media_poster' => $page->media_poster,
+            'video_link' => $page->video_link,
+            'book' => $page->book,
+            'created_at' => $page->created_at,
+            'read_count' => $page->read_count,
+        ];
+    }
+
+    /**
+     * Map a song model to array format for the feed
+     */
+    private function mapSongToArray($song): array
+    {
+        return [
+            'id' => $song->id,
+            'type' => 'song',
+            'content' => $song->title,
+            'description' => $song->description,
+            'thumbnail' => $song->thumbnail,
+            'youtube_url' => $song->youtube_url,
+            'youtube_video_id' => $song->youtube_video_id,
+            'created_at' => $song->created_at,
+            'read_count' => $song->read_count,
+        ];
+    }
+
+    /**
+     * Get items based on filter type
+     */
+    private function getFilteredItems($pagesQuery, $songsQuery, $filter, $perPage)
+    {
+        switch ($filter) {
+            case 'popular':
+                $pages = $pagesQuery->orderBy('read_count', 'desc')->get()->map(fn($page) => $this->mapPageToArray($page));
+                $songs = $songsQuery->orderBy('read_count', 'desc')->get()->map(fn($song) => $this->mapSongToArray($song));
+                return $pages->concat($songs)->sortByDesc('read_count')->values();
+
+            case 'random':
+                $pages = $pagesQuery->inRandomOrder()->limit($perPage * 2)->get()->map(fn($page) => $this->mapPageToArray($page));
+                $songs = $songsQuery->inRandomOrder()->limit($perPage)->get()->map(fn($song) => $this->mapSongToArray($song));
+                return $pages->concat($songs)->shuffle()->take($perPage);
+
+            case 'old':
+                $yearAgo = now()->subYear();
+                $pages = $pagesQuery->whereDate('created_at', '<=', $yearAgo)->orderBy('created_at', 'desc')->get()->map(fn($page) => $this->mapPageToArray($page));
+                $songs = $songsQuery->whereDate('created_at', '<=', $yearAgo)->orderBy('created_at', 'desc')->get()->map(fn($song) => $this->mapSongToArray($song));
+                $items = $pages->concat($songs)->sortByDesc('created_at')->values();
+
+                // If no old items found, fallback to oldest
+                if ($items->isEmpty()) {
+                    $pages = $pagesQuery->oldest()->get()->map(fn($page) => $this->mapPageToArray($page));
+                    $songs = $songsQuery->oldest()->get()->map(fn($song) => $this->mapSongToArray($song));
+                    return $pages->concat($songs)->sortBy('created_at')->values();
+                }
+                return $items;
+
+            default:
+                // Latest items from both tables
+                $pages = $pagesQuery->latest()->get()->map(fn($page) => $this->mapPageToArray($page));
+                $songs = $songsQuery->latest()->get()->map(fn($song) => $this->mapSongToArray($song));
+                return $pages->concat($songs)->sortByDesc('created_at')->values();
+        }
+    }
+
     public function index(Request $request): Response
     {
         $search = $request->search;
         $filter = $request->filter;
         $youtubeEnabled = SiteSetting::where('key', 'youtube_enabled')->first()->value;
 
-        $photos = Page::with('book')
+        // Build the pages query
+        $pagesQuery = Page::with('book')
             ->when($filter === 'youtube', function ($query) use ($youtubeEnabled) {
                 if (! $youtubeEnabled) {
                     $query->whereRaw('1 = 0');
@@ -40,6 +129,10 @@ class PageController extends Controller
             })
             ->when($filter === 'snapshot', function ($query) {
                 $query->where('media_path', 'like', '%snapshot%');
+            })
+            ->when($filter === 'music', function ($query) {
+                // Exclude pages from music filter
+                $query->whereRaw('1 = 0');
             })
             ->when(! $youtubeEnabled, function ($query) {
                 $query->whereNull('video_link');
@@ -51,22 +144,44 @@ class PageController extends Controller
                             $query->where('title', 'LIKE', '%'.$search.'%');
                         });
                 });
-            })
-            ->unless($filter, fn ($query) => $query->latest())
-            ->when($filter === 'old', function ($query) {
-                $yearAgo = clone $query;
-                $yearAgo->whereDate('created_at', '<=', today()->subYear());
-                if (! $yearAgo->exists()) {
-                    return $query->oldest();
-                }
+            });
 
-                return $yearAgo->orderBy('created_at', 'desc');
+        // Build the songs query
+        $songsQuery = Song::query()
+            ->when($filter === 'snapshot', function ($query) {
+                // Exclude songs from snapshot filter
+                $query->whereRaw('1 = 0');
             })
-            ->when($filter === 'random', fn ($query) => $query->inRandomOrder())
-            ->when($filter === 'popular', fn ($query) => $query->orderBy('read_count', 'desc'))
-            ->latest();
+            ->when($filter === 'youtube', function ($query) {
+                // Exclude songs from youtube filter
+                $query->whereRaw('1 = 0');
+            })
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('title', 'LIKE', '%'.$search.'%')
+                        ->orWhere('description', 'LIKE', '%'.$search.'%');
+                });
+            });
 
-        $photos = $photos->paginate(25);
+        // Apply ordering/filtering
+        $perPage = 25;
+        $currentPage = $request->input('page', 1);
+
+        // Get filtered items
+        $items = $this->getFilteredItems($pagesQuery, $songsQuery, $filter, $perPage);
+
+        // Manually paginate the combined collection
+        $total = $items->count();
+        $items = $items->slice(($currentPage - 1) * $perPage, $perPage)->values();
+
+        $photos = new \Illuminate\Pagination\LengthAwarePaginator(
+            $items,
+            $total,
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
         $photos->appends($request->all());
 
         return Inertia::render('Uploads/Index', [
