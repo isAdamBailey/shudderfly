@@ -8,8 +8,6 @@ import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { Link, usePage } from "@inertiajs/vue3";
 import { computed, watch } from "vue";
 
-/* global route */
-
 const props = defineProps({
     photos: {
         type: Object,
@@ -56,7 +54,7 @@ function mediaPath(photo) {
 
 function getItemLink(item) {
     if (item.type === "song") {
-        return route("music.index");
+        return route("music.index", { song: item.id });
     }
     return route("pages.show", item);
 }

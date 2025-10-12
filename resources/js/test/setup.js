@@ -71,13 +71,19 @@ vi.mock("@/Layouts/AuthenticatedLayout.vue", () => ({
 
 // Enhanced route mocking for Laravel routes
 export const ROUTE_MAPPINGS = {
-    "music.index": "/music",
+    "music.index": (params) => {
+        if (params && params.song) {
+            return `/music?song=${params.song}`;
+        }
+        return "/music";
+    },
     "music.sync": "/music/sync",
     "music.increment-read-count": (params) =>
         `/music/${params}/increment-read-count`,
     "pictures.index": "/pictures",
+    "pages.show": (params) => `/pages/${params.id || params}`,
     "books.index": "/books",
-    "books.show": (params) => `/books/${params.book}`,
+    "books.show": (params) => `/books/${params.id || params.book || params}`,
     "categories.show": (params) => `/categories/${params.categoryName}`,
 };
 

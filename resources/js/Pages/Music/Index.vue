@@ -202,4 +202,30 @@ const syncPlaylist = () => {
         }
     );
 };
+
+// Check for song query parameter and auto-play on mount
+// This must be after playSong is defined
+watch(
+    () => items.value,
+    (newItems) => {
+        if (newItems.length > 0 && !currentSong.value) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const songId = urlParams.get("song");
+
+            if (songId) {
+                const songToPlay = newItems.find(
+                    (song) => song.id === parseInt(songId)
+                );
+                if (songToPlay) {
+                    playSong(songToPlay);
+                    // Clean up the URL without reloading
+                    const url = new URL(window.location);
+                    url.searchParams.delete("song");
+                    window.history.replaceState({}, "", url);
+                }
+            }
+        }
+    },
+    { immediate: true }
+);
 </script>
