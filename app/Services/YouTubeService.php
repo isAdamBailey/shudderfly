@@ -18,8 +18,6 @@ class YouTubeService
 
     private const SYNC_INTERVAL_MINUTES = 10;
 
-    private const CACHE_TTL = self::SYNC_INTERVAL_MINUTES * 60; // seconds
-
     public function __construct()
     {
         $this->apiKey = config('services.youtube.api_key');
@@ -37,19 +35,6 @@ class YouTubeService
                 'error' => 'YouTube API key or playlist ID not configured',
                 'quota_exceeded' => false,
                 'synced' => 0,
-            ];
-        }
-
-        // Check if we've synced recently to avoid unnecessary API calls
-        $lastSyncKey = "youtube_playlist_last_sync_{$this->playlistId}";
-        $lastSync = Cache::get($lastSyncKey);
-
-        if ($lastSync && $lastSync > now()->subMinutes(self::SYNC_INTERVAL_MINUTES)) {
-            return [
-                'success' => true,
-                'message' => 'Playlist synced recently, skipping to save quota',
-                'synced' => 0,
-                'quota_exceeded' => false,
             ];
         }
 
@@ -98,7 +83,6 @@ class YouTubeService
 
         if (empty($videoIds)) {
             Log::info('No new videos to sync');
-            Cache::put($lastSyncKey, now(), self::CACHE_TTL);
 
             return [
                 'success' => true,
@@ -140,7 +124,6 @@ class YouTubeService
             }
         }
 
-        Cache::put($lastSyncKey, now(), self::CACHE_TTL);
 
         return [
             'success' => true,
