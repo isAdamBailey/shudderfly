@@ -92,14 +92,19 @@ class PageController extends Controller
 
             case 'old':
                 $yearAgo = now()->subYear();
+
+                // Clone queries for potential fallback
+                $pagesQueryClone = clone $pagesQuery;
+                $songsQueryClone = clone $songsQuery;
+
                 $pages = $pagesQuery->whereDate('created_at', '<=', $yearAgo)->orderBy('created_at', 'desc')->get()->map(fn($page) => $this->mapPageToArray($page));
                 $songs = $songsQuery->whereDate('created_at', '<=', $yearAgo)->orderBy('created_at', 'desc')->get()->map(fn($song) => $this->mapSongToArray($song));
                 $items = $pages->concat($songs)->sortByDesc('created_at')->values();
 
                 // If no old items found, fallback to oldest
                 if ($items->isEmpty()) {
-                    $pages = $pagesQuery->oldest()->get()->map(fn($page) => $this->mapPageToArray($page));
-                    $songs = $songsQuery->oldest()->get()->map(fn($song) => $this->mapSongToArray($song));
+                    $pages = $pagesQueryClone->oldest()->get()->map(fn($page) => $this->mapPageToArray($page));
+                    $songs = $songsQueryClone->oldest()->get()->map(fn($song) => $this->mapSongToArray($song));
                     return $pages->concat($songs)->sortBy('created_at')->values();
                 }
                 return $items;

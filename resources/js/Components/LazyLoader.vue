@@ -68,7 +68,7 @@ import { useForm, usePage } from "@inertiajs/vue3";
 import { useImage } from "@vueuse/core";
 import { computed, onUnmounted, ref } from "vue";
 
-const { isVideo, isPoster, isSnapshot } = useMedia();
+const { isVideo } = useMedia();
 const videoRef = ref(null);
 const { speak } = useSpeechSynthesis();
 const user = usePage().props.auth.user;

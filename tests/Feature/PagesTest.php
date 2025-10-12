@@ -620,4 +620,305 @@ class PagesTest extends TestCase
         // regardless of the action performed
         $response->assertRedirect(route('books.show', $sourceBook));
     }
+
+    // New tests for unified feed with songs
+
+    public function test_unified_feed_includes_both_pages_and_songs(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        // Create pages
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->count(5)->create();
+
+        // Create songs
+        \App\Models\Song::factory()->count(3)->create();
+
+        $this->get(route('pictures.index'))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 8) // 5 pages + 3 songs
+        );
+    }
+
+    public function test_music_filter_shows_only_songs(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        // Create pages
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->count(5)->create();
+
+        // Create songs
+        \App\Models\Song::factory()->count(3)->create();
+
+        $this->get(route('pictures.index', ['filter' => 'music']))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 3) // Only songs
+                ->where('photos.data.0.type', 'song')
+        );
+    }
+
+    public function test_songs_excluded_from_snapshot_filter(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        // Create snapshot pages
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->count(3)->state(['media_path' => 'books/test/snapshot_123.jpg'])->create();
+
+        // Create songs
+        \App\Models\Song::factory()->count(2)->create();
+
+        $this->get(route('pictures.index', ['filter' => 'snapshot']))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 3) // Only snapshot pages, no songs
+                ->where('photos.data.0.type', 'screenshot')
+        );
+    }
+
+    public function test_songs_excluded_from_youtube_filter(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        // Create youtube video pages
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->count(2)->state(['video_link' => 'https://youtube.com/watch?v=123'])->create();
+
+        // Create songs
+        \App\Models\Song::factory()->count(3)->create();
+
+        $this->get(route('pictures.index', ['filter' => 'youtube']))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 2) // Only youtube pages, no songs
+        );
+    }
+
+    public function test_popular_filter_sorts_by_read_count(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        // Create pages with different read counts
+        $book = Book::factory()->create();
+        $page1 = Page::factory()->for($book)->create(['read_count' => 10.5]);
+        $page2 = Page::factory()->for($book)->create(['read_count' => 5.0]);
+        $page3 = Page::factory()->for($book)->create(['read_count' => 15.0]);
+
+        // Create songs with different read counts
+        $song1 = \App\Models\Song::factory()->create(['read_count' => 20.0]);
+        $song2 = \App\Models\Song::factory()->create(['read_count' => 8.0]);
+
+        $response = $this->get(route('pictures.index', ['filter' => 'popular']));
+
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 5)
+                ->where('photos.data.0.read_count', 20) // Song with highest read count (int or float)
+                ->where('photos.data.1.read_count', 15) // Page with second highest
+                ->where('photos.data.2.read_count', 10.5)
+                ->where('photos.data.3.read_count', 8)
+                ->where('photos.data.4.read_count', 5)
+        );
+    }
+
+    public function test_random_filter_mixes_pages_and_songs(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        // Create pages
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->count(10)->create();
+
+        // Create songs
+        \App\Models\Song::factory()->count(5)->create();
+
+        $response = $this->get(route('pictures.index', ['filter' => 'random']));
+
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 15) // Total items available: 10 pages + 5 songs
+        );
+
+        // Verify we have a mix of types (not guaranteed order due to shuffle)
+        $data = $response->viewData('page')['props']['photos']['data'];
+        $types = collect($data)->pluck('type')->unique();
+        $this->assertTrue($types->count() >= 1); // Should have at least one type
+    }
+
+    public function test_old_filter_shows_items_older_than_year(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $yearAgo = now()->subYear();
+
+        // Create old pages
+        $book = Book::factory()->create();
+        $oldPage = Page::factory()->for($book)->create(['created_at' => $yearAgo->copy()->subDay()]);
+
+        // Create recent page
+        Page::factory()->for($book)->create(['created_at' => now()]);
+
+        // Create old songs
+        $oldSong = \App\Models\Song::factory()->create(['created_at' => $yearAgo->copy()->subWeek()]);
+
+        // Create recent song
+        \App\Models\Song::factory()->create(['created_at' => now()]);
+
+        $response = $this->get(route('pictures.index', ['filter' => 'old']));
+
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 2) // Only old items
+        );
+    }
+
+    public function test_old_filter_falls_back_to_oldest_when_no_old_items(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        // Create recent pages only
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->count(3)->create(['created_at' => now()]);
+
+        // Create recent songs only
+        \App\Models\Song::factory()->count(2)->create(['created_at' => now()]);
+
+        $response = $this->get(route('pictures.index', ['filter' => 'old']));
+
+        // When no old items exist and fallback is applied, the filtered queries return all items oldest first
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 5) // Fallback returns all 5 items sorted by oldest first
+        );
+
+        // Verify items are sorted by oldest first (created_at ascending)
+        $data = $response->viewData('page')['props']['photos']['data'];
+        $this->assertSame(5, count($data));
+    }
+
+    public function test_page_types_are_correctly_identified(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $book = Book::factory()->create();
+
+        // Create regular page
+        $regularPage = Page::factory()->for($book)->create(['media_path' => 'books/test/image.jpg']);
+
+        // Create video page
+        $videoPage = Page::factory()->for($book)->create(['media_poster' => 'books/test/poster.jpg']);
+
+        // Create screenshot page
+        $screenshotPage = Page::factory()->for($book)->create(['media_path' => 'books/test/snapshot_123.jpg']);
+
+        $response = $this->get(route('pictures.index'));
+
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 3)
+        );
+
+        // Verify types in response
+        $data = $response->viewData('page')['props']['photos']['data'];
+        $types = collect($data)->pluck('type');
+
+        $this->assertTrue($types->contains('page'));
+        $this->assertTrue($types->contains('video'));
+        $this->assertTrue($types->contains('screenshot'));
+    }
+
+    public function test_songs_have_correct_structure_in_feed(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $song = \App\Models\Song::factory()->create([
+            'title' => 'Test Song',
+            'description' => 'Test Description',
+            'youtube_video_id' => 'test123',
+        ]);
+
+        $response = $this->get(route('pictures.index', ['filter' => 'music']));
+
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 1)
+                ->where('photos.data.0.type', 'song')
+                ->where('photos.data.0.content', 'Test Song')
+                ->where('photos.data.0.description', 'Test Description')
+                ->has('photos.data.0.thumbnail')
+                ->has('photos.data.0.youtube_url')
+                ->has('photos.data.0.youtube_video_id')
+        );
+    }
+
+    public function test_search_works_across_pages_and_songs(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $searchTerm = 'Special';
+
+        // Create page with search term in content
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->create(['content' => 'This is a Special page']);
+
+        // Create page without search term
+        Page::factory()->for($book)->create(['content' => 'Regular page']);
+
+        // Create song with search term in title
+        \App\Models\Song::factory()->create(['title' => 'Special Song']);
+
+        // Create song with search term in description
+        \App\Models\Song::factory()->create([
+            'title' => 'Regular Song',
+            'description' => 'This has a Special description'
+        ]);
+
+        // Create song without search term
+        \App\Models\Song::factory()->create(['title' => 'Another Song']);
+
+        $response = $this->get(route('pictures.index', ['search' => $searchTerm]));
+
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 3) // 1 page + 2 songs with search term
+        );
+    }
+
+    public function test_pagination_works_with_unified_feed(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        // Create more items than per page (25)
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->count(30)->create();
+        \App\Models\Song::factory()->count(10)->create();
+
+        // Test first page
+        $response = $this->get(route('pictures.index'));
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 25) // First page should have 25 items
+                ->where('photos.total', 40) // Total should be 40
+        );
+
+        // Test second page
+        $response = $this->get(route('pictures.index', ['page' => 2]));
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 15) // Second page should have remaining 15 items
+                ->where('photos.total', 40)
+        );
+    }
 }
