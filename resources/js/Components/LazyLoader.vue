@@ -52,8 +52,14 @@
         />
         <span v-if="!pageId && !isCover">
             <TypePill v-if="itemType === 'song'" type="Music" />
-            <TypePill v-if="itemType === 'video'" type="Video" />
-            <TypePill v-if="itemType === 'screenshot'" type="Screenshot" />
+            <TypePill
+                v-if="itemType === 'video' || isPoster(imageSrc)"
+                type="Video"
+            />
+            <TypePill
+                v-if="itemType === 'screenshot' || isSnapshot(imageSrc)"
+                type="Screenshot"
+            />
         </span>
     </div>
 </template>
@@ -68,7 +74,7 @@ import { useForm, usePage } from "@inertiajs/vue3";
 import { useImage } from "@vueuse/core";
 import { computed, onUnmounted, ref } from "vue";
 
-const { isVideo } = useMedia();
+const { isVideo, isPoster, isSnapshot } = useMedia();
 const videoRef = ref(null);
 const { speak } = useSpeechSynthesis();
 const user = usePage().props.auth.user;
