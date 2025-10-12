@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\IncrementSongReadCount;
 use App\Models\Song;
+use App\Services\YouTubeService;
+use App\Support\ReadThrottle;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -45,7 +48,7 @@ class MusicController extends Controller
         $this->authorize('admin');
 
         try {
-            $youTubeService = new \App\Services\YouTubeService;
+            $youTubeService = new YouTubeService;
             $result = $youTubeService->syncPlaylist();
 
             if (! $result['success']) {
@@ -84,8 +87,11 @@ class MusicController extends Controller
      */
     public function incrementReadCount(Song $song, Request $request)
     {
-        $fingerprint = \App\Support\ReadThrottle::fingerprint($request);
-        \App\Support\ReadThrottle::dispatchJob(new \App\Jobs\IncrementSongReadCount($song, $fingerprint));
+        // Only increment for users who cannot edit profile (regular users, not admins)
+        if (auth()->user()->cannot('edit profile')) {
+            $fingerprint = ReadThrottle::fingerprint($request);
+            ReadThrottle::dispatchJob(new IncrementSongReadCount($song, $fingerprint));
+        }
 
         return response()->json(['success' => true]);
     }
