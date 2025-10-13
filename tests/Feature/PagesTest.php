@@ -922,4 +922,279 @@ class PagesTest extends TestCase
                 ->where('photos.total', 40)
         );
     }
+
+    // Music Enabled Site Setting Tests
+
+    public function test_songs_are_excluded_from_all_feeds_when_music_disabled(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
+
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->count(5)->create();
+        Song::factory()->count(5)->create();
+
+        $response = $this->get(route('pictures.index'));
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 5) // Should only have pages, no songs
+        );
+    }
+
+    public function test_songs_are_included_in_feeds_when_music_enabled(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '1']);
+
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->count(3)->create();
+        Song::factory()->count(3)->create();
+
+        $response = $this->get(route('pictures.index'));
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 6) // Should have both pages and songs
+        );
+    }
+
+    public function test_music_filter_returns_empty_when_music_disabled(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
+
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->count(5)->create();
+        Song::factory()->count(5)->create();
+
+        $response = $this->get(route('pictures.index', ['filter' => 'music']));
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 0) // Should be empty when music is disabled
+        );
+    }
+
+    public function test_popular_filter_excludes_songs_when_music_disabled(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
+
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->count(3)->create(['read_count' => 100]);
+        Song::factory()->count(3)->create(['read_count' => 200]);
+
+        $response = $this->get(route('pictures.index', ['filter' => 'popular']));
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 3) // Should only have pages, even though songs have higher read count
+        );
+    }
+
+    public function test_random_filter_excludes_songs_when_music_disabled(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
+
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->count(10)->create();
+        Song::factory()->count(10)->create();
+
+        $response = $this->get(route('pictures.index', ['filter' => 'random']));
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->where('photos.total', 10) // Should only count pages
+        );
+    }
+
+    public function test_old_filter_excludes_songs_when_music_disabled(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
+
+        $yearAgo = now()->subYear();
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->count(3)->create(['created_at' => $yearAgo]);
+        Song::factory()->count(3)->create(['created_at' => $yearAgo]);
+
+        $response = $this->get(route('pictures.index', ['filter' => 'old']));
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 3) // Should only have pages
+        );
+    }
+
+    public function test_search_excludes_songs_when_music_disabled(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
+
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->create(['content' => 'Test content with keyword']);
+        Song::factory()->create(['title' => 'Test song with keyword']);
+
+        $response = $this->get(route('pictures.index', ['search' => 'keyword']));
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 1) // Should only find the page
+        );
+    }
+
+    public function test_search_includes_songs_when_music_enabled(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '1']);
+
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->create(['content' => 'Test content with keyword']);
+        Song::factory()->create(['title' => 'Test song with keyword']);
+
+        $response = $this->get(route('pictures.index', ['search' => 'keyword']));
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 2) // Should find both
+        );
+    }
+
+    public function test_pagination_works_correctly_when_music_disabled(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
+
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->count(30)->create();
+        Song::factory()->count(30)->create();
+
+        $response = $this->get(route('pictures.index'));
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 25) // Should have 25 items on first page
+                ->where('photos.total', 30) // Total should be 30 (only pages)
+        );
+    }
+
+    public function test_pagination_works_correctly_when_music_enabled(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '1']);
+
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->count(20)->create();
+        Song::factory()->count(20)->create();
+
+        $response = $this->get(route('pictures.index'));
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 25) // Should have 25 items on first page
+                ->where('photos.total', 40) // Total should be 40 (pages + songs)
+        );
+    }
+
+    public function test_toggling_music_setting_changes_feed_immediately(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->count(5)->create();
+        Song::factory()->count(5)->create();
+
+        // Start with music enabled
+        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '1']);
+
+        $response1 = $this->get(route('pictures.index'));
+        $response1->assertInertia(
+            fn (Assert $page) => $page->where('photos.total', 10)
+        );
+
+        // Disable music
+        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
+
+        $response2 = $this->get(route('pictures.index'));
+        $response2->assertInertia(
+            fn (Assert $page) => $page->where('photos.total', 5)
+        );
+
+        // Re-enable music
+        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '1']);
+
+        $response3 = $this->get(route('pictures.index'));
+        $response3->assertInertia(
+            fn (Assert $page) => $page->where('photos.total', 10)
+        );
+    }
+
+    public function test_music_and_youtube_settings_work_independently(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
+        \App\Models\SiteSetting::where('key', 'youtube_enabled')->update(['value' => '0']);
+
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->count(2)->create();
+        Page::factory()->for($book)->count(2)->create(['video_link' => 'https://youtube.com/watch?v=test']);
+        Song::factory()->count(2)->create();
+
+        $response = $this->get(route('pictures.index'));
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 2) // Should only have non-video pages
+        );
+    }
+
+    public function test_both_settings_enabled_shows_everything(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '1']);
+        \App\Models\SiteSetting::where('key', 'youtube_enabled')->update(['value' => '1']);
+
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->count(2)->create();
+        Page::factory()->for($book)->count(2)->create(['video_link' => 'https://youtube.com/watch?v=test']);
+        Song::factory()->count(2)->create();
+
+        $response = $this->get(route('pictures.index'));
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 6) // Should have all items
+        );
+    }
+
+    public function test_empty_feed_when_no_content_and_music_disabled(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
+
+        // Create only songs, no pages
+        Song::factory()->count(5)->create();
+
+        $response = $this->get(route('pictures.index'));
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 0)
+        );
+    }
 }
