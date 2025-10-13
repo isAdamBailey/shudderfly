@@ -2,6 +2,7 @@
 
 namespace App\Console;
 
+use App\Models\SiteSetting;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -18,10 +19,15 @@ class Kernel extends ConsoleKernel
             ->weekly()
             ->withoutOverlapping();
 
-        $schedule->command('music:sync-youtube')
-            ->dailyAt('14:00')
-            ->timezone('America/Los_Angeles')
-            ->withoutOverlapping();
+        // Only schedule music sync if music is enabled
+        $musicEnabled = SiteSetting::where('key', 'music_enabled')->first()?->value ?? false;
+
+        if ($musicEnabled) {
+            $schedule->command('music:sync-youtube')
+                ->dailyAt('14:00')
+                ->timezone('America/Los_Angeles')
+                ->withoutOverlapping();
+        }
     }
 
     /**

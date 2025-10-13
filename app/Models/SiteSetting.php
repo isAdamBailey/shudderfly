@@ -26,7 +26,8 @@ class SiteSetting extends Model
     public function getValueAttribute($value)
     {
         if ($this->type === 'boolean') {
-            return (bool) $value;
+            // Explicitly handle "0" and "1" strings, as well as actual booleans
+            return $value === '1' || $value === 1 || $value === true;
         }
 
         return is_numeric($value) ? $value * 1 : $value;

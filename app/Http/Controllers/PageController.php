@@ -99,7 +99,7 @@ class PageController extends Controller
 
                 return [
                     'items' => $items->slice($offset, $perPage)->values(),
-                    'total' => $total
+                    'total' => $total,
                 ];
 
             case 'random':
@@ -118,7 +118,7 @@ class PageController extends Controller
 
                 return [
                     'items' => $items,
-                    'total' => $total
+                    'total' => $total,
                 ];
 
             case 'old':
@@ -143,7 +143,7 @@ class PageController extends Controller
 
                     return [
                         'items' => $items->slice($offset, $perPage)->values(),
-                        'total' => $total
+                        'total' => $total,
                     ];
                 } else {
                     // Fallback to oldest
@@ -157,7 +157,7 @@ class PageController extends Controller
 
                     return [
                         'items' => $items->slice($offset, $perPage)->values(),
-                        'total' => $total
+                        'total' => $total,
                     ];
                 }
 
@@ -177,7 +177,7 @@ class PageController extends Controller
 
                 return [
                     'items' => $items->slice($offset, $perPage)->values(),
-                    'total' => $total
+                    'total' => $total,
                 ];
         }
     }
@@ -187,6 +187,7 @@ class PageController extends Controller
         $search = $request->search;
         $filter = $request->filter;
         $youtubeEnabled = SiteSetting::where('key', 'youtube_enabled')->first()->value;
+        $musicEnabled = SiteSetting::where('key', 'music_enabled')->first()->value;
 
         // Build the pages query
         $pagesQuery = Page::with('book')
@@ -201,7 +202,7 @@ class PageController extends Controller
                 $query->where('media_path', 'like', '%snapshot%');
             })
             ->when($filter === 'music', function ($query) {
-                // Exclude pages from music filter
+                // Music filter only shows songs, not pages
                 $query->whereRaw('1 = 0');
             })
             ->when(! $youtubeEnabled, function ($query) {
@@ -224,6 +225,16 @@ class PageController extends Controller
             })
             ->when($filter === 'youtube', function ($query) {
                 // Exclude songs from youtube filter
+                $query->whereRaw('1 = 0');
+            })
+            ->when($filter === 'music', function ($query) use ($musicEnabled) {
+                // If music is disabled, exclude all songs
+                if (! $musicEnabled) {
+                    $query->whereRaw('1 = 0');
+                }
+            })
+            ->when(! $musicEnabled, function ($query) {
+                // When music is disabled, exclude all songs from all filters
                 $query->whereRaw('1 = 0');
             })
             ->when($search, function ($query) use ($search) {

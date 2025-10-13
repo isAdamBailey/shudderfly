@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\SiteSetting;
 use App\Models\Song;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
@@ -18,7 +19,10 @@ class YouTubeService
     public function __construct()
     {
         $this->apiKey = config('services.youtube.api_key');
-        $this->playlistId = config('services.youtube.playlist_id');
+
+        // Get playlist ID from site settings, fallback to config
+        $playlistIdSetting = SiteSetting::where('key', 'youtube_playlist_id')->first();
+        $this->playlistId = $playlistIdSetting?->value ?: config('services.youtube.playlist_id');
     }
 
     /**

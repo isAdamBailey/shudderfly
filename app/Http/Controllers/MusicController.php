@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\IncrementSongReadCount;
+use App\Models\SiteSetting;
 use App\Models\Song;
 use App\Services\YouTubeService;
 use App\Support\ReadThrottle;
@@ -12,6 +13,22 @@ use Inertia\Response;
 
 class MusicController extends Controller
 {
+    /**
+     * Create a new controller instance.
+     */
+    public function __construct()
+    {
+        $this->middleware(function ($request, $next) {
+            $musicEnabled = SiteSetting::where('key', 'music_enabled')->first()?->value ?? true;
+
+            if (! $musicEnabled) {
+                abort(404, 'Music feature is currently disabled.');
+            }
+
+            return $next($request);
+        });
+    }
+
     /**
      * Display the music page with songs
      */

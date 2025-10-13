@@ -52,7 +52,7 @@ class DashboardController extends Controller
                     ->first()
                     ->toArray(),
             ]),
-            'settings' => $this->settingsController->index(),
+            'adminSettings' => $this->settingsController->index(),
         ]);
     }
 }

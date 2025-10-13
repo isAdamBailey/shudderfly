@@ -11,7 +11,6 @@
                         {{ title }}
                     </h2>
                 </button>
-                <!-- Search moved to global layout -->
             </div>
         </template>
 
@@ -26,6 +25,7 @@
                 <i class="ri-star-line text-4xl"></i>
             </Button>
             <Button
+                v-if="isMusicEnabled"
                 type="button"
                 :is-active="isMusic"
                 :disabled="loading"
@@ -100,6 +100,9 @@ const isYouTubeEnabled = computed(
 );
 const isSnapshotEnabled = computed(
     () => usePage().props.settings["snapshot_enabled"]
+);
+const isMusicEnabled = computed(
+    () => usePage().props.settings["music_enabled"]
 );
 
 const loading = ref(false);

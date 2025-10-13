@@ -7,11 +7,15 @@ import NavLink from "@/Components/NavLink.vue";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
 import { usePermissions } from "@/composables/permissions";
 import ThemeToggle from "@/Layouts/Nav/ThemeToggle.vue";
-import { Link } from "@inertiajs/vue3";
-import { ref } from "vue";
+import { Link, usePage } from "@inertiajs/vue3";
+import { computed, ref } from "vue";
 
 const { canEditPages, canEditProfile } = usePermissions();
 const showingNavigationDropdown = ref(false);
+
+// Check if music is enabled from site settings
+const page = usePage();
+const musicEnabled = computed(() => page.props.settings?.music_enabled);
 </script>
 
 <template>
@@ -55,6 +59,7 @@ const showingNavigationDropdown = ref(false);
                                 Uploads
                             </NavLink>
                             <NavLink
+                                v-if="musicEnabled"
                                 :href="route('music.index')"
                                 :active="route().current('music.*')"
                             >
@@ -188,6 +193,7 @@ const showingNavigationDropdown = ref(false);
                         Uploads
                     </ResponsiveNavLink>
                     <ResponsiveNavLink
+                        v-if="musicEnabled"
                         :href="route('music.index')"
                         :active="route().current('music.*')"
                     >
