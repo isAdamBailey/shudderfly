@@ -21,7 +21,7 @@ return new class extends Migration
             ],
             [
                 'key' => 'youtube_playlist_id',
-                'value' => config('services.youtube.playlist_id', ''),
+                'value' => '',
                 'description' => 'YouTube Playlist ID for syncing music',
                 'type' => 'text',
                 'created_at' => now(),

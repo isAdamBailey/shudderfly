@@ -32,6 +32,5 @@ return [
 
     'youtube' => [
         'api_key' => env('YOUTUBE_API_KEY'),
-        'playlist_id' => env('YOUTUBE_PLAYLIST_ID'),
     ],
 ];

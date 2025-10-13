@@ -20,9 +20,9 @@ class YouTubeService
     {
         $this->apiKey = config('services.youtube.api_key');
 
-        // Get playlist ID from site settings, fallback to config
+        // Get playlist ID from site settings
         $playlistIdSetting = SiteSetting::where('key', 'youtube_playlist_id')->first();
-        $this->playlistId = $playlistIdSetting?->value ?: config('services.youtube.playlist_id');
+        $this->playlistId = $playlistIdSetting?->value ?: '';
     }
 
     /**
