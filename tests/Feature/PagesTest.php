@@ -39,7 +39,8 @@ class PagesTest extends TestCase
         // Create a book with both regular pages and video pages
         $book = Book::factory()->create();
         Page::factory()->for($book)->count(3)->create(); // Regular pages
-        Page::factory()->for($book)->count(2)->state(['video_link' => 'https://youtube.com/watch?v=123'])->create(); // Video pages
+        Page::factory()->for($book)->count(2)->state(['video_link' => 'https://youtube.com/watch?v=123'])->create(
+        ); // Video pages
 
         // Set youtube_enabled to false
         \App\Models\SiteSetting::where('key', 'youtube_enabled')->update(['value' => '0']);
@@ -109,8 +110,10 @@ class PagesTest extends TestCase
         // Create a book with regular pages, video pages, and snapshots
         $book = Book::factory()->create();
         Page::factory()->for($book)->count(2)->create(); // Regular pages
-        Page::factory()->for($book)->count(2)->state(['video_link' => 'https://youtube.com/watch?v=123'])->create(); // Video pages
-        Page::factory()->for($book)->count(3)->state(['media_path' => 'books/test/snapshot_123.jpg'])->create(); // Snapshots
+        Page::factory()->for($book)->count(2)->state(['video_link' => 'https://youtube.com/watch?v=123'])->create(
+        ); // Video pages
+        Page::factory()->for($book)->count(3)->state(['media_path' => 'books/test/snapshot_123.jpg'])->create(
+        ); // Snapshots
 
         // Test snapshot filter - should only show snapshot pages
         $this->get(route('pictures.index', ['filter' => 'snapshot']))->assertInertia(
@@ -134,8 +137,10 @@ class PagesTest extends TestCase
         // Create a book with regular pages, video pages, and snapshots
         $book = Book::factory()->create();
         Page::factory()->for($book)->count(2)->create(); // Regular pages
-        Page::factory()->for($book)->count(2)->state(['video_link' => 'https://youtube.com/watch?v=123'])->create(); // Video pages
-        Page::factory()->for($book)->count(3)->state(['media_path' => 'books/test/snapshot_123.jpg'])->create(); // Snapshots
+        Page::factory()->for($book)->count(2)->state(['video_link' => 'https://youtube.com/watch?v=123'])->create(
+        ); // Video pages
+        Page::factory()->for($book)->count(3)->state(['media_path' => 'books/test/snapshot_123.jpg'])->create(
+        ); // Snapshots
 
         // Create a YouTube video that also has a snapshot
         Page::factory()->for($book)->state([
@@ -227,10 +232,15 @@ class PagesTest extends TestCase
 
         // Create pages of different ages with negative read counts (so they won't be in top 20)
         $newPage = Page::factory()->for($book)->create(['created_at' => now(), 'read_count' => -1.0]); // ≤7 days: 3.0x
-        $monthOldPage = Page::factory()->for($book)->create(['created_at' => now()->subDays(15), 'read_count' => -1.0]); // ≤30 days: 2.0x
-        $threeMonthOldPage = Page::factory()->for($book)->create(['created_at' => now()->subDays(45), 'read_count' => -1.0]); // ≤60 days: 1.5x
-        $yearOldPage = Page::factory()->for($book)->create(['created_at' => now()->subDays(200), 'read_count' => -1.0]); // >90 days: 1.0x
-        $veryOldPage = Page::factory()->for($book)->create(['created_at' => now()->subYears(2), 'read_count' => -1.0]); // >90 days: 1.0x
+        $monthOldPage = Page::factory()->for($book)->create(['created_at' => now()->subDays(15), 'read_count' => -1.0]
+        ); // ≤30 days: 2.0x
+        $threeMonthOldPage = Page::factory()->for($book)->create(
+            ['created_at' => now()->subDays(45), 'read_count' => -1.0]
+        ); // ≤60 days: 1.5x
+        $yearOldPage = Page::factory()->for($book)->create(['created_at' => now()->subDays(200), 'read_count' => -1.0]
+        ); // >90 days: 1.0x
+        $veryOldPage = Page::factory()->for($book)->create(['created_at' => now()->subYears(2), 'read_count' => -1.0]
+        ); // >90 days: 1.0x
 
         // Run jobs directly for testing
         (new \App\Jobs\IncrementPageReadCount($newPage, 'test-fingerprint'))->handle();
@@ -718,7 +728,8 @@ class PagesTest extends TestCase
             fn (Assert $page) => $page
                 ->component('Uploads/Index')
                 ->has('photos.data', 5)
-                ->where('photos.data.0.read_count', fn ($value) => (float) $value === 20.0) // Song with highest read count
+                ->where('photos.data.0.read_count', fn ($value) => (float) $value === 20.0
+                ) // Song with highest read count
                 ->where('photos.data.1.read_count', fn ($value) => (float) $value === 15.0) // Page with second highest
                 ->where('photos.data.2.read_count', fn ($value) => (float) $value === 10.5)
                 ->where('photos.data.3.read_count', fn ($value) => (float) $value === 8.0)

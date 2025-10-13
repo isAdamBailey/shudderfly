@@ -96,13 +96,13 @@ defineProps({
 });
 
 const isYouTubeEnabled = computed(
-    () => usePage().props.settings["youtube_enabled"]
+    () => usePage().props.settings?.["youtube_enabled"]
 );
 const isSnapshotEnabled = computed(
-    () => usePage().props.settings["snapshot_enabled"]
+    () => usePage().props.settings?.["snapshot_enabled"]
 );
 const isMusicEnabled = computed(
-    () => usePage().props.settings["music_enabled"]
+    () => usePage().props.settings?.["music_enabled"]
 );
 
 const loading = ref(false);
