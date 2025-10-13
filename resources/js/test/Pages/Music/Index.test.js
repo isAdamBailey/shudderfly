@@ -9,14 +9,7 @@ vi.mock("@/composables/useInfiniteScroll", () => ({
 }));
 
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
-import { router } from "@inertiajs/vue3";
 import { createRouteMock } from "../../setup.js";
-
-// Use the shared route mock function from setup.js
-global.route = createRouteMock();
-
-// Mock window.route for the component
-window.route = global.route;
 
 const mockRouter = {
     get: vi.fn(),
@@ -260,20 +253,6 @@ describe("Music Index", () => {
 
         wrapper.vm.handlePlayingState(false);
         expect(wrapper.vm.isPlaying).toBe(false);
-    });
-
-    it.skip("triggers sync when sync button is clicked", async () => {
-        wrapper = createWrapper({ canSync: true });
-
-        const buttons = wrapper.findAll("button");
-        const syncButton = buttons.find((btn) => btn.text().includes("Sync"));
-
-        expect(syncButton.exists()).toBe(true);
-        await syncButton.trigger("click");
-        await nextTick(); // Wait for DOM updates
-
-        // Now expect the Inertia router to be called
-        expect(router.post).toHaveBeenCalled();
     });
 
     it("shows loading indicator when next page is available", () => {
