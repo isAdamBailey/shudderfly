@@ -8,7 +8,7 @@ describe("SongListItem", () => {
         id: 1,
         title: "Test Song Title",
         youtube_video_id: "dQw4w9WgXcQ",
-        thumbnail_url: "https://example.com/thumbnail.jpg",
+        thumbnail: "https://example.com/thumbnail.jpg",
         published_at: "2023-01-15T10:30:00Z",
         view_count: 1500000,
         duration: "PT3M45S",
@@ -39,13 +39,13 @@ describe("SongListItem", () => {
     it("shows fallback thumbnail when image fails to load", () => {
         wrapper = mount(SongListItem, {
             props: {
-                song: { ...mockSong, thumbnail_url: null },
+                song: { ...mockSong, thumbnail: null },
                 currentSong: null,
                 isPlaying: false,
             },
         });
 
-        // When thumbnail_url is null, it should use the YouTube fallback URL
+        // When thumbnail is null, it should use the YouTube fallback URL
         expect(wrapper.find("img").exists()).toBe(true);
         const expectedUrl = `https://img.youtube.com/vi/${mockSong.youtube_video_id}/maxresdefault.jpg`;
         expect(wrapper.find("img").attributes("src")).toBe(expectedUrl);
@@ -196,7 +196,7 @@ describe("SongListItem", () => {
     });
 
     it("uses fallback thumbnail URL when thumbnail_url is not provided", () => {
-        const songWithoutThumbnail = { ...mockSong, thumbnail_url: null };
+        const songWithoutThumbnail = { ...mockSong, thumbnail: null };
         wrapper = mount(SongListItem, {
             props: {
                 song: songWithoutThumbnail,

@@ -30,6 +30,10 @@ class Song extends Model
         'published_at' => 'datetime',
     ];
 
+    protected $appends = [
+        'thumbnail',
+    ];
+
     /**
      * Get the YouTube video URL
      */
@@ -46,11 +50,11 @@ class Song extends Model
     protected function thumbnail(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->thumbnail_maxres
+            get: fn () => $this->thumbnail_default
+                ?: $this->thumbnail_maxres
                 ?: $this->thumbnail_standard
                 ?: $this->thumbnail_high
-                ?: $this->thumbnail_medium
-                ?: $this->thumbnail_default,
+                ?: $this->thumbnail_medium,
         );
     }
 

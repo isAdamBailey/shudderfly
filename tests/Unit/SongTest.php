@@ -27,7 +27,7 @@ class SongTest extends TestCase
 
     public function test_song_thumbnail_attribute_returns_best_available(): void
     {
-        // Test with maxres thumbnail
+        // Test with default thumbnail
         $song = Song::factory()->make([
             'thumbnail_default' => 'default.jpg',
             'thumbnail_medium' => 'medium.jpg',
@@ -36,29 +36,29 @@ class SongTest extends TestCase
             'thumbnail_maxres' => 'maxres.jpg',
         ]);
 
-        $this->assertEquals('maxres.jpg', $song->thumbnail);
+        $this->assertEquals('default.jpg', $song->thumbnail);
 
-        // Test fallback when maxres is null
+        // Test fallback when default is null
         $song = Song::factory()->make([
-            'thumbnail_default' => 'default.jpg',
+            'thumbnail_default' => null,
             'thumbnail_medium' => 'medium.jpg',
             'thumbnail_high' => 'high.jpg',
             'thumbnail_standard' => 'standard.jpg',
-            'thumbnail_maxres' => null,
+            'thumbnail_maxres' => 'maxres.jpg',
         ]);
 
-        $this->assertEquals('standard.jpg', $song->thumbnail);
+        $this->assertEquals('maxres.jpg', $song->thumbnail);
 
-        // Test fallback to default when others are null
+        // Test fallback to medium when others are null
         $song = Song::factory()->make([
-            'thumbnail_default' => 'default.jpg',
-            'thumbnail_medium' => null,
+            'thumbnail_medium' => 'medium.jpg',
+            'thumbnail_default' => null,
             'thumbnail_high' => null,
             'thumbnail_standard' => null,
             'thumbnail_maxres' => null,
         ]);
 
-        $this->assertEquals('default.jpg', $song->thumbnail);
+        $this->assertEquals('medium.jpg', $song->thumbnail);
     }
 
     public function test_song_search_scope_finds_by_title(): void
