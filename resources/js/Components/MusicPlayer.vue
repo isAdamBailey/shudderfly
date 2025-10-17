@@ -237,7 +237,7 @@ const progressPercentage = computed(() => {
 const thumbnailUrl = computed(() => {
     if (!props.currentSong) return null;
     return (
-        props.currentSong.thumbnail_url ||
+        props.currentSong.thumbnail ||
         `https://img.youtube.com/vi/${props.currentSong.youtube_video_id}/maxresdefault.jpg`
     );
 });

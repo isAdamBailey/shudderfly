@@ -19,7 +19,7 @@ describe("MusicPlayer", () => {
         title: "Test Song Title",
         description: "Test song description",
         youtube_video_id: "dQw4w9WgXcQ",
-        thumbnail_url: "https://example.com/thumbnail.jpg",
+        thumbnail: "https://example.com/thumbnail.jpg",
     };
 
     beforeEach(() => {
@@ -97,7 +97,7 @@ describe("MusicPlayer", () => {
     it("shows fallback thumbnail when image fails", async () => {
         wrapper = mount(MusicPlayer, {
             props: {
-                currentSong: { ...mockSong, thumbnail_url: null },
+                currentSong: { ...mockSong, thumbnail: null },
             },
         });
 
@@ -325,7 +325,7 @@ describe("MusicPlayer", () => {
     });
 
     it("uses fallback YouTube thumbnail URL when thumbnail_url is not provided", () => {
-        const songWithoutThumbnail = { ...mockSong, thumbnail_url: null };
+        const songWithoutThumbnail = { ...mockSong, thumbnail: null };
         wrapper = mount(MusicPlayer, {
             props: {
                 currentSong: songWithoutThumbnail,
