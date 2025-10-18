@@ -71,6 +71,7 @@ class SendWeeklyStatsMail extends Command
             ->where('media_path', 'not like', '%snapshot%')
             ->where('created_at', '>=', $oneWeekAgo)
             ->get();
+        $songsThisWeek = Song::where('created_at', '>=', $oneWeekAgo)->get();
         $mostReadSongs = Song::query()
             ->orderBy('read_count', 'desc')
             ->take(5)
@@ -92,7 +93,8 @@ class SendWeeklyStatsMail extends Command
                 $videosThisWeek,
                 $imagesThisWeek,
                 $totalSongs,
-                $mostReadSongs
+                $mostReadSongs,
+                $songsThisWeek
             ));
         }
     }

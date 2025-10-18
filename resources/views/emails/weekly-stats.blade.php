@@ -30,6 +30,10 @@
 **{{ $imagesThisWeek->count() }}** new images!
 @endif
 
+@if($songsThisWeek->count() > 0)
+**{{ $songsThisWeek->count() }}** new songs!
+@endif
+
 ## {{ number_format($totalBooks) }} all time total books.
 ## {{ number_format($totalPages) }} all time total pages.
 ## {{ number_format($totalSongs) }} all time total songs.
