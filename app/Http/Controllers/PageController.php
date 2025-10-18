@@ -58,24 +58,6 @@ class PageController extends Controller
     }
 
     /**
-     * Map a song model to array format for the feed
-     */
-    private function mapSongToArray($song): array
-    {
-        return [
-            'id' => $song->id,
-            'type' => 'song',
-            'content' => $song->title,
-            'description' => $song->description,
-            'thumbnail' => $song->thumbnail,
-            'youtube_url' => $song->youtube_url,
-            'youtube_video_id' => $song->youtube_video_id,
-            'created_at' => $song->created_at,
-            'read_count' => $song->read_count,
-        ];
-    }
-
-    /**
      * Get items based on filter type
      */
     private function getFilteredItems($pagesQuery, $songsQuery, $filter, $perPage, $currentPage)
@@ -93,7 +75,11 @@ class PageController extends Controller
                 $fetchLimit = min($offset + $perPage + 50, $pagesCount + $songsCount);
 
                 $pages = $pagesQuery->orderBy('read_count', 'desc')->limit($fetchLimit)->get()->map(fn ($page) => $this->mapPageToArray($page));
-                $songs = $songsQuery->orderBy('read_count', 'desc')->limit($fetchLimit)->get()->map(fn ($song) => $this->mapSongToArray($song));
+                $songs = $songsQuery->orderBy('read_count', 'desc')->limit($fetchLimit)->get()->map(function ($song) {
+                    $song->type = 'song';
+
+                    return $song;
+                });
 
                 $items = $pages->concat($songs)->sortByDesc('read_count')->values();
 
@@ -112,7 +98,11 @@ class PageController extends Controller
                 $fetchLimit = min(100, $total);
 
                 $pages = $pagesQuery->inRandomOrder()->limit($fetchLimit)->get()->map(fn ($page) => $this->mapPageToArray($page));
-                $songs = $songsQuery->inRandomOrder()->limit($fetchLimit)->get()->map(fn ($song) => $this->mapSongToArray($song));
+                $songs = $songsQuery->inRandomOrder()->limit($fetchLimit)->get()->map(function ($song) {
+                    $song->type = 'song';
+
+                    return $song;
+                });
 
                 $items = $pages->concat($songs)->shuffle()->slice($offset, $perPage)->values();
 
@@ -137,7 +127,11 @@ class PageController extends Controller
                     $fetchLimit = $offset + $perPage + 50;
 
                     $pages = $pagesQuery->whereDate('created_at', '<=', $yearAgo)->orderBy('created_at', 'desc')->limit($fetchLimit)->get()->map(fn ($page) => $this->mapPageToArray($page));
-                    $songs = $songsQuery->whereDate('created_at', '<=', $yearAgo)->orderBy('created_at', 'desc')->limit($fetchLimit)->get()->map(fn ($song) => $this->mapSongToArray($song));
+                    $songs = $songsQuery->whereDate('created_at', '<=', $yearAgo)->orderBy('created_at', 'desc')->limit($fetchLimit)->get()->map(function ($song) {
+                        $song->type = 'song';
+
+                        return $song;
+                    });
 
                     $items = $pages->concat($songs)->sortByDesc('created_at')->values();
 
@@ -151,7 +145,11 @@ class PageController extends Controller
                     $fetchLimit = $offset + $perPage + 50;
 
                     $pages = $pagesQuery->oldest()->limit($fetchLimit)->get()->map(fn ($page) => $this->mapPageToArray($page));
-                    $songs = $songsQuery->oldest()->limit($fetchLimit)->get()->map(fn ($song) => $this->mapSongToArray($song));
+                    $songs = $songsQuery->oldest()->limit($fetchLimit)->get()->map(function ($song) {
+                        $song->type = 'song';
+
+                        return $song;
+                    });
 
                     $items = $pages->concat($songs)->sortBy('created_at')->values();
 
@@ -171,7 +169,11 @@ class PageController extends Controller
                 $fetchLimit = $offset + $perPage + 50;
 
                 $pages = $pagesQuery->latest()->limit($fetchLimit)->get()->map(fn ($page) => $this->mapPageToArray($page));
-                $songs = $songsQuery->latest()->limit($fetchLimit)->get()->map(fn ($song) => $this->mapSongToArray($song));
+                $songs = $songsQuery->latest()->limit($fetchLimit)->get()->map(function ($song) {
+                    $song->type = 'song';
+
+                    return $song;
+                });
 
                 $items = $pages->concat($songs)->sortByDesc('created_at')->values();
 

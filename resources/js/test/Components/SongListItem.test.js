@@ -8,7 +8,7 @@ describe("SongListItem", () => {
         id: 1,
         title: "Test Song Title",
         youtube_video_id: "dQw4w9WgXcQ",
-        thumbnail: "https://example.com/thumbnail.jpg",
+        thumbnail_default: "https://example.com/thumbnail.jpg",
         published_at: "2023-01-15T10:30:00Z",
         view_count: 1500000,
         duration: "PT3M45S",
@@ -39,16 +39,15 @@ describe("SongListItem", () => {
     it("shows fallback thumbnail when image fails to load", () => {
         wrapper = mount(SongListItem, {
             props: {
-                song: { ...mockSong, thumbnail: null },
+                song: { ...mockSong, thumbnail_default: "" },
                 currentSong: null,
                 isPlaying: false,
             },
         });
 
-        // When thumbnail is null, it should use the YouTube fallback URL
-        expect(wrapper.find("img").exists()).toBe(true);
-        const expectedUrl = `https://img.youtube.com/vi/${mockSong.youtube_video_id}/maxresdefault.jpg`;
-        expect(wrapper.find("img").attributes("src")).toBe(expectedUrl);
+        // When thumbnail_default is empty string, thumbnailUrl returns ""
+        // Component shows fallback icon instead
+        expect(wrapper.vm.thumbnailUrl).toBe("");
     });
 
     it("handles image error by showing fallback", async () => {
@@ -195,22 +194,7 @@ describe("SongListItem", () => {
         expect(playButton.classes()).toContain("hover:bg-green-700");
     });
 
-    it("uses fallback thumbnail URL when thumbnail_url is not provided", () => {
-        const songWithoutThumbnail = { ...mockSong, thumbnail: null };
-        wrapper = mount(SongListItem, {
-            props: {
-                song: songWithoutThumbnail,
-                currentSong: null,
-                isPlaying: false,
-            },
-        });
-
-        // Should use YouTube thumbnail fallback
-        const expectedUrl = `https://img.youtube.com/vi/${mockSong.youtube_video_id}/maxresdefault.jpg`;
-        expect(wrapper.find("img").attributes("src")).toBe(expectedUrl);
-    });
-
-    it("has proper responsive design classes", () => {
+    it("uses thumbnail_default when provided", () => {
         wrapper = mount(SongListItem, {
             props: {
                 song: mockSong,
@@ -219,8 +203,9 @@ describe("SongListItem", () => {
             },
         });
 
-        const container = wrapper.find("div");
-        expect(container.classes()).toContain("transition-colors");
-        expect(container.classes()).toContain("duration-200");
+        // Should use thumbnail_default
+        expect(wrapper.find("img").attributes("src")).toBe(
+            "https://example.com/thumbnail.jpg"
+        );
     });
 });

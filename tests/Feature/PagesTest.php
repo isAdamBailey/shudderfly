@@ -855,6 +855,8 @@ class PagesTest extends TestCase
             'title' => 'Test Song',
             'description' => 'Test Description',
             'youtube_video_id' => 'test123',
+            'thumbnail_default' => 'default.jpg',
+            'thumbnail_maxres' => 'maxres.jpg',
         ]);
 
         $response = $this->get(route('pictures.index', ['filter' => 'music']));
@@ -864,10 +866,10 @@ class PagesTest extends TestCase
                 ->component('Uploads/Index')
                 ->has('photos.data', 1)
                 ->where('photos.data.0.type', 'song')
-                ->where('photos.data.0.content', 'Test Song')
+                ->where('photos.data.0.title', 'Test Song')
                 ->where('photos.data.0.description', 'Test Description')
-                ->has('photos.data.0.thumbnail')
-                ->has('photos.data.0.youtube_url')
+                ->has('photos.data.0.thumbnail_default')
+                ->has('photos.data.0.thumbnail_maxres')
                 ->has('photos.data.0.youtube_video_id')
         );
     }

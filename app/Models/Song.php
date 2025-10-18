@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -30,34 +29,6 @@ class Song extends Model
         'published_at' => 'datetime',
     ];
 
-    protected $appends = [
-        'thumbnail',
-    ];
-
-    /**
-     * Get the YouTube video URL
-     */
-    protected function youtubeUrl(): Attribute
-    {
-        return Attribute::make(
-            get: fn () => "https://www.youtube.com/watch?v={$this->youtube_video_id}",
-        );
-    }
-
-    /**
-     * Get the best available thumbnail
-     */
-    protected function thumbnail(): Attribute
-    {
-        return Attribute::make(
-            get: fn () => $this->thumbnail_default
-                ?: $this->thumbnail_maxres
-                ?: $this->thumbnail_standard
-                ?: $this->thumbnail_high
-                ?: $this->thumbnail_medium,
-        );
-    }
-
     /**
      * Scope for searching songs by title
      */
@@ -65,18 +36,5 @@ class Song extends Model
     {
         return $query->where('title', 'LIKE', '%'.$search.'%')
             ->orWhere('description', 'LIKE', '%'.$search.'%');
-    }
-
-    /**
-     * Increment the read count for this song via queued job
-     */
-    public function incrementReadCount($actor = null): void
-    {
-        if ($actor instanceof \Illuminate\Http\Request) {
-            $fingerprint = \App\Support\ReadThrottle::fingerprint($actor);
-        } else {
-            $fingerprint = (string) $actor;
-        }
-        \App\Jobs\IncrementSongReadCount::dispatch($this, $fingerprint);
     }
 }

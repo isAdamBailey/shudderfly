@@ -42,8 +42,8 @@ watch(
 
 function mediaPath(photo) {
     // For songs, return the thumbnail
-    if (photo.type === "song" && photo.thumbnail) {
-        return photo.thumbnail;
+    if (photo.type === "song") {
+        return photo.thumbnail_high || photo.thumbnail_default;
     }
     // For pages, return poster or media path
     if (photo.media_poster) {
@@ -71,6 +71,11 @@ function getFooterText(item) {
         return "Music";
     }
     return item.book?.title || "";
+}
+
+function getDisplayText(item) {
+    // For songs, use title; for pages, use content
+    return item.title || item.content || "";
 }
 </script>
 
@@ -112,9 +117,9 @@ function getFooterText(item) {
                     :controls="false"
                 />
                 <div
-                    v-if="photo.content"
+                    v-if="getDisplayText(photo)"
                     class="absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 px-2 text-left text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
-                    v-html="photo.content"
+                    v-html="getDisplayText(photo)"
                 ></div>
             </Link>
             <Link

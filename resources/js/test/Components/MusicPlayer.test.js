@@ -19,7 +19,8 @@ describe("MusicPlayer", () => {
         title: "Test Song Title",
         description: "Test song description",
         youtube_video_id: "dQw4w9WgXcQ",
-        thumbnail: "https://example.com/thumbnail.jpg",
+        thumbnail_maxres: "https://example.com/thumbnail.jpg",
+        thumbnail_default: "https://example.com/thumbnail-default.jpg",
     };
 
     beforeEach(() => {
@@ -79,8 +80,9 @@ describe("MusicPlayer", () => {
         });
 
         expect(wrapper.find("h3").text()).toBe("Test Song Title");
+        // MusicPlayer uses thumbnail_high first, falls back to thumbnail_default
         expect(wrapper.find("img").attributes("src")).toBe(
-            "https://example.com/thumbnail.jpg"
+            "https://example.com/thumbnail-default.jpg"
         );
     });
 
@@ -97,15 +99,17 @@ describe("MusicPlayer", () => {
     it("shows fallback thumbnail when image fails", async () => {
         wrapper = mount(MusicPlayer, {
             props: {
-                currentSong: { ...mockSong, thumbnail: null },
+                currentSong: {
+                    ...mockSong,
+                    thumbnail_high: null,
+                    thumbnail_default: null,
+                },
             },
         });
 
         await nextTick();
-        // When thumbnail_url is null, it should still show an img element with YouTube fallback URL
-        expect(wrapper.find("img").exists()).toBe(true);
-        const expectedUrl = `https://img.youtube.com/vi/${mockSong.youtube_video_id}/maxresdefault.jpg`;
-        expect(wrapper.find("img").attributes("src")).toBe(expectedUrl);
+        // When both thumbnail properties are null, component doesn't render an img
+        expect(wrapper.find("img").exists()).toBe(false);
     });
 
     it("handles image error correctly", async () => {
@@ -325,15 +329,19 @@ describe("MusicPlayer", () => {
     });
 
     it("uses fallback YouTube thumbnail URL when thumbnail_url is not provided", () => {
-        const songWithoutThumbnail = { ...mockSong, thumbnail: null };
+        const songWithoutThumbnail = {
+            ...mockSong,
+            thumbnail_high: null,
+            thumbnail_default: null,
+        };
         wrapper = mount(MusicPlayer, {
             props: {
                 currentSong: songWithoutThumbnail,
             },
         });
 
-        const expectedUrl = `https://img.youtube.com/vi/${mockSong.youtube_video_id}/maxresdefault.jpg`;
-        expect(wrapper.vm.thumbnailUrl).toBe(expectedUrl);
+        // When both thumbnail_high and thumbnail_default are null, thumbnailUrl returns null
+        expect(wrapper.vm.thumbnailUrl).toBe(null);
     });
 
     it("applies dark mode classes correctly", () => {

@@ -100,10 +100,7 @@ const isCurrentSong = computed(() => {
 });
 
 const thumbnailUrl = computed(() => {
-    return (
-        props.song.thumbnail ||
-        `https://img.youtube.com/vi/${props.song.youtube_video_id}/maxresdefault.jpg`
-    );
+    return props.song.thumbnail_default || "";
 });
 
 const formattedDuration = computed(() => {

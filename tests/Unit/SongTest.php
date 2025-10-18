@@ -18,16 +18,9 @@ class SongTest extends TestCase
         Cache::flush();
     }
 
-    public function test_song_has_youtube_url_attribute(): void
+    public function test_song_has_all_thumbnail_properties(): void
     {
-        $song = Song::factory()->make(['youtube_video_id' => 'dQw4w9WgXcQ']);
-
-        $this->assertEquals('https://www.youtube.com/watch?v=dQw4w9WgXcQ', $song->youtube_url);
-    }
-
-    public function test_song_thumbnail_attribute_returns_best_available(): void
-    {
-        // Test with default thumbnail
+        // Test that all thumbnail properties are accessible
         $song = Song::factory()->make([
             'thumbnail_default' => 'default.jpg',
             'thumbnail_medium' => 'medium.jpg',
@@ -36,29 +29,11 @@ class SongTest extends TestCase
             'thumbnail_maxres' => 'maxres.jpg',
         ]);
 
-        $this->assertEquals('default.jpg', $song->thumbnail);
-
-        // Test fallback when default is null
-        $song = Song::factory()->make([
-            'thumbnail_default' => null,
-            'thumbnail_medium' => 'medium.jpg',
-            'thumbnail_high' => 'high.jpg',
-            'thumbnail_standard' => 'standard.jpg',
-            'thumbnail_maxres' => 'maxres.jpg',
-        ]);
-
-        $this->assertEquals('maxres.jpg', $song->thumbnail);
-
-        // Test fallback to medium when others are null
-        $song = Song::factory()->make([
-            'thumbnail_medium' => 'medium.jpg',
-            'thumbnail_default' => null,
-            'thumbnail_high' => null,
-            'thumbnail_standard' => null,
-            'thumbnail_maxres' => null,
-        ]);
-
-        $this->assertEquals('medium.jpg', $song->thumbnail);
+        $this->assertEquals('default.jpg', $song->thumbnail_default);
+        $this->assertEquals('medium.jpg', $song->thumbnail_medium);
+        $this->assertEquals('high.jpg', $song->thumbnail_high);
+        $this->assertEquals('standard.jpg', $song->thumbnail_standard);
+        $this->assertEquals('maxres.jpg', $song->thumbnail_maxres);
     }
 
     public function test_song_search_scope_finds_by_title(): void
