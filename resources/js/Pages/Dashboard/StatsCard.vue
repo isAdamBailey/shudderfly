@@ -1,286 +1,394 @@
 <template>
     <div class="text-gray-900 dark:text-white">
-        <div class="border-b py-4 flex items-center justify-between">
-            <div class="flex items-center">
-                <Button
-                    class="mr-3 text-gray-500 hover:text-gray-700 dark:text-gray-400"
-                    type="button"
-                    :disabled="speaking"
-                    aria-label="Speak total number of books"
-                    @click="
-                        speak(
-                            `Total number of books: ${
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-heading text-lg font-bold">Site statistics</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+                Quick access to common filters and top items
+            </p>
+        </div>
+
+        <!-- Stats grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <!-- Books -->
+            <div
+                class="bg-white dark:bg-gray-800 border rounded-lg p-3 flex items-center justify-between shadow-sm"
+            >
+                <!-- make icon + title link to books index -->
+                <Link
+                    class="flex items-center"
+                    :href="route('books.index')"
+                    aria-label="View all books"
+                >
+                    <i class="ri-book-line text-2xl text-gray-400 mr-3"></i>
+                    <div>
+                        <div class="text-base text-gray-500">Books</div>
+                        <div class="font-bold text-2xl">
+                            {{
                                 statsData.numberOfBooks?.toLocaleString?.() ?? 0
-                            }`
-                        )
-                    "
-                >
-                    <i class="ri-speak-fill text-2xl"></i>
-                </Button>
-
-                <p>Total number of books</p>
+                            }}
+                        </div>
+                    </div>
+                </Link>
+                <div class="flex items-center">
+                    <Button
+                        type="button"
+                        :disabled="speaking"
+                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 mr-2 p-1.5 h-8 w-8 speak-btn"
+                        aria-label="Speak books"
+                        @click="
+                            speak(
+                                `all books: ${
+                                    statsData.numberOfBooks?.toLocaleString?.() ??
+                                    0
+                                }`
+                            )
+                        "
+                    >
+                        <i class="ri-speak-fill text-lg"></i>
+                    </Button>
+                </div>
             </div>
-            <p class="font-bold">
-                {{ statsData.numberOfBooks?.toLocaleString?.() ?? 0 }}
-            </p>
-        </div>
-        <div class="border-b py-4 flex items-center justify-between">
-            <div class="flex items-center">
-                <Button
-                    class="mr-3 text-gray-500 hover:text-gray-700 dark:text-gray-400"
-                    type="button"
-                    :disabled="speaking"
-                    aria-label="Speak total number of pages"
-                    @click="
-                        speak(
-                            `Total number of pages: ${
+
+            <!-- Pages -->
+            <div
+                class="bg-white dark:bg-gray-800 border rounded-lg p-3 flex items-center justify-between shadow-sm"
+            >
+                <Link
+                    class="flex items-center"
+                    :href="route('pictures.index')"
+                    aria-label="View uploads"
+                >
+                    <i
+                        class="ri-file-text-line text-2xl text-gray-400 mr-3"
+                    ></i>
+                    <div>
+                        <div class="text-base text-gray-500">Pages</div>
+                        <div class="font-bold text-2xl">
+                            {{
                                 statsData.numberOfPages?.toLocaleString?.() ?? 0
-                            }`
-                        )
-                    "
-                >
-                    <i class="ri-speak-fill text-2xl"></i>
-                </Button>
-
-                <p>Total number of pages</p>
+                            }}
+                        </div>
+                    </div>
+                </Link>
+                <div class="flex items-center">
+                    <Button
+                        type="button"
+                        :disabled="speaking"
+                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 mr-2 p-1.5 h-8 w-8 speak-btn"
+                        aria-label="Speak total number of pages"
+                        @click="
+                            speak(
+                                `all pages: ${
+                                    statsData.numberOfPages?.toLocaleString?.() ??
+                                    0
+                                }`
+                            )
+                        "
+                    >
+                        <i class="ri-speak-fill text-lg"></i>
+                    </Button>
+                </div>
             </div>
-            <p class="font-bold">
-                {{ statsData.numberOfPages?.toLocaleString?.() ?? 0 }}
-            </p>
-        </div>
-        <div class="border-b py-4 flex items-center justify-between">
-            <div class="flex items-center">
-                <Button
-                    class="mr-3 text-gray-500 hover:text-gray-700 dark:text-gray-400"
-                    type="button"
-                    :disabled="speaking"
-                    aria-label="Speak total number of songs"
-                    @click="
-                        speak(
-                            `Total number of songs: ${
+
+            <!-- Songs -->
+            <div
+                class="bg-white dark:bg-gray-800 border rounded-lg p-3 flex items-center justify-between shadow-sm"
+            >
+                <Link
+                    class="flex items-center"
+                    :href="route('pictures.index', { filter: 'music' })"
+                    aria-label="View music uploads"
+                >
+                    <i class="ri-music-2-line text-2xl text-gray-400 mr-3"></i>
+                    <div>
+                        <div class="text-base text-gray-500">Songs</div>
+                        <div class="font-bold text-2xl">
+                            {{
                                 statsData.numberOfSongs?.toLocaleString?.() ?? 0
-                            }`
-                        )
-                    "
-                >
-                    <i class="ri-speak-fill text-2xl"></i>
-                </Button>
-
-                <p>Total number of songs</p>
+                            }}
+                        </div>
+                    </div>
+                </Link>
+                <div class="flex items-center">
+                    <Button
+                        type="button"
+                        :disabled="speaking"
+                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 mr-2 p-1.5 h-8 w-8 speak-btn"
+                        aria-label="Speak songs"
+                        @click="
+                            speak(
+                                `songs: ${
+                                    statsData.numberOfSongs?.toLocaleString?.() ??
+                                    0
+                                }`
+                            )
+                        "
+                    >
+                        <i class="ri-speak-fill text-lg"></i>
+                    </Button>
+                </div>
             </div>
-            <p class="font-bold">
-                {{ statsData.numberOfSongs?.toLocaleString?.() ?? 0 }}
-            </p>
-        </div>
-        <div class="border-b py-4 flex items-center justify-between">
-            <div class="flex items-center">
-                <Button
-                    class="mr-3 text-gray-500 hover:text-gray-700 dark:text-gray-400"
-                    type="button"
-                    :disabled="speaking"
-                    aria-label="Speak pages that are images"
-                    @click="
-                        speak(
-                            `Pages that are images: ${
+
+            <!-- Images (pages that are images) -->
+            <div
+                class="bg-white dark:bg-gray-800 border rounded-lg p-3 flex items-center justify-between shadow-sm"
+            >
+                <Link
+                    class="flex items-center"
+                    :href="route('pictures.index')"
+                    aria-label="View image pages"
+                >
+                    <i class="ri-image-line text-2xl text-gray-400 mr-3"></i>
+                    <div>
+                        <div class="text-base text-gray-500">Images</div>
+                        <div class="font-bold text-2xl">
+                            {{
                                 statsData.numberOfImages?.toLocaleString?.() ??
                                 0
-                            }`
-                        )
-                    "
-                >
-                    <i class="ri-speak-fill text-2xl"></i>
-                </Button>
-
-                <p>Pages that are images</p>
+                            }}
+                        </div>
+                    </div>
+                </Link>
+                <div class="flex items-center">
+                    <Button
+                        type="button"
+                        :disabled="speaking"
+                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 mr-2 p-1.5 h-8 w-8 speak-btn"
+                        aria-label="Speak images"
+                        @click="
+                            speak(
+                                `images: ${
+                                    statsData.numberOfImages?.toLocaleString?.() ??
+                                    0
+                                }`
+                            )
+                        "
+                    >
+                        <i class="ri-speak-fill text-lg"></i>
+                    </Button>
+                </div>
             </div>
-            <p class="font-bold">
-                {{ statsData.numberOfImages?.toLocaleString?.() ?? 0 }}
-            </p>
-        </div>
-        <div class="border-b py-4 flex items-center justify-between">
-            <div class="flex items-center">
-                <Button
-                    class="mr-3 text-gray-500 hover:text-gray-700 dark:text-gray-400"
-                    type="button"
-                    :disabled="speaking"
-                    aria-label="Speak pages that are videos"
-                    @click="
-                        speak(
-                            `Pages that are videos: ${
+
+            <!-- Videos -->
+            <div
+                class="bg-white dark:bg-gray-800 border rounded-lg p-3 flex items-center justify-between shadow-sm"
+            >
+                <!-- make icon + title link to popular uploads (pictures.index?filter=popular) -->
+                <Link
+                    class="flex items-center"
+                    :href="route('pictures.index')"
+                    aria-label="View videos"
+                >
+                    <i class="ri-video-line text-2xl text-gray-400 mr-3"></i>
+                    <div>
+                        <div class="text-base text-gray-500">Videos</div>
+                        <div class="font-bold text-2xl">
+                            {{
                                 statsData.numberOfVideos?.toLocaleString?.() ??
                                 0
-                            }`
-                        )
-                    "
-                >
-                    <i class="ri-speak-fill text-2xl"></i>
-                </Button>
-
-                <p>Pages that are videos</p>
+                            }}
+                        </div>
+                    </div>
+                </Link>
+                <div class="flex items-center">
+                    <Button
+                        type="button"
+                        :disabled="speaking"
+                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 mr-2 p-1.5 h-8 w-8 speak-btn"
+                        aria-label="Speak videos"
+                        @click="
+                            speak(
+                                `videos: ${
+                                    statsData.numberOfVideos?.toLocaleString?.() ??
+                                    0
+                                }`
+                            )
+                        "
+                    >
+                        <i class="ri-speak-fill text-lg"></i>
+                    </Button>
+                </div>
             </div>
-            <p class="font-bold">
-                {{ statsData.numberOfVideos?.toLocaleString?.() ?? 0 }}
-            </p>
-        </div>
-        <div class="border-b py-4 flex items-center justify-between">
-            <div class="flex items-center">
-                <Button
-                    class="mr-3 text-gray-500 hover:text-gray-700 dark:text-gray-400"
-                    type="button"
-                    :disabled="speaking"
-                    aria-label="Speak pages that are YouTube videos"
-                    @click="
-                        speak(
-                            `Pages that are YouTube videos: ${
+
+            <!-- YouTube videos -->
+            <div
+                class="bg-white dark:bg-gray-800 border rounded-lg p-3 flex items-center justify-between shadow-sm"
+            >
+                <!-- make icon + title link to youtube filter -->
+                <Link
+                    class="flex items-center"
+                    :href="route('pictures.index', { filter: 'youtube' })"
+                    aria-label="View YouTube videos"
+                >
+                    <i class="ri-youtube-line text-2xl text-gray-400 mr-3"></i>
+                    <div>
+                        <div class="text-base text-gray-500">
+                            YouTube videos
+                        </div>
+                        <div class="font-bold text-2xl">
+                            {{
                                 statsData.numberOfYouTubeVideos?.toLocaleString?.() ??
                                 0
-                            }`
-                        )
-                    "
-                >
-                    <i class="ri-speak-fill text-2xl"></i>
-                </Button>
-
-                <p>Pages that are YouTube videos</p>
+                            }}
+                        </div>
+                    </div>
+                </Link>
+                <div class="flex items-center">
+                    <Button
+                        type="button"
+                        :disabled="speaking"
+                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 mr-2 p-1.5 h-8 w-8 speak-btn"
+                        aria-label="Speak YouTube videos"
+                        @click="
+                            speak(
+                                `YouTube videos: ${
+                                    statsData.numberOfYouTubeVideos?.toLocaleString?.() ??
+                                    0
+                                }`
+                            )
+                        "
+                    >
+                        <i class="ri-speak-fill text-lg"></i>
+                    </Button>
+                </div>
             </div>
-            <p class="font-bold">
-                {{ statsData.numberOfYouTubeVideos?.toLocaleString?.() ?? 0 }}
-            </p>
-        </div>
-        <div class="border-b py-4 flex items-center justify-between">
-            <div class="flex items-center">
-                <Button
-                    class="mr-3 text-gray-500 hover:text-gray-700 dark:text-gray-400"
-                    type="button"
-                    :disabled="speaking"
-                    aria-label="Speak pages that are screenshots"
-                    @click="
-                        speak(
-                            `Pages that are screenshots: ${
+
+            <!-- Screenshots -->
+            <div
+                class="bg-white dark:bg-gray-800 border rounded-lg p-3 flex items-center justify-between shadow-sm"
+            >
+                <!-- make icon + title link to snapshots -->
+                <Link
+                    class="flex items-center"
+                    :href="route('pictures.index', { filter: 'snapshot' })"
+                    aria-label="View screenshots"
+                >
+                    <i class="ri-camera-line text-2xl text-gray-400 mr-3"></i>
+                    <div>
+                        <div class="text-base text-gray-500">Screenshots</div>
+                        <div class="font-bold text-2xl">
+                            {{
                                 statsData.numberOfScreenshots?.toLocaleString?.() ??
                                 0
-                            }`
-                        )
-                    "
-                >
-                    <i class="ri-speak-fill text-2xl"></i>
-                </Button>
-
-                <p>Pages that are screenshots</p>
-            </div>
-            <p class="font-bold">
-                {{ statsData.numberOfScreenshots?.toLocaleString?.() ?? 0 }}
-            </p>
-        </div>
-        <div class="border-b mt-4 flex justify-between">
-            <div class="flex items-center">
-                <Button
-                    class="mr-3 text-gray-500 hover:text-gray-700 dark:text-gray-400"
-                    type="button"
-                    :disabled="speaking"
-                    aria-label="Speak book with most pages"
-                    @click="
-                        speak(
-                            `Book with most pages: ${
-                                statsData.mostPages?.title || ''
-                            }. ${
-                                statsData.mostPages?.pages_count?.toLocaleString?.() ||
-                                0
-                            } pages.`
-                        )
-                    "
-                >
-                    <i class="ri-speak-fill text-2xl"></i>
-                </Button>
-
-                <p>Book with most pages</p>
-            </div>
-            <div class="flex-1 flex items-center justify-end">
+                            }}
+                        </div>
+                    </div>
+                </Link>
                 <div class="flex items-center">
-                    <Link
-                        class="flex items-center mb-4 font-bold hover:text-blue-400 underline"
-                        :href="route('books.show', statsData.mostPages?.slug)"
-                        :aria-label="`View book ${
-                            statsData.mostPages?.title || ''
-                        }`"
-                        :title="statsData.mostPages?.title"
+                    <Button
+                        type="button"
+                        :disabled="speaking"
+                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 mr-2 p-1.5 h-8 w-8 speak-btn"
+                        aria-label="Speak screenshots"
+                        @click="
+                            speak(
+                                `screenshots: ${
+                                    statsData.numberOfScreenshots?.toLocaleString?.() ??
+                                    0
+                                }`
+                            )
+                        "
                     >
-                        <div class="flex-shrink-0 mr-3">
-                            <img
-                                v-if="
-                                    statsData.mostPages?.cover_image?.media_path
-                                "
-                                :src="
-                                    statsData.mostPages.cover_image.media_path
-                                "
-                                :alt="statsData.mostPages?.title"
-                                class="w-10 h-10 rounded-lg object-cover"
-                                @error="
-                                    (e) => (e.target.style.display = 'none')
-                                "
-                            />
-                            <div
-                                v-else
-                                class="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center"
-                            >
-                                <i
-                                    class="ri-book-line text-xl text-gray-400 dark:text-gray-500"
-                                ></i>
+                        <i class="ri-speak-fill text-lg"></i>
+                    </Button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Most / Least pages -->
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div
+                class="bg-white dark:bg-gray-800 border rounded-lg p-4 shadow-sm"
+            >
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 mr-3">
+                        <img
+                            v-if="statsData.mostPages?.cover_image?.media_path"
+                            :src="statsData.mostPages.cover_image.media_path"
+                            :alt="statsData.mostPages?.title"
+                            class="w-16 h-16 rounded-lg object-cover"
+                            @error="(e) => (e.target.style.display = 'none')"
+                        />
+                        <div
+                            v-else
+                            class="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center"
+                        >
+                            <i
+                                class="ri-book-line text-xl text-gray-400 dark:text-gray-500"
+                            ></i>
+                        </div>
+                    </div>
+
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-sm text-gray-500">
+                                    Book with most pages
+                                </div>
+                                <Link
+                                    class="font-bold hover:text-blue-400 truncate block"
+                                    :href="
+                                        route(
+                                            'books.show',
+                                            statsData.mostPages?.slug
+                                        )
+                                    "
+                                    :title="statsData.mostPages?.title"
+                                >
+                                    {{ statsData.mostPages?.title }}
+                                </Link>
+                                <div class="text-sm text-gray-500 mt-1">
+                                    {{
+                                        countAddS(
+                                            statsData.mostPages?.pages_count ||
+                                                0,
+                                            "page"
+                                        )
+                                    }}
+                                </div>
+                            </div>
+
+                            <div class="ml-4">
+                                <Button
+                                    type="button"
+                                    :disabled="speaking"
+                                    class="text-gray-500 hover:text-gray-700 dark:text-gray-400 p-1.5 h-8 w-8 speak-btn"
+                                    aria-label="Speak book with most pages"
+                                    @click="
+                                        speak(
+                                            `Book with most pages: ${
+                                                statsData.mostPages?.title || ''
+                                            }. ${
+                                                statsData.mostPages
+                                                    ?.pages_count || 0
+                                            } pages.`
+                                        )
+                                    "
+                                >
+                                    <i class="ri-speak-fill text-lg"></i>
+                                </Button>
                             </div>
                         </div>
-
-                        <span class="truncate" style="max-width: 100%">{{
-                            statsData.mostPages?.title
-                        }}</span>
-                    </Link>
+                    </div>
                 </div>
-                <p class="ml-4">
-                    {{
-                        countAddS(statsData.mostPages?.pages_count || 0, "page")
-                    }}
-                </p>
             </div>
-        </div>
-        <div class="border-b mt-4 flex justify-between items-center">
-            <div class="flex items-center">
-                <Button
-                    class="mr-3 text-gray-500 hover:text-gray-700 dark:text-gray-400"
-                    type="button"
-                    :disabled="speaking"
-                    aria-label="Speak book with least pages"
-                    @click="
-                        speak(
-                            `Book with least pages: ${
-                                statsData.leastPages?.title || ''
-                            }. ${statsData.leastPages?.pages_count || 0} pages.`
-                        )
-                    "
-                >
-                    <i class="ri-speak-fill text-2xl"></i>
-                </Button>
 
-                <p>Book with least pages</p>
-            </div>
-            <div class="flex-1 flex items-center justify-end">
-                <Link
-                    class="flex items-center mb-0 font-bold hover:text-blue-400 underline"
-                    :href="route('books.show', statsData.leastPages?.slug)"
-                    :aria-label="`View book ${
-                        statsData.leastPages?.title || ''
-                    }`"
-                    :title="statsData.leastPages?.title"
-                >
+            <div
+                class="bg-white dark:bg-gray-800 border rounded-lg p-4 shadow-sm"
+            >
+                <div class="flex items-start">
                     <div class="flex-shrink-0 mr-3">
                         <img
                             v-if="statsData.leastPages?.cover_image?.media_path"
                             :src="statsData.leastPages.cover_image.media_path"
                             :alt="statsData.leastPages?.title"
-                            class="w-10 h-10 rounded-lg object-cover"
+                            class="w-16 h-16 rounded-lg object-cover"
                             @error="(e) => (e.target.style.display = 'none')"
                         />
                         <div
                             v-else
-                            class="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center"
+                            class="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center"
                         >
                             <i
                                 class="ri-book-line text-xl text-gray-400 dark:text-gray-500"
@@ -288,124 +396,196 @@
                         </div>
                     </div>
 
-                    <span class="truncate" style="max-width: 100%">{{
-                        statsData.leastPages?.title
-                    }}</span>
-                </Link>
-                <p class="ml-4">
-                    {{
-                        countAddS(
-                            statsData.leastPages?.pages_count || 0,
-                            "page"
-                        )
-                    }}
-                </p>
-            </div>
-        </div>
-        <div class="mt-6">
-            <div class="flex items-center mb-2">
-                <Button
-                    class="mr-3 py-0.5 px-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400"
-                    type="button"
-                    :disabled="speaking"
-                    aria-label="Speak top 5 books"
-                    @click="speakTopBooks"
-                >
-                    <i class="ri-speak-fill text-2xl"></i>
-                </Button>
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-sm text-gray-500">
+                                    Book with least pages
+                                </div>
+                                <Link
+                                    class="font-bold hover:text-blue-400 truncate block"
+                                    :href="
+                                        route(
+                                            'books.show',
+                                            statsData.leastPages?.slug
+                                        )
+                                    "
+                                    :title="statsData.leastPages?.title"
+                                >
+                                    {{ statsData.leastPages?.title }}
+                                </Link>
+                                <div class="text-sm text-gray-500 mt-1">
+                                    {{
+                                        countAddS(
+                                            statsData.leastPages?.pages_count ||
+                                                0,
+                                            "page"
+                                        )
+                                    }}
+                                </div>
+                            </div>
 
-                <p class="font-bold text-lg">Top 5 Most Popular Books</p>
-            </div>
-            <div
-                v-for="(book, index) in statsData.mostReadBooks || []"
-                :key="book.id"
-                class="border-b py-2 flex items-center"
-            >
-                <span class="text-gray-500 dark:text-gray-400 mr-2"
-                    >{{ index + 1 }}.</span
-                >
-
-                <Link
-                    class="flex-1 flex items-center font-medium hover:text-blue-400"
-                    :href="route('books.show', book.slug)"
-                    :aria-label="`View book ${book.title}`"
-                    :title="book.title"
-                >
-                    <div class="flex-shrink-0 mr-3">
-                        <img
-                            v-if="book.cover_image?.media_path"
-                            :src="book.cover_image.media_path"
-                            :alt="book.title"
-                            class="w-10 h-10 rounded-lg object-cover"
-                            @error="(e) => (e.target.style.display = 'none')"
-                        />
-                        <div
-                            v-else
-                            class="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center"
-                        >
-                            <i
-                                class="ri-book-line text-xl text-gray-400 dark:text-gray-500"
-                            ></i>
+                            <div class="ml-4">
+                                <Button
+                                    type="button"
+                                    :disabled="speaking"
+                                    class="text-gray-500 hover:text-gray-700 dark:text-gray-400 p-1.5 h-8 w-8 speak-btn"
+                                    aria-label="Speak book with least pages"
+                                    @click="
+                                        speak(
+                                            `Book with least pages: ${
+                                                statsData.leastPages?.title ||
+                                                ''
+                                            }. ${
+                                                statsData.leastPages
+                                                    ?.pages_count || 0
+                                            } pages.`
+                                        )
+                                    "
+                                >
+                                    <i class="ri-speak-fill text-lg"></i>
+                                </Button>
+                            </div>
                         </div>
                     </div>
-
-                    <span class="truncate" style="max-width: 100%">{{
-                        book.title
-                    }}</span>
-                </Link>
+                </div>
             </div>
         </div>
-        <div class="mt-6">
-            <div class="flex items-center mb-2">
-                <Button
-                    class="mr-3 py-0.5 px-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400"
-                    type="button"
-                    :disabled="speaking"
-                    aria-label="Speak top 5 songs"
-                    @click="speakTopSongs"
-                >
-                    <i class="ri-speak-fill text-2xl"></i>
-                </Button>
 
-                <p class="font-bold text-lg">Top 5 Most Popular Songs</p>
-            </div>
+        <!-- Top lists -->
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div
-                v-for="(song, index) in statsData.mostReadSongs || []"
-                :key="song.id"
-                class="border-b py-2 flex items-center"
+                class="bg-white dark:bg-gray-800 border rounded-lg p-4 shadow-sm"
             >
-                <span class="text-gray-500 dark:text-gray-400 mr-2"
-                    >{{ index + 1 }}.</span
-                >
-
-                <Link
-                    class="flex-1 flex items-center font-medium hover:text-blue-400"
-                    :href="route('music.show', song.id)"
-                    :aria-label="`View song ${song.title}`"
-                    :title="song.title"
-                >
-                    <div class="flex-shrink-0 mr-3">
-                        <img
-                            v-if="song.thumbnail_default"
-                            :src="song.thumbnail_default"
-                            :alt="song.title"
-                            class="w-10 h-10 rounded-lg object-cover"
-                            @error="(e) => (e.target.style.display = 'none')"
-                        />
-                        <div
-                            v-else
-                            class="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center"
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <Button
+                            class="mr-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 p-1.5 h-8 w-8 speak-btn"
+                            type="button"
+                            :disabled="speaking"
+                            aria-label="Speak top 5 books"
+                            @click="speakTopBooks"
                         >
-                            <i
-                                class="ri-music-2-line text-xl text-gray-400 dark:text-gray-500"
-                            ></i>
-                        </div>
+                            <i class="ri-speak-fill text-lg"></i>
+                        </Button>
+                        <p class="font-bold text-lg">
+                            Top 5 Most Popular Books
+                        </p>
                     </div>
 
-                    <span class="truncate" style="max-width: 100%">{{
-                        song.title
-                    }}</span>
-                </Link>
+                    <Link
+                        class="text-sm font-medium text-blue-500 hover:underline"
+                        :href="route('books.index')"
+                        >View all</Link
+                    >
+                </div>
+
+                <div class="space-y-2">
+                    <div
+                        v-for="(book, index) in statsData.mostReadBooks || []"
+                        :key="book.id"
+                        class="flex items-center justify-between"
+                    >
+                        <div class="flex items-center">
+                            <span class="text-gray-500 dark:text-gray-400 mr-2"
+                                >{{ index + 1 }}.</span
+                            >
+                            <Link
+                                class="flex items-center font-medium hover:text-blue-400 truncate"
+                                :href="route('books.show', book.slug)"
+                                :aria-label="`View book ${book.title}`"
+                                :title="book.title"
+                            >
+                                <div class="flex-shrink-0 mr-3">
+                                    <img
+                                        v-if="book.cover_image?.media_path"
+                                        :src="book.cover_image.media_path"
+                                        :alt="book.title"
+                                        class="w-10 h-10 rounded-lg object-cover"
+                                        @error="
+                                            (e) =>
+                                                (e.target.style.display =
+                                                    'none')
+                                        "
+                                    />
+                                </div>
+
+                                <span
+                                    class="truncate"
+                                    style="max-width: 100%"
+                                    >{{ book.title }}</span
+                                >
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="bg-white dark:bg-gray-800 border rounded-lg p-4 shadow-sm"
+            >
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <Button
+                            class="mr-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 p-1.5 h-8 w-8 speak-btn"
+                            type="button"
+                            :disabled="speaking"
+                            aria-label="Speak top 5 songs"
+                            @click="speakTopSongs"
+                        >
+                            <i class="ri-speak-fill text-lg"></i>
+                        </Button>
+                        <p class="font-bold text-lg">
+                            Top 5 Most Popular Songs
+                        </p>
+                    </div>
+
+                    <Link
+                        class="text-sm font-medium text-blue-500 hover:underline"
+                        :href="route('music.index')"
+                        >View all</Link
+                    >
+                </div>
+
+                <div class="space-y-2">
+                    <div
+                        v-for="(song, index) in statsData.mostReadSongs || []"
+                        :key="song.id"
+                        class="flex items-center justify-between"
+                    >
+                        <div class="flex items-center">
+                            <span class="text-gray-500 dark:text-gray-400 mr-2"
+                                >{{ index + 1 }}.</span
+                            >
+                            <Link
+                                class="flex items-center font-medium hover:text-blue-400 truncate"
+                                :href="route('music.show', song.id)"
+                                :aria-label="`View song ${song.title}`"
+                                :title="song.title"
+                            >
+                                <div class="flex-shrink-0 mr-3">
+                                    <img
+                                        v-if="song.thumbnail_default"
+                                        :src="song.thumbnail_default"
+                                        :alt="song.title"
+                                        class="w-10 h-10 rounded-lg object-cover"
+                                        @error="
+                                            (e) =>
+                                                (e.target.style.display =
+                                                    'none')
+                                        "
+                                    />
+                                </div>
+
+                                <span
+                                    class="truncate"
+                                    style="max-width: 100%"
+                                    >{{ song.title }}</span
+                                >
+                            </Link>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -491,4 +671,10 @@ function speakTopSongs() {
 }
 </script>
 
-<style scoped></style>
+<style scoped>
+.speak-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+</style>
