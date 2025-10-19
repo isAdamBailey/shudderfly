@@ -173,7 +173,6 @@ const musicEnabled = computed(() => page.props.settings?.music_enabled);
             >
                 <div class="pt-2 pb-3 space-y-1">
                     <ResponsiveNavLink
-                        v-if="canEditPages"
                         :href="route('dashboard')"
                         :active="route().current('dashboard')"
                     >

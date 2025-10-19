@@ -173,13 +173,4 @@ class DashboardTest extends TestCase
 
         $response->assertRedirect(route('login'));
     }
-
-    public function test_dashboard_requires_edit_pages_permission()
-    {
-        $user = User::factory()->create();
-
-        $response = $this->actingAs($user)->get(route('dashboard'));
-
-        $response->assertStatus(403);
-    }
 }
