@@ -31,6 +31,7 @@ class DashboardController extends Controller
                     ->count(),
                 'numberOfScreenshots' => Page::where('media_path', 'like', '%snapshot%')->count(),
                 'mostReadBooks' => Book::query()
+                    ->with('coverImage')
                     ->orderBy('read_count', 'desc')
                     ->orderBy('created_at')
                     ->take(5)
@@ -41,12 +42,14 @@ class DashboardController extends Controller
                     ->take(5)
                     ->get()
                     ->toArray(),
-                'leastPages' => Book::withCount('pages')
+                'leastPages' => Book::with('coverImage')
+                    ->withCount('pages')
                     ->orderBy('pages_count')
                     ->orderBy('created_at')
                     ->first()
                     ->toArray(),
-                'mostPages' => Book::withCount('pages')
+                'mostPages' => Book::with('coverImage')
+                    ->withCount('pages')
                     ->orderBy('pages_count', 'desc')
                     ->orderBy('created_at')
                     ->first()
