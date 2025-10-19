@@ -40,7 +40,6 @@ const musicEnabled = computed(() => page.props.settings?.music_enabled);
                             class="hidden space-x-8 sm:-my-px sm:ml-10 sm:flex"
                         >
                             <NavLink
-                                v-if="canEditPages"
                                 :href="route('dashboard')"
                                 :active="route().current('dashboard')"
                             >

@@ -37,6 +37,8 @@ Route::middleware('auth')->group(function () {
         ]);
     })->name('rules');
 
+    Route::get('/dashboard', [DashboardController::class, 'show'])->name('dashboard');
+
     Route::get('/photos', [PageController::class, 'index'])->name('pictures.index');
 
     Route::get('/pages/{page}', [PageController::class, 'show'])->name('pages.show');
@@ -60,8 +62,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/music/{song}/increment-read-count', [MusicController::class, 'incrementReadCount'])->name('music.increment-read-count');
 
     Route::group(['middleware' => ['can:edit pages']], function () {
-        Route::get('/dashboard', [DashboardController::class, 'show'])->name('dashboard');
-
         Route::post('/books', [BookController::class, 'store'])->name('books.store');
         Route::put('/books/{book}', [BookController::class, 'update'])->name('books.update');
         Route::delete('/books/{book}', [BookController::class, 'destroy'])->name('books.destroy');
