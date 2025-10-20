@@ -160,7 +160,9 @@ function sendEmail() {
         </div>
 
         <!-- Sticky preview and controls -->
-        <div class="sticky top-0 z-10 bg-white dark:bg-slate-800 pb-4 mb-4 -mx-4 px-4 pt-4 -mt-4 shadow-md">
+        <div
+            class="sticky top-0 z-10 bg-white dark:bg-slate-800 pb-4 mb-4 -mx-4 px-4 pt-4 -mt-4 shadow-md"
+        >
             <div
                 :class="[
                     'min-h-[56px] flex items-center px-4 py-3 rounded-md bg-gray-50 dark:bg-slate-700 text-lg font-medium',
@@ -176,7 +178,7 @@ function sendEmail() {
                     >
                     <button
                         type="button"
-                        class="ml-4 p-2 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-md"
+                        class="ml-4 px-4 py-3 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-md"
                         aria-label="Say message"
                         title="Say message"
                         :disabled="speaking"
@@ -264,7 +266,7 @@ function sendEmail() {
                         v-for="(w, i) in subjects"
                         :key="`s-${i}`"
                         type="button"
-                        class="px-4 py-3 rounded bg-purple-900 text-white text-lg font-semibold shadow-md"
+                        class="px-6 py-1 rounded-full bg-purple-900 text-white text-xl font-semibold shadow-md hover:bg-purple-800 transition-colors"
                         @click="addWord(w)"
                     >
                         {{ w }}
@@ -279,7 +281,7 @@ function sendEmail() {
                         v-for="(w, i) in verbs"
                         :key="`v-${i}`"
                         type="button"
-                        class="px-4 py-3 rounded bg-purple-900 text-white text-lg font-semibold shadow-md"
+                        class="px-6 py-1 rounded-full bg-purple-900 text-white text-xl font-semibold shadow-md hover:bg-purple-800 transition-colors"
                         @click="addWord(w)"
                     >
                         {{ w }}
@@ -294,7 +296,7 @@ function sendEmail() {
                         v-for="(w, i) in [...adjectives, ...objects]"
                         :key="`o-${i}`"
                         type="button"
-                        class="px-4 py-3 rounded bg-purple-900 text-white text-lg font-semibold shadow-md"
+                        class="px-6 py-1 rounded-full bg-purple-900 text-white text-xl font-semibold shadow-md hover:bg-purple-800 transition-colors"
                         @click="addWord(w)"
                     >
                         {{ w }}
