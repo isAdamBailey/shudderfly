@@ -32,6 +32,8 @@ const { speak, speaking } = useSpeechSynthesis();
 // Favorites (persisted to localStorage)
 const FAVORITES_KEY = "contact_builder_favorites_v1";
 const favorites = ref([]);
+const addFeedback = ref(false);
+const justAdded = ref(null);
 
 function loadFavorites() {
     try {
@@ -59,10 +61,19 @@ function addFavorite() {
         favorites.value.unshift(preview.value);
         if (favorites.value.length > 8) favorites.value.pop();
         saveFavorites();
+        // visual feedback
+        justAdded.value = preview.value;
+        addFeedback.value = true;
+        setTimeout(() => (addFeedback.value = false), 2000);
+        setTimeout(() => (justAdded.value = null), 1500);
     }
 }
 
 function removeFavorite(index) {
+    // confirmation before deletion
+    const text = favorites.value[index] || "this favorite";
+    const confirmed = window.confirm(`Remove favorite: "${text}"?`);
+    if (!confirmed) return;
     favorites.value.splice(index, 1);
     saveFavorites();
 }
@@ -126,11 +137,11 @@ function sendEmail() {
 }
 
 function undoSend() {
-    // Send a short follow-up asking to ignore previous message.
+    // Previously this sent a follow-up email asking admins to disregard the previous message.
+    // Remove that network call so Undo only clears the UI state locally.
     const prev = lastSentMessage.value;
     if (!prev) return;
-    const undoMsg = `Please disregard the previous message: "${prev}"`;
-    router.post(route("profile.contact-admins-email", { message: undoMsg }));
+    // Do not send a follow-up email; just clear the undo state locally.
     showUndo.value = false;
     lastSentMessage.value = "";
     clearTimeout(undoTimer);
@@ -139,7 +150,9 @@ function undoSend() {
 </script>
 
 <template>
-    <div class="p-4 rounded-md bg-white dark:bg-slate-800 border shadow-sm">
+    <div
+        class="p-4 rounded-md bg-white dark:bg-slate-800 border shadow-sm w-full"
+    >
         <div class="flex items-center mb-3">
             <i class="ri-gamepad-fill text-4xl text-red-500 mr-3"></i>
             <div>
@@ -157,76 +170,27 @@ function undoSend() {
                     { 'ring-2 ring-green-400 animate-pulse': speaking },
                 ]"
             >
-                <span class="text-gray-700 dark:text-gray-100">{{
-                    preview || "Tap words to start a message..."
-                }}</span>
-            </div>
-
-            <!-- Favorites row -->
-            <div
-                v-if="favorites.length"
-                class="flex items-center gap-2 mt-3 mb-2"
-            >
-                <div
-                    class="text-sm font-medium text-gray-700 dark:text-gray-200 mr-2"
-                >
-                    Favorites:
-                </div>
-                <div class="flex gap-2 flex-wrap">
-                    <div
-                        v-for="(f, i) in favorites"
-                        :key="`fav-${i}`"
-                        class="flex items-center bg-yellow-500 rounded overflow-hidden"
+                <div class="flex items-center justify-between w-full">
+                    <span
+                        class="text-gray-700 dark:text-gray-100 break-words"
+                        >{{
+                            preview || "Tap words to start a message..."
+                        }}</span
                     >
-                        <button
-                            type="button"
-                            class="flex items-center gap-2 px-3 py-2 text-white text-sm"
-                            :title="f"
-                            :aria-label="`Apply favorite: ${f}`"
-                            @click="applyFavorite(f)"
-                        >
-                            <i class="ri-heart-fill text-lg"></i>
-                            <span class="sr-only">Apply favorite</span>
-                        </button>
-                        <button
-                            type="button"
-                            class="px-2 py-2 text-white bg-yellow-600 hover:bg-yellow-700"
-                            :title="`Remove favorite: ${f}`"
-                            :aria-label="`Remove favorite: ${f}`"
-                            @click="removeFavorite(i)"
-                        >
-                            <i class="ri-close-line"></i>
-                        </button>
-                    </div>
                     <button
-                        class="px-2 py-2 rounded text-sm text-gray-600 dark:text-gray-200"
-                        title="Save current message to favorites"
-                        aria-label="Save favorite"
-                        @click="addFavorite"
+                        type="button"
+                        class="ml-4 p-2 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-md"
+                        aria-label="Say message"
+                        title="Say message"
+                        :disabled="speaking || !preview"
+                        @click="sayIt"
                     >
-                        <i class="ri-add-fill text-lg"></i>
+                        <i class="ri-speak-fill text-2xl"></i>
                     </button>
                 </div>
             </div>
 
-            <div class="flex gap-2 mt-2">
-                <Button
-                    class="flex-1 py-4 text-lg"
-                    :disabled="speaking || !preview"
-                    @click="sayIt"
-                >
-                    <i class="ri-speak-fill text-2xl mr-2"></i>
-                    Say it
-                </Button>
-                <Button
-                    class="flex-1 py-4 text-lg"
-                    :disabled="buttonsDisabled || !preview"
-                    @click="sendEmail"
-                >
-                    <i class="ri-mail-fill text-2xl mr-2"></i>
-                    Email it
-                </Button>
-            </div>
+            <!-- Email button removed from here and placed below the controls -->
 
             <div class="flex items-center gap-2 mt-3">
                 <!-- Icon-only secondary controls with ARIA/tooltips and larger touch targets -->
@@ -262,14 +226,24 @@ function undoSend() {
 
                 <!-- Save favorite quick-access -->
                 <button
-                    class="ml-2 p-3 rounded-md bg-red-500 text-white shadow-md"
+                    class="ml-2 p-3 rounded-md bg-red-500 text-white shadow-md flex items-center"
                     type="button"
                     title="Save current message as favorite"
                     aria-label="Save favorite"
                     @click="addFavorite"
                 >
-                    <i class="ri-heart-add-fill text-2xl"></i>
+                    <i class="ri-heart-add-fill text-2xl mr-2"></i>
+                    <span class="sr-only">Save favorite</span>
                 </button>
+
+                <!-- visual feedback when saving -->
+                <div
+                    v-if="addFeedback"
+                    class="ml-3 inline-flex items-center gap-2 bg-green-100 text-green-800 px-3 py-1 rounded"
+                >
+                    <i class="ri-check-line"></i>
+                    <span class="text-sm">Saved</span>
+                </div>
 
                 <!-- Undo toast (appears here) -->
                 <div
@@ -287,6 +261,18 @@ function undoSend() {
                     </button>
                 </div>
             </div>
+        </div>
+
+        <!-- Moved Email button under controls to make it more obvious after actions -->
+        <div class="flex gap-2 mt-4">
+            <Button
+                class="w-full py-4 text-lg"
+                :disabled="buttonsDisabled || !preview"
+                @click="sendEmail"
+            >
+                <i class="ri-mail-fill text-2xl mr-2"></i>
+                Email it
+            </Button>
         </div>
 
         <div class="space-y-3">
@@ -331,6 +317,43 @@ function undoSend() {
                         @click="addWord(w)"
                     >
                         {{ w }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Favorites moved to bottom -->
+        <div v-if="favorites.length" class="mt-6">
+            <div
+                class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2"
+            >
+                Saved favorites
+            </div>
+            <div class="flex gap-2 flex-wrap">
+                <div
+                    v-for="(f, i) in favorites"
+                    :key="`fav-bottom-${i}`"
+                    class="flex items-center bg-yellow-500 rounded overflow-hidden"
+                    :class="{ 'ring-2 ring-green-400': justAdded === f }"
+                >
+                    <button
+                        type="button"
+                        class="flex items-center gap-2 px-3 py-2 text-white text-sm"
+                        :title="f"
+                        :aria-label="`Apply favorite: ${f}`"
+                        @click="applyFavorite(f)"
+                    >
+                        <i class="ri-heart-fill text-lg"></i>
+                        <span class="sr-only">Apply favorite</span>
+                    </button>
+                    <button
+                        type="button"
+                        class="px-2 py-2 text-white bg-yellow-600 hover:bg-yellow-700"
+                        :title="`Remove favorite: ${f}`"
+                        :aria-label="`Remove favorite: ${f}`"
+                        @click="removeFavorite(i)"
+                    >
+                        <i class="ri-close-line"></i>
                     </button>
                 </div>
             </div>

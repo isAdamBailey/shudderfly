@@ -87,12 +87,16 @@ describe("ContactAdminsMessageBuilder - favorites", () => {
 
         await nextTick();
 
+        // stub global confirm so jsdom doesn't throw
+        vi.stubGlobal("confirm", () => true);
+
         // remove button has aria-label `Remove favorite: a favorite`
         const removeBtn = wrapper.find(
             `button[aria-label="Remove favorite: a favorite"]`
         );
         expect(removeBtn.exists()).toBe(true);
         await removeBtn.trigger("click");
+        await nextTick();
 
         const stored = JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]");
         expect(stored).toEqual(["other"]);
