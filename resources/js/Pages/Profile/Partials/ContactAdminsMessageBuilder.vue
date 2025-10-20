@@ -29,16 +29,40 @@ const preview = computed(() => selection.value.join(" ").trim());
 const { buttonsDisabled, setTimestamp } = useButtonState();
 const { speak, speaking } = useSpeechSynthesis();
 
-// Favorites (persisted to localStorage)
 const FAVORITES_KEY = "contact_builder_favorites_v1";
+const MAX_FAVORITES = 5;
 const favorites = ref([]);
 const addFeedback = ref(false);
 const justAdded = ref(null);
+const isAtMax = computed(() => {
+    const len = Array.isArray(favorites.value)
+        ? Number(favorites.value.length)
+        : 0;
+    return len >= Number(MAX_FAVORITES);
+});
+
+const canSaveFavorite = computed(() => {
+    const hasPreview =
+        typeof preview.value === "string" && preview.value.trim().length > 0;
+    const hasSelection = Array.isArray(selection.value)
+        ? selection.value.length > 0
+        : false;
+    const len = Array.isArray(favorites.value) ? favorites.value.length : 0;
+    return (hasPreview || hasSelection) && len < MAX_FAVORITES;
+});
 
 function loadFavorites() {
     try {
         const raw = localStorage.getItem(FAVORITES_KEY);
-        if (raw) favorites.value = JSON.parse(raw) || [];
+        if (raw) {
+            const parsed = JSON.parse(raw) || [];
+            const arr = Array.isArray(parsed)
+                ? parsed
+                : Object.values(parsed || {});
+            favorites.value = arr.slice(0, MAX_FAVORITES);
+        } else {
+            favorites.value = [];
+        }
     } catch (e) {
         favorites.value = [];
     }
@@ -46,22 +70,21 @@ function loadFavorites() {
 
 function saveFavorites() {
     try {
-        localStorage.setItem(
-            FAVORITES_KEY,
-            JSON.stringify(favorites.value || [])
-        );
+        const arr = Array.isArray(favorites.value)
+            ? favorites.value.slice(0, MAX_FAVORITES)
+            : [];
+        localStorage.setItem(FAVORITES_KEY, JSON.stringify(arr));
     } catch (e) {
-        // ignore
+        void 0;
     }
 }
 
 function addFavorite() {
-    if (!preview.value) return;
+    if (!canSaveFavorite.value) return;
     if (!favorites.value.includes(preview.value)) {
         favorites.value.unshift(preview.value);
-        if (favorites.value.length > 8) favorites.value.pop();
+        if (favorites.value.length > MAX_FAVORITES) favorites.value.pop();
         saveFavorites();
-        // visual feedback
         justAdded.value = preview.value;
         addFeedback.value = true;
         setTimeout(() => (addFeedback.value = false), 2000);
@@ -70,8 +93,8 @@ function addFavorite() {
 }
 
 function removeFavorite(index) {
-    // confirmation before deletion
     const text = favorites.value[index] || "this favorite";
+    speak(`Are you sure you want to delete ${text}?`);
     const confirmed = window.confirm(`Remove favorite: "${text}"?`);
     if (!confirmed) return;
     favorites.value.splice(index, 1);
@@ -97,7 +120,6 @@ function reset() {
 }
 
 function suggestRandom() {
-    // Pick a random, child-friendly sentence
     const s = subjects[Math.floor(Math.random() * subjects.length)];
     const v = verbs[Math.floor(Math.random() * verbs.length)];
     const a = adjectives[Math.floor(Math.random() * adjectives.length)];
@@ -105,19 +127,19 @@ function suggestRandom() {
     selection.value = [s, v, a, o].filter(Boolean);
 }
 
-// Undo toast after send
 const showUndo = ref(false);
 const lastSentMessage = ref("");
 let undoTimer = null;
 
 function sayIt() {
-    if (!preview.value) return;
-    speak(preview.value);
+    const placeholder = "Tap words to start a message...";
+    const text =
+        preview.value && preview.value.length ? preview.value : placeholder;
+    speak(text);
 }
 
 function sendEmail() {
     if (!preview.value) return;
-    // speak a small confirmation and send
     speak(`Sending message: ${preview.value}`);
     const messageToSend = preview.value;
     router.post(
@@ -125,7 +147,6 @@ function sendEmail() {
     );
     setTimestamp();
 
-    // show undo toast for a short window
     lastSentMessage.value = messageToSend;
     showUndo.value = true;
     clearTimeout(undoTimer);
@@ -137,11 +158,8 @@ function sendEmail() {
 }
 
 function undoSend() {
-    // Previously this sent a follow-up email asking admins to disregard the previous message.
-    // Remove that network call so Undo only clears the UI state locally.
     const prev = lastSentMessage.value;
     if (!prev) return;
-    // Do not send a follow-up email; just clear the undo state locally.
     showUndo.value = false;
     lastSentMessage.value = "";
     clearTimeout(undoTimer);
@@ -172,7 +190,7 @@ function undoSend() {
             >
                 <div class="flex items-center justify-between w-full">
                     <span
-                        class="text-gray-700 dark:text-gray-100 break-words"
+                        class="text-gray-700 dark:text-gray-100 break-words text-2xl md:text-3xl font-bold leading-tight"
                         >{{
                             preview || "Tap words to start a message..."
                         }}</span
@@ -182,7 +200,7 @@ function undoSend() {
                         class="ml-4 p-2 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-md"
                         aria-label="Say message"
                         title="Say message"
-                        :disabled="speaking || !preview"
+                        :disabled="speaking"
                         @click="sayIt"
                     >
                         <i class="ri-speak-fill text-2xl"></i>
@@ -190,10 +208,7 @@ function undoSend() {
                 </div>
             </div>
 
-            <!-- Email button removed from here and placed below the controls -->
-
             <div class="flex items-center gap-2 mt-3">
-                <!-- Icon-only secondary controls with ARIA/tooltips and larger touch targets -->
                 <button
                     class="p-3 rounded-md bg-slate-700 dark:bg-slate-600 text-white shadow-md"
                     type="button"
@@ -224,19 +239,34 @@ function undoSend() {
                     <i class="ri-shuffle-line text-2xl"></i>
                 </button>
 
-                <!-- Save favorite quick-access -->
                 <button
-                    class="ml-2 p-3 rounded-md bg-red-500 text-white shadow-md flex items-center"
+                    class="ml-2 p-3 rounded-md shadow-md flex items-center"
+                    :class="
+                        canSaveFavorite
+                            ? 'bg-red-500 text-white hover:bg-red-600'
+                            : 'bg-gray-400 text-white opacity-60 cursor-not-allowed'
+                    "
                     type="button"
-                    title="Save current message as favorite"
-                    aria-label="Save favorite"
+                    :title="
+                        canSaveFavorite
+                            ? 'Save current message as favorite'
+                            : isAtMax
+                            ? `Max favorites (${MAX_FAVORITES}) reached`
+                            : 'Build a message to save'
+                    "
+                    :aria-label="
+                        canSaveFavorite
+                            ? 'Save favorite'
+                            : 'Save favorite (disabled)'
+                    "
+                    :aria-disabled="!canSaveFavorite"
+                    :disabled="!canSaveFavorite"
                     @click="addFavorite"
                 >
                     <i class="ri-heart-add-fill text-2xl mr-2"></i>
                     <span class="sr-only">Save favorite</span>
                 </button>
 
-                <!-- visual feedback when saving -->
                 <div
                     v-if="addFeedback"
                     class="ml-3 inline-flex items-center gap-2 bg-green-100 text-green-800 px-3 py-1 rounded"
@@ -245,7 +275,6 @@ function undoSend() {
                     <span class="text-sm">Saved</span>
                 </div>
 
-                <!-- Undo toast (appears here) -->
                 <div
                     v-if="showUndo"
                     class="ml-4 bg-gray-100 dark:bg-slate-700 px-3 py-2 rounded flex items-center gap-3"
@@ -263,7 +292,6 @@ function undoSend() {
             </div>
         </div>
 
-        <!-- Moved Email button under controls to make it more obvious after actions -->
         <div class="flex gap-2 mt-4">
             <Button
                 class="w-full py-4 text-lg"
@@ -283,7 +311,7 @@ function undoSend() {
                         v-for="(w, i) in subjects"
                         :key="`s-${i}`"
                         type="button"
-                        class="px-4 py-3 rounded bg-purple-900 text-white text-base shadow-md"
+                        class="px-4 py-3 rounded bg-purple-900 text-white text-lg font-semibold shadow-md"
                         @click="addWord(w)"
                     >
                         {{ w }}
@@ -298,7 +326,7 @@ function undoSend() {
                         v-for="(w, i) in verbs"
                         :key="`v-${i}`"
                         type="button"
-                        class="px-4 py-3 rounded bg-purple-900 text-white text-base shadow-md"
+                        class="px-4 py-3 rounded bg-purple-900 text-white text-lg font-semibold shadow-md"
                         @click="addWord(w)"
                     >
                         {{ w }}
@@ -313,7 +341,7 @@ function undoSend() {
                         v-for="(w, i) in [...adjectives, ...objects]"
                         :key="`o-${i}`"
                         type="button"
-                        class="px-4 py-3 rounded bg-purple-900 text-white text-base shadow-md"
+                        class="px-4 py-3 rounded bg-purple-900 text-white text-lg font-semibold shadow-md"
                         @click="addWord(w)"
                     >
                         {{ w }}
@@ -322,7 +350,6 @@ function undoSend() {
             </div>
         </div>
 
-        <!-- Favorites moved to bottom -->
         <div v-if="favorites.length" class="mt-6">
             <div
                 class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2"
