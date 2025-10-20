@@ -6,10 +6,6 @@ import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { router } from "@inertiajs/vue3";
 import { ref, computed, onMounted } from "vue";
 
-defineProps({
-    adminUsers: { type: Array, default: () => [] },
-});
-
 const subjects = ["I", "We", "Mom", "Dad", "My tummy", "My legs"];
 const verbs = ["feel", "need", "love", "am", "are"];
 const adjectives = [
@@ -75,7 +71,7 @@ function saveFavorites() {
             : [];
         localStorage.setItem(FAVORITES_KEY, JSON.stringify(arr));
     } catch (e) {
-        void 0;
+        //
     }
 }
 
@@ -127,10 +123,6 @@ function suggestRandom() {
     selection.value = [s, v, a, o].filter(Boolean);
 }
 
-const showUndo = ref(false);
-const lastSentMessage = ref("");
-let undoTimer = null;
-
 function sayIt() {
     const placeholder = "Tap words to start a message...";
     const text =
@@ -146,24 +138,6 @@ function sendEmail() {
         route("profile.contact-admins-email", { message: messageToSend })
     );
     setTimestamp();
-
-    lastSentMessage.value = messageToSend;
-    showUndo.value = true;
-    clearTimeout(undoTimer);
-    undoTimer = setTimeout(() => {
-        showUndo.value = false;
-        lastSentMessage.value = "";
-        undoTimer = null;
-    }, 6000);
-}
-
-function undoSend() {
-    const prev = lastSentMessage.value;
-    if (!prev) return;
-    showUndo.value = false;
-    lastSentMessage.value = "";
-    clearTimeout(undoTimer);
-    undoTimer = null;
 }
 </script>
 
@@ -274,33 +248,7 @@ function undoSend() {
                     <i class="ri-check-line"></i>
                     <span class="text-sm">Saved</span>
                 </div>
-
-                <div
-                    v-if="showUndo"
-                    class="ml-4 bg-gray-100 dark:bg-slate-700 px-3 py-2 rounded flex items-center gap-3"
-                >
-                    <div class="text-sm">Message sent</div>
-                    <button
-                        class="px-3 py-1 rounded bg-white dark:bg-slate-600 text-sm"
-                        aria-label="Undo send"
-                        title="Undo send (notify admins to disregard)"
-                        @click="undoSend"
-                    >
-                        Undo
-                    </button>
-                </div>
             </div>
-        </div>
-
-        <div class="flex gap-2 mt-4">
-            <Button
-                class="w-full py-4 text-lg"
-                :disabled="buttonsDisabled || !preview"
-                @click="sendEmail"
-            >
-                <i class="ri-mail-fill text-2xl mr-2"></i>
-                Email it
-            </Button>
         </div>
 
         <div class="space-y-3">
@@ -384,6 +332,18 @@ function undoSend() {
                     </button>
                 </div>
             </div>
+        </div>
+
+        <!-- Moved Email button: bottom action -->
+        <div class="mt-6">
+            <Button
+                class="py-4 text-lg"
+                :disabled="buttonsDisabled || !preview"
+                @click="sendEmail"
+            >
+                <i class="ri-mail-fill text-2xl mr-2"></i>
+                Email it
+            </Button>
         </div>
     </div>
 </template>
