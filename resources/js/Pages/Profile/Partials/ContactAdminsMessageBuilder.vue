@@ -154,7 +154,8 @@ function sendEmail() {
             </div>
         </div>
 
-        <div class="mb-4">
+        <!-- Sticky preview and controls -->
+        <div class="sticky top-0 z-10 bg-white dark:bg-slate-800 pb-4 mb-4 -mx-4 px-4 pt-4 -mt-4 shadow-md">
             <div
                 :class="[
                     'min-h-[56px] flex items-center px-4 py-3 rounded-md bg-gray-50 dark:bg-slate-700 text-lg font-medium',
