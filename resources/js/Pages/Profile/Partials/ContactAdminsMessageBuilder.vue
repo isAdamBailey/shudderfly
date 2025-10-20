@@ -7,7 +7,7 @@ import { router } from "@inertiajs/vue3";
 import { ref, computed, onMounted } from "vue";
 
 const subjects = ["I", "We", "Mom", "Dad", "My tummy", "My legs"];
-const verbs = ["feel", "need", "love", "am", "are"];
+const verbs = ["feel", "need", "love", "am", "are", "want"];
 const adjectives = [
     "happy",
     "sad",
@@ -16,6 +16,7 @@ const adjectives = [
     "sore",
     "hungry",
     "good",
+    "farting",
 ];
 const objects = ["please", "now", "a hug", "help", "food", "rest"];
 
