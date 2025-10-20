@@ -103,6 +103,11 @@ function applyFavorite(text) {
 onMounted(loadFavorites);
 
 function addWord(word) {
+    // Prevent adding the same word twice in a row
+    const lastWord = selection.value[selection.value.length - 1];
+    if (lastWord === word) {
+        return;
+    }
     selection.value.push(word);
 }
 
