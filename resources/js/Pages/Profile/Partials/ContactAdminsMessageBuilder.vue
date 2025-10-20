@@ -31,10 +31,8 @@ const favorites = ref([]);
 const addFeedback = ref(false);
 const justAdded = ref(null);
 const isAtMax = computed(() => {
-    const len = Array.isArray(favorites.value)
-        ? Number(favorites.value.length)
-        : 0;
-    return len >= Number(MAX_FAVORITES);
+    const len = Array.isArray(favorites.value) ? favorites.value.length : 0;
+    return len >= MAX_FAVORITES;
 });
 
 const canSaveFavorite = computed(() => {

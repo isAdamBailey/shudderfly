@@ -3,7 +3,7 @@ import { shallowMount } from "@vue/test-utils";
 import { nextTick } from "vue";
 
 // Mocks for composables and router
-vi.mock("@/composables/useButtonState", () => ({
+vi.mock("@/composables/useDisableButtonState", () => ({
     useButtonState: () => ({
         buttonsDisabled: { value: false },
         setTimestamp: vi.fn(),
