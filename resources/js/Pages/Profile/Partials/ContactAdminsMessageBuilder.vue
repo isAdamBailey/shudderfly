@@ -6,19 +6,63 @@ import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { router } from "@inertiajs/vue3";
 import { ref, computed, onMounted } from "vue";
 
-const subjects = ["I", "We", "Mom", "Dad", "My tummy", "My legs"];
-const verbs = ["feel", "need", "love", "am", "are", "want"];
-const adjectives = [
+// Organized by semantic/functional categories for AAC
+const people = ["I", "you", "me", "Mom", "Dad", "we"];
+const bodyParts = [
+    "my tummy",
+    "my head",
+    "my legs",
+    "my back",
+    "my throat",
+    "my ear",
+    "my head",
+    "my feet",
+];
+const actions = [
+    "hurt",
+    "hurts",
+    "need",
+    "want",
+    "love",
+    "like",
+    "feel",
+    "am",
+    "is",
+    "help me",
+];
+const feelings = [
     "happy",
     "sad",
-    "silly",
-    "excited",
-    "sore",
-    "hungry",
+    "tired",
+    "scared",
+    "sick",
     "good",
-    "farting",
+    "bad",
+    "excited",
+    "hungry",
+    "thirsty",
 ];
-const objects = ["please", "now", "a hug", "help", "food", "rest"];
+const descriptors = ["very", "really", "a little", "so much", "not"];
+const things = [
+    "farts",
+    "food",
+    "water",
+    "hug",
+    "rest",
+    "medicine",
+    "bathroom",
+    "bed",
+    "blanket",
+    "toy",
+];
+const quickPhrases = [
+    "I love you",
+    "thank you",
+    "please help",
+    "I'm okay",
+    "yes",
+    "no",
+];
 
 const selection = ref([]);
 const preview = computed(() => selection.value.join(" ").trim());
@@ -120,11 +164,24 @@ function reset() {
 }
 
 function suggestRandom() {
-    const s = subjects[Math.floor(Math.random() * subjects.length)];
-    const v = verbs[Math.floor(Math.random() * verbs.length)];
-    const a = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const o = objects[Math.floor(Math.random() * objects.length)];
-    selection.value = [s, v, a, o].filter(Boolean);
+    // Random selection from different categories for variety
+    const allWords = [
+        ...people,
+        ...bodyParts,
+        ...actions,
+        ...feelings,
+        ...descriptors,
+        ...things,
+    ];
+    const randomCount = 3 + Math.floor(Math.random() * 2); // 3-4 words
+    const selected = [];
+    for (let i = 0; i < randomCount; i++) {
+        const word = allWords[Math.floor(Math.random() * allWords.length)];
+        if (!selected.includes(word)) {
+            selected.push(word);
+        }
+    }
+    selection.value = selected;
 }
 
 function sayIt() {
@@ -258,15 +315,40 @@ function sendEmail() {
             </div>
         </div>
 
-        <div class="space-y-3">
+        <div class="space-y-4">
+            <!-- Quick Phrases - Most Important -->
             <div>
-                <div class="text-sm font-semibold mb-2">Who / What</div>
+                <div
+                    class="text-base font-bold mb-2 text-blue-600 dark:text-blue-400 flex items-center gap-2"
+                >
+                    <i class="ri-chat-quote-fill text-3xl"></i>
+                    Quick Messages
+                </div>
                 <div class="flex flex-wrap gap-2">
                     <button
-                        v-for="(w, i) in subjects"
-                        :key="`s-${i}`"
+                        v-for="(w, i) in quickPhrases"
+                        :key="`qp-${i}`"
                         type="button"
-                        class="px-6 py-1 rounded-full bg-purple-900 text-white text-xl font-semibold shadow-md hover:bg-purple-800 transition-colors"
+                        class="px-4 py-1.5 rounded-lg bg-blue-600 text-white text-xl font-semibold shadow-md hover:bg-blue-700 transition-colors"
+                        @click="selection = w.split(' ')"
+                    >
+                        {{ w }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- People -->
+            <div>
+                <div class="text-sm font-semibold mb-2 flex items-center gap-2">
+                    <i class="ri-user-fill text-purple-600 text-2xl"></i>
+                    People
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button
+                        v-for="(w, i) in people"
+                        :key="`p-${i}`"
+                        type="button"
+                        class="px-4 py-1.5 rounded-full bg-purple-600 text-white text-xl font-semibold shadow-md hover:bg-purple-700 transition-colors"
                         @click="addWord(w)"
                     >
                         {{ w }}
@@ -274,14 +356,18 @@ function sendEmail() {
                 </div>
             </div>
 
+            <!-- Body Parts -->
             <div>
-                <div class="text-sm font-semibold mb-2">Action</div>
+                <div class="text-sm font-semibold mb-2 flex items-center gap-2">
+                    <i class="ri-body-scan-fill text-red-600 text-2xl"></i>
+                    Body Parts
+                </div>
                 <div class="flex flex-wrap gap-2">
                     <button
-                        v-for="(w, i) in verbs"
-                        :key="`v-${i}`"
+                        v-for="(w, i) in bodyParts"
+                        :key="`bp-${i}`"
                         type="button"
-                        class="px-6 py-1 rounded-full bg-purple-900 text-white text-xl font-semibold shadow-md hover:bg-purple-800 transition-colors"
+                        class="px-4 py-1.5 rounded-full bg-red-600 text-white text-xl font-semibold shadow-md hover:bg-red-700 transition-colors"
                         @click="addWord(w)"
                     >
                         {{ w }}
@@ -289,14 +375,77 @@ function sendEmail() {
                 </div>
             </div>
 
+            <!-- Actions -->
             <div>
-                <div class="text-sm font-semibold mb-2">Feeling / Object</div>
+                <div class="text-sm font-semibold mb-2 flex items-center gap-2">
+                    <i class="ri-run-fill text-green-600 text-2xl"></i>
+                    Actions
+                </div>
                 <div class="flex flex-wrap gap-2">
                     <button
-                        v-for="(w, i) in [...adjectives, ...objects]"
-                        :key="`o-${i}`"
+                        v-for="(w, i) in actions"
+                        :key="`a-${i}`"
                         type="button"
-                        class="px-6 py-1 rounded-full bg-purple-900 text-white text-xl font-semibold shadow-md hover:bg-purple-800 transition-colors"
+                        class="px-4 py-1.5 rounded-full bg-green-600 text-white text-xl font-semibold shadow-md hover:bg-green-700 transition-colors"
+                        @click="addWord(w)"
+                    >
+                        {{ w }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Feelings -->
+            <div>
+                <div class="text-sm font-semibold mb-2 flex items-center gap-2">
+                    <i
+                        class="ri-emotion-happy-fill text-yellow-600 text-2xl"
+                    ></i>
+                    Feelings
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button
+                        v-for="(w, i) in feelings"
+                        :key="`f-${i}`"
+                        type="button"
+                        class="px-4 py-1.5 rounded-full bg-yellow-600 text-white text-xl font-semibold shadow-md hover:bg-yellow-700 transition-colors"
+                        @click="addWord(w)"
+                    >
+                        {{ w }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Descriptors -->
+            <div>
+                <div class="text-sm font-semibold mb-2 flex items-center gap-2">
+                    <i class="ri-contrast-fill text-indigo-600 text-2xl"></i>
+                    How Much
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button
+                        v-for="(w, i) in descriptors"
+                        :key="`d-${i}`"
+                        type="button"
+                        class="px-4 py-1.5 rounded-full bg-indigo-600 text-white text-xl font-semibold shadow-md hover:bg-indigo-700 transition-colors"
+                        @click="addWord(w)"
+                    >
+                        {{ w }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Things -->
+            <div>
+                <div class="text-sm font-semibold mb-2 flex items-center gap-2">
+                    <i class="ri-gift-fill text-orange-600 text-2xl"></i>
+                    Things I Need
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button
+                        v-for="(w, i) in things"
+                        :key="`t-${i}`"
+                        type="button"
+                        class="px-4 py-1.5 rounded-full bg-orange-600 text-white text-xl font-semibold shadow-md hover:bg-orange-700 transition-colors"
                         @click="addWord(w)"
                     >
                         {{ w }}
