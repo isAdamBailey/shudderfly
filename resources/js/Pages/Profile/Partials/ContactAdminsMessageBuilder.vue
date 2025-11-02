@@ -7,7 +7,7 @@ import { router } from "@inertiajs/vue3";
 import { ref, computed, onMounted } from "vue";
 
 // Organized by semantic/functional categories for AAC
-const people = ["I", "you", "me", "Mom", "Dad", "we"];
+const people = ["I", "you", "and", "me", "Mom", "Dad", "we", "friend"];
 const bodyParts = [
     "my tummy",
     "my head",
@@ -19,6 +19,7 @@ const bodyParts = [
     "my feet",
 ];
 const actions = [
+    "am",
     "hurt",
     "hurts",
     "need",
@@ -26,7 +27,6 @@ const actions = [
     "love",
     "like",
     "feel",
-    "am",
     "is",
     "help me",
 ];
@@ -185,10 +185,8 @@ function suggestRandom() {
 }
 
 function sayIt() {
-    const placeholder = "Tap words to start a message...";
-    const text =
-        preview.value && preview.value.length ? preview.value : placeholder;
-    speak(text);
+    if (!preview.value || !preview.value.trim()) return;
+    speak(preview.value);
 }
 
 function sendEmail() {
@@ -206,17 +204,6 @@ function sendEmail() {
     <div
         class="p-4 rounded-md bg-white dark:bg-slate-800 border shadow-sm w-full"
     >
-        <div class="flex items-center mb-3">
-            <i class="ri-gamepad-fill text-4xl text-red-500 mr-3"></i>
-            <div>
-                <div class="text-xl font-semibold">Build a message</div>
-                <div class="text-sm text-gray-600 dark:text-gray-400">
-                    Tap words to make a sentence, then say it or email it.
-                </div>
-            </div>
-        </div>
-
-        <!-- Sticky preview and controls -->
         <div
             class="sticky top-0 z-10 bg-white dark:bg-slate-800 pb-4 mb-4 -mx-4 px-4 pt-4 -mt-4 shadow-md"
         >
@@ -229,9 +216,7 @@ function sendEmail() {
                 <div class="flex items-center justify-between w-full">
                     <span
                         class="text-gray-700 dark:text-gray-100 break-words text-2xl md:text-3xl font-bold leading-tight"
-                        >{{
-                            preview || "Tap words to start a message..."
-                        }}</span
+                        >{{ preview }}</span
                     >
                     <button
                         type="button"
@@ -258,13 +243,13 @@ function sendEmail() {
                 </button>
 
                 <button
-                    class="p-3 rounded-md bg-slate-700 dark:bg-slate-600 text-white shadow-md"
+                    class="px-4 py-3 rounded-md bg-red-600 hover:bg-red-700 text-white shadow-md font-semibold flex items-center gap-2"
                     type="button"
-                    title="Reset message"
-                    aria-label="Reset message"
+                    title="Clear all words"
+                    aria-label="Clear all words"
                     @click="reset"
                 >
-                    <i class="ri-refresh-line text-2xl"></i>
+                    <i class="ri-delete-bin-line text-2xl"></i>
                 </button>
 
                 <button
@@ -323,6 +308,15 @@ function sendEmail() {
                 >
                     <i class="ri-chat-quote-fill text-3xl"></i>
                     Quick Messages
+                    <button
+                        type="button"
+                        class="ml-auto p-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                        title="Say 'Quick Messages'"
+                        aria-label="Say category name"
+                        @click="speak('Quick Messages')"
+                    >
+                        <i class="ri-speak-fill text-lg"></i>
+                    </button>
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <button
@@ -342,6 +336,15 @@ function sendEmail() {
                 <div class="text-sm font-semibold mb-2 flex items-center gap-2">
                     <i class="ri-user-fill text-purple-600 text-2xl"></i>
                     People
+                    <button
+                        type="button"
+                        class="ml-auto p-1.5 rounded-md bg-purple-600 hover:bg-purple-700 text-white shadow-sm"
+                        title="Say 'People'"
+                        aria-label="Say category name"
+                        @click="speak('People')"
+                    >
+                        <i class="ri-speak-fill text-lg"></i>
+                    </button>
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <button
@@ -361,6 +364,15 @@ function sendEmail() {
                 <div class="text-sm font-semibold mb-2 flex items-center gap-2">
                     <i class="ri-body-scan-fill text-red-600 text-2xl"></i>
                     Body Parts
+                    <button
+                        type="button"
+                        class="ml-auto p-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white shadow-sm"
+                        title="Say 'Body Parts'"
+                        aria-label="Say category name"
+                        @click="speak('Body Parts')"
+                    >
+                        <i class="ri-speak-fill text-lg"></i>
+                    </button>
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <button
@@ -380,6 +392,15 @@ function sendEmail() {
                 <div class="text-sm font-semibold mb-2 flex items-center gap-2">
                     <i class="ri-run-fill text-green-600 text-2xl"></i>
                     Actions
+                    <button
+                        type="button"
+                        class="ml-auto p-1.5 rounded-md bg-green-600 hover:bg-green-700 text-white shadow-sm"
+                        title="Say 'Actions'"
+                        aria-label="Say category name"
+                        @click="speak('Actions')"
+                    >
+                        <i class="ri-speak-fill text-lg"></i>
+                    </button>
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <button
@@ -401,6 +422,15 @@ function sendEmail() {
                         class="ri-emotion-happy-fill text-yellow-600 text-2xl"
                     ></i>
                     Feelings
+                    <button
+                        type="button"
+                        class="ml-auto p-1.5 rounded-md bg-yellow-600 hover:bg-yellow-700 text-white shadow-sm"
+                        title="Say 'Feelings'"
+                        aria-label="Say category name"
+                        @click="speak('Feelings')"
+                    >
+                        <i class="ri-speak-fill text-lg"></i>
+                    </button>
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <button
@@ -420,6 +450,15 @@ function sendEmail() {
                 <div class="text-sm font-semibold mb-2 flex items-center gap-2">
                     <i class="ri-contrast-fill text-indigo-600 text-2xl"></i>
                     How Much
+                    <button
+                        type="button"
+                        class="ml-auto p-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+                        title="Say 'How Much'"
+                        aria-label="Say category name"
+                        @click="speak('How Much')"
+                    >
+                        <i class="ri-speak-fill text-lg"></i>
+                    </button>
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <button
@@ -439,6 +478,15 @@ function sendEmail() {
                 <div class="text-sm font-semibold mb-2 flex items-center gap-2">
                     <i class="ri-gift-fill text-orange-600 text-2xl"></i>
                     Things I Need
+                    <button
+                        type="button"
+                        class="ml-auto p-1.5 rounded-md bg-orange-600 hover:bg-orange-700 text-white shadow-sm"
+                        title="Say 'Things I Need'"
+                        aria-label="Say category name"
+                        @click="speak('Things I Need')"
+                    >
+                        <i class="ri-speak-fill text-lg"></i>
+                    </button>
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <button
