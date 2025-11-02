@@ -42,6 +42,7 @@ class YouTubeService
         $nextPageToken = null;
         $totalSynced = 0;
         $videoIds = [];
+        $allPlaylistVideoIds = []; // Track ALL video IDs in playlist for deletion logic
         $playlistItems = [];
         $quotaExceeded = false;
 
@@ -69,6 +70,9 @@ class YouTubeService
                 $videoId = $item['snippet']['resourceId']['videoId'];
                 $title = $item['snippet']['title'];
 
+                // Track all video IDs (even private/skipped ones) for deletion logic
+                $allPlaylistVideoIds[] = $videoId;
+
                 // Skip if we already have this video and it hasn't been updated recently
                 if ($this->shouldSkipVideo($videoId, $item['snippet']['publishedAt'], $title)) {
                     continue;
@@ -82,13 +86,20 @@ class YouTubeService
 
         } while ($nextPageToken && ! $quotaExceeded);
 
-        if (empty($videoIds)) {
-            Log::info('No new videos to sync');
+        // Delete songs that are no longer in the playlist (even if we have no new videos to sync)
+        $deletedCount = 0;
+        if (! empty($allPlaylistVideoIds)) {
+            $deletedCount = $this->removeMissingPlaylistSongs($allPlaylistVideoIds);
+        }
 
+        if (empty($videoIds)) {
             return [
                 'success' => true,
-                'message' => 'No new videos to sync',
+                'message' => $deletedCount > 0
+                    ? "No new videos to sync. Removed {$deletedCount} songs no longer in playlist."
+                    : 'No new videos to sync',
                 'synced' => 0,
+                'deleted' => $deletedCount,
                 'quota_exceeded' => $quotaExceeded,
             ];
         }
@@ -125,14 +136,46 @@ class YouTubeService
             }
         }
 
+        $message = $quotaExceeded
+            ? "Synced {$totalSynced} songs before quota limit reached"
+            : "Successfully synced {$totalSynced} songs";
+
+        if ($deletedCount > 0) {
+            $message .= ". Removed {$deletedCount} songs no longer in playlist";
+        }
+
         return [
             'success' => true,
             'synced' => $totalSynced,
+            'deleted' => $deletedCount,
             'quota_exceeded' => $quotaExceeded,
-            'message' => $quotaExceeded
-                ? "Synced {$totalSynced} songs before quota limit reached"
-                : "Successfully synced {$totalSynced} songs",
+            'message' => $message,
         ];
+    }
+
+    /**
+     * Remove songs from database that are no longer in the YouTube playlist
+     */
+    private function removeMissingPlaylistSongs(array $currentVideoIds)
+    {
+        if (empty($currentVideoIds)) {
+            return 0;
+        }
+
+        // Find songs whose youtube_video_id is NOT in the current playlist
+        $toDelete = Song::whereNotIn('youtube_video_id', $currentVideoIds)->get();
+
+        $count = 0;
+        foreach ($toDelete as $song) {
+            try {
+                $song->delete();
+                $count++;
+            } catch (\Exception $e) {
+                Log::warning("Failed to delete song {$song->id}: ".$e->getMessage());
+            }
+        }
+
+        return $count;
     }
 
     /**
