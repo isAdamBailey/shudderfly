@@ -2,9 +2,6 @@
 
 namespace App\Support;
 
-use App\Jobs\IncrementBookReadCount;
-use App\Jobs\IncrementPageReadCount;
-use App\Jobs\IncrementSongReadCount;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Http\Request;
 
@@ -41,7 +38,7 @@ final class ReadThrottle
 
     /**
      * Dispatch a queue job immediately in testing/sync environments, or with a small delay otherwise.
-     * Read count jobs are sent to database queue to avoid AWS SQS usage.
+     * All jobs are now dispatched to SQS queue.
      * This consolidates the conditional logic used in controllers.
      */
     public static function dispatchJob(ShouldQueue $job, int $delaySeconds = 5): void
@@ -53,14 +50,7 @@ final class ReadThrottle
             return;
         }
 
-        // Send read count jobs to database queue instead of SQS to save AWS costs
-        if ($job instanceof IncrementPageReadCount || $job instanceof IncrementBookReadCount || $job instanceof IncrementSongReadCount) {
-            dispatch($job)->onConnection('database')->delay(now()->addSeconds($delaySeconds));
-
-            return;
-        }
-
-        // Otherwise, dispatch with a small delay to smooth out rapid page refreshes
+        // Dispatch with a small delay to smooth out rapid page refreshes
         dispatch($job)->delay(now()->addSeconds($delaySeconds));
     }
 }
