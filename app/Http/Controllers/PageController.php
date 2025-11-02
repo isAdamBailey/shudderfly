@@ -305,8 +305,8 @@ class PageController extends Controller
 
         $siblingPages = $query->orderBy('created_at')->pluck('id');
 
-        $nextPage = null;
-        $previousPage = null;
+        $nextPageId = null;
+        $previousPageId = null;
 
         if (! $siblingPages->isEmpty()) {
             $currentIndex = $siblingPages->search($page->id);
@@ -315,9 +315,13 @@ class PageController extends Controller
             $nextIndex = ($currentIndex + 1) % $siblingPages->count();
             $previousIndex = ($currentIndex - 1 + $siblingPages->count()) % $siblingPages->count();
 
-            $nextPage = $nextIndex !== $currentIndex ? Page::find($siblingPages[$nextIndex]) : null;
-            $previousPage = $previousIndex !== $currentIndex ? Page::find($siblingPages[$previousIndex]) : null;
+            $nextPageId = $nextIndex !== $currentIndex ? $siblingPages[$nextIndex] : null;
+            $previousPageId = $previousIndex !== $currentIndex ? $siblingPages[$previousIndex] : null;
         }
+
+        // Fetch full page objects with relationships if IDs exist
+        $nextPage = $nextPageId ? Page::with('book')->find($nextPageId) : null;
+        $previousPage = $previousPageId ? Page::with('book')->find($previousPageId) : null;
 
         $books = $canEditPages
             ? Book::all()->map->only(['id', 'title'])->sortBy('title')->values()->toArray()

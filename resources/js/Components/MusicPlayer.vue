@@ -468,18 +468,15 @@ const incrementReadCount = async () => {
     if (!props.currentSong || hasIncrementedReadCount.value) return;
 
     try {
-        await fetch(
-            window.route("music.increment-read-count", props.currentSong.id),
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRF-TOKEN": document
-                        .querySelector('meta[name="csrf-token"]')
-                        .getAttribute("content"),
-                },
-            }
-        );
+        await fetch(route("music.increment-read-count", props.currentSong.id), {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-TOKEN": document
+                    .querySelector('meta[name="csrf-token"]')
+                    .getAttribute("content"),
+            },
+        });
 
         hasIncrementedReadCount.value = true;
     } catch (error) {

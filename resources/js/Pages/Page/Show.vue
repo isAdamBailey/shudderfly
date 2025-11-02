@@ -205,7 +205,7 @@ const SWIPE_MAX_VERTICAL = 40; // px
 
 function goToBook() {
     buttonDisabled.value = true;
-    router.get(window.route("books.show", props.page.book));
+    router.get(route("books.show", props.page.book));
 }
 
 function onTouchStart(event) {
@@ -250,10 +250,10 @@ function onTouchEnd(event) {
     // Navigate: left swipe -> next page, right swipe -> previous page
     if (dx < 0 && props.nextPage) {
         buttonDisabled.value = true;
-        router.get(window.route("pages.show", props.nextPage));
+        router.get(route("pages.show", props.nextPage));
     } else if (dx > 0 && props.previousPage) {
         buttonDisabled.value = true;
-        router.get(window.route("pages.show", props.previousPage));
+        router.get(route("pages.show", props.previousPage));
     }
 }
 </script>

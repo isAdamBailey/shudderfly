@@ -197,7 +197,7 @@ const syncPlaylist = () => {
 
     syncing.value = true;
     router.post(
-        window.route("music.sync"),
+        route("music.sync"),
         {},
         {
             onFinish: () => {
