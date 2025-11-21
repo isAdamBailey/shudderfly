@@ -46,7 +46,7 @@ class MusicController extends Controller
         $songsQuery->unless($filter, fn ($query) => $query->orderBy('created_at', 'desc'))
             ->when($filter === 'favorites', fn ($query) => $query->orderBy('read_count', 'desc'));
 
-        $songs = $songsQuery->paginate()->withQueryString();
+        $songs = $songsQuery->paginate(15)->withQueryString();
 
         // If a specific song is requested, load it separately
         $specificSong = null;
@@ -58,7 +58,7 @@ class MusicController extends Controller
             'songs' => $songs,
             'search' => $search,
             'filter' => $filter,
-
+            'canSync' => auth()->user()?->can('admin') ?? false,
             'specificSong' => $specificSong,
         ]);
     }

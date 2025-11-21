@@ -9,7 +9,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
-use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class MusicTest extends TestCase
@@ -32,16 +31,25 @@ class MusicTest extends TestCase
         // Create test songs
         $songs = Song::factory()->count(25)->create();
 
-        $response = $this->get(route('music.index'));
+        $response = $this->get(route('music.index'), [
+            'Accept' => 'application/json',
+        ]);
 
         $response->assertStatus(200)
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('Music/Index')
-                ->has('songs.data', 20) // Should be paginated to 20 per page
-                ->has('songs.next_page_url')
-                ->where('search', null)
-                ->where('canSync', false) // Regular user can't sync
-            );
+            ->assertJsonStructure([
+                'songs' => [
+                    'data',
+                    'next_page_url',
+                ],
+                'search',
+                'filter',
+                'canSync',
+            ])
+            ->assertJsonCount(15, 'songs.data') // Default pagination is 15 per page
+            ->assertJson([
+                'search' => null,
+                'canSync' => false, // Regular user can't sync
+            ]);
     }
 
     public function test_music_index_with_search_filters_songs(): void
@@ -55,14 +63,21 @@ class MusicTest extends TestCase
         Song::factory()->create(['title' => 'Test Song Two']);
         Song::factory()->create(['description' => 'Contains test keyword']);
 
-        $response = $this->get(route('music.index', ['search' => 'test']));
+        $response = $this->get(route('music.index', ['search' => 'test']), [
+            'Accept' => 'application/json',
+        ]);
 
         $response->assertStatus(200)
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('Music/Index')
-                ->has('songs.data', 3) // Should find 3 songs with "test"
-                ->where('search', 'test')
-            );
+            ->assertJsonStructure([
+                'songs' => [
+                    'data',
+                ],
+                'search',
+            ])
+            ->assertJsonCount(3, 'songs.data') // Should find 3 songs with "test"
+            ->assertJson([
+                'search' => 'test',
+            ]);
     }
 
     public function test_admin_can_see_sync_button(): void
@@ -70,12 +85,14 @@ class MusicTest extends TestCase
         $admin = User::factory()->admin()->create();
         $this->actingAs($admin);
 
-        $response = $this->get(route('music.index'));
+        $response = $this->get(route('music.index'), [
+            'Accept' => 'application/json',
+        ]);
 
         $response->assertStatus(200)
-            ->assertInertia(fn (Assert $page) => $page
-                ->where('canSync', true)
-            );
+            ->assertJson([
+                'canSync' => true,
+            ]);
     }
 
     public function test_regular_user_cannot_sync_playlist(): void
@@ -160,27 +177,37 @@ class MusicTest extends TestCase
         $newSong = Song::factory()->create(['title' => 'New Song', 'created_at' => now()]);
         $middleSong = Song::factory()->create(['title' => 'Middle Song', 'created_at' => now()->subDays(2)]);
 
-        $response = $this->get(route('music.index'));
+        $response = $this->get(route('music.index'), [
+            'Accept' => 'application/json',
+        ]);
 
         $response->assertStatus(200)
-            ->assertInertia(fn (Assert $page) => $page
-                ->has('songs.data', 3)
-                ->where('songs.data.0.title', 'New Song')
-                ->where('songs.data.1.title', 'Middle Song')
-                ->where('songs.data.2.title', 'Old Song')
-            );
+            ->assertJsonCount(3, 'songs.data')
+            ->assertJsonPath('songs.data.0.title', 'New Song')
+            ->assertJsonPath('songs.data.1.title', 'Middle Song')
+            ->assertJsonPath('songs.data.2.title', 'Old Song');
     }
 
-    public function test_music_show_route_redirects_to_index_with_song_param(): void
+    public function test_music_show_route_returns_song_json(): void
     {
         $user = User::factory()->create();
         $this->actingAs($user);
 
         $song = Song::factory()->create(['title' => 'Test Song']);
 
-        $response = $this->get(route('music.show', $song));
+        $response = $this->get(route('music.show', $song), [
+            'Accept' => 'application/json',
+        ]);
 
-        $response->assertRedirect(route('music.index', ['song' => $song->id]));
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'song' => [
+                    'id',
+                    'title',
+                ],
+            ])
+            ->assertJsonPath('song.id', $song->id)
+            ->assertJsonPath('song.title', 'Test Song');
     }
 
     /**
