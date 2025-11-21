@@ -1,5 +1,6 @@
 <script setup>
 import FlashMessage from "@/Components/Flash.vue";
+import MusicFlyout from "@/Components/Music/MusicFlyout.vue";
 import SearchInput from "@/Components/SearchInput.vue";
 import Footer from "@/Layouts/Nav/Footer.vue";
 import Navigation from "@/Layouts/Nav/Navigation.vue";
@@ -26,5 +27,8 @@ import Navigation from "@/Layouts/Nav/Navigation.vue";
 
       <Footer />
     </div>
+
+    <!-- Music Flyout (persists across all pages) -->
+    <MusicFlyout />
   </div>
 </template>

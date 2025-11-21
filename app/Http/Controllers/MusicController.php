@@ -8,8 +8,6 @@ use App\Models\Song;
 use App\Services\YouTubeService;
 use App\Support\ReadThrottle;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class MusicController extends Controller
 {
@@ -30,9 +28,9 @@ class MusicController extends Controller
     }
 
     /**
-     * Display the music page with songs
+     * Get songs data for flyout (JSON only)
      */
-    public function index(Request $request): Response
+    public function index(Request $request)
     {
         $search = $request->search;
         $filter = $request->filter;
@@ -48,7 +46,7 @@ class MusicController extends Controller
         $songsQuery->unless($filter, fn ($query) => $query->orderBy('created_at', 'desc'))
             ->when($filter === 'favorites', fn ($query) => $query->orderBy('read_count', 'desc'));
 
-        $songs = $songsQuery->paginate(20)->withQueryString();
+        $songs = $songsQuery->paginate()->withQueryString();
 
         // If a specific song is requested, load it separately
         $specificSong = null;
@@ -56,21 +54,23 @@ class MusicController extends Controller
             $specificSong = Song::find($songId);
         }
 
-        return Inertia::render('Music/Index', [
+        return response()->json([
             'songs' => $songs,
             'search' => $search,
             'filter' => $filter,
-            'canSync' => auth()->user()->can('admin'),
+
             'specificSong' => $specificSong,
         ]);
     }
 
     /**
-     * Get a single song by ID - redirects to music index with song parameter
+     * Get a single song by ID (JSON only)
      */
     public function show(Song $song)
     {
-        return redirect()->route('music.index', ['song' => $song->id]);
+        return response()->json([
+            'song' => $song,
+        ]);
     }
 
     /**

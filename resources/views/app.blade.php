@@ -31,5 +31,11 @@
     </head>
     <body class="font-sans antialiased">
         @inertia
+        
+        <!-- Global YouTube Player Element (persists across all route changes) -->
+        <div
+            id="global-music-player"
+            style="position: fixed; top: -9999px; left: -9999px; opacity: 0; pointer-events: none;"
+        ></div>
     </body>
 </html>

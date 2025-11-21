@@ -7,6 +7,7 @@ import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { Link, usePage } from "@inertiajs/vue3";
 import { computed, watch } from "vue";
+import { useMusicPlayer } from "@/composables/useMusicPlayer";
 
 const props = defineProps({
     photos: {
@@ -21,6 +22,7 @@ const { items, infiniteScrollRef, setItemLoading } = useInfiniteScroll(
 );
 
 const { speak } = useSpeechSynthesis();
+const { playSong, openFlyout } = useMusicPlayer();
 
 const notFountContent = "I can't find any uploads like that";
 
@@ -52,16 +54,41 @@ function mediaPath(photo) {
     return photo.media_path;
 }
 
+function handleItemClick(item, event) {
+    if (item.type === "song") {
+        event.preventDefault();
+        // Open flyout and play song
+        playSong(item);
+        openFlyout();
+        return false;
+    }
+    // For pages, let the Link handle navigation
+    return true;
+}
+
 function getItemLink(item) {
     if (item.type === "song") {
-        return route("music.show", item.id);
+        // Return # to prevent navigation, we'll handle it with click
+        return "#";
     }
     return route("pages.show", item);
 }
 
+function handleFooterClick(item, event) {
+    if (item.type === "song") {
+        event.preventDefault();
+        // Just open flyout
+        openFlyout();
+        return false;
+    }
+    // For books, let the Link handle navigation
+    return true;
+}
+
 function getFooterLink(item) {
     if (item.type === "song") {
-        return route("music.index");
+        // Return # to prevent navigation, we'll handle it with click
+        return "#";
     }
     return route("books.show", item.book);
 }
@@ -98,6 +125,7 @@ function getDisplayText(item) {
                 </span>
             </div>
             <Link
+                v-if="photo.type !== 'song'"
                 prefetch="hover"
                 as="button"
                 class="w-full h-[350px] rounded-b-lg"
@@ -122,7 +150,32 @@ function getDisplayText(item) {
                     v-html="getDisplayText(photo)"
                 ></div>
             </Link>
+            <button
+                v-else
+                type="button"
+                class="w-full h-[350px] rounded-b-lg"
+                @click="handleItemClick(photo, $event)"
+            >
+                <LazyLoader
+                    v-if="mediaPath(photo)"
+                    :src="mediaPath(photo)"
+                    :object-fit="'cover'"
+                    :fill-container="true"
+                    :item-type="photo.type"
+                />
+                <VideoWrapper
+                    v-if="photo.video_link"
+                    :url="photo.video_link"
+                    :controls="false"
+                />
+                <div
+                    v-if="getDisplayText(photo)"
+                    class="absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 px-2 text-left text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
+                    v-html="getDisplayText(photo)"
+                ></div>
+            </button>
             <Link
+                v-if="photo.type !== 'song'"
                 :href="getFooterLink(photo)"
                 prefetch="hover"
                 class="w-full h-[50px]"
@@ -139,6 +192,22 @@ function getDisplayText(item) {
                     >
                 </Button>
             </Link>
+            <button
+                v-else
+                type="button"
+                class="w-full h-[50px]"
+                @click="handleFooterClick(photo, $event)"
+            >
+                <Button
+                    :disabled="photo.loading"
+                    class="w-full h-full rounded-t-none rounded-b-lg whitespace-normal text-left"
+                >
+                    <span
+                        class="line-clamp-2 font-heading text-theme-button uppercase text-lg"
+                        >{{ getFooterText(photo) }}</span
+                    >
+                </Button>
+            </button>
         </div>
     </div>
     <div v-else class="flex flex-col items-center mt-10">
