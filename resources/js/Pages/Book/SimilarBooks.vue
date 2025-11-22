@@ -12,8 +12,8 @@
                 v-for="book in workingBooks"
                 :key="book.id"
                 :book="book"
-                container-class="w-60 h-60 shrink-0 snap-start"
-                title-size="text-lg sm:text-xl"
+                container-class="w-48 h-64 shrink-0 snap-start"
+                title-size="text-base sm:text-lg"
                 @click="setBookLoading"
             />
         </div>
