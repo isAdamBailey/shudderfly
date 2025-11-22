@@ -113,10 +113,10 @@ describe("BookCoverCard", () => {
         expect(image.attributes("src")).toBeTruthy();
     });
 
-    it("renders with aspect-square container by default", () => {
+    it("renders with aspect-[3/4] container by default", () => {
         const container = wrapper.find("a");
         expect(container.classes()).toContain("w-full");
-        expect(container.classes()).toContain("aspect-square");
+        expect(container.classes()).toContain("aspect-[3/4]");
     });
 
     it("applies custom container class when provided", async () => {
