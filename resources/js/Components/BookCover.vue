@@ -1,7 +1,7 @@
 <template>
   <div class="book-cover-container">
     <div
-      class="relative mx-auto max-w-4xl"
+      class="relative mx-auto book-wrapper"
       :class="hasCoverImage ? 'h-full' : ''"
     >
       <div
@@ -105,7 +105,20 @@
               Math.abs(finalTilt + finalRoll) * 15 + scrollProgress * 35
             }px)`,
             width: `${
-              12 + Math.abs(finalTilt + finalRoll) * 8 + scrollProgress * 20
+              32 + Math.abs(finalTilt + finalRoll) * 8 + scrollProgress * 20
+            }px`
+          }"
+        ></div>
+
+        <!-- Book pages visible on the side -->
+        <div
+          class="book-pages"
+          :style="{
+            transform: `translateZ(${
+              Math.abs(finalTilt + finalRoll) * 12 + scrollProgress * 30
+            }px)`,
+            right: `${
+              28 + Math.abs(finalTilt + finalRoll) * 6 + scrollProgress * 16
             }px`
           }"
         ></div>
@@ -246,21 +259,21 @@ const finalRoll = computed(() => (hasUserInteracted.value ? smoothRoll : 0));
 
 const finalTransform = computed(() => {
   if (!hasUserInteracted.value) {
-    return `perspective(1000px) scale(${
+    return `perspective(1500px) scale(${
       hoverScale.value
     }) rotateX(0deg) rotateY(0deg) translateZ(${
-      scrollProgress.value * 40
-    }px) translateX(${scrollProgress.value * 20}px)`;
+      scrollProgress.value * 50
+    }px) translateX(${scrollProgress.value * 25}px)`;
   }
 
-  return `perspective(1000px) scale(${hoverScale.value}) rotateX(${
-    smoothTilt.value * 15 + scrollProgress.value * 15
+  return `perspective(1500px) scale(${hoverScale.value}) rotateX(${
+    smoothTilt.value * 18 + scrollProgress.value * 18
   }deg) rotateY(${
-    smoothRoll.value * 25 + scrollProgress.value * 35
+    smoothRoll.value * 30 + scrollProgress.value * 40
   }deg) translateZ(${
-    Math.abs(smoothTilt.value + smoothRoll.value) * 20 +
-    scrollProgress.value * 40
-  }px) translateX(${smoothRoll.value * 15 + scrollProgress.value * 20}px)`;
+    Math.abs(smoothTilt.value + smoothRoll.value) * 30 +
+    scrollProgress.value * 50
+  }px) translateX(${smoothRoll.value * 20 + scrollProgress.value * 25}px)`;
 });
 </script>
 
@@ -269,6 +282,18 @@ const finalTransform = computed(() => {
   padding: 0.75rem;
   margin-top: 1.25rem;
   position: relative;
+  perspective: 1500px;
+  min-height: calc(100vh - 100px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.book-wrapper {
+  max-width: min(500px, calc((100vh - 120px) * 3 / 4));
+  width: 100%;
+  aspect-ratio: 3/4;
+  max-height: calc(100vh - 120px);
 }
 
 .book-cover {
@@ -283,12 +308,12 @@ const finalTransform = computed(() => {
 @keyframes bookAppear {
   0% {
     opacity: 0;
-    transform: perspective(1000px) translateY(30px) scale(0.9) rotateX(0deg)
-      rotateY(0deg) translateZ(0px) translateX(0px);
+    transform: perspective(1500px) translateY(40px) scale(0.9) rotateX(15deg)
+      rotateY(-10deg) translateZ(0px) translateX(0px);
   }
   100% {
     opacity: 1;
-    transform: perspective(1000px) translateY(0) scale(1) rotateX(0deg)
+    transform: perspective(1500px) translateY(0) scale(1) rotateX(0deg)
       rotateY(0deg) translateZ(0px) translateX(0px);
   }
 }
@@ -303,28 +328,48 @@ const finalTransform = computed(() => {
   right: 0;
   top: 0;
   bottom: 0;
-  width: 12px;
-  background: linear-gradient(to bottom, #1f2937, #111827, #1f2937);
-  box-shadow: inset -3px 0 6px rgba(0, 0, 0, 0.5),
-    inset 2px 0 2px rgba(255, 255, 255, 0.1);
-  transform: translateZ(8px);
+  width: 32px;
+  background: linear-gradient(to right, #1f2937, #374151, #1f2937);
+  box-shadow: inset -4px 0 8px rgba(0, 0, 0, 0.6),
+    inset 3px 0 3px rgba(255, 255, 255, 0.15), 2px 0 8px rgba(0, 0, 0, 0.3);
+  transform: translateZ(20px);
   transition: all 0.3s ease;
+  border-right: 2px solid rgba(0, 0, 0, 0.4);
+}
+
+.book-pages {
+  position: absolute;
+  right: 28px;
+  top: 4px;
+  bottom: 4px;
+  width: 8px;
+  background: repeating-linear-gradient(
+    to bottom,
+    #f3f4f6 0px,
+    #e5e7eb 1px,
+    #f9fafb 2px
+  );
+  box-shadow: inset -2px 0 4px rgba(0, 0, 0, 0.2), 2px 0 4px rgba(0, 0, 0, 0.2);
+  transform: translateZ(18px);
+  transition: all 0.3s ease;
+  border-right: 1px solid rgba(0, 0, 0, 0.2);
+  border-left: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .book-shadow {
   position: absolute;
-  bottom: -20px;
-  left: 12px;
-  right: 12px;
-  height: 20px;
+  bottom: -30px;
+  left: 5%;
+  right: 5%;
+  height: 30px;
   background: radial-gradient(
     ellipse at center,
-    rgba(0, 0, 0, 0.4) 0%,
-    rgba(0, 0, 0, 0.2) 40%,
+    rgba(0, 0, 0, 0.5) 0%,
+    rgba(0, 0, 0, 0.3) 40%,
     transparent 80%
   );
   border-radius: 50%;
-  filter: blur(10px);
+  filter: blur(15px);
   animation: shadowPulse 3s ease-in-out infinite;
 }
 
@@ -373,9 +418,10 @@ const finalTransform = computed(() => {
 }
 
 .book-border {
-  border: 4px solid rgba(255, 255, 255, 0.3);
+  border: 6px solid rgba(255, 255, 255, 0.3);
   box-shadow: 0 0 20px rgba(255, 255, 255, 0.1),
-    inset 0 0 20px rgba(255, 255, 255, 0.05), 0 8px 32px rgba(0, 0, 0, 0.3);
+    inset 0 0 20px rgba(255, 255, 255, 0.05), 0 8px 32px rgba(0, 0, 0, 0.3),
+    inset -3px 0 6px rgba(0, 0, 0, 0.2);
 }
 
 .book-cover::before {
