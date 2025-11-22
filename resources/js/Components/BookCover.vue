@@ -280,20 +280,19 @@ const finalTransform = computed(() => {
 <style scoped>
 .book-cover-container {
   padding: 0.75rem;
-  margin-top: 1.25rem;
+  margin-top: 0;
   position: relative;
   perspective: 1500px;
-  min-height: calc(100vh - 100px);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .book-wrapper {
-  max-width: min(500px, calc((100vh - 120px) * 3 / 4));
+  max-width: min(500px, calc(80vh * 3 / 4));
   width: 100%;
   aspect-ratio: 3/4;
-  max-height: calc(100vh - 120px);
+  max-height: 80vh;
 }
 
 .book-cover {
