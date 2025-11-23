@@ -3,11 +3,15 @@
     :href="route('books.show', { book: book.slug })"
     :class="[
       'relative overflow-hidden rounded-lg transition hover:opacity-80 hover:shadow hover:shadow-gray-300/50',
-      containerClass
+      containerClass,
+      { 'pointer-events-none opacity-50 cursor-not-allowed': disabled }
     ]"
+    :tabindex="disabled ? -1 : 0"
+    :aria-disabled="disabled"
     prefetch
     as="button"
     @click="handleClick"
+    @keydown="handleKeydown"
   >
     <div
       v-if="book.loading"
@@ -79,12 +83,28 @@ const props = defineProps({
   titleSize: {
     type: String,
     default: "text-base sm:text-lg"
+  },
+  disabled: {
+    type: Boolean,
+    default: false
   }
 });
 
 const emit = defineEmits(["click"]);
 
-const handleClick = () => {
+const handleClick = (event) => {
+  if (props.disabled) {
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
   emit("click", props.book);
+};
+
+const handleKeydown = (event) => {
+  if (props.disabled && (event.key === "Enter" || event.key === " ")) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
 };
 </script>

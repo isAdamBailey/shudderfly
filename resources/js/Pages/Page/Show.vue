@@ -7,21 +7,17 @@
         class="w-full pl-2 sm:pl-6 lg:pl-8 pt-2 pb-2 sticky top-0 z-30 text-left"
       >
         <div class="flex items-center gap-3 min-w-0">
-          <button
-            type="button"
-            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-600/40 text-white dark:bg-white/40 dark:text-gray-900 hover:bg-blue-500/50 dark:hover:bg-gray-100/50 christmas:bg-christmas-red/40 christmas:hover:bg-christmas-gold/50 halloween:bg-halloween-orange/40 halloween:hover:bg-halloween-purple/50 backdrop-blur-md shadow-xl drop-shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition min-w-0 max-w-[90vw] sm:max-w-[70vw] md:max-w-[60vw] lg:max-w-[50vw] disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400/40 dark:disabled:bg-gray-600/40"
-            :aria-label="`Back to Book: ${page.book.title}`"
-            :disabled="buttonDisabled"
-            @click="goToBook"
+          <div
+            class="max-w-[90vw] sm:max-w-[70vw] md:max-w-[60vw] lg:max-w-[50vw]"
           >
-            <i class="ri-book-2-fill text-xl md:text-2xl"></i>
-            <span
-              class="flex-1 basis-0 min-w-0 truncate font-heading uppercase text-lg md:text-xl lg:text-2xl font-bold tracking-wide"
-              :title="page.book.title"
-            >
-              {{ page.book.title }}
-            </span>
-          </button>
+            <BookCoverCard
+              :book="page.book"
+              :disabled="buttonDisabled"
+              container-class="w-20 sm:w-24 md:w-28 lg:w-32 aspect-[3/4] opacity-70 hover:opacity-100 transition-opacity"
+              title-size="text-xs sm:text-sm md:text-base"
+              @click="buttonDisabled = true"
+            />
+          </div>
         </div>
       </div>
 
@@ -153,6 +149,7 @@
 
 <script setup>
 import AddToCollageButton from "@/Components/AddToCollageButton.vue";
+import BookCoverCard from "@/Components/BookCoverCard.vue";
 import Button from "@/Components/Button.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import MapEmbed from "@/Components/Map/MapEmbed.vue";
@@ -209,11 +206,6 @@ const isSwiping = ref(false);
 const SWIPE_MIN_DISTANCE = 60; // px
 const SWIPE_MAX_DURATION = 800; // ms
 const SWIPE_MAX_VERTICAL = 40; // px
-
-function goToBook() {
-  buttonDisabled.value = true;
-  router.get(route("books.show", props.page.book));
-}
 
 function onTouchStart(event) {
   // Only handle single-finger touches to allow pinch-to-zoom
