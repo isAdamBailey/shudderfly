@@ -174,6 +174,17 @@ class BookController extends Controller
     {
         $book->update($request->validated());
 
+        // If book location was updated, cascade to pages without their own location
+        if ($request->has('latitude') || $request->has('longitude')) {
+            $book->pages()
+                ->whereNull('latitude')
+                ->whereNull('longitude')
+                ->update([
+                    'latitude' => $book->latitude,
+                    'longitude' => $book->longitude,
+                ]);
+        }
+
         return redirect(route('books.show', Book::find($book->id)))->with('success', $book->title.' updated successfully!');
     }
 

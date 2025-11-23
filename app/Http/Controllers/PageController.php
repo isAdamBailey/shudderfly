@@ -357,13 +357,19 @@ class PageController extends Controller
                 if (Str::startsWith($mimeType, 'image/')) {
                     $filename = pathinfo($file->hashName(), PATHINFO_FILENAME);
                     $mediaPath = 'books/'.$book->slug.'/'.$filename.'.webp';
-                    StoreImage::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'), null, null, null, $request->input('latitude'), $request->input('longitude'));
+                    // Use book location as default if page doesn't have location
+                    $latitude = $request->input('latitude') ?? $book->latitude;
+                    $longitude = $request->input('longitude') ?? $book->longitude;
+                    StoreImage::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'), null, null, null, $latitude, $longitude);
                     $successMessage = 'Queued image: '.$originalName.'. It may take a few minutes to process.';
                 } elseif (Str::startsWith($mimeType, 'video/')) {
                     $mediaPath = 'books/'.$book->slug.'/'.$originalName;
 
                     try {
-                        StoreVideo::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'), null, null, null, $request->input('latitude'), $request->input('longitude'));
+                        // Use book location as default if page doesn't have location
+                        $latitude = $request->input('latitude') ?? $book->latitude;
+                        $longitude = $request->input('longitude') ?? $book->longitude;
+                        StoreVideo::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'), null, null, null, $latitude, $longitude);
                         $successMessage = 'Queued video: '.$originalName.'. It may take a few minutes to process.';
                     } catch (\Exception $e) {
                         Log::error('Failed to dispatch StoreVideo job', [
@@ -378,11 +384,15 @@ class PageController extends Controller
             }
         } else {
             // If no file is uploaded, create the page immediately
+            // Use book location as default if page doesn't have location
+            $latitude = $request->input('latitude') ?? $book->latitude;
+            $longitude = $request->input('longitude') ?? $book->longitude;
+
             $book->pages()->create([
                 'content' => $request->input('content'),
                 'video_link' => $request->input('video_link') ? trim($request->input('video_link')) : null,
-                'latitude' => $request->input('latitude'),
-                'longitude' => $request->input('longitude'),
+                'latitude' => $latitude,
+                'longitude' => $longitude,
             ]);
         }
 
@@ -408,6 +418,9 @@ class PageController extends Controller
                 if (Str::startsWith($mimeType, 'image/')) {
                     $filename = pathinfo($file->hashName(), PATHINFO_FILENAME);
                     $mediaPath = 'books/'.$page->book->slug.'/'.$filename.'.webp';
+                    // Preserve page location if not provided in request, fall back to book location if page has none
+                    $latitude = $request->input('latitude') ?? $page->latitude ?? $page->book->latitude;
+                    $longitude = $request->input('longitude') ?? $page->longitude ?? $page->book->longitude;
                     StoreImage::dispatch(
                         $filePath,
                         $mediaPath,
@@ -417,13 +430,16 @@ class PageController extends Controller
                         $page,
                         $oldMediaPath,
                         $oldPosterPath,
-                        $request->input('latitude'),
-                        $request->input('longitude')
+                        $latitude,
+                        $longitude
                     );
                 } elseif (Str::startsWith($mimeType, 'video/')) {
                     $mediaPath = 'books/'.$page->book->slug.'/'.$file->getClientOriginalName();
 
                     try {
+                        // Preserve page location if not provided in request, fall back to book location if page has none
+                        $latitude = $request->input('latitude') ?? $page->latitude ?? $page->book->latitude;
+                        $longitude = $request->input('longitude') ?? $page->longitude ?? $page->book->longitude;
                         StoreVideo::dispatch(
                             $filePath,
                             $mediaPath,
@@ -433,8 +449,8 @@ class PageController extends Controller
                             $page,
                             $oldMediaPath,
                             $oldPosterPath,
-                            $request->input('latitude'),
-                            $request->input('longitude')
+                            $latitude,
+                            $longitude
                         );
                     } catch (\Exception $e) {
                         Log::error('Failed to dispatch StoreVideo job for update', [
@@ -460,12 +476,21 @@ class PageController extends Controller
                 $page->created_at = $request->created_at;
             }
 
+            // Handle location: update only provided coordinates, preserve existing values for others
+            // Check if keys exist in request (allows null values to clear coordinates)
             if ($request->has('latitude')) {
                 $page->latitude = $request->input('latitude');
             }
 
             if ($request->has('longitude')) {
                 $page->longitude = $request->input('longitude');
+            }
+
+            // If page has no location after update and book has location, inherit from book
+            // Use explicit null checks to handle coordinates of 0 (Equator/Prime Meridian)
+            if (is_null($page->latitude) && is_null($page->longitude) && ! is_null($page->book->latitude) && ! is_null($page->book->longitude)) {
+                $page->latitude = $page->book->latitude;
+                $page->longitude = $page->book->longitude;
             }
 
             if ($request->has('video_link') && ! is_null($request->video_link)) {

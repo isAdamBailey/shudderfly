@@ -1,5 +1,5 @@
 <template>
-  <div v-if="latitude && longitude" class="w-full mt-6 mb-4">
+  <div v-if="latitude != null && longitude != null" class="w-full mt-6 mb-4">
     <h3 class="text-lg font-semibold text-white mb-2">Location</h3>
     <div class="max-w-md mx-auto px-4">
       <Map

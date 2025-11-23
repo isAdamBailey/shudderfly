@@ -66,19 +66,20 @@ class CategoryController extends Controller
             };
         }
 
-        $locations = Page::whereIn('book_id', $allBookIds)
+        // Get book locations instead of page locations
+        $locations = Book::whereIn('id', $allBookIds)
             ->whereNotNull('latitude')
             ->whereNotNull('longitude')
-            ->with('book:id,title')
-            ->select('id', 'book_id', 'latitude', 'longitude', 'content')
+            ->select('id', 'title', 'latitude', 'longitude', 'slug')
             ->get()
-            ->map(function ($page) {
+            ->map(function ($book) {
                 return [
-                    'id' => $page->id,
-                    'latitude' => (float) $page->latitude,
-                    'longitude' => (float) $page->longitude,
-                    'book_title' => $page->book->title ?? '',
-                    'page_title' => $page->content ? strip_tags(substr($page->content, 0, 50)) : '',
+                    'id' => $book->id,
+                    'latitude' => (float) $book->latitude,
+                    'longitude' => (float) $book->longitude,
+                    'book_title' => $book->title ?? '',
+                    'page_title' => '', // Books don't have page titles
+                    'book_slug' => $book->slug ?? '',
                 ];
             })
             ->toArray();

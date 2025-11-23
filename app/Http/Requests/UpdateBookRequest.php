@@ -29,6 +29,8 @@ class UpdateBookRequest extends FormRequest
             'author' => 'string|max:100|nullable',
             'category_id' => 'integer',
             'cover_page' => 'integer',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
         ];
     }
 }

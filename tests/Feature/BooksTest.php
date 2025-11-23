@@ -465,4 +465,240 @@ class BooksTest extends TestCase
 
         $this->travelBack();
     }
+
+    public function test_book_can_be_stored_with_location(): void
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        $payload = [
+            'title' => $this->faker->sentence(3),
+            'author' => $this->faker->name(),
+            'excerpt' => $this->faker->paragraph(),
+            'latitude' => 45.5152,
+            'longitude' => -122.6784,
+        ];
+
+        $response = $this->post(route('books.store'), $payload);
+
+        $book = Book::first();
+        $this->assertEquals(45.5152, $book->latitude);
+        $this->assertEquals(-122.6784, $book->longitude);
+
+        $response->assertRedirect(route('books.show', $book));
+    }
+
+    public function test_book_can_be_stored_without_location(): void
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        $payload = [
+            'title' => $this->faker->sentence(3),
+            'author' => $this->faker->name(),
+            'excerpt' => $this->faker->paragraph(),
+        ];
+
+        $response = $this->post(route('books.store'), $payload);
+
+        $book = Book::first();
+        $this->assertNull($book->latitude);
+        $this->assertNull($book->longitude);
+
+        $response->assertRedirect(route('books.show', $book));
+    }
+
+    public function test_book_can_be_updated_with_location(): void
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        $book = Book::factory()->create();
+
+        $payload = [
+            'title' => $book->title,
+            'latitude' => 45.6387,
+            'longitude' => -122.6615,
+        ];
+
+        $response = $this->put(route('books.update', $book->slug), $payload);
+
+        $freshBook = Book::find($book->id);
+        $this->assertEquals(45.6387, $freshBook->latitude);
+        $this->assertEquals(-122.6615, $freshBook->longitude);
+
+        $response->assertRedirect(route('books.show', $freshBook));
+    }
+
+    public function test_book_location_can_be_cleared(): void
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        $book = Book::factory()->create([
+            'latitude' => 45.5152,
+            'longitude' => -122.6784,
+        ]);
+
+        $payload = [
+            'title' => $book->title,
+            'latitude' => null,
+            'longitude' => null,
+        ];
+
+        $response = $this->put(route('books.update', $book->slug), $payload);
+
+        $freshBook = Book::find($book->id);
+        $this->assertNull($freshBook->latitude);
+        $this->assertNull($freshBook->longitude);
+
+        $response->assertRedirect(route('books.show', $freshBook));
+    }
+
+    public function test_book_location_cascades_to_pages_without_locations(): void
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        $book = Book::factory()->create();
+
+        // Create pages: some with locations, some without
+        $pageWithLocation = Page::factory()->for($book)->create([
+            'latitude' => 40.7128,
+            'longitude' => -74.0060,
+        ]);
+        $pageWithoutLocation1 = Page::factory()->for($book)->create([
+            'latitude' => null,
+            'longitude' => null,
+        ]);
+        $pageWithoutLocation2 = Page::factory()->for($book)->create([
+            'latitude' => null,
+            'longitude' => null,
+        ]);
+
+        // Update book with location
+        $payload = [
+            'title' => $book->title,
+            'latitude' => 45.6387,
+            'longitude' => -122.6615,
+        ];
+
+        $this->put(route('books.update', $book->slug), $payload);
+
+        // Pages without locations should inherit book location
+        $this->assertEquals(45.6387, $pageWithoutLocation1->fresh()->latitude);
+        $this->assertEquals(-122.6615, $pageWithoutLocation1->fresh()->longitude);
+        $this->assertEquals(45.6387, $pageWithoutLocation2->fresh()->latitude);
+        $this->assertEquals(-122.6615, $pageWithoutLocation2->fresh()->longitude);
+
+        // Page with existing location should not be changed
+        $this->assertEquals(40.7128, $pageWithLocation->fresh()->latitude);
+        $this->assertEquals(-74.0060, $pageWithLocation->fresh()->longitude);
+    }
+
+    public function test_pages_inherit_book_location_when_created_without_location(): void
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        $book = Book::factory()->create([
+            'latitude' => 45.6387,
+            'longitude' => -122.6615,
+        ]);
+
+        $payload = [
+            'book_id' => $book->id,
+            'content' => $this->faker->paragraph(),
+            // No latitude/longitude provided
+        ];
+
+        $response = $this->post(route('pages.store'), $payload);
+
+        $page = $book->pages()->first();
+        $this->assertEquals(45.6387, $page->latitude);
+        $this->assertEquals(-122.6615, $page->longitude);
+
+        $response->assertRedirect(route('books.show', $book));
+    }
+
+    public function test_pages_can_override_book_location(): void
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        $book = Book::factory()->create([
+            'latitude' => 45.6387,
+            'longitude' => -122.6615,
+        ]);
+
+        $payload = [
+            'book_id' => $book->id,
+            'content' => $this->faker->paragraph(),
+            'latitude' => 40.7128, // Different from book location
+            'longitude' => -74.0060,
+        ];
+
+        $response = $this->post(route('pages.store'), $payload);
+
+        $page = $book->pages()->first();
+        $this->assertEquals(40.7128, $page->latitude);
+        $this->assertEquals(-74.0060, $page->longitude);
+
+        $response->assertRedirect(route('books.show', $book));
+    }
+
+    public function test_book_location_validation_rejects_invalid_latitude(): void
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        $book = Book::factory()->create();
+
+        $payload = [
+            'title' => $book->title,
+            'latitude' => 91.0, // Invalid: must be between -90 and 90
+            'longitude' => -122.6784,
+        ];
+
+        $response = $this->put(route('books.update', $book->slug), $payload);
+        $response->assertSessionHasErrors('latitude');
+    }
+
+    public function test_book_location_validation_rejects_invalid_longitude(): void
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        $book = Book::factory()->create();
+
+        $payload = [
+            'title' => $book->title,
+            'latitude' => 45.5152,
+            'longitude' => 181.0, // Invalid: must be between -180 and 180
+        ];
+
+        $response = $this->put(route('books.update', $book->slug), $payload);
+        $response->assertSessionHasErrors('longitude');
+    }
+
+    public function test_book_location_validation_accepts_valid_coordinates(): void
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        $book = Book::factory()->create();
+
+        $payload = [
+            'title' => $book->title,
+            'latitude' => 45.5152,
+            'longitude' => -122.6784,
+        ];
+
+        $response = $this->put(route('books.update', $book->slug), $payload);
+        $response->assertSessionHasNoErrors();
+
+        $freshBook = Book::find($book->id);
+        $this->assertEquals(45.5152, $freshBook->latitude);
+        $this->assertEquals(-122.6784, $freshBook->longitude);
+    }
 }

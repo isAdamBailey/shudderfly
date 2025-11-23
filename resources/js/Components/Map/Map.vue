@@ -135,16 +135,21 @@ const initializeMap = () => {
     props.locations.forEach((location) => {
       if (location.latitude != null && location.longitude != null) {
         bounds.push([location.latitude, location.longitude]);
-        const pageUrl = location.id ? route("pages.show", location.id) : "#";
+        // Use book link if book_slug exists, otherwise use page link
+        const url = location.book_slug
+          ? route("books.show", location.book_slug)
+          : location.id
+          ? route("pages.show", location.id)
+          : "#";
         const popupContent = location.page_title
-          ? `<a href="${pageUrl}" class="text-blue-600 hover:text-blue-800 underline"><strong>${
+          ? `<a href="${url}" class="text-blue-600 hover:text-blue-800 underline"><strong>${
               location.page_title
             }</strong></a>${
               location.book_title ? `<br><em>${location.book_title}</em>` : ""
             }`
           : location.book_title
-          ? `<a href="${pageUrl}" class="text-blue-600 hover:text-blue-800 underline"><strong>${location.book_title}</strong></a>`
-          : `<a href="${pageUrl}" class="text-blue-600 hover:text-blue-800 underline">Location</a>`;
+          ? `<a href="${url}" class="text-blue-600 hover:text-blue-800 underline"><strong>${location.book_title}</strong></a>`
+          : `<a href="${url}" class="text-blue-600 hover:text-blue-800 underline">Location</a>`;
 
         const marker = L.marker([location.latitude, location.longitude])
           .addTo(map)

@@ -1380,4 +1380,119 @@ class PagesTest extends TestCase
         // But we can verify the request was accepted
         $response->assertSessionHasNoErrors();
     }
+
+    public function test_page_location_coordinates_can_be_updated_independently(): void
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        $book = Book::factory()->create([
+            'latitude' => 45.6387,
+            'longitude' => -122.6615,
+        ]);
+
+        // Create a page with a specific location
+        $page = Page::factory()->for($book)->create([
+            'latitude' => 40.7128,
+            'longitude' => -74.0060,
+        ]);
+
+        // Update only latitude - longitude should be preserved
+        $payload = [
+            'content' => $page->content,
+            'latitude' => 45.5152, // New latitude
+            // longitude not provided
+        ];
+
+        $response = $this->post(route('pages.update', $page), $payload);
+        $response->assertSessionHasNoErrors();
+
+        $page->refresh();
+        $this->assertEquals(45.5152, $page->latitude, 'Latitude should be updated');
+        $this->assertEquals(-74.0060, $page->longitude, 'Longitude should be preserved, not overwritten with book longitude');
+
+        // Update only longitude - latitude should be preserved
+        $payload = [
+            'content' => $page->content,
+            'longitude' => -122.6784, // New longitude
+            // latitude not provided
+        ];
+
+        $response = $this->post(route('pages.update', $page), $payload);
+        $response->assertSessionHasNoErrors();
+
+        $page->refresh();
+        $this->assertEquals(45.5152, $page->latitude, 'Latitude should be preserved, not overwritten with book latitude');
+        $this->assertEquals(-122.6784, $page->longitude, 'Longitude should be updated');
+    }
+
+    public function test_page_location_preserved_when_updating_media_without_coordinates(): void
+    {
+        Storage::fake('s3');
+
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        $book = Book::factory()->create([
+            'latitude' => 45.6387,
+            'longitude' => -122.6615,
+        ]);
+
+        // Create a page with its own location (different from book)
+        $page = Page::factory()->for($book)->create([
+            'latitude' => 40.7128,
+            'longitude' => -74.0060,
+            'media_path' => 'books/'.$book->slug.'/existing.jpg',
+        ]);
+
+        // Update page with new image but don't provide coordinates
+        $payload = [
+            'content' => $this->faker->sentence(3),
+            'image' => UploadedFile::fake()->image('new-photo.jpg'),
+            // No latitude/longitude provided
+        ];
+
+        $response = $this->post(route('pages.update', $page), $payload);
+        $response->assertSessionHasNoErrors();
+
+        // Process the queued job
+        $this->artisan('queue:work --stop-when-empty --once');
+
+        // Page location should be preserved, not overwritten with book location
+        $page->refresh();
+        $this->assertEquals(40.7128, $page->latitude, 'Page latitude should be preserved when updating media without coordinates');
+        $this->assertEquals(-74.0060, $page->longitude, 'Page longitude should be preserved when updating media without coordinates');
+    }
+
+    public function test_page_inherits_book_location_with_zero_coordinates(): void
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        // Create a book with coordinates of 0 (Equator/Prime Meridian - valid location)
+        $book = Book::factory()->create([
+            'latitude' => 0.0,
+            'longitude' => 0.0,
+        ]);
+
+        // Create a page without location
+        $page = Page::factory()->for($book)->create([
+            'latitude' => null,
+            'longitude' => null,
+        ]);
+
+        // Update page without providing coordinates - should inherit book's location (0, 0)
+        $payload = [
+            'content' => $this->faker->sentence(3),
+            // No latitude/longitude provided
+        ];
+
+        $response = $this->post(route('pages.update', $page), $payload);
+        $response->assertSessionHasNoErrors();
+
+        $page->refresh();
+        // Verify that coordinates of 0 are correctly inherited (not treated as falsy)
+        $this->assertEquals(0.0, $page->latitude, 'Page should inherit book latitude of 0 (Equator)');
+        $this->assertEquals(0.0, $page->longitude, 'Page should inherit book longitude of 0 (Prime Meridian)');
+    }
 }

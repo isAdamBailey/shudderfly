@@ -1,6 +1,7 @@
 <script setup>
 import BreezeButton from "@/Components/Button.vue";
 import BreezeLabel from "@/Components/InputLabel.vue";
+import MapPicker from "@/Components/Map/MapPicker.vue";
 import TextArea from "@/Components/TextArea.vue";
 import BreezeInput from "@/Components/TextInput.vue";
 import DeleteForm from "@/Pages/Book/DeleteBookForm.vue";
@@ -19,7 +20,9 @@ const form = useForm({
   title: props.book.title,
   excerpt: props.book.excerpt,
   author: props.book.author,
-  category_id: props.book.category_id
+  category_id: props.book.category_id,
+  latitude: props.book.latitude ?? null,
+  longitude: props.book.longitude ?? null
 });
 
 const authorsOptions = computed(() => {
@@ -94,6 +97,13 @@ const submit = () => {
           class="mt-1 block w-full"
           size="sm"
           autocomplete="excerpt"
+        />
+      </div>
+
+      <div class="mt-4">
+        <MapPicker
+          v-model:latitude="form.latitude"
+          v-model:longitude="form.longitude"
         />
       </div>
 

@@ -107,8 +107,8 @@
       </div>
       <div class="mx-5">
         <MapEmbed
-          :latitude="props.page.latitude"
-          :longitude="props.page.longitude"
+          :latitude="props.page.latitude ?? props.page.book.latitude"
+          :longitude="props.page.longitude ?? props.page.book.longitude"
           :title="
             props.page.content
               ? stripHtml(props.page.content).substring(0, 50)

@@ -2,6 +2,7 @@
 import BreezeButton from "@/Components/Button.vue";
 import BreezeInput from "@/Components/TextInput.vue";
 import BreezeLabel from "@/Components/InputLabel.vue";
+import MapPicker from "@/Components/Map/MapPicker.vue";
 import { useForm, usePage } from "@inertiajs/vue3";
 import Multiselect from "@vueform/multiselect";
 import { computed } from "vue";
@@ -34,6 +35,8 @@ const form = useForm({
     excerpt: "",
     author: currentUser,
     category_id: undefinedCategory?.value,
+    latitude: null,
+    longitude: null,
 });
 
 const authorsOptions = computed(() => {
@@ -93,6 +96,13 @@ const submit = () => {
                     type="text"
                     class="mt-1 block w-full"
                     autocomplete="excerpt"
+                />
+            </div>
+
+            <div class="mt-4">
+                <MapPicker
+                    v-model:latitude="form.latitude"
+                    v-model:longitude="form.longitude"
                 />
             </div>
 

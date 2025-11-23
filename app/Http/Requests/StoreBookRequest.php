@@ -26,6 +26,8 @@ class StoreBookRequest extends FormRequest
             'excerpt' => 'string|max:255|nullable',
             'author' => 'string|max:100|nullable',
             'category_id' => 'integer',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
         ];
     }
 }
