@@ -111,6 +111,14 @@
                     </div>
                 </div>
             </div>
+            <div class="mx-5">
+                <MapEmbed
+                    :latitude="props.page.latitude"
+                    :longitude="props.page.longitude"
+                    :title="props.page.content ? stripHtml(props.page.content).substring(0, 50) : ''"
+                    :book-title="props.page.book.title"
+                />
+            </div>
             <div v-if="canEditPages" class="mb-3">
                 <Button
                     v-if="!showPageSettings"
@@ -150,6 +158,7 @@ import AddToCollageButton from "@/Components/AddToCollageButton.vue";
 import Button from "@/Components/Button.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
+import MapEmbed from "@/Components/MapEmbed.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useDate } from "@/dateHelpers";

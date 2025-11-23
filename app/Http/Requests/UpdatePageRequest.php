@@ -33,6 +33,8 @@ class UpdatePageRequest extends FormRequest
             ],
             'video_link' => 'string|nullable',
             'created_at' => 'date|nullable',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
         ];
     }
 }

@@ -39,6 +39,10 @@ class StoreVideo implements ShouldQueue
 
     protected ?string $oldPosterPath = null;
 
+    protected ?float $latitude = null;
+
+    protected ?float $longitude = null;
+
     public int $tries = 3;
 
     public int $timeout = 1800; // 30 minutes for video processing
@@ -49,7 +53,7 @@ class StoreVideo implements ShouldQueue
         return [120, 300, 600];
     }
 
-    public function __construct(string $filePath, string $path, ?Book $book = null, ?string $content = null, ?string $videoLink = null, ?Page $page = null, ?string $oldMediaPath = null, ?string $oldPosterPath = null)
+    public function __construct(string $filePath, string $path, ?Book $book = null, ?string $content = null, ?string $videoLink = null, ?Page $page = null, ?string $oldMediaPath = null, ?string $oldPosterPath = null, ?float $latitude = null, ?float $longitude = null)
     {
         $this->filePath = $filePath;
         $this->path = $path;
@@ -59,6 +63,8 @@ class StoreVideo implements ShouldQueue
         $this->page = $page;
         $this->oldMediaPath = $oldMediaPath;
         $this->oldPosterPath = $oldPosterPath;
+        $this->latitude = $latitude;
+        $this->longitude = $longitude;
     }
 
     public function handle(): void
@@ -370,6 +376,8 @@ class StoreVideo implements ShouldQueue
                             'media_path' => $processedFilePath,
                             'media_poster' => $posterPath,
                             'video_link' => $this->videoLink,
+                            'latitude' => $this->latitude,
+                            'longitude' => $this->longitude,
                         ]);
                     } elseif ($this->book) {
                         $page = $this->book->pages()->create([
@@ -377,6 +385,8 @@ class StoreVideo implements ShouldQueue
                             'media_path' => $processedFilePath,
                             'media_poster' => $posterPath,
                             'video_link' => $this->videoLink,
+                            'latitude' => $this->latitude,
+                            'longitude' => $this->longitude,
                         ]);
 
                         // Set as cover page if book doesn't have one

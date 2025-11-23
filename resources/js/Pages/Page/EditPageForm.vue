@@ -9,6 +9,7 @@ import VideoIcon from "@/Components/svg/VideoIcon.vue";
 import TextInput from "@/Components/TextInput.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
+import MapPicker from "@/Components/MapPicker.vue";
 import { useVideoOptimization } from "@/composables/useVideoOptimization.js";
 import DeletePageForm from "@/Pages/Book/DeletePageForm.vue";
 import { useForm, usePage } from "@inertiajs/vue3";
@@ -33,7 +34,9 @@ const pageForm = useForm({
   image: null,
   book_id: props.page.book_id,
   video_link: props.page.video_link,
-  created_at: props.page.created_at
+  created_at: props.page.created_at,
+  latitude: props.page.latitude ?? null,
+  longitude: props.page.longitude ?? null
 });
 
 const bookForm = useForm({
@@ -299,6 +302,12 @@ const setCreatedAtToNow = () => {
         track-by="label"
         placeholder="Search books"
         searchable
+      />
+    </div>
+    <div class="mt-3">
+      <MapPicker
+        v-model:latitude="pageForm.latitude"
+        v-model:longitude="pageForm.longitude"
       />
     </div>
 

@@ -20,6 +20,8 @@ class Page extends Model
         'book_id',
         'read_count',
         'created_at',
+        'latitude',
+        'longitude',
     ];
 
     public function getMediaPathAttribute($value): string

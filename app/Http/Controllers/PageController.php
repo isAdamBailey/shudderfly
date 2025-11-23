@@ -357,13 +357,13 @@ class PageController extends Controller
                 if (Str::startsWith($mimeType, 'image/')) {
                     $filename = pathinfo($file->hashName(), PATHINFO_FILENAME);
                     $mediaPath = 'books/'.$book->slug.'/'.$filename.'.webp';
-                    StoreImage::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'));
+                    StoreImage::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'), null, null, null, $request->input('latitude'), $request->input('longitude'));
                     $successMessage = 'Queued image: '.$originalName.'. It may take a few minutes to process.';
                 } elseif (Str::startsWith($mimeType, 'video/')) {
                     $mediaPath = 'books/'.$book->slug.'/'.$originalName;
 
                     try {
-                        StoreVideo::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'));
+                        StoreVideo::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'), null, null, null, $request->input('latitude'), $request->input('longitude'));
                         $successMessage = 'Queued video: '.$originalName.'. It may take a few minutes to process.';
                     } catch (\Exception $e) {
                         Log::error('Failed to dispatch StoreVideo job', [
@@ -381,6 +381,8 @@ class PageController extends Controller
             $book->pages()->create([
                 'content' => $request->input('content'),
                 'video_link' => $request->input('video_link') ? trim($request->input('video_link')) : null,
+                'latitude' => $request->input('latitude'),
+                'longitude' => $request->input('longitude'),
             ]);
         }
 
@@ -414,7 +416,9 @@ class PageController extends Controller
                         $request->input('video_link'),
                         $page,
                         $oldMediaPath,
-                        $oldPosterPath
+                        $oldPosterPath,
+                        $request->input('latitude'),
+                        $request->input('longitude')
                     );
                 } elseif (Str::startsWith($mimeType, 'video/')) {
                     $mediaPath = 'books/'.$page->book->slug.'/'.$file->getClientOriginalName();
@@ -428,7 +432,9 @@ class PageController extends Controller
                             $request->input('video_link'),
                             $page,
                             $oldMediaPath,
-                            $oldPosterPath
+                            $oldPosterPath,
+                            $request->input('latitude'),
+                            $request->input('longitude')
                         );
                     } catch (\Exception $e) {
                         Log::error('Failed to dispatch StoreVideo job for update', [
@@ -452,6 +458,14 @@ class PageController extends Controller
 
             if ($request->has('created_at')) {
                 $page->created_at = $request->created_at;
+            }
+
+            if ($request->has('latitude')) {
+                $page->latitude = $request->input('latitude');
+            }
+
+            if ($request->has('longitude')) {
+                $page->longitude = $request->input('longitude');
             }
 
             if ($request->has('video_link') && ! is_null($request->video_link)) {

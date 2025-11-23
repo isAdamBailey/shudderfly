@@ -1210,4 +1210,174 @@ class PagesTest extends TestCase
                 ->has('photos.data', 0)
         );
     }
+
+    public function test_page_can_be_stored_with_location(): void
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+        $book = Book::factory()->create();
+
+        $payload = [
+            'book_id' => $book->id,
+            'content' => $this->faker->paragraph(),
+            'latitude' => 45.5152,
+            'longitude' => -122.6784,
+        ];
+
+        $response = $this->post(route('pages.store'), $payload);
+
+        $page = Book::find($book->id)->pages->first();
+        $this->assertEquals(45.5152, $page->latitude);
+        $this->assertEquals(-122.6784, $page->longitude);
+
+        $response->assertRedirect(route('books.show', $book));
+    }
+
+    public function test_page_can_be_stored_without_location(): void
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+        $book = Book::factory()->create();
+
+        $payload = [
+            'book_id' => $book->id,
+            'content' => $this->faker->paragraph(),
+        ];
+
+        $response = $this->post(route('pages.store'), $payload);
+
+        $page = Book::find($book->id)->pages->first();
+        $this->assertNull($page->latitude);
+        $this->assertNull($page->longitude);
+
+        $response->assertRedirect(route('books.show', $book));
+    }
+
+    public function test_page_can_be_updated_with_location(): void
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        $book = Book::factory()->has(Page::factory())->create();
+        $page = $book->pages->first();
+
+        $payload = [
+            'content' => $this->faker->sentence(3),
+            'latitude' => 45.6387,
+            'longitude' => -122.6615,
+        ];
+
+        $response = $this->post(route('pages.update', $page), $payload);
+
+        $freshPage = Page::find($page->id);
+        $this->assertEquals(45.6387, $freshPage->latitude);
+        $this->assertEquals(-122.6615, $freshPage->longitude);
+
+        $response->assertRedirect(route('pages.show', $freshPage));
+    }
+
+    public function test_page_location_can_be_cleared(): void
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        $book = Book::factory()->has(Page::factory()->state([
+            'latitude' => 45.5152,
+            'longitude' => -122.6784,
+        ]))->create();
+        $page = $book->pages->first();
+
+        $payload = [
+            'content' => $page->content,
+            'latitude' => null,
+            'longitude' => null,
+        ];
+
+        $response = $this->post(route('pages.update', $page), $payload);
+
+        $freshPage = Page::find($page->id);
+        $this->assertNull($freshPage->latitude);
+        $this->assertNull($freshPage->longitude);
+
+        $response->assertRedirect(route('pages.show', $freshPage));
+    }
+
+    public function test_location_validation_rejects_invalid_latitude(): void
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+        $book = Book::factory()->create();
+
+        $payload = [
+            'book_id' => $book->id,
+            'content' => $this->faker->paragraph(),
+            'latitude' => 91.0, // Invalid: must be between -90 and 90
+            'longitude' => -122.6784,
+        ];
+
+        $response = $this->post(route('pages.store'), $payload);
+        $response->assertSessionHasErrors('latitude');
+    }
+
+    public function test_location_validation_rejects_invalid_longitude(): void
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+        $book = Book::factory()->create();
+
+        $payload = [
+            'book_id' => $book->id,
+            'content' => $this->faker->paragraph(),
+            'latitude' => 45.5152,
+            'longitude' => 181.0, // Invalid: must be between -180 and 180
+        ];
+
+        $response = $this->post(route('pages.store'), $payload);
+        $response->assertSessionHasErrors('longitude');
+    }
+
+    public function test_location_validation_accepts_valid_coordinates(): void
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+        $book = Book::factory()->create();
+
+        $payload = [
+            'book_id' => $book->id,
+            'content' => $this->faker->paragraph(),
+            'latitude' => 45.5152,
+            'longitude' => -122.6784,
+        ];
+
+        $response = $this->post(route('pages.store'), $payload);
+        $response->assertSessionHasNoErrors();
+
+        $page = Book::find($book->id)->pages->first();
+        $this->assertEquals(45.5152, $page->latitude);
+        $this->assertEquals(-122.6784, $page->longitude);
+    }
+
+    public function test_page_with_image_can_have_location(): void
+    {
+        Storage::fake('s3');
+
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+        $book = Book::factory()->create();
+
+        $payload = [
+            'book_id' => $book->id,
+            'content' => $this->faker->paragraph(),
+            'image' => UploadedFile::fake()->image('photo1.jpg'),
+            'latitude' => 45.5152,
+            'longitude' => -122.6784,
+        ];
+
+        $response = $this->post(route('pages.store'), $payload);
+        $response->assertRedirect(route('books.show', $book));
+
+        // Note: Since image processing is queued, we can't immediately check the location
+        // But we can verify the request was accepted
+        $response->assertSessionHasNoErrors();
+    }
 }

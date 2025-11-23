@@ -33,10 +33,14 @@ class StoreImage implements ShouldQueue
 
     protected ?string $oldPosterPath;
 
+    protected ?float $latitude;
+
+    protected ?float $longitude;
+
     /**
      * Create a new job instance.
      */
-    public function __construct(string $filePath, string $path, ?Book $book = null, ?string $content = null, ?string $videoLink = null, ?Page $page = null, ?string $oldMediaPath = null, ?string $oldPosterPath = null)
+    public function __construct(string $filePath, string $path, ?Book $book = null, ?string $content = null, ?string $videoLink = null, ?Page $page = null, ?string $oldMediaPath = null, ?string $oldPosterPath = null, ?float $latitude = null, ?float $longitude = null)
     {
         $this->filePath = $filePath;
         $this->path = $path;
@@ -46,6 +50,8 @@ class StoreImage implements ShouldQueue
         $this->page = $page;
         $this->oldMediaPath = $oldMediaPath;
         $this->oldPosterPath = $oldPosterPath;
+        $this->latitude = $latitude;
+        $this->longitude = $longitude;
     }
 
     /**
@@ -84,12 +90,16 @@ class StoreImage implements ShouldQueue
                     'content' => $this->content,
                     'media_path' => $this->path,
                     'video_link' => $this->videoLink,
+                    'latitude' => $this->latitude,
+                    'longitude' => $this->longitude,
                 ]);
             } elseif ($this->book) {
                 $page = $this->book->pages()->create([
                     'content' => $this->content,
                     'media_path' => $this->path,
                     'video_link' => $this->videoLink,
+                    'latitude' => $this->latitude,
+                    'longitude' => $this->longitude,
                 ]);
 
                 if (! $this->book->cover_page) {

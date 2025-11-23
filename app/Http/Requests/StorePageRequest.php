@@ -35,6 +35,8 @@ class StorePageRequest extends FormRequest
             ],
             'video_link' => ['string', 'nullable', new AtLeastOneField(['content', 'image', 'video_link'])],
             'category_id' => 'integer',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
         ];
     }
 }
