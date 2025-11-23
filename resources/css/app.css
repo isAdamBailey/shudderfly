@@ -431,16 +431,16 @@
 
   .mini-book__spine {
     position: absolute;
-    right: 0;
+    left: 0;
     top: 0;
     bottom: 0;
     width: 18px;
-    background: linear-gradient(to right, #1f2937, #374151, #1f2937);
-    box-shadow: inset -3px 0 6px rgba(0, 0, 0, 0.6),
-      inset 2px 0 3px rgba(255, 255, 255, 0.15),
-      2px 0 6px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(to left, #1f2937, #374151, #1f2937);
+    box-shadow: inset 3px 0 6px rgba(0, 0, 0, 0.6),
+      inset -2px 0 3px rgba(255, 255, 255, 0.15),
+      -2px 0 6px rgba(0, 0, 0, 0.3);
     transform: translateZ(12px);
-    border-right: 2px solid rgba(0, 0, 0, 0.4);
+    border-left: 2px solid rgba(0, 0, 0, 0.4);
   }
 
   .mini-book__title {

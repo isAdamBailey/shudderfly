@@ -117,7 +117,7 @@
             transform: `translateZ(${
               Math.abs(finalTilt + finalRoll) * 12 + scrollProgress * 30
             }px)`,
-            right: `${
+            left: `${
               28 + Math.abs(finalTilt + finalRoll) * 6 + scrollProgress * 16
             }px`
           }"
@@ -269,11 +269,11 @@ const finalTransform = computed(() => {
   return `perspective(1500px) scale(${hoverScale.value}) rotateX(${
     smoothTilt.value * 18 + scrollProgress.value * 18
   }deg) rotateY(${
-    smoothRoll.value * 30 + scrollProgress.value * 40
+    -smoothRoll.value * 30 - scrollProgress.value * 40
   }deg) translateZ(${
     Math.abs(smoothTilt.value + smoothRoll.value) * 30 +
     scrollProgress.value * 50
-  }px) translateX(${smoothRoll.value * 20 + scrollProgress.value * 25}px)`;
+  }px) translateX(${-smoothRoll.value * 20 - scrollProgress.value * 25}px)`;
 });
 </script>
 
@@ -308,7 +308,7 @@ const finalTransform = computed(() => {
   0% {
     opacity: 0;
     transform: perspective(1500px) translateY(40px) scale(0.9) rotateX(15deg)
-      rotateY(-10deg) translateZ(0px) translateX(0px);
+      rotateY(10deg) translateZ(0px) translateX(0px);
   }
   100% {
     opacity: 1;
@@ -324,21 +324,21 @@ const finalTransform = computed(() => {
 
 .book-spine {
   position: absolute;
-  right: 0;
+  left: 0;
   top: 0;
   bottom: 0;
   width: 32px;
-  background: linear-gradient(to right, #1f2937, #374151, #1f2937);
-  box-shadow: inset -4px 0 8px rgba(0, 0, 0, 0.6),
-    inset 3px 0 3px rgba(255, 255, 255, 0.15), 2px 0 8px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(to left, #1f2937, #374151, #1f2937);
+  box-shadow: inset 4px 0 8px rgba(0, 0, 0, 0.6),
+    inset -3px 0 3px rgba(255, 255, 255, 0.15), -2px 0 8px rgba(0, 0, 0, 0.3);
   transform: translateZ(20px);
   transition: all 0.3s ease;
-  border-right: 2px solid rgba(0, 0, 0, 0.4);
+  border-left: 2px solid rgba(0, 0, 0, 0.4);
 }
 
 .book-pages {
   position: absolute;
-  right: 28px;
+  left: 28px;
   top: 4px;
   bottom: 4px;
   width: 8px;
@@ -348,11 +348,11 @@ const finalTransform = computed(() => {
     #e5e7eb 1px,
     #f9fafb 2px
   );
-  box-shadow: inset -2px 0 4px rgba(0, 0, 0, 0.2), 2px 0 4px rgba(0, 0, 0, 0.2);
+  box-shadow: inset 2px 0 4px rgba(0, 0, 0, 0.2), -2px 0 4px rgba(0, 0, 0, 0.2);
   transform: translateZ(18px);
   transition: all 0.3s ease;
-  border-right: 1px solid rgba(0, 0, 0, 0.2);
-  border-left: 1px solid rgba(0, 0, 0, 0.1);
+  border-left: 1px solid rgba(0, 0, 0, 0.2);
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .book-shadow {
