@@ -4,6 +4,7 @@
 
 <script setup>
 import L from "leaflet";
+import { Geocoder } from "leaflet-control-geocoder";
 import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
 const props = defineProps({
@@ -185,8 +186,40 @@ const initializeMap = () => {
     markers.push(marker);
   }
 
-  // Add click handler for interactive mode
+  // Add geocoder control for interactive mode (address search)
   if (props.interactive) {
+    const geocoder = new Geocoder({
+      defaultMarkGeocode: false,
+      placeholder: "Search for an address...",
+      errorMessage: "Nothing found.",
+      position: "topright"
+    });
+
+    geocoder.on("markgeocode", (e) => {
+      const { lat, lng } = e.geocode.center;
+
+      // Remove existing marker
+      markers.forEach((marker) => {
+        map.removeLayer(marker);
+      });
+      markers = [];
+
+      // Add new marker at geocoded location
+      const marker = L.marker([lat, lng]).addTo(map);
+      markers.push(marker);
+
+      // Center map on geocoded location
+      map.setView([lat, lng], 17);
+
+      // Emit coordinates
+      emit("update:latitude", lat);
+      emit("update:longitude", lng);
+      emit("location-selected", { lat, lng });
+    });
+
+    geocoder.addTo(map);
+
+    // Add click handler for interactive mode
     map.on("click", (e) => {
       const { lat, lng } = e.latlng;
 
