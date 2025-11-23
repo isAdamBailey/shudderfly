@@ -130,13 +130,23 @@ const pondQueueCount = ref(0);
 const isUploading = ref(false);
 
 const pondUploadUrl = computed(() => getPagesStoreUrl());
-const pondExtraData = computed(() => ({
-  book_id: form.book_id,
-  content: form.content || "",
-  latitude: form.latitude,
-  longitude: form.longitude
-  // Don't pass video_link to file uploads since that's for text-only submissions
-}));
+const pondExtraData = computed(() => {
+  const data = {
+    book_id: form.book_id,
+    content: form.content || ""
+    // Don't pass video_link to file uploads since that's for text-only submissions
+  };
+
+  // Only include latitude/longitude if they have values (not null)
+  if (form.latitude != null) {
+    data.latitude = form.latitude;
+  }
+  if (form.longitude != null) {
+    data.longitude = form.longitude;
+  }
+
+  return data;
+});
 
 const hasQueuedFiles = computed(() => {
   const count = Number(pondQueueCount.value) || 0;
