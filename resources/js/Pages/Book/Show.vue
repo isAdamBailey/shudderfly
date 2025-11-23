@@ -193,6 +193,17 @@
       </div>
     </div>
     <div ref="infiniteScrollRef"></div>
+    
+    <!-- Book Location Map -->
+    <div v-if="book.latitude != null && book.longitude != null" class="mx-5 mt-6 mb-6">
+      <MapEmbed
+        :latitude="book.latitude"
+        :longitude="book.longitude"
+        :title="book.title"
+        :book-title="book.title"
+      />
+    </div>
+    
     <Deferred data="similarBooks">
       <template #fallback>
         <div class="text-gray-900 dark:text-gray-100">Loading...</div>
@@ -211,6 +222,7 @@
 import BookCover from "@/Components/BookCover.vue";
 import Button from "@/Components/Button.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
+import MapEmbed from "@/Components/Map/MapEmbed.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
 import BreezeValidationErrors from "@/Components/ValidationErrors.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
