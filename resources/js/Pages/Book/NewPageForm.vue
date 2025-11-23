@@ -8,7 +8,7 @@ import {
 } from "@/Components/InputLabel.vue";
 
 import FilePondUploader from "@/Components/FilePondUploader.vue";
-import MapPicker from "@/Components/MapPicker.vue";
+import MapPicker from "@/Components/Map/MapPicker.vue";
 import TextInput from "@/Components/TextInput.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";

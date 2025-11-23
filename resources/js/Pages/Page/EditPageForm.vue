@@ -5,11 +5,11 @@ import {
   default as BreezeLabel,
   default as InputLabel
 } from "@/Components/InputLabel.vue";
+import MapPicker from "@/Components/Map/MapPicker.vue";
 import VideoIcon from "@/Components/svg/VideoIcon.vue";
 import TextInput from "@/Components/TextInput.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
-import MapPicker from "@/Components/MapPicker.vue";
 import { useVideoOptimization } from "@/composables/useVideoOptimization.js";
 import DeletePageForm from "@/Pages/Book/DeletePageForm.vue";
 import { useForm, usePage } from "@inertiajs/vue3";

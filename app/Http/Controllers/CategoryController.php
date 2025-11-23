@@ -6,6 +6,7 @@ use App\Http\Requests\StoreCategoryRequest;
 use App\Http\Requests\UpdateCategoryRequest;
 use App\Models\Book;
 use App\Models\Category;
+use App\Models\Page;
 use App\Support\ThemeBooks;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\RedirectResponse;
@@ -40,9 +41,52 @@ class CategoryController extends Controller
                 ->paginate()
         };
 
+        // Get all pages with locations for ALL books in this category (not just current page)
+        if ($categoryName === 'themed') {
+            $theme = \App\Http\Middleware\HandleInertiaRequests::getCurrentTheme() ?? '';
+            $keywords = ThemeBooks::getKeywords($theme);
+            $allBookIds = empty($keywords) ? collect([]) : Book::query()
+                ->where(function ($q) use ($keywords) {
+                    foreach ($keywords as $keyword) {
+                        $q->orWhere(function ($subQuery) use ($keyword) {
+                            $subQuery->whereRaw('LOWER(title) LIKE ?', ['%'.strtolower($keyword).'%'])
+                                ->orWhereRaw('LOWER(excerpt) LIKE ?', ['%'.strtolower($keyword).'%']);
+                        });
+                    }
+                })
+                ->pluck('id');
+        } else {
+            $allBookIds = match ($categoryName) {
+                'popular' => Book::query()->pluck('id'),
+                'forgotten' => Book::query()->pluck('id'),
+                default => Category::where('name', $categoryName)
+                    ->firstOrFail()
+                    ->books()
+                    ->pluck('id')
+            };
+        }
+
+        $locations = Page::whereIn('book_id', $allBookIds)
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->with('book:id,title')
+            ->select('id', 'book_id', 'latitude', 'longitude', 'content')
+            ->get()
+            ->map(function ($page) {
+                return [
+                    'id' => $page->id,
+                    'latitude' => (float) $page->latitude,
+                    'longitude' => (float) $page->longitude,
+                    'book_title' => $page->book->title ?? '',
+                    'page_title' => $page->content ? strip_tags(substr($page->content, 0, 50)) : '',
+                ];
+            })
+            ->toArray();
+
         return Inertia::render('Category/Index', [
             'categoryName' => $categoryName,
             'books' => $books,
+            'locations' => $locations,
         ]);
     }
 
