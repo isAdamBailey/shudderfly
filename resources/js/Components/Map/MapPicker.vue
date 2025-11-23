@@ -14,6 +14,7 @@
       </button>
     </div>
     <Map
+      ref="mapRef"
       :latitude="latitude"
       :longitude="longitude"
       :interactive="true"
@@ -28,7 +29,7 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import Map from "./Map.vue";
 
 const props = defineProps({
@@ -44,9 +45,17 @@ const props = defineProps({
 
 const emit = defineEmits(["update:latitude", "update:longitude"]);
 
+const mapRef = ref(null);
+
 const hasLocation = computed(() => {
   return props.latitude !== null && props.longitude !== null;
 });
+
+const recenterMap = () => {
+  if (mapRef.value && mapRef.value.recenterOnMarker) {
+    mapRef.value.recenterOnMarker();
+  }
+};
 
 const clearLocation = () => {
   emit("update:latitude", null);

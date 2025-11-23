@@ -64,6 +64,19 @@ let map = null;
 let markers = [];
 let isInitialized = false;
 
+// Expose recenter method
+const recenterOnMarker = () => {
+  if (map && markers.length > 0) {
+    const marker = markers[0];
+    const latLng = marker.getLatLng();
+    map.setView(latLng, 17);
+  } else if (map && props.latitude != null && props.longitude != null) {
+    map.setView([props.latitude, props.longitude], 17);
+  }
+};
+
+defineExpose({ recenterOnMarker });
+
 // Fix for default marker icon issue in Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -184,6 +197,51 @@ const initializeMap = () => {
     }
 
     markers.push(marker);
+  }
+
+  // Add recenter button control (for both interactive and non-interactive modes when location exists)
+  const hasLocation =
+    (props.latitude != null && props.longitude != null) || markers.length > 0;
+  if (hasLocation) {
+    const recenterButton = L.control({ position: "bottomright" });
+    recenterButton.onAdd = function () {
+      const div = L.DomUtil.create("div", "leaflet-control-recenter");
+      div.innerHTML = `
+        <button
+          type="button"
+          class="leaflet-control-recenter-button"
+          title="Recenter on marker"
+          style="
+            background-color: white;
+            border: 2px solid rgba(0,0,0,0.2);
+            border-radius: 4px;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+          "
+        >
+          <span style="font-size: 18px;">📍</span>
+        </button>
+      `;
+
+      L.DomEvent.disableClickPropagation(div);
+      L.DomEvent.on(div, "click", function () {
+        if (markers.length > 0) {
+          const marker = markers[0];
+          const latLng = marker.getLatLng();
+          map.setView(latLng, 17);
+        } else if (props.latitude != null && props.longitude != null) {
+          map.setView([props.latitude, props.longitude], 17);
+        }
+      });
+
+      return div;
+    };
+    recenterButton.addTo(map);
   }
 
   // Add geocoder control for interactive mode (address search)
