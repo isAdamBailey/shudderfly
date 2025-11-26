@@ -18,7 +18,7 @@
       </div>
     </template>
 
-    <div v-if="locations && locations.length > 0" class="px-4 mb-6">
+    <div v-if="locations && locations.length > 0" class="w-full mb-6">
       <CategoryMap :locations="locations" />
     </div>
 

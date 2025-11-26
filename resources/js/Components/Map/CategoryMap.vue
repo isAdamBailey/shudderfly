@@ -3,10 +3,10 @@
     <h3 class="text-lg font-semibold text-white mb-2">
       Locations ({{ locations.length }})
     </h3>
-    <div class="max-w-md mx-auto px-4">
+    <div class="w-full px-20">
       <Map
         :locations="locations"
-        container-class="w-full aspect-square rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden shadow-lg"
+        container-class="w-full h-[300px] rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden shadow-lg"
       />
     </div>
   </div>

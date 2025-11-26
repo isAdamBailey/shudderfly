@@ -3,7 +3,21 @@
 
   <BreezeAuthenticatedLayout>
     <template #header>
-      <BookCover :book="book" :pages="pages" />
+      <div class="relative">
+        <div
+          v-if="book.category"
+          class="absolute left-2 sm:left-4 lg:left-8 top-2 z-30"
+        >
+          <Link
+            :href="route('categories.show', book.category.name)"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-full border font-semibold text-xs uppercase tracking-widest transition ease-in-out duration-150 bg-theme-primary text-theme-button border-theme-primary hover:text-theme-button-hover hover:bg-theme-button active:bg-theme-button focus:border-theme-button focus:shadow-theme-button"
+          >
+            <i class="ri-folder-fill text-sm"></i>
+            <span>{{ book.category.name }}</span>
+          </Link>
+        </div>
+        <BookCover :book="book" :pages="pages" />
+      </div>
       <div
         class="p-2 flex flex-col lg:flex-row lg:justify-between lg:items-center gap-3"
       >
