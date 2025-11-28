@@ -77,7 +77,8 @@ class SearchController extends Controller
             });
 
         // Combine and limit total results
-        $results = $pages->concat($songs)->take(15);
+        // Use values() to re-index the collection to ensure JSON array serialization
+        $results = $pages->concat($songs)->take(15)->values();
 
         return response()->json($results);
     }
