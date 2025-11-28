@@ -32,9 +32,10 @@ class Song extends Model
     ];
 
     /**
-     * Scope for searching songs by title
+     * Scope for filtering songs by title or description (database query)
+     * Note: Use Song::search() for Meilisearch-based search via Scout
      */
-    public function scopeSearch($query, $search)
+    public function scopeFilterBySearch($query, $search)
     {
         return $query->where('title', 'LIKE', '%'.$search.'%')
             ->orWhere('description', 'LIKE', '%'.$search.'%');
