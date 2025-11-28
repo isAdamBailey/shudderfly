@@ -48,9 +48,10 @@ class SearchController extends Controller
             return response()->json([]);
         }
 
-        // Search pages
+        // Search pages and songs with equal representation
+        // Fetch 8 of each to ensure fair distribution when limiting to 15 total
         $pages = Page::search($query)
-            ->take(10)
+            ->take(8)
             ->get()
             ->load('book')
             ->map(function ($page) {
@@ -65,7 +66,7 @@ class SearchController extends Controller
 
         // Search songs
         $songs = Song::search($query)
-            ->take(10)
+            ->take(8)
             ->get()
             ->map(function ($song) {
                 return [
@@ -76,7 +77,8 @@ class SearchController extends Controller
                 ];
             });
 
-        // Combine and limit total results
+        // Combine and limit total results to 15
+        // This ensures fair representation: up to 8 pages and 8 songs, totaling max 15
         // Use values() to re-index the collection to ensure JSON array serialization
         $results = $pages->concat($songs)->take(15)->values();
 

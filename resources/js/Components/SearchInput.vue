@@ -416,6 +416,8 @@ const navigateSuggestions = (direction) => {
 
 // Select a suggestion (either by click or Enter key)
 const selectSuggestion = (suggestion) => {
+  showSuggestions.value = false;
+  // Don't update search.value here as it triggers unnecessary API calls before navigation
   if (suggestion.type === "book") {
     // eslint-disable-next-line no-undef
     router.get(route("books.show", suggestion.slug));
@@ -426,8 +428,6 @@ const selectSuggestion = (suggestion) => {
     // eslint-disable-next-line no-undef
     router.get(route("music.show", suggestion.id));
   }
-  showSuggestions.value = false;
-  search.value = getSuggestionTitle(suggestion); // Update input with selected suggestion
 };
 
 const handleEnter = () => {
