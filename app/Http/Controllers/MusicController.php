@@ -39,7 +39,7 @@ class MusicController extends Controller
         $songsQuery = Song::query();
 
         if ($search) {
-            $songsQuery->filterBySearch($search);
+            $songsQuery = $songsQuery->filterBySearch($search);
         }
 
         // Apply filters

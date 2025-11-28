@@ -158,6 +158,10 @@ const props = defineProps({
   initialTarget: {
     type: String,
     default: null // 'books' | 'uploads'
+  },
+  showTargetToggle: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -271,8 +275,9 @@ watch(search, (newSearch) => {
     searchMethod();
     suggestions.value = [];
     showSuggestions.value = false;
-  } else if (!isListening.value) {
-    // Only fetch suggestions if not actively listening
+  } else if (!isListening.value && newSearch && newSearch.trim().length >= 2) {
+    // Fetch suggestions when search is set from voice recognition or other sources
+    // (handleInput calls fetchSuggestions directly to avoid timing issues)
     fetchSuggestions(newSearch);
   }
 });
@@ -374,12 +379,15 @@ const clearSearch = () => {
 // Handle input event to update search value and fetch suggestions
 const handleInput = (event) => {
   search.value = event.target.value;
-  if (search.value) {
+  selectedIndex.value = -1; // Reset selected index on input
+
+  if (search.value && search.value.trim().length >= 2 && !isListening.value) {
+    fetchSuggestions(search.value);
     showSuggestions.value = true; // Show suggestions as soon as user types
   } else {
+    suggestions.value = [];
     showSuggestions.value = false;
   }
-  selectedIndex.value = -1; // Reset selected index on input
 };
 
 // Handle focus event to show suggestions if there's a search query

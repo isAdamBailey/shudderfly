@@ -27,8 +27,8 @@ class SearchController extends Controller
             ->map(function ($book) {
                 return [
                     'id' => $book->id,
-                    'title' => $book->title,
-                    'excerpt' => $book->excerpt,
+                    'title' => strip_tags($book->title ?? ''),
+                    'excerpt' => strip_tags($book->excerpt ?? ''),
                     'slug' => $book->slug,
                     'type' => 'book',
                 ];
@@ -57,8 +57,8 @@ class SearchController extends Controller
             ->map(function ($page) {
                 return [
                     'id' => $page->id,
-                    'content' => $page->content,
-                    'book_title' => $page->book ? $page->book->title : null,
+                    'content' => strip_tags($page->content ?? ''),
+                    'book_title' => $page->book ? strip_tags($page->book->title ?? '') : null,
                     'book_id' => $page->book_id,
                     'type' => 'page',
                 ];
@@ -71,8 +71,8 @@ class SearchController extends Controller
             ->map(function ($song) {
                 return [
                     'id' => $song->id,
-                    'title' => $song->title,
-                    'description' => $song->description,
+                    'title' => strip_tags($song->title ?? ''),
+                    'description' => strip_tags($song->description ?? ''),
                     'type' => 'song',
                 ];
             });
