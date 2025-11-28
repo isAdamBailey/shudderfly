@@ -18,6 +18,7 @@
     <env name="MAIL_MAILER" value="array"/>
     <env name="QUEUE_CONNECTION" value="sync"/>
     <env name="SESSION_DRIVER" value="array"/>
+    <env name="SCOUT_DRIVER" value="null"/>
     
   </php>
   <source>
