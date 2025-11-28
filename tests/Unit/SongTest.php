@@ -42,7 +42,7 @@ class SongTest extends TestCase
         Song::factory()->create(['title' => 'Another Track']);
         Song::factory()->create(['title' => 'Amazing Beat']);
 
-        $results = Song::search('Amazing')->get();
+        $results = Song::query()->filterBySearch('Amazing')->get();
 
         $this->assertCount(2, $results);
         $this->assertTrue($results->pluck('title')->contains('Amazing Song'));
@@ -55,7 +55,7 @@ class SongTest extends TestCase
         Song::factory()->create(['description' => 'Just another song']);
         Song::factory()->create(['description' => 'Amazing beat with great vocals']);
 
-        $results = Song::search('amazing')->get();
+        $results = Song::query()->filterBySearch('amazing')->get();
 
         $this->assertCount(2, $results);
     }
@@ -65,10 +65,10 @@ class SongTest extends TestCase
         Song::factory()->create(['title' => 'Amazing Song']);
         Song::factory()->create(['title' => 'AMAZING TRACK']);
 
-        $results = Song::search('AMAZING')->get();
+        $results = Song::query()->filterBySearch('AMAZING')->get();
         $this->assertCount(2, $results);
 
-        $results = Song::search('amazing')->get();
+        $results = Song::query()->filterBySearch('amazing')->get();
         $this->assertCount(2, $results);
     }
 

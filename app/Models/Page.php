@@ -7,10 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Laravel\Scout\Searchable;
 
 class Page extends Model
 {
     use HasFactory;
+    use Searchable;
 
     protected $fillable = [
         'content',
@@ -74,5 +76,33 @@ class Page extends Model
     {
         return $this->belongsToMany(Collage::class, 'collage_page')
             ->withTimestamps();
+    }
+
+    /**
+     * Get the indexable data array for the model.
+     *
+     * @return array<string, mixed>
+     */
+    public function toSearchableArray(): array
+    {
+        // Ensure book relationship is loaded
+        if (! $this->relationLoaded('book')) {
+            $this->load('book');
+        }
+
+        return [
+            'id' => $this->id,
+            'content' => $this->content,
+            'book_title' => $this->book ? $this->book->title : null,
+            'book_id' => $this->book_id,
+        ];
+    }
+
+    /**
+     * Get the name of the index associated with the model.
+     */
+    public function searchableAs(): string
+    {
+        return 'pages';
     }
 }

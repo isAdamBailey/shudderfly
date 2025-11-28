@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Laravel\Scout\Searchable;
 
 class Song extends Model
 {
     use HasFactory;
+    use Searchable;
 
     protected $fillable = [
         'youtube_video_id',
@@ -30,11 +32,34 @@ class Song extends Model
     ];
 
     /**
-     * Scope for searching songs by title
+     * Scope for filtering songs by title or description (database query)
+     * Note: Use Song::search() for Meilisearch-based search via Scout
      */
-    public function scopeSearch($query, $search)
+    public function scopeFilterBySearch($query, $search)
     {
         return $query->where('title', 'LIKE', '%'.$search.'%')
             ->orWhere('description', 'LIKE', '%'.$search.'%');
+    }
+
+    /**
+     * Get the indexable data array for the model.
+     *
+     * @return array<string, mixed>
+     */
+    public function toSearchableArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'title' => $this->title,
+            'description' => $this->description,
+        ];
+    }
+
+    /**
+     * Get the name of the index associated with the model.
+     */
+    public function searchableAs(): string
+    {
+        return 'songs';
     }
 }

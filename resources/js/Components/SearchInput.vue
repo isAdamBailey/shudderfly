@@ -47,9 +47,13 @@
           name="search"
           :placeholder="searchPlaceholder"
           type="search"
-          @input="search = $event.target.value"
+          @input="handleInput"
+          @focus="handleFocus"
+          @blur="handleBlur"
           @keyup.esc="clearSearch"
-          @keyup.enter="searchMethod"
+          @keyup.enter="handleEnter"
+          @keydown.down.prevent="navigateSuggestions(1)"
+          @keydown.up.prevent="navigateSuggestions(-1)"
         />
 
         <!-- Error Indicator inside the input -->
@@ -62,6 +66,31 @@
             :title="lastError"
           >
             !
+          </div>
+        </div>
+
+        <!-- Suggestions Dropdown -->
+        <div
+          v-if="
+            showSuggestions && suggestions.length > 0 && search && !isListening
+          "
+          class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-96 overflow-y-auto"
+        >
+          <div
+            v-for="(suggestion, index) in suggestions"
+            :key="`${suggestion.type}-${suggestion.id}`"
+            class="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+            :class="{
+              'bg-blue-100 dark:bg-blue-700': index === selectedIndex
+            }"
+            @mousedown.prevent="selectSuggestion(suggestion)"
+          >
+            <div class="font-semibold text-gray-900 dark:text-white">
+              {{ getSuggestionTitle(suggestion) }}
+            </div>
+            <div class="text-sm text-gray-600 dark:text-gray-400">
+              {{ getSuggestionSubtitle(suggestion) }}
+            </div>
           </div>
         </div>
       </div>
@@ -117,6 +146,7 @@
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { router, usePage } from "@inertiajs/vue3";
 import { useSpeechRecognition } from "@vueuse/core";
+import { debounce } from "lodash";
 import { computed, onUnmounted, ref, watch } from "vue";
 
 const { speak } = useSpeechSynthesis();
@@ -128,6 +158,10 @@ const props = defineProps({
   initialTarget: {
     type: String,
     default: null // 'books' | 'uploads'
+  },
+  showTargetToggle: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -148,6 +182,10 @@ const isProcessing = computed(() => isListening.value);
 let search = ref(usePage().props?.search || null);
 let filter = ref(usePage().props?.filter || null);
 let target = ref(getDefaultTarget());
+
+const suggestions = ref([]);
+const showSuggestions = ref(false);
+const selectedIndex = ref(-1);
 
 const isBooksTarget = computed(() => target.value === "books");
 const isUploadsTarget = computed(() => target.value === "uploads");
@@ -172,6 +210,11 @@ const searchPlaceholder = computed(() => {
 const displayValue = computed(() => {
   if (isListening.value && currentTranscript.value) {
     return currentTranscript.value;
+  }
+  // Show selected suggestion in input if navigating with arrows
+  if (selectedIndex.value !== -1 && showSuggestions.value) {
+    const selected = suggestions.value[selectedIndex.value];
+    return getSuggestionTitle(selected);
   }
   if (finalTranscript.value && !search.value) {
     return finalTranscript.value;
@@ -227,11 +270,41 @@ watch(result, (newResult) => {
   }
 });
 
-watch(search, () => {
-  if (!search.value) {
+watch(search, (newSearch) => {
+  if (!newSearch) {
     searchMethod();
+    suggestions.value = [];
+    showSuggestions.value = false;
+  } else if (!isListening.value && newSearch && newSearch.trim().length >= 2) {
+    // Fetch suggestions when search is set from voice recognition or other sources
+    // (handleInput calls fetchSuggestions directly to avoid timing issues)
+    fetchSuggestions(newSearch);
   }
 });
+
+// Debounced function to fetch suggestions
+const fetchSuggestions = debounce(async (query) => {
+  if (!query || query.trim().length < 2) {
+    suggestions.value = [];
+    showSuggestions.value = false;
+    return;
+  }
+
+  try {
+    const endpoint =
+      target.value === "uploads" ? "/api/search/uploads" : "/api/search/books";
+    const response = await window.axios.get(endpoint, {
+      params: { q: query.trim() }
+    });
+    suggestions.value = response.data || [];
+    showSuggestions.value = suggestions.value.length > 0;
+    selectedIndex.value = -1; // Reset selected index
+  } catch (error) {
+    console.error("Error fetching suggestions:", error);
+    suggestions.value = [];
+    showSuggestions.value = false;
+  }
+}, 300); // 300ms debounce
 
 const searchMethod = () => {
   let routeName;
@@ -251,11 +324,16 @@ const searchMethod = () => {
     { search: search.value || null, filter: filter.value || null },
     { preserveState: true }
   );
+  showSuggestions.value = false; // Hide suggestions after full search
 };
 
 function setTarget(newTarget) {
   if (newTarget === target.value) return;
   target.value = newTarget;
+  // Refetch suggestions when target changes
+  if (search.value) {
+    fetchSuggestions(search.value);
+  }
 }
 
 function getDefaultTarget() {
@@ -284,6 +362,7 @@ const toggleVoiceRecognition = async () => {
       stop();
     } else {
       start();
+      showSuggestions.value = false; // Hide suggestions when listening
     }
   } catch (error) {
     console.error("Voice recognition error:", error);
@@ -293,6 +372,112 @@ const toggleVoiceRecognition = async () => {
 
 const clearSearch = () => {
   search.value = null;
+  suggestions.value = [];
+  showSuggestions.value = false;
+};
+
+// Handle input event to update search value and fetch suggestions
+const handleInput = (event) => {
+  search.value = event.target.value;
+  selectedIndex.value = -1; // Reset selected index on input
+
+  if (search.value && search.value.trim().length >= 2 && !isListening.value) {
+    fetchSuggestions(search.value);
+    showSuggestions.value = true; // Show suggestions as soon as user types
+  } else {
+    suggestions.value = [];
+    showSuggestions.value = false;
+  }
+};
+
+// Handle focus event to show suggestions if there's a search query
+const handleFocus = () => {
+  if (search.value && suggestions.value.length > 0) {
+    showSuggestions.value = true;
+  }
+};
+
+// Handle blur event to hide suggestions after a short delay
+const handleBlur = () => {
+  // Use a timeout to allow click events on suggestions to register
+  setTimeout(() => {
+    showSuggestions.value = false;
+  }, 150);
+};
+
+// Navigate suggestions with arrow keys
+const navigateSuggestions = (direction) => {
+  if (!showSuggestions.value || suggestions.value.length === 0) {
+    return;
+  }
+
+  let newIndex = selectedIndex.value + direction;
+
+  if (newIndex < 0) {
+    newIndex = suggestions.value.length - 1; // Wrap around to last item
+  } else if (newIndex >= suggestions.value.length) {
+    newIndex = 0; // Wrap around to first item
+  }
+  selectedIndex.value = newIndex;
+};
+
+// Select a suggestion (either by click or Enter key)
+const selectSuggestion = (suggestion) => {
+  showSuggestions.value = false;
+  // Don't update search.value here as it triggers unnecessary API calls before navigation
+  if (suggestion.type === "book") {
+    // eslint-disable-next-line no-undef
+    router.get(route("books.show", suggestion.slug));
+  } else if (suggestion.type === "page") {
+    // eslint-disable-next-line no-undef
+    router.get(route("pages.show", suggestion.id));
+  } else if (suggestion.type === "song") {
+    // eslint-disable-next-line no-undef
+    router.get(route("music.show", suggestion.id));
+  }
+};
+
+const handleEnter = () => {
+  if (
+    showSuggestions.value &&
+    suggestions.value.length > 0 &&
+    selectedIndex.value >= 0
+  ) {
+    selectSuggestion(suggestions.value[selectedIndex.value]);
+  } else {
+    searchMethod(); // Perform full search if no suggestion is selected or shown
+  }
+};
+
+const getSuggestionTitle = (suggestion) => {
+  if (suggestion.type === "book") {
+    return suggestion.title;
+  } else if (suggestion.type === "page") {
+    return suggestion.content
+      ? suggestion.content.substring(0, 60) +
+          (suggestion.content.length > 60 ? "..." : "")
+      : "Page";
+  } else if (suggestion.type === "song") {
+    return suggestion.title;
+  }
+  return "";
+};
+
+const getSuggestionSubtitle = (suggestion) => {
+  if (suggestion.type === "book") {
+    return suggestion.excerpt
+      ? suggestion.excerpt.substring(0, 80) +
+          (suggestion.excerpt.length > 80 ? "..." : "")
+      : "";
+  } else if (suggestion.type === "page") {
+    return suggestion.book_title || "";
+  } else if (suggestion.type === "song") {
+    return suggestion.description
+      ? suggestion.description.substring(0, 80) +
+          (suggestion.description.length > 80 ? "..." : "")
+      : "";
+  }
+  return "";
 };
 
 // Cleanup timeout on unmount
