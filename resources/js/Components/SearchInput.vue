@@ -146,7 +146,6 @@
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { router, usePage } from "@inertiajs/vue3";
 import { useSpeechRecognition } from "@vueuse/core";
-import axios from "axios";
 import { debounce } from "lodash";
 import { computed, onUnmounted, ref, watch } from "vue";
 
@@ -289,7 +288,7 @@ const fetchSuggestions = debounce(async (query) => {
   try {
     const endpoint =
       target.value === "uploads" ? "/api/search/uploads" : "/api/search/books";
-    const response = await axios.get(endpoint, {
+    const response = await window.axios.get(endpoint, {
       params: { q: query.trim() }
     });
     suggestions.value = response.data || [];
