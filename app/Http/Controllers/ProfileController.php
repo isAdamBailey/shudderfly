@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Http\Controllers\PushNotificationController;
 use App\Mail\ContactAdmins;
 use App\Models\User;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -73,9 +74,6 @@ class ProfileController extends Controller
 
     public function contactAdminsEmail(Request $request): void
     {
-        $request->validate([
-            'message' => 'required|string|max:5000',
-        ]);
         $users = User::permission('admin')->get();
         $sender = $request->user();
         $message = $request->message;
