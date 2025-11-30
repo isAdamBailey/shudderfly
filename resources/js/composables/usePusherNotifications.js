@@ -1,19 +1,34 @@
-import { onMounted, onUnmounted } from "vue";
 import { usePage } from "@inertiajs/vue3";
+import { onMounted, onUnmounted, ref } from "vue";
 
 export function usePusherNotifications() {
   let channel = null;
+  let retryTimeout = null;
+  const maxRetries = 10;
+  // Use ref to ensure each composable instance has its own retry count
+  const retryCount = ref(0);
 
   const setupNotifications = () => {
     // Check if Echo is available and user is authenticated
     if (!window.Echo) {
-      console.warn("Echo is not available");
+      // Echo is initialized asynchronously, retry if not available yet
+      if (retryCount.value < maxRetries) {
+        retryCount.value++;
+        retryTimeout = setTimeout(() => {
+          setupNotifications();
+        }, 500);
+      }
       return;
+    }
+
+    // Clear any pending retry
+    if (retryTimeout) {
+      clearTimeout(retryTimeout);
+      retryTimeout = null;
     }
 
     const user = usePage().props.auth?.user;
     if (!user || !user.id) {
-      console.warn("User is not authenticated");
       return;
     }
 
@@ -33,8 +48,18 @@ export function usePusherNotifications() {
   };
 
   const cleanup = () => {
-    if (channel) {
-      window.Echo.leave(`App.Models.User.${usePage().props.auth?.user?.id}`);
+    // Clear any pending retry
+    if (retryTimeout) {
+      clearTimeout(retryTimeout);
+      retryTimeout = null;
+    }
+
+    if (channel && window.Echo) {
+      try {
+        window.Echo.leave(`App.Models.User.${usePage().props.auth?.user?.id}`);
+      } catch (error) {
+        // Silently fail
+      }
       channel = null;
     }
   };
@@ -52,4 +77,3 @@ export function usePusherNotifications() {
     cleanup
   };
 }
-

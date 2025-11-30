@@ -66,22 +66,35 @@ class PushNotificationController extends Controller
         $subscriptionClass = 'Minishlink\WebPush\Subscription';
         
         if (!class_exists($webPushClass)) {
-            Log::warning('WebPush package not installed. Run: composer require minishlink/web-push');
-            return;
+            return [
+                'error' => 'WebPush package not installed',
+                'sent' => 0,
+                'failed' => 0,
+                'results' => []
+            ];
         }
 
         $subscriptions = PushSubscription::where('user_id', $userId)->get();
 
         if ($subscriptions->isEmpty()) {
-            return ['error' => 'No subscriptions found', 'count' => 0];
+            return [
+                'error' => 'No subscriptions found',
+                'sent' => 0,
+                'failed' => 0,
+                'results' => []
+            ];
         }
 
         $publicKey = config('services.webpush.public_key');
         $privateKey = config('services.webpush.private_key');
 
         if (!$publicKey || !$privateKey) {
-            Log::warning('VAPID keys not configured. Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in .env');
-            return ['error' => 'VAPID keys not configured'];
+            return [
+                'error' => 'VAPID keys not configured',
+                'sent' => 0,
+                'failed' => 0,
+                'results' => []
+            ];
         }
 
         $auth = [
@@ -95,13 +108,33 @@ class PushNotificationController extends Controller
         /** @var \Minishlink\WebPush\WebPush $webPush */
         $webPush = new $webPushClass($auth);
 
+        // Track endpoint to subscription mapping for cleanup
+        $endpointToSubscription = [];
+
         foreach ($subscriptions as $subscription) {
             try {
+                // Decode and validate JSON keys
+                $decodedKeys = json_decode($subscription->keys, true);
+                
+                // Check if JSON decode succeeded and keys are valid
+                if ($decodedKeys === null || json_last_error() !== JSON_ERROR_NONE) {
+                    // Skip this subscription and continue with others
+                    continue;
+                }
+                
+                // Validate that required keys are present
+                if (!isset($decodedKeys['p256dh']) || !isset($decodedKeys['auth'])) {
+                    continue;
+                }
+
                 /** @var \Minishlink\WebPush\Subscription $pushSubscription */
                 $pushSubscription = $subscriptionClass::create([
                     'endpoint' => $subscription->endpoint,
-                    'keys' => json_decode($subscription->keys, true),
+                    'keys' => $decodedKeys,
                 ]);
+
+                // Track this subscription for cleanup
+                $endpointToSubscription[$subscription->endpoint] = $subscription;
 
                 $webPush->queueNotification(
                     $pushSubscription,
@@ -113,7 +146,11 @@ class PushNotificationController extends Controller
                     ])
                 );
             } catch (\Exception $e) {
-                Log::error('Push notification error: ' . $e->getMessage());
+                Log::error('Push notification error: ' . $e->getMessage(), [
+                    'subscription_id' => $subscription->id ?? null,
+                    'user_id' => $subscription->user_id ?? null,
+                    'endpoint' => $subscription->endpoint ?? null
+                ]);
             }
         }
 
@@ -124,9 +161,21 @@ class PushNotificationController extends Controller
             } else {
                 $results[] = ['success' => false, 'endpoint' => $report->getEndpoint(), 'reason' => $report->getReason()];
                 Log::error('Push notification failed: ' . $report->getReason());
-                // Remove invalid subscriptions
+                // Remove invalid subscriptions - use both user_id and endpoint to match composite unique constraint
                 if ($report->isSubscriptionExpired()) {
-                    PushSubscription::where('endpoint', $report->getEndpoint())->delete();
+                    $endpoint = $report->getEndpoint();
+                    if (isset($endpointToSubscription[$endpoint])) {
+                        $subscription = $endpointToSubscription[$endpoint];
+                        PushSubscription::where('user_id', $subscription->user_id)
+                            ->where('endpoint', $endpoint)
+                            ->delete();
+                    } else {
+                        // Fallback: delete by endpoint only if mapping not found (shouldn't happen)
+                        // But since we're in the context of a specific userId, we can filter by that
+                        PushSubscription::where('user_id', $userId)
+                            ->where('endpoint', $endpoint)
+                            ->delete();
+                    }
                 }
             }
         }

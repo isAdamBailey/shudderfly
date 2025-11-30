@@ -16,7 +16,6 @@ export function usePushNotifications() {
   // Register service worker
   const registerServiceWorker = async () => {
     if (!checkSupport()) {
-      console.warn("Push notifications are not supported in this browser");
       return false;
     }
 
@@ -25,7 +24,6 @@ export function usePushNotifications() {
       registration.value = reg;
       return true;
     } catch (error) {
-      console.error("Service Worker registration failed:", error);
       return false;
     }
   };
@@ -33,7 +31,6 @@ export function usePushNotifications() {
   // Request notification permission
   const requestPermission = async () => {
     if (!("Notification" in window)) {
-      console.warn("This browser does not support notifications");
       return false;
     }
 
@@ -50,16 +47,12 @@ export function usePushNotifications() {
 
     const permissionGranted = await requestPermission();
     if (!permissionGranted) {
-      console.warn("Notification permission denied");
       return false;
     }
 
     // Check if VAPID key is configured
     const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
     if (!vapidKey || vapidKey.trim() === "") {
-      console.error(
-        "VITE_VAPID_PUBLIC_KEY is not set in environment variables"
-      );
       throw new Error(
         "Push notification key is not configured. Please set VITE_VAPID_PUBLIC_KEY in your .env file."
       );
@@ -68,7 +61,6 @@ export function usePushNotifications() {
     // Validate key format
     const trimmedKey = vapidKey.trim();
     if (trimmedKey.length < 80 || trimmedKey.length > 200) {
-      console.error("VAPID key length is invalid:", trimmedKey.length);
       throw new Error(
         `Invalid VAPID key length (${trimmedKey.length} chars). Expected 80-200 characters. Make sure you generated the key correctly using 'npx web-push generate-vapid-keys'.`
       );
@@ -80,16 +72,11 @@ export function usePushNotifications() {
 
       // Validate the key is the correct length (65 bytes for P-256 public key)
       if (applicationServerKey.length !== 65) {
-        console.error(
-          "Converted key length is invalid:",
-          applicationServerKey.length
-        );
         throw new Error(
           `Invalid VAPID key format. Expected 65 bytes after conversion, got ${applicationServerKey.length}. Make sure you're using the PUBLIC key (not private) from 'npx web-push generate-vapid-keys'.`
         );
       }
     } catch (error) {
-      console.error("Failed to convert VAPID key:", error);
       throw new Error(
         `Invalid VAPID public key format: ${error.message}. Make sure you're using the public key from 'npx web-push generate-vapid-keys' and it's in base64url format (no spaces, no newlines).`
       );
@@ -101,21 +88,41 @@ export function usePushNotifications() {
         applicationServerKey: applicationServerKey
       });
 
+      // Validate that both keys exist
+      const p256dhKey = sub.getKey("p256dh");
+      const authKey = sub.getKey("auth");
+
+      if (!p256dhKey || !authKey) {
+        // Unsubscribe from browser if keys are missing
+        await sub.unsubscribe();
+        throw new Error(
+          "Push subscription keys are missing. Please try subscribing again."
+        );
+      }
+
+      // Send subscription to backend before storing locally
+      // If backend fails, we'll rollback the browser subscription
+      try {
+        await axios.post("/api/push/subscribe", {
+          endpoint: sub.endpoint,
+          keys: {
+            p256dh: arrayBufferToBase64(p256dhKey),
+            auth: arrayBufferToBase64(authKey)
+          }
+        });
+      } catch (backendError) {
+        // Backend failed - rollback browser subscription
+        await sub.unsubscribe();
+        throw new Error(
+          "Failed to save subscription to server. Please try again."
+        );
+      }
+
+      // Only store subscription locally after backend succeeds
       subscription.value = sub;
-
-      // Send subscription to backend
-      await axios.post("/api/push/subscribe", {
-        endpoint: sub.endpoint,
-        keys: {
-          p256dh: arrayBufferToBase64(sub.getKey("p256dh")),
-          auth: arrayBufferToBase64(sub.getKey("auth"))
-        }
-      });
-
       isSubscribed.value = true;
       return true;
     } catch (error) {
-      console.error("Subscription failed:", error);
       return false;
     }
   };
@@ -133,16 +140,47 @@ export function usePushNotifications() {
     }
 
     if (subscription.value) {
+      const endpoint = subscription.value.endpoint;
+      const sub = subscription.value;
       try {
-        await subscription.value.unsubscribe();
-        await axios.post("/api/push/unsubscribe", {
-          endpoint: subscription.value.endpoint
-        });
+        // First, unsubscribe from browser
+        // If this fails, we don't modify backend, keeping state consistent
+        await sub.unsubscribe();
+
+        // Only delete from backend if browser unsubscribe succeeds
+        try {
+          await axios.post("/api/push/unsubscribe", {
+            endpoint: endpoint
+          });
+        } catch (backendError) {
+          // Backend deletion failed, but browser is already unsubscribed
+          // The subscription will be cleaned up on next sync or when user re-subscribes
+        }
+
         subscription.value = null;
         isSubscribed.value = false;
         return true;
       } catch (error) {
-        console.error("Unsubscription failed:", error);
+        // Browser unsubscribe failed - check if subscription still exists
+        if (registration.value) {
+          try {
+            const currentSub =
+              await registration.value.pushManager.getSubscription();
+            if (currentSub && currentSub.endpoint === endpoint) {
+              // Subscription still exists, restore state
+              subscription.value = currentSub;
+              isSubscribed.value = true;
+            } else {
+              // Subscription was removed, clear state
+              subscription.value = null;
+              isSubscribed.value = false;
+            }
+          } catch (checkError) {
+            // Can't check subscription, clear state
+            subscription.value = null;
+            isSubscribed.value = false;
+          }
+        }
         return false;
       }
     }
@@ -162,7 +200,7 @@ export function usePushNotifications() {
       subscription.value = sub;
       isSubscribed.value = !!sub;
     } catch (error) {
-      console.error("Error checking subscription:", error);
+      // Silently fail
     }
   };
 
@@ -212,7 +250,6 @@ export function usePushNotifications() {
     isSupported,
     isSubscribed,
     subscribe,
-    unsubscribe,
-    checkSubscription
+    unsubscribe
   };
 }
