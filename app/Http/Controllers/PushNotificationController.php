@@ -29,7 +29,7 @@ class PushNotificationController extends Controller
                 'endpoint' => $request->endpoint,
             ],
             [
-                'keys' => json_encode($request->keys),
+                'keys' => $request->keys,
             ]
         );
 
