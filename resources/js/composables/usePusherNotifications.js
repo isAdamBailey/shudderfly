@@ -38,11 +38,31 @@ export function usePusherNotifications() {
     // Listen for notifications
     channel.value.notification((notification) => {
       if ("Notification" in window && Notification.permission === "granted") {
-        new Notification(notification.title, {
-          body: notification.body,
-          icon: notification.icon || "/android-chrome-192x192.png",
-          data: notification.data
-        });
+        if ("serviceWorker" in navigator) {
+          navigator.serviceWorker.getRegistration().then(registration => {
+            if (registration) {
+              registration.showNotification(notification.title, {
+                body: notification.body,
+                icon: notification.icon || "/android-chrome-192x192.png",
+                data: notification.data
+              });
+            } else {
+              // Fallback to Notification constructor if registration is not available
+              new Notification(notification.title, {
+                body: notification.body,
+                icon: notification.icon || "/android-chrome-192x192.png",
+                data: notification.data
+              });
+            }
+          });
+        } else {
+          // Fallback to Notification constructor if serviceWorker is not available
+          new Notification(notification.title, {
+            body: notification.body,
+            icon: notification.icon || "/android-chrome-192x192.png",
+            data: notification.data
+          });
+        }
       }
     });
   };
