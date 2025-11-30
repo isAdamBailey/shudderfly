@@ -10,8 +10,6 @@
           </h2>
         </Link>
 
-        <NotificationToggle />
-
         <!-- Search moved to global layout -->
       </div>
       <div v-if="canEditPages" class="mb-3 w-full md:w-1/2 mx-auto">
@@ -71,7 +69,6 @@
 
 <script setup>
 import Button from "@/Components/Button.vue";
-import NotificationToggle from "@/Components/NotificationToggle.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 import { usePermissions } from "@/composables/permissions";

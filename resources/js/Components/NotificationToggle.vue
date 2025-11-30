@@ -44,9 +44,7 @@ const handleUnsubscribe = async () => {
 </script>
 
 <template>
-  <div class="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
-    <h3 class="text-lg font-semibold mb-4">Push Notifications</h3>
-
+  <div>
     <div v-if="!isSupported" class="text-sm text-gray-600 dark:text-gray-400">
       Push notifications are not supported in this browser.
     </div>
@@ -57,8 +55,8 @@ const handleUnsubscribe = async () => {
         class="mb-4 p-2 rounded"
         :class="
           message.includes('Success')
-            ? 'bg-green-100 text-green-800'
-            : 'bg-red-100 text-red-800'
+            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
         "
       >
         {{ message }}
