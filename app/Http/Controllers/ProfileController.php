@@ -74,10 +74,31 @@ class ProfileController extends Controller
     public function contactAdminsEmail(Request $request): void
     {
         $users = User::permission('admin')->get();
+        $sender = $request->user();
+        $message = $request->message;
 
         foreach ($users as $user) {
+            // Send email
             Mail::to($user->email)
-                ->send(new ContactAdmins(auth()->user(), $request->message));
+                ->send(new ContactAdmins($sender, $message));
+
+            // Send push notification
+            $title = 'Message from ' . $sender->name;
+            // Truncate message for push notification (max ~120 chars for body)
+            $body = strlen($message) > 120 ? substr($message, 0, 117) . '...' : $message;
+            
+            PushNotificationController::sendNotification(
+                $user->id,
+                $title,
+                $body,
+                [
+                    'type' => 'contact_admin',
+                    'sender_id' => $sender->id,
+                    'sender_name' => $sender->name,
+                    'message' => $message,
+                    'url' => route('profile.edit'),
+                ]
+            );
         }
     }
 }
