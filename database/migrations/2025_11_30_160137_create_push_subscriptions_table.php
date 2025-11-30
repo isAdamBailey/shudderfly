@@ -22,7 +22,10 @@ return new class extends Migration
         
         // Create unique index with prefix on endpoint to stay within MySQL key length limit (3072 bytes)
         // Using prefix of 255 chars (max 1020 bytes with utf8mb4) + user_id (8 bytes) = 1028 bytes < 3072
-        DB::statement('ALTER TABLE `push_subscriptions` ADD UNIQUE `push_subscriptions_user_id_endpoint_unique` (`user_id`, `endpoint`(255))');
+        Schema::table('push_subscriptions', function (Blueprint $table) {
+            // Note: DB::raw('endpoint(255)') is MySQL-specific. For other DBs, adjust as needed.
+            $table->unique(['user_id', DB::raw('endpoint(255)')], 'push_subscriptions_user_id_endpoint_unique');
+        });
     }
 
     /**
