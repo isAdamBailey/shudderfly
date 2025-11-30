@@ -14,7 +14,7 @@ class PushNotificationController extends Controller
     public function subscribe(Request $request)
     {
         $request->validate([
-            'endpoint' => 'required|url',
+            'endpoint' => 'required|string|max:1000',
             'keys' => 'required|array',
             'keys.p256dh' => 'required|string',
             'keys.auth' => 'required|string',
