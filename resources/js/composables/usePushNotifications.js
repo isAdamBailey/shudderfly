@@ -121,9 +121,11 @@ export function usePushNotifications() {
       // Only store subscription locally after backend succeeds
       subscription.value = sub;
       isSubscribed.value = true;
-      return true;
+      return { success: true };
     } catch (error) {
-      return false;
+      // Log the error for debugging (optional)
+      console.error("Push subscription error:", error);
+      return { success: false, error: error?.message || String(error) };
     }
   };
 
