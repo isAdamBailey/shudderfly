@@ -113,24 +113,15 @@ class PushNotificationController extends Controller
 
         foreach ($subscriptions as $subscription) {
             try {
-                // Decode and validate JSON keys
-                $decodedKeys = json_decode($subscription->keys, true);
-                
-                // Check if JSON decode succeeded and keys are valid
-                if ($decodedKeys === null || json_last_error() !== JSON_ERROR_NONE) {
-                    // Skip this subscription and continue with others
-                    continue;
-                }
-                
                 // Validate that required keys are present
-                if (!isset($decodedKeys['p256dh']) || !isset($decodedKeys['auth'])) {
+                if (!isset($subscription->keys['p256dh']) || !isset($subscription->keys['auth'])) {
                     continue;
                 }
 
                 /** @var \Minishlink\WebPush\Subscription $pushSubscription */
                 $pushSubscription = $subscriptionClass::create([
                     'endpoint' => $subscription->endpoint,
-                    'keys' => $decodedKeys,
+                    'keys' => $subscription->keys,
                 ]);
 
                 // Track this subscription for cleanup
