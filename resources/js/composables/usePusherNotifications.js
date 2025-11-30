@@ -2,8 +2,8 @@ import { usePage } from "@inertiajs/vue3";
 import { onMounted, onUnmounted, ref } from "vue";
 
 export function usePusherNotifications() {
-  let channel = null;
-  let retryTimeout = null;
+  const channel = ref(null);
+  const retryTimeout = ref(null);
   const maxRetries = 10;
   // Use ref to ensure each composable instance has its own retry count
   const retryCount = ref(0);
@@ -14,7 +14,7 @@ export function usePusherNotifications() {
       // Echo is initialized asynchronously, retry if not available yet
       if (retryCount.value < maxRetries) {
         retryCount.value++;
-        retryTimeout = setTimeout(() => {
+        retryTimeout.value = setTimeout(() => {
           setupNotifications();
         }, 500);
       }
@@ -22,9 +22,9 @@ export function usePusherNotifications() {
     }
 
     // Clear any pending retry
-    if (retryTimeout) {
-      clearTimeout(retryTimeout);
-      retryTimeout = null;
+    if (retryTimeout.value) {
+      clearTimeout(retryTimeout.value);
+      retryTimeout.value = null;
     }
 
     const user = usePage().props.auth?.user;
@@ -33,10 +33,10 @@ export function usePusherNotifications() {
     }
 
     // Subscribe to user's private channel
-    channel = window.Echo.private(`App.Models.User.${user.id}`);
+    channel.value = window.Echo.private(`App.Models.User.${user.id}`);
 
     // Listen for notifications
-    channel.notification((notification) => {
+    channel.value.notification((notification) => {
       if ("Notification" in window && Notification.permission === "granted") {
         new Notification(notification.title, {
           body: notification.body,
@@ -49,18 +49,18 @@ export function usePusherNotifications() {
 
   const cleanup = () => {
     // Clear any pending retry
-    if (retryTimeout) {
-      clearTimeout(retryTimeout);
-      retryTimeout = null;
+    if (retryTimeout.value) {
+      clearTimeout(retryTimeout.value);
+      retryTimeout.value = null;
     }
 
-    if (channel && window.Echo) {
+    if (channel.value && window.Echo) {
       try {
         window.Echo.leave(`App.Models.User.${usePage().props.auth?.user?.id}`);
       } catch (error) {
         // Silently fail
       }
-      channel = null;
+      channel.value = null;
     }
   };
 
