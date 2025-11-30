@@ -89,7 +89,7 @@ class ProfileController extends Controller
             // Send push notification
             $title = 'Message from ' . $sender->name;
             // Truncate message for push notification (max ~120 chars for body)
-            $body = strlen($message) > 120 ? substr($message, 0, 117) . '...' : $message;
+            $body = mb_strlen($message, 'UTF-8') > 120 ? mb_substr($message, 0, 117, 'UTF-8') . '...' : $message;
             
             PushNotificationController::sendNotification(
                 $user->id,
