@@ -22,6 +22,7 @@
         "meilisearch/meilisearch-php": "^1.16",
         "minishlink/web-push": "^9.0",
         "pbmedia/laravel-ffmpeg": "^8.5",
+        "pusher/pusher-php-server": "^7.2",
         "spatie/laravel-permission": "^6.0",
         "spatie/laravel-sluggable": "^3.4.2",
         "tightenco/ziggy": "^1.5"

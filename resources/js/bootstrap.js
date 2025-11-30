@@ -19,29 +19,23 @@ window.axios.defaults.withCredentials = true;
  * allows your team to easily build robust real-time web applications.
  */
 
-// import Echo from 'laravel-echo';
+// Only initialize Pusher/Echo if the required environment variables are set
+if (import.meta.env.VITE_PUSHER_APP_KEY) {
+  import("laravel-echo").then((EchoModule) => {
+    import("pusher-js").then((PusherModule) => {
+      window.Pusher = PusherModule.default;
 
-// import Pusher from 'pusher-js';
-// window.Pusher = Pusher;
-
-// window.Echo = new Echo({
-//     broadcaster: 'pusher',
-//     key: import.meta.env.VITE_PUSHER_APP_KEY,
-//     wsHost: import.meta.env.VITE_PUSHER_HOST ? import.meta.env.VITE_PUSHER_HOST : `ws-${import.meta.env.VITE_PUSHER_APP_CLUSTER}.pusher.com`,
-//     wsPort: import.meta.env.VITE_PUSHER_PORT ?? 80,
-//     wssPort: import.meta.env.VITE_PUSHER_PORT ?? 443,
-//     forceTLS: (import.meta.env.VITE_PUSHER_SCHEME ?? 'https') === 'https',
-//     enabledTransports: ['ws', 'wss'],
-// });
-
-// Example: Listen to Pusher events and show native notifications
-// window.Echo.private(`App.Models.User.${userId}`)
-//     .notification((notification) => {
-//         if ('Notification' in window && Notification.permission === 'granted') {
-//             new Notification(notification.title, {
-//                 body: notification.body,
-//                 icon: notification.icon || '/android-chrome-192x192.png',
-//                 data: notification.data,
-//             });
-//         }
-//     });
+      window.Echo = new EchoModule.default({
+        broadcaster: "pusher",
+        key: import.meta.env.VITE_PUSHER_APP_KEY,
+        wsHost: import.meta.env.VITE_PUSHER_HOST
+          ? import.meta.env.VITE_PUSHER_HOST
+          : `ws-${import.meta.env.VITE_PUSHER_APP_CLUSTER || "mt1"}.pusher.com`,
+        wsPort: import.meta.env.VITE_PUSHER_PORT ?? 80,
+        wssPort: import.meta.env.VITE_PUSHER_PORT ?? 443,
+        forceTLS: (import.meta.env.VITE_PUSHER_SCHEME ?? "https") === "https",
+        enabledTransports: ["ws", "wss"]
+      });
+    });
+  });
+}

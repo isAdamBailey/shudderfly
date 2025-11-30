@@ -26,7 +26,7 @@ self.addEventListener('notificationclick', function(event) {
     const urlToOpen = event.notification.data.url || '/';
 
     event.waitUntil(
-        clients.matchAll({
+        self.clients.matchAll({
             type: 'window',
             includeUncontrolled: true
         }).then(function(clientList) {
@@ -38,8 +38,8 @@ self.addEventListener('notificationclick', function(event) {
                 }
             }
             // If not, open a new window/tab
-            if (clients.openWindow) {
-                return clients.openWindow(urlToOpen);
+            if (self.clients.openWindow) {
+                return self.clients.openWindow(urlToOpen);
             }
         })
     );
