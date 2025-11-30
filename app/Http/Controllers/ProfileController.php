@@ -74,9 +74,12 @@ class ProfileController extends Controller
 
     public function contactAdminsEmail(Request $request): void
     {
+        $validated = $request->validate([
+            'message' => 'required|string|max:1000',
+        ]);
         $users = User::permission('admin')->get();
         $sender = $request->user();
-        $message = $request->message;
+        $message = $validated['message'];
 
         foreach ($users as $user) {
             // Send email
