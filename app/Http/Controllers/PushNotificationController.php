@@ -42,7 +42,7 @@ class PushNotificationController extends Controller
     public function unsubscribe(Request $request)
     {
         $request->validate([
-            'endpoint' => 'required|url',
+            'endpoint' => 'required|string|max:1000',
         ]);
 
         $user = $request->user();
