@@ -55,9 +55,9 @@ class PushNotificationController extends Controller
     }
 
     /**
-     * Send a push notification to a user
-     * This can be called from your Laravel backend when Pusher events occur
-     * 
+     * Send a Web Push API notification to a user's browser using the minishlink/web-push library.
+     *
+     * This method sends browser push notifications, not Pusher notifications.
      * Requires: composer require minishlink/web-push
      */
     public static function sendNotification($userId, $title, $body, $data = [])
