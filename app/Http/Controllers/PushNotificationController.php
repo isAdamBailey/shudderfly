@@ -73,7 +73,7 @@ class PushNotificationController extends Controller
         $subscriptions = PushSubscription::where('user_id', $userId)->get();
 
         if ($subscriptions->isEmpty()) {
-            return;
+            return ['error' => 'No subscriptions found', 'count' => 0];
         }
 
         $publicKey = config('services.webpush.public_key');
@@ -81,7 +81,7 @@ class PushNotificationController extends Controller
 
         if (!$publicKey || !$privateKey) {
             Log::warning('VAPID keys not configured. Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in .env');
-            return;
+            return ['error' => 'VAPID keys not configured'];
         }
 
         $auth = [
@@ -117,8 +117,12 @@ class PushNotificationController extends Controller
             }
         }
 
+        $results = [];
         foreach ($webPush->flush() as $report) {
-            if (!$report->isSuccess()) {
+            if ($report->isSuccess()) {
+                $results[] = ['success' => true, 'endpoint' => $report->getEndpoint()];
+            } else {
+                $results[] = ['success' => false, 'endpoint' => $report->getEndpoint(), 'reason' => $report->getReason()];
                 Log::error('Push notification failed: ' . $report->getReason());
                 // Remove invalid subscriptions
                 if ($report->isSubscriptionExpired()) {
@@ -126,6 +130,12 @@ class PushNotificationController extends Controller
                 }
             }
         }
+        
+        return [
+            'sent' => count(array_filter($results, fn($r) => $r['success'])),
+            'failed' => count(array_filter($results, fn($r) => !$r['success'])),
+            'results' => $results
+        ];
     }
 }
 

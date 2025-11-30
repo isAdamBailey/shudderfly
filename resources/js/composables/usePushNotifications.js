@@ -23,7 +23,6 @@ export function usePushNotifications() {
     try {
       const reg = await navigator.serviceWorker.register("/sw.js");
       registration.value = reg;
-      console.log("Service Worker registered");
       return true;
     } catch (error) {
       console.error("Service Worker registration failed:", error);
@@ -55,12 +54,51 @@ export function usePushNotifications() {
       return false;
     }
 
+    // Check if VAPID key is configured
+    const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+    if (!vapidKey || vapidKey.trim() === "") {
+      console.error(
+        "VITE_VAPID_PUBLIC_KEY is not set in environment variables"
+      );
+      throw new Error(
+        "Push notification key is not configured. Please set VITE_VAPID_PUBLIC_KEY in your .env file."
+      );
+    }
+
+    // Validate key format
+    const trimmedKey = vapidKey.trim();
+    if (trimmedKey.length < 80 || trimmedKey.length > 200) {
+      console.error("VAPID key length is invalid:", trimmedKey.length);
+      throw new Error(
+        `Invalid VAPID key length (${trimmedKey.length} chars). Expected 80-200 characters. Make sure you generated the key correctly using 'npx web-push generate-vapid-keys'.`
+      );
+    }
+
+    let applicationServerKey;
+    try {
+      applicationServerKey = urlBase64ToUint8Array(trimmedKey);
+
+      // Validate the key is the correct length (65 bytes for P-256 public key)
+      if (applicationServerKey.length !== 65) {
+        console.error(
+          "Converted key length is invalid:",
+          applicationServerKey.length
+        );
+        throw new Error(
+          `Invalid VAPID key format. Expected 65 bytes after conversion, got ${applicationServerKey.length}. Make sure you're using the PUBLIC key (not private) from 'npx web-push generate-vapid-keys'.`
+        );
+      }
+    } catch (error) {
+      console.error("Failed to convert VAPID key:", error);
+      throw new Error(
+        `Invalid VAPID public key format: ${error.message}. Make sure you're using the public key from 'npx web-push generate-vapid-keys' and it's in base64url format (no spaces, no newlines).`
+      );
+    }
+
     try {
       const sub = await registration.value.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(
-          import.meta.env.VITE_VAPID_PUBLIC_KEY
-        )
+        applicationServerKey: applicationServerKey
       });
 
       subscription.value = sub;
@@ -75,7 +113,6 @@ export function usePushNotifications() {
       });
 
       isSubscribed.value = true;
-      console.log("Subscribed to push notifications");
       return true;
     } catch (error) {
       console.error("Subscription failed:", error);
@@ -103,7 +140,6 @@ export function usePushNotifications() {
         });
         subscription.value = null;
         isSubscribed.value = false;
-        console.log("Unsubscribed from push notifications");
         return true;
       } catch (error) {
         console.error("Unsubscription failed:", error);
@@ -132,18 +168,26 @@ export function usePushNotifications() {
 
   // Helper: Convert VAPID key from base64 URL to Uint8Array
   const urlBase64ToUint8Array = (base64String) => {
-    const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-    const base64 = (base64String + padding)
-      .replace(/-/g, "+")
-      .replace(/_/g, "/");
-
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i);
+    if (!base64String || typeof base64String !== "string") {
+      throw new Error("VAPID public key must be a non-empty string");
     }
-    return outputArray;
+
+    try {
+      const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+      const base64 = (base64String + padding)
+        .replace(/-/g, "+")
+        .replace(/_/g, "/");
+
+      const rawData = window.atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      return outputArray;
+    } catch (error) {
+      throw new Error(`Invalid VAPID public key format: ${error.message}`);
+    }
   };
 
   // Helper: Convert ArrayBuffer to base64
