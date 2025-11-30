@@ -36,6 +36,12 @@ if (import.meta.env.VITE_PUSHER_APP_KEY) {
         forceTLS: (import.meta.env.VITE_PUSHER_SCHEME ?? "https") === "https",
         enabledTransports: ["ws", "wss"]
       });
+    }).catch((error) => {
+      console.error("Failed to load pusher-js module:", error);
+      // Graceful degradation: Do not initialize window.Pusher/Echo
     });
+  }).catch((error) => {
+    console.error("Failed to load laravel-echo module:", error);
+    // Graceful degradation: Do not initialize window.Echo
   });
 }
