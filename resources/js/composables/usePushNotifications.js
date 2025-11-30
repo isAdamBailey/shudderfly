@@ -122,6 +122,8 @@ export function usePushNotifications() {
       subscription.value = sub;
       isSubscribed.value = true;
       return true;
+    } catch (error) {
+      return false;
     }
   };
 
