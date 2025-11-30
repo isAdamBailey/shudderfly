@@ -59,9 +59,26 @@ class PushNotificationController extends Controller
      *
      * This method sends browser push notifications, not Pusher notifications.
      * Requires: composer require minishlink/web-push
+     *
+     * @param int $userId
+     * @param string $title
+     * @param string $body
+     * @param array $data Optional associative array of additional data to include in the notification payload.
+     *                    Example: ['url' => 'https://example.com', 'type' => 'message']
+     *                    All keys should be strings, and values should be serializable (string, int, bool, array).
+     * @return array Result of the notification send attempt.
      */
     public static function sendNotification($userId, $title, $body, $data = [])
     {
+        // Validate $data parameter
+        if (!is_array($data)) {
+            return [
+                'error' => 'Invalid $data parameter: must be an array',
+                'sent' => 0,
+                'failed' => 0,
+                'results' => []
+            ];
+        }
         $webPushClass = 'Minishlink\WebPush\WebPush';
         $subscriptionClass = 'Minishlink\WebPush\Subscription';
         
