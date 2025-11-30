@@ -4,6 +4,10 @@ import MusicFlyout from "@/Components/Music/MusicFlyout.vue";
 import SearchInput from "@/Components/SearchInput.vue";
 import Footer from "@/Layouts/Nav/Footer.vue";
 import Navigation from "@/Layouts/Nav/Navigation.vue";
+import { usePusherNotifications } from "@/composables/usePusherNotifications";
+
+// Set up Pusher notifications for authenticated users
+usePusherNotifications();
 </script>
 
 <template>

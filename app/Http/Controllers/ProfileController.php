@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Http\Controllers\PushNotificationController;
 use App\Mail\ContactAdmins;
 use App\Models\User;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -73,11 +74,35 @@ class ProfileController extends Controller
 
     public function contactAdminsEmail(Request $request): void
     {
+        $validated = $request->validate([
+            'message' => 'required|string|max:1000',
+        ]);
         $users = User::permission('admin')->get();
+        $sender = $request->user();
+        $message = $validated['message'];
 
         foreach ($users as $user) {
+            // Send email
             Mail::to($user->email)
-                ->send(new ContactAdmins(auth()->user(), $request->message));
+                ->send(new ContactAdmins($sender, $message));
+
+            // Send push notification
+            $title = 'Message from ' . $sender->name;
+            // Truncate message for push notification (max ~120 chars for body)
+            $body = mb_strlen($message, 'UTF-8') > 120 ? mb_substr($message, 0, 117, 'UTF-8') . '...' : $message;
+            
+            PushNotificationController::sendNotification(
+                $user->id,
+                $title,
+                $body,
+                [
+                    'type' => 'contact_admin',
+                    'sender_id' => $sender->id,
+                    'sender_name' => $sender->name,
+                    'message' => $message,
+                    'url' => route('profile.edit'),
+                ]
+            );
         }
     }
 }
