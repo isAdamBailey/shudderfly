@@ -33,3 +33,15 @@ window.axios.defaults.withCredentials = true;
 //     forceTLS: (import.meta.env.VITE_PUSHER_SCHEME ?? 'https') === 'https',
 //     enabledTransports: ['ws', 'wss'],
 // });
+
+// Example: Listen to Pusher events and show native notifications
+// window.Echo.private(`App.Models.User.${userId}`)
+//     .notification((notification) => {
+//         if ('Notification' in window && Notification.permission === 'granted') {
+//             new Notification(notification.title, {
+//                 body: notification.body,
+//                 icon: notification.icon || '/android-chrome-192x192.png',
+//                 data: notification.data,
+//             });
+//         }
+//     });

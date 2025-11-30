@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\PushNotificationController;
 use App\Http\Controllers\SearchController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -22,4 +23,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/search/books', [SearchController::class, 'searchBooks'])->name('api.search.books');
     Route::get('/search/uploads', [SearchController::class, 'searchUploads'])->name('api.search.uploads');
+    
+    // Push notification routes
+    Route::post('/push/subscribe', [PushNotificationController::class, 'subscribe'])->name('api.push.subscribe');
+    Route::post('/push/unsubscribe', [PushNotificationController::class, 'unsubscribe'])->name('api.push.unsubscribe');
 });
