@@ -13,8 +13,11 @@
         Clear location
       </button>
     </div>
-    <div class="mb-3 text-xs text-gray-500 dark:text-gray-400">
-      <p>You can search for an address above and select from the results, or simply click on the map to drop a pin at that location.</p>
+    <div class="mb-3 text-gray-500 dark:text-gray-400">
+      <p>
+        You can search for an address belowa nd select from the results, or
+        simply click on the map to drop a pin at that location.
+      </p>
     </div>
     <div class="mb-3 relative">
       <div class="flex gap-2">
@@ -33,7 +36,7 @@
           <div
             v-if="showSuggestions && suggestions.length > 0"
             class="absolute z-[9999] w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto"
-            style="z-index: 9999;"
+            style="z-index: 9999"
           >
             <button
               v-for="(suggestion, index) in suggestions"
@@ -42,7 +45,16 @@
               class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700 last:border-b-0"
               @mousedown.prevent="selectSuggestion(suggestion)"
             >
-              <span v-html="suggestion.displayName || suggestion.name || suggestion.html || suggestion.formatted || suggestion.place_name || 'Location'"></span>
+              <span
+                v-html="
+                  suggestion.displayName ||
+                  suggestion.name ||
+                  suggestion.html ||
+                  suggestion.formatted ||
+                  suggestion.place_name ||
+                  'Location'
+                "
+              ></span>
             </button>
           </div>
         </div>
@@ -91,12 +103,16 @@ const props = defineProps({
 // Convert string props to numbers
 const latitude = computed(() => {
   if (props.latitude === null || props.latitude === undefined) return null;
-  return typeof props.latitude === 'string' ? parseFloat(props.latitude) : props.latitude;
+  return typeof props.latitude === "string"
+    ? parseFloat(props.latitude)
+    : props.latitude;
 });
 
 const longitude = computed(() => {
   if (props.longitude === null || props.longitude === undefined) return null;
-  return typeof props.longitude === 'string' ? parseFloat(props.longitude) : props.longitude;
+  return typeof props.longitude === "string"
+    ? parseFloat(props.longitude)
+    : props.longitude;
 });
 
 const emit = defineEmits(["update:latitude", "update:longitude"]);
@@ -129,18 +145,20 @@ const clearLocation = () => {
 const handleInput = async () => {
   showSuggestions.value = true;
   searchError.value = "";
-  
+
   // Clear previous timeout
   if (searchTimeout) {
     clearTimeout(searchTimeout);
   }
-  
+
   // Debounce the search
   searchTimeout = setTimeout(async () => {
     if (searchQuery.value.trim().length >= 3) {
       try {
         if (mapRef.value && mapRef.value.getGeocodeSuggestions) {
-          const results = await mapRef.value.getGeocodeSuggestions(searchQuery.value);
+          const results = await mapRef.value.getGeocodeSuggestions(
+            searchQuery.value
+          );
           console.log("Geocode suggestions received:", results);
           suggestions.value = results || [];
           // Keep suggestions visible if we have results
@@ -168,11 +186,15 @@ const handleBlur = () => {
 };
 
 const selectSuggestion = async (suggestion) => {
-  const suggestionName = suggestion.name || suggestion.html || suggestion.formatted || searchQuery.value;
+  const suggestionName =
+    suggestion.name ||
+    suggestion.html ||
+    suggestion.formatted ||
+    searchQuery.value;
   searchQuery.value = suggestionName;
   showSuggestions.value = false;
   suggestions.value = [];
-  
+
   // If the suggestion has coordinates, use them directly
   if (suggestion.center && suggestion.center.lat && suggestion.center.lng) {
     emit("update:latitude", suggestion.center.lat);
@@ -180,11 +202,11 @@ const selectSuggestion = async (suggestion) => {
     searchQuery.value = "";
     return;
   }
-  
+
   // Otherwise, geocode the selected suggestion
   isSearching.value = true;
   searchError.value = "";
-  
+
   try {
     if (mapRef.value && mapRef.value.geocodeAddress) {
       // Use the suggestion's name or the query
@@ -194,7 +216,9 @@ const selectSuggestion = async (suggestion) => {
       throw new Error("Map not ready");
     }
   } catch (error) {
-    searchError.value = error.message || "Location not found. Please try a different search term.";
+    searchError.value =
+      error.message ||
+      "Location not found. Please try a different search term.";
   } finally {
     isSearching.value = false;
   }
@@ -202,11 +226,11 @@ const selectSuggestion = async (suggestion) => {
 
 const searchLocation = async () => {
   if (!searchQuery.value.trim()) return;
-  
+
   showSuggestions.value = false;
   isSearching.value = true;
   searchError.value = "";
-  
+
   try {
     if (mapRef.value && mapRef.value.geocodeAddress) {
       await mapRef.value.geocodeAddress(searchQuery.value);
@@ -216,10 +240,11 @@ const searchLocation = async () => {
       throw new Error("Map not ready");
     }
   } catch (error) {
-    searchError.value = error.message || "Location not found. Please try a different search term.";
+    searchError.value =
+      error.message ||
+      "Location not found. Please try a different search term.";
   } finally {
     isSearching.value = false;
   }
 };
 </script>
-
