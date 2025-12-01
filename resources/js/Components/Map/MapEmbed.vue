@@ -14,15 +14,16 @@
 </template>
 
 <script setup>
+import { computed } from "vue";
 import Map from "./Map.vue";
 
-defineProps({
+const props = defineProps({
   latitude: {
-    type: Number,
+    type: [Number, String],
     default: null
   },
   longitude: {
-    type: Number,
+    type: [Number, String],
     default: null
   },
   title: {
@@ -33,6 +34,17 @@ defineProps({
     type: String,
     default: ""
   }
+});
+
+// Convert string props to numbers
+const latitude = computed(() => {
+  if (props.latitude === null || props.latitude === undefined) return null;
+  return typeof props.latitude === 'string' ? parseFloat(props.latitude) : props.latitude;
+});
+
+const longitude = computed(() => {
+  if (props.longitude === null || props.longitude === undefined) return null;
+  return typeof props.longitude === 'string' ? parseFloat(props.longitude) : props.longitude;
 });
 </script>
 

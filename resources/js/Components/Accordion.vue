@@ -1,6 +1,7 @@
 <template>
     <div class="bg-white dark:bg-gray-800">
         <button
+            type="button"
             class="w-full flex justify-between items-center text-xl dark:text-gray-100 font-semibold border-b p-6"
             @click="isOpen = !isOpen"
         >

@@ -3,6 +3,7 @@ import BreezeButton from "@/Components/Button.vue";
 import BreezeInput from "@/Components/TextInput.vue";
 import BreezeLabel from "@/Components/InputLabel.vue";
 import MapPicker from "@/Components/Map/MapPicker.vue";
+import Accordion from "@/Components/Accordion.vue";
 import { useForm, usePage } from "@inertiajs/vue3";
 import Multiselect from "@vueform/multiselect";
 import { computed } from "vue";
@@ -100,10 +101,12 @@ const submit = () => {
             </div>
 
             <div class="mt-4">
-                <MapPicker
-                    v-model:latitude="form.latitude"
-                    v-model:longitude="form.longitude"
-                />
+                <Accordion title="Location">
+                    <MapPicker
+                        v-model:latitude="form.latitude"
+                        v-model:longitude="form.longitude"
+                    />
+                </Accordion>
             </div>
 
             <div class="my-8 dark:text-gray-100">

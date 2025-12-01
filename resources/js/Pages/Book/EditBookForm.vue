@@ -1,4 +1,6 @@
 <script setup>
+/* eslint-disable no-undef */
+import Accordion from "@/Components/Accordion.vue";
 import BreezeButton from "@/Components/Button.vue";
 import BreezeLabel from "@/Components/InputLabel.vue";
 import MapPicker from "@/Components/Map/MapPicker.vue";
@@ -101,10 +103,12 @@ const submit = () => {
       </div>
 
       <div class="mt-4">
-        <MapPicker
-          v-model:latitude="form.latitude"
-          v-model:longitude="form.longitude"
-        />
+        <Accordion title="Location">
+          <MapPicker
+            v-model:latitude="form.latitude"
+            v-model:longitude="form.longitude"
+          />
+        </Accordion>
       </div>
 
       <div class="flex justify-center mt-4">

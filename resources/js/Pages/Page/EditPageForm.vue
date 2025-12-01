@@ -10,6 +10,7 @@ import VideoIcon from "@/Components/svg/VideoIcon.vue";
 import TextInput from "@/Components/TextInput.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
+import Accordion from "@/Components/Accordion.vue";
 import { useVideoOptimization } from "@/composables/useVideoOptimization.js";
 import DeletePageForm from "@/Pages/Book/DeletePageForm.vue";
 import { useForm, usePage } from "@inertiajs/vue3";
@@ -305,10 +306,12 @@ const setCreatedAtToNow = () => {
       />
     </div>
     <div class="mt-3">
-      <MapPicker
-        v-model:latitude="pageForm.latitude"
-        v-model:longitude="pageForm.longitude"
-      />
+      <Accordion title="Location">
+        <MapPicker
+          v-model:latitude="pageForm.latitude"
+          v-model:longitude="pageForm.longitude"
+        />
+      </Accordion>
     </div>
 
     <!-- Page Actions Section -->

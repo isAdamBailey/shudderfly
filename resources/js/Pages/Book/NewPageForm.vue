@@ -12,6 +12,7 @@ import MapPicker from "@/Components/Map/MapPicker.vue";
 import TextInput from "@/Components/TextInput.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
+import Accordion from "@/Components/Accordion.vue";
 import { useVideoOptimization } from "@/composables/useVideoOptimization.js";
 import { useForm, usePage } from "@inertiajs/vue3";
 import { useVuelidate } from "@vuelidate/core";
@@ -476,10 +477,12 @@ onUnmounted(() => {
 
       <!-- Location Section -->
       <div class="w-full mt-4">
-        <MapPicker
-          v-model:latitude="form.latitude"
-          v-model:longitude="form.longitude"
-        />
+        <Accordion title="Location">
+          <MapPicker
+            v-model:latitude="form.latitude"
+            v-model:longitude="form.longitude"
+          />
+        </Accordion>
       </div>
 
       <!-- Error Messages -->
