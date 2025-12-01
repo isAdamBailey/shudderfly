@@ -1,8 +1,8 @@
 <template>
-    <div class="bg-white dark:bg-gray-800">
+    <div :class="['bg-white dark:bg-gray-800', darkBackground ? 'bg-gray-800' : '']">
         <button
             type="button"
-            class="w-full flex justify-between items-center text-xl dark:text-gray-100 font-semibold border-b p-6"
+            :class="['w-full flex justify-between items-center text-xl font-semibold border-b p-6', darkBackground ? 'bg-gray-800 text-gray-100 border-gray-700' : 'dark:text-gray-100']"
             @click="isOpen = !isOpen"
         >
             <span>{{ title }}</span>
@@ -12,7 +12,7 @@
             ></i>
         </button>
 
-        <div v-show="isOpen" class="p-6">
+        <div v-show="isOpen" :class="['p-6', darkBackground ? 'bg-gray-800' : '']">
             <slot></slot>
         </div>
     </div>
@@ -27,6 +27,10 @@ const props = defineProps({
         required: true,
     },
     defaultOpen: {
+        type: Boolean,
+        default: false,
+    },
+    darkBackground: {
         type: Boolean,
         default: false,
     },

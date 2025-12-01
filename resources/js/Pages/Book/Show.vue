@@ -85,6 +85,24 @@
         </div>
       </div>
     </template>
+
+    <!-- Book Location Map -->
+    <div
+      v-if="book.latitude != null && book.longitude != null"
+      class="mt-3 md:mt-0 mx-auto max-w-7xl md:p-4"
+    >
+      <div class="bg-gray-800 rounded-lg overflow-hidden">
+        <Accordion title="Map" :dark-background="true">
+          <MapEmbed
+            :latitude="book.latitude"
+            :longitude="book.longitude"
+            :title="book.title"
+            :book-title="book.title"
+          />
+        </Accordion>
+      </div>
+    </div>
+
     <!-- Tab Content -->
     <div v-if="canEditPages && activeTab" class="w-full mt-4 md:ml-2">
       <div>
@@ -208,19 +226,6 @@
     </div>
     <div ref="infiniteScrollRef"></div>
 
-    <!-- Book Location Map -->
-    <div
-      v-if="book.latitude != null && book.longitude != null"
-      class="mx-5 mt-6 mb-6"
-    >
-      <MapEmbed
-        :latitude="book.latitude"
-        :longitude="book.longitude"
-        :title="book.title"
-        :book-title="book.title"
-      />
-    </div>
-
     <Deferred data="similarBooks">
       <template #fallback>
         <div class="text-gray-900 dark:text-gray-100">Loading...</div>
@@ -236,6 +241,7 @@
 </template>
 
 <script setup>
+import Accordion from "@/Components/Accordion.vue";
 import BookCover from "@/Components/BookCover.vue";
 import Button from "@/Components/Button.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
