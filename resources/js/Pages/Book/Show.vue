@@ -98,6 +98,7 @@
             :longitude="book.longitude"
             :title="book.title"
             :book-title="book.title"
+            heading=""
           />
         </Accordion>
       </div>

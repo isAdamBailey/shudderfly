@@ -1,6 +1,6 @@
 <template>
   <div v-if="latitude != null && longitude != null" class="w-full mt-6 mb-4">
-    <h3 class="text-lg font-semibold text-white mb-2">Location</h3>
+    <h3 class="text-lg font-semibold text-white mb-2">{{ heading }}</h3>
     <div class="max-w-md mx-auto px-4">
       <Map
         :latitude="latitude"
@@ -33,18 +33,25 @@ const props = defineProps({
   bookTitle: {
     type: String,
     default: ""
+  },
+  heading: {
+    type: String,
+    default: "Location"
   }
 });
 
 // Convert string props to numbers
 const latitude = computed(() => {
   if (props.latitude === null || props.latitude === undefined) return null;
-  return typeof props.latitude === 'string' ? parseFloat(props.latitude) : props.latitude;
+  return typeof props.latitude === "string"
+    ? parseFloat(props.latitude)
+    : props.latitude;
 });
 
 const longitude = computed(() => {
   if (props.longitude === null || props.longitude === undefined) return null;
-  return typeof props.longitude === 'string' ? parseFloat(props.longitude) : props.longitude;
+  return typeof props.longitude === "string"
+    ? parseFloat(props.longitude)
+    : props.longitude;
 });
 </script>
-
