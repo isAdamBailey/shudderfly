@@ -1,10 +1,11 @@
 <script setup>
 /* global route */
 import Button from "@/Components/Button.vue";
+import VirtualKeyboard from "@/Components/VirtualKeyboard.vue";
 import { useButtonState } from "@/composables/useDisableButtonState";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { router } from "@inertiajs/vue3";
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 // Organized by semantic/functional categories for AAC
 const people = ["I", "you", "and", "me", "Mom", "Dad", "we", "friend"];
@@ -65,7 +66,12 @@ const quickPhrases = [
 ];
 
 const selection = ref([]);
-const preview = computed(() => selection.value.join(" ").trim());
+const inputValue = ref("");
+// Preview uses inputValue as source of truth, with selection as fallback for compatibility
+const preview = computed(() => {
+  return inputValue.value.trim() || selection.value.join(" ").trim();
+});
+const keyboardInputRef = ref(null);
 
 const wordCount = computed(() => {
   if (!preview.value) return 0;
@@ -95,11 +101,13 @@ const isAtMax = computed(() => {
 const canSaveFavorite = computed(() => {
   const hasPreview =
     typeof preview.value === "string" && preview.value.trim().length > 0;
+  const hasInputValue =
+    typeof inputValue.value === "string" && inputValue.value.trim().length > 0;
   const hasSelection = Array.isArray(selection.value)
     ? selection.value.length > 0
     : false;
   const len = Array.isArray(favorites.value) ? favorites.value.length : 0;
-  return (hasPreview || hasSelection) && len < MAX_FAVORITES;
+  return (hasPreview || hasInputValue || hasSelection) && len < MAX_FAVORITES;
 });
 
 function loadFavorites() {
@@ -130,11 +138,22 @@ function saveFavorites() {
 
 function addFavorite() {
   if (!canSaveFavorite.value) return;
-  if (!favorites.value.includes(preview.value)) {
-    favorites.value.unshift(preview.value);
+  // Use inputValue if it has content, otherwise use preview
+  // This ensures typed text is saved correctly
+  const textToSave = inputValue.value.trim() || preview.value.trim() || "";
+  if (!textToSave) return;
+
+  // Normalize the text (remove extra spaces) for comparison
+  const normalizedText = textToSave.split(/\s+/).join(" ");
+  const alreadyExists = favorites.value.some(
+    (fav) => fav.split(/\s+/).join(" ") === normalizedText
+  );
+
+  if (!alreadyExists) {
+    favorites.value.unshift(normalizedText);
     if (favorites.value.length > MAX_FAVORITES) favorites.value.pop();
     saveFavorites();
-    justAdded.value = preview.value;
+    justAdded.value = normalizedText;
     addFeedback.value = true;
     setTimeout(() => (addFeedback.value = false), 2000);
     setTimeout(() => (justAdded.value = null), 1500);
@@ -151,25 +170,148 @@ function removeFavorite(index) {
 }
 
 function applyFavorite(text) {
-  selection.value = text.split(" ");
+  inputValue.value = text;
+  const words = text
+    .trim()
+    .split(/\s+/)
+    .filter((w) => w.length > 0);
+  selection.value = words;
 }
 
-onMounted(loadFavorites);
+// Sync selection with input value (when typing)
+function handleInputChange(event) {
+  // Get the current value from the input element (KioskBoard updates it directly)
+  const currentValue = event?.target?.value ?? inputValue.value;
+
+  // Always update inputValue to match what's actually in the input
+  inputValue.value = currentValue;
+
+  // Update selection for word count (but keep the full input value for display)
+  const words = inputValue.value
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word.length > 0);
+  selection.value = words;
+}
+
+// Watch for changes to inputValue and sync with the actual input element
+watch(
+  () => inputValue.value,
+  (newValue) => {
+    if (keyboardInputRef.value && keyboardInputRef.value.value !== newValue) {
+      keyboardInputRef.value.value = newValue;
+    }
+  }
+);
+
+let inputHandlers = null;
+
+// Also watch the input element for changes (from KioskBoard or direct typing)
+onMounted(() => {
+  loadFavorites();
+
+  // Focus input to show keyboard immediately
+  setTimeout(() => {
+    if (keyboardInputRef.value) {
+      keyboardInputRef.value.focus();
+
+      // Add event listeners to catch all input changes (including from KioskBoard)
+      const inputEl = keyboardInputRef.value;
+
+      // Listen for input events (from typing or KioskBoard)
+      const handleInput = (e) => {
+        const value = e.target.value;
+        if (value !== inputValue.value) {
+          inputValue.value = value;
+        }
+      };
+
+      // Listen for change events
+      const handleChange = (e) => {
+        const value = e.target.value;
+        if (value !== inputValue.value) {
+          inputValue.value = value;
+        }
+      };
+
+      inputEl.addEventListener("input", handleInput);
+      inputEl.addEventListener("change", handleChange);
+
+      // Store handlers for cleanup
+      inputHandlers = {
+        element: inputEl,
+        input: handleInput,
+        change: handleChange
+      };
+    }
+  }, 200);
+});
+
+onUnmounted(() => {
+  if (inputHandlers) {
+    inputHandlers.element.removeEventListener("input", inputHandlers.input);
+    inputHandlers.element.removeEventListener("change", inputHandlers.change);
+  }
+});
 
 function addWord(word) {
+  // Get the actual current value from the input element to ensure we have the latest
+  const inputElement = keyboardInputRef.value;
+  const currentValue = inputElement?.value ?? inputValue.value;
+
   // Prevent adding the same word twice in a row
-  const lastWord = selection.value[selection.value.length - 1];
+  const words = currentValue
+    .trim()
+    .split(/\s+/)
+    .filter((w) => w.length > 0);
+  const lastWord = words[words.length - 1];
+
   if (lastWord === word) {
     return;
   }
-  selection.value.push(word);
+
+  // Append word to the current input value (including any partial words being typed)
+  // Add a space before the new word if the current value doesn't end with a space
+  let newValue;
+  if (currentValue.trim() && !currentValue.endsWith(" ")) {
+    newValue = currentValue + " " + word;
+  } else {
+    newValue = currentValue + word;
+  }
+
+  // Update both the reactive value and the actual input element
+  inputValue.value = newValue;
+  if (inputElement) {
+    inputElement.value = newValue;
+    // Trigger input event so KioskBoard knows about the change
+    inputElement.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  // Update selection to reflect the new words
+  const newWords = newValue
+    .trim()
+    .split(/\s+/)
+    .filter((w) => w.length > 0);
+  selection.value = newWords;
 }
 
 function removeLast() {
-  selection.value.pop();
+  // Remove last word from input value
+  const currentText = inputValue.value.trim();
+  const words = currentText.split(/\s+/).filter((w) => w.length > 0);
+
+  if (words.length > 0) {
+    words.pop();
+    inputValue.value = words.join(" ");
+    selection.value = words;
+  } else {
+    inputValue.value = "";
+    selection.value = [];
+  }
 }
 
 function reset() {
+  inputValue.value = "";
   selection.value = [];
 }
 
@@ -191,12 +333,26 @@ function suggestRandom() {
       selected.push(word);
     }
   }
+  inputValue.value = selected.join(" ");
   selection.value = selected;
 }
 
 function sayIt() {
-  if (!preview.value || !preview.value.trim()) return;
-  speak(preview.value);
+  // Always get the actual current value from the input element
+  // This ensures we speak what's actually in the input, including keyboard-typed text
+  const inputElement = keyboardInputRef.value;
+  const currentText = inputElement?.value?.trim() || inputValue.value.trim();
+
+  if (!currentText) {
+    return;
+  }
+
+  // Update inputValue to keep it in sync with the actual input
+  if (inputElement && inputElement.value !== inputValue.value) {
+    inputValue.value = inputElement.value;
+  }
+
+  speak(currentText);
 }
 
 function sendEmail() {
@@ -224,10 +380,15 @@ function sendEmail() {
         ]"
       >
         <div class="flex items-center justify-between w-full">
-          <span
-            class="text-gray-700 dark:text-gray-100 break-words text-2xl md:text-3xl font-bold leading-tight"
-            >{{ preview }}</span
-          >
+          <input
+            ref="keyboardInputRef"
+            v-model="inputValue"
+            type="text"
+            class="virtual-keyboard-input flex-1 text-gray-700 dark:text-gray-100 break-words text-2xl md:text-3xl font-bold leading-tight bg-transparent border-none outline-none focus:outline-none"
+            placeholder="Type your message here..."
+            @input="handleInputChange"
+            @change="handleInputChange"
+          />
           <button
             type="button"
             class="ml-4 px-4 py-3 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-md"
@@ -332,7 +493,13 @@ function sendEmail() {
             :key="`qp-${i}`"
             type="button"
             class="px-4 py-1.5 rounded-lg bg-blue-600 text-white text-xl font-semibold shadow-md hover:bg-blue-700 transition-colors"
-            @click="selection = w.split(' ')"
+            @click="
+              inputValue = w;
+              selection = w
+                .trim()
+                .split(/\s+/)
+                .filter((word) => word.length > 0);
+            "
           >
             {{ w }}
           </button>
@@ -553,5 +720,11 @@ function sendEmail() {
         Email it
       </Button>
     </div>
+
+    <!-- Virtual Keyboard Component -->
+    <VirtualKeyboard
+      input-selector=".virtual-keyboard-input"
+      :auto-focus="true"
+    />
   </div>
 </template>
