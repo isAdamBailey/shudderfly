@@ -70,6 +70,7 @@ let map = null;
 let markers = [];
 let isInitialized = false;
 let geocoderInstance = null;
+let visibilityObserver = null;
 
 // Expose recenter method
 const recenterOnMarker = () => {
@@ -307,6 +308,12 @@ const initializeMap = () => {
       map = null;
     }
 
+    // Clean up existing visibility observer
+    if (visibilityObserver) {
+      visibilityObserver.disconnect();
+      visibilityObserver = null;
+    }
+
     let centerLat, centerLng, zoom;
 
     if (isMultipleMode) {
@@ -520,6 +527,36 @@ const initializeMap = () => {
       }
     }, 100);
 
+    // Set up IntersectionObserver to detect when map becomes visible
+    // This is important for maps inside accordions, tabs, or other collapsible containers
+    if (mapContainer.value && typeof IntersectionObserver !== "undefined") {
+      visibilityObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting && map) {
+              // Map container is now visible, invalidate size
+              setTimeout(() => {
+                if (map && mapContainer.value) {
+                  try {
+                    map.invalidateSize();
+                  } catch (error) {
+                    console.error(
+                      "Error invalidating map size on visibility:",
+                      error
+                    );
+                  }
+                }
+              }, 100);
+            }
+          });
+        },
+        {
+          threshold: 0.1 // Trigger when at least 10% is visible
+        }
+      );
+      visibilityObserver.observe(mapContainer.value);
+    }
+
     isInitialized = true;
   } catch (error) {
     console.error("Error initializing map:", error);
@@ -595,6 +632,10 @@ watch(
 );
 
 onUnmounted(() => {
+  if (visibilityObserver) {
+    visibilityObserver.disconnect();
+    visibilityObserver = null;
+  }
   if (map) {
     map.remove();
   }
