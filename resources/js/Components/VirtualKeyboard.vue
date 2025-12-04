@@ -62,7 +62,7 @@ const initializeKeyboard = () => {
     language: "en",
     theme: isDarkMode ? "dark" : "light",
     allowRealKeyboard: true,
-    allowMobileKeyboard: false,
+    allowMobileKeyboard: true,
     keysJsonUrl: null,
     keysSpecialCharsArrayOfStrings: [
       "!",
@@ -164,15 +164,18 @@ onUnmounted(() => {
   <div style="display: none"></div>
 </template>
 
-<style scoped>
-/* Custom styles for KioskBoard to make keys larger */
-/* Using higher specificity to override KioskBoard defaults */
-:deep(#KioskBoard-VirtualKeyboard .kioskboard-key) {
+<style>
+/* Global styles for KioskBoard - needed because KioskBoard injects into body */
+/* Desktop styles for keyboard buttons */
+#KioskBoard-VirtualKeyboard .kioskboard-key {
   min-height: 60px;
   min-width: 60px;
   font-size: 28px;
   padding: 12px 16px;
   margin: 4px;
+  background-color: red !important;
+  color: white !important;
+
   /* Prevent text selection for better touch interaction */
   -webkit-user-select: none;
   user-select: none;
@@ -181,26 +184,34 @@ onUnmounted(() => {
   touch-action: manipulation;
 }
 
-:deep(#KioskBoard-VirtualKeyboard .kioskboard-key-space) {
+#KioskBoard-VirtualKeyboard .kioskboard-key-space {
   min-width: 300px;
 }
 
-:deep(#KioskBoard-VirtualKeyboard .kioskboard-key-specialcharacter) {
+#KioskBoard-VirtualKeyboard .kioskboard-key-specialcharacter {
   min-width: 80px;
 }
 
-:deep(#KioskBoard-VirtualKeyboard .kioskboard-row) {
+#KioskBoard-VirtualKeyboard .kioskboard-row {
   margin-bottom: 8px;
 }
 
+/* Hide the numbers row - first row typically contains numbers */
+#KioskBoard-VirtualKeyboard .kioskboard-row:first-child {
+  display: none;
+}
+
 /* Ensure keyboard is always visible and properly positioned */
-:deep(#KioskBoard-VirtualKeyboard) {
+#KioskBoard-VirtualKeyboard {
   position: relative;
   margin-top: 20px;
   z-index: 1;
 }
-</style>
-
-<style>
-/* Global styles for KioskBoard - needed because KioskBoard injects into body */
+@media (max-width: 768px) {
+  #KioskBoard-VirtualKeyboard .kioskboard-key,
+  #KioskBoard-VirtualKeyboard .kioskboard-key * {
+    margin: 5px !important;
+    font-size: 30px !important;
+  }
+}
 </style>
