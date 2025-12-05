@@ -1,9 +1,28 @@
 <template>
-  <div ref="mapContainer" :class="containerClass"></div>
+  <div>
+    <div
+      v-if="currentAddress && showAddress"
+      class="mb-2 flex items-center gap-2 text-sm text-gray-100"
+    >
+      <div><strong>Address:</strong> {{ currentAddress }}</div>
+      <Button
+        type="button"
+        :disabled="speaking"
+        class="speak-btn"
+        aria-label="Speak address"
+        @click="speak(`the address is ${currentAddress}`)"
+      >
+        <i class="ri-speak-fill text-lg"></i>
+      </Button>
+    </div>
+    <div ref="mapContainer" :class="containerClass"></div>
+  </div>
 </template>
 
 <script setup>
 /* eslint-disable no-undef */
+import Button from "@/Components/Button.vue";
+import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import L from "leaflet";
 import { Geocoder } from "leaflet-control-geocoder";
 import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
@@ -56,6 +75,11 @@ const props = defineProps({
     type: String,
     default:
       "w-full aspect-square rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden shadow-lg"
+  },
+  // Show address above map
+  showAddress: {
+    type: Boolean,
+    default: true
   }
 });
 
@@ -65,7 +89,10 @@ const emit = defineEmits([
   "location-selected"
 ]);
 
+const { speak, speaking } = useSpeechSynthesis();
+
 const mapContainer = ref(null);
+const currentAddress = ref(null);
 let map = null;
 let markers = [];
 let isInitialized = false;
@@ -106,7 +133,6 @@ const geocodeAddress = async (query) => {
         }
       }, 100);
     } catch (error) {
-      console.error("Error creating geocoder:", error);
       throw new Error("Failed to initialize geocoder");
     }
   }
@@ -258,12 +284,86 @@ const getGeocodeSuggestions = async (query) => {
 
     return [];
   } catch (error) {
-    console.error("Error fetching geocode suggestions:", error);
     return [];
   }
 };
 
-defineExpose({ recenterOnMarker, geocodeAddress, getGeocodeSuggestions });
+// Reverse geocode: get address from coordinates
+const reverseGeocode = async (lat, lng) => {
+  if (lat == null || lng == null) {
+    throw new Error("Invalid coordinates");
+  }
+
+  try {
+    // Use backend API endpoint to avoid CORS issues
+    const response = await fetch(`/api/geocode/reverse?lat=${lat}&lng=${lng}`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "X-Requested-With": "XMLHttpRequest"
+      },
+      credentials: "same-origin"
+    });
+
+    if (!response.ok) {
+      throw new Error(`Reverse geocode request failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (data && data.displayName) {
+      return {
+        displayName: data.displayName,
+        address: data.address || {},
+        lat: parseFloat(data.lat),
+        lng: parseFloat(data.lng),
+        raw: data.raw || data
+      };
+    }
+
+    throw new Error("No address found for coordinates");
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Helper function to fetch and update address
+const updateAddress = async (lat, lng) => {
+  if (lat == null || lng == null) {
+    currentAddress.value = null;
+    return null;
+  }
+
+  // Validate coordinates are numbers
+  const numLat = typeof lat === "string" ? parseFloat(lat) : lat;
+  const numLng = typeof lng === "string" ? parseFloat(lng) : lng;
+
+  if (isNaN(numLat) || isNaN(numLng)) {
+    currentAddress.value = null;
+    return null;
+  }
+
+  try {
+    const result = await reverseGeocode(numLat, numLng);
+    if (result && result.displayName) {
+      currentAddress.value = result.displayName;
+      return result;
+    } else {
+      currentAddress.value = null;
+      return null;
+    }
+  } catch (error) {
+    currentAddress.value = null;
+    return null;
+  }
+};
+
+defineExpose({
+  recenterOnMarker,
+  geocodeAddress,
+  getGeocodeSuggestions,
+  reverseGeocode
+});
 
 // Fix for default marker icon issue in Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -307,6 +407,9 @@ const initializeMap = () => {
       map.remove();
       map = null;
     }
+
+    // Clear address when reinitializing
+    currentAddress.value = null;
 
     // Clean up existing visibility observer
     if (visibilityObserver) {
@@ -401,6 +504,11 @@ const initializeMap = () => {
 
       const marker = L.marker([lat, lng]).addTo(map);
 
+      // Fetch address for display above map (with small delay to ensure map is ready)
+      setTimeout(() => {
+        updateAddress(lat, lng);
+      }, 100);
+
       if (!props.interactive) {
         marker.bindPopup(popupContent);
       }
@@ -461,7 +569,7 @@ const initializeMap = () => {
         position: "topright"
       });
 
-      geocoderInstance.on("markgeocode", (e) => {
+      geocoderInstance.on("markgeocode", async (e) => {
         const { lat, lng } = e.geocode.center;
 
         // Remove existing marker
@@ -469,6 +577,9 @@ const initializeMap = () => {
           map.removeLayer(marker);
         });
         markers = [];
+
+        // Fetch address for display above map
+        await updateAddress(lat, lng);
 
         // Add new marker at geocoded location
         const marker = L.marker([lat, lng]).addTo(map);
@@ -488,7 +599,7 @@ const initializeMap = () => {
 
     // Add click handler for interactive mode
     if (props.interactive) {
-      map.on("click", (e) => {
+      map.on("click", async (e) => {
         const { lat, lng } = e.latlng;
 
         // Remove existing marker
@@ -496,6 +607,9 @@ const initializeMap = () => {
           map.removeLayer(marker);
         });
         markers = [];
+
+        // Fetch address for display above map
+        await updateAddress(lat, lng);
 
         // Add new marker
         const marker = L.marker([lat, lng]).addTo(map);
@@ -519,7 +633,7 @@ const initializeMap = () => {
               try {
                 map.invalidateSize();
               } catch (e) {
-                console.error("Error invalidating map size:", e);
+                // Silently handle map size invalidation errors
               }
             }
           }, 200);
@@ -540,10 +654,7 @@ const initializeMap = () => {
                   try {
                     map.invalidateSize();
                   } catch (error) {
-                    console.error(
-                      "Error invalidating map size on visibility:",
-                      error
-                    );
+                    // Silently handle map size invalidation errors
                   }
                 }
               }, 100);
@@ -559,7 +670,6 @@ const initializeMap = () => {
 
     isInitialized = true;
   } catch (error) {
-    console.error("Error initializing map:", error);
     isInitialized = false;
   }
 };
@@ -606,6 +716,11 @@ watch(
           : "Location";
 
         const marker = L.marker([lat, lng]).addTo(map).bindPopup(popupContent);
+
+        // Fetch address for display above map (with small delay to ensure map is ready)
+        setTimeout(() => {
+          updateAddress(lat, lng);
+        }, 100);
 
         markers.push(marker);
 

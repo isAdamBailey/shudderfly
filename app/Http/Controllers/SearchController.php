@@ -84,4 +84,47 @@ class SearchController extends Controller
 
         return response()->json($results);
     }
+
+    /**
+     * Reverse geocode: get address from coordinates
+     * Proxies request to Nominatim to avoid CORS issues
+     */
+    public function reverseGeocode(Request $request): JsonResponse
+    {
+        $lat = $request->input('lat');
+        $lng = $request->input('lng');
+
+        if ($lat === null || $lng === null) {
+            return response()->json(['error' => 'Latitude and longitude are required'], 400);
+        }
+
+        try {
+            $url = "https://nominatim.openstreetmap.org/reverse?format=json&lat={$lat}&lon={$lng}&addressdetails=1";
+
+            $client = new \GuzzleHttp\Client();
+            $response = $client->get($url, [
+                'headers' => [
+                    'User-Agent' => 'Shudderfly App'
+                ],
+                'timeout' => 10
+            ]);
+
+            $data = json_decode($response->getBody(), true);
+
+            if ($data && isset($data['display_name'])) {
+                return response()->json([
+                    'displayName' => $data['display_name'],
+                    'address' => $data['address'] ?? [],
+                    'lat' => floatval($data['lat'] ?? $lat),
+                    'lng' => floatval($data['lon'] ?? $lng),
+                    'raw' => $data
+                ]);
+            }
+
+            return response()->json(['error' => 'No address found for coordinates'], 404);
+        } catch (\Exception $e) {
+            \Log::error('Reverse geocode error: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to reverse geocode'], 500);
+        }
+    }
 }
