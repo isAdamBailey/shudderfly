@@ -141,7 +141,7 @@ const geocodeAddress = async (query) => {
     let timeoutId;
 
     // Set up a one-time listener for the geocode result
-    const onGeocode = (e) => {
+    const onGeocode = async (e) => {
       geocoderInstance.off("markgeocode", onGeocode);
       geocoderInstance.off("error", onError);
       if (timeoutId) clearTimeout(timeoutId);
@@ -153,6 +153,9 @@ const geocodeAddress = async (query) => {
         map.removeLayer(marker);
       });
       markers = [];
+
+      // Fetch address for display above map
+      await updateAddress(lat, lng);
 
       // Add new marker at geocoded location
       const marker = L.marker([lat, lng]).addTo(map);

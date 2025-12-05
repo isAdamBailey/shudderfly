@@ -16,6 +16,7 @@ class PushSubscription extends Model
     protected $casts = [
         'keys' => 'array',
     ];
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

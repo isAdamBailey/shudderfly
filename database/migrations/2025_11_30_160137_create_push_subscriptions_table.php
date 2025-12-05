@@ -19,7 +19,7 @@ return new class extends Migration
             $table->text('keys'); // JSON string containing p256dh and auth keys
             $table->timestamps();
         });
-        
+
         // Create unique index with prefix on endpoint to stay within MySQL key length limit (3072 bytes)
         // Using prefix of 255 chars (max 1020 bytes with utf8mb4) + user_id (8 bytes) = 1028 bytes < 3072
         Schema::table('push_subscriptions', function (Blueprint $table) {

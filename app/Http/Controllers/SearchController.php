@@ -7,6 +7,7 @@ use App\Models\Page;
 use App\Models\Song;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class SearchController extends Controller
 {
@@ -98,15 +99,38 @@ class SearchController extends Controller
             return response()->json(['error' => 'Latitude and longitude are required'], 400);
         }
 
-        try {
-            $url = "https://nominatim.openstreetmap.org/reverse?format=json&lat={$lat}&lon={$lng}&addressdetails=1";
+        // Validate that lat and lng are numeric
+        if (! is_numeric($lat) || ! is_numeric($lng)) {
+            return response()->json(['error' => 'Latitude and longitude must be numeric'], 400);
+        }
 
-            $client = new \GuzzleHttp\Client();
-            $response = $client->get($url, [
-                'headers' => [
-                    'User-Agent' => 'Shudderfly App'
+        // Convert to float and validate ranges
+        $lat = (float) $lat;
+        $lng = (float) $lng;
+
+        // Validate coordinate ranges
+        if ($lat < -90 || $lat > 90) {
+            return response()->json(['error' => 'Latitude must be between -90 and 90'], 400);
+        }
+
+        if ($lng < -180 || $lng > 180) {
+            return response()->json(['error' => 'Longitude must be between -180 and 180'], 400);
+        }
+
+        try {
+            // Use Guzzle's query parameter handling to properly encode values
+            $client = new \GuzzleHttp\Client;
+            $response = $client->get('https://nominatim.openstreetmap.org/reverse', [
+                'query' => [
+                    'format' => 'json',
+                    'lat' => $lat,
+                    'lon' => $lng,
+                    'addressdetails' => 1,
                 ],
-                'timeout' => 10
+                'headers' => [
+                    'User-Agent' => 'Shudderfly App',
+                ],
+                'timeout' => 10,
             ]);
 
             $data = json_decode($response->getBody(), true);
@@ -117,13 +141,14 @@ class SearchController extends Controller
                     'address' => $data['address'] ?? [],
                     'lat' => floatval($data['lat'] ?? $lat),
                     'lng' => floatval($data['lon'] ?? $lng),
-                    'raw' => $data
+                    'raw' => $data,
                 ]);
             }
 
             return response()->json(['error' => 'No address found for coordinates'], 404);
         } catch (\Exception $e) {
-            \Log::error('Reverse geocode error: ' . $e->getMessage());
+            Log::error('Reverse geocode error: '.$e->getMessage());
+
             return response()->json(['error' => 'Failed to reverse geocode'], 500);
         }
     }

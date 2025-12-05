@@ -53,7 +53,7 @@
             </Link>
             <div
               v-if="page.media_path"
-              class="rounded-lg overflow-hidden mx-16 md:mx-20"
+              class="rounded-lg overflow-hidden mt-6 mx-16 md:mx-20"
             >
               <LazyLoader
                 :src="page.media_path"

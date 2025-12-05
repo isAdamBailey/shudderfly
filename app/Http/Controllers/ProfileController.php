@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
-use App\Http\Controllers\PushNotificationController;
 use App\Mail\ContactAdmins;
 use App\Models\User;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -87,10 +86,10 @@ class ProfileController extends Controller
                 ->send(new ContactAdmins($sender, $message));
 
             // Send push notification
-            $title = 'Message from ' . $sender->name;
+            $title = 'Message from '.$sender->name;
             // Truncate message for push notification (max ~120 chars for body)
-            $body = mb_strlen($message, 'UTF-8') > 120 ? mb_substr($message, 0, 117, 'UTF-8') . '...' : $message;
-            
+            $body = mb_strlen($message, 'UTF-8') > 120 ? mb_substr($message, 0, 117, 'UTF-8').'...' : $message;
+
             PushNotificationController::sendNotification(
                 $user->id,
                 $title,

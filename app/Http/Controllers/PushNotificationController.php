@@ -60,34 +60,34 @@ class PushNotificationController extends Controller
      * This method sends browser push notifications, not Pusher notifications.
      * Requires: composer require minishlink/web-push
      *
-     * @param int $userId
-     * @param string $title
-     * @param string $body
-     * @param array $data Optional associative array of additional data to include in the notification payload.
-     *                    Example: ['url' => 'https://example.com', 'type' => 'message']
-     *                    All keys should be strings, and values should be serializable (string, int, bool, array).
+     * @param  int  $userId
+     * @param  string  $title
+     * @param  string  $body
+     * @param  array  $data  Optional associative array of additional data to include in the notification payload.
+     *                       Example: ['url' => 'https://example.com', 'type' => 'message']
+     *                       All keys should be strings, and values should be serializable (string, int, bool, array).
      * @return array Result of the notification send attempt.
      */
     public static function sendNotification($userId, $title, $body, $data = [])
     {
         // Validate $data parameter
-        if (!is_array($data)) {
+        if (! is_array($data)) {
             return [
                 'error' => 'Invalid $data parameter: must be an array',
                 'sent' => 0,
                 'failed' => 0,
-                'results' => []
+                'results' => [],
             ];
         }
         $webPushClass = 'Minishlink\WebPush\WebPush';
         $subscriptionClass = 'Minishlink\WebPush\Subscription';
-        
-        if (!class_exists($webPushClass)) {
+
+        if (! class_exists($webPushClass)) {
             return [
                 'error' => 'WebPush package not installed',
                 'sent' => 0,
                 'failed' => 0,
-                'results' => []
+                'results' => [],
             ];
         }
 
@@ -98,19 +98,19 @@ class PushNotificationController extends Controller
                 'error' => 'No subscriptions found',
                 'sent' => 0,
                 'failed' => 0,
-                'results' => []
+                'results' => [],
             ];
         }
 
         $publicKey = config('services.webpush.public_key');
         $privateKey = config('services.webpush.private_key');
 
-        if (!$publicKey || !$privateKey) {
+        if (! $publicKey || ! $privateKey) {
             return [
                 'error' => 'VAPID keys not configured',
                 'sent' => 0,
                 'failed' => 0,
-                'results' => []
+                'results' => [],
             ];
         }
 
@@ -131,7 +131,7 @@ class PushNotificationController extends Controller
         foreach ($subscriptions as $subscription) {
             try {
                 // Validate that required keys are present
-                if (!isset($subscription->keys['p256dh']) || !isset($subscription->keys['auth'])) {
+                if (! isset($subscription->keys['p256dh']) || ! isset($subscription->keys['auth'])) {
                     continue;
                 }
 
@@ -154,10 +154,10 @@ class PushNotificationController extends Controller
                     ])
                 );
             } catch (\Exception $e) {
-                Log::error('Push notification error: ' . $e->getMessage(), [
+                Log::error('Push notification error: '.$e->getMessage(), [
                     'subscription_id' => $subscription->id ?? null,
                     'user_id' => $subscription->user_id ?? null,
-                    'endpoint' => $subscription->endpoint ?? null
+                    'endpoint' => $subscription->endpoint ?? null,
                 ]);
             }
         }
@@ -168,7 +168,7 @@ class PushNotificationController extends Controller
                 $results[] = ['success' => true, 'endpoint' => $report->getEndpoint()];
             } else {
                 $results[] = ['success' => false, 'endpoint' => $report->getEndpoint(), 'reason' => $report->getReason()];
-                Log::error('Push notification failed: ' . $report->getReason());
+                Log::error('Push notification failed: '.$report->getReason());
                 // Remove invalid subscriptions - use both user_id and endpoint to match composite unique constraint
                 if ($report->isSubscriptionExpired()) {
                     $endpoint = $report->getEndpoint();
@@ -187,12 +187,11 @@ class PushNotificationController extends Controller
                 }
             }
         }
-        
+
         return [
-            'sent' => count(array_filter($results, fn($r) => $r['success'])),
-            'failed' => count(array_filter($results, fn($r) => !$r['success'])),
-            'results' => $results
+            'sent' => count(array_filter($results, fn ($r) => $r['success'])),
+            'failed' => count(array_filter($results, fn ($r) => ! $r['success'])),
+            'results' => $results,
         ];
     }
 }
-

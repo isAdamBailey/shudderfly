@@ -24,7 +24,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/search/books', [SearchController::class, 'searchBooks'])->name('api.search.books');
     Route::get('/search/uploads', [SearchController::class, 'searchUploads'])->name('api.search.uploads');
     Route::get('/geocode/reverse', [SearchController::class, 'reverseGeocode'])->name('api.geocode.reverse');
-    
+
     // Push notification routes
     Route::post('/push/subscribe', [PushNotificationController::class, 'subscribe'])->name('api.push.subscribe');
     Route::post('/push/unsubscribe', [PushNotificationController::class, 'unsubscribe'])->name('api.push.unsubscribe');
