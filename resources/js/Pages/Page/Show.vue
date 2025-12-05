@@ -6,7 +6,9 @@
       <div class="text-center">
         <div class="relative min-h-[60vh]">
           <div
-            class="absolute top-2 left-2 sm:top-4 sm:left-4 md:top-6 md:left-6 lg:top-8 lg:left-8 z-20"
+            ref="bookCoverRef"
+            class="absolute top-0 left-2 sm:left-4 md:left-6 lg:left-8 z-20"
+            style="width: fit-content; height: fit-content"
           >
             <BookCoverCard
               :book="page.book"
@@ -154,7 +156,7 @@ import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { useMedia } from "@/mediaHelpers";
 import EditPageForm from "@/Pages/Page/EditPageForm.vue";
 import { Head, Link, router } from "@inertiajs/vue3";
-import { computed, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 
 const { canEditPages } = usePermissions();
 const { short } = useDate();
@@ -171,6 +173,8 @@ const props = defineProps({
 
 let showPageSettings = ref(false);
 const buttonDisabled = ref(false);
+const bookCoverRef = ref(null);
+const scrollHandler = ref(null);
 
 const hasContent = computed(() => stripHtml(props.page.content));
 
@@ -248,4 +252,35 @@ function onTouchEnd(event) {
     router.get(route("pages.show", props.previousPage));
   }
 }
+
+// Make book cover sticky
+onMounted(() => {
+  if (!bookCoverRef.value) return;
+
+  const container = bookCoverRef.value.parentElement;
+  if (!container) return;
+
+  scrollHandler.value = () => {
+    if (!bookCoverRef.value || !container) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const shouldStick = containerRect.top <= 0;
+
+    if (shouldStick) {
+      bookCoverRef.value.style.position = "fixed";
+      bookCoverRef.value.style.top = "0";
+    } else {
+      bookCoverRef.value.style.position = "absolute";
+      bookCoverRef.value.style.top = "0";
+    }
+  };
+
+  window.addEventListener("scroll", scrollHandler.value, { passive: true });
+});
+
+onUnmounted(() => {
+  if (scrollHandler.value) {
+    window.removeEventListener("scroll", scrollHandler.value);
+  }
+});
 </script>
