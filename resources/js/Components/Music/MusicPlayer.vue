@@ -190,8 +190,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 const {
   currentSong,
   isPlaying: globalIsPlaying,
-  setPlaying,
-  getSavedPlaybackState
+  setPlaying
 } = useMusicPlayer();
 
 if (!window.__globalMusicPlayer) window.__globalMusicPlayer = null;
@@ -218,6 +217,8 @@ const imageError = ref(false);
 const playerError = ref(null);
 const hasIncrementedReadCount = ref(false);
 const isLoading = ref(true);
+const shouldAutoplay = ref(false);
+const isInitialMount = ref(true);
 
 const isPlaying = computed(() => globalIsPlaying.value);
 
@@ -410,7 +411,7 @@ const createPlayer = async () => {
         cc_load_policy: 0,
         iv_load_policy: 3,
         autohide: 1,
-        autoplay: 1,
+        autoplay: shouldAutoplay.value ? 1 : 0,
         enablejsapi: 1,
         origin: window.location.origin,
         playsinline: 1
@@ -456,16 +457,20 @@ const onPlayerReady = (event) => {
     setGlobalUpdateInterval(interval);
   }
 
-  setTimeout(() => {
-    const currentPlayer = globalPlayer();
-    if (currentPlayer && typeof currentPlayer.playVideo === "function") {
-      try {
-        currentPlayer.playVideo();
-      } catch (error) {
-        // Auto-play may fail
+  // Autoplay if a song was selected (not on initial mount)
+  if (shouldAutoplay.value) {
+    setTimeout(() => {
+      const currentPlayer = globalPlayer();
+      if (currentPlayer && typeof currentPlayer.playVideo === "function") {
+        try {
+          currentPlayer.playVideo();
+          setPlaying(true);
+        } catch (error) {
+          // Auto-play may fail due to browser policies
+        }
       }
-    }
-  }, 1000);
+    }, 500);
+  }
 
   isLoading.value = false;
 };
@@ -488,16 +493,6 @@ const onPlayerStateChange = (event) => {
       currentTime.value = 0;
       break;
     case window.YT.PlayerState.CUED:
-      setTimeout(() => {
-        const player = globalPlayer();
-        if (player && typeof player.playVideo === "function") {
-          try {
-            player.playVideo();
-          } catch (error) {
-            // Play may fail
-          }
-        }
-      }, 500);
       break;
   }
 };
@@ -608,6 +603,9 @@ watch(
     duration.value = 0;
     hasIncrementedReadCount.value = false;
 
+    // Enable autoplay for new song selections (not initial mount)
+    shouldAutoplay.value = !isInitialMount.value;
+
     await nextTick();
     createPlayer();
   },
@@ -618,20 +616,12 @@ onMounted(() => {
   const player = globalPlayer();
   if (currentSong.value && player) {
     try {
-      const savedState = getSavedPlaybackState();
       const playerState = player.getPlayerState();
 
       if (playerState === window.YT.PlayerState.PLAYING) {
         setPlaying(true);
       } else if (playerState === window.YT.PlayerState.PAUSED) {
         setPlaying(false);
-      } else if (savedState && savedState.isPlaying) {
-        try {
-          player.playVideo();
-          setPlaying(true);
-        } catch (e) {
-          // Playback restoration may fail
-        }
       }
 
       duration.value = player.getDuration();
@@ -641,6 +631,12 @@ onMounted(() => {
       isLoading.value = false;
     }
   }
+
+  // Mark initial mount as complete after a short delay
+  // This ensures the watch function's immediate execution doesn't trigger autoplay
+  setTimeout(() => {
+    isInitialMount.value = false;
+  }, 100);
 });
 
 onUnmounted(() => {
