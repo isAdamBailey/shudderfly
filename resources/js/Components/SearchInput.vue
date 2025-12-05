@@ -1,9 +1,9 @@
 <template>
   <div
-    class="w-full bg-transparent flex flex-wrap pl-2 md:pl-8 mt-5 pr-3 md:pr-8 mb-2 gap-2"
+    class="w-full bg-transparent flex flex-nowrap pl-2 md:pl-8 mt-5 pr-3 md:pr-8 mb-2 gap-2"
   >
     <!-- Microphone + Search Input Container (stays together) -->
-    <div class="flex gap-2 flex-1 min-w-[250px]">
+    <div class="flex gap-2 flex-1">
       <!-- Voice Recognition Button - LEFT -->
       <button
         v-if="isSupported"
@@ -96,9 +96,9 @@
       </div>
     </div>
 
-    <!-- Toggle Group - RIGHT (wraps down on smaller screens) -->
+    <!-- Toggle Group - RIGHT -->
     <div
-      class="self-center min-w-[250px] max-w-[250px]"
+      class="self-center w-[180px] flex-shrink-0"
       role="radiogroup"
       aria-label="Search target"
     >
