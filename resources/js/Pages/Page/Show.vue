@@ -3,12 +3,10 @@
 
   <BreezeAuthenticatedLayout>
     <div class="relative">
-      <div
-        class="w-full pl-2 sm:pl-6 lg:pl-8 pt-2 pb-2 sticky top-0 z-30 text-left"
-      >
-        <div class="flex items-center gap-3 min-w-0">
+      <div class="text-center">
+        <div class="relative min-h-[60vh]">
           <div
-            class="max-w-[90vw] sm:max-w-[70vw] md:max-w-[60vw] lg:max-w-[50vw]"
+            class="absolute top-2 left-2 sm:top-4 sm:left-4 md:top-6 md:left-6 lg:top-8 lg:left-8 z-20"
           >
             <BookCoverCard
               :book="page.book"
@@ -18,11 +16,6 @@
               @click="buttonDisabled = true"
             />
           </div>
-        </div>
-      </div>
-
-      <div class="text-center">
-        <div class="relative min-h-[60vh]">
           <div
             class="w-full flex items-center justify-center relative"
             style="touch-action: pan-y pinch-zoom"
