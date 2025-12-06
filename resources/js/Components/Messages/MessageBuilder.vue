@@ -81,6 +81,10 @@ const wordCount = computed(() => {
     .filter((word) => word.length > 0).length;
 });
 
+const hasMinimumCharacters = computed(() => {
+  return preview.value && preview.value.trim().length >= 10;
+});
+
 const { speak, speaking } = useSpeechSynthesis();
 
 const form = useForm({
@@ -601,7 +605,7 @@ function sayIt() {
 }
 
 function postMessage() {
-  if (!preview.value?.trim() || form.processing) return;
+  if (!preview.value?.trim() || form.processing || !hasMinimumCharacters.value) return;
   speak(`Posting message: ${preview.value}`);
 
   const taggedUserIds = [];
@@ -1028,7 +1032,7 @@ function postMessage() {
     <div class="mt-6">
       <Button
         class="py-4 text-lg"
-        :disabled="form.processing"
+        :disabled="form.processing || !hasMinimumCharacters"
         @click="postMessage"
       >
         <i class="ri-send-plane-fill text-2xl mr-2"></i>
