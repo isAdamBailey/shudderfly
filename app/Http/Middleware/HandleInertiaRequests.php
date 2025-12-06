@@ -31,7 +31,7 @@ class HandleInertiaRequests extends Middleware
         if ($request->is('broadcasting/*')) {
             return $next($request);
         }
-        
+
         return parent::handle($request, $next);
     }
 
@@ -60,9 +60,10 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'unread_notifications_count' => function () use ($request) {
-                if (!$request->user()) {
+                if (! $request->user()) {
                     return 0;
                 }
+
                 return $request->user()->unreadNotifications()->count();
             },
             'csrf_token' => csrf_token(),
@@ -73,6 +74,7 @@ class HandleInertiaRequests extends Middleware
             },
             'settings' => SiteSetting::all()->mapWithKeys(function ($setting) {
                 $rawValue = $setting->getAttributes()['value'] ?? $setting->value;
+
                 return [$setting->key => $rawValue];
             }),
             'theme' => self::getCurrentTheme(),

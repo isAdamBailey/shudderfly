@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Events\MessageCreated;
-use App\Http\Controllers\PushNotificationController;
 use App\Models\Message;
 use App\Models\SiteSetting;
 use App\Models\User;
@@ -25,7 +24,7 @@ class MessageController extends Controller
         $setting = SiteSetting::where('key', 'messaging_enabled')->first();
         $messagingEnabled = $setting && ($setting->getAttributes()['value'] ?? $setting->value) === '1';
 
-        if (!$messagingEnabled) {
+        if (! $messagingEnabled) {
             return Inertia::render('Messages/Index', [
                 'messages' => [],
                 'messagingEnabled' => false,
@@ -58,7 +57,7 @@ class MessageController extends Controller
         $setting = SiteSetting::where('key', 'messaging_enabled')->first();
         $messagingEnabled = $setting && ($setting->getAttributes()['value'] ?? $setting->value) === '1';
 
-        if (!$messagingEnabled) {
+        if (! $messagingEnabled) {
             return back()->withErrors(['message' => 'Messaging is currently disabled.']);
         }
 
@@ -77,27 +76,27 @@ class MessageController extends Controller
         $message->load('user');
 
         // Use tagged user IDs from request if provided and not empty, otherwise parse from message
-        $taggedUserIds = !empty($validated['tagged_user_ids']) && is_array($validated['tagged_user_ids'])
+        $taggedUserIds = ! empty($validated['tagged_user_ids']) && is_array($validated['tagged_user_ids'])
             ? $validated['tagged_user_ids']
             : $message->getTaggedUserIds();
-        
-        if (!is_array($taggedUserIds)) {
+
+        if (! is_array($taggedUserIds)) {
             $taggedUserIds = [];
         }
-        
+
         foreach ($taggedUserIds as $userId) {
             $taggedUser = User::find($userId);
             if ($taggedUser) {
                 // Send database notification
                 $taggedUser->notify(new UserTagged($message, Auth::user()));
-                
+
                 // Send push notification
                 $title = 'You were tagged by '.Auth::user()->name;
                 // Truncate message for push notification (max ~120 chars for body)
-                $messageBody = mb_strlen($message->message, 'UTF-8') > 120 
-                    ? mb_substr($message->message, 0, 117, 'UTF-8').'...' 
+                $messageBody = mb_strlen($message->message, 'UTF-8') > 120
+                    ? mb_substr($message->message, 0, 117, 'UTF-8').'...'
                     : $message->message;
-                
+
                 PushNotificationController::sendNotification(
                     $taggedUser->id,
                     $title,
@@ -126,7 +125,7 @@ class MessageController extends Controller
     public function destroy(Message $message): RedirectResponse
     {
         // Only admins can delete messages
-        if (!Auth::user()->hasPermissionTo('admin')) {
+        if (! Auth::user()->hasPermissionTo('admin')) {
             abort(403, 'Only admins can delete messages.');
         }
 

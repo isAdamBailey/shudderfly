@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->text('message');
             $table->timestamps();
-            
+
             $table->index('user_id');
             $table->index('created_at');
         });

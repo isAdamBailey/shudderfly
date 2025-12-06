@@ -27,7 +27,7 @@ export function useUnreadNotifications() {
     if (notificationsChannel.value && window.Echo && user) {
       try {
         window.Echo.leave(`App.Models.User.${user.id}`);
-      } catch (error) {
+      } catch {
       }
       notificationsChannel.value = null;
     }

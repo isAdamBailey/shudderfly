@@ -14,6 +14,7 @@ class UserTagged extends Notification implements ShouldBroadcast
     use Queueable;
 
     public Message $message;
+
     public User $tagger;
 
     /**
@@ -41,10 +42,10 @@ class UserTagged extends Notification implements ShouldBroadcast
     public function toBroadcast(object $notifiable): BroadcastMessage
     {
         $title = 'You were tagged by '.$this->tagger->name;
-        $messageBody = mb_strlen($this->message->message, 'UTF-8') > 120 
-            ? mb_substr($this->message->message, 0, 117, 'UTF-8').'...' 
+        $messageBody = mb_strlen($this->message->message, 'UTF-8') > 120
+            ? mb_substr($this->message->message, 0, 117, 'UTF-8').'...'
             : $this->message->message;
-        
+
         return new BroadcastMessage([
             'id' => $this->id,
             'type' => 'App\Notifications\UserTagged',

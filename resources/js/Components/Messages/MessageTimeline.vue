@@ -165,8 +165,7 @@ const cleanup = () => {
   if (messagesChannel.value && window.Echo) {
     try {
       window.Echo.leave("messages");
-    } catch (error) {
-      // Silently fail
+    } catch {
     }
     messagesChannel.value = null;
   }

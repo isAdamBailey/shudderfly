@@ -9,6 +9,6 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 Broadcast::channel('messages', function ($user) {
     $setting = \App\Models\SiteSetting::where('key', 'messaging_enabled')->first();
     $messagingEnabled = $setting && ($setting->getAttributes()['value'] ?? $setting->value) === '1';
-    
+
     return $messagingEnabled;
 });

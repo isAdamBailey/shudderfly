@@ -32,7 +32,7 @@ export function usePusherNotifications() {
 
     try {
       channel.value = window.Echo.private(`App.Models.User.${user.id}`);
-    } catch (error) {
+    } catch {
       return;
     }
 
@@ -97,8 +97,7 @@ export function usePusherNotifications() {
     if (channel.value && window.Echo) {
       try {
         window.Echo.leave(`App.Models.User.${usePage().props.auth?.user?.id}`);
-      } catch (error) {
-        // Silently fail
+      } catch {
       }
       channel.value = null;
     }
@@ -111,9 +110,4 @@ export function usePusherNotifications() {
   onUnmounted(() => {
     cleanup();
   });
-
-  return {
-    setupNotifications,
-    cleanup
-  };
 }

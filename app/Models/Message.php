@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Collection;
 
 class Message extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'user_id',
         'message',
@@ -55,13 +57,13 @@ class Message extends Model
         // Extract all @mentions - match @ followed by word characters and spaces until punctuation/end
         // Try to match full usernames first, then partial matches
         $allUserNames = User::pluck('name')->toArray();
-        
+
         if (empty($allUserNames)) {
             return [];
         }
 
         $foundUsernames = [];
-        
+
         // First, try to match full usernames (with spaces)
         foreach ($allUserNames as $userName) {
             $pattern = '/@'.preg_quote($userName, '/').'(?=\s|$|[^\w\s])/i';
@@ -69,11 +71,11 @@ class Message extends Model
                 $foundUsernames[] = $userName;
             }
         }
-        
+
         // Then, extract simple @mentions (single word) and look them up
         preg_match_all('/@([a-zA-Z0-9_]+)(?=\s|$|[^\w])/', $this->message, $matches);
         $simpleMentions = $matches[1] ?? [];
-        
+
         foreach ($simpleMentions as $mention) {
             // Check if this mention is already covered by a full username match
             $alreadyMatched = false;
@@ -83,8 +85,8 @@ class Message extends Model
                     break;
                 }
             }
-            
-            if (!$alreadyMatched) {
+
+            if (! $alreadyMatched) {
                 // Look up the mention directly - if it matches a user name exactly, use it
                 $user = User::whereRaw('LOWER(name) = LOWER(?)', [$mention])->first();
                 if ($user) {
@@ -92,7 +94,7 @@ class Message extends Model
                 }
             }
         }
-        
+
         return array_unique($foundUsernames);
     }
 
@@ -103,7 +105,7 @@ class Message extends Model
     public function getTaggedUserIds(): array
     {
         $usernames = $this->getTaggedUsernames();
-        
+
         if (empty($usernames)) {
             return [];
         }

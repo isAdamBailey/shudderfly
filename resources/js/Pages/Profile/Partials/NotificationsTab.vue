@@ -153,8 +153,7 @@ const cleanup = () => {
   if (notificationsChannel.value && window.Echo && user) {
     try {
       window.Echo.leave(`App.Models.User.${user.id}`);
-    } catch (error) {
-      // Silently fail
+    } catch {
     }
     notificationsChannel.value = null;
   }
