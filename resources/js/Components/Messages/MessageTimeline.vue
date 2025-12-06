@@ -28,26 +28,24 @@
           ></div>
         </div>
         <div class="ml-4 flex items-center gap-2">
-          <button
+          <Button
             type="button"
-            class="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
             :disabled="speaking"
             title="Speak message"
             aria-label="Speak message"
             @click="speakMessage(message)"
           >
             <i class="ri-speak-fill text-xl"></i>
-          </button>
-          <button
+          </Button>
+          <DangerButton
             v-if="canAdmin"
             type="button"
-            class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
             title="Delete message"
             aria-label="Delete message"
             @click="deleteMessage(message.id)"
           >
             <i class="ri-delete-bin-line text-xl"></i>
-          </button>
+          </DangerButton>
         </div>
       </div>
     </div>
@@ -57,6 +55,8 @@
 </template>
 
 <script setup>
+import Button from "@/Components/Button.vue";
+import DangerButton from "@/Components/DangerButton.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { router } from "@inertiajs/vue3";
