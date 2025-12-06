@@ -1,11 +1,6 @@
 import "./bootstrap";
 import "../css/app.css";
 
-// Make test notification function available in development
-if (import.meta.env.DEV) {
-  import('./utils/testNotifications.js');
-}
-
 import { createApp, h } from "vue";
 import { createInertiaApp } from "@inertiajs/vue3";
 import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
