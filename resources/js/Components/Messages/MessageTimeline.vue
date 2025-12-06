@@ -224,18 +224,15 @@ const setupEchoListener = () => {
         return dateB - dateA; // Most recent first
       });
 
-      // Show success message
+      // Show success message for all users when a new message is received
       const successMessage =
         event.success_message || messageData.success_message;
       if (successMessage) {
         setFlashMessage("success", successMessage, 5000);
       } else if (messageData.user?.name) {
         // Fallback: create message if not provided in event
-        setFlashMessage(
-          "success",
-          `New message added by ${messageData.user.name}`,
-          5000
-        );
+        const fallbackMessage = `New message added by ${messageData.user.name}`;
+        setFlashMessage("success", fallbackMessage, 5000);
       }
     }
   });
