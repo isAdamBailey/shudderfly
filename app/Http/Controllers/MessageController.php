@@ -7,6 +7,7 @@ use App\Models\Message;
 use App\Models\SiteSetting;
 use App\Models\User;
 use App\Notifications\UserTagged;
+use App\Services\PushNotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,6 +16,10 @@ use Inertia\Response;
 
 class MessageController extends Controller
 {
+    public function __construct(
+        protected PushNotificationService $pushNotificationService
+    ) {
+    }
     /**
      * Display the messages index page.
      */
@@ -97,7 +102,7 @@ class MessageController extends Controller
                     ? mb_substr($message->message, 0, 117, 'UTF-8').'...'
                     : $message->message;
 
-                PushNotificationController::sendNotification(
+                $this->pushNotificationService->sendNotification(
                     $taggedUser->id,
                     $title,
                     $messageBody,
