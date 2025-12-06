@@ -116,7 +116,7 @@ const formatMessage = (text) => {
   
   // Then, match any remaining simple @mentions (single word) that weren't matched
   formatted = formatted.replace(
-    /@([a-zA-Z0-9_]+)(?=\s|$|[^\w])/g,
+    /@([a-zA-Z0-9_]+)(?!\w)/g,
     (match, username) => {
       // Only highlight if it's not already inside a span (not already highlighted)
       if (!match.includes('<span')) {
