@@ -63,7 +63,7 @@ const messagingEnabled = computed(() => {
                 :href="route('messages.index')"
                 :active="route().current('messages.*')"
               >
-                Messages
+                Chat
               </NavLink>
             </div>
           </div>
@@ -190,7 +190,7 @@ const messagingEnabled = computed(() => {
             :href="route('messages.index')"
             :active="route().current('messages.*')"
           >
-            Messages
+            Chat
           </ResponsiveNavLink>
         </div>
 

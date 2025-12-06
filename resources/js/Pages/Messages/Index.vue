@@ -1,10 +1,10 @@
 <template>
-  <Head title="Messages" />
+  <Head title="Chat" />
 
   <AuthenticatedLayout>
     <template #header>
       <h2 class="font-heading text-4xl text-theme-title leading-tight">
-        Messages
+        Chat
       </h2>
     </template>
 
@@ -23,7 +23,7 @@
 
         <!-- Message Timeline -->
         <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg p-6">
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+          <h3 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
             Timeline
           </h3>
           <MessageTimeline :messages="messages.data || []" :users="users" />
