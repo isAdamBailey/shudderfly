@@ -115,7 +115,7 @@ describe("MessageBuilder", () => {
             await nextTick();
 
             // Check if suggestions dropdown appears
-            const suggestions = wrapper.find(".user-suggestions");
+            const suggestions = wrapper.find(".user-suggestions-container");
             if (suggestions.exists()) {
                 expect(suggestions.exists()).toBe(true);
             }
@@ -140,7 +140,7 @@ describe("MessageBuilder", () => {
             await nextTick();
 
             // Should show users matching "j" (John Doe, Jane Smith)
-            const suggestions = wrapper.find(".user-suggestions");
+            const suggestions = wrapper.find(".user-suggestions-container");
             if (suggestions.exists()) {
                 expect(suggestions.text()).toContain("John");
                 expect(suggestions.text()).toContain("Jane");
