@@ -39,10 +39,17 @@ self.addEventListener('push', function(event) {
 self.addEventListener('notificationclick', function(event) {
     event.notification.close();
 
-    const urlToOpen = event.notification.data.url || '/';
+    const notificationData = event.notification.data || {};
+    const urlToOpen = notificationData.url || '/';
     
-    // Convert relative URLs to absolute for comparison
-    const absoluteUrlToOpen = new URL(urlToOpen, self.location.origin).href;
+    // Convert relative URLs to absolute
+    let absoluteUrlToOpen;
+    try {
+        absoluteUrlToOpen = new URL(urlToOpen, self.location.origin).href;
+    } catch (e) {
+        // If URL parsing fails, use the origin
+        absoluteUrlToOpen = self.location.origin + urlToOpen;
+    }
 
     event.waitUntil(
         self.clients.matchAll({

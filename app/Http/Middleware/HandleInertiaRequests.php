@@ -26,6 +26,15 @@ class HandleInertiaRequests extends Middleware
         return parent::version($request);
     }
 
+    public function handle(Request $request, \Closure $next)
+    {
+        if ($request->is('broadcasting/*')) {
+            return $next($request);
+        }
+
+        return parent::handle($request, $next);
+    }
+
     /**
      * Get the current theme based on the date.
      */
@@ -46,10 +55,25 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+        $userArray = null;
+        if ($user) {
+            // Make ID visible for authenticated user (needed for Echo channels)
+            $user->makeVisible(['id']);
+            $userArray = $user;
+        }
+
         return array_merge(parent::share($request), [
             'auth' => [
-                'user' => $request->user(),
+                'user' => $userArray,
             ],
+            'unread_notifications_count' => function () use ($request) {
+                if (! $request->user()) {
+                    return 0;
+                }
+
+                return $request->user()->unreadNotifications()->count();
+            },
             'csrf_token' => csrf_token(),
             'ziggy' => function () use ($request) {
                 return array_merge((new Ziggy)->toArray(), [
@@ -57,7 +81,9 @@ class HandleInertiaRequests extends Middleware
                 ]);
             },
             'settings' => SiteSetting::all()->mapWithKeys(function ($setting) {
-                return [$setting->key => $setting->value];
+                $rawValue = $setting->getAttributes()['value'] ?? $setting->value;
+
+                return [$setting->key => $rawValue];
             }),
             'theme' => self::getCurrentTheme(),
             'flash' => [

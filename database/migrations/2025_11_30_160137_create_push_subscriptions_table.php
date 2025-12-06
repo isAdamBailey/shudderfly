@@ -20,12 +20,19 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // Create unique index with prefix on endpoint to stay within MySQL key length limit (3072 bytes)
-        // Using prefix of 255 chars (max 1020 bytes with utf8mb4) + user_id (8 bytes) = 1028 bytes < 3072
-        Schema::table('push_subscriptions', function (Blueprint $table) {
-            // Note: DB::raw('endpoint(255)') is MySQL-specific. For other DBs, adjust as needed.
-            $table->unique(['user_id', DB::raw('endpoint(255)')], 'push_subscriptions_user_id_endpoint_unique');
-        });
+        // Create unique index on user_id and endpoint
+        // For MySQL, use prefix to stay within key length limit (3072 bytes)
+        // For other databases (SQLite, PostgreSQL), use full endpoint
+        $driver = DB::connection()->getDriverName();
+        if ($driver === 'mysql') {
+            Schema::table('push_subscriptions', function (Blueprint $table) {
+                $table->unique(['user_id', DB::raw('endpoint(255)')], 'push_subscriptions_user_id_endpoint_unique');
+            });
+        } else {
+            Schema::table('push_subscriptions', function (Blueprint $table) {
+                $table->unique(['user_id', 'endpoint'], 'push_subscriptions_user_id_endpoint_unique');
+            });
+        }
     }
 
     /**

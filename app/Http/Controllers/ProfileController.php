@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Mail\ContactAdmins;
 use App\Models\User;
+use App\Services\PushNotificationService;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,6 +15,10 @@ use Inertia\Inertia;
 
 class ProfileController extends Controller
 {
+    public function __construct(
+        protected PushNotificationService $pushNotificationService
+    ) {}
+
     /**
      * Display the user's profile form.
      *
@@ -90,7 +95,7 @@ class ProfileController extends Controller
             // Truncate message for push notification (max ~120 chars for body)
             $body = mb_strlen($message, 'UTF-8') > 120 ? mb_substr($message, 0, 117, 'UTF-8').'...' : $message;
 
-            PushNotificationController::sendNotification(
+            $this->pushNotificationService->sendNotification(
                 $user->id,
                 $title,
                 $body,
@@ -103,5 +108,39 @@ class ProfileController extends Controller
                 ]
             );
         }
+    }
+
+    /**
+     * Get the user's notifications.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function notifications(Request $request)
+    {
+        $notifications = $request->user()
+            ->notifications()
+            ->latest()
+            ->paginate(20);
+
+        return response()->json($notifications);
+    }
+
+    /**
+     * Mark a notification as read.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function markNotificationAsRead(Request $request, string $id)
+    {
+        $notification = $request->user()
+            ->notifications()
+            ->where('id', $id)
+            ->first();
+
+        if ($notification) {
+            $notification->markAsRead();
+        }
+
+        return response()->json(['success' => true]);
     }
 }

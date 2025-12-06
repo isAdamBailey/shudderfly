@@ -13,6 +13,9 @@ export function usePushNotifications() {
     return isSupported.value;
   };
 
+  // Check support immediately (synchronous)
+  checkSupport();
+
   // Register service worker
   const registerServiceWorker = async () => {
     if (!checkSupport()) {
@@ -121,11 +124,11 @@ export function usePushNotifications() {
       // Only store subscription locally after backend succeeds
       subscription.value = sub;
       isSubscribed.value = true;
-      return { success: true };
+      return true;
     } catch (error) {
       // Log the error for debugging (optional)
       console.error("Push subscription error:", error);
-      return { success: false, error: error?.message || String(error) };
+      throw error;
     }
   };
 

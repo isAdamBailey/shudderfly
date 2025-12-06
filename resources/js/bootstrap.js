@@ -25,16 +25,33 @@ if (import.meta.env.VITE_PUSHER_APP_KEY) {
     import("pusher-js").then((PusherModule) => {
       window.Pusher = PusherModule.default;
 
-      window.Echo = new EchoModule.default({
+      const pusherConfig = {
         broadcaster: "pusher",
         key: import.meta.env.VITE_PUSHER_APP_KEY,
-        wsHost: import.meta.env.VITE_PUSHER_HOST
-          ? import.meta.env.VITE_PUSHER_HOST
-          : `ws-${import.meta.env.VITE_PUSHER_APP_CLUSTER || "mt1"}.pusher.com`,
-        wsPort: import.meta.env.VITE_PUSHER_PORT ?? 80,
-        wssPort: import.meta.env.VITE_PUSHER_PORT ?? 443,
         forceTLS: (import.meta.env.VITE_PUSHER_SCHEME ?? "https") === "https",
         enabledTransports: ["ws", "wss"]
+      };
+
+      // If using custom host, use wsHost/wsPort/wssPort
+      if (import.meta.env.VITE_PUSHER_HOST) {
+        pusherConfig.wsHost = import.meta.env.VITE_PUSHER_HOST;
+        pusherConfig.wsPort = import.meta.env.VITE_PUSHER_PORT ?? 80;
+        pusherConfig.wssPort = import.meta.env.VITE_PUSHER_PORT ?? 443;
+      } else {
+        // If using standard Pusher service, use cluster
+        pusherConfig.cluster = import.meta.env.VITE_PUSHER_APP_CLUSTER || "mt1";
+      }
+
+      // Laravel Echo automatically handles CSRF via XSRF-TOKEN cookie
+      // But we can explicitly set the auth endpoint and headers if needed
+      window.Echo = new EchoModule.default({
+        ...pusherConfig,
+        authEndpoint: '/broadcasting/auth',
+        auth: {
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+        },
       });
     }).catch((error) => {
       console.error("Failed to load pusher-js module:", error);

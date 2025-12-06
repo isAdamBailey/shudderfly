@@ -32,4 +32,16 @@ class SiteSetting extends Model
 
         return is_numeric($value) ? $value * 1 : $value;
     }
+
+    /**
+     * Set the value attribute, ensuring it's stored as a string.
+     *
+     * @param  mixed  $value
+     * @return void
+     */
+    public function setValueAttribute($value)
+    {
+        // Always store as string in database
+        $this->attributes['value'] = (string) $value;
+    }
 }
