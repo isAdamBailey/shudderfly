@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Notifications\Messages\BroadcastMessage;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class UserTagged extends Notification implements ShouldBroadcast
@@ -33,7 +34,23 @@ class UserTagged extends Notification implements ShouldBroadcast
      */
     public function via(object $notifiable): array
     {
-        return ['database', 'broadcast'];
+        return ['database', 'broadcast', 'mail'];
+    }
+
+    /**
+     * Get the mail representation of the notification.
+     */
+    public function toMail(object $notifiable): MailMessage
+    {
+        $url = route('messages.index');
+
+        return (new MailMessage)
+            ->subject('You were tagged in a message by '.$this->tagger->name)
+            ->greeting('Hello '.$notifiable->name.'!')
+            ->line($this->tagger->name.' tagged you in a message:')
+            ->line('"'.$this->message->message.'"')
+            ->action('View Message', $url)
+            ->line('Thank you for using our platform!');
     }
 
     /**
