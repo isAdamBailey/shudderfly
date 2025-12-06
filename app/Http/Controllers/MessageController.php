@@ -54,6 +54,25 @@ class MessageController extends Controller
     }
 
     /**
+     * Get a specific message by ID.
+     */
+    public function show(Message $message): \Illuminate\Http\JsonResponse
+    {
+        $message->load('user');
+        
+        return response()->json([
+            'id' => $message->id,
+            'user_id' => $message->user_id,
+            'message' => $message->message,
+            'created_at' => $message->created_at->toIso8601String(),
+            'user' => [
+                'id' => $message->user->id,
+                'name' => $message->user->name,
+            ],
+        ]);
+    }
+
+    /**
      * Store a newly created message.
      */
     public function store(Request $request): RedirectResponse

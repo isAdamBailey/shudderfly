@@ -10,6 +10,21 @@ global.route = (name, params) => {
   return `/${name}`;
 };
 
+// Mock window.location for tests
+Object.defineProperty(window, 'location', {
+  value: {
+    hash: ''
+  },
+  writable: true
+});
+
+// Mock axios
+vi.mock('axios', () => ({
+  default: {
+    get: vi.fn()
+  }
+}));
+
 // Mock router and usePage
 const mockPage = {
   props: {
@@ -32,6 +47,19 @@ vi.mock("@/composables/permissions", () => ({
 }));
 
 describe("MessageTimeline", () => {
+  beforeEach(() => {
+    // Ensure window.location is properly mocked
+    if (typeof window !== "undefined") {
+      Object.defineProperty(window, "location", {
+        value: {
+          hash: ""
+        },
+        writable: true,
+        configurable: true
+      });
+    }
+  });
+
   const mockMessages = [
     {
       id: 1,

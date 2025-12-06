@@ -208,9 +208,8 @@ describe("NotificationsTab", () => {
       await nextTick();
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      const link = wrapper.find('a[href="/messages"]');
-      expect(link.exists()).toBe(true);
-      expect(link.text()).toContain("View message");
+      // The entire notification card is now clickable, check for the "View message" text
+      expect(wrapper.text()).toContain("View message");
     });
   });
 

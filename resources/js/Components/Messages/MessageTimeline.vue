@@ -9,8 +9,9 @@
 
     <div
       v-for="message in messages"
+      :id="`message-${message.id}`"
       :key="message.id"
-      class="bg-white dark:bg-gray-800 rounded-lg shadow p-4"
+      class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 scroll-mt-4"
     >
       <div class="flex items-start justify-between">
         <div class="flex-1">
@@ -55,13 +56,15 @@
 </template>
 
 <script setup>
+/* global route */
 import Button from "@/Components/Button.vue";
 import DangerButton from "@/Components/DangerButton.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useFlashMessage } from "@/composables/useFlashMessage";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { router } from "@inertiajs/vue3";
-import { onMounted, onUnmounted, ref, watch } from "vue";
+import axios from "axios";
+import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
 const props = defineProps({
   messages: {
@@ -238,11 +241,71 @@ const cleanup = () => {
   }
 };
 
+const scrollToMessage = async () => {
+  // Check if window and location are available (for test environments)
+  if (typeof window === "undefined" || !window?.location) {
+    return;
+  }
+
+  // Check if there's a hash in the URL (e.g., #message-123)
+  const hash = window.location?.hash;
+  if (hash && hash.startsWith("#message-")) {
+    const messageId = parseInt(hash.replace("#message-", ""), 10);
+    if (!messageId) return;
+
+    // Check if message exists in current messages
+    const messageExists = messages.value.some((m) => m.id === messageId);
+
+    if (!messageExists) {
+      // Message not in current page, fetch it
+      try {
+        const response = await axios.get(route("messages.show", messageId));
+        const fetchedMessage = response.data;
+        // Add the message to the beginning of the array
+        messages.value.unshift(fetchedMessage);
+        // Wait for DOM to update
+        await nextTick();
+      } catch (error) {
+        console.error("Failed to fetch message:", error);
+        return;
+      }
+    }
+
+    // Wait for next tick to ensure DOM is updated
+    setTimeout(() => {
+      const element = document.getElementById(`message-${messageId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+        // Add a highlight effect
+        element.classList.add("ring-2", "ring-blue-500", "ring-offset-2");
+        setTimeout(() => {
+          element.classList.remove("ring-2", "ring-blue-500", "ring-offset-2");
+        }, 2000);
+      }
+    }, 100);
+  }
+};
+
 onMounted(() => {
   setupEchoListener();
+  scrollToMessage();
+
+  // Also listen for hash changes (in case user navigates with back/forward)
+  if (
+    typeof window !== "undefined" &&
+    typeof window.addEventListener === "function"
+  ) {
+    window.addEventListener("hashchange", scrollToMessage);
+  }
 });
 
 onUnmounted(() => {
   cleanup();
+  if (
+    typeof window !== "undefined" &&
+    typeof window.removeEventListener === "function"
+  ) {
+    window.removeEventListener("hashchange", scrollToMessage);
+  }
 });
 </script>

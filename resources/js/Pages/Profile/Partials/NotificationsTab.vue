@@ -16,11 +16,12 @@
         v-for="notification in notifications"
         :key="notification.id"
         :class="[
-          'p-4 rounded-lg border',
+          'p-4 rounded-lg border cursor-pointer transition-colors',
           notification.read_at
-            ? 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
-            : 'bg-blue-50 dark:bg-blue-900 border-blue-200 dark:border-blue-700'
+            ? 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
+            : 'bg-blue-50 dark:bg-blue-900 border-blue-200 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-800'
         ]"
+        @click="handleNotificationClick(notification)"
       >
         <div class="flex items-start justify-between">
           <div class="flex-1">
@@ -46,19 +47,15 @@
             <div class="text-sm text-gray-500 dark:text-gray-400 mt-2">
               {{ formatDate(notification.created_at) }}
             </div>
-            <a
-              v-if="notification.data.message_id"
-              :href="notification.data.url || route('messages.index')"
-              class="text-blue-600 dark:text-blue-400 hover:underline text-sm mt-2 inline-block"
-            >
+            <div class="text-blue-600 dark:text-blue-400 text-sm mt-2">
               View message →
-            </a>
+            </div>
           </div>
           <button
             v-if="!notification.read_at"
             type="button"
-            class="ml-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            @click="markAsRead(notification.id)"
+            class="ml-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 z-10"
+            @click.stop="markAsRead(notification.id)"
             title="Mark as read"
           >
             <i class="ri-check-line text-xl"></i>
@@ -108,6 +105,19 @@ const loadNotifications = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+const handleNotificationClick = async (notification) => {
+  // Mark as read if not already read
+  if (!notification.read_at) {
+    await markAsRead(notification.id);
+  }
+  // Navigate to messages timeline with message ID hash if available
+  const baseUrl = notification.data.url || route('messages.index');
+  const url = notification.data.message_id 
+    ? `${baseUrl}#message-${notification.data.message_id}`
+    : baseUrl;
+  router.visit(url);
 };
 
 const markAsRead = async (notificationId) => {

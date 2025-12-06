@@ -63,6 +63,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/music/{song}/increment-read-count', [MusicController::class, 'incrementReadCount'])->name('music.increment-read-count');
 
     Route::get('/messages', [MessageController::class, 'index'])->name('messages.index');
+    Route::get('/messages/{message}', [MessageController::class, 'show'])->name('messages.show');
     Route::post('/messages', [MessageController::class, 'store'])->name('messages.store');
     Route::get('/profile/notifications', [ProfileController::class, 'notifications'])->name('profile.notifications');
     Route::post('/notifications/{id}/read', [ProfileController::class, 'markNotificationAsRead'])->name('notifications.read');
