@@ -88,6 +88,18 @@ class PushNotificationService
                     continue;
                 }
 
+                // Security: Validate endpoint before using it to prevent SSRF
+                if (! $this->isValidWebPushEndpoint($subscription->endpoint)) {
+                    Log::warning('Invalid push subscription endpoint rejected', [
+                        'subscription_id' => $subscription->id ?? null,
+                        'user_id' => $subscription->user_id ?? null,
+                        'endpoint' => $subscription->endpoint ?? null,
+                    ]);
+                    // Delete the invalid subscription
+                    PushSubscription::where('id', $subscription->id)->delete();
+                    continue;
+                }
+
                 /** @var \Minishlink\WebPush\Subscription $pushSubscription */
                 $pushSubscription = $subscriptionClass::create([
                     'endpoint' => $subscription->endpoint,
@@ -146,6 +158,88 @@ class PushNotificationService
             'failed' => count(array_filter($results, fn ($r) => ! $r['success'])),
             'results' => $results,
         ];
+    }
+
+    /**
+     * Validate that an endpoint is a legitimate Web Push provider endpoint.
+     * This prevents SSRF attacks by ensuring we only send requests to trusted providers.
+     *
+     * @param  string  $endpoint
+     * @return bool
+     */
+    private function isValidWebPushEndpoint(string $endpoint): bool
+    {
+        $allowedDomains = [
+            'fcm.googleapis.com',                    // Google Firebase Cloud Messaging
+            'updates.push.services.mozilla.com',      // Mozilla Push Service
+            'notify.windows.com',                     // Microsoft Windows Push Notification Service
+        ];
+
+        $parsedUrl = parse_url($endpoint);
+
+        // Must be a valid URL
+        if ($parsedUrl === false || ! isset($parsedUrl['scheme'], $parsedUrl['host'])) {
+            return false;
+        }
+
+        // Must use HTTPS
+        if ($parsedUrl['scheme'] !== 'https') {
+            return false;
+        }
+
+        // Check if host matches an allowed domain
+        $host = $parsedUrl['host'];
+        foreach ($allowedDomains as $allowedDomain) {
+            // Exact match or subdomain match (e.g., *.notify.windows.com)
+            if ($host === $allowedDomain || str_ends_with($host, '.'.$allowedDomain)) {
+                // Additional check: reject internal/localhost addresses
+                if ($this->isInternalOrLocalhost($host)) {
+                    return false;
+                }
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if the host is an internal/localhost address.
+     *
+     * @param  string  $host
+     * @return bool
+     */
+    private function isInternalOrLocalhost(string $host): bool
+    {
+        // Check for localhost variants
+        if (in_array(strtolower($host), ['localhost', '127.0.0.1', '::1'])) {
+            return true;
+        }
+
+        // Check if host is an IP address
+        $isIp = filter_var($host, FILTER_VALIDATE_IP) !== false;
+
+        if ($isIp) {
+            // For IP addresses, check for private/reserved ranges
+            if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+                return true;
+            }
+        } else {
+            // For hostnames, check for internal domain patterns
+            $internalPatterns = [
+                '.local',
+                '.internal',
+                '.lan',
+            ];
+
+            foreach ($internalPatterns as $pattern) {
+                if (str_ends_with($host, $pattern)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }
 

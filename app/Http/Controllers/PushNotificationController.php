@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PushSubscription;
+use App\Rules\ValidWebPushEndpoint;
 use App\Services\PushNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -19,7 +20,7 @@ class PushNotificationController extends Controller
     public function subscribe(Request $request)
     {
         $request->validate([
-            'endpoint' => 'required|string|max:1000',
+            'endpoint' => ['required', 'string', 'max:1000', new ValidWebPushEndpoint()],
             'keys' => 'required|array',
             'keys.p256dh' => 'required|string',
             'keys.auth' => 'required|string',
