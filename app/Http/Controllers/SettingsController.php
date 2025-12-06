@@ -28,7 +28,14 @@ class SettingsController extends Controller
         $validated = $request->validate([
             'settings' => ['required', 'array'],
             'settings.*' => ['required', function ($attribute, $value, $fail) {
-                if (! isset($value['value']) || (! is_string($value['value']) && ! is_numeric($value['value']) && ! is_bool($value['value']) && $value['value'] !== '0' && $value['value'] !== '1')) {
+                // Allow null/undefined values (they will be handled as empty strings)
+                if (! isset($value['value'])) {
+                    return;
+                }
+                
+                $val = $value['value'];
+                // Accept string, numeric, boolean, null, or the specific strings '0'/'1'
+                if (! is_string($val) && ! is_numeric($val) && ! is_bool($val) && $val !== null && $val !== '0' && $val !== '1') {
                     $fail('The '.$attribute.' value must be a string, numeric, or boolean value.');
                 }
                 if (! isset($value['description']) || ! is_string($value['description'])) {
@@ -44,18 +51,24 @@ class SettingsController extends Controller
                 continue;
             }
 
-            $value = $data['value'];
+            $value = $data['value'] ?? null;
 
             if ($setting->type === 'boolean') {
-                $value = filter_var($value, FILTER_VALIDATE_BOOLEAN) ? '1' : '0';
+                // Handle boolean values: true/1/'1' -> '1', false/0/'0'/null -> '0'
+                if ($value === true || $value === 1 || $value === '1') {
+                    $value = '1';
+                } else {
+                    $value = '0';
+                }
             } else {
-                $value = (string) $value;
+                // For non-boolean values, convert to string (handle null as empty string)
+                $value = $value !== null ? (string) $value : '';
             }
 
             // Update directly using update() - Laravel will handle the value correctly
             $setting->update([
                 'value' => $value,
-                'description' => $data['description'],
+                'description' => $data['description'] ?? '',
             ]);
         }
 
