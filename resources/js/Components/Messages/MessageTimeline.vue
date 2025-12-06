@@ -96,10 +96,15 @@ watch(
       (m) => !propsIds.has(m.id)
     );
 
-    // Merge: new messages from props first, then existing Echo messages
-    messages.value = [...newMessages, ...existingMessagesToKeep];
+    // Merge: combine all messages and sort by created_at (most recent first)
+    const allMessages = [...newMessages, ...existingMessagesToKeep];
+    messages.value = allMessages.sort((a, b) => {
+      const dateA = new Date(a.created_at);
+      const dateB = new Date(b.created_at);
+      return dateB - dateA; // Most recent first
+    });
   },
-  { deep: true }
+  { deep: true, immediate: false }
 );
 
 const formatDate = (dateString) => {
@@ -198,9 +203,9 @@ const setupEchoListener = () => {
   // Listen for new messages
   // Laravel Echo automatically prefixes with the event namespace
   messagesChannel.value.listen(".App\\Events\\MessageCreated", (event) => {
-    // Event data structure from broadcastWith() - check if it's already the message object
-    // or if it's wrapped in a data property
-    const messageData = event.message || event;
+    // Laravel Echo puts broadcastWith() data directly on the event object
+    // The event itself IS the message data from broadcastWith()
+    const messageData = event;
 
     // Ensure message has required structure
     if (!messageData || !messageData.id || !messageData.user) {
@@ -211,11 +216,15 @@ const setupEchoListener = () => {
     const messageExists = messages.value.some((m) => m.id === messageData.id);
 
     if (!messageExists) {
-      // Add new message to the beginning of the array (most recent first)
-      messages.value.unshift(messageData);
+      // Add new message and sort by created_at (most recent first)
+      messages.value.push(messageData);
+      messages.value.sort((a, b) => {
+        const dateA = new Date(a.created_at);
+        const dateB = new Date(b.created_at);
+        return dateB - dateA; // Most recent first
+      });
 
-      // Show success message - check event directly first, then messageData
-      // Laravel Echo puts broadcastWith() data directly on the event object
+      // Show success message
       const successMessage =
         event.success_message || messageData.success_message;
       if (successMessage) {
