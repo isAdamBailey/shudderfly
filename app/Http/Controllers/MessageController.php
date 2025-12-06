@@ -39,7 +39,7 @@ class MessageController extends Controller
         $users = User::select('id', 'name')
             ->orderBy('name')
             ->get()
-            ->makeVisible(['id']); // Make id visible even though it's in $hidden
+            ->makeVisible(['id']);
 
         return Inertia::render('Messages/Index', [
             'messages' => $messages,
