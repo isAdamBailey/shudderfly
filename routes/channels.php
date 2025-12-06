@@ -7,8 +7,11 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 });
 
 Broadcast::channel('messages', function ($user) {
+    // For private channels, Laravel automatically ensures $user is authenticated
+    // Check if messaging is enabled
     $setting = \App\Models\SiteSetting::where('key', 'messaging_enabled')->first();
     $messagingEnabled = $setting && ($setting->getAttributes()['value'] ?? $setting->value) === '1';
 
-    return $messagingEnabled;
+    // Return true if messaging is enabled and user is authenticated, false otherwise
+    return $messagingEnabled === true;
 });

@@ -150,8 +150,8 @@ const setupEchoListener = () => {
     return;
   }
 
-  // Subscribe to public messages channel
-  messagesChannel.value = window.Echo.channel("messages");
+  // Subscribe to private messages channel (requires authentication)
+  messagesChannel.value = window.Echo.private("messages");
 
   // Listen for new messages
   // Laravel Echo automatically prefixes with the event namespace

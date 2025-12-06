@@ -48,6 +48,7 @@ describe("MessageTimeline", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         // Mock window.Echo
+        const mockListen = vi.fn();
         global.window = {
             ...global.window,
             Echo: {
@@ -55,7 +56,7 @@ describe("MessageTimeline", () => {
                     listen: vi.fn(),
                 })),
                 private: vi.fn(() => ({
-                    notification: vi.fn(),
+                    listen: mockListen,
                 })),
                 leave: vi.fn(),
             },
@@ -270,7 +271,7 @@ describe("MessageTimeline", () => {
     });
 
     describe("Echo integration", () => {
-        it("subscribes to messages channel on mount", () => {
+        it("subscribes to private messages channel on mount", () => {
             mount(MessageTimeline, {
                 props: {
                     messages: mockMessages,
@@ -278,10 +279,15 @@ describe("MessageTimeline", () => {
                 },
             });
 
-            expect(global.window.Echo.channel).toHaveBeenCalledWith("messages");
+            expect(global.window.Echo.private).toHaveBeenCalledWith("messages");
         });
 
         it("adds new messages when broadcast event is received", async () => {
+            const mockListen = vi.fn();
+            global.window.Echo.private = vi.fn(() => ({
+                listen: mockListen,
+            }));
+
             const wrapper = mount(MessageTimeline, {
                 props: {
                     messages: mockMessages,
@@ -291,10 +297,10 @@ describe("MessageTimeline", () => {
 
             await nextTick();
 
-            const channel = global.window.Echo.channel("messages");
+            const channel = global.window.Echo.private("messages");
             // The listen method should have been called
-            if (channel.listen.mock.calls.length > 0) {
-                const listenCallback = channel.listen.mock.calls.find(
+            if (mockListen.mock.calls.length > 0) {
+                const listenCallback = mockListen.mock.calls.find(
                     (call) => call[0] === ".App\\Events\\MessageCreated"
                 )?.[1];
 
