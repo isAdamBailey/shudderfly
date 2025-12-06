@@ -29,7 +29,9 @@ export function useUnreadNotifications() {
     }
     retryCount.value = 0;
 
-    notificationsChannel.value = window.Echo.private(`App.Models.User.${user.id}`);
+    notificationsChannel.value = window.Echo.private(
+      `App.Models.User.${user.id}`
+    );
 
     notificationsChannel.value.notification(() => {
       unreadCount.value++;
@@ -46,8 +48,7 @@ export function useUnreadNotifications() {
     if (notificationsChannel.value && window.Echo && user) {
       try {
         window.Echo.leave(`App.Models.User.${user.id}`);
-      } catch {
-      }
+      } catch {}
       notificationsChannel.value = null;
     }
     retryCount.value = 0;
@@ -72,7 +73,12 @@ export function useUnreadNotifications() {
   );
 
   onMounted(() => {
-    setupEchoListener();
+    // Only setup if not already set up by the watch (which runs with immediate: true)
+    // This prevents duplicate listeners when user is already authenticated on mount
+    const user = page.props.auth?.user;
+    if (user?.id && !notificationsChannel.value && window.Echo) {
+      setupEchoListener();
+    }
   });
 
   onUnmounted(() => {
@@ -80,7 +86,6 @@ export function useUnreadNotifications() {
   });
 
   return {
-    unreadCount,
+    unreadCount
   };
 }
-

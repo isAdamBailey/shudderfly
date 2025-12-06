@@ -97,6 +97,7 @@ class PushNotificationService
                     ]);
                     // Delete the invalid subscription
                     PushSubscription::where('id', $subscription->id)->delete();
+
                     continue;
                 }
 
@@ -163,9 +164,6 @@ class PushNotificationService
     /**
      * Validate that an endpoint is a legitimate Web Push provider endpoint.
      * This prevents SSRF attacks by ensuring we only send requests to trusted providers.
-     *
-     * @param  string  $endpoint
-     * @return bool
      */
     private function isValidWebPushEndpoint(string $endpoint): bool
     {
@@ -196,6 +194,7 @@ class PushNotificationService
                 if ($this->isInternalOrLocalhost($host)) {
                     return false;
                 }
+
                 return true;
             }
         }
@@ -205,9 +204,6 @@ class PushNotificationService
 
     /**
      * Check if the host is an internal/localhost address.
-     *
-     * @param  string  $host
-     * @return bool
      */
     private function isInternalOrLocalhost(string $host): bool
     {
@@ -242,4 +238,3 @@ class PushNotificationService
         return false;
     }
 }
-

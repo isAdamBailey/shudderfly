@@ -18,8 +18,8 @@ class MessageController extends Controller
 {
     public function __construct(
         protected PushNotificationService $pushNotificationService
-    ) {
-    }
+    ) {}
+
     /**
      * Display the messages index page.
      */
@@ -81,7 +81,7 @@ class MessageController extends Controller
         $message->load('user');
 
         // Use tagged user IDs from request if provided and not empty, otherwise parse from message
-        $taggedUserIds = !empty($validated['tagged_user_ids'])
+        $taggedUserIds = ! empty($validated['tagged_user_ids'])
             ? $validated['tagged_user_ids']
             : $message->getTaggedUserIds();
 

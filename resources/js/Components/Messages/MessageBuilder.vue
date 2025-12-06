@@ -635,13 +635,11 @@ function postMessage() {
     }
   }
 
-  // Create a new form instance with the data
-  const submitForm = useForm({
-    message: messageText,
-    tagged_user_ids: taggedUserIds
-  });
+  // Update the existing form instance with the data
+  form.message = messageText;
+  form.tagged_user_ids = taggedUserIds;
 
-  submitForm.post(route("messages.store"), {
+  form.post(route("messages.store"), {
     preserveScroll: true,
     onSuccess: () => {
       // Clear input after successful post

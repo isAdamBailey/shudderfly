@@ -17,8 +17,8 @@ class ProfileController extends Controller
 {
     public function __construct(
         protected PushNotificationService $pushNotificationService
-    ) {
-    }
+    ) {}
+
     /**
      * Display the user's profile form.
      *

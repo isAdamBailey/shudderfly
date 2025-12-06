@@ -42,7 +42,7 @@ class Message extends Model
     public function scopeWithinRetentionPeriod($query)
     {
         $rawRetention = SiteSetting::where('key', 'messaging_retention_days')->value('value');
-        $retentionDays = (is_numeric($rawRetention) && (int)$rawRetention > 0) ? (int)$rawRetention : 30;
+        $retentionDays = (is_numeric($rawRetention) && (int) $rawRetention > 0) ? (int) $rawRetention : 30;
 
         return $query->where('created_at', '>=', now()->subDays($retentionDays));
     }

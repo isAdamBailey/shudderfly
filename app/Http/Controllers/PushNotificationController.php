@@ -6,21 +6,20 @@ use App\Models\PushSubscription;
 use App\Rules\ValidWebPushEndpoint;
 use App\Services\PushNotificationService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
 class PushNotificationController extends Controller
 {
     public function __construct(
         protected PushNotificationService $pushNotificationService
-    ) {
-    }
+    ) {}
+
     /**
      * Store a push subscription
      */
     public function subscribe(Request $request)
     {
         $request->validate([
-            'endpoint' => ['required', 'string', 'max:1000', new ValidWebPushEndpoint()],
+            'endpoint' => ['required', 'string', 'max:1000', new ValidWebPushEndpoint],
             'keys' => 'required|array',
             'keys.p256dh' => 'required|string',
             'keys.auth' => 'required|string',
@@ -73,12 +72,14 @@ class PushNotificationController extends Controller
      *                       Example: ['url' => 'https://example.com', 'type' => 'message']
      *                       All keys should be strings, and values should be serializable (string, int, bool, array).
      * @return array Result of the notification send attempt.
+     *
      * @deprecated Use PushNotificationService::sendNotification() instead. This method is kept for backward compatibility.
      */
     public static function sendNotification($userId, $title, $body, $data = [])
     {
         // Delegate to service for backward compatibility
         $service = app(PushNotificationService::class);
+
         return $service->sendNotification($userId, $title, $body, $data);
     }
 }
