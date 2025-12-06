@@ -121,7 +121,8 @@ class MessageController extends Controller
         // Broadcast the new message
         event(new MessageCreated($message));
 
-        return back()->with('success', 'Message posted successfully!');
+        // Return flash message for the user who posted (others will see it via Echo)
+        return back()->with('success', 'New message added by ' . Auth::user()->name);
     }
 
     /**

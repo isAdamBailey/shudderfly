@@ -58,6 +58,7 @@
 import Button from "@/Components/Button.vue";
 import DangerButton from "@/Components/DangerButton.vue";
 import { usePermissions } from "@/composables/permissions";
+import { useFlashMessage } from "@/composables/useFlashMessage";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { router } from "@inertiajs/vue3";
 import { onMounted, onUnmounted, ref, watch } from "vue";
@@ -75,16 +76,25 @@ const props = defineProps({
 
 const { canAdmin } = usePermissions();
 const { speak, speaking } = useSpeechSynthesis();
+const { setFlashMessage } = useFlashMessage();
 const loading = ref(false);
 const messagesChannel = ref(null);
 
 const messages = ref([...props.messages]);
 
-// Watch for prop changes
+// Watch for prop changes - merge with existing messages to avoid duplicates
 watch(
   () => props.messages,
   (newMessages) => {
-    messages.value = [...newMessages];
+    const propsIds = new Set(newMessages.map((m) => m.id));
+
+    // Keep existing messages that aren't in the new props (Echo-added messages)
+    const existingMessagesToKeep = messages.value.filter(
+      (m) => !propsIds.has(m.id)
+    );
+
+    // Merge: new messages from props first, then existing Echo messages
+    messages.value = [...newMessages, ...existingMessagesToKeep];
   },
   { deep: true }
 );
@@ -185,8 +195,37 @@ const setupEchoListener = () => {
   // Listen for new messages
   // Laravel Echo automatically prefixes with the event namespace
   messagesChannel.value.listen(".App\\Events\\MessageCreated", (event) => {
-    // Add new message to the beginning of the array
-    messages.value.unshift(event);
+    // Event data structure from broadcastWith() - check if it's already the message object
+    // or if it's wrapped in a data property
+    const messageData = event.message || event;
+
+    // Ensure message has required structure
+    if (!messageData || !messageData.id || !messageData.user) {
+      return;
+    }
+
+    // Check if message already exists to avoid duplicates
+    const messageExists = messages.value.some((m) => m.id === messageData.id);
+
+    if (!messageExists) {
+      // Add new message to the beginning of the array (most recent first)
+      messages.value.unshift(messageData);
+
+      // Show success message - check event directly first, then messageData
+      // Laravel Echo puts broadcastWith() data directly on the event object
+      const successMessage =
+        event.success_message || messageData.success_message;
+      if (successMessage) {
+        setFlashMessage("success", successMessage, 5000);
+      } else if (messageData.user?.name) {
+        // Fallback: create message if not provided in event
+        setFlashMessage(
+          "success",
+          `New message added by ${messageData.user.name}`,
+          5000
+        );
+      }
+    }
   });
 };
 

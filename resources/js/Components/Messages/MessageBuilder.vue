@@ -214,6 +214,16 @@ function applyFavorite(text) {
   selection.value = words;
 }
 
+// Auto-grow textarea function
+function autoGrowTextarea(textarea) {
+  if (!textarea) return;
+  // Reset height to auto to get the correct scrollHeight
+  textarea.style.height = 'auto';
+  // Set height to scrollHeight, but cap at max-height (300px)
+  const newHeight = Math.min(textarea.scrollHeight, 300);
+  textarea.style.height = `${newHeight}px`;
+}
+
 // Sync selection with input value (when typing)
 function handleInputChange(event) {
   // Get the current value from the input element (KioskBoard updates it directly)
@@ -234,6 +244,13 @@ function handleInputChange(event) {
     .split(/\s+/)
     .filter((word) => word.length > 0);
   selection.value = words;
+}
+
+// Handle textarea input with auto-grow
+function handleTextareaInput(event) {
+  handleInputChange(event);
+  // Auto-grow the textarea
+  autoGrowTextarea(event.target);
 }
 
 function checkForMentions(text, cursorPos) {
@@ -308,6 +325,8 @@ function insertMention(user) {
   }
 
   keyboardInputRef.value.value = inputValue.value;
+  // Auto-grow textarea after inserting mention
+  autoGrowTextarea(keyboardInputRef.value);
   keyboardInputRef.value.dispatchEvent(new Event("input", { bubbles: true }));
 
   showUserSuggestions.value = false;
@@ -358,6 +377,8 @@ watch(
   (newValue) => {
     if (keyboardInputRef.value && keyboardInputRef.value.value !== newValue) {
       keyboardInputRef.value.value = newValue;
+      // Auto-grow when value changes programmatically
+      autoGrowTextarea(keyboardInputRef.value);
     }
   }
 );
@@ -371,11 +392,12 @@ let justAddedTimeoutId = null;
 onMounted(() => {
   loadFavorites();
 
-  // Focus input to show keyboard immediately
+  // Set up event listeners for input changes (including from KioskBoard)
   mountTimeoutId = setTimeout(() => {
     if (keyboardInputRef.value && typeof document !== "undefined") {
-      keyboardInputRef.value.focus();
-
+      // Initialize textarea height
+      autoGrowTextarea(keyboardInputRef.value);
+      
       // Add event listeners to catch all input changes (including from KioskBoard)
       const inputEl = keyboardInputRef.value;
 
@@ -387,6 +409,8 @@ onMounted(() => {
           // Check for mentions when input changes
           const cursorPos = e.target.selectionStart ?? value.length;
           checkForMentions(value, cursorPos);
+          // Auto-grow textarea
+          autoGrowTextarea(e.target);
         }
       };
 
@@ -666,18 +690,18 @@ function postMessage() {
     >
       <div
         :class="[
-          'min-h-[56px] flex items-center px-4 py-3 rounded-md bg-gray-50 dark:bg-slate-700 text-lg font-medium',
+          'min-h-[56px] flex items-start px-4 py-3 rounded-md bg-gray-50 dark:bg-slate-700 text-lg font-medium',
           { 'ring-2 ring-green-400 animate-pulse': speaking }
         ]"
       >
         <div class="flex items-center justify-between w-full relative">
-          <input
+          <textarea
             ref="keyboardInputRef"
             v-model="inputValue"
-            type="text"
-            class="virtual-keyboard-input flex-1 text-gray-700 dark:text-gray-100 break-words text-2xl md:text-3xl font-bold leading-tight bg-transparent border-none outline-none focus:outline-none"
+            class="virtual-keyboard-input flex-1 text-gray-700 dark:text-gray-100 break-words text-2xl md:text-3xl font-bold leading-tight bg-transparent border-none outline-none focus:outline-none resize-none overflow-hidden min-h-[40px] max-h-[300px]"
             placeholder="Type your message here... (use @ to tag users)"
-            @input="handleInputChange"
+            rows="1"
+            @input="handleTextareaInput"
             @change="handleInputChange"
             @keydown="handleKeydown"
           />
@@ -705,7 +729,7 @@ function postMessage() {
           </div>
           <button
             type="button"
-            class="ml-4 px-4 py-3 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-md"
+            class="ml-4 px-4 py-3 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-md self-start mt-1"
             aria-label="Say message"
             title="Say message"
             :disabled="speaking"
@@ -1043,7 +1067,7 @@ function postMessage() {
     <!-- Virtual Keyboard Component -->
     <VirtualKeyboard
       input-selector=".virtual-keyboard-input"
-      :auto-focus="true"
+      :auto-focus="false"
     />
   </div>
 </template>

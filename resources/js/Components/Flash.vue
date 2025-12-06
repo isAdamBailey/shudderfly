@@ -1,29 +1,21 @@
 <script setup>
-import { router, usePage } from "@inertiajs/vue3";
-import { onBeforeUnmount, onMounted, ref, computed } from "vue";
+import { router } from "@inertiajs/vue3";
+import { useFlashMessage } from "@/composables/useFlashMessage";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
-const page = usePage();
+const { flashMessage, clearFlashMessage } = useFlashMessage();
 const show = ref(false);
 let hideTimeoutId = null;
 let disposeSuccess = null;
 
 const close = () => {
     show.value = false;
+    clearFlashMessage();
     if (hideTimeoutId) {
         clearTimeout(hideTimeoutId);
         hideTimeoutId = null;
     }
 };
-
-// Computed properties for different message types
-const flashMessage = computed(() => {
-    const flash = page.props.flash;
-    if (flash?.success) return { type: "success", text: flash.success };
-    if (flash?.error) return { type: "error", text: flash.error };
-    if (flash?.warning) return { type: "warning", text: flash.warning };
-    if (flash?.info) return { type: "info", text: flash.info };
-    return null;
-});
 
 const messageStyles = computed(() => {
     const type = flashMessage.value?.type;
@@ -78,6 +70,11 @@ const triggerIfMessage = () => {
         hideTimeoutId = setTimeout(close, hideDelay);
     }
 };
+
+// Watch for flash message changes (including Echo-triggered ones)
+watch(flashMessage, () => {
+    triggerIfMessage();
+}, { immediate: true });
 
 // Ensure first render (direct loads) shows the message
 onMounted(() => {

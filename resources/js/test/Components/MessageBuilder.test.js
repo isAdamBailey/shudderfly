@@ -57,7 +57,7 @@ describe("MessageBuilder", () => {
                 },
             });
 
-            expect(wrapper.find('input[type="text"]').exists()).toBe(true);
+            expect(wrapper.find('textarea').exists()).toBe(true);
         });
 
         it("renders the @ button for mentions", () => {
@@ -108,7 +108,7 @@ describe("MessageBuilder", () => {
                 },
             });
 
-            const input = wrapper.find('input[type="text"]');
+            const input = wrapper.find('textarea');
             await input.setValue("@");
             await input.trigger("input");
 
@@ -133,7 +133,7 @@ describe("MessageBuilder", () => {
                 },
             });
 
-            const input = wrapper.find('input[type="text"]');
+            const input = wrapper.find('textarea');
             await input.setValue("@j");
             await input.trigger("input");
 
@@ -159,7 +159,7 @@ describe("MessageBuilder", () => {
                 },
             });
 
-            const input = wrapper.find('input[type="text"]');
+            const input = wrapper.find('textarea');
             await input.setValue("@");
             await input.trigger("input");
 
@@ -207,7 +207,7 @@ describe("MessageBuilder", () => {
                 },
             });
 
-            const input = wrapper.find('input[type="text"]');
+            const input = wrapper.find('textarea');
             await input.setValue("Test message");
             await input.trigger("input");
 
@@ -284,7 +284,7 @@ describe("MessageBuilder", () => {
                 },
             });
 
-            const input = wrapper.find('input[type="text"]');
+            const input = wrapper.find('textarea');
             await input.setValue("Hello ");
             await input.trigger("input");
 
@@ -319,7 +319,7 @@ describe("MessageBuilder", () => {
                 },
             });
 
-            const input = wrapper.find('input[type="text"]');
+            const input = wrapper.find('textarea');
             await input.setValue("Test message");
             await input.trigger("input");
 
@@ -372,7 +372,7 @@ describe("MessageBuilder", () => {
                 },
             });
 
-            const input = wrapper.find('input[type="text"]');
+            const input = wrapper.find('textarea');
             await input.setValue("Test message");
             await input.trigger("input");
 
@@ -404,7 +404,7 @@ describe("MessageBuilder", () => {
                 },
             });
 
-            const input = wrapper.find('input[type="text"]');
+            const input = wrapper.find('textarea');
             await input.setValue("Hello world test");
             await input.trigger("input");
 

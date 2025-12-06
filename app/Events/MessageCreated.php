@@ -51,6 +51,7 @@ class MessageCreated implements ShouldBroadcast
                 'id' => $this->message->user->id,
                 'name' => $this->message->user->name,
             ],
+            'success_message' => 'New message added by ' . $this->message->user->name,
         ];
     }
 }
