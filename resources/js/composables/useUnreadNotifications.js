@@ -4,6 +4,9 @@ import { onMounted, onUnmounted, ref, watch } from "vue";
 export function useUnreadNotifications() {
   const unreadCount = ref(0);
   const notificationsChannel = ref(null);
+  const retryTimeout = ref(null);
+  const maxRetries = 10;
+  const retryCount = ref(0);
   const page = usePage();
 
   unreadCount.value = page.props.unread_notifications_count || 0;
@@ -11,9 +14,20 @@ export function useUnreadNotifications() {
   const setupEchoListener = () => {
     const user = page.props.auth?.user;
     if (!user || !user.id || !window.Echo) {
-      setTimeout(setupEchoListener, 500);
+      if (retryCount.value < maxRetries) {
+        retryCount.value++;
+        retryTimeout.value = setTimeout(() => {
+          setupEchoListener();
+        }, 500);
+      }
       return;
     }
+
+    if (retryTimeout.value) {
+      clearTimeout(retryTimeout.value);
+      retryTimeout.value = null;
+    }
+    retryCount.value = 0;
 
     notificationsChannel.value = window.Echo.private(`App.Models.User.${user.id}`);
 
@@ -23,6 +37,11 @@ export function useUnreadNotifications() {
   };
 
   const cleanup = () => {
+    if (retryTimeout.value) {
+      clearTimeout(retryTimeout.value);
+      retryTimeout.value = null;
+    }
+
     const user = page.props.auth?.user;
     if (notificationsChannel.value && window.Echo && user) {
       try {
@@ -31,6 +50,7 @@ export function useUnreadNotifications() {
       }
       notificationsChannel.value = null;
     }
+    retryCount.value = 0;
   };
 
   watch(
