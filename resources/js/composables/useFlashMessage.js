@@ -1,5 +1,5 @@
 import { usePage } from "@inertiajs/vue3";
-import { computed, ref } from "vue";
+import { computed, ref, nextTick } from "vue";
 
 const echoFlashMessage = ref(null);
 let echoFlashTimeout = null;
@@ -23,15 +23,24 @@ export function useFlashMessage() {
   });
 
   const setFlashMessage = (type, text, duration = 5000) => {
-    echoFlashMessage.value = { type, text };
-    
+    // Clear any existing timeout
     if (echoFlashTimeout) {
       clearTimeout(echoFlashTimeout);
+      echoFlashTimeout = null;
     }
     
-    echoFlashTimeout = setTimeout(() => {
-      echoFlashMessage.value = null;
-    }, duration);
+    // Force reactivity by setting to null first, then to the new value
+    // This ensures Safari picks up the change
+    echoFlashMessage.value = null;
+    nextTick(() => {
+      echoFlashMessage.value = { type, text };
+      
+      // Set timeout to clear the message
+      echoFlashTimeout = setTimeout(() => {
+        echoFlashMessage.value = null;
+        echoFlashTimeout = null;
+      }, duration);
+    });
   };
 
   const clearFlashMessage = () => {

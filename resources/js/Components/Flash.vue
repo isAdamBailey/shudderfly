@@ -72,9 +72,12 @@ const triggerIfMessage = () => {
 };
 
 // Watch for flash message changes (including Echo-triggered ones)
-watch(flashMessage, () => {
-    triggerIfMessage();
-}, { immediate: true });
+watch(flashMessage, (newValue, oldValue) => {
+    // Only trigger if the message actually changed
+    if (newValue !== oldValue) {
+        triggerIfMessage();
+    }
+}, { immediate: true, deep: true });
 
 // Ensure first render (direct loads) shows the message
 onMounted(() => {
