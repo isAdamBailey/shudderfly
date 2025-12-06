@@ -27,19 +27,19 @@ class SettingsController extends Controller
     {
         $validated = $request->validate([
             'settings' => ['required', 'array'],
-            'settings.*' => ['required', function ($attribute, $value, $fail) {
-                // Allow null/undefined values (they will be handled as empty strings)
-                if (! isset($value['value'])) {
-                    return;
-                }
-                
-                $val = $value['value'];
-                // Accept string, numeric, boolean, null, or the specific strings '0'/'1'
-                if (! is_string($val) && ! is_numeric($val) && ! is_bool($val) && $val !== null && $val !== '0' && $val !== '1') {
-                    $fail('The '.$attribute.' value must be a string, numeric, or boolean value.');
-                }
-                if (! isset($value['description']) || ! is_string($value['description'])) {
+            'settings.*' => ['required', 'array', function ($attribute, $value, $fail) {
+                // Validate description is present and is a string (required)
+                if (! array_key_exists('description', $value) || ! is_string($value['description'])) {
                     $fail('The '.$attribute.' description must be a string.');
+                }
+
+                // Validate value type if present (value is optional, but if present must be valid type)
+                if (array_key_exists('value', $value)) {
+                    $val = $value['value'];
+                    // Accept string, numeric, boolean, null, or the specific strings '0'/'1'
+                    if (! is_string($val) && ! is_numeric($val) && ! is_bool($val) && $val !== null && $val !== '0' && $val !== '1') {
+                        $fail('The '.$attribute.' value must be a string, numeric, or boolean value.');
+                    }
                 }
             }],
         ]);

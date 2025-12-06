@@ -57,7 +57,6 @@
 </template>
 
 <script setup>
-import Button from "@/Components/Button.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { router } from "@inertiajs/vue3";

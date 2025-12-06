@@ -70,21 +70,22 @@ class SettingsTest extends TestCase
         $this->actingAs($user);
         $user->givePermissionTo('admin');
 
-        // Test missing value
-        $response = $this->put('/settings', [
-            'settings' => [
-                'test_key' => [
-                    'description' => 'Some description',
-                ],
-            ],
-        ]);
-        $response->assertSessionHasErrors('settings.test_key');
-
         // Test missing description
         $response = $this->put('/settings', [
             'settings' => [
                 'test_key' => [
                     'value' => 'some value',
+                ],
+            ],
+        ]);
+        $response->assertSessionHasErrors('settings.test_key');
+
+        // Test invalid description type
+        $response = $this->put('/settings', [
+            'settings' => [
+                'test_key' => [
+                    'value' => 'some value',
+                    'description' => [],
                 ],
             ],
         ]);
