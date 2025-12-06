@@ -55,9 +55,17 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+        $userArray = null;
+        if ($user) {
+            // Make ID visible for authenticated user (needed for Echo channels)
+            $user->makeVisible(['id']);
+            $userArray = $user;
+        }
+
         return array_merge(parent::share($request), [
             'auth' => [
-                'user' => $request->user(),
+                'user' => $userArray,
             ],
             'unread_notifications_count' => function () use ($request) {
                 if (! $request->user()) {
