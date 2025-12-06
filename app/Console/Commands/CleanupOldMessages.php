@@ -29,6 +29,7 @@ class CleanupOldMessages extends Command
     {
         $retentionDays = (int) (SiteSetting::where('key', 'messaging_retention_days')
             ->value('value') ?? 30);
+        $retentionDays = max(1, $retentionDays);
 
         $cutoffDate = now()->subDays($retentionDays);
 
