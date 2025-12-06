@@ -27,28 +27,41 @@
             v-html="formatMessage(message.message)"
           ></div>
         </div>
-        <button
-          v-if="canAdmin"
-          type="button"
-          class="ml-4 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-          @click="deleteMessage(message.id)"
-          title="Delete message"
-        >
-          <i class="ri-delete-bin-line text-xl"></i>
-        </button>
+        <div class="ml-4 flex items-center gap-2">
+          <button
+            type="button"
+            class="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+            :disabled="speaking"
+            title="Speak message"
+            aria-label="Speak message"
+            @click="speakMessage(message)"
+          >
+            <i class="ri-speak-fill text-xl"></i>
+          </button>
+          <button
+            v-if="canAdmin"
+            type="button"
+            class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+            title="Delete message"
+            aria-label="Delete message"
+            @click="deleteMessage(message.id)"
+          >
+            <i class="ri-delete-bin-line text-xl"></i>
+          </button>
+        </div>
       </div>
     </div>
 
-    <div v-if="loading" class="text-center py-4 text-gray-500">
-      Loading...
-    </div>
+    <div v-if="loading" class="text-center py-4 text-gray-500">Loading...</div>
   </div>
 </template>
 
 <script setup>
+import Button from "@/Components/Button.vue";
 import { usePermissions } from "@/composables/permissions";
+import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { router } from "@inertiajs/vue3";
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { onMounted, onUnmounted, ref, watch } from "vue";
 
 const props = defineProps({
   messages: {
@@ -62,6 +75,7 @@ const props = defineProps({
 });
 
 const { canAdmin } = usePermissions();
+const { speak, speaking } = useSpeechSynthesis();
 const loading = ref(false);
 const messagesChannel = ref(null);
 
@@ -85,48 +99,64 @@ const formatDate = (dateString) => {
   const diffDays = Math.floor(diffMs / 86400000);
 
   if (diffMins < 1) return "just now";
-  if (diffMins < 60) return `${diffMins} minute${diffMins !== 1 ? "s" : ""} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
+  if (diffMins < 60)
+    return `${diffMins} minute${diffMins !== 1 ? "s" : ""} ago`;
+  if (diffHours < 24)
+    return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
   if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
 
   return date.toLocaleDateString();
 };
 
 const formatMessage = (text) => {
-  if (!text) return '';
-  
+  if (!text) return "";
+
   let formatted = text;
-  
+
   // First, match full usernames (with spaces) - most specific first
   if (props.users && props.users.length > 0) {
     // Sort by length (longest first) to match full names before partial matches
-    const sortedUsers = [...props.users].sort((a, b) => b.name.length - a.name.length);
-    
+    const sortedUsers = [...props.users].sort(
+      (a, b) => b.name.length - a.name.length
+    );
+
     for (const user of sortedUsers) {
       // Escape special regex characters in username
-      const escapedName = user.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const escapedName = user.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       // Match @username followed by space, punctuation, or end of string
-      const pattern = new RegExp(`@${escapedName}(?=\\s|$|[^\\w\\s])`, 'gi');
+      const pattern = new RegExp(`@${escapedName}(?=\\s|$|[^\\w\\s])`, "gi");
       formatted = formatted.replace(
         pattern,
         `<span class="font-semibold text-blue-600 dark:text-blue-400">@${user.name}</span>`
       );
     }
   }
-  
+
   // Then, match any remaining simple @mentions (single word) that weren't matched
   formatted = formatted.replace(
     /@([a-zA-Z0-9_]+)(?!\w)/g,
     (match, username) => {
       // Only highlight if it's not already inside a span (not already highlighted)
-      if (!match.includes('<span')) {
+      if (!match.includes("<span")) {
         return `<span class="font-semibold text-blue-600 dark:text-blue-400">@${username}</span>`;
       }
       return match;
     }
   );
-  
+
   return formatted;
+};
+
+const stripHtml = (html) => {
+  if (!html) return "";
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || "";
+};
+
+const speakMessage = (message) => {
+  const messageText = stripHtml(formatMessage(message.message));
+  speak(messageText);
 };
 
 const deleteMessage = (messageId) => {
@@ -165,8 +195,7 @@ const cleanup = () => {
   if (messagesChannel.value && window.Echo) {
     try {
       window.Echo.leave("messages");
-    } catch {
-    }
+    } catch {}
     messagesChannel.value = null;
   }
 };
@@ -179,4 +208,3 @@ onUnmounted(() => {
   cleanup();
 });
 </script>
-
