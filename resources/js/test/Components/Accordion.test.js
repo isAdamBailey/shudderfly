@@ -47,7 +47,6 @@ describe("Accordion", () => {
                 },
             });
 
-            const content = wrapper.find('[v-show="isOpen"]');
             // Content should be hidden initially
             expect(wrapper.vm.isOpen).toBe(false);
         });
