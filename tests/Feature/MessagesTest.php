@@ -294,4 +294,84 @@ class MessagesTest extends TestCase
             ->where('messages.data.0.id', $recentMessage->id)
         );
     }
+
+    public function test_message_parses_mentions_with_punctuation_after_username(): void
+    {
+        $user1 = User::factory()->create(['name' => 'JohnDoe']);
+        $user2 = User::factory()->create(['name' => 'Jane Smith']);
+
+        // Test comma immediately after
+        $message1 = Message::factory()->create([
+            'user_id' => $user1->id,
+            'message' => 'Hello @JohnDoe,how are you?',
+        ]);
+        $tagged1 = $message1->getTaggedUsernames();
+        $this->assertContains('JohnDoe', $tagged1);
+
+        // Test period immediately after
+        $message2 = Message::factory()->create([
+            'user_id' => $user1->id,
+            'message' => 'Hello @JohnDoe. How are you?',
+        ]);
+        $tagged2 = $message2->getTaggedUsernames();
+        $this->assertContains('JohnDoe', $tagged2);
+
+        // Test exclamation immediately after
+        $message3 = Message::factory()->create([
+            'user_id' => $user1->id,
+            'message' => 'Hello @JohnDoe! How are you?',
+        ]);
+        $tagged3 = $message3->getTaggedUsernames();
+        $this->assertContains('JohnDoe', $tagged3);
+
+        // Test question mark immediately after
+        $message4 = Message::factory()->create([
+            'user_id' => $user1->id,
+            'message' => 'Hello @JohnDoe? How are you?',
+        ]);
+        $tagged4 = $message4->getTaggedUsernames();
+        $this->assertContains('JohnDoe', $tagged4);
+
+        // Test full username with space and punctuation
+        $message5 = Message::factory()->create([
+            'user_id' => $user1->id,
+            'message' => 'Hello @Jane Smith,how are you?',
+        ]);
+        $tagged5 = $message5->getTaggedUsernames();
+        $this->assertContains('Jane Smith', $tagged5);
+
+        // Test full username with period
+        $message6 = Message::factory()->create([
+            'user_id' => $user1->id,
+            'message' => 'Hello @Jane Smith. How are you?',
+        ]);
+        $tagged6 = $message6->getTaggedUsernames();
+        $this->assertContains('Jane Smith', $tagged6);
+    }
+
+    public function test_message_parses_mentions_at_end_of_string(): void
+    {
+        $user = User::factory()->create(['name' => 'JohnDoe']);
+
+        $message = Message::factory()->create([
+            'user_id' => $user->id,
+            'message' => 'Hello @JohnDoe',
+        ]);
+
+        $tagged = $message->getTaggedUsernames();
+        $this->assertContains('JohnDoe', $tagged);
+    }
+
+    public function test_message_parses_mentions_with_space_after(): void
+    {
+        $user = User::factory()->create(['name' => 'JohnDoe']);
+
+        $message = Message::factory()->create([
+            'user_id' => $user->id,
+            'message' => 'Hello @JohnDoe how are you?',
+        ]);
+
+        $tagged = $message->getTaggedUsernames();
+        $this->assertContains('JohnDoe', $tagged);
+    }
 }

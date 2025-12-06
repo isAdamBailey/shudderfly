@@ -65,6 +65,10 @@ class Message extends Model
         $foundUsernames = [];
 
         // First, try to match full usernames (with spaces)
+        // Pattern matches @username followed by:
+        // - whitespace (\s)
+        // - end of string ($)
+        // - any non-word, non-whitespace character ([^\w\s]) - handles punctuation like , . ! ? etc.
         foreach ($allUserNames as $userName) {
             $pattern = '/@'.preg_quote($userName, '/').'(?=\s|$|[^\w\s])/i';
             if (preg_match($pattern, $this->message)) {
