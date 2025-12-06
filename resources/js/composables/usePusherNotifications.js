@@ -1,6 +1,21 @@
 import { usePage } from "@inertiajs/vue3";
 import { onMounted, onUnmounted, ref } from "vue";
 
+/**
+ * Composable for handling Pusher push notifications.
+ * 
+ * This composable automatically sets up and cleans up notification listeners
+ * via Vue lifecycle hooks (onMounted/onUnmounted). It does not return any values.
+ * 
+ * Usage:
+ *   import { usePusherNotifications } from "@/composables/usePusherNotifications";
+ *   usePusherNotifications(); // Automatically handles setup and cleanup
+ * 
+ * The composable will:
+ * - Subscribe to the user's private notification channel on mount
+ * - Display browser notifications when notifications are received
+ * - Clean up the channel subscription on unmount
+ */
 export function usePusherNotifications() {
   const channel = ref(null);
   const retryTimeout = ref(null);
