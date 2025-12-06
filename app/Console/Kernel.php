@@ -28,6 +28,14 @@ class Kernel extends ConsoleKernel
                 ->timezone('America/Los_Angeles')
                 ->withoutOverlapping();
         }
+
+        // Cleanup old messages daily
+        $messagingEnabled = SiteSetting::where('key', 'messaging_enabled')->first()?->value ?? false;
+        if ($messagingEnabled) {
+            $schedule->command('messages:cleanup')
+                ->daily()
+                ->withoutOverlapping();
+        }
     }
 
     /**

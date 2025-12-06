@@ -104,4 +104,38 @@ class ProfileController extends Controller
             );
         }
     }
+
+    /**
+     * Get the user's notifications.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function notifications(Request $request)
+    {
+        $notifications = $request->user()
+            ->notifications()
+            ->latest()
+            ->paginate(20);
+
+        return response()->json($notifications);
+    }
+
+    /**
+     * Mark a notification as read.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function markNotificationAsRead(Request $request, string $id)
+    {
+        $notification = $request->user()
+            ->notifications()
+            ->where('id', $id)
+            ->first();
+
+        if ($notification) {
+            $notification->markAsRead();
+        }
+
+        return response()->json(['success' => true]);
+    }
 }

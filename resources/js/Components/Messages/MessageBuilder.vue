@@ -1,10 +1,10 @@
 <script setup>
 /* global route */
+import Accordion from "@/Components/Accordion.vue";
 import Button from "@/Components/Button.vue";
 import VirtualKeyboard from "@/Components/VirtualKeyboard.vue";
-import { useButtonState } from "@/composables/useDisableButtonState";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
-import { router } from "@inertiajs/vue3";
+import { useForm } from "@inertiajs/vue3";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 // Organized by semantic/functional categories for AAC
@@ -81,18 +81,34 @@ const wordCount = computed(() => {
     .filter((word) => word.length > 0).length;
 });
 
-const canSendEmail = computed(() => {
-  return wordCount.value >= 5;
-});
-
-const { buttonsDisabled, setTimestamp } = useButtonState();
 const { speak, speaking } = useSpeechSynthesis();
 
-const FAVORITES_KEY = "contact_builder_favorites_v1";
+const form = useForm({
+  message: "",
+  tagged_user_ids: []
+});
+
+const props = defineProps({
+  users: {
+    type: Array,
+    default: () => []
+  }
+});
+
+const FAVORITES_KEY = "message_builder_favorites_v1";
 const MAX_FAVORITES = 5;
 const favorites = ref([]);
 const addFeedback = ref(false);
 const justAdded = ref(null);
+
+// User tagging autocomplete
+const showUserSuggestions = ref(false);
+const userSuggestions = ref([]);
+const selectedSuggestionIndex = ref(-1);
+const mentionQuery = ref("");
+const mentionStartPos = ref(-1);
+// Track user IDs for mentions: maps mention text (e.g., "@Colin Lowe") to user ID
+const mentionUserIds = ref(new Map());
 const isAtMax = computed(() => {
   const len = Array.isArray(favorites.value) ? favorites.value.length : 0;
   return len >= MAX_FAVORITES;
@@ -186,12 +202,119 @@ function handleInputChange(event) {
   // Always update inputValue to match what's actually in the input
   inputValue.value = currentValue;
 
+  // Check for @ mentions
+  checkForMentions(currentValue, event?.target?.selectionStart ?? currentValue.length);
+
   // Update selection for word count (but keep the full input value for display)
   const words = inputValue.value
     .trim()
     .split(/\s+/)
     .filter((word) => word.length > 0);
   selection.value = words;
+}
+
+function checkForMentions(text, cursorPos) {
+  if (!text || props.users.length === 0) {
+    showUserSuggestions.value = false;
+    return;
+  }
+
+  // If cursorPos is not available, use end of text
+  const effectiveCursorPos = cursorPos !== undefined && cursorPos !== null ? cursorPos : text.length;
+  
+  // Find the last @ before cursor
+  const textBeforeCursor = text.substring(0, effectiveCursorPos);
+  const lastAtIndex = textBeforeCursor.lastIndexOf("@");
+  
+  if (lastAtIndex === -1) {
+    showUserSuggestions.value = false;
+    return;
+  }
+
+  // Check if there's a space or newline after @ (meaning mention is complete)
+  const textAfterAt = textBeforeCursor.substring(lastAtIndex + 1);
+  if (textAfterAt.includes(" ") || textAfterAt.includes("\n")) {
+    showUserSuggestions.value = false;
+    return;
+  }
+
+  // Get the query after @
+  mentionQuery.value = textAfterAt.toLowerCase();
+  mentionStartPos.value = lastAtIndex;
+
+  // Filter users based on query
+  if (mentionQuery.value.length > 0) {
+    userSuggestions.value = props.users.filter((user) =>
+      user.name.toLowerCase().includes(mentionQuery.value)
+    ).slice(0, 5); // Limit to 5 suggestions
+  } else {
+    userSuggestions.value = props.users.slice(0, 5);
+  }
+
+  showUserSuggestions.value = userSuggestions.value.length > 0;
+  selectedSuggestionIndex.value = -1;
+}
+
+function insertMention(user) {
+  if (!keyboardInputRef.value || !user) {
+    return;
+  }
+
+  const userId = user.id ?? user.user_id ?? user.ID;
+  const userName = user.name ?? user.user_name ?? user.Name;
+  
+  if (!userName) {
+    return;
+  }
+
+  const text = inputValue.value;
+  const beforeMention = text.substring(0, mentionStartPos.value);
+  const mentionText = `@${userName}`;
+  const afterMention = text.substring(mentionStartPos.value).replace(/@[\w\s]*/, `${mentionText} `);
+
+  inputValue.value = beforeMention + afterMention;
+  
+  if (userId !== undefined && userId !== null) {
+    const parsedUserId = parseInt(userId, 10);
+    if (!isNaN(parsedUserId)) {
+      mentionUserIds.value.set(mentionText, parsedUserId);
+    }
+  }
+  
+  keyboardInputRef.value.value = inputValue.value;
+  keyboardInputRef.value.dispatchEvent(new Event("input", { bubbles: true }));
+
+  showUserSuggestions.value = false;
+  mentionQuery.value = "";
+  mentionStartPos.value = -1;
+
+  setTimeout(() => {
+    if (keyboardInputRef.value) {
+      const newCursorPos = beforeMention.length + mentionText.length + 2;
+      keyboardInputRef.value.setSelectionRange(newCursorPos, newCursorPos);
+      keyboardInputRef.value.focus();
+    }
+  }, 0);
+}
+
+function handleKeydown(event) {
+  if (!showUserSuggestions.value) return;
+
+  if (event.key === "ArrowDown") {
+    event.preventDefault();
+    selectedSuggestionIndex.value = Math.min(
+      selectedSuggestionIndex.value + 1,
+      userSuggestions.value.length - 1
+    );
+  } else if (event.key === "ArrowUp") {
+    event.preventDefault();
+    selectedSuggestionIndex.value = Math.max(selectedSuggestionIndex.value - 1, -1);
+  } else if (event.key === "Enter" && selectedSuggestionIndex.value >= 0) {
+    event.preventDefault();
+    insertMention(userSuggestions.value[selectedSuggestionIndex.value]);
+  } else if (event.key === "Escape") {
+    showUserSuggestions.value = false;
+  }
 }
 
 // Watch for changes to inputValue and sync with the actual input element
@@ -206,7 +329,6 @@ watch(
 
 let inputHandlers = null;
 
-// Also watch the input element for changes (from KioskBoard or direct typing)
 onMounted(() => {
   loadFavorites();
 
@@ -223,6 +345,9 @@ onMounted(() => {
         const value = e.target.value;
         if (value !== inputValue.value) {
           inputValue.value = value;
+          // Check for mentions when input changes
+          const cursorPos = e.target.selectionStart ?? value.length;
+          checkForMentions(value, cursorPos);
         }
       };
 
@@ -234,14 +359,23 @@ onMounted(() => {
         }
       };
 
+      // Close suggestions when clicking outside
+      const handleClickOutside = (e) => {
+        if (!e.target.closest('.user-suggestions-container') && !e.target.closest('.virtual-keyboard-input')) {
+          showUserSuggestions.value = false;
+        }
+      };
+
       inputEl.addEventListener("input", handleInput);
       inputEl.addEventListener("change", handleChange);
+      document.addEventListener("click", handleClickOutside);
 
       // Store handlers for cleanup
       inputHandlers = {
         element: inputEl,
         input: handleInput,
-        change: handleChange
+        change: handleChange,
+        clickOutside: handleClickOutside
       };
     }
   }, 200);
@@ -251,6 +385,9 @@ onUnmounted(() => {
   if (inputHandlers) {
     inputHandlers.element.removeEventListener("input", inputHandlers.input);
     inputHandlers.element.removeEventListener("change", inputHandlers.change);
+    if (inputHandlers.clickOutside) {
+      document.removeEventListener("click", inputHandlers.clickOutside);
+    }
   }
 });
 
@@ -258,6 +395,22 @@ function addWord(word) {
   // Get the actual current value from the input element to ensure we have the latest
   const inputElement = keyboardInputRef.value;
   const currentValue = inputElement?.value ?? inputValue.value;
+
+  // Special handling for @ symbol - don't add space before it
+  if (word === "@") {
+    const newValue = currentValue + "@";
+    inputValue.value = newValue;
+    if (inputElement) {
+      inputElement.value = newValue;
+      inputElement.dispatchEvent(new Event("input", { bubbles: true }));
+      // Trigger mention check after @ is added
+      setTimeout(() => {
+        checkForMentions(newValue, newValue.length);
+        inputElement.focus();
+      }, 50);
+    }
+    return;
+  }
 
   // Prevent adding the same word twice in a row
   const words = currentValue
@@ -295,6 +448,36 @@ function addWord(word) {
   selection.value = newWords;
 }
 
+function addPhrase(phrase) {
+  // Get the actual current value from the input element to ensure we have the latest
+  const inputElement = keyboardInputRef.value;
+  const currentValue = inputElement?.value ?? inputValue.value;
+
+  // Append phrase to the current input value
+  // Add a space before the new phrase if the current value doesn't end with a space
+  let newValue;
+  if (currentValue.trim() && !currentValue.endsWith(" ")) {
+    newValue = currentValue + " " + phrase;
+  } else {
+    newValue = currentValue + phrase;
+  }
+
+  // Update both the reactive value and the actual input element
+  inputValue.value = newValue;
+  if (inputElement) {
+    inputElement.value = newValue;
+    // Trigger input event so KioskBoard knows about the change
+    inputElement.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  // Update selection to reflect the new words
+  const newWords = newValue
+    .trim()
+    .split(/\s+/)
+    .filter((w) => w.length > 0);
+  selection.value = newWords;
+}
+
 function removeLast() {
   // Remove last word from input value
   const currentText = inputValue.value.trim();
@@ -313,6 +496,10 @@ function removeLast() {
 function reset() {
   inputValue.value = "";
   selection.value = [];
+  showUserSuggestions.value = false;
+  mentionQuery.value = "";
+  mentionStartPos.value = -1;
+  mentionUserIds.value.clear();
 }
 
 function suggestRandom() {
@@ -355,14 +542,51 @@ function sayIt() {
   speak(currentText);
 }
 
-function sendEmail() {
-  if (!preview.value || !canSendEmail.value) return;
-  speak(`Sending message: ${preview.value}`);
-  const messageToSend = preview.value;
-  router.post(
-    route("profile.contact-admins-email", { message: messageToSend })
-  );
-  setTimestamp();
+function postMessage() {
+  if (!preview.value?.trim() || form.processing) return;
+  speak(`Posting message: ${preview.value}`);
+  
+  const taggedUserIds = [];
+  const messageText = preview.value;
+  
+  for (const [mentionText, userId] of mentionUserIds.value.entries()) {
+    if (messageText.includes(mentionText)) {
+      const id = parseInt(userId, 10);
+      if (!isNaN(id)) {
+        taggedUserIds.push(id);
+      }
+    } else {
+      const mentionWithoutAt = mentionText.startsWith('@') ? mentionText.substring(1) : mentionText;
+      const escapedMention = mentionWithoutAt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const mentionPattern = new RegExp(`@${escapedMention}(?=\\s|$|[^\\w\\s])`, 'i');
+      
+      if (mentionPattern.test(messageText)) {
+        const id = parseInt(userId, 10);
+        if (!isNaN(id)) {
+          taggedUserIds.push(id);
+        }
+      }
+    }
+  }
+  
+  // Create a new form instance with the data
+  const submitForm = useForm({
+    message: messageText,
+    tagged_user_ids: taggedUserIds
+  });
+  
+  submitForm.post(route("messages.store"), {
+    preserveScroll: true,
+    onSuccess: () => {
+      // Clear input after successful post
+      inputValue.value = "";
+      selection.value = [];
+      mentionUserIds.value.clear();
+      form.reset();
+    },
+    onError: () => {
+    }
+  });
 }
 </script>
 
@@ -379,16 +603,37 @@ function sendEmail() {
           { 'ring-2 ring-green-400 animate-pulse': speaking }
         ]"
       >
-        <div class="flex items-center justify-between w-full">
+        <div class="flex items-center justify-between w-full relative">
           <input
             ref="keyboardInputRef"
             v-model="inputValue"
             type="text"
             class="virtual-keyboard-input flex-1 text-gray-700 dark:text-gray-100 break-words text-2xl md:text-3xl font-bold leading-tight bg-transparent border-none outline-none focus:outline-none"
-            placeholder="Type your message here..."
+            placeholder="Type your message here... (use @ to tag users)"
             @input="handleInputChange"
             @change="handleInputChange"
+            @keydown="handleKeydown"
           />
+          
+          <!-- User Suggestions Dropdown -->
+          <div
+            v-if="showUserSuggestions"
+            class="user-suggestions-container absolute top-full left-0 mt-1 w-full max-w-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-[100] max-h-60 overflow-y-auto"
+          >
+            <div
+              v-for="(user, index) in userSuggestions"
+              :key="user.id"
+              :class="[
+                'px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700',
+                selectedSuggestionIndex === index ? 'bg-gray-100 dark:bg-gray-700' : ''
+              ]"
+              @click="insertMention(user)"
+            >
+              <div class="font-semibold text-gray-900 dark:text-gray-100">
+                @{{ user.name }}
+              </div>
+            </div>
+          </div>
           <button
             type="button"
             class="ml-4 px-4 py-3 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-md"
@@ -403,6 +648,15 @@ function sendEmail() {
       </div>
 
       <div class="flex items-center gap-2 mt-3">
+        <button
+          class="px-4 py-3 rounded-md bg-blue-600 dark:bg-blue-500 text-white shadow-md hover:bg-blue-700 dark:hover:bg-blue-600 font-bold text-2xl"
+          type="button"
+          title="Tag a user (@)"
+          aria-label="Tag a user"
+          @click="addWord('@')"
+        >
+          @
+        </button>
         <button
           class="p-3 rounded-md bg-slate-700 dark:bg-slate-600 text-white shadow-md"
           type="button"
@@ -469,9 +723,10 @@ function sendEmail() {
       </div>
     </div>
 
-    <div class="space-y-4">
-      <!-- Quick Phrases - Most Important -->
-      <div>
+    <Accordion title="Prebuilt Messages">
+      <div class="space-y-4">
+        <!-- Quick Phrases - Most Important -->
+        <div>
         <div
           class="text-base font-bold mb-2 text-blue-600 dark:text-blue-400 flex items-center gap-2"
         >
@@ -493,13 +748,7 @@ function sendEmail() {
             :key="`qp-${i}`"
             type="button"
             class="px-4 py-1.5 rounded-lg bg-blue-600 text-white text-xl font-semibold shadow-md hover:bg-blue-700 transition-colors"
-            @click="
-              inputValue = w;
-              selection = w
-                .trim()
-                .split(/\s+/)
-                .filter((word) => word.length > 0);
-            "
+            @click="addPhrase(w)"
           >
             {{ w }}
           </button>
@@ -673,7 +922,8 @@ function sendEmail() {
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </Accordion>
 
     <div v-if="favorites.length" class="mt-6">
       <div class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
@@ -709,15 +959,15 @@ function sendEmail() {
       </div>
     </div>
 
-    <!-- Moved Email button: bottom action -->
+    <!-- Post to Timeline button: bottom action -->
     <div class="mt-6">
       <Button
         class="py-4 text-lg"
-        :disabled="buttonsDisabled || !canSendEmail"
-        @click="sendEmail"
+        :disabled="form.processing"
+        @click="postMessage"
       >
-        <i class="ri-mail-fill text-2xl mr-2"></i>
-        Email it
+        <i class="ri-send-plane-fill text-2xl mr-2"></i>
+        Post to Timeline
       </Button>
     </div>
 

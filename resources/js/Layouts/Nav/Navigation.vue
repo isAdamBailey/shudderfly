@@ -6,12 +6,19 @@ import FireworksAnimation from "@/Components/FireworksAnimation.vue";
 import NavLink from "@/Components/NavLink.vue";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
 import { usePermissions } from "@/composables/permissions";
+import { useUnreadNotifications } from "@/composables/useUnreadNotifications";
 import ThemeToggle from "@/Layouts/Nav/ThemeToggle.vue";
-import { Link } from "@inertiajs/vue3";
-import { ref } from "vue";
+import { Link, usePage } from "@inertiajs/vue3";
+import { computed, ref } from "vue";
 
 const { canEditPages, canEditProfile } = usePermissions();
 const showingNavigationDropdown = ref(false);
+const { unreadCount } = useUnreadNotifications();
+
+const messagingEnabled = computed(() => {
+  const value = usePage().props.settings?.messaging_enabled;
+  return value === "1" || value === 1 || value === true;
+});
 </script>
 
 <template>
@@ -51,6 +58,13 @@ const showingNavigationDropdown = ref(false);
               >
                 Collages
               </NavLink>
+              <NavLink
+                v-if="messagingEnabled"
+                :href="route('messages.index')"
+                :active="route().current('messages.*')"
+              >
+                Messages
+              </NavLink>
             </div>
           </div>
 
@@ -61,7 +75,7 @@ const showingNavigationDropdown = ref(false);
             <div class="ml-3 relative">
               <Dropdown align="right" width="48">
                 <template #trigger>
-                  <span class="inline-flex rounded-md">
+                  <span class="inline-flex rounded-md relative">
                     <button
                       type="button"
                       class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-gray-100 dark:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition ease-in-out duration-150"
@@ -81,6 +95,11 @@ const showingNavigationDropdown = ref(false);
                         />
                       </svg>
                     </button>
+                    <span
+                      v-if="messagingEnabled && unreadCount > 0"
+                      class="absolute -top-1 -right-1 h-3 w-3 bg-red-600 rounded-full border-2 border-white dark:border-gray-800"
+                      title="You have unread notifications"
+                    ></span>
                   </span>
                 </template>
 
@@ -166,6 +185,13 @@ const showingNavigationDropdown = ref(false);
           >
             Collages
           </ResponsiveNavLink>
+          <ResponsiveNavLink
+            v-if="messagingEnabled"
+            :href="route('messages.index')"
+            :active="route().current('messages.*')"
+          >
+            Messages
+          </ResponsiveNavLink>
         </div>
 
         <!-- Responsive Settings Options -->
@@ -180,8 +206,13 @@ const showingNavigationDropdown = ref(false);
           </div>
 
           <div class="mt-3 space-y-1">
-            <ResponsiveNavLink :href="route('profile.edit')">
+            <ResponsiveNavLink :href="route('profile.edit')" class="relative">
               Account
+              <span
+                v-if="messagingEnabled && unreadCount > 0"
+                class="absolute right-4 top-1/2 -translate-y-1/2 h-2 w-2 bg-red-600 rounded-full"
+                title="You have unread notifications"
+              ></span>
             </ResponsiveNavLink>
             <ResponsiveNavLink
               v-if="canEditPages"

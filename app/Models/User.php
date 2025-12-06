@@ -35,7 +35,6 @@ class User extends Authenticatable
         'remember_token',
         'permissions',
         'roles',
-        'id',
         'updated_at',
         'created_at',
     ];

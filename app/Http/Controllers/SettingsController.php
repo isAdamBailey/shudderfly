@@ -10,10 +10,13 @@ class SettingsController extends Controller
     public function index()
     {
         return SiteSetting::all()->map(function ($setting) {
+            // Get raw value from database to avoid accessor conversion
+            $rawValue = $setting->getAttributes()['value'] ?? $setting->value;
+            
             return [
                 'id' => $setting->id,
                 'key' => $setting->key,
-                'value' => $setting->value,
+                'value' => $rawValue,
                 'description' => $setting->description,
                 'type' => $setting->type,
             ];
