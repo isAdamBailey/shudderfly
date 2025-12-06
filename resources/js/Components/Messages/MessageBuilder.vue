@@ -171,8 +171,24 @@ function addFavorite() {
     saveFavorites();
     justAdded.value = normalizedText;
     addFeedback.value = true;
-    setTimeout(() => (addFeedback.value = false), 2000);
-    setTimeout(() => (justAdded.value = null), 1500);
+
+    // Clear any existing timeouts
+    if (feedbackTimeoutId !== null) {
+      clearTimeout(feedbackTimeoutId);
+    }
+    if (justAddedTimeoutId !== null) {
+      clearTimeout(justAddedTimeoutId);
+    }
+
+    feedbackTimeoutId = setTimeout(() => {
+      addFeedback.value = false;
+      feedbackTimeoutId = null;
+    }, 2000);
+
+    justAddedTimeoutId = setTimeout(() => {
+      justAdded.value = null;
+      justAddedTimeoutId = null;
+    }, 1500);
   }
 }
 
@@ -203,7 +219,10 @@ function handleInputChange(event) {
   inputValue.value = currentValue;
 
   // Check for @ mentions
-  checkForMentions(currentValue, event?.target?.selectionStart ?? currentValue.length);
+  checkForMentions(
+    currentValue,
+    event?.target?.selectionStart ?? currentValue.length
+  );
 
   // Update selection for word count (but keep the full input value for display)
   const words = inputValue.value
@@ -220,12 +239,13 @@ function checkForMentions(text, cursorPos) {
   }
 
   // If cursorPos is not available, use end of text
-  const effectiveCursorPos = cursorPos !== undefined && cursorPos !== null ? cursorPos : text.length;
-  
+  const effectiveCursorPos =
+    cursorPos !== undefined && cursorPos !== null ? cursorPos : text.length;
+
   // Find the last @ before cursor
   const textBeforeCursor = text.substring(0, effectiveCursorPos);
   const lastAtIndex = textBeforeCursor.lastIndexOf("@");
-  
+
   if (lastAtIndex === -1) {
     showUserSuggestions.value = false;
     return;
@@ -244,9 +264,9 @@ function checkForMentions(text, cursorPos) {
 
   // Filter users based on query
   if (mentionQuery.value.length > 0) {
-    userSuggestions.value = props.users.filter((user) =>
-      user.name.toLowerCase().includes(mentionQuery.value)
-    ).slice(0, 5); // Limit to 5 suggestions
+    userSuggestions.value = props.users
+      .filter((user) => user.name.toLowerCase().includes(mentionQuery.value))
+      .slice(0, 5); // Limit to 5 suggestions
   } else {
     userSuggestions.value = props.users.slice(0, 5);
   }
@@ -262,7 +282,7 @@ function insertMention(user) {
 
   const userId = user.id ?? user.user_id ?? user.ID;
   const userName = user.name ?? user.user_name ?? user.Name;
-  
+
   if (!userName) {
     return;
   }
@@ -270,17 +290,19 @@ function insertMention(user) {
   const text = inputValue.value;
   const beforeMention = text.substring(0, mentionStartPos.value);
   const mentionText = `@${userName}`;
-  const afterMention = text.substring(mentionStartPos.value).replace(/@[\w\s]*/, `${mentionText} `);
+  const afterMention = text
+    .substring(mentionStartPos.value)
+    .replace(/@[\w\s]*/, `${mentionText} `);
 
   inputValue.value = beforeMention + afterMention;
-  
+
   if (userId !== undefined && userId !== null) {
     const parsedUserId = parseInt(userId, 10);
     if (!isNaN(parsedUserId)) {
       mentionUserIds.value.set(mentionText, parsedUserId);
     }
   }
-  
+
   keyboardInputRef.value.value = inputValue.value;
   keyboardInputRef.value.dispatchEvent(new Event("input", { bubbles: true }));
 
@@ -288,12 +310,18 @@ function insertMention(user) {
   mentionQuery.value = "";
   mentionStartPos.value = -1;
 
-  setTimeout(() => {
+  // Clear any existing cursor timeout
+  if (cursorTimeoutId !== null) {
+    clearTimeout(cursorTimeoutId);
+  }
+
+  cursorTimeoutId = setTimeout(() => {
     if (keyboardInputRef.value) {
       const newCursorPos = beforeMention.length + mentionText.length + 2;
       keyboardInputRef.value.setSelectionRange(newCursorPos, newCursorPos);
       keyboardInputRef.value.focus();
     }
+    cursorTimeoutId = null;
   }, 0);
 }
 
@@ -308,7 +336,10 @@ function handleKeydown(event) {
     );
   } else if (event.key === "ArrowUp") {
     event.preventDefault();
-    selectedSuggestionIndex.value = Math.max(selectedSuggestionIndex.value - 1, -1);
+    selectedSuggestionIndex.value = Math.max(
+      selectedSuggestionIndex.value - 1,
+      -1
+    );
   } else if (event.key === "Enter" && selectedSuggestionIndex.value >= 0) {
     event.preventDefault();
     insertMention(userSuggestions.value[selectedSuggestionIndex.value]);
@@ -328,13 +359,17 @@ watch(
 );
 
 let inputHandlers = null;
+let mountTimeoutId = null;
+let cursorTimeoutId = null;
+let feedbackTimeoutId = null;
+let justAddedTimeoutId = null;
 
 onMounted(() => {
   loadFavorites();
 
   // Focus input to show keyboard immediately
-  setTimeout(() => {
-    if (keyboardInputRef.value) {
+  mountTimeoutId = setTimeout(() => {
+    if (keyboardInputRef.value && typeof document !== "undefined") {
       keyboardInputRef.value.focus();
 
       // Add event listeners to catch all input changes (including from KioskBoard)
@@ -361,7 +396,10 @@ onMounted(() => {
 
       // Close suggestions when clicking outside
       const handleClickOutside = (e) => {
-        if (!e.target.closest('.user-suggestions-container') && !e.target.closest('.virtual-keyboard-input')) {
+        if (
+          !e.target.closest(".user-suggestions-container") &&
+          !e.target.closest(".virtual-keyboard-input")
+        ) {
           showUserSuggestions.value = false;
         }
       };
@@ -382,12 +420,32 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  // Clear any pending timeouts
+  if (mountTimeoutId !== null) {
+    clearTimeout(mountTimeoutId);
+    mountTimeoutId = null;
+  }
+  if (cursorTimeoutId !== null) {
+    clearTimeout(cursorTimeoutId);
+    cursorTimeoutId = null;
+  }
+  if (feedbackTimeoutId !== null) {
+    clearTimeout(feedbackTimeoutId);
+    feedbackTimeoutId = null;
+  }
+  if (justAddedTimeoutId !== null) {
+    clearTimeout(justAddedTimeoutId);
+    justAddedTimeoutId = null;
+  }
+
+  // Clean up event listeners
   if (inputHandlers) {
     inputHandlers.element.removeEventListener("input", inputHandlers.input);
     inputHandlers.element.removeEventListener("change", inputHandlers.change);
-    if (inputHandlers.clickOutside) {
+    if (inputHandlers.clickOutside && typeof document !== "undefined") {
       document.removeEventListener("click", inputHandlers.clickOutside);
     }
+    inputHandlers = null;
   }
 });
 
@@ -545,10 +603,10 @@ function sayIt() {
 function postMessage() {
   if (!preview.value?.trim() || form.processing) return;
   speak(`Posting message: ${preview.value}`);
-  
+
   const taggedUserIds = [];
   const messageText = preview.value;
-  
+
   for (const [mentionText, userId] of mentionUserIds.value.entries()) {
     if (messageText.includes(mentionText)) {
       const id = parseInt(userId, 10);
@@ -556,10 +614,18 @@ function postMessage() {
         taggedUserIds.push(id);
       }
     } else {
-      const mentionWithoutAt = mentionText.startsWith('@') ? mentionText.substring(1) : mentionText;
-      const escapedMention = mentionWithoutAt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const mentionPattern = new RegExp(`@${escapedMention}(?=\\s|$|[^\\w\\s])`, 'i');
-      
+      const mentionWithoutAt = mentionText.startsWith("@")
+        ? mentionText.substring(1)
+        : mentionText;
+      const escapedMention = mentionWithoutAt.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&"
+      );
+      const mentionPattern = new RegExp(
+        `@${escapedMention}(?=\\s|$|[^\\w\\s])`,
+        "i"
+      );
+
       if (mentionPattern.test(messageText)) {
         const id = parseInt(userId, 10);
         if (!isNaN(id)) {
@@ -568,13 +634,13 @@ function postMessage() {
       }
     }
   }
-  
+
   // Create a new form instance with the data
   const submitForm = useForm({
     message: messageText,
     tagged_user_ids: taggedUserIds
   });
-  
+
   submitForm.post(route("messages.store"), {
     preserveScroll: true,
     onSuccess: () => {
@@ -584,8 +650,7 @@ function postMessage() {
       mentionUserIds.value.clear();
       form.reset();
     },
-    onError: () => {
-    }
+    onError: () => {}
   });
 }
 </script>
@@ -614,7 +679,7 @@ function postMessage() {
             @change="handleInputChange"
             @keydown="handleKeydown"
           />
-          
+
           <!-- User Suggestions Dropdown -->
           <div
             v-if="showUserSuggestions"
@@ -625,7 +690,9 @@ function postMessage() {
               :key="user.id"
               :class="[
                 'px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700',
-                selectedSuggestionIndex === index ? 'bg-gray-100 dark:bg-gray-700' : ''
+                selectedSuggestionIndex === index
+                  ? 'bg-gray-100 dark:bg-gray-700'
+                  : ''
               ]"
               @click="insertMention(user)"
             >
@@ -727,201 +794,201 @@ function postMessage() {
       <div class="space-y-4">
         <!-- Quick Phrases - Most Important -->
         <div>
-        <div
-          class="text-base font-bold mb-2 text-blue-600 dark:text-blue-400 flex items-center gap-2"
-        >
-          <i class="ri-chat-quote-fill text-3xl"></i>
-          Quick Messages
-          <button
-            type="button"
-            class="ml-auto p-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
-            title="Say 'Quick Messages'"
-            aria-label="Say category name"
-            @click="speak('Quick Messages')"
+          <div
+            class="text-base font-bold mb-2 text-blue-600 dark:text-blue-400 flex items-center gap-2"
           >
-            <i class="ri-speak-fill text-lg"></i>
-          </button>
+            <i class="ri-chat-quote-fill text-3xl"></i>
+            Quick Messages
+            <button
+              type="button"
+              class="ml-auto p-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+              title="Say 'Quick Messages'"
+              aria-label="Say category name"
+              @click="speak('Quick Messages')"
+            >
+              <i class="ri-speak-fill text-lg"></i>
+            </button>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="(w, i) in quickPhrases"
+              :key="`qp-${i}`"
+              type="button"
+              class="px-4 py-1.5 rounded-lg bg-blue-600 text-white text-xl font-semibold shadow-md hover:bg-blue-700 transition-colors"
+              @click="addPhrase(w)"
+            >
+              {{ w }}
+            </button>
+          </div>
         </div>
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="(w, i) in quickPhrases"
-            :key="`qp-${i}`"
-            type="button"
-            class="px-4 py-1.5 rounded-lg bg-blue-600 text-white text-xl font-semibold shadow-md hover:bg-blue-700 transition-colors"
-            @click="addPhrase(w)"
-          >
-            {{ w }}
-          </button>
-        </div>
-      </div>
 
-      <!-- People -->
-      <div>
-        <div class="text-sm font-semibold mb-2 flex items-center gap-2">
-          <i class="ri-user-fill text-purple-600 text-2xl"></i>
-          People
-          <button
-            type="button"
-            class="ml-auto p-1.5 rounded-md bg-purple-600 hover:bg-purple-700 text-white shadow-sm"
-            title="Say 'People'"
-            aria-label="Say category name"
-            @click="speak('People')"
-          >
-            <i class="ri-speak-fill text-lg"></i>
-          </button>
+        <!-- People -->
+        <div>
+          <div class="text-sm font-semibold mb-2 flex items-center gap-2">
+            <i class="ri-user-fill text-purple-600 text-2xl"></i>
+            People
+            <button
+              type="button"
+              class="ml-auto p-1.5 rounded-md bg-purple-600 hover:bg-purple-700 text-white shadow-sm"
+              title="Say 'People'"
+              aria-label="Say category name"
+              @click="speak('People')"
+            >
+              <i class="ri-speak-fill text-lg"></i>
+            </button>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="(w, i) in people"
+              :key="`p-${i}`"
+              type="button"
+              class="px-4 py-1.5 rounded-full bg-purple-600 text-white text-xl font-semibold shadow-md hover:bg-purple-700 transition-colors"
+              @click="addWord(w)"
+            >
+              {{ w }}
+            </button>
+          </div>
         </div>
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="(w, i) in people"
-            :key="`p-${i}`"
-            type="button"
-            class="px-4 py-1.5 rounded-full bg-purple-600 text-white text-xl font-semibold shadow-md hover:bg-purple-700 transition-colors"
-            @click="addWord(w)"
-          >
-            {{ w }}
-          </button>
-        </div>
-      </div>
 
-      <!-- Body Parts -->
-      <div>
-        <div class="text-sm font-semibold mb-2 flex items-center gap-2">
-          <i class="ri-body-scan-fill text-red-600 text-2xl"></i>
-          Body Parts
-          <button
-            type="button"
-            class="ml-auto p-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white shadow-sm"
-            title="Say 'Body Parts'"
-            aria-label="Say category name"
-            @click="speak('Body Parts')"
-          >
-            <i class="ri-speak-fill text-lg"></i>
-          </button>
+        <!-- Body Parts -->
+        <div>
+          <div class="text-sm font-semibold mb-2 flex items-center gap-2">
+            <i class="ri-body-scan-fill text-red-600 text-2xl"></i>
+            Body Parts
+            <button
+              type="button"
+              class="ml-auto p-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white shadow-sm"
+              title="Say 'Body Parts'"
+              aria-label="Say category name"
+              @click="speak('Body Parts')"
+            >
+              <i class="ri-speak-fill text-lg"></i>
+            </button>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="(w, i) in bodyParts"
+              :key="`bp-${i}`"
+              type="button"
+              class="px-4 py-1.5 rounded-full bg-red-600 text-white text-xl font-semibold shadow-md hover:bg-red-700 transition-colors"
+              @click="addWord(w)"
+            >
+              {{ w }}
+            </button>
+          </div>
         </div>
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="(w, i) in bodyParts"
-            :key="`bp-${i}`"
-            type="button"
-            class="px-4 py-1.5 rounded-full bg-red-600 text-white text-xl font-semibold shadow-md hover:bg-red-700 transition-colors"
-            @click="addWord(w)"
-          >
-            {{ w }}
-          </button>
-        </div>
-      </div>
 
-      <!-- Actions -->
-      <div>
-        <div class="text-sm font-semibold mb-2 flex items-center gap-2">
-          <i class="ri-run-fill text-green-600 text-2xl"></i>
-          Actions
-          <button
-            type="button"
-            class="ml-auto p-1.5 rounded-md bg-green-600 hover:bg-green-700 text-white shadow-sm"
-            title="Say 'Actions'"
-            aria-label="Say category name"
-            @click="speak('Actions')"
-          >
-            <i class="ri-speak-fill text-lg"></i>
-          </button>
+        <!-- Actions -->
+        <div>
+          <div class="text-sm font-semibold mb-2 flex items-center gap-2">
+            <i class="ri-run-fill text-green-600 text-2xl"></i>
+            Actions
+            <button
+              type="button"
+              class="ml-auto p-1.5 rounded-md bg-green-600 hover:bg-green-700 text-white shadow-sm"
+              title="Say 'Actions'"
+              aria-label="Say category name"
+              @click="speak('Actions')"
+            >
+              <i class="ri-speak-fill text-lg"></i>
+            </button>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="(w, i) in actions"
+              :key="`a-${i}`"
+              type="button"
+              class="px-4 py-1.5 rounded-full bg-green-600 text-white text-xl font-semibold shadow-md hover:bg-green-700 transition-colors"
+              @click="addWord(w)"
+            >
+              {{ w }}
+            </button>
+          </div>
         </div>
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="(w, i) in actions"
-            :key="`a-${i}`"
-            type="button"
-            class="px-4 py-1.5 rounded-full bg-green-600 text-white text-xl font-semibold shadow-md hover:bg-green-700 transition-colors"
-            @click="addWord(w)"
-          >
-            {{ w }}
-          </button>
-        </div>
-      </div>
 
-      <!-- Feelings -->
-      <div>
-        <div class="text-sm font-semibold mb-2 flex items-center gap-2">
-          <i class="ri-emotion-happy-fill text-yellow-600 text-2xl"></i>
-          Feelings
-          <button
-            type="button"
-            class="ml-auto p-1.5 rounded-md bg-yellow-600 hover:bg-yellow-700 text-white shadow-sm"
-            title="Say 'Feelings'"
-            aria-label="Say category name"
-            @click="speak('Feelings')"
-          >
-            <i class="ri-speak-fill text-lg"></i>
-          </button>
+        <!-- Feelings -->
+        <div>
+          <div class="text-sm font-semibold mb-2 flex items-center gap-2">
+            <i class="ri-emotion-happy-fill text-yellow-600 text-2xl"></i>
+            Feelings
+            <button
+              type="button"
+              class="ml-auto p-1.5 rounded-md bg-yellow-600 hover:bg-yellow-700 text-white shadow-sm"
+              title="Say 'Feelings'"
+              aria-label="Say category name"
+              @click="speak('Feelings')"
+            >
+              <i class="ri-speak-fill text-lg"></i>
+            </button>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="(w, i) in feelings"
+              :key="`f-${i}`"
+              type="button"
+              class="px-4 py-1.5 rounded-full bg-yellow-600 text-white text-xl font-semibold shadow-md hover:bg-yellow-700 transition-colors"
+              @click="addWord(w)"
+            >
+              {{ w }}
+            </button>
+          </div>
         </div>
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="(w, i) in feelings"
-            :key="`f-${i}`"
-            type="button"
-            class="px-4 py-1.5 rounded-full bg-yellow-600 text-white text-xl font-semibold shadow-md hover:bg-yellow-700 transition-colors"
-            @click="addWord(w)"
-          >
-            {{ w }}
-          </button>
-        </div>
-      </div>
 
-      <!-- Descriptors -->
-      <div>
-        <div class="text-sm font-semibold mb-2 flex items-center gap-2">
-          <i class="ri-contrast-fill text-indigo-600 text-2xl"></i>
-          How Much
-          <button
-            type="button"
-            class="ml-auto p-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
-            title="Say 'How Much'"
-            aria-label="Say category name"
-            @click="speak('How Much')"
-          >
-            <i class="ri-speak-fill text-lg"></i>
-          </button>
+        <!-- Descriptors -->
+        <div>
+          <div class="text-sm font-semibold mb-2 flex items-center gap-2">
+            <i class="ri-contrast-fill text-indigo-600 text-2xl"></i>
+            How Much
+            <button
+              type="button"
+              class="ml-auto p-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+              title="Say 'How Much'"
+              aria-label="Say category name"
+              @click="speak('How Much')"
+            >
+              <i class="ri-speak-fill text-lg"></i>
+            </button>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="(w, i) in descriptors"
+              :key="`d-${i}`"
+              type="button"
+              class="px-4 py-1.5 rounded-full bg-indigo-600 text-white text-xl font-semibold shadow-md hover:bg-indigo-700 transition-colors"
+              @click="addWord(w)"
+            >
+              {{ w }}
+            </button>
+          </div>
         </div>
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="(w, i) in descriptors"
-            :key="`d-${i}`"
-            type="button"
-            class="px-4 py-1.5 rounded-full bg-indigo-600 text-white text-xl font-semibold shadow-md hover:bg-indigo-700 transition-colors"
-            @click="addWord(w)"
-          >
-            {{ w }}
-          </button>
-        </div>
-      </div>
 
-      <!-- Things -->
-      <div>
-        <div class="text-sm font-semibold mb-2 flex items-center gap-2">
-          <i class="ri-gift-fill text-orange-600 text-2xl"></i>
-          Things I Need
-          <button
-            type="button"
-            class="ml-auto p-1.5 rounded-md bg-orange-600 hover:bg-orange-700 text-white shadow-sm"
-            title="Say 'Things I Need'"
-            aria-label="Say category name"
-            @click="speak('Things I Need')"
-          >
-            <i class="ri-speak-fill text-lg"></i>
-          </button>
+        <!-- Things -->
+        <div>
+          <div class="text-sm font-semibold mb-2 flex items-center gap-2">
+            <i class="ri-gift-fill text-orange-600 text-2xl"></i>
+            Things I Need
+            <button
+              type="button"
+              class="ml-auto p-1.5 rounded-md bg-orange-600 hover:bg-orange-700 text-white shadow-sm"
+              title="Say 'Things I Need'"
+              aria-label="Say category name"
+              @click="speak('Things I Need')"
+            >
+              <i class="ri-speak-fill text-lg"></i>
+            </button>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="(w, i) in things"
+              :key="`t-${i}`"
+              type="button"
+              class="px-4 py-1.5 rounded-full bg-orange-600 text-white text-xl font-semibold shadow-md hover:bg-orange-700 transition-colors"
+              @click="addWord(w)"
+            >
+              {{ w }}
+            </button>
+          </div>
         </div>
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="(w, i) in things"
-            :key="`t-${i}`"
-            type="button"
-            class="px-4 py-1.5 rounded-full bg-orange-600 text-white text-xl font-semibold shadow-md hover:bg-orange-700 transition-colors"
-            @click="addWord(w)"
-          >
-            {{ w }}
-          </button>
-        </div>
-      </div>
       </div>
     </Accordion>
 
