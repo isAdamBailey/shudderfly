@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class ProfileController extends Controller
@@ -51,6 +52,47 @@ class ProfileController extends Controller
         $request->user()->save();
 
         return Redirect::route('profile.edit');
+    }
+
+    /**
+     * Update the user's avatar.
+     *
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function updateAvatar(Request $request)
+    {
+        $validated = $request->validate([
+            'avatar' => ['nullable', 'string', Rule::in($this->getAllowedAvatarIds())],
+        ]);
+
+        $request->user()->update([
+            'avatar' => $validated['avatar'] ?? null,
+        ]);
+
+        return Redirect::route('profile.edit')->with('success', 'Avatar updated successfully.');
+    }
+
+    /**
+     * Get the list of allowed avatar IDs.
+     *
+     * @return array<string>
+     */
+    protected function getAllowedAvatarIds(): array
+    {
+        return [
+            'cat',
+            'dog',
+            'bird',
+            'bear',
+            'fox',
+            'rabbit',
+            'owl',
+            'panda',
+            'tiger',
+            'elephant',
+            'lion',
+            'penguin',
+        ];
     }
 
     /**
