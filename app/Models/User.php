@@ -62,8 +62,6 @@ class User extends Authenticatable
 
     /**
      * Get the user's avatar URL or initials-based avatar.
-     *
-     * @return string
      */
     public function getAvatarUrlAttribute(): string
     {
@@ -76,8 +74,6 @@ class User extends Authenticatable
 
     /**
      * Get initials from user's name.
-     *
-     * @return string
      */
     public function getInitials(): string
     {
@@ -88,7 +84,7 @@ class User extends Authenticatable
 
         $parts = explode(' ', $name);
         if (count($parts) >= 2) {
-            return strtoupper(substr($parts[0], 0, 1) . substr(end($parts), 0, 1));
+            return strtoupper(substr($parts[0], 0, 1).substr(end($parts), 0, 1));
         }
 
         return strtoupper(substr($name, 0, min(2, strlen($name))));
@@ -96,13 +92,11 @@ class User extends Authenticatable
 
     /**
      * Get initials-based avatar URL from ui-avatars.com.
-     *
-     * @return string
      */
     protected function getInitialsAvatarUrl(): string
     {
         $initials = $this->getInitials();
-        
+
         $colors = [
             '6366f1', '8b5cf6', 'ec4899', 'f59e0b',
             '10b981', '06b6d4', 'f97316', '84cc16',
@@ -110,6 +104,6 @@ class User extends Authenticatable
         $colorIndex = $this->id ? ($this->id % count($colors)) : 0;
         $backgroundColor = $colors[$colorIndex];
 
-        return 'https://ui-avatars.com/api/?name=' . urlencode($initials) . '&background=' . $backgroundColor . '&color=ffffff&size=100&bold=true';
+        return 'https://ui-avatars.com/api/?name='.urlencode($initials).'&background='.$backgroundColor.'&color=ffffff&size=100&bold=true';
     }
 }

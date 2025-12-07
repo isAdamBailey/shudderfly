@@ -39,22 +39,20 @@ class CleanupOldMessages extends Command
             ->pluck('id')
             ->toArray();
 
-        // Delete the messages
-        $deletedCount = Message::where('created_at', '<', $cutoffDate)->delete();
-
-        // Delete notifications that reference these deleted messages
+        // Delete notifications that reference these messages (bulk delete doesn't fire model events)
         $notificationCount = 0;
-        if (!empty($messageIds)) {
-            // Delete notifications where the data JSON contains message_id matching deleted messages
-            // We need to check for UserTagged notifications that have message_id in their data
+        if (! empty($messageIds)) {
             foreach ($messageIds as $messageId) {
                 $count = DB::table('notifications')
                     ->where('type', 'App\\Notifications\\UserTagged')
-                    ->whereJsonContains('data->message_id', $messageId)
+                    ->whereRaw("JSON_EXTRACT(data, '$.message_id') = ?", [$messageId])
                     ->delete();
                 $notificationCount += $count;
             }
         }
+
+        // Delete the messages
+        $deletedCount = Message::where('created_at', '<', $cutoffDate)->delete();
 
         $this->info("Deleted {$deletedCount} message(s) older than {$retentionDays} days.");
         if ($notificationCount > 0) {

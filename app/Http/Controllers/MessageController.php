@@ -59,7 +59,7 @@ class MessageController extends Controller
     public function show(Message $message): \Illuminate\Http\JsonResponse
     {
         $message->load('user');
-        
+
         return response()->json([
             'id' => $message->id,
             'user_id' => $message->user_id,
@@ -141,7 +141,7 @@ class MessageController extends Controller
         event(new MessageCreated($message));
 
         // Return flash message for the user who posted (others will see it via Echo)
-        return back()->with('success', 'New message added by ' . Auth::user()->name);
+        return back()->with('success', 'New message added by '.Auth::user()->name);
     }
 
     /**

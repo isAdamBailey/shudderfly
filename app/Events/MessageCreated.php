@@ -37,8 +37,6 @@ class MessageCreated implements ShouldBroadcastNow
 
     /**
      * The event's broadcast name.
-     *
-     * @return string
      */
     public function broadcastAs(): string
     {
@@ -61,7 +59,7 @@ class MessageCreated implements ShouldBroadcastNow
                 'id' => $this->message->user->id,
                 'name' => $this->message->user->name,
             ],
-            'success_message' => 'New message added by ' . $this->message->user->name,
+            'success_message' => 'New message added by '.$this->message->user->name,
         ];
     }
 }

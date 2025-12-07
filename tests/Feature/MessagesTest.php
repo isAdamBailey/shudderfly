@@ -245,6 +245,56 @@ class MessagesTest extends TestCase
         ]);
     }
 
+    public function test_admin_deleting_message_also_deletes_related_notifications(): void
+    {
+        $admin = User::factory()->create();
+        $admin->givePermissionTo('admin');
+
+        $tagger = User::factory()->create(['name' => 'Alice']);
+        $taggedUser = User::factory()->create(['name' => 'Bob']);
+
+        $message = Message::factory()->create([
+            'user_id' => $tagger->id,
+        ]);
+
+        // Create a notification for this message
+        $notificationId = \Illuminate\Support\Str::uuid()->toString();
+        DB::table('notifications')->insert([
+            'id' => $notificationId,
+            'type' => 'App\\Notifications\\UserTagged',
+            'notifiable_type' => 'App\\Models\\User',
+            'notifiable_id' => $taggedUser->id,
+            'data' => json_encode([
+                'message_id' => $message->id,
+                'message' => 'Hello @Bob!',
+                'tagger_id' => $tagger->id,
+                'tagger_name' => $tagger->name,
+                'tagger_avatar' => null,
+                'created_at' => $message->created_at->toIso8601String(),
+                'url' => route('messages.index').'#message-'.$message->id,
+            ]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($admin);
+
+        $response = $this->delete(route('messages.destroy', $message));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        // Message should be deleted
+        $this->assertDatabaseMissing('messages', [
+            'id' => $message->id,
+        ]);
+
+        // Notification should also be deleted
+        $this->assertDatabaseMissing('notifications', [
+            'id' => $notificationId,
+        ]);
+    }
+
     public function test_non_admin_cannot_delete_message(): void
     {
         $user = User::factory()->create();

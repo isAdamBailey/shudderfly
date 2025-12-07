@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 
 class Message extends Model
 {
@@ -19,6 +20,37 @@ class Message extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+    /**
+     * Boot the model.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Delete related notifications when a message is deleted
+        // Note: This only fires for single model deletions, not bulk deletes
+        static::deleting(function ($message) {
+            $driver = DB::getDriverName();
+            if ($driver === 'mysql' || $driver === 'mariadb') {
+                DB::table('notifications')
+                    ->where('type', 'App\\Notifications\\UserTagged')
+                    ->whereRaw("JSON_EXTRACT(data, '$.message_id') = ?", [$message->id])
+                    ->delete();
+            } elseif ($driver === 'pgsql') {
+                DB::table('notifications')
+                    ->where('type', 'App\\Notifications\\UserTagged')
+                    ->whereRaw("data->>'message_id' = ?", [(string) $message->id])
+                    ->delete();
+            } else {
+                // SQLite or fallback
+                DB::table('notifications')
+                    ->where('type', 'App\\Notifications\\UserTagged')
+                    ->whereJsonContains('data->message_id', $message->id)
+                    ->delete();
+            }
+        });
+    }
 
     /**
      * Get the user that owns the message.

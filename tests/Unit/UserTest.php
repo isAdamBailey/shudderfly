@@ -97,4 +97,3 @@ class UserTest extends TestCase
         $this->assertStringContainsString('name=JS', $avatarUrl);
     }
 }
-
