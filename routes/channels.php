@@ -12,6 +12,6 @@ Broadcast::channel('messages', function ($user) {
     $setting = \App\Models\SiteSetting::where('key', 'messaging_enabled')->first();
     $messagingEnabled = $setting && ($setting->getAttributes()['value'] ?? $setting->value) === '1';
 
-    // Return true if messaging is enabled and user is authenticated, false otherwise
-    return $messagingEnabled === true;
+    // Return user data if messaging is enabled and user is authenticated, false otherwise
+    return $messagingEnabled ? ['id' => $user->id, 'name' => $user->name] : false;
 });
