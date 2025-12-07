@@ -48,6 +48,7 @@ Route::middleware('auth')->group(function () {
         ->name('profile.contact-admins-email');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
 
     Route::group(['middleware' => ['can:edit profile']], function () {
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

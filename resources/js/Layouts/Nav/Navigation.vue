@@ -1,5 +1,6 @@
 <script setup>
 import ApplicationLogo from "@/Components/ApplicationLogo.vue";
+import Avatar from "@/Components/Avatar.vue";
 import Dropdown from "@/Components/Dropdown.vue";
 import DropdownLink from "@/Components/DropdownLink.vue";
 import FireworksAnimation from "@/Components/FireworksAnimation.vue";
@@ -78,9 +79,10 @@ const messagingEnabled = computed(() => {
                   <span class="inline-flex rounded-md relative">
                     <button
                       type="button"
-                      class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-gray-100 dark:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition ease-in-out duration-150"
+                      class="inline-flex items-center gap-2 px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-gray-100 dark:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition ease-in-out duration-150"
                     >
-                      {{ $page.props.auth.user.name }}
+                      <Avatar :user="$page.props.auth.user" size="sm" />
+                      <span class="hidden sm:inline">{{ $page.props.auth.user.name }}</span>
 
                       <svg
                         class="ml-2 -mr-0.5 h-4 w-4"
@@ -196,12 +198,15 @@ const messagingEnabled = computed(() => {
 
         <!-- Responsive Settings Options -->
         <div class="pt-4 pb-1 border-t border-gray-200 dark:border-gray-600">
-          <div class="px-4">
-            <div class="font-medium text-base text-gray-100 dark:text-gray-200">
-              {{ $page.props.auth.user.name }}
-            </div>
-            <div class="font-medium text-sm text-gray-100">
-              {{ $page.props.auth.user.email }}
+          <div class="px-4 flex items-center gap-3">
+            <Avatar :user="$page.props.auth.user" size="md" />
+            <div>
+              <div class="font-medium text-base text-gray-100 dark:text-gray-200">
+                {{ $page.props.auth.user.name }}
+              </div>
+              <div class="font-medium text-sm text-gray-100">
+                {{ $page.props.auth.user.email }}
+              </div>
             </div>
           </div>
 

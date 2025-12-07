@@ -100,4 +100,91 @@ class ProfileTest extends TestCase
 
         $this->assertNotNull($user->fresh());
     }
+
+    public function test_avatar_can_be_updated()
+    {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->patch('/profile/avatar', [
+                'avatar' => 'cat',
+            ]);
+
+        $response
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/profile');
+
+        $user->refresh();
+
+        $this->assertSame('cat', $user->avatar);
+    }
+
+    public function test_avatar_can_be_updated_without_edit_profile_permission()
+    {
+        $user = User::factory()->create();
+        // User does NOT have 'edit profile' permission
+
+        $response = $this
+            ->actingAs($user)
+            ->patch('/profile/avatar', [
+                'avatar' => 'bird',
+            ]);
+
+        $response
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/profile');
+
+        $user->refresh();
+
+        $this->assertSame('bird', $user->avatar);
+    }
+
+    public function test_avatar_can_be_cleared()
+    {
+        $user = User::factory()->create(['avatar' => 'dog']);
+
+        $response = $this
+            ->actingAs($user)
+            ->patch('/profile/avatar', [
+                'avatar' => null,
+            ]);
+
+        $response
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/profile');
+
+        $user->refresh();
+
+        $this->assertNull($user->avatar);
+    }
+
+    public function test_invalid_avatar_is_rejected()
+    {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->from('/profile')
+            ->patch('/profile/avatar', [
+                'avatar' => 'invalid-avatar',
+            ]);
+
+        $response
+            ->assertSessionHasErrors('avatar')
+            ->assertRedirect('/profile');
+
+        $user->refresh();
+
+        $this->assertNotSame('invalid-avatar', $user->avatar);
+    }
+
+    public function test_avatar_update_requires_authentication()
+    {
+        $response = $this->patch('/profile/avatar', [
+            'avatar' => 'cat',
+        ]);
+
+        $response->assertRedirect('/login');
+    }
 }

@@ -8,6 +8,7 @@ import { useUnreadNotifications } from "@/composables/useUnreadNotifications";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, usePage } from "@inertiajs/vue3";
 import { computed, ref } from "vue";
+import AvatarSelectionForm from "./Partials/AvatarSelectionForm.vue";
 import DeleteUserForm from "./Partials/DeleteUserForm.vue";
 import NotificationsTab from "./Partials/NotificationsTab.vue";
 import UpdatePasswordForm from "./Partials/UpdatePasswordForm.vue";
@@ -81,8 +82,15 @@ defineProps({
         </div>
       </Transition>
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-        <Accordion v-if="messagingEnabled" title="Notifications" :show-badge="unreadCount > 0">
+        <Accordion
+          v-if="messagingEnabled"
+          title="Notifications"
+          :show-badge="unreadCount > 0"
+        >
           <NotificationsTab />
+        </Accordion>
+        <Accordion title="Avatar">
+          <AvatarSelectionForm />
         </Accordion>
         <Accordion title="Voice Settings">
           <VoiceSettingsForm />
@@ -90,30 +98,27 @@ defineProps({
         <Accordion title="Push Notifications">
           <NotificationToggle />
         </Accordion>
-        <div
-          v-if="canEditProfile"
-          class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg"
-        >
+        <Accordion title="Profile Information">
+          v-if="canEditProfile" class="p-4 sm:p-8 bg-white dark:bg-gray-800
+          shadow sm:rounded-lg" >
           <UpdateProfileInformationForm
             :must-verify-email="mustVerifyEmail"
             :status="status"
             class="max-w-xl"
           />
-        </div>
+        </Accordion>
 
-        <div
-          v-if="canEditProfile"
-          class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg"
-        >
+        <Accordion title="Password">
+          v-if="canEditProfile" class="p-4 sm:p-8 bg-white dark:bg-gray-800
+          shadow sm:rounded-lg" >
           <UpdatePasswordForm class="max-w-xl" />
-        </div>
+        </Accordion>
 
-        <div
-          v-if="canEditProfile"
-          class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg"
-        >
+        <Accordion title="Delete Account">
+          v-if="canEditProfile" class="p-4 sm:p-8 bg-white dark:bg-gray-800
+          shadow sm:rounded-lg" >
           <DeleteUserForm class="max-w-xl" />
-        </div>
+        </Accordion>
       </div>
     </div>
   </AuthenticatedLayout>

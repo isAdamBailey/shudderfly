@@ -16,6 +16,7 @@
             <div class="flex items-start justify-between">
                 <div class="flex-1">
                     <div class="flex items-center gap-2 mb-2">
+                        <Avatar :user="message.user" size="sm" />
                         <span
                             class="font-semibold text-gray-900 dark:text-gray-100"
                         >
@@ -61,6 +62,7 @@
 
 <script setup>
 /* global route */
+import Avatar from "@/Components/Avatar.vue";
 import Button from "@/Components/Button.vue";
 import DangerButton from "@/Components/DangerButton.vue";
 import { usePermissions } from "@/composables/permissions";
