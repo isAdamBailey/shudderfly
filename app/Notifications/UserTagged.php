@@ -42,7 +42,7 @@ class UserTagged extends Notification implements ShouldBroadcast
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $url = route('messages.index');
+        $url = route('messages.index').'#message-'.$this->message->id;
 
         return (new MailMessage)
             ->subject('You were tagged in a message by '.$this->tagger->name)
@@ -75,7 +75,7 @@ class UserTagged extends Notification implements ShouldBroadcast
                 'tagger_id' => $this->tagger->id,
                 'tagger_name' => $this->tagger->name,
                 'created_at' => $this->message->created_at->toIso8601String(),
-                'url' => route('messages.index'),
+                'url' => route('messages.index').'#message-'.$this->message->id,
             ],
             'read_at' => null,
         ]);
@@ -94,7 +94,7 @@ class UserTagged extends Notification implements ShouldBroadcast
             'tagger_id' => $this->tagger->id,
             'tagger_name' => $this->tagger->name,
             'created_at' => $this->message->created_at->toIso8601String(),
-            'url' => route('messages.index'),
+            'url' => route('messages.index').'#message-'.$this->message->id,
         ];
     }
 }
