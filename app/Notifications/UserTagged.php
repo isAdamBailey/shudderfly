@@ -74,6 +74,7 @@ class UserTagged extends Notification implements ShouldBroadcast
                 'message' => $this->message->message,
                 'tagger_id' => $this->tagger->id,
                 'tagger_name' => $this->tagger->name,
+                'tagger_avatar' => $this->tagger->avatar,
                 'created_at' => $this->message->created_at->toIso8601String(),
                 'url' => route('messages.index').'#message-'.$this->message->id,
             ],
@@ -93,6 +94,7 @@ class UserTagged extends Notification implements ShouldBroadcast
             'message' => $this->message->message,
             'tagger_id' => $this->tagger->id,
             'tagger_name' => $this->tagger->name,
+            'tagger_avatar' => $this->tagger->avatar,
             'created_at' => $this->message->created_at->toIso8601String(),
             'url' => route('messages.index').'#message-'.$this->message->id,
         ];

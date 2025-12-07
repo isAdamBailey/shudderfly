@@ -6,6 +6,7 @@ use App\Models\Message;
 use App\Models\SiteSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -373,5 +374,139 @@ class MessagesTest extends TestCase
 
         $tagged = $message->getTaggedUsernames();
         $this->assertContains('JohnDoe', $tagged);
+    }
+
+    public function test_cleanup_command_deletes_old_messages(): void
+    {
+        $user = User::factory()->create();
+
+        // Create messages within and outside retention period
+        $recentMessage = Message::factory()->create([
+            'user_id' => $user->id,
+            'created_at' => now()->subDays(10),
+        ]);
+
+        $oldMessage = Message::factory()->create([
+            'user_id' => $user->id,
+            'created_at' => now()->subDays(35),
+        ]);
+
+        $this->artisan('messages:cleanup')
+            ->expectsOutput('Deleted 1 message(s) older than 30 days.')
+            ->assertExitCode(0);
+
+        // Recent message should still exist
+        $this->assertDatabaseHas('messages', [
+            'id' => $recentMessage->id,
+        ]);
+
+        // Old message should be deleted
+        $this->assertDatabaseMissing('messages', [
+            'id' => $oldMessage->id,
+        ]);
+    }
+
+    public function test_cleanup_command_deletes_notifications_for_deleted_messages(): void
+    {
+        $tagger = User::factory()->create(['name' => 'Alice']);
+        $taggedUser = User::factory()->create(['name' => 'Bob']);
+
+        // Create an old message that will be deleted
+        $oldMessage = Message::factory()->create([
+            'user_id' => $tagger->id,
+            'created_at' => now()->subDays(35),
+        ]);
+
+        // Create a notification for this message
+        $notificationId = \Illuminate\Support\Str::uuid()->toString();
+        DB::table('notifications')->insert([
+            'id' => $notificationId,
+            'type' => 'App\\Notifications\\UserTagged',
+            'notifiable_type' => 'App\\Models\\User',
+            'notifiable_id' => $taggedUser->id,
+            'data' => json_encode([
+                'message_id' => $oldMessage->id,
+                'message' => 'Hello @Bob!',
+                'tagger_id' => $tagger->id,
+                'tagger_name' => $tagger->name,
+                'tagger_avatar' => null,
+                'created_at' => $oldMessage->created_at->toIso8601String(),
+                'url' => route('messages.index').'#message-'.$oldMessage->id,
+            ]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Create a recent message with a notification that should remain
+        $recentMessage = Message::factory()->create([
+            'user_id' => $tagger->id,
+            'created_at' => now()->subDays(10),
+        ]);
+
+        $recentNotificationId = \Illuminate\Support\Str::uuid()->toString();
+        DB::table('notifications')->insert([
+            'id' => $recentNotificationId,
+            'type' => 'App\\Notifications\\UserTagged',
+            'notifiable_type' => 'App\\Models\\User',
+            'notifiable_id' => $taggedUser->id,
+            'data' => json_encode([
+                'message_id' => $recentMessage->id,
+                'message' => 'Hello @Bob!',
+                'tagger_id' => $tagger->id,
+                'tagger_name' => $tagger->name,
+                'tagger_avatar' => null,
+                'created_at' => $recentMessage->created_at->toIso8601String(),
+                'url' => route('messages.index').'#message-'.$recentMessage->id,
+            ]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->artisan('messages:cleanup')
+            ->expectsOutput('Deleted 1 message(s) older than 30 days.')
+            ->expectsOutput('Deleted 1 notification(s) for deleted messages.')
+            ->assertExitCode(0);
+
+        // Old notification should be deleted
+        $this->assertDatabaseMissing('notifications', [
+            'id' => $notificationId,
+        ]);
+
+        // Recent notification should still exist
+        $this->assertDatabaseHas('notifications', [
+            'id' => $recentNotificationId,
+        ]);
+    }
+
+    public function test_cleanup_command_handles_custom_retention_period(): void
+    {
+        SiteSetting::where('key', 'messaging_retention_days')->update(['value' => '7']);
+
+        $user = User::factory()->create();
+
+        // Create messages within and outside the custom retention period
+        $recentMessage = Message::factory()->create([
+            'user_id' => $user->id,
+            'created_at' => now()->subDays(5),
+        ]);
+
+        $oldMessage = Message::factory()->create([
+            'user_id' => $user->id,
+            'created_at' => now()->subDays(10),
+        ]);
+
+        $this->artisan('messages:cleanup')
+            ->expectsOutput('Deleted 1 message(s) older than 7 days.')
+            ->assertExitCode(0);
+
+        // Recent message should still exist
+        $this->assertDatabaseHas('messages', [
+            'id' => $recentMessage->id,
+        ]);
+
+        // Old message should be deleted
+        $this->assertDatabaseMissing('messages', [
+            'id' => $oldMessage->id,
+        ]);
     }
 }

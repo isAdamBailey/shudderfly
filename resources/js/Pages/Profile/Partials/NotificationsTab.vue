@@ -16,49 +16,60 @@
         v-for="notification in notifications"
         :key="notification.id"
         :class="[
-          'p-4 rounded-lg border cursor-pointer transition-colors',
+          'p-2.5 rounded-lg border cursor-pointer transition-colors',
           notification.read_at
             ? 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
             : 'bg-blue-50 dark:bg-blue-900 border-blue-200 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-800'
         ]"
         @click="handleNotificationClick(notification)"
       >
-        <div class="flex items-start justify-between">
-          <div class="flex-1">
-            <div class="flex items-center gap-2 mb-2">
-              <i
-                v-if="notification.type === 'App\\Notifications\\UserTagged'"
-                class="ri-user-add-line text-xl text-blue-600 dark:text-blue-400"
-              ></i>
-              <span
-                v-if="!notification.read_at"
-                class="inline-block w-2 h-2 bg-blue-600 rounded-full"
-              ></span>
-            </div>
+        <div class="flex items-start justify-between gap-2">
+          <div class="flex-1 min-w-0">
             <div
               v-if="notification.type === 'App\\Notifications\\UserTagged'"
               class="text-gray-900 dark:text-gray-100"
             >
-              <strong>{{ notification.data.tagger_name }}</strong> tagged you in a message:
-              <p class="mt-2 text-gray-700 dark:text-gray-300 italic">
+              <div class="flex items-center gap-2 mb-1">
+                <Avatar
+                  :avatar="notification.data.tagger_avatar"
+                  :user="{
+                    id: notification.data.tagger_id,
+                    name: notification.data.tagger_name
+                  }"
+                  size="sm"
+                />
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <strong>{{ notification.data.tagger_name }}</strong>
+                  <span class="text-sm">tagged you:</span>
+                  <span
+                    v-if="!notification.read_at"
+                    class="inline-block w-1.5 h-1.5 bg-blue-600 rounded-full"
+                  ></span>
+                </div>
+              </div>
+              <p
+                class="text-sm text-gray-700 dark:text-gray-300 italic ml-8 mb-1"
+              >
                 "{{ notification.data.message }}"
               </p>
             </div>
-            <div class="text-sm text-gray-500 dark:text-gray-400 mt-2">
-              {{ formatDate(notification.created_at) }}
-            </div>
-            <div class="text-blue-600 dark:text-blue-400 text-sm mt-2">
-              View message →
+            <div
+              class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 ml-8"
+            >
+              <span>{{ formatDate(notification.created_at) }}</span>
+              <span class="text-blue-600 dark:text-blue-400"
+                >View message →</span
+              >
             </div>
           </div>
           <button
             v-if="!notification.read_at"
             type="button"
-            class="ml-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 z-10"
-            @click.stop="markAsRead(notification.id)"
             title="Mark as read"
+            class="flex-shrink-0 px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800 rounded z-10 transition-colors"
+            @click.stop="markAsRead(notification.id)"
           >
-            <i class="ri-check-line text-xl"></i>
+            Mark read
           </button>
         </div>
       </div>
@@ -68,11 +79,11 @@
 
 <script setup>
 /* global route */
-import { router } from "@inertiajs/vue3";
-import { onMounted, onUnmounted, ref } from "vue";
-import { usePage } from "@inertiajs/vue3";
-import axios from "axios";
+import Avatar from "@/Components/Avatar.vue";
 import { useUnreadNotifications } from "@/composables/useUnreadNotifications";
+import { router, usePage } from "@inertiajs/vue3";
+import axios from "axios";
+import { onMounted, onUnmounted, ref } from "vue";
 
 const notifications = ref([]);
 const loading = ref(true);
@@ -88,8 +99,10 @@ const formatDate = (dateString) => {
   const diffDays = Math.floor(diffMs / 86400000);
 
   if (diffMins < 1) return "just now";
-  if (diffMins < 60) return `${diffMins} minute${diffMins !== 1 ? "s" : ""} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
+  if (diffMins < 60)
+    return `${diffMins} minute${diffMins !== 1 ? "s" : ""} ago`;
+  if (diffHours < 24)
+    return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
   if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
 
   return date.toLocaleDateString();
@@ -113,8 +126,8 @@ const handleNotificationClick = async (notification) => {
     await markAsRead(notification.id);
   }
   // Navigate to messages timeline with message ID hash if available
-  const baseUrl = notification.data.url || route('messages.index');
-  const url = notification.data.message_id 
+  const baseUrl = notification.data.url || route("messages.index");
+  const url = notification.data.message_id
     ? `${baseUrl}#message-${notification.data.message_id}`
     : baseUrl;
   router.visit(url);
@@ -124,7 +137,9 @@ const markAsRead = async (notificationId) => {
   try {
     await axios.post(route("notifications.read", notificationId));
     // Update local state
-    const notification = notifications.value.find((n) => n.id === notificationId);
+    const notification = notifications.value.find(
+      (n) => n.id === notificationId
+    );
     if (notification) {
       notification.read_at = new Date().toISOString();
     }
@@ -133,7 +148,7 @@ const markAsRead = async (notificationId) => {
       unreadCount.value--;
     }
     // Reload page props to sync with server
-    router.reload({ only: ['unread_notifications_count'] });
+    router.reload({ only: ["unread_notifications_count"] });
   } catch (error) {
     console.error("Failed to mark notification as read:", error);
   }
@@ -148,7 +163,9 @@ const setupEchoListener = () => {
   }
 
   // Subscribe to user's private channel for notifications
-  notificationsChannel.value = window.Echo.private(`App.Models.User.${user.id}`);
+  notificationsChannel.value = window.Echo.private(
+    `App.Models.User.${user.id}`
+  );
 
   // Listen for new notifications
   notificationsChannel.value.notification((notification) => {
@@ -163,7 +180,9 @@ const cleanup = () => {
   if (notificationsChannel.value && window.Echo && user) {
     try {
       window.Echo.leave(`App.Models.User.${user.id}`);
-    } catch {
+    } catch (error) {
+      // Ignore errors when leaving channel
+      console.debug("Error leaving channel:", error);
     }
     notificationsChannel.value = null;
   }
@@ -178,4 +197,3 @@ onUnmounted(() => {
   cleanup();
 });
 </script>
-
