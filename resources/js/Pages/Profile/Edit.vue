@@ -98,9 +98,7 @@ defineProps({
         <Accordion title="Push Notifications">
           <NotificationToggle />
         </Accordion>
-        <Accordion title="Profile Information">
-          v-if="canEditProfile" class="p-4 sm:p-8 bg-white dark:bg-gray-800
-          shadow sm:rounded-lg" >
+        <Accordion v-if="canEditProfile" title="Profile Information">
           <UpdateProfileInformationForm
             :must-verify-email="mustVerifyEmail"
             :status="status"
@@ -108,15 +106,11 @@ defineProps({
           />
         </Accordion>
 
-        <Accordion title="Password">
-          v-if="canEditProfile" class="p-4 sm:p-8 bg-white dark:bg-gray-800
-          shadow sm:rounded-lg" >
+        <Accordion v-if="canEditProfile" title="Password">
           <UpdatePasswordForm class="max-w-xl" />
         </Accordion>
 
-        <Accordion title="Delete Account">
-          v-if="canEditProfile" class="p-4 sm:p-8 bg-white dark:bg-gray-800
-          shadow sm:rounded-lg" >
+        <Accordion v-if="canEditProfile" title="Delete Account">
           <DeleteUserForm class="max-w-xl" />
         </Accordion>
       </div>
