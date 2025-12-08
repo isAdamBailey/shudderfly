@@ -296,7 +296,8 @@ const stripHtml = (html) => {
 
 const speakMessage = (message) => {
   const messageText = stripHtml(formatMessage(message.message));
-  speak(messageText);
+  const username = message.user?.name || "Someone";
+  speak(`${username} says ${messageText}`);
 };
 
 const deleteMessage = (messageId) => {
