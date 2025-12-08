@@ -82,7 +82,9 @@ const messagingEnabled = computed(() => {
                       class="inline-flex items-center gap-2 px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-gray-100 dark:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition ease-in-out duration-150"
                     >
                       <Avatar :user="$page.props.auth.user" size="sm" />
-                      <span class="hidden sm:inline">{{ $page.props.auth.user.name }}</span>
+                      <span class="hidden sm:inline">{{
+                        $page.props.auth.user.name
+                      }}</span>
 
                       <svg
                         class="ml-2 -mr-0.5 h-4 w-4"
@@ -107,7 +109,14 @@ const messagingEnabled = computed(() => {
 
                 <template #content>
                   <DropdownLink :href="route('profile.edit')">
-                    Account
+                    <span class="relative inline-block">
+                      Account
+                      <span
+                        v-if="messagingEnabled && unreadCount > 0"
+                        class="absolute left-full ml-1.5 top-1/2 -translate-y-1/2 h-2 w-2 bg-red-600 rounded-full"
+                        title="You have unread notifications"
+                      ></span>
+                    </span>
                   </DropdownLink>
                   <DropdownLink
                     v-if="canEditProfile"
@@ -201,7 +210,9 @@ const messagingEnabled = computed(() => {
           <div class="px-4 flex items-center gap-3">
             <Avatar :user="$page.props.auth.user" size="md" />
             <div>
-              <div class="font-medium text-base text-gray-100 dark:text-gray-200">
+              <div
+                class="font-medium text-base text-gray-100 dark:text-gray-200"
+              >
                 {{ $page.props.auth.user.name }}
               </div>
               <div class="font-medium text-sm text-gray-100">
