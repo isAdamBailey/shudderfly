@@ -9,7 +9,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class MessageCreated implements ShouldBroadcastNow
+class MessageReactionUpdated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -40,7 +40,7 @@ class MessageCreated implements ShouldBroadcastNow
      */
     public function broadcastAs(): string
     {
-        return 'MessageCreated';
+        return 'MessageReactionUpdated';
     }
 
     /**
@@ -51,16 +51,8 @@ class MessageCreated implements ShouldBroadcastNow
     public function broadcastWith(): array
     {
         return [
-            'id' => $this->message->id,
-            'user_id' => $this->message->user_id,
-            'message' => $this->message->message,
-            'created_at' => $this->message->created_at->toIso8601String(),
-            'user' => [
-                'id' => $this->message->user->id,
-                'name' => $this->message->user->name,
-            ],
-            'success_message' => 'New message added by '.$this->message->user->name,
-            'grouped_reactions' => [],
+            'message_id' => $this->message->id,
+            'grouped_reactions' => $this->message->getGroupedReactions(),
         ];
     }
 }

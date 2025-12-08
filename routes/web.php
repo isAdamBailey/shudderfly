@@ -7,6 +7,7 @@ use App\Http\Controllers\CollageController;
 use App\Http\Controllers\CollagePageController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\MessageReactionController;
 use App\Http\Controllers\MusicController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProfileController;
@@ -66,6 +67,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/messages', [MessageController::class, 'index'])->name('messages.index');
     Route::get('/messages/{message}', [MessageController::class, 'show'])->name('messages.show');
     Route::post('/messages', [MessageController::class, 'store'])->name('messages.store');
+    Route::post('/messages/{message}/reactions', [MessageReactionController::class, 'store'])->name('messages.reactions.store');
+    Route::delete('/messages/{message}/reactions', [MessageReactionController::class, 'destroy'])->name('messages.reactions.destroy');
     Route::get('/profile/notifications', [ProfileController::class, 'notifications'])->name('profile.notifications');
     Route::post('/notifications/{id}/read', [ProfileController::class, 'markNotificationAsRead'])->name('notifications.read');
 

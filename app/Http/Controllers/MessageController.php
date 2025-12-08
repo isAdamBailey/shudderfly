@@ -36,10 +36,16 @@ class MessageController extends Controller
             ]);
         }
 
-        $messages = Message::with('user')
+        $messages = Message::with(['user', 'reactions.user'])
             ->recent()
             ->withinRetentionPeriod()
             ->paginate(20);
+
+        // Transform messages to include grouped reactions
+        $messages->getCollection()->transform(function ($message) {
+            $message->grouped_reactions = $message->getGroupedReactions();
+            return $message;
+        });
 
         $users = User::select('id', 'name')
             ->orderBy('name')
@@ -58,7 +64,7 @@ class MessageController extends Controller
      */
     public function show(Message $message): \Illuminate\Http\JsonResponse
     {
-        $message->load('user');
+        $message->load(['user', 'reactions.user']);
 
         return response()->json([
             'id' => $message->id,
@@ -69,6 +75,7 @@ class MessageController extends Controller
                 'id' => $message->user->id,
                 'name' => $message->user->name,
             ],
+            'grouped_reactions' => $message->getGroupedReactions(),
         ]);
     }
 

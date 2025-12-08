@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Message;
+use App\Models\MessageReaction;
 use App\Models\SiteSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -558,5 +559,392 @@ class MessagesTest extends TestCase
         $this->assertDatabaseMissing('messages', [
             'id' => $oldMessage->id,
         ]);
+    }
+
+    public function test_user_can_add_reaction_to_message(): void
+    {
+        Event::fake();
+
+        $user = User::factory()->create();
+        $message = Message::factory()->create();
+
+        $this->actingAs($user);
+
+        $response = $this->postJson(route('messages.reactions.store', $message), [
+            'emoji' => '👍',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJsonStructure([
+            'reaction' => ['id', 'emoji', 'user'],
+            'grouped_reactions',
+        ]);
+
+        $this->assertDatabaseHas('message_reactions', [
+            'message_id' => $message->id,
+            'user_id' => $user->id,
+            'emoji' => '👍',
+        ]);
+
+        Event::assertDispatched(\App\Events\MessageReactionUpdated::class);
+    }
+
+    public function test_user_can_remove_reaction_from_message(): void
+    {
+        Event::fake();
+
+        $user = User::factory()->create();
+        $message = Message::factory()->create();
+
+        // Create a reaction first
+        MessageReaction::factory()->create([
+            'message_id' => $message->id,
+            'user_id' => $user->id,
+            'emoji' => '👍',
+        ]);
+
+        $this->actingAs($user);
+
+        $response = $this->deleteJson(route('messages.reactions.destroy', $message));
+
+        $response->assertStatus(200);
+        $response->assertJsonStructure(['grouped_reactions']);
+
+        $this->assertDatabaseMissing('message_reactions', [
+            'message_id' => $message->id,
+            'user_id' => $user->id,
+        ]);
+
+        Event::assertDispatched(\App\Events\MessageReactionUpdated::class);
+    }
+
+    public function test_user_can_change_reaction(): void
+    {
+        Event::fake();
+
+        $user = User::factory()->create();
+        $message = Message::factory()->create();
+
+        // Create initial reaction
+        MessageReaction::factory()->create([
+            'message_id' => $message->id,
+            'user_id' => $user->id,
+            'emoji' => '👍',
+        ]);
+
+        $this->actingAs($user);
+
+        // Change to different emoji
+        $response = $this->postJson(route('messages.reactions.store', $message), [
+            'emoji' => '❤️',
+        ]);
+
+        $response->assertStatus(200);
+
+        // Should only have one reaction with the new emoji
+        $this->assertDatabaseHas('message_reactions', [
+            'message_id' => $message->id,
+            'user_id' => $user->id,
+            'emoji' => '❤️',
+        ]);
+
+        $this->assertDatabaseMissing('message_reactions', [
+            'message_id' => $message->id,
+            'user_id' => $user->id,
+            'emoji' => '👍',
+        ]);
+
+        // Should only have one reaction total for this user/message
+        $this->assertEquals(1, MessageReaction::where('message_id', $message->id)
+            ->where('user_id', $user->id)
+            ->count());
+
+        Event::assertDispatched(\App\Events\MessageReactionUpdated::class);
+    }
+
+    public function test_user_can_only_have_one_reaction_per_message(): void
+    {
+        $user = User::factory()->create();
+        $message = Message::factory()->create();
+
+        $this->actingAs($user);
+
+        // Add first reaction
+        $this->postJson(route('messages.reactions.store', $message), [
+            'emoji' => '👍',
+        ]);
+
+        // Try to add second reaction with different emoji
+        $this->postJson(route('messages.reactions.store', $message), [
+            'emoji' => '❤️',
+        ]);
+
+        // Should only have one reaction (the second one)
+        $reactions = MessageReaction::where('message_id', $message->id)
+            ->where('user_id', $user->id)
+            ->get();
+
+        $this->assertCount(1, $reactions);
+        $this->assertEquals('❤️', $reactions->first()->emoji);
+    }
+
+    public function test_invalid_emoji_is_rejected(): void
+    {
+        $user = User::factory()->create();
+        $message = Message::factory()->create();
+
+        $this->actingAs($user);
+
+        $response = $this->postJson(route('messages.reactions.store', $message), [
+            'emoji' => '🚀', // Not in allowed list
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJson(['error' => true]);
+
+        $this->assertDatabaseMissing('message_reactions', [
+            'message_id' => $message->id,
+            'user_id' => $user->id,
+        ]);
+    }
+
+    public function test_allowed_emojis_can_be_used(): void
+    {
+        $user = User::factory()->create();
+        $message = Message::factory()->create();
+
+        $this->actingAs($user);
+
+        $allowedEmojis = ['👍', '❤️', '😂', '😮', '😢'];
+
+        foreach ($allowedEmojis as $emoji) {
+            $response = $this->postJson(route('messages.reactions.store', $message), [
+                'emoji' => $emoji,
+            ]);
+
+            $response->assertStatus(200);
+
+            // Remove reaction before testing next one
+            $this->deleteJson(route('messages.reactions.destroy', $message));
+        }
+    }
+
+    public function test_multiple_users_can_react_to_same_message(): void
+    {
+        $user1 = User::factory()->create();
+        $user2 = User::factory()->create();
+        $user3 = User::factory()->create();
+        $message = Message::factory()->create();
+
+        // User 1 reacts
+        $this->actingAs($user1);
+        $this->postJson(route('messages.reactions.store', $message), [
+            'emoji' => '👍',
+        ]);
+
+        // User 2 reacts
+        $this->actingAs($user2);
+        $this->postJson(route('messages.reactions.store', $message), [
+            'emoji' => '👍',
+        ]);
+
+        // User 3 reacts with different emoji
+        $this->actingAs($user3);
+        $this->postJson(route('messages.reactions.store', $message), [
+            'emoji' => '❤️',
+        ]);
+
+        // Should have 3 reactions total
+        $this->assertEquals(3, MessageReaction::where('message_id', $message->id)->count());
+
+        // Check grouped reactions
+        $message->refresh();
+        $grouped = $message->getGroupedReactions();
+
+        $this->assertArrayHasKey('👍', $grouped);
+        $this->assertEquals(2, $grouped['👍']['count']);
+        $this->assertCount(2, $grouped['👍']['users']);
+
+        $this->assertArrayHasKey('❤️', $grouped);
+        $this->assertEquals(1, $grouped['❤️']['count']);
+        $this->assertCount(1, $grouped['❤️']['users']);
+    }
+
+    public function test_reactions_are_included_in_message_index(): void
+    {
+        $user = User::factory()->create();
+        $message = Message::factory()->create();
+
+        // Add reactions
+        MessageReaction::factory()->create([
+            'message_id' => $message->id,
+            'user_id' => $user->id,
+            'emoji' => '👍',
+        ]);
+
+        $this->actingAs($user);
+
+        $response = $this->get(route('messages.index'));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Messages/Index')
+            ->has('messages.data', 1)
+            ->has('messages.data.0.grouped_reactions')
+        );
+    }
+
+    public function test_reactions_are_included_in_message_show(): void
+    {
+        $user = User::factory()->create();
+        $message = Message::factory()->create();
+
+        // Add reactions
+        MessageReaction::factory()->create([
+            'message_id' => $message->id,
+            'user_id' => $user->id,
+            'emoji' => '👍',
+        ]);
+
+        $this->actingAs($user);
+
+        $response = $this->getJson(route('messages.show', $message));
+
+        $response->assertStatus(200);
+        $response->assertJsonStructure([
+            'id',
+            'user_id',
+            'message',
+            'created_at',
+            'user',
+            'grouped_reactions',
+        ]);
+
+        $data = $response->json();
+        $this->assertArrayHasKey('grouped_reactions', $data);
+    }
+
+    public function test_reactions_are_deleted_when_message_is_deleted(): void
+    {
+        $admin = User::factory()->create();
+        $admin->givePermissionTo('admin');
+
+        $user = User::factory()->create();
+        $message = Message::factory()->create();
+
+        // Add reactions
+        $reaction1 = MessageReaction::factory()->create([
+            'message_id' => $message->id,
+            'user_id' => $user->id,
+            'emoji' => '👍',
+        ]);
+
+        $reaction2 = MessageReaction::factory()->create([
+            'message_id' => $message->id,
+            'user_id' => $admin->id,
+            'emoji' => '❤️',
+        ]);
+
+        $this->actingAs($admin);
+
+        $response = $this->delete(route('messages.destroy', $message));
+
+        $response->assertRedirect();
+
+        // Message should be deleted
+        $this->assertDatabaseMissing('messages', [
+            'id' => $message->id,
+        ]);
+
+        // Reactions should be deleted (cascade)
+        $this->assertDatabaseMissing('message_reactions', [
+            'id' => $reaction1->id,
+        ]);
+
+        $this->assertDatabaseMissing('message_reactions', [
+            'id' => $reaction2->id,
+        ]);
+    }
+
+    public function test_reaction_requires_authentication(): void
+    {
+        $message = Message::factory()->create();
+
+        $response = $this->postJson(route('messages.reactions.store', $message), [
+            'emoji' => '👍',
+        ]);
+
+        $response->assertStatus(401);
+    }
+
+    public function test_remove_reaction_requires_authentication(): void
+    {
+        $message = Message::factory()->create();
+
+        $response = $this->deleteJson(route('messages.reactions.destroy', $message));
+
+        $response->assertStatus(401);
+    }
+
+    public function test_reaction_requires_emoji(): void
+    {
+        $user = User::factory()->create();
+        $message = Message::factory()->create();
+
+        $this->actingAs($user);
+
+        $response = $this->postJson(route('messages.reactions.store', $message), []);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('emoji');
+    }
+
+    public function test_grouped_reactions_returns_correct_structure(): void
+    {
+        $user1 = User::factory()->create(['name' => 'Alice']);
+        $user2 = User::factory()->create(['name' => 'Bob']);
+        $user3 = User::factory()->create(['name' => 'Charlie']);
+        $message = Message::factory()->create();
+
+        // Add reactions
+        MessageReaction::factory()->create([
+            'message_id' => $message->id,
+            'user_id' => $user1->id,
+            'emoji' => '👍',
+        ]);
+
+        MessageReaction::factory()->create([
+            'message_id' => $message->id,
+            'user_id' => $user2->id,
+            'emoji' => '👍',
+        ]);
+
+        MessageReaction::factory()->create([
+            'message_id' => $message->id,
+            'user_id' => $user3->id,
+            'emoji' => '❤️',
+        ]);
+
+        $grouped = $message->getGroupedReactions();
+
+        $this->assertArrayHasKey('👍', $grouped);
+        $this->assertEquals(2, $grouped['👍']['count']);
+        $this->assertCount(2, $grouped['👍']['users']);
+        $this->assertArrayHasKey('id', $grouped['👍']['users'][0]);
+        $this->assertArrayHasKey('name', $grouped['👍']['users'][0]);
+
+        $this->assertArrayHasKey('❤️', $grouped);
+        $this->assertEquals(1, $grouped['❤️']['count']);
+        $this->assertCount(1, $grouped['❤️']['users']);
+    }
+
+    public function test_empty_reactions_returns_empty_array(): void
+    {
+        $message = Message::factory()->create();
+
+        $grouped = $message->getGroupedReactions();
+
+        $this->assertIsArray($grouped);
+        $this->assertEmpty($grouped);
     }
 }

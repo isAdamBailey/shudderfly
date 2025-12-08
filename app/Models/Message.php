@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 
 class Message extends Model
@@ -58,6 +59,42 @@ class Message extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the reactions for this message.
+     */
+    public function reactions(): HasMany
+    {
+        return $this->hasMany(MessageReaction::class);
+    }
+
+    /**
+     * Get reactions grouped by emoji with user lists.
+     *
+     * @return array<string, array{count: int, users: array}>
+     */
+    public function getGroupedReactions(): array
+    {
+        $reactions = $this->reactions()->with('user')->get();
+        $grouped = [];
+
+        foreach ($reactions as $reaction) {
+            $emoji = $reaction->emoji;
+            if (! isset($grouped[$emoji])) {
+                $grouped[$emoji] = [
+                    'count' => 0,
+                    'users' => [],
+                ];
+            }
+            $grouped[$emoji]['count']++;
+            $grouped[$emoji]['users'][] = [
+                'id' => $reaction->user->id,
+                'name' => $reaction->user->name,
+            ];
+        }
+
+        return $grouped;
     }
 
     /**

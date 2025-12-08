@@ -30,6 +30,65 @@
                         class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words"
                         v-html="formatMessage(message.message)"
                     ></div>
+                    <!-- Reactions -->
+                    <div class="mt-3 flex flex-wrap items-center gap-2">
+                        <div
+                            v-for="emoji in allowedEmojis"
+                            :key="emoji"
+                            class="flex items-center gap-1"
+                        >
+                            <button
+                                type="button"
+                                @click="toggleReaction(message, emoji)"
+                                :class="[
+                                    'flex items-center gap-1 px-2 py-1 rounded-full text-sm transition-colors',
+                                    hasUserReacted(message, emoji)
+                                        ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                ]"
+                                :title="getReactionTooltip(message, emoji)"
+                            >
+                                <span class="text-base">{{ emoji }}</span>
+                                <span
+                                    v-if="getReactionCount(message, emoji) > 0"
+                                    class="font-medium"
+                                >
+                                    {{ getReactionCount(message, emoji) }}
+                                </span>
+                            </button>
+                            <div
+                                v-if="getReactionCount(message, emoji) > 0"
+                                class="relative reaction-user-list"
+                            >
+                                <button
+                                    type="button"
+                                    class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                                    @click.stop="toggleUserList(message.id, emoji)"
+                                    title="See who reacted"
+                                >
+                                    <i class="ri-information-line"></i>
+                                </button>
+                                <div
+                                    v-if="expandedReactions[`${message.id}-${emoji}`]"
+                                    class="absolute left-0 bottom-full mb-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10 min-w-[150px]"
+                                    @click.stop
+                                >
+                                    <div class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                                        {{ emoji }} Reacted:
+                                    </div>
+                                    <div class="space-y-1">
+                                        <div
+                                            v-for="user in getReactionUsers(message, emoji)"
+                                            :key="user.id"
+                                            class="text-xs text-gray-600 dark:text-gray-400"
+                                        >
+                                            {{ user.name }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="ml-4 flex items-center gap-2">
                     <Button
@@ -68,9 +127,9 @@ import DangerButton from "@/Components/DangerButton.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useFlashMessage } from "@/composables/useFlashMessage";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
-import { router } from "@inertiajs/vue3";
+import { router, usePage } from "@inertiajs/vue3";
 import axios from "axios";
-import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
 const props = defineProps({
     messages: {
@@ -88,8 +147,22 @@ const { speak, speaking } = useSpeechSynthesis();
 const { setFlashMessage } = useFlashMessage();
 const loading = ref(false);
 const messagesChannel = ref(null);
+const expandedReactions = ref({});
 
-const messages = ref([...props.messages]);
+// Initialize messages with grouped_reactions
+const initialMessages = props.messages.map((msg) => ({
+    ...msg,
+    grouped_reactions: msg.grouped_reactions || {},
+}));
+const messages = ref(initialMessages);
+
+// Allowed emojis for reactions
+const allowedEmojis = ['👍', '❤️', '😂', '😮', '😢'];
+
+// Get current user ID
+const currentUserId = computed(() => {
+    return usePage().props.auth?.user?.id;
+});
 
 // Watch for prop changes - merge with existing messages to avoid duplicates
 watch(
@@ -104,6 +177,12 @@ watch(
 
         // Merge: combine all messages and sort by created_at (most recent first)
         const allMessages = [...newMessages, ...existingMessagesToKeep];
+        // Ensure all messages have grouped_reactions initialized
+        allMessages.forEach((msg) => {
+            if (!msg.grouped_reactions) {
+                msg.grouped_reactions = {};
+            }
+        });
         messages.value = allMessages.sort((a, b) => {
             const dateA = new Date(a.created_at);
             const dateB = new Date(b.created_at);
@@ -228,6 +307,15 @@ const setupEchoListener = () => {
         messagesChannel.value.listen(".MessageCreated", (event) => {
             handleMessageEvent(event);
         });
+
+        // Listen for reaction updates
+        messagesChannel.value.listen("MessageReactionUpdated", (event) => {
+            handleReactionUpdate(event);
+        });
+
+        messagesChannel.value.listen(".MessageReactionUpdated", (event) => {
+            handleReactionUpdate(event);
+        });
     } catch (error) {
         console.error("Error setting up Echo listener:", error);
     }
@@ -246,6 +334,10 @@ const handleMessageEvent = (event) => {
     const messageExists = messages.value.some((m) => m.id === messageData.id);
 
     if (!messageExists) {
+        // Ensure grouped_reactions is initialized
+        if (!messageData.grouped_reactions) {
+            messageData.grouped_reactions = {};
+        }
         // Add new message and sort by created_at (most recent first)
         messages.value.push(messageData);
         messages.value.sort((a, b) => {
@@ -264,6 +356,17 @@ const handleMessageEvent = (event) => {
             const fallbackMessage = `New message added by ${messageData.user.name}`;
             setFlashMessage("info", fallbackMessage, 5000);
         }
+    }
+};
+
+const handleReactionUpdate = (event) => {
+    const messageId = event.message_id;
+    const groupedReactions = event.grouped_reactions || {};
+
+    // Find the message and update its reactions
+    const messageIndex = messages.value.findIndex((m) => m.id === messageId);
+    if (messageIndex !== -1) {
+        messages.value[messageIndex].grouped_reactions = groupedReactions;
     }
 };
 
@@ -300,6 +403,10 @@ const scrollToMessage = async () => {
                     route("messages.show", messageId)
                 );
                 const fetchedMessage = response.data;
+                // Ensure grouped_reactions is initialized
+                if (!fetchedMessage.grouped_reactions) {
+                    fetchedMessage.grouped_reactions = {};
+                }
                 // Add the message to the beginning of the array
                 messages.value.unshift(fetchedMessage);
                 // Wait for DOM to update
@@ -333,6 +440,14 @@ const scrollToMessage = async () => {
     }
 };
 
+const handleClickOutside = (event) => {
+    // Close expanded reaction lists when clicking outside
+    const target = event.target;
+    if (!target.closest('.reaction-user-list')) {
+        expandedReactions.value = {};
+    }
+};
+
 onMounted(() => {
     setupEchoListener();
     scrollToMessage();
@@ -343,6 +458,7 @@ onMounted(() => {
         typeof window.addEventListener === "function"
     ) {
         window.addEventListener("hashchange", scrollToMessage);
+        window.addEventListener("click", handleClickOutside);
     }
 });
 
@@ -353,6 +469,82 @@ onUnmounted(() => {
         typeof window.removeEventListener === "function"
     ) {
         window.removeEventListener("hashchange", scrollToMessage);
+        window.removeEventListener("click", handleClickOutside);
     }
 });
+
+// Reaction functions
+const getReactionCount = (message, emoji) => {
+    if (!message.grouped_reactions || !message.grouped_reactions[emoji]) {
+        return 0;
+    }
+    return message.grouped_reactions[emoji].count || 0;
+};
+
+const getReactionUsers = (message, emoji) => {
+    if (!message.grouped_reactions || !message.grouped_reactions[emoji]) {
+        return [];
+    }
+    return message.grouped_reactions[emoji].users || [];
+};
+
+const hasUserReacted = (message, emoji) => {
+    if (!currentUserId.value) return false;
+    const users = getReactionUsers(message, emoji);
+    return users.some((user) => user.id === currentUserId.value);
+};
+
+const getReactionTooltip = (message, emoji) => {
+    const count = getReactionCount(message, emoji);
+    if (count === 0) {
+        return `React with ${emoji}`;
+    }
+    const users = getReactionUsers(message, emoji);
+    const userNames = users.map((u) => u.name).join(", ");
+    return `${emoji} ${count}: ${userNames}`;
+};
+
+const toggleUserList = (messageId, emoji) => {
+    const key = `${messageId}-${emoji}`;
+    expandedReactions.value[key] = !expandedReactions.value[key];
+};
+
+const toggleReaction = async (message, emoji) => {
+    if (!currentUserId.value) return;
+
+    const currentlyReacted = hasUserReacted(message, emoji);
+    const hasOtherReaction = allowedEmojis.some(
+        (e) => e !== emoji && hasUserReacted(message, e)
+    );
+
+    // Initialize grouped_reactions if not present
+    if (!message.grouped_reactions) {
+        message.grouped_reactions = {};
+    }
+
+    try {
+        let response;
+        if (currentlyReacted) {
+            // Remove reaction
+            response = await axios.delete(route("messages.reactions.destroy", message.id));
+        } else {
+            // Add or update reaction
+            response = await axios.post(route("messages.reactions.store", message.id), {
+                emoji: emoji,
+            });
+        }
+
+        // Update local state with server response
+        if (response?.data?.grouped_reactions) {
+            message.grouped_reactions = response.data.grouped_reactions;
+        }
+    } catch (error) {
+        console.error("Error toggling reaction:", error);
+        setFlashMessage(
+            "error",
+            "Failed to update reaction. Please try again.",
+            3000
+        );
+    }
+};
 </script>
