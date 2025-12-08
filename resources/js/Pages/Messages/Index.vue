@@ -26,7 +26,7 @@
           <h3 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
             Timeline
           </h3>
-          <MessageTimeline :messages="messages.data || []" :users="users" />
+          <MessageTimeline :messages="messages" :users="users" />
         </div>
       </div>
     </div>

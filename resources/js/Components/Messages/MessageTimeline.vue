@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-4">
+  <div ref="timelineContainer" class="space-y-4">
     <div
       v-if="localMessages.length === 0 && !loading"
       class="text-center py-8 text-gray-500 dark:text-gray-400"
@@ -102,6 +102,12 @@
 
     <div v-if="loading" class="text-center py-4 text-gray-500">Loading...</div>
 
+    <!-- Infinite scroll trigger -->
+    <div ref="infiniteScrollRef" class="h-4"></div>
+
+    <!-- Scroll to timeline button -->
+    <ScrollTop :method="scrollToTimeline" :skip-scroll-to-top="true" />
+
     <!-- Reaction Selection Modal -->
     <Modal :show="showReactionModal" max-width="sm" @close="closeReactionModal">
       <div class="p-6">
@@ -130,7 +136,11 @@
     </Modal>
 
     <!-- View All Reactions Modal -->
-    <Modal :show="showViewReactionsModal" max-width="sm" @close="closeViewReactionsModal">
+    <Modal
+      :show="showViewReactionsModal"
+      max-width="sm"
+      @close="closeViewReactionsModal"
+    >
       <div class="p-6">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
@@ -155,9 +165,15 @@
           >
             <div class="flex items-center gap-2 mb-2">
               <span class="text-2xl">{{ emoji }}</span>
-              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <span
+                class="text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
                 {{ getReactionCount(selectedMessageForView, emoji) }}
-                {{ getReactionCount(selectedMessageForView, emoji) === 1 ? 'reaction' : 'reactions' }}
+                {{
+                  getReactionCount(selectedMessageForView, emoji) === 1
+                    ? "reaction"
+                    : "reactions"
+                }}
               </span>
             </div>
             <div class="space-y-1 ml-8">
@@ -182,8 +198,10 @@ import Avatar from "@/Components/Avatar.vue";
 import Button from "@/Components/Button.vue";
 import DangerButton from "@/Components/DangerButton.vue";
 import Modal from "@/Components/Modal.vue";
+import ScrollTop from "@/Components/ScrollTop.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useFlashMessage } from "@/composables/useFlashMessage";
+import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { router, usePage } from "@inertiajs/vue3";
 import axios from "axios";
@@ -191,8 +209,8 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
 const props = defineProps({
   messages: {
-    type: Array,
-    default: () => []
+    type: [Object, Array],
+    default: () => ({ data: [] })
   },
   users: {
     type: Array,
@@ -209,13 +227,43 @@ const showReactionModal = ref(false);
 const selectedMessageForReaction = ref(null);
 const showViewReactionsModal = ref(false);
 const selectedMessageForView = ref(null);
+const timelineContainer = ref(null);
 
-// Initialize messages with grouped_reactions
-const initialMessages = props.messages.map((msg) => ({
-  ...msg,
-  grouped_reactions: msg.grouped_reactions || {}
-}));
-const localMessages = ref(initialMessages);
+// Handle both pagination object and array formats
+const messagesData = computed(() => {
+  if (Array.isArray(props.messages)) {
+    return props.messages;
+  }
+  return props.messages?.data || [];
+});
+
+const messagesPagination = computed(() => {
+  if (Array.isArray(props.messages)) {
+    // If it's an array, create a mock pagination object
+    return {
+      data: props.messages,
+      next_page_url: null
+    };
+  }
+  return props.messages || { data: [], next_page_url: null };
+});
+
+// Use infinite scroll composable
+const { items: infiniteScrollItems, infiniteScrollRef } = useInfiniteScroll(
+  messagesData.value,
+  messagesPagination
+);
+
+// Initialize messages with grouped_reactions and merge with infinite scroll items
+const initializeMessages = (messageArray) => {
+  return messageArray.map((msg) => ({
+    ...msg,
+    grouped_reactions: msg.grouped_reactions || {}
+  }));
+};
+
+// Use infinite scroll items as the base, but manage separately for Echo updates
+const localMessages = ref(initializeMessages(messagesData.value));
 
 // Allowed emojis for reactions
 const allowedEmojis = ["👍", "❤️", "😂", "😮", "😢"];
@@ -225,9 +273,40 @@ const currentUserId = computed(() => {
   return usePage().props.auth?.user?.id;
 });
 
-// Watch for prop changes - merge with existing messages to avoid duplicates
+// Watch for infinite scroll items changes (from pagination)
 watch(
-  () => props.messages,
+  () => infiniteScrollItems.value,
+  (newItems) => {
+    const newItemsIds = new Set(newItems.map((m) => m.id));
+
+    // Keep Echo-added messages that aren't in the paginated items
+    const echoMessages = localMessages.value.filter(
+      (m) => !newItemsIds.has(m.id)
+    );
+
+    // Merge paginated items with Echo messages
+    const allMessages = [...newItems, ...echoMessages];
+
+    // Ensure all messages have grouped_reactions initialized
+    allMessages.forEach((msg) => {
+      if (!msg.grouped_reactions) {
+        msg.grouped_reactions = {};
+      }
+    });
+
+    // Sort by created_at (most recent first)
+    localMessages.value = allMessages.sort((a, b) => {
+      const dateA = new Date(a.created_at);
+      const dateB = new Date(b.created_at);
+      return dateB - dateA; // Most recent first
+    });
+  },
+  { deep: true, immediate: true }
+);
+
+// Watch for prop changes (initial load or page refresh)
+watch(
+  () => messagesData.value,
   (newMessages) => {
     const propsIds = new Set(newMessages.map((m) => m.id));
 
@@ -337,32 +416,37 @@ const speakAllReactions = (message) => {
   };
 
   const selectedReactions = getSelectedReactions(message);
-  
+
   if (selectedReactions.length === 0) {
     speak("No reactions");
     return;
   }
 
-  const reactionTexts = selectedReactions.map((emoji) => {
-    const users = getReactionUsers(message, emoji);
-    const emojiName = emojiNames[emoji] || "reaction";
-    
-    if (users.length === 0) {
-      return "";
-    }
-    
-    const userNames = users.map((u) => u.name).join(", ");
-    const lastCommaIndex = userNames.lastIndexOf(", ");
-    
-    let formattedNames;
-    if (lastCommaIndex !== -1) {
-      formattedNames = userNames.substring(0, lastCommaIndex) + ", and " + userNames.substring(lastCommaIndex + 2);
-    } else {
-      formattedNames = userNames;
-    }
-    
-    return `${emojiName} from ${formattedNames}`;
-  }).filter((text) => text !== "");
+  const reactionTexts = selectedReactions
+    .map((emoji) => {
+      const users = getReactionUsers(message, emoji);
+      const emojiName = emojiNames[emoji] || "reaction";
+
+      if (users.length === 0) {
+        return "";
+      }
+
+      const userNames = users.map((u) => u.name).join(", ");
+      const lastCommaIndex = userNames.lastIndexOf(", ");
+
+      let formattedNames;
+      if (lastCommaIndex !== -1) {
+        formattedNames =
+          userNames.substring(0, lastCommaIndex) +
+          ", and " +
+          userNames.substring(lastCommaIndex + 2);
+      } else {
+        formattedNames = userNames;
+      }
+
+      return `${emojiName} from ${formattedNames}`;
+    })
+    .filter((text) => text !== "");
 
   const fullText = reactionTexts.join(". ") + ".";
   speak(fullText);
@@ -483,6 +567,15 @@ const cleanup = () => {
   }
 };
 
+const scrollToTimeline = () => {
+  if (timelineContainer.value) {
+    timelineContainer.value.scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+  }
+};
+
 const scrollToMessage = async () => {
   // Check if window and location are available (for test environments)
   if (typeof window === "undefined" || !window?.location) {
@@ -507,8 +600,13 @@ const scrollToMessage = async () => {
         if (!fetchedMessage.grouped_reactions) {
           fetchedMessage.grouped_reactions = {};
         }
-        // Add the message to the beginning of the array
-        localMessages.value.unshift(fetchedMessage);
+        // Add the message and sort by created_at (most recent first)
+        localMessages.value.push(fetchedMessage);
+        localMessages.value.sort((a, b) => {
+          const dateA = new Date(a.created_at);
+          const dateB = new Date(b.created_at);
+          return dateB - dateA; // Most recent first
+        });
         // Wait for DOM to update
         await nextTick();
       } catch (error) {
@@ -531,7 +629,6 @@ const scrollToMessage = async () => {
     }, 100);
   }
 };
-
 
 onMounted(() => {
   setupEchoListener();

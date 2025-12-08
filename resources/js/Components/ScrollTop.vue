@@ -26,13 +26,17 @@ const props = defineProps({
   method: {
     type: [Function, String],
     default: null
+  },
+  skipScrollToTop: {
+    type: Boolean,
+    default: false
   }
 });
 
 const scrollTopButton = ref(null);
 
 const handleScroll = () => {
-  if (!scrollTopButton.value) return;
+  if (!scrollTopButton.value || typeof window === "undefined") return;
 
   if (window.scrollY > 0) {
     scrollTopButton.value.classList.remove("hidden");
@@ -44,31 +48,50 @@ const handleScroll = () => {
 const handleDebouncedScroll = debounce(handleScroll, 100);
 
 onMounted(() => {
-  window.addEventListener("scroll", handleDebouncedScroll);
+  if (
+    typeof window !== "undefined" &&
+    typeof window.addEventListener === "function"
+  ) {
+    window.addEventListener("scroll", handleDebouncedScroll);
+  }
 });
 
 onBeforeUnmount(() => {
-  window.removeEventListener("scroll", handleDebouncedScroll);
+  if (
+    typeof window !== "undefined" &&
+    typeof window.removeEventListener === "function"
+  ) {
+    window.removeEventListener("scroll", handleDebouncedScroll);
+  }
 });
 
 const scrollToTop = async () => {
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  if (typeof window === "undefined") return;
+
+  if (!props.skipScrollToTop) {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   if (props.method) {
-    await new Promise((resolve) => {
-      const checkIfScrollIsAtTop = setInterval(() => {
-        if (window.scrollY === 0) {
-          clearInterval(checkIfScrollIsAtTop);
-          resolve();
-        }
-      }, 10);
-    });
+    if (!props.skipScrollToTop) {
+      await new Promise((resolve) => {
+        const checkIfScrollIsAtTop = setInterval(() => {
+          if (window.scrollY === 0) {
+            clearInterval(checkIfScrollIsAtTop);
+            resolve();
+          }
+        }, 10);
+      });
+    }
 
     if (typeof props.method === "function") {
       props.method();
     } else if (typeof props.method === "string") {
       router.visit(props.method);
     }
+  } else if (!props.skipScrollToTop) {
+    // Only scroll to top if no method is provided and we're not skipping
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 };
 </script>
