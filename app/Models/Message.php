@@ -76,7 +76,15 @@ class Message extends Model
      */
     public function getGroupedReactions(): array
     {
-        $reactions = $this->reactions()->with('user')->get();
+        // Use already-loaded relations if available to avoid N+1 queries
+        if ($this->relationLoaded('reactions')) {
+            $reactions = $this->reactions;
+            // Ensure user relation is loaded on each reaction
+            $reactions->loadMissing('user');
+        } else {
+            $reactions = $this->reactions()->with('user')->get();
+        }
+
         $grouped = [];
 
         foreach ($reactions as $reaction) {

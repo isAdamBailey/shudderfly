@@ -44,6 +44,7 @@ class MessageController extends Controller
         // Transform messages to include grouped reactions
         $messages->getCollection()->transform(function ($message) {
             $message->grouped_reactions = $message->getGroupedReactions();
+
             return $message;
         });
 
