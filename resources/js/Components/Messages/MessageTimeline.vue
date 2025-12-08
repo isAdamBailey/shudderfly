@@ -1,14 +1,14 @@
 <template>
   <div class="space-y-4">
     <div
-      v-if="messages.length === 0 && !loading"
+      v-if="localMessages.length === 0 && !loading"
       class="text-center py-8 text-gray-500 dark:text-gray-400"
     >
       No messages yet. Be the first to post!
     </div>
 
     <div
-      v-for="message in messages"
+      v-for="message in localMessages"
       :id="`message-${message.id}`"
       :key="message.id"
       class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 scroll-mt-4"
@@ -30,8 +30,9 @@
           ></div>
           <!-- Reactions -->
           <div class="mt-3 flex flex-wrap items-center gap-2">
+            <!-- Only show reactions that have been selected (count > 0) -->
             <div
-              v-for="emoji in allowedEmojis"
+              v-for="emoji in getSelectedReactions(message)"
               :key="emoji"
               class="flex items-center gap-1"
             >
@@ -60,7 +61,7 @@
               >
                 <button
                   type="button"
-                  class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                  class="p-2 text-base text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                   title="See who reacted"
                   @click.stop="toggleUserList(message.id, emoji)"
                 >
@@ -88,6 +89,15 @@
                 </div>
               </div>
             </div>
+            <!-- Add reaction button -->
+            <button
+              type="button"
+              class="flex items-center gap-1 px-2 py-1 rounded-full text-sm transition-colors bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+              title="Add reaction"
+              @click="openReactionModal(message)"
+            >
+              <i class="ri-add-line text-base"></i>
+            </button>
           </div>
         </div>
         <div class="ml-4 flex items-center gap-2">
@@ -114,6 +124,33 @@
     </div>
 
     <div v-if="loading" class="text-center py-4 text-gray-500">Loading...</div>
+
+    <!-- Reaction Selection Modal -->
+    <Modal :show="showReactionModal" max-width="sm" @close="closeReactionModal">
+      <div class="p-6">
+        <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+          Add Reaction
+        </h2>
+        <div class="grid grid-cols-5 gap-3">
+          <button
+            v-for="emoji in allowedEmojis"
+            :key="emoji"
+            type="button"
+            :class="[
+              'flex items-center justify-center p-3 rounded-lg text-2xl transition-colors',
+              selectedMessageForReaction &&
+              hasUserReacted(selectedMessageForReaction, emoji)
+                ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+            ]"
+            :title="emoji"
+            @click="selectReaction(emoji)"
+          >
+            {{ emoji }}
+          </button>
+        </div>
+      </div>
+    </Modal>
   </div>
 </template>
 
@@ -122,6 +159,7 @@
 import Avatar from "@/Components/Avatar.vue";
 import Button from "@/Components/Button.vue";
 import DangerButton from "@/Components/DangerButton.vue";
+import Modal from "@/Components/Modal.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useFlashMessage } from "@/composables/useFlashMessage";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
@@ -146,13 +184,15 @@ const { setFlashMessage } = useFlashMessage();
 const loading = ref(false);
 const messagesChannel = ref(null);
 const expandedReactions = ref({});
+const showReactionModal = ref(false);
+const selectedMessageForReaction = ref(null);
 
 // Initialize messages with grouped_reactions
 const initialMessages = props.messages.map((msg) => ({
   ...msg,
   grouped_reactions: msg.grouped_reactions || {}
 }));
-const messages = ref(initialMessages);
+const localMessages = ref(initialMessages);
 
 // Allowed emojis for reactions
 const allowedEmojis = ["👍", "❤️", "😂", "😮", "😢"];
@@ -169,7 +209,7 @@ watch(
     const propsIds = new Set(newMessages.map((m) => m.id));
 
     // Keep existing messages that aren't in the new props (Echo-added messages)
-    const existingMessagesToKeep = messages.value.filter(
+    const existingMessagesToKeep = localMessages.value.filter(
       (m) => !propsIds.has(m.id)
     );
 
@@ -181,7 +221,7 @@ watch(
         msg.grouped_reactions = {};
       }
     });
-    messages.value = allMessages.sort((a, b) => {
+    localMessages.value = allMessages.sort((a, b) => {
       const dateA = new Date(a.created_at);
       const dateB = new Date(b.created_at);
       return dateB - dateA; // Most recent first
@@ -268,7 +308,9 @@ const deleteMessage = (messageId) => {
     preserveScroll: true,
     onSuccess: () => {
       // Remove from local messages array
-      messages.value = messages.value.filter((m) => m.id !== messageId);
+      localMessages.value = localMessages.value.filter(
+        (m) => m.id !== messageId
+      );
     }
   });
 };
@@ -321,7 +363,9 @@ const handleMessageEvent = (event) => {
   }
 
   // Check if message already exists to avoid duplicates
-  const messageExists = messages.value.some((m) => m.id === messageData.id);
+  const messageExists = localMessages.value.some(
+    (m) => m.id === messageData.id
+  );
 
   if (!messageExists) {
     // Ensure grouped_reactions is initialized
@@ -329,8 +373,8 @@ const handleMessageEvent = (event) => {
       messageData.grouped_reactions = {};
     }
     // Add new message and sort by created_at (most recent first)
-    messages.value.push(messageData);
-    messages.value.sort((a, b) => {
+    localMessages.value.push(messageData);
+    localMessages.value.sort((a, b) => {
       const dateA = new Date(a.created_at);
       const dateB = new Date(b.created_at);
       return dateB - dateA; // Most recent first
@@ -353,9 +397,9 @@ const handleReactionUpdate = (event) => {
   const groupedReactions = event.grouped_reactions || {};
 
   // Find the message and update its reactions
-  const messageIndex = messages.value.findIndex((m) => m.id === messageId);
+  const messageIndex = localMessages.value.findIndex((m) => m.id === messageId);
   if (messageIndex !== -1) {
-    messages.value[messageIndex].grouped_reactions = groupedReactions;
+    localMessages.value[messageIndex].grouped_reactions = groupedReactions;
   }
 };
 
@@ -383,7 +427,7 @@ const scrollToMessage = async () => {
     if (!messageId) return;
 
     // Check if message exists in current messages
-    const messageExists = messages.value.some((m) => m.id === messageId);
+    const messageExists = localMessages.value.some((m) => m.id === messageId);
 
     if (!messageExists) {
       // Message not in current page, fetch it
@@ -395,7 +439,7 @@ const scrollToMessage = async () => {
           fetchedMessage.grouped_reactions = {};
         }
         // Add the message to the beginning of the array
-        messages.value.unshift(fetchedMessage);
+        localMessages.value.unshift(fetchedMessage);
         // Wait for DOM to update
         await nextTick();
       } catch (error) {
@@ -453,6 +497,14 @@ onUnmounted(() => {
 });
 
 // Reaction functions
+const getSelectedReactions = (message) => {
+  if (!message.grouped_reactions) {
+    return [];
+  }
+  // Return only emojis that have been selected (count > 0)
+  return allowedEmojis.filter((emoji) => getReactionCount(message, emoji) > 0);
+};
+
 const getReactionCount = (message, emoji) => {
   if (!message.grouped_reactions || !message.grouped_reactions[emoji]) {
     return 0;
@@ -488,13 +540,65 @@ const toggleUserList = (messageId, emoji) => {
   expandedReactions.value[key] = !expandedReactions.value[key];
 };
 
+const openReactionModal = (message) => {
+  selectedMessageForReaction.value = message;
+  showReactionModal.value = true;
+};
+
+const closeReactionModal = () => {
+  showReactionModal.value = false;
+  selectedMessageForReaction.value = null;
+};
+
+const selectReaction = async (emoji) => {
+  if (!currentUserId.value || !selectedMessageForReaction.value) return;
+
+  const message = selectedMessageForReaction.value;
+  const currentlyReacted = hasUserReacted(message, emoji);
+
+  // Initialize grouped_reactions if not present
+  if (!message.grouped_reactions) {
+    message.grouped_reactions = {};
+  }
+
+  try {
+    let response;
+    if (currentlyReacted) {
+      // Remove reaction
+      response = await axios.delete(
+        route("messages.reactions.destroy", message.id)
+      );
+    } else {
+      // Add or update reaction
+      response = await axios.post(
+        route("messages.reactions.store", message.id),
+        {
+          emoji: emoji
+        }
+      );
+    }
+
+    // Update local state with server response
+    if (response?.data?.grouped_reactions) {
+      message.grouped_reactions = response.data.grouped_reactions;
+    }
+
+    // Close modal after selection
+    closeReactionModal();
+  } catch (error) {
+    console.error("Error toggling reaction:", error);
+    setFlashMessage(
+      "error",
+      "Failed to update reaction. Please try again.",
+      3000
+    );
+  }
+};
+
 const toggleReaction = async (message, emoji) => {
   if (!currentUserId.value) return;
 
   const currentlyReacted = hasUserReacted(message, emoji);
-  const hasOtherReaction = allowedEmojis.some(
-    (e) => e !== emoji && hasUserReacted(message, e)
-  );
 
   // Initialize grouped_reactions if not present
   if (!message.grouped_reactions) {
