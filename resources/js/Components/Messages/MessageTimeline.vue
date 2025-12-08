@@ -55,39 +55,6 @@
                   {{ getReactionCount(message, emoji) }}
                 </span>
               </button>
-              <div
-                v-if="getReactionCount(message, emoji) > 0"
-                class="relative reaction-user-list"
-              >
-                <button
-                  type="button"
-                  class="p-2 text-base text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                  title="See who reacted"
-                  @click.stop="toggleUserList(message.id, emoji)"
-                >
-                  <i class="ri-information-line"></i>
-                </button>
-                <div
-                  v-if="expandedReactions[`${message.id}-${emoji}`]"
-                  class="absolute left-0 bottom-full mb-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10 min-w-[150px]"
-                  @click.stop
-                >
-                  <div
-                    class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1"
-                  >
-                    {{ emoji }} Reacted:
-                  </div>
-                  <div class="space-y-1">
-                    <div
-                      v-for="user in getReactionUsers(message, emoji)"
-                      :key="user.id"
-                      class="text-xs text-gray-600 dark:text-gray-400"
-                    >
-                      {{ user.name }}
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
             <!-- Add reaction button -->
             <button
@@ -97,6 +64,16 @@
               @click="openReactionModal(message)"
             >
               <i class="ri-add-line text-base"></i>
+            </button>
+            <!-- View all reactions button -->
+            <button
+              v-if="hasAnyReactions(message)"
+              type="button"
+              class="flex items-center gap-1 px-2 py-1 rounded-full text-sm transition-colors bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+              title="View all reactions"
+              @click="openViewReactionsModal(message)"
+            >
+              <i class="ri-information-line text-base"></i>
             </button>
           </div>
         </div>
@@ -151,6 +128,51 @@
         </div>
       </div>
     </Modal>
+
+    <!-- View All Reactions Modal -->
+    <Modal :show="showViewReactionsModal" max-width="sm" @close="closeViewReactionsModal">
+      <div class="p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
+            Reactions
+          </h2>
+          <Button
+            v-if="selectedMessageForView"
+            type="button"
+            :disabled="speaking"
+            title="Speak all reactions"
+            aria-label="Speak all reactions"
+            @click="speakAllReactions(selectedMessageForView)"
+          >
+            <i class="ri-speak-fill text-xl"></i>
+          </Button>
+        </div>
+        <div v-if="selectedMessageForView" class="space-y-4">
+          <div
+            v-for="emoji in getSelectedReactions(selectedMessageForView)"
+            :key="emoji"
+            class="border-b border-gray-200 dark:border-gray-700 pb-3 last:border-b-0 last:pb-0"
+          >
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-2xl">{{ emoji }}</span>
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {{ getReactionCount(selectedMessageForView, emoji) }}
+                {{ getReactionCount(selectedMessageForView, emoji) === 1 ? 'reaction' : 'reactions' }}
+              </span>
+            </div>
+            <div class="space-y-1 ml-8">
+              <div
+                v-for="user in getReactionUsers(selectedMessageForView, emoji)"
+                :key="user.id"
+                class="text-sm text-gray-600 dark:text-gray-400"
+              >
+                {{ user.name }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Modal>
   </div>
 </template>
 
@@ -183,9 +205,10 @@ const { speak, speaking } = useSpeechSynthesis();
 const { setFlashMessage } = useFlashMessage();
 const loading = ref(false);
 const messagesChannel = ref(null);
-const expandedReactions = ref({});
 const showReactionModal = ref(false);
 const selectedMessageForReaction = ref(null);
+const showViewReactionsModal = ref(false);
+const selectedMessageForView = ref(null);
 
 // Initialize messages with grouped_reactions
 const initialMessages = props.messages.map((msg) => ({
@@ -298,6 +321,51 @@ const speakMessage = (message) => {
   const messageText = stripHtml(formatMessage(message.message));
   const username = message.user?.name || "Someone";
   speak(`${username} says ${messageText}`);
+};
+
+const speakAllReactions = (message) => {
+  if (!message || !message.grouped_reactions) {
+    return;
+  }
+
+  const emojiNames = {
+    "👍": "thumbs up",
+    "❤️": "heart",
+    "😂": "laughing",
+    "😮": "surprised",
+    "😢": "sad"
+  };
+
+  const selectedReactions = getSelectedReactions(message);
+  
+  if (selectedReactions.length === 0) {
+    speak("No reactions");
+    return;
+  }
+
+  const reactionTexts = selectedReactions.map((emoji) => {
+    const users = getReactionUsers(message, emoji);
+    const emojiName = emojiNames[emoji] || "reaction";
+    
+    if (users.length === 0) {
+      return "";
+    }
+    
+    const userNames = users.map((u) => u.name).join(", ");
+    const lastCommaIndex = userNames.lastIndexOf(", ");
+    
+    let formattedNames;
+    if (lastCommaIndex !== -1) {
+      formattedNames = userNames.substring(0, lastCommaIndex) + ", and " + userNames.substring(lastCommaIndex + 2);
+    } else {
+      formattedNames = userNames;
+    }
+    
+    return `${emojiName} from ${formattedNames}`;
+  }).filter((text) => text !== "");
+
+  const fullText = reactionTexts.join(". ") + ".";
+  speak(fullText);
 };
 
 const deleteMessage = (messageId) => {
@@ -464,13 +532,6 @@ const scrollToMessage = async () => {
   }
 };
 
-const handleClickOutside = (event) => {
-  // Close expanded reaction lists when clicking outside
-  const target = event.target;
-  if (!target.closest(".reaction-user-list")) {
-    expandedReactions.value = {};
-  }
-};
 
 onMounted(() => {
   setupEchoListener();
@@ -482,7 +543,6 @@ onMounted(() => {
     typeof window.addEventListener === "function"
   ) {
     window.addEventListener("hashchange", scrollToMessage);
-    window.addEventListener("click", handleClickOutside);
   }
 });
 
@@ -493,7 +553,6 @@ onUnmounted(() => {
     typeof window.removeEventListener === "function"
   ) {
     window.removeEventListener("hashchange", scrollToMessage);
-    window.removeEventListener("click", handleClickOutside);
   }
 });
 
@@ -536,9 +595,21 @@ const getReactionTooltip = (message, emoji) => {
   return `${emoji} ${count}: ${userNames}`;
 };
 
-const toggleUserList = (messageId, emoji) => {
-  const key = `${messageId}-${emoji}`;
-  expandedReactions.value[key] = !expandedReactions.value[key];
+const hasAnyReactions = (message) => {
+  if (!message.grouped_reactions) {
+    return false;
+  }
+  return getSelectedReactions(message).length > 0;
+};
+
+const openViewReactionsModal = (message) => {
+  selectedMessageForView.value = message;
+  showViewReactionsModal.value = true;
+};
+
+const closeViewReactionsModal = () => {
+  showViewReactionsModal.value = false;
+  selectedMessageForView.value = null;
 };
 
 const openReactionModal = (message) => {
