@@ -77,6 +77,28 @@ const initialsUrl = computed(() => {
 const showInitials = computed(() => {
     return !avatarData.value;
 });
+
+const sizePixels = {
+    xs: 24,
+    sm: 32,
+    md: 40,
+    lg: 48,
+    xl: 64,
+};
+
+const svgWithDimensions = computed(() => {
+    if (!avatarData.value) return null;
+    const svg = avatarData.value.svg;
+    const size = sizePixels[props.size] || 40;
+    // Ensure SVG has explicit width and height for Safari iOS compatibility
+    if (svg.includes('viewBox') && !svg.includes('width=')) {
+        return svg.replace(
+            /<svg([^>]*)>/,
+            `<svg$1 width="${size}" height="${size}">`
+        );
+    }
+    return svg;
+});
 </script>
 
 <template>
@@ -87,10 +109,10 @@ const showInitials = computed(() => {
         ]"
     >
         <div
-            v-if="avatarData && !showInitials"
+            v-if="avatarData && !showInitials && svgWithDimensions"
             :class="sizeClasses[size]"
             class="rounded-full flex items-center justify-center"
-            v-html="avatarData.svg"
+            v-html="svgWithDimensions"
         ></div>
 
         <img
@@ -98,6 +120,9 @@ const showInitials = computed(() => {
             :src="initialsUrl"
             :alt="initials"
             class="w-full h-full object-cover rounded-full"
+            loading="eager"
+            decoding="async"
+            crossorigin="anonymous"
         />
 
         <span
