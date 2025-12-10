@@ -2,7 +2,6 @@
 /* global route */
 import Accordion from "@/Components/Accordion.vue";
 import Button from "@/Components/Button.vue";
-import VirtualKeyboard from "@/Components/VirtualKeyboard.vue";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useForm } from "@inertiajs/vue3";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
@@ -72,14 +71,6 @@ const preview = computed(() => {
   return inputValue.value.trim() || selection.value.join(" ").trim();
 });
 const keyboardInputRef = ref(null);
-
-const wordCount = computed(() => {
-  if (!preview.value) return 0;
-  return preview.value
-    .trim()
-    .split(/\s+/)
-    .filter((word) => word.length > 0).length;
-});
 
 const hasMinimumCharacters = computed(() => {
   return preview.value && preview.value.trim().length >= 10;
@@ -218,7 +209,7 @@ function applyFavorite(text) {
 function autoGrowTextarea(textarea) {
   if (!textarea) return;
   // Reset height to auto to get the correct scrollHeight
-  textarea.style.height = 'auto';
+  textarea.style.height = "auto";
   // Set height to scrollHeight, but cap at max-height (300px)
   const newHeight = Math.min(textarea.scrollHeight, 300);
   textarea.style.height = `${newHeight}px`;
@@ -226,7 +217,7 @@ function autoGrowTextarea(textarea) {
 
 // Sync selection with input value (when typing)
 function handleInputChange(event) {
-  // Get the current value from the input element (KioskBoard updates it directly)
+  // Get the current value from the input element
   const currentValue = event?.target?.value ?? inputValue.value;
 
   // Always update inputValue to match what's actually in the input
@@ -392,16 +383,16 @@ let justAddedTimeoutId = null;
 onMounted(() => {
   loadFavorites();
 
-  // Set up event listeners for input changes (including from KioskBoard)
+  // Set up event listeners for input changes
   mountTimeoutId = setTimeout(() => {
     if (keyboardInputRef.value && typeof document !== "undefined") {
       // Initialize textarea height
       autoGrowTextarea(keyboardInputRef.value);
-      
-      // Add event listeners to catch all input changes (including from KioskBoard)
+
+      // Add event listeners to catch all input changes
       const inputEl = keyboardInputRef.value;
 
-      // Listen for input events (from typing or KioskBoard)
+      // Listen for input events
       const handleInput = (e) => {
         const value = e.target.value;
         if (value !== inputValue.value) {
@@ -426,7 +417,7 @@ onMounted(() => {
       const handleClickOutside = (e) => {
         if (
           !e.target.closest(".user-suggestions-container") &&
-          !e.target.closest(".virtual-keyboard-input")
+          !e.target.closest(".message-input")
         ) {
           showUserSuggestions.value = false;
         }
@@ -522,7 +513,7 @@ function addWord(word) {
   inputValue.value = newValue;
   if (inputElement) {
     inputElement.value = newValue;
-    // Trigger input event so KioskBoard knows about the change
+    // Trigger input event
     inputElement.dispatchEvent(new Event("input", { bubbles: true }));
   }
 
@@ -552,7 +543,7 @@ function addPhrase(phrase) {
   inputValue.value = newValue;
   if (inputElement) {
     inputElement.value = newValue;
-    // Trigger input event so KioskBoard knows about the change
+    // Trigger input event
     inputElement.dispatchEvent(new Event("input", { bubbles: true }));
   }
 
@@ -629,7 +620,8 @@ function sayIt() {
 }
 
 function postMessage() {
-  if (!preview.value?.trim() || form.processing || !hasMinimumCharacters.value) return;
+  if (!preview.value?.trim() || form.processing || !hasMinimumCharacters.value)
+    return;
   speak(`Posting message: ${preview.value}`);
 
   const taggedUserIds = [];
@@ -698,7 +690,7 @@ function postMessage() {
           <textarea
             ref="keyboardInputRef"
             v-model="inputValue"
-            class="virtual-keyboard-input flex-1 text-gray-700 dark:text-gray-100 break-words text-2xl md:text-3xl font-bold leading-tight bg-transparent border-none outline-none focus:outline-none resize-none overflow-hidden min-h-[40px] max-h-[300px]"
+            class="message-input flex-1 text-gray-700 dark:text-gray-100 break-words text-2xl md:text-3xl font-bold leading-tight bg-transparent border-none outline-none focus:outline-none resize-none overflow-hidden min-h-[40px] max-h-[300px]"
             placeholder="Type your message here... (use @ to tag users)"
             rows="1"
             @input="handleTextareaInput"
@@ -1063,11 +1055,5 @@ function postMessage() {
         Post to Timeline
       </Button>
     </div>
-
-    <!-- Virtual Keyboard Component -->
-    <VirtualKeyboard
-      input-selector=".virtual-keyboard-input"
-      :auto-focus="false"
-    />
   </div>
 </template>

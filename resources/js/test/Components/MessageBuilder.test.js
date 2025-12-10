@@ -50,7 +50,6 @@ describe("MessageBuilder", () => {
                 props: { users: defaultUsers },
                 global: {
                     stubs: {
-                        VirtualKeyboard: true,
                         Accordion: true,
                         Button: { template: "<button><slot/></button>" },
                     },
@@ -65,7 +64,6 @@ describe("MessageBuilder", () => {
                 props: { users: defaultUsers },
                 global: {
                     stubs: {
-                        VirtualKeyboard: true,
                         Accordion: true,
                         Button: { template: "<button><slot/></button>" },
                     },
@@ -83,7 +81,6 @@ describe("MessageBuilder", () => {
                 props: { users: defaultUsers },
                 global: {
                     stubs: {
-                        VirtualKeyboard: true,
                         Button: { template: "<button><slot/></button>" },
                     },
                 },
@@ -101,7 +98,6 @@ describe("MessageBuilder", () => {
                 props: { users: defaultUsers },
                 global: {
                     stubs: {
-                        VirtualKeyboard: true,
                         Accordion: true,
                         Button: { template: "<button><slot/></button>" },
                     },
@@ -126,7 +122,6 @@ describe("MessageBuilder", () => {
                 props: { users: defaultUsers },
                 global: {
                     stubs: {
-                        VirtualKeyboard: true,
                         Accordion: true,
                         Button: { template: "<button><slot/></button>" },
                     },
@@ -152,7 +147,6 @@ describe("MessageBuilder", () => {
                 props: { users: defaultUsers },
                 global: {
                     stubs: {
-                        VirtualKeyboard: true,
                         Accordion: true,
                         Button: { template: "<button><slot/></button>" },
                     },
@@ -182,7 +176,6 @@ describe("MessageBuilder", () => {
                 props: { users: defaultUsers },
                 global: {
                     stubs: {
-                        VirtualKeyboard: true,
                         Accordion: true,
                         Button: { template: "<button><slot/></button>" },
                     },
@@ -200,7 +193,6 @@ describe("MessageBuilder", () => {
                 props: { users: defaultUsers },
                 global: {
                     stubs: {
-                        VirtualKeyboard: true,
                         Accordion: true,
                         Button: { template: "<button><slot/></button>" },
                     },
@@ -241,7 +233,6 @@ describe("MessageBuilder", () => {
                 props: { users: defaultUsers },
                 global: {
                     stubs: {
-                        VirtualKeyboard: true,
                         Accordion: true,
                         Button: { template: "<button><slot/></button>" },
                     },
@@ -277,7 +268,6 @@ describe("MessageBuilder", () => {
                 props: { users: defaultUsers },
                 global: {
                     stubs: {
-                        VirtualKeyboard: true,
                         Accordion: true,
                         Button: { template: "<button><slot/></button>" },
                     },
@@ -312,7 +302,6 @@ describe("MessageBuilder", () => {
                 props: { users: defaultUsers },
                 global: {
                     stubs: {
-                        VirtualKeyboard: true,
                         Accordion: true,
                         Button: { template: "<button><slot/></button>" },
                     },
@@ -344,7 +333,6 @@ describe("MessageBuilder", () => {
                 props: { users: defaultUsers },
                 global: {
                     stubs: {
-                        VirtualKeyboard: true,
                         Accordion: true,
                         Button: { template: "<button><slot/></button>" },
                     },
@@ -365,7 +353,6 @@ describe("MessageBuilder", () => {
                 props: { users: defaultUsers },
                 global: {
                     stubs: {
-                        VirtualKeyboard: true,
                         Accordion: true,
                         Button: { template: "<button><slot/></button>" },
                     },
@@ -397,7 +384,6 @@ describe("MessageBuilder", () => {
                 props: { users: defaultUsers },
                 global: {
                     stubs: {
-                        VirtualKeyboard: true,
                         Accordion: true,
                         Button: { template: "<button><slot/></button>" },
                     },
