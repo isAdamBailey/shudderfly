@@ -122,7 +122,6 @@ const svgWithDimensions = computed(() => {
             class="w-full h-full object-cover rounded-full"
             loading="eager"
             decoding="async"
-            crossorigin="anonymous"
         />
 
         <span
