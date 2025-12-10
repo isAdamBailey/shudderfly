@@ -266,7 +266,7 @@ const initializeMessages = (messageArray) => {
 const localMessages = ref(initializeMessages(messagesData.value));
 
 // Allowed emojis for reactions
-const allowedEmojis = ["👍", "❤️", "😂", "😮", "😢"];
+const allowedEmojis = ["👍", "❤️", "😂", "😮", "😢", "💩"];
 
 // Get current user ID
 const currentUserId = computed(() => {
@@ -412,7 +412,8 @@ const speakAllReactions = (message) => {
     "❤️": "heart",
     "😂": "laughing",
     "😮": "surprised",
-    "😢": "sad"
+    "😢": "sad",
+    "💩": "poop"
   };
 
   const selectedReactions = getSelectedReactions(message);
