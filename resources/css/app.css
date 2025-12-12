@@ -450,10 +450,10 @@
   }
 }
 
-/* Christmas Snow Animation */
+/* Christmas Snow Animation - Optimized for mobile performance */
 @keyframes snowfall {
   0% {
-    transform: translateY(-100vh) translateX(0);
+    transform: translate3d(0, -100vh, 0);
     opacity: 0;
   }
   10% {
@@ -463,356 +463,76 @@
     opacity: 1;
   }
   100% {
-    transform: translateY(100vh) translateX(100px);
+    transform: translate3d(50px, 100vh, 0);
     opacity: 0;
   }
 }
 
-@keyframes snowfall-slow {
-  0% {
-    transform: translateY(-100vh) translateX(0);
-    opacity: 0;
-  }
-  10% {
-    opacity: 0.8;
-  }
-  90% {
-    opacity: 0.8;
-  }
-  100% {
-    transform: translateY(100vh) translateX(-80px);
-    opacity: 0;
-  }
-}
-
-@keyframes snowfall-fast {
-  0% {
-    transform: translateY(-100vh) translateX(0);
-    opacity: 0;
-  }
-  10% {
-    opacity: 0.9;
-  }
-  90% {
-    opacity: 0.9;
-  }
-  100% {
-    transform: translateY(100vh) translateX(150px);
-    opacity: 0;
-  }
-}
-
-/* Snow animation only when Christmas theme is active */
+/* Snow animation only when Christmas theme is active - simplified for performance */
 [data-theme="christmas"] body {
   position: relative;
   overflow-x: hidden;
 }
 
+/* Single optimized snow layer with minimal gradients */
 [data-theme="christmas"] body::before {
   content: "";
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  height: 200%;
+  height: 150%;
   pointer-events: none;
   z-index: 0;
-  background-image: 
-    /* Small snowflakes */ radial-gradient(
-      circle at 10% 5%,
-      rgba(255, 255, 255, 0.8) 1px,
-      transparent 1px
+  /* Reduced to 8 snowflakes for better performance */
+  background-image: radial-gradient(
+      circle at 15% 10%,
+      rgba(255, 255, 255, 0.9) 1.5px,
+      transparent 1.5px
     ),
     radial-gradient(
-      circle at 20% 10%,
-      rgba(255, 255, 255, 0.8) 1px,
-      transparent 1px
+      circle at 35% 20%,
+      rgba(255, 255, 255, 0.9) 1.5px,
+      transparent 1.5px
     ),
     radial-gradient(
-      circle at 30% 3%,
-      rgba(255, 255, 255, 0.8) 1px,
-      transparent 1px
+      circle at 55% 5%,
+      rgba(255, 255, 255, 0.9) 1.5px,
+      transparent 1.5px
     ),
     radial-gradient(
-      circle at 40% 15%,
-      rgba(255, 255, 255, 0.8) 1px,
-      transparent 1px
-    ),
-    radial-gradient(
-      circle at 50% 8%,
-      rgba(255, 255, 255, 0.8) 1px,
-      transparent 1px
-    ),
-    radial-gradient(
-      circle at 60% 20%,
-      rgba(255, 255, 255, 0.8) 1px,
-      transparent 1px
-    ),
-    radial-gradient(
-      circle at 70% 5%,
-      rgba(255, 255, 255, 0.8) 1px,
-      transparent 1px
-    ),
-    radial-gradient(
-      circle at 80% 12%,
-      rgba(255, 255, 255, 0.8) 1px,
-      transparent 1px
-    ),
-    radial-gradient(
-      circle at 90% 18%,
-      rgba(255, 255, 255, 0.8) 1px,
-      transparent 1px
-    ),
-    radial-gradient(
-      circle at 15% 25%,
-      rgba(255, 255, 255, 0.8) 1px,
-      transparent 1px
+      circle at 75% 15%,
+      rgba(255, 255, 255, 0.9) 1.5px,
+      transparent 1.5px
     ),
     radial-gradient(
       circle at 25% 30%,
-      rgba(255, 255, 255, 0.8) 1px,
-      transparent 1px
-    ),
-    radial-gradient(
-      circle at 35% 22%,
-      rgba(255, 255, 255, 0.8) 1px,
-      transparent 1px
-    ),
-    radial-gradient(
-      circle at 45% 28%,
-      rgba(255, 255, 255, 0.8) 1px,
-      transparent 1px
-    ),
-    radial-gradient(
-      circle at 55% 35%,
-      rgba(255, 255, 255, 0.8) 1px,
-      transparent 1px
-    ),
-    radial-gradient(
-      circle at 65% 40%,
-      rgba(255, 255, 255, 0.8) 1px,
-      transparent 1px
-    ),
-    radial-gradient(
-      circle at 75% 32%,
-      rgba(255, 255, 255, 0.8) 1px,
-      transparent 1px
-    ),
-    radial-gradient(
-      circle at 85% 38%,
-      rgba(255, 255, 255, 0.8) 1px,
-      transparent 1px
-    ),
-    radial-gradient(
-      circle at 95% 42%,
-      rgba(255, 255, 255, 0.8) 1px,
-      transparent 1px
-    ),
-    /* Medium snowflakes */
-      radial-gradient(
-        circle at 12% 7%,
-        rgba(255, 255, 255, 0.9) 2px,
-        transparent 2px
-      ),
-    radial-gradient(
-      circle at 22% 14%,
-      rgba(255, 255, 255, 0.9) 2px,
+      rgba(255, 255, 255, 0.95) 2px,
       transparent 2px
     ),
     radial-gradient(
-      circle at 32% 11%,
-      rgba(255, 255, 255, 0.9) 2px,
+      circle at 65% 25%,
+      rgba(255, 255, 255, 0.95) 2px,
       transparent 2px
     ),
     radial-gradient(
-      circle at 42% 19%,
-      rgba(255, 255, 255, 0.9) 2px,
-      transparent 2px
-    ),
-    radial-gradient(
-      circle at 52% 24%,
-      rgba(255, 255, 255, 0.9) 2px,
-      transparent 2px
-    ),
-    radial-gradient(
-      circle at 62% 16%,
-      rgba(255, 255, 255, 0.9) 2px,
-      transparent 2px
-    ),
-    radial-gradient(
-      circle at 72% 27%,
-      rgba(255, 255, 255, 0.9) 2px,
-      transparent 2px
-    ),
-    radial-gradient(
-      circle at 82% 33%,
-      rgba(255, 255, 255, 0.9) 2px,
-      transparent 2px
-    ),
-    radial-gradient(
-      circle at 92% 9%,
-      rgba(255, 255, 255, 0.9) 2px,
-      transparent 2px
-    ),
-    /* Large snowflakes */
-      radial-gradient(
-        circle at 18% 13%,
-        rgba(255, 255, 255, 1) 3px,
-        transparent 3px
-      ),
-    radial-gradient(
-      circle at 28% 21%,
-      rgba(255, 255, 255, 1) 3px,
-      transparent 3px
-    ),
-    radial-gradient(
-      circle at 38% 17%,
-      rgba(255, 255, 255, 1) 3px,
-      transparent 3px
-    ),
-    radial-gradient(
-      circle at 48% 26%,
-      rgba(255, 255, 255, 1) 3px,
-      transparent 3px
-    ),
-    radial-gradient(
-      circle at 58% 31%,
-      rgba(255, 255, 255, 1) 3px,
-      transparent 3px
-    ),
-    radial-gradient(
-      circle at 68% 23%,
-      rgba(255, 255, 255, 1) 3px,
-      transparent 3px
-    ),
-    radial-gradient(
-      circle at 78% 29%,
-      rgba(255, 255, 255, 1) 3px,
-      transparent 3px
-    ),
-    radial-gradient(
-      circle at 88% 36%,
-      rgba(255, 255, 255, 1) 3px,
-      transparent 3px
-    );
-  background-size: 100% 50%;
-  background-repeat: repeat;
-  animation: snowfall 15s linear infinite;
-  filter: blur(0.5px);
-  will-change: transform;
-}
-
-[data-theme="christmas"] body::after {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 200%;
-  pointer-events: none;
-  z-index: 0;
-  background-image: 
-    /* Additional small snowflakes */ radial-gradient(
-      circle at 7% 6%,
-      rgba(255, 255, 255, 0.7) 1.5px,
-      transparent 1.5px
-    ),
-    radial-gradient(
-      circle at 17% 12%,
-      rgba(255, 255, 255, 0.7) 1.5px,
-      transparent 1.5px
-    ),
-    radial-gradient(
-      circle at 27% 9%,
-      rgba(255, 255, 255, 0.7) 1.5px,
-      transparent 1.5px
-    ),
-    radial-gradient(
-      circle at 37% 16%,
-      rgba(255, 255, 255, 0.7) 1.5px,
-      transparent 1.5px
-    ),
-    radial-gradient(
-      circle at 47% 21%,
-      rgba(255, 255, 255, 0.7) 1.5px,
-      transparent 1.5px
-    ),
-    radial-gradient(
-      circle at 57% 14%,
-      rgba(255, 255, 255, 0.7) 1.5px,
-      transparent 1.5px
-    ),
-    radial-gradient(
-      circle at 67% 24%,
-      rgba(255, 255, 255, 0.7) 1.5px,
-      transparent 1.5px
-    ),
-    radial-gradient(
-      circle at 77% 19%,
-      rgba(255, 255, 255, 0.7) 1.5px,
-      transparent 1.5px
-    ),
-    radial-gradient(
-      circle at 87% 27%,
-      rgba(255, 255, 255, 0.7) 1.5px,
-      transparent 1.5px
-    ),
-    radial-gradient(
-      circle at 97% 15%,
-      rgba(255, 255, 255, 0.7) 1.5px,
-      transparent 1.5px
-    ),
-    /* Additional medium snowflakes */
-      radial-gradient(
-        circle at 11% 20%,
-        rgba(255, 255, 255, 0.85) 2.5px,
-        transparent 2.5px
-      ),
-    radial-gradient(
-      circle at 21% 26%,
-      rgba(255, 255, 255, 0.85) 2.5px,
+      circle at 45% 35%,
+      rgba(255, 255, 255, 1) 2.5px,
       transparent 2.5px
     ),
     radial-gradient(
-      circle at 31% 34%,
-      rgba(255, 255, 255, 0.85) 2.5px,
-      transparent 2.5px
-    ),
-    radial-gradient(
-      circle at 41% 29%,
-      rgba(255, 255, 255, 0.85) 2.5px,
-      transparent 2.5px
-    ),
-    radial-gradient(
-      circle at 51% 37%,
-      rgba(255, 255, 255, 0.85) 2.5px,
-      transparent 2.5px
-    ),
-    radial-gradient(
-      circle at 61% 31%,
-      rgba(255, 255, 255, 0.85) 2.5px,
-      transparent 2.5px
-    ),
-    radial-gradient(
-      circle at 71% 39%,
-      rgba(255, 255, 255, 0.85) 2.5px,
-      transparent 2.5px
-    ),
-    radial-gradient(
-      circle at 81% 44%,
-      rgba(255, 255, 255, 0.85) 2.5px,
-      transparent 2.5px
-    ),
-    radial-gradient(
-      circle at 91% 41%,
-      rgba(255, 255, 255, 0.85) 2.5px,
+      circle at 85% 40%,
+      rgba(255, 255, 255, 1) 2.5px,
       transparent 2.5px
     );
-  background-size: 100% 50%;
+  background-size: 100% 60%;
   background-repeat: repeat;
-  animation: snowfall-slow 20s linear infinite;
-  filter: blur(0.3px);
+  animation: snowfall 20s linear infinite;
+  /* Removed blur filter for better performance */
   will-change: transform;
+  /* Hardware acceleration */
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 /* Ensure Page/Show content appears above snow */
