@@ -7,7 +7,7 @@
         <div class="relative min-h-[60vh]">
           <div
             ref="bookCoverRef"
-            class="absolute top-0 left-2 sm:left-4 md:left-6 lg:left-8 z-20"
+            class="absolute top-0 left-2 sm:left-4 md:left-6 lg:left-8 z-10 pointer-events-auto"
             style="width: fit-content; height: fit-content"
           >
             <BookCoverCard
@@ -19,7 +19,7 @@
             />
           </div>
           <div
-            class="w-full flex items-center justify-center relative"
+            class="w-full flex items-center justify-center relative pointer-events-none"
             style="touch-action: pan-y pinch-zoom"
             @touchstart.passive="onTouchStart"
             @touchmove.passive="onTouchMove"
@@ -30,7 +30,7 @@
               prefetch="hover"
               :href="route('pages.show', previousPage)"
               as="button"
-              class="z-10 absolute left-3 md:left-8 top-1/2 transform -translate-y-1/2 inline-flex items-center text-white hover:text-blue-600 hover:dark:text-gray-800 hover:christmas:text-christmas-gold disabled:opacity-25 transition ease-in-out duration-150"
+              class="z-10 absolute left-3 md:left-8 top-1/2 transform -translate-y-1/2 inline-flex items-center text-white hover:text-blue-600 hover:dark:text-gray-800 hover:christmas:text-christmas-gold disabled:opacity-25 transition ease-in-out duration-150 pointer-events-auto"
               aria-label="previous page"
               :disabled="buttonDisabled"
               @click="buttonDisabled = true"
@@ -44,7 +44,7 @@
               prefetch="hover"
               :href="route('pages.show', nextPage)"
               as="button"
-              class="z-10 absolute right-3 md:right-8 top-1/2 transform -translate-y-1/2 inline-flex items-center text-white hover:text-blue-600 hover:dark:text-gray-800 hover:christmas:text-christmas-gold disabled:opacity-25 transition ease-in-out duration-150"
+              class="z-10 absolute right-3 md:right-8 top-1/2 transform -translate-y-1/2 inline-flex items-center text-white hover:text-blue-600 hover:dark:text-gray-800 hover:christmas:text-christmas-gold disabled:opacity-25 transition ease-in-out duration-150 pointer-events-auto"
               aria-label="next page"
               :disabled="buttonDisabled"
               @click="buttonDisabled = true"
@@ -55,7 +55,7 @@
             </Link>
             <div
               v-if="page.media_path"
-              class="rounded-lg overflow-hidden mt-6 mx-16 md:mx-20"
+              class="rounded-lg overflow-hidden mt-6 mx-16 md:mx-20 relative z-20 pointer-events-auto"
             >
               <LazyLoader
                 :src="page.media_path"
@@ -68,7 +68,7 @@
             </div>
             <div
               v-else-if="page.video_link"
-              class="w-full max-w-4xl mx-16 md:mx-20"
+              class="w-full max-w-4xl mx-16 md:mx-20 relative z-20 pointer-events-auto"
             >
               <VideoWrapper :url="page.video_link" :title="page.description" />
             </div>
