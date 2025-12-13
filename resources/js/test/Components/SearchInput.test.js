@@ -34,7 +34,7 @@ describe("Components/SearchInput.vue", () => {
     const radios = wrapper.findAll('[role="radio"]');
     expect(radios.length).toBe(2);
     expect(radios[0].text()).toContain("Books");
-    expect(radios[1].text()).toContain("Uploads");
+    expect(radios[1].text()).toContain("ALL");
   });
 
   it("defaults target to uploads and updates placeholder", async () => {
