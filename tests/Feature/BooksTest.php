@@ -591,9 +591,9 @@ class BooksTest extends TestCase
         $this->assertEquals(45.6387, $pageWithoutLocation2->fresh()->latitude);
         $this->assertEquals(-122.6615, $pageWithoutLocation2->fresh()->longitude);
 
-        // Page with existing location should not be changed
-        $this->assertEquals(40.7128, $pageWithLocation->fresh()->latitude);
-        $this->assertEquals(-74.0060, $pageWithLocation->fresh()->longitude);
+        // Page with existing location should get overridden by book location
+        $this->assertEquals(45.6387, $pageWithLocation->fresh()->latitude);
+        $this->assertEquals(-122.6615, $pageWithLocation->fresh()->longitude);
     }
 
     public function test_pages_inherit_book_location_when_created_without_location(): void
