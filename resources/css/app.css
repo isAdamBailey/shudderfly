@@ -280,12 +280,7 @@
   @apply text-blue-400 underline decoration-2 underline-offset-2;
   transition: all 0.3s ease;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  color: rgba(
-    96,
-    165,
-    250,
-    0.95
-  ) !important; /* Override any inherited colors */
+  color: rgba(96, 165, 250, 0.95);
 }
 
 .page-content a:hover {
@@ -293,24 +288,24 @@
   text-decoration-color: rgba(59, 130, 246, 0.7);
   text-shadow: 0 1px 4px rgba(59, 130, 246, 0.4);
   transform: translateY(-1px);
-  color: rgba(147, 197, 253, 0.98) !important;
+  color: rgba(147, 197, 253, 0.98);
 }
 
 .page-content a:active {
   @apply text-blue-500;
   transform: translateY(0);
-  color: rgba(59, 130, 246, 0.9) !important;
+  color: rgba(59, 130, 246, 0.9);
 }
 
 .page-content a:visited {
   @apply text-purple-400;
-  color: rgba(196, 181, 253, 0.9) !important;
+  color: rgba(196, 181, 253, 0.9);
 }
 
 .page-content a:visited:hover {
   @apply text-purple-300;
   text-shadow: 0 1px 4px rgba(168, 85, 247, 0.4);
-  color: rgba(196, 181, 253, 0.95) !important;
+  color: rgba(196, 181, 253, 0.95);
 }
 
 /* Style bold text */
@@ -547,7 +542,8 @@
 }
 
 /* Ensure images and media in page/show appear above snow */
-[data-theme="christmas"] main img,
+/* Exclude Leaflet map tiles from this rule - Leaflet uses absolute positioning */
+[data-theme="christmas"] main img:not(.leaflet-container img),
 [data-theme="christmas"] main video,
 [data-theme="christmas"] main iframe {
   position: relative;
@@ -558,4 +554,17 @@
 [data-theme="christmas"] .text-container {
   position: relative;
   z-index: 1;
+}
+
+/* Ensure Leaflet map containers render correctly */
+.leaflet-container {
+  background-color: #f4f4f4;
+  outline: 0;
+  height: 100%;
+  width: 100%;
+}
+
+.leaflet-container img {
+  max-width: none;
+  max-height: none;
 }

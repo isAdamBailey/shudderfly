@@ -383,6 +383,20 @@ const initializeMap = () => {
   if (!mapContainer.value) return;
 
   try {
+    // Ensure container has dimensions before initializing
+    // This is critical for aspect-square containers
+    const container = mapContainer.value;
+    const rect = container.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) {
+      // Container not yet sized, wait a bit and try again
+      setTimeout(() => {
+        if (mapContainer.value) {
+          initializeMap();
+        }
+      }, 100);
+      return;
+    }
+
     // Convert string props to numbers
     const lat =
       props.latitude != null
@@ -454,7 +468,9 @@ const initializeMap = () => {
     map = L.map(mapContainer.value).setView([centerLat, centerLng], zoom);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19
+      maxZoom: 19,
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
 
     // Add markers based on mode
@@ -625,24 +641,22 @@ const initializeMap = () => {
     }
 
     // Invalidate size to ensure map renders correctly
-    setTimeout(() => {
+    // Multiple attempts to handle aspect-square and dynamic sizing
+    const invalidateMapSize = () => {
       if (map && mapContainer.value) {
         try {
           map.invalidateSize();
+          // Trigger a resize event to force Leaflet to recalculate
+          window.dispatchEvent(new Event('resize'));
         } catch (error) {
-          // Map might not be fully initialized yet, try again
-          setTimeout(() => {
-            if (map && mapContainer.value) {
-              try {
-                map.invalidateSize();
-              } catch (e) {
-                // Silently handle map size invalidation errors
-              }
-            }
-          }, 200);
+          // Silently handle errors
         }
       }
-    }, 100);
+    };
+
+    setTimeout(invalidateMapSize, 100);
+    setTimeout(invalidateMapSize, 300);
+    setTimeout(invalidateMapSize, 500);
 
     // Set up IntersectionObserver to detect when map becomes visible
     // This is important for maps inside accordions, tabs, or other collapsible containers
