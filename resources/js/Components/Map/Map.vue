@@ -98,6 +98,7 @@ let markers = [];
 let isInitialized = false;
 let geocoderInstance = null;
 let visibilityObserver = null;
+let resizeObserver = null;
 
 // Expose recenter method
 const recenterOnMarker = () => {
@@ -384,11 +385,16 @@ const initializeMap = () => {
 
   try {
     // Ensure container has dimensions before initializing
-    // This is critical for aspect-square containers
+    // Force height immediately to ensure container is ready
     const container = mapContainer.value;
+    container.style.minHeight = "300px";
+    container.style.height = "300px";
+
     const rect = container.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) {
-      // Container not yet sized, wait a bit and try again
+    const hasDimensions = rect.width > 0 && rect.height > 0;
+
+    // If container still doesn't have dimensions, wait briefly and try once more
+    if (!hasDimensions) {
       setTimeout(() => {
         if (mapContainer.value) {
           initializeMap();
@@ -428,31 +434,55 @@ const initializeMap = () => {
     // Clear address when reinitializing
     currentAddress.value = null;
 
-    // Clean up existing visibility observer
+    // Clean up existing observers
     if (visibilityObserver) {
       visibilityObserver.disconnect();
       visibilityObserver = null;
+    }
+    if (resizeObserver) {
+      resizeObserver.disconnect();
+      resizeObserver = null;
     }
 
     let centerLat, centerLng, zoom;
 
     if (isMultipleMode) {
       // Multiple locations mode
-      const bounds = [];
+      const validLocations = [];
       props.locations.forEach((location) => {
         if (location.latitude != null && location.longitude != null) {
-          bounds.push([location.latitude, location.longitude]);
+          const lat =
+            typeof location.latitude === "string"
+              ? parseFloat(location.latitude)
+              : location.latitude;
+          const lng =
+            typeof location.longitude === "string"
+              ? parseFloat(location.longitude)
+              : location.longitude;
+
+          if (
+            !isNaN(lat) &&
+            !isNaN(lng) &&
+            lat >= -90 &&
+            lat <= 90 &&
+            lng >= -180 &&
+            lng <= 180
+          ) {
+            validLocations.push({ lat, lng });
+          }
         }
       });
 
-      if (bounds.length === 0) return;
-
-      const firstLocation = props.locations.find(
-        (loc) => loc.latitude != null && loc.longitude != null
-      );
-      centerLat = firstLocation?.latitude ?? props.defaultLat;
-      centerLng = firstLocation?.longitude ?? props.defaultLng;
-      zoom = 13;
+      // If no valid locations, use default center but still initialize the map
+      if (validLocations.length === 0) {
+        centerLat = props.defaultLat;
+        centerLng = props.defaultLng;
+        zoom = 13;
+      } else {
+        centerLat = validLocations[0].lat;
+        centerLng = validLocations[0].lng;
+        zoom = 13;
+      }
     } else if (isSingleMode) {
       // Single location mode
       centerLat = lat;
@@ -465,13 +495,77 @@ const initializeMap = () => {
       zoom = 15;
     }
 
-    map = L.map(mapContainer.value).setView([centerLat, centerLng], zoom);
+    // Ensure center coordinates are numbers
+    const centerLatNum =
+      typeof centerLat === "string" ? parseFloat(centerLat) : centerLat;
+    const centerLngNum =
+      typeof centerLng === "string" ? parseFloat(centerLng) : centerLng;
 
+    // Validate coordinates
+    if (
+      isNaN(centerLatNum) ||
+      isNaN(centerLngNum) ||
+      centerLatNum < -90 ||
+      centerLatNum > 90 ||
+      centerLngNum < -180 ||
+      centerLngNum > 180
+    ) {
+      centerLat = props.defaultLat;
+      centerLng = props.defaultLng;
+    } else {
+      centerLat = centerLatNum;
+      centerLng = centerLngNum;
+    }
+
+    // Create map with explicit options
+    map = L.map(mapContainer.value, {
+      preferCanvas: false,
+      zoomControl: true
+    });
+
+    // Add tile layer first
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
+
+    // Force height immediately to ensure container has dimensions
+    if (mapContainer.value) {
+      mapContainer.value.style.minHeight = "300px";
+      mapContainer.value.style.height = "300px";
+    }
+
+    // Wait for container to have proper dimensions before setting view
+    // This is critical - Leaflet needs container dimensions to calculate tile positions correctly
+    const setMapView = () => {
+      if (map && mapContainer.value) {
+        const rect = mapContainer.value.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 50) {
+          map.setView([centerLat, centerLng], zoom);
+          map.invalidateSize();
+          return true;
+        }
+      }
+      return false;
+    };
+
+    // Try to set view, with one retry if needed
+    if (!setMapView()) {
+      setTimeout(() => {
+        if (!setMapView() && map && mapContainer.value) {
+          // Final attempt - force height again and set view
+          mapContainer.value.style.minHeight = "300px";
+          mapContainer.value.style.height = "300px";
+          setTimeout(() => {
+            if (map) {
+              map.setView([centerLat, centerLng], zoom);
+              map.invalidateSize();
+            }
+          }, 50);
+        }
+      }, 100);
+    }
 
     // Add markers based on mode
     if (isMultipleMode) {
@@ -479,37 +573,102 @@ const initializeMap = () => {
       const bounds = [];
       props.locations.forEach((location) => {
         if (location.latitude != null && location.longitude != null) {
-          bounds.push([location.latitude, location.longitude]);
-          // Use book link if book_slug exists, otherwise use page link
-          const url = location.book_slug
-            ? route("books.show", location.book_slug)
-            : location.id
-            ? route("pages.show", location.id)
-            : "#";
-          const popupContent = location.page_title
-            ? `<a href="${url}" class="text-blue-600 hover:text-blue-800 underline"><strong>${
-                location.page_title
-              }</strong></a>${
-                location.book_title ? `<br><em>${location.book_title}</em>` : ""
-              }`
-            : location.book_title
-            ? `<a href="${url}" class="text-blue-600 hover:text-blue-800 underline"><strong>${location.book_title}</strong></a>`
-            : `<a href="${url}" class="text-blue-600 hover:text-blue-800 underline">Location</a>`;
+          const lat =
+            typeof location.latitude === "string"
+              ? parseFloat(location.latitude)
+              : location.latitude;
+          const lng =
+            typeof location.longitude === "string"
+              ? parseFloat(location.longitude)
+              : location.longitude;
 
-          const marker = L.marker([location.latitude, location.longitude])
-            .addTo(map)
-            .bindPopup(popupContent);
+          if (!isNaN(lat) && !isNaN(lng)) {
+            bounds.push([lat, lng]);
+            // Use book link if book_slug exists, otherwise use page link
+            const url = location.book_slug
+              ? route("books.show", location.book_slug)
+              : location.id
+              ? route("pages.show", location.id)
+              : "#";
+            const popupContent = location.page_title
+              ? `<a href="${url}" class="text-blue-600 hover:text-blue-800 underline"><strong>${
+                  location.page_title
+                }</strong></a>${
+                  location.book_title
+                    ? `<br><em>${location.book_title}</em>`
+                    : ""
+                }`
+              : location.book_title
+              ? `<a href="${url}" class="text-blue-600 hover:text-blue-800 underline"><strong>${location.book_title}</strong></a>`
+              : `<a href="${url}" class="text-blue-600 hover:text-blue-800 underline">Location</a>`;
 
-          markers.push(marker);
+            const marker = L.marker([lat, lng])
+              .addTo(map)
+              .bindPopup(popupContent);
+
+            markers.push(marker);
+          }
         }
       });
 
-      // Fit bounds if multiple markers
+      // Fit bounds if multiple markers - use longer delay to ensure map is ready
       if (bounds.length > 1) {
         const latLngBounds = L.latLngBounds(bounds);
-        map.fitBounds(latLngBounds, { padding: [20, 20], maxZoom: 15 });
+        // Use setTimeout to ensure map is fully initialized before fitting bounds
+        setTimeout(() => {
+          if (map) {
+            try {
+              // First invalidate size
+              map.invalidateSize();
+              // Then fit bounds
+              map.fitBounds(latLngBounds, { padding: [20, 20], maxZoom: 15 });
+              // Invalidate again after fitBounds
+              setTimeout(() => {
+                if (map) {
+                  map.invalidateSize();
+                }
+              }, 50);
+            } catch (error) {
+              // If fitBounds fails, try setting view to first marker
+              if (bounds.length > 0) {
+                map.setView(bounds[0], 13);
+                map.invalidateSize();
+              }
+            }
+          }
+        }, 200);
       } else if (bounds.length === 1) {
-        map.setView(bounds[0], 17);
+        // Use setTimeout to ensure map is fully initialized before setting view
+        setTimeout(() => {
+          if (map) {
+            try {
+              map.setView(bounds[0], 17);
+              map.invalidateSize();
+            } catch (error) {
+              // Fallback to default view
+              map.setView([centerLat, centerLng], zoom);
+              map.invalidateSize();
+            }
+          }
+        }, 200);
+      } else if (bounds.length === 0 && markers.length === 0) {
+        // No valid markers, ensure map is still visible at default location
+        setTimeout(() => {
+          if (map) {
+            map.setView([centerLat, centerLng], zoom);
+            map.invalidateSize();
+          }
+        }, 200);
+      } else if (bounds.length === 0 && markers.length > 0) {
+        // Markers were added but bounds calculation failed, center on first marker
+        setTimeout(() => {
+          if (map && markers.length > 0) {
+            const firstMarker = markers[0];
+            const markerLatLng = firstMarker.getLatLng();
+            map.setView(markerLatLng, 13);
+            map.invalidateSize();
+          }
+        }, 200);
       }
     } else if (isSingleMode || (props.interactive && isSingleMode)) {
       // Single marker
@@ -647,7 +806,7 @@ const initializeMap = () => {
         try {
           map.invalidateSize();
           // Trigger a resize event to force Leaflet to recalculate
-          window.dispatchEvent(new Event('resize'));
+          window.dispatchEvent(new Event("resize"));
         } catch (error) {
           // Silently handle errors
         }
@@ -683,7 +842,90 @@ const initializeMap = () => {
         }
       );
       visibilityObserver.observe(mapContainer.value);
+
+      // If map is already visible when mounted, ensure it initializes properly
+      // Check if element is already intersecting
+      const isAlreadyVisible =
+        mapContainer.value.offsetWidth > 0 &&
+        mapContainer.value.offsetHeight > 0;
+      if (isAlreadyVisible && map) {
+        // Map is already visible, add additional invalidation attempts
+        setTimeout(() => {
+          if (map && mapContainer.value) {
+            try {
+              map.invalidateSize();
+            } catch (error) {
+              // Silently handle map size invalidation errors
+            }
+          }
+        }, 200);
+        setTimeout(() => {
+          if (map && mapContainer.value) {
+            try {
+              map.invalidateSize();
+            } catch (error) {
+              // Silently handle map size invalidation errors
+            }
+          }
+        }, 600);
+      }
     }
+
+    // Set up ResizeObserver to handle container size changes
+    if (mapContainer.value && typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(() => {
+        if (map && mapContainer.value) {
+          // Debounce the invalidation to avoid too many calls
+          setTimeout(() => {
+            if (map && mapContainer.value) {
+              try {
+                map.invalidateSize();
+              } catch (error) {
+                // Silently handle map size invalidation errors
+              }
+            }
+          }, 100);
+        }
+      });
+      resizeObserver.observe(mapContainer.value);
+    }
+
+    // Final check: ensure map view is valid after all initialization
+    setTimeout(() => {
+      if (map) {
+        try {
+          const currentCenter = map.getCenter();
+
+          // Validate that center is reasonable (not NaN or extreme values)
+          if (
+            isNaN(currentCenter.lat) ||
+            isNaN(currentCenter.lng) ||
+            Math.abs(currentCenter.lat) > 90 ||
+            Math.abs(currentCenter.lng) > 180
+          ) {
+            // Reset to default if view is invalid
+            map.setView([props.defaultLat, props.defaultLng], 13);
+            map.invalidateSize();
+          } else {
+            // Even if valid, force a refresh to ensure tiles load correctly
+            map.invalidateSize();
+          }
+
+          // Force a complete view refresh
+          const currentZoom = map.getZoom();
+          map.setView(map.getCenter(), currentZoom);
+          map.invalidateSize();
+        } catch (error) {
+          // If error, try to reset to default
+          try {
+            map.setView([props.defaultLat, props.defaultLng], 13);
+            map.invalidateSize();
+          } catch (resetError) {
+            // Silently handle errors
+          }
+        }
+      }
+    }, 400);
 
     isInitialized = true;
   } catch (error) {
@@ -692,8 +934,17 @@ const initializeMap = () => {
 };
 
 onMounted(() => {
+  // Use a longer delay to ensure DOM is fully settled
   nextTick(() => {
-    initializeMap();
+    // If locations are already provided, initialize immediately
+    // Otherwise, wait a bit for props to settle
+    if (props.locations && props.locations.length > 0) {
+      initializeMap();
+    } else {
+      setTimeout(() => {
+        initializeMap();
+      }, 50);
+    }
   });
 });
 
@@ -754,19 +1005,33 @@ watch(
 // Watch for changes in multiple locations mode
 watch(
   () => props.locations,
-  () => {
-    if (!isInitialized) return;
-    nextTick(() => {
-      initializeMap();
-    });
+  (newLocations) => {
+    // If locations are provided and map isn't initialized yet, initialize it
+    if (!isInitialized && newLocations && newLocations.length > 0) {
+      nextTick(() => {
+        initializeMap();
+      });
+      return;
+    }
+
+    // If map is already initialized, reinitialize with new locations
+    if (isInitialized) {
+      nextTick(() => {
+        initializeMap();
+      });
+    }
   },
-  { deep: true }
+  { deep: true, immediate: true }
 );
 
 onUnmounted(() => {
   if (visibilityObserver) {
     visibilityObserver.disconnect();
     visibilityObserver = null;
+  }
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+    resizeObserver = null;
   }
   if (map) {
     map.remove();
