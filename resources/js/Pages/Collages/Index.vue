@@ -70,7 +70,7 @@
             <template #image-actions="{ page, collage }">
                 <button
                     v-if="canAdmin && !collage.is_locked"
-                    class="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg transition-all duration-200"
+                    class="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg transition-all duration-200 z-10"
                     :class="{
                         'opacity-50 cursor-not-allowed': isGenerating(collage),
                     }"
