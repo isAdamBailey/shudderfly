@@ -140,9 +140,63 @@ return [
         'host' => env('MEILISEARCH_HOST', 'http://localhost:7700'),
         'key' => env('MEILISEARCH_KEY'),
         'index-settings' => [
-            // 'users' => [
-            //     'filterableAttributes'=> ['id', 'name', 'email'],
-            // ],
+            // Enhanced typo tolerance for accessibility (voice search with speech variations)
+            'books' => [
+                'searchableAttributes' => ['title', 'excerpt'],
+                'typoTolerance' => [
+                    'enabled' => true,
+                    // Allow typos even in very short words (default is 5 for 1 typo, 9 for 2)
+                    'minWordSizeForTypos' => [
+                        'oneTypo' => 3,  // Allow 1 typo in 3+ letter words
+                        'twoTypos' => 5, // Allow 2 typos in 5+ letter words
+                    ],
+                ],
+                // Prioritize exact matches but still show typo-tolerant results
+                'rankingRules' => [
+                    'words',
+                    'typo',
+                    'proximity',
+                    'attribute',
+                    'sort',
+                    'exactness',
+                ],
+            ],
+            'pages' => [
+                'searchableAttributes' => ['content'],
+                'typoTolerance' => [
+                    'enabled' => true,
+                    'minWordSizeForTypos' => [
+                        'oneTypo' => 3,
+                        'twoTypos' => 5,
+                    ],
+                ],
+                'rankingRules' => [
+                    'words',
+                    'typo',
+                    'proximity',
+                    'attribute',
+                    'sort',
+                    'exactness',
+                ],
+            ],
+            'songs' => [
+                'searchableAttributes' => ['title', 'description'],
+                'typoTolerance' => [
+                    'enabled' => true,
+                    'minWordSizeForTypos' => [
+                        'oneTypo' => 3,
+                        'twoTypos' => 5,
+                    ],
+                ],
+                'rankingRules' => [
+                    'words',
+                    'typo',
+                    'proximity',
+                    'attribute',
+                    'sort',
+                    'exactness',
+                ],
+            ],
         ],
     ],
 

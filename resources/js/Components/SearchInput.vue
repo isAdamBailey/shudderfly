@@ -69,6 +69,50 @@
           </div>
         </div>
 
+        <!-- Live Voice Feedback Display -->
+        <div
+          v-if="isListening"
+          class="absolute z-50 w-full mt-1 bg-gradient-to-r from-red-500 to-pink-500 christmas:from-christmas-red christmas:to-christmas-gold halloween:from-halloween-orange halloween:to-halloween-purple rounded-lg shadow-lg p-3 text-white"
+        >
+          <div class="flex items-center gap-2 mb-2">
+            <div class="flex gap-1">
+              <span
+                class="w-2 h-2 bg-white rounded-full animate-bounce"
+                style="animation-delay: 0ms"
+              ></span>
+              <span
+                class="w-2 h-2 bg-white rounded-full animate-bounce"
+                style="animation-delay: 150ms"
+              ></span>
+              <span
+                class="w-2 h-2 bg-white rounded-full animate-bounce"
+                style="animation-delay: 300ms"
+              ></span>
+            </div>
+            <span class="text-sm font-medium">Listening...</span>
+          </div>
+
+          <!-- Show what's being heard in real-time -->
+          <div
+            v-if="currentTranscript"
+            class="bg-white/20 rounded-lg p-2 min-h-[2rem]"
+          >
+            <p class="text-lg font-bold break-words">
+              "{{ currentTranscript }}"
+            </p>
+          </div>
+          <div v-else class="bg-white/20 rounded-lg p-2 min-h-[2rem]">
+            <p class="text-sm opacity-75 italic">
+              Say something... I'm waiting to hear you!
+            </p>
+          </div>
+
+          <!-- Tap to stop hint -->
+          <p class="text-xs mt-2 opacity-75 text-center">
+            Tap the microphone again to search
+          </p>
+        </div>
+
         <!-- Suggestions Dropdown -->
         <div
           v-if="
@@ -186,15 +230,16 @@ let target = ref(getDefaultTarget());
 const suggestions = ref([]);
 const showSuggestions = ref(false);
 const selectedIndex = ref(-1);
+const isVoiceSearch = ref(false);
 
 const isBooksTarget = computed(() => target.value === "books");
 const isUploadsTarget = computed(() => target.value === "uploads");
 
 const currentLabel = computed(() => {
   if (props.showTargetToggle) {
-    return target.value === "uploads" ? "Uploads" : "Books";
+    return target.value === "uploads" ? "ALL" : "Books";
   }
-  return props.label || (target.value === "uploads" ? "Uploads" : "Books");
+  return props.label || (target.value === "uploads" ? "ALL" : "Books");
 });
 
 const searchPlaceholder = computed(() => {
@@ -224,48 +269,95 @@ const displayValue = computed(() => {
 
 watch(result, (newResult) => {
   if (newResult && newResult.trim()) {
-    search.value = deduplicateWords(newResult);
+    isVoiceSearch.value = true;
+    search.value = processVoiceInput(newResult);
   }
 });
 
-// Function to deduplicate repeated words
-const deduplicateWords = (text) => {
-  const words = text.trim().split(/\s+/);
-  const uniqueWords = [];
+const FILLER_WORDS = new Set([
+  "um",
+  "uh",
+  "er",
+  "ah",
+  "like",
+  "you know",
+  "basically",
+  "actually",
+  "literally",
+  "so",
+  "well",
+  "hmm",
+  "hm",
+  "mm",
+  "mmm"
+]);
 
-  for (let i = 0; i < words.length; i++) {
-    const word = words[i];
-    // Only add if it's different from the previous word
-    if (i === 0 || word !== words[i - 1]) {
-      uniqueWords.push(word);
-    }
-  }
-
-  return uniqueWords.join(" ");
+const SPEECH_NORMALIZATIONS = {
+  wanna: "want to",
+  gonna: "going to",
+  gotta: "got to",
+  kinda: "kind of",
+  sorta: "sort of",
+  dunno: "don't know",
+  lemme: "let me",
+  gimme: "give me",
+  coulda: "could have",
+  shoulda: "should have",
+  woulda: "would have",
+  aint: "is not",
+  "ain't": "is not",
+  cuz: "because",
+  "'cause": "because",
+  cause: "because",
+  ya: "you",
+  yea: "yes",
+  yeah: "yes",
+  yup: "yes",
+  yep: "yes",
+  nah: "no",
+  nope: "no"
 };
 
-// Watch for when recognition stops to trigger search
+const processVoiceInput = (text) => {
+  if (!text) return "";
+
+  let processed = text.toLowerCase().trim();
+
+  // Remove filler words
+  let words = processed.split(/\s+/).filter((word) => !FILLER_WORDS.has(word));
+  processed = words.join(" ");
+
+  // Normalize speech patterns
+  for (const [pattern, replacement] of Object.entries(SPEECH_NORMALIZATIONS)) {
+    processed = processed.replace(
+      new RegExp(`\\b${pattern}\\b`, "gi"),
+      replacement
+    );
+  }
+
+  // Deduplicate consecutive repeated words
+  words = processed.split(/\s+/);
+  const unique = words.filter(
+    (word, i) => i === 0 || word.toLowerCase() !== words[i - 1].toLowerCase()
+  );
+
+  return unique.join(" ").replace(/\s+/g, " ").trim();
+};
+
+let speechTimeout = null;
+
 watch(isListening, (listening) => {
-  if (!listening && result.value && result.value.trim()) {
-    search.value = deduplicateWords(result.value);
+  if (!listening && result.value?.trim()) {
+    search.value = processVoiceInput(result.value);
     searchMethod();
   }
 });
 
-// Auto-stop recognition after a pause in speech
-let speechTimeout = null;
 watch(result, (newResult) => {
-  if (newResult && newResult.trim() && isListening.value) {
-    // Clear existing timeout
-    if (speechTimeout) {
-      clearTimeout(speechTimeout);
-    }
-
-    // Set new timeout to stop recognition after 2 seconds of silence
+  if (newResult?.trim() && isListening.value) {
+    if (speechTimeout) clearTimeout(speechTimeout);
     speechTimeout = setTimeout(() => {
-      if (isListening.value) {
-        stop();
-      }
+      if (isListening.value) stop();
     }, 2000);
   }
 });
@@ -275,14 +367,11 @@ watch(search, (newSearch) => {
     searchMethod();
     suggestions.value = [];
     showSuggestions.value = false;
-  } else if (!isListening.value && newSearch && newSearch.trim().length >= 2) {
-    // Fetch suggestions when search is set from voice recognition or other sources
-    // (handleInput calls fetchSuggestions directly to avoid timing issues)
+  } else if (!isListening.value && newSearch.trim().length >= 2) {
     fetchSuggestions(newSearch);
   }
 });
 
-// Debounced function to fetch suggestions
 const fetchSuggestions = debounce(async (query) => {
   if (!query || query.trim().length < 2) {
     suggestions.value = [];
@@ -294,60 +383,49 @@ const fetchSuggestions = debounce(async (query) => {
     const endpoint =
       target.value === "uploads" ? "/api/search/uploads" : "/api/search/books";
     const response = await window.axios.get(endpoint, {
-      params: { q: query.trim() }
+      params: { q: query.trim(), voice: isVoiceSearch.value ? 1 : 0 }
     });
     suggestions.value = response.data || [];
     showSuggestions.value = suggestions.value.length > 0;
-    selectedIndex.value = -1; // Reset selected index
-  } catch (error) {
-    console.error("Error fetching suggestions:", error);
+    selectedIndex.value = -1;
+  } catch (err) {
+    console.error("Error fetching suggestions:", err);
     suggestions.value = [];
     showSuggestions.value = false;
   }
-}, 300); // 300ms debounce
+}, 300);
 
 const searchMethod = () => {
-  let routeName;
-  if (target.value === "uploads") {
-    routeName = "pictures.index";
-  } else {
-    routeName = "books.index";
-  }
-
-  if (search.value) {
+  const routeName =
+    target.value === "uploads" ? "pictures.index" : "books.index";
+  if (search.value)
     speak(`Searching for ${currentLabel.value} with ${search.value}`);
-  }
   // eslint-disable-next-line no-undef
   router.get(
-    // eslint-disable-next-line no-undef
     route(routeName),
     { search: search.value || null, filter: filter.value || null },
     { preserveState: true }
   );
-  showSuggestions.value = false; // Hide suggestions after full search
+  showSuggestions.value = false;
 };
 
 function setTarget(newTarget) {
   if (newTarget === target.value) return;
   target.value = newTarget;
-  // Refetch suggestions when target changes
-  if (search.value) {
-    fetchSuggestions(search.value);
-  }
+  if (search.value) fetchSuggestions(search.value);
 }
 
 function getDefaultTarget() {
-  if (props.initialTarget === "books" || props.initialTarget === "uploads") {
+  if (props.initialTarget === "books" || props.initialTarget === "uploads")
     return props.initialTarget;
-  }
-  // Infer based on page props (URL or server-provided context) if available
   const currentUrl =
     typeof window !== "undefined" ? window.location.pathname : "";
-  // Check for books pages
-  if (currentUrl.startsWith("/books") || currentUrl.startsWith("/book/")) {
+  if (
+    currentUrl === "/" ||
+    currentUrl.startsWith("/books") ||
+    currentUrl.startsWith("/book/")
+  )
     return "books";
-  }
-  // Default to uploads
   return "uploads";
 }
 
@@ -362,7 +440,7 @@ const toggleVoiceRecognition = async () => {
       stop();
     } else {
       start();
-      showSuggestions.value = false; // Hide suggestions when listening
+      showSuggestions.value = false;
     }
   } catch (error) {
     console.error("Voice recognition error:", error);
@@ -376,65 +454,50 @@ const clearSearch = () => {
   showSuggestions.value = false;
 };
 
-// Handle input event to update search value and fetch suggestions
 const handleInput = (event) => {
   search.value = event.target.value;
-  selectedIndex.value = -1; // Reset selected index on input
+  selectedIndex.value = -1;
+  isVoiceSearch.value = false;
 
-  if (search.value && search.value.trim().length >= 2 && !isListening.value) {
+  if (search.value?.trim().length >= 2 && !isListening.value) {
     fetchSuggestions(search.value);
-    showSuggestions.value = true; // Show suggestions as soon as user types
+    showSuggestions.value = true;
   } else {
     suggestions.value = [];
     showSuggestions.value = false;
   }
 };
 
-// Handle focus event to show suggestions if there's a search query
 const handleFocus = () => {
-  if (search.value && suggestions.value.length > 0) {
+  if (search.value && suggestions.value.length > 0)
     showSuggestions.value = true;
-  }
 };
 
-// Handle blur event to hide suggestions after a short delay
 const handleBlur = () => {
-  // Use a timeout to allow click events on suggestions to register
   setTimeout(() => {
     showSuggestions.value = false;
   }, 150);
 };
 
-// Navigate suggestions with arrow keys
 const navigateSuggestions = (direction) => {
-  if (!showSuggestions.value || suggestions.value.length === 0) {
-    return;
-  }
-
+  if (!showSuggestions.value || suggestions.value.length === 0) return;
   let newIndex = selectedIndex.value + direction;
-
-  if (newIndex < 0) {
-    newIndex = suggestions.value.length - 1; // Wrap around to last item
-  } else if (newIndex >= suggestions.value.length) {
-    newIndex = 0; // Wrap around to first item
-  }
+  if (newIndex < 0) newIndex = suggestions.value.length - 1;
+  else if (newIndex >= suggestions.value.length) newIndex = 0;
   selectedIndex.value = newIndex;
 };
 
-// Select a suggestion (either by click or Enter key)
 const selectSuggestion = (suggestion) => {
   showSuggestions.value = false;
-  // Don't update search.value here as it triggers unnecessary API calls before navigation
-  if (suggestion.type === "book") {
-    // eslint-disable-next-line no-undef
+  // eslint-disable-next-line no-undef
+  if (suggestion.type === "book")
     router.get(route("books.show", suggestion.slug));
-  } else if (suggestion.type === "page") {
-    // eslint-disable-next-line no-undef
+  // eslint-disable-next-line no-undef
+  else if (suggestion.type === "page")
     router.get(route("pages.show", suggestion.id));
-  } else if (suggestion.type === "song") {
-    // eslint-disable-next-line no-undef
+  // eslint-disable-next-line no-undef
+  else if (suggestion.type === "song")
     router.get(route("music.show", suggestion.id));
-  }
 };
 
 const handleEnter = () => {
@@ -445,45 +508,29 @@ const handleEnter = () => {
   ) {
     selectSuggestion(suggestions.value[selectedIndex.value]);
   } else {
-    searchMethod(); // Perform full search if no suggestion is selected or shown
+    searchMethod();
   }
 };
 
+const truncate = (text, len) =>
+  text ? (text.length > len ? text.substring(0, len) + "..." : text) : "";
+
 const getSuggestionTitle = (suggestion) => {
-  if (suggestion.type === "book") {
+  if (suggestion.type === "book" || suggestion.type === "song")
     return suggestion.title;
-  } else if (suggestion.type === "page") {
-    return suggestion.content
-      ? suggestion.content.substring(0, 60) +
-          (suggestion.content.length > 60 ? "..." : "")
-      : "Page";
-  } else if (suggestion.type === "song") {
-    return suggestion.title;
-  }
+  if (suggestion.type === "page")
+    return truncate(suggestion.content, 60) || "Page";
   return "";
 };
 
 const getSuggestionSubtitle = (suggestion) => {
-  if (suggestion.type === "book") {
-    return suggestion.excerpt
-      ? suggestion.excerpt.substring(0, 80) +
-          (suggestion.excerpt.length > 80 ? "..." : "")
-      : "";
-  } else if (suggestion.type === "page") {
-    return suggestion.book_title || "";
-  } else if (suggestion.type === "song") {
-    return suggestion.description
-      ? suggestion.description.substring(0, 80) +
-          (suggestion.description.length > 80 ? "..." : "")
-      : "";
-  }
+  if (suggestion.type === "book") return truncate(suggestion.excerpt, 80);
+  if (suggestion.type === "page") return suggestion.book_title || "";
+  if (suggestion.type === "song") return truncate(suggestion.description, 80);
   return "";
 };
 
-// Cleanup timeout on unmount
 onUnmounted(() => {
-  if (speechTimeout) {
-    clearTimeout(speechTimeout);
-  }
+  if (speechTimeout) clearTimeout(speechTimeout);
 });
 </script>

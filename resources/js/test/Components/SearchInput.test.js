@@ -37,21 +37,27 @@ describe("Components/SearchInput.vue", () => {
     expect(radios[1].text()).toContain("ALL");
   });
 
-  it("defaults target to uploads and updates placeholder", async () => {
+  it("defaults target to books when URL is root and updates placeholder", async () => {
+    // Mock window.location.pathname to be "/" (root)
+    Object.defineProperty(window, "location", {
+      value: { pathname: "/" },
+      writable: true
+    });
+
     const wrapper = mount(SearchInput);
-    // Uploads should be selected by default
-    const uploads = wrapper.findAll('[role="radio"]')[1];
-    expect(uploads.attributes("aria-checked")).toBe("true");
-    expect(wrapper.find('input[type="search"]').attributes("placeholder")).toBe(
-      "Search Uploads!"
-    );
-    // Switch to Books
-    await wrapper.findAll('[role="radio"]')[0].trigger("click");
-    expect(
-      wrapper.findAll('[role="radio"]')[0].attributes("aria-checked")
-    ).toBe("true");
+    // Books should be selected by default when URL is "/"
+    const books = wrapper.findAll('[role="radio"]')[0];
+    expect(books.attributes("aria-checked")).toBe("true");
     expect(wrapper.find('input[type="search"]').attributes("placeholder")).toBe(
       "Search Books!"
+    );
+    // Switch to Uploads
+    await wrapper.findAll('[role="radio"]')[1].trigger("click");
+    expect(
+      wrapper.findAll('[role="radio"]')[1].attributes("aria-checked")
+    ).toBe("true");
+    expect(wrapper.find('input[type="search"]').attributes("placeholder")).toBe(
+      "Search ALL!"
     );
   });
 
@@ -62,7 +68,18 @@ describe("Components/SearchInput.vue", () => {
   });
 
   it("navigates to pictures.index on Enter when target is uploads", async () => {
+    // Mock window.location.pathname to be something other than "/" so uploads is default
+    Object.defineProperty(window, "location", {
+      value: { pathname: "/pictures" },
+      writable: true
+    });
+
     const wrapper = mount(SearchInput);
+    // Ensure uploads is selected (should be default when pathname is not "/" or "/books")
+    const uploads = wrapper.findAll('[role="radio"]')[1];
+    if (uploads.attributes("aria-checked") !== "true") {
+      await uploads.trigger("click");
+    }
     const input = wrapper.find('input[type="search"]');
     await input.setValue("cats");
     await input.trigger("keyup.enter");
