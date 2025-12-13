@@ -32,5 +32,6 @@ const typeClasses = computed(() => {
     padding: 5px 10px;
     border-radius: 20px;
     font-size: 14px;
+    z-index: 10;
 }
 </style>
