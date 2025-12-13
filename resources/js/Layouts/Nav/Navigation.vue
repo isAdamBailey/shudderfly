@@ -42,16 +42,10 @@ const messagingEnabled = computed(() => {
             <!-- Navigation Links -->
             <div class="hidden space-x-8 sm:-my-px sm:ml-10 sm:flex">
               <NavLink
-                :href="route('dashboard')"
-                :active="route().current('dashboard')"
-              >
-                Admin
-              </NavLink>
-              <NavLink
                 :href="route('pictures.index')"
                 :active="route().current('pictures.*')"
               >
-                Uploads
+                ALL
               </NavLink>
               <NavLink
                 :href="route('collages.index')"
@@ -108,6 +102,9 @@ const messagingEnabled = computed(() => {
                 </template>
 
                 <template #content>
+                  <DropdownLink :href="route('dashboard')">
+                    <span class="relative inline-block"> Admin </span>
+                  </DropdownLink>
                   <DropdownLink :href="route('profile.edit')">
                     <span class="relative inline-block">
                       Account
@@ -179,16 +176,10 @@ const messagingEnabled = computed(() => {
       >
         <div class="pt-2 pb-3 space-y-1">
           <ResponsiveNavLink
-            :href="route('dashboard')"
-            :active="route().current('dashboard')"
-          >
-            Admin
-          </ResponsiveNavLink>
-          <ResponsiveNavLink
             :href="route('pictures.index')"
             :active="route().current('pictures.*')"
           >
-            Uploads
+            ALL
           </ResponsiveNavLink>
           <ResponsiveNavLink
             :href="route('collages.index')"
@@ -222,6 +213,9 @@ const messagingEnabled = computed(() => {
           </div>
 
           <div class="mt-3 space-y-1">
+            <ResponsiveNavLink :href="route('dashboard')" class="relative">
+              Admin
+            </ResponsiveNavLink>
             <ResponsiveNavLink :href="route('profile.edit')" class="relative">
               Account
               <span

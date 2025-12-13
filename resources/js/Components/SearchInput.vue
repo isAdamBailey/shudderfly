@@ -135,7 +135,7 @@
           @keydown.enter.prevent="setTarget('uploads')"
           @keydown.space.prevent="setTarget('uploads')"
         >
-          Uploads
+          ALL
         </button>
       </div>
     </div>
