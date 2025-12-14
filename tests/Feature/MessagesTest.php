@@ -127,7 +127,6 @@ class MessagesTest extends TestCase
         ]);
 
         $response->assertRedirect();
-        $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('messages', [
             'user_id' => $user->id,

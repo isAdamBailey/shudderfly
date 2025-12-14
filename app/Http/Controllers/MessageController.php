@@ -99,8 +99,11 @@ class MessageController extends Controller
             'tagged_user_ids.*' => ['integer', 'exists:users,id'],
         ]);
 
+        /** @var User $user */
+        $user = $request->user();
+
         $message = Message::create([
-            'user_id' => Auth::id(),
+            'user_id' => $user->id,
             'message' => $validated['message'],
         ]);
 
@@ -120,10 +123,10 @@ class MessageController extends Controller
             $taggedUser = User::find($userId);
             if ($taggedUser) {
                 // Send database notification
-                $taggedUser->notify(new UserTagged($message, Auth::user()));
+                $taggedUser->notify(new UserTagged($message, $user));
 
                 // Send push notification
-                $title = 'You were tagged by '.Auth::user()->name;
+                $title = 'You were tagged by '.$user->name;
                 // Truncate message for push notification (max ~120 chars for body)
                 $messageBody = mb_strlen($message->message, 'UTF-8') > 120
                     ? mb_substr($message->message, 0, 117, 'UTF-8').'...'
@@ -136,8 +139,8 @@ class MessageController extends Controller
                     [
                         'type' => 'user_tagged',
                         'message_id' => $message->id,
-                        'tagger_id' => Auth::id(),
-                        'tagger_name' => Auth::user()->name,
+                        'tagger_id' => $user->id,
+                        'tagger_name' => $user->name,
                         'message' => $message->message,
                         'url' => route('messages.index'),
                     ]
@@ -148,8 +151,8 @@ class MessageController extends Controller
         // Broadcast the new message
         event(new MessageCreated($message));
 
-        // Return flash message for the user who posted (others will see it via Echo)
-        return back()->with('success', 'New message added by '.Auth::user()->name);
+        // Flash message is handled via Echo broadcast for all users
+        return back();
     }
 
     /**

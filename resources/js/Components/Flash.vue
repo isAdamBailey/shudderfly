@@ -132,42 +132,44 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div
-    v-if="show && hasFlashMessage && flashMessage"
-    :key="forceRender"
-    class="fixed top-0 left-0 right-0 z-50"
-    style="z-index: 9999 !important"
-  >
-    <div class="max-w-7xl mx-auto px-4 py-3">
-      <div
-        :class="[
-          'border px-4 py-3 rounded relative shadow-lg flex items-center justify-between',
-          messageStyles.container
-        ]"
-        role="alert"
-      >
-        <div class="flex items-center flex-1 pr-8">
-          <i
-            :class="[
-              messageStyles.iconName,
-              'text-xl mr-3',
-              messageStyles.icon
-            ]"
-          ></i>
-          <span>{{ flashMessage.text }}</span>
-        </div>
-        <button
+  <Teleport to="body">
+    <div
+      v-if="show && hasFlashMessage && flashMessage"
+      :key="forceRender"
+      class="fixed top-0 left-0 right-0 z-50"
+      style="position: fixed; top: 0; left: 0; right: 0; z-index: 9999"
+    >
+      <div class="max-w-7xl mx-auto px-4 py-3">
+        <div
           :class="[
-            'flex-shrink-0 ml-4 p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200',
-            messageStyles.button
+            'border px-4 py-3 rounded relative shadow-lg flex items-center justify-between',
+            messageStyles.container
           ]"
-          aria-label="Close notification"
-          type="button"
-          @click="close"
+          role="alert"
         >
-          <i :class="['ri-close-line text-2xl', messageStyles.icon]"></i>
-        </button>
+          <div class="flex items-center flex-1 pr-8">
+            <i
+              :class="[
+                messageStyles.iconName,
+                'text-xl mr-3',
+                messageStyles.icon
+              ]"
+            ></i>
+            <span>{{ flashMessage.text }}</span>
+          </div>
+          <button
+            :class="[
+              'flex-shrink-0 ml-4 p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200',
+              messageStyles.button
+            ]"
+            aria-label="Close notification"
+            type="button"
+            @click="close"
+          >
+            <i :class="['ri-close-line text-2xl', messageStyles.icon]"></i>
+          </button>
+        </div>
       </div>
     </div>
-  </div>
+  </Teleport>
 </template>
