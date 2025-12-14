@@ -164,7 +164,7 @@
         <Link
           v-if="activeTab !== 'bulk'"
           prefetch
-          class="w-full h-full block"
+          class="relative w-full h-full block"
           :href="route('pages.show', page)"
           as="button"
           replace
@@ -172,7 +172,7 @@
         >
           <div
             v-if="page.loading"
-            class="absolute inset-0 flex items-center justify-center bg-white/70"
+            class="absolute inset-0 flex items-center justify-center bg-white/70 z-20"
           >
             <span class="animate-spin text-black"
               ><i class="ri-loader-line text-3xl"></i
@@ -191,16 +191,16 @@
           />
           <div
             v-if="page.content"
-            class="absolute inset-x-0 top-0 rounded-t-lg w-full truncate bg-white/70 py-2.5 text-left px-2 text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
+            class="absolute inset-x-0 top-0 rounded-t-lg w-full truncate bg-white/70 py-2.5 text-left px-2 text-sm leading-4 text-black backdrop-blur-sm line-clamp-1 z-10"
             v-html="page.content"
           ></div>
         </Link>
 
         <!-- Content display when in bulk actions mode -->
-        <div v-else class="w-full h-full block">
+        <div v-else class="relative w-full h-full block">
           <div
             v-if="page.loading"
-            class="absolute inset-0 flex items-center justify-center bg-white/70"
+            class="absolute inset-0 flex items-center justify-center bg-white/70 z-20"
           >
             <span class="animate-spin text-black"
               ><i class="ri-loader-line text-3xl"></i
@@ -219,7 +219,7 @@
           />
           <div
             v-if="page.content"
-            class="absolute inset-x-0 top-0 rounded-t-lg w-full truncate bg-white/70 py-2.5 text-left px-2 text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
+            class="absolute inset-x-0 top-0 rounded-t-lg w-full truncate bg-white/70 py-2.5 text-left px-2 text-sm leading-4 text-black backdrop-blur-sm line-clamp-1 z-10"
             v-html="page.content"
           ></div>
         </div>

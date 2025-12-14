@@ -128,7 +128,7 @@ function getDisplayText(item) {
                 v-if="photo.type !== 'song'"
                 prefetch="hover"
                 as="button"
-                class="w-full h-[350px] rounded-b-lg"
+                class="relative w-full h-[350px] rounded-b-lg"
                 :href="getItemLink(photo)"
                 @click="setItemLoading(photo)"
             >
@@ -146,14 +146,14 @@ function getDisplayText(item) {
                 />
                 <div
                     v-if="getDisplayText(photo)"
-                    class="absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 px-2 text-left text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
+                    class="absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 px-2 text-left text-sm leading-4 text-black backdrop-blur-sm line-clamp-1 z-10"
                     v-html="getDisplayText(photo)"
                 ></div>
             </Link>
             <button
                 v-else
                 type="button"
-                class="w-full h-[350px] rounded-b-lg"
+                class="relative w-full h-[350px] rounded-b-lg"
                 @click="handleItemClick(photo, $event)"
             >
                 <LazyLoader
@@ -170,7 +170,7 @@ function getDisplayText(item) {
                 />
                 <div
                     v-if="getDisplayText(photo)"
-                    class="absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 px-2 text-left text-sm leading-4 text-black backdrop-blur-sm line-clamp-1"
+                    class="absolute inset-x-0 top-0 w-full truncate bg-white/70 py-2.5 px-2 text-left text-sm leading-4 text-black backdrop-blur-sm line-clamp-1 z-10"
                     v-html="getDisplayText(photo)"
                 ></div>
             </button>
