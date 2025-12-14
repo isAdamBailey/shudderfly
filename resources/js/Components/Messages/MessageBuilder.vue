@@ -2,6 +2,7 @@
 /* global route */
 import Accordion from "@/Components/Accordion.vue";
 import Button from "@/Components/Button.vue";
+import { useMessageBuilder } from "@/composables/useMessageBuilder";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useForm } from "@inertiajs/vue3";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
@@ -43,17 +44,37 @@ const feelings = [
   "thirsty"
 ];
 const descriptors = ["very", "really", "a little", "so much", "not"];
+const commonStarters = [
+  "I want",
+  "I need",
+  "I feel",
+  "I am",
+  "I like",
+  "I love",
+  "I have",
+  "I want to",
+  "I need to"
+];
 const things = [
-  "farts",
+  "a hug",
+  "a snack",
+  "a copy",
+  "a drink",
+  "a break",
+  "a toy",
+  "a blanket",
+  "some food",
+  "some water",
+  "some medicine",
+  "some rest",
+  "some help",
   "food",
   "water",
-  "hug",
-  "rest",
   "medicine",
-  "bathroom",
-  "bed",
-  "blanket",
-  "toy"
+  "rest",
+  "help",
+  "the bathroom",
+  "my bed"
 ];
 const quickPhrases = [
   "I love you",
@@ -71,6 +92,7 @@ const preview = computed(() => {
   return inputValue.value.trim() || selection.value.join(" ").trim();
 });
 const keyboardInputRef = ref(null);
+const actionsAccordionOpen = ref(false);
 
 const hasMinimumCharacters = computed(() => {
   return preview.value && preview.value.trim().length >= 10;
@@ -210,8 +232,8 @@ function autoGrowTextarea(textarea) {
   if (!textarea) return;
   // Reset height to auto to get the correct scrollHeight
   textarea.style.height = "auto";
-  // Set height to scrollHeight, but cap at max-height (300px)
-  const newHeight = Math.min(textarea.scrollHeight, 300);
+  // Set height to scrollHeight, but cap at max-height (200px)
+  const newHeight = Math.min(textarea.scrollHeight, 200);
   textarea.style.height = `${newHeight}px`;
 }
 
@@ -555,6 +577,12 @@ function addPhrase(phrase) {
   selection.value = newWords;
 }
 
+// Register functions with composable for MessageBuilderFlyout to use
+const { setAddWord, setAddPhrase, setGetPreview } = useMessageBuilder();
+setAddWord(addWord);
+setAddPhrase(addPhrase);
+setGetPreview(() => preview.value);
+
 function removeLast() {
   // Remove last word from input value
   const currentText = inputValue.value.trim();
@@ -587,7 +615,9 @@ function suggestRandom() {
     ...actions,
     ...feelings,
     ...descriptors,
-    ...things
+    ...things,
+    ...commonStarters,
+    ...quickPhrases
   ];
   const randomCount = 3 + Math.floor(Math.random() * 2); // 3-4 words
   const selected = [];
@@ -660,13 +690,22 @@ function postMessage() {
   form.tagged_user_ids = taggedUserIds;
 
   form.post(route("messages.store"), {
-    preserveScroll: true,
+    preserveScroll: false,
     onSuccess: () => {
       // Clear input after successful post
       inputValue.value = "";
       selection.value = [];
       mentionUserIds.value.clear();
       form.reset();
+
+      // Close actions accordion and scroll to top
+      actionsAccordionOpen.value = false;
+      setTimeout(() => {
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth"
+        });
+      }, 100);
     },
     onError: () => {}
   });
@@ -677,12 +716,11 @@ function postMessage() {
   <div
     class="p-4 rounded-md bg-white dark:bg-slate-800 border shadow-sm w-full"
   >
-    <div
-      class="sticky top-0 z-10 bg-white dark:bg-slate-800 pb-4 mb-4 -mx-4 px-4 pt-4 -mt-4 shadow-md"
-    >
+    <!-- Message Input -->
+    <div class="mb-3">
       <div
         :class="[
-          'min-h-[56px] flex items-start px-4 py-3 rounded-md bg-gray-50 dark:bg-slate-700 text-lg font-medium',
+          'min-h-[44px] flex items-start px-3 py-2 rounded-md bg-gray-50 dark:bg-slate-700 text-sm font-medium',
           { 'ring-2 ring-green-400 animate-pulse': speaking }
         ]"
       >
@@ -690,7 +728,7 @@ function postMessage() {
           <textarea
             ref="keyboardInputRef"
             v-model="inputValue"
-            class="message-input flex-1 text-gray-700 dark:text-gray-100 break-words text-2xl md:text-3xl font-bold leading-tight bg-transparent border-none outline-none focus:outline-none resize-none overflow-hidden min-h-[40px] max-h-[300px]"
+            class="message-input flex-1 text-gray-700 dark:text-gray-100 break-words text-lg md:text-xl font-bold leading-tight bg-transparent border-none outline-none focus:outline-none resize-none overflow-hidden min-h-[32px] max-h-[200px]"
             placeholder="Type your message here... (use @ to tag users)"
             rows="1"
             @input="handleTextareaInput"
@@ -721,18 +759,27 @@ function postMessage() {
           </div>
           <button
             type="button"
-            class="ml-4 px-4 py-3 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-md self-start mt-1"
+            class="ml-3 px-3 py-2 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-md self-start"
             aria-label="Say message"
             title="Say message"
             :disabled="speaking"
             @click="sayIt"
           >
-            <i class="ri-speak-fill text-2xl"></i>
+            <i class="ri-speak-fill text-lg"></i>
           </button>
         </div>
       </div>
+    </div>
 
-      <div class="flex items-center gap-2 mt-3">
+    <!-- Actions Accordion -->
+    <Accordion
+      ref="actionsAccordionRef"
+      v-model="actionsAccordionOpen"
+      title="Actions"
+      :default-open="false"
+      :compact="true"
+    >
+      <div class="flex items-center gap-2 flex-wrap">
         <button
           class="px-4 py-3 rounded-md bg-blue-600 dark:bg-blue-500 text-white shadow-md hover:bg-blue-700 dark:hover:bg-blue-600 font-bold text-2xl"
           type="button"
@@ -806,248 +853,50 @@ function postMessage() {
           <span class="text-sm">Saved</span>
         </div>
       </div>
-    </div>
 
-    <Accordion title="Prebuilt Messages">
-      <div class="space-y-4">
-        <!-- Quick Phrases - Most Important -->
-        <div>
+      <!-- Saved Favorites -->
+      <div
+        v-if="favorites.length"
+        class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700"
+      >
+        <div class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+          Saved favorites
+        </div>
+        <div class="flex gap-2 flex-wrap">
           <div
-            class="text-base font-bold mb-2 text-blue-600 dark:text-blue-400 flex items-center gap-2"
+            v-for="(f, i) in favorites"
+            :key="`fav-${i}`"
+            class="flex items-center bg-yellow-500 rounded overflow-hidden"
+            :class="{ 'ring-2 ring-green-400': justAdded === f }"
           >
-            <i class="ri-chat-quote-fill text-3xl"></i>
-            Quick Messages
             <button
               type="button"
-              class="ml-auto p-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
-              title="Say 'Quick Messages'"
-              aria-label="Say category name"
-              @click="speak('Quick Messages')"
+              class="flex items-center gap-2 px-3 py-2 text-white text-sm"
+              :title="f"
+              :aria-label="`Apply favorite: ${f}`"
+              @click="applyFavorite(f)"
             >
-              <i class="ri-speak-fill text-lg"></i>
+              <i class="ri-heart-fill text-lg"></i>
+              <span class="sr-only">Apply favorite</span>
             </button>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <button
-              v-for="(w, i) in quickPhrases"
-              :key="`qp-${i}`"
-              type="button"
-              class="px-4 py-1.5 rounded-lg bg-blue-600 text-white text-xl font-semibold shadow-md hover:bg-blue-700 transition-colors"
-              @click="addPhrase(w)"
-            >
-              {{ w }}
-            </button>
-          </div>
-        </div>
-
-        <!-- People -->
-        <div>
-          <div class="text-sm font-semibold mb-2 flex items-center gap-2">
-            <i class="ri-user-fill text-purple-600 text-2xl"></i>
-            People
             <button
               type="button"
-              class="ml-auto p-1.5 rounded-md bg-purple-600 hover:bg-purple-700 text-white shadow-sm"
-              title="Say 'People'"
-              aria-label="Say category name"
-              @click="speak('People')"
+              class="px-2 py-2 text-white bg-yellow-600 hover:bg-yellow-700"
+              :title="`Remove favorite: ${f}`"
+              :aria-label="`Remove favorite: ${f}`"
+              @click="removeFavorite(i)"
             >
-              <i class="ri-speak-fill text-lg"></i>
-            </button>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <button
-              v-for="(w, i) in people"
-              :key="`p-${i}`"
-              type="button"
-              class="px-4 py-1.5 rounded-full bg-purple-600 text-white text-xl font-semibold shadow-md hover:bg-purple-700 transition-colors"
-              @click="addWord(w)"
-            >
-              {{ w }}
-            </button>
-          </div>
-        </div>
-
-        <!-- Body Parts -->
-        <div>
-          <div class="text-sm font-semibold mb-2 flex items-center gap-2">
-            <i class="ri-body-scan-fill text-red-600 text-2xl"></i>
-            Body Parts
-            <button
-              type="button"
-              class="ml-auto p-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white shadow-sm"
-              title="Say 'Body Parts'"
-              aria-label="Say category name"
-              @click="speak('Body Parts')"
-            >
-              <i class="ri-speak-fill text-lg"></i>
-            </button>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <button
-              v-for="(w, i) in bodyParts"
-              :key="`bp-${i}`"
-              type="button"
-              class="px-4 py-1.5 rounded-full bg-red-600 text-white text-xl font-semibold shadow-md hover:bg-red-700 transition-colors"
-              @click="addWord(w)"
-            >
-              {{ w }}
-            </button>
-          </div>
-        </div>
-
-        <!-- Actions -->
-        <div>
-          <div class="text-sm font-semibold mb-2 flex items-center gap-2">
-            <i class="ri-run-fill text-green-600 text-2xl"></i>
-            Actions
-            <button
-              type="button"
-              class="ml-auto p-1.5 rounded-md bg-green-600 hover:bg-green-700 text-white shadow-sm"
-              title="Say 'Actions'"
-              aria-label="Say category name"
-              @click="speak('Actions')"
-            >
-              <i class="ri-speak-fill text-lg"></i>
-            </button>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <button
-              v-for="(w, i) in actions"
-              :key="`a-${i}`"
-              type="button"
-              class="px-4 py-1.5 rounded-full bg-green-600 text-white text-xl font-semibold shadow-md hover:bg-green-700 transition-colors"
-              @click="addWord(w)"
-            >
-              {{ w }}
-            </button>
-          </div>
-        </div>
-
-        <!-- Feelings -->
-        <div>
-          <div class="text-sm font-semibold mb-2 flex items-center gap-2">
-            <i class="ri-emotion-happy-fill text-yellow-600 text-2xl"></i>
-            Feelings
-            <button
-              type="button"
-              class="ml-auto p-1.5 rounded-md bg-yellow-600 hover:bg-yellow-700 text-white shadow-sm"
-              title="Say 'Feelings'"
-              aria-label="Say category name"
-              @click="speak('Feelings')"
-            >
-              <i class="ri-speak-fill text-lg"></i>
-            </button>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <button
-              v-for="(w, i) in feelings"
-              :key="`f-${i}`"
-              type="button"
-              class="px-4 py-1.5 rounded-full bg-yellow-600 text-white text-xl font-semibold shadow-md hover:bg-yellow-700 transition-colors"
-              @click="addWord(w)"
-            >
-              {{ w }}
-            </button>
-          </div>
-        </div>
-
-        <!-- Descriptors -->
-        <div>
-          <div class="text-sm font-semibold mb-2 flex items-center gap-2">
-            <i class="ri-contrast-fill text-indigo-600 text-2xl"></i>
-            How Much
-            <button
-              type="button"
-              class="ml-auto p-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
-              title="Say 'How Much'"
-              aria-label="Say category name"
-              @click="speak('How Much')"
-            >
-              <i class="ri-speak-fill text-lg"></i>
-            </button>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <button
-              v-for="(w, i) in descriptors"
-              :key="`d-${i}`"
-              type="button"
-              class="px-4 py-1.5 rounded-full bg-indigo-600 text-white text-xl font-semibold shadow-md hover:bg-indigo-700 transition-colors"
-              @click="addWord(w)"
-            >
-              {{ w }}
-            </button>
-          </div>
-        </div>
-
-        <!-- Things -->
-        <div>
-          <div class="text-sm font-semibold mb-2 flex items-center gap-2">
-            <i class="ri-gift-fill text-orange-600 text-2xl"></i>
-            Things I Need
-            <button
-              type="button"
-              class="ml-auto p-1.5 rounded-md bg-orange-600 hover:bg-orange-700 text-white shadow-sm"
-              title="Say 'Things I Need'"
-              aria-label="Say category name"
-              @click="speak('Things I Need')"
-            >
-              <i class="ri-speak-fill text-lg"></i>
-            </button>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <button
-              v-for="(w, i) in things"
-              :key="`t-${i}`"
-              type="button"
-              class="px-4 py-1.5 rounded-full bg-orange-600 text-white text-xl font-semibold shadow-md hover:bg-orange-700 transition-colors"
-              @click="addWord(w)"
-            >
-              {{ w }}
+              <i class="ri-close-line"></i>
             </button>
           </div>
         </div>
       </div>
     </Accordion>
 
-    <div v-if="favorites.length" class="mt-6">
-      <div class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-        Saved favorites
-      </div>
-      <div class="flex gap-2 flex-wrap">
-        <div
-          v-for="(f, i) in favorites"
-          :key="`fav-bottom-${i}`"
-          class="flex items-center bg-yellow-500 rounded overflow-hidden"
-          :class="{ 'ring-2 ring-green-400': justAdded === f }"
-        >
-          <button
-            type="button"
-            class="flex items-center gap-2 px-3 py-2 text-white text-sm"
-            :title="f"
-            :aria-label="`Apply favorite: ${f}`"
-            @click="applyFavorite(f)"
-          >
-            <i class="ri-heart-fill text-lg"></i>
-            <span class="sr-only">Apply favorite</span>
-          </button>
-          <button
-            type="button"
-            class="px-2 py-2 text-white bg-yellow-600 hover:bg-yellow-700"
-            :title="`Remove favorite: ${f}`"
-            :aria-label="`Remove favorite: ${f}`"
-            @click="removeFavorite(i)"
-          >
-            <i class="ri-close-line"></i>
-          </button>
-        </div>
-      </div>
-    </div>
-
     <!-- Post to Timeline button: bottom action -->
     <div class="mt-6">
       <Button
-        class="py-4 text-lg"
+        class="py-4 text-lg w-full"
         :disabled="form.processing || !hasMinimumCharacters"
         @click="postMessage"
       >

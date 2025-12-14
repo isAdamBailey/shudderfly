@@ -20,9 +20,16 @@ const emit = defineEmits(["close"]);
 
 watch(
     () => props.show,
-    () => {
-        if (props.show) {
+    (isShowing) => {
+        if (isShowing) {
             document.body.style.overflow = "hidden";
+            // Scroll modal container to top on mobile when opened
+            setTimeout(() => {
+                const modalContainer = document.querySelector('.fixed.inset-0.overflow-y-auto.z-50');
+                if (modalContainer) {
+                    modalContainer.scrollTop = 0;
+                }
+            }, 50);
         } else {
             document.body.style.overflow = null;
         }
@@ -64,7 +71,7 @@ const maxWidthClass = computed(() => {
         <transition leave-active-class="duration-200">
             <div
                 v-show="show"
-                class="fixed inset-0 overflow-y-auto px-4 py-6 sm:px-0 z-50"
+                class="fixed inset-0 overflow-y-auto px-4 py-6 sm:px-0 z-50 flex items-start sm:items-center justify-center"
                 scroll-region
             >
                 <transition
@@ -96,8 +103,9 @@ const maxWidthClass = computed(() => {
                 >
                     <div
                         v-show="show"
-                        class="mb-6 bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-xl transform transition-all sm:w-full sm:mx-auto"
+                        class="my-auto mb-6 bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-xl transform transition-all sm:w-full sm:mx-auto"
                         :class="maxWidthClass"
+                        style="min-height: fit-content;"
                     >
                         <slot v-if="show" />
                     </div>

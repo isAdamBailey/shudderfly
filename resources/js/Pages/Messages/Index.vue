@@ -17,7 +17,7 @@
 
       <div v-else class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
         <!-- Message Builder -->
-        <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
+        <div class="sticky top-0 z-50 bg-white dark:bg-gray-800 shadow sm:rounded-lg">
           <MessageBuilder :users="users" />
         </div>
 
