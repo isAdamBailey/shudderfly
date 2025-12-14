@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
 const props = defineProps({
     align: {
@@ -25,10 +25,24 @@ const closeOnEscape = (e) => {
 onMounted(() => document.addEventListener("keydown", closeOnEscape));
 onUnmounted(() => document.removeEventListener("keydown", closeOnEscape));
 
+const triggerRef = ref(null);
+const dropdownWidth = ref(null);
+
 const widthClass = computed(() => {
+    if (props.width === "full") {
+        return "";
+    }
     return {
         48: "w-48",
+        56: "w-56",
     }[props.width.toString()];
+});
+
+const widthStyle = computed(() => {
+    if (props.width === "full" && dropdownWidth.value) {
+        return { width: `${dropdownWidth.value}px` };
+    }
+    return {};
 });
 
 const alignmentClasses = computed(() => {
@@ -42,11 +56,27 @@ const alignmentClasses = computed(() => {
 });
 
 const open = ref(false);
+
+const updateDropdownWidth = () => {
+    if (props.width === "full" && triggerRef.value) {
+        const triggerElement = triggerRef.value.querySelector("button, a, span");
+        if (triggerElement) {
+            dropdownWidth.value = triggerElement.offsetWidth;
+        }
+    }
+};
+
+watch(open, async (newValue) => {
+    if (newValue && props.width === "full") {
+        await nextTick();
+        updateDropdownWidth();
+    }
+});
 </script>
 
 <template>
     <div class="relative">
-        <div @click="open = !open">
+        <div ref="triggerRef" @click="open = !open">
             <slot name="trigger" />
         </div>
 
@@ -67,8 +97,9 @@ const open = ref(false);
         >
             <div
                 v-show="open"
-                class="fixed z-[9999] mt-2 rounded-md shadow-lg"
+                class="absolute z-[9999] mt-2 rounded-md shadow-lg"
                 :class="[widthClass, alignmentClasses]"
+                :style="widthStyle"
                 @click="open = false"
             >
                 <div

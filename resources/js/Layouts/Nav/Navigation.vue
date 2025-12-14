@@ -68,52 +68,59 @@ const messagingEnabled = computed(() => {
           <div class="hidden sm:flex sm:items-center sm:ml-6">
             <!-- Settings Dropdown -->
             <div class="ml-3 relative">
-              <Dropdown align="right" width="48">
+              <Dropdown align="right" width="56">
                 <template #trigger>
-                  <span class="inline-flex rounded-md relative">
-                    <button
-                      type="button"
-                      class="inline-flex items-center gap-2 px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-gray-100 dark:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition ease-in-out duration-150"
-                    >
-                      <Avatar :user="$page.props.auth.user" size="sm" />
-                      <span class="hidden sm:inline">{{
-                        $page.props.auth.user.name
-                      }}</span>
-
-                      <svg
-                        class="ml-2 -mr-0.5 h-4 w-4"
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fill-rule="evenodd"
-                          d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                          clip-rule="evenodd"
-                        />
-                      </svg>
-                    </button>
+                  <button
+                    type="button"
+                    class="relative inline-flex items-center focus:outline-none transition-opacity hover:opacity-80"
+                  >
+                    <Avatar :user="$page.props.auth.user" size="md" />
                     <span
                       v-if="messagingEnabled && unreadCount > 0"
-                      class="absolute -top-1 -right-1 h-3 w-3 bg-red-600 rounded-full border-2 border-white dark:border-gray-800"
+                      class="absolute -top-0.5 -right-0.5 h-3 w-3 bg-red-600 rounded-full border-2 border-white flex items-center justify-center"
                       title="You have unread notifications"
-                    ></span>
-                  </span>
+                    >
+                      <span
+                        class="h-1.5 w-1.5 bg-white rounded-full animate-pulse"
+                      ></span>
+                    </span>
+                  </button>
                 </template>
 
                 <template #content>
+                  <div
+                    class="px-4 py-3 border-b border-gray-200 dark:border-gray-700"
+                  >
+                    <div class="flex items-center gap-3">
+                      <Avatar :user="$page.props.auth.user" size="md" />
+                      <div>
+                        <div
+                          class="text-sm font-semibold text-gray-900 dark:text-gray-100"
+                        >
+                          {{ $page.props.auth.user.name }}
+                        </div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">
+                          {{ $page.props.auth.user.email }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                   <DropdownLink :href="route('dashboard')">
-                    <span class="relative inline-block"> Admin </span>
+                    <div class="flex items-center gap-3">
+                      <i class="ri-dashboard-line text-lg"></i>
+                      <span>Admin</span>
+                    </div>
                   </DropdownLink>
                   <DropdownLink :href="route('profile.edit')">
-                    <span class="relative inline-block">
-                      Account
+                    <div class="flex items-center gap-3 relative">
+                      <i class="ri-user-settings-line text-lg"></i>
+                      <span>Account</span>
                       <span
                         v-if="messagingEnabled && unreadCount > 0"
-                        class="absolute left-full ml-1.5 top-1/2 -translate-y-1/2 h-2 w-2 bg-red-600 rounded-full"
+                        class="ml-auto h-2 w-2 bg-red-600 rounded-full animate-pulse"
                         title="You have unread notifications"
                       ></span>
-                    </span>
+                    </div>
                   </DropdownLink>
                   <DropdownLink
                     v-if="canEditProfile"
@@ -121,7 +128,10 @@ const messagingEnabled = computed(() => {
                     method="post"
                     as="button"
                   >
-                    Log Out
+                    <div class="flex items-center gap-3">
+                      <i class="ri-logout-box-line text-lg"></i>
+                      <span>Log Out</span>
+                    </div>
                   </DropdownLink>
                 </template>
               </Dropdown>
@@ -199,14 +209,25 @@ const messagingEnabled = computed(() => {
         <!-- Responsive Settings Options -->
         <div class="pt-4 pb-1 border-t border-gray-200 dark:border-gray-600">
           <div class="px-4 flex items-center gap-3">
-            <Avatar :user="$page.props.auth.user" size="md" />
+            <div class="relative">
+              <Avatar :user="$page.props.auth.user" size="md" />
+              <span
+                v-if="messagingEnabled && unreadCount > 0"
+                class="absolute -top-0.5 -right-0.5 h-3 w-3 bg-red-600 rounded-full border-2 border-white dark:border-gray-800 flex items-center justify-center"
+                title="You have unread notifications"
+              >
+                <span
+                  class="h-1.5 w-1.5 bg-white rounded-full animate-pulse"
+                ></span>
+              </span>
+            </div>
             <div>
               <div
-                class="font-medium text-base text-gray-100 dark:text-gray-200"
+                class="font-semibold text-base text-gray-100 dark:text-gray-200"
               >
                 {{ $page.props.auth.user.name }}
               </div>
-              <div class="font-medium text-sm text-gray-100">
+              <div class="text-sm text-gray-300 dark:text-gray-400">
                 {{ $page.props.auth.user.email }}
               </div>
             </div>
@@ -214,15 +235,21 @@ const messagingEnabled = computed(() => {
 
           <div class="mt-3 space-y-1">
             <ResponsiveNavLink :href="route('dashboard')" class="relative">
-              Admin
+              <div class="flex items-center gap-3">
+                <i class="ri-dashboard-line text-lg"></i>
+                <span>Admin</span>
+              </div>
             </ResponsiveNavLink>
             <ResponsiveNavLink :href="route('profile.edit')" class="relative">
-              Account
-              <span
-                v-if="messagingEnabled && unreadCount > 0"
-                class="absolute right-4 top-1/2 -translate-y-1/2 h-2 w-2 bg-red-600 rounded-full"
-                title="You have unread notifications"
-              ></span>
+              <div class="flex items-center gap-3">
+                <i class="ri-user-settings-line text-lg"></i>
+                <span>Account</span>
+                <span
+                  v-if="messagingEnabled && unreadCount > 0"
+                  class="ml-auto h-2 w-2 bg-red-600 rounded-full animate-pulse"
+                  title="You have unread notifications"
+                ></span>
+              </div>
             </ResponsiveNavLink>
             <ResponsiveNavLink
               v-if="canEditPages"
@@ -230,7 +257,10 @@ const messagingEnabled = computed(() => {
               method="post"
               as="button"
             >
-              Log Out
+              <div class="flex items-center gap-3">
+                <i class="ri-logout-box-line text-lg"></i>
+                <span>Log Out</span>
+              </div>
             </ResponsiveNavLink>
           </div>
         </div>
