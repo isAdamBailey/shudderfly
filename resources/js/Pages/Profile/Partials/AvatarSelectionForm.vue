@@ -3,7 +3,6 @@ import Avatar from "@/Components/Avatar.vue";
 import InputError from "@/Components/InputError.vue";
 import { avatars } from "@/constants/avatars";
 import { useForm, usePage } from "@inertiajs/vue3";
-import { computed } from "vue";
 
 const user = usePage().props.auth.user;
 
@@ -57,7 +56,7 @@ const getSvgWithDimensions = (svg) => {
     <div class="mt-6">
       <div class="mb-6 flex items-center gap-4">
         <div class="flex-shrink-0">
-          <Avatar :user="user" size="lg" />
+          <Avatar :user="user" :avatar="form.avatar" size="lg" />
         </div>
         <div>
           <p class="text-sm text-gray-600 dark:text-gray-400">Current avatar</p>

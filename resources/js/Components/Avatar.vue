@@ -9,7 +9,7 @@ const props = defineProps({
   },
   avatar: {
     type: String,
-    default: null
+    default: undefined
   },
   size: {
     type: String,
@@ -27,9 +27,11 @@ const sizeClasses = {
 };
 
 const avatarId = computed(() => {
-  if (props.avatar) {
+  // If avatar prop is explicitly provided (even if null), use it
+  if (props.avatar !== undefined) {
     return props.avatar;
   }
+  // Otherwise, fall back to user.avatar
   if (props.user?.avatar) {
     return props.user.avatar;
   }
