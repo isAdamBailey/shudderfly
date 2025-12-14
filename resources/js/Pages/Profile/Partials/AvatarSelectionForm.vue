@@ -3,6 +3,7 @@ import Avatar from "@/Components/Avatar.vue";
 import InputError from "@/Components/InputError.vue";
 import { avatars } from "@/constants/avatars";
 import { useForm, usePage } from "@inertiajs/vue3";
+import { computed } from "vue";
 
 const user = usePage().props.auth.user;
 
@@ -25,6 +26,20 @@ const selectAvatar = (avatarId) => {
 const clearAvatar = () => {
   form.avatar = null;
   submit();
+};
+
+// Ensure SVG has explicit width and height for Safari iOS compatibility
+const getSvgWithDimensions = (svg) => {
+  if (!svg) return null;
+  // Use a reasonable size for the selection grid (100px works well for the grid layout)
+  const size = 100;
+  if (svg.includes("viewBox") && !svg.includes("width=")) {
+    return svg.replace(
+      /<svg([^>]*)>/,
+      `<svg$1 width="${size}" height="${size}">`
+    );
+  }
+  return svg;
 };
 </script>
 
@@ -74,7 +89,7 @@ const clearAvatar = () => {
         >
           <div
             class="w-full aspect-square flex items-center justify-center"
-            v-html="avatar.svg"
+            v-html="getSvgWithDimensions(avatar.svg)"
           ></div>
           <p class="mt-2 text-xs text-center text-gray-600 dark:text-gray-400">
             {{ avatar.name }}
