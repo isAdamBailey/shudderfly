@@ -36,37 +36,37 @@ const messageStyles = computed(() => {
   switch (type) {
     case "success":
       return {
-        container: "bg-green-100 border-green-400 text-green-700",
-        button: "hover:bg-green-200 focus:ring-green-500",
-        icon: "text-green-600",
+        container: "bg-green-50 border-green-200 text-green-900",
+        button: "hover:bg-green-100 focus:ring-green-500",
+        icon: "text-green-700",
         iconName: "ri-check-line"
       };
     case "error":
       return {
-        container: "bg-red-100 border-red-400 text-red-700",
-        button: "hover:bg-red-200 focus:ring-red-500",
-        icon: "text-red-600",
+        container: "bg-red-50 border-red-200 text-red-900",
+        button: "hover:bg-red-100 focus:ring-red-500",
+        icon: "text-red-700",
         iconName: "ri-error-warning-line"
       };
     case "warning":
       return {
-        container: "bg-orange-100 border-orange-400 text-orange-700",
-        button: "hover:bg-orange-200 focus:ring-orange-500",
-        icon: "text-orange-600",
+        container: "bg-orange-50 border-orange-200 text-orange-900",
+        button: "hover:bg-orange-100 focus:ring-orange-500",
+        icon: "text-orange-700",
         iconName: "ri-alert-line"
       };
     case "info":
       return {
-        container: "bg-blue-100 border-blue-400 text-blue-700",
-        button: "hover:bg-blue-200 focus:ring-blue-500",
-        icon: "text-blue-600",
+        container: "bg-blue-50 border-blue-200 text-blue-900",
+        button: "hover:bg-blue-100 focus:ring-blue-500",
+        icon: "text-blue-700",
         iconName: "ri-information-line"
       };
     default:
       return {
-        container: "bg-gray-100 border-gray-400 text-gray-700",
-        button: "hover:bg-gray-200 focus:ring-gray-500",
-        icon: "text-gray-600",
+        container: "bg-gray-50 border-gray-200 text-gray-900",
+        button: "hover:bg-gray-100 focus:ring-gray-500",
+        icon: "text-gray-700",
         iconName: "ri-information-line"
       };
   }
@@ -82,8 +82,8 @@ const triggerIfMessage = async () => {
     if (hideTimeoutId) clearTimeout(hideTimeoutId);
     // Auto-hide success and info messages, but keep errors/warnings visible longer
     const hideDelay = ["error", "warning"].includes(flashMessage.value.type)
-      ? 8000
-      : 5000;
+      ? 5000
+      : 3000;
     hideTimeoutId = setTimeout(close, hideDelay);
   } else {
     // If flash message is null, hide the component
@@ -133,43 +133,52 @@ onBeforeUnmount(() => {
 
 <template>
   <Teleport to="body">
-    <div
-      v-if="show && hasFlashMessage && flashMessage"
-      :key="forceRender"
-      class="fixed top-0 left-0 right-0 z-50"
-      style="position: fixed; top: 0; left: 0; right: 0; z-index: 9999"
+    <Transition
+      enter-active-class="transition ease-out duration-300"
+      enter-from-class="opacity-0 translate-y-[10px]"
+      enter-to-class="opacity-100 translate-y-0"
+      leave-active-class="transition ease-in duration-200"
+      leave-from-class="opacity-100 translate-y-0"
+      leave-to-class="opacity-0 translate-y-[10px]"
     >
-      <div class="max-w-7xl mx-auto px-4 py-3">
+      <div
+        v-if="show && hasFlashMessage && flashMessage"
+        :key="forceRender"
+        class="fixed bottom-4 left-4 z-50 max-w-md w-full"
+        style="position: fixed; bottom: 1rem; left: 1rem; z-index: 9999"
+      >
         <div
           :class="[
-            'border px-4 py-3 rounded relative shadow-lg flex items-center justify-between',
+            'border px-4 py-3 rounded-2xl relative flex items-center gap-3 backdrop-blur-sm',
             messageStyles.container
           ]"
           role="alert"
         >
-          <div class="flex items-center flex-1 pr-8">
+          <div class="flex items-center flex-1 min-w-0">
             <i
               :class="[
                 messageStyles.iconName,
-                'text-xl mr-3',
+                'text-xl flex-shrink-0',
                 messageStyles.icon
               ]"
             ></i>
-            <span>{{ flashMessage.text }}</span>
+            <span class="ml-3 text-lg font-semibold break-words">{{
+              flashMessage.text
+            }}</span>
           </div>
           <button
             :class="[
-              'flex-shrink-0 ml-4 p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200',
+              'flex-shrink-0 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200',
               messageStyles.button
             ]"
             aria-label="Close notification"
             type="button"
             @click="close"
           >
-            <i :class="['ri-close-line text-2xl', messageStyles.icon]"></i>
+            <i :class="['ri-close-line text-xl', messageStyles.icon]"></i>
           </button>
         </div>
       </div>
-    </div>
+    </Transition>
   </Teleport>
 </template>
