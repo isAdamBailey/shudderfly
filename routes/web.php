@@ -5,7 +5,9 @@ use App\Http\Controllers\BookController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CollageController;
 use App\Http\Controllers\CollagePageController;
+use App\Http\Controllers\CommentReactionController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\MessageCommentController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\MessageReactionController;
 use App\Http\Controllers\MusicController;
@@ -69,6 +71,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/messages', [MessageController::class, 'store'])->name('messages.store');
     Route::post('/messages/{message}/reactions', [MessageReactionController::class, 'store'])->name('messages.reactions.store');
     Route::delete('/messages/{message}/reactions', [MessageReactionController::class, 'destroy'])->name('messages.reactions.destroy');
+    Route::post('/messages/{message}/comments', [MessageCommentController::class, 'store'])->name('messages.comments.store');
+    Route::post('/messages/{message}/comments/{comment}/reactions', [CommentReactionController::class, 'store'])->name('messages.comments.reactions.store');
+    Route::delete('/messages/{message}/comments/{comment}/reactions', [CommentReactionController::class, 'destroy'])->name('messages.comments.reactions.destroy');
     Route::get('/profile/notifications', [ProfileController::class, 'notifications'])->name('profile.notifications');
     Route::post('/notifications/{id}/read', [ProfileController::class, 'markNotificationAsRead'])->name('notifications.read');
 
@@ -107,6 +112,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
 
         Route::delete('/messages/{message}', [MessageController::class, 'destroy'])->name('messages.destroy');
+        Route::delete('/messages/{message}/comments/{comment}', [MessageCommentController::class, 'destroy'])->name('messages.comments.destroy');
     });
 });
 

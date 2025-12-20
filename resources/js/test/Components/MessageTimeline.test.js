@@ -22,22 +22,39 @@ Object.defineProperty(window, "location", {
 vi.mock("axios", () => ({
     default: {
         get: vi.fn(),
+        post: vi.fn(),
+        delete: vi.fn(),
     },
 }));
 
 // Mock router and usePage
-const mockPage = {
-    props: {
-        flash: {},
-    },
-};
-
-vi.mock("@inertiajs/vue3", () => ({
-    router: {
+vi.mock("@inertiajs/vue3", () => {
+    const mockRouter = {
         delete: vi.fn(),
-    },
-    usePage: () => mockPage,
-}));
+        post: vi.fn(),
+    };
+    return {
+        router: mockRouter,
+        usePage: () => ({
+            props: {
+                flash: {},
+                auth: {
+                    user: {
+                        id: 1,
+                        name: "Test User",
+                    },
+                },
+            },
+        }),
+    };
+});
+
+// Get reference to mocked router for use in tests
+let mockRouter;
+beforeAll(async () => {
+    const inertia = await import("@inertiajs/vue3");
+    mockRouter = inertia.router;
+});
 
 // Mock permissions composable
 vi.mock("@/composables/permissions", () => ({
@@ -80,8 +97,24 @@ describe("MessageTimeline", () => {
         { id: 2, name: "Jane Smith" },
     ];
 
-    beforeEach(() => {
+    beforeEach(async () => {
         vi.clearAllMocks();
+        
+        if (!mockRouter) {
+            const inertia = await import("@inertiajs/vue3");
+            mockRouter = inertia.router;
+        }
+        
+        if (mockRouter) {
+            mockRouter.delete.mockClear();
+            mockRouter.post.mockClear();
+        }
+        
+        const axios = await import("axios");
+        axios.default.get.mockClear();
+        axios.default.post.mockClear();
+        axios.default.delete.mockClear();
+        
         // Mock window.Echo
         const mockListen = vi.fn();
         global.window = {
@@ -403,6 +436,546 @@ describe("MessageTimeline", () => {
             await nextTick();
 
             expect(wrapper.text()).toContain("New message");
+        });
+    });
+
+    describe("Comments", () => {
+        const messageWithComments = [
+            {
+                id: 1,
+                message: "Hello world!",
+                created_at: new Date().toISOString(),
+                user: { id: 1, name: "Alice" },
+                comments: [
+                    {
+                        id: 1,
+                        comment: "Great message!",
+                        created_at: new Date().toISOString(),
+                        user: { id: 2, name: "Bob" },
+                        grouped_reactions: {},
+                    },
+                    {
+                        id: 2,
+                        comment: "I agree!",
+                        created_at: new Date(Date.now() - 60000).toISOString(),
+                        user: { id: 3, name: "Charlie" },
+                        grouped_reactions: {},
+                    },
+                ],
+            },
+        ];
+
+        it("displays comment count", () => {
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: messageWithComments,
+                    users: mockUsers,
+                },
+            });
+
+            expect(wrapper.text()).toContain("2");
+            expect(wrapper.text()).toContain("comments");
+        });
+
+        it("displays singular comment count for one comment", () => {
+            const messageWithOneComment = [
+                {
+                    id: 1,
+                    message: "Hello world!",
+                    created_at: new Date().toISOString(),
+                    user: { id: 1, name: "Alice" },
+                    comments: [
+                        {
+                            id: 1,
+                            comment: "Great message!",
+                            created_at: new Date().toISOString(),
+                            user: { id: 2, name: "Bob" },
+                            grouped_reactions: {},
+                        },
+                    ],
+                },
+            ];
+
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: messageWithOneComment,
+                    users: mockUsers,
+                },
+            });
+
+            expect(wrapper.text()).toContain("1");
+            expect(wrapper.text()).toContain("comment");
+        });
+
+        it("shows 'Add Comment' button when comments section is collapsed", () => {
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: messageWithComments,
+                    users: mockUsers,
+                },
+            });
+
+            expect(wrapper.text()).toContain("Add Comment");
+        });
+
+        it("expands comments section when expandComments is called", async () => {
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: messageWithComments,
+                    users: mockUsers,
+                },
+            });
+
+            await nextTick();
+            
+            wrapper.vm.expandComments(1);
+            await nextTick();
+            await nextTick();
+
+            const textarea = wrapper.find("textarea");
+            expect(textarea.exists()).toBe(true);
+        });
+
+        it("expands comments section when toggleComments is called", async () => {
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: messageWithComments,
+                    users: mockUsers,
+                },
+            });
+
+            await nextTick();
+            
+            wrapper.vm.toggleComments(1);
+            await nextTick();
+            await nextTick();
+
+            const textarea = wrapper.find("textarea");
+            expect(textarea.exists()).toBe(true);
+        });
+
+        it("displays comments when section is expanded", async () => {
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: messageWithComments,
+                    users: mockUsers,
+                },
+            });
+
+            await nextTick();
+            
+            wrapper.vm.toggleComments(1);
+            await nextTick();
+            await nextTick();
+
+            expect(wrapper.text()).toContain("Great message!");
+            expect(wrapper.text()).toContain("I agree!");
+            expect(wrapper.text()).toContain("Bob");
+            expect(wrapper.text()).toContain("Charlie");
+        });
+
+        it("displays comment form when section is expanded", async () => {
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: messageWithComments,
+                    users: mockUsers,
+                },
+            });
+
+            await nextTick();
+            
+            wrapper.vm.expandComments(1);
+            await nextTick();
+            await nextTick();
+
+            const textarea = wrapper.find("textarea");
+            expect(textarea.exists()).toBe(true);
+            expect(wrapper.text()).toContain("Post Comment");
+        });
+
+        it("shows character count in comment form", async () => {
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: messageWithComments,
+                    users: mockUsers,
+                },
+            });
+
+            await nextTick();
+            
+            wrapper.vm.expandComments(1);
+            await nextTick();
+            await nextTick();
+
+            wrapper.vm.commentForms[1] = "Test comment";
+            await nextTick();
+
+            expect(wrapper.text()).toContain("12/1000");
+        });
+
+        it("disables submit button when comment is empty", async () => {
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: messageWithComments,
+                    users: mockUsers,
+                },
+            });
+
+            await nextTick();
+            
+            wrapper.vm.expandComments(1);
+            await nextTick();
+            await nextTick();
+
+            const submitButtons = wrapper.findAll("button");
+            const submitButton = submitButtons.find((btn) =>
+                btn.text().includes("Post Comment")
+            );
+            if (submitButton) {
+                expect(submitButton.attributes("disabled")).toBeDefined();
+            }
+        });
+
+        it("enables submit button when comment has text", async () => {
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: messageWithComments,
+                    users: mockUsers,
+                },
+            });
+
+            await nextTick();
+            
+            wrapper.vm.expandComments(1);
+            await nextTick();
+            await nextTick();
+
+            wrapper.vm.commentForms[1] = "Test comment";
+            await nextTick();
+
+            const submitButtons = wrapper.findAll("button");
+            const submitButton = submitButtons.find((btn) =>
+                btn.text().includes("Post Comment")
+            );
+            if (submitButton) {
+                expect(submitButton.attributes("disabled")).toBeUndefined();
+            }
+        });
+
+        it("submits comment when submitComment is called", async () => {
+            if (!mockRouter) {
+                const inertia = await import("@inertiajs/vue3");
+                mockRouter = inertia.router;
+            }
+            mockRouter.post.mockResolvedValue({});
+
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: messageWithComments,
+                    users: mockUsers,
+                },
+            });
+
+            await nextTick();
+            
+            wrapper.vm.expandComments(1);
+            await nextTick();
+            await nextTick();
+
+            wrapper.vm.commentForms[1] = "New comment";
+            await nextTick();
+
+            await wrapper.vm.submitComment({ id: 1 });
+            await nextTick();
+
+            expect(mockRouter.post).toHaveBeenCalledWith(
+                expect.stringContaining("/messages.comments.store"),
+                { comment: "New comment" },
+                expect.objectContaining({
+                    preserveScroll: true,
+                })
+            );
+        });
+
+        it("clears comment form after submission", async () => {
+            if (!mockRouter) {
+                const inertia = await import("@inertiajs/vue3");
+                mockRouter = inertia.router;
+            }
+            mockRouter.post.mockResolvedValue({});
+
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: messageWithComments,
+                    users: mockUsers,
+                },
+            });
+
+            await nextTick();
+            
+            wrapper.vm.expandComments(1);
+            await nextTick();
+            await nextTick();
+
+            wrapper.vm.commentForms[1] = "New comment";
+            await nextTick();
+
+            await wrapper.vm.submitComment({ id: 1 });
+            await nextTick();
+
+            expect(wrapper.vm.commentForms[1]).toBe("");
+        });
+
+        it("has deleteComment method for admin users", async () => {
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: messageWithComments,
+                    users: mockUsers,
+                },
+            });
+
+            await nextTick();
+            
+            expect(typeof wrapper.vm.deleteComment).toBe("function");
+        });
+
+        it("calls delete endpoint when deleteComment is called", async () => {
+            if (!mockRouter) {
+                const inertia = await import("@inertiajs/vue3");
+                mockRouter = inertia.router;
+            }
+            vi.stubGlobal("confirm", () => true);
+
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: messageWithComments,
+                    users: mockUsers,
+                },
+            });
+
+            await nextTick();
+
+            wrapper.vm.deleteComment(1, 1);
+            await nextTick();
+
+            expect(mockRouter.delete).toHaveBeenCalledWith(
+                expect.stringContaining("/messages.comments.destroy"),
+                expect.objectContaining({
+                    preserveScroll: true,
+                })
+            );
+        });
+
+        it("displays comment reactions", async () => {
+            const messageWithCommentReactions = [
+                {
+                    id: 1,
+                    message: "Hello world!",
+                    created_at: new Date().toISOString(),
+                    user: { id: 1, name: "Alice" },
+                    comments: [
+                        {
+                            id: 1,
+                            comment: "Great message!",
+                            created_at: new Date().toISOString(),
+                            user: { id: 2, name: "Bob" },
+                            grouped_reactions: {
+                                "👍": {
+                                    count: 2,
+                                    users: [
+                                        { id: 3, name: "Charlie" },
+                                        { id: 4, name: "David" },
+                                    ],
+                                },
+                            },
+                        },
+                    ],
+                },
+            ];
+
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: messageWithCommentReactions,
+                    users: mockUsers,
+                },
+            });
+
+            await nextTick();
+            
+            wrapper.vm.toggleComments(1);
+            await nextTick();
+            await nextTick();
+
+            expect(wrapper.text()).toContain("👍");
+            expect(wrapper.text()).toContain("2");
+        });
+
+        it("handles comment reaction when toggleCommentReaction is called", async () => {
+            const axios = await import("axios");
+            axios.default.post.mockResolvedValue({
+                data: {
+                    grouped_reactions: {
+                        "👍": {
+                            count: 1,
+                            users: [{ id: 1, name: "Test User" }],
+                        },
+                    },
+                },
+            });
+
+            const messageWithComment = [
+                {
+                    id: 1,
+                    message: "Hello world!",
+                    created_at: new Date().toISOString(),
+                    user: { id: 1, name: "Alice" },
+                    comments: [
+                        {
+                            id: 1,
+                            comment: "Great message!",
+                            created_at: new Date().toISOString(),
+                            user: { id: 2, name: "Bob" },
+                            grouped_reactions: {},
+                        },
+                    ],
+                },
+            ];
+
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: messageWithComment,
+                    users: mockUsers,
+                },
+            });
+
+            await nextTick();
+
+            const message = wrapper.vm.localMessages[0];
+            const comment = message.comments[0];
+
+            await wrapper.vm.toggleCommentReaction(message, comment, "👍");
+            await nextTick();
+
+            expect(axios.default.post).toHaveBeenCalled();
+        });
+
+        it("handles Echo comment created event", async () => {
+            const mockListen = vi.fn();
+            const mockChannel = {
+                listen: mockListen.mockReturnThis(),
+                error: vi.fn().mockReturnThis(),
+            };
+
+            global.window.Echo.private = vi.fn(() => mockChannel);
+
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: mockMessages,
+                    users: mockUsers,
+                },
+            });
+
+            await new Promise((resolve) => setTimeout(resolve, 600));
+            await nextTick();
+
+            const commentCreatedCallback = mockListen.mock.calls.find(
+                (call) =>
+                    call[0] === "CommentCreated" ||
+                    call[0] === ".CommentCreated"
+            )?.[1];
+
+            expect(commentCreatedCallback).toBeDefined();
+
+            const newComment = {
+                id: 1,
+                message_id: 1,
+                comment: "New comment",
+                created_at: new Date().toISOString(),
+                user: { id: 3, name: "Charlie" },
+                grouped_reactions: {},
+            };
+
+            commentCreatedCallback(newComment);
+            await nextTick();
+            await nextTick();
+
+            expect(mockListen).toHaveBeenCalledWith(
+                expect.stringMatching(/^\.?CommentCreated$/),
+                expect.any(Function)
+            );
+        });
+
+        it("handles Echo comment reaction updated event", async () => {
+            const mockListen = vi.fn();
+            const mockChannel = {
+                listen: mockListen.mockReturnThis(),
+                error: vi.fn().mockReturnThis(),
+            };
+
+            global.window.Echo.private = vi.fn(() => mockChannel);
+
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: messageWithComments,
+                    users: mockUsers,
+                },
+            });
+
+            await new Promise((resolve) => setTimeout(resolve, 600));
+            await nextTick();
+
+            const reactionUpdatedCallback = mockListen.mock.calls.find(
+                (call) =>
+                    call[0] === "CommentReactionUpdated" ||
+                    call[0] === ".CommentReactionUpdated"
+            )?.[1];
+
+            expect(reactionUpdatedCallback).toBeDefined();
+
+            const reactionUpdate = {
+                comment_id: 1,
+                message_id: 1,
+                grouped_reactions: {
+                    "👍": {
+                        count: 1,
+                        users: [{ id: 1, name: "Test User" }],
+                    },
+                },
+            };
+
+            reactionUpdatedCallback(reactionUpdate);
+            await nextTick();
+            await nextTick();
+
+            expect(mockListen).toHaveBeenCalledWith(
+                expect.stringMatching(/^\.?CommentReactionUpdated$/),
+                expect.any(Function)
+            );
+        });
+
+        it("collapses comments section when toggle is called again", async () => {
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: messageWithComments,
+                    users: mockUsers,
+                },
+            });
+
+            await nextTick();
+            
+            wrapper.vm.toggleComments(1);
+            await nextTick();
+            await nextTick();
+
+            let textarea = wrapper.find("textarea");
+            expect(textarea.exists()).toBe(true);
+
+            wrapper.vm.toggleComments(1);
+            await nextTick();
+            await nextTick();
+
+            textarea = wrapper.find("textarea");
+            expect(textarea.exists()).toBe(false);
         });
     });
 });

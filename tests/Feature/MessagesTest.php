@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\CommentReaction;
 use App\Models\Message;
+use App\Models\MessageComment;
 use App\Models\MessageReaction;
 use App\Models\SiteSetting;
 use App\Models\User;
@@ -942,6 +944,627 @@ class MessagesTest extends TestCase
         $message = Message::factory()->create();
 
         $grouped = $message->getGroupedReactions();
+
+        $this->assertIsArray($grouped);
+        $this->assertEmpty($grouped);
+    }
+
+    public function test_user_can_create_comment_on_message(): void
+    {
+        Event::fake();
+        Notification::fake();
+
+        $user = User::factory()->create();
+        $message = Message::factory()->create();
+
+        $this->actingAs($user);
+
+        $response = $this->post(route('messages.comments.store', $message), [
+            'comment' => 'This is a test comment',
+        ]);
+
+        $response->assertRedirect();
+
+        $this->assertDatabaseHas('message_comments', [
+            'message_id' => $message->id,
+            'user_id' => $user->id,
+            'comment' => 'This is a test comment',
+        ]);
+
+        Event::assertDispatched(\App\Events\CommentCreated::class);
+    }
+
+    public function test_comment_creation_requires_authentication(): void
+    {
+        $message = Message::factory()->create();
+
+        $response = $this->post(route('messages.comments.store', $message), [
+            'comment' => 'This is a test comment',
+        ]);
+
+        $response->assertRedirect(route('login'));
+    }
+
+    public function test_comment_creation_validates_required_comment(): void
+    {
+        $user = User::factory()->create();
+        $message = Message::factory()->create();
+
+        $this->actingAs($user);
+
+        $response = $this->post(route('messages.comments.store', $message), []);
+
+        $response->assertSessionHasErrors('comment');
+    }
+
+    public function test_comment_creation_validates_comment_max_length(): void
+    {
+        $user = User::factory()->create();
+        $message = Message::factory()->create();
+
+        $this->actingAs($user);
+
+        $response = $this->post(route('messages.comments.store', $message), [
+            'comment' => str_repeat('a', 1001),
+        ]);
+
+        $response->assertSessionHasErrors('comment');
+    }
+
+    public function test_comment_creation_sends_notification_to_message_author(): void
+    {
+        Notification::fake();
+        Event::fake();
+
+        $messageAuthor = User::factory()->create(['name' => 'Alice']);
+        $commenter = User::factory()->create(['name' => 'Bob']);
+        $message = Message::factory()->create(['user_id' => $messageAuthor->id]);
+
+        $this->actingAs($commenter);
+
+        $response = $this->post(route('messages.comments.store', $message), [
+            'comment' => 'Great message!',
+        ]);
+
+        $response->assertRedirect();
+
+        Notification::assertSentTo($messageAuthor, \App\Notifications\MessageCommented::class);
+    }
+
+    public function test_comment_creation_does_not_send_notification_when_commenting_on_own_message(): void
+    {
+        Notification::fake();
+        Event::fake();
+
+        $user = User::factory()->create();
+        $message = Message::factory()->create(['user_id' => $user->id]);
+
+        $this->actingAs($user);
+
+        $response = $this->post(route('messages.comments.store', $message), [
+            'comment' => 'My own comment',
+        ]);
+
+        $response->assertRedirect();
+
+        Notification::assertNothingSent();
+    }
+
+    public function test_admin_can_delete_comment(): void
+    {
+        Event::fake();
+
+        $admin = User::factory()->create();
+        $admin->givePermissionTo('admin');
+
+        $message = Message::factory()->create();
+        $comment = MessageComment::factory()->create(['message_id' => $message->id]);
+
+        $this->actingAs($admin);
+
+        $response = $this->delete(route('messages.comments.destroy', [$message, $comment]));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseMissing('message_comments', [
+            'id' => $comment->id,
+        ]);
+    }
+
+    public function test_non_admin_cannot_delete_comment(): void
+    {
+        $user = User::factory()->create();
+        $message = Message::factory()->create();
+        $comment = MessageComment::factory()->create(['message_id' => $message->id]);
+
+        $this->actingAs($user);
+
+        $response = $this->delete(route('messages.comments.destroy', [$message, $comment]));
+
+        $response->assertStatus(403);
+
+        $this->assertDatabaseHas('message_comments', [
+            'id' => $comment->id,
+        ]);
+    }
+
+    public function test_comment_deletion_requires_authentication(): void
+    {
+        $message = Message::factory()->create();
+        $comment = MessageComment::factory()->create(['message_id' => $message->id]);
+
+        $response = $this->delete(route('messages.comments.destroy', [$message, $comment]));
+
+        $response->assertRedirect(route('login'));
+    }
+
+    public function test_comments_are_deleted_when_message_is_deleted(): void
+    {
+        $admin = User::factory()->create();
+        $admin->givePermissionTo('admin');
+
+        $message = Message::factory()->create();
+        $comment1 = MessageComment::factory()->create(['message_id' => $message->id]);
+        $comment2 = MessageComment::factory()->create(['message_id' => $message->id]);
+
+        $this->actingAs($admin);
+
+        $response = $this->delete(route('messages.destroy', $message));
+
+        $response->assertRedirect();
+
+        // Message should be deleted
+        $this->assertDatabaseMissing('messages', [
+            'id' => $message->id,
+        ]);
+
+        // Comments should be deleted (cascade)
+        $this->assertDatabaseMissing('message_comments', [
+            'id' => $comment1->id,
+        ]);
+
+        $this->assertDatabaseMissing('message_comments', [
+            'id' => $comment2->id,
+        ]);
+    }
+
+    public function test_comments_are_included_in_message_index(): void
+    {
+        $user = User::factory()->create();
+        $message = Message::factory()->create();
+
+        // Add comment
+        MessageComment::factory()->create([
+            'message_id' => $message->id,
+            'user_id' => $user->id,
+        ]);
+
+        $this->actingAs($user);
+
+        $response = $this->get(route('messages.index'));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Messages/Index')
+            ->has('messages.data', 1)
+            ->has('messages.data.0.comments', 1)
+        );
+    }
+
+    public function test_comments_are_included_in_message_show(): void
+    {
+        $user = User::factory()->create();
+        $message = Message::factory()->create();
+
+        // Add comment
+        MessageComment::factory()->create([
+            'message_id' => $message->id,
+            'user_id' => $user->id,
+        ]);
+
+        $this->actingAs($user);
+
+        $response = $this->getJson(route('messages.show', $message));
+
+        $response->assertStatus(200);
+        $response->assertJsonStructure([
+            'id',
+            'user_id',
+            'message',
+            'created_at',
+            'user',
+            'comments',
+        ]);
+
+        $data = $response->json();
+        $this->assertArrayHasKey('comments', $data);
+        $this->assertCount(1, $data['comments']);
+    }
+
+    public function test_user_can_add_reaction_to_comment(): void
+    {
+        Event::fake();
+
+        $user = User::factory()->create();
+        $message = Message::factory()->create();
+        $comment = MessageComment::factory()->create(['message_id' => $message->id]);
+
+        $this->actingAs($user);
+
+        $response = $this->postJson(route('messages.comments.reactions.store', [$message, $comment]), [
+            'emoji' => '👍',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJsonStructure([
+            'reaction' => ['id', 'emoji', 'user'],
+            'grouped_reactions',
+        ]);
+
+        $this->assertDatabaseHas('comment_reactions', [
+            'comment_id' => $comment->id,
+            'user_id' => $user->id,
+            'emoji' => '👍',
+        ]);
+
+        Event::assertDispatched(\App\Events\CommentReactionUpdated::class);
+    }
+
+    public function test_user_can_remove_reaction_from_comment(): void
+    {
+        Event::fake();
+
+        $user = User::factory()->create();
+        $message = Message::factory()->create();
+        $comment = MessageComment::factory()->create(['message_id' => $message->id]);
+
+        // Create a reaction first
+        CommentReaction::factory()->create([
+            'comment_id' => $comment->id,
+            'user_id' => $user->id,
+            'emoji' => '👍',
+        ]);
+
+        $this->actingAs($user);
+
+        $response = $this->deleteJson(route('messages.comments.reactions.destroy', [$message, $comment]));
+
+        $response->assertStatus(200);
+        $response->assertJsonStructure(['grouped_reactions']);
+
+        $this->assertDatabaseMissing('comment_reactions', [
+            'comment_id' => $comment->id,
+            'user_id' => $user->id,
+        ]);
+
+        Event::assertDispatched(\App\Events\CommentReactionUpdated::class);
+    }
+
+    public function test_user_can_change_comment_reaction(): void
+    {
+        Event::fake();
+
+        $user = User::factory()->create();
+        $message = Message::factory()->create();
+        $comment = MessageComment::factory()->create(['message_id' => $message->id]);
+
+        // Create initial reaction
+        CommentReaction::factory()->create([
+            'comment_id' => $comment->id,
+            'user_id' => $user->id,
+            'emoji' => '👍',
+        ]);
+
+        $this->actingAs($user);
+
+        // Change to different emoji
+        $response = $this->postJson(route('messages.comments.reactions.store', [$message, $comment]), [
+            'emoji' => '❤️',
+        ]);
+
+        $response->assertStatus(200);
+
+        // Should only have one reaction with the new emoji
+        $this->assertDatabaseHas('comment_reactions', [
+            'comment_id' => $comment->id,
+            'user_id' => $user->id,
+            'emoji' => '❤️',
+        ]);
+
+        $this->assertDatabaseMissing('comment_reactions', [
+            'comment_id' => $comment->id,
+            'user_id' => $user->id,
+            'emoji' => '👍',
+        ]);
+
+        // Should only have one reaction total for this user/comment
+        $this->assertEquals(1, CommentReaction::where('comment_id', $comment->id)
+            ->where('user_id', $user->id)
+            ->count());
+
+        Event::assertDispatched(\App\Events\CommentReactionUpdated::class);
+    }
+
+    public function test_user_can_only_have_one_reaction_per_comment(): void
+    {
+        $user = User::factory()->create();
+        $message = Message::factory()->create();
+        $comment = MessageComment::factory()->create(['message_id' => $message->id]);
+
+        $this->actingAs($user);
+
+        // Add first reaction
+        $this->postJson(route('messages.comments.reactions.store', [$message, $comment]), [
+            'emoji' => '👍',
+        ]);
+
+        // Try to add second reaction with different emoji
+        $this->postJson(route('messages.comments.reactions.store', [$message, $comment]), [
+            'emoji' => '❤️',
+        ]);
+
+        // Should only have one reaction (the second one)
+        $reactions = CommentReaction::where('comment_id', $comment->id)
+            ->where('user_id', $user->id)
+            ->get();
+
+        $this->assertCount(1, $reactions);
+        $this->assertEquals('❤️', $reactions->first()->emoji);
+    }
+
+    public function test_invalid_emoji_is_rejected_for_comment_reaction(): void
+    {
+        $user = User::factory()->create();
+        $message = Message::factory()->create();
+        $comment = MessageComment::factory()->create(['message_id' => $message->id]);
+
+        $this->actingAs($user);
+
+        $response = $this->postJson(route('messages.comments.reactions.store', [$message, $comment]), [
+            'emoji' => '🚀', // Not in allowed list
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJson(['error' => true]);
+
+        $this->assertDatabaseMissing('comment_reactions', [
+            'comment_id' => $comment->id,
+            'user_id' => $user->id,
+        ]);
+    }
+
+    public function test_allowed_emojis_can_be_used_for_comment_reactions(): void
+    {
+        $user = User::factory()->create();
+        $message = Message::factory()->create();
+        $comment = MessageComment::factory()->create(['message_id' => $message->id]);
+
+        $this->actingAs($user);
+
+        $allowedEmojis = ['👍', '❤️', '😂', '😮', '😢', '💩'];
+
+        foreach ($allowedEmojis as $emoji) {
+            $response = $this->postJson(route('messages.comments.reactions.store', [$message, $comment]), [
+                'emoji' => $emoji,
+            ]);
+
+            $response->assertStatus(200);
+
+            // Remove reaction before testing next one
+            $this->deleteJson(route('messages.comments.reactions.destroy', [$message, $comment]));
+        }
+    }
+
+    public function test_multiple_users_can_react_to_same_comment(): void
+    {
+        $user1 = User::factory()->create();
+        $user2 = User::factory()->create();
+        $user3 = User::factory()->create();
+        $message = Message::factory()->create();
+        $comment = MessageComment::factory()->create(['message_id' => $message->id]);
+
+        // User 1 reacts
+        $this->actingAs($user1);
+        $this->postJson(route('messages.comments.reactions.store', [$message, $comment]), [
+            'emoji' => '👍',
+        ]);
+
+        // User 2 reacts
+        $this->actingAs($user2);
+        $this->postJson(route('messages.comments.reactions.store', [$message, $comment]), [
+            'emoji' => '👍',
+        ]);
+
+        // User 3 reacts with different emoji
+        $this->actingAs($user3);
+        $this->postJson(route('messages.comments.reactions.store', [$message, $comment]), [
+            'emoji' => '❤️',
+        ]);
+
+        // Should have 3 reactions total
+        $this->assertEquals(3, CommentReaction::where('comment_id', $comment->id)->count());
+
+        // Check grouped reactions
+        $comment->refresh();
+        $grouped = $comment->getGroupedReactions();
+
+        $this->assertArrayHasKey('👍', $grouped);
+        $this->assertEquals(2, $grouped['👍']['count']);
+        $this->assertCount(2, $grouped['👍']['users']);
+
+        $this->assertArrayHasKey('❤️', $grouped);
+        $this->assertEquals(1, $grouped['❤️']['count']);
+        $this->assertCount(1, $grouped['❤️']['users']);
+    }
+
+    public function test_comment_reactions_are_deleted_when_comment_is_deleted(): void
+    {
+        $admin = User::factory()->create();
+        $admin->givePermissionTo('admin');
+
+        $message = Message::factory()->create();
+        $comment = MessageComment::factory()->create(['message_id' => $message->id]);
+
+        // Add reactions
+        $reaction1 = CommentReaction::factory()->create([
+            'comment_id' => $comment->id,
+            'emoji' => '👍',
+        ]);
+
+        $reaction2 = CommentReaction::factory()->create([
+            'comment_id' => $comment->id,
+            'emoji' => '❤️',
+        ]);
+
+        $this->actingAs($admin);
+
+        $response = $this->delete(route('messages.comments.destroy', [$message, $comment]));
+
+        $response->assertRedirect();
+
+        // Comment should be deleted
+        $this->assertDatabaseMissing('message_comments', [
+            'id' => $comment->id,
+        ]);
+
+        // Reactions should be deleted (cascade)
+        $this->assertDatabaseMissing('comment_reactions', [
+            'id' => $reaction1->id,
+        ]);
+
+        $this->assertDatabaseMissing('comment_reactions', [
+            'id' => $reaction2->id,
+        ]);
+    }
+
+    public function test_comment_reactions_are_deleted_when_message_is_deleted(): void
+    {
+        $admin = User::factory()->create();
+        $admin->givePermissionTo('admin');
+
+        $message = Message::factory()->create();
+        $comment = MessageComment::factory()->create(['message_id' => $message->id]);
+
+        // Add reactions
+        $reaction1 = CommentReaction::factory()->create([
+            'comment_id' => $comment->id,
+            'emoji' => '👍',
+        ]);
+
+        $reaction2 = CommentReaction::factory()->create([
+            'comment_id' => $comment->id,
+            'emoji' => '❤️',
+        ]);
+
+        $this->actingAs($admin);
+
+        $response = $this->delete(route('messages.destroy', $message));
+
+        $response->assertRedirect();
+
+        // Message should be deleted
+        $this->assertDatabaseMissing('messages', [
+            'id' => $message->id,
+        ]);
+
+        // Comment should be deleted (cascade)
+        $this->assertDatabaseMissing('message_comments', [
+            'id' => $comment->id,
+        ]);
+
+        // Reactions should be deleted (cascade)
+        $this->assertDatabaseMissing('comment_reactions', [
+            'id' => $reaction1->id,
+        ]);
+
+        $this->assertDatabaseMissing('comment_reactions', [
+            'id' => $reaction2->id,
+        ]);
+    }
+
+    public function test_comment_reaction_requires_authentication(): void
+    {
+        $message = Message::factory()->create();
+        $comment = MessageComment::factory()->create(['message_id' => $message->id]);
+
+        $response = $this->postJson(route('messages.comments.reactions.store', [$message, $comment]), [
+            'emoji' => '👍',
+        ]);
+
+        $response->assertStatus(401);
+    }
+
+    public function test_remove_comment_reaction_requires_authentication(): void
+    {
+        $message = Message::factory()->create();
+        $comment = MessageComment::factory()->create(['message_id' => $message->id]);
+
+        $response = $this->deleteJson(route('messages.comments.reactions.destroy', [$message, $comment]));
+
+        $response->assertStatus(401);
+    }
+
+    public function test_comment_reaction_requires_emoji(): void
+    {
+        $user = User::factory()->create();
+        $message = Message::factory()->create();
+        $comment = MessageComment::factory()->create(['message_id' => $message->id]);
+
+        $this->actingAs($user);
+
+        $response = $this->postJson(route('messages.comments.reactions.store', [$message, $comment]), []);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('emoji');
+    }
+
+    public function test_grouped_comment_reactions_returns_correct_structure(): void
+    {
+        $user1 = User::factory()->create(['name' => 'Alice']);
+        $user2 = User::factory()->create(['name' => 'Bob']);
+        $user3 = User::factory()->create(['name' => 'Charlie']);
+        $message = Message::factory()->create();
+        $comment = MessageComment::factory()->create(['message_id' => $message->id]);
+
+        // Add reactions
+        CommentReaction::factory()->create([
+            'comment_id' => $comment->id,
+            'user_id' => $user1->id,
+            'emoji' => '👍',
+        ]);
+
+        CommentReaction::factory()->create([
+            'comment_id' => $comment->id,
+            'user_id' => $user2->id,
+            'emoji' => '👍',
+        ]);
+
+        CommentReaction::factory()->create([
+            'comment_id' => $comment->id,
+            'user_id' => $user3->id,
+            'emoji' => '❤️',
+        ]);
+
+        $grouped = $comment->getGroupedReactions();
+
+        $this->assertArrayHasKey('👍', $grouped);
+        $this->assertEquals(2, $grouped['👍']['count']);
+        $this->assertCount(2, $grouped['👍']['users']);
+        $this->assertArrayHasKey('id', $grouped['👍']['users'][0]);
+        $this->assertArrayHasKey('name', $grouped['👍']['users'][0]);
+
+        $this->assertArrayHasKey('❤️', $grouped);
+        $this->assertEquals(1, $grouped['❤️']['count']);
+        $this->assertCount(1, $grouped['❤️']['users']);
+    }
+
+    public function test_empty_comment_reactions_returns_empty_array(): void
+    {
+        $message = Message::factory()->create();
+        $comment = MessageComment::factory()->create(['message_id' => $message->id]);
+
+        $grouped = $comment->getGroupedReactions();
 
         $this->assertIsArray($grouped);
         $this->assertEmpty($grouped);

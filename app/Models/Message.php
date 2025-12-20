@@ -70,6 +70,14 @@ class Message extends Model
     }
 
     /**
+     * Get the comments for this message.
+     */
+    public function comments(): HasMany
+    {
+        return $this->hasMany(MessageComment::class);
+    }
+
+    /**
      * Get reactions grouped by emoji with user lists.
      *
      * @return array<string, array{count: int, users: array}>
