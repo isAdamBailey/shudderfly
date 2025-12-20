@@ -50,6 +50,8 @@ class CommentReactionUpdated implements ShouldBroadcastNow
      */
     public function broadcastWith(): array
     {
+        $this->comment->loadMissing('reactions.user');
+
         return [
             'comment_id' => $this->comment->id,
             'message_id' => $this->comment->message_id,

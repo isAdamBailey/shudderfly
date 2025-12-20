@@ -1034,7 +1034,7 @@ const getComments = (message) => {
   if (!message.comments) {
     return [];
   }
-  return message.comments.sort((a, b) => {
+  return [...message.comments].sort((a, b) => {
     const dateA = new Date(a.created_at);
     const dateB = new Date(b.created_at);
     return dateA - dateB; // Oldest first

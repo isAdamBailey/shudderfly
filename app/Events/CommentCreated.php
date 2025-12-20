@@ -50,6 +50,8 @@ class CommentCreated implements ShouldBroadcastNow
      */
     public function broadcastWith(): array
     {
+        $this->comment->loadMissing('user');
+
         return [
             'id' => $this->comment->id,
             'message_id' => $this->comment->message_id,
