@@ -299,9 +299,9 @@ const {
   isFlyoutOpen,
   toggleFlyout,
   closeFlyout,
-  addWord: addWordFn,
-  addPhrase: addPhraseFn,
-  getPreview: getPreviewFn
+  getActiveAddWord,
+  getActiveAddPhrase,
+  getActiveGetPreview
 } = useMessageBuilder();
 const { speak } = useSpeechSynthesis();
 const page = usePage();
@@ -390,19 +390,22 @@ const quickPhrases = [
 ];
 
 function handleAddWord(word) {
-  if (addWordFn.value) {
-    addWordFn.value(word);
+  const addWordFn = getActiveAddWord();
+  if (addWordFn) {
+    addWordFn(word);
   }
 }
 
 function handleAddPhrase(phrase) {
-  // Add it to the message builder first
-  if (addPhraseFn.value) {
-    addPhraseFn.value(phrase);
+  // Add it to the active input first
+  const addPhraseFn = getActiveAddPhrase();
+  if (addPhraseFn) {
+    addPhraseFn(phrase);
     // Then speak the complete message after a short delay to ensure it's updated
     setTimeout(() => {
-      if (getPreviewFn.value) {
-        const fullMessage = getPreviewFn.value();
+      const getPreviewFn = getActiveGetPreview();
+      if (getPreviewFn) {
+        const fullMessage = getPreviewFn();
         if (fullMessage) {
           speak(fullMessage);
         }

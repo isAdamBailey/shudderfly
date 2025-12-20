@@ -36,14 +36,21 @@ class MessageController extends Controller
             ]);
         }
 
-        $messages = Message::with(['user', 'reactions.user'])
+        $messages = Message::with(['user', 'reactions.user', 'comments.user', 'comments.reactions.user'])
             ->recent()
             ->withinRetentionPeriod()
             ->paginate(20);
 
-        // Transform messages to include grouped reactions
+        // Transform messages to include grouped reactions and comments with grouped reactions
         $messages->getCollection()->transform(function ($message) {
             $message->grouped_reactions = $message->getGroupedReactions();
+
+            // Transform comments to include grouped reactions
+            $message->comments->transform(function ($comment) {
+                $comment->grouped_reactions = $comment->getGroupedReactions();
+
+                return $comment;
+            });
 
             return $message;
         });
@@ -65,7 +72,21 @@ class MessageController extends Controller
      */
     public function show(Message $message): \Illuminate\Http\JsonResponse
     {
-        $message->load(['user', 'reactions.user']);
+        $message->load(['user', 'reactions.user', 'comments.user', 'comments.reactions.user']);
+
+        // Transform comments to include grouped reactions
+        $comments = $message->comments->map(function ($comment) {
+            return [
+                'id' => $comment->id,
+                'comment' => $comment->comment,
+                'created_at' => $comment->created_at->toIso8601String(),
+                'user' => [
+                    'id' => $comment->user->id,
+                    'name' => $comment->user->name,
+                ],
+                'grouped_reactions' => $comment->getGroupedReactions(),
+            ];
+        });
 
         return response()->json([
             'id' => $message->id,
@@ -77,6 +98,7 @@ class MessageController extends Controller
                 'name' => $message->user->name,
             ],
             'grouped_reactions' => $message->getGroupedReactions(),
+            'comments' => $comments,
         ]);
     }
 

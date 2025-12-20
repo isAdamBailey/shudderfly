@@ -404,6 +404,8 @@ let justAddedTimeoutId = null;
 
 onMounted(() => {
   loadFavorites();
+  // Set message input as active by default
+  setActiveMessageInput();
 
   // Set up event listeners for input changes
   mountTimeoutId = setTimeout(() => {
@@ -578,10 +580,15 @@ function addPhrase(phrase) {
 }
 
 // Register functions with composable for MessageBuilderFlyout to use
-const { setAddWord, setAddPhrase, setGetPreview } = useMessageBuilder();
+const { setAddWord, setAddPhrase, setGetPreview, setActiveMessageInput } = useMessageBuilder();
 setAddWord(addWord);
 setAddPhrase(addPhrase);
 setGetPreview(() => preview.value);
+
+// Set message input as active when focused
+const handleMessageInputFocus = () => {
+  setActiveMessageInput();
+};
 
 function removeLast() {
   // Remove last word from input value
@@ -734,6 +741,7 @@ function postMessage() {
             @input="handleTextareaInput"
             @change="handleInputChange"
             @keydown="handleKeydown"
+            @focus="handleMessageInputFocus"
           />
 
           <!-- User Suggestions Dropdown -->

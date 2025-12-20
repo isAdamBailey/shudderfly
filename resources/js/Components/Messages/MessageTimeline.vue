@@ -98,6 +98,146 @@
           </DangerButton>
         </div>
       </div>
+      
+      <!-- Comments Section -->
+      <div class="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+        <div class="flex items-center justify-between mb-2">
+          <button
+            type="button"
+            class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+            @click="toggleComments(message.id)"
+          >
+            <i
+              :class="[
+                'text-base transition-transform',
+                expandedComments[message.id]
+                  ? 'ri-arrow-down-s-line'
+                  : 'ri-arrow-right-s-line'
+              ]"
+            ></i>
+            <span>
+              {{ getCommentCount(message) }}
+              {{ getCommentCount(message) === 1 ? "comment" : "comments" }}
+            </span>
+          </button>
+          <button
+            v-if="!expandedComments[message.id]"
+            type="button"
+            class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+            @click="expandComments(message.id)"
+          >
+            Add Comment
+          </button>
+        </div>
+        
+        <template v-if="expandedComments[message.id]">
+          <div class="space-y-3">
+          <!-- Comment Form -->
+          <form @submit.prevent="submitComment(message)" class="space-y-2">
+            <textarea
+              v-model="commentForms[message.id]"
+              :placeholder="'Add a comment...'"
+              maxlength="1000"
+              rows="3"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            ></textarea>
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-gray-500 dark:text-gray-400">
+                {{ (commentForms[message.id] || "").length }}/1000
+              </span>
+              <Button type="submit" :disabled="!commentForms[message.id]?.trim()">
+                Post Comment
+              </Button>
+            </div>
+          </form>
+          
+          <!-- Comments List -->
+          <div v-if="getComments(message).length > 0" class="space-y-3">
+            <div
+              v-for="comment in getComments(message)"
+              :key="comment.id"
+              class="bg-gray-50 dark:bg-gray-900 rounded-lg p-3"
+            >
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <Avatar :user="comment.user" size="sm" />
+                    <span class="font-semibold text-sm text-gray-900 dark:text-gray-100">
+                      {{ comment.user.name }}
+                    </span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">
+                      {{ formatDate(comment.created_at) }}
+                    </span>
+                  </div>
+                  <div class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words ml-8">
+                    {{ comment.comment }}
+                  </div>
+                  <!-- Comment Reactions -->
+                  <div class="mt-2 ml-8 flex flex-wrap items-center gap-2">
+                    <div
+                      v-for="emoji in getSelectedCommentReactions(comment)"
+                      :key="emoji"
+                      class="flex items-center gap-1"
+                    >
+                      <button
+                        type="button"
+                        :class="[
+                          'flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors',
+                          hasUserReactedToComment(comment, emoji)
+                            ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        ]"
+                        :title="getCommentReactionTooltip(comment, emoji)"
+                        @click="toggleCommentReaction(message, comment, emoji)"
+                      >
+                        <span class="text-sm">{{ emoji }}</span>
+                        <span
+                          v-if="getCommentReactionCount(comment, emoji) > 0"
+                          class="font-medium text-xs"
+                        >
+                          {{ getCommentReactionCount(comment, emoji) }}
+                        </span>
+                      </button>
+                    </div>
+                    <!-- Add reaction button -->
+                    <button
+                      type="button"
+                      class="flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                      title="Add reaction"
+                      @click="openCommentReactionModal(message, comment)"
+                    >
+                      <i class="ri-add-line text-xs"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="ml-4 flex items-center gap-2">
+                  <Button
+                    type="button"
+                    :disabled="speaking"
+                    title="Speak comment"
+                    aria-label="Speak comment"
+                    class="px-3 py-2"
+                    @click="speakComment(comment)"
+                  >
+                    <i class="ri-speak-fill text-base"></i>
+                  </Button>
+                  <DangerButton
+                    v-if="canAdmin"
+                    type="button"
+                    title="Delete comment"
+                    aria-label="Delete comment"
+                    class="px-3 py-2"
+                    @click="deleteComment(message.id, comment.id)"
+                  >
+                    <i class="ri-delete-bin-line text-base"></i>
+                  </DangerButton>
+                </div>
+              </div>
+            </div>
+          </div>
+          </div>
+        </template>
+      </div>
     </div>
 
     <div v-if="loading" class="text-center py-4 text-gray-500">Loading...</div>
@@ -189,6 +329,33 @@
         </div>
       </div>
     </Modal>
+
+    <!-- Comment Reaction Selection Modal -->
+    <Modal :show="showCommentReactionModal" max-width="sm" @close="closeCommentReactionModal">
+      <div class="p-6">
+        <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+          Add Reaction
+        </h2>
+        <div class="grid grid-cols-5 gap-3">
+          <button
+            v-for="emoji in allowedEmojis"
+            :key="emoji"
+            type="button"
+            :class="[
+              'flex items-center justify-center p-3 rounded-lg text-2xl transition-colors',
+              selectedCommentForReaction &&
+              hasUserReactedToComment(selectedCommentForReaction, emoji)
+                ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+            ]"
+            :title="emoji"
+            @click="selectCommentReaction(emoji)"
+          >
+            {{ emoji }}
+          </button>
+        </div>
+      </div>
+    </Modal>
   </div>
 </template>
 
@@ -205,7 +372,7 @@ import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { router, usePage } from "@inertiajs/vue3";
 import axios from "axios";
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 
 const props = defineProps({
   messages: {
@@ -228,6 +395,11 @@ const selectedMessageForReaction = ref(null);
 const showViewReactionsModal = ref(false);
 const selectedMessageForView = ref(null);
 const timelineContainer = ref(null);
+const expandedComments = ref({});
+const commentForms = ref({});
+const showCommentReactionModal = ref(false);
+const selectedCommentForReaction = ref(null);
+const selectedMessageForCommentReaction = ref(null);
 
 // Handle both pagination object and array formats
 const messagesData = computed(() => {
@@ -254,12 +426,19 @@ const { items: infiniteScrollItems, infiniteScrollRef } = useInfiniteScroll(
   messagesPagination
 );
 
-// Initialize messages with grouped_reactions and merge with infinite scroll items
+// Initialize messages with grouped_reactions and comments with grouped_reactions
 const initializeMessages = (messageArray) => {
-  return messageArray.map((msg) => ({
-    ...msg,
-    grouped_reactions: msg.grouped_reactions || {}
-  }));
+  return messageArray.map((msg) => {
+    const message = {
+      ...msg,
+      grouped_reactions: msg.grouped_reactions || {},
+      comments: (msg.comments || []).map((comment) => ({
+        ...comment,
+        grouped_reactions: comment.grouped_reactions || {}
+      }))
+    };
+    return message;
+  });
 };
 
 // Use infinite scroll items as the base, but manage separately for Echo updates
@@ -287,15 +466,24 @@ watch(
     // Merge paginated items with Echo messages
     const allMessages = [...newItems, ...echoMessages];
 
-    // Ensure all messages have grouped_reactions initialized
-    allMessages.forEach((msg) => {
-      if (!msg.grouped_reactions) {
-        msg.grouped_reactions = {};
+    // Ensure all messages have grouped_reactions and comments initialized
+    const processedMessages = allMessages.map((msg) => {
+      const processed = { ...msg };
+      if (!processed.grouped_reactions) {
+        processed.grouped_reactions = {};
       }
+      if (!processed.comments) {
+        processed.comments = [];
+      }
+      processed.comments = (processed.comments || []).map((comment) => ({
+        ...comment,
+        grouped_reactions: comment.grouped_reactions || {}
+      }));
+      return processed;
     });
 
     // Sort by created_at (most recent first)
-    localMessages.value = allMessages.sort((a, b) => {
+    localMessages.value = processedMessages.sort((a, b) => {
       const dateA = new Date(a.created_at);
       const dateB = new Date(b.created_at);
       return dateB - dateA; // Most recent first
@@ -317,19 +505,28 @@ watch(
 
     // Merge: combine all messages and sort by created_at (most recent first)
     const allMessages = [...newMessages, ...existingMessagesToKeep];
-    // Ensure all messages have grouped_reactions initialized
-    allMessages.forEach((msg) => {
-      if (!msg.grouped_reactions) {
-        msg.grouped_reactions = {};
+    // Ensure all messages have grouped_reactions and comments initialized
+    const processedMessages = allMessages.map((msg) => {
+      const processed = { ...msg };
+      if (!processed.grouped_reactions) {
+        processed.grouped_reactions = {};
       }
+      if (!processed.comments) {
+        processed.comments = [];
+      }
+      processed.comments = (processed.comments || []).map((comment) => ({
+        ...comment,
+        grouped_reactions: comment.grouped_reactions || {}
+      }));
+      return processed;
     });
-    localMessages.value = allMessages.sort((a, b) => {
+    localMessages.value = processedMessages.sort((a, b) => {
       const dateA = new Date(a.created_at);
       const dateB = new Date(b.created_at);
       return dateB - dateA; // Most recent first
     });
   },
-  { deep: true, immediate: false }
+  { immediate: false }
 );
 
 const formatDate = (dateString) => {
@@ -458,6 +655,10 @@ const deleteMessage = (messageId) => {
     return;
   }
 
+  // Clean up
+  delete commentForms.value[messageId];
+  expandedComments.value[messageId] = false;
+
   router.delete(route("messages.destroy", messageId), {
     preserveScroll: true,
     onSuccess: () => {
@@ -465,6 +666,8 @@ const deleteMessage = (messageId) => {
       localMessages.value = localMessages.value.filter(
         (m) => m.id !== messageId
       );
+      // Reset to message input if needed
+      setActiveMessageInput();
     }
   });
 };
@@ -502,6 +705,16 @@ const setupEchoListener = () => {
     messagesChannel.value.listen(".MessageReactionUpdated", (event) => {
       handleReactionUpdate(event);
     });
+
+    // Listen for new comments
+    messagesChannel.value.listen(".CommentCreated", (event) => {
+      handleCommentEvent(event);
+    });
+
+    // Listen for comment reaction updates
+    messagesChannel.value.listen(".CommentReactionUpdated", (event) => {
+      handleCommentReactionUpdate(event);
+    });
   } catch (error) {
     console.error("Error setting up Echo listener:", error);
   }
@@ -525,6 +738,9 @@ const handleMessageEvent = (event) => {
     // Ensure grouped_reactions is initialized
     if (!messageData.grouped_reactions) {
       messageData.grouped_reactions = {};
+    }
+    if (!messageData.comments) {
+      messageData.comments = [];
     }
     // Add new message and sort by created_at (most recent first)
     localMessages.value.push(messageData);
@@ -597,10 +813,17 @@ const scrollToMessage = async () => {
       try {
         const response = await axios.get(route("messages.show", messageId));
         const fetchedMessage = response.data;
-        // Ensure grouped_reactions is initialized
+        // Ensure grouped_reactions and comments are initialized
         if (!fetchedMessage.grouped_reactions) {
           fetchedMessage.grouped_reactions = {};
         }
+        if (!fetchedMessage.comments) {
+          fetchedMessage.comments = [];
+        }
+        fetchedMessage.comments = (fetchedMessage.comments || []).map((comment) => ({
+          ...comment,
+          grouped_reactions: comment.grouped_reactions || {}
+        }));
         // Add the message and sort by created_at (most recent first)
         localMessages.value.push(fetchedMessage);
         localMessages.value.sort((a, b) => {
@@ -803,6 +1026,275 @@ const toggleReaction = async (message, emoji) => {
       "Failed to update reaction. Please try again.",
       3000
     );
+  }
+};
+
+// Comment functions
+const getComments = (message) => {
+  if (!message.comments) {
+    return [];
+  }
+  return [...message.comments].sort((a, b) => {
+    const dateA = new Date(a.created_at);
+    const dateB = new Date(b.created_at);
+    return dateA - dateB; // Oldest first
+  });
+};
+
+const getCommentCount = (message) => {
+  return message.comments?.length || 0;
+};
+
+const toggleComments = (messageId) => {
+  if (expandedComments.value[messageId]) {
+    expandedComments.value[messageId] = false;
+  } else {
+    expandedComments.value[messageId] = true;
+    if (!commentForms.value[messageId]) {
+      commentForms.value[messageId] = "";
+    }
+  }
+};
+
+const expandComments = (messageId) => {
+  expandedComments.value[messageId] = true;
+  if (!commentForms.value[messageId]) {
+    commentForms.value[messageId] = "";
+  }
+};
+
+const submitComment = async (message) => {
+  const commentText = commentForms.value[message.id]?.trim();
+  if (!commentText) {
+    return;
+  }
+
+  commentForms.value[message.id] = "";
+
+  try {
+    await router.post(route("messages.comments.store", message.id), {
+      comment: commentText
+    }, {
+      preserveScroll: true,
+      onSuccess: () => {
+      },
+      onError: () => {
+        commentForms.value[message.id] = commentText;
+      }
+    });
+  } catch (error) {
+    commentForms.value[message.id] = commentText;
+    setFlashMessage(
+      "error",
+      "Failed to post comment. Please try again.",
+      3000
+    );
+  }
+};
+
+const speakComment = (comment) => {
+  const commentText = comment.comment || "";
+  const username = comment.user?.name || "Someone";
+  speak(`${username} says ${commentText}`);
+};
+
+const deleteComment = (messageId, commentId) => {
+  if (!confirm("Are you sure you want to delete this comment?")) {
+    return;
+  }
+
+  router.delete(route("messages.comments.destroy", [messageId, commentId]), {
+    preserveScroll: true,
+    onSuccess: () => {
+      const message = localMessages.value.find((m) => m.id === messageId);
+      if (message && message.comments) {
+        message.comments = message.comments.filter((c) => c.id !== commentId);
+      }
+    }
+  });
+};
+
+// Comment reaction functions
+const getSelectedCommentReactions = (comment) => {
+  if (!comment.grouped_reactions) {
+    return [];
+  }
+  return allowedEmojis.filter((emoji) => getCommentReactionCount(comment, emoji) > 0);
+};
+
+const getCommentReactionCount = (comment, emoji) => {
+  if (!comment.grouped_reactions || !comment.grouped_reactions[emoji]) {
+    return 0;
+  }
+  return comment.grouped_reactions[emoji].count || 0;
+};
+
+const getCommentReactionUsers = (comment, emoji) => {
+  if (!comment.grouped_reactions || !comment.grouped_reactions[emoji]) {
+    return [];
+  }
+  return comment.grouped_reactions[emoji].users || [];
+};
+
+const hasUserReactedToComment = (comment, emoji) => {
+  if (!currentUserId.value) return false;
+  const users = getCommentReactionUsers(comment, emoji);
+  return users.some((user) => user.id === currentUserId.value);
+};
+
+const getCommentReactionTooltip = (comment, emoji) => {
+  const count = getCommentReactionCount(comment, emoji);
+  if (count === 0) {
+    return `React with ${emoji}`;
+  }
+  const users = getCommentReactionUsers(comment, emoji);
+  const userNames = users.map((u) => u.name).join(", ");
+  return `${emoji} ${count}: ${userNames}`;
+};
+
+const openCommentReactionModal = (message, comment) => {
+  selectedCommentForReaction.value = comment;
+  selectedMessageForCommentReaction.value = message;
+  showCommentReactionModal.value = true;
+};
+
+const closeCommentReactionModal = () => {
+  showCommentReactionModal.value = false;
+  selectedCommentForReaction.value = null;
+  selectedMessageForCommentReaction.value = null;
+};
+
+const selectCommentReaction = async (emoji) => {
+  if (!currentUserId.value || !selectedCommentForReaction.value || !selectedMessageForCommentReaction.value) return;
+
+  const comment = selectedCommentForReaction.value;
+  const message = selectedMessageForCommentReaction.value;
+  const currentlyReacted = hasUserReactedToComment(comment, emoji);
+
+  if (!comment.grouped_reactions) {
+    comment.grouped_reactions = {};
+  }
+
+  try {
+    let response;
+    if (currentlyReacted) {
+      response = await axios.delete(
+        route("messages.comments.reactions.destroy", [message.id, comment.id])
+      );
+    } else {
+      response = await axios.post(
+        route("messages.comments.reactions.store", [message.id, comment.id]),
+        {
+          emoji: emoji
+        }
+      );
+    }
+
+    if (response?.data?.grouped_reactions) {
+      comment.grouped_reactions = response.data.grouped_reactions;
+    }
+
+    closeCommentReactionModal();
+  } catch (error) {
+    setFlashMessage(
+      "error",
+      "Failed to update reaction. Please try again.",
+      3000
+    );
+  }
+};
+
+const toggleCommentReaction = async (message, comment, emoji) => {
+  if (!currentUserId.value) return;
+
+  const currentlyReacted = hasUserReactedToComment(comment, emoji);
+
+  if (!comment.grouped_reactions) {
+    comment.grouped_reactions = {};
+  }
+
+  try {
+    let response;
+    if (currentlyReacted) {
+      response = await axios.delete(
+        route("messages.comments.reactions.destroy", [message.id, comment.id])
+      );
+    } else {
+      response = await axios.post(
+        route("messages.comments.reactions.store", [message.id, comment.id]),
+        {
+          emoji: emoji
+        }
+      );
+    }
+
+    if (response?.data?.grouped_reactions) {
+      comment.grouped_reactions = response.data.grouped_reactions;
+    }
+  } catch (error) {
+    setFlashMessage(
+      "error",
+      "Failed to update reaction. Please try again.",
+      3000
+    );
+  }
+};
+
+const handleCommentEvent = (event) => {
+  const commentData = event;
+  const messageId = commentData.message_id;
+
+  if (!commentData || !commentData.id || !commentData.user || !messageId) {
+    return;
+  }
+
+  const messageIndex = localMessages.value.findIndex((m) => m.id === messageId);
+  if (messageIndex === -1) {
+    return;
+  }
+
+  const message = { ...localMessages.value[messageIndex] };
+
+  if (!message.comments) {
+    message.comments = [];
+  }
+
+  const commentExists = message.comments.some((c) => c.id === commentData.id);
+  if (!commentExists) {
+    const processedComment = {
+      ...commentData,
+      grouped_reactions: commentData.grouped_reactions || {}
+    };
+    message.comments = [...message.comments, processedComment];
+    localMessages.value[messageIndex] = message;
+  }
+};
+
+const handleCommentReactionUpdate = (event) => {
+  const commentId = event.comment_id;
+  const messageId = event.message_id;
+  const groupedReactions = event.grouped_reactions || {};
+
+  // Find the message
+  const messageIndex = localMessages.value.findIndex((m) => m.id === messageId);
+  if (messageIndex === -1) {
+    return;
+  }
+
+  const message = { ...localMessages.value[messageIndex] };
+  if (!message.comments) {
+    return;
+  }
+
+  const commentIndex = message.comments.findIndex((c) => c.id === commentId);
+  if (commentIndex !== -1) {
+    message.comments = message.comments.map((comment, idx) => {
+      if (idx === commentIndex) {
+        return { ...comment, grouped_reactions: groupedReactions };
+      }
+      return comment;
+    });
+    localMessages.value[messageIndex] = message;
   }
 };
 </script>

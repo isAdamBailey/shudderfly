@@ -54,6 +54,39 @@
               </p>
             </div>
             <div
+              v-else-if="notification.type === 'App\\Notifications\\MessageCommented'"
+              class="text-gray-900 dark:text-gray-100"
+            >
+              <div class="flex items-center gap-2 mb-1">
+                <Avatar
+                  :avatar="notification.data.commenter_avatar"
+                  :user="{
+                    id: notification.data.commenter_id,
+                    name: notification.data.commenter_name
+                  }"
+                  size="sm"
+                />
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <strong>{{ notification.data.commenter_name }}</strong>
+                  <span class="text-sm">commented on your message:</span>
+                  <span
+                    v-if="!notification.read_at"
+                    class="inline-block w-1.5 h-1.5 bg-blue-600 rounded-full"
+                  ></span>
+                </div>
+              </div>
+              <p
+                class="text-sm text-gray-700 dark:text-gray-300 italic ml-8 mb-1"
+              >
+                "{{ notification.data.message }}"
+              </p>
+              <p
+                class="text-sm text-gray-600 dark:text-gray-400 ml-8 mt-1"
+              >
+                Comment: "{{ notification.data.comment }}"
+              </p>
+            </div>
+            <div
               class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 ml-8"
             >
               <span>{{ formatDate(notification.created_at) }}</span>
