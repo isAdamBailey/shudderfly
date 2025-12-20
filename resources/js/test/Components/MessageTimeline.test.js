@@ -868,7 +868,7 @@ describe("MessageTimeline", () => {
 
             global.window.Echo.private = vi.fn(() => mockChannel);
 
-            const wrapper = mount(MessageTimeline, {
+            mount(MessageTimeline, {
                 props: {
                     messages: mockMessages,
                     users: mockUsers,
