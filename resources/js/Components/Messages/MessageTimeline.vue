@@ -13,31 +13,9 @@
       :key="message.id"
       class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 scroll-mt-4 relative"
     >
-      <!-- Buttons in top right -->
-      <div class="absolute top-4 right-4 flex items-center gap-2">
-        <Button
-          type="button"
-          :disabled="speaking"
-          :title="t('message.speak')"
-          :aria-label="t('message.speak_aria')"
-          @click="speakMessage(message)"
-        >
-          <i class="ri-speak-fill text-xl"></i>
-        </Button>
-        <DangerButton
-          v-if="canAdmin"
-          type="button"
-          :title="t('message.delete')"
-          :aria-label="t('message.delete_aria')"
-          @click="deleteMessage(message.id)"
-        >
-          <i class="ri-delete-bin-line text-xl"></i>
-        </DangerButton>
-      </div>
-
-      <!-- Content area - wraps underneath buttons -->
-      <div class="pr-20">
-        <div class="flex items-center gap-2 mb-2">
+      <!-- Header with buttons -->
+      <div class="flex items-start justify-between mb-2">
+        <div class="flex items-center gap-2 flex-1 min-w-0">
           <Avatar :user="message.user" size="sm" />
           <span class="font-semibold text-gray-900 dark:text-gray-100">
             {{ message.user.name }}
@@ -46,6 +24,33 @@
             {{ formatDate(message.created_at) }}
           </span>
         </div>
+        <!-- Buttons in top right -->
+        <div class="flex items-center gap-2 flex-shrink-0 ml-2">
+          <Button
+            type="button"
+            :disabled="speaking"
+            :title="t('message.speak')"
+            :aria-label="t('message.speak_aria')"
+            class="w-8 h-8 p-0 flex items-center justify-center"
+            @click="speakMessage(message)"
+          >
+            <i class="ri-speak-fill text-base"></i>
+          </Button>
+          <DangerButton
+            v-if="canAdmin"
+            type="button"
+            :title="t('message.delete')"
+            :aria-label="t('message.delete_aria')"
+            class="w-8 h-8 p-0 flex items-center justify-center"
+            @click="deleteMessage(message.id)"
+          >
+            <i class="ri-delete-bin-line text-base"></i>
+          </DangerButton>
+        </div>
+      </div>
+
+      <!-- Content area - full width below buttons -->
+      <div class="w-full">
         <div
           class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words"
           v-html="formatMessage(message.message)"
