@@ -135,6 +135,7 @@
       <div class="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
         <div class="flex items-center justify-between mb-2 gap-2">
           <Button
+            v-if="getCommentCount(message) > 0"
             type="button"
             class="flex items-center gap-2"
             @click="toggleComments(message.id)"
@@ -157,7 +158,9 @@
             </span>
           </Button>
           <Button
-            v-if="!expandedComments[message.id]"
+            v-if="
+              getCommentCount(message) === 0 || !expandedComments[message.id]
+            "
             type="button"
             @click="expandComments(message.id)"
           >
