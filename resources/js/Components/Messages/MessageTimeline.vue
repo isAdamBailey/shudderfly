@@ -197,71 +197,27 @@
                 :key="comment.id"
                 class="bg-gray-50 dark:bg-gray-900 rounded-lg p-3"
               >
-                <div class="flex items-start justify-between">
-                  <div class="flex-1">
-                    <div class="flex items-center gap-2 mb-1">
-                      <Avatar :user="comment.user" size="sm" />
-                      <span
-                        class="font-semibold text-sm text-gray-900 dark:text-gray-100"
-                      >
-                        {{ comment.user.name }}
-                      </span>
-                      <span class="text-xs text-gray-500 dark:text-gray-400">
-                        {{ formatDate(comment.created_at) }}
-                      </span>
-                    </div>
-                    <div
-                      class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words ml-8"
+                <!-- Header with buttons -->
+                <div class="flex items-start justify-between mb-1">
+                  <div class="flex items-center gap-2 flex-1 min-w-0">
+                    <Avatar :user="comment.user" size="sm" />
+                    <span
+                      class="font-semibold text-sm text-gray-900 dark:text-gray-100"
                     >
-                      {{ comment.comment }}
-                    </div>
-                    <!-- Comment Reactions -->
-                    <div class="mt-2 ml-8 flex flex-wrap items-center gap-2">
-                      <div
-                        v-for="emoji in getSelectedCommentReactions(comment)"
-                        :key="emoji"
-                        class="flex items-center gap-1"
-                      >
-                        <button
-                          type="button"
-                          :class="[
-                            'flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors',
-                            hasUserReactedToComment(comment, emoji)
-                              ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                          ]"
-                          :title="getCommentReactionTooltip(comment, emoji)"
-                          @click="
-                            toggleCommentReaction(message, comment, emoji)
-                          "
-                        >
-                          <span class="text-sm">{{ emoji }}</span>
-                          <span
-                            v-if="getCommentReactionCount(comment, emoji) > 0"
-                            class="font-medium text-xs"
-                          >
-                            {{ getCommentReactionCount(comment, emoji) }}
-                          </span>
-                        </button>
-                      </div>
-                      <!-- Add reaction button -->
-                      <button
-                        type="button"
-                        class="flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                        :title="t('comment.add_reaction')"
-                        @click="openCommentReactionModal(message, comment)"
-                      >
-                        <i class="ri-add-line text-xs"></i>
-                      </button>
-                    </div>
+                      {{ comment.user.name }}
+                    </span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">
+                      {{ formatDate(comment.created_at) }}
+                    </span>
                   </div>
-                  <div class="ml-4 flex items-center gap-2">
+                  <!-- Buttons in top right -->
+                  <div class="flex items-center gap-2 flex-shrink-0 ml-2">
                     <Button
                       type="button"
                       :disabled="speaking"
                       :title="t('comment.speak')"
                       :aria-label="t('comment.speak_aria')"
-                      class="px-3 py-2"
+                      class="w-8 h-8 p-0 flex items-center justify-center"
                       @click="speakComment(comment)"
                     >
                       <i class="ri-speak-fill text-base"></i>
@@ -271,11 +227,57 @@
                       type="button"
                       :title="t('comment.delete')"
                       :aria-label="t('comment.delete_aria')"
-                      class="px-3 py-2"
+                      class="w-8 h-8 p-0 flex items-center justify-center"
                       @click="deleteComment(message.id, comment.id)"
                     >
                       <i class="ri-delete-bin-line text-base"></i>
                     </DangerButton>
+                  </div>
+                </div>
+
+                <!-- Content area - full width below buttons -->
+                <div class="w-full">
+                  <div
+                    class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words"
+                  >
+                    {{ comment.comment }}
+                  </div>
+                  <!-- Comment Reactions -->
+                  <div class="mt-2 flex flex-wrap items-center gap-2">
+                    <div
+                      v-for="emoji in getSelectedCommentReactions(comment)"
+                      :key="emoji"
+                      class="flex items-center gap-1"
+                    >
+                      <button
+                        type="button"
+                        :class="[
+                          'flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors',
+                          hasUserReactedToComment(comment, emoji)
+                            ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        ]"
+                        :title="getCommentReactionTooltip(comment, emoji)"
+                        @click="toggleCommentReaction(message, comment, emoji)"
+                      >
+                        <span class="text-sm">{{ emoji }}</span>
+                        <span
+                          v-if="getCommentReactionCount(comment, emoji) > 0"
+                          class="font-medium text-xs"
+                        >
+                          {{ getCommentReactionCount(comment, emoji) }}
+                        </span>
+                      </button>
+                    </div>
+                    <!-- Add reaction button -->
+                    <button
+                      type="button"
+                      class="flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                      :title="t('comment.add_reaction')"
+                      @click="openCommentReactionModal(message, comment)"
+                    >
+                      <i class="ri-add-line text-xs"></i>
+                    </button>
                   </div>
                 </div>
               </div>
