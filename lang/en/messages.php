@@ -2,7 +2,7 @@
 
 return [
     // Existing translations
-    'page_shared' => 'check out this page from :book',
+    'page_shared' => 'check out this :media from :book',
     'unknown_book' => 'Unknown Book',
     'share_to_timeline' => 'Share to Timeline',
     'already_shared_today' => 'Already shared today',

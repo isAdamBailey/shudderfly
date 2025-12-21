@@ -1591,7 +1591,7 @@ class MessagesTest extends TestCase
 
         $this->assertDatabaseHas('messages', [
             'user_id' => $user->id,
-            'message' => __('messages.page_shared', ['book' => $book->title]),
+            'message' => __('messages.page_shared', ['media' => 'picture', 'book' => $book->title]),
             'page_id' => $page->id,
         ]);
 
@@ -1614,7 +1614,7 @@ class MessagesTest extends TestCase
 
         $this->assertDatabaseHas('messages', [
             'user_id' => $user->id,
-            'message' => __('messages.page_shared', ['book' => 'My Amazing Book']),
+            'message' => __('messages.page_shared', ['media' => 'picture', 'book' => 'My Amazing Book']),
             'page_id' => $page->id,
         ]);
     }
@@ -1656,7 +1656,7 @@ class MessagesTest extends TestCase
         Event::assertDispatched(\App\Events\MessageCreated::class, function ($event) use ($user, $page, $book) {
             return $event->message->user_id === $user->id &&
                    $event->message->page_id === $page->id &&
-                   $event->message->message === __('messages.page_shared', ['book' => $book->title]);
+                   $event->message->message === __('messages.page_shared', ['media' => 'picture', 'book' => $book->title]);
         });
     }
 
@@ -1717,7 +1717,7 @@ class MessagesTest extends TestCase
         $message = Message::factory()->create([
             'user_id' => $user->id,
             'page_id' => $page->id,
-            'message' => __('messages.page_shared', ['book' => 'Test Book']),
+            'message' => __('messages.page_shared', ['media' => 'picture', 'book' => 'Test Book']),
         ]);
 
         $this->actingAs($user);
@@ -1729,7 +1729,7 @@ class MessagesTest extends TestCase
             ->component('Messages/Index')
             ->has('messages.data', 1)
             ->where('messages.data.0.id', $message->id)
-            ->where('messages.data.0.message', __('messages.page_shared', ['book' => 'Test Book']))
+            ->where('messages.data.0.message', __('messages.page_shared', ['media' => 'page', 'book' => 'Test Book']))
             ->has('messages.data.0.page')
             ->where('messages.data.0.page.media_path', function ($value) {
                 return str_contains($value, 'books/test/image.webp');

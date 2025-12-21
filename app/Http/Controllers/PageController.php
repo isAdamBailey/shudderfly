@@ -625,6 +625,41 @@ class PageController extends Controller
     /**
      * Share a page to the timeline.
      */
+    /**
+     * Get the media type description for a page
+     */
+    private function getMediaType(Page $page): string
+    {
+        if ($page->video_link) {
+            return 'youtube video';
+        } elseif ($page->media_poster || ($page->media_path && $this->isVideoFile($page->media_path))) {
+            return 'video';
+        } elseif ($page->media_path && str_contains($page->media_path, 'snapshot')) {
+            return 'screenshot';
+        }
+
+        return 'picture';
+    }
+
+    /**
+     * Check if a file path is a video file
+     */
+    private function isVideoFile(?string $path): bool
+    {
+        if (! $path) {
+            return false;
+        }
+
+        $videoFormats = ['.mp4', '.avi', '.mpeg', '.quicktime', '.mov'];
+        foreach ($videoFormats as $format) {
+            if (str_ends_with(strtolower($path), $format)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function share(Page $page, Request $request): RedirectResponse
     {
         // Check if messaging is enabled
@@ -638,10 +673,11 @@ class PageController extends Controller
         $page->load('book');
 
         $bookTitle = $page->book?->title ?? __('messages.unknown_book');
+        $mediaType = $this->getMediaType($page);
 
         $message = Message::create([
             'user_id' => $request->user()->id,
-            'message' => __('messages.page_shared', ['book' => $bookTitle]),
+            'message' => __('messages.page_shared', ['media' => $mediaType, 'book' => $bookTitle]),
             'page_id' => $page->id,
         ]);
 

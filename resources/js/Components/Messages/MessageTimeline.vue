@@ -29,7 +29,13 @@
             v-html="formatMessage(message.message)"
           ></div>
           <div
-            v-if="message.page_id && message.page && message.page.media_path"
+            v-if="
+              message.page_id &&
+              message.page &&
+              (message.page.media_path ||
+                message.page.media_poster ||
+                message.page.video_link)
+            "
             class="mt-0.5 mb-1 -mx-4 sm:mx-0 sm:max-w-[600px] md:mt-3 md:mb-3"
           >
             <Link
@@ -37,8 +43,12 @@
               class="block rounded-lg overflow-hidden w-full sm:rounded-lg"
             >
               <img
-                :src="message.page.media_path"
-                :alt="message.page.content ? stripHtml(message.page.content).substring(0, 50) : t('message.shared_page')"
+                :src="getPageImageSrc(message.page)"
+                :alt="
+                  message.page.content
+                    ? stripHtml(message.page.content).substring(0, 50)
+                    : t('message.shared_page')
+                "
                 class="w-full h-auto object-contain"
                 loading="lazy"
               />
@@ -114,7 +124,7 @@
           </DangerButton>
         </div>
       </div>
-      
+
       <!-- Comments Section -->
       <div class="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
         <div class="flex items-center justify-between mb-2">
@@ -133,7 +143,11 @@
             ></i>
             <span>
               {{ getCommentCount(message) }}
-              {{ getCommentCount(message) === 1 ? t('message.comment') : t('message.comments') }}
+              {{
+                getCommentCount(message) === 1
+                  ? t("message.comment")
+                  : t("message.comments")
+              }}
             </span>
           </button>
           <button
@@ -142,121 +156,132 @@
             class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
             @click="expandComments(message.id)"
           >
-            {{ t('message.add_comment') }}
+            {{ t("message.add_comment") }}
           </button>
         </div>
-        
+
         <template v-if="expandedComments[message.id]">
           <div class="space-y-3">
-          <!-- Comment Form -->
-          <form @submit.prevent="submitComment(message)" class="space-y-2">
-            <textarea
-              v-model="commentForms[message.id]"
-              :placeholder="t('message.comment_placeholder')"
-              maxlength="1000"
-              rows="3"
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-            ></textarea>
-            <div class="flex items-center justify-between">
-              <span class="text-xs text-gray-500 dark:text-gray-400">
-                {{ (commentForms[message.id] || "").length }}/1000
-              </span>
-              <Button type="submit" :disabled="!commentForms[message.id]?.trim()">
-                {{ t('message.post_comment') }}
-              </Button>
-            </div>
-          </form>
-          
-          <!-- Comments List -->
-          <div v-if="getComments(message).length > 0" class="space-y-3">
-            <div
-              v-for="comment in getComments(message)"
-              :key="comment.id"
-              class="bg-gray-50 dark:bg-gray-900 rounded-lg p-3"
-            >
-              <div class="flex items-start justify-between">
-                <div class="flex-1">
-                  <div class="flex items-center gap-2 mb-1">
-                    <Avatar :user="comment.user" size="sm" />
-                    <span class="font-semibold text-sm text-gray-900 dark:text-gray-100">
-                      {{ comment.user.name }}
-                    </span>
-                    <span class="text-xs text-gray-500 dark:text-gray-400">
-                      {{ formatDate(comment.created_at) }}
-                    </span>
-                  </div>
-                  <div class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words ml-8">
-                    {{ comment.comment }}
-                  </div>
-                  <!-- Comment Reactions -->
-                  <div class="mt-2 ml-8 flex flex-wrap items-center gap-2">
+            <!-- Comment Form -->
+            <form class="space-y-2" @submit.prevent="submitComment(message)">
+              <textarea
+                v-model="commentForms[message.id]"
+                :placeholder="t('message.comment_placeholder')"
+                maxlength="1000"
+                rows="3"
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              ></textarea>
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-gray-500 dark:text-gray-400">
+                  {{ (commentForms[message.id] || "").length }}/1000
+                </span>
+                <Button
+                  type="submit"
+                  :disabled="!commentForms[message.id]?.trim()"
+                >
+                  {{ t("message.post_comment") }}
+                </Button>
+              </div>
+            </form>
+
+            <!-- Comments List -->
+            <div v-if="getComments(message).length > 0" class="space-y-3">
+              <div
+                v-for="comment in getComments(message)"
+                :key="comment.id"
+                class="bg-gray-50 dark:bg-gray-900 rounded-lg p-3"
+              >
+                <div class="flex items-start justify-between">
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-1">
+                      <Avatar :user="comment.user" size="sm" />
+                      <span
+                        class="font-semibold text-sm text-gray-900 dark:text-gray-100"
+                      >
+                        {{ comment.user.name }}
+                      </span>
+                      <span class="text-xs text-gray-500 dark:text-gray-400">
+                        {{ formatDate(comment.created_at) }}
+                      </span>
+                    </div>
                     <div
-                      v-for="emoji in getSelectedCommentReactions(comment)"
-                      :key="emoji"
-                      class="flex items-center gap-1"
+                      class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words ml-8"
                     >
+                      {{ comment.comment }}
+                    </div>
+                    <!-- Comment Reactions -->
+                    <div class="mt-2 ml-8 flex flex-wrap items-center gap-2">
+                      <div
+                        v-for="emoji in getSelectedCommentReactions(comment)"
+                        :key="emoji"
+                        class="flex items-center gap-1"
+                      >
+                        <button
+                          type="button"
+                          :class="[
+                            'flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors',
+                            hasUserReactedToComment(comment, emoji)
+                              ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                          ]"
+                          :title="getCommentReactionTooltip(comment, emoji)"
+                          @click="
+                            toggleCommentReaction(message, comment, emoji)
+                          "
+                        >
+                          <span class="text-sm">{{ emoji }}</span>
+                          <span
+                            v-if="getCommentReactionCount(comment, emoji) > 0"
+                            class="font-medium text-xs"
+                          >
+                            {{ getCommentReactionCount(comment, emoji) }}
+                          </span>
+                        </button>
+                      </div>
+                      <!-- Add reaction button -->
                       <button
                         type="button"
-                        :class="[
-                          'flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors',
-                          hasUserReactedToComment(comment, emoji)
-                            ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                        ]"
-                        :title="getCommentReactionTooltip(comment, emoji)"
-                        @click="toggleCommentReaction(message, comment, emoji)"
+                        class="flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                        :title="t('comment.add_reaction')"
+                        @click="openCommentReactionModal(message, comment)"
                       >
-                        <span class="text-sm">{{ emoji }}</span>
-                        <span
-                          v-if="getCommentReactionCount(comment, emoji) > 0"
-                          class="font-medium text-xs"
-                        >
-                          {{ getCommentReactionCount(comment, emoji) }}
-                        </span>
+                        <i class="ri-add-line text-xs"></i>
                       </button>
                     </div>
-                    <!-- Add reaction button -->
-                    <button
-                      type="button"
-                      class="flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                      :title="t('comment.add_reaction')"
-                      @click="openCommentReactionModal(message, comment)"
-                    >
-                      <i class="ri-add-line text-xs"></i>
-                    </button>
                   </div>
-                </div>
-                <div class="ml-4 flex items-center gap-2">
-                  <Button
-                    type="button"
-                    :disabled="speaking"
-                    :title="t('comment.speak')"
-                    :aria-label="t('comment.speak_aria')"
-                    class="px-3 py-2"
-                    @click="speakComment(comment)"
-                  >
-                    <i class="ri-speak-fill text-base"></i>
-                  </Button>
-                  <DangerButton
-                    v-if="canAdmin"
-                    type="button"
-                    :title="t('comment.delete')"
-                    :aria-label="t('comment.delete_aria')"
-                    class="px-3 py-2"
-                    @click="deleteComment(message.id, comment.id)"
-                  >
-                    <i class="ri-delete-bin-line text-base"></i>
-                  </DangerButton>
+                  <div class="ml-4 flex items-center gap-2">
+                    <Button
+                      type="button"
+                      :disabled="speaking"
+                      :title="t('comment.speak')"
+                      :aria-label="t('comment.speak_aria')"
+                      class="px-3 py-2"
+                      @click="speakComment(comment)"
+                    >
+                      <i class="ri-speak-fill text-base"></i>
+                    </Button>
+                    <DangerButton
+                      v-if="canAdmin"
+                      type="button"
+                      :title="t('comment.delete')"
+                      :aria-label="t('comment.delete_aria')"
+                      class="px-3 py-2"
+                      @click="deleteComment(message.id, comment.id)"
+                    >
+                      <i class="ri-delete-bin-line text-base"></i>
+                    </DangerButton>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
           </div>
         </template>
       </div>
     </div>
 
-    <div v-if="loading" class="text-center py-4 text-gray-500">{{ t('message.loading') }}</div>
+    <div v-if="loading" class="text-center py-4 text-gray-500">
+      {{ t("message.loading") }}
+    </div>
 
     <!-- Infinite scroll trigger -->
     <div ref="infiniteScrollRef" class="h-4"></div>
@@ -300,7 +325,7 @@
       <div class="p-6">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-            {{ t('general.reactions') }}
+            {{ t("general.reactions") }}
           </h2>
           <Button
             v-if="selectedMessageForView"
@@ -327,8 +352,8 @@
                 {{ getReactionCount(selectedMessageForView, emoji) }}
                 {{
                   getReactionCount(selectedMessageForView, emoji) === 1
-                    ? t('message.reaction')
-                    : t('message.reactions')
+                    ? t("message.reaction")
+                    : t("message.reactions")
                 }}
               </span>
             </div>
@@ -347,7 +372,11 @@
     </Modal>
 
     <!-- Comment Reaction Selection Modal -->
-    <Modal :show="showCommentReactionModal" max-width="sm" @close="closeCommentReactionModal">
+    <Modal
+      :show="showCommentReactionModal"
+      max-width="sm"
+      @close="closeCommentReactionModal"
+    >
       <div class="p-6">
         <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
           Add Reaction
@@ -387,9 +416,10 @@ import { useFlashMessage } from "@/composables/useFlashMessage";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
+import { useMedia } from "@/mediaHelpers";
 import { Link, router, usePage } from "@inertiajs/vue3";
 import axios from "axios";
-import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
 const props = defineProps({
   messages: {
@@ -406,6 +436,7 @@ const { canAdmin } = usePermissions();
 const { speak, speaking } = useSpeechSynthesis();
 const { setFlashMessage } = useFlashMessage();
 const { t } = useTranslations();
+const { isVideo } = useMedia();
 const loading = ref(false);
 const messagesChannel = ref(null);
 const showReactionModal = ref(false);
@@ -438,13 +469,11 @@ const messagesPagination = computed(() => {
   return props.messages || { data: [], next_page_url: null };
 });
 
-// Use infinite scroll composable
 const { items: infiniteScrollItems, infiniteScrollRef } = useInfiniteScroll(
   messagesData.value,
   messagesPagination
 );
 
-// Initialize messages with grouped_reactions and comments with grouped_reactions
 const initializeMessages = (messageArray) => {
   return messageArray.map((msg) => {
     const message = {
@@ -459,18 +488,14 @@ const initializeMessages = (messageArray) => {
   });
 };
 
-// Use infinite scroll items as the base, but manage separately for Echo updates
 const localMessages = ref(initializeMessages(messagesData.value));
 
-// Allowed emojis for reactions
 const allowedEmojis = ["👍", "❤️", "😂", "😮", "😢", "💩"];
 
-// Get current user ID
 const currentUserId = computed(() => {
   return usePage().props.auth?.user?.id;
 });
 
-// Watch for infinite scroll items changes (from pagination)
 watch(
   () => infiniteScrollItems.value,
   (newItems) => {
@@ -510,7 +535,6 @@ watch(
   { deep: true, immediate: true }
 );
 
-// Watch for prop changes (initial load or page refresh)
 watch(
   () => messagesData.value,
   (newMessages) => {
@@ -546,6 +570,17 @@ watch(
   },
   { immediate: false }
 );
+
+const getPageImageSrc = (page) => {
+  const isVideoPage =
+    page.video_link || (page.media_path && isVideo(page.media_path));
+
+  if (isVideoPage) {
+    return page.media_poster || "/img/video-placeholder.png";
+  }
+
+  return page.media_path;
+};
 
 const formatDate = (dateString) => {
   const date = new Date(dateString);
@@ -838,10 +873,12 @@ const scrollToMessage = async () => {
         if (!fetchedMessage.comments) {
           fetchedMessage.comments = [];
         }
-        fetchedMessage.comments = (fetchedMessage.comments || []).map((comment) => ({
-          ...comment,
-          grouped_reactions: comment.grouped_reactions || {}
-        }));
+        fetchedMessage.comments = (fetchedMessage.comments || []).map(
+          (comment) => ({
+            ...comment,
+            grouped_reactions: comment.grouped_reactions || {}
+          })
+        );
         // Add the message and sort by created_at (most recent first)
         localMessages.value.push(fetchedMessage);
         localMessages.value.sort((a, b) => {
@@ -1090,23 +1127,22 @@ const submitComment = async (message) => {
   commentForms.value[message.id] = "";
 
   try {
-    await router.post(route("messages.comments.store", message.id), {
-      comment: commentText
-    }, {
-      preserveScroll: true,
-      onSuccess: () => {
+    await router.post(
+      route("messages.comments.store", message.id),
+      {
+        comment: commentText
       },
-      onError: () => {
-        commentForms.value[message.id] = commentText;
+      {
+        preserveScroll: true,
+        onSuccess: () => {},
+        onError: () => {
+          commentForms.value[message.id] = commentText;
+        }
       }
-    });
+    );
   } catch (error) {
     commentForms.value[message.id] = commentText;
-    setFlashMessage(
-      "error",
-      "Failed to post comment. Please try again.",
-      3000
-    );
+    setFlashMessage("error", "Failed to post comment. Please try again.", 3000);
   }
 };
 
@@ -1137,7 +1173,9 @@ const getSelectedCommentReactions = (comment) => {
   if (!comment.grouped_reactions) {
     return [];
   }
-  return allowedEmojis.filter((emoji) => getCommentReactionCount(comment, emoji) > 0);
+  return allowedEmojis.filter(
+    (emoji) => getCommentReactionCount(comment, emoji) > 0
+  );
 };
 
 const getCommentReactionCount = (comment, emoji) => {
@@ -1183,7 +1221,12 @@ const closeCommentReactionModal = () => {
 };
 
 const selectCommentReaction = async (emoji) => {
-  if (!currentUserId.value || !selectedCommentForReaction.value || !selectedMessageForCommentReaction.value) return;
+  if (
+    !currentUserId.value ||
+    !selectedCommentForReaction.value ||
+    !selectedMessageForCommentReaction.value
+  )
+    return;
 
   const comment = selectedCommentForReaction.value;
   const message = selectedMessageForCommentReaction.value;

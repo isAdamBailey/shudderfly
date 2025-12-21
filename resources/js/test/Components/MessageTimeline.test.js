@@ -69,6 +69,19 @@ vi.mock("@/composables/permissions", () => ({
   })
 }));
 
+// Mock mediaHelpers composable
+vi.mock("@/mediaHelpers", () => ({
+  useMedia: () => ({
+    isVideo: (path) => {
+      if (!path) return false;
+      const videoFormats = ["mp4", "avi", "mpeg", "quicktime"];
+      return videoFormats.some((suffix) => path.endsWith(suffix));
+    },
+    isPoster: (path) => path && path.includes("poster"),
+    isSnapshot: (path) => path && path.includes("snapshot")
+  })
+}));
+
 describe("MessageTimeline", () => {
   beforeEach(() => {
     // Ensure window.location is properly mocked
@@ -1093,6 +1106,75 @@ describe("MessageTimeline", () => {
       expect(wrapper.text()).toContain("shared this page from Test Book");
       const lazyLoader = wrapper.findComponent({ name: "LazyLoader" });
       expect(lazyLoader.exists()).toBe(false);
+    });
+
+    it("displays placeholder image for video pages", async () => {
+      const mockMessages = [
+        {
+          id: 1,
+          message: "check out this page from Test Book",
+          created_at: new Date().toISOString(),
+          user: { id: 1, name: "Alice" },
+          page_id: 123,
+          page: {
+            id: 123,
+            media_path: "https://example.com/video.mp4",
+            video_link: "https://youtube.com/watch?v=test"
+          }
+        }
+      ];
+
+      const wrapper = mount(MessageTimeline, {
+        props: {
+          messages: mockMessages,
+          users: mockUsers
+        }
+      });
+
+      await nextTick();
+
+      // Find the page image by looking for an img inside a Link with the page route
+      const link = wrapper.findComponent({ name: "Link" });
+      expect(link.exists()).toBe(true);
+      const img = link.find("img");
+      expect(img.exists()).toBe(true);
+      // Should use placeholder for video pages
+      expect(img.attributes("src")).toBe("/img/video-placeholder.png");
+    });
+
+    it("displays media_poster for video pages when available", async () => {
+      const mockMessages = [
+        {
+          id: 1,
+          message: "check out this page from Test Book",
+          created_at: new Date().toISOString(),
+          user: { id: 1, name: "Alice" },
+          page_id: 123,
+          page: {
+            id: 123,
+            media_path: "https://example.com/video.mp4",
+            media_poster: "https://example.com/poster.jpg",
+            video_link: "https://youtube.com/watch?v=test"
+          }
+        }
+      ];
+
+      const wrapper = mount(MessageTimeline, {
+        props: {
+          messages: mockMessages,
+          users: mockUsers
+        }
+      });
+
+      await nextTick();
+
+      // Find the page image by looking for an img inside a Link with the page route
+      const link = wrapper.findComponent({ name: "Link" });
+      expect(link.exists()).toBe(true);
+      const img = link.find("img");
+      expect(img.exists()).toBe(true);
+      // Should use media_poster when available
+      expect(img.attributes("src")).toBe("https://example.com/poster.jpg");
     });
   });
 });

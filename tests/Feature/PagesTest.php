@@ -1590,7 +1590,86 @@ class PagesTest extends TestCase
         $this->assertDatabaseHas('messages', [
             'user_id' => $user->id,
             'page_id' => $page->id,
-            'message' => __('messages.page_shared', ['book' => __('messages.unknown_book')]),
+            'message' => __('messages.page_shared', ['media' => 'picture', 'book' => __('messages.unknown_book')]),
+        ]);
+    }
+
+    public function test_share_youtube_video_shows_correct_media_type(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        // Enable messaging
+        SiteSetting::updateOrCreate(
+            ['key' => 'messaging_enabled'],
+            ['value' => '1']
+        );
+
+        $book = Book::factory()->create();
+        $page = Page::factory()->for($book)->create([
+            'video_link' => 'https://youtube.com/watch?v=test123'
+        ]);
+
+        $response = $this->post(route('pages.share', $page));
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('messages', [
+            'user_id' => $user->id,
+            'page_id' => $page->id,
+            'message' => __('messages.page_shared', ['media' => 'youtube video', 'book' => $book->title]),
+        ]);
+    }
+
+    public function test_share_video_shows_correct_media_type(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        // Enable messaging
+        SiteSetting::updateOrCreate(
+            ['key' => 'messaging_enabled'],
+            ['value' => '1']
+        );
+
+        $book = Book::factory()->create();
+        $page = Page::factory()->for($book)->create([
+            'media_path' => 'books/test/video.mp4',
+            'media_poster' => 'books/test/poster.jpg'
+        ]);
+
+        $response = $this->post(route('pages.share', $page));
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('messages', [
+            'user_id' => $user->id,
+            'page_id' => $page->id,
+            'message' => __('messages.page_shared', ['media' => 'video', 'book' => $book->title]),
+        ]);
+    }
+
+    public function test_share_screenshot_shows_correct_media_type(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        // Enable messaging
+        SiteSetting::updateOrCreate(
+            ['key' => 'messaging_enabled'],
+            ['value' => '1']
+        );
+
+        $book = Book::factory()->create();
+        $page = Page::factory()->for($book)->create([
+            'media_path' => 'books/test/snapshot-123.jpg'
+        ]);
+
+        $response = $this->post(route('pages.share', $page));
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('messages', [
+            'user_id' => $user->id,
+            'page_id' => $page->id,
+            'message' => __('messages.page_shared', ['media' => 'screenshot', 'book' => $book->title]),
         ]);
     }
 }
