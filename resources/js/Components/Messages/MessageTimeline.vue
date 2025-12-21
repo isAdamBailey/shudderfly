@@ -38,7 +38,7 @@
             >
               <img
                 :src="message.page.media_path"
-                :alt="message.page.content ? stripHtml(message.page.content).substring(0, 50) : 'Shared page'"
+                :alt="message.page.content ? stripHtml(message.page.content).substring(0, 50) : t('message.shared_page')"
                 class="w-full h-auto object-contain"
                 loading="lazy"
               />
@@ -76,7 +76,7 @@
             <button
               type="button"
               class="flex items-center gap-1 px-2 py-1 rounded-full text-sm transition-colors bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-              title="Add reaction"
+              :title="t('message.add_reaction')"
               @click="openReactionModal(message)"
             >
               <i class="ri-add-line text-base"></i>
@@ -86,7 +86,7 @@
               v-if="hasAnyReactions(message)"
               type="button"
               class="flex items-center gap-1 px-2 py-1 rounded-full text-sm transition-colors bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-              title="View all reactions"
+              :title="t('message.view_all_reactions')"
               @click="openViewReactionsModal(message)"
             >
               <i class="ri-information-line text-base"></i>
@@ -97,8 +97,8 @@
           <Button
             type="button"
             :disabled="speaking"
-            title="Speak message"
-            aria-label="Speak message"
+            :title="t('message.speak')"
+            :aria-label="t('message.speak_aria')"
             @click="speakMessage(message)"
           >
             <i class="ri-speak-fill text-xl"></i>
@@ -106,8 +106,8 @@
           <DangerButton
             v-if="canAdmin"
             type="button"
-            title="Delete message"
-            aria-label="Delete message"
+            :title="t('message.delete')"
+            :aria-label="t('message.delete_aria')"
             @click="deleteMessage(message.id)"
           >
             <i class="ri-delete-bin-line text-xl"></i>
@@ -133,7 +133,7 @@
             ></i>
             <span>
               {{ getCommentCount(message) }}
-              {{ getCommentCount(message) === 1 ? "comment" : "comments" }}
+              {{ getCommentCount(message) === 1 ? t('message.comment') : t('message.comments') }}
             </span>
           </button>
           <button
@@ -142,7 +142,7 @@
             class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
             @click="expandComments(message.id)"
           >
-            Add Comment
+            {{ t('message.add_comment') }}
           </button>
         </div>
         
@@ -152,7 +152,7 @@
           <form @submit.prevent="submitComment(message)" class="space-y-2">
             <textarea
               v-model="commentForms[message.id]"
-              :placeholder="'Add a comment...'"
+              :placeholder="t('message.comment_placeholder')"
               maxlength="1000"
               rows="3"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
@@ -162,7 +162,7 @@
                 {{ (commentForms[message.id] || "").length }}/1000
               </span>
               <Button type="submit" :disabled="!commentForms[message.id]?.trim()">
-                Post Comment
+                {{ t('message.post_comment') }}
               </Button>
             </div>
           </form>
@@ -219,7 +219,7 @@
                     <button
                       type="button"
                       class="flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                      title="Add reaction"
+                      :title="t('comment.add_reaction')"
                       @click="openCommentReactionModal(message, comment)"
                     >
                       <i class="ri-add-line text-xs"></i>
@@ -230,8 +230,8 @@
                   <Button
                     type="button"
                     :disabled="speaking"
-                    title="Speak comment"
-                    aria-label="Speak comment"
+                    :title="t('comment.speak')"
+                    :aria-label="t('comment.speak_aria')"
                     class="px-3 py-2"
                     @click="speakComment(comment)"
                   >
@@ -240,8 +240,8 @@
                   <DangerButton
                     v-if="canAdmin"
                     type="button"
-                    title="Delete comment"
-                    aria-label="Delete comment"
+                    :title="t('comment.delete')"
+                    :aria-label="t('comment.delete_aria')"
                     class="px-3 py-2"
                     @click="deleteComment(message.id, comment.id)"
                   >
@@ -256,7 +256,7 @@
       </div>
     </div>
 
-    <div v-if="loading" class="text-center py-4 text-gray-500">Loading...</div>
+    <div v-if="loading" class="text-center py-4 text-gray-500">{{ t('message.loading') }}</div>
 
     <!-- Infinite scroll trigger -->
     <div ref="infiniteScrollRef" class="h-4"></div>
@@ -300,14 +300,14 @@
       <div class="p-6">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-            Reactions
+            {{ t('general.reactions') }}
           </h2>
           <Button
             v-if="selectedMessageForView"
             type="button"
             :disabled="speaking"
-            title="Speak all reactions"
-            aria-label="Speak all reactions"
+            :title="t('general.speak_all_reactions')"
+            :aria-label="t('general.speak_all_reactions_aria')"
             @click="speakAllReactions(selectedMessageForView)"
           >
             <i class="ri-speak-fill text-xl"></i>
@@ -327,8 +327,8 @@
                 {{ getReactionCount(selectedMessageForView, emoji) }}
                 {{
                   getReactionCount(selectedMessageForView, emoji) === 1
-                    ? "reaction"
-                    : "reactions"
+                    ? t('message.reaction')
+                    : t('message.reactions')
                 }}
               </span>
             </div>
@@ -386,6 +386,7 @@ import { usePermissions } from "@/composables/permissions";
 import { useFlashMessage } from "@/composables/useFlashMessage";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { useTranslations } from "@/composables/useTranslations";
 import { Link, router, usePage } from "@inertiajs/vue3";
 import axios from "axios";
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
@@ -404,6 +405,7 @@ const props = defineProps({
 const { canAdmin } = usePermissions();
 const { speak, speaking } = useSpeechSynthesis();
 const { setFlashMessage } = useFlashMessage();
+const { t } = useTranslations();
 const loading = ref(false);
 const messagesChannel = ref(null);
 const showReactionModal = ref(false);

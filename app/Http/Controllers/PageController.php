@@ -346,7 +346,7 @@ class PageController extends Controller
     public function store(StorePageRequest $request): Redirector|RedirectResponse
     {
         $book = Book::find($request->book_id);
-        $successMessage = 'Page created successfully!';
+        $successMessage = __('messages.page.created');
 
         if ($request->hasFile('image')) {
             $file = $request->file('image');
@@ -363,7 +363,7 @@ class PageController extends Controller
                     $latitude = $request->input('latitude') ?? $book->latitude;
                     $longitude = $request->input('longitude') ?? $book->longitude;
                     StoreImage::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'), null, null, null, $latitude, $longitude);
-                    $successMessage = 'Queued image: '.$originalName.'. It may take a few minutes to process.';
+                    $successMessage = __('messages.page.queued_image', ['filename' => $originalName]);
                 } elseif (Str::startsWith($mimeType, 'video/')) {
                     $mediaPath = 'books/'.$book->slug.'/'.$originalName;
 
@@ -372,7 +372,7 @@ class PageController extends Controller
                         $latitude = $request->input('latitude') ?? $book->latitude;
                         $longitude = $request->input('longitude') ?? $book->longitude;
                         StoreVideo::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'), null, null, null, $latitude, $longitude);
-                        $successMessage = 'Queued video: '.$originalName.'. It may take a few minutes to process.';
+                        $successMessage = __('messages.page.queued_video', ['filename' => $originalName]);
                     } catch (\Exception $e) {
                         Log::error('Failed to dispatch StoreVideo job', [
                             'exception' => $e->getMessage(),
@@ -532,7 +532,7 @@ class PageController extends Controller
             }
         }
 
-        return redirect(route('pages.show', $page))->with('success', 'Page updated successfully!');
+        return redirect(route('pages.show', $page))->with('success', __('messages.page.updated'));
     }
 
     /**
@@ -552,7 +552,7 @@ class PageController extends Controller
         }
         $page->delete();
 
-        return redirect(route('books.show', $page->book))->with('success', 'Page deleted successfully!');
+        return redirect(route('books.show', $page->book))->with('success', __('messages.page.deleted'));
     }
 
     public function snapshot(Request $request)
@@ -600,14 +600,14 @@ class PageController extends Controller
                     }
                     $page->delete();
                 }
-                $message = count($pages).' page(s) deleted successfully.';
+                $message = __('messages.page.bulk_deleted', ['count' => count($pages)]);
                 break;
 
             case 'move_to_top':
                 foreach ($pages as $page) {
                     $page->update(['created_at' => now()]);
                 }
-                $message = count($pages).' page(s) moved to top successfully.';
+                $message = __('messages.page.bulk_moved_to_top', ['count' => count($pages)]);
                 break;
 
             case 'move_to_book':
@@ -615,7 +615,7 @@ class PageController extends Controller
                 foreach ($pages as $page) {
                     $page->update(['book_id' => $targetBookId]);
                 }
-                $message = count($pages).' page(s) moved to "'.$targetBook->title.'" successfully.';
+                $message = __('messages.page.bulk_moved_to_book', ['count' => count($pages), 'book' => $targetBook->title]);
                 break;
         }
 
@@ -632,7 +632,7 @@ class PageController extends Controller
         $messagingEnabled = $setting && ($setting->getAttributes()['value'] ?? $setting->value) === '1';
 
         if (! $messagingEnabled) {
-            return back()->withErrors(['message' => 'Messaging is currently disabled.']);
+            return back()->withErrors(['message' => __('messages.messaging.disabled')]);
         }
 
         $page->load('book');
@@ -648,6 +648,6 @@ class PageController extends Controller
         $message->load('page');
         event(new MessageCreated($message));
 
-        return back()->with('success', 'Page shared successfully!');
+        return back()->with('success', __('messages.page.shared'));
     }
 }

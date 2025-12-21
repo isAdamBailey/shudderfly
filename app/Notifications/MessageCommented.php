@@ -49,13 +49,13 @@ class MessageCommented extends Notification implements ShouldBroadcast
         $url = route('messages.index').'#message-'.$this->message->id;
 
         return (new MailMessage)
-            ->subject($this->commenter->name.' commented on your message')
-            ->greeting('Hello '.$notifiable->name.'!')
-            ->line($this->commenter->name.' commented on your message:')
+            ->subject(__('messages.commented.subject', ['name' => $this->commenter->name]))
+            ->greeting(__('messages.commented.greeting', ['name' => $notifiable->name]))
+            ->line(__('messages.commented.line', ['name' => $this->commenter->name]))
             ->line('"'.$this->message->message.'"')
-            ->line('Comment: "'.$this->comment->comment.'"')
-            ->action('View Message', $url)
-            ->line('Thank you for using our platform!');
+            ->line(__('messages.commented.comment_line', ['comment' => $this->comment->comment]))
+            ->action(__('messages.commented.action'), $url)
+            ->line(__('messages.commented.thank_you'));
     }
 
     /**
@@ -63,7 +63,7 @@ class MessageCommented extends Notification implements ShouldBroadcast
      */
     public function toBroadcast(object $notifiable): BroadcastMessage
     {
-        $title = $this->commenter->name.' commented on your message';
+        $title = __('messages.commented.title', ['name' => $this->commenter->name]);
         $commentBody = mb_strlen($this->comment->comment, 'UTF-8') > 120
             ? mb_substr($this->comment->comment, 0, 117, 'UTF-8').'...'
             : $this->comment->comment;

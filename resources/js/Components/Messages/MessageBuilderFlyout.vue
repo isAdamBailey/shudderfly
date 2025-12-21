@@ -20,7 +20,7 @@
       <button
         type="button"
         class="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white dark:text-white shadow-lg dark:shadow-gray-900 flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:ring-offset-2 dark:focus:ring-offset-gray-800 rounded-r-lg px-2 py-3 relative w-8 h-16"
-        aria-label="Toggle prebuilt messages"
+        :aria-label="t('flyout.toggle_aria')"
         @click="toggleFlyout"
       >
         <i class="ri-message-3-line text-lg"></i>
@@ -44,7 +44,7 @@
           <h2
             class="text-2xl font-heading font-semibold text-indigo-600 dark:text-gray-100"
           >
-            Prebuilt Messages
+            {{ t('flyout.prebuilt_messages') }}
           </h2>
           <button
             class="w-8 h-8 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200"
@@ -62,12 +62,12 @@
               class="text-base font-bold mb-2 text-blue-600 dark:text-blue-400 flex items-center gap-2"
             >
               <i class="ri-chat-quote-fill text-3xl"></i>
-              Quick Messages
+              {{ t('flyout.quick_messages') }}
               <button
                 type="button"
                 class="ml-auto p-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
-                title="Say 'Quick Messages'"
-                aria-label="Say category name"
+                :title="t('flyout.say_quick_messages')"
+                :aria-label="t('flyout.say_category_aria')"
                 @click="speak('Quick Messages')"
               >
                 <i class="ri-speak-fill text-lg"></i>
@@ -92,12 +92,12 @@
               class="text-base font-bold mb-2 text-teal-600 dark:text-teal-400 flex items-center gap-2"
             >
               <i class="ri-play-circle-fill text-3xl"></i>
-              Common Starters
+              {{ t('flyout.common_starters') }}
               <button
                 type="button"
                 class="ml-auto p-1.5 rounded-md bg-teal-600 hover:bg-teal-700 text-white shadow-sm"
-                title="Say 'Common Starters'"
-                aria-label="Say category name"
+                :title="t('flyout.say_common_starters')"
+                :aria-label="t('flyout.say_category_aria')"
                 @click="speak('Common Starters')"
               >
                 <i class="ri-speak-fill text-lg"></i>
@@ -120,12 +120,12 @@
           <div>
             <div class="text-sm font-semibold mb-2 flex items-center gap-2">
               <i class="ri-gift-fill text-orange-600 text-2xl"></i>
-              Things I Need
+              {{ t('flyout.things_i_need') }}
               <button
                 type="button"
                 class="ml-auto p-1.5 rounded-md bg-orange-600 hover:bg-orange-700 text-white shadow-sm"
-                title="Say 'Things I Need'"
-                aria-label="Say category name"
+                :title="t('flyout.say_things_i_need')"
+                :aria-label="t('flyout.say_category_aria')"
                 @click="speak('Things I Need')"
               >
                 <i class="ri-speak-fill text-lg"></i>
@@ -148,12 +148,12 @@
           <div>
             <div class="text-sm font-semibold mb-2 flex items-center gap-2">
               <i class="ri-user-fill text-purple-600 text-2xl"></i>
-              People
+              {{ t('flyout.people') }}
               <button
                 type="button"
                 class="ml-auto p-1.5 rounded-md bg-purple-600 hover:bg-purple-700 text-white shadow-sm"
-                title="Say 'People'"
-                aria-label="Say category name"
+                :title="t('flyout.say_people')"
+                :aria-label="t('flyout.say_category_aria')"
                 @click="speak('People')"
               >
                 <i class="ri-speak-fill text-lg"></i>
@@ -176,12 +176,12 @@
           <div>
             <div class="text-sm font-semibold mb-2 flex items-center gap-2">
               <i class="ri-body-scan-fill text-red-600 text-2xl"></i>
-              Body Parts
+              {{ t('flyout.body_parts') }}
               <button
                 type="button"
                 class="ml-auto p-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white shadow-sm"
-                title="Say 'Body Parts'"
-                aria-label="Say category name"
+                :title="t('flyout.say_body_parts')"
+                :aria-label="t('flyout.say_category_aria')"
                 @click="speak('Body Parts')"
               >
                 <i class="ri-speak-fill text-lg"></i>
@@ -204,12 +204,12 @@
           <div>
             <div class="text-sm font-semibold mb-2 flex items-center gap-2">
               <i class="ri-run-fill text-green-600 text-2xl"></i>
-              Actions
+              {{ t('flyout.actions') }}
               <button
                 type="button"
                 class="ml-auto p-1.5 rounded-md bg-green-600 hover:bg-green-700 text-white shadow-sm"
-                title="Say 'Actions'"
-                aria-label="Say category name"
+                :title="t('flyout.say_actions')"
+                :aria-label="t('flyout.say_category_aria')"
                 @click="speak('Actions')"
               >
                 <i class="ri-speak-fill text-lg"></i>
@@ -232,12 +232,12 @@
           <div>
             <div class="text-sm font-semibold mb-2 flex items-center gap-2">
               <i class="ri-emotion-happy-fill text-yellow-600 text-2xl"></i>
-              Feelings
+              {{ t('flyout.feelings') }}
               <button
                 type="button"
                 class="ml-auto p-1.5 rounded-md bg-yellow-600 hover:bg-yellow-700 text-white shadow-sm"
-                title="Say 'Feelings'"
-                aria-label="Say category name"
+                :title="t('flyout.say_feelings')"
+                :aria-label="t('flyout.say_category_aria')"
                 @click="speak('Feelings')"
               >
                 <i class="ri-speak-fill text-lg"></i>
@@ -260,12 +260,12 @@
           <div>
             <div class="text-sm font-semibold mb-2 flex items-center gap-2">
               <i class="ri-contrast-fill text-indigo-600 text-2xl"></i>
-              How Much
+              {{ t('flyout.how_much') }}
               <button
                 type="button"
                 class="ml-auto p-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
-                title="Say 'How Much'"
-                aria-label="Say category name"
+                :title="t('flyout.say_how_much')"
+                :aria-label="t('flyout.say_category_aria')"
                 @click="speak('How Much')"
               >
                 <i class="ri-speak-fill text-lg"></i>
@@ -292,6 +292,7 @@
 <script setup>
 import { useMessageBuilder } from "@/composables/useMessageBuilder";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { useTranslations } from "@/composables/useTranslations";
 import { usePage } from "@inertiajs/vue3";
 import { computed } from "vue";
 
@@ -304,6 +305,7 @@ const {
   getActiveGetPreview
 } = useMessageBuilder();
 const { speak } = useSpeechSynthesis();
+const { t } = useTranslations();
 const page = usePage();
 
 // Check if we're on the messages page

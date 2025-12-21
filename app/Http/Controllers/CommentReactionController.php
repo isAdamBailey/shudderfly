@@ -25,7 +25,7 @@ class CommentReactionController extends Controller
 
         if (! CommentReaction::isAllowedEmoji($emoji)) {
             return response()->json([
-                'error' => 'Invalid emoji. Allowed emojis: '.implode(' ', CommentReaction::ALLOWED_EMOJIS),
+                'error' => __('messages.emoji.invalid', ['emojis' => implode(' ', CommentReaction::ALLOWED_EMOJIS)]),
             ], 422);
         }
 

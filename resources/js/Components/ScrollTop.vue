@@ -8,7 +8,7 @@
     >
       <button
         role="button"
-        aria-label="scroll to top of the page"
+        :aria-label="t('general.scroll_to_top')"
         @click="scrollToTop"
       >
         <i class="ri-arrow-up-circle-line text-7xl"></i>
@@ -18,10 +18,12 @@
 </template>
 
 <script setup>
+import { useTranslations } from "@/composables/useTranslations";
 import { router } from "@inertiajs/vue3";
 import debounce from "lodash/debounce";
 import { onBeforeUnmount, onMounted, ref } from "vue";
 
+const { t } = useTranslations();
 const props = defineProps({
   method: {
     type: [Function, String],

@@ -44,7 +44,7 @@ class MessageCommentController extends Controller
 
             $messageAuthor->notify(new MessageCommented($message, $comment, $user));
 
-            $title = $user->name.' commented on your message';
+            $title = __('messages.commented.push_title', ['name' => $user->name]);
             $commentBody = mb_strlen($comment->comment, 'UTF-8') > 120
                 ? mb_substr($comment->comment, 0, 117, 'UTF-8').'...'
                 : $comment->comment;
@@ -77,11 +77,11 @@ class MessageCommentController extends Controller
     public function destroy(Message $message, MessageComment $comment): RedirectResponse
     {
         if (! Auth::user()->hasPermissionTo('admin')) {
-            abort(403, 'Only admins can delete comments.');
+            abort(403, __('messages.admin.only_comments'));
         }
 
         $comment->delete();
 
-        return back()->with('success', 'Comment deleted successfully.');
+        return back()->with('success', __('messages.comment.deleted'));
     }
 }

@@ -30,7 +30,7 @@
       </button>
 
       <!-- Search Input - MIDDLE -->
-      <label for="search" class="hidden">Search</label>
+      <label for="search" class="hidden">{{ t('search.label') }}</label>
       <div class="relative flex-1 min-w-0">
         <input
           id="search"
@@ -91,7 +91,7 @@
                 style="animation-delay: 300ms"
               ></span>
             </div>
-            <span class="text-sm font-medium">Listening...</span>
+            <span class="text-sm font-medium">{{ t('search.listening') }}</span>
           </div>
 
           <!-- Show what's being heard in real-time -->
@@ -105,13 +105,13 @@
           </div>
           <div v-else class="bg-white/20 rounded-lg p-2 min-h-[2rem]">
             <p class="text-sm opacity-75 italic">
-              Say something... I'm waiting to hear you!
+              {{ t('search.say_something') }}
             </p>
           </div>
 
           <!-- Tap to stop hint -->
           <p class="text-xs mt-2 opacity-75 text-center">
-            Tap the microphone again to search
+            {{ t('search.tap_to_stop') }}
           </p>
         </div>
 
@@ -146,7 +146,7 @@
     <div
       class="self-center w-[180px] flex-shrink-0"
       role="radiogroup"
-      aria-label="Search target"
+      :aria-label="t('search.target_aria')"
     >
       <div
         class="relative inline-flex items-center rounded-full bg-gray-200 dark:bg-gray-800 p-1 h-8 w-full"
@@ -165,7 +165,7 @@
           @keydown.enter.prevent="setTarget('books')"
           @keydown.space.prevent="setTarget('books')"
         >
-          Books
+          {{ t('search.books') }}
         </button>
         <button
           role="radio"
@@ -181,7 +181,7 @@
           @keydown.enter.prevent="setTarget('uploads')"
           @keydown.space.prevent="setTarget('uploads')"
         >
-          ALL
+          {{ t('search.all') }}
         </button>
       </div>
     </div>
@@ -190,12 +190,14 @@
 
 <script setup>
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { useTranslations } from "@/composables/useTranslations";
 import { router, usePage } from "@inertiajs/vue3";
 import { useSpeechRecognition } from "@vueuse/core";
 import { debounce } from "lodash";
 import { computed, onUnmounted, ref, watch } from "vue";
 
 const { speak } = useSpeechSynthesis();
+const { t } = useTranslations();
 const props = defineProps({
   label: {
     type: String,
@@ -239,19 +241,19 @@ const isUploadsTarget = computed(() => target.value === "uploads");
 
 const currentLabel = computed(() => {
   if (props.showTargetToggle) {
-    return target.value === "uploads" ? "ALL" : "Books";
+    return target.value === "uploads" ? t('search.all') : t('search.books');
   }
-  return props.label || (target.value === "uploads" ? "ALL" : "Books");
+  return props.label || (target.value === "uploads" ? t('search.all') : t('search.books'));
 });
 
 const searchPlaceholder = computed(() => {
   if (isListening.value) {
-    return `Listening...`;
+    return t('search.listening');
   }
   if (isProcessing.value) {
-    return "Processing speech...";
+    return t('search.processing');
   }
-  return `Search ${currentLabel.value}!`;
+  return t('search.placeholder', { target: currentLabel.value });
 });
 
 const displayValue = computed(() => {
@@ -433,7 +435,7 @@ function getDefaultTarget() {
 
 const toggleVoiceRecognition = async () => {
   if (!isSupported.value) {
-    speak("Voice recognition is not supported in this browser.");
+    speak(t('search.voice_not_supported'));
     return;
   }
 
@@ -446,7 +448,7 @@ const toggleVoiceRecognition = async () => {
     }
   } catch (error) {
     console.error("Voice recognition error:", error);
-    speak(`Failed to start voice recognition: ${error.message}`);
+    speak(t('search.voice_failed', { error: error.message }));
   }
 };
 

@@ -4,6 +4,7 @@ import Accordion from "@/Components/Accordion.vue";
 import Button from "@/Components/Button.vue";
 import { useMessageBuilder } from "@/composables/useMessageBuilder";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { useTranslations } from "@/composables/useTranslations";
 import { useForm } from "@inertiajs/vue3";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
@@ -99,6 +100,7 @@ const hasMinimumCharacters = computed(() => {
 });
 
 const { speak, speaking } = useSpeechSynthesis();
+const { t } = useTranslations();
 
 const form = useForm({
   message: "",
@@ -736,7 +738,7 @@ function postMessage() {
             ref="keyboardInputRef"
             v-model="inputValue"
             class="message-input flex-1 text-gray-700 dark:text-gray-100 break-words text-lg md:text-xl font-bold leading-tight bg-transparent border-none outline-none focus:outline-none resize-none overflow-hidden min-h-[32px] max-h-[200px]"
-            placeholder="Type your message here... (use @ to tag users)"
+            :placeholder="t('builder.placeholder')"
             rows="1"
             @input="handleTextareaInput"
             @change="handleInputChange"
@@ -768,8 +770,8 @@ function postMessage() {
           <button
             type="button"
             class="ml-3 px-3 py-2 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-md self-start"
-            aria-label="Say message"
-            title="Say message"
+            :aria-label="t('builder.say_message_aria')"
+            :title="t('builder.say_message')"
             :disabled="speaking"
             @click="sayIt"
           >
@@ -783,7 +785,7 @@ function postMessage() {
     <Accordion
       ref="actionsAccordionRef"
       v-model="actionsAccordionOpen"
-      title="Actions"
+      :title="t('builder.actions')"
       :default-open="false"
       :compact="true"
     >
@@ -791,8 +793,8 @@ function postMessage() {
         <button
           class="px-4 py-3 rounded-md bg-blue-600 dark:bg-blue-500 text-white shadow-md hover:bg-blue-700 dark:hover:bg-blue-600 font-bold text-2xl"
           type="button"
-          title="Tag a user (@)"
-          aria-label="Tag a user"
+          :title="t('builder.tag_user')"
+          :aria-label="t('builder.tag_user_aria')"
           @click="addWord('@')"
         >
           @
@@ -800,8 +802,8 @@ function postMessage() {
         <button
           class="p-3 rounded-md bg-slate-700 dark:bg-slate-600 text-white shadow-md"
           type="button"
-          title="Remove last word"
-          aria-label="Remove last word"
+          :title="t('builder.remove_last_word')"
+          :aria-label="t('builder.remove_last_word_aria')"
           @click="removeLast"
         >
           <i class="ri-delete-back-2-line text-2xl"></i>
@@ -810,8 +812,8 @@ function postMessage() {
         <button
           class="px-4 py-3 rounded-md bg-red-600 hover:bg-red-700 text-white shadow-md font-semibold flex items-center gap-2"
           type="button"
-          title="Clear all words"
-          aria-label="Clear all words"
+          :title="t('builder.clear_all')"
+          :aria-label="t('builder.clear_all_aria')"
           @click="reset"
         >
           <i class="ri-delete-bin-line text-2xl"></i>
@@ -820,8 +822,8 @@ function postMessage() {
         <button
           class="p-3 rounded-md bg-slate-700 dark:bg-slate-600 text-white shadow-md"
           type="button"
-          title="Surprise: build a random sentence"
-          aria-label="Surprise sentence"
+          :title="t('builder.surprise')"
+          :aria-label="t('builder.surprise_aria')"
           @click="suggestRandom"
         >
           <i class="ri-shuffle-line text-2xl"></i>
@@ -837,13 +839,13 @@ function postMessage() {
           type="button"
           :title="
             canSaveFavorite
-              ? 'Save current message as favorite'
+              ? t('builder.save_favorite')
               : isAtMax
-              ? `Max favorites (${MAX_FAVORITES}) reached`
-              : 'Build a message to save'
+              ? t('builder.max_favorites', { count: MAX_FAVORITES })
+              : t('builder.build_to_save')
           "
           :aria-label="
-            canSaveFavorite ? 'Save favorite' : 'Save favorite (disabled)'
+            canSaveFavorite ? t('builder.save_favorite') : t('builder.save_favorite_disabled')
           "
           :aria-disabled="!canSaveFavorite"
           :disabled="!canSaveFavorite"
@@ -858,7 +860,7 @@ function postMessage() {
           class="ml-3 inline-flex items-center gap-2 bg-green-100 text-green-800 px-3 py-1 rounded"
         >
           <i class="ri-check-line"></i>
-          <span class="text-sm">Saved</span>
+          <span class="text-sm">{{ t('builder.saved') }}</span>
         </div>
       </div>
 
@@ -868,7 +870,7 @@ function postMessage() {
         class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700"
       >
         <div class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-          Saved favorites
+          {{ t('builder.saved_favorites') }}
         </div>
         <div class="flex gap-2 flex-wrap">
           <div
@@ -881,7 +883,7 @@ function postMessage() {
               type="button"
               class="flex items-center gap-2 px-3 py-2 text-white text-sm"
               :title="f"
-              :aria-label="`Apply favorite: ${f}`"
+              :aria-label="t('builder.apply_favorite', { favorite: f })"
               @click="applyFavorite(f)"
             >
               <i class="ri-heart-fill text-lg"></i>
@@ -890,8 +892,8 @@ function postMessage() {
             <button
               type="button"
               class="px-2 py-2 text-white bg-yellow-600 hover:bg-yellow-700"
-              :title="`Remove favorite: ${f}`"
-              :aria-label="`Remove favorite: ${f}`"
+              :title="t('builder.remove_favorite', { favorite: f })"
+              :aria-label="t('builder.remove_favorite', { favorite: f })"
               @click="removeFavorite(i)"
             >
               <i class="ri-close-line"></i>
@@ -909,7 +911,7 @@ function postMessage() {
         @click="postMessage"
       >
         <i class="ri-send-plane-fill text-2xl mr-2"></i>
-        Post to Timeline
+        {{ t('builder.post_to_timeline') }}
       </Button>
     </div>
   </div>

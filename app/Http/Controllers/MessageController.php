@@ -112,7 +112,7 @@ class MessageController extends Controller
         $messagingEnabled = $setting && ($setting->getAttributes()['value'] ?? $setting->value) === '1';
 
         if (! $messagingEnabled) {
-            return back()->withErrors(['message' => 'Messaging is currently disabled.']);
+            return back()->withErrors(['message' => __('messages.messaging.disabled')]);
         }
 
         $validated = $request->validate([
@@ -148,7 +148,7 @@ class MessageController extends Controller
                 $taggedUser->notify(new UserTagged($message, $user));
 
                 // Send push notification
-                $title = 'You were tagged by '.$user->name;
+                $title = __('messages.tagged.push_title', ['name' => $user->name]);
                 // Truncate message for push notification (max ~120 chars for body)
                 $messageBody = mb_strlen($message->message, 'UTF-8') > 120
                     ? mb_substr($message->message, 0, 117, 'UTF-8').'...'
@@ -184,11 +184,11 @@ class MessageController extends Controller
     {
         // Only admins can delete messages
         if (! Auth::user()->hasPermissionTo('admin')) {
-            abort(403, 'Only admins can delete messages.');
+            abort(403, __('messages.admin.only_messages'));
         }
 
         $message->delete();
 
-        return back()->with('success', 'Message deleted successfully.');
+        return back()->with('success', __('messages.message.deleted'));
     }
 }

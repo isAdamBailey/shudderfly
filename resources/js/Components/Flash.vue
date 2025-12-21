@@ -1,5 +1,6 @@
 <script setup>
 import { useFlashMessage } from "@/composables/useFlashMessage";
+import { useTranslations } from "@/composables/useTranslations";
 import { router } from "@inertiajs/vue3";
 import {
   computed,
@@ -11,6 +12,7 @@ import {
 } from "vue";
 
 const { flashMessage, clearFlashMessage } = useFlashMessage();
+const { t } = useTranslations();
 const show = ref(false);
 const forceRender = ref(0); // Force re-render counter for Safari
 
@@ -171,7 +173,7 @@ onBeforeUnmount(() => {
               'flex-shrink-0 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200',
               messageStyles.button
             ]"
-            aria-label="Close notification"
+            :aria-label="t('general.close')"
             type="button"
             @click="close"
           >

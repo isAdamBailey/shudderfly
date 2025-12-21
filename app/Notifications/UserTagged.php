@@ -45,12 +45,12 @@ class UserTagged extends Notification implements ShouldBroadcast
         $url = route('messages.index').'#message-'.$this->message->id;
 
         return (new MailMessage)
-            ->subject('You were tagged in a message by '.$this->tagger->name)
-            ->greeting('Hello '.$notifiable->name.'!')
-            ->line($this->tagger->name.' tagged you in a message:')
+            ->subject(__('messages.tagged.subject', ['name' => $this->tagger->name]))
+            ->greeting(__('messages.tagged.greeting', ['name' => $notifiable->name]))
+            ->line(__('messages.tagged.line', ['name' => $this->tagger->name]))
             ->line('"'.$this->message->message.'"')
-            ->action('View Message', $url)
-            ->line('Thank you for using our platform!');
+            ->action(__('messages.tagged.action'), $url)
+            ->line(__('messages.tagged.thank_you'));
     }
 
     /**
@@ -58,7 +58,7 @@ class UserTagged extends Notification implements ShouldBroadcast
      */
     public function toBroadcast(object $notifiable): BroadcastMessage
     {
-        $title = 'You were tagged by '.$this->tagger->name;
+        $title = __('messages.tagged.title', ['name' => $this->tagger->name]);
         $messageBody = mb_strlen($this->message->message, 'UTF-8') > 120
             ? mb_substr($this->message->message, 0, 117, 'UTF-8').'...'
             : $this->message->message;

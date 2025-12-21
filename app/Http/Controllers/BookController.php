@@ -106,7 +106,7 @@ class BookController extends Controller
     {
         $book = Book::create($request->validated());
 
-        return redirect(route('books.show', $book))->with('success', $book->title.' created successfully! You can now add pages to it.');
+        return redirect(route('books.show', $book))->with('success', __('messages.book.created', ['title' => $book->title]));
     }
 
     /**
@@ -182,7 +182,7 @@ class BookController extends Controller
             ]);
         }
 
-        return redirect(route('books.show', Book::find($book->id)))->with('success', $book->title.' updated successfully!');
+        return redirect(route('books.show', Book::find($book->id)))->with('success', __('messages.book.updated', ['title' => $book->title]));
     }
 
     /**
@@ -207,7 +207,7 @@ class BookController extends Controller
         $book->pages()->delete();
         $book->delete();
 
-        return redirect(route('books.index'))->with('success', $book->title.' deleted successfully!');
+        return redirect(route('books.index'))->with('success', __('messages.book.deleted', ['title' => $book->title]));
     }
 
     /**

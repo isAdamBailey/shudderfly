@@ -69,7 +69,7 @@ class ProfileController extends Controller
             'avatar' => $validated['avatar'] ?? null,
         ]);
 
-        return Redirect::route('profile.edit')->with('success', 'Avatar updated successfully.');
+        return Redirect::route('profile.edit')->with('success', __('messages.avatar.updated'));
     }
 
     /**
@@ -133,7 +133,7 @@ class ProfileController extends Controller
                 ->send(new ContactAdmins($sender, $message));
 
             // Send push notification
-            $title = 'Message from '.$sender->name;
+            $title = __('messages.contact_admin.push_title', ['name' => $sender->name]);
             // Truncate message for push notification (max ~120 chars for body)
             $body = mb_strlen($message, 'UTF-8') > 120 ? mb_substr($message, 0, 117, 'UTF-8').'...' : $message;
 

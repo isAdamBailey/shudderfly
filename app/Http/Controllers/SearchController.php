@@ -182,12 +182,12 @@ class SearchController extends Controller
         $lng = $request->input('lng');
 
         if ($lat === null || $lng === null) {
-            return response()->json(['error' => 'Latitude and longitude are required'], 400);
+            return response()->json(['error' => __('messages.search.lat_lng_required')], 400);
         }
 
         // Validate that lat and lng are numeric
         if (! is_numeric($lat) || ! is_numeric($lng)) {
-            return response()->json(['error' => 'Latitude and longitude must be numeric'], 400);
+            return response()->json(['error' => __('messages.search.lat_lng_numeric')], 400);
         }
 
         // Convert to float and validate ranges
@@ -196,11 +196,11 @@ class SearchController extends Controller
 
         // Validate coordinate ranges
         if ($lat < -90 || $lat > 90) {
-            return response()->json(['error' => 'Latitude must be between -90 and 90'], 400);
+            return response()->json(['error' => __('messages.search.latitude_range')], 400);
         }
 
         if ($lng < -180 || $lng > 180) {
-            return response()->json(['error' => 'Longitude must be between -180 and 180'], 400);
+            return response()->json(['error' => __('messages.search.longitude_range')], 400);
         }
 
         try {
@@ -231,11 +231,11 @@ class SearchController extends Controller
                 ]);
             }
 
-            return response()->json(['error' => 'No address found for coordinates'], 404);
+            return response()->json(['error' => __('messages.search.no_address')], 404);
         } catch (\Exception $e) {
             Log::error('Reverse geocode error: '.$e->getMessage());
 
-            return response()->json(['error' => 'Failed to reverse geocode'], 500);
+            return response()->json(['error' => __('messages.search.reverse_geocode_failed')], 500);
         }
     }
 }

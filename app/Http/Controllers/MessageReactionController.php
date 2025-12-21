@@ -25,7 +25,7 @@ class MessageReactionController extends Controller
         // Validate emoji is in allowed list
         if (! MessageReaction::isAllowedEmoji($emoji)) {
             return response()->json([
-                'error' => 'Invalid emoji. Allowed emojis: '.implode(' ', MessageReaction::ALLOWED_EMOJIS),
+                'error' => __('messages.emoji.invalid', ['emojis' => implode(' ', MessageReaction::ALLOWED_EMOJIS)]),
             ], 422);
         }
 
