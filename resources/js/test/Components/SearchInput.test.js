@@ -2,6 +2,23 @@ import { router } from "@inertiajs/vue3";
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Mock useTranslations composable
+vi.mock("@/composables/useTranslations", () => ({
+  useTranslations: () => ({
+    t: (key, replacements = {}) => {
+      const translations = {
+        'search.placeholder': replacements.target ? `Search ${replacements.target}!` : 'Search!',
+        'search.books': 'Books',
+        'search.all': 'ALL',
+      };
+      return translations[key] || key;
+    },
+    translations: {
+      value: {}
+    }
+  })
+}));
+
 let SearchInput;
 
 beforeEach(async () => {

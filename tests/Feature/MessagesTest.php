@@ -1729,7 +1729,7 @@ class MessagesTest extends TestCase
             ->component('Messages/Index')
             ->has('messages.data', 1)
             ->where('messages.data.0.id', $message->id)
-            ->where('messages.data.0.message', __('messages.page_shared', ['media' => 'page', 'book' => 'Test Book']))
+            ->where('messages.data.0.message', __('messages.page_shared', ['media' => 'picture', 'book' => 'Test Book']))
             ->has('messages.data.0.page')
             ->where('messages.data.0.page.media_path', function ($value) {
                 return str_contains($value, 'books/test/image.webp');

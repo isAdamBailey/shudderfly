@@ -128,10 +128,10 @@
 
       <!-- Comments Section -->
       <div class="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
-        <div class="flex items-center justify-between mb-2">
-          <button
+        <div class="flex items-center justify-between mb-2 gap-2">
+          <Button
             type="button"
-            class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+            class="flex items-center gap-2"
             @click="toggleComments(message.id)"
           >
             <i
@@ -150,15 +150,15 @@
                   : t("message.comments")
               }}
             </span>
-          </button>
-          <button
+          </Button>
+          <Button
             v-if="!expandedComments[message.id]"
             type="button"
-            class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
             @click="expandComments(message.id)"
           >
+            <i class="ri-add-line mr-1"></i>
             {{ t("message.add_comment") }}
-          </button>
+          </Button>
         </div>
 
         <template v-if="expandedComments[message.id]">

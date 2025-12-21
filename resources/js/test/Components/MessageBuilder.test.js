@@ -25,6 +25,18 @@ const mockForm = {
 
 vi.mock("@inertiajs/vue3", () => ({
   useForm: () => mockForm,
+  usePage: () => ({
+    props: {
+      flash: {},
+      auth: {
+        user: {
+          id: 1,
+          name: "Test User"
+        }
+      },
+      search: null
+    }
+  }),
   router: {
     post: vi.fn()
   }

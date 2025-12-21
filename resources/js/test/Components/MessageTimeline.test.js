@@ -82,6 +82,47 @@ vi.mock("@/mediaHelpers", () => ({
   })
 }));
 
+// Mock useTranslations composable
+vi.mock("@/composables/useTranslations", () => ({
+  useTranslations: () => ({
+    t: (key) => {
+      const translations = {
+        'message.add_comment': 'Add Comment',
+        'message.post_comment': 'Post Comment',
+        'message.comment': 'comment',
+        'message.comments': 'comments',
+        'message.comment_placeholder': 'Add a comment...',
+        'message.speak': 'Speak message',
+        'message.speak_aria': 'Speak message',
+        'message.delete': 'Delete message',
+        'message.delete_aria': 'Delete message',
+        'message.add_reaction': 'Add reaction',
+        'message.view_all_reactions': 'View all reactions',
+        'message.reaction': 'reaction',
+        'message.reactions': 'reactions',
+        'message.loading': 'Loading...',
+        'message.shared_page': 'Shared page',
+        'comment.add_reaction': 'Add reaction',
+        'comment.speak': 'Speak comment',
+        'comment.speak_aria': 'Speak comment',
+        'comment.delete': 'Delete comment',
+        'comment.delete_aria': 'Delete comment',
+        'general.close': 'Close notification',
+        'general.scroll_to_top': 'scroll to top of the page',
+        'general.add_reaction': 'Add Reaction',
+        'general.reactions': 'Reactions',
+        'general.speak_all_reactions': 'Speak all reactions',
+        'general.speak_all_reactions_aria': 'Speak all reactions',
+        'general.view_message': 'View Message'
+      };
+      return translations[key] || key;
+    },
+    translations: {
+      value: {}
+    }
+  })
+}));
+
 describe("MessageTimeline", () => {
   beforeEach(() => {
     // Ensure window.location is properly mocked
