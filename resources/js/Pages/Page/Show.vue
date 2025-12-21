@@ -131,12 +131,22 @@
           @close-page-form="showPageSettings = false"
         />
       </div>
-      <div class="my-4">
+      <div class="my-4 flex items-center gap-2">
         <AddToCollageButton
           v-if="canAddToCollage"
           :page-id="props.page.id"
           :collages="props.collages"
         />
+        <Button
+          type="button"
+          :disabled="isShareDisabled || sharing"
+          class="w-10 h-10 p-0 flex items-center justify-center"
+          :title="hasSharedToday ? 'Already shared today' : 'Share to Timeline'"
+          @click="sharePage"
+        >
+          <i v-if="sharing" class="ri-loader-line text-xl animate-spin"></i>
+          <i v-else class="ri-share-line text-xl"></i>
+        </Button>
       </div>
     </div>
   </BreezeAuthenticatedLayout>
@@ -149,6 +159,7 @@ import Button from "@/Components/Button.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import MapEmbed from "@/Components/Map/MapEmbed.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
+import { useFlashMessage } from "@/composables/useFlashMessage";
 import { usePermissions } from "@/composables/permissions";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useDate } from "@/dateHelpers";
@@ -156,12 +167,13 @@ import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { useMedia } from "@/mediaHelpers";
 import EditPageForm from "@/Pages/Page/EditPageForm.vue";
 import { Head, Link, router } from "@inertiajs/vue3";
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 const { canEditPages } = usePermissions();
 const { short } = useDate();
 const { speak, speaking } = useSpeechSynthesis();
 const { isVideo } = useMedia();
+const { flashMessage } = useFlashMessage();
 
 const props = defineProps({
   page: { type: Object, required: true },
@@ -175,6 +187,8 @@ let showPageSettings = ref(false);
 const buttonDisabled = ref(false);
 const bookCoverRef = ref(null);
 const scrollHandler = ref(null);
+const sharing = ref(false);
+const hasSharedToday = ref(false);
 
 const hasContent = computed(() => stripHtml(props.page.content));
 
@@ -193,6 +207,40 @@ const canAddToCollage = computed(() => {
     props.collages.length > 0
   );
 });
+
+const isShareDisabled = computed(() => {
+  return hasSharedToday.value || sharing.value;
+});
+
+const checkIfSharedToday = () => {
+  const today = new Date().toISOString().split('T')[0];
+  const key = `page_share_${props.page.id}_${today}`;
+  hasSharedToday.value = localStorage.getItem(key) !== null;
+};
+
+const sharePage = () => {
+  if (isShareDisabled.value) return;
+
+  sharing.value = true;
+
+  router.post(
+    route('pages.share', props.page.id),
+    {},
+    {
+      preserveScroll: true,
+      onSuccess: () => {
+        const today = new Date().toISOString().split('T')[0];
+        const key = `page_share_${props.page.id}_${today}`;
+        localStorage.setItem(key, Date.now().toString());
+        hasSharedToday.value = true;
+        sharing.value = false;
+      },
+      onError: () => {
+        sharing.value = false;
+      }
+    }
+  );
+};
 
 // Swipe navigation (left/right) to go to previous/next page
 const touchStartX = ref(0);
@@ -253,8 +301,21 @@ function onTouchEnd(event) {
   }
 }
 
+// Watch for flash messages and speak them
+watch(
+  flashMessage,
+  (newMessage) => {
+    if (newMessage && newMessage.type === 'success') {
+      speak(newMessage.text);
+    }
+  }
+);
+
 // Make book cover sticky
+
 onMounted(() => {
+  checkIfSharedToday();
+
   if (!bookCoverRef.value) return;
 
   const container = bookCoverRef.value.parentElement;

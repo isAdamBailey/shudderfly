@@ -20,6 +20,7 @@ class MessageFactory extends Factory
         return [
             'user_id' => User::factory(),
             'message' => $this->faker->sentence(),
+            'page_id' => null,
             'created_at' => now(),
             'updated_at' => now(),
         ];
