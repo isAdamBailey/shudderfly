@@ -131,21 +131,23 @@
           @close-page-form="showPageSettings = false"
         />
       </div>
-      <div class="my-4 flex items-center gap-2">
+      <div class="my-4 mx-5 flex items-end gap-2">
         <AddToCollageButton
           v-if="canAddToCollage"
           :page-id="props.page.id"
           :collages="props.collages"
         />
         <Button
+          v-if="(page.media_path || page.video_link || page.media_poster) && $page.props.auth.user"
           type="button"
           :disabled="isShareDisabled || sharing"
-          class="w-10 h-10 p-0 flex items-center justify-center"
+          class="h-10 flex items-center justify-center gap-2"
           :title="hasSharedToday ? t('already_shared_today') : t('share_to_timeline')"
           @click="sharePage"
         >
           <i v-if="sharing" class="ri-loader-line text-xl animate-spin"></i>
           <i v-else class="ri-share-line text-xl"></i>
+          <span>Share</span>
         </Button>
       </div>
     </div>

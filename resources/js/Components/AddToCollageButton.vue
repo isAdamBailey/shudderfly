@@ -1,5 +1,5 @@
 <template>
-    <div class="ml-10">
+    <div>
         <div v-if="isPageInAnyCollage" class="text-yellow-400 text-sm">
             <i class="ri-information-line mr-1 text-2xl"></i>
             This picture is in collage
@@ -86,6 +86,7 @@
                         (availableCollages.length > 1 && !selectedCollageId) ||
                         !hasAvailableCollages
                     "
+                    class="h-10"
                     @click="addToCollage"
                 >
                     <i class="ri-add-line text-xl mr-1"></i>

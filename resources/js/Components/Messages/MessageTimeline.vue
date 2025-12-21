@@ -11,117 +11,118 @@
       v-for="message in localMessages"
       :id="`message-${message.id}`"
       :key="message.id"
-      class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 scroll-mt-4"
+      class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 scroll-mt-4 relative"
     >
-      <div class="flex items-start justify-between">
-        <div class="flex-1">
-          <div class="flex items-center gap-2 mb-2">
-            <Avatar :user="message.user" size="sm" />
-            <span class="font-semibold text-gray-900 dark:text-gray-100">
-              {{ message.user.name }}
-            </span>
-            <span class="text-sm text-gray-500 dark:text-gray-400">
-              {{ formatDate(message.created_at) }}
-            </span>
-          </div>
-          <div
-            class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words"
-            v-html="formatMessage(message.message)"
-          ></div>
-          <div
-            v-if="
-              message.page_id &&
-              message.page &&
-              (message.page.media_path ||
-                message.page.media_poster ||
-                message.page.video_link)
-            "
-            class="mt-0.5 mb-1 -mx-4 sm:mx-0 sm:max-w-[600px] md:mt-3 md:mb-3"
-          >
-            <Link
-              :href="route('pages.show', message.page_id)"
-              class="block rounded-lg overflow-hidden w-full sm:rounded-lg"
-            >
-              <img
-                :src="getPageImageSrc(message.page)"
-                :alt="
-                  message.page.content
-                    ? stripHtml(message.page.content).substring(0, 50)
-                    : t('message.shared_page')
-                "
-                class="w-full h-auto object-contain"
-                loading="lazy"
-              />
-            </Link>
-          </div>
-          <!-- Reactions -->
-          <div class="mt-2 md:mt-3 flex flex-wrap items-center gap-2">
-            <!-- Only show reactions that have been selected (count > 0) -->
-            <div
-              v-for="emoji in getSelectedReactions(message)"
-              :key="emoji"
-              class="flex items-center gap-1"
-            >
-              <button
-                type="button"
-                :class="[
-                  'flex items-center gap-1 px-2 py-1 rounded-full text-sm transition-colors',
-                  hasUserReacted(message, emoji)
-                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                ]"
-                :title="getReactionTooltip(message, emoji)"
-                @click="toggleReaction(message, emoji)"
-              >
-                <span class="text-base">{{ emoji }}</span>
-                <span
-                  v-if="getReactionCount(message, emoji) > 0"
-                  class="font-medium"
-                >
-                  {{ getReactionCount(message, emoji) }}
-                </span>
-              </button>
-            </div>
-            <!-- Add reaction button -->
-            <button
-              type="button"
-              class="flex items-center gap-1 px-2 py-1 rounded-full text-sm transition-colors bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-              :title="t('message.add_reaction')"
-              @click="openReactionModal(message)"
-            >
-              <i class="ri-add-line text-base"></i>
-            </button>
-            <!-- View all reactions button -->
-            <button
-              v-if="hasAnyReactions(message)"
-              type="button"
-              class="flex items-center gap-1 px-2 py-1 rounded-full text-sm transition-colors bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-              :title="t('message.view_all_reactions')"
-              @click="openViewReactionsModal(message)"
-            >
-              <i class="ri-information-line text-base"></i>
-            </button>
-          </div>
+      <!-- Buttons in top right -->
+      <div class="absolute top-4 right-4 flex items-center gap-2">
+        <Button
+          type="button"
+          :disabled="speaking"
+          :title="t('message.speak')"
+          :aria-label="t('message.speak_aria')"
+          @click="speakMessage(message)"
+        >
+          <i class="ri-speak-fill text-xl"></i>
+        </Button>
+        <DangerButton
+          v-if="canAdmin"
+          type="button"
+          :title="t('message.delete')"
+          :aria-label="t('message.delete_aria')"
+          @click="deleteMessage(message.id)"
+        >
+          <i class="ri-delete-bin-line text-xl"></i>
+        </DangerButton>
+      </div>
+
+      <!-- Content area - wraps underneath buttons -->
+      <div class="pr-20">
+        <div class="flex items-center gap-2 mb-2">
+          <Avatar :user="message.user" size="sm" />
+          <span class="font-semibold text-gray-900 dark:text-gray-100">
+            {{ message.user.name }}
+          </span>
+          <span class="text-sm text-gray-500 dark:text-gray-400">
+            {{ formatDate(message.created_at) }}
+          </span>
         </div>
-        <div class="ml-4 flex items-center gap-2">
-          <Button
-            type="button"
-            :disabled="speaking"
-            :title="t('message.speak')"
-            :aria-label="t('message.speak_aria')"
-            @click="speakMessage(message)"
+        <div
+          class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words"
+          v-html="formatMessage(message.message)"
+        ></div>
+        <div
+          v-if="
+            message.page_id &&
+            message.page &&
+            (message.page.media_path ||
+              message.page.media_poster ||
+              message.page.video_link)
+          "
+          class="mt-0.5 mb-1 -mx-4 sm:mx-0 sm:max-w-[400px] md:mt-3 md:mb-3"
+        >
+          <Link
+            :href="route('pages.show', message.page_id)"
+            class="block rounded-lg overflow-hidden w-full sm:rounded-lg"
           >
-            <i class="ri-speak-fill text-xl"></i>
-          </Button>
-          <DangerButton
-            v-if="canAdmin"
-            type="button"
-            :title="t('message.delete')"
-            :aria-label="t('message.delete_aria')"
-            @click="deleteMessage(message.id)"
+            <img
+              :src="getPageImageSrc(message.page)"
+              :alt="
+                message.page.content
+                  ? stripHtml(message.page.content).substring(0, 50)
+                  : t('message.shared_page')
+              "
+              class="w-full h-auto object-contain"
+              loading="lazy"
+            />
+          </Link>
+        </div>
+        <!-- Reactions -->
+        <div class="mt-2 md:mt-3 flex flex-wrap items-center gap-2">
+          <!-- Only show reactions that have been selected (count > 0) -->
+          <div
+            v-for="emoji in getSelectedReactions(message)"
+            :key="emoji"
+            class="flex items-center gap-1"
           >
-            <i class="ri-delete-bin-line text-xl"></i>
-          </DangerButton>
+            <button
+              type="button"
+              :class="[
+                'flex items-center gap-1 px-2 py-1 rounded-full text-sm transition-colors',
+                hasUserReacted(message, emoji)
+                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              ]"
+              :title="getReactionTooltip(message, emoji)"
+              @click="toggleReaction(message, emoji)"
+            >
+              <span class="text-base">{{ emoji }}</span>
+              <span
+                v-if="getReactionCount(message, emoji) > 0"
+                class="font-medium"
+              >
+                {{ getReactionCount(message, emoji) }}
+              </span>
+            </button>
+          </div>
+          <!-- Add reaction button -->
+          <button
+            type="button"
+            class="flex items-center gap-1 px-2 py-1 rounded-full text-sm transition-colors bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+            :title="t('message.add_reaction')"
+            @click="openReactionModal(message)"
+          >
+            <i class="ri-add-line text-base"></i>
+          </button>
+          <!-- View all reactions button -->
+          <button
+            v-if="hasAnyReactions(message)"
+            type="button"
+            class="flex items-center gap-1 px-2 py-1 rounded-full text-sm transition-colors bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+            :title="t('message.view_all_reactions')"
+            @click="openViewReactionsModal(message)"
+          >
+            <i class="ri-information-line text-base"></i>
+          </button>
         </div>
       </div>
 
@@ -414,6 +415,7 @@ import ScrollTop from "@/Components/ScrollTop.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useFlashMessage } from "@/composables/useFlashMessage";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
+import { useMessageBuilder } from "@/composables/useMessageBuilder";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import { useMedia } from "@/mediaHelpers";
@@ -437,6 +439,7 @@ const { speak, speaking } = useSpeechSynthesis();
 const { setFlashMessage } = useFlashMessage();
 const { t } = useTranslations();
 const { isVideo } = useMedia();
+const { setActiveMessageInput } = useMessageBuilder();
 const loading = ref(false);
 const messagesChannel = ref(null);
 const showReactionModal = ref(false);
