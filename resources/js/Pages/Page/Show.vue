@@ -68,7 +68,7 @@
             </div>
             <div
               v-else-if="page.video_link"
-              class="w-full max-w-4xl mx-16 md:mx-20 relative z-20 pointer-events-auto"
+              class="w-full max-w-4xl mx-16 md:mx-20 relative z-20 pointer-events-auto rounded-lg overflow-hidden"
             >
               <VideoWrapper :url="page.video_link" :title="page.description" />
             </div>
