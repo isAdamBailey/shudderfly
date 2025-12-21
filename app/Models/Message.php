@@ -15,6 +15,7 @@ class Message extends Model
     protected $fillable = [
         'user_id',
         'message',
+        'page_id',
     ];
 
     protected $casts = [
@@ -75,6 +76,14 @@ class Message extends Model
     public function comments(): HasMany
     {
         return $this->hasMany(MessageComment::class);
+    }
+
+    /**
+     * Get the page that this message shares (if any).
+     */
+    public function page(): BelongsTo
+    {
+        return $this->belongsTo(Page::class);
     }
 
     /**

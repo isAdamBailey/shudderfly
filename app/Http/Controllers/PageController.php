@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\MessageCreated;
 use App\Http\Requests\StorePageRequest;
 use App\Http\Requests\UpdatePageRequest;
 use App\Jobs\CreateVideoSnapshot;
@@ -10,6 +11,7 @@ use App\Jobs\StoreImage;
 use App\Jobs\StoreVideo;
 use App\Models\Book;
 use App\Models\Collage;
+use App\Models\Message;
 use App\Models\Page;
 use App\Models\SiteSetting;
 use App\Models\Song;
@@ -618,5 +620,34 @@ class PageController extends Controller
         }
 
         return redirect(route('books.show', $book))->with('success', $message);
+    }
+
+    /**
+     * Share a page to the timeline.
+     */
+    public function share(Page $page, Request $request): RedirectResponse
+    {
+        // Check if messaging is enabled
+        $setting = SiteSetting::where('key', 'messaging_enabled')->first();
+        $messagingEnabled = $setting && ($setting->getAttributes()['value'] ?? $setting->value) === '1';
+
+        if (! $messagingEnabled) {
+            return back()->withErrors(['message' => 'Messaging is currently disabled.']);
+        }
+
+        $page->load('book');
+
+        $bookTitle = $page->book?->title ?? __('messages.unknown_book');
+
+        $message = Message::create([
+            'user_id' => $request->user()->id,
+            'message' => __('messages.page_shared', ['book' => $bookTitle]),
+            'page_id' => $page->id,
+        ]);
+
+        $message->load('page');
+        event(new MessageCreated($message));
+
+        return back()->with('success', 'Page shared successfully!');
     }
 }

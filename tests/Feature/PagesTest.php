@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Book;
+use App\Models\Message;
 use App\Models\Page;
+use App\Models\SiteSetting;
 use App\Models\Song;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -1494,5 +1496,101 @@ class PagesTest extends TestCase
         // Verify that coordinates of 0 are correctly inherited (not treated as falsy)
         $this->assertEquals(0.0, $page->latitude, 'Page should inherit book latitude of 0 (Equator)');
         $this->assertEquals(0.0, $page->longitude, 'Page should inherit book longitude of 0 (Prime Meridian)');
+    }
+
+    public function test_deleting_page_deletes_related_messages(): void
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo('edit pages');
+        $this->actingAs($user);
+
+        // Enable messaging
+        SiteSetting::updateOrCreate(
+            ['key' => 'messaging_enabled'],
+            ['value' => '1']
+        );
+
+        $book = Book::factory()->create();
+        $page = Page::factory()->for($book)->create();
+
+        // Share the page (creates a message with page_id)
+        $this->post(route('pages.share', $page));
+
+        $message = Message::where('page_id', $page->id)->first();
+        $this->assertNotNull($message, 'Message should exist after sharing page');
+
+        // Delete the page
+        $this->delete(route('pages.destroy', $page));
+
+        // Message should be deleted via cascade
+        $this->assertDatabaseMissing('messages', [
+            'id' => $message->id,
+        ]);
+    }
+
+    public function test_share_route_requires_authentication(): void
+    {
+        $book = Book::factory()->create();
+        $page = Page::factory()->for($book)->create();
+
+        $response = $this->post(route('pages.share', $page));
+
+        $response->assertRedirect(route('login'));
+    }
+
+    public function test_share_fails_when_messaging_disabled(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        // Disable messaging
+        SiteSetting::updateOrCreate(
+            ['key' => 'messaging_enabled'],
+            ['value' => '0']
+        );
+
+        $book = Book::factory()->create();
+        $page = Page::factory()->for($book)->create(['media_path' => 'test/image.jpg']);
+
+        $response = $this->post(route('pages.share', $page));
+
+        $response->assertRedirect();
+        $response->assertSessionHasErrors(['message']);
+        $this->assertDatabaseMissing('messages', [
+            'page_id' => $page->id,
+        ]);
+    }
+
+    public function test_share_handles_orphaned_page_gracefully(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        // Enable messaging
+        SiteSetting::updateOrCreate(
+            ['key' => 'messaging_enabled'],
+            ['value' => '1']
+        );
+
+        $book = Book::factory()->create();
+        $page = Page::factory()->for($book)->create(['media_path' => 'test/image.jpg']);
+
+        // Delete the book to orphan the page
+        $book->delete();
+
+        // Refresh the page to clear the relationship
+        $page->refresh();
+
+        $response = $this->post(route('pages.share', $page));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        // Message should be created with "Unknown Book" as the book title
+        $this->assertDatabaseHas('messages', [
+            'user_id' => $user->id,
+            'page_id' => $page->id,
+            'message' => __('messages.page_shared', ['book' => __('messages.unknown_book')]),
+        ]);
     }
 }

@@ -35,6 +35,12 @@ vi.mock("@inertiajs/vue3", () => {
   };
   return {
     router: mockRouter,
+    Link: { name: "Link", template: "<a><slot /></a>", props: ["href"] },
+    useForm: vi.fn(() => ({
+      post: vi.fn(),
+      delete: vi.fn(),
+      processing: false
+    })),
     usePage: () => ({
       props: {
         flash: {},
@@ -966,6 +972,127 @@ describe("MessageTimeline", () => {
 
       textarea = wrapper.find("textarea");
       expect(textarea.exists()).toBe(false);
+    });
+  });
+
+  describe("Page sharing", () => {
+    it("displays page image when message has page_id and page.media_path", async () => {
+      const mockMessages = [
+        {
+          id: 1,
+          message: "shared this page from Test Book",
+          created_at: new Date().toISOString(),
+          user: { id: 1, name: "Alice" },
+          page_id: 123,
+          page: {
+            id: 123,
+            media_path: "https://example.com/image.webp"
+          }
+        }
+      ];
+
+      const wrapper = mount(MessageTimeline, {
+        props: {
+          messages: mockMessages,
+          users: mockUsers
+        }
+      });
+
+      await nextTick();
+
+      // Find the page image by looking for an img inside a Link with the page route
+      const link = wrapper.findComponent({ name: "Link" });
+      expect(link.exists()).toBe(true);
+      const img = link.find("img");
+      expect(img.exists()).toBe(true);
+      expect(img.attributes("src")).toBe("https://example.com/image.webp");
+    });
+
+    it("makes page image clickable and links to page", async () => {
+      const mockMessages = [
+        {
+          id: 1,
+          message: "shared this page from Test Book",
+          created_at: new Date().toISOString(),
+          user: { id: 1, name: "Alice" },
+          page_id: 123,
+          page: {
+            id: 123,
+            media_path: "https://example.com/image.webp"
+          }
+        }
+      ];
+
+      const wrapper = mount(MessageTimeline, {
+        props: {
+          messages: mockMessages,
+          users: mockUsers
+        }
+      });
+
+      await nextTick();
+
+      // The Link component might render differently, so check for Link component with page route
+      const link = wrapper.findComponent({ name: "Link" });
+      expect(link.exists()).toBe(true);
+      // Check if the href prop contains the page id
+      const href = link.props("href");
+      expect(href).toContain("123");
+    });
+
+    it("does not break when message has no page", async () => {
+      const mockMessages = [
+        {
+          id: 1,
+          message: "Hello world",
+          created_at: new Date().toISOString(),
+          user: { id: 1, name: "Alice" },
+          page_id: null,
+          page: null
+        }
+      ];
+
+      const wrapper = mount(MessageTimeline, {
+        props: {
+          messages: mockMessages,
+          users: mockUsers
+        }
+      });
+
+      await nextTick();
+
+      expect(wrapper.text()).toContain("Hello world");
+      const lazyLoader = wrapper.findComponent({ name: "LazyLoader" });
+      expect(lazyLoader.exists()).toBe(false);
+    });
+
+    it("handles message with page but no media_path gracefully", async () => {
+      const mockMessages = [
+        {
+          id: 1,
+          message: "shared this page from Test Book",
+          created_at: new Date().toISOString(),
+          user: { id: 1, name: "Alice" },
+          page_id: 123,
+          page: {
+            id: 123,
+            media_path: null
+          }
+        }
+      ];
+
+      const wrapper = mount(MessageTimeline, {
+        props: {
+          messages: mockMessages,
+          users: mockUsers
+        }
+      });
+
+      await nextTick();
+
+      expect(wrapper.text()).toContain("shared this page from Test Book");
+      const lazyLoader = wrapper.findComponent({ name: "LazyLoader" });
+      expect(lazyLoader.exists()).toBe(false);
     });
   });
 });

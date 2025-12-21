@@ -28,8 +28,24 @@
             class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words"
             v-html="formatMessage(message.message)"
           ></div>
+          <div
+            v-if="message.page_id && message.page && message.page.media_path"
+            class="mt-0.5 mb-1 -mx-4 sm:mx-0 sm:max-w-[600px] md:mt-3 md:mb-3"
+          >
+            <Link
+              :href="route('pages.show', message.page_id)"
+              class="block rounded-lg overflow-hidden w-full sm:rounded-lg"
+            >
+              <img
+                :src="message.page.media_path"
+                :alt="message.page.content ? stripHtml(message.page.content).substring(0, 50) : 'Shared page'"
+                class="w-full h-auto object-contain"
+                loading="lazy"
+              />
+            </Link>
+          </div>
           <!-- Reactions -->
-          <div class="mt-3 flex flex-wrap items-center gap-2">
+          <div class="mt-2 md:mt-3 flex flex-wrap items-center gap-2">
             <!-- Only show reactions that have been selected (count > 0) -->
             <div
               v-for="emoji in getSelectedReactions(message)"
@@ -370,7 +386,7 @@ import { usePermissions } from "@/composables/permissions";
 import { useFlashMessage } from "@/composables/useFlashMessage";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
-import { router, usePage } from "@inertiajs/vue3";
+import { Link, router, usePage } from "@inertiajs/vue3";
 import axios from "axios";
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 

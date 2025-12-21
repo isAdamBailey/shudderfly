@@ -36,7 +36,7 @@ class MessageController extends Controller
             ]);
         }
 
-        $messages = Message::with(['user', 'reactions.user', 'comments.user', 'comments.reactions.user'])
+        $messages = Message::with(['user', 'page', 'reactions.user', 'comments.user', 'comments.reactions.user'])
             ->recent()
             ->withinRetentionPeriod()
             ->paginate(20);

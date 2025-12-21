@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Book;
 use App\Models\CommentReaction;
 use App\Models\Message;
 use App\Models\MessageComment;
 use App\Models\MessageReaction;
+use App\Models\Page;
 use App\Models\SiteSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -1568,5 +1570,170 @@ class MessagesTest extends TestCase
 
         $this->assertIsArray($grouped);
         $this->assertEmpty($grouped);
+    }
+
+    public function test_authenticated_user_can_share_page(): void
+    {
+        Event::fake();
+
+        $user = User::factory()->create();
+        $book = Book::factory()->make(['title' => 'Test Book']);
+        $book->generateSlug();
+        $book->save();
+        $page = Page::factory()->for($book)->create(['media_path' => 'books/test/image.webp']);
+
+        $this->actingAs($user);
+
+        $response = $this->post(route('pages.share', $page));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('messages', [
+            'user_id' => $user->id,
+            'message' => __('messages.page_shared', ['book' => $book->title]),
+            'page_id' => $page->id,
+        ]);
+
+        Event::assertDispatched(\App\Events\MessageCreated::class);
+    }
+
+    public function test_page_share_creates_message_with_correct_text(): void
+    {
+        Event::fake();
+
+        $user = User::factory()->create();
+        $book = Book::factory()->make(['title' => 'My Amazing Book']);
+        $book->generateSlug();
+        $book->save();
+        $page = Page::factory()->for($book)->create();
+
+        $this->actingAs($user);
+
+        $this->post(route('pages.share', $page));
+
+        $this->assertDatabaseHas('messages', [
+            'user_id' => $user->id,
+            'message' => __('messages.page_shared', ['book' => 'My Amazing Book']),
+            'page_id' => $page->id,
+        ]);
+    }
+
+    public function test_page_share_sets_page_id(): void
+    {
+        Event::fake();
+
+        $user = User::factory()->create();
+        $book = Book::factory()->make();
+        $book->generateSlug();
+        $book->save();
+        $page = Page::factory()->for($book)->create();
+
+        $this->actingAs($user);
+
+        $this->post(route('pages.share', $page));
+
+        $message = Message::where('user_id', $user->id)->first();
+
+        $this->assertNotNull($message);
+        $this->assertEquals($page->id, $message->page_id);
+    }
+
+    public function test_page_share_broadcasts_message_created_event(): void
+    {
+        Event::fake();
+
+        $user = User::factory()->create();
+        $book = Book::factory()->make();
+        $book->generateSlug();
+        $book->save();
+        $page = Page::factory()->for($book)->create();
+
+        $this->actingAs($user);
+
+        $this->post(route('pages.share', $page));
+
+        Event::assertDispatched(\App\Events\MessageCreated::class, function ($event) use ($user, $page, $book) {
+            return $event->message->user_id === $user->id &&
+                   $event->message->page_id === $page->id &&
+                   $event->message->message === __('messages.page_shared', ['book' => $book->title]);
+        });
+    }
+
+    public function test_page_share_loads_page_relationship(): void
+    {
+        Event::fake();
+
+        $user = User::factory()->create();
+        $book = Book::factory()->make(['title' => 'Test Book']);
+        $book->generateSlug();
+        $book->save();
+        $page = Page::factory()->for($book)->create();
+
+        $this->actingAs($user);
+
+        $this->post(route('pages.share', $page));
+
+        $message = Message::where('user_id', $user->id)->with('page')->first();
+
+        $this->assertNotNull($message);
+        $this->assertNotNull($message->page);
+        $this->assertEquals($page->id, $message->page->id);
+    }
+
+    public function test_messages_index_includes_page_relationship(): void
+    {
+        $user = User::factory()->create();
+        $book = Book::factory()->make();
+        $book->generateSlug();
+        $book->save();
+        $page = Page::factory()->for($book)->create();
+        $message = Message::factory()->create([
+            'user_id' => $user->id,
+            'page_id' => $page->id,
+        ]);
+
+        $this->actingAs($user);
+
+        $response = $this->get(route('messages.index'));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($inertiaPage) => $inertiaPage
+            ->component('Messages/Index')
+            ->has('messages.data', 1)
+            ->where('messages.data.0.id', $message->id)
+            ->has('messages.data.0.page')
+            ->where('messages.data.0.page.id', $page->id)
+        );
+    }
+
+    public function test_messages_with_page_display_correctly(): void
+    {
+        $user = User::factory()->create();
+        $book = Book::factory()->make(['title' => 'Test Book']);
+        $book->generateSlug();
+        $book->save();
+        $page = Page::factory()->for($book)->create(['media_path' => 'books/test/image.webp']);
+        $message = Message::factory()->create([
+            'user_id' => $user->id,
+            'page_id' => $page->id,
+            'message' => __('messages.page_shared', ['book' => 'Test Book']),
+        ]);
+
+        $this->actingAs($user);
+
+        $response = $this->get(route('messages.index'));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($inertiaPage) => $inertiaPage
+            ->component('Messages/Index')
+            ->has('messages.data', 1)
+            ->where('messages.data.0.id', $message->id)
+            ->where('messages.data.0.message', __('messages.page_shared', ['book' => 'Test Book']))
+            ->has('messages.data.0.page')
+            ->where('messages.data.0.page.media_path', function ($value) {
+                return str_contains($value, 'books/test/image.webp');
+            })
+        );
     }
 }
