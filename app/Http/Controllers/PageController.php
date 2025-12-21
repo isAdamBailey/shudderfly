@@ -627,11 +627,21 @@ class PageController extends Controller
      */
     public function share(Page $page, Request $request): RedirectResponse
     {
+        // Check if messaging is enabled
+        $setting = SiteSetting::where('key', 'messaging_enabled')->first();
+        $messagingEnabled = $setting && ($setting->getAttributes()['value'] ?? $setting->value) === '1';
+
+        if (! $messagingEnabled) {
+            return back()->withErrors(['message' => 'Messaging is currently disabled.']);
+        }
+
         $page->load('book');
+
+        $bookTitle = $page->book?->title ?? __('messages.unknown_book');
 
         $message = Message::create([
             'user_id' => $request->user()->id,
-            'message' => 'check out this page from '.$page->book->title,
+            'message' => __('messages.page_shared', ['book' => $bookTitle]),
             'page_id' => $page->id,
         ]);
 

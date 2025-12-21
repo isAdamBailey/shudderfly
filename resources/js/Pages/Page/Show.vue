@@ -141,7 +141,7 @@
           type="button"
           :disabled="isShareDisabled || sharing"
           class="w-10 h-10 p-0 flex items-center justify-center"
-          :title="hasSharedToday ? 'Already shared today' : 'Share to Timeline'"
+          :title="hasSharedToday ? t('already_shared_today') : t('share_to_timeline')"
           @click="sharePage"
         >
           <i v-if="sharing" class="ri-loader-line text-xl animate-spin"></i>
@@ -162,6 +162,7 @@ import VideoWrapper from "@/Components/VideoWrapper.vue";
 import { useFlashMessage } from "@/composables/useFlashMessage";
 import { usePermissions } from "@/composables/permissions";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { useTranslations } from "@/composables/useTranslations";
 import { useDate } from "@/dateHelpers";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { useMedia } from "@/mediaHelpers";
@@ -174,6 +175,7 @@ const { short } = useDate();
 const { speak, speaking } = useSpeechSynthesis();
 const { isVideo } = useMedia();
 const { flashMessage } = useFlashMessage();
+const { t } = useTranslations();
 
 const props = defineProps({
   page: { type: Object, required: true },

@@ -28,6 +28,14 @@ vi.mock("@/composables/useSpeechSynthesis", () => ({
   })
 }));
 
+vi.mock("@/composables/useFlashMessage", () => ({
+  useFlashMessage: () => ({
+    flashMessage: { value: null },
+    setFlashMessage: vi.fn(),
+    clearFlashMessage: vi.fn()
+  })
+}));
+
 vi.mock("@/dateHelpers", () => ({
   useDate: () => ({
     short: vi.fn(() => "Jan 1, 2023")
@@ -37,6 +45,24 @@ vi.mock("@/dateHelpers", () => ({
 vi.mock("@/mediaHelpers", () => ({
   useMedia: () => ({
     isVideo: vi.fn(() => false)
+  })
+}));
+
+vi.mock("@/composables/useTranslations", () => ({
+  useTranslations: () => ({
+    t: (key) => {
+      const translations = {
+        share_to_timeline: "Share to Timeline",
+        already_shared_today: "Already shared today"
+      };
+      return translations[key] || key;
+    },
+    translations: {
+      value: {
+        share_to_timeline: "Share to Timeline",
+        already_shared_today: "Already shared today"
+      }
+    }
   })
 }));
 

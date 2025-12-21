@@ -93,6 +93,21 @@ class HandleInertiaRequests extends Middleware
                 'info' => fn () => $request->session()->get('info'),
                 'quota_exceeded' => fn () => $request->session()->get('quota_exceeded'),
             ],
+            'translations' => function () {
+                $locale = app()->getLocale();
+                $messagesPath = lang_path("{$locale}/messages.php");
+                
+                if (file_exists($messagesPath)) {
+                    return require $messagesPath;
+                }
+                
+                $enPath = lang_path('en/messages.php');
+                if (file_exists($enPath)) {
+                    return require $enPath;
+                }
+                
+                return [];
+            },
         ]);
     }
 }
