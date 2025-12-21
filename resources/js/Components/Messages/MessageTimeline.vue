@@ -380,7 +380,6 @@
 import Avatar from "@/Components/Avatar.vue";
 import Button from "@/Components/Button.vue";
 import DangerButton from "@/Components/DangerButton.vue";
-import LazyLoader from "@/Components/LazyLoader.vue";
 import Modal from "@/Components/Modal.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
 import { usePermissions } from "@/composables/permissions";

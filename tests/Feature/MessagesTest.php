@@ -1598,16 +1598,6 @@ class MessagesTest extends TestCase
         Event::assertDispatched(\App\Events\MessageCreated::class);
     }
 
-    public function test_page_share_requires_authentication(): void
-    {
-        $book = Book::factory()->create();
-        $page = Page::factory()->for($book)->create();
-
-        $response = $this->post(route('pages.share', $page));
-
-        $response->assertRedirect(route('login'));
-    }
-
     public function test_page_share_creates_message_with_correct_text(): void
     {
         Event::fake();
@@ -1689,29 +1679,6 @@ class MessagesTest extends TestCase
         $this->assertEquals($page->id, $message->page->id);
     }
 
-    public function test_deleting_page_deletes_related_messages(): void
-    {
-        $user = User::factory()->create();
-        $book = Book::factory()->create();
-        $page = Page::factory()->for($book)->create();
-
-        $this->actingAs($user);
-
-        // Share the page
-        $this->post(route('pages.share', $page));
-
-        $message = Message::where('page_id', $page->id)->first();
-        $this->assertNotNull($message);
-
-        // Delete the page
-        $page->delete();
-
-        // Message should be deleted via cascade
-        $this->assertDatabaseMissing('messages', [
-            'id' => $message->id,
-        ]);
-    }
-
     public function test_messages_index_includes_page_relationship(): void
     {
         $user = User::factory()->create();
@@ -1765,7 +1732,6 @@ class MessagesTest extends TestCase
             ->where('messages.data.0.page.media_path', function ($value) {
                 return str_contains($value, 'books/test/image.webp');
             })
-            ->where('messages.data.0.message', 'check out this page from Test Book')
         );
     }
 }

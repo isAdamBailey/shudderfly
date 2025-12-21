@@ -627,16 +627,10 @@ class PageController extends Controller
      */
     public function share(Page $page, Request $request): RedirectResponse
     {
-        $user = $request->user();
-
-        if (! $user) {
-            abort(403, 'You must be authenticated to share a page.');
-        }
-
         $page->load('book');
 
         $message = Message::create([
-            'user_id' => $user->id,
+            'user_id' => $request->user()->id,
             'message' => 'check out this page from '.$page->book->title,
             'page_id' => $page->id,
         ]);

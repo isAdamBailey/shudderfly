@@ -13,7 +13,6 @@ return new class extends Migration
     {
         Schema::table('messages', function (Blueprint $table) {
             $table->foreignId('page_id')->nullable()->after('user_id')->constrained()->onDelete('cascade');
-            $table->index('page_id');
         });
     }
 
@@ -23,9 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('messages', function (Blueprint $table) {
-            $table->dropForeign(['page_id']);
-            $table->dropIndex(['page_id']);
-            $table->dropColumn('page_id');
+            $table->dropConstrainedForeignId('page_id');
         });
     }
 };

@@ -1,6 +1,6 @@
 import Show from "@/Pages/Page/Show.vue";
 import { mount } from "@vue/test-utils";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 
 // Mock route function
@@ -111,7 +111,11 @@ vi.mock("@inertiajs/vue3", () => {
       }
     }),
     Head: { name: "Head", template: "<div />" },
-    Link: { name: "Link", template: "<a><slot /></a>", props: ["href", "as", "prefetch", "class", "disabled", "aria-label"] }
+    Link: {
+      name: "Link",
+      template: "<a><slot /></a>",
+      props: ["href", "as", "prefetch", "class", "disabled", "aria-label"]
+    }
   };
 });
 
@@ -265,7 +269,9 @@ describe("Page/Show.vue", () => {
       const buttons = wrapper.findAllComponents({ name: "Button" });
       const shareButton = buttons.find((btn) => {
         const html = btn.html();
-        return html.includes("ri-share-line") || html.includes("ri-loader-line");
+        return (
+          html.includes("ri-share-line") || html.includes("ri-loader-line")
+        );
       });
       expect(shareButton).toBeDefined();
     });
@@ -300,11 +306,15 @@ describe("Page/Show.vue", () => {
       const buttons = wrapper.findAllComponents({ name: "Button" });
       const shareButton = buttons.find((btn) => {
         const html = btn.html();
-        return html.includes("ri-share-line") || html.includes("ri-loader-line");
+        return (
+          html.includes("ri-share-line") || html.includes("ri-loader-line")
+        );
       });
       expect(shareButton).toBeDefined();
       // Check if disabled prop is set or if the button is actually disabled
-      const isDisabled = shareButton.props("disabled") !== false || shareButton.attributes("disabled") !== undefined;
+      const isDisabled =
+        shareButton.props("disabled") !== false ||
+        shareButton.attributes("disabled") !== undefined;
       expect(isDisabled).toBe(true);
     });
 
@@ -313,15 +323,15 @@ describe("Page/Show.vue", () => {
       if (mockRouter) {
         mockRouter.post.mockClear();
       }
-      
+
       // Ensure the component is ready and sharePage is available
       await nextTick();
-      
+
       // Call sharePage directly to test the functionality
       // Make sure isShareDisabled is false first
       wrapper.vm.hasSharedToday = false;
       wrapper.vm.sharing = false;
-      
+
       wrapper.vm.sharePage();
       await nextTick();
 
@@ -345,7 +355,9 @@ describe("Page/Show.vue", () => {
       const buttons = wrapper.findAllComponents({ name: "Button" });
       const shareButton = buttons.find((btn) => {
         const html = btn.html();
-        return html.includes("ri-share-line") || html.includes("ri-loader-line");
+        return (
+          html.includes("ri-share-line") || html.includes("ri-loader-line")
+        );
       });
       expect(shareButton).toBeDefined();
       await shareButton.trigger("click");
@@ -367,17 +379,15 @@ describe("Page/Show.vue", () => {
       const buttons = wrapper.findAllComponents({ name: "Button" });
       const shareButton = buttons.find((btn) => {
         const html = btn.html();
-        return html.includes("ri-share-line") || html.includes("ri-loader-line");
+        return (
+          html.includes("ri-share-line") || html.includes("ri-loader-line")
+        );
       });
       expect(shareButton).toBeDefined();
       await shareButton.trigger("click");
       await nextTick();
 
-      // Check if sharing state is set (might be accessed differently)
-      const sharingState = wrapper.vm.sharing !== undefined ? wrapper.vm.sharing : false;
-      // The sharing state should be true while the request is pending
-      // But since we're checking immediately, it might not be set yet
-      // So we just verify the button was clicked and router.post was called
+      // Verify the button was clicked and router.post was called
       expect(router.post).toHaveBeenCalled();
 
       resolveShare();
@@ -395,7 +405,9 @@ describe("Page/Show.vue", () => {
       const buttons = wrapper.findAllComponents({ name: "Button" });
       const shareButton = buttons.find((btn) => {
         const html = btn.html();
-        return html.includes("ri-share-line") || html.includes("ri-loader-line");
+        return (
+          html.includes("ri-share-line") || html.includes("ri-loader-line")
+        );
       });
       expect(shareButton).toBeDefined();
       await shareButton.trigger("click");
