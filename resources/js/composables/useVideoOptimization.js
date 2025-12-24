@@ -67,13 +67,13 @@ export function useVideoOptimization() {
             targetHeight = Math.round(targetHeight * scale);
           }
 
-          const targetSizeMB = 50;
+          const targetSizeMB = 60;
           const targetBitrate = Math.floor(
             (targetSizeMB * 8 * 1024 * 1024) / video.duration
           );
           const clampedBitrate = Math.max(
-            500000,
-            Math.min(1500000, targetBitrate)
+            200000,
+            Math.min(2000000, targetBitrate)
           );
 
           let stream;
