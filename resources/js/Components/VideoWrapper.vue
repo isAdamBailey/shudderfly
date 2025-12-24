@@ -47,7 +47,6 @@ const useIframe = computed(() => isPlaylist.value || props.iframe);
 .video-container {
   position: relative;
   width: 100%;
-  height: 100%;
   padding-bottom: 56.25%; /* For a 16:9 aspect ratio */
   overflow: hidden;
 }
