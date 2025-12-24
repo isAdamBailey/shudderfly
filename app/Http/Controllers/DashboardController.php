@@ -25,10 +25,7 @@ class DashboardController extends Controller
                 'numberOfPages' => Page::count(),
                 'numberOfSongs' => Song::count(),
                 'numberOfYouTubeVideos' => Page::whereNotNull('video_link')->count(),
-                'numberOfVideos' => Page::where(function ($query) {
-                    $query->where('media_path', 'like', '%.mp4')
-                        ->orWhere('media_path', 'like', '%.webm');
-                })->count(),
+                'numberOfVideos' => Page::where('media_path', 'like', '%.mp4')->count(),
                 'numberOfImages' => Page::where('media_path', 'like', '%.webp')
                     ->where('media_path', 'not like', '%snapshot%')
                     ->count(),

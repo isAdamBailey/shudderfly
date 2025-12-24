@@ -147,10 +147,6 @@ class DashboardTest extends TestCase
         ]);
         Page::factory()->create([
             'book_id' => $book->id,
-            'media_path' => 'videos/test.webm',
-        ]);
-        Page::factory()->create([
-            'book_id' => $book->id,
             'media_path' => 'images/snapshot.webp',
         ]);
         Page::factory()->create([
@@ -166,11 +162,7 @@ class DashboardTest extends TestCase
         $this->assertEquals(1, Page::where('media_path', 'like', '%.webp')
             ->where('media_path', 'not like', '%snapshot%')
             ->count());
-        // Videos include both .mp4 and .webm files
-        $this->assertEquals(2, Page::where(function ($query) {
-            $query->where('media_path', 'like', '%.mp4')
-                ->orWhere('media_path', 'like', '%.webm');
-        })->count());
+        $this->assertEquals(1, Page::where('media_path', 'like', '%.mp4')->count());
         $this->assertEquals(1, Page::where('media_path', 'like', '%snapshot%')->count());
         $this->assertEquals(1, Page::whereNotNull('video_link')->count());
     }
