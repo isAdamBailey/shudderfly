@@ -4,7 +4,6 @@ export function useVideoOptimization() {
   const compressionProgress = ref(false);
   const optimizationProgress = ref(0);
 
-  // Smart video optimization that reduces size while preserving timeline structure
   async function optimizeVideoForUpload(file) {
     return new Promise((resolve) => {
       if (!file.type.startsWith("video/")) {
@@ -12,8 +11,7 @@ export function useVideoOptimization() {
         return;
       }
 
-      // Check if file needs compression for 60MB validation
-      const maxSize = 60 * 1024 * 1024; // 60MB
+      const maxSize = 60 * 1024 * 1024;
       if (file.size <= maxSize) {
         optimizationProgress.value = 100;
         resolve(file);
@@ -24,26 +22,96 @@ export function useVideoOptimization() {
       video.muted = true;
       video.playsInline = true;
       video.preload = "metadata";
+      let objectUrl = null;
+      let animationFrameId = null;
+      let canvas = null;
+      let ctx = null;
+
+      const cleanup = () => {
+        if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId);
+          animationFrameId = null;
+        }
+        if (objectUrl) {
+          URL.revokeObjectURL(objectUrl);
+        }
+        video.src = "";
+        if (canvas) {
+          canvas.width = 0;
+          canvas.height = 0;
+          canvas = null;
+          ctx = null;
+        }
+      };
+
+      video.onerror = () => {
+        cleanup();
+        optimizationProgress.value = 0;
+        resolve(file);
+      };
 
       video.onloadedmetadata = () => {
         optimizationProgress.value = 10;
 
         try {
-          // Use video stream but with settings optimized for size while preserving structure
-          const stream = video.captureStream(30); // Keep good frame rate for timeline preservation
+          const fileSizeMB = file.size / (1024 * 1024);
+          const isVeryLarge = fileSizeMB > 100;
+          const isExtremelyLarge = fileSizeMB > 150;
 
-          // Calculate bitrate to target ~50MB (under 60MB limit with buffer)
-          const targetSizeMB = 50;
+          let frameRate = 25;
+          if (isExtremelyLarge) {
+            frameRate = 15;
+          } else if (isVeryLarge) {
+            frameRate = 20;
+          }
+
+          let targetWidth = video.videoWidth;
+          let targetHeight = video.videoHeight;
+          const needsScaling = targetWidth > 1920 || isVeryLarge;
+
+          if (needsScaling) {
+            const maxWidth = 1920;
+            const scale = targetWidth > maxWidth ? maxWidth / targetWidth : 1;
+            targetWidth = Math.round(targetWidth * scale);
+            targetHeight = Math.round(targetHeight * scale);
+          }
+
+          const targetSizeMB = 25;
           const targetBitrate = Math.floor(
             (targetSizeMB * 8 * 1024 * 1024) / video.duration
           );
           const clampedBitrate = Math.max(
-            400000,
-            Math.min(2000000, targetBitrate)
-          ); // 400kbps - 2Mbps
+            200000,
+            Math.min(800000, targetBitrate)
+          );
+
+          let stream;
+
+          if (needsScaling) {
+            canvas = document.createElement("canvas");
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            ctx = canvas.getContext("2d");
+            stream = canvas.captureStream(frameRate);
+          } else {
+            stream = video.captureStream(frameRate);
+          }
+          const codecs = [
+            "video/webm;codecs=vp9",
+            "video/webm;codecs=vp8",
+            "video/webm"
+          ];
+
+          let selectedMimeType = codecs[0];
+          for (const mimeType of codecs) {
+            if (MediaRecorder.isTypeSupported(mimeType)) {
+              selectedMimeType = mimeType;
+              break;
+            }
+          }
 
           const mediaRecorder = new MediaRecorder(stream, {
-            mimeType: "video/webm;codecs=vp9",
+            mimeType: selectedMimeType,
             videoBitsPerSecond: clampedBitrate
           });
 
@@ -57,27 +125,45 @@ export function useVideoOptimization() {
 
           mediaRecorder.onstop = () => {
             optimizationProgress.value = 100;
-            const blob = new Blob(chunks, { type: "video/webm" });
-
-            // Create compressed file
+            const blob = new Blob(chunks, { type: selectedMimeType });
             const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+            const extension = selectedMimeType.includes("webm")
+              ? "webm"
+              : "mp4";
             const compressedFile = new File(
               [blob],
-              `${nameWithoutExt}_compressed.webm`,
+              `${nameWithoutExt}_compressed.${extension}`,
               {
-                type: "video/webm",
+                type: selectedMimeType,
                 lastModified: Date.now()
               }
             );
 
+            cleanup();
             resolve(compressedFile);
           };
 
-          // Track progress during compression
+          const drawFrame = () => {
+            if (!canvas || !ctx) return;
+            if (video.ended || video.paused) {
+              if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+              }
+              return;
+            }
+            try {
+              ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
+            } catch (err) {
+              // ignore
+            }
+            animationFrameId = requestAnimationFrame(drawFrame);
+          };
+
           video.ontimeupdate = () => {
             if (video.duration > 0) {
               const progress =
-                Math.round((video.currentTime / video.duration) * 85) + 10; // 10-95%
+                Math.round((video.currentTime / video.duration) * 85) + 10;
               optimizationProgress.value = Math.min(progress, 95);
             }
           };
@@ -85,35 +171,35 @@ export function useVideoOptimization() {
           video.onplay = () => {
             optimizationProgress.value = 15;
             mediaRecorder.start();
+            if (canvas && ctx) {
+              drawFrame();
+            }
           };
 
           video.onended = () => {
+            if (animationFrameId) {
+              cancelAnimationFrame(animationFrameId);
+              animationFrameId = null;
+            }
             optimizationProgress.value = 98;
             mediaRecorder.stop();
           };
 
-          video.onerror = () => {
-            optimizationProgress.value = 0;
-            resolve(file);
-          };
-
           video.currentTime = 0;
           video.play().catch(() => {
+            cleanup();
             optimizationProgress.value = 0;
             resolve(file);
           });
-        } catch {
+        } catch (err) {
+          cleanup();
           optimizationProgress.value = 0;
           resolve(file);
         }
       };
 
-      video.onerror = () => {
-        optimizationProgress.value = 0;
-        resolve(file);
-      };
-
-      video.src = URL.createObjectURL(file);
+      objectUrl = URL.createObjectURL(file);
+      video.src = objectUrl;
     });
   }
 

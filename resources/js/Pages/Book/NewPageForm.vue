@@ -129,6 +129,7 @@ watch(
 const uploaderRef = ref(null);
 const pondQueueCount = ref(0);
 const isUploading = ref(false);
+const isOptimizing = ref(false);
 
 const pondUploadUrl = computed(() => getPagesStoreUrl());
 const pondExtraData = computed(() => {
@@ -428,6 +429,8 @@ onUnmounted(() => {
               :video-threshold-bytes="41943040"
               @queue-update="onPondQueueUpdate"
               @processing-start="onPondProcessingStart"
+              @optimizing-start="isOptimizing = true"
+              @optimizing-end="isOptimizing = false"
               @error="onPondError"
               @processed="onPondProcessed"
               @all-done="onPondAllDone"
@@ -512,7 +515,7 @@ onUnmounted(() => {
         <Button
           type="button"
           class="w-3/4 flex justify-center py-3"
-          :disabled="isUploading || form.processing"
+          :disabled="isUploading || isOptimizing || form.processing"
           @click.prevent="
             hasQueuedFiles ? handleUploadAll() : handleFormSubmit()
           "
