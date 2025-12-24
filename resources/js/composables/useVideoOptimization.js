@@ -54,35 +54,26 @@ export function useVideoOptimization() {
         optimizationProgress.value = 10;
 
         try {
-          const fileSizeMB = file.size / (1024 * 1024);
-          const isVeryLarge = fileSizeMB > 100;
-          const isExtremelyLarge = fileSizeMB > 150;
-
-          let frameRate = 25;
-          if (isExtremelyLarge) {
-            frameRate = 15;
-          } else if (isVeryLarge) {
-            frameRate = 20;
-          }
+          const frameRate = 30;
 
           let targetWidth = video.videoWidth;
           let targetHeight = video.videoHeight;
-          const needsScaling = targetWidth > 1920 || isVeryLarge;
+          const needsScaling = targetWidth > 1920;
 
           if (needsScaling) {
             const maxWidth = 1920;
-            const scale = targetWidth > maxWidth ? maxWidth / targetWidth : 1;
+            const scale = maxWidth / targetWidth;
             targetWidth = Math.round(targetWidth * scale);
             targetHeight = Math.round(targetHeight * scale);
           }
 
-          const targetSizeMB = 25;
+          const targetSizeMB = 50;
           const targetBitrate = Math.floor(
             (targetSizeMB * 8 * 1024 * 1024) / video.duration
           );
           const clampedBitrate = Math.max(
-            200000,
-            Math.min(800000, targetBitrate)
+            500000,
+            Math.min(1500000, targetBitrate)
           );
 
           let stream;
