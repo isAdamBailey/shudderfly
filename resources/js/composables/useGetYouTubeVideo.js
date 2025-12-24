@@ -44,9 +44,9 @@ export default function useGetYouTubeVideo(videoLink, settings = {}) {
     }
 
     if (isPlaylist.value) {
-      return `https://www.youtube.com/embed/videoseries?list=${videoId.value}&modestbranding=1&rel=0${controls}`;
+      return `https://www.youtube.com/embed/videoseries?list=${videoId.value}&modestbranding=1&rel=0&playsinline=1${controls}`;
     } else {
-      return `https://www.youtube.com/embed/${videoId.value}?modestbranding=1&rel=0${controls}`;
+      return `https://www.youtube.com/embed/${videoId.value}?modestbranding=1&rel=0&playsinline=1${controls}`;
     }
   });
 

@@ -29,7 +29,10 @@ const useIframe = computed(() => isPlaylist.value || props.iframe);
       :title="title"
       :src="embedUrl"
       frameborder="0"
-      allow="accelerometer; encrypted-media;"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+      allowfullscreen
+      playsinline
+      webkit-playsinline
     ></iframe>
     <TypePill v-if="isPlaylist && !controls" type="Playlist" />
   </div>
@@ -38,7 +41,7 @@ const useIframe = computed(() => isPlaylist.value || props.iframe);
       :id="videoId"
       :title="title"
       :cookie="true"
-      :params="`modestbranding=1&rel=0${!controls ? '&controls=0' : ''}`"
+      :params="`modestbranding=1&rel=0&playsinline=1${!controls ? '&controls=0' : ''}`"
     />
   </div>
 </template>
