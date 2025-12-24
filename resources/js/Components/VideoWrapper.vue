@@ -11,7 +11,7 @@ const props = defineProps({
   controls: { type: Boolean, default: true }
 });
 
-const { embedUrl, videoId, isPlaylist } = useGetYouTubeVideo(props.url, {
+const { embedUrl, videoId, isPlaylist } = useGetYouTubeVideo(() => props.url, {
   noControls: !props.controls
 });
 
