@@ -19,16 +19,11 @@
 
 <script setup>
 import { useTranslations } from "@/composables/useTranslations";
-import { router } from "@inertiajs/vue3";
 import debounce from "lodash/debounce";
 import { onBeforeUnmount, onMounted, ref } from "vue";
 
 const { t } = useTranslations();
 const props = defineProps({
-  method: {
-    type: [Function, String],
-    default: null
-  },
   skipScrollToTop: {
     type: Boolean,
     default: false
@@ -67,32 +62,10 @@ onBeforeUnmount(() => {
   }
 });
 
-const scrollToTop = async () => {
+const scrollToTop = () => {
   if (typeof window === "undefined") return;
 
   if (!props.skipScrollToTop) {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  if (props.method) {
-    if (!props.skipScrollToTop) {
-      await new Promise((resolve) => {
-        const checkIfScrollIsAtTop = setInterval(() => {
-          if (window.scrollY === 0) {
-            clearInterval(checkIfScrollIsAtTop);
-            resolve();
-          }
-        }, 10);
-      });
-    }
-
-    if (typeof props.method === "function") {
-      props.method();
-    } else if (typeof props.method === "string") {
-      router.visit(props.method);
-    }
-  } else if (!props.skipScrollToTop) {
-    // Only scroll to top if no method is provided and we're not skipping
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 };

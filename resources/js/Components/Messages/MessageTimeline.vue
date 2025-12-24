@@ -298,7 +298,7 @@
     <div ref="infiniteScrollRef" class="h-4"></div>
 
     <!-- Scroll to timeline button -->
-    <ScrollTop :method="scrollToTimeline" :skip-scroll-to-top="true" />
+    <ScrollTop :skip-scroll-to-top="true" />
 
     <!-- Reaction Selection Modal -->
     <Modal :show="showReactionModal" max-width="sm" @close="closeReactionModal">

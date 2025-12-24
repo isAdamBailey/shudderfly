@@ -237,7 +237,7 @@
         label="You might also like these books"
       />
     </Deferred>
-    <ScrollTop :method="route('books.show', book)" />
+    <ScrollTop />
   </BreezeAuthenticatedLayout>
 </template>
 
