@@ -74,29 +74,33 @@ const server = {
     const fileKey4 = `${baseName}-${originalFile.size}`;
     const fileKey5 = baseName;
 
-    let compressedFile =
-      compressedFiles.get(fileKey1) ||
-      compressedFiles.get(fileKey2) ||
-      compressedFiles.get(fileKey3) ||
-      compressedFiles.get(fileKey4) ||
-      compressedFiles.get(fileKey5);
+    let compressedFile = null;
 
-    if (!compressedFile && originalFile.type?.startsWith("video/")) {
-      const keysToCheck = [originalFile.name, baseName];
-      for (const checkName of keysToCheck) {
-        for (const [key, value] of compressedFiles.entries()) {
-          if (key.startsWith(checkName + "-") || key === checkName) {
-            compressedFile = value;
-            break;
+    if (originalFile.type?.startsWith("video/")) {
+      compressedFile =
+        compressedFiles.get(fileKey1) ||
+        compressedFiles.get(fileKey2) ||
+        compressedFiles.get(fileKey3) ||
+        compressedFiles.get(fileKey4) ||
+        compressedFiles.get(fileKey5);
+
+      if (!compressedFile) {
+        const keysToCheck = [originalFile.name, baseName];
+        for (const checkName of keysToCheck) {
+          for (const [key, value] of compressedFiles.entries()) {
+            if (key.startsWith(checkName + "-") || key === checkName) {
+              compressedFile = value;
+              break;
+            }
           }
+          if (compressedFile) break;
         }
-        if (compressedFile) break;
       }
     }
 
     const fileToUpload = compressedFile || metadata?.file || originalFile;
 
-    if (compressedFile) {
+    if (compressedFile && originalFile.type?.startsWith("video/")) {
       compressedFiles.delete(fileKey1);
       compressedFiles.delete(fileKey2);
       compressedFiles.delete(fileKey3);
