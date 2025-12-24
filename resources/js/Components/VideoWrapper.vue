@@ -36,12 +36,18 @@ const useIframe = computed(() => isPlaylist.value || props.iframe);
     ></iframe>
     <TypePill v-if="isPlaylist && !controls" type="Playlist" />
   </div>
-  <div v-else class="video-container">
+  <div
+    v-else
+    class="video-container"
+    style="pointer-events: auto; touch-action: manipulation"
+  >
     <LiteYouTubeEmbed
       :id="videoId"
       :title="title"
-      :cookie="true"
-      :params="`modestbranding=1&rel=0&playsinline=1${!controls ? '&controls=0' : ''}`"
+      :cookie="false"
+      :params="`modestbranding=1&rel=0&playsinline=1${
+        !controls ? '&controls=0' : ''
+      }`"
     />
   </div>
 </template>
@@ -52,6 +58,7 @@ const useIframe = computed(() => isPlaylist.value || props.iframe);
   width: 100%;
   padding-bottom: 56.25%; /* For a 16:9 aspect ratio */
   overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .video-container iframe {
@@ -68,5 +75,16 @@ const useIframe = computed(() => isPlaylist.value || props.iframe);
   left: 0;
   width: 100%;
   height: 100%;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Ensure the play button and overlay are clickable on iOS */
+.video-container .yt-lite > .lty-playbtn {
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  z-index: 1;
 }
 </style>
