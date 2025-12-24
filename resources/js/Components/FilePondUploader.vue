@@ -49,7 +49,8 @@ const FilePond = vueFilePond(
 const pond = ref(null);
 const page = usePage();
 const compressedFiles = new Map();
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 5; // More retries for flaky mobile connections
+const UPLOAD_TIMEOUT_MS = 300000; // 5 minutes per file
 
 const server = {
   process: (
@@ -178,14 +179,28 @@ const server = {
           }
         } else {
           if (attempt < MAX_RETRIES) {
-            const delay = attempt === 0 ? 0 : Math.pow(2, attempt - 1) * 1000;
-            setTimeout(() => {
-              if (!aborted) {
-                attemptUpload(file, attempt + 1);
-              }
-            }, delay);
+            // Exponential backoff with jitter for mobile
+            const baseDelay = Math.pow(2, attempt + 1) * 1000;
+            const jitter = Math.random() * 1000;
+            const delay = baseDelay + jitter;
+
+            if (!navigator.onLine) {
+              const handleOnline = () => {
+                window.removeEventListener("online", handleOnline);
+                if (!aborted) {
+                  attemptUpload(file, attempt + 1);
+                }
+              };
+              window.addEventListener("online", handleOnline);
+            } else {
+              setTimeout(() => {
+                if (!aborted) {
+                  attemptUpload(file, attempt + 1);
+                }
+              }, delay);
+            }
           } else {
-            const errorMsg = `Upload failed (${xhr.status})`;
+            const errorMsg = `Upload failed. Please try again.`;
             emit("error", errorMsg);
             error(errorMsg);
           }
@@ -196,14 +211,61 @@ const server = {
         if (aborted) return;
 
         if (attempt < MAX_RETRIES) {
-          const delay = attempt === 0 ? 0 : Math.pow(2, attempt - 1) * 1000;
-          setTimeout(() => {
-            if (!aborted) {
-              attemptUpload(file, attempt + 1);
-            }
-          }, delay);
+          // Exponential backoff with jitter for mobile: 2s, 4s, 8s, 16s, 32s
+          const baseDelay = Math.pow(2, attempt + 1) * 1000;
+          const jitter = Math.random() * 1000;
+          const delay = baseDelay + jitter;
+
+          // If offline, wait for connection to return before retrying
+          if (!navigator.onLine) {
+            const handleOnline = () => {
+              window.removeEventListener("online", handleOnline);
+              if (!aborted) {
+                attemptUpload(file, attempt + 1);
+              }
+            };
+            window.addEventListener("online", handleOnline);
+          } else {
+            setTimeout(() => {
+              if (!aborted) {
+                attemptUpload(file, attempt + 1);
+              }
+            }, delay);
+          }
         } else {
-          const errorMsg = "Upload failed due to network error";
+          const errorMsg =
+            "Upload failed. Please check your connection and try again.";
+          emit("error", errorMsg);
+          error(errorMsg);
+        }
+      });
+
+      xhr.addEventListener("timeout", () => {
+        if (aborted) return;
+
+        if (attempt < MAX_RETRIES) {
+          const baseDelay = Math.pow(2, attempt + 1) * 1000;
+          const jitter = Math.random() * 1000;
+          const delay = baseDelay + jitter;
+
+          if (!navigator.onLine) {
+            const handleOnline = () => {
+              window.removeEventListener("online", handleOnline);
+              if (!aborted) {
+                attemptUpload(file, attempt + 1);
+              }
+            };
+            window.addEventListener("online", handleOnline);
+          } else {
+            setTimeout(() => {
+              if (!aborted) {
+                attemptUpload(file, attempt + 1);
+              }
+            }, delay);
+          }
+        } else {
+          const errorMsg =
+            "Upload timed out. Please check your connection and try again.";
           emit("error", errorMsg);
           error(errorMsg);
         }
@@ -216,6 +278,7 @@ const server = {
       });
 
       xhr.open("POST", props.uploadUrl);
+      xhr.timeout = UPLOAD_TIMEOUT_MS;
       xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
       xhr.setRequestHeader("X-CSRF-TOKEN", page.props.csrf_token);
       xhr.send(formData);
