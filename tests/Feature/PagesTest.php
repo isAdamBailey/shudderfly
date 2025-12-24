@@ -1607,7 +1607,7 @@ class PagesTest extends TestCase
 
         $book = Book::factory()->create();
         $page = Page::factory()->for($book)->create([
-            'video_link' => 'https://youtube.com/watch?v=test123'
+            'video_link' => 'https://youtube.com/watch?v=test123',
         ]);
 
         $response = $this->post(route('pages.share', $page));
@@ -1634,7 +1634,7 @@ class PagesTest extends TestCase
         $book = Book::factory()->create();
         $page = Page::factory()->for($book)->create([
             'media_path' => 'books/test/video.mp4',
-            'media_poster' => 'books/test/poster.jpg'
+            'media_poster' => 'books/test/poster.jpg',
         ]);
 
         $response = $this->post(route('pages.share', $page));
@@ -1660,7 +1660,7 @@ class PagesTest extends TestCase
 
         $book = Book::factory()->create();
         $page = Page::factory()->for($book)->create([
-            'media_path' => 'books/test/snapshot-123.jpg'
+            'media_path' => 'books/test/snapshot-123.jpg',
         ]);
 
         $response = $this->post(route('pages.share', $page));

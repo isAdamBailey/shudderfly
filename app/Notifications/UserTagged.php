@@ -49,11 +49,11 @@ class UserTagged extends Notification implements ShouldBroadcast
         $messageId = $this->contentType === 'comment' && $this->content instanceof MessageComment
             ? $this->content->message_id
             : ($this->content instanceof Message ? $this->content->id : null);
-        
+
         $contentText = $this->contentType === 'comment' && $this->content instanceof MessageComment
             ? $this->content->comment
             : ($this->content instanceof Message ? $this->content->message : '');
-        
+
         $url = route('messages.index').'#message-'.$messageId;
 
         return (new MailMessage)
@@ -71,11 +71,11 @@ class UserTagged extends Notification implements ShouldBroadcast
     public function toBroadcast(object $notifiable): BroadcastMessage
     {
         $title = __('messages.tagged.title', ['name' => $this->tagger->name]);
-        
+
         $contentText = $this->contentType === 'comment' && $this->content instanceof MessageComment
             ? $this->content->comment
             : ($this->content instanceof Message ? $this->content->message : '');
-        
+
         $messageBody = mb_strlen($contentText, 'UTF-8') > 120
             ? mb_substr($contentText, 0, 117, 'UTF-8').'...'
             : $contentText;
@@ -122,7 +122,7 @@ class UserTagged extends Notification implements ShouldBroadcast
         $messageId = $this->contentType === 'comment' && $this->content instanceof MessageComment
             ? $this->content->message_id
             : ($this->content instanceof Message ? $this->content->id : null);
-        
+
         $contentText = $this->contentType === 'comment' && $this->content instanceof MessageComment
             ? $this->content->comment
             : ($this->content instanceof Message ? $this->content->message : '');

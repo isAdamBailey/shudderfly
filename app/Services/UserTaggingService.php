@@ -17,10 +17,7 @@ class UserTaggingService
      * Notify tagged users about being mentioned in a message or comment.
      *
      * @param  array<int>  $taggedUserIds
-     * @param  User  $tagger
-     * @param  Message|MessageComment  $content
      * @param  string  $contentType  Either 'message' or 'comment'
-     * @return void
      */
     public function notifyTaggedUsers(array $taggedUserIds, User $tagger, Message|MessageComment $content, string $contentType): void
     {
@@ -77,4 +74,3 @@ class UserTaggingService
         }
     }
 }
-

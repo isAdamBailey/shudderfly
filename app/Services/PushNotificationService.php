@@ -90,11 +90,6 @@ class PushNotificationService
 
                 // Security: Validate endpoint before using it to prevent SSRF
                 if (! $this->isValidWebPushEndpoint($subscription->endpoint)) {
-                    Log::warning('Invalid push subscription endpoint rejected', [
-                        'subscription_id' => $subscription->id ?? null,
-                        'user_id' => $subscription->user_id ?? null,
-                        'endpoint' => $subscription->endpoint ?? null,
-                    ]);
                     // Delete the invalid subscription
                     PushSubscription::where('id', $subscription->id)->delete();
 

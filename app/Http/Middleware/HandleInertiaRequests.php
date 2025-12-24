@@ -96,16 +96,16 @@ class HandleInertiaRequests extends Middleware
             'translations' => function () {
                 $locale = app()->getLocale();
                 $messagesPath = lang_path("{$locale}/messages.php");
-                
+
                 if (file_exists($messagesPath)) {
                     return require $messagesPath;
                 }
-                
+
                 $enPath = lang_path('en/messages.php');
                 if (file_exists($enPath)) {
                     return require $enPath;
                 }
-                
+
                 return [];
             },
         ]);
