@@ -14,21 +14,17 @@ import {
 const { flashMessage, clearFlashMessage } = useFlashMessage();
 const { t } = useTranslations();
 const show = ref(false);
-const forceRender = ref(0); // Force re-render counter for Safari
-
-// Create a computed to explicitly track the flash message for Safari compatibility
-const hasFlashMessage = computed(() => {
-  return !!flashMessage.value;
-});
-let hideTimeoutId = null;
-let disposeSuccess = null;
+const forceRender = ref(0);
+const hideTimeoutId = ref(null);
+const disposeSuccess = ref(null);
+const routerSuccessHandler = ref(null);
 
 const close = () => {
   show.value = false;
   clearFlashMessage();
-  if (hideTimeoutId) {
-    clearTimeout(hideTimeoutId);
-    hideTimeoutId = null;
+  if (hideTimeoutId.value) {
+    clearTimeout(hideTimeoutId.value);
+    hideTimeoutId.value = null;
   }
 };
 
@@ -76,60 +72,65 @@ const messageStyles = computed(() => {
 
 const triggerIfMessage = async () => {
   if (flashMessage.value) {
-    // Force a re-render by incrementing the counter (moved from computed to avoid side effect)
     forceRender.value++;
     show.value = true;
-    // Force a re-render by waiting for next tick
     await nextTick();
-    if (hideTimeoutId) clearTimeout(hideTimeoutId);
-    // Auto-hide success and info messages, but keep errors/warnings visible longer
+    await nextTick();
+    if (hideTimeoutId.value) clearTimeout(hideTimeoutId.value);
     const hideDelay = ["error", "warning"].includes(flashMessage.value.type)
       ? 5000
       : 3000;
-    hideTimeoutId = setTimeout(close, hideDelay);
+    hideTimeoutId.value = setTimeout(close, hideDelay);
   } else {
-    // If flash message is null, hide the component
     show.value = false;
   }
 };
 
-// Watch for flash message changes (including Echo-triggered ones)
 let lastFlashMessageId = null;
 watch(
   flashMessage,
   (newVal) => {
-    // Create a unique ID for this flash message to prevent duplicate triggers
     const messageId = newVal ? `${newVal.type}-${newVal.text}` : null;
-    if (messageId === lastFlashMessageId && show.value) {
-      // Already showing this message, skip
+    if (messageId === lastFlashMessageId && show.value && newVal) {
       return;
     }
     lastFlashMessageId = messageId;
-    triggerIfMessage();
+    requestAnimationFrame(() => {
+      triggerIfMessage();
+    });
   },
   { immediate: true, deep: true }
 );
 
-// Ensure first render (direct loads) shows the message
 onMounted(() => {
-  triggerIfMessage();
+  requestAnimationFrame(() => {
+    triggerIfMessage();
+  });
 
-  // Show after every successful Inertia navigation, regardless of identical text
-  // router.on returns a disposer in newer versions; keep a reference for cleanup
-  const maybeDisposer = router.on("success", triggerIfMessage);
+  const handler = () => {
+    requestAnimationFrame(() => {
+      triggerIfMessage();
+    });
+  };
+  routerSuccessHandler.value = handler;
+  const maybeDisposer = router.on("success", handler);
   if (typeof maybeDisposer === "function") {
-    disposeSuccess = maybeDisposer;
+    disposeSuccess.value = maybeDisposer;
   }
 });
 
 onBeforeUnmount(() => {
-  // Prefer the disposer if available; otherwise fall back to router.off when supported
-  if (typeof disposeSuccess === "function") {
-    disposeSuccess();
-  } else if (typeof router.off === "function") {
-    router.off("success", triggerIfMessage);
+  if (typeof disposeSuccess.value === "function") {
+    disposeSuccess.value();
+    disposeSuccess.value = null;
+  } else if (typeof router.off === "function" && routerSuccessHandler.value) {
+    router.off("success", routerSuccessHandler.value);
+    routerSuccessHandler.value = null;
   }
-  if (hideTimeoutId) clearTimeout(hideTimeoutId);
+  if (hideTimeoutId.value) {
+    clearTimeout(hideTimeoutId.value);
+    hideTimeoutId.value = null;
+  }
 });
 </script>
 
@@ -144,40 +145,46 @@ onBeforeUnmount(() => {
       leave-to-class="opacity-0 translate-y-[10px]"
     >
       <div
-        v-if="show && hasFlashMessage && flashMessage"
-        :key="forceRender"
-        class="fixed bottom-4 left-4 z-50 max-w-md w-full"
-        style="position: fixed; bottom: 1rem; left: 1rem; z-index: 9999"
+        v-if="show && flashMessage"
+        :key="`flash-${forceRender}-${flashMessage?.type}-${flashMessage?.text}`"
+        class="fixed bottom-4 left-4 right-4 sm:right-auto sm:max-w-md z-[9999]"
       >
         <div
           :class="[
-            'border px-4 py-3 rounded-2xl relative flex items-center gap-3 backdrop-blur-sm',
+            'border px-3 sm:px-4 py-3 rounded-2xl relative flex items-center gap-2 sm:gap-3',
             messageStyles.container
           ]"
           role="alert"
+          :style="{
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)'
+          }"
         >
           <div class="flex items-center flex-1 min-w-0">
             <i
               :class="[
                 messageStyles.iconName,
-                'text-xl flex-shrink-0',
+                'text-lg sm:text-xl flex-shrink-0',
                 messageStyles.icon
               ]"
             ></i>
-            <span class="ml-3 text-lg font-semibold break-words">{{
-              flashMessage.text
-            }}</span>
+            <span
+              class="ml-2 sm:ml-3 text-base sm:text-lg font-semibold break-words overflow-wrap-anywhere"
+              >{{ flashMessage.text }}</span
+            >
           </div>
           <button
             :class="[
-              'flex-shrink-0 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200',
+              'flex-shrink-0 p-1.5 sm:p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200',
               messageStyles.button
             ]"
             :aria-label="t('general.close')"
             type="button"
             @click="close"
           >
-            <i :class="['ri-close-line text-xl', messageStyles.icon]"></i>
+            <i
+              :class="['ri-close-line text-lg sm:text-xl', messageStyles.icon]"
+            ></i>
           </button>
         </div>
       </div>
