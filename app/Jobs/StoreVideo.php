@@ -105,6 +105,14 @@ class StoreVideo implements ShouldQueue
         }
 
         $fileSize = Storage::disk('local')->size($this->filePath);
+
+        // Detect if video is likely pre-optimized (client-side compressed)
+        $sourcePath = storage_path('app/'.$this->filePath);
+        $mimeType = mime_content_type($sourcePath);
+        $isWebm = str_contains($mimeType ?? '', 'webm');
+        $fileExtension = strtolower(pathinfo($this->filePath, PATHINFO_EXTENSION));
+        $isPreOptimized = $fileSize < (25 * 1024 * 1024); // < 25MB suggests pre-compressed
+
         $requiredSpace = $fileSize * 4; // Increased buffer for processing
 
         if ($freeSpace < $requiredSpace) {
@@ -182,6 +190,24 @@ class StoreVideo implements ShouldQueue
 
             $isPortrait = $height > $width;
 
+            // Determine if scaling is needed
+            $needsScaling = $isPortrait
+                ? ($height > 960 || $width > 540)
+                : ($width > 960 || $height > 540);
+
+            // Check if we can skip re-encoding entirely (already optimal)
+            // Skip if: pre-optimized AND no scaling needed AND file is small enough AND no rotation needed
+            $skipReencode = $isPreOptimized
+                && ! $needsScaling
+                && $fileSize < (15 * 1024 * 1024)
+                && ($rotation == 0);
+
+            if ($skipReencode) {
+                $this->uploadDirectly($sourcePath, $isWebm ? 'webm' : $fileExtension);
+
+                return;
+            }
+
             $rotationFilter = '';
             if ($rotation == 90 || $rotation == -270) {
                 $rotationFilter = 'transpose=1,';
@@ -208,14 +234,18 @@ class StoreVideo implements ShouldQueue
             $videoBitrate = 600;
             $audioBitrate = 64;
 
+            // Use lighter encoding for pre-optimized files (better quality, still fast)
+            $preset = $isPreOptimized ? 'fast' : 'ultrafast';
+            $crf = $isPreOptimized ? '24' : '30';
+
             $ffmpegParams = [
                 '-i', storage_path('app/'.$this->filePath),
                 '-c:v', 'libx264',
                 '-c:a', 'aac',
                 '-b:v', $videoBitrate.'k',
                 '-b:a', $audioBitrate.'k',
-                '-preset', 'ultrafast',
-                '-crf', '30',
+                '-preset', $preset,
+                '-crf', $crf,
                 '-profile:v', 'baseline',
                 '-level', '3.0',
                 '-threads', '1',
@@ -291,133 +321,18 @@ class StoreVideo implements ShouldQueue
                 throw new \RuntimeException('FFmpeg processing failed (exit code: '.$exitCode.'): '.$errorOutput);
             }
 
-            $screenshotContents = null;
             $tempScreenshotPath = null;
-            try {
-                // Generate screenshot using direct FFmpeg command (more reliable than Laravel FFmpeg library)
-                $tempScreenshotPath = $tempDir.uniqid('screenshot_', true).'.jpg';
-
-                $ffmpegBinary = config('laravel-ffmpeg.ffmpeg.binaries');
-                $fullVideoPath = storage_path('app/'.$this->filePath);
-                $fullImagePath = $tempScreenshotPath;
-
-                // Try multiple timestamps for better success rate
-                $screenshotTimestamps = [1.0, 0.5, 2.0, 0.1];
-                $screenshotGenerated = false;
-
-                foreach ($screenshotTimestamps as $timestamp) {
-                    try {
-                        $ffmpegCommand = sprintf(
-                            'timeout 60 %s -i %s -ss %.1f -vframes 1 -q:v 2 -y %s 2>&1',
-                            escapeshellarg($ffmpegBinary),
-                            escapeshellarg($fullVideoPath),
-                            $timestamp,
-                            escapeshellarg($fullImagePath)
-                        );
-
-                        $output = [];
-                        $returnCode = 0;
-                        exec($ffmpegCommand, $output, $returnCode);
-                        $outputString = implode("\n", $output);
-
-                        if ($returnCode === 0 && file_exists($fullImagePath) && filesize($fullImagePath) > 0) {
-                            $screenshotGenerated = true;
-                            break;
-                        }
-                    } catch (Throwable $timestampError) {
-                        continue;
-                    }
-                }
-
-                // Read the file contents if screenshot was generated successfully
-                if ($screenshotGenerated && file_exists($tempScreenshotPath)) {
-                    $screenshotContents = file_get_contents($tempScreenshotPath);
-                }
-            } catch (Throwable $e) {
-                Log::warning('Failed to generate screenshot, continuing without poster', [
-                    'error' => $e->getMessage(),
-                    'filePath' => $this->filePath,
-                ]);
-            }
+            $screenshotContents = $this->generateScreenshot(storage_path('app/'.$this->filePath), $tempScreenshotPath);
 
             $filename = pathinfo($this->path, PATHINFO_FILENAME).'.mp4';
             $dirPath = pathinfo($this->path, PATHINFO_DIRNAME);
             $posterPath = $dirPath.'/'.pathinfo($this->path, PATHINFO_FILENAME).'_poster.jpg';
 
             try {
-                $processedFilePath = retry(3, function () use ($tempFile, $filename, $dirPath) {
-                    $result = Storage::disk('s3')->putFileAs($dirPath, new File($tempFile), $filename);
-                    if (! $result) {
-                        throw new \RuntimeException('S3 upload returned false');
-                    }
-
-                    return $result;
-                }, 2000);
-
-                Storage::disk('s3')->setVisibility($processedFilePath, 'public');
-
-                if ($screenshotContents) {
-                    retry(3, function () use ($posterPath, $screenshotContents) {
-                        $result = Storage::disk('s3')->put($posterPath, $screenshotContents);
-                        if (! $result) {
-                            throw new \RuntimeException('S3 poster upload returned false');
-                        }
-
-                        // Explicitly set visibility to public
-                        Storage::disk('s3')->setVisibility($posterPath, 'public');
-                    }, 2000);
-                }
-
-                // Use database transaction for data consistency
-                DB::transaction(function () use ($processedFilePath, $posterPath) {
-                    if ($this->page) {
-                        $this->page->update([
-                            'content' => $this->content,
-                            'media_path' => $processedFilePath,
-                            'media_poster' => $posterPath,
-                            'video_link' => $this->videoLink,
-                            'latitude' => $this->latitude,
-                            'longitude' => $this->longitude,
-                        ]);
-                    } elseif ($this->book) {
-                        $page = $this->book->pages()->create([
-                            'content' => $this->content,
-                            'media_path' => $processedFilePath,
-                            'media_poster' => $posterPath,
-                            'video_link' => $this->videoLink,
-                            'latitude' => $this->latitude,
-                            'longitude' => $this->longitude,
-                        ]);
-
-                        // Set as cover page if book doesn't have one
-                        if (! $this->book->cover_page) {
-                            $this->book->update(['cover_page' => $page->id]);
-                        }
-                    }
-                });
-
-                // After successful DB update, delete any old media/poster
-                try {
-                    if ($this->oldMediaPath) {
-                        Storage::disk('s3')->delete($this->oldMediaPath);
-                    }
-                } catch (Throwable $cleanupError) {
-                    Log::warning('Failed to delete old media after StoreVideo', [
-                        'path' => $this->oldMediaPath,
-                        'exception' => $cleanupError->getMessage(),
-                    ]);
-                }
-
-                try {
-                    if ($this->oldPosterPath) {
-                        Storage::disk('s3')->delete($this->oldPosterPath);
-                    }
-                } catch (Throwable $cleanupError) {
-                    Log::warning('Failed to delete old poster after StoreVideo', [
-                        'path' => $this->oldPosterPath,
-                        'exception' => $cleanupError->getMessage(),
-                    ]);
-                }
+                $processedFilePath = $this->uploadVideoToS3($tempFile, $filename, $dirPath);
+                $this->uploadPosterToS3($posterPath, $screenshotContents);
+                $this->updateDatabase($processedFilePath, $posterPath);
+                $this->cleanupOldMedia();
 
             } catch (Throwable $e) {
                 Log::error('Failed to upload video to S3', [
@@ -493,6 +408,181 @@ class StoreVideo implements ShouldQueue
         }
     }
 
+    /**
+     * Upload video directly without re-encoding (for pre-optimized files).
+     * Only generates poster and uploads to S3.
+     */
+    private function uploadDirectly(string $sourcePath, string $extension): void
+    {
+        $tempScreenshotPath = null;
+
+        try {
+            $screenshotContents = $this->generateScreenshot($sourcePath, $tempScreenshotPath);
+
+            $filename = pathinfo($this->path, PATHINFO_FILENAME).'.'.$extension;
+            $dirPath = pathinfo($this->path, PATHINFO_DIRNAME);
+            $posterPath = $dirPath.'/'.pathinfo($this->path, PATHINFO_FILENAME).'_poster.jpg';
+
+            $processedFilePath = $this->uploadVideoToS3($sourcePath, $filename, $dirPath);
+            $this->uploadPosterToS3($posterPath, $screenshotContents);
+            $this->updateDatabase($processedFilePath, $posterPath);
+            $this->cleanupOldMedia();
+
+        } finally {
+            if ($tempScreenshotPath && file_exists($tempScreenshotPath)) {
+                @unlink($tempScreenshotPath);
+            }
+
+            if (Storage::disk('local')->exists($this->filePath)) {
+                Storage::disk('local')->delete($this->filePath);
+            }
+        }
+    }
+
+    /**
+     * Generate a screenshot/poster from the video.
+     */
+    private function generateScreenshot(string $videoPath, ?string &$tempScreenshotPath = null): ?string
+    {
+        $tempDir = storage_path('app/temp/');
+        if (! is_dir($tempDir) && ! mkdir($tempDir, 0755, true)) {
+            return null;
+        }
+
+        try {
+            $tempScreenshotPath = $tempDir.uniqid('screenshot_', true).'.jpg';
+            $ffmpegBinary = config('laravel-ffmpeg.ffmpeg.binaries');
+
+            $screenshotTimestamps = [1.0, 0.5, 2.0, 0.1];
+
+            foreach ($screenshotTimestamps as $timestamp) {
+                try {
+                    $ffmpegCommand = sprintf(
+                        'timeout 60 %s -i %s -ss %.1f -vframes 1 -q:v 2 -y %s 2>&1',
+                        escapeshellarg($ffmpegBinary),
+                        escapeshellarg($videoPath),
+                        $timestamp,
+                        escapeshellarg($tempScreenshotPath)
+                    );
+
+                    $output = [];
+                    $returnCode = 0;
+                    exec($ffmpegCommand, $output, $returnCode);
+
+                    if ($returnCode === 0 && file_exists($tempScreenshotPath) && filesize($tempScreenshotPath) > 0) {
+                        return file_get_contents($tempScreenshotPath);
+                    }
+                } catch (Throwable $e) {
+                    continue;
+                }
+            }
+        } catch (Throwable $e) {
+            Log::warning('Failed to generate screenshot', [
+                'error' => $e->getMessage(),
+                'filePath' => $this->filePath,
+            ]);
+        }
+
+        return null;
+    }
+
+    /**
+     * Upload video file to S3.
+     */
+    private function uploadVideoToS3(string $filePath, string $filename, string $dirPath): string
+    {
+        $processedFilePath = retry(3, function () use ($filePath, $filename, $dirPath) {
+            $result = Storage::disk('s3')->putFileAs($dirPath, new File($filePath), $filename);
+            if (! $result) {
+                throw new \RuntimeException('S3 upload returned false');
+            }
+
+            return $result;
+        }, 2000);
+
+        Storage::disk('s3')->setVisibility($processedFilePath, 'public');
+
+        return $processedFilePath;
+    }
+
+    /**
+     * Upload poster image to S3.
+     */
+    private function uploadPosterToS3(string $posterPath, ?string $screenshotContents): void
+    {
+        if (! $screenshotContents) {
+            return;
+        }
+
+        retry(3, function () use ($posterPath, $screenshotContents) {
+            $result = Storage::disk('s3')->put($posterPath, $screenshotContents);
+            if (! $result) {
+                throw new \RuntimeException('S3 poster upload returned false');
+            }
+            Storage::disk('s3')->setVisibility($posterPath, 'public');
+        }, 2000);
+    }
+
+    /**
+     * Update the database with the processed video information.
+     */
+    private function updateDatabase(string $processedFilePath, string $posterPath): void
+    {
+        DB::transaction(function () use ($processedFilePath, $posterPath) {
+            if ($this->page) {
+                $this->page->update([
+                    'content' => $this->content,
+                    'media_path' => $processedFilePath,
+                    'media_poster' => $posterPath,
+                    'video_link' => $this->videoLink,
+                    'latitude' => $this->latitude,
+                    'longitude' => $this->longitude,
+                ]);
+            } elseif ($this->book) {
+                $page = $this->book->pages()->create([
+                    'content' => $this->content,
+                    'media_path' => $processedFilePath,
+                    'media_poster' => $posterPath,
+                    'video_link' => $this->videoLink,
+                    'latitude' => $this->latitude,
+                    'longitude' => $this->longitude,
+                ]);
+
+                if (! $this->book->cover_page) {
+                    $this->book->update(['cover_page' => $page->id]);
+                }
+            }
+        });
+    }
+
+    /**
+     * Clean up old media files from S3.
+     */
+    private function cleanupOldMedia(): void
+    {
+        try {
+            if ($this->oldMediaPath) {
+                Storage::disk('s3')->delete($this->oldMediaPath);
+            }
+        } catch (Throwable $e) {
+            Log::warning('Failed to delete old media', [
+                'path' => $this->oldMediaPath,
+                'exception' => $e->getMessage(),
+            ]);
+        }
+
+        try {
+            if ($this->oldPosterPath) {
+                Storage::disk('s3')->delete($this->oldPosterPath);
+            }
+        } catch (Throwable $e) {
+            Log::warning('Failed to delete old poster', [
+                'path' => $this->oldPosterPath,
+                'exception' => $e->getMessage(),
+            ]);
+        }
+    }
+
     private function getMemoryLimitInBytes(): int
     {
         $memoryLimit = ini_get('memory_limit');
@@ -548,7 +638,11 @@ class StoreVideo implements ShouldQueue
         // Clean up any temporary files that might have been created
         $tempDir = storage_path('app/temp/');
         if (is_dir($tempDir)) {
-            $tempFiles = glob($tempDir.'video_*.mp4');
+            // Clean up both mp4 and webm temp files
+            $tempFiles = array_merge(
+                glob($tempDir.'video_*.mp4') ?: [],
+                glob($tempDir.'video_*.webm') ?: []
+            );
             foreach ($tempFiles as $tempFile) {
                 if (file_exists($tempFile) && (time() - filemtime($tempFile)) > 3600) { // Older than 1 hour
                     @unlink($tempFile);

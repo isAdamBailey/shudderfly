@@ -650,7 +650,7 @@ class PageController extends Controller
             return false;
         }
 
-        $videoFormats = ['.mp4', '.avi', '.mpeg', '.quicktime', '.mov'];
+        $videoFormats = ['.mp4', '.avi', '.mpeg', '.quicktime', '.mov', '.webm'];
         foreach ($videoFormats as $format) {
             if (str_ends_with(strtolower($path), $format)) {
                 return true;

@@ -11,7 +11,8 @@ export function useVideoOptimization() {
         return;
       }
 
-      const maxSize = 60 * 1024 * 1024;
+      // Align with FilePondUploader's videoThresholdBytes (40MB)
+      const maxSize = 40 * 1024 * 1024;
       if (file.size <= maxSize) {
         optimizationProgress.value = 100;
         resolve(file);
@@ -67,7 +68,7 @@ export function useVideoOptimization() {
             targetHeight = Math.round(targetHeight * scale);
           }
 
-          const targetSizeMB = 60;
+          const targetSizeMB = 40;
           const targetBitrate = Math.floor(
             (targetSizeMB * 8 * 1024 * 1024) / video.duration
           );

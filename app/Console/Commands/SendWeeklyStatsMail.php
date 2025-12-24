@@ -66,7 +66,10 @@ class SendWeeklyStatsMail extends Command
         $booksThisWeek = Book::where('created_at', '>=', $oneWeekAgo)->get();
         $screenshotsThisWeek = Page::where('media_path', 'like', '%snapshot%')->where('created_at', '>=', $oneWeekAgo)->get();
         $youTubeVideosThisWeek = Page::whereNotNull('video_link')->where('created_at', '>=', $oneWeekAgo)->get();
-        $videosThisWeek = Page::where('media_path', 'like', '%.mp4')->where('created_at', '>=', $oneWeekAgo)->get();
+        $videosThisWeek = Page::where(function ($query) {
+            $query->where('media_path', 'like', '%.mp4')
+                ->orWhere('media_path', 'like', '%.webm');
+        })->where('created_at', '>=', $oneWeekAgo)->get();
         $imagesThisWeek = Page::where('media_path', 'like', '%.webp')
             ->where('media_path', 'not like', '%snapshot%')
             ->where('created_at', '>=', $oneWeekAgo)
