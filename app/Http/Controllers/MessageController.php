@@ -6,8 +6,8 @@ use App\Events\MessageCreated;
 use App\Models\Message;
 use App\Models\SiteSetting;
 use App\Models\User;
-use App\Notifications\UserTagged;
 use App\Services\PushNotificationService;
+use App\Services\UserTaggingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,7 +17,8 @@ use Inertia\Response;
 class MessageController extends Controller
 {
     public function __construct(
-        protected PushNotificationService $pushNotificationService
+        protected PushNotificationService $pushNotificationService,
+        protected UserTaggingService $userTaggingService
     ) {}
 
     /**
@@ -141,33 +142,9 @@ class MessageController extends Controller
             $taggedUserIds = [];
         }
 
-        foreach ($taggedUserIds as $userId) {
-            $taggedUser = User::find($userId);
-            if ($taggedUser) {
-                // Send database notification
-                $taggedUser->notify(new UserTagged($message, $user));
-
-                // Send push notification
-                $title = __('messages.tagged.push_title', ['name' => $user->name]);
-                // Truncate message for push notification (max ~120 chars for body)
-                $messageBody = mb_strlen($message->message, 'UTF-8') > 120
-                    ? mb_substr($message->message, 0, 117, 'UTF-8').'...'
-                    : $message->message;
-
-                $this->pushNotificationService->sendNotification(
-                    $taggedUser->id,
-                    $title,
-                    $messageBody,
-                    [
-                        'type' => 'user_tagged',
-                        'message_id' => $message->id,
-                        'tagger_id' => $user->id,
-                        'tagger_name' => $user->name,
-                        'message' => $message->message,
-                        'url' => route('messages.index'),
-                    ]
-                );
-            }
+        // Notify tagged users
+        if (! empty($taggedUserIds)) {
+            $this->userTaggingService->notifyTaggedUsers($taggedUserIds, $user, $message, 'message');
         }
 
         // Broadcast the new message

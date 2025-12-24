@@ -742,7 +742,7 @@ describe("MessageTimeline", () => {
 
       expect(mockRouter.post).toHaveBeenCalledWith(
         expect.stringContaining("/messages.comments.store"),
-        { comment: "New comment" },
+        { comment: "New comment", tagged_user_ids: [] },
         expect.objectContaining({
           preserveScroll: true
         })
@@ -1159,8 +1159,8 @@ describe("MessageTimeline", () => {
           page_id: 123,
           page: {
             id: 123,
-            media_path: "https://example.com/video.mp4",
-            video_link: "https://youtube.com/watch?v=test"
+            media_path: "https://example.com/video.mp4"
+            // No video_link - this is a non-YouTube video, so image should be shown
           }
         }
       ];
@@ -1194,8 +1194,8 @@ describe("MessageTimeline", () => {
           page: {
             id: 123,
             media_path: "https://example.com/video.mp4",
-            media_poster: "https://example.com/poster.jpg",
-            video_link: "https://youtube.com/watch?v=test"
+            media_poster: "https://example.com/poster.jpg"
+            // No video_link - this is a non-YouTube video, so image should be shown
           }
         }
       ];

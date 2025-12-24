@@ -185,13 +185,47 @@
           <div class="space-y-3">
             <!-- Comment Form -->
             <form class="space-y-2" @submit.prevent="submitComment(message)">
-              <textarea
-                v-model="commentForms[message.id]"
-                :placeholder="t('message.comment_placeholder')"
-                maxlength="1000"
-                rows="3"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-              ></textarea>
+              <div class="relative">
+                <textarea
+                  :ref="
+                    (el) => {
+                      if (el && commentTextareaRefs.value)
+                        commentTextareaRefs.value[message.id] = el;
+                    }
+                  "
+                  v-model="commentForms[message.id]"
+                  :placeholder="t('message.comment_placeholder')"
+                  maxlength="1000"
+                  rows="3"
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none overflow-hidden min-h-[76px] max-h-[200px]"
+                  @input="(e) => handleCommentInput(e, message.id)"
+                  @keydown="(e) => handleCommentKeydown(e, message.id)"
+                ></textarea>
+
+                <!-- User Suggestions Dropdown -->
+                <div
+                  v-if="getCommentTagging(message.id).showUserSuggestions"
+                  class="user-suggestions-container absolute top-full left-0 mt-1 w-full max-w-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-[100] max-h-60 overflow-y-auto"
+                >
+                  <div
+                    v-for="(user, index) in getCommentTagging(message.id)
+                      .userSuggestions"
+                    :key="user.id"
+                    :class="[
+                      'px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700',
+                      getCommentTagging(message.id).selectedSuggestionIndex ===
+                      index
+                        ? 'bg-gray-100 dark:bg-gray-700'
+                        : ''
+                    ]"
+                    @click="insertCommentMention(message.id, user)"
+                  >
+                    <div class="font-semibold text-gray-900 dark:text-gray-100">
+                      @{{ user.name }}
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div class="flex items-center justify-between">
                 <span class="text-xs text-gray-500 dark:text-gray-400">
                   {{ (commentForms[message.id] || "").length }}/1000
@@ -440,6 +474,7 @@ import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 import { useMessageBuilder } from "@/composables/useMessageBuilder";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
+import { useUserTagging } from "@/composables/useUserTagging";
 import { useMedia } from "@/mediaHelpers";
 import { Link, router, usePage } from "@inertiajs/vue3";
 import axios from "axios";
@@ -471,6 +506,9 @@ const selectedMessageForView = ref(null);
 const timelineContainer = ref(null);
 const expandedComments = ref({});
 const commentForms = ref({});
+const commentTextareaRefs = ref({}); // Refs for comment textareas per message
+const commentTaggingInstances = ref({}); // useUserTagging instances per message
+const commentTaggingWatchers = ref({}); // Watcher stop functions for cleanup per message
 const showCommentReactionModal = ref(false);
 const selectedCommentForReaction = ref(null);
 const selectedMessageForCommentReaction = ref(null);
@@ -945,6 +983,18 @@ onMounted(() => {
   ) {
     window.addEventListener("hashchange", scrollToMessage);
   }
+
+  // Initialize textarea heights for any expanded comments
+  nextTick(() => {
+    Object.keys(expandedComments.value).forEach((messageId) => {
+      if (
+        expandedComments.value[messageId] &&
+        commentTextareaRefs.value[messageId]
+      ) {
+        autoGrowCommentTextarea(messageId);
+      }
+    });
+  });
 });
 
 onUnmounted(() => {
@@ -955,6 +1005,11 @@ onUnmounted(() => {
   ) {
     window.removeEventListener("hashchange", scrollToMessage);
   }
+
+  // Clean up all comment tagging instances and watchers
+  Object.keys(commentTaggingWatchers.value).forEach((messageId) => {
+    cleanupCommentTagging(messageId);
+  });
 });
 
 // Reaction functions
@@ -1109,6 +1164,127 @@ const toggleReaction = async (message, emoji) => {
   }
 };
 
+// Auto-grow textarea function for comments
+function autoGrowCommentTextarea(messageId) {
+  const textarea = commentTextareaRefs.value[messageId];
+  if (!textarea) return;
+  // Reset height to auto to get the correct scrollHeight
+  textarea.style.height = "auto";
+  // Set height to scrollHeight, but cap at max-height (200px)
+  const newHeight = Math.min(textarea.scrollHeight, 200);
+  textarea.style.height = `${newHeight}px`;
+}
+
+// Get or initialize tagging for a comment form
+function getCommentTagging(messageId) {
+  if (!commentTaggingInstances.value[messageId]) {
+    // Create refs for this message's comment form
+    const textareaRef = ref(null);
+    const inputValue = ref(commentForms.value[messageId] || "");
+    const users = ref(props.users || []);
+
+    // Watch for changes to sync with commentForms
+    const stopWatch1 = watch(
+      () => commentForms.value[messageId],
+      (newValue) => {
+        if (inputValue.value !== (newValue || "")) {
+          inputValue.value = newValue || "";
+        }
+      }
+    );
+
+    // Watch inputValue to sync back to commentForms
+    const stopWatch2 = watch(inputValue, (newValue) => {
+      if (commentForms.value[messageId] !== newValue) {
+        commentForms.value[messageId] = newValue;
+      }
+    });
+
+    // Update textareaRef when the ref is set
+    const stopWatch3 = watch(
+      () => commentTextareaRefs.value[messageId],
+      (newRef) => {
+        if (newRef) {
+          textareaRef.value = newRef;
+        }
+      },
+      { immediate: true }
+    );
+
+    // Store watcher stop functions for cleanup
+    commentTaggingWatchers.value[messageId] = [
+      stopWatch1,
+      stopWatch2,
+      stopWatch3
+    ];
+
+    const tagging = useUserTagging({
+      users,
+      textareaRef,
+      inputValue
+    });
+
+    commentTaggingInstances.value[messageId] = tagging;
+  }
+  return commentTaggingInstances.value[messageId];
+}
+
+// Clean up tagging instance and watchers for a message
+function cleanupCommentTagging(messageId) {
+  // Stop all watchers
+  if (commentTaggingWatchers.value[messageId]) {
+    commentTaggingWatchers.value[messageId].forEach((stop) => stop());
+    delete commentTaggingWatchers.value[messageId];
+  }
+
+  // Clear tagging instance
+  if (commentTaggingInstances.value[messageId]) {
+    commentTaggingInstances.value[messageId].clearMentions();
+    delete commentTaggingInstances.value[messageId];
+  }
+
+  // Clear textarea ref
+  if (commentTextareaRefs.value[messageId]) {
+    delete commentTextareaRefs.value[messageId];
+  }
+}
+
+// Wrapper function for inserting mentions that also calls autoGrowTextarea
+function insertCommentMention(messageId, user) {
+  const tagging = getCommentTagging(messageId);
+  tagging.insertMention(user);
+  // Call autoGrowTextarea after mention insertion to ensure textarea expands
+  nextTick(() => {
+    autoGrowCommentTextarea(messageId);
+  });
+}
+
+// Handle comment input changes
+function handleCommentInput(event, messageId) {
+  const value = event.target.value;
+  commentForms.value[messageId] = value;
+
+  const tagging = getCommentTagging(messageId);
+  const cursorPos = event.target.selectionStart ?? value.length;
+  tagging.checkForMentions(value, cursorPos);
+
+  // Auto-grow textarea
+  autoGrowCommentTextarea(messageId);
+}
+
+// Handle comment keyboard events for suggestion navigation
+function handleCommentKeydown(event, messageId) {
+  const tagging = getCommentTagging(messageId);
+  tagging.handleKeydown(event);
+
+  // If Enter was pressed and a mention was inserted, auto-grow
+  if (event.key === "Enter" && tagging.selectedSuggestionIndex.value >= 0) {
+    nextTick(() => {
+      autoGrowCommentTextarea(messageId);
+    });
+  }
+}
+
 // Comment functions
 const getComments = (message) => {
   if (!message.comments) {
@@ -1128,11 +1304,15 @@ const getCommentCount = (message) => {
 const toggleComments = (messageId) => {
   if (expandedComments.value[messageId]) {
     expandedComments.value[messageId] = false;
+    // Clean up tagging when comments are collapsed
+    cleanupCommentTagging(messageId);
   } else {
     expandedComments.value[messageId] = true;
     if (!commentForms.value[messageId]) {
       commentForms.value[messageId] = "";
     }
+    // Initialize tagging when comments are expanded
+    getCommentTagging(messageId);
   }
 };
 
@@ -1141,6 +1321,8 @@ const expandComments = (messageId) => {
   if (!commentForms.value[messageId]) {
     commentForms.value[messageId] = "";
   }
+  // Initialize tagging when comments are expanded
+  getCommentTagging(messageId);
 };
 
 const submitComment = async (message) => {
@@ -1149,24 +1331,38 @@ const submitComment = async (message) => {
     return;
   }
 
+  // Get tagged user IDs from the tagging instance
+  const tagging = getCommentTagging(message.id);
+  const taggedUserIds = tagging.getTaggedUserIds(commentText);
+
+  const commentTextToSubmit = commentText;
   commentForms.value[message.id] = "";
+
+  // Clear mention tracking after submission
+  tagging.clearMentions();
 
   try {
     await router.post(
       route("messages.comments.store", message.id),
       {
-        comment: commentText
+        comment: commentTextToSubmit,
+        tagged_user_ids: taggedUserIds
       },
       {
         preserveScroll: true,
-        onSuccess: () => {},
+        onSuccess: () => {
+          // Clear the textarea ref and reset height
+          if (commentTextareaRefs.value[message.id]) {
+            commentTextareaRefs.value[message.id].style.height = "auto";
+          }
+        },
         onError: () => {
-          commentForms.value[message.id] = commentText;
+          commentForms.value[message.id] = commentTextToSubmit;
         }
       }
     );
   } catch (error) {
-    commentForms.value[message.id] = commentText;
+    commentForms.value[message.id] = commentTextToSubmit;
     setFlashMessage("error", "Failed to post comment. Please try again.", 3000);
   }
 };

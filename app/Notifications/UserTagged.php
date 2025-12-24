@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Message;
+use App\Models\MessageComment;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -14,17 +15,20 @@ class UserTagged extends Notification implements ShouldBroadcast
 {
     use Queueable;
 
-    public Message $message;
+    public Message|MessageComment $content;
 
     public User $tagger;
+
+    public string $contentType;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct(Message $message, User $tagger)
+    public function __construct(Message|MessageComment $content, User $tagger, string $contentType = 'message')
     {
-        $this->message = $message;
+        $this->content = $content;
         $this->tagger = $tagger;
+        $this->contentType = $contentType;
     }
 
     /**
@@ -42,13 +46,21 @@ class UserTagged extends Notification implements ShouldBroadcast
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $url = route('messages.index').'#message-'.$this->message->id;
+        $messageId = $this->contentType === 'comment' && $this->content instanceof MessageComment
+            ? $this->content->message_id
+            : ($this->content instanceof Message ? $this->content->id : null);
+        
+        $contentText = $this->contentType === 'comment' && $this->content instanceof MessageComment
+            ? $this->content->comment
+            : ($this->content instanceof Message ? $this->content->message : '');
+        
+        $url = route('messages.index').'#message-'.$messageId;
 
         return (new MailMessage)
             ->subject(__('messages.tagged.subject', ['name' => $this->tagger->name]))
             ->greeting(__('messages.tagged.greeting', ['name' => $notifiable->name]))
             ->line(__('messages.tagged.line', ['name' => $this->tagger->name]))
-            ->line('"'.$this->message->message.'"')
+            ->line('"'.$contentText.'"')
             ->action(__('messages.tagged.action'), $url)
             ->line(__('messages.tagged.thank_you'));
     }
@@ -59,9 +71,35 @@ class UserTagged extends Notification implements ShouldBroadcast
     public function toBroadcast(object $notifiable): BroadcastMessage
     {
         $title = __('messages.tagged.title', ['name' => $this->tagger->name]);
-        $messageBody = mb_strlen($this->message->message, 'UTF-8') > 120
-            ? mb_substr($this->message->message, 0, 117, 'UTF-8').'...'
-            : $this->message->message;
+        
+        $contentText = $this->contentType === 'comment' && $this->content instanceof MessageComment
+            ? $this->content->comment
+            : ($this->content instanceof Message ? $this->content->message : '');
+        
+        $messageBody = mb_strlen($contentText, 'UTF-8') > 120
+            ? mb_substr($contentText, 0, 117, 'UTF-8').'...'
+            : $contentText;
+
+        $messageId = $this->contentType === 'comment' && $this->content instanceof MessageComment
+            ? $this->content->message_id
+            : ($this->content instanceof Message ? $this->content->id : null);
+
+        $data = [
+            'tagger_id' => $this->tagger->id,
+            'tagger_name' => $this->tagger->name,
+            'tagger_avatar' => $this->tagger->avatar,
+            'created_at' => $this->content->created_at->toIso8601String(),
+            'url' => route('messages.index').'#message-'.$messageId,
+        ];
+
+        if ($this->contentType === 'comment' && $this->content instanceof MessageComment) {
+            $data['comment_id'] = $this->content->id;
+            $data['message_id'] = $this->content->message_id;
+            $data['comment'] = $this->content->comment;
+        } else {
+            $data['message_id'] = $this->content instanceof Message ? $this->content->id : null;
+            $data['message'] = $contentText;
+        }
 
         return new BroadcastMessage([
             'id' => $this->id,
@@ -69,15 +107,7 @@ class UserTagged extends Notification implements ShouldBroadcast
             'title' => $title,
             'body' => $messageBody,
             'icon' => '/android-chrome-192x192.png',
-            'data' => [
-                'message_id' => $this->message->id,
-                'message' => $this->message->message,
-                'tagger_id' => $this->tagger->id,
-                'tagger_name' => $this->tagger->name,
-                'tagger_avatar' => $this->tagger->avatar,
-                'created_at' => $this->message->created_at->toIso8601String(),
-                'url' => route('messages.index').'#message-'.$this->message->id,
-            ],
+            'data' => $data,
             'read_at' => null,
         ]);
     }
@@ -89,14 +119,31 @@ class UserTagged extends Notification implements ShouldBroadcast
      */
     public function toArray(object $notifiable): array
     {
-        return [
-            'message_id' => $this->message->id,
-            'message' => $this->message->message,
+        $messageId = $this->contentType === 'comment' && $this->content instanceof MessageComment
+            ? $this->content->message_id
+            : ($this->content instanceof Message ? $this->content->id : null);
+        
+        $contentText = $this->contentType === 'comment' && $this->content instanceof MessageComment
+            ? $this->content->comment
+            : ($this->content instanceof Message ? $this->content->message : '');
+
+        $data = [
             'tagger_id' => $this->tagger->id,
             'tagger_name' => $this->tagger->name,
             'tagger_avatar' => $this->tagger->avatar,
-            'created_at' => $this->message->created_at->toIso8601String(),
-            'url' => route('messages.index').'#message-'.$this->message->id,
+            'created_at' => $this->content->created_at->toIso8601String(),
+            'url' => route('messages.index').'#message-'.$messageId,
         ];
+
+        if ($this->contentType === 'comment' && $this->content instanceof MessageComment) {
+            $data['comment_id'] = $this->content->id;
+            $data['message_id'] = $this->content->message_id;
+            $data['comment'] = $this->content->comment;
+        } else {
+            $data['message_id'] = $this->content instanceof Message ? $this->content->id : null;
+            $data['message'] = $contentText;
+        }
+
+        return $data;
     }
 }

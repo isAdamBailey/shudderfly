@@ -8,6 +8,7 @@ use App\Models\MessageComment;
 use App\Models\User;
 use App\Notifications\MessageCommented;
 use App\Services\PushNotificationService;
+use App\Services\UserTaggingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,7 +16,8 @@ use Illuminate\Support\Facades\Auth;
 class MessageCommentController extends Controller
 {
     public function __construct(
-        protected PushNotificationService $pushNotificationService
+        protected PushNotificationService $pushNotificationService,
+        protected UserTaggingService $userTaggingService
     ) {}
 
     /**
@@ -25,6 +27,8 @@ class MessageCommentController extends Controller
     {
         $validated = $request->validate([
             'comment' => ['required', 'string', 'max:1000'],
+            'tagged_user_ids' => ['sometimes', 'array'],
+            'tagged_user_ids.*' => ['integer', 'exists:users,id'],
         ]);
 
         /** @var User $user */
@@ -38,6 +42,20 @@ class MessageCommentController extends Controller
 
         $comment->load('user');
         $message->load('user');
+
+        // Use tagged user IDs from request if provided and not empty, otherwise parse from comment
+        $taggedUserIds = ! empty($validated['tagged_user_ids'])
+            ? $validated['tagged_user_ids']
+            : $comment->getTaggedUserIds('comment');
+
+        if (! is_array($taggedUserIds)) {
+            $taggedUserIds = [];
+        }
+
+        // Notify tagged users
+        if (! empty($taggedUserIds)) {
+            $this->userTaggingService->notifyTaggedUsers($taggedUserIds, $user, $comment, 'comment');
+        }
 
         if ($message->user_id !== $user->id) {
             $messageAuthor = $message->user;
