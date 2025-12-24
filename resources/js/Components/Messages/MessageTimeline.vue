@@ -63,11 +63,23 @@
               message.page.media_poster ||
               message.page.video_link)
           "
-          class="mt-0.5 mb-1 -mx-4 sm:mx-0 sm:max-w-[400px] md:mt-3 md:mb-3"
+          class="mt-2 md:mt-3"
         >
+          <!-- Video link - only show for YouTube videos -->
+          <div v-if="message.page.video_link" class="mt-2">
+            <Link
+              :href="route('pages.show', message.page_id)"
+              class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors inline-flex items-center gap-1"
+            >
+              <i class="ri-play-circle-line text-base"></i>
+              <span>Watch video</span>
+            </Link>
+          </div>
+          <!-- Thumbnail image - only show for non-YouTube videos -->
           <Link
+            v-if="!message.page.video_link"
             :href="route('pages.show', message.page_id)"
-            class="block rounded-lg overflow-hidden w-full sm:rounded-lg"
+            class="block rounded-lg overflow-hidden w-full max-w-[200px] sm:max-w-[250px] mt-2"
           >
             <img
               :src="getPageImageSrc(message.page)"
@@ -76,7 +88,7 @@
                   ? stripHtml(message.page.content).substring(0, 50)
                   : t('message.shared_page')
               "
-              class="w-full h-auto object-contain"
+              class="w-full h-auto max-h-[200px] sm:max-h-[250px] object-contain rounded-lg"
               loading="lazy"
             />
           </Link>
