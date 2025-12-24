@@ -7,16 +7,6 @@ import { nextTick, ref } from "vue";
 
 global.route = (name) => `/${name}`;
 
-// Mock video optimization composable
-vi.mock("@/composables/useVideoOptimization", () => ({
-    useVideoOptimization: () => ({
-        compressionProgress: false,
-        optimizationProgress: 0,
-        processMediaFile: vi.fn((file) => Promise.resolve(file)),
-        resetProgress: vi.fn(),
-    }),
-}));
-
 // Mock vuelidate
 vi.mock("@vuelidate/core", () => ({
     useVuelidate: vi.fn(() => ({
@@ -297,7 +287,7 @@ describe("NewPageForm", () => {
 
         it("validates file sizes", () => {
             const smallFile = createFile("test.jpg", "image/jpeg", 1024);
-            const largeFile = createFile("test.jpg", "image/jpeg", 70000000); // 70MB
+            const largeFile = createFile("test.jpg", "image/jpeg", 600000000); // 600MB (over 512MB limit)
 
             expect(validateFile(smallFile).valid).toBe(true);
             expect(validateFile(largeFile).valid).toBe(false);

@@ -11,7 +11,6 @@ import TextInput from "@/Components/TextInput.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
 import Accordion from "@/Components/Accordion.vue";
-import { useVideoOptimization } from "@/composables/useVideoOptimization.js";
 import DeletePageForm from "@/Pages/Book/DeletePageForm.vue";
 import { useForm, usePage } from "@inertiajs/vue3";
 import Multiselect from "@vueform/multiselect";
@@ -48,9 +47,6 @@ const imagePreview = ref(props.page.media_path);
 
 const imageInput = ref(null);
 const mediaOption = ref("upload"); // upload , link
-
-const { compressionProgress, optimizationProgress, processMediaFile } =
-  useVideoOptimization();
 
 onMounted(() => {
   if (props.page.video_link) {
@@ -91,36 +87,17 @@ function selectNewImage() {
   imageInput.value.click();
 }
 
-async function updateImagePreview() {
+function updateImagePreview() {
   const photo = imageInput.value.files[0];
   if (!photo) return;
 
-  try {
-    const processedFile = await processMediaFile(photo);
+  pageForm.image = photo;
 
-    pageForm.image = processedFile;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      imagePreview.value = e.target.result;
-      console.log("Preview updated:", {
-        fileType: processedFile.type,
-        fileSize:
-          Math.round((processedFile.size / 1024 / 1024) * 100) / 100 + "MB",
-        previewType: e.target.result.substring(0, 50) + "..."
-      });
-    };
-    reader.readAsDataURL(processedFile);
-  } catch (error) {
-    console.error("Error processing media file:", error);
-    pageForm.image = photo;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      imagePreview.value = e.target.result;
-    };
-    reader.readAsDataURL(photo);
-  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    imagePreview.value = e.target.result;
+  };
+  reader.readAsDataURL(photo);
 }
 
 function clearImageFileInput() {
@@ -185,29 +162,6 @@ const setCreatedAtToNow = () => {
             @change="updateImagePreview"
           />
 
-          <!-- Processing Progress -->
-          <div
-            v-if="compressionProgress"
-            class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded"
-          >
-            <div
-              class="flex items-center justify-between text-sm text-blue-700 mb-2"
-            >
-              <div class="flex items-center space-x-2">
-                <div
-                  class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"
-                ></div>
-                <span>Optimizing video...</span>
-              </div>
-              <span class="font-medium">{{ optimizationProgress }}%</span>
-            </div>
-            <div class="w-full bg-blue-200 rounded-full h-2">
-              <div
-                class="bg-blue-500 h-2 rounded-full transition-all duration-300 ease-out"
-                :style="`width: ${optimizationProgress}%`"
-              ></div>
-            </div>
-          </div>
           <div
             v-if="
               imagePreview.startsWith('data:image') ||
@@ -260,7 +214,6 @@ const setCreatedAtToNow = () => {
           <Button
             class="mt-2"
             type="button"
-            :disabled="compressionProgress"
             @click.prevent="selectNewImage"
           >
             Update Media
@@ -389,21 +342,11 @@ const setCreatedAtToNow = () => {
       <Button
         class="w-full flex justify-center py-3 bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
         :class="{ 'opacity-25': pageForm.processing }"
-        :disabled="
-          compressionProgress || pageForm.processing || !pageForm.isDirty
-        "
+        :disabled="pageForm.processing || !pageForm.isDirty"
         @click="submit"
       >
-        <i
-          v-if="compressionProgress"
-          class="ri-loader-4-line animate-spin -ml-1 mr-3 text-xl text-white"
-        ></i>
         <span class="text-lg font-medium">
-          {{
-            compressionProgress
-              ? `Optimizing... ${optimizationProgress}%`
-              : "Update Page"
-          }}
+          Update Page
         </span>
       </Button>
     </div>

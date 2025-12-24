@@ -185,16 +185,15 @@ const hasActiveProcessing = computed(() =>
               !fileObj.file.type.startsWith('video/')
             "
           >
-            File too large (max 60MB)
+            File too large (max 512MB)
           </p>
           <p
             v-if="
               !isFileSizeValid(fileObj.file.size) &&
-              fileObj.file.type.startsWith('video/') &&
-              fileObj.processed
+              fileObj.file.type.startsWith('video/')
             "
           >
-            Video still too large after optimization (max 60MB)
+            Video file too large (max 512MB)
           </p>
           <p v-if="!isAllowedFileType(fileObj.file.type)">
             Unsupported file type

@@ -13,7 +13,6 @@ import TextInput from "@/Components/TextInput.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
 import Accordion from "@/Components/Accordion.vue";
-import { useVideoOptimization } from "@/composables/useVideoOptimization.js";
 import { useForm, usePage } from "@inertiajs/vue3";
 import { useVuelidate } from "@vuelidate/core";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
@@ -38,8 +37,6 @@ const form = useForm({
 });
 
 const mediaOption = ref("upload"); // upload, link
-
-const { processMediaFile } = useVideoOptimization();
 
 const getPagesStoreUrl = () => {
   return route("pages.store");
@@ -129,7 +126,6 @@ watch(
 const uploaderRef = ref(null);
 const pondQueueCount = ref(0);
 const isUploading = ref(false);
-const isOptimizing = ref(false);
 
 const pondUploadUrl = computed(() => getPagesStoreUrl());
 const pondExtraData = computed(() => {
@@ -425,12 +421,8 @@ onUnmounted(() => {
               :accepted-file-types="['image/*', 'video/*']"
               :instant-upload="false"
               :extra-data="pondExtraData"
-              :process-video="processMediaFile"
-              :video-threshold-bytes="41943040"
               @queue-update="onPondQueueUpdate"
               @processing-start="onPondProcessingStart"
-              @optimizing-start="isOptimizing = true"
-              @optimizing-end="isOptimizing = false"
               @error="onPondError"
               @processed="onPondProcessed"
               @all-done="onPondAllDone"
@@ -515,7 +507,7 @@ onUnmounted(() => {
         <Button
           type="button"
           class="w-3/4 flex justify-center py-3"
-          :disabled="isUploading || isOptimizing || form.processing"
+          :disabled="isUploading || form.processing"
           @click.prevent="
             hasQueuedFiles ? handleUploadAll() : handleFormSubmit()
           "

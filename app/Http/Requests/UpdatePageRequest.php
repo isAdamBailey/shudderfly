@@ -28,7 +28,7 @@ class UpdatePageRequest extends FormRequest
             'book_id' => 'integer',
             'image' => [
                 'nullable',
-                'max:60000',
+                'max:524288', // 512MB in kilobytes
                 'mimetypes:image/jpeg,image/jpg,image/png,image/bmp,image/gif,image/svg+xml,image/webp,video/mp4,video/avi,video/quicktime,video/mpeg,video/webm,video/x-matroska,application/octet-stream',
             ],
             'video_link' => 'string|nullable',

@@ -1,5 +1,5 @@
 // File validation constants and utilities
-export const MAX_FILE_SIZE = 62914560; // 60MB
+export const MAX_FILE_SIZE = 536870912; // 512MB
 export const ALLOWED_FILE_TYPES = [
   "image/jpeg",
   "image/jpg",
@@ -29,9 +29,10 @@ export function validateFile(file) {
   };
 }
 
-// Helper function to check if video needs optimization
+// Note: Client-side compression has been removed - all compression happens on the backend
+// This function is kept for backwards compatibility but always returns false
 export function needsVideoOptimization(file) {
-  return file.type.startsWith("video/") && file.size > MAX_FILE_SIZE;
+  return false; // Compression is handled on the backend
 }
 
 // Helper function to check if file type is allowed
