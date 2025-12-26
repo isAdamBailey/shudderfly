@@ -114,6 +114,8 @@ const props = defineProps({
   }
 });
 
+const emit = defineEmits(['messagePosted']);
+
 const FAVORITES_KEY = "message_builder_favorites_v1";
 const MAX_FAVORITES = 5;
 const favorites = ref([]);
@@ -229,31 +231,20 @@ function applyFavorite(text) {
   selection.value = words;
 }
 
-// Auto-grow textarea function
 function autoGrowTextarea(textarea) {
   if (!textarea) return;
-  // Reset height to auto to get the correct scrollHeight
   textarea.style.height = "auto";
-  // Set height to scrollHeight, but cap at max-height (200px)
   const newHeight = Math.min(textarea.scrollHeight, 200);
   textarea.style.height = `${newHeight}px`;
 }
 
-// Sync selection with input value (when typing)
 function handleInputChange(event) {
-  // Get the current value from the input element
   const currentValue = event?.target?.value ?? inputValue.value;
-
-  // Always update inputValue to match what's actually in the input
   inputValue.value = currentValue;
-
-  // Check for @ mentions
   checkForMentions(
     currentValue,
     event?.target?.selectionStart ?? currentValue.length
   );
-
-  // Update selection for word count (but keep the full input value for display)
   const words = inputValue.value
     .trim()
     .split(/\s+/)
@@ -261,10 +252,8 @@ function handleInputChange(event) {
   selection.value = words;
 }
 
-// Handle textarea input with auto-grow
 function handleTextareaInput(event) {
   handleInputChange(event);
-  // Auto-grow the textarea
   autoGrowTextarea(event.target);
 }
 
@@ -406,32 +395,26 @@ let justAddedTimeoutId = null;
 
 onMounted(() => {
   loadFavorites();
-  // Set message input as active by default
+  setAddWord(addWord);
+  setAddPhrase(addPhrase);
+  setGetPreview(() => preview.value);
   setActiveMessageInput();
 
-  // Set up event listeners for input changes
   mountTimeoutId = setTimeout(() => {
     if (keyboardInputRef.value && typeof document !== "undefined") {
-      // Initialize textarea height
       autoGrowTextarea(keyboardInputRef.value);
-
-      // Add event listeners to catch all input changes
       const inputEl = keyboardInputRef.value;
 
-      // Listen for input events
       const handleInput = (e) => {
         const value = e.target.value;
         if (value !== inputValue.value) {
           inputValue.value = value;
-          // Check for mentions when input changes
           const cursorPos = e.target.selectionStart ?? value.length;
           checkForMentions(value, cursorPos);
-          // Auto-grow textarea
           autoGrowTextarea(e.target);
         }
       };
 
-      // Listen for change events
       const handleChange = (e) => {
         const value = e.target.value;
         if (value !== inputValue.value) {
@@ -439,7 +422,6 @@ onMounted(() => {
         }
       };
 
-      // Close suggestions when clicking outside
       const handleClickOutside = (e) => {
         if (
           !e.target.closest(".user-suggestions-container") &&
@@ -453,7 +435,6 @@ onMounted(() => {
       inputEl.addEventListener("change", handleChange);
       document.addEventListener("click", handleClickOutside);
 
-      // Store handlers for cleanup
       inputHandlers = {
         element: inputEl,
         input: handleInput,
@@ -495,18 +476,15 @@ onUnmounted(() => {
 });
 
 function addWord(word) {
-  // Get the actual current value from the input element to ensure we have the latest
   const inputElement = keyboardInputRef.value;
   const currentValue = inputElement?.value ?? inputValue.value;
 
-  // Special handling for @ symbol - don't add space before it
   if (word === "@") {
     const newValue = currentValue + "@";
     inputValue.value = newValue;
     if (inputElement) {
       inputElement.value = newValue;
       inputElement.dispatchEvent(new Event("input", { bubbles: true }));
-      // Trigger mention check after @ is added
       setTimeout(() => {
         checkForMentions(newValue, newValue.length);
         inputElement.focus();
@@ -515,7 +493,6 @@ function addWord(word) {
     return;
   }
 
-  // Prevent adding the same word twice in a row
   const words = currentValue
     .trim()
     .split(/\s+/)
@@ -526,8 +503,6 @@ function addWord(word) {
     return;
   }
 
-  // Append word to the current input value (including any partial words being typed)
-  // Add a space before the new word if the current value doesn't end with a space
   let newValue;
   if (currentValue.trim() && !currentValue.endsWith(" ")) {
     newValue = currentValue + " " + word;
@@ -535,15 +510,12 @@ function addWord(word) {
     newValue = currentValue + word;
   }
 
-  // Update both the reactive value and the actual input element
   inputValue.value = newValue;
   if (inputElement) {
     inputElement.value = newValue;
-    // Trigger input event
     inputElement.dispatchEvent(new Event("input", { bubbles: true }));
   }
 
-  // Update selection to reflect the new words
   const newWords = newValue
     .trim()
     .split(/\s+/)
@@ -552,12 +524,9 @@ function addWord(word) {
 }
 
 function addPhrase(phrase) {
-  // Get the actual current value from the input element to ensure we have the latest
   const inputElement = keyboardInputRef.value;
   const currentValue = inputElement?.value ?? inputValue.value;
 
-  // Append phrase to the current input value
-  // Add a space before the new phrase if the current value doesn't end with a space
   let newValue;
   if (currentValue.trim() && !currentValue.endsWith(" ")) {
     newValue = currentValue + " " + phrase;
@@ -565,15 +534,12 @@ function addPhrase(phrase) {
     newValue = currentValue + phrase;
   }
 
-  // Update both the reactive value and the actual input element
   inputValue.value = newValue;
   if (inputElement) {
     inputElement.value = newValue;
-    // Trigger input event
     inputElement.dispatchEvent(new Event("input", { bubbles: true }));
   }
 
-  // Update selection to reflect the new words
   const newWords = newValue
     .trim()
     .split(/\s+/)
@@ -581,19 +547,16 @@ function addPhrase(phrase) {
   selection.value = newWords;
 }
 
-// Register functions with composable for MessageBuilderFlyout to use
 const { setAddWord, setAddPhrase, setGetPreview, setActiveMessageInput } = useMessageBuilder();
 setAddWord(addWord);
 setAddPhrase(addPhrase);
 setGetPreview(() => preview.value);
 
-// Set message input as active when focused
 const handleMessageInputFocus = () => {
   setActiveMessageInput();
 };
 
 function removeLast() {
-  // Remove last word from input value
   const currentText = inputValue.value.trim();
   const words = currentText.split(/\s+/).filter((w) => w.length > 0);
 
@@ -617,7 +580,6 @@ function reset() {
 }
 
 function suggestRandom() {
-  // Random selection from different categories for variety
   const allWords = [
     ...people,
     ...bodyParts,
@@ -628,7 +590,7 @@ function suggestRandom() {
     ...commonStarters,
     ...quickPhrases
   ];
-  const randomCount = 3 + Math.floor(Math.random() * 2); // 3-4 words
+  const randomCount = 3 + Math.floor(Math.random() * 2);
   const selected = [];
   for (let i = 0; i < randomCount; i++) {
     const word = allWords[Math.floor(Math.random() * allWords.length)];
@@ -641,8 +603,6 @@ function suggestRandom() {
 }
 
 function sayIt() {
-  // Always get the actual current value from the input element
-  // This ensures we speak what's actually in the input, including keyboard-typed text
   const inputElement = keyboardInputRef.value;
   const currentText = inputElement?.value?.trim() || inputValue.value.trim();
 
@@ -650,7 +610,6 @@ function sayIt() {
     return;
   }
 
-  // Update inputValue to keep it in sync with the actual input
   if (inputElement && inputElement.value !== inputValue.value) {
     inputValue.value = inputElement.value;
   }
@@ -694,27 +653,18 @@ function postMessage() {
     }
   }
 
-  // Update the existing form instance with the data
   form.message = messageText;
   form.tagged_user_ids = taggedUserIds;
 
   form.post(route("messages.store"), {
-    preserveScroll: false,
+    preserveScroll: true,
     onSuccess: () => {
-      // Clear input after successful post
       inputValue.value = "";
       selection.value = [];
       mentionUserIds.value.clear();
       form.reset();
-
-      // Close actions accordion and scroll to top
       actionsAccordionOpen.value = false;
-      setTimeout(() => {
-        window.scrollTo({
-          top: 0,
-          behavior: "smooth"
-        });
-      }, 100);
+      emit('messagePosted');
     },
     onError: () => {}
   });

@@ -1,5 +1,8 @@
 <template>
   <div ref="timelineContainer" class="space-y-4">
+    <!-- Call to Action for Creating Message -->
+    <MessageCTA @click="showMessageBuilderModal = true" />
+
     <div
       v-if="localMessages.length === 0 && !loading"
       class="text-center py-8 text-gray-500 dark:text-gray-400"
@@ -11,7 +14,7 @@
       v-for="message in localMessages"
       :id="`message-${message.id}`"
       :key="message.id"
-      class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 scroll-mt-4 relative"
+      class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4 scroll-mt-4 relative"
     >
       <!-- Header with buttons -->
       <div class="flex items-start justify-between mb-2">
@@ -24,35 +27,51 @@
             {{ formatDate(message.created_at) }}
           </span>
         </div>
-        <!-- Buttons in top right -->
-        <div class="flex items-center gap-2 flex-shrink-0 ml-2">
-          <Button
-            type="button"
-            :disabled="speaking"
-            :title="t('message.speak')"
-            :aria-label="t('message.speak_aria')"
-            class="w-8 h-8 p-0 flex items-center justify-center"
-            @click="speakMessage(message)"
-          >
-            <i class="ri-speak-fill text-base"></i>
-          </Button>
-          <DangerButton
-            v-if="canAdmin"
-            type="button"
-            :title="t('message.delete')"
-            :aria-label="t('message.delete_aria')"
-            class="w-8 h-8 p-0 flex items-center justify-center"
-            @click="deleteMessage(message.id)"
-          >
-            <i class="ri-delete-bin-line text-base"></i>
-          </DangerButton>
+        <!-- Actions menu -->
+        <div class="flex items-center flex-shrink-0 ml-2">
+          <Dropdown align="right" width="48">
+            <template #trigger>
+              <button
+                type="button"
+                class="w-8 h-8 p-0 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                :title="t('message.actions')"
+                :aria-label="t('message.actions')"
+              >
+                <i class="ri-more-2-fill text-lg"></i>
+              </button>
+            </template>
+            <template #content>
+              <button
+                type="button"
+                :disabled="speaking"
+                class="block w-full px-4 py-2 text-left text-sm leading-5 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+                @click="speakMessage(message)"
+              >
+                <div class="flex items-center gap-2">
+                  <i class="ri-speak-fill"></i>
+                  <span>{{ t("message.speak") }}</span>
+                </div>
+              </button>
+              <button
+                v-if="canAdmin"
+                type="button"
+                class="block w-full px-4 py-2 text-left text-sm leading-5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 focus:outline-none transition duration-150 ease-in-out"
+                @click="deleteMessage(message.id)"
+              >
+                <div class="flex items-center gap-2">
+                  <i class="ri-delete-bin-line"></i>
+                  <span>{{ t("message.delete") }}</span>
+                </div>
+              </button>
+            </template>
+          </Dropdown>
         </div>
       </div>
 
       <!-- Content area - full width below buttons -->
       <div class="w-full">
         <div
-          class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words"
+          class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words text-lg leading-relaxed"
           v-html="formatMessage(message.message)"
         ></div>
         <div
@@ -94,60 +113,20 @@
           </Link>
         </div>
         <!-- Reactions -->
-        <div class="mt-2 md:mt-3 flex flex-wrap items-center gap-2">
-          <!-- Only show reactions that have been selected (count > 0) -->
-          <div
-            v-for="emoji in getSelectedReactions(message)"
-            :key="emoji"
-            class="flex items-center gap-1"
-          >
-            <button
-              type="button"
-              :class="[
-                'flex items-center gap-1 px-2 py-1 rounded-full text-sm transition-colors',
-                hasUserReacted(message, emoji)
-                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-              ]"
-              :title="getReactionTooltip(message, emoji)"
-              @click="toggleReaction(message, emoji)"
-            >
-              <span class="text-base">{{ emoji }}</span>
-              <span
-                v-if="getReactionCount(message, emoji) > 0"
-                class="font-medium"
-              >
-                {{ getReactionCount(message, emoji) }}
-              </span>
-            </button>
-          </div>
-          <!-- Add reaction button -->
-          <button
-            type="button"
-            class="flex items-center gap-1 px-2 py-1 rounded-full text-sm transition-colors bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-            :title="t('message.add_reaction')"
-            @click="openReactionModal(message)"
-          >
-            <i class="ri-add-line text-base"></i>
-          </button>
-          <!-- View all reactions button -->
-          <button
-            v-if="hasAnyReactions(message)"
-            type="button"
-            class="flex items-center gap-1 px-2 py-1 rounded-full text-sm transition-colors bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-            :title="t('message.view_all_reactions')"
-            @click="openViewReactionsModal(message)"
-          >
-            <i class="ri-information-line text-base"></i>
-          </button>
-        </div>
+        <MessageReactions
+          :grouped-reactions="message.grouped_reactions || {}"
+          :selected-reactions="getSelectedReactions(message)"
+          :current-user-id="currentUserId"
+          @toggle-reaction="(emoji) => toggleReaction(message, emoji)"
+          @add-reaction="openReactionModal(message)"
+          @view-reactions="openViewReactionsModal(message)"
+        />
       </div>
 
       <!-- Comments Section -->
-      <div class="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
-        <div class="flex items-center justify-between mb-2 gap-2">
+      <div class="mt-4 border-t-2 border-gray-200 dark:border-gray-700 pt-4">
+        <div class="mb-2">
           <Button
-            v-if="getCommentCount(message) > 0"
             type="button"
             class="flex items-center gap-2"
             @click="toggleComments(message.id)"
@@ -160,7 +139,7 @@
                   : 'ri-arrow-right-s-line'
               ]"
             ></i>
-            <span>
+            <span v-if="getCommentCount(message) > 0">
               {{ getCommentCount(message) }}
               {{
                 getCommentCount(message) === 1
@@ -168,16 +147,9 @@
                   : t("message.comments")
               }}
             </span>
-          </Button>
-          <Button
-            v-if="
-              getCommentCount(message) === 0 || !expandedComments[message.id]
-            "
-            type="button"
-            @click="expandComments(message.id)"
-          >
-            <i class="ri-add-line mr-1"></i>
-            {{ t("message.add_comment") }}
+            <span v-else>
+              {{ t("message.add_comment") }}
+            </span>
           </Button>
         </div>
 
@@ -240,96 +212,20 @@
             </form>
 
             <!-- Comments List -->
-            <div v-if="getComments(message).length > 0" class="space-y-3">
-              <div
+            <div v-if="getComments(message).length > 0" class="space-y-3 mt-3">
+              <CommentItem
                 v-for="comment in getComments(message)"
                 :key="comment.id"
-                class="bg-gray-50 dark:bg-gray-900 rounded-lg p-3"
-              >
-                <!-- Header with buttons -->
-                <div class="flex items-start justify-between mb-1">
-                  <div class="flex items-center gap-2 flex-1 min-w-0">
-                    <Avatar :user="comment.user" size="sm" />
-                    <span
-                      class="font-semibold text-sm text-gray-900 dark:text-gray-100"
-                    >
-                      {{ comment.user.name }}
-                    </span>
-                    <span class="text-xs text-gray-500 dark:text-gray-400">
-                      {{ formatDate(comment.created_at) }}
-                    </span>
-                  </div>
-                  <!-- Buttons in top right -->
-                  <div class="flex items-center gap-2 flex-shrink-0 ml-2">
-                    <Button
-                      type="button"
-                      :disabled="speaking"
-                      :title="t('comment.speak')"
-                      :aria-label="t('comment.speak_aria')"
-                      class="w-8 h-8 p-0 flex items-center justify-center"
-                      @click="speakComment(comment)"
-                    >
-                      <i class="ri-speak-fill text-base"></i>
-                    </Button>
-                    <DangerButton
-                      v-if="canAdmin"
-                      type="button"
-                      :title="t('comment.delete')"
-                      :aria-label="t('comment.delete_aria')"
-                      class="w-8 h-8 p-0 flex items-center justify-center"
-                      @click="deleteComment(message.id, comment.id)"
-                    >
-                      <i class="ri-delete-bin-line text-base"></i>
-                    </DangerButton>
-                  </div>
-                </div>
-
-                <!-- Content area - full width below buttons -->
-                <div class="w-full">
-                  <div
-                    class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words"
-                  >
-                    {{ comment.comment }}
-                  </div>
-                  <!-- Comment Reactions -->
-                  <div class="mt-2 flex flex-wrap items-center gap-2">
-                    <div
-                      v-for="emoji in getSelectedCommentReactions(comment)"
-                      :key="emoji"
-                      class="flex items-center gap-1"
-                    >
-                      <button
-                        type="button"
-                        :class="[
-                          'flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors',
-                          hasUserReactedToComment(comment, emoji)
-                            ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                        ]"
-                        :title="getCommentReactionTooltip(comment, emoji)"
-                        @click="toggleCommentReaction(message, comment, emoji)"
-                      >
-                        <span class="text-sm">{{ emoji }}</span>
-                        <span
-                          v-if="getCommentReactionCount(comment, emoji) > 0"
-                          class="font-medium text-xs"
-                        >
-                          {{ getCommentReactionCount(comment, emoji) }}
-                        </span>
-                      </button>
-                    </div>
-                    <!-- Add reaction button -->
-                    <button
-                      type="button"
-                      class="flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                      :title="t('comment.add_reaction')"
-                      @click="openCommentReactionModal(message, comment)"
-                    >
-                      <i class="ri-add-line text-xs"></i>
-                    </button>
-                  </div>
-                </div>
-              </div>
+                :comment="comment"
+                :speaking="speaking"
+                :current-user-id="currentUserId"
+                @speak="speakComment"
+                @delete="(commentId) => deleteComment(message.id, commentId)"
+                @toggle-reaction="
+                  (emoji) => toggleCommentReaction(message, comment, emoji)
+                "
+                @add-reaction="openCommentReactionModal(message, comment)"
+              />
             </div>
           </div>
         </template>
@@ -344,7 +240,7 @@
     <div ref="infiniteScrollRef" class="h-4"></div>
 
     <!-- Scroll to timeline button -->
-    <ScrollTop :skip-scroll-to-top="true" />
+    <ScrollTop :custom-scroll-handler="scrollToTimeline" />
 
     <!-- Reaction Selection Modal -->
     <Modal :show="showReactionModal" max-width="sm" @close="closeReactionModal">
@@ -458,6 +354,14 @@
         </div>
       </div>
     </Modal>
+
+    <!-- Message Builder Modal -->
+    <MessageBuilderModal
+      :show="showMessageBuilderModal"
+      :users="users"
+      @close="showMessageBuilderModal = false"
+      @message-posted="handleMessagePosted"
+    />
   </div>
 </template>
 
@@ -465,7 +369,11 @@
 /* global route */
 import Avatar from "@/Components/Avatar.vue";
 import Button from "@/Components/Button.vue";
-import DangerButton from "@/Components/DangerButton.vue";
+import Dropdown from "@/Components/Dropdown.vue";
+import CommentItem from "@/Components/Messages/CommentItem.vue";
+import MessageBuilderModal from "@/Components/Messages/MessageBuilderModal.vue";
+import MessageCTA from "@/Components/Messages/MessageCTA.vue";
+import MessageReactions from "@/Components/Messages/MessageReactions.vue";
 import Modal from "@/Components/Modal.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
 import { usePermissions } from "@/composables/permissions";
@@ -512,6 +420,7 @@ const commentTaggingWatchers = ref({}); // Watcher stop functions for cleanup pe
 const showCommentReactionModal = ref(false);
 const selectedCommentForReaction = ref(null);
 const selectedMessageForCommentReaction = ref(null);
+const showMessageBuilderModal = ref(false);
 
 // Handle both pagination object and array formats
 const messagesData = computed(() => {
@@ -559,20 +468,22 @@ const currentUserId = computed(() => {
   return usePage().props.auth?.user?.id;
 });
 
+const handleMessagePosted = () => {
+  showMessageBuilderModal.value = false;
+  setTimeout(() => {
+    scrollToTimeline();
+  }, 300);
+};
+
 watch(
   () => infiniteScrollItems.value,
   (newItems) => {
     const newItemsIds = new Set(newItems.map((m) => m.id));
-
-    // Keep Echo-added messages that aren't in the paginated items
     const echoMessages = localMessages.value.filter(
       (m) => !newItemsIds.has(m.id)
     );
-
-    // Merge paginated items with Echo messages
     const allMessages = [...newItems, ...echoMessages];
 
-    // Ensure all messages have grouped_reactions and comments initialized
     const processedMessages = allMessages.map((msg) => {
       const processed = { ...msg };
       if (!processed.grouped_reactions) {
@@ -588,11 +499,10 @@ watch(
       return processed;
     });
 
-    // Sort by created_at (most recent first)
     localMessages.value = processedMessages.sort((a, b) => {
       const dateA = new Date(a.created_at);
       const dateB = new Date(b.created_at);
-      return dateB - dateA; // Most recent first
+      return dateB - dateA;
     });
   },
   { deep: true, immediate: true }
@@ -837,43 +747,42 @@ const setupEchoListener = () => {
 };
 
 const handleMessageEvent = (event) => {
-  // Laravel Echo puts broadcastWith() data directly on the event object
   const messageData = event;
 
-  // Ensure message has required structure
   if (!messageData || !messageData.id || !messageData.user) {
     return;
   }
 
-  // Check if message already exists to avoid duplicates
   const messageExists = localMessages.value.some(
     (m) => m.id === messageData.id
   );
 
   if (!messageExists) {
-    // Ensure grouped_reactions is initialized
     if (!messageData.grouped_reactions) {
       messageData.grouped_reactions = {};
     }
     if (!messageData.comments) {
       messageData.comments = [];
     }
-    // Add new message and sort by created_at (most recent first)
     localMessages.value.push(messageData);
     localMessages.value.sort((a, b) => {
       const dateA = new Date(a.created_at);
       const dateB = new Date(b.created_at);
-      return dateB - dateA; // Most recent first
+      return dateB - dateA;
     });
 
-    // Show info message for all users when a new message is received
     const successMessage = event.success_message || messageData.success_message;
     if (successMessage) {
       setFlashMessage("info", successMessage, 5000);
     } else if (messageData.user?.name) {
-      // Fallback: create message if not provided in event
       const fallbackMessage = `New message added by ${messageData.user.name}`;
       setFlashMessage("info", fallbackMessage, 5000);
+    }
+
+    if (messageData.user_id === currentUserId.value) {
+      nextTick(() => {
+        scrollToTimeline();
+      });
     }
   }
 };
@@ -1313,6 +1222,12 @@ const toggleComments = (messageId) => {
     }
     // Initialize tagging when comments are expanded
     getCommentTagging(messageId);
+    // Focus the textarea after expansion
+    nextTick(() => {
+      if (commentTextareaRefs.value[messageId]) {
+        commentTextareaRefs.value[messageId].focus();
+      }
+    });
   }
 };
 

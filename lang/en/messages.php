@@ -72,6 +72,9 @@ return [
     'search.voice_failed' => 'Failed to start voice recognition: :error',
 
     // UI Labels - Messages
+    'message.whats_on_your_mind' => 'What\'s on your mind?',
+    'message.create_message' => 'Create message',
+    'message.actions' => 'Message actions',
     'message.add_comment' => 'Add Comment',
     'message.comment_placeholder' => 'Add a comment...',
     'message.post_comment' => 'Post Comment',
@@ -89,6 +92,7 @@ return [
     'message.shared_page' => 'Shared page',
 
     // UI Labels - Comments
+    'comment.actions' => 'Comment actions',
     'comment.delete' => 'Delete comment',
     'comment.delete_aria' => 'Delete comment',
     'comment.speak' => 'Speak comment',

@@ -559,10 +559,33 @@ describe("MessageTimeline", () => {
       expect(wrapper.text()).toContain("comment");
     });
 
-    it("shows 'Add Comment' button when comments section is collapsed", () => {
+    it("shows comment count button when comments exist and section is collapsed", () => {
       const wrapper = mount(MessageTimeline, {
         props: {
           messages: messageWithComments,
+          users: mockUsers
+        }
+      });
+
+      // When there are comments, button shows the count
+      expect(wrapper.text()).toContain("2");
+      expect(wrapper.text()).toContain("comments");
+    });
+
+    it("shows 'Add Comment' button when there are no comments", () => {
+      const messageWithoutComments = [
+        {
+          id: 1,
+          message: "Hello world!",
+          created_at: new Date().toISOString(),
+          user: { id: 1, name: "Alice" },
+          comments: []
+        }
+      ];
+
+      const wrapper = mount(MessageTimeline, {
+        props: {
+          messages: messageWithoutComments,
           users: mockUsers
         }
       });

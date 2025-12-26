@@ -1,6 +1,5 @@
 <script setup>
 import FlashMessage from "@/Components/Flash.vue";
-import MessageBuilderFlyout from "@/Components/Messages/MessageBuilderFlyout.vue";
 import MusicFlyout from "@/Components/Music/MusicFlyout.vue";
 import SearchInput from "@/Components/SearchInput.vue";
 import { usePusherNotifications } from "@/composables/usePusherNotifications";
@@ -81,6 +80,5 @@ watch(
     </div>
 
     <MusicFlyout />
-    <MessageBuilderFlyout />
   </div>
 </template>

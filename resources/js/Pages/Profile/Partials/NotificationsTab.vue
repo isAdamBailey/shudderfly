@@ -159,10 +159,15 @@ const handleNotificationClick = async (notification) => {
     await markAsRead(notification.id);
   }
   // Navigate to messages timeline with message ID hash if available
-  const baseUrl = notification.data.url || route("messages.index");
-  const url = notification.data.message_id
-    ? `${baseUrl}#message-${notification.data.message_id}`
-    : baseUrl;
+  // If URL already exists in notification data, use it (it may already include hash)
+  // Otherwise, construct URL with hash if message_id is available
+  let url = notification.data.url;
+  if (!url) {
+    url = route("messages.index");
+    if (notification.data.message_id) {
+      url = `${url}#message-${notification.data.message_id}`;
+    }
+  }
   router.visit(url);
 };
 

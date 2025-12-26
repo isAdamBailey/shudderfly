@@ -15,19 +15,9 @@
         </div>
       </div>
 
-      <div v-else class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-        <!-- Message Builder -->
-        <div class="sticky top-0 z-50 bg-white dark:bg-gray-800 shadow sm:rounded-lg">
-          <MessageBuilder :users="users" />
-        </div>
-
+      <div v-else class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <!-- Message Timeline -->
         <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg p-6">
-          <h3
-            class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4"
-          >
-            Timeline
-          </h3>
           <MessageTimeline :messages="messages" :users="users" />
         </div>
       </div>
@@ -36,7 +26,6 @@
 </template>
 
 <script setup>
-import MessageBuilder from "@/Components/Messages/MessageBuilder.vue";
 import MessageTimeline from "@/Components/Messages/MessageTimeline.vue";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head } from "@inertiajs/vue3";

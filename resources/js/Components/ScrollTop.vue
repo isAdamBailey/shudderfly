@@ -24,9 +24,9 @@ import { onBeforeUnmount, onMounted, ref } from "vue";
 
 const { t } = useTranslations();
 const props = defineProps({
-  skipScrollToTop: {
-    type: Boolean,
-    default: false
+  customScrollHandler: {
+    type: Function,
+    default: null
   }
 });
 
@@ -65,7 +65,9 @@ onBeforeUnmount(() => {
 const scrollToTop = () => {
   if (typeof window === "undefined") return;
 
-  if (!props.skipScrollToTop) {
+  if (props.customScrollHandler) {
+    props.customScrollHandler();
+  } else {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 };
