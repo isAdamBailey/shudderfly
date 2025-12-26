@@ -27,15 +27,22 @@ const clearAvatar = () => {
   submit();
 };
 
-// Ensure SVG has explicit width and height for Safari iOS compatibility
 const getSvgWithDimensions = (svg) => {
   if (!svg) return null;
-  // Use a reasonable size for the selection grid (100px works well for the grid layout)
   const size = 100;
   if (svg.includes("viewBox") && !svg.includes("width=")) {
     return svg.replace(
       /<svg([^>]*)>/,
       `<svg$1 width="${size}" height="${size}">`
+    );
+  }
+  if (svg.includes("width=") && svg.includes("height=")) {
+    return svg.replace(
+      /width="(\d+)"/,
+      `width="${size}"`
+    ).replace(
+      /height="(\d+)"/,
+      `height="${size}"`
     );
   }
   return svg;

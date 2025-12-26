@@ -80,18 +80,18 @@ class ProfileController extends Controller
     protected function getAllowedAvatarIds(): array
     {
         return [
-            'cat',
-            'dog',
-            'bird',
-            'bear',
-            'fox',
-            'rabbit',
-            'owl',
-            'panda',
-            'tiger',
-            'elephant',
-            'lion',
-            'penguin',
+            'avatar-1',
+            'avatar-2',
+            'avatar-3',
+            'avatar-4',
+            'avatar-5',
+            'avatar-6',
+            'avatar-7',
+            'avatar-8',
+            'avatar-9',
+            'avatar-10',
+            'avatar-11',
+            'avatar-12',
         ];
     }
 

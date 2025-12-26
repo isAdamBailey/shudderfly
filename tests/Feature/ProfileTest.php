@@ -108,7 +108,7 @@ class ProfileTest extends TestCase
         $response = $this
             ->actingAs($user)
             ->patch('/profile/avatar', [
-                'avatar' => 'cat',
+                'avatar' => 'avatar-1',
             ]);
 
         $response
@@ -117,7 +117,7 @@ class ProfileTest extends TestCase
 
         $user->refresh();
 
-        $this->assertSame('cat', $user->avatar);
+        $this->assertSame('avatar-1', $user->avatar);
     }
 
     public function test_avatar_can_be_updated_without_edit_profile_permission()
@@ -128,7 +128,7 @@ class ProfileTest extends TestCase
         $response = $this
             ->actingAs($user)
             ->patch('/profile/avatar', [
-                'avatar' => 'bird',
+                'avatar' => 'avatar-2',
             ]);
 
         $response
@@ -137,12 +137,12 @@ class ProfileTest extends TestCase
 
         $user->refresh();
 
-        $this->assertSame('bird', $user->avatar);
+        $this->assertSame('avatar-2', $user->avatar);
     }
 
     public function test_avatar_can_be_cleared()
     {
-        $user = User::factory()->create(['avatar' => 'dog']);
+        $user = User::factory()->create(['avatar' => 'avatar-3']);
 
         $response = $this
             ->actingAs($user)
@@ -182,7 +182,7 @@ class ProfileTest extends TestCase
     public function test_avatar_update_requires_authentication()
     {
         $response = $this->patch('/profile/avatar', [
-            'avatar' => 'cat',
+            'avatar' => 'avatar-1',
         ]);
 
         $response->assertRedirect('/login');

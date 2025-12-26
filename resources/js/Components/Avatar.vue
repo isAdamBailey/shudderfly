@@ -100,11 +100,19 @@ const svgWithDimensions = computed(() => {
   if (!avatarData.value) return null;
   const svg = avatarData.value.svg;
   const size = sizePixels[props.size] || 40;
-  // Ensure SVG has explicit width and height for Safari iOS compatibility
   if (svg.includes("viewBox") && !svg.includes("width=")) {
     return svg.replace(
       /<svg([^>]*)>/,
       `<svg$1 width="${size}" height="${size}">`
+    );
+  }
+  if (svg.includes("width=") && svg.includes("height=")) {
+    return svg.replace(
+      /width="(\d+)"/,
+      `width="${size}"`
+    ).replace(
+      /height="(\d+)"/,
+      `height="${size}"`
     );
   }
   return svg;
