@@ -29,6 +29,16 @@
           <template #content>
             <button
               type="button"
+              class="block w-full px-4 py-2 text-left text-sm leading-5 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none transition duration-150 ease-in-out"
+              @click="$emit('reply', comment)"
+            >
+              <div class="flex items-center gap-2">
+                <i class="ri-reply-line"></i>
+                <span>{{ t("comment.reply") }}</span>
+              </div>
+            </button>
+            <button
+              type="button"
               :disabled="speaking"
               class="block w-full px-4 py-2 text-left text-sm leading-5 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
               @click="$emit('speak', comment)"
@@ -58,9 +68,8 @@
     <div class="w-full">
       <div
         class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words"
-      >
-        {{ comment.comment }}
-      </div>
+        v-html="formatComment(comment.comment)"
+      ></div>
       <!-- Comment Reactions -->
       <CommentReactions
         :grouped-reactions="comment.grouped_reactions || {}"
@@ -75,9 +84,7 @@
 
 <script setup>
 import Avatar from "@/Components/Avatar.vue";
-import Button from "@/Components/Button.vue";
 import CommentReactions from "@/Components/Messages/CommentReactions.vue";
-import DangerButton from "@/Components/DangerButton.vue";
 import Dropdown from "@/Components/Dropdown.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useTranslations } from "@/composables/useTranslations";
@@ -95,13 +102,99 @@ const props = defineProps({
   currentUserId: {
     type: Number,
     default: null
+  },
+  users: {
+    type: Array,
+    default: () => []
   }
 });
 
-defineEmits(["speak", "delete", "toggle-reaction", "add-reaction"]);
+defineEmits(["speak", "delete", "toggle-reaction", "add-reaction", "reply"]);
 
 const { canAdmin } = usePermissions();
 const { t } = useTranslations();
+
+const formatComment = (text) => {
+  if (!text) return "";
+
+  let formatted = text;
+
+  if (props.users && props.users.length > 0) {
+    const sortedUsers = [...props.users].sort(
+      (a, b) => b.name.length - a.name.length
+    );
+
+    for (const user of sortedUsers) {
+      const escapedName = user.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      
+      const blockquotePattern1 = new RegExp(
+        `@${escapedName}\\n>\\s*([^\\n]*)`,
+        "gi"
+      );
+      formatted = formatted.replace(blockquotePattern1, (match, quote) => {
+        const trimmedQuote = quote.trim();
+        if (trimmedQuote) {
+          return `<span class="font-semibold text-blue-600 dark:text-blue-400">@${user.name}</span>\n<blockquote class="border-l-4 border-gray-300 dark:border-gray-600 pl-3 py-1 my-2 italic text-gray-600 dark:text-gray-400">${trimmedQuote}</blockquote>`;
+        }
+        return match;
+      });
+      
+      const blockquotePattern2 = new RegExp(
+        `@${escapedName}\\s*>\\s*([^\\n]*)`,
+        "gi"
+      );
+      formatted = formatted.replace(blockquotePattern2, (match, quote) => {
+        if (!match.includes("<blockquote")) {
+          const trimmedQuote = quote.trim();
+          if (trimmedQuote) {
+            return `<span class="font-semibold text-blue-600 dark:text-blue-400">@${user.name}</span> <blockquote class="border-l-4 border-gray-300 dark:border-gray-600 pl-3 py-1 my-2 italic text-gray-600 dark:text-gray-400">${trimmedQuote}</blockquote>`;
+          }
+        }
+        return match;
+      });
+    }
+  }
+
+  if (props.users && props.users.length > 0) {
+    const sortedUsers = [...props.users].sort(
+      (a, b) => b.name.length - a.name.length
+    );
+
+    for (const user of sortedUsers) {
+      const escapedName = user.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const pattern = new RegExp(`@${escapedName}(?=\\s|$|[^\\w\\s>\\n])`, "gi");
+      formatted = formatted.replace(pattern, (match) => {
+        if (!match.includes("<span")) {
+          return `<span class="font-semibold text-blue-600 dark:text-blue-400">@${user.name}</span>`;
+        }
+        return match;
+      });
+    }
+  }
+
+  formatted = formatted.replace(
+    /@([a-zA-Z0-9_]+)(?!\w)/g,
+    (match, username) => {
+      if (!match.includes("<span")) {
+        return `<span class="font-semibold text-blue-600 dark:text-blue-400">@${username}</span>`;
+      }
+      return match;
+    }
+  );
+
+  formatted = formatted.replace(
+    /(<span[^>]*>@[^<]+<\/span>)\n>\s*([^\n<]*)/g,
+    (match, mentionSpan, quote) => {
+      const trimmedQuote = quote.trim();
+      if (trimmedQuote) {
+        return `${mentionSpan}\n<blockquote class="border-l-4 border-gray-300 dark:border-gray-600 pl-3 py-1 my-2 italic text-gray-600 dark:text-gray-400">${trimmedQuote}</blockquote>`;
+      }
+      return match;
+    }
+  );
+
+  return formatted;
+};
 
 const allowedEmojis = ["👍", "❤️", "😂", "😮", "😢", "💩"];
 

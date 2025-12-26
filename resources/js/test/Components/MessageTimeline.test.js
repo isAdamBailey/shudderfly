@@ -87,33 +87,33 @@ vi.mock("@/composables/useTranslations", () => ({
   useTranslations: () => ({
     t: (key) => {
       const translations = {
-        'message.add_comment': 'Add Comment',
-        'message.post_comment': 'Post Comment',
-        'message.comment': 'comment',
-        'message.comments': 'comments',
-        'message.comment_placeholder': 'Add a comment...',
-        'message.speak': 'Speak message',
-        'message.speak_aria': 'Speak message',
-        'message.delete': 'Delete message',
-        'message.delete_aria': 'Delete message',
-        'message.add_reaction': 'Add reaction',
-        'message.view_all_reactions': 'View all reactions',
-        'message.reaction': 'reaction',
-        'message.reactions': 'reactions',
-        'message.loading': 'Loading...',
-        'message.shared_page': 'Shared page',
-        'comment.add_reaction': 'Add reaction',
-        'comment.speak': 'Speak comment',
-        'comment.speak_aria': 'Speak comment',
-        'comment.delete': 'Delete comment',
-        'comment.delete_aria': 'Delete comment',
-        'general.close': 'Close notification',
-        'general.scroll_to_top': 'scroll to top of the page',
-        'general.add_reaction': 'Add Reaction',
-        'general.reactions': 'Reactions',
-        'general.speak_all_reactions': 'Speak all reactions',
-        'general.speak_all_reactions_aria': 'Speak all reactions',
-        'general.view_message': 'View Message'
+        "message.add_comment": "Add Comment",
+        "message.post_comment": "Post Comment",
+        "message.comment": "comment",
+        "message.comments": "comments",
+        "message.comment_placeholder": "Add a comment...",
+        "message.speak": "Speak message",
+        "message.speak_aria": "Speak message",
+        "message.delete": "Delete message",
+        "message.delete_aria": "Delete message",
+        "message.add_reaction": "Add reaction",
+        "message.view_all_reactions": "View all reactions",
+        "message.reaction": "reaction",
+        "message.reactions": "reactions",
+        "message.loading": "Loading...",
+        "message.shared_page": "Shared page",
+        "comment.add_reaction": "Add reaction",
+        "comment.speak": "Speak comment",
+        "comment.speak_aria": "Speak comment",
+        "comment.delete": "Delete comment",
+        "comment.delete_aria": "Delete comment",
+        "general.close": "Close notification",
+        "general.scroll_to_top": "scroll to top of the page",
+        "general.add_reaction": "Add Reaction",
+        "general.reactions": "Reactions",
+        "general.speak_all_reactions": "Speak all reactions",
+        "general.speak_all_reactions_aria": "Speak all reactions",
+        "general.view_message": "View Message"
       };
       return translations[key] || key;
     },
@@ -593,7 +593,7 @@ describe("MessageTimeline", () => {
       expect(wrapper.text()).toContain("Add Comment");
     });
 
-    it("expands comments section when expandComments is called", async () => {
+    it("expands comments section when toggleComments is called", async () => {
       const wrapper = mount(MessageTimeline, {
         props: {
           messages: messageWithComments,
@@ -603,7 +603,7 @@ describe("MessageTimeline", () => {
 
       await nextTick();
 
-      wrapper.vm.expandComments(1);
+      wrapper.vm.toggleComments(1);
       await nextTick();
       await nextTick();
 
@@ -659,7 +659,7 @@ describe("MessageTimeline", () => {
 
       await nextTick();
 
-      wrapper.vm.expandComments(1);
+      wrapper.vm.toggleComments(1);
       await nextTick();
       await nextTick();
 
@@ -678,7 +678,7 @@ describe("MessageTimeline", () => {
 
       await nextTick();
 
-      wrapper.vm.expandComments(1);
+      wrapper.vm.toggleComments(1);
       await nextTick();
       await nextTick();
 
@@ -698,7 +698,7 @@ describe("MessageTimeline", () => {
 
       await nextTick();
 
-      wrapper.vm.expandComments(1);
+      wrapper.vm.toggleComments(1);
       await nextTick();
       await nextTick();
 
@@ -721,7 +721,7 @@ describe("MessageTimeline", () => {
 
       await nextTick();
 
-      wrapper.vm.expandComments(1);
+      wrapper.vm.toggleComments(1);
       await nextTick();
       await nextTick();
 
@@ -753,7 +753,7 @@ describe("MessageTimeline", () => {
 
       await nextTick();
 
-      wrapper.vm.expandComments(1);
+      wrapper.vm.toggleComments(1);
       await nextTick();
       await nextTick();
 
@@ -788,7 +788,7 @@ describe("MessageTimeline", () => {
 
       await nextTick();
 
-      wrapper.vm.expandComments(1);
+      wrapper.vm.toggleComments(1);
       await nextTick();
       await nextTick();
 
@@ -1049,6 +1049,217 @@ describe("MessageTimeline", () => {
 
       textarea = wrapper.find("textarea");
       expect(textarea.exists()).toBe(false);
+    });
+
+    describe("Reply functionality", () => {
+      it("formats reply text correctly for a regular comment", async () => {
+        const wrapper = mount(MessageTimeline, {
+          props: {
+            messages: messageWithComments,
+            users: mockUsers
+          }
+        });
+
+        await nextTick();
+        wrapper.vm.toggleComments(1);
+        await nextTick();
+        await nextTick();
+
+        const message = messageWithComments[0];
+        const comment = message.comments[0];
+
+        wrapper.vm.handleReplyToComment(message, comment);
+        await nextTick();
+        await nextTick();
+
+        expect(wrapper.vm.commentForms[1]).toBe(`@Bob\n>Great message!\n\n`);
+      });
+
+      it("extracts actual comment text when replying to a reply", async () => {
+        const messageWithReply = [
+          {
+            id: 1,
+            message: "Hello world!",
+            created_at: new Date().toISOString(),
+            user: { id: 1, name: "Alice" },
+            comments: [
+              {
+                id: 1,
+                comment: "Great message!",
+                created_at: new Date().toISOString(),
+                user: { id: 2, name: "Bob" },
+                grouped_reactions: {}
+              },
+              {
+                id: 2,
+                comment: "@Bob\n>Great message!\n\nI agree!",
+                created_at: new Date().toISOString(),
+                user: { id: 3, name: "Charlie" },
+                grouped_reactions: {}
+              }
+            ]
+          }
+        ];
+
+        const wrapper = mount(MessageTimeline, {
+          props: {
+            messages: messageWithReply,
+            users: mockUsers
+          }
+        });
+
+        await nextTick();
+        wrapper.vm.toggleComments(1);
+        await nextTick();
+        await nextTick();
+
+        const message = messageWithReply[0];
+        const replyComment = message.comments[1];
+
+        wrapper.vm.handleReplyToComment(message, replyComment);
+        await nextTick();
+        await nextTick();
+
+        expect(wrapper.vm.commentForms[1]).toBe(`@Charlie\n>I agree!\n\n`);
+      });
+
+      it("expands comments section when replying to a collapsed comment", async () => {
+        const wrapper = mount(MessageTimeline, {
+          props: {
+            messages: messageWithComments,
+            users: mockUsers
+          }
+        });
+
+        await nextTick();
+
+        const message = messageWithComments[0];
+        const comment = message.comments[0];
+
+        expect(wrapper.vm.expandedComments[1]).toBeUndefined();
+
+        wrapper.vm.handleReplyToComment(message, comment);
+        await nextTick();
+        await nextTick();
+
+        expect(wrapper.vm.expandedComments[1]).toBe(true);
+        expect(wrapper.vm.commentForms[1]).toBe(`@Bob\n>Great message!\n\n`);
+      });
+
+      it("does not expand comments section when already expanded", async () => {
+        const wrapper = mount(MessageTimeline, {
+          props: {
+            messages: messageWithComments,
+            users: mockUsers
+          }
+        });
+
+        await nextTick();
+        wrapper.vm.toggleComments(1);
+        await nextTick();
+        await nextTick();
+
+        const message = messageWithComments[0];
+        const comment = message.comments[0];
+
+        expect(wrapper.vm.expandedComments[1]).toBe(true);
+
+        wrapper.vm.handleReplyToComment(message, comment);
+        await nextTick();
+        await nextTick();
+
+        expect(wrapper.vm.expandedComments[1]).toBe(true);
+        expect(wrapper.vm.commentForms[1]).toBe(`@Bob\n>Great message!\n\n`);
+      });
+
+      it("handles reply to comment with old format blockquote", async () => {
+        const messageWithOldFormatReply = [
+          {
+            id: 1,
+            message: "Hello world!",
+            created_at: new Date().toISOString(),
+            user: { id: 1, name: "Alice" },
+            comments: [
+              {
+                id: 1,
+                comment: "Great message!",
+                created_at: new Date().toISOString(),
+                user: { id: 2, name: "Bob" },
+                grouped_reactions: {}
+              },
+              {
+                id: 2,
+                comment: "@Bob >Great message!\n\nI agree!",
+                created_at: new Date().toISOString(),
+                user: { id: 3, name: "Charlie" },
+                grouped_reactions: {}
+              }
+            ]
+          }
+        ];
+
+        const wrapper = mount(MessageTimeline, {
+          props: {
+            messages: messageWithOldFormatReply,
+            users: mockUsers
+          }
+        });
+
+        await nextTick();
+        wrapper.vm.toggleComments(1);
+        await nextTick();
+        await nextTick();
+
+        const message = messageWithOldFormatReply[0];
+        const replyComment = message.comments[1];
+
+        wrapper.vm.handleReplyToComment(message, replyComment);
+        await nextTick();
+        await nextTick();
+
+        expect(wrapper.vm.commentForms[1]).toBe(`@Charlie\n>I agree!\n\n`);
+      });
+
+      it("handles reply when comment has empty text", async () => {
+        const messageWithEmptyComment = [
+          {
+            id: 1,
+            message: "Hello world!",
+            created_at: new Date().toISOString(),
+            user: { id: 1, name: "Alice" },
+            comments: [
+              {
+                id: 1,
+                comment: "",
+                created_at: new Date().toISOString(),
+                user: { id: 2, name: "Bob" },
+                grouped_reactions: {}
+              }
+            ]
+          }
+        ];
+
+        const wrapper = mount(MessageTimeline, {
+          props: {
+            messages: messageWithEmptyComment,
+            users: mockUsers
+          }
+        });
+
+        await nextTick();
+        wrapper.vm.toggleComments(1);
+        await nextTick();
+        await nextTick();
+
+        const message = messageWithEmptyComment[0];
+        const comment = message.comments[0];
+
+        wrapper.vm.handleReplyToComment(message, comment);
+        await nextTick();
+        await nextTick();
+
+        expect(wrapper.vm.commentForms[1]).toBe(`@Bob\n>\n\n`);
+      });
     });
   });
 

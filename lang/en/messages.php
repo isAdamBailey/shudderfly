@@ -93,6 +93,7 @@ return [
 
     // UI Labels - Comments
     'comment.actions' => 'Comment actions',
+    'comment.reply' => 'Reply',
     'comment.delete' => 'Delete comment',
     'comment.delete_aria' => 'Delete comment',
     'comment.speak' => 'Speak comment',

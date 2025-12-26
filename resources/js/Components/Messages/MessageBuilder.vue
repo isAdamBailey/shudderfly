@@ -548,9 +548,6 @@ function addPhrase(phrase) {
 }
 
 const { setAddWord, setAddPhrase, setGetPreview, setActiveMessageInput } = useMessageBuilder();
-setAddWord(addWord);
-setAddPhrase(addPhrase);
-setGetPreview(() => preview.value);
 
 const handleMessageInputFocus = () => {
   setActiveMessageInput();
