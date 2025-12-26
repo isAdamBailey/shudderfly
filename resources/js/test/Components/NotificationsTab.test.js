@@ -1,4 +1,4 @@
-import NotificationsTab from "@/Pages/Profile/Partials/NotificationsTab.vue";
+import NotificationList from "@/Components/NotificationList.vue";
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
@@ -67,7 +67,7 @@ vi.mock("@/composables/useUnreadNotifications", () => ({
   })
 }));
 
-describe("NotificationsTab", () => {
+describe("NotificationList", () => {
   const mockNotifications = [
     {
       id: "1",
@@ -128,13 +128,13 @@ describe("NotificationsTab", () => {
           })
       );
 
-      const wrapper = mount(NotificationsTab);
+      const wrapper = mount(NotificationList);
 
       expect(wrapper.text()).toContain("Loading notifications");
     });
 
     it("displays notifications when loaded", async () => {
-      const wrapper = mount(NotificationsTab);
+      const wrapper = mount(NotificationList);
 
       await nextTick();
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -151,7 +151,7 @@ describe("NotificationsTab", () => {
         }
       });
 
-      const wrapper = mount(NotificationsTab);
+      const wrapper = mount(NotificationList);
 
       await nextTick();
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -162,7 +162,7 @@ describe("NotificationsTab", () => {
 
   describe("Notification display", () => {
     it("shows unread indicator for unread notifications", async () => {
-      const wrapper = mount(NotificationsTab);
+      const wrapper = mount(NotificationList);
 
       await nextTick();
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -173,7 +173,7 @@ describe("NotificationsTab", () => {
     });
 
     it("shows read styling for read notifications", async () => {
-      const wrapper = mount(NotificationsTab);
+      const wrapper = mount(NotificationList);
 
       await nextTick();
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -184,7 +184,7 @@ describe("NotificationsTab", () => {
     });
 
     it("displays tagger name correctly", async () => {
-      const wrapper = mount(NotificationsTab);
+      const wrapper = mount(NotificationList);
 
       await nextTick();
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -194,7 +194,7 @@ describe("NotificationsTab", () => {
     });
 
     it("displays notification message", async () => {
-      const wrapper = mount(NotificationsTab);
+      const wrapper = mount(NotificationList);
 
       await nextTick();
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -203,7 +203,7 @@ describe("NotificationsTab", () => {
     });
 
     it("shows view message link when message_id exists", async () => {
-      const wrapper = mount(NotificationsTab);
+      const wrapper = mount(NotificationList);
 
       await nextTick();
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -215,7 +215,7 @@ describe("NotificationsTab", () => {
 
   describe("Mark as read", () => {
     it("shows mark as read button for unread notifications", async () => {
-      const wrapper = mount(NotificationsTab);
+      const wrapper = mount(NotificationList);
 
       await nextTick();
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -228,7 +228,7 @@ describe("NotificationsTab", () => {
       const axios = (await import("axios")).default;
       axios.post = vi.fn().mockResolvedValue({ data: {} });
 
-      const wrapper = mount(NotificationsTab);
+      const wrapper = mount(NotificationList);
 
       await nextTick();
       await new Promise((resolve) => setTimeout(resolve, 200));
@@ -262,7 +262,7 @@ describe("NotificationsTab", () => {
     });
 
     it("updates notification to read state after marking", async () => {
-      const wrapper = mount(NotificationsTab);
+      const wrapper = mount(NotificationList);
 
       await nextTick();
       await new Promise((resolve) => setTimeout(resolve, 200));
@@ -306,7 +306,7 @@ describe("NotificationsTab", () => {
         }
       });
 
-      const wrapper = mount(NotificationsTab);
+      const wrapper = mount(NotificationList);
 
       await nextTick();
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -339,7 +339,7 @@ describe("NotificationsTab", () => {
         }
       });
 
-      const wrapper = mount(NotificationsTab);
+      const wrapper = mount(NotificationList);
 
       await nextTick();
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -351,7 +351,7 @@ describe("NotificationsTab", () => {
 
   describe("Echo integration", () => {
     it("subscribes to user's private channel on mount", () => {
-      mount(NotificationsTab);
+      mount(NotificationList);
 
       expect(global.window.Echo.private).toHaveBeenCalledWith(
         "App.Models.User.1"
@@ -359,7 +359,7 @@ describe("NotificationsTab", () => {
     });
 
     it("adds new notification when broadcast event is received", async () => {
-      const wrapper = mount(NotificationsTab);
+      const wrapper = mount(NotificationList);
 
       await nextTick();
 
@@ -396,7 +396,7 @@ describe("NotificationsTab", () => {
 
       axios.get.mockRejectedValue(new Error("API Error"));
 
-      mount(NotificationsTab);
+      mount(NotificationList);
 
       await nextTick();
       await new Promise((resolve) => setTimeout(resolve, 100));

@@ -4,25 +4,17 @@ import NotificationToggle from "@/Components/NotificationToggle.vue";
 import Close from "@/Components/svg/Close.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
-import { useUnreadNotifications } from "@/composables/useUnreadNotifications";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, usePage } from "@inertiajs/vue3";
 import { computed, ref } from "vue";
 import AvatarSelectionForm from "./Partials/AvatarSelectionForm.vue";
 import DeleteUserForm from "./Partials/DeleteUserForm.vue";
-import NotificationsTab from "./Partials/NotificationsTab.vue";
 import UpdatePasswordForm from "./Partials/UpdatePasswordForm.vue";
 import UpdateProfileInformationForm from "./Partials/UpdateProfileInformationForm.vue";
 import VoiceSettingsForm from "./Partials/VoiceSettingsForm.vue";
 
 const { speak } = useSpeechSynthesis();
 const { canEditProfile } = usePermissions();
-const { unreadCount } = useUnreadNotifications();
-
-const messagingEnabled = computed(() => {
-  const value = usePage().props.settings?.messaging_enabled;
-  return value === "1" || value === 1 || value === true;
-});
 
 const close = ref(false);
 
@@ -82,13 +74,6 @@ defineProps({
         </div>
       </Transition>
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-        <Accordion
-          v-if="messagingEnabled"
-          title="Notifications"
-          :show-badge="unreadCount > 0"
-        >
-          <NotificationsTab />
-        </Accordion>
         <Accordion title="Avatar">
           <AvatarSelectionForm />
         </Accordion>

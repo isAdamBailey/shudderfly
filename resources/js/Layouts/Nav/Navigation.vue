@@ -5,6 +5,7 @@ import Dropdown from "@/Components/Dropdown.vue";
 import DropdownLink from "@/Components/DropdownLink.vue";
 import FireworksAnimation from "@/Components/FireworksAnimation.vue";
 import NavLink from "@/Components/NavLink.vue";
+import NotificationList from "@/Components/NotificationList.vue";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useUnreadNotifications } from "@/composables/useUnreadNotifications";
@@ -66,6 +67,43 @@ const messagingEnabled = computed(() => {
           <ThemeToggle />
 
           <div class="hidden sm:flex sm:items-center sm:ml-6">
+            <!-- Notifications Dropdown -->
+            <div v-if="messagingEnabled" class="ml-3 relative">
+              <Dropdown align="right" width="80">
+                <template #trigger>
+                  <button
+                    type="button"
+                    class="relative inline-flex items-center justify-center p-2 focus:outline-none transition-opacity hover:opacity-80"
+                  >
+                    <i class="ri-notification-fill text-2xl text-white"></i>
+                    <span
+                      v-if="unreadCount > 0"
+                      class="absolute top-0 right-0 h-3 w-3 bg-red-600 rounded-full border-2 border-white dark:border-gray-800"
+                      title="You have unread notifications"
+                    ></span>
+                  </button>
+                </template>
+
+                <template #content>
+                  <div class="max-h-96 overflow-y-auto">
+                    <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                      <div class="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        Notifications
+                        <span
+                          v-if="unreadCount > 0"
+                          class="ml-2 px-2 py-0.5 text-xs bg-red-600 text-white rounded-full"
+                        >
+                          {{ unreadCount }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="p-3">
+                      <NotificationList />
+                    </div>
+                  </div>
+                </template>
+              </Dropdown>
+            </div>
             <!-- Settings Dropdown -->
             <div class="ml-3 relative">
               <Dropdown align="right" width="56">
@@ -75,15 +113,6 @@ const messagingEnabled = computed(() => {
                     class="relative inline-flex items-center focus:outline-none transition-opacity hover:opacity-80"
                   >
                     <Avatar :user="$page.props.auth.user" size="md" />
-                    <span
-                      v-if="messagingEnabled && unreadCount > 0"
-                      class="absolute -top-0.5 -right-0.5 h-3 w-3 bg-red-600 rounded-full border-2 border-white flex items-center justify-center"
-                      title="You have unread notifications"
-                    >
-                      <span
-                        class="h-1.5 w-1.5 bg-white rounded-full animate-pulse"
-                      ></span>
-                    </span>
                   </button>
                 </template>
 
@@ -112,14 +141,9 @@ const messagingEnabled = computed(() => {
                     </div>
                   </DropdownLink>
                   <DropdownLink :href="route('profile.edit')">
-                    <div class="flex items-center gap-3 relative">
+                    <div class="flex items-center gap-3">
                       <i class="ri-user-settings-line text-lg"></i>
                       <span>Account</span>
-                      <span
-                        v-if="messagingEnabled && unreadCount > 0"
-                        class="ml-auto h-2 w-2 bg-red-600 rounded-full animate-pulse"
-                        title="You have unread notifications"
-                      ></span>
                     </div>
                   </DropdownLink>
                   <DropdownLink
@@ -138,8 +162,46 @@ const messagingEnabled = computed(() => {
             </div>
           </div>
 
-          <!-- Hamburger -->
-          <div class="-mr-2 flex items-center sm:hidden">
+          <!-- Mobile Notifications and Hamburger -->
+          <div class="-mr-2 flex items-center gap-2 sm:hidden">
+            <!-- Notifications Dropdown (Mobile) -->
+            <div v-if="messagingEnabled" class="relative">
+              <Dropdown align="right" width="80">
+                <template #trigger>
+                  <button
+                    type="button"
+                    class="relative inline-flex items-center justify-center p-2 focus:outline-none transition-opacity hover:opacity-80"
+                  >
+                    <i class="ri-notification-fill text-2xl text-white"></i>
+                    <span
+                      v-if="unreadCount > 0"
+                      class="absolute top-0 right-0 h-3 w-3 bg-red-600 rounded-full border-2 border-white dark:border-gray-800"
+                      title="You have unread notifications"
+                    ></span>
+                  </button>
+                </template>
+
+                <template #content>
+                  <div class="max-h-96 overflow-y-auto">
+                    <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                      <div class="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        Notifications
+                        <span
+                          v-if="unreadCount > 0"
+                          class="ml-2 px-2 py-0.5 text-xs bg-red-600 text-white rounded-full"
+                        >
+                          {{ unreadCount }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="p-3">
+                      <NotificationList />
+                    </div>
+                  </div>
+                </template>
+              </Dropdown>
+            </div>
+            <!-- Hamburger -->
             <button
               class="inline-flex items-center justify-center p-2 rounded-md text-yellow-200 hover:text-yellow-400 hover:bg-blue-700 dark:text-gray-500 dark:hover:text-gray-400 dark:hover:bg-gray-900 focus:outline-none focus:bg-yellow-100 dark:focus:bg-gray-900 focus:text-gray-500 dark:focus:text-gray-400 transition duration-150 ease-in-out"
               @click="showingNavigationDropdown = !showingNavigationDropdown"
@@ -209,18 +271,7 @@ const messagingEnabled = computed(() => {
         <!-- Responsive Settings Options -->
         <div class="pt-4 pb-1 border-t border-gray-200 dark:border-gray-600">
           <div class="px-4 flex items-center gap-3">
-            <div class="relative">
-              <Avatar :user="$page.props.auth.user" size="md" />
-              <span
-                v-if="messagingEnabled && unreadCount > 0"
-                class="absolute -top-0.5 -right-0.5 h-3 w-3 bg-red-600 rounded-full border-2 border-white dark:border-gray-800 flex items-center justify-center"
-                title="You have unread notifications"
-              >
-                <span
-                  class="h-1.5 w-1.5 bg-white rounded-full animate-pulse"
-                ></span>
-              </span>
-            </div>
+            <Avatar :user="$page.props.auth.user" size="md" />
             <div>
               <div
                 class="font-semibold text-base text-gray-100 dark:text-gray-200"
@@ -244,11 +295,6 @@ const messagingEnabled = computed(() => {
               <div class="flex items-center gap-3">
                 <i class="ri-user-settings-line text-lg"></i>
                 <span>Account</span>
-                <span
-                  v-if="messagingEnabled && unreadCount > 0"
-                  class="ml-auto h-2 w-2 bg-red-600 rounded-full animate-pulse"
-                  title="You have unread notifications"
-                ></span>
               </div>
             </ResponsiveNavLink>
             <ResponsiveNavLink
