@@ -9,7 +9,7 @@ import BreezeInput from "@/Components/TextInput.vue";
 import DeleteForm from "@/Pages/Book/DeleteBookForm.vue";
 import { useForm, usePage } from "@inertiajs/vue3";
 import Multiselect from "@vueform/multiselect";
-import { computed } from "vue";
+import { computed, ref } from "vue";
 
 const props = defineProps({
   book: { type: Object, required: true },
@@ -17,6 +17,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["close-form"]);
+const isLocationOpen = ref(false);
 
 const form = useForm({
   title: props.book.title,
@@ -43,6 +44,10 @@ const categoriesOptions = computed(() => {
     : [];
 });
 
+const handleAddressFocus = () => {
+  isLocationOpen.value = true;
+};
+
 const submit = () => {
   form.put(route("books.update", props.book.slug), {
     onSuccess: () => {
@@ -54,7 +59,7 @@ const submit = () => {
 </script>
 
 <template>
-  <div class="bg-white dark:bg-gray-800 rounded p-5 m-5 md:w-full">
+  <div class="bg-white dark:bg-gray-800 rounded p-5 w-full">
     <h3 class="text-2xl dark:text-gray-100 w-full border-b mb-7">Edit Book</h3>
     <form @submit.prevent="submit">
       <div class="flex flex-col">
@@ -103,12 +108,12 @@ const submit = () => {
       </div>
 
       <div class="mt-4">
-        <Accordion title="Location">
-          <MapPicker
-            v-model:latitude="form.latitude"
-            v-model:longitude="form.longitude"
-          />
-        </Accordion>
+        <MapPicker
+          v-model:latitude="form.latitude"
+          v-model:longitude="form.longitude"
+          :open-map="isLocationOpen"
+          @address-focus="handleAddressFocus"
+        />
       </div>
 
       <div class="flex justify-center mt-4">

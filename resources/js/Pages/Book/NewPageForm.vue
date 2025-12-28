@@ -17,6 +17,8 @@ import { useForm, usePage } from "@inertiajs/vue3";
 import { useVuelidate } from "@vuelidate/core";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
+const isLocationOpen = ref(false);
+
 const emit = defineEmits(["close-form"]);
 
 const props = defineProps({
@@ -292,6 +294,10 @@ onMounted(() => {
 onUnmounted(() => {
   // no-op (FilePond cleans itself)
 });
+
+const handleAddressFocus = () => {
+  isLocationOpen.value = true;
+};
 </script>
 
 <template>
@@ -472,12 +478,12 @@ onUnmounted(() => {
 
       <!-- Location Section -->
       <div class="w-full mt-4">
-        <Accordion title="Location">
-          <MapPicker
-            v-model:latitude="form.latitude"
-            v-model:longitude="form.longitude"
-          />
-        </Accordion>
+        <MapPicker
+          v-model:latitude="form.latitude"
+          v-model:longitude="form.longitude"
+          :open-map="isLocationOpen"
+          @address-focus="handleAddressFocus"
+        />
       </div>
 
       <!-- Error Messages -->

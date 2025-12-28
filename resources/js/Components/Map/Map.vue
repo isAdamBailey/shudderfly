@@ -2,7 +2,7 @@
     <div>
         <div
             v-if="currentAddress && showAddress"
-            class="mb-2 flex items-center gap-2 text-sm text-gray-100"
+            class="mb-2 flex items-center gap-2 text-sm text-gray-500"
         >
             <div><strong>Address:</strong> {{ currentAddress }}</div>
             <Button

@@ -16,6 +16,8 @@ import { useForm, usePage } from "@inertiajs/vue3";
 import Multiselect from "@vueform/multiselect";
 import { computed, onMounted, ref } from "vue";
 
+const isLocationOpen = ref(false);
+
 const emit = defineEmits(["close-page-form"]);
 
 const props = defineProps({
@@ -130,6 +132,10 @@ const makeCoverPage = () => {
 
 const setCreatedAtToNow = () => {
   pageForm.created_at = new Date().toISOString().slice(0, 16);
+};
+
+const handleAddressFocus = () => {
+  isLocationOpen.value = true;
 };
 </script>
 
@@ -259,12 +265,12 @@ const setCreatedAtToNow = () => {
       />
     </div>
     <div class="mt-3">
-      <Accordion title="Location">
-        <MapPicker
-          v-model:latitude="pageForm.latitude"
-          v-model:longitude="pageForm.longitude"
-        />
-      </Accordion>
+      <MapPicker
+        v-model:latitude="pageForm.latitude"
+        v-model:longitude="pageForm.longitude"
+        :open-map="isLocationOpen"
+        @address-focus="handleAddressFocus"
+      />
     </div>
 
     <!-- Page Actions Section -->

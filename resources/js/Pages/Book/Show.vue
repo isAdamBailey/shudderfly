@@ -111,12 +111,12 @@
       </div>
       <div class="flex flex-col md:flex-row justify-around">
         <!-- Add Pages Tab -->
-        <div v-if="activeTab === 'pages'">
+        <div v-if="activeTab === 'pages'" class="w-full md:w-1/2 mx-auto">
           <NewPageForm :book="book" @close-form="closeAllTabs" />
         </div>
 
         <!-- Edit Book Tab -->
-        <div v-if="activeTab === 'book'">
+        <div v-if="activeTab === 'book'" class="w-full md:w-1/2 mx-auto">
           <EditBookForm
             :book="book"
             :authors="authors"
@@ -126,7 +126,7 @@
         </div>
 
         <!-- Bulk Actions Tab -->
-        <div v-if="activeTab === 'bulk'">
+        <div v-if="activeTab === 'bulk'" class="w-full md:w-1/2 mx-auto">
           <BulkActionsForm
             :book="book"
             :books="books"

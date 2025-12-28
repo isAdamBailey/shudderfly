@@ -2,7 +2,7 @@
   <div class="w-full">
     <div class="mb-2 flex items-center justify-between">
       <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-        Location (optional)
+        Address (optional)
       </label>
       <button
         v-if="hasLocation"
@@ -13,12 +13,6 @@
         Clear location
       </button>
     </div>
-    <div class="mb-3 text-gray-500 dark:text-gray-400">
-      <p>
-        You can search for an address belowa nd select from the results, or
-        simply click on the map to drop a pin at that location.
-      </p>
-    </div>
     <div class="mb-3 relative">
       <div class="flex gap-2">
         <div class="flex-1 relative">
@@ -26,10 +20,10 @@
             v-model="searchQuery"
             type="text"
             placeholder="Search for an address..."
-            class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            class="w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             @keyup.enter="searchLocation"
             @input="handleInput"
-            @focus="showSuggestions = true"
+            @focus="handleFocus"
             @blur="handleBlur"
           />
           <!-- Autocomplete dropdown -->
@@ -72,21 +66,30 @@
         {{ searchError }}
       </p>
     </div>
-    <Map
-      ref="mapRef"
-      :latitude="latitude"
-      :longitude="longitude"
-      :interactive="true"
-      :hide-geocoder="true"
-      container-class="w-full max-w-md aspect-square rounded-lg border border-gray-300 dark:border-gray-600"
-      @update:latitude="(val) => $emit('update:latitude', val)"
-      @update:longitude="(val) => $emit('update:longitude', val)"
-    />
+
+    <div v-if="showMap" class="mt-4">
+      <div class="mb-3 text-sm text-gray-500 dark:text-gray-400">
+        <p>
+          You can search for an address above and select from the results, or
+          simply click on the map to drop a pin at that location.
+        </p>
+      </div>
+      <Map
+        ref="mapRef"
+        :latitude="latitude"
+        :longitude="longitude"
+        :interactive="true"
+        :hide-geocoder="true"
+        container-class="w-full aspect-square rounded-lg border border-gray-300 dark:border-gray-600"
+        @update:latitude="(val) => $emit('update:latitude', val)"
+        @update:longitude="(val) => $emit('update:longitude', val)"
+      />
+    </div>
   </div>
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import Map from "./Map.vue";
 
 const props = defineProps({
@@ -97,6 +100,10 @@ const props = defineProps({
   longitude: {
     type: [Number, String],
     default: null
+  },
+  openMap: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -115,7 +122,7 @@ const longitude = computed(() => {
     : props.longitude;
 });
 
-const emit = defineEmits(["update:latitude", "update:longitude"]);
+const emit = defineEmits(["update:latitude", "update:longitude", "address-focus"]);
 
 const mapRef = ref(null);
 const searchQuery = ref("");
@@ -123,7 +130,15 @@ const isSearching = ref(false);
 const searchError = ref("");
 const suggestions = ref([]);
 const showSuggestions = ref(false);
+const showMap = ref(false);
 let searchTimeout = null;
+
+// Watch for openMap prop changes
+watch(() => props.openMap, (newVal) => {
+  if (newVal) {
+    showMap.value = true;
+  }
+});
 
 const hasLocation = computed(() => {
   return latitude.value !== null && longitude.value !== null;
@@ -140,9 +155,17 @@ const clearLocation = () => {
   emit("update:longitude", null);
   searchQuery.value = "";
   searchError.value = "";
+  showMap.value = false;
+};
+
+const handleFocus = () => {
+  showMap.value = true;
+  showSuggestions.value = true;
+  emit('address-focus');
 };
 
 const handleInput = async () => {
+  showMap.value = true;
   showSuggestions.value = true;
   searchError.value = "";
 

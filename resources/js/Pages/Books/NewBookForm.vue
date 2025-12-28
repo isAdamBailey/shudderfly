@@ -6,7 +6,7 @@ import MapPicker from "@/Components/Map/MapPicker.vue";
 import Accordion from "@/Components/Accordion.vue";
 import { useForm, usePage } from "@inertiajs/vue3";
 import Multiselect from "@vueform/multiselect";
-import { computed } from "vue";
+import { computed, ref } from "vue";
 
 const props = defineProps({
     authors: {
@@ -20,6 +20,7 @@ const props = defineProps({
 });
 
 const currentUser = usePage().props.auth.user.name;
+const isLocationOpen = ref(false);
 
 const categoriesOptions = computed(() => {
     return props.categories.map((category) => {
@@ -48,13 +49,17 @@ const authorsOptions = computed(() => {
         : [];
 });
 
+const handleAddressFocus = () => {
+    isLocationOpen.value = true;
+};
+
 const submit = () => {
     form.post(route("books.store"), {});
 };
 </script>
 
 <template>
-    <div class="bg-white dark:bg-gray-800 p-5">
+    <div class="bg-white dark:bg-gray-800 p-5 w-full">
         <form @submit.prevent="submit">
             <div>
                 <BreezeLabel for="author" value="Author Name" />
@@ -98,20 +103,19 @@ const submit = () => {
                     class="mt-1 block w-full"
                     autocomplete="excerpt"
                 />
+                <div class="dark:text-gray-100 text-sm">
+                    Any text added to "title" or "excerpt" can be searched to
+                    find the book later.
+                </div>
             </div>
 
             <div class="mt-4">
-                <Accordion title="Location">
-                    <MapPicker
-                        v-model:latitude="form.latitude"
-                        v-model:longitude="form.longitude"
-                    />
-                </Accordion>
-            </div>
-
-            <div class="my-8 dark:text-gray-100">
-                Any text added to "title" or "excerpt" can be searched to find
-                the book later.
+                <MapPicker
+                    v-model:latitude="form.latitude"
+                    v-model:longitude="form.longitude"
+                    :open-map="isLocationOpen"
+                    @address-focus="handleAddressFocus"
+                />
             </div>
 
             <div class="flex items-center justify-end mt-4">
