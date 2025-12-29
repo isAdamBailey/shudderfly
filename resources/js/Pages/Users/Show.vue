@@ -5,7 +5,7 @@ import MessageTimeline from "@/Components/Messages/MessageTimeline.vue";
 import StatCard from "@/Components/StatCard.vue";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
-import { Head, Link } from "@inertiajs/vue3";
+import { Head } from "@inertiajs/vue3";
 import { computed, defineOptions } from "vue";
 
 defineOptions({
