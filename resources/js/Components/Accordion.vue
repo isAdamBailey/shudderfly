@@ -1,8 +1,19 @@
 <template>
-    <div :class="['bg-white dark:bg-gray-800', darkBackground ? 'bg-gray-800' : '']">
+    <div
+        :class="[
+            'bg-white dark:bg-gray-800',
+            darkBackground ? 'bg-gray-800' : '',
+        ]"
+    >
         <button
             type="button"
-            :class="['w-full flex justify-between items-center font-semibold border-b relative', darkBackground ? 'bg-gray-800 text-gray-100 border-gray-700' : 'dark:text-gray-100', compact ? 'text-base p-3' : 'text-xl p-6']"
+            :class="[
+                'w-full flex justify-between items-center font-semibold border-b relative',
+                darkBackground
+                    ? 'bg-gray-800 text-gray-100 border-gray-700'
+                    : 'dark:text-gray-100',
+                compact ? 'text-base p-3' : 'text-xl p-6',
+            ]"
             @click="isOpen = !isOpen"
         >
             <span class="flex items-center gap-2">
@@ -19,7 +30,14 @@
             ></i>
         </button>
 
-        <div v-show="isOpen" :class="[darkBackground ? 'bg-gray-800' : '', compact ? 'p-3' : 'p-6']">
+        <div
+            v-show="isOpen"
+            :class="[
+                darkBackground ? 'bg-gray-800' : '',
+                compact ? 'p-3' : 'p-6',
+                'overflow-visible',
+            ]"
+        >
             <slot></slot>
         </div>
     </div>

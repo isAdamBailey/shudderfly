@@ -14,6 +14,7 @@ use App\Http\Controllers\MusicController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\UserController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -42,6 +43,8 @@ Route::middleware('auth')->group(function () {
     })->name('rules');
 
     Route::get('/dashboard', [DashboardController::class, 'show'])->name('dashboard');
+
+    Route::get('/users/{user:email}', [UserController::class, 'show'])->name('users.show');
 
     Route::get('/photos', [PageController::class, 'index'])->name('pictures.index');
 
@@ -107,8 +110,10 @@ Route::middleware('auth')->group(function () {
 
         Route::post('/music/sync', [MusicController::class, 'sync'])->name('music.sync');
 
-        Route::put('/admin/permissions', [AdminController::class, 'update'])->name('admin.permissions');
-        Route::delete('/admin', [AdminController::class, 'destroy'])->name('admin.destroy');
+        Route::group(['middleware' => ['can:admin']], function () {
+            Route::put('/admin/permissions', [AdminController::class, 'update'])->name('admin.permissions');
+            Route::delete('/admin', [AdminController::class, 'destroy'])->name('admin.destroy');
+        });
 
         Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
 

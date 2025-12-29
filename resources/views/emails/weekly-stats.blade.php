@@ -9,7 +9,9 @@
 @foreach($booksThisWeek as $book)
 <p>
     <x-email-hyperlink href="{{url('/book/' . $book->slug)}}">{{ $book->title }}</x-email-hyperlink>
-    by: {{ $book->author }}
+    @if($book->author)
+    by: <x-email-hyperlink href="{{url('/users/' . urlencode(\App\Models\User::where('name', $book->author)->value('email') ?? $book->author))}}">{{ $book->author }}</x-email-hyperlink>
+    @endif
 </p>
 @endforeach
 @endif
@@ -42,7 +44,9 @@
 @foreach($mostRead as $book)
 <p>
     <x-email-hyperlink href="{{ url('/book/' . $book->slug) }}">{{ $book->title }}</x-email-hyperlink>
-    by: {{ $book->author }}
+    @if($book->author)
+    by: <x-email-hyperlink href="{{url('/users/' . urlencode(\App\Models\User::where('name', $book->author)->value('email') ?? $book->author))}}">{{ $book->author }}</x-email-hyperlink>
+    @endif
 </p>
 @endforeach
 
@@ -69,7 +73,14 @@ only has {{ $leastPages->pages_count }} pages.
 
 @foreach ($bookCounts as $userName => $count)
 <p>
+    @php
+        $userEmail = \App\Models\User::where('name', $userName)->value('email');
+    @endphp
+    @if($userEmail)
+    <x-email-hyperlink href="{{url('/users/' . urlencode($userEmail))}}">{{ $userName }}</x-email-hyperlink>: <strong>{{ $count }}</strong>
+    @else
     {{ $userName }}: <strong>{{ $count }}</strong>
+    @endif
 </p>
 @endforeach
 
