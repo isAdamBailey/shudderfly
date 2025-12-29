@@ -49,9 +49,7 @@ const formatDate = (dateString) => {
 
 const speakTopBooks = () => {
     const bookTexts = props.stats.topBooks.map((book, index) => {
-        return `${index + 1}. ${book.title}: popularity ${
-            book.popularity_percentage ?? 0
-        } percent`;
+        return `${index + 1}. ${book.title}`;
     });
     const fullText = "Top books by popularity. " + bookTexts.join(". ") + ".";
     speak(fullText);
@@ -59,9 +57,7 @@ const speakTopBooks = () => {
 
 const speakRecentBooks = () => {
     const bookTexts = props.stats.recentBooks.map((book, index) => {
-        return `${index + 1}. ${book.title}: popularity ${
-            book.popularity_percentage ?? 0
-        } percent`;
+        return `${index + 1}. ${book.title}`;
     });
     const fullText = "Recent books created. " + bookTexts.join(". ") + ".";
     speak(fullText);
@@ -183,10 +179,6 @@ const speakUserSummary = () => {
                                     icon="ri-book-line"
                                     icon-color="text-blue-600 dark:text-blue-400"
                                     :label="book.title"
-                                    :value="`popularity ${
-                                        book.popularity_percentage ?? 0
-                                    }%`"
-                                    :subtitle="''"
                                     :href="route('books.show', book.slug)"
                                     :cover-image="book.cover_image?.media_path"
                                 />

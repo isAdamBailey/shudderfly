@@ -17,7 +17,8 @@ defineProps({
     },
     value: {
         type: [String, Number],
-        required: true,
+        required: false,
+        default: null,
     },
     href: {
         type: String,
@@ -67,6 +68,7 @@ defineProps({
                     {{ label }}
                 </div>
                 <div
+                    v-if="value"
                     class="font-bold text-2xl text-gray-900 dark:text-gray-100"
                 >
                     {{ value }}

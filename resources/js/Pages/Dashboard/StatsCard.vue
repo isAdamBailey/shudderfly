@@ -475,44 +475,33 @@
                     <div
                         v-for="(book, index) in statsData.mostReadBooks || []"
                         :key="book.id"
-                        class="flex items-center justify-between"
+                        class="flex items-center"
                     >
-                        <div class="flex items-center flex-1">
-                            <span class="text-gray-500 dark:text-gray-400 mr-2"
-                                >{{ index + 1 }}.</span
-                            >
-                            <Link
-                                class="flex items-center font-medium hover:text-blue-400 truncate"
-                                :href="route('books.show', book.slug)"
-                                :aria-label="`View book ${book.title}`"
-                                :title="book.title"
-                            >
-                                <div class="flex-shrink-0 mr-3">
-                                    <img
-                                        v-if="book.cover_image?.media_path"
-                                        :src="book.cover_image.media_path"
-                                        :alt="book.title"
-                                        class="w-10 h-10 rounded-lg object-cover"
-                                        @error="
-                                            (e) =>
-                                                (e.target.style.display =
-                                                    'none')
-                                        "
-                                    />
-                                </div>
-
-                                <span
-                                    class="truncate"
-                                    style="max-width: 100%"
-                                    >{{ book.title }}</span
-                                >
-                            </Link>
-                        </div>
-                        <span
-                            class="text-sm text-gray-500 dark:text-gray-400 ml-2 whitespace-nowrap"
+                        <span class="text-gray-500 dark:text-gray-400 mr-2"
+                            >{{ index + 1 }}.</span
                         >
-                            popularity {{ book.popularity_percentage ?? 0 }}%
-                        </span>
+                        <Link
+                            class="flex items-center font-medium hover:text-blue-400 truncate"
+                            :href="route('books.show', book.slug)"
+                            :aria-label="`View book ${book.title}`"
+                            :title="book.title"
+                        >
+                            <div class="flex-shrink-0 mr-3">
+                                <img
+                                    v-if="book.cover_image?.media_path"
+                                    :src="book.cover_image.media_path"
+                                    :alt="book.title"
+                                    class="w-10 h-10 rounded-lg object-cover"
+                                    @error="
+                                        (e) => (e.target.style.display = 'none')
+                                    "
+                                />
+                            </div>
+
+                            <span class="truncate" style="max-width: 100%">{{
+                                book.title
+                            }}</span>
+                        </Link>
                     </div>
                 </div>
             </div>
@@ -549,48 +538,37 @@
                     <div
                         v-for="(song, index) in statsData.mostReadSongs || []"
                         :key="song.id"
-                        class="flex items-center justify-between"
+                        class="flex items-center"
                     >
-                        <div class="flex items-center flex-1">
-                            <span class="text-gray-500 dark:text-gray-400 mr-2"
-                                >{{ index + 1 }}.</span
-                            >
-                            <button
-                                type="button"
-                                class="flex items-center font-medium hover:text-blue-400 truncate cursor-pointer"
-                                :aria-label="`Play song ${song.title}`"
-                                :title="song.title"
-                                @click="
-                                    playSong(song);
-                                    openFlyout();
-                                "
-                            >
-                                <div class="flex-shrink-0 mr-3">
-                                    <img
-                                        v-if="song.thumbnail_default"
-                                        :src="song.thumbnail_default"
-                                        :alt="song.title"
-                                        class="w-10 h-10 rounded-lg object-cover"
-                                        @error="
-                                            (e) =>
-                                                (e.target.style.display =
-                                                    'none')
-                                        "
-                                    />
-                                </div>
-
-                                <span
-                                    class="truncate"
-                                    style="max-width: 100%"
-                                    >{{ song.title }}</span
-                                >
-                            </button>
-                        </div>
-                        <span
-                            class="text-sm text-gray-500 dark:text-gray-400 ml-2 whitespace-nowrap"
+                        <span class="text-gray-500 dark:text-gray-400 mr-2"
+                            >{{ index + 1 }}.</span
                         >
-                            popularity {{ song.popularity_percentage ?? 0 }}%
-                        </span>
+                        <button
+                            type="button"
+                            class="flex items-center font-medium hover:text-blue-400 truncate cursor-pointer"
+                            :aria-label="`Play song ${song.title}`"
+                            :title="song.title"
+                            @click="
+                                playSong(song);
+                                openFlyout();
+                            "
+                        >
+                            <div class="flex-shrink-0 mr-3">
+                                <img
+                                    v-if="song.thumbnail_default"
+                                    :src="song.thumbnail_default"
+                                    :alt="song.title"
+                                    class="w-10 h-10 rounded-lg object-cover"
+                                    @error="
+                                        (e) => (e.target.style.display = 'none')
+                                    "
+                                />
+                            </div>
+
+                            <span class="truncate" style="max-width: 100%">{{
+                                song.title
+                            }}</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -665,32 +643,17 @@ function speakTopBooks() {
     const books = statsData.value?.mostReadBooks || [];
     if (!books.length) return;
 
-    const items = books
-        .slice(0, 5)
-        .map(
-            (b, i) =>
-                `${i + 1}. ${b.title}, popularity ${
-                    b.popularity_percentage ?? 0
-                } percent`
-        );
-    const phrase = `Top five books: ${items.join(". ")}.`;
+    const items = books.slice(0, 5).map((b, i) => `${i + 1}. ${b.title}`);
+    const phrase = `Top five most popular books: ${items.join(". ")}.`;
     speak(phrase);
 }
 
-// Speak the top 5 songs as a single short phrase.
 function speakTopSongs() {
     const songs = statsData.value?.mostReadSongs || [];
     if (!songs.length) return;
 
-    const items = songs
-        .slice(0, 5)
-        .map(
-            (s, i) =>
-                `${i + 1}. ${s.title}, popularity ${
-                    s.popularity_percentage ?? 0
-                } percent`
-        );
-    const phrase = `Top five songs: ${items.join(". ")}.`;
+    const items = songs.slice(0, 5).map((s, i) => `${i + 1}. ${s.title}`);
+    const phrase = `Top five most popular songs: ${items.join(". ")}.`;
     speak(phrase);
 }
 </script>
