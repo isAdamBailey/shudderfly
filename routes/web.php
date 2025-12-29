@@ -110,10 +110,8 @@ Route::middleware('auth')->group(function () {
 
         Route::post('/music/sync', [MusicController::class, 'sync'])->name('music.sync');
 
-        Route::group(['middleware' => ['can:admin']], function () {
-            Route::put('/admin/permissions', [AdminController::class, 'update'])->name('admin.permissions');
-            Route::delete('/admin', [AdminController::class, 'destroy'])->name('admin.destroy');
-        });
+        Route::put('/admin/permissions', [AdminController::class, 'update'])->name('admin.permissions');
+        Route::delete('/admin', [AdminController::class, 'destroy'])->name('admin.destroy');
 
         Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
 
