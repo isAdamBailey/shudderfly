@@ -7,6 +7,7 @@ use App\Models\Book;
 use App\Models\Page;
 use App\Models\Song;
 use App\Models\User;
+use App\Services\PopularityService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail;
@@ -14,25 +15,14 @@ use Spatie\Permission\Models\Permission;
 
 class SendWeeklyStatsMail extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
     protected $signature = 'send:weekly-stats-mail';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'This command sends an email containing the weekly stats of the application.';
+    protected $description = 'Send weekly stats email to users with edit pages permission';
 
-    /**
-     * Execute the console command.
-     */
     public function handle()
     {
+        $popularityService = app(PopularityService::class);
+
         $permission = Permission::findByName('edit pages');
         $users = $permission->users;
 
@@ -47,11 +37,14 @@ class SendWeeklyStatsMail extends Command
             ->orderBy('pages_count', 'desc')
             ->orderBy('created_at')
             ->first();
-        $mostRead = Book::query()
-            ->orderBy('read_count', 'desc')
-            ->orderBy('created_at')
-            ->take(5)
-            ->get();
+        $mostRead = $popularityService->addPopularityToCollection(
+            Book::query()
+                ->orderBy('read_count', 'desc')
+                ->orderBy('created_at')
+                ->take(5)
+                ->get(),
+            Book::class
+        );
         $leastRead = Book::query()
             ->orderBy('read_count')
             ->orderBy('created_at')
@@ -72,10 +65,13 @@ class SendWeeklyStatsMail extends Command
             ->where('created_at', '>=', $oneWeekAgo)
             ->get();
         $songsThisWeek = Song::where('created_at', '>=', $oneWeekAgo)->get();
-        $mostReadSongs = Song::query()
-            ->orderBy('read_count', 'desc')
-            ->take(5)
-            ->get();
+        $mostReadSongs = $popularityService->addPopularityToCollection(
+            Song::query()
+                ->orderBy('read_count', 'desc')
+                ->take(5)
+                ->get(),
+            Song::class
+        );
 
         foreach ($users as $user) {
             Mail::to($user->email)->send(new WeeklyStatsMail(

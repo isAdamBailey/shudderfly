@@ -32,6 +32,7 @@ describe("UserShow", () => {
                 title: "Test Book 1",
                 slug: "test-book-1",
                 read_count: 100,
+                popularity_percentage: 95,
                 cover_image: { media_path: "/path/to/cover1.jpg" },
                 created_at: "2024-11-01T10:00:00.000000Z",
             },
@@ -40,6 +41,7 @@ describe("UserShow", () => {
                 title: "Test Book 2",
                 slug: "test-book-2",
                 read_count: 50,
+                popularity_percentage: 75,
                 cover_image: null,
                 created_at: "2024-10-15T10:00:00.000000Z",
             },
@@ -50,6 +52,7 @@ describe("UserShow", () => {
                 title: "Recent Book 1",
                 slug: "recent-book-1",
                 read_count: 10,
+                popularity_percentage: 50,
                 cover_image: { media_path: "/path/to/cover3.jpg" },
                 created_at: "2024-12-01T10:00:00.000000Z",
             },
@@ -58,6 +61,7 @@ describe("UserShow", () => {
                 title: "Recent Book 2",
                 slug: "recent-book-2",
                 read_count: 5,
+                popularity_percentage: 25,
                 cover_image: null,
                 created_at: "2024-11-20T10:00:00.000000Z",
             },
@@ -121,7 +125,7 @@ describe("UserShow", () => {
         expect(wrapper.text()).toContain("Member since");
     });
 
-    it("displays top books by read count", () => {
+    it("displays top books by popularity", () => {
         const wrapper = mount(UserShow, {
             props: {
                 profileUser,
@@ -144,12 +148,11 @@ describe("UserShow", () => {
             },
         });
 
-        expect(wrapper.text()).toContain("Top Books by Read Count");
+        expect(wrapper.text()).toContain("Top Books by");
         expect(wrapper.text()).toContain("Test Book 1");
         expect(wrapper.text()).toContain("Test Book 2");
-        expect(wrapper.text()).toContain("100");
-        expect(wrapper.text()).toContain("reads");
-        expect(wrapper.text()).toContain("50");
+        expect(wrapper.text()).toContain("popularity 95%");
+        expect(wrapper.text()).toContain("popularity 75%");
     });
 
     it("displays messages count stat", () => {

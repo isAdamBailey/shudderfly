@@ -49,17 +49,19 @@ const formatDate = (dateString) => {
 
 const speakTopBooks = () => {
     const bookTexts = props.stats.topBooks.map((book, index) => {
-        const reads = book.read_count === 1 ? "read" : "reads";
-        return `${index + 1}. ${book.title}: ${book.read_count} ${reads}`;
+        return `${index + 1}. ${book.title}: popularity ${
+            book.popularity_percentage ?? 0
+        } percent`;
     });
-    const fullText = "Top books by read count. " + bookTexts.join(". ") + ".";
+    const fullText = "Top books by popularity. " + bookTexts.join(". ") + ".";
     speak(fullText);
 };
 
 const speakRecentBooks = () => {
     const bookTexts = props.stats.recentBooks.map((book, index) => {
-        const reads = book.read_count === 1 ? "read" : "reads";
-        return `${index + 1}. ${book.title}: ${book.read_count} ${reads}`;
+        return `${index + 1}. ${book.title}: popularity ${
+            book.popularity_percentage ?? 0
+        } percent`;
     });
     const fullText = "Recent books created. " + bookTexts.join(". ") + ".";
     speak(fullText);
@@ -181,10 +183,10 @@ const speakUserSummary = () => {
                                     icon="ri-book-line"
                                     icon-color="text-blue-600 dark:text-blue-400"
                                     :label="book.title"
-                                    :value="Math.floor(book.read_count).toLocaleString()"
-                                    :subtitle="
-                                        book.read_count !== 1 ? 'reads' : 'read'
-                                    "
+                                    :value="`popularity ${
+                                        book.popularity_percentage ?? 0
+                                    }%`"
+                                    :subtitle="''"
                                     :href="route('books.show', book.slug)"
                                     :cover-image="book.cover_image?.media_path"
                                 />
@@ -247,10 +249,10 @@ const speakUserSummary = () => {
                                     icon="ri-book-line"
                                     icon-color="text-purple-600 dark:text-purple-400"
                                     :label="book.title"
-                                    :value="Math.floor(book.read_count).toLocaleString()"
-                                    :subtitle="`${
-                                        book.read_count !== 1 ? 'reads' : 'read'
-                                    } • ${formatDate(book.created_at)}`"
+                                    :value="`popularity ${
+                                        book.popularity_percentage ?? 0
+                                    }%`"
+                                    :subtitle="`${formatDate(book.created_at)}`"
                                     :href="route('books.show', book.slug)"
                                     :cover-image="book.cover_image?.media_path"
                                 />
@@ -276,7 +278,9 @@ const speakUserSummary = () => {
                             icon="ri-eye-line"
                             icon-color="text-green-600 dark:text-green-400"
                             label="Total Reads"
-                            :value="Math.floor(stats.totalReads).toLocaleString()"
+                            :value="
+                                Math.floor(stats.totalReads).toLocaleString()
+                            "
                         />
                     </div>
                 </div>

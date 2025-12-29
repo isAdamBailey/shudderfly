@@ -40,13 +40,14 @@
 ## {{ number_format($totalPages) }} all time total pages.
 ## {{ number_format($totalSongs) }} all time total songs.
 
-## Top 5 Most Read Books
+## Top 5 Most Popular Books
 @foreach($mostRead as $book)
 <p>
     <x-email-hyperlink href="{{ url('/book/' . $book->slug) }}">{{ $book->title }}</x-email-hyperlink>
     @if($book->author)
     by: <x-email-hyperlink href="{{url('/users/' . urlencode(\App\Models\User::where('name', $book->author)->value('email') ?? $book->author))}}">{{ $book->author }}</x-email-hyperlink>
     @endif
+    - popularity {{ $book->popularity_percentage ?? 0 }}%
 </p>
 @endforeach
 
@@ -54,6 +55,7 @@
 @foreach($mostReadSongs as $song)
 <p>
     <x-email-hyperlink href="{{ route('music.show', $song['id']) }}">{{ $song['title'] }}</x-email-hyperlink>
+    - popularity {{ $song['popularity_percentage'] ?? 0 }}%
 </p>
 @endforeach
 

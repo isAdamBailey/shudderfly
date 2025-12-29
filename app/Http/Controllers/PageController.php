@@ -15,6 +15,7 @@ use App\Models\Message;
 use App\Models\Page;
 use App\Models\SiteSetting;
 use App\Models\Song;
+use App\Services\PopularityService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
@@ -27,6 +28,10 @@ use Inertia\Response;
 
 class PageController extends Controller
 {
+    public function __construct(
+        private PopularityService $popularityService
+    ) {}
+
     /**
      * Determine the type of page based on its media properties
      */
@@ -330,6 +335,8 @@ class PageController extends Controller
             : [];
 
         $collages = Collage::with('pages')->latest()->limit(4)->get();
+
+        $page->popularity_percentage = $this->popularityService->calculatePopularity($page);
 
         return Inertia::render('Page/Show', [
             'page' => $page,

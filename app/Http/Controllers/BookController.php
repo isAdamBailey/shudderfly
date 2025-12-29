@@ -9,6 +9,7 @@ use App\Jobs\IncrementBookReadCount;
 use App\Models\Book;
 use App\Models\Category;
 use App\Models\User;
+use App\Services\PopularityService;
 use App\Support\ThemeBooks;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Collection;
@@ -23,6 +24,9 @@ use Inertia\Response;
 
 class BookController extends Controller
 {
+    public function __construct(
+        private PopularityService $popularityService
+    ) {}
     /**
      * Display a listing of the resource.
      */
@@ -157,8 +161,12 @@ class BookController extends Controller
             ? Book::all()->map->only(['id', 'title'])->sortBy('title')->values()->toArray()
             : [];
 
+        // Add popularity percentage to the book
+        $book->load(['coverImage', 'category']);
+        $book->popularity_percentage = $this->popularityService->calculatePopularity($book);
+
         return Inertia::render('Book/Show', [
-            'book' => $book->load(['coverImage', 'category']),
+            'book' => $book,
             'pages' => $pages,
             'authors' => $authors,
             'categories' => $categories,

@@ -477,7 +477,7 @@
                         :key="book.id"
                         class="flex items-center justify-between"
                     >
-                        <div class="flex items-center">
+                        <div class="flex items-center flex-1">
                             <span class="text-gray-500 dark:text-gray-400 mr-2"
                                 >{{ index + 1 }}.</span
                             >
@@ -508,6 +508,11 @@
                                 >
                             </Link>
                         </div>
+                        <span
+                            class="text-sm text-gray-500 dark:text-gray-400 ml-2 whitespace-nowrap"
+                        >
+                            popularity {{ book.popularity_percentage ?? 0 }}%
+                        </span>
                     </div>
                 </div>
             </div>
@@ -546,7 +551,7 @@
                         :key="song.id"
                         class="flex items-center justify-between"
                     >
-                        <div class="flex items-center">
+                        <div class="flex items-center flex-1">
                             <span class="text-gray-500 dark:text-gray-400 mr-2"
                                 >{{ index + 1 }}.</span
                             >
@@ -581,6 +586,11 @@
                                 >
                             </button>
                         </div>
+                        <span
+                            class="text-sm text-gray-500 dark:text-gray-400 ml-2 whitespace-nowrap"
+                        >
+                            popularity {{ song.popularity_percentage ?? 0 }}%
+                        </span>
                     </div>
                 </div>
             </div>
@@ -655,7 +665,14 @@ function speakTopBooks() {
     const books = statsData.value?.mostReadBooks || [];
     if (!books.length) return;
 
-    const items = books.slice(0, 5).map((b, i) => `${i + 1}. ${b.title}`);
+    const items = books
+        .slice(0, 5)
+        .map(
+            (b, i) =>
+                `${i + 1}. ${b.title}, popularity ${
+                    b.popularity_percentage ?? 0
+                } percent`
+        );
     const phrase = `Top five books: ${items.join(". ")}.`;
     speak(phrase);
 }
@@ -665,7 +682,14 @@ function speakTopSongs() {
     const songs = statsData.value?.mostReadSongs || [];
     if (!songs.length) return;
 
-    const items = songs.slice(0, 5).map((s, i) => `${i + 1}. ${s.title}`);
+    const items = songs
+        .slice(0, 5)
+        .map(
+            (s, i) =>
+                `${i + 1}. ${s.title}, popularity ${
+                    s.popularity_percentage ?? 0
+                } percent`
+        );
     const phrase = `Top five songs: ${items.join(". ")}.`;
     speak(phrase);
 }

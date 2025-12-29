@@ -7,12 +7,14 @@ use App\Models\Category;
 use App\Models\Page;
 use App\Models\Song;
 use App\Models\User;
+use App\Services\PopularityService;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
     public function __construct(
-        private SettingsController $settingsController
+        private SettingsController $settingsController,
+        private PopularityService $popularityService
     ) {}
 
     public function show()
@@ -30,18 +32,22 @@ class DashboardController extends Controller
                     ->where('media_path', 'not like', '%snapshot%')
                     ->count(),
                 'numberOfScreenshots' => Page::where('media_path', 'like', '%snapshot%')->count(),
-                'mostReadBooks' => Book::query()
-                    ->with('coverImage')
-                    ->orderBy('read_count', 'desc')
-                    ->orderBy('created_at')
-                    ->take(5)
-                    ->get()
-                    ->toArray(),
-                'mostReadSongs' => Song::query()
-                    ->orderBy('read_count', 'desc')
-                    ->take(5)
-                    ->get()
-                    ->toArray(),
+                'mostReadBooks' => $this->popularityService->addPopularityToCollection(
+                    Book::query()
+                        ->with('coverImage')
+                        ->orderBy('read_count', 'desc')
+                        ->orderBy('created_at')
+                        ->take(5)
+                        ->get(),
+                    Book::class
+                )->toArray(),
+                'mostReadSongs' => $this->popularityService->addPopularityToCollection(
+                    Song::query()
+                        ->orderBy('read_count', 'desc')
+                        ->take(5)
+                        ->get(),
+                    Song::class
+                )->toArray(),
                 'leastPages' => Book::with('coverImage')
                     ->withCount('pages')
                     ->orderBy('pages_count')

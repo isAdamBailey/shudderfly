@@ -5,11 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\Book;
 use App\Models\Message;
 use App\Models\User;
+use App\Services\PopularityService;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class UserController extends Controller
 {
+    public function __construct(
+        private PopularityService $popularityService
+    ) {}
+
     /**
      * Display the specified user's profile.
      */
@@ -20,18 +25,24 @@ class UserController extends Controller
         // Calculate total reads across ALL user's books
         $totalReads = Book::where('author', $user->name)->sum('read_count');
 
-        $topBooks = Book::where('author', $user->name)
-            ->with('coverImage')
-            ->orderBy('read_count', 'desc')
-            ->orderBy('created_at', 'desc')
-            ->take(5)
-            ->get();
+        $topBooks = $this->popularityService->addPopularityToCollection(
+            Book::where('author', $user->name)
+                ->with('coverImage')
+                ->orderBy('read_count', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->take(5)
+                ->get(),
+            Book::class
+        );
 
-        $recentBooks = Book::where('author', $user->name)
-            ->with('coverImage')
-            ->orderBy('created_at', 'desc')
-            ->take(5)
-            ->get();
+        $recentBooks = $this->popularityService->addPopularityToCollection(
+            Book::where('author', $user->name)
+                ->with('coverImage')
+                ->orderBy('created_at', 'desc')
+                ->take(5)
+                ->get(),
+            Book::class
+        );
 
         $messagesCount = Message::where('user_id', $user->id)->count();
 
