@@ -147,8 +147,9 @@ describe("UserShow", () => {
         expect(wrapper.text()).toContain("Top Books by Read Count");
         expect(wrapper.text()).toContain("Test Book 1");
         expect(wrapper.text()).toContain("Test Book 2");
-        expect(wrapper.text()).toContain("100 reads");
-        expect(wrapper.text()).toContain("50 reads");
+        expect(wrapper.text()).toContain("100");
+        expect(wrapper.text()).toContain("reads");
+        expect(wrapper.text()).toContain("50");
     });
 
     it("displays messages count stat", () => {

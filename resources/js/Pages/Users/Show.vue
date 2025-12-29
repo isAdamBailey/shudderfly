@@ -64,6 +64,13 @@ const speakRecentBooks = () => {
     const fullText = "Recent books created. " + bookTexts.join(". ") + ".";
     speak(fullText);
 };
+
+const speakUserSummary = () => {
+    const books = props.stats.totalBooksCount === 1 ? "book" : "books";
+    const messages = props.stats.messagesCount === 1 ? "message" : "messages";
+    const summary = `${props.profileUser.name}. Member since ${memberSince.value}. ${props.stats.totalBooksCount} ${books} created. ${props.stats.messagesCount} ${messages} posted.`;
+    speak(summary);
+};
 </script>
 
 <template>
@@ -86,21 +93,37 @@ const speakRecentBooks = () => {
                         <div class="flex items-start gap-6">
                             <Avatar :user="profileUser" size="xl" />
                             <div class="flex-1">
-                                <h1
-                                    class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2"
-                                >
-                                    {{ profileUser.name }}
-                                </h1>
-                                <p
-                                    class="text-gray-600 dark:text-gray-400 mb-4"
-                                >
-                                    {{ profileUser.email }}
-                                </p>
-                                <div
-                                    class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400"
-                                >
-                                    <i class="ri-calendar-line"></i>
-                                    <span>Member since {{ memberSince }}</span>
+                                <div class="flex items-start justify-between">
+                                    <div>
+                                        <h1
+                                            class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2"
+                                        >
+                                            {{ profileUser.name }}
+                                        </h1>
+                                        <p
+                                            class="text-gray-600 dark:text-gray-400 mb-4"
+                                        >
+                                            {{ profileUser.email }}
+                                        </p>
+                                        <div
+                                            class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400"
+                                        >
+                                            <i class="ri-calendar-line"></i>
+                                            <span
+                                                >Member since
+                                                {{ memberSince }}</span
+                                            >
+                                        </div>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        :disabled="speaking"
+                                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 p-1.5 h-8 w-8"
+                                        aria-label="Speak user summary"
+                                        @click="speakUserSummary"
+                                    >
+                                        <i class="ri-speak-fill text-lg"></i>
+                                    </Button>
                                 </div>
                             </div>
                         </div>
