@@ -833,7 +833,7 @@ const deleteMessage = (messageId) => {
 };
 
 const navigateToMessage = (messageId) => {
-    router.visit(route("messages.index") + `#message-${messageId}`);
+    window.location.href = route("messages.index") + `#message-${messageId}`;
 };
 
 const setupEchoListener = () => {
