@@ -43,7 +43,7 @@ export function useInfiniteScroll(initialItems, paginationData) {
         observer = new IntersectionObserver(
             (entries) =>
                 entries.forEach((entry) => entry.isIntersecting && fetchMore()),
-            { rootMargin: "0px 500px 0px 0px" }
+            { rootMargin: "0px 0px 500px 0px" }
         );
 
         if (infiniteScrollRef.value) {
