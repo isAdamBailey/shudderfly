@@ -26,6 +26,19 @@ class DashboardTest extends TestCase
         );
     }
 
+    public function test_non_admin_users_can_access_dashboard()
+    {
+        $user = User::factory()->create();
+        // Don't give admin permission
+
+        $response = $this->actingAs($user)->get(route('dashboard'));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Dashboard/Index')
+        );
+    }
+
     public function test_dashboard_queries_work_with_data()
     {
         $user = User::factory()->create();

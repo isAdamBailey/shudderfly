@@ -67,4 +67,36 @@ class AdminPermissionsTest extends TestCase
 
         $response->assertRedirect(route('dashboard'));
     }
+
+    public function test_non_admin_users_cannot_update_permissions()
+    {
+        $this->actingAs($user = User::factory()->create());
+        // User does not have admin permission
+
+        $editUser = User::factory()->create();
+
+        $payload = [
+            'user' => $editUser->toArray(),
+            'permissions' => ['edit pages'],
+        ];
+        $response = $this->put(route('admin.permissions'), $payload);
+
+        $response->assertStatus(403); // Forbidden
+    }
+
+    public function test_non_admin_users_cannot_delete_users()
+    {
+        $this->actingAs($user = User::factory()->create());
+        // User does not have admin permission
+
+        $deleteUser = User::factory()->create();
+
+        $payload = [
+            'email' => $deleteUser->email,
+        ];
+        $response = $this->delete(route('admin.destroy'), $payload);
+
+        $response->assertStatus(403); // Forbidden
+        $this->assertTrue(User::where('id', $deleteUser->id)->exists());
+    }
 }
