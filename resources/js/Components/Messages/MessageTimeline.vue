@@ -25,11 +25,18 @@
                 <div class="flex items-center gap-2 flex-1 min-w-0">
                     <Avatar :user="message.user" size="sm" />
                     <Link
+                        v-if="message.user?.email"
                         :href="route('users.show', message.user.email)"
                         class="font-semibold text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                     >
                         {{ message.user.name }}
                     </Link>
+                    <span
+                        v-else
+                        class="font-semibold text-gray-900 dark:text-gray-100"
+                    >
+                        {{ message.user?.name || 'Unknown User' }}
+                    </span>
                     <span class="text-sm text-gray-500 dark:text-gray-400">
                         {{ formatDate(message.created_at) }}
                     </span>
