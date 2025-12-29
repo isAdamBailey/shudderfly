@@ -181,7 +181,7 @@ const speakUserSummary = () => {
                                     icon="ri-book-line"
                                     icon-color="text-blue-600 dark:text-blue-400"
                                     :label="book.title"
-                                    :value="book.read_count.toLocaleString()"
+                                    :value="Math.floor(book.read_count).toLocaleString()"
                                     :subtitle="
                                         book.read_count !== 1 ? 'reads' : 'read'
                                     "
@@ -247,7 +247,7 @@ const speakUserSummary = () => {
                                     icon="ri-book-line"
                                     icon-color="text-purple-600 dark:text-purple-400"
                                     :label="book.title"
-                                    :value="book.read_count.toLocaleString()"
+                                    :value="Math.floor(book.read_count).toLocaleString()"
                                     :subtitle="`${
                                         book.read_count !== 1 ? 'reads' : 'read'
                                     } • ${formatDate(book.created_at)}`"
@@ -276,7 +276,7 @@ const speakUserSummary = () => {
                             icon="ri-eye-line"
                             icon-color="text-green-600 dark:text-green-400"
                             label="Total Reads"
-                            :value="stats.totalReads.toLocaleString()"
+                            :value="Math.floor(stats.totalReads).toLocaleString()"
                         />
                     </div>
                 </div>

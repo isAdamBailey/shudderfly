@@ -833,7 +833,12 @@ const deleteMessage = (messageId) => {
 };
 
 const navigateToMessage = (messageId) => {
-    window.location.href = route("messages.index") + `#message-${messageId}`;
+    // Construct URL exactly like notifications do
+    let url = route("messages.index");
+    if (messageId) {
+        url = `${url}#message-${messageId}`;
+    }
+    router.visit(url);
 };
 
 const setupEchoListener = () => {
