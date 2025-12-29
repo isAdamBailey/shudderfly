@@ -25,6 +25,7 @@ describe("UserShow", () => {
 
     const stats = {
         totalBooksCount: 4,
+        totalReads: 165, // Sum of all book reads
         topBooks: [
             {
                 id: 1,

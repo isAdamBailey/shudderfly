@@ -17,6 +17,9 @@ class UserController extends Controller
     {
         $totalBooksCount = Book::where('author', $user->name)->count();
 
+        // Calculate total reads across ALL user's books
+        $totalReads = Book::where('author', $user->name)->sum('read_count');
+
         $topBooks = Book::where('author', $user->name)
             ->with('coverImage')
             ->orderBy('read_count', 'desc')
@@ -45,6 +48,7 @@ class UserController extends Controller
             'profileUser' => $user,
             'stats' => [
                 'totalBooksCount' => $totalBooksCount,
+                'totalReads' => $totalReads,
                 'topBooks' => $topBooks,
                 'recentBooks' => $recentBooks,
                 'messagesCount' => $messagesCount,
@@ -53,3 +57,4 @@ class UserController extends Controller
         ]);
     }
 }
+
