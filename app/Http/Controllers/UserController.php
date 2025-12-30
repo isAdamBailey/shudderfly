@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Book;
 use App\Models\Message;
+use App\Models\MessageComment;
 use App\Models\User;
 use App\Services\PopularityService;
 use Inertia\Inertia;
@@ -21,9 +22,6 @@ class UserController extends Controller
     public function show(User $user): Response
     {
         $totalBooksCount = Book::where('author', $user->name)->count();
-
-        // Calculate total reads across ALL user's books
-        $totalReads = Book::where('author', $user->name)->sum('read_count');
 
         $topBooks = $this->popularityService->addPopularityToCollection(
             Book::where('author', $user->name)
@@ -46,6 +44,21 @@ class UserController extends Controller
 
         $messagesCount = Message::where('user_id', $user->id)->count();
 
+        // Calculate user activity stats
+        $commentsCount = MessageComment::where('user_id', $user->id)->count();
+
+        // Optimize reactions count with a single query using UNION
+        $reactionsGiven = \DB::table('message_reactions')
+            ->where('user_id', $user->id)
+            ->selectRaw('COUNT(*) as count')
+            ->union(
+                \DB::table('comment_reactions')
+                    ->where('user_id', $user->id)
+                    ->selectRaw('COUNT(*) as count')
+            )
+            ->get()
+            ->sum('count');
+
         $recentMessages = Message::where('user_id', $user->id)
             ->with(['page', 'user'])
             ->orderBy('created_at', 'desc')
@@ -59,10 +72,11 @@ class UserController extends Controller
             'profileUser' => $user,
             'stats' => [
                 'totalBooksCount' => $totalBooksCount,
-                'totalReads' => $totalReads,
                 'topBooks' => $topBooks,
                 'recentBooks' => $recentBooks,
                 'messagesCount' => $messagesCount,
+                'commentsCount' => $commentsCount,
+                'reactionsGiven' => $reactionsGiven,
             ],
             'recentMessages' => $recentMessages,
         ]);

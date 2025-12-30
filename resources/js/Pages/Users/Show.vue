@@ -66,7 +66,19 @@ const speakRecentBooks = () => {
 const speakUserSummary = () => {
     const books = props.stats.totalBooksCount === 1 ? "book" : "books";
     const messages = props.stats.messagesCount === 1 ? "message" : "messages";
-    const summary = `${props.profileUser.name}. Member since ${memberSince.value}. ${props.stats.totalBooksCount} ${books} created. ${props.stats.messagesCount} ${messages} posted.`;
+    const comments = props.stats.commentsCount === 1 ? "comment" : "comments";
+    const reactions =
+        props.stats.reactionsGiven === 1 ? "reaction" : "reactions";
+
+    const summary = [
+        `${props.profileUser.name}.`,
+        `Member since ${memberSince.value}.`,
+        `${props.stats.totalBooksCount} ${books} created.`,
+        `${props.stats.messagesCount} ${messages} posted.`,
+        `${props.stats.commentsCount} ${comments} posted.`,
+        `${props.stats.reactionsGiven} ${reactions} given.`,
+    ].join(" ");
+
     speak(summary);
 };
 </script>
@@ -267,12 +279,16 @@ const speakUserSummary = () => {
                             :value="stats.totalBooksCount"
                         />
                         <StatCard
-                            icon="ri-eye-line"
-                            icon-color="text-green-600 dark:text-green-400"
-                            label="Total Reads"
-                            :value="
-                                Math.floor(stats.totalReads).toLocaleString()
-                            "
+                            icon="ri-chat-3-line"
+                            icon-color="text-purple-600 dark:text-purple-400"
+                            label="Comments Posted"
+                            :value="stats.commentsCount"
+                        />
+                        <StatCard
+                            icon="ri-heart-line"
+                            icon-color="text-pink-600 dark:text-pink-400"
+                            label="Reactions Given"
+                            :value="stats.reactionsGiven"
                         />
                     </div>
                 </div>
