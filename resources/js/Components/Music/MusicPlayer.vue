@@ -348,7 +348,7 @@ const loadYouTubeAPI = () => {
 
         if (!document.querySelector('script[src*="youtube"]')) {
             const script = document.createElement("script");
-            script.src = "https://www.youtube-nocookie.com/iframe_api";
+            script.src = "https://www.youtube.com/iframe_api";
             document.head.appendChild(script);
         }
     });
