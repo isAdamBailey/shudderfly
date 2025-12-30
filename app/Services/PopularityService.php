@@ -38,6 +38,7 @@ class PopularityService
         if ($totalCount === 0) {
             return $collection->map(function ($item) {
                 $item->popularity_percentage = 0;
+
                 return $item;
             });
         }
@@ -45,6 +46,7 @@ class PopularityService
         if ($totalCount === 1) {
             return $collection->map(function ($item) {
                 $item->popularity_percentage = 100;
+
                 return $item;
             });
         }
@@ -75,4 +77,3 @@ class PopularityService
         });
     }
 }
-

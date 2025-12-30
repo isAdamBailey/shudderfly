@@ -27,6 +27,7 @@ class BookController extends Controller
     public function __construct(
         private PopularityService $popularityService
     ) {}
+
     /**
      * Display a listing of the resource.
      */
