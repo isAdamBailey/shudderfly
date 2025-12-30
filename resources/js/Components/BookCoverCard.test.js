@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import BookCoverCard from "@/Components/BookCoverCard.vue";
-import { createRouteMock } from "../setup.js";
+import { createRouteMock } from "../vitest.setup.js";
 
 // Use the shared route mock function from setup.js
 global.route = createRouteMock();

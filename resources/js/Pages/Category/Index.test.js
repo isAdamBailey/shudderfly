@@ -10,7 +10,7 @@ vi.mock("@/composables/useInfiniteScroll", () => ({
 
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 import { usePage } from "@inertiajs/vue3";
-import { createRouteMock } from "../../setup.js";
+import { createRouteMock } from "../../vitest.setup.js";
 
 // Use the shared route mock function from setup.js
 global.route = createRouteMock();
