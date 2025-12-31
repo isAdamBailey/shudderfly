@@ -188,6 +188,7 @@
             v-if="page.video_link"
             :url="page.video_link"
             :controls="false"
+            :fill-container="true"
           />
           <div
             v-if="page.content"
@@ -216,6 +217,7 @@
             v-if="page.video_link"
             :url="page.video_link"
             :controls="false"
+            :fill-container="true"
           />
           <div
             v-if="page.content"

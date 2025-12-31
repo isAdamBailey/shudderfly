@@ -8,7 +8,8 @@ const props = defineProps({
   url: { type: String, default: null },
   iframe: { type: Boolean, default: false },
   title: { type: String, default: "" },
-  controls: { type: Boolean, default: true }
+  controls: { type: Boolean, default: true },
+  fillContainer: { type: Boolean, default: false }
 });
 
 const { embedUrl, videoId, isPlaylist } = useGetYouTubeVideo(() => props.url, {
@@ -22,8 +23,11 @@ const useIframe = computed(() => isPlaylist.value || props.iframe);
 <template>
   <div
     v-if="useIframe"
-    :class="!controls ? 'pointer-events-none' : ''"
-    class="video-container rounded-lg"
+    :class="[
+      !controls ? 'pointer-events-none' : '',
+      fillContainer ? 'video-container-fill' : 'video-container'
+    ]"
+    class="rounded-lg"
   >
     <iframe
       :title="title"
@@ -38,7 +42,7 @@ const useIframe = computed(() => isPlaylist.value || props.iframe);
   </div>
   <div
     v-else
-    class="video-container"
+    :class="fillContainer ? 'video-container-fill' : 'video-container'"
     style="pointer-events: auto; touch-action: manipulation"
   >
     <LiteYouTubeEmbed
@@ -69,15 +73,26 @@ const useIframe = computed(() => isPlaylist.value || props.iframe);
   }
 }
 
-.video-container iframe {
+.video-container-fill {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.video-container iframe,
+.video-container-fill iframe {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
+  object-fit: cover;
 }
 
-.video-container .yt-lite {
+.video-container .yt-lite,
+.video-container-fill .yt-lite {
   position: absolute;
   top: 0;
   left: 0;
@@ -89,7 +104,8 @@ const useIframe = computed(() => isPlaylist.value || props.iframe);
 }
 
 /* Ensure the play button and overlay are clickable on iOS */
-.video-container .yt-lite > .lty-playbtn {
+.video-container .yt-lite > .lty-playbtn,
+.video-container-fill .yt-lite > .lty-playbtn {
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;

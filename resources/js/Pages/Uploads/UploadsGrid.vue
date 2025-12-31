@@ -143,6 +143,7 @@ function getDisplayText(item) {
                     v-if="photo.video_link"
                     :url="photo.video_link"
                     :controls="false"
+                    :fill-container="true"
                 />
                 <div
                     v-if="getDisplayText(photo)"
@@ -167,6 +168,7 @@ function getDisplayText(item) {
                     v-if="photo.video_link"
                     :url="photo.video_link"
                     :controls="false"
+                    :fill-container="true"
                 />
                 <div
                     v-if="getDisplayText(photo)"
