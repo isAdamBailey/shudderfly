@@ -170,19 +170,6 @@ const messagingEnabled = computed(() => {
                                             <span>Admin</span>
                                         </div>
                                     </DropdownLink>
-                                    <DropdownLink
-                                        :href="
-                                            route(
-                                                'users.show',
-                                                $page.props.auth.user.email
-                                            )
-                                        "
-                                    >
-                                        <div class="flex items-center gap-3">
-                                            <i class="ri-user-line text-lg"></i>
-                                            <span>Profile</span>
-                                        </div>
-                                    </DropdownLink>
                                     <DropdownLink :href="route('profile.edit')">
                                         <div class="flex items-center gap-3">
                                             <i
@@ -357,17 +344,6 @@ const messagingEnabled = computed(() => {
                             <div class="flex items-center gap-3">
                                 <i class="ri-dashboard-line text-lg"></i>
                                 <span>Admin</span>
-                            </div>
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            :href="
-                                route('users.show', $page.props.auth.user.email)
-                            "
-                            class="relative"
-                        >
-                            <div class="flex items-center gap-3">
-                                <i class="ri-user-line text-lg"></i>
-                                <span>Profile</span>
                             </div>
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
