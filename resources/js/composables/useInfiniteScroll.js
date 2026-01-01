@@ -7,10 +7,15 @@ export function useInfiniteScroll(initialItems, paginationData) {
     );
     const infiniteScrollRef = ref(null);
     const fetchedPages = new Set();
+    const isPaused = ref(false);
     let observer = null;
     const initialUrl = usePage().url;
 
     const fetchMore = () => {
+        if (isPaused.value) {
+            return;
+        }
+
         const nextPageUrl = paginationData.value.next_page_url;
         if (!nextPageUrl || fetchedPages.has(nextPageUrl)) {
             return;
@@ -39,6 +44,14 @@ export function useInfiniteScroll(initialItems, paginationData) {
         item.loading = true;
     }
 
+    function pause() {
+        isPaused.value = true;
+    }
+
+    function resume() {
+        isPaused.value = false;
+    }
+
     onMounted(() => {
         observer = new IntersectionObserver(
             (entries) =>
@@ -61,5 +74,7 @@ export function useInfiniteScroll(initialItems, paginationData) {
         items,
         infiniteScrollRef,
         setItemLoading,
+        pause,
+        resume,
     };
 }

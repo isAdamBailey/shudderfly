@@ -35,7 +35,7 @@
                         v-else
                         class="font-semibold text-gray-900 dark:text-gray-100"
                     >
-                        {{ message.user?.name || 'Unknown User' }}
+                        {{ message.user?.name || "Unknown User" }}
                     </span>
                     <span class="text-sm text-gray-500 dark:text-gray-400">
                         {{ formatDate(message.created_at) }}
@@ -529,10 +529,12 @@ const messagesPagination = computed(() => {
     return props.messages || { data: [], next_page_url: null };
 });
 
-const { items: infiniteScrollItems, infiniteScrollRef } = useInfiniteScroll(
-    messagesData.value,
-    messagesPagination
-);
+const {
+    items: infiniteScrollItems,
+    infiniteScrollRef,
+    pause: pauseInfiniteScroll,
+    resume: resumeInfiniteScroll,
+} = useInfiniteScroll(messagesData.value, messagesPagination);
 
 const initializeMessages = (messageArray) => {
     return messageArray.map((msg) => {
@@ -550,6 +552,10 @@ const initializeMessages = (messageArray) => {
 
 const localMessages = ref(initializeMessages(messagesData.value));
 
+// Track when we're scrolling to a specific message from a notification
+const isScrollingToMessage = ref(false);
+const targetMessageId = ref(null);
+
 const allowedEmojis = ["👍", "❤️", "😂", "😮", "😢", "💩"];
 
 const currentUserId = computed(() => {
@@ -563,9 +569,103 @@ const handleMessagePosted = () => {
     }, 300);
 };
 
+/**
+ * Helper function to get the absolute position of an element from the document top.
+ * Safely handles elements with display: none or detached from the DOM.
+ * @param {HTMLElement|null} element - The element to get the position for
+ * @returns {number} The absolute position from the document top, or 0 if element is invalid
+ */
+const getAbsoluteOffsetTop = (element) => {
+    if (!element) {
+        return 0;
+    }
+
+    let offsetTop = 0;
+    let currentElement = element;
+
+    while (currentElement) {
+        offsetTop += currentElement.offsetTop;
+        currentElement = currentElement.offsetParent;
+
+        // Break if offsetParent is null (element has display: none or is detached)
+        if (!currentElement) {
+            break;
+        }
+    }
+
+    return offsetTop;
+};
+
+/**
+ * Preserves scroll position when navigating to a specific message from a notification.
+ * Uses separate state for each watcher to avoid race conditions.
+ * Returns functions to save and restore the scroll position.
+ */
+const useScrollPositionPreservation = () => {
+    /**
+     * Creates a new state context for a watcher callback.
+     * This prevents race conditions when multiple watchers execute concurrently.
+     */
+    const createState = () => ({
+        savedScrollElement: null,
+        savedAbsoluteOffset: 0,
+    });
+
+    const saveScrollPosition = (state) => {
+        if (isScrollingToMessage.value && targetMessageId.value) {
+            state.savedScrollElement = document.getElementById(
+                `message-${targetMessageId.value}`
+            );
+            if (state.savedScrollElement) {
+                state.savedAbsoluteOffset = getAbsoluteOffsetTop(
+                    state.savedScrollElement
+                );
+            }
+        }
+    };
+
+    const restoreScrollPosition = (state) => {
+        if (
+            !state ||
+            !state.savedScrollElement ||
+            !isScrollingToMessage.value
+        ) {
+            return;
+        }
+
+        nextTick(() => {
+            const element = document.getElementById(
+                `message-${targetMessageId.value}`
+            );
+            if (element) {
+                const currentAbsoluteOffset = getAbsoluteOffsetTop(element);
+                const offsetDiff =
+                    currentAbsoluteOffset - state.savedAbsoluteOffset;
+
+                // Only adjust scroll if difference is greater than 1px
+                // Threshold of 1px prevents unnecessary micro-adjustments caused by
+                // sub-pixel rendering or rounding differences in layout calculations
+                if (Math.abs(offsetDiff) > 1) {
+                    window.scrollBy(0, offsetDiff);
+                }
+            }
+        });
+    };
+
+    return { saveScrollPosition, restoreScrollPosition, createState };
+};
+
+// Initialize scroll position preservation functions once
+const { saveScrollPosition, restoreScrollPosition, createState } =
+    useScrollPositionPreservation();
+
 watch(
     () => infiniteScrollItems.value,
     (newItems) => {
+        // Create isolated state for this watcher execution to prevent race conditions
+        const state = createState();
+        saveScrollPosition(state);
+
         const newItemsIds = new Set(newItems.map((m) => m.id));
         const echoMessages = localMessages.value.filter(
             (m) => !newItemsIds.has(m.id)
@@ -592,6 +692,8 @@ watch(
             const dateB = new Date(b.created_at);
             return dateB - dateA;
         });
+
+        restoreScrollPosition(state);
     },
     { deep: true, immediate: true }
 );
@@ -599,6 +701,10 @@ watch(
 watch(
     () => messagesData.value,
     (newMessages) => {
+        // Create isolated state for this watcher execution to prevent race conditions
+        const state = createState();
+        saveScrollPosition(state);
+
         const propsIds = new Set(newMessages.map((m) => m.id));
 
         const existingMessagesToKeep = localMessages.value.filter(
@@ -625,6 +731,8 @@ watch(
             const dateB = new Date(b.created_at);
             return dateB - dateA;
         });
+
+        restoreScrollPosition(state);
     },
     { immediate: false }
 );
@@ -971,6 +1079,14 @@ const scrollToMessage = async () => {
         const messageId = parseInt(hash.replace("#message-", ""), 10);
         if (!messageId) return;
 
+        isScrollingToMessage.value = true;
+        targetMessageId.value = messageId;
+
+        // Pause infinite scroll to prevent interference
+        if (pauseInfiniteScroll) {
+            pauseInfiniteScroll();
+        }
+
         const messageExists = localMessages.value.some(
             (m) => m.id === messageId
         );
@@ -1002,6 +1118,11 @@ const scrollToMessage = async () => {
                 await nextTick();
             } catch (error) {
                 console.error("Failed to fetch message:", error);
+                isScrollingToMessage.value = false;
+                targetMessageId.value = null;
+                if (resumeInfiniteScroll) {
+                    resumeInfiniteScroll();
+                }
                 return;
             }
         }
@@ -1021,7 +1142,27 @@ const scrollToMessage = async () => {
                         "ring-blue-500",
                         "ring-offset-2"
                     );
+                    // Wait 1000ms after highlight animation completes before resuming infinite scroll
+                    // This buffer ensures:
+                    // 1. User has time to visually locate the highlighted message
+                    // 2. Any pending DOM updates from the navigation have settled
+                    // 3. Scroll position is stable before new content can be loaded
+                    // 4. Prevents jarring experience of highlight disappearing + new content loading simultaneously
+                    setTimeout(() => {
+                        isScrollingToMessage.value = false;
+                        targetMessageId.value = null;
+                        // Resume infinite scroll now that navigation is complete
+                        if (resumeInfiniteScroll) {
+                            resumeInfiniteScroll();
+                        }
+                    }, 1000);
                 }, 2000);
+            } else {
+                isScrollingToMessage.value = false;
+                targetMessageId.value = null;
+                if (resumeInfiniteScroll) {
+                    resumeInfiniteScroll();
+                }
             }
         }, 100);
     }
