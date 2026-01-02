@@ -27,10 +27,12 @@
                 <div
                     class="relative w-full h-full flex flex-col justify-between p-8 z-10"
                 >
-                    <div class="flex-1 flex items-start justify-center pt-8">
-                        <div class="text-center">
+                    <div
+                        class="flex-1 flex items-start justify-center pt-8 px-4"
+                    >
+                        <div class="text-center w-full max-w-full">
                             <h1
-                                class="book-title font-heading uppercase text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-4 md:mb-6 tracking-[0.1em] leading-tight"
+                                class="book-title font-heading uppercase text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 md:mb-6 tracking-[0.05em] leading-tight break-words hyphens-auto px-2"
                                 :data-text="book.title"
                                 :style="{
                                     transform: `translateY(${
@@ -413,6 +415,9 @@ const finalTransform = computed(() => {
         -1px 0 0 rgba(255, 255, 255, 0.1);
     position: relative;
     animation: titleGlow 2s ease-in-out infinite alternate;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
 }
 
 @keyframes titleGlow {
