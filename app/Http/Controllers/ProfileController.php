@@ -185,4 +185,35 @@ class ProfileController extends Controller
 
         return response()->json(['success' => true]);
     }
+
+    /**
+     * Mark all notifications as read.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function markAllNotificationsAsRead(Request $request)
+    {
+        $request->user()->unreadNotifications->markAsRead();
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Delete a notification.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function deleteNotification(Request $request, string $id)
+    {
+        $notification = $request->user()
+            ->notifications()
+            ->where('id', $id)
+            ->first();
+
+        if ($notification) {
+            $notification->delete();
+        }
+
+        return response()->json(['success' => true]);
+    }
 }

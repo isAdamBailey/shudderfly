@@ -31,27 +31,19 @@ class Message extends Model
     {
         parent::boot();
 
-        // Delete related notifications when a message is deleted
-        // Note: This only fires for single model deletions, not bulk deletes
         static::deleting(function ($message) {
-            $driver = DB::getDriverName();
-            if ($driver === 'mysql' || $driver === 'mariadb') {
-                DB::table('notifications')
-                    ->where('type', 'App\\Notifications\\UserTagged')
-                    ->whereRaw("JSON_EXTRACT(data, '$.message_id') = ?", [$message->id])
-                    ->delete();
-            } elseif ($driver === 'pgsql') {
-                DB::table('notifications')
-                    ->where('type', 'App\\Notifications\\UserTagged')
-                    ->whereRaw("data->>'message_id' = ?", [(string) $message->id])
-                    ->delete();
-            } else {
-                // SQLite or fallback
-                DB::table('notifications')
-                    ->where('type', 'App\\Notifications\\UserTagged')
-                    ->whereJsonContains('data->message_id', $message->id)
-                    ->delete();
-            }
+            $messageId = $message->id;
+
+            DB::table('notifications')
+                ->where(function ($query) use ($messageId) {
+                    $query->where('type', 'App\\Notifications\\UserTagged')
+                        ->whereRaw("JSON_EXTRACT(data, '$.message_id') = ?", [$messageId]);
+                })
+                ->orWhere(function ($query) use ($messageId) {
+                    $query->where('type', 'App\\Notifications\\MessageCommented')
+                        ->whereRaw("JSON_EXTRACT(data, '$.message_id') = ?", [$messageId]);
+                })
+                ->delete();
         });
     }
 

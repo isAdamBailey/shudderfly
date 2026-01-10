@@ -97,3 +97,4 @@ trait HasUserTagging
         return array_unique($userIds);
     }
 }
+

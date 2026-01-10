@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class MessageComment extends Model
 {
@@ -22,6 +23,29 @@ class MessageComment extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+    /**
+     * Boot the model.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function ($comment) {
+            $commentId = $comment->id;
+
+            DB::table('notifications')
+                ->where(function ($query) use ($commentId) {
+                    $query->where('type', 'App\\Notifications\\UserTagged')
+                        ->whereRaw("JSON_EXTRACT(data, '$.comment_id') = ?", [$commentId]);
+                })
+                ->orWhere(function ($query) use ($commentId) {
+                    $query->where('type', 'App\\Notifications\\MessageCommented')
+                        ->whereRaw("JSON_EXTRACT(data, '$.comment_id') = ?", [$commentId]);
+                })
+                ->delete();
+        });
+    }
 
     /**
      * Get the message that this comment belongs to.

@@ -80,6 +80,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/messages/{message}/comments/{comment}/reactions', [CommentReactionController::class, 'destroy'])->name('messages.comments.reactions.destroy');
     Route::get('/profile/notifications', [ProfileController::class, 'notifications'])->name('profile.notifications');
     Route::post('/notifications/{id}/read', [ProfileController::class, 'markNotificationAsRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [ProfileController::class, 'markAllNotificationsAsRead'])->name('notifications.read-all');
+    Route::delete('/notifications/{id}', [ProfileController::class, 'deleteNotification'])->name('notifications.delete');
 
     Route::group(['middleware' => ['can:edit pages']], function () {
         Route::post('/books', [BookController::class, 'store'])->name('books.store');

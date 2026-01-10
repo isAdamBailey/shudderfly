@@ -16,11 +16,22 @@ import { computed, ref } from "vue";
 const { canEditPages, canEditProfile } = usePermissions();
 const showingNavigationDropdown = ref(false);
 const { unreadCount } = useUnreadNotifications();
+const notificationListRef = ref(null);
+const mobileNotificationListRef = ref(null);
 
 const messagingEnabled = computed(() => {
     const value = usePage().props.settings?.messaging_enabled;
     return value === "1" || value === 1 || value === true;
 });
+
+const markAllAsRead = async () => {
+    if (notificationListRef.value) {
+        await notificationListRef.value.markAllAsRead();
+    }
+    if (mobileNotificationListRef.value) {
+        await mobileNotificationListRef.value.markAllAsRead();
+    }
+};
 </script>
 
 <template>
@@ -94,19 +105,31 @@ const messagingEnabled = computed(() => {
                                             class="px-4 py-3 border-b border-gray-200 dark:border-gray-700"
                                         >
                                             <div
-                                                class="text-sm font-semibold text-gray-900 dark:text-gray-100"
+                                                class="flex items-center justify-between gap-2"
                                             >
-                                                Notifications
-                                                <span
-                                                    v-if="unreadCount > 0"
-                                                    class="ml-2 px-2 py-0.5 text-xs bg-red-600 text-white rounded-full"
+                                                <div
+                                                    class="text-sm font-semibold text-gray-900 dark:text-gray-100"
                                                 >
-                                                    {{ unreadCount }}
-                                                </span>
+                                                    Notifications
+                                                    <span
+                                                        v-if="unreadCount > 0"
+                                                        class="ml-2 px-2 py-0.5 text-xs bg-red-600 text-white rounded-full"
+                                                    >
+                                                        {{ unreadCount }}
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    v-if="unreadCount > 0"
+                                                    type="button"
+                                                    class="px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800 rounded transition-colors"
+                                                    @click="markAllAsRead"
+                                                >
+                                                    Mark all read
+                                                </button>
                                             </div>
                                         </div>
                                         <div class="p-3">
-                                            <NotificationList />
+                                            <NotificationList ref="notificationListRef" />
                                         </div>
                                     </div>
                                 </template>
@@ -223,19 +246,31 @@ const messagingEnabled = computed(() => {
                                             class="px-4 py-3 border-b border-gray-200 dark:border-gray-700"
                                         >
                                             <div
-                                                class="text-sm font-semibold text-gray-900 dark:text-gray-100"
+                                                class="flex items-center justify-between gap-2"
                                             >
-                                                Notifications
-                                                <span
-                                                    v-if="unreadCount > 0"
-                                                    class="ml-2 px-2 py-0.5 text-xs bg-red-600 text-white rounded-full"
+                                                <div
+                                                    class="text-sm font-semibold text-gray-900 dark:text-gray-100"
                                                 >
-                                                    {{ unreadCount }}
-                                                </span>
+                                                    Notifications
+                                                    <span
+                                                        v-if="unreadCount > 0"
+                                                        class="ml-2 px-2 py-0.5 text-xs bg-red-600 text-white rounded-full"
+                                                    >
+                                                        {{ unreadCount }}
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    v-if="unreadCount > 0"
+                                                    type="button"
+                                                    class="px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800 rounded transition-colors"
+                                                    @click="markAllAsRead"
+                                                >
+                                                    Mark all read
+                                                </button>
                                             </div>
                                         </div>
                                         <div class="p-3">
-                                            <NotificationList />
+                                            <NotificationList ref="mobileNotificationListRef" />
                                         </div>
                                     </div>
                                 </template>

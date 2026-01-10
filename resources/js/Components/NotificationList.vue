@@ -1,6 +1,9 @@
 <template>
   <div class="space-y-2">
-    <div v-if="loading" class="text-center py-4 text-gray-500 dark:text-gray-400">
+    <div
+      v-if="loading"
+      class="text-center py-4 text-gray-500 dark:text-gray-400"
+    >
       Loading notifications...
     </div>
 
@@ -23,8 +26,8 @@
         ]"
         @click="handleNotificationClick(notification)"
       >
-        <div class="flex items-start justify-between gap-2">
-          <div class="flex-1 min-w-0">
+        <div>
+          <div class="mb-2">
             <div
               v-if="notification.type === 'App\\Notifications\\UserTagged'"
               class="text-gray-900 dark:text-gray-100"
@@ -54,7 +57,9 @@
               </p>
             </div>
             <div
-              v-else-if="notification.type === 'App\\Notifications\\MessageCommented'"
+              v-else-if="
+                notification.type === 'App\\Notifications\\MessageCommented'
+              "
               class="text-gray-900 dark:text-gray-100"
             >
               <div class="flex items-center gap-2 mb-1">
@@ -80,9 +85,7 @@
               >
                 "{{ notification.data.message }}"
               </p>
-              <p
-                class="text-sm text-gray-600 dark:text-gray-400 ml-8 mt-1"
-              >
+              <p class="text-sm text-gray-600 dark:text-gray-400 ml-8 mt-1">
                 Comment: "{{ notification.data.comment }}"
               </p>
             </div>
@@ -95,15 +98,27 @@
               >
             </div>
           </div>
-          <button
-            v-if="!notification.read_at"
-            type="button"
-            title="Mark as read"
-            class="flex-shrink-0 px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800 rounded z-10 transition-colors"
-            @click.stop="markAsRead(notification.id)"
+          <div
+            class="flex items-center justify-end gap-1 pt-2 border-t border-gray-200 dark:border-gray-700"
           >
-            Mark read
-          </button>
+            <button
+              v-if="!notification.read_at"
+              type="button"
+              title="Mark as read"
+              class="px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800 rounded transition-colors"
+              @click.stop="markAsRead(notification.id)"
+            >
+              Mark read
+            </button>
+            <button
+              type="button"
+              title="Delete notification"
+              class="px-2 py-1 text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-100 dark:hover:bg-red-800 rounded transition-colors"
+              @click.stop="deleteNotification(notification.id)"
+            >
+              Delete
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -192,6 +207,44 @@ const markAsRead = async (notificationId) => {
   }
 };
 
+const markAllAsRead = async () => {
+  try {
+    await axios.post(route("notifications.read-all"));
+    // Update local state
+    notifications.value.forEach((notification) => {
+      if (!notification.read_at) {
+        notification.read_at = new Date().toISOString();
+      }
+    });
+    // Reset global count
+    unreadCount.value = 0;
+    // Reload page props to sync with server
+    router.reload({ only: ["unread_notifications_count"] });
+  } catch (error) {
+    console.error("Failed to mark all notifications as read:", error);
+  }
+};
+
+const deleteNotification = async (notificationId) => {
+  try {
+    await axios.delete(route("notifications.delete", notificationId));
+    // Remove from local state
+    const index = notifications.value.findIndex((n) => n.id === notificationId);
+    if (index !== -1) {
+      const notification = notifications.value[index];
+      // Decrement global count if it was unread
+      if (!notification.read_at && unreadCount.value > 0) {
+        unreadCount.value--;
+      }
+      notifications.value.splice(index, 1);
+    }
+    // Reload page props to sync with server
+    router.reload({ only: ["unread_notifications_count"] });
+  } catch (error) {
+    console.error("Failed to delete notification:", error);
+  }
+};
+
 const setupEchoListener = () => {
   const user = usePage().props.auth?.user;
   if (!user || !user.id || !window.Echo) {
@@ -234,5 +287,8 @@ onMounted(() => {
 onUnmounted(() => {
   cleanup();
 });
-</script>
 
+defineExpose({
+  markAllAsRead
+});
+</script>
