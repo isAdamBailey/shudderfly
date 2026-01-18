@@ -1,5 +1,6 @@
 <script setup>
 import { useFlashMessage } from "@/composables/useFlashMessage";
+import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import { router } from "@inertiajs/vue3";
 import {
@@ -11,7 +12,8 @@ import {
   watch
 } from "vue";
 
-const { flashMessage, clearFlashMessage } = useFlashMessage();
+const { flashMessage, clearFlashMessage, isEchoMessage } = useFlashMessage();
+const { speak } = useSpeechSynthesis();
 const { t } = useTranslations();
 const show = ref(false);
 const forceRender = ref(0);
@@ -95,6 +97,11 @@ watch(
       return;
     }
     lastFlashMessageId = messageId;
+    
+    if (newVal && isEchoMessage.value) {
+      speak(newVal.text);
+    }
+    
     requestAnimationFrame(() => {
       triggerIfMessage();
     });

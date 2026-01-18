@@ -48,9 +48,14 @@ export function useFlashMessage() {
     }
   };
 
+  const isEchoMessage = computed(() => {
+    return !!echoFlashMessage.value;
+  });
+
   return {
     flashMessage,
     setFlashMessage,
-    clearFlashMessage
+    clearFlashMessage,
+    isEchoMessage
   };
 }

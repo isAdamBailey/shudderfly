@@ -122,7 +122,11 @@ const longitude = computed(() => {
     : props.longitude;
 });
 
-const emit = defineEmits(["update:latitude", "update:longitude", "address-focus"]);
+const emit = defineEmits([
+  "update:latitude",
+  "update:longitude",
+  "address-focus"
+]);
 
 const mapRef = ref(null);
 const searchQuery = ref("");
@@ -134,11 +138,14 @@ const showMap = ref(false);
 let searchTimeout = null;
 
 // Watch for openMap prop changes
-watch(() => props.openMap, (newVal) => {
-  if (newVal) {
-    showMap.value = true;
+watch(
+  () => props.openMap,
+  (newVal) => {
+    if (newVal) {
+      showMap.value = true;
+    }
   }
-});
+);
 
 const hasLocation = computed(() => {
   return latitude.value !== null && longitude.value !== null;
@@ -161,7 +168,7 @@ const clearLocation = () => {
 const handleFocus = () => {
   showMap.value = true;
   showSuggestions.value = true;
-  emit('address-focus');
+  emit("address-focus");
 };
 
 const handleInput = async () => {

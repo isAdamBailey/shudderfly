@@ -395,15 +395,6 @@ function onTouchEnd(event) {
     }
 }
 
-// Watch for flash messages and speak them
-watch(
-    () => flashMessage.value,
-    (newMessage) => {
-        if (newMessage && newMessage.type === "success") {
-            speak(newMessage.text);
-        }
-    }
-);
 
 // Make book cover sticky
 
