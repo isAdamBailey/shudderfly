@@ -43,19 +43,13 @@ class MessageCommentController extends Controller
         $comment->load('user');
         $message->load('user');
 
-        // Use tagged user IDs from request if provided and not empty, otherwise parse from comment
-        $taggedUserIds = ! empty($validated['tagged_user_ids'])
-            ? $validated['tagged_user_ids']
-            : $comment->getTaggedUserIds('comment');
-
-        if (! is_array($taggedUserIds)) {
-            $taggedUserIds = [];
-        }
-
-        // Notify tagged users
-        if (! empty($taggedUserIds)) {
-            $this->userTaggingService->notifyTaggedUsers($taggedUserIds, $user, $comment, 'comment');
-        }
+        $this->userTaggingService->processAndNotifyTaggedUsers(
+            $validated,
+            $user,
+            $comment,
+            'comment',
+            'comment'
+        );
 
         if ($message->user_id !== $user->id) {
             $messageAuthor = $message->user;

@@ -15,7 +15,9 @@ use App\Models\Message;
 use App\Models\Page;
 use App\Models\SiteSetting;
 use App\Models\Song;
+use App\Models\User;
 use App\Services\PopularityService;
+use App\Services\UserTaggingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
@@ -29,7 +31,8 @@ use Inertia\Response;
 class PageController extends Controller
 {
     public function __construct(
-        private PopularityService $popularityService
+        private PopularityService $popularityService,
+        private UserTaggingService $userTaggingService
     ) {}
 
     /**
@@ -335,6 +338,10 @@ class PageController extends Controller
             : [];
 
         $collages = Collage::with('pages')->latest()->limit(4)->get();
+        $users = User::select('id', 'name')
+            ->orderBy('name')
+            ->get()
+            ->makeVisible(['id']);
 
         $page->popularity_percentage = $this->popularityService->calculatePopularity($page);
 
@@ -344,6 +351,7 @@ class PageController extends Controller
             'nextPage' => $nextPage,
             'books' => $books,
             'collages' => $collages,
+            'users' => $users,
         ]);
     }
 
@@ -677,18 +685,47 @@ class PageController extends Controller
             return back()->withErrors(['message' => __('messages.messaging.disabled')]);
         }
 
+        $validated = $request->validate([
+            'tagged_user_ids' => ['sometimes', 'array'],
+            'tagged_user_ids.*' => ['integer', 'exists:users,id'],
+        ]);
+
         $page->load('book');
 
         $bookTitle = $page->book?->title ?? __('messages.unknown_book');
         $mediaType = $this->getMediaType($page);
+        
+        $taggedUserIds = $validated['tagged_user_ids'] ?? [];
+        if (! is_array($taggedUserIds)) {
+            $taggedUserIds = [];
+        }
+        
+        $taggedUser = null;
+        if (! empty($taggedUserIds)) {
+            $taggedUser = User::select('id', 'name')->find($taggedUserIds[0]);
+        }
+        
+        $shareMessage = __('messages.page_shared', ['media' => $mediaType, 'book' => $bookTitle]);
+        if ($taggedUser) {
+            $shareMessage = $shareMessage.' @'.$taggedUser->name;
+        }
 
         $message = Message::create([
             'user_id' => $request->user()->id,
-            'message' => __('messages.page_shared', ['media' => $mediaType, 'book' => $bookTitle]),
+            'message' => $shareMessage,
             'page_id' => $page->id,
         ]);
 
-        $message->load('page');
+        $message->load(['page', 'user']);
+
+        if (! empty($taggedUserIds)) {
+            $this->userTaggingService->notifyTaggedUsers(
+                $taggedUserIds,
+                $request->user(),
+                $message,
+                'message'
+            );
+        }
         event(new MessageCreated($message));
 
         return back()->with('success', __('messages.page.shared'));

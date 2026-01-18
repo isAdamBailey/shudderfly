@@ -393,9 +393,6 @@ const toggleLock = (collage) => {
     // eslint-disable-next-line no-undef
     updateForm.put(route("collages.update", collage.id), {
         preserveScroll: true,
-        onSuccess: () => {
-            console.log("Lock toggle successful");
-        },
         onError: (errors) => {
             console.error("Lock toggle failed:", errors);
         },

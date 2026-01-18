@@ -2,6 +2,7 @@
 /* global route */
 import Accordion from "@/Components/Accordion.vue";
 import Button from "@/Components/Button.vue";
+import UserTagList from "@/Components/UserTagList.vue";
 import { useMessageBuilder } from "@/composables/useMessageBuilder";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
@@ -698,21 +699,11 @@ function postMessage() {
             v-if="showUserSuggestions"
             class="user-suggestions-container absolute top-full left-0 mt-1 w-full max-w-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-[100] max-h-60 overflow-y-auto"
           >
-            <div
-              v-for="(user, index) in userSuggestions"
-              :key="user.id"
-              :class="[
-                'px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700',
-                selectedSuggestionIndex === index
-                  ? 'bg-gray-100 dark:bg-gray-700'
-                  : ''
-              ]"
-              @click="insertMention(user)"
-            >
-              <div class="font-semibold text-gray-900 dark:text-gray-100">
-                @{{ user.name }}
-              </div>
-            </div>
+            <UserTagList
+              :users="userSuggestions"
+              :selected-index="selectedSuggestionIndex"
+              @select="insertMention"
+            />
           </div>
           <button
             type="button"

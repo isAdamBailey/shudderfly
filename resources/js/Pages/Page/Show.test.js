@@ -133,7 +133,10 @@ vi.mock("@inertiajs/vue3", () => {
         auth: {
           user: { permissions_list: [] }
         },
-        search: null
+        search: null,
+        settings: {
+          messaging_enabled: "1"
+        }
       }
     }),
     Head: { name: "Head", template: "<div />" },
@@ -172,6 +175,7 @@ describe("Page/Show.vue", () => {
   const nextPage = { id: 2, title: "Next Page" };
   const books = [];
   const collages = [];
+  const users = [];
 
   beforeEach(() => {
     wrapper = mount(Show, {
@@ -180,14 +184,18 @@ describe("Page/Show.vue", () => {
         previousPage,
         nextPage,
         books,
-        collages
+        collages,
+        users
       },
       global: {
         mocks: {
           $page: {
             props: {
               auth: { user: { permissions_list: [] } },
-              search: null
+              search: null,
+              settings: {
+                messaging_enabled: "1"
+              }
             }
           }
         }
@@ -270,7 +278,10 @@ describe("Page/Show.vue", () => {
           $page: {
             props: {
               auth: { user: { permissions_list: [] } },
-              search: null
+              search: null,
+              settings: {
+                messaging_enabled: "1"
+              }
             }
           }
         }
@@ -365,7 +376,9 @@ describe("Page/Show.vue", () => {
       const { router } = await import("@inertiajs/vue3");
       expect(router.post).toHaveBeenCalledWith(
         expect.stringContaining("/pages/1/share"),
-        {},
+        {
+          tagged_user_ids: []
+        },
         expect.any(Object)
       );
     });

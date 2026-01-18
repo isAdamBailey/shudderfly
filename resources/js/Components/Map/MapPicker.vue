@@ -182,14 +182,11 @@ const handleInput = async () => {
           const results = await mapRef.value.getGeocodeSuggestions(
             searchQuery.value
           );
-          console.log("Geocode suggestions received:", results);
           suggestions.value = results || [];
           // Keep suggestions visible if we have results
           if (suggestions.value.length > 0) {
             showSuggestions.value = true;
           }
-        } else {
-          console.log("Map ref or getGeocodeSuggestions not available");
         }
       } catch (error) {
         console.error("Error getting suggestions:", error);

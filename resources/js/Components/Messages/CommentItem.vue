@@ -7,11 +7,18 @@
             <div class="flex items-center gap-2 flex-1 min-w-0">
                 <Avatar :user="comment.user" size="sm" />
                 <Link
+                    v-if="comment.user?.email"
                     :href="route('users.show', comment.user.email)"
                     class="font-semibold text-sm text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                 >
                     {{ comment.user.name }}
                 </Link>
+                <span
+                    v-else
+                    class="font-semibold text-sm text-gray-900 dark:text-gray-100"
+                >
+                    {{ comment.user?.name || "Unknown User" }}
+                </span>
                 <span class="text-xs text-gray-500 dark:text-gray-400">
                     {{ formatDate(comment.created_at) }}
                 </span>

@@ -179,14 +179,20 @@
                             class="space-y-2"
                             @submit.prevent="submitComment(message)"
                         >
-                            <div class="relative">
+                            <div class="relative" style="z-index: 1;">
                                 <textarea
                                     :ref="
                                         (el) => {
-                                            if (el && commentTextareaRefs.value)
-                                                commentTextareaRefs.value[
-                                                    message.id
-                                                ] = el;
+                                            if (el) {
+                                                if (!commentTextareaRefs.value) {
+                                                    commentTextareaRefs.value = {};
+                                                }
+                                                commentTextareaRefs.value[message.id] = el;
+                                                const tagging = getCommentTagging(message.id);
+                                                if (tagging && tagging.textareaRef) {
+                                                    tagging.textareaRef.value = el;
+                                                }
+                                            }
                                         }
                                     "
                                     v-model="commentForms[message.id]"
@@ -195,7 +201,7 @@
                                     "
                                     maxlength="1000"
                                     rows="3"
-                                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none overflow-hidden min-h-[76px] max-h-[200px]"
+                                    class="w-full px-3 py-2 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none overflow-hidden min-h-[76px] max-h-[200px]"
                                     @input="
                                         (e) => handleCommentInput(e, message.id)
                                     "
@@ -203,42 +209,53 @@
                                         (e) =>
                                             handleCommentKeydown(e, message.id)
                                     "
+                                    @blur="
+                                        (e) =>
+                                            handleCommentBlur(e, message.id)
+                                    "
                                 ></textarea>
+                                <button
+                                    type="button"
+                                    class="absolute top-2 right-2 w-8 h-8 flex items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700"
+                                    :title="t('builder.tag_user')"
+                                    :aria-label="t('builder.tag_user_aria')"
+                                    @click.prevent="
+                                        openCommentTagList(message.id)
+                                    "
+                                >
+                                    @
+                                </button>
 
                                 <div
                                     v-if="
                                         getCommentTagging(message.id)
                                             .showUserSuggestions
                                     "
-                                    class="user-suggestions-container absolute top-full left-0 mt-1 w-full max-w-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-[100] max-h-60 overflow-y-auto"
+                                    class="user-suggestions-container absolute top-full left-0 mt-1 w-full max-w-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-[9999] max-h-60 overflow-y-auto"
+                                    style="pointer-events: auto;"
+                                    @click.stop
+                                    @mousedown.stop
                                 >
-                                    <div
-                                        v-for="(
-                                            user, index
-                                        ) in getCommentTagging(message.id)
-                                            .userSuggestions"
-                                        :key="user.id"
-                                        :class="[
-                                            'px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700',
+                                    <UserTagList
+                                        :users="
                                             getCommentTagging(message.id)
-                                                .selectedSuggestionIndex ===
-                                            index
-                                                ? 'bg-gray-100 dark:bg-gray-700'
-                                                : '',
-                                        ]"
-                                        @click="
-                                            insertCommentMention(
-                                                message.id,
-                                                user
-                                            )
+                                                .userSuggestions
                                         "
-                                    >
-                                        <div
-                                            class="font-semibold text-gray-900 dark:text-gray-100"
-                                        >
-                                            @{{ user.name }}
-                                        </div>
-                                    </div>
+                                        :selected-index="
+                                            getCommentTagging(message.id)
+                                                .selectedSuggestionIndex
+                                        "
+                                        @select="
+                                            (user) => {
+                                                if (user) {
+                                                    insertCommentMention(
+                                                        message.id,
+                                                        user
+                                                    );
+                                                }
+                                            }
+                                        "
+                                    />
                                 </div>
                             </div>
                             <div class="flex items-center justify-between">
@@ -460,6 +477,7 @@ import CommentItem from "@/Components/Messages/CommentItem.vue";
 import MessageBuilderModal from "@/Components/Messages/MessageBuilderModal.vue";
 import MessageCTA from "@/Components/Messages/MessageCTA.vue";
 import MessageReactions from "@/Components/Messages/MessageReactions.vue";
+import UserTagList from "@/Components/UserTagList.vue";
 import Modal from "@/Components/Modal.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
 import { usePermissions } from "@/composables/permissions";
@@ -1412,11 +1430,100 @@ function cleanupCommentTagging(messageId) {
 }
 
 function insertCommentMention(messageId, user) {
+    if (!user) return;
+    
     const tagging = getCommentTagging(messageId);
-    tagging.insertMention(user);
+    if (!tagging) return;
+    
+    let textarea = commentTextareaRefs.value?.[messageId];
+    
+    if (!textarea) {
+        const messageElement = document.querySelector(`#message-${messageId}`);
+        if (messageElement) {
+            textarea = messageElement.querySelector('textarea');
+            if (textarea && commentTextareaRefs.value) {
+                commentTextareaRefs.value[messageId] = textarea;
+            }
+        }
+    }
+    
+    if (!textarea) return;
+    
+    const userId = user.id ?? user.user_id ?? user.ID;
+    const userName = user.name ?? user.user_name ?? user.Name;
+    
+    if (!userName) return;
+    
+    const currentValue = textarea.value || commentForms.value[messageId] || "";
+    const cursorPos = textarea.selectionStart ?? currentValue.length;
+    const textBeforeCursor = currentValue.substring(0, cursorPos);
+    const lastAtIndex = textBeforeCursor.lastIndexOf("@");
+    
+    if (lastAtIndex === -1) {
+        return;
+    }
+    
+    const beforeMention = currentValue.substring(0, lastAtIndex);
+    const mentionText = `@${userName}`;
+    const textAfterAt = currentValue.substring(lastAtIndex);
+    const afterMention = textAfterAt.replace(/@[\w\s]*/, `${mentionText} `);
+    const newValue = beforeMention + afterMention;
+    
+    commentForms.value[messageId] = newValue;
+    
+    if (tagging.inputValue) {
+        tagging.inputValue.value = newValue;
+    }
+    
     nextTick(() => {
-        autoGrowCommentTextarea(messageId);
+        if (textarea) {
+            if (textarea.value !== newValue) {
+                textarea.value = newValue;
+            }
+            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+                window.HTMLTextAreaElement.prototype,
+                "value"
+            )?.set;
+            if (nativeInputValueSetter) {
+                nativeInputValueSetter.call(textarea, newValue);
+            }
+            const event = new Event("input", { bubbles: true });
+            textarea.dispatchEvent(event);
+        }
     });
+    
+    if (userId !== undefined && userId !== null && tagging.mentionUserIds && tagging.mentionUserIds.value) {
+        const parsedUserId = parseInt(userId, 10);
+        if (!isNaN(parsedUserId)) {
+            tagging.mentionUserIds.value.set(mentionText, parsedUserId);
+        }
+    }
+    
+    if (tagging.showUserSuggestions) {
+        if (typeof tagging.showUserSuggestions === 'object' && 'value' in tagging.showUserSuggestions) {
+            tagging.showUserSuggestions.value = false;
+        }
+    }
+    if (tagging.mentionQuery) {
+        if (typeof tagging.mentionQuery === 'object' && 'value' in tagging.mentionQuery) {
+            tagging.mentionQuery.value = "";
+        }
+    }
+    if (tagging.mentionStartPos) {
+        if (typeof tagging.mentionStartPos === 'object' && 'value' in tagging.mentionStartPos) {
+            tagging.mentionStartPos.value = -1;
+        }
+    }
+    
+    autoGrowCommentTextarea(messageId);
+    
+    setTimeout(() => {
+        if (textarea) {
+            const newCursorPos = beforeMention.length + mentionText.length + 1;
+            textarea.focus();
+            textarea.setSelectionRange(newCursorPos, newCursorPos);
+        }
+    }, 10);
 }
 
 function handleCommentInput(event, messageId) {
@@ -1439,6 +1546,57 @@ function handleCommentKeydown(event, messageId) {
             autoGrowCommentTextarea(messageId);
         });
     }
+}
+
+function handleCommentBlur(event, messageId) {
+    const relatedTarget = event.relatedTarget;
+    const tagging = getCommentTagging(messageId);
+    
+    if (!tagging) return;
+    
+    if (relatedTarget?.closest(".user-suggestions-container")) {
+        setTimeout(() => {
+            const textarea = commentTextareaRefs.value?.[messageId];
+            if (textarea) {
+                textarea.focus();
+            }
+        }, 0);
+        return;
+    }
+    
+    setTimeout(() => {
+        if (!tagging || !tagging.showUserSuggestions) return;
+        
+        const activeElement = document.activeElement;
+        const isClickingInSuggestions = activeElement?.closest(".user-suggestions-container");
+        if (!isClickingInSuggestions && 
+            activeElement !== commentTextareaRefs.value?.[messageId]) {
+            if (tagging.showUserSuggestions.value !== undefined) {
+                tagging.showUserSuggestions.value = false;
+            }
+        }
+    }, 200);
+}
+
+function openCommentTagList(messageId) {
+    if (!commentForms.value[messageId]) {
+        commentForms.value[messageId] = "";
+    }
+    const textarea = commentTextareaRefs.value[messageId];
+    const tagging = getCommentTagging(messageId);
+    const currentValue = commentForms.value[messageId] || "";
+    const cursorPos = textarea?.selectionStart ?? currentValue.length;
+    const newValue =
+        currentValue.slice(0, cursorPos) + "@" + currentValue.slice(cursorPos);
+
+    commentForms.value[messageId] = newValue;
+    if (textarea) {
+        textarea.value = newValue;
+        textarea.focus();
+        textarea.setSelectionRange(cursorPos + 1, cursorPos + 1);
+    }
+    tagging.checkForMentions(newValue, cursorPos + 1);
+    autoGrowCommentTextarea(messageId);
 }
 
 const getComments = (message) => {

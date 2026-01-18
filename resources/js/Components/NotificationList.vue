@@ -273,7 +273,6 @@ const cleanup = () => {
       window.Echo.leave(`App.Models.User.${user.id}`);
     } catch (error) {
       // Ignore errors when leaving channel
-      console.debug("Error leaving channel:", error);
     }
     notificationsChannel.value = null;
   }

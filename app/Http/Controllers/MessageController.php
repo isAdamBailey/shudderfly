@@ -133,19 +133,13 @@ class MessageController extends Controller
         // Load user relationship for broadcasting
         $message->load('user');
 
-        // Use tagged user IDs from request if provided and not empty, otherwise parse from message
-        $taggedUserIds = ! empty($validated['tagged_user_ids'])
-            ? $validated['tagged_user_ids']
-            : $message->getTaggedUserIds();
-
-        if (! is_array($taggedUserIds)) {
-            $taggedUserIds = [];
-        }
-
-        // Notify tagged users
-        if (! empty($taggedUserIds)) {
-            $this->userTaggingService->notifyTaggedUsers($taggedUserIds, $user, $message, 'message');
-        }
+        $this->userTaggingService->processAndNotifyTaggedUsers(
+            $validated,
+            $user,
+            $message,
+            'message',
+            'message'
+        );
 
         // Broadcast the new message
         event(new MessageCreated($message));
