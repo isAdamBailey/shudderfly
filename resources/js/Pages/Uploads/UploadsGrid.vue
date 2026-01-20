@@ -71,7 +71,7 @@ function getItemLink(item) {
         // Return # to prevent navigation, we'll handle it with click
         return "#";
     }
-    return route("pages.show", item);
+    return route("pages.show", item.id);
 }
 
 function handleFooterClick(item, event) {
@@ -90,7 +90,7 @@ function getFooterLink(item) {
         // Return # to prevent navigation, we'll handle it with click
         return "#";
     }
-    return route("books.show", item.book);
+    return route("books.show", item.book?.slug || item.book?.id);
 }
 
 function getFooterText(item) {

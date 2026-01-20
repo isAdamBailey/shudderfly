@@ -165,7 +165,7 @@
           v-if="activeTab !== 'bulk'"
           prefetch
           class="relative w-full h-full block"
-          :href="route('pages.show', page)"
+          :href="route('pages.show', page.id)"
           as="button"
           replace
           @click="setItemLoading(page)"

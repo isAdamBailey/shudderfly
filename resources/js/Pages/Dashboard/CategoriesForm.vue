@@ -150,7 +150,7 @@ const capitalizeFirstLetter = (string) => {
 const updateCategory = async (category) => {
     const name = localCategoryNames.value[editingIndex.value];
     router.put(
-        route("categories.update", category),
+        route("categories.update", category.id),
         { name },
         {
             onBefore: () =>
@@ -178,7 +178,7 @@ const addCategory = async () => {
 };
 
 const deleteCategory = (category) => {
-    form.delete(route("categories.destroy", category), {
+    form.delete(route("categories.destroy", category.id), {
         onBefore: () =>
             confirm(
                 `Are you sure you want to delete ${category.name}? If it has existing books, they will be moved to uncategorized.`
