@@ -9,7 +9,7 @@
           class="absolute left-2 sm:left-4 lg:left-8 top-2 z-30"
         >
           <Link
-            :href="route('categories.show', book.category.name)"
+            :href="route('categories.show', { categoryName: book.category?.name })"
             class="inline-flex items-center gap-2 px-4 py-2 rounded-full border font-semibold text-xs uppercase tracking-widest transition ease-in-out duration-150 bg-theme-primary text-theme-button border-theme-primary hover:text-theme-button-hover hover:bg-theme-button active:bg-theme-button focus:border-theme-button focus:shadow-theme-button"
           >
             <i class="ri-folder-fill text-sm"></i>
@@ -165,7 +165,7 @@
           v-if="activeTab !== 'bulk'"
           prefetch
           class="relative w-full h-full block"
-          :href="route('pages.show', page.id)"
+          :href="route('pages.show', { page: page?.id })"
           as="button"
           replace
           @click="setItemLoading(page)"

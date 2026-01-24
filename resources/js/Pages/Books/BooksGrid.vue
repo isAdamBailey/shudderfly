@@ -9,7 +9,7 @@
             <Link
                 :href="
                     route('categories.show', {
-                        categoryName: props.category.name,
+                        categoryName: props.category?.name || '',
                     })
                 "
                 class="ml-2 text-2xl text-theme-primary font-heading hover:underline cursor-pointer transition"

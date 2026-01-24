@@ -191,7 +191,7 @@ const speakUserSummary = () => {
                                     icon="ri-book-line"
                                     icon-color="text-blue-600 dark:text-blue-400"
                                     :label="book.title"
-                                    :href="route('books.show', book.slug)"
+                                    :href="route('books.show', { book: book?.slug })"
                                     :cover-image="book.cover_image?.media_path"
                                 />
                             </div>
@@ -257,7 +257,7 @@ const speakUserSummary = () => {
                                         book.popularity_percentage ?? 0
                                     }%`"
                                     :subtitle="`${formatDate(book.created_at)}`"
-                                    :href="route('books.show', book.slug)"
+                                    :href="route('books.show', { book: book?.slug })"
                                     :cover-image="book.cover_image?.media_path"
                                 />
                             </div>

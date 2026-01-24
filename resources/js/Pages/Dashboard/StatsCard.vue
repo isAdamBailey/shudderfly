@@ -482,7 +482,7 @@
                         >
                         <Link
                             class="flex items-center font-medium hover:text-blue-400 truncate"
-                            :href="route('books.show', book.slug)"
+                            :href="route('books.show', { book: book?.slug })"
                             :aria-label="`View book ${book.title}`"
                             :title="book.title"
                         >

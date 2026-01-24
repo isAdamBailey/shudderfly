@@ -28,7 +28,7 @@
             <Link
               v-if="previousPage"
               prefetch="hover"
-              :href="route('pages.show', previousPage.id)"
+              :href="route('pages.show', { page: previousPage?.id })"
               as="button"
               class="z-30 fixed left-3 md:left-8 top-1/2 transform -translate-y-1/2 inline-flex items-center text-white hover:text-blue-600 hover:dark:text-gray-800 hover:christmas:text-christmas-gold disabled:opacity-25 transition ease-in-out duration-150 pointer-events-auto"
               aria-label="previous page"
@@ -42,7 +42,7 @@
             <Link
               v-if="nextPage"
               prefetch="hover"
-              :href="route('pages.show', nextPage.id)"
+              :href="route('pages.show', { page: nextPage?.id })"
               as="button"
               class="z-30 fixed right-3 md:right-8 top-1/2 transform -translate-y-1/2 inline-flex items-center text-white hover:text-blue-600 hover:dark:text-gray-800 hover:christmas:text-christmas-gold disabled:opacity-25 transition ease-in-out duration-150 pointer-events-auto"
               aria-label="next page"
@@ -375,10 +375,10 @@ function onTouchEnd(event) {
   // Navigate: left swipe -> next page, right swipe -> previous page
   if (dx < 0 && props.nextPage) {
     buttonDisabled.value = true;
-    router.get(route("pages.show", props.nextPage.id));
+    router.get(route("pages.show", { page: props.nextPage?.id }));
   } else if (dx > 0 && props.previousPage) {
     buttonDisabled.value = true;
-    router.get(route("pages.show", props.previousPage.id));
+    router.get(route("pages.show", { page: props.previousPage?.id }));
   }
 }
 
