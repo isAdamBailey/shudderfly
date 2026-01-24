@@ -355,7 +355,7 @@ describe("Page/Show.vue", () => {
       expect(isDisabled).toBe(true);
     });
 
-    it("calls sharePage when share button is clicked", async () => {
+    it("calls sharePage when share without tag is selected", async () => {
       // Clear any previous calls
       if (mockRouter) {
         mockRouter.post.mockClear();
@@ -364,11 +364,8 @@ describe("Page/Show.vue", () => {
       // Ensure the component is ready and sharePage is available
       await nextTick();
 
-      // Call sharePage directly to test the functionality
-      // Make sure isShareDisabled is false first
       wrapper.vm.hasSharedToday = false;
       wrapper.vm.sharing = false;
-
       wrapper.vm.sharePage();
       await nextTick();
 
@@ -400,6 +397,11 @@ describe("Page/Show.vue", () => {
       });
       expect(shareButton).toBeDefined();
       await shareButton.trigger("click");
+      await nextTick();
+
+      const userTagList = wrapper.findComponent({ name: "UserTagList" });
+      expect(userTagList.exists()).toBe(true);
+      userTagList.vm.$emit("select-none");
       await nextTick();
 
       const today = new Date().toISOString().split("T")[0];
