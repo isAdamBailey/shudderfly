@@ -694,17 +694,17 @@ class PageController extends Controller
 
         $bookTitle = $page->book?->title ?? __('messages.unknown_book');
         $mediaType = $this->getMediaType($page);
-        
+
         $taggedUserIds = $validated['tagged_user_ids'] ?? [];
         if (! is_array($taggedUserIds)) {
             $taggedUserIds = [];
         }
-        
+
         $taggedUser = null;
         if (! empty($taggedUserIds)) {
             $taggedUser = User::select('id', 'name')->find($taggedUserIds[0]);
         }
-        
+
         $shareMessage = __('messages.page_shared', ['media' => $mediaType, 'book' => $bookTitle]);
         if ($taggedUser) {
             $shareMessage = $shareMessage.' @'.$taggedUser->name;
@@ -728,6 +728,8 @@ class PageController extends Controller
         }
         event(new MessageCreated($message));
 
-        return back()->with('success', __('messages.page.shared'));
+        return redirect()
+            ->to(route('messages.index').'#message-'.$message->id)
+            ->with('success', __('messages.page.shared'));
     }
 }

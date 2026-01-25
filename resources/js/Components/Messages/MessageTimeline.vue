@@ -484,6 +484,7 @@ import { usePermissions } from "@/composables/permissions";
 import { useFlashMessage } from "@/composables/useFlashMessage";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 import { useMessageBuilder } from "@/composables/useMessageBuilder";
+import { useMessageLocator } from "@/composables/useMessageLocator";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import { useUserTagging } from "@/composables/useUserTagging";
@@ -554,25 +555,30 @@ const {
     resume: resumeInfiniteScroll,
 } = useInfiniteScroll(messagesData.value, messagesPagination);
 
-const initializeMessages = (messageArray) => {
-    return messageArray.map((msg) => {
-        const message = {
-            ...msg,
-            grouped_reactions: msg.grouped_reactions || {},
-            comments: (msg.comments || []).map((comment) => ({
-                ...comment,
-                grouped_reactions: comment.grouped_reactions || {},
-            })),
-        };
-        return message;
-    });
-};
+const normalizeMessage = (message) => ({
+    ...message,
+    grouped_reactions: message.grouped_reactions || {},
+    comments: (message.comments || []).map((comment) => ({
+        ...comment,
+        grouped_reactions: comment.grouped_reactions || {},
+    })),
+});
+
+const initializeMessages = (messageArray) =>
+    messageArray.map((message) => normalizeMessage(message));
 
 const localMessages = ref(initializeMessages(messagesData.value));
 
-// Track when we're scrolling to a specific message from a notification
-const isScrollingToMessage = ref(false);
-const targetMessageId = ref(null);
+const {
+    saveScrollPosition,
+    restoreScrollPosition,
+    createScrollState,
+} = useMessageLocator({
+    messages: localMessages,
+    normalizeMessage,
+    pauseInfiniteScroll,
+    resumeInfiniteScroll,
+});
 
 const allowedEmojis = ["👍", "❤️", "😂", "😮", "😢", "💩"];
 
@@ -587,101 +593,10 @@ const handleMessagePosted = () => {
     }, 300);
 };
 
-/**
- * Helper function to get the absolute position of an element from the document top.
- * Safely handles elements with display: none or detached from the DOM.
- * @param {HTMLElement|null} element - The element to get the position for
- * @returns {number} The absolute position from the document top, or 0 if element is invalid
- */
-const getAbsoluteOffsetTop = (element) => {
-    if (!element) {
-        return 0;
-    }
-
-    let offsetTop = 0;
-    let currentElement = element;
-
-    while (currentElement) {
-        offsetTop += currentElement.offsetTop;
-        currentElement = currentElement.offsetParent;
-
-        // Break if offsetParent is null (element has display: none or is detached)
-        if (!currentElement) {
-            break;
-        }
-    }
-
-    return offsetTop;
-};
-
-/**
- * Preserves scroll position when navigating to a specific message from a notification.
- * Uses separate state for each watcher to avoid race conditions.
- * Returns functions to save and restore the scroll position.
- */
-const useScrollPositionPreservation = () => {
-    /**
-     * Creates a new state context for a watcher callback.
-     * This prevents race conditions when multiple watchers execute concurrently.
-     */
-    const createState = () => ({
-        savedScrollElement: null,
-        savedAbsoluteOffset: 0,
-    });
-
-    const saveScrollPosition = (state) => {
-        if (isScrollingToMessage.value && targetMessageId.value) {
-            state.savedScrollElement = document.getElementById(
-                `message-${targetMessageId.value}`
-            );
-            if (state.savedScrollElement) {
-                state.savedAbsoluteOffset = getAbsoluteOffsetTop(
-                    state.savedScrollElement
-                );
-            }
-        }
-    };
-
-    const restoreScrollPosition = (state) => {
-        if (
-            !state ||
-            !state.savedScrollElement ||
-            !isScrollingToMessage.value
-        ) {
-            return;
-        }
-
-        nextTick(() => {
-            const element = document.getElementById(
-                `message-${targetMessageId.value}`
-            );
-            if (element) {
-                const currentAbsoluteOffset = getAbsoluteOffsetTop(element);
-                const offsetDiff =
-                    currentAbsoluteOffset - state.savedAbsoluteOffset;
-
-                // Only adjust scroll if difference is greater than 1px
-                // Threshold of 1px prevents unnecessary micro-adjustments caused by
-                // sub-pixel rendering or rounding differences in layout calculations
-                if (Math.abs(offsetDiff) > 1) {
-                    window.scrollBy(0, offsetDiff);
-                }
-            }
-        });
-    };
-
-    return { saveScrollPosition, restoreScrollPosition, createState };
-};
-
-// Initialize scroll position preservation functions once
-const { saveScrollPosition, restoreScrollPosition, createState } =
-    useScrollPositionPreservation();
-
 watch(
     () => infiniteScrollItems.value,
     (newItems) => {
-        // Create isolated state for this watcher execution to prevent race conditions
-        const state = createState();
+        const state = createScrollState();
         saveScrollPosition(state);
 
         const newItemsIds = new Set(newItems.map((m) => m.id));
@@ -690,22 +605,7 @@ watch(
         );
         const allMessages = [...newItems, ...echoMessages];
 
-        const processedMessages = allMessages.map((msg) => {
-            const processed = { ...msg };
-            if (!processed.grouped_reactions) {
-                processed.grouped_reactions = {};
-            }
-            if (!processed.comments) {
-                processed.comments = [];
-            }
-            processed.comments = (processed.comments || []).map((comment) => ({
-                ...comment,
-                grouped_reactions: comment.grouped_reactions || {},
-            }));
-            return processed;
-        });
-
-        localMessages.value = processedMessages.sort((a, b) => {
+        localMessages.value = allMessages.map(normalizeMessage).sort((a, b) => {
             const dateA = new Date(a.created_at);
             const dateB = new Date(b.created_at);
             return dateB - dateA;
@@ -719,8 +619,7 @@ watch(
 watch(
     () => messagesData.value,
     (newMessages) => {
-        // Create isolated state for this watcher execution to prevent race conditions
-        const state = createState();
+        const state = createScrollState();
         saveScrollPosition(state);
 
         const propsIds = new Set(newMessages.map((m) => m.id));
@@ -730,21 +629,7 @@ watch(
         );
 
         const allMessages = [...newMessages, ...existingMessagesToKeep];
-        const processedMessages = allMessages.map((msg) => {
-            const processed = { ...msg };
-            if (!processed.grouped_reactions) {
-                processed.grouped_reactions = {};
-            }
-            if (!processed.comments) {
-                processed.comments = [];
-            }
-            processed.comments = (processed.comments || []).map((comment) => ({
-                ...comment,
-                grouped_reactions: comment.grouped_reactions || {},
-            }));
-            return processed;
-        });
-        localMessages.value = processedMessages.sort((a, b) => {
+        localMessages.value = allMessages.map(normalizeMessage).sort((a, b) => {
             const dateA = new Date(a.created_at);
             const dateB = new Date(b.created_at);
             return dateB - dateA;
@@ -1087,115 +972,8 @@ const scrollToTimeline = () => {
     }
 };
 
-const scrollToMessage = async () => {
-    if (typeof window === "undefined" || !window?.location) {
-        return;
-    }
-
-    const hash = window.location?.hash;
-    if (hash && hash.startsWith("#message-")) {
-        const messageId = parseInt(hash.replace("#message-", ""), 10);
-        if (!messageId) return;
-
-        isScrollingToMessage.value = true;
-        targetMessageId.value = messageId;
-
-        // Pause infinite scroll to prevent interference
-        if (pauseInfiniteScroll) {
-            pauseInfiniteScroll();
-        }
-
-        const messageExists = localMessages.value.some(
-            (m) => m.id === messageId
-        );
-
-        if (!messageExists) {
-            try {
-                const response = await axios.get(
-                    route("messages.show", messageId)
-                );
-                const fetchedMessage = response.data;
-                if (!fetchedMessage.grouped_reactions) {
-                    fetchedMessage.grouped_reactions = {};
-                }
-                if (!fetchedMessage.comments) {
-                    fetchedMessage.comments = [];
-                }
-                fetchedMessage.comments = (fetchedMessage.comments || []).map(
-                    (comment) => ({
-                        ...comment,
-                        grouped_reactions: comment.grouped_reactions || {},
-                    })
-                );
-                localMessages.value.push(fetchedMessage);
-                localMessages.value.sort((a, b) => {
-                    const dateA = new Date(a.created_at);
-                    const dateB = new Date(b.created_at);
-                    return dateB - dateA; // Most recent first
-                });
-                await nextTick();
-            } catch (error) {
-                console.error("Failed to fetch message:", error);
-                isScrollingToMessage.value = false;
-                targetMessageId.value = null;
-                if (resumeInfiniteScroll) {
-                    resumeInfiniteScroll();
-                }
-                return;
-            }
-        }
-
-        setTimeout(() => {
-            const element = document.getElementById(`message-${messageId}`);
-            if (element) {
-                element.scrollIntoView({ behavior: "smooth", block: "center" });
-                element.classList.add(
-                    "ring-2",
-                    "ring-blue-500",
-                    "ring-offset-2"
-                );
-                setTimeout(() => {
-                    element.classList.remove(
-                        "ring-2",
-                        "ring-blue-500",
-                        "ring-offset-2"
-                    );
-                    // Wait 1000ms after highlight animation completes before resuming infinite scroll
-                    // This buffer ensures:
-                    // 1. User has time to visually locate the highlighted message
-                    // 2. Any pending DOM updates from the navigation have settled
-                    // 3. Scroll position is stable before new content can be loaded
-                    // 4. Prevents jarring experience of highlight disappearing + new content loading simultaneously
-                    setTimeout(() => {
-                        isScrollingToMessage.value = false;
-                        targetMessageId.value = null;
-                        // Resume infinite scroll now that navigation is complete
-                        if (resumeInfiniteScroll) {
-                            resumeInfiniteScroll();
-                        }
-                    }, 1000);
-                }, 2000);
-            } else {
-                isScrollingToMessage.value = false;
-                targetMessageId.value = null;
-                if (resumeInfiniteScroll) {
-                    resumeInfiniteScroll();
-                }
-            }
-        }, 100);
-    }
-};
-
 onMounted(() => {
     setupEchoListener();
-    scrollToMessage();
-
-    if (
-        typeof window !== "undefined" &&
-        typeof window.addEventListener === "function"
-    ) {
-        window.addEventListener("hashchange", scrollToMessage);
-    }
 
     nextTick(() => {
         Object.keys(expandedComments.value).forEach((messageId) => {
@@ -1211,12 +989,6 @@ onMounted(() => {
 
 onUnmounted(() => {
     cleanup();
-    if (
-        typeof window !== "undefined" &&
-        typeof window.removeEventListener === "function"
-    ) {
-        window.removeEventListener("hashchange", scrollToMessage);
-    }
 
     Object.keys(commentTaggingWatchers.value).forEach((messageId) => {
         cleanupCommentTagging(messageId);

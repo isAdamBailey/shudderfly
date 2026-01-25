@@ -22,7 +22,6 @@ class UserTaggingService
      * @param  Message|MessageComment  $content  The message or comment
      * @param  string  $contentType  Either 'message' or 'comment'
      * @param  string  $contentField  Field name for parsing (e.g., 'message', 'comment')
-     * @return void
      */
     public function processAndNotifyTaggedUsers(
         array $validated,
@@ -119,4 +118,3 @@ class UserTaggingService
         }
     }
 }
-

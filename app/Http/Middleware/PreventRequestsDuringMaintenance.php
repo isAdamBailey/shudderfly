@@ -20,10 +20,6 @@ class PreventRequestsDuringMaintenance extends Middleware
 
     /**
      * Render the maintenance mode response.
-     *
-     * @param  Request  $request
-     * @param  HttpException  $exception
-     * @return Response
      */
     protected function render(Request $request, HttpException $exception): Response
     {
