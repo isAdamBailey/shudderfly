@@ -15,7 +15,10 @@
                 <i class="ri-speak-fill text-lg"></i>
             </Button>
         </div>
-        <div ref="mapContainer" :class="containerClass"></div>
+        <div v-if="apiKeyMissing" class="p-4 text-center text-red-600 bg-red-50 rounded-lg">
+            Google Maps API key is not configured. Please add VITE_GOOGLE_MAPS_API_KEY to your .env file.
+        </div>
+        <div v-else ref="mapContainer" :class="containerClass"></div>
         <Accordion
             v-if="showStreetView && hasStreetViewData"
             v-model="streetViewAccordionOpen"
@@ -33,7 +36,7 @@
 </template>
 
 <script setup>
-/* global route, google */
+/* global route */
 import Accordion from "@/Components/Accordion.vue";
 import Button from "@/Components/Button.vue";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
@@ -102,6 +105,7 @@ const currentAddress = ref(null);
 const hasStreetViewData = ref(false);
 const streetViewAccordionOpen = ref(false);
 const pendingStreetViewCoords = ref(null);
+const apiKeyMissing = ref(false);
 
 let map = null;
 let markers = [];
@@ -112,6 +116,11 @@ let mapsLibrary = null;
 let geocoder = null;
 let autocompleteService = null;
 let apiOptionsSet = false;
+let mapListeners = [];
+
+const isGoogleLoaded = () => {
+    return typeof window !== "undefined" && typeof window.google !== "undefined" && window.google.maps;
+};
 
 const recenterOnMarker = () => {
     if (map && markers.length > 0) {
@@ -140,7 +149,7 @@ const geocodeAddress = async (query) => {
                 clearMarkers();
                 await updateAddress(lat, lng);
 
-                const marker = new google.maps.Marker({
+                const marker = new window.google.maps.Marker({
                     position: { lat, lng },
                     map: map,
                 });
@@ -161,26 +170,60 @@ const geocodeAddress = async (query) => {
     });
 };
 
+const geocodeByPlaceId = (placeId) => {
+    return new Promise((resolve, reject) => {
+        if (!geocoder) {
+            reject(new Error("Geocoder not initialized"));
+            return;
+        }
+        geocoder.geocode({ placeId }, (results, status) => {
+            if (status === "OK" && results && results.length > 0) {
+                const location = results[0].geometry.location;
+                resolve({
+                    lat: location.lat(),
+                    lng: location.lng(),
+                });
+            } else {
+                reject(new Error("Place geocode failed: " + status));
+            }
+        });
+    });
+};
+
 const getGeocodeSuggestions = async (query) => {
     if (!map || !isInitialized || !query || query.length < 3) {
         return [];
     }
 
+    if (!isGoogleLoaded()) {
+        return [];
+    }
+
     if (!autocompleteService) {
-        autocompleteService = new google.maps.places.AutocompleteService();
+        autocompleteService = new window.google.maps.places.AutocompleteService();
     }
 
     return new Promise((resolve) => {
         autocompleteService.getPlacePredictions(
             { input: query },
-            (predictions, status) => {
-                if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
-                    const results = predictions.map((prediction) => ({
-                        name: prediction.description,
-                        displayName: prediction.description,
-                        placeId: prediction.place_id,
-                        center: null,
-                    }));
+            async (predictions, status) => {
+                if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+                    const results = await Promise.all(
+                        predictions.map(async (prediction) => {
+                            let center = null;
+                            try {
+                                center = await geocodeByPlaceId(prediction.place_id);
+                            } catch (e) {
+                                // If geocoding fails, leave center null
+                            }
+                            return {
+                                name: prediction.description,
+                                displayName: prediction.description,
+                                placeId: prediction.place_id,
+                                center,
+                            };
+                        })
+                    );
                     resolve(results);
                 } else {
                     resolve([]);
@@ -264,16 +307,37 @@ const clearMarkers = () => {
     infoWindows = [];
 };
 
-const checkStreetViewAvailability = (lat, lng) => {
-    if (!google || !props.showStreetView) return;
+const disposeMap = () => {
+    clearMarkers();
+    
+    mapListeners.forEach((listener) => {
+        if (isGoogleLoaded() && listener) {
+            window.google.maps.event.removeListener(listener);
+        }
+    });
+    mapListeners = [];
 
-    const streetViewService = new google.maps.StreetViewService();
-    const location = new google.maps.LatLng(lat, lng);
+    if (map && isGoogleLoaded()) {
+        window.google.maps.event.clearInstanceListeners(map);
+    }
+
+    if (mapContainer.value) {
+        mapContainer.value.innerHTML = "";
+    }
+
+    map = null;
+};
+
+const checkStreetViewAvailability = (lat, lng) => {
+    if (!isGoogleLoaded() || !props.showStreetView) return;
+
+    const streetViewService = new window.google.maps.StreetViewService();
+    const location = new window.google.maps.LatLng(lat, lng);
 
     streetViewService.getPanorama(
         { location: location, radius: 50 },
         (data, status) => {
-            if (status === google.maps.StreetViewStatus.OK) {
+            if (status === window.google.maps.StreetViewStatus.OK) {
                 hasStreetViewData.value = true;
                 pendingStreetViewCoords.value = { lat, lng };
             } else {
@@ -286,17 +350,23 @@ const checkStreetViewAvailability = (lat, lng) => {
 
 const disposeStreetView = () => {
     if (streetViewPanorama) {
+        if (isGoogleLoaded()) {
+            window.google.maps.event.clearInstanceListeners(streetViewPanorama);
+        }
         streetViewPanorama.setVisible(false);
         streetViewPanorama = null;
+    }
+    if (streetViewContainer.value) {
+        streetViewContainer.value.innerHTML = "";
     }
 };
 
 const initStreetView = (lat, lng) => {
-    if (!streetViewContainer.value || !google) return;
+    if (!streetViewContainer.value || !isGoogleLoaded()) return;
 
     disposeStreetView();
 
-    streetViewPanorama = new google.maps.StreetViewPanorama(
+    streetViewPanorama = new window.google.maps.StreetViewPanorama(
         streetViewContainer.value,
         {
             position: { lat, lng },
@@ -325,6 +395,13 @@ defineExpose({
 
 const initializeMap = async () => {
     if (!mapContainer.value) return;
+
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) {
+        console.error("Google Maps API key is missing. Please set VITE_GOOGLE_MAPS_API_KEY in your .env file.");
+        apiKeyMissing.value = true;
+        return;
+    }
 
     try {
         const container = mapContainer.value;
@@ -359,10 +436,7 @@ const initializeMap = async () => {
         const isMultipleMode = props.locations && props.locations.length > 0;
         const isSingleMode = lat != null && lng != null;
 
-        if (map) {
-            clearMarkers();
-            map = null;
-        }
+        disposeMap();
 
         currentAddress.value = null;
         hasStreetViewData.value = false;
@@ -434,29 +508,27 @@ const initializeMap = async () => {
             centerLng = centerLngNum;
         }
 
-        // Load Google Maps API using new functional API (only set options once)
         if (!apiOptionsSet) {
             setOptions({
-                key: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
+                key: apiKey,
                 v: "weekly",
             });
             apiOptionsSet = true;
         }
 
-        // Import required libraries (safe to call multiple times)
         if (!mapsLibrary) {
             mapsLibrary = await importLibrary("maps");
             await importLibrary("places");
             await importLibrary("streetView");
         }
         if (!geocoder) {
-            geocoder = new google.maps.Geocoder();
+            geocoder = new window.google.maps.Geocoder();
         }
 
-        map = new google.maps.Map(mapContainer.value, {
+        map = new window.google.maps.Map(mapContainer.value, {
             center: { lat: centerLat, lng: centerLng },
             zoom: zoom,
-            mapTypeId: google.maps.MapTypeId.HYBRID,
+            mapTypeId: window.google.maps.MapTypeId.HYBRID,
             disableDefaultUI: true,
             zoomControl: true,
             streetViewControl: false,
@@ -464,9 +536,8 @@ const initializeMap = async () => {
             gestureHandling: "cooperative",
         });
 
-        // Add markers based on mode
         if (isMultipleMode) {
-            const bounds = new google.maps.LatLngBounds();
+            const bounds = new window.google.maps.LatLngBounds();
             let hasValidMarkers = false;
 
             props.locations.forEach((location) => {
@@ -500,19 +571,20 @@ const initializeMap = async () => {
                             ? `<a href="${url}" class="text-blue-600 hover:text-blue-800 underline"><strong>${location.book_title}</strong></a>`
                             : `<a href="${url}" class="text-blue-600 hover:text-blue-800 underline">Location</a>`;
 
-                        const marker = new google.maps.Marker({
+                        const marker = new window.google.maps.Marker({
                             position: { lat: locLat, lng: locLng },
                             map: map,
                         });
 
-                        const infoWindow = new google.maps.InfoWindow({
+                        const infoWindow = new window.google.maps.InfoWindow({
                             content: popupContent,
                         });
 
-                        marker.addListener("click", () => {
+                        const clickListener = marker.addListener("click", () => {
                             infoWindows.forEach((iw) => iw.close());
                             infoWindow.open(map, marker);
                         });
+                        mapListeners.push(clickListener);
 
                         markers.push(marker);
                         infoWindows.push(infoWindow);
@@ -547,7 +619,7 @@ const initializeMap = async () => {
                 ? `<strong>${props.bookTitle}</strong>`
                 : "Location";
 
-            const marker = new google.maps.Marker({
+            const marker = new window.google.maps.Marker({
                 position: { lat, lng },
                 map: map,
             });
@@ -557,13 +629,14 @@ const initializeMap = async () => {
             }, 100);
 
             if (!props.interactive) {
-                const infoWindow = new google.maps.InfoWindow({
+                const infoWindow = new window.google.maps.InfoWindow({
                     content: popupContent,
                 });
 
-                marker.addListener("click", () => {
+                const clickListener = marker.addListener("click", () => {
                     infoWindow.open(map, marker);
                 });
+                mapListeners.push(clickListener);
 
                 infoWindows.push(infoWindow);
             }
@@ -575,7 +648,6 @@ const initializeMap = async () => {
             }
         }
 
-        // Add recenter button
         const hasLocation = (lat != null && lng != null) || markers.length > 0;
         if (hasLocation) {
             const recenterDiv = document.createElement("div");
@@ -613,19 +685,18 @@ const initializeMap = async () => {
                 }
             });
 
-            map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(recenterDiv);
+            map.controls[window.google.maps.ControlPosition.RIGHT_BOTTOM].push(recenterDiv);
         }
 
-        // Add click handler for interactive mode
         if (props.interactive) {
-            map.addListener("click", async (e) => {
+            const clickListener = map.addListener("click", async (e) => {
                 const clickLat = e.latLng.lat();
                 const clickLng = e.latLng.lng();
 
                 clearMarkers();
                 await updateAddress(clickLat, clickLng);
 
-                const marker = new google.maps.Marker({
+                const marker = new window.google.maps.Marker({
                     position: { lat: clickLat, lng: clickLng },
                     map: map,
                 });
@@ -639,6 +710,7 @@ const initializeMap = async () => {
                     checkStreetViewAvailability(clickLat, clickLng);
                 }
             });
+            mapListeners.push(clickListener);
         }
 
         isInitialized = true;
@@ -679,7 +751,7 @@ watch(
 
             clearMarkers();
 
-            if (lat != null && lng != null) {
+            if (lat != null && lng != null && isGoogleLoaded()) {
                 const popupContent = props.title
                     ? `<strong>${props.title}</strong>${
                           props.bookTitle
@@ -690,18 +762,19 @@ watch(
                     ? `<strong>${props.bookTitle}</strong>`
                     : "Location";
 
-                const marker = new google.maps.Marker({
+                const marker = new window.google.maps.Marker({
                     position: { lat, lng },
                     map: map,
                 });
 
-                const infoWindow = new google.maps.InfoWindow({
+                const infoWindow = new window.google.maps.InfoWindow({
                     content: popupContent,
                 });
 
-                marker.addListener("click", () => {
+                const clickListener = marker.addListener("click", () => {
                     infoWindow.open(map, marker);
                 });
+                mapListeners.push(clickListener);
 
                 setTimeout(() => {
                     updateAddress(lat, lng);
@@ -763,9 +836,8 @@ watch(hasStreetViewData, (hasData) => {
 });
 
 onUnmounted(() => {
-    clearMarkers();
+    disposeMap();
     disposeStreetView();
-    map = null;
     mapsLibrary = null;
     geocoder = null;
     autocompleteService = null;

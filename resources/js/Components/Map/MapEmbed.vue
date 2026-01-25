@@ -41,7 +41,7 @@ const props = defineProps({
   },
   showStreetView: {
     type: Boolean,
-    default: true
+    default: false
   }
 });
 

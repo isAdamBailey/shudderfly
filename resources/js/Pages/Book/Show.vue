@@ -99,6 +99,7 @@
             :title="book.title"
             :book-title="book.title"
             heading=""
+            :show-street-view="true"
           />
         </Accordion>
       </div>

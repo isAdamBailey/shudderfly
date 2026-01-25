@@ -106,6 +106,7 @@
               : ''
           "
           :book-title="props.page.book.title"
+          :show-street-view="true"
         />
       </div>
       <div v-if="canEditPages" class="mb-3">
