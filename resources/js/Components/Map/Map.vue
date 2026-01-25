@@ -18,6 +18,7 @@
         <div ref="mapContainer" :class="containerClass"></div>
         <Accordion
             v-if="showStreetView && hasStreetViewData"
+            v-model="streetViewAccordionOpen"
             title="Street View"
             :dark-background="true"
             :compact="true"
@@ -64,10 +65,6 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
-    hideGeocoder: {
-        type: Boolean,
-        default: false,
-    },
     defaultLat: {
         type: Number,
         default: 45.6387,
@@ -103,6 +100,8 @@ const mapContainer = ref(null);
 const streetViewContainer = ref(null);
 const currentAddress = ref(null);
 const hasStreetViewData = ref(false);
+const streetViewAccordionOpen = ref(false);
+const pendingStreetViewCoords = ref(null);
 
 let map = null;
 let markers = [];
@@ -276,23 +275,26 @@ const checkStreetViewAvailability = (lat, lng) => {
         (data, status) => {
             if (status === google.maps.StreetViewStatus.OK) {
                 hasStreetViewData.value = true;
-                nextTick(() => {
-                    initStreetView(lat, lng);
-                });
+                pendingStreetViewCoords.value = { lat, lng };
             } else {
                 hasStreetViewData.value = false;
+                pendingStreetViewCoords.value = null;
             }
         }
     );
 };
 
+const disposeStreetView = () => {
+    if (streetViewPanorama) {
+        streetViewPanorama.setVisible(false);
+        streetViewPanorama = null;
+    }
+};
+
 const initStreetView = (lat, lng) => {
     if (!streetViewContainer.value || !google) return;
 
-    if (streetViewPanorama) {
-        streetViewPanorama.setPosition({ lat, lng });
-        return;
-    }
+    disposeStreetView();
 
     streetViewPanorama = new google.maps.StreetViewPanorama(
         streetViewContainer.value,
@@ -743,11 +745,26 @@ watch(
     { deep: true, immediate: true }
 );
 
+watch(streetViewAccordionOpen, (isOpen) => {
+    if (isOpen && pendingStreetViewCoords.value && !streetViewPanorama) {
+        nextTick(() => {
+            const { lat, lng } = pendingStreetViewCoords.value;
+            initStreetView(lat, lng);
+        });
+    }
+});
+
+watch(hasStreetViewData, (hasData) => {
+    if (!hasData) {
+        disposeStreetView();
+        pendingStreetViewCoords.value = null;
+        streetViewAccordionOpen.value = false;
+    }
+});
+
 onUnmounted(() => {
     clearMarkers();
-    if (streetViewPanorama) {
-        streetViewPanorama = null;
-    }
+    disposeStreetView();
     map = null;
     mapsLibrary = null;
     geocoder = null;

@@ -539,7 +539,8 @@
 }
 
 /* Ensure images and media in page/show appear above snow */
-[data-theme="christmas"] main img,
+/* Exclude Google Maps images which use their own positioning */
+[data-theme="christmas"] main img:not(.gm-style img),
 [data-theme="christmas"] main video,
 [data-theme="christmas"] main iframe {
   position: relative;
