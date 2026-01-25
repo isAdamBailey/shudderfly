@@ -562,3 +562,17 @@
   max-width: none;
   max-height: none;
 }
+
+/* Disable clickable links in Google Maps (logo, terms, report) */
+.gm-style a,
+.gm-style a[href],
+.gm-style .gm-style-cc a,
+.gm-style .gmnoprint a {
+  pointer-events: none !important;
+  cursor: default !important;
+}
+
+/* Also disable the keyboard shortcuts link */
+.gm-style button[title="Keyboard shortcuts"] {
+  pointer-events: none !important;
+}
