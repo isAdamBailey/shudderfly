@@ -1,0 +1,13 @@
+---
+description: 
+alwaysApply: true
+---
+
+# Use Sail for PHP
+
+All PHP-related commands must run through Sail (Docker), not `php`.
+
+Examples:
+- `sail artisan migrate`
+- `sail test`
+- `sail composer install`

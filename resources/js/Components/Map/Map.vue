@@ -15,20 +15,35 @@
                 <i class="ri-speak-fill text-lg"></i>
             </Button>
         </div>
-        <div ref="mapContainer" :class="containerClass"></div>
+        <div v-if="apiKeyMissing" class="p-4 text-center text-red-600 bg-red-50 rounded-lg">
+            Google Maps API key is not configured. Please add VITE_GOOGLE_MAPS_API_KEY to your .env file.
+        </div>
+        <div v-else ref="mapContainer" :class="containerClass"></div>
+        <Accordion
+            v-if="showStreetView && hasStreetViewData"
+            v-model="streetViewAccordionOpen"
+            title="Street View"
+            :dark-background="true"
+            :compact="true"
+            class="mt-2 rounded-lg overflow-hidden"
+        >
+            <div
+                ref="streetViewContainer"
+                :class="containerClass"
+            ></div>
+        </Accordion>
     </div>
 </template>
 
 <script setup>
-/* eslint-disable no-undef */
+/* global route */
+import Accordion from "@/Components/Accordion.vue";
 import Button from "@/Components/Button.vue";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
-import L from "leaflet";
-import { Geocoder } from "leaflet-control-geocoder";
+import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
 const props = defineProps({
-    // Single location mode
     latitude: {
         type: [Number, String],
         default: null,
@@ -37,12 +52,10 @@ const props = defineProps({
         type: [Number, String],
         default: null,
     },
-    // Multiple locations mode
     locations: {
         type: Array,
         default: () => [],
     },
-    // Popup content for single location
     title: {
         type: String,
         default: "",
@@ -51,35 +64,30 @@ const props = defineProps({
         type: String,
         default: "",
     },
-    // Interactive mode (for picker)
     interactive: {
         type: Boolean,
         default: false,
     },
-    // Hide geocoder control on map (for external search input)
-    hideGeocoder: {
-        type: Boolean,
-        default: false,
-    },
-    // Default center when no location
     defaultLat: {
         type: Number,
-        default: 45.6387, // Vancouver, WA
+        default: 45.6387,
     },
     defaultLng: {
         type: Number,
         default: -122.6615,
     },
-    // Container class
     containerClass: {
         type: String,
         default:
             "w-full aspect-square rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden shadow-lg",
     },
-    // Show address above map
     showAddress: {
         type: Boolean,
         default: true,
+    },
+    showStreetView: {
+        type: Boolean,
+        default: false,
     },
 });
 
@@ -92,260 +100,181 @@ const emit = defineEmits([
 const { speak, speaking } = useSpeechSynthesis();
 
 const mapContainer = ref(null);
+const streetViewContainer = ref(null);
 const currentAddress = ref(null);
+const hasStreetViewData = ref(false);
+const streetViewAccordionOpen = ref(false);
+const pendingStreetViewCoords = ref(null);
+const apiKeyMissing = ref(false);
+
 let map = null;
 let markers = [];
+let infoWindows = [];
+let streetViewPanorama = null;
 let isInitialized = false;
-let geocoderInstance = null;
-let visibilityObserver = null;
-let resizeObserver = null;
+let mapsLibrary = null;
+let geocoder = null;
+let autocompleteService = null;
+let apiOptionsSet = false;
+let mapListeners = [];
 
-// Expose recenter method
+const isGoogleLoaded = () => {
+    return typeof window !== "undefined" && typeof window.google !== "undefined" && window.google.maps;
+};
+
 const recenterOnMarker = () => {
     if (map && markers.length > 0) {
         const marker = markers[0];
-        const latLng = marker.getLatLng();
-        map.setView(latLng, 17);
+        const position = marker.getPosition();
+        map.setCenter(position);
+        map.setZoom(17);
     } else if (map && props.latitude != null && props.longitude != null) {
-        map.setView([props.latitude, props.longitude], 17);
+        map.setCenter({ lat: Number(props.latitude), lng: Number(props.longitude) });
+        map.setZoom(17);
     }
 };
 
-// Expose geocode method for external search
 const geocodeAddress = async (query) => {
-    if (!map || !isInitialized) {
+    if (!map || !isInitialized || !geocoder) {
         throw new Error("Map not initialized");
     }
 
-    // Ensure geocoder instance exists and is added to map (hidden)
-    if (!geocoderInstance) {
-        try {
-            geocoderInstance = new Geocoder({
-                defaultMarkGeocode: false,
-            });
-            geocoderInstance.addTo(map);
-            // Hide the control visually
-            setTimeout(() => {
-                const controlElement = map
-                    .getContainer()
-                    .querySelector(".leaflet-control-geocoder");
-                if (controlElement) {
-                    controlElement.style.display = "none";
-                }
-            }, 100);
-        } catch (error) {
-            throw new Error("Failed to initialize geocoder");
-        }
-    }
-
     return new Promise((resolve, reject) => {
-        let timeoutId;
+        geocoder.geocode({ address: query }, async (results, status) => {
+            if (status === "OK" && results && results.length > 0) {
+                const location = results[0].geometry.location;
+                const lat = location.lat();
+                const lng = location.lng();
 
-        // Set up a one-time listener for the geocode result
-        const onGeocode = async (e) => {
-            geocoderInstance.off("markgeocode", onGeocode);
-            geocoderInstance.off("error", onError);
-            if (timeoutId) clearTimeout(timeoutId);
+                clearMarkers();
+                await updateAddress(lat, lng);
 
-            const { lat, lng } = e.geocode.center;
+                const marker = new window.google.maps.Marker({
+                    position: { lat, lng },
+                    map: map,
+                });
+                markers.push(marker);
 
-            // Remove existing marker
-            markers.forEach((marker) => {
-                map.removeLayer(marker);
-            });
-            markers = [];
+                map.setCenter({ lat, lng });
+                map.setZoom(17);
 
-            // Fetch address for display above map
-            await updateAddress(lat, lng);
+                emit("update:latitude", lat);
+                emit("update:longitude", lng);
+                emit("location-selected", { lat, lng });
 
-            // Add new marker at geocoded location
-            const marker = L.marker([lat, lng]).addTo(map);
-            markers.push(marker);
-
-            // Center map on geocoded location
-            map.setView([lat, lng], 17);
-
-            // Emit coordinates
-            emit("update:latitude", lat);
-            emit("update:longitude", lng);
-            emit("location-selected", { lat, lng });
-
-            resolve({ lat, lng });
-        };
-
-        const onError = () => {
-            geocoderInstance.off("markgeocode", onGeocode);
-            geocoderInstance.off("error", onError);
-            if (timeoutId) clearTimeout(timeoutId);
-            reject(new Error("Geocode failed"));
-        };
-
-        geocoderInstance.on("markgeocode", onGeocode);
-        geocoderInstance.on("error", onError);
-
-        // Wait a bit for geocoder to be fully initialized, then trigger geocode
-        setTimeout(() => {
-            try {
-                // Try to access the geocoding service
-                // In leaflet-control-geocoder, the service is typically in _geocoder
-                const geocodingService = geocoderInstance._geocoder;
-
-                if (
-                    geocodingService &&
-                    typeof geocodingService.geocode === "function"
-                ) {
-                    geocodingService.geocode(query, (results) => {
-                        if (results && results.length > 0) {
-                            const result = results[0];
-                            const center = result.center;
-                            if (center) {
-                                onGeocode({ geocode: { center } });
-                            } else {
-                                onError();
-                            }
-                        } else {
-                            onError();
-                        }
-                    });
-                } else {
-                    // Fallback: use the input field to trigger search
-                    const input =
-                        geocoderInstance._input ||
-                        map
-                            .getContainer()
-                            .querySelector(".leaflet-control-geocoder input");
-                    if (input) {
-                        input.value = query;
-                        // Trigger the geocode by calling the internal method or simulating Enter
-                        if (typeof geocoderInstance._geocode === "function") {
-                            geocoderInstance._geocode();
-                        } else {
-                            // Simulate Enter key press
-                            const enterEvent = new KeyboardEvent("keydown", {
-                                key: "Enter",
-                                code: "Enter",
-                                keyCode: 13,
-                                bubbles: true,
-                            });
-                            input.dispatchEvent(enterEvent);
-                        }
-                    } else {
-                        onError();
-                    }
-                }
-            } catch (error) {
-                onError();
+                resolve({ lat, lng });
+            } else {
+                reject(new Error("Geocode failed: " + status));
             }
-        }, 200);
-
-        // Timeout after 10 seconds
-        timeoutId = setTimeout(() => {
-            geocoderInstance.off("markgeocode", onGeocode);
-            geocoderInstance.off("error", onError);
-            reject(new Error("Geocode request timed out"));
-        }, 10000);
+        });
     });
 };
 
-// Expose method to get geocode suggestions (for autocomplete)
-// Use Nominatim API directly since geocoder's internal service isn't accessible
+const geocodeByPlaceId = (placeId) => {
+    return new Promise((resolve, reject) => {
+        if (!geocoder) {
+            reject(new Error("Geocoder not initialized"));
+            return;
+        }
+        geocoder.geocode({ placeId }, (results, status) => {
+            if (status === "OK" && results && results.length > 0) {
+                const location = results[0].geometry.location;
+                resolve({
+                    lat: location.lat(),
+                    lng: location.lng(),
+                });
+            } else {
+                reject(new Error("Place geocode failed: " + status));
+            }
+        });
+    });
+};
+
 const getGeocodeSuggestions = async (query) => {
     if (!map || !isInitialized || !query || query.length < 3) {
         return [];
     }
 
-    try {
-        // Use Nominatim geocoding API directly (same as leaflet-control-geocoder uses)
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-            query
-        )}&limit=5&addressdetails=1`;
-
-        const response = await fetch(url, {
-            headers: {
-                "User-Agent": "Shudderfly App", // Nominatim requires a user agent
-            },
-        });
-
-        if (!response.ok) {
-            return [];
-        }
-
-        const data = await response.json();
-
-        if (data && data.length > 0) {
-            return data.map((result) => {
-                const displayName = result.display_name || result.name || query;
-                return {
-                    ...result,
-                    name: displayName,
-                    displayName: displayName,
-                    center: {
-                        lat: parseFloat(result.lat),
-                        lng: parseFloat(result.lon),
-                    },
-                    formatted: result.display_name,
-                };
-            });
-        }
-
-        return [];
-    } catch (error) {
+    if (!isGoogleLoaded()) {
         return [];
     }
+
+    if (!autocompleteService) {
+        autocompleteService = new window.google.maps.places.AutocompleteService();
+    }
+
+    return new Promise((resolve) => {
+        autocompleteService.getPlacePredictions(
+            { input: query },
+            async (predictions, status) => {
+                if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+                    const results = await Promise.all(
+                        predictions.map(async (prediction) => {
+                            let center = null;
+                            try {
+                                center = await geocodeByPlaceId(prediction.place_id);
+                            } catch (e) {
+                                // If geocoding fails, leave center null
+                            }
+                            return {
+                                name: prediction.description,
+                                displayName: prediction.description,
+                                placeId: prediction.place_id,
+                                center,
+                            };
+                        })
+                    );
+                    resolve(results);
+                } else {
+                    resolve([]);
+                }
+            }
+        );
+    });
 };
 
-// Reverse geocode: get address from coordinates
 const reverseGeocode = async (lat, lng) => {
     if (lat == null || lng == null) {
         throw new Error("Invalid coordinates");
     }
 
-    try {
-        // Use backend API endpoint to avoid CORS issues
-        const response = await fetch(
-            `/api/geocode/reverse?lat=${lat}&lng=${lng}`,
-            {
-                method: "GET",
-                headers: {
-                    Accept: "application/json",
-                    "X-Requested-With": "XMLHttpRequest",
-                },
-                credentials: "same-origin",
-            }
-        );
-
-        if (!response.ok) {
-            throw new Error(
-                `Reverse geocode request failed: ${response.status}`
-            );
+    const response = await fetch(
+        `/api/geocode/reverse?lat=${lat}&lng=${lng}`,
+        {
+            method: "GET",
+            headers: {
+                Accept: "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+            },
+            credentials: "same-origin",
         }
+    );
 
-        const data = await response.json();
-
-        if (data && data.displayName) {
-            return {
-                displayName: data.displayName,
-                address: data.address || {},
-                lat: parseFloat(data.lat),
-                lng: parseFloat(data.lng),
-                raw: data.raw || data,
-            };
-        }
-
-        throw new Error("No address found for coordinates");
-    } catch (error) {
-        throw error;
+    if (!response.ok) {
+        throw new Error(`Reverse geocode request failed: ${response.status}`);
     }
+
+    const data = await response.json();
+
+    if (data && data.displayName) {
+        return {
+            displayName: data.displayName,
+            address: data.address || {},
+            lat: parseFloat(data.lat),
+            lng: parseFloat(data.lng),
+            raw: data.raw || data,
+        };
+    }
+
+    throw new Error("No address found for coordinates");
 };
 
-// Helper function to fetch and update address
 const updateAddress = async (lat, lng) => {
     if (lat == null || lng == null) {
         currentAddress.value = null;
         return null;
     }
 
-    // Validate coordinates are numbers
     const numLat = typeof lat === "string" ? parseFloat(lat) : lat;
     const numLng = typeof lng === "string" ? parseFloat(lng) : lng;
 
@@ -369,6 +298,94 @@ const updateAddress = async (lat, lng) => {
     }
 };
 
+const clearMarkers = () => {
+    markers.forEach((marker) => {
+        marker.setMap(null);
+    });
+    markers = [];
+    infoWindows.forEach((iw) => iw.close());
+    infoWindows = [];
+};
+
+const disposeMap = () => {
+    clearMarkers();
+    
+    mapListeners.forEach((listener) => {
+        if (isGoogleLoaded() && listener) {
+            window.google.maps.event.removeListener(listener);
+        }
+    });
+    mapListeners = [];
+
+    if (map && isGoogleLoaded()) {
+        window.google.maps.event.clearInstanceListeners(map);
+    }
+
+    if (mapContainer.value) {
+        mapContainer.value.innerHTML = "";
+    }
+
+    map = null;
+};
+
+const checkStreetViewAvailability = (lat, lng) => {
+    if (!isGoogleLoaded() || !props.showStreetView) return;
+
+    const streetViewService = new window.google.maps.StreetViewService();
+    const location = new window.google.maps.LatLng(lat, lng);
+
+    streetViewService.getPanorama(
+        { location: location, radius: 50 },
+        (data, status) => {
+            if (status === window.google.maps.StreetViewStatus.OK) {
+                hasStreetViewData.value = true;
+                pendingStreetViewCoords.value = { lat, lng };
+            } else {
+                hasStreetViewData.value = false;
+                pendingStreetViewCoords.value = null;
+            }
+        }
+    );
+};
+
+const disposeStreetView = () => {
+    if (streetViewPanorama) {
+        if (isGoogleLoaded()) {
+            window.google.maps.event.clearInstanceListeners(streetViewPanorama);
+        }
+        streetViewPanorama.setVisible(false);
+        streetViewPanorama = null;
+    }
+    if (streetViewContainer.value) {
+        streetViewContainer.value.innerHTML = "";
+    }
+};
+
+const initStreetView = (lat, lng) => {
+    if (!streetViewContainer.value || !isGoogleLoaded()) return;
+
+    disposeStreetView();
+
+    streetViewPanorama = new window.google.maps.StreetViewPanorama(
+        streetViewContainer.value,
+        {
+            position: { lat, lng },
+            pov: { heading: 0, pitch: 0 },
+            zoom: 1,
+            disableDefaultUI: true,
+            panControl: true,
+            zoomControl: true,
+            enableCloseButton: false,
+            linksControl: false,
+            addressControl: false,
+            fullscreenControl: false,
+            showRoadLabels: false,
+            clickToGo: true,
+            scrollwheel: true,
+        }
+    );
+};
+
 defineExpose({
     recenterOnMarker,
     geocodeAddress,
@@ -376,23 +393,17 @@ defineExpose({
     reverseGeocode,
 });
 
-// Fix for default marker icon issue in Leaflet
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl:
-        "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-    iconUrl:
-        "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-    shadowUrl:
-        "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-});
-
-const initializeMap = () => {
+const initializeMap = async () => {
     if (!mapContainer.value) return;
 
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) {
+        console.error("Google Maps API key is missing. Please set VITE_GOOGLE_MAPS_API_KEY in your .env file.");
+        apiKeyMissing.value = true;
+        return;
+    }
+
     try {
-        // Ensure container has dimensions before initializing
-        // Force height immediately to ensure container is ready
         const container = mapContainer.value;
         container.style.minHeight = "300px";
         container.style.height = "300px";
@@ -400,7 +411,6 @@ const initializeMap = () => {
         const rect = container.getBoundingClientRect();
         const hasDimensions = rect.width > 0 && rect.height > 0;
 
-        // If container still doesn't have dimensions, wait briefly and try once more
         if (!hasDimensions) {
             setTimeout(() => {
                 if (mapContainer.value) {
@@ -410,7 +420,6 @@ const initializeMap = () => {
             return;
         }
 
-        // Convert string props to numbers
         const lat =
             props.latitude != null
                 ? typeof props.latitude === "string"
@@ -424,63 +433,42 @@ const initializeMap = () => {
                     : props.longitude
                 : null;
 
-        // Determine if we're in multiple locations mode
         const isMultipleMode = props.locations && props.locations.length > 0;
         const isSingleMode = lat != null && lng != null;
 
-        // If map already exists, remove it first
-        if (map) {
-            markers.forEach((marker) => {
-                map.removeLayer(marker);
-            });
-            markers = [];
-            map.remove();
-            map = null;
-        }
+        disposeMap();
 
-        // Clear address when reinitializing
         currentAddress.value = null;
-
-        // Clean up existing observers
-        if (visibilityObserver) {
-            visibilityObserver.disconnect();
-            visibilityObserver = null;
-        }
-        if (resizeObserver) {
-            resizeObserver.disconnect();
-            resizeObserver = null;
-        }
+        hasStreetViewData.value = false;
 
         let centerLat, centerLng, zoom;
 
         if (isMultipleMode) {
-            // Multiple locations mode
             const validLocations = [];
             props.locations.forEach((location) => {
                 if (location.latitude != null && location.longitude != null) {
-                    const lat =
+                    const locLat =
                         typeof location.latitude === "string"
                             ? parseFloat(location.latitude)
                             : location.latitude;
-                    const lng =
+                    const locLng =
                         typeof location.longitude === "string"
                             ? parseFloat(location.longitude)
                             : location.longitude;
 
                     if (
-                        !isNaN(lat) &&
-                        !isNaN(lng) &&
-                        lat >= -90 &&
-                        lat <= 90 &&
-                        lng >= -180 &&
-                        lng <= 180
+                        !isNaN(locLat) &&
+                        !isNaN(locLng) &&
+                        locLat >= -90 &&
+                        locLat <= 90 &&
+                        locLng >= -180 &&
+                        locLng <= 180
                     ) {
-                        validLocations.push({ lat, lng });
+                        validLocations.push({ lat: locLat, lng: locLng });
                     }
                 }
             });
 
-            // If no valid locations, use default center but still initialize the map
             if (validLocations.length === 0) {
                 centerLat = props.defaultLat;
                 centerLng = props.defaultLng;
@@ -491,24 +479,20 @@ const initializeMap = () => {
                 zoom = 13;
             }
         } else if (isSingleMode) {
-            // Single location mode
             centerLat = lat;
             centerLng = lng;
             zoom = 17;
         } else {
-            // Default/Interactive mode
             centerLat = props.defaultLat;
             centerLng = props.defaultLng;
             zoom = 15;
         }
 
-        // Ensure center coordinates are numbers
         const centerLatNum =
             typeof centerLat === "string" ? parseFloat(centerLat) : centerLat;
         const centerLngNum =
             typeof centerLng === "string" ? parseFloat(centerLng) : centerLng;
 
-        // Validate coordinates
         if (
             isNaN(centerLatNum) ||
             isNaN(centerLngNum) ||
@@ -524,85 +508,61 @@ const initializeMap = () => {
             centerLng = centerLngNum;
         }
 
-        // Create map with explicit options
-        map = L.map(mapContainer.value, {
-            preferCanvas: false,
+        if (!apiOptionsSet) {
+            setOptions({
+                key: apiKey,
+                v: "weekly",
+            });
+            apiOptionsSet = true;
+        }
+
+        if (!mapsLibrary) {
+            mapsLibrary = await importLibrary("maps");
+            await importLibrary("places");
+            await importLibrary("streetView");
+        }
+        if (!geocoder) {
+            geocoder = new window.google.maps.Geocoder();
+        }
+
+        map = new window.google.maps.Map(mapContainer.value, {
+            center: { lat: centerLat, lng: centerLng },
+            zoom: zoom,
+            mapTypeId: window.google.maps.MapTypeId.HYBRID,
+            disableDefaultUI: true,
             zoomControl: true,
+            streetViewControl: false,
+            clickableIcons: false,
+            gestureHandling: "cooperative",
         });
 
-        // Add tile layer first
-        L.tileLayer(
-            "  https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-            {
-                maxZoom: 19,
-                attribution: '&copy; <a href="https://www.esri.com/">Esri</a>',
-            }
-        ).addTo(map);
-
-        // Force height immediately to ensure container has dimensions
-        if (mapContainer.value) {
-            mapContainer.value.style.minHeight = "300px";
-            mapContainer.value.style.height = "300px";
-        }
-
-        // Wait for container to have proper dimensions before setting view
-        // This is critical - Leaflet needs container dimensions to calculate tile positions correctly
-        const setMapView = () => {
-            if (map && mapContainer.value) {
-                const rect = mapContainer.value.getBoundingClientRect();
-                if (rect.width > 0 && rect.height > 50) {
-                    map.setView([centerLat, centerLng], zoom);
-                    map.invalidateSize();
-                    return true;
-                }
-            }
-            return false;
-        };
-
-        // Try to set view, with one retry if needed
-        if (!setMapView()) {
-            setTimeout(() => {
-                if (!setMapView() && map && mapContainer.value) {
-                    // Final attempt - force height again and set view
-                    mapContainer.value.style.minHeight = "300px";
-                    mapContainer.value.style.height = "300px";
-                    setTimeout(() => {
-                        if (map) {
-                            map.setView([centerLat, centerLng], zoom);
-                            map.invalidateSize();
-                        }
-                    }, 50);
-                }
-            }, 100);
-        }
-
-        // Add markers based on mode
         if (isMultipleMode) {
-            // Multiple markers
-            const bounds = [];
+            const bounds = new window.google.maps.LatLngBounds();
+            let hasValidMarkers = false;
+
             props.locations.forEach((location) => {
                 if (location.latitude != null && location.longitude != null) {
-                    const lat =
+                    const locLat =
                         typeof location.latitude === "string"
                             ? parseFloat(location.latitude)
                             : location.latitude;
-                    const lng =
+                    const locLng =
                         typeof location.longitude === "string"
                             ? parseFloat(location.longitude)
                             : location.longitude;
 
-                    if (!isNaN(lat) && !isNaN(lng)) {
-                        bounds.push([lat, lng]);
-                        // Use book link if book_slug exists, otherwise use page link
+                    if (!isNaN(locLat) && !isNaN(locLng)) {
+                        hasValidMarkers = true;
+                        bounds.extend({ lat: locLat, lng: locLng });
+
                         const url = location.book_slug
                             ? route("books.show", location.book_slug)
                             : location.id
                             ? route("pages.show", location.id)
                             : "#";
+
                         const popupContent = location.page_title
-                            ? `<a href="${url}" class="text-blue-600 hover:text-blue-800 underline"><strong>${
-                                  location.page_title
-                              }</strong></a>${
+                            ? `<a href="${url}" class="text-blue-600 hover:text-blue-800 underline"><strong>${location.page_title}</strong></a>${
                                   location.book_title
                                       ? `<br><em>${location.book_title}</em>`
                                       : ""
@@ -611,79 +571,46 @@ const initializeMap = () => {
                             ? `<a href="${url}" class="text-blue-600 hover:text-blue-800 underline"><strong>${location.book_title}</strong></a>`
                             : `<a href="${url}" class="text-blue-600 hover:text-blue-800 underline">Location</a>`;
 
-                        const marker = L.marker([lat, lng])
-                            .addTo(map)
-                            .bindPopup(popupContent);
+                        const marker = new window.google.maps.Marker({
+                            position: { lat: locLat, lng: locLng },
+                            map: map,
+                        });
+
+                        const infoWindow = new window.google.maps.InfoWindow({
+                            content: popupContent,
+                        });
+
+                        const clickListener = marker.addListener("click", () => {
+                            infoWindows.forEach((iw) => iw.close());
+                            infoWindow.open(map, marker);
+                        });
+                        mapListeners.push(clickListener);
 
                         markers.push(marker);
+                        infoWindows.push(infoWindow);
                     }
                 }
             });
 
-            // Fit bounds if multiple markers - use longer delay to ensure map is ready
-            if (bounds.length > 1) {
-                const latLngBounds = L.latLngBounds(bounds);
-                // Use setTimeout to ensure map is fully initialized before fitting bounds
+            if (hasValidMarkers && markers.length > 1) {
                 setTimeout(() => {
                     if (map) {
-                        try {
-                            // First invalidate size
-                            map.invalidateSize();
-                            // Then fit bounds
-                            map.fitBounds(latLngBounds, {
-                                padding: [20, 20],
-                                maxZoom: 15,
-                            });
-                            // Invalidate again after fitBounds
-                            setTimeout(() => {
-                                if (map) {
-                                    map.invalidateSize();
-                                }
-                            }, 50);
-                        } catch (error) {
-                            // If fitBounds fails, try setting view to first marker
-                            if (bounds.length > 0) {
-                                map.setView(bounds[0], 13);
-                                map.invalidateSize();
-                            }
+                        map.fitBounds(bounds, { padding: 20 });
+                        const currentZoom = map.getZoom();
+                        if (currentZoom > 15) {
+                            map.setZoom(15);
                         }
                     }
-                }, 200);
-            } else if (bounds.length === 1) {
-                // Use setTimeout to ensure map is fully initialized before setting view
+                }, 100);
+            } else if (markers.length === 1) {
                 setTimeout(() => {
-                    if (map) {
-                        try {
-                            map.setView(bounds[0], 17);
-                            map.invalidateSize();
-                        } catch (error) {
-                            // Fallback to default view
-                            map.setView([centerLat, centerLng], zoom);
-                            map.invalidateSize();
-                        }
+                    if (map && markers[0]) {
+                        map.setCenter(markers[0].getPosition());
+                        map.setZoom(17);
                     }
-                }, 200);
-            } else if (bounds.length === 0 && markers.length === 0) {
-                // No valid markers, ensure map is still visible at default location
-                setTimeout(() => {
-                    if (map) {
-                        map.setView([centerLat, centerLng], zoom);
-                        map.invalidateSize();
-                    }
-                }, 200);
-            } else if (bounds.length === 0 && markers.length > 0) {
-                // Markers were added but bounds calculation failed, center on first marker
-                setTimeout(() => {
-                    if (map && markers.length > 0) {
-                        const firstMarker = markers[0];
-                        const markerLatLng = firstMarker.getLatLng();
-                        map.setView(markerLatLng, 13);
-                        map.invalidateSize();
-                    }
-                }, 200);
+                }, 100);
             }
         } else if (isSingleMode || (props.interactive && isSingleMode)) {
-            // Single marker
             const popupContent = props.title
                 ? `<strong>${props.title}</strong>${
                       props.bookTitle ? `<br><em>${props.bookTitle}</em>` : ""
@@ -692,264 +619,109 @@ const initializeMap = () => {
                 ? `<strong>${props.bookTitle}</strong>`
                 : "Location";
 
-            const marker = L.marker([lat, lng]).addTo(map);
+            const marker = new window.google.maps.Marker({
+                position: { lat, lng },
+                map: map,
+            });
 
-            // Fetch address for display above map (with small delay to ensure map is ready)
             setTimeout(() => {
                 updateAddress(lat, lng);
             }, 100);
 
             if (!props.interactive) {
-                marker.bindPopup(popupContent);
+                const infoWindow = new window.google.maps.InfoWindow({
+                    content: popupContent,
+                });
+
+                const clickListener = marker.addListener("click", () => {
+                    infoWindow.open(map, marker);
+                });
+                mapListeners.push(clickListener);
+
+                infoWindows.push(infoWindow);
             }
 
             markers.push(marker);
+
+            if (props.showStreetView) {
+                checkStreetViewAvailability(lat, lng);
+            }
         }
 
-        // Add recenter button control (for both interactive and non-interactive modes when location exists)
         const hasLocation = (lat != null && lng != null) || markers.length > 0;
         if (hasLocation) {
-            const recenterButton = L.control({ position: "bottomright" });
-            recenterButton.onAdd = function () {
-                const div = L.DomUtil.create("div", "leaflet-control-recenter");
-                div.innerHTML = `
-        <button
-          type="button"
-          class="leaflet-control-recenter-button"
-          title="Recenter on marker"
-          style="
-            background-color: white;
-            border: 2px solid rgba(0,0,0,0.2);
-            border-radius: 4px;
-            width: 30px;
-            height: 30px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
-          "
-        >
-          <span style="font-size: 18px;">📍</span>
-        </button>
-      `;
+            const recenterDiv = document.createElement("div");
+            recenterDiv.innerHTML = `
+                <button
+                    type="button"
+                    class="gm-recenter-btn"
+                    title="Recenter on marker"
+                    style="
+                        background-color: white;
+                        border: none;
+                        border-radius: 2px;
+                        width: 40px;
+                        height: 40px;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        box-shadow: rgba(0, 0, 0, 0.3) 0px 1px 4px -1px;
+                        margin: 10px;
+                    "
+                >
+                    <span style="font-size: 20px;">📍</span>
+                </button>
+            `;
 
-                L.DomEvent.disableClickPropagation(div);
-                L.DomEvent.on(div, "click", function () {
-                    if (markers.length > 0) {
-                        const marker = markers[0];
-                        const latLng = marker.getLatLng();
-                        map.setView(latLng, 17);
-                    } else if (lat != null && lng != null) {
-                        map.setView([lat, lng], 17);
-                    }
-                });
-
-                return div;
-            };
-            recenterButton.addTo(map);
-        }
-
-        // Add geocoder control for interactive mode (address search)
-        if (props.interactive && !props.hideGeocoder) {
-            geocoderInstance = new Geocoder({
-                defaultMarkGeocode: false,
-                placeholder: "Search for an address...",
-                errorMessage: "Nothing found.",
-                position: "topright",
+            recenterDiv.addEventListener("click", () => {
+                if (markers.length > 0) {
+                    const marker = markers[0];
+                    map.setCenter(marker.getPosition());
+                    map.setZoom(17);
+                } else if (lat != null && lng != null) {
+                    map.setCenter({ lat, lng });
+                    map.setZoom(17);
+                }
             });
 
-            geocoderInstance.on("markgeocode", async (e) => {
-                const { lat, lng } = e.geocode.center;
-
-                // Remove existing marker
-                markers.forEach((marker) => {
-                    map.removeLayer(marker);
-                });
-                markers = [];
-
-                // Fetch address for display above map
-                await updateAddress(lat, lng);
-
-                // Add new marker at geocoded location
-                const marker = L.marker([lat, lng]).addTo(map);
-                markers.push(marker);
-
-                // Center map on geocoded location
-                map.setView([lat, lng], 17);
-
-                // Emit coordinates
-                emit("update:latitude", lat);
-                emit("update:longitude", lng);
-                emit("location-selected", { lat, lng });
-            });
-
-            geocoderInstance.addTo(map);
+            map.controls[window.google.maps.ControlPosition.RIGHT_BOTTOM].push(recenterDiv);
         }
 
-        // Add click handler for interactive mode
         if (props.interactive) {
-            map.on("click", async (e) => {
-                const { lat, lng } = e.latlng;
+            const clickListener = map.addListener("click", async (e) => {
+                const clickLat = e.latLng.lat();
+                const clickLng = e.latLng.lng();
 
-                // Remove existing marker
-                markers.forEach((marker) => {
-                    map.removeLayer(marker);
+                clearMarkers();
+                await updateAddress(clickLat, clickLng);
+
+                const marker = new window.google.maps.Marker({
+                    position: { lat: clickLat, lng: clickLng },
+                    map: map,
                 });
-                markers = [];
-
-                // Fetch address for display above map
-                await updateAddress(lat, lng);
-
-                // Add new marker
-                const marker = L.marker([lat, lng]).addTo(map);
                 markers.push(marker);
 
-                emit("update:latitude", lat);
-                emit("update:longitude", lng);
-                emit("location-selected", { lat, lng });
-            });
-        }
+                emit("update:latitude", clickLat);
+                emit("update:longitude", clickLng);
+                emit("location-selected", { lat: clickLat, lng: clickLng });
 
-        // Invalidate size to ensure map renders correctly
-        // Multiple attempts to handle aspect-square and dynamic sizing
-        const invalidateMapSize = () => {
-            if (map && mapContainer.value) {
-                try {
-                    map.invalidateSize();
-                    // Trigger a resize event to force Leaflet to recalculate
-                    window.dispatchEvent(new Event("resize"));
-                } catch (error) {
-                    // Silently handle errors
-                }
-            }
-        };
-
-        setTimeout(invalidateMapSize, 100);
-        setTimeout(invalidateMapSize, 300);
-        setTimeout(invalidateMapSize, 500);
-
-        // Set up IntersectionObserver to detect when map becomes visible
-        // This is important for maps inside accordions, tabs, or other collapsible containers
-        if (mapContainer.value && typeof IntersectionObserver !== "undefined") {
-            visibilityObserver = new IntersectionObserver(
-                (entries) => {
-                    entries.forEach((entry) => {
-                        if (entry.isIntersecting && map) {
-                            // Map container is now visible, invalidate size
-                            setTimeout(() => {
-                                if (map && mapContainer.value) {
-                                    try {
-                                        map.invalidateSize();
-                                    } catch (error) {
-                                        // Silently handle map size invalidation errors
-                                    }
-                                }
-                            }, 100);
-                        }
-                    });
-                },
-                {
-                    threshold: 0.1, // Trigger when at least 10% is visible
-                }
-            );
-            visibilityObserver.observe(mapContainer.value);
-
-            // If map is already visible when mounted, ensure it initializes properly
-            // Check if element is already intersecting
-            const isAlreadyVisible =
-                mapContainer.value.offsetWidth > 0 &&
-                mapContainer.value.offsetHeight > 0;
-            if (isAlreadyVisible && map) {
-                // Map is already visible, add additional invalidation attempts
-                setTimeout(() => {
-                    if (map && mapContainer.value) {
-                        try {
-                            map.invalidateSize();
-                        } catch (error) {
-                            // Silently handle map size invalidation errors
-                        }
-                    }
-                }, 200);
-                setTimeout(() => {
-                    if (map && mapContainer.value) {
-                        try {
-                            map.invalidateSize();
-                        } catch (error) {
-                            // Silently handle map size invalidation errors
-                        }
-                    }
-                }, 600);
-            }
-        }
-
-        // Set up ResizeObserver to handle container size changes
-        if (mapContainer.value && typeof ResizeObserver !== "undefined") {
-            resizeObserver = new ResizeObserver(() => {
-                if (map && mapContainer.value) {
-                    // Debounce the invalidation to avoid too many calls
-                    setTimeout(() => {
-                        if (map && mapContainer.value) {
-                            try {
-                                map.invalidateSize();
-                            } catch (error) {
-                                // Silently handle map size invalidation errors
-                            }
-                        }
-                    }, 100);
+                if (props.showStreetView) {
+                    checkStreetViewAvailability(clickLat, clickLng);
                 }
             });
-            resizeObserver.observe(mapContainer.value);
+            mapListeners.push(clickListener);
         }
-
-        // Final check: ensure map view is valid after all initialization
-        setTimeout(() => {
-            if (map) {
-                try {
-                    const currentCenter = map.getCenter();
-
-                    // Validate that center is reasonable (not NaN or extreme values)
-                    if (
-                        isNaN(currentCenter.lat) ||
-                        isNaN(currentCenter.lng) ||
-                        Math.abs(currentCenter.lat) > 90 ||
-                        Math.abs(currentCenter.lng) > 180
-                    ) {
-                        // Reset to default if view is invalid
-                        map.setView([props.defaultLat, props.defaultLng], 13);
-                        map.invalidateSize();
-                    } else {
-                        // Even if valid, force a refresh to ensure tiles load correctly
-                        map.invalidateSize();
-                    }
-
-                    // Force a complete view refresh
-                    const currentZoom = map.getZoom();
-                    map.setView(map.getCenter(), currentZoom);
-                    map.invalidateSize();
-                } catch (error) {
-                    // If error, try to reset to default
-                    try {
-                        map.setView([props.defaultLat, props.defaultLng], 13);
-                        map.invalidateSize();
-                    } catch (resetError) {
-                        // Silently handle errors
-                    }
-                }
-            }
-        }, 400);
 
         isInitialized = true;
     } catch (error) {
+        console.error("Failed to initialize Google Map:", error);
         isInitialized = false;
     }
 };
 
 onMounted(() => {
-    // Use a longer delay to ensure DOM is fully settled
     nextTick(() => {
-        // If locations are already provided, initialize immediately
-        // Otherwise, wait a bit for props to settle
         if (props.locations && props.locations.length > 0) {
             initializeMap();
         } else {
@@ -960,12 +732,10 @@ onMounted(() => {
     });
 });
 
-// Watch for changes in single location mode
 watch(
     () => [props.latitude, props.longitude],
     ([newLat, newLng]) => {
         if (map && !props.locations?.length) {
-            // Convert string props to numbers
             const lat =
                 newLat != null
                     ? typeof newLat === "string"
@@ -979,14 +749,9 @@ watch(
                         : newLng
                     : null;
 
-            // Remove existing markers
-            markers.forEach((marker) => {
-                map.removeLayer(marker);
-            });
-            markers = [];
+            clearMarkers();
 
-            if (lat != null && lng != null) {
-                // Add new marker
+            if (lat != null && lng != null && isGoogleLoaded()) {
                 const popupContent = props.title
                     ? `<strong>${props.title}</strong>${
                           props.bookTitle
@@ -997,32 +762,46 @@ watch(
                     ? `<strong>${props.bookTitle}</strong>`
                     : "Location";
 
-                const marker = L.marker([lat, lng])
-                    .addTo(map)
-                    .bindPopup(popupContent);
+                const marker = new window.google.maps.Marker({
+                    position: { lat, lng },
+                    map: map,
+                });
 
-                // Fetch address for display above map (with small delay to ensure map is ready)
+                const infoWindow = new window.google.maps.InfoWindow({
+                    content: popupContent,
+                });
+
+                const clickListener = marker.addListener("click", () => {
+                    infoWindow.open(map, marker);
+                });
+                mapListeners.push(clickListener);
+
                 setTimeout(() => {
                     updateAddress(lat, lng);
                 }, 100);
 
                 markers.push(marker);
+                infoWindows.push(infoWindow);
 
                 if (!props.interactive) {
-                    map.setView([lat, lng], 17);
+                    map.setCenter({ lat, lng });
+                    map.setZoom(17);
                 } else {
-                    map.setView([lat, lng], 15);
+                    map.setCenter({ lat, lng });
+                    map.setZoom(15);
+                }
+
+                if (props.showStreetView) {
+                    checkStreetViewAvailability(lat, lng);
                 }
             }
         }
     }
 );
 
-// Watch for changes in multiple locations mode
 watch(
     () => props.locations,
     (newLocations) => {
-        // If locations are provided and map isn't initialized yet, initialize it
         if (!isInitialized && newLocations && newLocations.length > 0) {
             nextTick(() => {
                 initializeMap();
@@ -1030,7 +809,6 @@ watch(
             return;
         }
 
-        // If map is already initialized, reinitialize with new locations
         if (isInitialized) {
             nextTick(() => {
                 initializeMap();
@@ -1040,17 +818,28 @@ watch(
     { deep: true, immediate: true }
 );
 
+watch(streetViewAccordionOpen, (isOpen) => {
+    if (isOpen && pendingStreetViewCoords.value && !streetViewPanorama) {
+        nextTick(() => {
+            const { lat, lng } = pendingStreetViewCoords.value;
+            initStreetView(lat, lng);
+        });
+    }
+});
+
+watch(hasStreetViewData, (hasData) => {
+    if (!hasData) {
+        disposeStreetView();
+        pendingStreetViewCoords.value = null;
+        streetViewAccordionOpen.value = false;
+    }
+});
+
 onUnmounted(() => {
-    if (visibilityObserver) {
-        visibilityObserver.disconnect();
-        visibilityObserver = null;
-    }
-    if (resizeObserver) {
-        resizeObserver.disconnect();
-        resizeObserver = null;
-    }
-    if (map) {
-        map.remove();
-    }
+    disposeMap();
+    disposeStreetView();
+    mapsLibrary = null;
+    geocoder = null;
+    autocompleteService = null;
 });
 </script>

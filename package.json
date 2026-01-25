@@ -37,6 +37,7 @@
   "dependencies": {
     "@dicebear/core": "^9.2.4",
     "@dicebear/fun-emoji": "^9.2.4",
+    "@googlemaps/js-api-loader": "^2.0.2",
     "@inertiajs/vue3": "^2.0.0",
     "@tiptap/extension-link": "^2.12.0",
     "@tiptap/starter-kit": "^2.0.0-beta.185",
@@ -52,8 +53,6 @@
     "filepond-plugin-image-preview": "^4.6.12",
     "filepond-plugin-media-preview": "^1.0.11",
     "laravel-echo": "^2.2.6",
-    "leaflet": "^1.9.4",
-    "leaflet-control-geocoder": "^3.3.1",
     "lodash": "^4.17.19",
     "pusher-js": "^8.4.0",
     "remixicon": "^4.2.0",
