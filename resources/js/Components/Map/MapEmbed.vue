@@ -7,6 +7,7 @@
         :longitude="longitude"
         :title="title"
         :book-title="bookTitle"
+        :show-street-view="showStreetView"
         container-class="w-full aspect-square rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden shadow-lg"
       />
     </div>
@@ -37,10 +38,13 @@ const props = defineProps({
   heading: {
     type: String,
     default: "Location"
+  },
+  showStreetView: {
+    type: Boolean,
+    default: true
   }
 });
 
-// Convert string props to numbers
 const latitude = computed(() => {
   if (props.latitude === null || props.latitude === undefined) return null;
   return typeof props.latitude === "string"

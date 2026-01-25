@@ -1,6 +1,3 @@
-@import "leaflet/dist/leaflet.css";
-@import "leaflet-control-geocoder/dist/Control.Geocoder.css";
-
 @tailwind base;
 @tailwind components;
 
@@ -542,8 +539,7 @@
 }
 
 /* Ensure images and media in page/show appear above snow */
-/* Exclude Leaflet map tiles from this rule - Leaflet uses absolute positioning */
-[data-theme="christmas"] main img:not(.leaflet-container img),
+[data-theme="christmas"] main img,
 [data-theme="christmas"] main video,
 [data-theme="christmas"] main iframe {
   position: relative;
@@ -556,15 +552,12 @@
   z-index: 1;
 }
 
-/* Ensure Leaflet map containers render correctly */
-.leaflet-container {
+/* Ensure Google Map containers render correctly */
+.gm-style {
   background-color: #f4f4f4;
-  outline: 0;
-  height: 100%;
-  width: 100%;
 }
 
-.leaflet-container img {
+.gm-style img {
   max-width: none;
   max-height: none;
 }

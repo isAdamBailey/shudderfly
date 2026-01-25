@@ -1,0 +1,10 @@
+---
+description: 
+globs: **/*.php
+alwaysApply: false
+---
+
+# Lint PHP With Sail Pint
+
+- Use `sail pint` to lint PHP code in this project.
+- Example: `sail pint`
