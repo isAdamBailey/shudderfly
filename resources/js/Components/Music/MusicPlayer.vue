@@ -410,6 +410,7 @@ const createPlayer = async () => {
         }
 
         const newPlayer = new window.YT.Player("global-music-player", {
+            host: "https://www.youtube-nocookie.com",
             height: "1",
             width: "1",
             videoId: currentSong.value.youtube_video_id,
@@ -428,17 +429,7 @@ const createPlayer = async () => {
                 playsinline: 1,
             },
             events: {
-                onReady: (event) => {
-                    const modifyIframeSrc = () => {
-                        const iframe = document.getElementById("global-music-player")?.querySelector("iframe");
-                        if (iframe && iframe.src.includes("youtube.com") && !iframe.src.includes("youtube-nocookie.com")) {
-                            iframe.src = iframe.src.replace("youtube.com", "youtube-nocookie.com");
-                        }
-                    };
-                    modifyIframeSrc();
-                    setTimeout(modifyIframeSrc, 100);
-                    onPlayerReady(event);
-                },
+                onReady: onPlayerReady,
                 onStateChange: onPlayerStateChange,
                 onError: onPlayerError,
             },
