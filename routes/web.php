@@ -15,6 +15,7 @@ use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\YouTubeProxyController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -69,6 +70,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/music', [MusicController::class, 'index'])->name('music.index');
     Route::get('/music/{song}', [MusicController::class, 'show'])->name('music.show');
     Route::post('/music/{song}/increment-read-count', [MusicController::class, 'incrementReadCount'])->name('music.increment-read-count');
+
+    Route::get('/api/youtube-iframe-api', [YouTubeProxyController::class, 'iframeApi'])->name('youtube.iframe-api');
 
     Route::get('/messages', [MessageController::class, 'index'])->name('messages.index');
     Route::get('/messages/{message}', [MessageController::class, 'show'])->name('messages.show');

@@ -348,7 +348,8 @@ const loadYouTubeAPI = () => {
 
         if (!document.querySelector('script[src*="youtube"]')) {
             const script = document.createElement("script");
-            script.src = "https://www.youtube.com/iframe_api";
+            // eslint-disable-next-line no-undef
+            script.src = route("youtube.iframe-api");
             document.head.appendChild(script);
         }
     });
@@ -427,7 +428,17 @@ const createPlayer = async () => {
                 playsinline: 1,
             },
             events: {
-                onReady: onPlayerReady,
+                onReady: (event) => {
+                    const modifyIframeSrc = () => {
+                        const iframe = document.getElementById("global-music-player")?.querySelector("iframe");
+                        if (iframe && iframe.src.includes("youtube.com") && !iframe.src.includes("youtube-nocookie.com")) {
+                            iframe.src = iframe.src.replace("youtube.com", "youtube-nocookie.com");
+                        }
+                    };
+                    modifyIframeSrc();
+                    setTimeout(modifyIframeSrc, 100);
+                    onPlayerReady(event);
+                },
                 onStateChange: onPlayerStateChange,
                 onError: onPlayerError,
             },
