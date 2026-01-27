@@ -7,7 +7,7 @@
         :longitude="longitude"
         :title="title"
         :book-title="bookTitle"
-        :show-street-view="showStreetView"
+        :show-street-view="effectiveShowStreetView"
         container-class="w-full aspect-square rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden shadow-lg"
       />
     </div>
@@ -16,6 +16,7 @@
 
 <script setup>
 import { computed } from "vue";
+import { usePage } from "@inertiajs/vue3";
 import Map from "./Map.vue";
 
 const props = defineProps({
@@ -57,5 +58,14 @@ const longitude = computed(() => {
   return typeof props.longitude === "string"
     ? parseFloat(props.longitude)
     : props.longitude;
+});
+
+const streetViewEnabled = computed(() => {
+  const value = usePage().props.settings?.street_view_enabled;
+  return value === "1" || value === 1 || value === true;
+});
+
+const effectiveShowStreetView = computed(() => {
+  return props.showStreetView && streetViewEnabled.value;
 });
 </script>
