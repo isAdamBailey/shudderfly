@@ -10,13 +10,6 @@
       >
         {{ t("message.whats_on_your_mind") }}
       </div>
-      <button
-        type="button"
-        class="p-2 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white transition-colors"
-        :title="t('message.create_message')"
-      >
-        <i class="ri-add-line text-xl"></i>
-      </button>
     </div>
   </div>
 </template>
@@ -35,4 +28,3 @@ const currentUser = computed(() => {
   return usePage().props.auth?.user;
 });
 </script>
-

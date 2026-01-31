@@ -1,8 +1,6 @@
 <template>
   <div class="max-h-96 overflow-y-auto">
-    <div
-      class="px-4 py-3 border-b border-gray-200 dark:border-gray-700"
-    >
+    <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
       <h2
         class="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2"
       >
@@ -68,98 +66,98 @@
           @click="handleNotificationClick(notification)"
         >
           <div>
-          <div class="mb-2">
-            <div
-              v-if="notification.type === 'App\\Notifications\\UserTagged'"
-              class="text-gray-900 dark:text-gray-100"
-            >
-              <div class="flex items-center gap-2 mb-1">
-                <Avatar
-                  :avatar="notification.data.tagger_avatar"
-                  :user="{
-                    id: notification.data.tagger_id,
-                    name: notification.data.tagger_name
-                  }"
-                  size="sm"
-                />
-                <div class="flex items-center gap-1.5 flex-wrap">
-                  <strong>{{ notification.data.tagger_name }}</strong>
-                  <span class="text-sm">tagged you:</span>
-                  <span
-                    v-if="!notification.read_at"
-                    class="inline-block w-1.5 h-1.5 bg-blue-600 rounded-full"
-                  ></span>
+            <div class="mb-2">
+              <div
+                v-if="notification.type === 'App\\Notifications\\UserTagged'"
+                class="text-gray-900 dark:text-gray-100"
+              >
+                <div class="flex items-center gap-2 mb-1">
+                  <Avatar
+                    :avatar="notification.data.tagger_avatar"
+                    :user="{
+                      id: notification.data.tagger_id,
+                      name: notification.data.tagger_name
+                    }"
+                    size="sm"
+                  />
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <strong>{{ notification.data.tagger_name }}</strong>
+                    <span class="text-sm">tagged you:</span>
+                    <span
+                      v-if="!notification.read_at"
+                      class="inline-block w-1.5 h-1.5 bg-blue-600 rounded-full"
+                    ></span>
+                  </div>
                 </div>
+                <p
+                  class="text-sm text-gray-700 dark:text-gray-300 italic ml-8 mb-1"
+                >
+                  "{{ notification.data.message }}"
+                </p>
               </div>
-              <p
-                class="text-sm text-gray-700 dark:text-gray-300 italic ml-8 mb-1"
+              <div
+                v-else-if="
+                  notification.type === 'App\\Notifications\\MessageCommented'
+                "
+                class="text-gray-900 dark:text-gray-100"
               >
-                "{{ notification.data.message }}"
-              </p>
-            </div>
-            <div
-              v-else-if="
-                notification.type === 'App\\Notifications\\MessageCommented'
-              "
-              class="text-gray-900 dark:text-gray-100"
-            >
-              <div class="flex items-center gap-2 mb-1">
-                <Avatar
-                  :avatar="notification.data.commenter_avatar"
-                  :user="{
-                    id: notification.data.commenter_id,
-                    name: notification.data.commenter_name
-                  }"
-                  size="sm"
-                />
-                <div class="flex items-center gap-1.5 flex-wrap">
-                  <strong>{{ notification.data.commenter_name }}</strong>
-                  <span class="text-sm">commented on your message:</span>
-                  <span
-                    v-if="!notification.read_at"
-                    class="inline-block w-1.5 h-1.5 bg-blue-600 rounded-full"
-                  ></span>
+                <div class="flex items-center gap-2 mb-1">
+                  <Avatar
+                    :avatar="notification.data.commenter_avatar"
+                    :user="{
+                      id: notification.data.commenter_id,
+                      name: notification.data.commenter_name
+                    }"
+                    size="sm"
+                  />
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <strong>{{ notification.data.commenter_name }}</strong>
+                    <span class="text-sm">commented on your message:</span>
+                    <span
+                      v-if="!notification.read_at"
+                      class="inline-block w-1.5 h-1.5 bg-blue-600 rounded-full"
+                    ></span>
+                  </div>
                 </div>
+                <p
+                  class="text-sm text-gray-700 dark:text-gray-300 italic ml-8 mb-1"
+                >
+                  "{{ notification.data.message }}"
+                </p>
+                <p class="text-sm text-gray-600 dark:text-gray-400 ml-8 mt-1">
+                  Comment: "{{ notification.data.comment }}"
+                </p>
               </div>
-              <p
-                class="text-sm text-gray-700 dark:text-gray-300 italic ml-8 mb-1"
+              <div
+                class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 ml-8"
               >
-                "{{ notification.data.message }}"
-              </p>
-              <p class="text-sm text-gray-600 dark:text-gray-400 ml-8 mt-1">
-                Comment: "{{ notification.data.comment }}"
-              </p>
+                <span>{{ formatDate(notification.created_at) }}</span>
+                <span class="text-blue-600 dark:text-blue-400"
+                  >View message →</span
+                >
+              </div>
             </div>
             <div
-              class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 ml-8"
+              class="flex items-center justify-end gap-1 pt-2 border-t border-gray-200 dark:border-gray-700"
             >
-              <span>{{ formatDate(notification.created_at) }}</span>
-              <span class="text-blue-600 dark:text-blue-400"
-                >View message →</span
+              <button
+                v-if="!notification.read_at"
+                type="button"
+                title="Mark as read"
+                class="px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800 rounded transition-colors"
+                @click.stop="markAsRead(notification.id)"
               >
+                Mark read
+              </button>
+              <button
+                type="button"
+                title="Delete notification"
+                class="px-2 py-1 text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-100 dark:hover:bg-red-800 rounded transition-colors"
+                @click.stop="deleteNotification(notification.id)"
+              >
+                Delete
+              </button>
             </div>
-          </div>
-          <div
-            class="flex items-center justify-end gap-1 pt-2 border-t border-gray-200 dark:border-gray-700"
-          >
-            <button
-              v-if="!notification.read_at"
-              type="button"
-              title="Mark as read"
-              class="px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800 rounded transition-colors"
-              @click.stop="markAsRead(notification.id)"
-            >
-              Mark read
-            </button>
-            <button
-              type="button"
-              title="Delete notification"
-              class="px-2 py-1 text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-100 dark:hover:bg-red-800 rounded transition-colors"
-              @click.stop="deleteNotification(notification.id)"
-            >
-              Delete
-            </button>
-          </div>
           </div>
         </div>
       </div>
@@ -170,9 +168,9 @@
 <script setup>
 /* global route */
 import Avatar from "@/Components/Avatar.vue";
-import { useUnreadNotifications } from "@/composables/useUnreadNotifications";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
+import { useUnreadNotifications } from "@/composables/useUnreadNotifications";
 import { router, usePage } from "@inertiajs/vue3";
 import axios from "axios";
 import { onMounted, onUnmounted, ref } from "vue";
