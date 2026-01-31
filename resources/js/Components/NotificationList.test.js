@@ -67,6 +67,25 @@ vi.mock("@/composables/useUnreadNotifications", () => ({
   })
 }));
 
+vi.mock("@/composables/useSpeechSynthesis", () => ({
+  useSpeechSynthesis: () => ({
+    speak: vi.fn(),
+    speaking: { value: false }
+  })
+}));
+
+vi.mock("@/composables/useTranslations", () => ({
+  useTranslations: () => ({
+    t: (key, replacements = {}) => {
+      let str = key;
+      Object.entries(replacements).forEach(([k, v]) => {
+        str = str.replace(new RegExp(`:${k}`, "g"), v);
+      });
+      return str;
+    }
+  })
+}));
+
 describe("NotificationList", () => {
   const mockNotifications = [
     {

@@ -100,38 +100,7 @@ const markAllAsRead = async () => {
                                 </template>
 
                                 <template #content>
-                                    <div class="max-h-96 overflow-y-auto">
-                                        <div
-                                            class="px-4 py-3 border-b border-gray-200 dark:border-gray-700"
-                                        >
-                                            <div
-                                                class="flex items-center justify-between gap-2"
-                                            >
-                                                <div
-                                                    class="text-sm font-semibold text-gray-900 dark:text-gray-100"
-                                                >
-                                                    Notifications
-                                                    <span
-                                                        v-if="unreadCount > 0"
-                                                        class="ml-2 px-2 py-0.5 text-xs bg-red-600 text-white rounded-full"
-                                                    >
-                                                        {{ unreadCount }}
-                                                    </span>
-                                                </div>
-                                                <button
-                                                    v-if="unreadCount > 0"
-                                                    type="button"
-                                                    class="px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800 rounded transition-colors"
-                                                    @click="markAllAsRead"
-                                                >
-                                                    Mark all read
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div class="p-3">
-                                            <NotificationList ref="notificationListRef" />
-                                        </div>
-                                    </div>
+                                    <NotificationList ref="notificationListRef" />
                                 </template>
                             </Dropdown>
                         </div>
@@ -241,38 +210,7 @@ const markAllAsRead = async () => {
                                 </template>
 
                                 <template #content>
-                                    <div class="max-h-96 overflow-y-auto">
-                                        <div
-                                            class="px-4 py-3 border-b border-gray-200 dark:border-gray-700"
-                                        >
-                                            <div
-                                                class="flex items-center justify-between gap-2"
-                                            >
-                                                <div
-                                                    class="text-sm font-semibold text-gray-900 dark:text-gray-100"
-                                                >
-                                                    Notifications
-                                                    <span
-                                                        v-if="unreadCount > 0"
-                                                        class="ml-2 px-2 py-0.5 text-xs bg-red-600 text-white rounded-full"
-                                                    >
-                                                        {{ unreadCount }}
-                                                    </span>
-                                                </div>
-                                                <button
-                                                    v-if="unreadCount > 0"
-                                                    type="button"
-                                                    class="px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800 rounded transition-colors"
-                                                    @click="markAllAsRead"
-                                                >
-                                                    Mark all read
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div class="p-3">
-                                            <NotificationList ref="mobileNotificationListRef" />
-                                        </div>
-                                    </div>
+                                    <NotificationList ref="mobileNotificationListRef" />
                                 </template>
                             </Dropdown>
                         </div>

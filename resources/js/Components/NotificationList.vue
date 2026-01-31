@@ -1,32 +1,73 @@
 <template>
-  <div class="space-y-2">
+  <div class="max-h-96 overflow-y-auto">
     <div
-      v-if="loading"
-      class="text-center py-4 text-gray-500 dark:text-gray-400"
+      class="px-4 py-3 border-b border-gray-200 dark:border-gray-700"
     >
-      Loading notifications...
-    </div>
-
-    <div
-      v-else-if="notifications.length === 0"
-      class="text-center py-8 text-gray-500 dark:text-gray-400"
-    >
-      No notifications yet.
-    </div>
-
-    <div v-else class="space-y-2">
-      <div
-        v-for="notification in notifications"
-        :key="notification.id"
-        :class="[
-          'p-2.5 rounded-lg border cursor-pointer transition-colors',
-          notification.read_at
-            ? 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
-            : 'bg-blue-50 dark:bg-blue-900 border-blue-200 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-800'
-        ]"
-        @click="handleNotificationClick(notification)"
+      <h2
+        class="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2"
       >
-        <div>
+        Notifications
+        <span
+          v-if="unreadCount > 0"
+          class="px-2 py-0.5 text-sm bg-red-600 text-white rounded-full"
+        >
+          {{ unreadCount }}
+        </span>
+      </h2>
+    </div>
+    <div
+      class="px-4 py-2 flex items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50"
+    >
+      <button
+        v-if="notifications.length > 0"
+        type="button"
+        title="Speak unread notifications summary"
+        class="p-1.5 rounded text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors disabled:opacity-50"
+        :disabled="speaking"
+        @click.stop="speakSummary"
+      >
+        <i
+          class="ri-speak-fill text-lg"
+          :class="{ 'animate-pulse': speaking }"
+        ></i>
+      </button>
+      <button
+        v-if="unreadCount > 0"
+        type="button"
+        class="px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800 rounded transition-colors"
+        @click.stop="markAllAsRead"
+      >
+        Mark all read
+      </button>
+    </div>
+    <div class="p-3 space-y-2">
+      <div
+        v-if="loading"
+        class="text-center py-4 text-gray-500 dark:text-gray-400"
+      >
+        Loading notifications...
+      </div>
+
+      <div
+        v-else-if="notifications.length === 0"
+        class="text-center py-8 text-gray-500 dark:text-gray-400"
+      >
+        No notifications yet.
+      </div>
+
+      <div v-else class="space-y-2">
+        <div
+          v-for="notification in notifications"
+          :key="notification.id"
+          :class="[
+            'p-2.5 rounded-lg border cursor-pointer transition-colors',
+            notification.read_at
+              ? 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
+              : 'bg-blue-50 dark:bg-blue-900 border-blue-200 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-800'
+          ]"
+          @click="handleNotificationClick(notification)"
+        >
+          <div>
           <div class="mb-2">
             <div
               v-if="notification.type === 'App\\Notifications\\UserTagged'"
@@ -119,6 +160,7 @@
               Delete
             </button>
           </div>
+          </div>
         </div>
       </div>
     </div>
@@ -129,11 +171,15 @@
 /* global route */
 import Avatar from "@/Components/Avatar.vue";
 import { useUnreadNotifications } from "@/composables/useUnreadNotifications";
+import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { useTranslations } from "@/composables/useTranslations";
 import { router, usePage } from "@inertiajs/vue3";
 import axios from "axios";
 import { onMounted, onUnmounted, ref } from "vue";
 
 const notifications = ref([]);
+const { speak, speaking } = useSpeechSynthesis();
+const { t } = useTranslations();
 const loading = ref(true);
 const notificationsChannel = ref(null);
 const { unreadCount } = useUnreadNotifications();
@@ -228,21 +274,51 @@ const markAllAsRead = async () => {
 const deleteNotification = async (notificationId) => {
   try {
     await axios.delete(route("notifications.delete", notificationId));
-    // Remove from local state
     const index = notifications.value.findIndex((n) => n.id === notificationId);
     if (index !== -1) {
       const notification = notifications.value[index];
-      // Decrement global count if it was unread
       if (!notification.read_at && unreadCount.value > 0) {
         unreadCount.value--;
       }
       notifications.value.splice(index, 1);
     }
-    // Reload page props to sync with server
     router.reload({ only: ["unread_notifications_count"] });
   } catch (error) {
     console.error("Failed to delete notification:", error);
   }
+};
+
+const getSummaryForSpeech = () => {
+  const unread = notifications.value.filter((n) => !n.read_at);
+  if (unread.length === 0) return t("notifications.summary_none");
+  const countText =
+    unread.length === 1
+      ? t("notifications.summary_count_one") + " "
+      : t("notifications.summary_count", { count: unread.length }) + " ";
+  const parts = unread.slice(0, 5).map((n) => {
+    if (n.type === "App\\Notifications\\UserTagged") {
+      return t("notifications.summary_tagged", {
+        name: n.data.tagger_name
+      });
+    }
+    if (n.type === "App\\Notifications\\MessageCommented") {
+      return t("notifications.summary_commented", {
+        name: n.data.commenter_name
+      });
+    }
+    return t("notifications.summary_new");
+  });
+  const summary = parts.join(" ");
+  const more =
+    unread.length > 5
+      ? " " + t("notifications.summary_more", { count: unread.length - 5 })
+      : "";
+  const tap = " " + t("notifications.summary_tap");
+  return countText + summary + more + tap;
+};
+
+const speakSummary = () => {
+  speak(getSummaryForSpeech());
 };
 
 const setupEchoListener = () => {
