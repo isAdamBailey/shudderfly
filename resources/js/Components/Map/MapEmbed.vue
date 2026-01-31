@@ -1,14 +1,14 @@
 <template>
   <div v-if="latitude != null && longitude != null" class="w-full mt-6 mb-4">
     <h3 class="text-lg font-semibold text-white mb-2">{{ heading }}</h3>
-    <div class="max-w-md mx-auto px-4">
+    <div class="w-full px-4">
       <Map
         :latitude="latitude"
         :longitude="longitude"
         :title="title"
         :book-title="bookTitle"
         :show-street-view="effectiveShowStreetView"
-        container-class="w-full aspect-square rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden shadow-lg"
+        container-class="w-full aspect-video rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden shadow-lg"
       />
     </div>
   </div>

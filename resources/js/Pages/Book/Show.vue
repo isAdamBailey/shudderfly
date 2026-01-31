@@ -18,72 +18,6 @@
         </div>
         <BookCover :book="book" :pages="pages" />
       </div>
-      <div
-        class="p-2 flex flex-col lg:flex-row lg:justify-between lg:items-center gap-3"
-      >
-        <!-- Tab Navigation -->
-        <div
-          v-if="canEditPages"
-          class="flex flex-wrap justify-center sm:justify-start bg-gray-800 rounded-lg p-1 gap-1"
-        >
-          <button
-            type="button"
-            :class="[
-              'px-3 py-2 rounded-md text-sm font-medium transition-colors flex-1 min-w-0 sm:flex-none',
-              activeTab === 'pages'
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-300 hover:text-white hover:bg-gray-700'
-            ]"
-            @click="setActiveTab('pages')"
-          >
-            Add Pages
-          </button>
-          <button
-            type="button"
-            :class="[
-              'px-3 py-2 rounded-md text-sm font-medium transition-colors flex-1 min-w-0 sm:flex-none',
-              activeTab === 'book'
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-300 hover:text-white hover:bg-gray-700'
-            ]"
-            @click="setActiveTab('book')"
-          >
-            Edit Book
-          </button>
-          <button
-            type="button"
-            :class="[
-              'px-3 py-2 rounded-md text-sm font-medium transition-colors flex-1 min-w-0 sm:flex-none',
-              activeTab === 'bulk'
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-300 hover:text-white hover:bg-gray-700'
-            ]"
-            @click="setActiveTab('bulk')"
-          >
-            Bulk Actions
-          </button>
-        </div>
-
-        <!-- Right side actions -->
-        <div class="flex gap-2 flex-shrink-0">
-          <Button
-            v-if="canEditPages && activeTab"
-            type="button"
-            class="font-bold px-4 bg-red-600 hover:bg-red-700"
-            @click="closeAllTabs"
-          >
-            Close
-          </Button>
-          <Button
-            type="button"
-            class="text-gray-100"
-            :disabled="speaking"
-            @click="readTitleAndExcerpt"
-          >
-            <i class="ri-speak-fill text-lg"></i>
-          </Button>
-        </div>
-      </div>
     </template>
 
     <!-- Book Location Map -->
@@ -105,8 +39,103 @@
       </div>
     </div>
 
+    <!-- Actions row -->
+    <div id="pages" class="p-2 flex justify-between items-center gap-3 max-w-7xl mx-auto">
+      <!-- Sort Buttons -->
+      <div class="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          :is-active="isNewest"
+          :disabled="sortLoading"
+          class="rounded-full"
+          @click="sortPages('newest')"
+        >
+          <i class="ri-time-line text-2xl"></i>
+        </Button>
+        <Button
+          type="button"
+          :is-active="isOldest"
+          :disabled="sortLoading"
+          class="rounded-full"
+          @click="sortPages('oldest')"
+        >
+          <i class="ri-history-line text-2xl"></i>
+        </Button>
+        <Button
+          type="button"
+          :is-active="isPopular"
+          :disabled="sortLoading"
+          class="rounded-full"
+          @click="sortPages('popular')"
+        >
+          <i class="ri-star-line text-2xl"></i>
+        </Button>
+      </div>
+
+      <!-- Right side actions -->
+      <div class="flex gap-2 items-center">
+        <Button
+          type="button"
+          class="text-gray-100"
+          :disabled="speaking"
+          @click="readTitleAndExcerpt"
+        >
+          <i class="ri-speak-fill text-lg"></i>
+        </Button>
+
+        <!-- Admin dropdown menu -->
+        <Dropdown v-if="canEditPages" align="right" width="48">
+          <template #trigger>
+            <Button type="button" class="text-gray-100">
+              <i class="ri-more-2-fill text-lg"></i>
+            </Button>
+          </template>
+
+          <template #content>
+            <button
+              type="button"
+              class="block w-full px-4 py-2 text-left text-sm leading-5 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+              :class="{ 'bg-blue-600 text-white hover:bg-blue-700': activeTab === 'pages' }"
+              @click="setActiveTab('pages')"
+            >
+              <i class="ri-add-line mr-2"></i>
+              Add Pages
+            </button>
+            <button
+              type="button"
+              class="block w-full px-4 py-2 text-left text-sm leading-5 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+              :class="{ 'bg-blue-600 text-white hover:bg-blue-700': activeTab === 'book' }"
+              @click="setActiveTab('book')"
+            >
+              <i class="ri-edit-line mr-2"></i>
+              Edit Book
+            </button>
+            <button
+              type="button"
+              class="block w-full px-4 py-2 text-left text-sm leading-5 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+              :class="{ 'bg-blue-600 text-white hover:bg-blue-700': activeTab === 'bulk' }"
+              @click="setActiveTab('bulk')"
+            >
+              <i class="ri-checkbox-multiple-line mr-2"></i>
+              Bulk Actions
+            </button>
+          </template>
+        </Dropdown>
+      </div>
+    </div>
+
     <!-- Tab Content -->
     <div v-if="canEditPages && activeTab" class="w-full mt-4 md:ml-2">
+      <div class="flex justify-end px-4 mb-2">
+        <Button
+          type="button"
+          class="font-bold px-6 py-2 bg-red-600 hover:bg-red-700 text-white"
+          @click="closeAllTabs"
+        >
+          <i class="ri-close-line mr-1"></i>
+          Close
+        </Button>
+      </div>
       <div>
         <BreezeValidationErrors class="mb-4" />
       </div>
@@ -248,6 +277,7 @@
 import Accordion from "@/Components/Accordion.vue";
 import BookCover from "@/Components/BookCover.vue";
 import Button from "@/Components/Button.vue";
+import Dropdown from "@/Components/Dropdown.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import MapEmbed from "@/Components/Map/MapEmbed.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
@@ -261,8 +291,10 @@ import BulkActionsForm from "@/Pages/Book/BulkActionsForm.vue";
 import EditBookForm from "@/Pages/Book/EditBookForm.vue";
 import NewPageForm from "@/Pages/Book/NewPageForm.vue";
 import SimilarBooks from "@/Pages/Book/SimilarBooks.vue";
-import { Deferred, Head, Link } from "@inertiajs/vue3";
+import { Deferred, Head, Link, router } from "@inertiajs/vue3";
 import { computed, onMounted, ref } from "vue";
+
+/* global route */
 
 // Component name for linting
 defineOptions({
@@ -275,6 +307,7 @@ const { speak, speaking } = useSpeechSynthesis();
 const props = defineProps({
   book: { type: Object, required: true },
   pages: { type: Object, required: true },
+  sort: { type: String, default: "newest" },
   authors: { type: Array, required: true },
   categories: { type: Array, default: null },
   similarBooks: { type: Array, default: null },
@@ -285,6 +318,31 @@ const { items, infiniteScrollRef, setItemLoading } = useInfiniteScroll(
   props.pages.data,
   computed(() => props.pages)
 );
+
+const sortLoading = ref(false);
+
+const isNewest = computed(() => props.sort === "newest");
+const isOldest = computed(() => props.sort === "oldest");
+const isPopular = computed(() => props.sort === "popular");
+
+function sortPages(sortValue) {
+  sortLoading.value = true;
+  let phrase = "newest";
+  switch (sortValue) {
+    case "oldest":
+      phrase = "oldest";
+      break;
+    case "popular":
+      phrase = "favorites";
+      break;
+  }
+  speak(phrase);
+  router.get(
+    route("books.show", { book: props.book.slug, sort: sortValue }) + "#pages",
+    {},
+    { preserveScroll: false }
+  );
+}
 
 let activeTab = ref(null);
 let selectedPages = ref([]);

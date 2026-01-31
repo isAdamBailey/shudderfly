@@ -60,9 +60,9 @@ class YouTubeProxyTest extends TestCase
         $this->actingAs($user);
 
         Cache::flush();
-        
+
         $mockScript = 'var YT = { Player: function() {} };';
-        
+
         Http::fake([
             'www.youtube.com/iframe_api' => Http::response($mockScript, 200),
         ]);
@@ -84,7 +84,7 @@ class YouTubeProxyTest extends TestCase
         $this->actingAs($user);
 
         $mockScript = 'var YT = { Player: function() {} };';
-        
+
         Http::fake([
             'www.youtube.com/iframe_api' => Http::response($mockScript, 200),
         ]);
@@ -168,7 +168,7 @@ class YouTubeProxyTest extends TestCase
         $this->actingAs($user);
 
         $mockScript = 'var YT = { Player: function() {} };';
-        
+
         Http::fake([
             'www.youtube.com/iframe_api' => Http::response($mockScript, 200),
         ]);

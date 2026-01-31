@@ -701,4 +701,90 @@ class BooksTest extends TestCase
         $this->assertEquals(45.5152, $freshBook->latitude);
         $this->assertEquals(-122.6784, $freshBook->longitude);
     }
+
+    public function test_book_pages_sorted_by_newest_by_default(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $book = Book::factory()->create();
+        $oldPage = Page::factory()->for($book)->create(['created_at' => now()->subDays(10)]);
+        $newPage = Page::factory()->for($book)->create(['created_at' => now()]);
+        $middlePage = Page::factory()->for($book)->create(['created_at' => now()->subDays(5)]);
+
+        $this->get(route('books.show', $book))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Book/Show')
+                ->where('sort', 'newest')
+                ->has('pages.data', 3)
+                ->where('pages.data.0.id', $newPage->id)
+                ->where('pages.data.1.id', $middlePage->id)
+                ->where('pages.data.2.id', $oldPage->id)
+        );
+    }
+
+    public function test_book_pages_sorted_by_oldest(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $book = Book::factory()->create();
+        $oldPage = Page::factory()->for($book)->create(['created_at' => now()->subDays(10)]);
+        $newPage = Page::factory()->for($book)->create(['created_at' => now()]);
+        $middlePage = Page::factory()->for($book)->create(['created_at' => now()->subDays(5)]);
+
+        $this->get(route('books.show', ['book' => $book, 'sort' => 'oldest']))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Book/Show')
+                ->where('sort', 'oldest')
+                ->has('pages.data', 3)
+                ->where('pages.data.0.id', $oldPage->id)
+                ->where('pages.data.1.id', $middlePage->id)
+                ->where('pages.data.2.id', $newPage->id)
+        );
+    }
+
+    public function test_book_pages_sorted_by_popular(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $book = Book::factory()->create();
+        $lowReadPage = Page::factory()->for($book)->create(['read_count' => 5]);
+        $highReadPage = Page::factory()->for($book)->create(['read_count' => 100]);
+        $mediumReadPage = Page::factory()->for($book)->create(['read_count' => 50]);
+
+        $this->get(route('books.show', ['book' => $book, 'sort' => 'popular']))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Book/Show')
+                ->where('sort', 'popular')
+                ->has('pages.data', 3)
+                ->where('pages.data.0.id', $highReadPage->id)
+                ->where('pages.data.1.id', $mediumReadPage->id)
+                ->where('pages.data.2.id', $lowReadPage->id)
+        );
+    }
+
+    public function test_book_pages_sort_parameter_returned_in_response(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $book = Book::factory()->has(Page::factory())->create();
+
+        $this->get(route('books.show', $book))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Book/Show')
+                ->has('sort')
+                ->where('sort', 'newest')
+        );
+
+        $this->get(route('books.show', ['book' => $book, 'sort' => 'oldest']))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Book/Show')
+                ->where('sort', 'oldest')
+        );
+
+        $this->get(route('books.show', ['book' => $book, 'sort' => 'popular']))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Book/Show')
+                ->where('sort', 'popular')
+        );
+    }
 }

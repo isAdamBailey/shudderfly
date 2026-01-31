@@ -139,9 +139,12 @@ class BookController extends Controller
         }
 
         $youtubeEnabled = \App\Models\SiteSetting::where('key', 'youtube_enabled')->first()->value;
+        $sort = $request->query('sort', 'newest');
 
         $pages = $book->pages()
             ->when(! $youtubeEnabled, fn ($query) => $query->whereNull('video_link'))
+            ->when($sort === 'popular', fn ($query) => $query->reorder()->orderBy('read_count', 'desc'))
+            ->when($sort === 'oldest', fn ($query) => $query->reorder()->orderBy('created_at', 'asc'))
             ->paginate();
 
         // when at the last page, return all books that contain words
@@ -169,6 +172,7 @@ class BookController extends Controller
         return Inertia::render('Book/Show', [
             'book' => $book,
             'pages' => $pages,
+            'sort' => $sort,
             'authors' => $authors,
             'categories' => $categories,
             'books' => $books,
