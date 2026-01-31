@@ -426,7 +426,7 @@ class PagesTest extends TestCase
         Storage::disk('public')->assertMissing('books/test/poster.jpg');
 
         $response->assertRedirect(route('books.show', $book))
-            ->assertSessionHas('success', '3 page(s) deleted successfully.');
+            ->assertSessionHas('success', 'Those 3 pages are gone.');
     }
 
     public function test_bulk_move_to_top()
@@ -459,7 +459,7 @@ class PagesTest extends TestCase
         $this->assertTrue($freshOldPage2->created_at->gt($freshRecentPage->created_at));
 
         $response->assertRedirect(route('books.show', $book))
-            ->assertSessionHas('success', '2 page(s) moved to top successfully.');
+            ->assertSessionHas('success', '2 pages moved to the top!');
     }
 
     public function test_bulk_move_to_book()
@@ -488,7 +488,7 @@ class PagesTest extends TestCase
         }
 
         $response->assertRedirect(route('books.show', $sourceBook))
-            ->assertSessionHas('success', '3 page(s) moved to "'.$targetBook->title.'" successfully.');
+            ->assertSessionHas('success', 'Moved 3 pages into '.$targetBook->title.'!');
     }
 
     public function test_bulk_action_validation_errors()
@@ -568,7 +568,7 @@ class PagesTest extends TestCase
 
         // Should redirect to the book of the first page
         $response->assertRedirect(route('books.show', $book1))
-            ->assertSessionHas('success', '2 page(s) deleted successfully.');
+            ->assertSessionHas('success', 'Those 2 pages are gone.');
 
         // Both pages should be deleted regardless of which book they belong to
         foreach ($pageIds as $pageId) {
@@ -607,7 +607,7 @@ class PagesTest extends TestCase
         }
 
         $response->assertRedirect(route('books.show', $book))
-            ->assertSessionHas('success', '2 page(s) deleted successfully.');
+            ->assertSessionHas('success', 'Those 2 pages are gone.');
     }
 
     public function test_bulk_action_preserves_original_book_context()
