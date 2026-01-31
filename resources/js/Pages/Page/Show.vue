@@ -2,41 +2,41 @@
   <Head :title="page.book.title" />
 
   <BreezeAuthenticatedLayout>
-    <div class="relative">
-      <div class="text-center">
-        <div class="relative min-h-[60vh]">
-          <div
-            ref="bookCoverRef"
-            class="absolute top-0 left-2 sm:left-4 md:left-6 lg:left-8 z-10 pointer-events-auto"
-            style="width: fit-content; height: fit-content"
-          >
-            <BookCoverCard
-              :book="page.book"
-              :disabled="buttonDisabled"
-              container-class="w-20 sm:w-24 md:w-28 lg:w-32 aspect-[3/4] opacity-70 hover:opacity-100 transition-opacity"
-              title-size="text-xs sm:text-sm md:text-base"
-              @click="buttonDisabled = true"
-            />
-          </div>
-          <div
-            class="w-full flex items-center justify-center relative pointer-events-none"
-            style="touch-action: pan-y pinch-zoom"
-            @touchstart.passive="onTouchStart"
-            @touchmove.passive="onTouchMove"
-            @touchend="onTouchEnd"
-          >
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
+      <div class="relative text-center">
+        <div
+          ref="bookCoverRef"
+          class="absolute top-0 left-0 z-[5] pointer-events-auto"
+          style="width: fit-content; height: fit-content"
+        >
+          <BookCoverCard
+            :book="page.book"
+            :disabled="buttonDisabled"
+            container-class="w-20 sm:w-24 md:w-28 lg:w-32 aspect-[3/4] opacity-70 hover:opacity-100 transition-opacity"
+            title-size="text-xs sm:text-sm md:text-base"
+            @click="buttonDisabled = true"
+          />
+        </div>
+        <div
+          class="relative flex flex-col items-center min-h-[40vh] pt-6"
+          style="touch-action: pan-y pinch-zoom"
+          @touchstart.passive="onTouchStart"
+          @touchmove.passive="onTouchMove"
+          @touchend="onTouchEnd"
+        >
+          <div class="relative w-full flex justify-center px-12 sm:px-14 md:px-16">
             <Link
               v-if="previousPage"
               prefetch="hover"
               :href="route('pages.show', { page: previousPage?.id })"
               as="button"
-              class="z-30 fixed left-3 md:left-8 top-1/2 transform -translate-y-1/2 inline-flex items-center text-white hover:text-blue-600 hover:dark:text-gray-800 hover:christmas:text-christmas-gold disabled:opacity-25 transition ease-in-out duration-150 pointer-events-auto"
+              class="absolute left-0 top-1/2 -translate-y-1/2 z-30 inline-flex items-center text-white hover:text-blue-600 hover:dark:text-gray-800 hover:christmas:text-christmas-gold disabled:opacity-25 transition ease-in-out duration-150 pointer-events-auto"
               aria-label="previous page"
               :disabled="buttonDisabled"
               @click="buttonDisabled = true"
             >
               <i
-                class="ri-arrow-left-circle-fill text-6xl rounded-full bg-blue-600 hover:bg-white dark:bg-gray-800 christmas:bg-christmas-red hover:dark:bg-white"
+                class="ri-arrow-left-circle-fill text-4xl sm:text-5xl rounded-full bg-blue-600 hover:bg-white dark:bg-gray-800 christmas:bg-christmas-red hover:dark:bg-white"
               ></i>
             </Link>
             <Link
@@ -44,18 +44,18 @@
               prefetch="hover"
               :href="route('pages.show', { page: nextPage?.id })"
               as="button"
-              class="z-30 fixed right-3 md:right-8 top-1/2 transform -translate-y-1/2 inline-flex items-center text-white hover:text-blue-600 hover:dark:text-gray-800 hover:christmas:text-christmas-gold disabled:opacity-25 transition ease-in-out duration-150 pointer-events-auto"
+              class="absolute right-0 top-1/2 -translate-y-1/2 z-30 inline-flex items-center text-white hover:text-blue-600 hover:dark:text-gray-800 hover:christmas:text-christmas-gold disabled:opacity-25 transition ease-in-out duration-150 pointer-events-auto"
               aria-label="next page"
               :disabled="buttonDisabled"
               @click="buttonDisabled = true"
             >
               <i
-                class="ri-arrow-right-circle-fill text-6xl rounded-full bg-blue-600 hover:bg-white dark:bg-gray-800 christmas:bg-christmas-red hover:dark:bg-white"
+                class="ri-arrow-right-circle-fill text-4xl sm:text-5xl rounded-full bg-blue-600 hover:bg-white dark:bg-gray-800 christmas:bg-christmas-red hover:dark:bg-white"
               ></i>
             </Link>
             <div
               v-if="page.media_path"
-              class="rounded-lg overflow-hidden mt-6 mx-16 md:mx-20 relative z-20 pointer-events-auto"
+              class="w-full max-w-4xl flex justify-center rounded-lg overflow-hidden z-20 pointer-events-auto"
             >
               <LazyLoader
                 :src="page.media_path"
@@ -68,17 +68,21 @@
             </div>
             <div
               v-else-if="page.video_link"
-              class="w-full max-w-4xl mx-16 md:mx-20 relative z-20 pointer-events-auto rounded-lg overflow-hidden"
+              class="w-full max-w-4xl z-20 pointer-events-auto rounded-lg overflow-hidden"
             >
               <VideoWrapper :url="page.video_link" :title="page.description" />
             </div>
           </div>
-          <p v-if="canEditPages" class="w-full mb-3 text-sm italic text-white">
+          <p
+            v-if="canEditPages"
+            class="w-full mt-4 mb-3 text-sm italic text-gray-400 dark:text-gray-500"
+          >
             Uploaded on {{ short(page.created_at) }}, popularity
             {{ page.popularity_percentage ?? 0 }}%
           </p>
         </div>
-        <div v-if="hasContent" class="mx-5 mt-8 mb-5 relative z-20">
+      </div>
+      <div v-if="hasContent" class="mx-5 mt-8 mb-5 relative z-20">
           <div class="text-container">
             <div
               class="font-content page-content max-w-5xl mx-auto text-lg text-left relative"
@@ -95,7 +99,6 @@
             </div>
           </div>
         </div>
-      </div>
       <div class="mx-5">
         <MapEmbed
           :latitude="props.page.latitude ?? props.page.book.latitude"
