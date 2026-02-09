@@ -114,6 +114,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/collages/{collage}/generate-pdf', [CollageController::class, 'generatePdf'])->name('collages.generate-pdf');
 
         Route::post('/music/sync', [MusicController::class, 'sync'])->name('music.sync');
+        Route::delete('/music/{song}', [MusicController::class, 'destroy'])->name('music.destroy');
 
         Route::put('/admin/permissions', [AdminController::class, 'update'])->name('admin.permissions');
         Route::delete('/admin', [AdminController::class, 'destroy'])->name('admin.destroy');

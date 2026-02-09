@@ -117,11 +117,21 @@
 
                     <!-- Playback Controls -->
                     <div
-                        class="flex items-center justify-center sm:justify-start space-x-4"
+                        class="flex items-center justify-center sm:justify-start space-x-3"
                     >
+                        <button
+                            class="w-9 h-9 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                            :disabled="!hasPreviousSong || isLoading"
+                            title="Previous song"
+                            @click="skipToPrevious"
+                        >
+                            <i class="ri-skip-back-fill text-lg"></i>
+                        </button>
+
                         <button
                             class="w-9 h-9 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200"
                             :disabled="isLoading"
+                            title="Rewind 10s"
                             @click="seekBackward"
                         >
                             <i class="ri-skip-back-mini-fill text-lg"></i>
@@ -142,9 +152,19 @@
                         <button
                             class="w-9 h-9 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200"
                             :disabled="isLoading"
+                            title="Forward 10s"
                             @click="seekForward"
                         >
                             <i class="ri-skip-forward-mini-fill text-lg"></i>
+                        </button>
+
+                        <button
+                            class="w-9 h-9 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                            :disabled="!hasNextSong || isLoading"
+                            title="Next song"
+                            @click="skipToNext"
+                        >
+                            <i class="ri-skip-forward-fill text-lg"></i>
                         </button>
                     </div>
                 </div>
@@ -199,7 +219,10 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 const {
     currentSong,
     isPlaying: globalIsPlaying,
+    songsList,
     setPlaying,
+    playNextSong,
+    playPreviousSong,
 } = useMusicPlayer();
 
 if (!window.__globalMusicPlayer) window.__globalMusicPlayer = null;
@@ -230,6 +253,30 @@ const shouldAutoplay = ref(false);
 const isInitialMount = ref(true);
 
 const isPlaying = computed(() => globalIsPlaying.value);
+
+const hasNextSong = computed(() => {
+    if (!currentSong.value || songsList.value.length === 0) return false;
+    const idx = songsList.value.findIndex(
+        (s) => s.id === currentSong.value.id
+    );
+    return idx !== -1 && idx < songsList.value.length - 1;
+});
+
+const hasPreviousSong = computed(() => {
+    if (!currentSong.value || songsList.value.length === 0) return false;
+    const idx = songsList.value.findIndex(
+        (s) => s.id === currentSong.value.id
+    );
+    return idx > 0;
+});
+
+const skipToNext = () => {
+    playNextSong();
+};
+
+const skipToPrevious = () => {
+    playPreviousSong();
+};
 
 const progressPercentage = computed(() => {
     return duration.value > 0 ? (currentTime.value / duration.value) * 100 : 0;
@@ -509,6 +556,9 @@ const onPlayerStateChange = (event) => {
         case window.YT.PlayerState.ENDED:
             setPlaying(false);
             currentTime.value = 0;
+            if (!playNextSong()) {
+                // No next song available, stay stopped
+            }
             break;
         case window.YT.PlayerState.CUED:
             break;

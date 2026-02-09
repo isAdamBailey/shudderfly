@@ -44,7 +44,9 @@
           :song="song"
           :current-song="currentSong"
           :is-playing="isPlaying"
+          :can-delete="canAdmin"
           @play="playSong"
+          @delete="deleteSong"
         />
 
         <div
@@ -86,6 +88,9 @@ const {
   currentSong,
   isPlaying,
   playSong: playSongGlobal,
+  toggleCurrentSongPlayback,
+  setSongsList,
+  removeSongFromList,
   setSearch,
   setFilter
 } = useMusicPlayer();
@@ -164,6 +169,7 @@ const fetchMore = async () => {
       }));
       items.value = [...items.value, ...newItems];
       nextPageUrl.value = data.songs.next_page_url || null;
+      setSongsList(items.value);
     }
   } catch (error) {
     console.error("Error loading more songs:", error);
@@ -182,6 +188,7 @@ watch(
       }));
       nextPageUrl.value = newSongs.next_page_url || null;
       fetchedPages.clear();
+      setSongsList(items.value);
       if (items.value.length === 0) {
         speak(notFoundContent);
       }
@@ -202,7 +209,42 @@ watch(
 );
 
 const playSong = (song) => {
+  if (currentSong.value && currentSong.value.id === song.id) {
+    toggleCurrentSongPlayback();
+    return;
+  }
   playSongGlobal(song);
+};
+
+const deleteSong = async (song) => {
+  if (!confirm(`Delete "${song.title}"? This will also remove it from the YouTube playlist.`)) {
+    return;
+  }
+
+  try {
+    const response = await fetch(route("music.destroy", song.id), {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-TOKEN": document
+          .querySelector('meta[name="csrf-token"]')
+          .getAttribute("content"),
+        Accept: "application/json",
+        "X-Requested-With": "XMLHttpRequest"
+      }
+    });
+
+    if (response.ok) {
+      items.value = items.value.filter((s) => s.id !== song.id);
+      removeSongFromList(song.id);
+    } else {
+      const data = await response.json();
+      alert(data.error || "Failed to delete song.");
+    }
+  } catch (error) {
+    console.error("Error deleting song:", error);
+    alert("Failed to delete song.");
+  }
 };
 
 const applyFilter = async (filter) => {

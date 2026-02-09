@@ -348,6 +348,81 @@ class YouTubeService
         return true; // New song created
     }
 
+    public function removeFromPlaylist(string $videoId): array
+    {
+        if (! $this->apiKey || ! $this->playlistId) {
+            return [
+                'success' => false,
+                'error' => 'YouTube API key or playlist ID not configured',
+            ];
+        }
+
+        $playlistItemId = $this->findPlaylistItemId($videoId);
+
+        if (! $playlistItemId) {
+            return [
+                'success' => true,
+                'message' => 'Video not found in YouTube playlist (may have already been removed)',
+            ];
+        }
+
+        try {
+            $response = Http::withHeaders([
+                'User-Agent' => 'Laravel-App/1.0',
+                'Accept' => 'application/json',
+            ])->delete('https://www.googleapis.com/youtube/v3/playlistItems', [
+                'id' => $playlistItemId,
+                'key' => $this->apiKey,
+            ]);
+
+            if ($response->successful()) {
+                return [
+                    'success' => true,
+                    'message' => 'Video removed from YouTube playlist',
+                ];
+            }
+
+            Log::error('Failed to remove video from YouTube playlist: '.$response->body());
+
+            return [
+                'success' => false,
+                'error' => 'Failed to remove video from YouTube playlist',
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error removing video from YouTube playlist: '.$e->getMessage());
+
+            return [
+                'success' => false,
+                'error' => 'Error removing video from YouTube playlist: '.$e->getMessage(),
+            ];
+        }
+    }
+
+    private function findPlaylistItemId(string $videoId): ?string
+    {
+        $nextPageToken = null;
+
+        do {
+            $response = $this->getPlaylistItems($nextPageToken);
+
+            if (! $response->successful()) {
+                return null;
+            }
+
+            $data = $response->json();
+
+            foreach ($data['items'] ?? [] as $item) {
+                if (($item['snippet']['resourceId']['videoId'] ?? null) === $videoId) {
+                    return $item['id'];
+                }
+            }
+
+            $nextPageToken = $data['nextPageToken'] ?? null;
+        } while ($nextPageToken);
+
+        return null;
+    }
+
     /**
      * Handle API errors with quota awareness
      */

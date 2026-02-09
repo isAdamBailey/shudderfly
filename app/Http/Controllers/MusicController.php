@@ -115,6 +115,28 @@ class MusicController extends Controller
         }
     }
 
+    public function destroy(Song $song)
+    {
+        $this->authorize('admin');
+
+        try {
+            $youTubeService = new YouTubeService;
+            $result = $youTubeService->removeFromPlaylist($song->youtube_video_id);
+
+            if (! $result['success']) {
+                \Log::warning('YouTube playlist removal failed for song '.$song->id.': '.($result['error'] ?? 'Unknown error'));
+            }
+
+            $song->delete();
+
+            return response()->json(['success' => true, 'message' => 'Song deleted successfully']);
+        } catch (\Exception $e) {
+            \Log::error('Error deleting song: '.$e->getMessage());
+
+            return response()->json(['error' => 'Failed to delete song'], 500);
+        }
+    }
+
     /**
      * Increment read count for a song when it's played
      */

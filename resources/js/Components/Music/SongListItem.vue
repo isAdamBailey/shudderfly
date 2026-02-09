@@ -70,6 +70,17 @@
                 ></div>
             </div>
         </div>
+
+        <!-- Delete Button (admin only) -->
+        <div v-if="canDelete" class="flex-shrink-0 ml-2">
+            <button
+                class="w-8 h-8 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-800/50 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center transition-colors duration-200"
+                title="Delete song"
+                @click.stop="$emit('delete', song)"
+            >
+                <i class="ri-delete-bin-line text-sm"></i>
+            </button>
+        </div>
     </div>
 </template>
 
@@ -89,9 +100,13 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    canDelete: {
+        type: Boolean,
+        default: false,
+    },
 });
 
-defineEmits(["play"]);
+defineEmits(["play", "delete"]);
 
 const imageError = ref(false);
 
