@@ -145,172 +145,169 @@
                 v-if="!readOnly"
                 class="mt-4 border-t-2 border-gray-200 dark:border-gray-700 pt-4"
             >
-                <div class="mb-2">
-                    <Button
-                        type="button"
-                        class="flex items-center gap-2"
-                        @click="toggleComments(message.id)"
-                    >
-                        <i
-                            :class="[
-                                'text-base transition-transform',
-                                expandedComments[message.id]
-                                    ? 'ri-arrow-down-s-line'
-                                    : 'ri-arrow-right-s-line',
-                            ]"
-                        ></i>
-                        <span v-if="getCommentCount(message) > 0">
-                            {{ getCommentCount(message) }}
-                            {{
-                                getCommentCount(message) === 1
-                                    ? t("message.comment")
-                                    : t("message.comments")
-                            }}
-                        </span>
-                        <span v-else>
-                            {{ t("message.add_comment") }}
-                        </span>
-                    </Button>
+                <!-- No comments: inviting CTA -->
+                <div
+                    v-if="getCommentCount(message) === 0 && !activeCommentForms[message.id]"
+                    class="flex items-center gap-3 py-4 px-4 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 cursor-pointer group hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-all"
+                    @click="openCommentForm(message.id)"
+                >
+                    <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 dark:group-hover:bg-blue-800/50 transition-colors">
+                        <i class="ri-chat-3-line text-xl text-blue-500 dark:text-blue-400"></i>
+                    </div>
+                    <span class="text-sm font-medium text-gray-400 dark:text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                        {{ t("message.start_conversation") }}
+                    </span>
+                    <i class="ri-add-line text-lg text-gray-300 dark:text-gray-600 group-hover:text-blue-500 dark:group-hover:text-blue-400 ml-auto transition-colors"></i>
                 </div>
 
-                <template v-if="expandedComments[message.id]">
-                    <div class="space-y-3">
-                        <form
-                            class="space-y-2"
-                            @submit.prevent="submitComment(message)"
-                        >
-                            <div class="relative" style="z-index: 1;">
-                                <textarea
-                                    :ref="
-                                        (el) => {
-                                            if (el) {
-                                                if (!commentTextareaRefs.value) {
-                                                    commentTextareaRefs.value = {};
-                                                }
-                                                commentTextareaRefs.value[message.id] = el;
-                                                const tagging = getCommentTagging(message.id);
-                                                if (tagging && tagging.textareaRef) {
-                                                    tagging.textareaRef.value = el;
-                                                }
-                                            }
-                                        }
-                                    "
-                                    v-model="commentForms[message.id]"
-                                    :placeholder="
-                                        t('message.comment_placeholder')
-                                    "
-                                    maxlength="1000"
-                                    rows="3"
-                                    class="w-full px-3 py-2 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none overflow-hidden min-h-[76px] max-h-[200px]"
-                                    @input="
-                                        (e) => handleCommentInput(e, message.id)
-                                    "
-                                    @keydown="
-                                        (e) =>
-                                            handleCommentKeydown(e, message.id)
-                                    "
-                                    @blur="
-                                        (e) =>
-                                            handleCommentBlur(e, message.id)
-                                    "
-                                ></textarea>
-                                <button
-                                    type="button"
-                                    class="absolute top-2 right-2 w-8 h-8 flex items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700"
-                                    :title="t('builder.tag_user')"
-                                    :aria-label="t('builder.tag_user_aria')"
-                                    @click.prevent="
-                                        openCommentTagList(message.id)
-                                    "
-                                >
-                                    @
-                                </button>
+                <!-- Has comments or form is active -->
+                <template v-else>
+                    <!-- Preview comments (first 2) -->
+                    <div v-if="getComments(message).length > 0" class="space-y-3">
+                        <div class="flex items-center gap-1.5 mb-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                            <i class="ri-chat-3-line text-sm"></i>
+                            <span>
+                                {{ getCommentCount(message) }}
+                                {{ getCommentCount(message) === 1 ? t("message.comment") : t("message.comments") }}
+                            </span>
+                        </div>
 
-                                <div
-                                    v-if="
-                                        getCommentTagging(message.id)
-                                            .showUserSuggestions
-                                    "
-                                    class="user-suggestions-container absolute top-full left-0 mt-1 w-full max-w-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-[9999] max-h-60 overflow-y-auto"
-                                    style="pointer-events: auto;"
-                                    @click.stop
-                                    @mousedown.stop
-                                >
-                                    <UserTagList
-                                        :users="
-                                            getCommentTagging(message.id)
-                                                .userSuggestions
-                                        "
-                                        :selected-index="
-                                            getCommentTagging(message.id)
-                                                .selectedSuggestionIndex
-                                        "
-                                        @select="
-                                            (user) => {
-                                                if (user) {
-                                                    insertCommentMention(
-                                                        message.id,
-                                                        user
-                                                    );
-                                                }
-                                            }
-                                        "
-                                    />
-                                </div>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span
-                                    class="text-xs text-gray-500 dark:text-gray-400"
-                                >
-                                    {{
-                                        (commentForms[message.id] || "").length
-                                    }}/1000
-                                </span>
-                                <Button
-                                    type="submit"
-                                    :disabled="
-                                        !commentForms[message.id]?.trim()
-                                    "
-                                >
-                                    {{ t("message.post_comment") }}
-                                </Button>
-                            </div>
-                        </form>
+                        <CommentItem
+                            v-for="comment in getPreviewComments(message)"
+                            :key="comment.id"
+                            :comment="comment"
+                            :speaking="speaking"
+                            :current-user-id="currentUserId"
+                            :users="users"
+                            @speak="speakComment"
+                            @delete="(commentId) => deleteComment(message.id, commentId)"
+                            @toggle-reaction="(emoji) => toggleCommentReaction(message, comment, emoji)"
+                            @add-reaction="openCommentReactionModal(message, comment)"
+                            @reply="(comment) => handleReplyToComment(message, comment)"
+                        />
 
-                        <div
-                            v-if="getComments(message).length > 0"
-                            class="space-y-3 mt-3"
+                        <!-- Show more / show less -->
+                        <button
+                            v-if="getCommentCount(message) > 2 && !expandedComments[message.id]"
+                            type="button"
+                            class="flex items-center gap-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors py-1 pl-2"
+                            @click="expandedComments[message.id] = true"
                         >
+                            <i class="ri-arrow-down-s-line text-base"></i>
+                            {{ t("message.show_more_comments", { count: getCommentCount(message) - 2 }) }}
+                        </button>
+
+                        <!-- Remaining comments when expanded -->
+                        <template v-if="expandedComments[message.id] && getRemainingComments(message).length > 0">
                             <CommentItem
-                                v-for="comment in getComments(message)"
+                                v-for="comment in getRemainingComments(message)"
                                 :key="comment.id"
                                 :comment="comment"
                                 :speaking="speaking"
                                 :current-user-id="currentUserId"
                                 :users="users"
                                 @speak="speakComment"
-                                @delete="
-                                    (commentId) =>
-                                        deleteComment(message.id, commentId)
-                                "
-                                @toggle-reaction="
-                                    (emoji) =>
-                                        toggleCommentReaction(
-                                            message,
-                                            comment,
-                                            emoji
-                                        )
-                                "
-                                @add-reaction="
-                                    openCommentReactionModal(message, comment)
-                                "
-                                @reply="
-                                    (comment) =>
-                                        handleReplyToComment(message, comment)
-                                "
+                                @delete="(commentId) => deleteComment(message.id, commentId)"
+                                @toggle-reaction="(emoji) => toggleCommentReaction(message, comment, emoji)"
+                                @add-reaction="openCommentReactionModal(message, comment)"
+                                @reply="(comment) => handleReplyToComment(message, comment)"
                             />
-                        </div>
+
+                            <button
+                                type="button"
+                                class="flex items-center gap-1.5 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors py-1 pl-2"
+                                @click="expandedComments[message.id] = false"
+                            >
+                                <i class="ri-arrow-up-s-line text-base"></i>
+                                {{ t("message.show_less_comments") }}
+                            </button>
+                        </template>
                     </div>
+
+                    <!-- Add comment button (when form is not active) -->
+                    <button
+                        v-if="!activeCommentForms[message.id]"
+                        type="button"
+                        class="flex items-center gap-2 mt-3 text-sm text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors py-1.5"
+                        @click="openCommentForm(message.id)"
+                    >
+                        <i class="ri-reply-line text-base"></i>
+                        {{ t("message.add_comment") }}
+                    </button>
+
+                    <!-- Comment form -->
+                    <form
+                        v-if="activeCommentForms[message.id]"
+                        class="space-y-2 mt-3"
+                        @submit.prevent="submitComment(message)"
+                    >
+                        <div class="relative" style="z-index: 1;">
+                            <textarea
+                                :ref="
+                                    (el) => {
+                                        if (el) {
+                                            if (!commentTextareaRefs.value) {
+                                                commentTextareaRefs.value = {};
+                                            }
+                                            commentTextareaRefs.value[message.id] = el;
+                                            const tagging = getCommentTagging(message.id);
+                                            if (tagging && tagging.textareaRef) {
+                                                tagging.textareaRef.value = el;
+                                            }
+                                        }
+                                    }
+                                "
+                                v-model="commentForms[message.id]"
+                                :placeholder="t('message.comment_placeholder')"
+                                maxlength="1000"
+                                rows="3"
+                                class="w-full px-3 py-2 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none overflow-hidden min-h-[76px] max-h-[200px]"
+                                @input="(e) => handleCommentInput(e, message.id)"
+                                @keydown="(e) => handleCommentKeydown(e, message.id)"
+                                @blur="(e) => handleCommentBlur(e, message.id)"
+                            ></textarea>
+                            <button
+                                type="button"
+                                class="absolute top-2 right-2 w-8 h-8 flex items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700"
+                                :title="t('builder.tag_user')"
+                                :aria-label="t('builder.tag_user_aria')"
+                                @click.prevent="openCommentTagList(message.id)"
+                            >
+                                @
+                            </button>
+
+                            <div
+                                v-if="getCommentTagging(message.id).showUserSuggestions"
+                                class="user-suggestions-container absolute top-full left-0 mt-1 w-full max-w-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-[9999] max-h-60 overflow-y-auto"
+                                style="pointer-events: auto;"
+                                @click.stop
+                                @mousedown.stop
+                            >
+                                <UserTagList
+                                    :users="getCommentTagging(message.id).userSuggestions"
+                                    :selected-index="getCommentTagging(message.id).selectedSuggestionIndex"
+                                    @select="
+                                        (user) => {
+                                            if (user) {
+                                                insertCommentMention(message.id, user);
+                                            }
+                                        }
+                                    "
+                                />
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-gray-500 dark:text-gray-400">
+                                {{ (commentForms[message.id] || "").length }}/1000
+                            </span>
+                            <Button
+                                type="submit"
+                                :disabled="!commentForms[message.id]?.trim()"
+                            >
+                                {{ t("message.post_comment") }}
+                            </Button>
+                        </div>
+                    </form>
                 </template>
             </div>
         </div>
@@ -522,6 +519,7 @@ const showViewReactionsModal = ref(false);
 const selectedMessageForView = ref(null);
 const timelineContainer = ref(null);
 const expandedComments = ref({});
+const activeCommentForms = ref({});
 const commentForms = ref({});
 const commentTextareaRefs = ref({});
 const commentTaggingInstances = ref({});
@@ -835,8 +833,8 @@ const deleteMessage = (messageId) => {
         return;
     }
 
-    // Clean up
     delete commentForms.value[messageId];
+    delete activeCommentForms.value[messageId];
     expandedComments.value[messageId] = false;
 
     router.delete(route("messages.destroy", messageId), {
@@ -976,9 +974,9 @@ onMounted(() => {
     setupEchoListener();
 
     nextTick(() => {
-        Object.keys(expandedComments.value).forEach((messageId) => {
+        Object.keys(activeCommentForms.value).forEach((messageId) => {
             if (
-                expandedComments.value[messageId] &&
+                activeCommentForms.value[messageId] &&
                 commentTextareaRefs.value[messageId]
             ) {
                 autoGrowCommentTextarea(messageId);
@@ -1378,30 +1376,33 @@ const getComments = (message) => {
     return [...message.comments].sort((a, b) => {
         const dateA = new Date(a.created_at);
         const dateB = new Date(b.created_at);
-        return dateA - dateB; // Oldest first
+        return dateA - dateB;
     });
+};
+
+const getPreviewComments = (message) => {
+    return getComments(message).slice(0, 2);
+};
+
+const getRemainingComments = (message) => {
+    return getComments(message).slice(2);
 };
 
 const getCommentCount = (message) => {
     return message.comments?.length || 0;
 };
 
-const toggleComments = (messageId) => {
-    if (expandedComments.value[messageId]) {
-        expandedComments.value[messageId] = false;
-        cleanupCommentTagging(messageId);
-    } else {
-        expandedComments.value[messageId] = true;
-        if (!commentForms.value[messageId]) {
-            commentForms.value[messageId] = "";
-        }
-        getCommentTagging(messageId);
-        nextTick(() => {
-            if (commentTextareaRefs.value[messageId]) {
-                commentTextareaRefs.value[messageId].focus();
-            }
-        });
+const openCommentForm = (messageId) => {
+    activeCommentForms.value[messageId] = true;
+    if (!commentForms.value[messageId]) {
+        commentForms.value[messageId] = "";
     }
+    getCommentTagging(messageId);
+    nextTick(() => {
+        if (commentTextareaRefs.value[messageId]) {
+            commentTextareaRefs.value[messageId].focus();
+        }
+    });
 };
 
 const submitComment = async (message) => {
@@ -1473,11 +1474,10 @@ const extractActualCommentText = (commentText) => {
 };
 
 const handleReplyToComment = (message, comment) => {
-    const needsExpansion = !expandedComments.value[message.id];
+    const formWasHidden = !activeCommentForms.value[message.id];
 
-    if (needsExpansion) {
-        expandedComments.value[message.id] = true;
-        getCommentTagging(message.id);
+    if (formWasHidden) {
+        openCommentForm(message.id);
     }
 
     const username = comment.user?.name || "";
@@ -1525,7 +1525,7 @@ const handleReplyToComment = (message, comment) => {
         return false;
     };
 
-    if (needsExpansion) {
+    if (formWasHidden) {
         nextTick(() => {
             let attempts = 0;
             const maxAttempts = 20;

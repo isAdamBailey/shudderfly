@@ -102,6 +102,9 @@ vi.mock("@/composables/useTranslations", () => ({
                 "message.reactions": "reactions",
                 "message.loading": "Loading...",
                 "message.shared_page": "Shared page",
+                "message.start_conversation": "Be the first to reply!",
+                "message.show_more_comments": "Show :count more",
+                "message.show_less_comments": "Show less",
                 "comment.add_reaction": "Add reaction",
                 "comment.speak": "Speak comment",
                 "comment.speak_aria": "Speak comment",
@@ -567,7 +570,7 @@ describe("MessageTimeline", () => {
             expect(wrapper.text()).toContain("comment");
         });
 
-        it("shows comment count button when comments exist and section is collapsed", () => {
+        it("shows comment count when comments exist", () => {
             const wrapper = mount(MessageTimeline, {
                 props: {
                     messages: messageWithComments,
@@ -575,12 +578,11 @@ describe("MessageTimeline", () => {
                 },
             });
 
-            // When there are comments, button shows the count
             expect(wrapper.text()).toContain("2");
             expect(wrapper.text()).toContain("comments");
         });
 
-        it("shows 'Add Comment' button when there are no comments", () => {
+        it("shows inviting CTA when there are no comments", () => {
             const messageWithoutComments = [
                 {
                     id: 1,
@@ -598,10 +600,10 @@ describe("MessageTimeline", () => {
                 },
             });
 
-            expect(wrapper.text()).toContain("Add Comment");
+            expect(wrapper.text()).toContain("Be the first to reply!");
         });
 
-        it("expands comments section when toggleComments is called", async () => {
+        it("shows comment form when openCommentForm is called", async () => {
             const wrapper = mount(MessageTimeline, {
                 props: {
                     messages: messageWithComments,
@@ -611,7 +613,7 @@ describe("MessageTimeline", () => {
 
             await nextTick();
 
-            wrapper.vm.toggleComments(1);
+            wrapper.vm.openCommentForm(1);
             await nextTick();
             await nextTick();
 
@@ -619,7 +621,7 @@ describe("MessageTimeline", () => {
             expect(textarea.exists()).toBe(true);
         });
 
-        it("expands comments section when toggleComments is called", async () => {
+        it("displays preview comments without needing to expand", async () => {
             const wrapper = mount(MessageTimeline, {
                 props: {
                     messages: messageWithComments,
@@ -627,28 +629,6 @@ describe("MessageTimeline", () => {
                 },
             });
 
-            await nextTick();
-
-            wrapper.vm.toggleComments(1);
-            await nextTick();
-            await nextTick();
-
-            const textarea = wrapper.find("textarea");
-            expect(textarea.exists()).toBe(true);
-        });
-
-        it("displays comments when section is expanded", async () => {
-            const wrapper = mount(MessageTimeline, {
-                props: {
-                    messages: messageWithComments,
-                    users: mockUsers,
-                },
-            });
-
-            await nextTick();
-
-            wrapper.vm.toggleComments(1);
-            await nextTick();
             await nextTick();
 
             expect(wrapper.text()).toContain("Great message!");
@@ -667,7 +647,7 @@ describe("MessageTimeline", () => {
 
             await nextTick();
 
-            wrapper.vm.toggleComments(1);
+            wrapper.vm.openCommentForm(1);
             await nextTick();
             await nextTick();
 
@@ -686,7 +666,7 @@ describe("MessageTimeline", () => {
 
             await nextTick();
 
-            wrapper.vm.toggleComments(1);
+            wrapper.vm.openCommentForm(1);
             await nextTick();
             await nextTick();
 
@@ -706,7 +686,7 @@ describe("MessageTimeline", () => {
 
             await nextTick();
 
-            wrapper.vm.toggleComments(1);
+            wrapper.vm.openCommentForm(1);
             await nextTick();
             await nextTick();
 
@@ -729,7 +709,7 @@ describe("MessageTimeline", () => {
 
             await nextTick();
 
-            wrapper.vm.toggleComments(1);
+            wrapper.vm.openCommentForm(1);
             await nextTick();
             await nextTick();
 
@@ -761,7 +741,7 @@ describe("MessageTimeline", () => {
 
             await nextTick();
 
-            wrapper.vm.toggleComments(1);
+            wrapper.vm.openCommentForm(1);
             await nextTick();
             await nextTick();
 
@@ -796,7 +776,7 @@ describe("MessageTimeline", () => {
 
             await nextTick();
 
-            wrapper.vm.toggleComments(1);
+            wrapper.vm.openCommentForm(1);
             await nextTick();
             await nextTick();
 
@@ -883,10 +863,6 @@ describe("MessageTimeline", () => {
                 },
             });
 
-            await nextTick();
-
-            wrapper.vm.toggleComments(1);
-            await nextTick();
             await nextTick();
 
             expect(wrapper.text()).toContain("👍");
@@ -1036,7 +1012,7 @@ describe("MessageTimeline", () => {
             );
         });
 
-        it("collapses comments section when toggle is called again", async () => {
+        it("keeps comment form open after calling openCommentForm", async () => {
             const wrapper = mount(MessageTimeline, {
                 props: {
                     messages: messageWithComments,
@@ -1046,19 +1022,13 @@ describe("MessageTimeline", () => {
 
             await nextTick();
 
-            wrapper.vm.toggleComments(1);
+            wrapper.vm.openCommentForm(1);
             await nextTick();
             await nextTick();
 
-            let textarea = wrapper.find("textarea");
+            const textarea = wrapper.find("textarea");
             expect(textarea.exists()).toBe(true);
-
-            wrapper.vm.toggleComments(1);
-            await nextTick();
-            await nextTick();
-
-            textarea = wrapper.find("textarea");
-            expect(textarea.exists()).toBe(false);
+            expect(wrapper.vm.activeCommentForms[1]).toBe(true);
         });
 
         describe("Reply functionality", () => {
@@ -1071,7 +1041,7 @@ describe("MessageTimeline", () => {
                 });
 
                 await nextTick();
-                wrapper.vm.toggleComments(1);
+                wrapper.vm.openCommentForm(1);
                 await nextTick();
                 await nextTick();
 
@@ -1121,7 +1091,7 @@ describe("MessageTimeline", () => {
                 });
 
                 await nextTick();
-                wrapper.vm.toggleComments(1);
+                wrapper.vm.openCommentForm(1);
                 await nextTick();
                 await nextTick();
 
@@ -1137,7 +1107,7 @@ describe("MessageTimeline", () => {
                 );
             });
 
-            it("expands comments section when replying to a collapsed comment", async () => {
+            it("opens comment form when replying to a comment", async () => {
                 const wrapper = mount(MessageTimeline, {
                     props: {
                         messages: messageWithComments,
@@ -1150,19 +1120,19 @@ describe("MessageTimeline", () => {
                 const message = messageWithComments[0];
                 const comment = message.comments[0];
 
-                expect(wrapper.vm.expandedComments[1]).toBeUndefined();
+                expect(wrapper.vm.activeCommentForms[1]).toBeUndefined();
 
                 wrapper.vm.handleReplyToComment(message, comment);
                 await nextTick();
                 await nextTick();
 
-                expect(wrapper.vm.expandedComments[1]).toBe(true);
+                expect(wrapper.vm.activeCommentForms[1]).toBe(true);
                 expect(wrapper.vm.commentForms[1]).toBe(
                     `@Bob\n>Great message!\n\n`
                 );
             });
 
-            it("does not expand comments section when already expanded", async () => {
+            it("keeps comment form open when replying while already active", async () => {
                 const wrapper = mount(MessageTimeline, {
                     props: {
                         messages: messageWithComments,
@@ -1171,20 +1141,20 @@ describe("MessageTimeline", () => {
                 });
 
                 await nextTick();
-                wrapper.vm.toggleComments(1);
+                wrapper.vm.openCommentForm(1);
                 await nextTick();
                 await nextTick();
 
                 const message = messageWithComments[0];
                 const comment = message.comments[0];
 
-                expect(wrapper.vm.expandedComments[1]).toBe(true);
+                expect(wrapper.vm.activeCommentForms[1]).toBe(true);
 
                 wrapper.vm.handleReplyToComment(message, comment);
                 await nextTick();
                 await nextTick();
 
-                expect(wrapper.vm.expandedComments[1]).toBe(true);
+                expect(wrapper.vm.activeCommentForms[1]).toBe(true);
                 expect(wrapper.vm.commentForms[1]).toBe(
                     `@Bob\n>Great message!\n\n`
                 );
@@ -1224,7 +1194,7 @@ describe("MessageTimeline", () => {
                 });
 
                 await nextTick();
-                wrapper.vm.toggleComments(1);
+                wrapper.vm.openCommentForm(1);
                 await nextTick();
                 await nextTick();
 
@@ -1267,7 +1237,7 @@ describe("MessageTimeline", () => {
                 });
 
                 await nextTick();
-                wrapper.vm.toggleComments(1);
+                wrapper.vm.openCommentForm(1);
                 await nextTick();
                 await nextTick();
 
