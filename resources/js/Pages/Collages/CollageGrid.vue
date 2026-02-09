@@ -1,43 +1,27 @@
 <template>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mx-10 my-5">
         <div
-            v-for="(collage, index) in collages"
+            v-for="collage in collages"
             :key="collage.id"
             :ref="(el) => setCollageRef(el, collage.id)"
             class="bg-white shadow p-4 flex flex-col space-y-2"
         >
             <div class="flex justify-between items-start mb-2 min-w-0">
-                <div class="flex flex-col">
-                    <h3
-                        class="text-lg font-semibold text-gray-800 whitespace-nowrap truncate"
+                <div class="flex items-center gap-2">
+                    <span
+                        v-if="!showIndex && collage.updated_at"
+                        class="text-sm text-gray-500"
                     >
-                        <template v-if="showIndex">
-                            Collage #{{ index + 1 }}
-                        </template>
-                        <template v-else> ID: {{ collage.id }} </template>
-                    </h3>
-                    <div class="flex items-center gap-2 mt-1">
-                        <span class="text-sm text-gray-500">
-                            {{ collage.pages.length }}/{{
-                                MAX_COLLAGE_PAGES
-                            }}
-                            image{{ collage.pages.length !== 1 ? "s" : "" }}
-                        </span>
-                        <span
-                            v-if="collage.updated_at"
-                            class="text-xs text-gray-400"
-                        >
-                            {{ short(collage.updated_at) }}
-                        </span>
-                        <span
-                            v-if="collage.is_locked"
-                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800"
-                            title="This collage is locked"
-                        >
-                            <i class="ri-lock-line mr-1"></i>
-                            Locked
-                        </span>
-                    </div>
+                        {{ short(collage.updated_at) }}
+                    </span>
+                    <span
+                        v-if="collage.is_locked"
+                        class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800"
+                        title="This collage is locked"
+                    >
+                        <i class="ri-lock-line mr-1"></i>
+                        Locked
+                    </span>
                 </div>
             </div>
 
