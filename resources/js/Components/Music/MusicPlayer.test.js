@@ -14,14 +14,20 @@ global.route = vi.fn((name, params) => {
 // Mock useMusicPlayer composable
 const mockCurrentSong = ref(null);
 const mockIsPlaying = ref(false);
+const mockSongsList = ref([]);
 const mockSetPlaying = vi.fn();
 const mockGetSavedPlaybackState = vi.fn(() => null);
+const mockPlayNextSong = vi.fn();
+const mockPlayPreviousSong = vi.fn();
 
 vi.mock("@/composables/useMusicPlayer", () => ({
   useMusicPlayer: () => ({
     currentSong: computed(() => mockCurrentSong.value),
     isPlaying: computed(() => mockIsPlaying.value),
+    songsList: computed(() => mockSongsList.value),
     setPlaying: mockSetPlaying,
+    playNextSong: mockPlayNextSong,
+    playPreviousSong: mockPlayPreviousSong,
     getSavedPlaybackState: mockGetSavedPlaybackState
   })
 }));
@@ -42,7 +48,10 @@ describe("MusicPlayer", () => {
     vi.clearAllMocks();
     mockCurrentSong.value = null;
     mockIsPlaying.value = false;
+    mockSongsList.value = [];
     mockSetPlaying.mockClear();
+    mockPlayNextSong.mockClear();
+    mockPlayPreviousSong.mockClear();
     mockGetSavedPlaybackState.mockReturnValue(null);
 
     // Initialize global player variables

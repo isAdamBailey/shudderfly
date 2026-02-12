@@ -111,6 +111,7 @@ let map = null;
 let markers = [];
 let infoWindows = [];
 let streetViewPanorama = null;
+let mapLinkClickHandler = null;
 let isInitialized = false;
 let mapsLibrary = null;
 let geocoder = null;
@@ -309,7 +310,12 @@ const clearMarkers = () => {
 
 const disposeMap = () => {
     clearMarkers();
-    
+
+    if (mapLinkClickHandler) {
+        document.removeEventListener("click", mapLinkClickHandler, true);
+        mapLinkClickHandler = null;
+    }
+
     mapListeners.forEach((listener) => {
         if (isGoogleLoaded() && listener) {
             window.google.maps.event.removeListener(listener);
@@ -537,6 +543,24 @@ const initializeMap = async () => {
         });
 
         if (isMultipleMode) {
+            if (!mapLinkClickHandler) {
+                mapLinkClickHandler = (e) => {
+                    const path = e.composedPath ? e.composedPath() : [e.target];
+                    const el = path.find((node) =>
+                        node?.classList?.contains?.("shudderfly-map-link")
+                    );
+                    if (el) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const href = el.getAttribute("href") || el.getAttribute("data-href");
+                        if (href && href !== "#") {
+                            window.location.href = href;
+                        }
+                    }
+                };
+                document.addEventListener("click", mapLinkClickHandler, true);
+            }
+
             const bounds = new window.google.maps.LatLngBounds();
             let hasValidMarkers = false;
 
@@ -561,15 +585,16 @@ const initializeMap = async () => {
                             ? route("pages.show", location.id)
                             : "#";
 
+                        const safeUrl = String(url).replace(/"/g, "&quot;");
                         const popupContent = location.page_title
-                            ? `<a href="${url}" class="text-blue-600 hover:text-blue-800 underline"><strong>${location.page_title}</strong></a>${
+                            ? `<span role="link" tabindex="0" class="shudderfly-map-link text-blue-600 hover:text-blue-800 underline cursor-pointer" data-href="${safeUrl}"><strong>${location.page_title}</strong></span>${
                                   location.book_title
                                       ? `<br><em>${location.book_title}</em>`
                                       : ""
                               }`
                             : location.book_title
-                            ? `<a href="${url}" class="text-blue-600 hover:text-blue-800 underline"><strong>${location.book_title}</strong></a>`
-                            : `<a href="${url}" class="text-blue-600 hover:text-blue-800 underline">Location</a>`;
+                            ? `<span role="link" tabindex="0" class="shudderfly-map-link text-blue-600 hover:text-blue-800 underline cursor-pointer" data-href="${safeUrl}"><strong>${location.book_title}</strong></span>`
+                            : `<span role="link" tabindex="0" class="shudderfly-map-link text-blue-600 hover:text-blue-800 underline cursor-pointer" data-href="${safeUrl}">Location</span>`;
 
                         const marker = new window.google.maps.Marker({
                             position: { lat: locLat, lng: locLng },
@@ -578,6 +603,25 @@ const initializeMap = async () => {
 
                         const infoWindow = new window.google.maps.InfoWindow({
                             content: popupContent,
+                        });
+
+                        window.google.maps.event.addListener(infoWindow, "domready", () => {
+                            document
+                                .querySelectorAll(".shudderfly-map-link")
+                                .forEach((el) => {
+                                    const href = el.getAttribute("data-href");
+                                    if (!href || href === "#") return;
+                                    const nav = () => {
+                                        window.location.href = href;
+                                    };
+                                    el.addEventListener("click", nav);
+                                    el.addEventListener("keydown", (e) => {
+                                        if (e.key === "Enter" || e.key === " ") {
+                                            e.preventDefault();
+                                            nav();
+                                        }
+                                    });
+                                });
                         });
 
                         const clickListener = marker.addListener("click", () => {

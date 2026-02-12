@@ -572,6 +572,14 @@
   cursor: default !important;
 }
 
+/* Re-enable links inside InfoWindow popups (marker popouts) */
+.gm-style-iw a,
+.gm-style-iw-chr a,
+.gm-style .shudderfly-map-link {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
 /* Also disable the keyboard shortcuts link */
 .gm-style button[title="Keyboard shortcuts"] {
   pointer-events: none !important;
