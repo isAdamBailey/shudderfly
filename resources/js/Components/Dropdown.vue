@@ -14,6 +14,10 @@ const props = defineProps({
         type: Array,
         default: () => ["py-1", "bg-gray-100 dark:bg-gray-800"],
     },
+    dropUp: {
+        type: Boolean,
+        default: false,
+    },
 });
 
 const closeOnEscape = (e) => {
@@ -48,12 +52,13 @@ const widthStyle = computed(() => {
 });
 
 const alignmentClasses = computed(() => {
+    const vertical = props.dropUp ? "bottom" : "top";
     if (props.align === "left") {
-        return "origin-top-left left-0";
+        return `origin-${vertical}-left left-0`;
     } else if (props.align === "right") {
-        return "origin-top-right right-0";
+        return `origin-${vertical}-right right-0`;
     } else {
-        return "origin-top";
+        return `origin-${vertical}`;
     }
 });
 
@@ -99,8 +104,8 @@ watch(open, async (newValue) => {
         >
             <div
                 v-show="open"
-                class="absolute z-[9999] mt-2 rounded-md shadow-lg"
-                :class="[widthClass, alignmentClasses]"
+                class="absolute z-[9999] rounded-md shadow-lg"
+                :class="[widthClass, alignmentClasses, dropUp ? 'mb-2 bottom-full' : 'mt-2']"
                 :style="widthStyle"
                 @click="open = false"
             >

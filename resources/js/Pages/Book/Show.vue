@@ -72,60 +72,18 @@
         </Button>
       </div>
 
-      <!-- Right side actions -->
-      <div class="flex gap-2 items-center">
-        <Button
-          type="button"
-          class="text-gray-100"
-          :disabled="speaking"
-          @click="readTitleAndExcerpt"
-        >
-          <i class="ri-speak-fill text-lg"></i>
-        </Button>
-
-        <!-- Admin dropdown menu -->
-        <Dropdown v-if="canEditPages" align="right" width="48">
-          <template #trigger>
-            <Button type="button" class="text-gray-100">
-              <i class="ri-more-2-fill text-lg"></i>
-            </Button>
-          </template>
-
-          <template #content>
-            <button
-              type="button"
-              class="block w-full px-4 py-2 text-left text-sm leading-5 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-              :class="{ 'bg-blue-600 text-white hover:bg-blue-700': activeTab === 'pages' }"
-              @click="setActiveTab('pages')"
-            >
-              <i class="ri-add-line mr-2"></i>
-              Add Pages
-            </button>
-            <button
-              type="button"
-              class="block w-full px-4 py-2 text-left text-sm leading-5 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-              :class="{ 'bg-blue-600 text-white hover:bg-blue-700': activeTab === 'book' }"
-              @click="setActiveTab('book')"
-            >
-              <i class="ri-edit-line mr-2"></i>
-              Edit Book
-            </button>
-            <button
-              type="button"
-              class="block w-full px-4 py-2 text-left text-sm leading-5 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-              :class="{ 'bg-blue-600 text-white hover:bg-blue-700': activeTab === 'bulk' }"
-              @click="setActiveTab('bulk')"
-            >
-              <i class="ri-checkbox-multiple-line mr-2"></i>
-              Bulk Actions
-            </button>
-          </template>
-        </Dropdown>
-      </div>
+      <Button
+        type="button"
+        class="text-gray-100"
+        :disabled="speaking"
+        @click="readTitleAndExcerpt"
+      >
+        <i class="ri-speak-fill text-lg"></i>
+      </Button>
     </div>
 
     <!-- Tab Content -->
-    <div v-if="canEditPages && activeTab" class="w-full mt-4 md:ml-2">
+    <div id="admin-form" v-if="canEditPages && activeTab" class="w-full mt-4 md:ml-2">
       <div class="flex justify-end px-4 mb-2">
         <Button
           type="button"
@@ -270,6 +228,50 @@
       />
     </Deferred>
     <ScrollTop />
+
+    <!-- Admin floating action button -->
+    <div v-if="canEditPages" class="fixed bottom-24 right-6 z-50">
+      <Dropdown align="right" width="56" :drop-up="true">
+        <template #trigger>
+          <button
+            type="button"
+            class="flex items-center justify-center w-14 h-14 rounded-full bg-theme-primary text-theme-button shadow-lg hover:bg-theme-button hover:text-theme-button-hover active:bg-theme-button transition ease-in-out duration-150"
+          >
+            <i class="ri-more-2-fill text-2xl"></i>
+          </button>
+        </template>
+
+        <template #content>
+          <button
+            type="button"
+            class="flex items-center w-full px-5 py-4 min-h-[48px] text-left text-base text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition border-b border-gray-200 dark:border-gray-600 first:border-t-0"
+            :class="{ 'bg-blue-600 text-white hover:bg-blue-700 border-transparent': activeTab === 'pages' }"
+            @click="setActiveTab('pages')"
+          >
+            <i class="ri-add-line mr-3 text-lg text-emerald-600 dark:text-emerald-400 shrink-0" :class="{ 'text-white': activeTab === 'pages' }"></i>
+            Add Pages
+          </button>
+          <button
+            type="button"
+            class="flex items-center w-full px-5 py-4 min-h-[48px] text-left text-base text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition border-b border-gray-200 dark:border-gray-600"
+            :class="{ 'bg-blue-600 text-white hover:bg-blue-700 border-transparent': activeTab === 'book' }"
+            @click="setActiveTab('book')"
+          >
+            <i class="ri-edit-line mr-3 text-lg text-blue-600 dark:text-blue-400 shrink-0" :class="{ 'text-white': activeTab === 'book' }"></i>
+            Edit Book
+          </button>
+          <button
+            type="button"
+            class="flex items-center w-full px-5 py-4 min-h-[48px] text-left text-base text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition border-b-0"
+            :class="{ 'bg-blue-600 text-white hover:bg-blue-700': activeTab === 'bulk' }"
+            @click="setActiveTab('bulk')"
+          >
+            <i class="ri-checkbox-multiple-line mr-3 text-lg text-amber-600 dark:text-amber-400 shrink-0" :class="{ 'text-white': activeTab === 'bulk' }"></i>
+            Bulk Actions
+          </button>
+        </template>
+      </Dropdown>
+    </div>
   </BreezeAuthenticatedLayout>
 </template>
 
@@ -292,7 +294,7 @@ import EditBookForm from "@/Pages/Book/EditBookForm.vue";
 import NewPageForm from "@/Pages/Book/NewPageForm.vue";
 import SimilarBooks from "@/Pages/Book/SimilarBooks.vue";
 import { Deferred, Head, Link, router } from "@inertiajs/vue3";
-import { computed, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, ref } from "vue";
 
 /* global route */
 
@@ -352,9 +354,14 @@ const setActiveTab = (tab) => {
     activeTab.value = null;
   } else {
     activeTab.value = tab;
+    nextTick(() => {
+      document.getElementById("admin-form")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    });
   }
 
-  // Clear selections when switching away from bulk actions
   if (activeTab.value !== "bulk") {
     selectedPages.value = [];
   }
