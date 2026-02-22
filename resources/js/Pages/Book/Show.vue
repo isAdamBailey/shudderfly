@@ -3,7 +3,7 @@
 
   <BreezeAuthenticatedLayout>
     <template #header>
-      <div class="relative">
+      <div class="relative overflow-hidden">
         <div
           v-if="book.category"
           class="absolute left-2 sm:left-4 lg:left-8 top-2 z-30"
