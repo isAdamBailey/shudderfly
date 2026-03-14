@@ -1,12 +1,20 @@
 <script setup>
 import Button from "@/Components/Button.vue";
 import { usePushNotifications } from "@/composables/usePushNotifications";
+import { useTranslations } from "@/composables/useTranslations";
+import { router, usePage } from "@inertiajs/vue3";
 import { ref } from "vue";
 
 const { isSupported, isSubscribed, subscribe, unsubscribe } =
   usePushNotifications();
+const { t } = useTranslations();
 const loading = ref(false);
 const message = ref("");
+const emailLoading = ref(false);
+const user = usePage().props.auth.user;
+const emailNotificationsEnabled = ref(
+  user?.email_notifications_enabled ?? true
+);
 
 const handleSubscribe = async () => {
   loading.value = true;
@@ -41,18 +49,62 @@ const handleUnsubscribe = async () => {
     loading.value = false;
   }
 };
+
+const handleEmailToggle = () => {
+  const nextValue = !emailNotificationsEnabled.value;
+  emailLoading.value = true;
+
+  router.patch(
+    route("profile.notifications.preferences"),
+    {
+      email_notifications_enabled: nextValue
+    },
+    {
+      preserveScroll: true,
+      onSuccess: () => {
+        emailNotificationsEnabled.value = nextValue;
+      },
+      onFinish: () => {
+        emailLoading.value = false;
+      }
+    }
+  );
+};
 </script>
 
 <template>
-  <div>
+  <div class="space-y-6">
+    <div class="space-y-3">
+      <div class="flex items-center justify-between gap-4">
+        <div class="flex-1">
+          <p class="text-sm text-gray-600 dark:text-gray-400">
+            {{ t("notifications.email.description") }}
+          </p>
+        </div>
+        <Button
+          :disabled="emailLoading"
+          :class="emailNotificationsEnabled ? '' : 'bg-red-600 hover:bg-red-700'"
+          @click="handleEmailToggle"
+        >
+          {{
+            emailLoading
+              ? t("notifications.email.saving")
+              : emailNotificationsEnabled
+                ? t("notifications.email.disable")
+                : t("notifications.email.enable")
+          }}
+        </Button>
+      </div>
+    </div>
+
     <div v-if="!isSupported" class="text-sm text-gray-600 dark:text-gray-400">
       Push notifications are not supported in this browser.
     </div>
 
-    <div v-else>
+    <div v-else class="space-y-3">
       <div
         v-if="message"
-        class="mb-4 p-2 rounded"
+        class="p-2 rounded"
         :class="
           message.includes('Success')
             ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'

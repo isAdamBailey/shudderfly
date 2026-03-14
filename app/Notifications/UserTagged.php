@@ -38,7 +38,13 @@ class UserTagged extends Notification implements ShouldBroadcast
      */
     public function via(object $notifiable): array
     {
-        return ['database', 'broadcast', 'mail'];
+        $channels = ['database', 'broadcast'];
+
+        if ($notifiable->email_notifications_enabled) {
+            $channels[] = 'mail';
+        }
+
+        return $channels;
     }
 
     /**
@@ -62,6 +68,7 @@ class UserTagged extends Notification implements ShouldBroadcast
             ->line(__('messages.tagged.line', ['name' => $this->tagger->name]))
             ->line('"'.$contentText.'"')
             ->action(__('messages.tagged.action'), $url)
+            ->line(__('messages.notifications.email.opt_out_markdown', ['url' => route('profile.edit')]))
             ->line(__('messages.tagged.thank_you'));
     }
 

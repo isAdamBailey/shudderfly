@@ -68,4 +68,17 @@ class PasswordResetTest extends TestCase
             return true;
         });
     }
+
+    public function test_reset_password_link_is_sent_when_email_notifications_are_disabled()
+    {
+        Notification::fake();
+
+        $user = User::factory()->create([
+            'email_notifications_enabled' => false,
+        ]);
+
+        $this->post('/forgot-password', ['email' => $user->email]);
+
+        Notification::assertSentTo($user, ResetPassword::class);
+    }
 }

@@ -55,6 +55,23 @@ class ProfileController extends Controller
     }
 
     /**
+     * Update the user's notification preferences.
+     *
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function updateNotificationPreferences(Request $request)
+    {
+        $validated = $request->validate([
+            'email_notifications_enabled' => ['required', 'boolean'],
+        ]);
+
+        $request->user()->update($validated);
+
+        return Redirect::route('profile.edit')
+            ->with('success', __('messages.notifications.email.updated'));
+    }
+
+    /**
      * Update the user's avatar.
      *
      * @return \Illuminate\Http\RedirectResponse
@@ -129,8 +146,10 @@ class ProfileController extends Controller
 
         foreach ($users as $user) {
             // Send email
-            Mail::to($user->email)
-                ->send(new ContactAdmins($sender, $message));
+            if ($user->email_notifications_enabled) {
+                Mail::to($user->email)
+                    ->send(new ContactAdmins($sender, $message));
+            }
 
             // Send push notification
             $title = __('messages.contact_admin.push_title', ['name' => $sender->name]);

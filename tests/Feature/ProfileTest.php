@@ -187,4 +187,40 @@ class ProfileTest extends TestCase
 
         $response->assertRedirect('/login');
     }
+
+    public function test_notification_preferences_can_be_updated()
+    {
+        $user = User::factory()->create([
+            'email_notifications_enabled' => true,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->patch('/profile/notifications/preferences', [
+                'email_notifications_enabled' => false,
+            ]);
+
+        $response
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success', __('messages.notifications.email.updated'))
+            ->assertRedirect('/profile');
+
+        $this->assertFalse($user->refresh()->email_notifications_enabled);
+    }
+
+    public function test_notification_preferences_require_boolean_value()
+    {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->from('/profile')
+            ->patch('/profile/notifications/preferences', [
+                'email_notifications_enabled' => 'nope',
+            ]);
+
+        $response
+            ->assertSessionHasErrors('email_notifications_enabled')
+            ->assertRedirect('/profile');
+    }
 }

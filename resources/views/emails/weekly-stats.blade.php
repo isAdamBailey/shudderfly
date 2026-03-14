@@ -97,6 +97,8 @@ only has {{ $leastPages->pages_count }} pages.
     Report a Bug
 </x-mail::button>
 
+<x-email-opt-out-footer />
+
 Thanks and love you,<br>
 {{ config('app.name') }}
 </x-mail::message>

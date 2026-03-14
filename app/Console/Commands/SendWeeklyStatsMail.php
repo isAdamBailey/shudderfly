@@ -74,24 +74,26 @@ class SendWeeklyStatsMail extends Command
         );
 
         foreach ($users as $user) {
-            Mail::to($user->email)->send(new WeeklyStatsMail(
-                $user,
-                $totalBooks,
-                $totalPages,
-                $leastPages,
-                $mostPages,
-                $mostRead,
-                $leastRead,
-                $booksThisWeek,
-                $bookCounts,
-                $screenshotsThisWeek,
-                $youTubeVideosThisWeek,
-                $videosThisWeek,
-                $imagesThisWeek,
-                $totalSongs,
-                $mostReadSongs,
-                $songsThisWeek
-            ));
+            if ($user->email_notifications_enabled) {
+                Mail::to($user->email)->send(new WeeklyStatsMail(
+                    $user,
+                    $totalBooks,
+                    $totalPages,
+                    $leastPages,
+                    $mostPages,
+                    $mostRead,
+                    $leastRead,
+                    $booksThisWeek,
+                    $bookCounts,
+                    $screenshotsThisWeek,
+                    $youTubeVideosThisWeek,
+                    $videosThisWeek,
+                    $imagesThisWeek,
+                    $totalSongs,
+                    $mostReadSongs,
+                    $songsThisWeek
+                ));
+            }
         }
     }
 }

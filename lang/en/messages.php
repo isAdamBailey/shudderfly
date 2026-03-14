@@ -156,6 +156,14 @@ return [
     'notifications.summary_new' => 'Something new.',
     'notifications.summary_more' => 'And :count more.',
     'notifications.summary_tap' => 'Tap one to hear it.',
+    'notifications.email.updated' => 'Email notification settings updated.',
+    'notifications.email.description' => 'Receive email updates for activity like comments and mentions.',
+    'notifications.email.saving' => 'Saving...',
+    'notifications.email.enable' => 'Enable Email',
+    'notifications.email.disable' => 'Disable Email',
+    'notifications.email.opt_out_prefix' => 'To opt out of emails, please access your',
+    'notifications.email.account_settings' => 'account settings',
+    'notifications.email.opt_out_markdown' => 'To opt out of emails, please access your [account settings](:url).',
 
     // UI Labels - General
     'general.close' => 'Close',

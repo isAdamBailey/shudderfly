@@ -57,6 +57,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
+    Route::patch('/profile/notifications/preferences', [ProfileController::class, 'updateNotificationPreferences'])
+        ->name('profile.notifications.preferences');
 
     Route::group(['middleware' => ['can:edit profile']], function () {
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

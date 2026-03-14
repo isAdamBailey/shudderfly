@@ -38,7 +38,13 @@ class MessageCommented extends Notification implements ShouldBroadcast
      */
     public function via(object $notifiable): array
     {
-        return ['database', 'broadcast', 'mail'];
+        $channels = ['database', 'broadcast'];
+
+        if ($notifiable->email_notifications_enabled) {
+            $channels[] = 'mail';
+        }
+
+        return $channels;
     }
 
     /**
@@ -55,6 +61,7 @@ class MessageCommented extends Notification implements ShouldBroadcast
             ->line('"'.$this->message->message.'"')
             ->line(__('messages.commented.comment_line', ['comment' => $this->comment->comment]))
             ->action(__('messages.commented.action'), $url)
+            ->line(__('messages.notifications.email.opt_out_markdown', ['url' => route('profile.edit')]))
             ->line(__('messages.commented.thank_you'));
     }
 

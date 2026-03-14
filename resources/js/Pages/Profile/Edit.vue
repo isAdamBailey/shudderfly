@@ -107,7 +107,7 @@ defineProps({
         <Accordion title="Voice Settings">
           <VoiceSettingsForm />
         </Accordion>
-        <Accordion title="Push Notifications">
+        <Accordion title="Notification Settings">
           <NotificationToggle />
         </Accordion>
         <Accordion v-if="canEditProfile" title="Profile Information">
