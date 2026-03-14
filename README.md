@@ -1,4 +1,4 @@
-[![Laravel Forge Site Deployment Status](https://img.shields.io/endpoint?url=https%3A%2F%2Fforge.laravel.com%2Fsite-badges%2Fa89488e3-6bf3-4f91-9427-41050b590248%3Fdate%3D1&style=flat-square)](https://forge.laravel.com)
+[![Laravel Forge Site Deployment Status](https://img.shields.io/endpoint?url=https%3A%2F%2Fforge.laravel.com%2Fsite-badges%2Fa89488e3-6bf3-4f91-9427-41050b590248%3Fdate%3D1&style=flat)](https://forge.laravel.com/adam-f6w/adambaileyio/1819049)
 [![Tests](https://github.com/isAdamBailey/shudderfly/actions/workflows/test.yml/badge.svg)](https://github.com/isAdamBailey/shudderfly/actions/workflows/test.yml)
 
 # 🦋 Shudderfly
@@ -107,10 +107,11 @@ Before you begin, ensure you have the following installed:
 - **Node.js 20+** and **npm 10+**
 - **Docker Desktop** (for Laravel Sail)
 - **FFmpeg** (for video processing)
+
   ```bash
   # macOS
   brew install ffmpeg
-  
+
   # Ubuntu/Debian
   sudo apt-get install ffmpeg
   ```
@@ -149,6 +150,7 @@ php artisan key:generate
 Edit `.env` and configure the following sections:
 
 **Database** (handled by Docker):
+
 ```env
 DB_CONNECTION=mysql
 DB_HOST=mysql
@@ -159,6 +161,7 @@ DB_PASSWORD=password
 ```
 
 **Queue System** (use `sync` for local development):
+
 ```env
 QUEUE_CONNECTION=sync
 # For production with SQS:
@@ -170,6 +173,7 @@ QUEUE_CONNECTION=sync
 ```
 
 **File Storage** (use `local` for development):
+
 ```env
 FILESYSTEM_DISK=local
 # For production with S3:
@@ -179,6 +183,7 @@ FILESYSTEM_DISK=local
 ```
 
 **Meilisearch** (handled by Docker):
+
 ```env
 SCOUT_DRIVER=meilisearch
 MEILISEARCH_HOST=http://meilisearch:7700
@@ -187,6 +192,7 @@ FORWARD_MEILISEARCH_PORT=7700
 ```
 
 **Mail** (optional for local development):
+
 ```env
 MAIL_MAILER=log
 # For production with AWS SES:
@@ -196,6 +202,7 @@ MAIL_MAILER=log
 ```
 
 **Pusher** (optional for real-time features):
+
 ```env
 # Leave blank to disable real-time features locally
 PUSHER_APP_ID=
@@ -206,6 +213,7 @@ PUSHER_APP_CLUSTER=mt1
 ```
 
 **Web Push Notifications** (optional):
+
 ```bash
 # Generate VAPID keys
 npx web-push generate-vapid-keys
@@ -239,6 +247,7 @@ sail artisan migrate:fresh --seed
 ```
 
 This creates:
+
 - **3 Permission Roles**: Viewer, Editor, Admin
 - **Default User**: Check the seeder output for credentials
 - **Sample Books, Pages, and Songs**: Test data to explore features
@@ -312,6 +321,7 @@ sail down
 ### Database Schema
 
 **Core Models**:
+
 - `books` - Photo album containers with categories and geolocation
 - `pages` - Individual photos/videos belonging to books
 - `songs` - YouTube music tracks with thumbnails
@@ -439,14 +449,15 @@ The following models are automatically indexed when created or updated:
 1. Create an S3 bucket for media storage
 2. Enable public access for uploaded media
 3. Configure CORS policy:
+
 ```json
 [
-    {
-        "AllowedHeaders": ["*"],
-        "AllowedMethods": ["GET", "PUT", "POST", "DELETE"],
-        "AllowedOrigins": ["*"],
-        "ExposeHeaders": []
-    }
+  {
+    "AllowedHeaders": ["*"],
+    "AllowedMethods": ["GET", "PUT", "POST", "DELETE"],
+    "AllowedOrigins": ["*"],
+    "ExposeHeaders": []
+  }
 ]
 ```
 
@@ -462,6 +473,7 @@ The following models are automatically indexed when created or updated:
 2. Set visibility timeout to at least 1900 seconds (for video processing)
 3. Configure dead-letter queue for failed jobs
 4. Add credentials to `.env`:
+
 ```env
 QUEUE_CONNECTION=sqs
 SQS_PREFIX=https://sqs.us-east-1.amazonaws.com/your-account-id
@@ -473,6 +485,7 @@ SQS_QUEUE=shudderfly-production
 1. Verify your domain in AWS SES
 2. Move out of sandbox mode for production sending
 3. Configure in `.env`:
+
 ```env
 MAIL_MAILER=ses
 MAIL_FROM_ADDRESS=noreply@yourdomain.com
@@ -548,6 +561,7 @@ php artisan schedule:run
 ```
 
 This handles:
+
 - Weekly engagement statistics emails
 - Cleanup of old failed jobs
 - Cache warming
@@ -659,6 +673,7 @@ npm run format
 
 **Problem**: Videos fail to process or timeout
 **Solutions**:
+
 - Check FFmpeg is installed: `which ffmpeg`
 - Increase PHP memory limit in `php.ini`: `memory_limit = 512M`
 - Increase queue timeout: `QUEUE_CONNECTION=sync` for local testing
@@ -669,6 +684,7 @@ npm run format
 
 **Problem**: Images upload but don't show in browser
 **Solutions**:
+
 - Check S3 bucket permissions (must be publicly readable)
 - Verify `CLOUDFRONT_URL` in `.env` matches your distribution
 - Check browser console for CORS errors
@@ -679,6 +695,7 @@ npm run format
 
 **Problem**: Search returns no results
 **Solutions**:
+
 - Verify Meilisearch is running: `docker ps | grep meilisearch`
 - Re-index models: `sail artisan scout:import "App\Models\Book"`
 - Check Meilisearch logs: `docker logs meilisearch`
@@ -688,6 +705,7 @@ npm run format
 
 **Problem**: Jobs remain in queue and don't process
 **Solutions**:
+
 - Restart queue worker: `sail artisan queue:restart`
 - Check failed jobs: `sail artisan queue:failed`
 - Retry failed jobs: `sail artisan queue:retry all`
@@ -697,6 +715,7 @@ npm run format
 
 **Problem**: Cannot create/edit content
 **Solutions**:
+
 - Check user roles: `sail artisan tinker` → `User::with('roles')->get()`
 - Verify permissions seeded: `sail artisan db:seed --class=RolesAndPermissionsSeeder`
 - Assign role to user in UI: Settings → Users → Edit User
@@ -727,7 +746,8 @@ This project is open-sourced software licensed under the [MIT license](LICENSE).
 
 ## 👨‍💻 Author
 
-**Adam Bailey**  
+**Adam Bailey**
+
 - Website: [adambailey.io](https://adambailey.io)
 - GitHub: [@isAdamBailey](https://github.com/isAdamBailey)
 
@@ -736,6 +756,7 @@ This project is open-sourced software licensed under the [MIT license](LICENSE).
 ## 🙏 Acknowledgments
 
 Built with:
+
 - [Laravel](https://laravel.com) - The PHP Framework for Web Artisans
 - [Vue.js](https://vuejs.org) - The Progressive JavaScript Framework
 - [Inertia.js](https://inertiajs.com) - Build single-page apps without building an API
@@ -745,4 +766,3 @@ Built with:
 ---
 
 **⭐ If you find this project useful, please consider giving it a star on GitHub!**
-
