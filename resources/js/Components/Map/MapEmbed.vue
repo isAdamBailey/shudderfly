@@ -8,6 +8,7 @@
         :title="title"
         :book-title="bookTitle"
         :show-street-view="effectiveShowStreetView"
+        :rotate-view="rotateView"
         container-class="w-full aspect-video rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden shadow-lg"
       />
     </div>
@@ -43,6 +44,10 @@ const props = defineProps({
   showStreetView: {
     type: Boolean,
     default: false
+  },
+  rotateView: {
+    type: Boolean,
+    default: true
   }
 });
 

@@ -89,6 +89,10 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    rotateView: {
+        type: Boolean,
+        default: false,
+    },
 });
 
 const emit = defineEmits([
@@ -531,16 +535,29 @@ const initializeMap = async () => {
             geocoder = new window.google.maps.Geocoder();
         }
 
+        const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
+
         map = new window.google.maps.Map(mapContainer.value, {
             center: { lat: centerLat, lng: centerLng },
             zoom: zoom,
             mapTypeId: window.google.maps.MapTypeId.HYBRID,
-            disableDefaultUI: true,
+            disableDefaultUI: !props.rotateView,
             zoomControl: true,
+            cameraControl: false,
+            rotateControl: props.rotateView,
             streetViewControl: false,
             clickableIcons: false,
             gestureHandling: "cooperative",
+            renderingType: window.google.maps.RenderingType.VECTOR,
+            headingInteractionEnabled: props.rotateView,
+            tiltInteractionEnabled: props.rotateView,
+            ...(mapId ? { mapId } : {}),
         });
+
+        if (props.rotateView) {
+            map.setHeadingInteractionEnabled(true);
+            map.setTiltInteractionEnabled(true);
+        }
 
         if (isMultipleMode) {
             if (!mapLinkClickHandler) {
