@@ -12,7 +12,7 @@ import {
   watch
 } from "vue";
 
-const { flashMessage, clearFlashMessage, isEchoMessage } = useFlashMessage();
+const { flashMessage, clearFlashMessage } = useFlashMessage();
 const { speak } = useSpeechSynthesis();
 const { t } = useTranslations();
 const show = ref(false);
@@ -98,7 +98,7 @@ watch(
     }
     lastFlashMessageId = messageId;
     
-    if (newVal && isEchoMessage.value) {
+    if (newVal?.text) {
       speak(newVal.text);
     }
     

@@ -7,6 +7,7 @@ use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -65,6 +66,18 @@ class Handler extends ExceptionHandler
             return Inertia::render('Error', ['status' => 404])
                 ->toResponse($request)
                 ->setStatusCode(404);
+        }
+
+        if (
+            $exception instanceof HttpExceptionInterface &&
+            in_array($exception->getStatusCode(), [403, 404, 500, 503], true) &&
+            ! $request->expectsJson()
+        ) {
+            $statusCode = $exception->getStatusCode();
+
+            return Inertia::render('Error', ['status' => $statusCode])
+                ->toResponse($request)
+                ->setStatusCode($statusCode);
         }
 
         return parent::render($request, $exception);

@@ -337,7 +337,13 @@ class PagesTest extends TestCase
                 ->where('photos.data.0.id', $visiblePage->id)
         );
 
-        $this->get(route('pages.show', $blockedPage))->assertStatus(404);
+        $this->get(route('pages.show', $blockedPage))
+            ->assertStatus(404)
+            ->assertInertia(
+                fn (Assert $page) => $page
+                    ->component('Error')
+                    ->where('status', 404)
+            );
     }
 
     public function test_authenticated_user_can_unblock_all_blocked_pages_without_edit_pages_permission(): void
