@@ -142,6 +142,7 @@ class BookController extends Controller
         $sort = $request->query('sort', 'newest');
 
         $pages = $book->pages()
+            ->notBlocked()
             ->when(! $youtubeEnabled, fn ($query) => $query->whereNull('video_link'))
             ->when($sort === 'popular', fn ($query) => $query->reorder()->orderBy('read_count', 'desc'))
             ->when($sort === 'oldest', fn ($query) => $query->reorder()->orderBy('created_at', 'asc'))

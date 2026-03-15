@@ -1736,4 +1736,73 @@ class MessagesTest extends TestCase
             })
         );
     }
+
+    public function test_messages_index_hides_messages_with_blocked_pages(): void
+    {
+        $user = User::factory()->create();
+        $book = Book::factory()->make(['title' => 'Test Book']);
+        $book->generateSlug();
+        $book->save();
+
+        $visiblePage = Page::factory()->for($book)->create(['blocked' => false]);
+        $blockedPage = Page::factory()->for($book)->create(['blocked' => true]);
+
+        $visibleMessage = Message::factory()->create([
+            'user_id' => $user->id,
+            'page_id' => $visiblePage->id,
+        ]);
+        Message::factory()->create([
+            'user_id' => $user->id,
+            'page_id' => $blockedPage->id,
+        ]);
+
+        $this->actingAs($user);
+
+        $response = $this->get(route('messages.index'));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($inertiaPage) => $inertiaPage
+            ->component('Messages/Index')
+            ->has('messages.data', 1)
+            ->where('messages.data.0.id', $visibleMessage->id)
+        );
+    }
+
+    public function test_messages_show_returns_404_for_message_with_blocked_page(): void
+    {
+        $user = User::factory()->create();
+        $book = Book::factory()->make(['title' => 'Test Book']);
+        $book->generateSlug();
+        $book->save();
+        $blockedPage = Page::factory()->for($book)->create(['blocked' => true]);
+        $message = Message::factory()->create([
+            'user_id' => $user->id,
+            'page_id' => $blockedPage->id,
+        ]);
+
+        $this->actingAs($user);
+
+        $this->getJson(route('messages.show', $message))->assertStatus(404);
+    }
+
+    public function test_cannot_share_blocked_page_to_chat(): void
+    {
+        Event::fake();
+
+        $user = User::factory()->create();
+        $book = Book::factory()->make(['title' => 'Blocked Book']);
+        $book->generateSlug();
+        $book->save();
+        $blockedPage = Page::factory()->for($book)->create(['blocked' => true]);
+
+        $this->actingAs($user);
+
+        $response = $this->post(route('pages.share', $blockedPage));
+
+        $response->assertStatus(404);
+        $this->assertDatabaseMissing('messages', [
+            'user_id' => $user->id,
+            'page_id' => $blockedPage->id,
+        ]);
+    }
 }

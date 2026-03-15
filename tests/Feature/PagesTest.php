@@ -302,6 +302,58 @@ class PagesTest extends TestCase
         $this->post(route('pages.update', $page))->assertStatus(403);
     }
 
+    public function test_authenticated_user_can_block_page_without_edit_pages_permission(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $book = Book::factory()->create();
+        $page = Page::factory()->for($book)->create(['blocked' => false]);
+
+        $response = $this->patch(route('pages.block', $page));
+
+        $response->assertRedirect(route('books.show', $book));
+        $this->assertTrue($page->fresh()->blocked);
+    }
+
+    public function test_blocked_pages_are_hidden_from_books_and_uploads_and_show_returns_404(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $book = Book::factory()->create();
+        $visiblePage = Page::factory()->for($book)->create(['blocked' => false]);
+        $blockedPage = Page::factory()->for($book)->create(['blocked' => true]);
+
+        $this->get(route('books.show', $book))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Book/Show')
+                ->has('pages.data', 1)
+                ->where('pages.data.0.id', $visiblePage->id)
+        );
+
+        $this->get(route('pictures.index'))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Uploads/Index')
+                ->has('photos.data', 1)
+                ->where('photos.data.0.id', $visiblePage->id)
+        );
+
+        $this->get(route('pages.show', $blockedPage))->assertStatus(404);
+    }
+
+    public function test_authenticated_user_can_unblock_all_blocked_pages_without_edit_pages_permission(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->count(2)->create(['blocked' => true]);
+        Page::factory()->for($book)->count(2)->create(['blocked' => false]);
+
+        $response = $this->post(route('pages.unblock-all'));
+
+        $response->assertRedirect();
+        $this->assertSame(0, Page::where('blocked', true)->count());
+    }
+
     public function test_page_is_updated()
     {
         Storage::fake('s3');

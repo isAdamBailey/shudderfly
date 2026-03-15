@@ -38,6 +38,7 @@ class MessageController extends Controller
         }
 
         $messages = Message::with(['user', 'page', 'reactions.user', 'comments.user', 'comments.reactions.user'])
+            ->whereDoesntHave('page', fn ($query) => $query->where('blocked', true))
             ->recent()
             ->withinRetentionPeriod()
             ->paginate(20);
@@ -73,7 +74,11 @@ class MessageController extends Controller
      */
     public function show(Message $message): \Illuminate\Http\JsonResponse
     {
-        $message->load(['user', 'reactions.user', 'comments.user', 'comments.reactions.user']);
+        $message->load(['user', 'page', 'reactions.user', 'comments.user', 'comments.reactions.user']);
+
+        if ($message->page?->blocked) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
 
         // Transform comments to include grouped reactions
         $comments = $message->comments->map(function ($comment) {

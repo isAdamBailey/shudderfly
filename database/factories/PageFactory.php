@@ -25,6 +25,7 @@ class PageFactory extends Factory
             'book_id' => Book::factory(),
             'content' => $faker->paragraphs(3, true),
             'media_path' => $faker->picsumUrl(640, 480),
+            'blocked' => false,
         ];
     }
 }

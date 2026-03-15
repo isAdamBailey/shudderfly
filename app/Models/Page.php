@@ -19,11 +19,16 @@ class Page extends Model
         'media_path',
         'media_poster',
         'video_link',
+        'blocked',
         'book_id',
         'read_count',
         'created_at',
         'latitude',
         'longitude',
+    ];
+
+    protected $casts = [
+        'blocked' => 'boolean',
     ];
 
     public function getMediaPathAttribute($value): string
@@ -67,6 +72,11 @@ class Page extends Model
             ->orWhere('media_path', 'like', '%.webp%');
     }
 
+    public function scopeNotBlocked($query)
+    {
+        return $query->where('blocked', false);
+    }
+
     public function book(): BelongsTo
     {
         return $this->belongsTo(Book::class);
@@ -95,7 +105,13 @@ class Page extends Model
             'content' => $this->content,
             'book_title' => $this->book ? $this->book->title : null,
             'book_id' => $this->book_id,
+            'blocked' => $this->blocked,
         ];
+    }
+
+    public function shouldBeSearchable(): bool
+    {
+        return ! $this->blocked;
     }
 
     /**

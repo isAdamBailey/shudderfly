@@ -135,54 +135,97 @@
           @close-page-form="showPageSettings = false"
         />
       </div>
-      <div class="my-4 mx-5 flex items-end gap-2">
-        <AddToCollageButton
-          v-if="canAddToCollage"
-          :page-id="props.page.id"
-          :collages="props.collages"
-        />
+      <div class="my-4 mx-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div
-          v-if="
-            messagingEnabled &&
-            (page.media_path || page.video_link || page.media_poster) &&
-            $page.props.auth.user
-          "
-          ref="shareMenuContainerRef"
-          class="relative flex items-center"
+          v-if="canAddToCollage"
+          class="flex flex-wrap items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 p-2"
+        >
+          <AddToCollageButton
+            :page-id="props.page.id"
+            :collages="props.collages"
+          />
+        </div>
+
+        <div
+          v-if="canSharePage"
+          class="flex flex-wrap items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 p-2"
         >
           <Button
             type="button"
-            :disabled="isShareDisabled || sharing"
-            class="h-10 flex items-center justify-center gap-2"
-            :title="
-              hasSharedToday
-                ? t('already_shared_today')
-                : t('share_to_timeline')
-            "
-            @click.stop="toggleShareMenu"
-            ref="shareButtonRef"
+            :disabled="speaking"
+            class="h-10 w-10 flex items-center justify-center"
+            :title="t('page.speak_share_action')"
+            :aria-label="t('page.speak_share_action_aria')"
+            @click="speak(shareActionLabel)"
           >
-            <i v-if="sharing" class="ri-loader-line text-xl animate-spin"></i>
-            <i v-else class="ri-share-line text-xl"></i>
-            <span>Share</span>
+            <i class="ri-speak-fill text-2xl"></i>
           </Button>
           <div
-            v-if="shareMenuOpen"
-            ref="shareMenuRef"
-            class="fixed w-64 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-[100] max-h-72 overflow-y-auto"
-            :style="shareMenuStyles"
-            @click.stop
+            ref="shareMenuContainerRef"
+            class="relative flex items-center"
           >
-            <UserTagList
-              :users="users"
-              :selected-user-id="selectedShareUserId"
-              :show-none="true"
-              none-label="Share without tag"
-              :none-selected="selectedShareUserId === null"
-              @select="handleShareSelect"
-              @select-none="handleShareSelectNone"
-            />
+            <Button
+              type="button"
+              :disabled="isShareDisabled || sharing"
+              class="h-10 flex items-center justify-center gap-2"
+              :title="
+                hasSharedToday
+                  ? t('already_shared_today')
+                  : t('share_to_timeline')
+              "
+              @click.stop="toggleShareMenu"
+              ref="shareButtonRef"
+            >
+              <i v-if="sharing" class="ri-loader-line text-xl animate-spin"></i>
+              <i v-else class="ri-share-line text-xl"></i>
+              <span>{{ t("share_to_timeline") }}</span>
+            </Button>
+            <div
+              v-if="shareMenuOpen"
+              ref="shareMenuRef"
+              class="fixed w-64 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-[100] max-h-72 overflow-y-auto"
+              :style="shareMenuStyles"
+              @click.stop
+            >
+              <UserTagList
+                :users="users"
+                :selected-user-id="selectedShareUserId"
+                :show-none="true"
+                none-label="Share without tag"
+                :none-selected="selectedShareUserId === null"
+                @select="handleShareSelect"
+                @select-none="handleShareSelectNone"
+              />
+            </div>
           </div>
+        </div>
+
+        <div
+          v-if="$page.props.auth.user"
+          class="flex flex-wrap items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 p-2 md:justify-end"
+        >
+          <Button
+            type="button"
+            :disabled="speaking"
+            class="h-10 w-10 flex items-center justify-center"
+            :title="t('page.speak_block_action')"
+            :aria-label="t('page.speak_block_action_aria')"
+            @click="speak(t('page.block_this'))"
+          >
+            <i class="ri-speak-fill text-2xl"></i>
+          </Button>
+          <Button
+            type="button"
+            :disabled="blocking"
+            class="h-10 flex items-center justify-center gap-2"
+            :title="t('page.block_this')"
+            :aria-label="t('page.block_aria')"
+            @click="blockPage"
+          >
+            <i v-if="blocking" class="ri-loader-line text-xl animate-spin"></i>
+            <i v-else class="ri-forbid-2-line text-xl"></i>
+            <span>{{ t("page.block_this") }}</span>
+          </Button>
         </div>
       </div>
     </div>
@@ -239,6 +282,7 @@ const selectedShareUserId = ref(null);
 const shareButtonRef = ref(null);
 const shareMenuRef = ref(null);
 const shareMenuStyles = ref({});
+const blocking = ref(false);
 
 const hasContent = computed(() => stripHtml(props.page.content));
 
@@ -261,6 +305,32 @@ const canAddToCollage = computed(() => {
 const isShareDisabled = computed(() => {
   return hasSharedToday.value || sharing.value;
 });
+const canSharePage = computed(() => {
+  return (
+    messagingEnabled.value &&
+    Boolean(props.page.media_path || props.page.video_link || props.page.media_poster) &&
+    Boolean(usePage().props.auth?.user)
+  );
+});
+const shareActionLabel = computed(() => {
+  return hasSharedToday.value ? t("already_shared_today") : t("share_to_timeline");
+});
+
+const blockPage = () => {
+  if (blocking.value) return;
+
+  blocking.value = true;
+  router.patch(
+    route("pages.block", props.page.id),
+    {},
+    {
+      preserveScroll: true,
+      onFinish: () => {
+        blocking.value = false;
+      }
+    }
+  );
+};
 
 const checkIfSharedToday = () => {
   const today = new Date().toISOString().split("T")[0];

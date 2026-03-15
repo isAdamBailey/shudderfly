@@ -4,7 +4,7 @@ return [
     // Sharing & books
     'page_shared' => 'Look! This :media is from :book',
     'unknown_book' => 'Mystery book',
-    'share_to_timeline' => 'Share it',
+    'share_to_timeline' => 'Share to chat',
     'already_shared_today' => 'You already shared something today!',
 
     // Success messages (friendly, simple)
@@ -20,6 +20,8 @@ return [
     'page.bulk_deleted' => 'Those :count pages are gone.',
     'page.bulk_moved_to_top' => ':count pages moved to the top!',
     'page.bulk_moved_to_book' => 'Moved :count pages into :book!',
+    'page.blocked' => 'Page blocked.',
+    'page.unblocked_all' => 'Unblocked :count blocked pages.',
     'message.deleted' => 'Message gone.',
     'comment.deleted' => 'Comment gone.',
     'avatar.updated' => 'New picture! Looking good.',
@@ -173,4 +175,17 @@ return [
     'general.speak_all_reactions' => 'Hear all reactions',
     'general.speak_all_reactions_aria' => 'Hear all reactions',
     'general.view_message' => 'See message',
+    'page.block_this' => 'Block this page',
+    'page.block_aria' => 'Block this page',
+    'page.speak_block_action' => 'Hear block action',
+    'page.speak_block_action_aria' => 'Hear what this block action does',
+    'page.speak_share_action' => 'Hear share action',
+    'page.speak_share_action_aria' => 'Hear what this share action does',
+    'dashboard.unlock_all_blocked_pages' => 'Unblock ALL blocked pages',
+    'dashboard.unlock_all_blocked_pages_aria' => 'Unblock all blocked pages',
+    'dashboard.speak_unblock_all_action' => 'Hear unblock blocked pages action',
+    'dashboard.speak_unblock_all_action_aria' => 'Hear what unblocking blocked pages does',
+    'dashboard.speak_unblock_all_action_with_count' => 'There are :count blocked pages. Unblock all blocked pages.',
+    'dashboard.unblock' => 'Unblock',
+    'dashboard.blocked_pages_count' => ':count blocked pages',
 ];

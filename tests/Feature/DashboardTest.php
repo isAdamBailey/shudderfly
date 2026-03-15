@@ -186,4 +186,18 @@ class DashboardTest extends TestCase
 
         $response->assertRedirect(route('login'));
     }
+
+    public function test_authenticated_user_can_call_unblock_all_pages_route()
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $book = Book::factory()->create();
+        Page::factory()->for($book)->count(2)->create(['blocked' => true]);
+
+        $response = $this->post(route('pages.unblock-all'));
+
+        $response->assertRedirect();
+        $this->assertEquals(0, Page::where('blocked', true)->count());
+    }
 }

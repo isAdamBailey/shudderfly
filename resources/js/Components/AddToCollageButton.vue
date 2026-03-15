@@ -11,7 +11,7 @@
                 }}<span v-if="index < pageExistingCollages.length - 1">, </span>
             </span>
             <Button
-                class="ml-3 py-0.5 px-0.5"
+                class="ml-3 h-10 w-10 flex items-center justify-center"
                 :disabled="speaking"
                 @click="
                     speak(
@@ -21,7 +21,7 @@
                     )
                 "
             >
-                <i class="ri-speak-fill text-2xl"></i>
+                <i class="ri-speak-fill text-xl"></i>
             </Button>
         </div>
 
@@ -29,7 +29,7 @@
             <label class="block mb-3 font-medium text-white"
                 >Add to collage:
                 <Button
-                    class="ml-3 py-0.5"
+                    class="ml-3 h-10 w-10 flex items-center justify-center"
                     :disabled="speaking"
                     @click="
                         speak(
@@ -43,7 +43,7 @@
                         )
                     "
                 >
-                    <i class="ri-speak-fill text-2xl"></i>
+                    <i class="ri-speak-fill text-xl"></i>
                 </Button>
             </label>
             <div class="flex items-center gap-2">

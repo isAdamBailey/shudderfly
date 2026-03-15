@@ -50,6 +50,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/photos', [PageController::class, 'index'])->name('pictures.index');
 
     Route::get('/pages/{page}', [PageController::class, 'show'])->name('pages.show');
+    Route::patch('/pages/{page}/block', [PageController::class, 'block'])->name('pages.block');
+    Route::post('/pages/unblock-all', [PageController::class, 'unblockAll'])->name('pages.unblock-all');
     Route::post('/pages/{page}/share', [PageController::class, 'share'])->name('pages.share');
     Route::post('/pages/snapshot', [PageController::class, 'snapshot'])->name('pages.snapshot');
     Route::post('/contact-admins-email', [ProfileController::class, 'contactAdminsEmail'])

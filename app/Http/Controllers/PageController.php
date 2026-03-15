@@ -203,6 +203,7 @@ class PageController extends Controller
 
         // Build the pages query
         $pagesQuery = Page::with('book')
+            ->notBlocked()
             ->when($filter === 'youtube', function ($query) use ($youtubeEnabled) {
                 if (! $youtubeEnabled) {
                     $query->whereRaw('1 = 0');
@@ -282,6 +283,10 @@ class PageController extends Controller
 
     public function show(Page $page, Request $request): Response
     {
+        if ($page->blocked) {
+            abort(404);
+        }
+
         $youtubeEnabled = SiteSetting::where('key', 'youtube_enabled')->first()->value;
 
         if (! $youtubeEnabled && $page->video_link) {
@@ -307,7 +312,7 @@ class PageController extends Controller
 
         $page->load(['book', 'book.coverImage']);
 
-        $query = Page::where('book_id', $page->book_id);
+        $query = Page::notBlocked()->where('book_id', $page->book_id);
 
         if (! $youtubeEnabled) {
             $query->whereNull('video_link');
@@ -330,8 +335,8 @@ class PageController extends Controller
         }
 
         // Fetch full page objects with relationships if IDs exist
-        $nextPage = $nextPageId ? Page::with('book')->find($nextPageId) : null;
-        $previousPage = $previousPageId ? Page::with('book')->find($previousPageId) : null;
+        $nextPage = $nextPageId ? Page::with('book')->notBlocked()->find($nextPageId) : null;
+        $previousPage = $previousPageId ? Page::with('book')->notBlocked()->find($previousPageId) : null;
 
         $books = $canEditPages
             ? Book::all()->map->only(['id', 'title'])->sortBy('title')->values()->toArray()
@@ -637,6 +642,20 @@ class PageController extends Controller
         return redirect(route('books.show', $book))->with('success', $message);
     }
 
+    public function block(Page $page): Redirector|RedirectResponse
+    {
+        $page->update(['blocked' => true]);
+
+        return redirect(route('books.show', $page->book))->with('success', __('messages.page.blocked'));
+    }
+
+    public function unblockAll(): Redirector|RedirectResponse
+    {
+        $count = Page::where('blocked', true)->update(['blocked' => false]);
+
+        return redirect()->back()->with('success', __('messages.page.unblocked_all', ['count' => $count]));
+    }
+
     /**
      * Share a page to the timeline.
      */
@@ -677,6 +696,10 @@ class PageController extends Controller
 
     public function share(Page $page, Request $request): RedirectResponse
     {
+        if ($page->blocked) {
+            abort(404);
+        }
+
         // Check if messaging is enabled
         $setting = SiteSetting::where('key', 'messaging_enabled')->first();
         $messagingEnabled = $setting && ($setting->getAttributes()['value'] ?? $setting->value) === '1';
