@@ -14,11 +14,11 @@ import { Deferred, Head, router } from "@inertiajs/vue3";
 import { ref } from "vue";
 
 defineProps({
-    users: { type: [Array, Function], default: () => [] },
+    users: { type: Array, default: () => [] },
     stats: { type: [Object, Function], default: () => ({}) },
-    categories: { type: [Array, Function], default: () => [] },
+    categories: { type: Array, default: () => [] },
     adminSettings: { type: Array, default: () => [] },
-    blockedPagesCount: { type: [Number, Function], default: 0 },
+    blockedPagesCount: { type: Number, default: 0 },
 });
 
 const buildTimestamp = __BUILD_TIMESTAMP__;
@@ -64,16 +64,7 @@ const unblockAllPages = () => {
                         class="bg-white overflow-hidden shadow-sm sm:rounded-lg"
                     >
                         <Accordion title="Categories">
-                            <Deferred data="categories">
-                                <template #fallback>
-                                    <div
-                                        class="text-gray-900 dark:text-gray-100"
-                                    >
-                                        Loading...
-                                    </div>
-                                </template>
-                                <CategoriesForm :categories="categories" />
-                            </Deferred>
+                            <CategoriesForm :categories="categories" />
                         </Accordion>
                     </div>
                 </div>
@@ -82,16 +73,7 @@ const unblockAllPages = () => {
                         class="bg-white overflow-visible shadow-sm sm:rounded-lg"
                     >
                         <Accordion title="Users">
-                            <Deferred data="users">
-                                <template #fallback>
-                                    <div
-                                        class="text-gray-900 dark:text-gray-100"
-                                    >
-                                        Loading...
-                                    </div>
-                                </template>
-                                <UsersForm :users="users" />
-                            </Deferred>
+                            <UsersForm :users="users" />
                         </Accordion>
                     </div>
                 </div>
@@ -111,41 +93,32 @@ const unblockAllPages = () => {
                         class="bg-white overflow-hidden shadow-sm sm:rounded-lg"
                     >
                         <Accordion :title="t('dashboard.unblock')">
-                            <Deferred data="blockedPagesCount">
-                                <template #fallback>
-                                    <div
-                                        class="text-gray-900 dark:text-gray-100"
+                            <div class="space-y-3">
+                                <p class="text-gray-900 dark:text-gray-100">
+                                    {{ t("dashboard.blocked_pages_count", { count: blockedPagesCount }) }}
+                                </p>
+                                <div class="flex items-center gap-2">
+                                    <Button
+                                        type="button"
+                                        :disabled="speaking"
+                                        class="h-10 w-10 flex items-center justify-center"
+                                        :title="t('dashboard.speak_unblock_all_action')"
+                                        :aria-label="t('dashboard.speak_unblock_all_action_aria')"
+                                        @click="speak(t('dashboard.speak_unblock_all_action_with_count', { count: blockedPagesCount }))"
                                     >
-                                        Loading...
-                                    </div>
-                                </template>
-                                <div class="space-y-3">
-                                    <p class="text-gray-900 dark:text-gray-100">
-                                        {{ t("dashboard.blocked_pages_count", { count: blockedPagesCount }) }}
-                                    </p>
-                                    <div class="flex items-center gap-2">
-                                        <Button
-                                            type="button"
-                                            :disabled="speaking"
-                                            class="h-10 w-10 flex items-center justify-center"
-                                            :title="t('dashboard.speak_unblock_all_action')"
-                                            :aria-label="t('dashboard.speak_unblock_all_action_aria')"
-                                            @click="speak(t('dashboard.speak_unblock_all_action_with_count', { count: blockedPagesCount }))"
-                                        >
-                                            <i class="ri-speak-fill text-xl"></i>
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            :disabled="unlockingBlockedPages || blockedPagesCount === 0"
-                                            :aria-label="t('dashboard.unlock_all_blocked_pages_aria')"
-                                            @click="unblockAllPages"
-                                        >
-                                            <i v-if="unlockingBlockedPages" class="ri-loader-line text-xl animate-spin"></i>
-                                            <span v-else>{{ t("dashboard.unlock_all_blocked_pages") }}</span>
-                                        </Button>
-                                    </div>
+                                        <i class="ri-speak-fill text-xl"></i>
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        :disabled="unlockingBlockedPages || blockedPagesCount === 0"
+                                        :aria-label="t('dashboard.unlock_all_blocked_pages_aria')"
+                                        @click="unblockAllPages"
+                                    >
+                                        <i v-if="unlockingBlockedPages" class="ri-loader-line text-xl animate-spin"></i>
+                                        <span v-else>{{ t("dashboard.unlock_all_blocked_pages") }}</span>
+                                    </Button>
                                 </div>
-                            </Deferred>
+                            </div>
                         </Accordion>
                     </div>
                 </div>

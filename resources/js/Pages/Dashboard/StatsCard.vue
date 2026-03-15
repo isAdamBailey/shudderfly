@@ -318,6 +318,7 @@
                                     Book with most pages
                                 </div>
                                 <Link
+                                    v-if="statsData.mostPages?.slug"
                                     class="font-bold hover:text-blue-400 truncate block"
                                     :href="
                                         route(
@@ -329,6 +330,13 @@
                                 >
                                     {{ statsData.mostPages?.title }}
                                 </Link>
+                                <span
+                                    v-else
+                                    class="font-bold truncate block"
+                                    :title="statsData.mostPages?.title"
+                                >
+                                    {{ statsData.mostPages?.title }}
+                                </span>
                                 <div class="text-sm text-gray-500 mt-1">
                                     {{
                                         countAddS(
@@ -394,6 +402,7 @@
                                     Book with least pages
                                 </div>
                                 <Link
+                                    v-if="statsData.leastPages?.slug"
                                     class="font-bold hover:text-blue-400 truncate block"
                                     :href="
                                         route(
@@ -405,6 +414,13 @@
                                 >
                                     {{ statsData.leastPages?.title }}
                                 </Link>
+                                <span
+                                    v-else
+                                    class="font-bold truncate block"
+                                    :title="statsData.leastPages?.title"
+                                >
+                                    {{ statsData.leastPages?.title }}
+                                </span>
                                 <div class="text-sm text-gray-500 mt-1">
                                     {{
                                         countAddS(
@@ -481,6 +497,7 @@
                             >{{ index + 1 }}.</span
                         >
                         <Link
+                            v-if="book?.slug"
                             class="flex items-center font-medium hover:text-blue-400 truncate"
                             :href="route('books.show', { book: book?.slug })"
                             :aria-label="`View book ${book.title}`"
@@ -502,6 +519,27 @@
                                 book.title
                             }}</span>
                         </Link>
+                        <div
+                            v-else
+                            class="flex items-center font-medium truncate"
+                            :title="book.title"
+                        >
+                            <div class="flex-shrink-0 mr-3">
+                                <img
+                                    v-if="book.cover_image?.media_path"
+                                    :src="book.cover_image.media_path"
+                                    :alt="book.title"
+                                    class="w-10 h-10 rounded-lg object-cover"
+                                    @error="
+                                        (e) => (e.target.style.display = 'none')
+                                    "
+                                />
+                            </div>
+
+                            <span class="truncate" style="max-width: 100%">{{
+                                book.title
+                            }}</span>
+                        </div>
                     </div>
                 </div>
             </div>

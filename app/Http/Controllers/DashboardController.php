@@ -20,9 +20,9 @@ class DashboardController extends Controller
     public function show()
     {
         return Inertia::render('Dashboard/Index', [
-            'users' => Inertia::defer(fn () => User::all()),
-            'categories' => Inertia::defer(fn () => Category::withCount('books')->get()),
-            'blockedPagesCount' => Inertia::defer(fn () => Page::where('blocked', true)->count()),
+            'users' => User::all(),
+            'categories' => Category::withCount('books')->get(),
+            'blockedPagesCount' => Page::where('blocked', true)->count(),
             'stats' => Inertia::defer(fn () => [
                 'numberOfBooks' => Book::count(),
                 'numberOfPages' => Page::count(),

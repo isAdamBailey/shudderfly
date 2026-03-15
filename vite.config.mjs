@@ -2,6 +2,10 @@ import vue from "@vitejs/plugin-vue";
 import laravel from "laravel-vite-plugin";
 import { defineConfig } from "vite";
 
+if (process.env.VITEST) {
+    process.env.LARAVEL_BYPASS_ENV_CHECK = "1";
+}
+
 export default defineConfig({
     plugins: [
         laravel({
