@@ -88,7 +88,7 @@ const unblockAllPages = () => {
                     </div>
                 </div>
 
-                <div class="w-full sm:px-6 lg:px-8">
+                <div v-if="canAdmin" class="w-full sm:px-6 lg:px-8">
                     <div
                         class="bg-white overflow-hidden shadow-sm sm:rounded-lg"
                     >
@@ -130,10 +130,16 @@ const unblockAllPages = () => {
                         <Accordion title="Site Statistics">
                             <Deferred data="stats">
                                 <template #fallback>
-                                    <div
-                                        class="text-gray-900 dark:text-gray-100"
-                                    >
-                                        Loading...
+                                    <div class="space-y-4 py-2" role="status" aria-live="polite" aria-label="Loading statistics">
+                                        <div class="flex items-center gap-3 text-gray-900 dark:text-gray-100">
+                                            <i class="ri-loader-4-line text-2xl animate-spin"></i>
+                                            <span class="font-medium">Loading statistics...</span>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <div class="h-3 w-3/4 rounded bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
+                                            <div class="h-3 w-2/3 rounded bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
+                                            <div class="h-3 w-1/2 rounded bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
+                                        </div>
                                     </div>
                                 </template>
                                 <StatsCard :stats="stats" />
