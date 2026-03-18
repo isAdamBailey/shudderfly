@@ -163,6 +163,7 @@ return [
             ],
             'pages' => [
                 'searchableAttributes' => ['content'],
+                'filterableAttributes' => ['blocked'],
                 'typoTolerance' => [
                     'enabled' => true,
                     'minWordSizeForTypos' => [

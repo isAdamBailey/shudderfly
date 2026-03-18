@@ -120,11 +120,10 @@ class SearchController extends Controller
             // Search pages
             if ($allPages->count() < $maxPages) {
                 $pages = Page::search($searchQuery)
-                    ->where('blocked', false)
                     ->take($pageVariationLimit)
                     ->get()
                     ->load('book')
-                    ->filter(fn ($page) => ! $page->blocked);
+                    ->where('blocked', false);
 
                 foreach ($pages as $page) {
                     if ($allPages->count() >= $maxPages) {
