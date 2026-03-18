@@ -32,6 +32,11 @@ const updates = [
     title: "Black Circles",
     href: "https://records.adambailey.io/",
     description: "New app to see and hear dads music!"
+  },
+  {
+    title: "Poop Boom",
+    href: "https://boom.adambailey.io/",
+    description: "Get the BOOM in the toilet!"
   }
 ];
 
