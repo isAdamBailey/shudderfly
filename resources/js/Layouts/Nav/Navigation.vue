@@ -55,6 +55,12 @@ const messagingEnabled = computed(() => {
                 Collages
               </NavLink>
               <NavLink
+                :href="route('games.index')"
+                :active="route().current('games.*')"
+              >
+                Games
+              </NavLink>
+              <NavLink
                 v-if="messagingEnabled"
                 :href="route('messages.index')"
                 :active="route().current('messages.*')"
@@ -229,6 +235,12 @@ const messagingEnabled = computed(() => {
             :active="route().current('collages.*')"
           >
             Collages
+          </ResponsiveNavLink>
+          <ResponsiveNavLink
+            :href="route('games.index')"
+            :active="route().current('games.*')"
+          >
+            Games
           </ResponsiveNavLink>
           <ResponsiveNavLink
             v-if="messagingEnabled"
