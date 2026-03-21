@@ -14,6 +14,7 @@
 📚 **Digital Photo Albums** - Organize memories into themed books with categories and geolocation  
 🎵 **Distraction-Free Music** - YouTube integration without recommendations or ads  
 🖼️ **PDF Collage Generator** - Create printable photo books from your digital collections  
+🎮 **Accessible Games** - Fun, self-contained games with no ads, no tracking, and full keyboard/screen-reader support  
 🔍 **Lightning-Fast Search** - Powered by Meilisearch with typo-tolerance and instant results  
 🚀 **Production-Ready** - Built on Laravel 12 with enterprise-grade security and scalability
 
@@ -23,6 +24,7 @@
 - **📸 Photos**: Standalone image galleries with infinite scroll and bulk management
 - **🎵 Music**: YouTube videos presented as audio tracks with custom thumbnails
 - **🎨 Collages**: Generate beautiful PDF photo books for printing
+- **🎮 Games**: Accessible, ad-free games playable within the authenticated app (Poop Boom, Cockroach Fart)
 - **💬 Messages**: Internal communication system with reactions and threading
 
 ---
