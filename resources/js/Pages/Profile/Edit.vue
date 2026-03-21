@@ -24,19 +24,9 @@ const closeUpdates = () => {
 
 const updates = [
   {
-    title: "Cockroach Hiss",
-    href: "https://cockroach.adambailey.io",
-    description: "New game — try it out!"
-  },
-  {
     title: "Black Circles",
     href: "https://records.adambailey.io/",
     description: "New app to see and hear dads music!"
-  },
-  {
-    title: "Poop Boom",
-    href: "https://boom.adambailey.io/",
-    description: "Get the BOOM in the toilet!"
   }
 ];
 
