@@ -1,5 +1,7 @@
 <script setup>
+import GameStartScreen from "@/Components/Games/GameStartScreen.vue";
 import ShareToChatButton from "@/Components/ShareToChatButton.vue";
+import { POOP_BOOM_INTRO_SCRIPT } from "@/Pages/Games/shared/introScripts.js";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head } from "@inertiajs/vue3";
 import { ref, computed, onMounted, onUnmounted } from "vue";
@@ -372,14 +374,19 @@ onUnmounted(() => {
 
                 <!-- ── start screen ─────────────────────────────── -->
                 <Transition name="fade">
-                    <div v-if="!gameStarted" class="overlay start-screen">
-                        <div class="overlay-card">
-                            <div class="big-emoji">💩</div>
-                            <h1>Poop Boom</h1>
-                            <p>Drag the poop and drop it into the toilet.<br>5 misses and it's game over!</p>
-                            <button class="btn" @click="startGame">▶ Play</button>
-                        </div>
-                    </div>
+                    <GameStartScreen
+                        v-if="!gameStarted"
+                        title="Poop Boom"
+                        :intro-script="POOP_BOOM_INTRO_SCRIPT"
+                        play-label="▶ Play"
+                        @play="startGame"
+                    >
+                        <template #media>💩</template>
+                        <p>
+                            Drag the poop and drop it into the toilet.<br />
+                            5 misses and it's game over!
+                        </p>
+                    </GameStartScreen>
                 </Transition>
 
                 <!-- ── game over screen ──────────────────────────── -->

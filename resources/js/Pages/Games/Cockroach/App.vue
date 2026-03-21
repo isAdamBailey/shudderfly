@@ -1,10 +1,18 @@
 <template>
-    <StartScreen
+    <GameStartScreen
         v-if="state.phase === 'start'"
-        :fact="currentFact"
+        title="Cockroach Fart"
+        subtitle="Tap the cockroach's head to make it hiss!"
+        :intro-script="COCKROACH_INTRO_SCRIPT"
         :high-score="state.highScore"
         @play="handlePlay"
-    />
+    >
+        <template #extra>
+            <div class="game-start-aside">
+                <span class="game-start-aside-label">Fun fact: </span>{{ currentFact }}
+            </div>
+        </template>
+    </GameStartScreen>
     <GameBoard
         v-else-if="state.phase === 'playing'"
         :state="state"
@@ -23,8 +31,9 @@
 <script setup>
 import { watch, onUnmounted } from "vue";
 
-import StartScreen from "./components/StartScreen.vue";
-import GameBoard   from "./components/GameBoard.vue";
+import GameStartScreen from "@/Components/Games/GameStartScreen.vue";
+import GameBoard from "./components/GameBoard.vue";
+import { COCKROACH_INTRO_SCRIPT } from "@/Pages/Games/shared/introScripts.js";
 import WinScreen   from "./components/WinScreen.vue";
 import { useGameState } from "./composables/useGameState.js";
 import { useSound }     from "./composables/useSound.js";

@@ -20,48 +20,22 @@
         </div>
 
         <div class="hud-right">
-            <button
-                class="help-btn"
-                @pointerdown.prevent="speakRules"
-                :class="{ speaking: isSpeaking }"
-            >
-                <svg v-if="!isSpeaking" viewBox="0 0 24 24" fill="currentColor" width="1em" height="1em">
-                    <path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
-                </svg>
-                <svg v-else viewBox="0 0 24 24" fill="currentColor" width="1em" height="1em">
-                    <rect x="6" y="6" width="12" height="12" rx="2" />
-                </svg>
-            </button>
+            <GameStartSpeechButton
+                variant="icon"
+                :script="COCKROACH_INTRO_SCRIPT"
+            />
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref, onUnmounted } from "vue";
-import { speakGameRules, stopSpeaking } from "../composables/useSpeech.js";
+import GameStartSpeechButton from "@/Components/Games/GameStartSpeechButton.vue";
+import { COCKROACH_INTRO_SCRIPT } from "@/Pages/Games/shared/introScripts.js";
 
 defineProps({
     score:      { type: Number, default: 0 },
     comboCount: { type: Number, default: 0 },
     hissCount:  { type: Number, default: 0 },
-});
-
-const isSpeaking = ref(false);
-
-function speakRules() {
-    if (isSpeaking.value) {
-        stopSpeaking();
-        isSpeaking.value = false;
-        return;
-    }
-    isSpeaking.value = true;
-    speakGameRules(() => {
-        isSpeaking.value = false;
-    });
-}
-
-onUnmounted(() => {
-    stopSpeaking();
 });
 </script>
 
@@ -137,31 +111,6 @@ onUnmounted(() => {
 .hud-right {
     display: flex;
     align-items: center;
-}
-
-.help-btn {
-    font-size: 3vmin;
-    width: 5.5vmin;
-    height: 5.5vmin;
-    border-radius: 1.2vmin;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    background: rgba(0, 0, 0, 0.35);
-    color: rgba(255, 255, 255, 0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-    transition: background 0.2s, color 0.2s, border-color 0.2s;
-}
-
-.help-btn:active { background: rgba(255, 255, 255, 0.15); }
-
-.help-btn.speaking {
-    border-color: #ffd54f;
-    color: #ffd54f;
-    background: rgba(255, 213, 79, 0.15);
 }
 
 @keyframes comboIn {
