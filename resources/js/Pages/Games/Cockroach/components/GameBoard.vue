@@ -64,8 +64,6 @@ function handleHiss(direction) {
     inset: 0;
     background: linear-gradient(180deg, #3e2723 0%, #5d4037 30%, #6d4c41 60%, #8d6e63 100%);
     overflow: hidden;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
     user-select: none;
     -webkit-user-select: none;
 }

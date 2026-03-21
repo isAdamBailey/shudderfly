@@ -120,8 +120,6 @@ defineEmits(["play-again"]);
     cursor: pointer;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
     transition: transform 0.15s ease;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
 }
 
 .play-again-btn:active { transform: scale(0.95); }

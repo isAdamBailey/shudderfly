@@ -1,7 +1,10 @@
 <script setup>
+import { useGameViewportLock } from "@/composables/useGameViewportLock";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head } from "@inertiajs/vue3";
 import CockroachApp from "./Cockroach/App.vue";
+
+useGameViewportLock();
 </script>
 
 <template>

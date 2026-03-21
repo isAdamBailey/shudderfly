@@ -2,9 +2,12 @@
 import GameStartScreen from "@/Components/Games/GameStartScreen.vue";
 import ShareToChatButton from "@/Components/ShareToChatButton.vue";
 import { POOP_BOOM_INTRO_SCRIPT } from "@/Pages/Games/shared/introScripts.js";
+import { useGameViewportLock } from "@/composables/useGameViewportLock";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head } from "@inertiajs/vue3";
 import { ref, computed, onMounted, onUnmounted } from "vue";
+
+useGameViewportLock();
 
 // ─── constants ────────────────────────────────────────────────────────────────
 const TOILET_W      = 90;   // px

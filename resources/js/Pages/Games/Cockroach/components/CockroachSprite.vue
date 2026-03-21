@@ -72,7 +72,6 @@ function onHeadTap(event) {
     position: absolute;
     z-index: 20;
     cursor: pointer;
-    touch-action: manipulation;
 }
 
 .head-area {
