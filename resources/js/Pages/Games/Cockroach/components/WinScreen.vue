@@ -15,11 +15,16 @@
             <button class="play-again-btn" @pointerdown.prevent="$emit('play-again')">
                 Play Again
             </button>
+            <div class="share-wrap">
+                <ShareToChatButton game-slug="cockroach" :score="score" />
+            </div>
         </div>
     </div>
 </template>
 
 <script setup>
+import ShareToChatButton from "@/Components/ShareToChatButton.vue";
+
 defineProps({
     score:    { type: Number,  required: true },
     stars:    { type: Number,  required: true },
@@ -120,6 +125,13 @@ defineEmits(["play-again"]);
 }
 
 .play-again-btn:active { transform: scale(0.95); }
+
+.share-wrap {
+    margin-top: 3vmin;
+    max-width: min(90vw, 28rem);
+    margin-left: auto;
+    margin-right: auto;
+}
 
 @keyframes fadeIn {
     from { opacity: 0; }

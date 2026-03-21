@@ -1,4 +1,5 @@
 <script setup>
+import ShareToChatButton from "@/Components/ShareToChatButton.vue";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head } from "@inertiajs/vue3";
 import { ref, computed, onMounted, onUnmounted } from "vue";
@@ -389,6 +390,9 @@ onUnmounted(() => {
                             <h1>Game Over!</h1>
                             <p>You scored <strong>{{ score }}</strong> point{{ score !== 1 ? "s" : "" }}!</p>
                             <button class="btn" @click="restartGame">🔄 Play Again</button>
+                            <div class="gameover-share">
+                                <ShareToChatButton game-slug="boom" :score="score" />
+                            </div>
                         </div>
                     </div>
                 </Transition>
@@ -644,6 +648,14 @@ onUnmounted(() => {
 .big-emoji { font-size: 5rem; margin-bottom: 8px; }
 .overlay-card h1 { font-size: 2.4rem; margin-bottom: 8px; }
 .overlay-card p  { font-size: 1rem; opacity: .9; margin-bottom: 20px; line-height: 1.5; }
+
+.gameover-share {
+    margin-top: 16px;
+    max-width: 28rem;
+    margin-left: auto;
+    margin-right: auto;
+    touch-action: manipulation;
+}
 
 .btn {
     display: inline-block;

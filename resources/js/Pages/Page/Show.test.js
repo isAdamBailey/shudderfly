@@ -1,15 +1,19 @@
+import UserTagList from "@/Components/UserTagList.vue";
 import Show from "@/Pages/Page/Show.vue";
 import { mount } from "@vue/test-utils";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 
 // Mock route function
 global.route = vi.fn((name, params) => {
-  if (name === "pages.share" && params) {
+  if (name === "pages.share" && params != null) {
     return `/pages/${params}/share`;
   }
-  if (name === "pages.show" && params) {
-    return `/pages/${params}`;
+  if (name === "games.share-score" && params != null) {
+    return `/games/${params}/share-score`;
+  }
+  if (name === "pages.show" && params?.page != null) {
+    return `/pages/${params.page}`;
   }
   return `/${name}`;
 });
@@ -53,7 +57,9 @@ vi.mock("@/composables/useTranslations", () => ({
     t: (key) => {
       const translations = {
         share_to_timeline: "Share to Timeline",
-        already_shared_today: "Already shared today"
+        already_shared_today: "Already shared today",
+        "page.speak_share_action": "Hear share action",
+        "page.speak_share_action_aria": "Hear share aria"
       };
       return translations[key] || key;
     },
@@ -134,6 +140,7 @@ vi.mock("@inertiajs/vue3", () => {
           user: { permissions_list: [] }
         },
         search: null,
+        users: [],
         settings: {
           messaging_enabled: "1"
         }
@@ -146,13 +153,6 @@ vi.mock("@inertiajs/vue3", () => {
       props: ["href", "as", "prefetch", "class", "disabled", "aria-label"]
     }
   };
-});
-
-// Get reference to mocked router for use in tests
-let mockRouter;
-beforeAll(async () => {
-  const { router } = await import("@inertiajs/vue3");
-  mockRouter = router;
 });
 
 describe("Page/Show.vue", () => {
@@ -178,6 +178,10 @@ describe("Page/Show.vue", () => {
   const users = [];
 
   beforeEach(() => {
+    localStorage.clear();
+    if (wrapper) {
+      wrapper.unmount();
+    }
     wrapper = mount(Show, {
       props: {
         page,
@@ -188,6 +192,9 @@ describe("Page/Show.vue", () => {
         users
       },
       global: {
+        stubs: {
+          Teleport: { template: "<div><slot /></div>" }
+        },
         mocks: {
           $page: {
             props: {
@@ -265,6 +272,7 @@ describe("Page/Show.vue", () => {
 
   it("handles page without media", () => {
     const pageWithoutMedia = { ...page, media_path: null };
+    wrapper.unmount();
     wrapper = mount(Show, {
       props: {
         page: pageWithoutMedia,
@@ -274,6 +282,9 @@ describe("Page/Show.vue", () => {
         collages
       },
       global: {
+        stubs: {
+          Teleport: { template: "<div><slot /></div>" }
+        },
         mocks: {
           $page: {
             props: {
@@ -294,23 +305,17 @@ describe("Page/Show.vue", () => {
       (loader) => loader.props("page-id") === pageWithoutMedia.id
     );
     expect(pageLazyLoader).toBeUndefined();
+    expect(
+      wrapper.findComponent({ name: "ShareToChatButton" }).exists()
+    ).toBe(false);
   });
 
-  describe("Share button", () => {
-    beforeEach(() => {
-      // Clear localStorage before each test
-      localStorage.clear();
-    });
-
-    it("renders share button", () => {
-      const buttons = wrapper.findAllComponents({ name: "Button" });
-      const shareButton = buttons.find((btn) => {
-        const html = btn.html();
-        return (
-          html.includes("ri-share-line") || html.includes("ri-loader-line")
-        );
-      });
-      expect(shareButton).toBeDefined();
+  describe("Share to chat", () => {
+    it("renders ShareToChatButton for shareable page", () => {
+      const share = wrapper.findComponent({ name: "ShareToChatButton" });
+      expect(share.exists()).toBe(true);
+      expect(share.props("kind")).toBe("page");
+      expect(share.props("pageId")).toBe(page.id);
     });
 
     it("disables share button when page was already shared today", async () => {
@@ -318,20 +323,26 @@ describe("Page/Show.vue", () => {
       const key = `page_share_${page.id}_${today}`;
       localStorage.setItem(key, Date.now().toString());
 
+      wrapper.unmount();
       wrapper = mount(Show, {
         props: {
           page,
           previousPage,
           nextPage,
           books,
-          collages
+          collages,
+          users
         },
         global: {
+          stubs: {
+            Teleport: { template: "<div><slot /></div>" }
+          },
           mocks: {
             $page: {
               props: {
                 auth: { user: { permissions_list: [] } },
-                search: null
+                search: null,
+                settings: { messaging_enabled: "1" }
               }
             }
           }
@@ -340,7 +351,8 @@ describe("Page/Show.vue", () => {
 
       await nextTick();
 
-      const buttons = wrapper.findAllComponents({ name: "Button" });
+      const share = wrapper.findComponent({ name: "ShareToChatButton" });
+      const buttons = share.findAllComponents({ name: "Button" });
       const shareButton = buttons.find((btn) => {
         const html = btn.html();
         return (
@@ -348,28 +360,30 @@ describe("Page/Show.vue", () => {
         );
       });
       expect(shareButton).toBeDefined();
-      // Check if disabled prop is set or if the button is actually disabled
       const isDisabled =
         shareButton.props("disabled") !== false ||
         shareButton.attributes("disabled") !== undefined;
       expect(isDisabled).toBe(true);
     });
 
-    it("calls sharePage when share without tag is selected", async () => {
-      // Clear any previous calls
-      if (mockRouter) {
-        mockRouter.post.mockClear();
-      }
-
-      // Ensure the component is ready and sharePage is available
+    it("posts to pages.share when share without tag is selected", async () => {
+      const share = wrapper.findComponent({ name: "ShareToChatButton" });
+      const buttons = share.findAllComponents({ name: "Button" });
+      const shareButton = buttons.find((btn) => {
+        const html = btn.html();
+        return (
+          html.includes("ri-share-line") || html.includes("ri-loader-line")
+        );
+      });
+      expect(shareButton).toBeDefined();
+      await shareButton.trigger("click");
       await nextTick();
 
-      wrapper.vm.hasSharedToday = false;
-      wrapper.vm.sharing = false;
-      wrapper.vm.sharePage();
+      const userTagList = share.findComponent(UserTagList);
+      expect(userTagList.exists()).toBe(true);
+      userTagList.vm.$emit("select-none");
       await nextTick();
 
-      // Get the router from the import to check calls
       const { router } = await import("@inertiajs/vue3");
       expect(router.post).toHaveBeenCalledWith(
         expect.stringContaining("/pages/1/share"),
@@ -388,7 +402,8 @@ describe("Page/Show.vue", () => {
         }
       });
 
-      const buttons = wrapper.findAllComponents({ name: "Button" });
+      const share = wrapper.findComponent({ name: "ShareToChatButton" });
+      const buttons = share.findAllComponents({ name: "Button" });
       const shareButton = buttons.find((btn) => {
         const html = btn.html();
         return (
@@ -399,8 +414,7 @@ describe("Page/Show.vue", () => {
       await shareButton.trigger("click");
       await nextTick();
 
-      const userTagList = wrapper.findComponent({ name: "UserTagList" });
-      expect(userTagList.exists()).toBe(true);
+      const userTagList = share.findComponent(UserTagList);
       userTagList.vm.$emit("select-none");
       await nextTick();
 
@@ -417,7 +431,8 @@ describe("Page/Show.vue", () => {
       });
       router.post.mockReturnValue(sharePromise);
 
-      const buttons = wrapper.findAllComponents({ name: "Button" });
+      const share = wrapper.findComponent({ name: "ShareToChatButton" });
+      const buttons = share.findAllComponents({ name: "Button" });
       const shareButton = buttons.find((btn) => {
         const html = btn.html();
         return (
@@ -428,7 +443,6 @@ describe("Page/Show.vue", () => {
       await shareButton.trigger("click");
       await nextTick();
 
-      // Verify the button was clicked and router.post was called
       expect(router.post).toHaveBeenCalled();
 
       resolveShare();
@@ -443,7 +457,8 @@ describe("Page/Show.vue", () => {
         }
       });
 
-      const buttons = wrapper.findAllComponents({ name: "Button" });
+      const share = wrapper.findComponent({ name: "ShareToChatButton" });
+      const buttons = share.findAllComponents({ name: "Button" });
       const shareButton = buttons.find((btn) => {
         const html = btn.html();
         return (
@@ -454,7 +469,11 @@ describe("Page/Show.vue", () => {
       await shareButton.trigger("click");
       await nextTick();
 
-      expect(wrapper.vm.sharing).toBe(false);
+      const userTagList = share.findComponent(UserTagList);
+      userTagList.vm.$emit("select-none");
+      await nextTick();
+
+      expect(router.post).toHaveBeenCalled();
     });
   });
 });

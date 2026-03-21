@@ -2,8 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Message;
+use App\Models\SiteSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -39,7 +42,9 @@ class GamesTest extends TestCase
         $response = $this->get(route('games.show', 'boom'));
 
         $response->assertInertia(
-            fn (Assert $page) => $page->component('Games/Boom')
+            fn (Assert $page) => $page
+                ->component('Games/Boom')
+                ->has('users')
         );
     }
 
@@ -52,7 +57,9 @@ class GamesTest extends TestCase
         $response = $this->get(route('games.show', 'cockroach'));
 
         $response->assertInertia(
-            fn (Assert $page) => $page->component('Games/Cockroach')
+            fn (Assert $page) => $page
+                ->component('Games/Cockroach')
+                ->has('users')
         );
     }
 
@@ -70,5 +77,66 @@ class GamesTest extends TestCase
         $this->get(route('games.index'))->assertRedirect(route('login'));
         $this->get(route('games.show', 'boom'))->assertRedirect(route('login'));
         $this->get(route('games.show', 'cockroach'))->assertRedirect(route('login'));
+    }
+
+    public function test_share_game_score_requires_authentication(): void
+    {
+        $this->post(route('games.share-score', 'boom'), ['score' => 5])
+            ->assertRedirect(route('login'));
+    }
+
+    public function test_share_game_score_unknown_game_returns_404(): void
+    {
+        $user = User::factory()->create();
+        SiteSetting::updateOrCreate(
+            ['key' => 'messaging_enabled'],
+            ['value' => '1', 'type' => 'boolean', 'description' => 'x']
+        );
+
+        $this->actingAs($user)
+            ->post(route('games.share-score', 'nope'), ['score' => 1])
+            ->assertNotFound();
+    }
+
+    public function test_authenticated_user_can_share_game_score_to_chat(): void
+    {
+        Event::fake();
+
+        SiteSetting::updateOrCreate(
+            ['key' => 'messaging_enabled'],
+            ['value' => '1', 'type' => 'boolean', 'description' => 'x']
+        );
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $response = $this->post(route('games.share-score', 'boom'), ['score' => 42]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('messages', [
+            'user_id' => $user->id,
+            'message' => __('messages.game_score_shared', ['game' => 'Poop Boom', 'score' => 42]),
+            'page_id' => null,
+        ]);
+
+        Event::assertDispatched(\App\Events\MessageCreated::class);
+    }
+
+    public function test_share_game_score_fails_when_messaging_disabled(): void
+    {
+        SiteSetting::updateOrCreate(
+            ['key' => 'messaging_enabled'],
+            ['value' => '0', 'type' => 'boolean', 'description' => 'x']
+        );
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $this->post(route('games.share-score', 'cockroach'), ['score' => 3])
+            ->assertSessionHasErrors();
+
+        $this->assertSame(0, Message::count());
     }
 }

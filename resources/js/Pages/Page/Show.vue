@@ -146,59 +146,12 @@
           />
         </div>
 
-        <div
+        <ShareToChatButton
           v-if="canSharePage"
-          class="flex flex-wrap items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 p-2"
-        >
-          <Button
-            type="button"
-            :disabled="speaking"
-            class="h-10 w-10 flex items-center justify-center"
-            :title="t('page.speak_share_action')"
-            :aria-label="t('page.speak_share_action_aria')"
-            @click="speak(shareActionLabel)"
-          >
-            <i class="ri-speak-fill text-2xl"></i>
-          </Button>
-          <div
-            ref="shareMenuContainerRef"
-            class="relative flex items-center"
-          >
-            <Button
-              type="button"
-              :disabled="isShareDisabled || sharing"
-              class="h-10 flex items-center justify-center gap-2"
-              :title="
-                hasSharedToday
-                  ? t('already_shared_today')
-                  : t('share_to_timeline')
-              "
-              @click.stop="toggleShareMenu"
-              ref="shareButtonRef"
-            >
-              <i v-if="sharing" class="ri-loader-line text-xl animate-spin"></i>
-              <i v-else class="ri-share-line text-xl"></i>
-              <span>{{ t("share_to_timeline") }}</span>
-            </Button>
-            <div
-              v-if="shareMenuOpen"
-              ref="shareMenuRef"
-              class="fixed w-64 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-[100] max-h-72 overflow-y-auto"
-              :style="shareMenuStyles"
-              @click.stop
-            >
-              <UserTagList
-                :users="users"
-                :selected-user-id="selectedShareUserId"
-                :show-none="true"
-                none-label="Share without tag"
-                :none-selected="selectedShareUserId === null"
-                @select="handleShareSelect"
-                @select-none="handleShareSelectNone"
-              />
-            </div>
-          </div>
-        </div>
+          kind="page"
+          :page-id="page.id"
+          wrapper-class="flex flex-wrap items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 p-2"
+        />
 
         <div
           v-if="$page.props.auth.user"
@@ -238,7 +191,7 @@ import BookCoverCard from "@/Components/BookCoverCard.vue";
 import Button from "@/Components/Button.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import MapEmbed from "@/Components/Map/MapEmbed.vue";
-import UserTagList from "@/Components/UserTagList.vue";
+import ShareToChatButton from "@/Components/ShareToChatButton.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
@@ -248,7 +201,7 @@ import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { useMedia } from "@/mediaHelpers";
 import EditPageForm from "@/Pages/Page/EditPageForm.vue";
 import { Head, Link, router, usePage } from "@inertiajs/vue3";
-import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 
 const { canEditPages } = usePermissions();
 const { short } = useDate();
@@ -274,14 +227,6 @@ let showPageSettings = ref(false);
 const buttonDisabled = ref(false);
 const bookCoverRef = ref(null);
 const scrollHandler = ref(null);
-const sharing = ref(false);
-const hasSharedToday = ref(false);
-const shareMenuOpen = ref(false);
-const shareMenuContainerRef = ref(null);
-const selectedShareUserId = ref(null);
-const shareButtonRef = ref(null);
-const shareMenuRef = ref(null);
-const shareMenuStyles = ref({});
 const blocking = ref(false);
 
 const hasContent = computed(() => stripHtml(props.page.content));
@@ -302,18 +247,12 @@ const canAddToCollage = computed(() => {
   );
 });
 
-const isShareDisabled = computed(() => {
-  return hasSharedToday.value || sharing.value;
-});
 const canSharePage = computed(() => {
   return (
     messagingEnabled.value &&
     Boolean(props.page.media_path || props.page.video_link || props.page.media_poster) &&
     Boolean(usePage().props.auth?.user)
   );
-});
-const shareActionLabel = computed(() => {
-  return hasSharedToday.value ? t("already_shared_today") : t("share_to_timeline");
 });
 
 const blockPage = () => {
@@ -330,98 +269,6 @@ const blockPage = () => {
       }
     }
   );
-};
-
-const checkIfSharedToday = () => {
-  const today = new Date().toISOString().split("T")[0];
-  const key = `page_share_${props.page.id}_${today}`;
-  hasSharedToday.value = localStorage.getItem(key) !== null;
-};
-
-const sharePage = (taggedUserId = null) => {
-  if (isShareDisabled.value) return;
-
-  sharing.value = true;
-  shareMenuOpen.value = false;
-  selectedShareUserId.value = null;
-
-  router.post(
-    route("pages.share", props.page.id),
-    {
-      tagged_user_ids: taggedUserId ? [taggedUserId] : []
-    },
-    {
-      preserveScroll: true,
-      onSuccess: () => {
-        const today = new Date().toISOString().split("T")[0];
-        const key = `page_share_${props.page.id}_${today}`;
-        localStorage.setItem(key, Date.now().toString());
-        hasSharedToday.value = true;
-        sharing.value = false;
-      },
-      onError: () => {
-        sharing.value = false;
-      }
-    }
-  );
-};
-
-const toggleShareMenu = () => {
-  if (isShareDisabled.value) return;
-  shareMenuOpen.value = !shareMenuOpen.value;
-  if (shareMenuOpen.value) {
-    nextTick(() => {
-      updateShareMenuPosition();
-    });
-  }
-};
-
-const handleShareSelect = (user) => {
-  if (!user) return;
-  selectedShareUserId.value = user.id;
-  sharePage(user.id);
-};
-
-const handleShareSelectNone = () => {
-  selectedShareUserId.value = null;
-  sharePage(null);
-};
-
-const handleShareMenuClickOutside = (event) => {
-  if (!shareMenuOpen.value) return;
-  const container = shareMenuContainerRef.value;
-  if (container && !container.contains(event.target)) {
-    shareMenuOpen.value = false;
-  }
-};
-
-const updateShareMenuPosition = () => {
-  if (!shareMenuOpen.value) return;
-  const buttonEl = shareButtonRef.value?.$el || shareButtonRef.value;
-  const menuEl = shareMenuRef.value;
-  if (!buttonEl || !menuEl) return;
-
-  const rect = buttonEl.getBoundingClientRect();
-  const padding = 12;
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
-  const menuWidth = Math.min(menuEl.offsetWidth || 256, viewportWidth - padding * 2);
-  const menuHeight = menuEl.offsetHeight || 0;
-  const left = Math.min(
-    Math.max(rect.left, padding),
-    viewportWidth - menuWidth - padding
-  );
-  const top = Math.min(
-    rect.bottom + 8,
-    Math.max(padding, viewportHeight - menuHeight - padding)
-  );
-
-  shareMenuStyles.value = {
-    position: "fixed",
-    left: `${left}px`,
-    top: `${top}px`,
-    width: `${menuWidth}px`
-  };
 };
 
 // Swipe navigation (left/right) to go to previous/next page
@@ -486,11 +333,6 @@ function onTouchEnd(event) {
 // Make book cover sticky
 
 onMounted(() => {
-  checkIfSharedToday();
-  document.addEventListener("click", handleShareMenuClickOutside);
-  window.addEventListener("resize", updateShareMenuPosition, { passive: true });
-  window.addEventListener("scroll", updateShareMenuPosition, { passive: true });
-
   if (!bookCoverRef.value) return;
 
   const container = bookCoverRef.value.parentElement;
@@ -518,8 +360,5 @@ onUnmounted(() => {
   if (scrollHandler.value) {
     window.removeEventListener("scroll", scrollHandler.value);
   }
-  document.removeEventListener("click", handleShareMenuClickOutside);
-  window.removeEventListener("resize", updateShareMenuPosition);
-  window.removeEventListener("scroll", updateShareMenuPosition);
 });
 </script>
