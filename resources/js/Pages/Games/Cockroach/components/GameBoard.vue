@@ -42,10 +42,6 @@ function handleHiss(direction) {
     emit("hiss", direction);
     playHiss();
 }
-
-function handleBoardTap() {
-    // no-op: captures stray taps on the board
-}
 </script>
 
 <style scoped>

@@ -1,19 +1,26 @@
+const isAudioSupported =
+    typeof window !== "undefined" &&
+    !!(window.AudioContext || window.webkitAudioContext);
+
 let audioCtx = null;
 let fartBuffer = null;
 
 function getContext() {
+    if (!isAudioSupported) return null;
     if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
     if (audioCtx.state === "suspended") {
-        audioCtx.resume();
+        audioCtx.resume().catch(() => {});
     }
     return audioCtx;
 }
 
 export function useSound() {
     async function initAudio() {
+        if (fartBuffer) return;
         const ctx = getContext();
+        if (!ctx) return;
         try {
             const res = await fetch("/fart.mp3");
             if (!res.ok) return;
@@ -24,6 +31,7 @@ export function useSound() {
 
     function playHiss() {
         const ctx = getContext();
+        if (!ctx) return;
         const duration = 0.9;
         const bufferSize = ctx.sampleRate * duration;
         const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
@@ -71,7 +79,8 @@ export function useSound() {
 
     function playFart() {
         if (!fartBuffer) return;
-        const ctx    = getContext();
+        const ctx = getContext();
+        if (!ctx) return;
         const now    = ctx.currentTime;
         const source = ctx.createBufferSource();
         source.buffer = fartBuffer;
@@ -83,7 +92,8 @@ export function useSound() {
     }
 
     function playVictory() {
-        const ctx   = getContext();
+        const ctx = getContext();
+        if (!ctx) return;
         const notes = [523.25, 659.25, 783.99, 1046.5];
 
         notes.forEach((freq, i) => {

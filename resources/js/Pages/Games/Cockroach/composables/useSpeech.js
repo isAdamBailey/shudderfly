@@ -1,3 +1,8 @@
+const isSpeechSupported =
+    typeof window !== "undefined" &&
+    "speechSynthesis" in window &&
+    typeof SpeechSynthesisUtterance !== "undefined";
+
 const RULES_SPEECH =
     "Welcome to Cockroach Fart! Here is how to play. You see a big Madagascar hissing cockroach on the screen. " +
     "Tap the cockroach's head to make it hiss. Each hiss moves the cockroach a little bit toward the toilet on " +
@@ -8,6 +13,11 @@ const RULES_SPEECH =
 let currentUtterance = null;
 
 export function speakGameRules(onEnd) {
+    if (!isSpeechSupported) {
+        if (onEnd) onEnd();
+        return;
+    }
+
     stopSpeaking();
 
     const utterance      = new SpeechSynthesisUtterance(RULES_SPEECH);
@@ -31,6 +41,8 @@ export function speakGameRules(onEnd) {
 }
 
 export function stopSpeaking() {
-    window.speechSynthesis.cancel();
+    if (isSpeechSupported) {
+        window.speechSynthesis.cancel();
+    }
     currentUtterance = null;
 }

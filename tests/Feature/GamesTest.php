@@ -20,7 +20,13 @@ class GamesTest extends TestCase
         $response = $this->get(route('games.index'));
 
         $response->assertInertia(
-            fn (Assert $page) => $page->component('Games/Index')
+            fn (Assert $page) => $page
+                ->component('Games/Index')
+                ->has('games', 2)
+                ->where('games.0.slug', 'boom')
+                ->where('games.0.name', 'Poop Boom')
+                ->where('games.1.slug', 'cockroach')
+                ->where('games.1.name', 'Cockroach Fart')
         );
     }
 

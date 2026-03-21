@@ -22,6 +22,14 @@ const FACTS = [
     "Males hiss to attract mates and scare off other males.",
 ];
 
+function getHighScore() {
+    try {
+        return parseInt(localStorage.getItem("cockroach_high_score") || "0", 10);
+    } catch {
+        return 0;
+    }
+}
+
 export function useGameState() {
     const state = reactive({
         phase: "start",
@@ -34,7 +42,7 @@ export function useGameState() {
         cockroachRotation: 0,
         isHissing: false,
         showFart: false,
-        highScore: parseInt(localStorage.getItem("cockroach_high_score") || "0", 10),
+        highScore: getHighScore(),
     });
 
     const stars = computed(() => {
@@ -106,7 +114,11 @@ export function useGameState() {
             state.phase = "win";
             if (state.score > state.highScore) {
                 state.highScore = state.score;
-                localStorage.setItem("cockroach_high_score", String(state.score));
+                try {
+                    localStorage.setItem("cockroach_high_score", String(state.score));
+                } catch {
+                    // Ignore storage errors so the win screen still renders
+                }
             }
         }, 3000);
     }

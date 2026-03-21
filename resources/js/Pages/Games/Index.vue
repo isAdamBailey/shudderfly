@@ -2,20 +2,12 @@
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, Link } from "@inertiajs/vue3";
 
-const games = [
-    {
-        slug: "boom",
-        name: "Poop Boom",
-        emoji: "💩",
-        description: "Drag the poop into the toilet. 5 misses and it's game over!",
+defineProps({
+    games: {
+        type: Array,
+        required: true,
     },
-    {
-        slug: "cockroach",
-        name: "Cockroach Fart",
-        emoji: "🪳",
-        description: "Tap the cockroach's head to make it hiss its way to the toilet.",
-    },
-];
+});
 </script>
 
 <template>
@@ -23,7 +15,7 @@ const games = [
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-100 leading-tight">
+            <h2 class="font-heading text-2xl text-theme-title leading-tight">
                 Games
             </h2>
         </template>

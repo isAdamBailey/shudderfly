@@ -37,7 +37,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, onUnmounted } from "vue";
 import { speakGameRules, stopSpeaking } from "../composables/useSpeech.js";
 
 defineProps({
@@ -59,6 +59,10 @@ function speakRules() {
         isSpeaking.value = false;
     });
 }
+
+onUnmounted(() => {
+    stopSpeaking();
+});
 </script>
 
 <style scoped>

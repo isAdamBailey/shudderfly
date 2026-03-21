@@ -108,6 +108,7 @@ function handleMiss() {
         if (misses.value >= MAX_MISSES) {
             gameOver.value = true;
             cancelAnimationFrame(rafId);
+            playGameOverSound();
         } else {
             resetPoop();
             queueNextTick();
@@ -169,33 +170,46 @@ function getEventPos(e) {
     };
 }
 
+let activeMoveHandler = null;
+let activeEndHandler  = null;
+
+function removeDragListeners() {
+    if (activeMoveHandler) {
+        document.removeEventListener("mousemove", activeMoveHandler);
+        document.removeEventListener("touchmove", activeMoveHandler);
+        activeMoveHandler = null;
+    }
+    if (activeEndHandler) {
+        document.removeEventListener("mouseup",  activeEndHandler);
+        document.removeEventListener("touchend", activeEndHandler);
+        activeEndHandler = null;
+    }
+}
+
 function startDrag(e) {
     if (isPoopFalling.value || gameOver.value || !gameStarted.value) return;
     e.preventDefault();
     isDragging.value = true;
 
-    const move = (ev) => {
+    activeMoveHandler = (ev) => {
         if (!isDragging.value) return;
         const pos = getEventPos(ev);
         poopX.value = Math.max(POOP_SIZE / 2, Math.min(gameW.value - POOP_SIZE / 2, pos.x));
         poopY.value = Math.max(POOP_SIZE / 2, Math.min(gameH.value - TOILET_H - TOILET_BOTTOM - POOP_SIZE, pos.y));
     };
 
-    const end = () => {
+    activeEndHandler = () => {
         if (!isDragging.value) return;
         isDragging.value = false;
-        document.removeEventListener("mousemove", move);
-        document.removeEventListener("touchmove", move);
-        document.removeEventListener("mouseup",   end);
-        document.removeEventListener("touchend",  end);
+        removeDragListeners();
         isPoopFalling.value = true;
         poopVelY.value = 1;
     };
 
-    document.addEventListener("mousemove", move, { passive: false });
-    document.addEventListener("touchmove", move, { passive: false });
-    document.addEventListener("mouseup",  end);
-    document.addEventListener("touchend", end);
+    document.addEventListener("mousemove", activeMoveHandler, { passive: false });
+    document.addEventListener("touchmove", activeMoveHandler, { passive: false });
+    document.addEventListener("mouseup",  activeEndHandler);
+    document.addEventListener("touchend", activeEndHandler);
 }
 
 // ─── sounds (Web Audio API) ───────────────────────────────────────────────────
@@ -331,7 +345,6 @@ function restartGame() {
     misses.value   = 0;
     gameOver.value = false;
     toiletDir      = 1;
-    playGameOverSound();
     resetPoop();
     toiletX.value = gameW.value / 2;
     queueNextTick();
@@ -345,6 +358,7 @@ onMounted(() => {
 onUnmounted(() => {
     cancelAnimationFrame(rafId);
     window.removeEventListener("resize", updateSize);
+    removeDragListeners();
 });
 </script>
 

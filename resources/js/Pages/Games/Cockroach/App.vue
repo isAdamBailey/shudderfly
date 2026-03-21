@@ -21,7 +21,7 @@
 </template>
 
 <script setup>
-import { watch } from "vue";
+import { watch, onUnmounted } from "vue";
 
 import StartScreen from "./components/StartScreen.vue";
 import GameBoard   from "./components/GameBoard.vue";
@@ -32,12 +32,26 @@ import { useSound }     from "./composables/useSound.js";
 const { state, stars, currentFact, startGame, hiss } = useGameState();
 const { initAudio, playFart, playVictory }            = useSound();
 
+let victoryTimeoutId = null;
+
 watch(() => state.showFart, (isFarting) => {
+    if (victoryTimeoutId !== null) {
+        clearTimeout(victoryTimeoutId);
+        victoryTimeoutId = null;
+    }
     if (isFarting) {
         playFart();
-        setTimeout(() => {
+        victoryTimeoutId = setTimeout(() => {
             playVictory();
+            victoryTimeoutId = null;
         }, 1500);
+    }
+});
+
+onUnmounted(() => {
+    if (victoryTimeoutId !== null) {
+        clearTimeout(victoryTimeoutId);
+        victoryTimeoutId = null;
     }
 });
 
