@@ -2,11 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Events\CollagePageRemoved;
 use App\Models\Book;
 use App\Models\Collage;
 use App\Models\Page;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -284,5 +286,31 @@ class CollagesTest extends TestCase
 
         $response->assertRedirect(route('collages.archived'))
             ->assertSessionHas('success', 'PDF generation has been queued. You will receive an email when it\'s ready.');
+    }
+
+    public function test_collage_page_removed_event_is_broadcast_on_page_removal(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $user->givePermissionTo('edit pages');
+
+        $book = Book::factory()->create();
+        $collage = Collage::factory()->create();
+        $page = Page::factory()->for($book)->create();
+        $collage->pages()->attach($page);
+
+        Event::fake();
+
+        $response = $this->delete(route('collage-page.destroy', [$collage, $page]));
+
+        $response->assertRedirect();
+        $this->assertDatabaseMissing('collage_page', [
+            'collage_id' => $collage->id,
+            'page_id' => $page->id,
+        ]);
+        Event::assertDispatched(CollagePageRemoved::class, function ($event) use ($collage) {
+            return $event->collage->id === $collage->id;
+        });
     }
 }

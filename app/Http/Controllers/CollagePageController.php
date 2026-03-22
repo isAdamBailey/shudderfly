@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\CollagePageRemoved;
 use App\Models\Collage;
 use App\Models\Page;
 use Illuminate\Http\Request;
@@ -33,6 +34,9 @@ class CollagePageController extends Controller
     public function destroy(Collage $collage, Page $page)
     {
         $collage->pages()->detach($page->id);
+
+        $collage->load('pages');
+        CollagePageRemoved::dispatch($collage);
 
         return back();
     }
