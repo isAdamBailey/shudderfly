@@ -50,6 +50,8 @@ class CollagePageRemoved implements ShouldBroadcastNow
      */
     public function broadcastWith(): array
     {
+        $this->collage->loadMissing('pages');
+
         return [
             'collage' => [
                 'id' => $this->collage->id,

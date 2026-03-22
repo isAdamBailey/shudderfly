@@ -309,8 +309,50 @@ class CollagesTest extends TestCase
             'collage_id' => $collage->id,
             'page_id' => $page->id,
         ]);
+
         Event::assertDispatched(CollagePageRemoved::class, function ($event) use ($collage) {
-            return $event->collage->id === $collage->id;
+            if ($event->collage->id !== $collage->id) {
+                return false;
+            }
+
+            // Assert broadcast channel
+            $channels = $event->broadcastOn();
+            $this->assertCount(1, $channels);
+            $this->assertEquals('private-collages', $channels[0]->name);
+
+            // Assert broadcast name
+            $this->assertEquals('CollagePageRemoved', $event->broadcastAs());
+
+            // Assert broadcast payload
+            $payload = $event->broadcastWith();
+            $this->assertArrayHasKey('collage', $payload);
+            $this->assertEquals($collage->id, $payload['collage']['id']);
+            $this->assertArrayHasKey('is_archived', $payload['collage']);
+            $this->assertArrayHasKey('is_locked', $payload['collage']);
+            $this->assertArrayHasKey('pages', $payload['collage']);
+            $this->assertIsArray($payload['collage']['pages']);
+
+            return true;
         });
+    }
+
+    public function test_collage_page_removed_event_is_not_broadcast_when_page_was_not_in_collage(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $user->givePermissionTo('edit pages');
+
+        $book = Book::factory()->create();
+        $collage = Collage::factory()->create();
+        $page = Page::factory()->for($book)->create();
+        // Intentionally NOT attaching $page to $collage
+
+        Event::fake();
+
+        $response = $this->delete(route('collage-page.destroy', [$collage, $page]));
+
+        $response->assertRedirect();
+        Event::assertNotDispatched(CollagePageRemoved::class);
     }
 }

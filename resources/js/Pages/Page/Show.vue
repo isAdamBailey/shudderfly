@@ -201,7 +201,7 @@ import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { useMedia } from "@/mediaHelpers";
 import EditPageForm from "@/Pages/Page/EditPageForm.vue";
 import { Head, Link, router, usePage } from "@inertiajs/vue3";
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 const { canEditPages } = usePermissions();
 const { short } = useDate();
@@ -230,6 +230,10 @@ const scrollHandler = ref(null);
 const blocking = ref(false);
 
 const localCollages = ref([...props.collages]);
+
+watch(() => props.collages, (newCollages) => {
+  localCollages.value = [...newCollages];
+});
 
 const hasContent = computed(() => stripHtml(props.page.content));
 
@@ -334,10 +338,11 @@ function onTouchEnd(event) {
 
 // Make book cover sticky
 const collagesChannel = ref(null);
+const collagesRetryTimeout = ref(null);
 
 const setupCollagesListener = () => {
   if (!window.Echo) {
-    setTimeout(setupCollagesListener, 500);
+    collagesRetryTimeout.value = setTimeout(setupCollagesListener, 500);
     return;
   }
 
@@ -391,6 +396,11 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  if (collagesRetryTimeout.value) {
+    clearTimeout(collagesRetryTimeout.value);
+    collagesRetryTimeout.value = null;
+  }
+
   if (collagesChannel.value && window.Echo) {
     try {
       window.Echo.leave("collages");

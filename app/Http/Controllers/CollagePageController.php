@@ -33,10 +33,12 @@ class CollagePageController extends Controller
 
     public function destroy(Collage $collage, Page $page)
     {
-        $collage->pages()->detach($page->id);
+        $detached = $collage->pages()->detach($page->id);
 
-        $collage->load('pages');
-        CollagePageRemoved::dispatch($collage);
+        if ($detached > 0) {
+            $collage->load('pages');
+            CollagePageRemoved::dispatch($collage);
+        }
 
         return back();
     }
