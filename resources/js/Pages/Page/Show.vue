@@ -142,7 +142,7 @@
         >
           <AddToCollageButton
             :page-id="props.page.id"
-            :collages="props.collages"
+            :collages="localCollages"
           />
         </div>
 
@@ -201,7 +201,7 @@ import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { useMedia } from "@/mediaHelpers";
 import EditPageForm from "@/Pages/Page/EditPageForm.vue";
 import { Head, Link, router, usePage } from "@inertiajs/vue3";
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 const { canEditPages } = usePermissions();
 const { short } = useDate();
@@ -229,6 +229,12 @@ const bookCoverRef = ref(null);
 const scrollHandler = ref(null);
 const blocking = ref(false);
 
+const localCollages = ref([...props.collages]);
+
+watch(() => props.collages, (newCollages) => {
+  localCollages.value = [...newCollages];
+});
+
 const hasContent = computed(() => stripHtml(props.page.content));
 
 const stripHtml = (html) => {
@@ -243,7 +249,7 @@ const canAddToCollage = computed(() => {
     props.page.media_path &&
     !isVideo(props.page.media_path) &&
     !props.page.video_link &&
-    props.collages.length > 0
+    localCollages.value.length > 0
   );
 });
 
@@ -331,8 +337,41 @@ function onTouchEnd(event) {
 }
 
 // Make book cover sticky
+const collagesChannel = ref(null);
+const collagesRetryTimeout = ref(null);
+
+const setupCollagesListener = () => {
+  if (!window.Echo) {
+    collagesRetryTimeout.value = setTimeout(setupCollagesListener, 500);
+    return;
+  }
+
+  if (collagesChannel.value) {
+    return;
+  }
+
+  try {
+    collagesChannel.value = window.Echo.private("collages");
+
+    collagesChannel.value.listen(".CollagePageRemoved", (event) => {
+      const updatedCollage = event.collage;
+      if (!updatedCollage) return;
+      const index = localCollages.value.findIndex((c) => c.id === updatedCollage.id);
+      if (index !== -1) {
+        localCollages.value[index] = {
+          ...localCollages.value[index],
+          ...updatedCollage,
+        };
+      }
+    });
+  } catch (error) {
+    console.error("Error setting up collages Echo listener:", error);
+  }
+};
 
 onMounted(() => {
+  setupCollagesListener();
+
   if (!bookCoverRef.value) return;
 
   const container = bookCoverRef.value.parentElement;
@@ -357,6 +396,20 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  if (collagesRetryTimeout.value) {
+    clearTimeout(collagesRetryTimeout.value);
+    collagesRetryTimeout.value = null;
+  }
+
+  if (collagesChannel.value && window.Echo) {
+    try {
+      window.Echo.leave("collages");
+    } catch {
+      // ignore
+    }
+    collagesChannel.value = null;
+  }
+
   if (scrollHandler.value) {
     window.removeEventListener("scroll", scrollHandler.value);
   }
