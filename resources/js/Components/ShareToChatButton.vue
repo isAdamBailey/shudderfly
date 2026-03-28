@@ -30,6 +30,7 @@ const { speak, speaking } = useSpeechSynthesis();
 const { t } = useTranslations();
 
 const sharing = ref(false);
+const shareConfirmPending = ref(false);
 const hasSharedToday = ref(false);
 const shareMenuOpen = ref(false);
 const shareMenuContainerRef = ref(null);
@@ -117,15 +118,41 @@ const toggleShareMenu = () => {
   }
 };
 
+const confirmPageShareThen = (taggedUser, postAction) => {
+  if (shareConfirmPending.value) return;
+  shareConfirmPending.value = true;
+  const speakPhrase = taggedUser
+    ? t("page.share_confirm_speak_tagged", { username: taggedUser.name })
+    : t("page.share_confirm_speak");
+  const dialogMessage = taggedUser
+    ? t("page.share_confirm_dialog_tagged", { username: taggedUser.name })
+    : t("page.share_confirm_dialog");
+  speak(speakPhrase, () => {
+    shareConfirmPending.value = false;
+    if (!window.confirm(dialogMessage)) {
+      return;
+    }
+    postAction();
+  });
+};
+
 const handleShareSelect = (user) => {
   if (!user) return;
   selectedShareUserId.value = user.id;
-  shareToChat(user.id);
+  if (props.kind === "page") {
+    confirmPageShareThen(user, () => shareToChat(user.id));
+  } else {
+    shareToChat(user.id);
+  }
 };
 
 const handleShareSelectNone = () => {
   selectedShareUserId.value = null;
-  shareToChat(null);
+  if (props.kind === "page") {
+    confirmPageShareThen(null, () => shareToChat(null));
+  } else {
+    shareToChat(null);
+  }
 };
 
 const handleShareMenuClickOutside = (event) => {
@@ -184,6 +211,7 @@ onUnmounted(() => {
 <template>
   <div v-if="canShare" :class="wrapperClass">
     <Button
+      v-if="kind === 'game'"
       type="button"
       :disabled="speaking"
       class="h-10 w-10 flex items-center justify-center"
@@ -195,6 +223,24 @@ onUnmounted(() => {
     </Button>
     <div ref="shareMenuContainerRef" class="relative flex items-center">
       <Button
+        v-if="kind === 'page'"
+        ref="shareButtonRef"
+        type="button"
+        :disabled="isShareDisabled || sharing || shareConfirmPending"
+        class="h-10 w-10 flex items-center justify-center"
+        :title="
+          hasSharedToday ? t('already_shared_today') : t('page.share_icon_title')
+        "
+        :aria-label="
+          hasSharedToday ? t('already_shared_today') : t('page.share_aria')
+        "
+        @click.stop="toggleShareMenu"
+      >
+        <i v-if="sharing" class="ri-loader-line text-xl animate-spin"></i>
+        <i v-else class="ri-share-line text-xl"></i>
+      </Button>
+      <Button
+        v-else
         ref="shareButtonRef"
         type="button"
         :disabled="isShareDisabled || sharing"

@@ -159,25 +159,14 @@
         >
           <Button
             type="button"
-            :disabled="speaking"
+            :disabled="blocking || blockConfirmPending"
             class="h-10 w-10 flex items-center justify-center"
-            :title="t('page.speak_block_action')"
-            :aria-label="t('page.speak_block_action_aria')"
-            @click="speak(t('page.block_this'))"
-          >
-            <i class="ri-speak-fill text-2xl"></i>
-          </Button>
-          <Button
-            type="button"
-            :disabled="blocking"
-            class="h-10 flex items-center justify-center gap-2"
-            :title="t('page.block_this')"
+            :title="t('page.block_icon_title')"
             :aria-label="t('page.block_aria')"
             @click="blockPage"
           >
             <i v-if="blocking" class="ri-loader-line text-xl animate-spin"></i>
             <i v-else class="ri-forbid-2-line text-xl"></i>
-            <span>{{ t("page.block_this") }}</span>
           </Button>
         </div>
       </div>
@@ -228,6 +217,7 @@ const buttonDisabled = ref(false);
 const bookCoverRef = ref(null);
 const scrollHandler = ref(null);
 const blocking = ref(false);
+const blockConfirmPending = ref(false);
 
 const hasContent = computed(() => stripHtml(props.page.content));
 
@@ -256,19 +246,26 @@ const canSharePage = computed(() => {
 });
 
 const blockPage = () => {
-  if (blocking.value) return;
+  if (blocking.value || blockConfirmPending.value) return;
 
-  blocking.value = true;
-  router.patch(
-    route("pages.block", props.page.id),
-    {},
-    {
-      preserveScroll: true,
-      onFinish: () => {
-        blocking.value = false;
-      }
+  blockConfirmPending.value = true;
+  speak(t("page.block_confirm_speak"), () => {
+    blockConfirmPending.value = false;
+    if (!window.confirm(t("page.block_confirm_dialog"))) {
+      return;
     }
-  );
+    blocking.value = true;
+    router.patch(
+      route("pages.block", props.page.id),
+      {},
+      {
+        preserveScroll: true,
+        onFinish: () => {
+          blocking.value = false;
+        }
+      }
+    );
+  });
 };
 
 // Swipe navigation (left/right) to go to previous/next page

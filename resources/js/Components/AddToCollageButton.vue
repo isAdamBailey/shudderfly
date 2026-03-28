@@ -1,51 +1,28 @@
 <template>
     <div>
-        <div v-if="isPageInAnyCollage" class="text-yellow-400 text-sm">
-            <i class="ri-information-line mr-1 text-2xl"></i>
-            This picture is in collage
-            <span
-                v-for="(existingCollage, index) in pageExistingCollages"
-                :key="existingCollage.id"
-            >
-                #{{ getCollageDisplayNumber(existingCollage.id)
-                }}<span v-if="index < pageExistingCollages.length - 1">, </span>
+        <div
+            v-if="isPageInAnyCollage"
+            class="flex items-center gap-2 text-yellow-400 text-sm"
+        >
+            <i
+                class="ri-information-line flex-shrink-0 text-2xl leading-none"
+                aria-hidden="true"
+            ></i>
+            <span>
+                This picture is in collage
+                <template v-if="availableCollages.length > 1">
+                    <span
+                        v-for="(existingCollage, index) in pageExistingCollages"
+                        :key="existingCollage.id"
+                    >
+                        #{{ getCollageDisplayNumber(existingCollage.id)
+                        }}<span v-if="index < pageExistingCollages.length - 1">, </span>
+                    </span>
+                </template>
             </span>
-            <Button
-                class="ml-3 h-10 w-10 flex items-center justify-center"
-                :disabled="speaking"
-                @click="
-                    speak(
-                        `This picture is in collage #${getCollageDisplayNumber(
-                            pageExistingCollages[0].id
-                        )}`
-                    )
-                "
-            >
-                <i class="ri-speak-fill text-xl"></i>
-            </Button>
         </div>
 
         <div v-else>
-            <label class="block mb-3 font-medium text-white"
-                >Add to collage:
-                <Button
-                    class="ml-3 h-10 w-10 flex items-center justify-center"
-                    :disabled="speaking"
-                    @click="
-                        speak(
-                            `${
-                                !hasAvailableCollages
-                                    ? 'All collages are full'
-                                    : availableCollages.length === 1
-                                    ? 'Click the add button to add to the collage'
-                                    : 'Select a collage and click the add button'
-                            }`
-                        )
-                    "
-                >
-                    <i class="ri-speak-fill text-xl"></i>
-                </Button>
-            </label>
             <div class="flex items-center gap-2">
                 <select
                     v-if="availableCollages.length > 1"
@@ -56,8 +33,8 @@
                     <option :value="null" disabled>
                         {{
                             hasAvailableCollages
-                                ? "Select collage"
-                                : "All collages are full"
+                                ? t("page.collage_select_placeholder")
+                                : t("page.collage_all_full")
                         }}
                     </option>
                     <option
@@ -66,10 +43,12 @@
                         :value="collage.id"
                         :disabled="collage.pages.length >= MAX_COLLAGE_PAGES"
                     >
-                        Collage #{{ getCollageDisplayNumber(collage.id) }}
+                        {{ t("page.collage_option_label", {
+                            number: getCollageDisplayNumber(collage.id),
+                        }) }}
                         <span v-if="collage.pages.length >= MAX_COLLAGE_PAGES">
-                            (Full)</span
-                        >
+                            (Full)
+                        </span>
                     </option>
                 </select>
                 <div
@@ -77,12 +56,13 @@
                     class="p-3 bg-green-100 text-green-700 rounded"
                 >
                     <i class="ri-check-circle-line mr-1"></i>
-                    Page successfully added to collage!
+                    {{ t("page.collage_add_success") }}
                 </div>
                 <Button
                     v-else
                     :disabled="
                         form.processing ||
+                        collageConfirmPending ||
                         (availableCollages.length > 1 && !selectedCollageId) ||
                         !hasAvailableCollages
                     "
@@ -90,13 +70,7 @@
                     @click="addToCollage"
                 >
                     <i class="ri-add-line text-xl mr-1"></i>
-                    {{
-                        availableCollages.length === 1
-                            ? `Add to Collage #${getCollageDisplayNumber(
-                                  availableCollages[0].id
-                              )}`
-                            : "Add to Collage"
-                    }}
+                    {{ t("page.collage_add_button") }}
                 </Button>
             </div>
         </div>
@@ -104,13 +78,16 @@
 </template>
 
 <script setup>
+/* global route */
 import Button from "@/Components/Button.vue";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { useTranslations } from "@/composables/useTranslations";
 import { MAX_COLLAGE_PAGES } from "@/constants/collage";
 import { useForm } from "@inertiajs/vue3";
 import { computed, ref, watch } from "vue";
 
-const { speak, speaking } = useSpeechSynthesis();
+const { speak } = useSpeechSynthesis();
+const { t } = useTranslations();
 
 const props = defineProps({
     pageId: { type: Number, required: true },
@@ -119,6 +96,7 @@ const props = defineProps({
 
 const selectedCollageId = ref(null);
 const showSuccess = ref(false);
+const collageConfirmPending = ref(false);
 
 const form = useForm({
     collage_id: null,
@@ -143,22 +121,44 @@ const isPageInAnyCollage = computed(() => {
 });
 
 const addToCollage = () => {
-    // If there's only one available collage, use it automatically
+    if (collageConfirmPending.value || form.processing) return;
+
     if (availableCollages.value.length === 1) {
         form.collage_id = availableCollages.value[0].id;
+    } else if (!selectedCollageId.value) {
+        return;
+    } else {
+        form.collage_id = selectedCollageId.value;
     }
 
-    // eslint-disable-next-line no-undef
-    form.post(route("collage-page.store"), {
-        preserveScroll: true,
-        onSuccess: () => {
-            speak("Picture successfully added to collage!");
-            form.reset();
-            showSuccess.value = true;
-            setTimeout(() => {
-                showSuccess.value = false;
-            }, 3000);
-        },
+    const single = availableCollages.value.length === 1;
+    const speakPhrase = single
+        ? t("page.collage_confirm_speak_single")
+        : t("page.collage_confirm_speak_choice", {
+              number: getCollageDisplayNumber(form.collage_id),
+          });
+    const dialogMessage = single
+        ? t("page.collage_confirm_dialog_single")
+        : t("page.collage_confirm_dialog_choice", {
+              number: getCollageDisplayNumber(form.collage_id),
+          });
+
+    collageConfirmPending.value = true;
+    speak(speakPhrase, () => {
+        collageConfirmPending.value = false;
+        if (!window.confirm(dialogMessage)) {
+            return;
+        }
+        form.post(route("collage-page.store"), {
+            preserveScroll: true,
+            onSuccess: () => {
+                form.reset();
+                showSuccess.value = true;
+                setTimeout(() => {
+                    showSuccess.value = false;
+                }, 3000);
+            },
+        });
     });
 };
 

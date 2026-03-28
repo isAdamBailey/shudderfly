@@ -27,7 +27,9 @@ vi.mock("@/composables/permissions", () => ({
 
 vi.mock("@/composables/useSpeechSynthesis", () => ({
   useSpeechSynthesis: () => ({
-    speak: vi.fn(),
+    speak: vi.fn((phrase, onComplete) => {
+      onComplete?.();
+    }),
     speaking: false
   })
 }));
@@ -59,7 +61,15 @@ vi.mock("@/composables/useTranslations", () => ({
         share_to_timeline: "Share to Timeline",
         already_shared_today: "Already shared today",
         "page.speak_share_action": "Hear share action",
-        "page.speak_share_action_aria": "Hear share aria"
+        "page.speak_share_action_aria": "Hear share aria",
+        "page.share_icon_title": "Share",
+        "page.share_aria": "Share to chat",
+        "page.share_confirm_speak": "Are you sure you want to share this page:",
+        "page.share_confirm_speak_tagged":
+          "Are you sure you want to share this page with :username:",
+        "page.share_confirm_dialog": "Are you sure you want to share this page?",
+        "page.share_confirm_dialog_tagged":
+          "Are you sure you want to share this page with :username?"
       };
       return translations[key] || key;
     },
@@ -179,6 +189,7 @@ describe("Page/Show.vue", () => {
 
   beforeEach(() => {
     localStorage.clear();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
     if (wrapper) {
       wrapper.unmount();
     }

@@ -18,6 +18,7 @@ use App\Models\Song;
 use App\Models\User;
 use App\Services\PopularityService;
 use App\Services\UserTaggingService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
@@ -649,11 +650,20 @@ class PageController extends Controller
         return redirect(route('books.show', $page->book))->with('success', __('messages.page.blocked'));
     }
 
-    public function unblockAll(): Redirector|RedirectResponse
+    public function unblockAll(Request $request): Redirector|RedirectResponse|JsonResponse
     {
         $count = Page::where('blocked', true)->update(['blocked' => false]);
+        $message = __('messages.page.unblocked_all', ['count' => $count]);
 
-        return redirect()->back()->with('success', __('messages.page.unblocked_all', ['count' => $count]));
+        if ($request->header('X-Inertia')) {
+            return redirect()->back()->with('success', $message);
+        }
+
+        if (str_contains((string) $request->header('Accept'), 'application/json')) {
+            return response()->json(['message' => $message]);
+        }
+
+        return redirect()->back()->with('success', $message);
     }
 
     /**

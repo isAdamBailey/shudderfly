@@ -20,11 +20,44 @@ vi.mock("@/composables/useSpeechSynthesis", () => ({
     }),
 }));
 
+vi.mock("@/composables/useTranslations", () => ({
+    useTranslations: () => ({
+        t: (key, replacements = {}) => {
+            const map = {
+                "page.collage_select_placeholder": "Select collage",
+                "page.collage_all_full": "All collages are full",
+                "page.collage_option_label": "Collage #:number:",
+                "page.collage_add_button": "Add to Collage",
+                "page.collage_add_success":
+                    "Page successfully added to collage!",
+                "page.collage_confirm_speak_single":
+                    "Are you sure you want to add this page to collage:",
+                "page.collage_confirm_speak_choice":
+                    "Are you sure you want to add this page to collage #:number:",
+                "page.collage_confirm_dialog_single":
+                    "Are you sure you want to add this page to collage?",
+                "page.collage_confirm_dialog_choice":
+                    "Are you sure you want to add this page to collage #:number?",
+            };
+            let translation = map[key] || key;
+            Object.keys(replacements).forEach((placeholder) => {
+                translation = translation.replace(
+                    new RegExp(`:${placeholder}`, "g"),
+                    String(replacements[placeholder])
+                );
+            });
+            return translation;
+        },
+    }),
+}));
+
 describe("AddToCollageButton", () => {
     let wrapper;
     let mockForm;
 
     const createMockForm = () => ({
+        collage_id: null,
+        page_id: 1,
         data: { collage_id: null, page_id: 1 },
         errors: {},
         processing: false,
@@ -48,13 +81,37 @@ describe("AddToCollageButton", () => {
     beforeEach(() => {
         mockForm = createMockForm();
         useForm.mockReturnValue(mockForm);
-        mockSpeak.mockClear(); // Reset the mock between tests
+        mockSpeak.mockClear();
+        mockSpeak.mockImplementation((phrase, onComplete) => {
+            onComplete?.();
+        });
+        vi.spyOn(window, "confirm").mockReturnValue(true);
     });
 
     describe("Page already in collage", () => {
-        it("shows message when page is in one collage", () => {
+        it("shows message without number when only one collage exists", () => {
+            const collages = [
+                { id: 1, pages: [{ id: 1 }], is_archived: false, is_locked: false },
+            ];
+
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+            });
+
+            expect(wrapper.text()).toContain("This picture is in collage");
+            expect(wrapper.text()).not.toMatch(/#\d/);
+            expect(wrapper.find("select").exists()).toBe(false);
+            expect(wrapper.text()).not.toContain("Add to collage:");
+        });
+
+        it("shows collage number when page is in a collage among several", () => {
             const collages = createCollages([
                 { id: 1, pages: [{ id: 1 }], is_archived: false },
+                { id: 2, pages: [], is_archived: false },
+                { id: 3, pages: [], is_archived: false },
             ]);
 
             wrapper = mount(AddToCollageButton, {
@@ -67,8 +124,6 @@ describe("AddToCollageButton", () => {
             expect(wrapper.text()).toContain("This picture is in collage");
             expect(wrapper.text()).toContain("#1");
             expect(wrapper.find("select").exists()).toBe(false);
-            // Should not show the add to collage section
-            expect(wrapper.text()).not.toContain("Add to collage:");
         });
 
         it("shows message when page is in multiple collages", () => {
@@ -129,10 +184,11 @@ describe("AddToCollageButton", () => {
             });
 
             expect(wrapper.find("select").exists()).toBe(false);
-            expect(wrapper.text()).toContain("Add to Collage #1");
+            expect(wrapper.text()).toContain("Add to Collage");
+            expect(wrapper.text()).not.toMatch(/Add to Collage #/);
         });
 
-        it("shows specific collage number in button text for single collage", () => {
+        it("shows add button without collage number when only one collage", () => {
             const collages = [
                 { id: 5, pages: [], is_archived: false, is_locked: false },
             ];
@@ -147,7 +203,7 @@ describe("AddToCollageButton", () => {
             const addButton = wrapper
                 .findAll("button")
                 .find((btn) => btn.text().includes("Add to Collage"));
-            expect(addButton.text()).toContain("Add to Collage #1"); // Display number is index-based
+            expect(addButton.text().trim()).toBe("Add to Collage");
         });
 
         it("enables button when only one collage is available", () => {
@@ -207,7 +263,8 @@ describe("AddToCollageButton", () => {
             });
 
             expect(wrapper.find("select").exists()).toBe(false);
-            expect(wrapper.text()).toContain("Add to Collage #2");
+            expect(wrapper.text()).toContain("Add to Collage");
+            expect(wrapper.text()).not.toMatch(/Add to Collage #/);
         });
     });
 
@@ -326,7 +383,8 @@ describe("AddToCollageButton", () => {
 
             // Should show single collage behavior since only collage 3 is available
             expect(wrapper.find("select").exists()).toBe(false);
-            expect(wrapper.text()).toContain("Add to Collage #3");
+            expect(wrapper.text()).toContain("Add to Collage");
+            expect(wrapper.text()).not.toMatch(/Add to Collage #/);
         });
     });
 
@@ -522,8 +580,8 @@ describe("AddToCollageButton", () => {
         });
     });
 
-    describe("Speech synthesis integration", () => {
-        it("provides appropriate speech text for single collage scenario", async () => {
+    describe("Confirm before add", () => {
+        it("speaks confirmation phrase for single collage before posting", async () => {
             const collages = [
                 { id: 1, pages: [], is_archived: false, is_locked: false },
             ];
@@ -535,27 +593,21 @@ describe("AddToCollageButton", () => {
                 },
             });
 
-            const speakButton = wrapper
+            const addButton = wrapper
                 .findAll("button")
-                .find((btn) => btn.find("i.ri-speak-fill").exists());
+                .find((btn) => btn.text().includes("Add to Collage"));
+            await addButton.trigger("click");
+            await nextTick();
 
-            await speakButton.trigger("click");
-
-            // The mock speak function should be called with the expected text
             expect(mockSpeak).toHaveBeenCalledWith(
-                "Click the add button to add to the collage"
+                "Are you sure you want to add this page to collage:",
+                expect.any(Function)
             );
+            expect(mockForm.post).toHaveBeenCalled();
         });
 
-        it("provides appropriate speech text when page is already in collage", async () => {
-            const collages = [
-                {
-                    id: 1,
-                    pages: [{ id: 1 }],
-                    is_archived: false,
-                    is_locked: false,
-                },
-            ];
+        it("speaks confirmation with collage number when multiple collages", async () => {
+            const collages = createCollages();
 
             wrapper = mount(AddToCollageButton, {
                 props: {
@@ -564,16 +616,20 @@ describe("AddToCollageButton", () => {
                 },
             });
 
-            const speakButton = wrapper
+            await wrapper.find("select").setValue(1);
+            await nextTick();
+
+            const addButton = wrapper
                 .findAll("button")
-                .find((btn) => btn.find("i.ri-speak-fill").exists());
+                .find((btn) => btn.text().includes("Add to Collage"));
+            await addButton.trigger("click");
+            await nextTick();
 
-            await speakButton.trigger("click");
-
-            // The mock speak function should be called with the expected text
             expect(mockSpeak).toHaveBeenCalledWith(
-                "This picture is in collage #1"
+                "Are you sure you want to add this page to collage #1:",
+                expect.any(Function)
             );
+            expect(mockForm.post).toHaveBeenCalled();
         });
     });
 

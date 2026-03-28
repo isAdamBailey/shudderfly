@@ -104,54 +104,63 @@ export function useSpeechSynthesis() {
     }
   };
 
-  const speak = (phrase) => {
-    if ("speechSynthesis" in window && phrase) {
-      try {
-        const currentVoices = window.speechSynthesis.getVoices();
-        if (currentVoices.length === 0) {
-          return;
-        }
-
-        const utterance = new SpeechSynthesisUtterance(phrase);
-
-        const index = parseInt(
-          localStorage.getItem("selectedVoiceIndex") || "0",
-          10
-        );
-
-        if (index >= 0 && index < currentVoices.length) {
-          utterance.voice = currentVoices[index];
-        } else {
-          utterance.voice = currentVoices[0];
-        }
-
-        utterance.rate = speechRate.value;
-        utterance.volume = speechVolume.value;
-        utterance.pitch = speechPitch.value;
-
-        utterance.onstart = () => {
-          speaking.value = true;
-        };
-        utterance.onend = () => {
-          speaking.value = false;
-        };
-        utterance.onpause = () => {
-          isPaused.value = true;
-        };
-        utterance.onresume = () => {
-          isPaused.value = false;
-        };
-
-        utterance.onerror = (event) => {
-          console.error("Speech error:", event.error);
-          speaking.value = false;
-          isPaused.value = false;
-        };
-
-        window.speechSynthesis.speak(utterance);
-      } catch (error) {
-        speaking.value = false;
+  const speak = (phrase, onComplete) => {
+    const done = () => {
+      onComplete?.();
+    };
+    if (!("speechSynthesis" in window) || !phrase) {
+      done();
+      return;
+    }
+    try {
+      const currentVoices = window.speechSynthesis.getVoices();
+      if (currentVoices.length === 0) {
+        done();
+        return;
       }
+
+      const utterance = new SpeechSynthesisUtterance(phrase);
+
+      const index = parseInt(
+        localStorage.getItem("selectedVoiceIndex") || "0",
+        10
+      );
+
+      if (index >= 0 && index < currentVoices.length) {
+        utterance.voice = currentVoices[index];
+      } else {
+        utterance.voice = currentVoices[0];
+      }
+
+      utterance.rate = speechRate.value;
+      utterance.volume = speechVolume.value;
+      utterance.pitch = speechPitch.value;
+
+      utterance.onstart = () => {
+        speaking.value = true;
+      };
+      utterance.onend = () => {
+        speaking.value = false;
+        done();
+      };
+      utterance.onpause = () => {
+        isPaused.value = true;
+      };
+      utterance.onresume = () => {
+        isPaused.value = false;
+      };
+
+      utterance.onerror = (event) => {
+        console.error("Speech error:", event.error);
+        speaking.value = false;
+        isPaused.value = false;
+        done();
+      };
+
+      window.speechSynthesis.speak(utterance);
+    } catch (error) {
+      speaking.value = false;
+      done();
     }
   };
 
