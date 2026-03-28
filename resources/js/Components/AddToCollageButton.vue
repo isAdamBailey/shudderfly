@@ -2,7 +2,7 @@
     <div>
         <div
             v-if="isPageInAnyCollage"
-            class="flex items-center gap-2 text-yellow-400 text-sm"
+            class="flex flex-nowrap items-center gap-2 text-yellow-400 text-sm"
         >
             <i
                 class="ri-information-line flex-shrink-0 text-2xl leading-none"
@@ -23,7 +23,7 @@
         </div>
 
         <div v-else>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-nowrap items-center gap-2">
                 <select
                     v-if="availableCollages.length > 1"
                     v-model="selectedCollageId"

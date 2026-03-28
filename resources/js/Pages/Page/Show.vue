@@ -135,10 +135,12 @@
           @close-page-form="showPageSettings = false"
         />
       </div>
-      <div class="my-4 mx-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+      <div
+        class="my-4 mx-5 flex flex-row flex-wrap items-center justify-between gap-2 sm:gap-3"
+      >
         <div
           v-if="canAddToCollage"
-          class="flex flex-wrap items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 p-2"
+          class="flex shrink-0 items-center gap-2"
         >
           <AddToCollageButton
             :page-id="props.page.id"
@@ -150,12 +152,12 @@
           v-if="canSharePage"
           kind="page"
           :page-id="page.id"
-          wrapper-class="flex flex-wrap items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 p-2"
+          wrapper-class="flex shrink-0 items-center gap-2"
         />
 
         <div
           v-if="$page.props.auth.user"
-          class="flex flex-wrap items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 p-2 md:justify-end"
+          class="flex shrink-0 items-center gap-2"
         >
           <Button
             type="button"
