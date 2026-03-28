@@ -27,6 +27,12 @@ class GameController extends Controller
             'description' => "Tap the cockroach's head to make it hiss its way to the toilet.",
             'component' => 'Cockroach',
         ],
+        'big-poop' => [
+            'name' => 'Big Poop',
+            'emoji' => '💩',
+            'description' => 'Guide the poop through the intestine and out the other end!',
+            'component' => 'BigPoop',
+        ],
     ];
 
     public function __construct(

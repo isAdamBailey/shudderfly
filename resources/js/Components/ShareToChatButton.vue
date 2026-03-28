@@ -18,19 +18,18 @@ const props = defineProps({
   pageId: { type: [Number, String], default: undefined },
   wrapperClass: {
     type: String,
-    default:
-      "flex flex-wrap items-center justify-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 p-2",
+    default: "inline-flex items-center justify-center gap-2",
   },
 });
 
 const page = usePage();
 
 const users = computed(() => page.props.users ?? []);
-const { speak, speaking } = useSpeechSynthesis();
+const { speak } = useSpeechSynthesis();
 const { t } = useTranslations();
 
 const sharing = ref(false);
-const shareConfirmPending = ref(false);
+const confirmPending = ref(false);
 const hasSharedToday = ref(false);
 const shareMenuOpen = ref(false);
 const shareMenuContainerRef = ref(null);
@@ -50,12 +49,6 @@ const canShare = computed(() => {
 
 const isShareDisabled = computed(() => {
   return hasSharedToday.value || sharing.value;
-});
-
-const shareActionLabel = computed(() => {
-  return hasSharedToday.value
-    ? t("already_shared_today")
-    : t("share_to_timeline");
 });
 
 const storageKey = () => {
@@ -118,9 +111,9 @@ const toggleShareMenu = () => {
   }
 };
 
-const confirmPageShareThen = (taggedUser, postAction) => {
-  if (shareConfirmPending.value) return;
-  shareConfirmPending.value = true;
+const confirmThenShare = (taggedUser, postAction) => {
+  if (confirmPending.value) return;
+  confirmPending.value = true;
   const speakPhrase = taggedUser
     ? t("page.share_confirm_speak_tagged", { username: taggedUser.name })
     : t("page.share_confirm_speak");
@@ -128,7 +121,7 @@ const confirmPageShareThen = (taggedUser, postAction) => {
     ? t("page.share_confirm_dialog_tagged", { username: taggedUser.name })
     : t("page.share_confirm_dialog");
   speak(speakPhrase, () => {
-    shareConfirmPending.value = false;
+    confirmPending.value = false;
     if (!window.confirm(dialogMessage)) {
       return;
     }
@@ -139,20 +132,12 @@ const confirmPageShareThen = (taggedUser, postAction) => {
 const handleShareSelect = (user) => {
   if (!user) return;
   selectedShareUserId.value = user.id;
-  if (props.kind === "page") {
-    confirmPageShareThen(user, () => shareToChat(user.id));
-  } else {
-    shareToChat(user.id);
-  }
+  confirmThenShare(user, () => shareToChat(user.id));
 };
 
 const handleShareSelectNone = () => {
   selectedShareUserId.value = null;
-  if (props.kind === "page") {
-    confirmPageShareThen(null, () => shareToChat(null));
-  } else {
-    shareToChat(null);
-  }
+  confirmThenShare(null, () => shareToChat(null));
 };
 
 const handleShareMenuClickOutside = (event) => {
@@ -210,23 +195,11 @@ onUnmounted(() => {
 
 <template>
   <div v-if="canShare" :class="wrapperClass">
-    <Button
-      v-if="kind === 'game'"
-      type="button"
-      :disabled="speaking"
-      class="h-10 w-10 flex items-center justify-center"
-      :title="t('page.speak_share_action')"
-      :aria-label="t('page.speak_share_action_aria')"
-      @click="speak(shareActionLabel)"
-    >
-      <i class="ri-speak-fill text-2xl"></i>
-    </Button>
     <div ref="shareMenuContainerRef" class="relative flex items-center">
       <Button
-        v-if="kind === 'page'"
         ref="shareButtonRef"
         type="button"
-        :disabled="isShareDisabled || sharing || shareConfirmPending"
+        :disabled="isShareDisabled || sharing || confirmPending"
         class="h-10 w-10 flex items-center justify-center"
         :title="
           hasSharedToday ? t('already_shared_today') : t('page.share_icon_title')
@@ -238,21 +211,6 @@ onUnmounted(() => {
       >
         <i v-if="sharing" class="ri-loader-line text-xl animate-spin"></i>
         <i v-else class="ri-share-line text-xl"></i>
-      </Button>
-      <Button
-        v-else
-        ref="shareButtonRef"
-        type="button"
-        :disabled="isShareDisabled || sharing"
-        class="h-10 flex items-center justify-center gap-2"
-        :title="
-          hasSharedToday ? t('already_shared_today') : t('share_to_timeline')
-        "
-        @click.stop="toggleShareMenu"
-      >
-        <i v-if="sharing" class="ri-loader-line text-xl animate-spin"></i>
-        <i v-else class="ri-share-line text-xl"></i>
-        <span>{{ t("share_to_timeline") }}</span>
       </Button>
       <Teleport to="body">
         <div

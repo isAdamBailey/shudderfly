@@ -1,6 +1,6 @@
 <script setup>
+import GameEndScreen from "@/Components/Games/GameEndScreen.vue";
 import GameStartScreen from "@/Components/Games/GameStartScreen.vue";
-import ShareToChatButton from "@/Components/ShareToChatButton.vue";
 import { POOP_BOOM_INTRO_SCRIPT } from "@/Pages/Games/shared/introScripts.js";
 import { useGameViewportLock } from "@/composables/useGameViewportLock";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
@@ -394,17 +394,15 @@ onUnmounted(() => {
 
                 <!-- ── game over screen ──────────────────────────── -->
                 <Transition name="fade">
-                    <div v-if="gameOver" class="overlay gameover-screen">
-                        <div class="overlay-card">
-                            <div class="big-emoji">😱</div>
-                            <h1>Game Over!</h1>
-                            <p>You scored <strong>{{ score }}</strong> point{{ score !== 1 ? "s" : "" }}!</p>
-                            <button class="btn" @click="restartGame">🔄 Play Again</button>
-                            <div class="gameover-share">
-                                <ShareToChatButton game-slug="boom" :score="score" />
-                            </div>
-                        </div>
-                    </div>
+                    <GameEndScreen
+                        v-if="gameOver"
+                        title="Game Over!"
+                        emoji="😱"
+                        :score="score"
+                        game-slug="boom"
+                        play-again-label="🔄 Play Again"
+                        @play-again="restartGame"
+                    />
                 </Transition>
 
                 <!-- ── HUD ────────────────────────────────────────── -->
@@ -632,56 +630,6 @@ onUnmounted(() => {
     color: #f44;
     text-shadow: 0 0 8px #f44;
 }
-
-/* ── overlays ────────────────────────────────────────────── */
-.overlay {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(34, 23, 14, 0.6);
-    backdrop-filter: blur(4px);
-    z-index: 50;
-}
-
-.overlay-card {
-    background: rgba(112, 88, 58, 0.36);
-    border: 2px solid rgba(236, 208, 171, 0.4);
-    border-radius: 20px;
-    padding: 36px 44px;
-    text-align: center;
-    color: #fff7eb;
-    backdrop-filter: blur(8px);
-}
-
-.big-emoji { font-size: 5rem; margin-bottom: 8px; }
-.overlay-card h1 { font-size: 2.4rem; margin-bottom: 8px; }
-.overlay-card p  { font-size: 1rem; opacity: .9; margin-bottom: 20px; line-height: 1.5; }
-
-.gameover-share {
-    margin-top: 16px;
-    max-width: 28rem;
-    margin-left: auto;
-    margin-right: auto;
-    touch-action: manipulation;
-}
-
-.btn {
-    display: inline-block;
-    padding: 12px 32px;
-    font-size: 1.1rem;
-    font-weight: 700;
-    border: none;
-    border-radius: 50px;
-    cursor: pointer;
-    background: linear-gradient(135deg, #8f6a34, #5c4528);
-    color: #fff5e5;
-    box-shadow: 0 4px 20px rgba(92, 69, 40, 0.55);
-    transition: transform .1s, box-shadow .1s;
-}
-.btn:hover  { transform: scale(1.05); box-shadow: 0 6px 24px rgba(168, 132, 83, 0.72); }
-.btn:active { transform: scale(.97); }
 
 /* ── transitions ─────────────────────────────────────────── */
 .fade-enter-active, .fade-leave-active { transition: opacity .3s; }

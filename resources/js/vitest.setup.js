@@ -85,6 +85,9 @@ export const ROUTE_MAPPINGS = {
     "books.index": "/books",
     "books.show": (params) => `/books/${params.id || params.book || params}`,
     "categories.show": (params) => `/categories/${params.categoryName}`,
+    "games.index": "/games",
+    "games.show": (params) => `/games/${params}`,
+    "games.share-score": (params) => `/games/${params}/share-score`,
 };
 
 export const createRouteMock = () =>

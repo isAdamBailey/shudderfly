@@ -10,3 +10,9 @@ export const POOP_BOOM_INTRO_SCRIPT =
     "and a poop sits near the top. Press or click the poop, drag it over the toilet bowl, then let go to drop it. " +
     "If the poop lands in the toilet you score one point. If you miss, you lose a miss. You get five misses before " +
     "game over. Score as many points as you can. Good luck!";
+
+export const BIG_POOP_INTRO_SCRIPT =
+    "Welcome to Big Poop! Here is how to play. You are a poop making your way through a long, winding intestine. " +
+    "Drag or swipe to move left, right, and downward through the twisting gut. Try not to bump into the intestine " +
+    "walls — each collision costs you points. Your score is based on how quickly you finish and how few walls you " +
+    "hit. Reach the exit at the bottom to win! Fewer collisions means more stars. Good luck!";

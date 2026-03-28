@@ -25,11 +25,13 @@ class GamesTest extends TestCase
         $response->assertInertia(
             fn (Assert $page) => $page
                 ->component('Games/Index')
-                ->has('games', 2)
+                ->has('games', 3)
                 ->where('games.0.slug', 'boom')
                 ->where('games.0.name', 'Poop Boom')
                 ->where('games.1.slug', 'cockroach')
                 ->where('games.1.name', 'Cockroach Fart')
+                ->where('games.2.slug', 'big-poop')
+                ->where('games.2.name', 'Big Poop')
         );
     }
 
@@ -63,6 +65,21 @@ class GamesTest extends TestCase
         );
     }
 
+    public function test_big_poop_game_page_is_displayed(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $response = $this->get(route('games.show', 'big-poop'));
+
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Games/BigPoop')
+                ->has('users')
+        );
+    }
+
     public function test_unknown_game_returns_404(): void
     {
         /** @var User $user */
@@ -77,6 +94,7 @@ class GamesTest extends TestCase
         $this->get(route('games.index'))->assertRedirect(route('login'));
         $this->get(route('games.show', 'boom'))->assertRedirect(route('login'));
         $this->get(route('games.show', 'cockroach'))->assertRedirect(route('login'));
+        $this->get(route('games.show', 'big-poop'))->assertRedirect(route('login'));
     }
 
     public function test_share_game_score_requires_authentication(): void
