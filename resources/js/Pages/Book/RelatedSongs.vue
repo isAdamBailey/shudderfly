@@ -6,7 +6,7 @@
       {{ label }}
     </h3>
     <div
-      class="flex snap-x space-x-1 overflow-x-auto overflow-y-hidden pb-2 scrollbar scrollbar-thumb-gray-500 scrollbar-thumb-rounded"
+      class="horizontal-scroll-strip flex min-w-0 w-full max-w-full flex-nowrap snap-x touch-pan-x space-x-1 overflow-x-auto overflow-y-hidden overscroll-x-contain pb-2"
     >
       <button
         v-for="song in songs"

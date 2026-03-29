@@ -129,6 +129,20 @@
     halloween:focus:shadow-outline-halloween-spooky;
   }
 
+  .horizontal-scroll-strip {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(107 114 128) transparent;
+  }
+
+  .horizontal-scroll-strip::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .horizontal-scroll-strip::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background-color: rgb(107 114 128);
+  }
+
   .text-theme-button {
     @apply text-yellow-200
     dark:text-gray-100
