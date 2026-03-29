@@ -1,19 +1,21 @@
 <template>
   <div
     ref="scrollTopButton"
-    class="hidden !fixed bottom-3 right-5 transition z-10"
+    class="hidden transition"
+    :class="
+      embedded
+        ? 'relative'
+        : '!fixed bottom-3 right-5 z-40 w-fit'
+    "
   >
-    <div
-      class="cursor-pointer bg-gray-50 rounded-full text-blue-600 transition hover:text-blue-300 dark:text-purple-900 dark:hover:text-purple-500"
+    <button
+      type="button"
+      class="box-border flex h-14 w-14 min-h-[3.5rem] min-w-[3.5rem] shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-gray-200/70 bg-gray-50 p-0 text-blue-600 shadow-lg ring-1 ring-gray-900/10 transition hover:bg-gray-100 hover:text-blue-500 dark:border-amber-400/35 dark:bg-zinc-600 dark:text-amber-200 dark:shadow-xl dark:shadow-black/50 dark:ring-2 dark:ring-amber-400/45 dark:hover:bg-zinc-500 dark:hover:text-amber-100"
+      :aria-label="t('general.scroll_to_top')"
+      @click="scrollToTop"
     >
-      <button
-        role="button"
-        :aria-label="t('general.scroll_to_top')"
-        @click="scrollToTop"
-      >
-        <i class="ri-arrow-up-circle-line text-7xl"></i>
-      </button>
-    </div>
+      <i class="ri-arrow-up-line text-2xl" aria-hidden="true"></i>
+    </button>
   </div>
 </template>
 
@@ -27,6 +29,10 @@ const props = defineProps({
   customScrollHandler: {
     type: Function,
     default: null
+  },
+  embedded: {
+    type: Boolean,
+    default: false
   }
 });
 

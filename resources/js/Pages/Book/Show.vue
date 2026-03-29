@@ -233,17 +233,23 @@
       </template>
       <RelatedSongs v-if="relatedSongs" :songs="relatedSongs" />
     </Deferred>
-    <ScrollTop />
-
-    <!-- Admin floating action button -->
-    <div v-if="canEditPages" class="fixed bottom-24 right-6 z-50">
-      <Dropdown align="right" width="56" :drop-up="true">
+    <div
+      class="fixed bottom-3 right-5 z-50 flex w-fit flex-col-reverse items-end gap-3"
+    >
+      <ScrollTop embedded />
+      <Dropdown
+        v-if="canEditPages"
+        class="inline-flex shrink-0"
+        align="right"
+        width="56"
+        :drop-up="true"
+      >
         <template #trigger>
           <button
             type="button"
-            class="flex items-center justify-center w-14 h-14 rounded-full bg-theme-primary text-theme-button shadow-lg hover:bg-theme-button hover:text-theme-button-hover active:bg-theme-button transition ease-in-out duration-150"
+            class="box-border flex h-14 w-14 min-h-[3.5rem] min-w-[3.5rem] shrink-0 items-center justify-center rounded-full border-2 border-white/40 bg-theme-primary p-0 text-theme-button shadow-2xl transition ease-in-out duration-150 hover:bg-theme-button hover:text-theme-button-hover active:bg-theme-button dark:border-amber-400/70 dark:!bg-indigo-600 dark:text-white dark:shadow-[0_4px_28px_rgba(251,191,36,0.35)] dark:ring-2 dark:ring-amber-400/50 dark:hover:bg-theme-button dark:hover:text-theme-button-hover"
           >
-            <i class="ri-more-2-fill text-2xl"></i>
+            <i class="ri-more-2-fill text-2xl" aria-hidden="true"></i>
           </button>
         </template>
 
