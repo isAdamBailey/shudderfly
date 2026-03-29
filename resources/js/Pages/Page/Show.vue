@@ -112,23 +112,12 @@
           :show-street-view="true"
         />
       </div>
-      <div v-if="canEditPages" class="mb-3">
-        <Button
-          v-if="!showPageSettings"
-          class="w-full rounded-none bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
-          @click="showPageSettings = true"
-        >
-          Edit Page
-        </Button>
-        <Button
-          v-else
-          class="w-full rounded-none bg-red-700 dark:bg-red-700 hover:bg-pink-400 dark:hover:bg-pink-400"
-          @click="showPageSettings = false"
-        >
-          Close page settings
-        </Button>
+      <div
+        v-if="canEditPages && showPageSettings"
+        id="page-edit-form"
+        class="mx-5 mb-3 scroll-mt-4"
+      >
         <EditPageForm
-          v-if="showPageSettings"
           :page="page"
           :book="page.book"
           :books="books"
@@ -173,6 +162,34 @@
         </div>
       </div>
     </div>
+
+    <ScrollTop />
+    <FloatingActionMenu v-if="canEditPages">
+      <button
+        v-if="!showPageSettings"
+        type="button"
+        class="flex min-h-[48px] w-full items-center border-b border-gray-200 px-5 py-4 text-left text-base text-gray-700 transition hover:bg-gray-200 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+        @click="openPageSettings"
+      >
+        <i
+          class="ri-edit-line mr-3 shrink-0 text-lg text-blue-600 dark:text-blue-400"
+          aria-hidden="true"
+        ></i>
+        Edit Page
+      </button>
+      <button
+        v-else
+        type="button"
+        class="flex min-h-[48px] w-full items-center border-b-0 px-5 py-4 text-left text-base text-gray-700 transition hover:bg-gray-200 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+        @click="showPageSettings = false"
+      >
+        <i
+          class="ri-close-line mr-3 shrink-0 text-lg text-gray-600 dark:text-gray-400"
+          aria-hidden="true"
+        ></i>
+        Close page settings
+      </button>
+    </FloatingActionMenu>
   </BreezeAuthenticatedLayout>
 </template>
 
@@ -180,8 +197,10 @@
 import AddToCollageButton from "@/Components/AddToCollageButton.vue";
 import BookCoverCard from "@/Components/BookCoverCard.vue";
 import Button from "@/Components/Button.vue";
+import FloatingActionMenu from "@/Components/FloatingActionMenu.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import MapEmbed from "@/Components/Map/MapEmbed.vue";
+import ScrollTop from "@/Components/ScrollTop.vue";
 import ShareToChatButton from "@/Components/ShareToChatButton.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import { usePermissions } from "@/composables/permissions";
@@ -192,7 +211,7 @@ import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { useMedia } from "@/mediaHelpers";
 import EditPageForm from "@/Pages/Page/EditPageForm.vue";
 import { Head, Link, router, usePage } from "@inertiajs/vue3";
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
 const { canEditPages } = usePermissions();
 const { short } = useDate();
@@ -214,7 +233,18 @@ const messagingEnabled = computed(() => {
   return value === "1" || value === 1 || value === true;
 });
 
-let showPageSettings = ref(false);
+const showPageSettings = ref(false);
+
+function openPageSettings() {
+  showPageSettings.value = true;
+  nextTick(() => {
+    document.getElementById("page-edit-form")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+  });
+}
+
 const buttonDisabled = ref(false);
 const bookCoverRef = ref(null);
 const scrollHandler = ref(null);

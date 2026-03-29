@@ -1,12 +1,7 @@
 <template>
   <div
     ref="scrollTopButton"
-    class="hidden transition"
-    :class="
-      embedded
-        ? 'relative'
-        : '!fixed bottom-3 right-5 z-40 w-fit'
-    "
+    class="hidden !fixed bottom-3 right-5 z-[60] w-fit transition"
   >
     <button
       type="button"
@@ -22,26 +17,35 @@
 <script setup>
 import { useTranslations } from "@/composables/useTranslations";
 import debounce from "lodash/debounce";
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 
 const { t } = useTranslations();
 const props = defineProps({
   customScrollHandler: {
     type: Function,
     default: null
-  },
-  embedded: {
-    type: Boolean,
-    default: false
   }
 });
 
 const scrollTopButton = ref(null);
 
+function scrollY() {
+  if (typeof window === "undefined") {
+    return 0;
+  }
+  return (
+    window.scrollY ||
+    window.pageYOffset ||
+    document.documentElement.scrollTop ||
+    document.body.scrollTop ||
+    0
+  );
+}
+
 const handleScroll = () => {
   if (!scrollTopButton.value || typeof window === "undefined") return;
 
-  if (window.scrollY > 0) {
+  if (scrollY() > 0) {
     scrollTopButton.value.classList.remove("hidden");
   } else {
     scrollTopButton.value.classList.add("hidden");
@@ -50,12 +54,27 @@ const handleScroll = () => {
 
 const handleDebouncedScroll = debounce(handleScroll, 100);
 
+const syncAfterPaint = () => {
+  nextTick(() => {
+    requestAnimationFrame(handleScroll);
+  });
+};
+
+const onInertiaFinish = () => {
+  syncAfterPaint();
+};
+
 onMounted(() => {
   if (
     typeof window !== "undefined" &&
     typeof window.addEventListener === "function"
   ) {
-    window.addEventListener("scroll", handleDebouncedScroll);
+    window.addEventListener("scroll", handleDebouncedScroll, { passive: true });
+    syncAfterPaint();
+  }
+
+  if (typeof document !== "undefined") {
+    document.addEventListener("inertia:finish", onInertiaFinish);
   }
 });
 
@@ -65,6 +84,9 @@ onBeforeUnmount(() => {
     typeof window.removeEventListener === "function"
   ) {
     window.removeEventListener("scroll", handleDebouncedScroll);
+  }
+  if (typeof document !== "undefined") {
+    document.removeEventListener("inertia:finish", onInertiaFinish);
   }
 });
 

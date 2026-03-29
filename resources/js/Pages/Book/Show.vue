@@ -233,57 +233,48 @@
       </template>
       <RelatedSongs v-if="relatedSongs" :songs="relatedSongs" />
     </Deferred>
-    <div
-      class="fixed bottom-3 right-5 z-50 flex w-fit flex-col-reverse items-end gap-3"
-    >
-      <ScrollTop embedded />
-      <Dropdown
-        v-if="canEditPages"
-        class="inline-flex shrink-0"
-        align="right"
-        width="56"
-        :drop-up="true"
+    <ScrollTop />
+    <FloatingActionMenu v-if="canEditPages">
+      <button
+        type="button"
+        class="flex min-h-[48px] w-full items-center border-b border-gray-200 px-5 py-4 text-left text-base text-gray-700 transition first:border-t-0 hover:bg-gray-200 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+        :class="{ 'border-transparent bg-blue-600 text-white hover:bg-blue-700': activeTab === 'pages' }"
+        @click="setActiveTab('pages')"
       >
-        <template #trigger>
-          <button
-            type="button"
-            class="box-border flex h-14 w-14 min-h-[3.5rem] min-w-[3.5rem] shrink-0 items-center justify-center rounded-full border-2 border-white/40 bg-theme-primary p-0 text-theme-button shadow-2xl transition ease-in-out duration-150 hover:bg-theme-button hover:text-theme-button-hover active:bg-theme-button dark:border-amber-400/70 dark:!bg-indigo-600 dark:text-white dark:shadow-[0_4px_28px_rgba(251,191,36,0.35)] dark:ring-2 dark:ring-amber-400/50 dark:hover:bg-theme-button dark:hover:text-theme-button-hover"
-          >
-            <i class="ri-more-2-fill text-2xl" aria-hidden="true"></i>
-          </button>
-        </template>
-
-        <template #content>
-          <button
-            type="button"
-            class="flex items-center w-full px-5 py-4 min-h-[48px] text-left text-base text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition border-b border-gray-200 dark:border-gray-600 first:border-t-0"
-            :class="{ 'bg-blue-600 text-white hover:bg-blue-700 border-transparent': activeTab === 'pages' }"
-            @click="setActiveTab('pages')"
-          >
-            <i class="ri-add-line mr-3 text-lg text-emerald-600 dark:text-emerald-400 shrink-0" :class="{ 'text-white': activeTab === 'pages' }"></i>
-            Add Pages
-          </button>
-          <button
-            type="button"
-            class="flex items-center w-full px-5 py-4 min-h-[48px] text-left text-base text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition border-b border-gray-200 dark:border-gray-600"
-            :class="{ 'bg-blue-600 text-white hover:bg-blue-700 border-transparent': activeTab === 'book' }"
-            @click="setActiveTab('book')"
-          >
-            <i class="ri-edit-line mr-3 text-lg text-blue-600 dark:text-blue-400 shrink-0" :class="{ 'text-white': activeTab === 'book' }"></i>
-            Edit Book
-          </button>
-          <button
-            type="button"
-            class="flex items-center w-full px-5 py-4 min-h-[48px] text-left text-base text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition border-b-0"
-            :class="{ 'bg-blue-600 text-white hover:bg-blue-700': activeTab === 'bulk' }"
-            @click="setActiveTab('bulk')"
-          >
-            <i class="ri-checkbox-multiple-line mr-3 text-lg text-amber-600 dark:text-amber-400 shrink-0" :class="{ 'text-white': activeTab === 'bulk' }"></i>
-            Bulk Actions
-          </button>
-        </template>
-      </Dropdown>
-    </div>
+        <i
+          class="ri-add-line mr-3 shrink-0 text-lg text-emerald-600 dark:text-emerald-400"
+          :class="{ 'text-white': activeTab === 'pages' }"
+          aria-hidden="true"
+        ></i>
+        Add Pages
+      </button>
+      <button
+        type="button"
+        class="flex min-h-[48px] w-full items-center border-b border-gray-200 px-5 py-4 text-left text-base text-gray-700 transition hover:bg-gray-200 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+        :class="{ 'border-transparent bg-blue-600 text-white hover:bg-blue-700': activeTab === 'book' }"
+        @click="setActiveTab('book')"
+      >
+        <i
+          class="ri-edit-line mr-3 shrink-0 text-lg text-blue-600 dark:text-blue-400"
+          :class="{ 'text-white': activeTab === 'book' }"
+          aria-hidden="true"
+        ></i>
+        Edit Book
+      </button>
+      <button
+        type="button"
+        class="flex min-h-[48px] w-full items-center border-b-0 px-5 py-4 text-left text-base text-gray-700 transition hover:bg-gray-200 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+        :class="{ 'bg-blue-600 text-white hover:bg-blue-700': activeTab === 'bulk' }"
+        @click="setActiveTab('bulk')"
+      >
+        <i
+          class="ri-checkbox-multiple-line mr-3 shrink-0 text-lg text-amber-600 dark:text-amber-400"
+          :class="{ 'text-white': activeTab === 'bulk' }"
+          aria-hidden="true"
+        ></i>
+        Bulk Actions
+      </button>
+    </FloatingActionMenu>
   </BreezeAuthenticatedLayout>
 </template>
 
@@ -291,7 +282,7 @@
 import Accordion from "@/Components/Accordion.vue";
 import BookCover from "@/Components/BookCover.vue";
 import Button from "@/Components/Button.vue";
-import Dropdown from "@/Components/Dropdown.vue";
+import FloatingActionMenu from "@/Components/FloatingActionMenu.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import MapEmbed from "@/Components/Map/MapEmbed.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";

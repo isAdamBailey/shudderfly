@@ -143,11 +143,14 @@
                 </div>
             </template>
         </CollageGrid>
+
+        <ScrollTop />
     </AuthenticatedLayout>
 </template>
 
 <script setup>
 import Button from "@/Components/Button.vue";
+import ScrollTop from "@/Components/ScrollTop.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
