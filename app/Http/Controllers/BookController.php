@@ -8,6 +8,8 @@ use App\Http\Requests\UpdateBookRequest;
 use App\Jobs\IncrementBookReadCount;
 use App\Models\Book;
 use App\Models\Category;
+use App\Models\SiteSetting;
+use App\Models\Song;
 use App\Models\User;
 use App\Services\PopularityService;
 use App\Support\ThemeBooks;
@@ -148,10 +150,11 @@ class BookController extends Controller
             ->when($sort === 'oldest', fn ($query) => $query->reorder()->orderBy('created_at', 'asc'))
             ->paginate();
 
-        // when at the last page, return all books that contain words
         $similarBooks = null;
+        $relatedSongs = null;
         if ($pages->currentPage() == $pages->lastPage()) {
             $similarBooks = $this->getSimilarBooks($book);
+            $relatedSongs = $this->getRelatedSongs($book);
         }
 
         $categories = $canEditPages
@@ -178,6 +181,7 @@ class BookController extends Controller
             'categories' => $categories,
             'books' => $books,
             'similarBooks' => Inertia::defer(fn () => $similarBooks),
+            'relatedSongs' => Inertia::defer(fn () => $relatedSongs),
         ]);
     }
 
@@ -257,5 +261,26 @@ class BookController extends Controller
         $similarBooks = $query->get();
 
         return $similarBooks->isEmpty() ? null : $similarBooks;
+    }
+
+    private function getRelatedSongs(Book $book): ?Collection
+    {
+        $musicEnabled = SiteSetting::where('key', 'music_enabled')->first()?->value ?? true;
+        if (! $musicEnabled) {
+            return null;
+        }
+
+        $title = trim($book->title);
+        if (mb_strlen($title) < 3) {
+            return null;
+        }
+
+        $songs = Song::query()
+            ->whereRelatedToBookTitle($title)
+            ->orderByDesc('read_count')
+            ->limit(20)
+            ->get();
+
+        return $songs->isEmpty() ? null : $songs;
     }
 }

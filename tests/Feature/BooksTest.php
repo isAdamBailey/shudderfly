@@ -5,10 +5,13 @@ namespace Tests\Feature;
 use App\Models\Book;
 use App\Models\Category;
 use App\Models\Page;
+use App\Models\SiteSetting;
+use App\Models\Song;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Sequence;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\Fluent\AssertableJson;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -785,6 +788,31 @@ class BooksTest extends TestCase
             fn (Assert $page) => $page
                 ->component('Book/Show')
                 ->where('sort', 'popular')
+        );
+    }
+
+    public function test_book_show_defers_related_songs_on_last_page(): void
+    {
+        Cache::flush();
+        $user = User::factory()->create();
+        $user->revokePermissionTo('edit profile');
+        $this->actingAs($user);
+
+        SiteSetting::where('key', 'music_enabled')->update(['value' => '1']);
+
+        $bookTitle = 'UniqueRelatedArtistXyz';
+        $book = Book::factory()->has(Page::factory(1))->create(['title' => $bookTitle]);
+
+        $song = Song::factory()->create([
+            'title' => $bookTitle.' - Official Video',
+        ]);
+
+        $this->get(route('books.show', $book))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Book/Show')
+                ->loadDeferredProps(function (Assert $page) use ($song) {
+                    $page->where('relatedSongs.0.id', $song->id);
+                })
         );
     }
 }

@@ -72,6 +72,48 @@ class SongTest extends TestCase
         $this->assertCount(2, $results);
     }
 
+    public function test_where_related_to_book_title_matches_title_artist_segment(): void
+    {
+        Song::factory()->create(['title' => 'BookTitleMatchX - Official']);
+
+        $results = Song::query()->whereRelatedToBookTitle('BookTitleMatchX')->get();
+
+        $this->assertCount(1, $results);
+    }
+
+    public function test_where_related_to_book_title_matches_description(): void
+    {
+        Song::factory()->create([
+            'title' => 'Some Other Title',
+            'description' => 'Featuring BookDescMatchY on vocals',
+        ]);
+
+        $results = Song::query()->whereRelatedToBookTitle('BookDescMatchY')->get();
+
+        $this->assertCount(1, $results);
+    }
+
+    public function test_where_related_to_book_title_matches_tags_json(): void
+    {
+        Song::factory()->create([
+            'title' => 'Unrelated',
+            'tags' => ['rock', 'booktagmatchz', 'live'],
+        ]);
+
+        $results = Song::query()->whereRelatedToBookTitle('booktagmatchz')->get();
+
+        $this->assertCount(1, $results);
+    }
+
+    public function test_where_related_to_book_title_short_title_returns_none(): void
+    {
+        Song::factory()->create(['title' => 'Ab - Song']);
+
+        $results = Song::query()->whereRelatedToBookTitle('Ab')->get();
+
+        $this->assertCount(0, $results);
+    }
+
     public function test_tags_are_cast_to_array(): void
     {
         $song = Song::factory()->create(['tags' => ['rock', 'metal', 'guitar']]);

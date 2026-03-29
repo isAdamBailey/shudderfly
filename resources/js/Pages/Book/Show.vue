@@ -227,6 +227,12 @@
         label="You might also like these books"
       />
     </Deferred>
+    <Deferred data="relatedSongs">
+      <template #fallback>
+        <div class="text-gray-900 dark:text-gray-100">Loading...</div>
+      </template>
+      <RelatedSongs v-if="relatedSongs" :songs="relatedSongs" />
+    </Deferred>
     <ScrollTop />
 
     <!-- Admin floating action button -->
@@ -292,6 +298,7 @@ import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import BulkActionsForm from "@/Pages/Book/BulkActionsForm.vue";
 import EditBookForm from "@/Pages/Book/EditBookForm.vue";
 import NewPageForm from "@/Pages/Book/NewPageForm.vue";
+import RelatedSongs from "@/Pages/Book/RelatedSongs.vue";
 import SimilarBooks from "@/Pages/Book/SimilarBooks.vue";
 import { Deferred, Head, Link, router } from "@inertiajs/vue3";
 import { computed, nextTick, onMounted, ref } from "vue";
@@ -313,6 +320,7 @@ const props = defineProps({
   authors: { type: Array, required: true },
   categories: { type: Array, default: null },
   similarBooks: { type: Array, default: null },
+  relatedSongs: { type: Array, default: null },
   books: { type: Array, default: null }
 });
 
