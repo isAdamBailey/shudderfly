@@ -156,6 +156,27 @@
     christmas:hover:bg-christmas-mint
     halloween:hover:bg-halloween-candy;
   }
+
+  .bg-game-modal {
+    @apply bg-neutral-950/95 text-gray-100 shadow-xl ring-1 ring-white/10
+      christmas:bg-christmas-pine/95
+      halloween:bg-halloween-midnight/95
+      fireworks:bg-slate-950/95;
+  }
+
+  .text-game-modal-title {
+    @apply text-yellow-200
+      christmas:text-christmas-gold
+      halloween:text-yellow-300
+      fireworks:text-yellow-200;
+  }
+
+  .text-game-modal-accent {
+    @apply text-yellow-300
+      christmas:text-christmas-gold
+      halloween:text-yellow-200
+      fireworks:text-yellow-300;
+  }
 }
 
 /* Legacy page content styles */

@@ -5,7 +5,7 @@ import { POOP_BOOM_INTRO_SCRIPT } from "@/Pages/Games/shared/introScripts.js";
 import { useGameViewportLock } from "@/composables/useGameViewportLock";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head } from "@inertiajs/vue3";
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
 
 useGameViewportLock();
 
@@ -338,19 +338,23 @@ function updateSize() {
     toiletX.value = gameW.value / 2;
 }
 
-function startGame() {
+async function startGame() {
     gameStarted.value = true;
+    await nextTick();
+    updateSize();
     resetPoop();
     toiletX.value = gameW.value / 2;
     queueNextTick();
 }
 
-function restartGame() {
+async function restartGame() {
     cancelAnimationFrame(rafId);
     score.value    = 0;
     misses.value   = 0;
     gameOver.value = false;
     toiletDir      = 1;
+    await nextTick();
+    updateSize();
     resetPoop();
     toiletX.value = gameW.value / 2;
     queueNextTick();
@@ -373,37 +377,39 @@ onUnmounted(() => {
 
     <AuthenticatedLayout>
         <div class="boom-wrapper">
-            <div class="game-container" ref="gameEl">
+            <Transition name="fade">
+                <GameStartScreen
+                    v-if="!gameStarted"
+                    title="Poop Boom"
+                    :intro-script="POOP_BOOM_INTRO_SCRIPT"
+                    play-label="▶ Play"
+                    @play="startGame"
+                >
+                    <template #media>💩</template>
+                    <p>
+                        Drag the poop and drop it into the toilet.<br />
+                        5 misses and it's game over!
+                    </p>
+                </GameStartScreen>
+            </Transition>
 
-                <!-- ── start screen ─────────────────────────────── -->
-                <Transition name="fade">
-                    <GameStartScreen
-                        v-if="!gameStarted"
-                        title="Poop Boom"
-                        :intro-script="POOP_BOOM_INTRO_SCRIPT"
-                        play-label="▶ Play"
-                        @play="startGame"
-                    >
-                        <template #media>💩</template>
-                        <p>
-                            Drag the poop and drop it into the toilet.<br />
-                            5 misses and it's game over!
-                        </p>
-                    </GameStartScreen>
-                </Transition>
+            <Transition name="fade">
+                <GameEndScreen
+                    v-if="gameOver"
+                    title="Game Over!"
+                    emoji="😱"
+                    :score="score"
+                    game-slug="boom"
+                    play-again-label="🔄 Play Again"
+                    @play-again="restartGame"
+                />
+            </Transition>
 
-                <!-- ── game over screen ──────────────────────────── -->
-                <Transition name="fade">
-                    <GameEndScreen
-                        v-if="gameOver"
-                        title="Game Over!"
-                        emoji="😱"
-                        :score="score"
-                        game-slug="boom"
-                        play-again-label="🔄 Play Again"
-                        @play-again="restartGame"
-                    />
-                </Transition>
+            <div
+                v-if="gameStarted && !gameOver"
+                ref="gameEl"
+                class="game-container"
+            >
 
                 <!-- ── HUD ────────────────────────────────────────── -->
                 <div class="hud">
@@ -463,6 +469,7 @@ onUnmounted(() => {
 <style scoped>
 /* ── outer wrapper fills space below the nav bar ─────────── */
 .boom-wrapper {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;

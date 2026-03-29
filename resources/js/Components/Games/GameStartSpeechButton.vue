@@ -1,6 +1,6 @@
 <script setup>
 import { speakGameIntro, stopGameIntroSpeech } from "@/composables/useGameIntroSpeech";
-import { ref, onUnmounted } from "vue";
+import { computed, onUnmounted, ref } from "vue";
 
 const props = defineProps({
     script: { type: String, required: true },
@@ -12,6 +12,23 @@ const props = defineProps({
 });
 
 const isSpeaking = ref(false);
+
+const variantClass = computed(() => {
+    switch (props.variant) {
+        case "boom":
+            return "inline-block rounded-full border-2 border-white/25 bg-white/10 px-[22px] py-2.5 text-base font-bold text-gray-100";
+        case "icon":
+            return "flex h-[2.6em] w-[2.6em] items-center justify-center rounded-full border-2 border-white/30 bg-black/40 p-0 text-[clamp(14px,3.2vmin,22px)] text-gray-100";
+        case "panel":
+            return "inline-block rounded-full border-2 border-white/25 bg-white/10 px-[clamp(18px,4vmin,24px)] py-[clamp(8px,1.8vmin,12px)] text-[clamp(0.9rem,2.6vmin,1.05rem)] font-bold text-gray-100";
+        default:
+            return "inline-block rounded-[2vmin] border-2 border-white/30 bg-white/12 px-[4vmin] py-[2vmin] text-[3vmin] font-bold text-white";
+    }
+});
+
+const activeClass = computed(() =>
+    isSpeaking.value ? "border-yellow-300 text-yellow-200" : "",
+);
 
 function toggle() {
     if (isSpeaking.value) {
@@ -33,8 +50,8 @@ onUnmounted(() => {
 <template>
     <button
         type="button"
-        class="game-intro-speech"
-        :class="[`game-intro-speech--${variant}`, { 'game-intro-speech--active': isSpeaking }]"
+        class="game-intro-speech cursor-pointer touch-manipulation transition-[transform,color,border-color,background-color] duration-200 [-webkit-tap-highlight-color:transparent] active:scale-95"
+        :class="[variantClass, activeClass]"
         :aria-label="isSpeaking ? 'Stop instructions' : 'Listen to how to play'"
         @pointerdown.prevent="toggle"
     >
@@ -67,83 +84,3 @@ onUnmounted(() => {
         </template>
     </button>
 </template>
-
-<style scoped>
-.game-intro-speech {
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-    cursor: pointer;
-    transition: transform 0.15s ease, background 0.2s, border-color 0.2s, color 0.2s;
-}
-
-.game-intro-speech:active {
-    transform: scale(0.95);
-}
-
-.game-intro-speech--cockroach {
-    display: inline-block;
-    font-size: 3vmin;
-    font-weight: 700;
-    color: #fff;
-    background: rgba(255, 255, 255, 0.12);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 2vmin;
-    padding: 2vmin 4vmin;
-}
-
-.game-intro-speech--cockroach.game-intro-speech--active {
-    border-color: #ffcc00;
-    color: #ffcc00;
-}
-
-.game-intro-speech--boom {
-    display: inline-block;
-    font-size: 1rem;
-    font-weight: 700;
-    color: #fff5e5;
-    background: rgba(63, 45, 28, 0.45);
-    border: 2px solid rgba(236, 208, 171, 0.45);
-    border-radius: 50px;
-    padding: 10px 22px;
-}
-
-.game-intro-speech--boom.game-intro-speech--active {
-    border-color: #ffd54f;
-    color: #ffd54f;
-}
-
-.game-intro-speech--icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.6em;
-    height: 2.6em;
-    padding: 0;
-    border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.35);
-    background: rgba(0, 0, 0, 0.35);
-    color: rgba(255, 255, 255, 0.92);
-    font-size: clamp(14px, 3.2vmin, 22px);
-}
-
-.game-intro-speech--icon.game-intro-speech--active {
-    border-color: #ffcc00;
-    color: #ffcc00;
-}
-
-.game-intro-speech--panel {
-    display: inline-block;
-    font-size: clamp(0.9rem, 2.6vmin, 1.05rem);
-    font-weight: 700;
-    color: #fff5e5;
-    background: rgba(0, 0, 0, 0.28);
-    border: 2px solid rgba(236, 208, 171, 0.45);
-    border-radius: 50px;
-    padding: clamp(8px, 1.8vmin, 12px) clamp(18px, 4vmin, 24px);
-}
-
-.game-intro-speech--panel.game-intro-speech--active {
-    border-color: #ffd54f;
-    color: #ffd54f;
-}
-</style>

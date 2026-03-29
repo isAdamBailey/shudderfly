@@ -32,13 +32,23 @@
         @play-again="handlePlay"
     >
         <template #above-score>
-            <div class="stars-row">
-                <span v-for="i in 3" :key="i" class="star" :class="{ filled: i <= stars }">
+            <div class="mb-2">
+                <span
+                    v-for="i in 3"
+                    :key="i"
+                    class="game-star inline-block text-[clamp(1.8rem,7vmin,2.8rem)] text-gray-600 transition-colors duration-300 dark:text-gray-500 mx-[0.15em]"
+                    :class="{
+                        'game-star-filled text-yellow-300 drop-shadow-[0_0_12px_rgba(253,224,71,0.45)]':
+                            i <= stars,
+                    }"
+                >
                     &#9733;
                 </span>
             </div>
         </template>
-        <div class="collision-stat">
+        <div
+            class="collision-stat mx-auto mb-2 max-w-lg rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-gray-300 sm:px-4 sm:py-2.5 sm:text-[0.95rem]"
+        >
             Wall hits: {{ state.collisions }} | Time: {{ elapsedSeconds }}s
         </div>
     </GameEndScreen>
@@ -70,35 +80,19 @@ async function handlePlay() {
 </script>
 
 <style scoped>
-.stars-row {
-    margin-bottom: 0.5em;
-}
-
-.star {
-    font-size: clamp(1.8rem, 7vmin, 2.8rem);
-    color: #444;
-    margin: 0 0.15em;
-    transition: color 0.3s, transform 0.3s;
-}
-
-.star.filled {
-    color: #ffd700;
-    text-shadow: 0 0 12px rgba(255, 215, 0, 0.6);
+.game-star-filled {
     animation: starPop 0.4s ease-out;
 }
 
-.collision-stat {
-    font-size: clamp(0.8rem, 2.2vmin, 0.95rem);
-    color: #e8d5b7;
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: clamp(10px, 1.5vmin, 14px);
-    padding: clamp(8px, 1.2vmin, 12px) clamp(14px, 2.5vmin, 20px);
-    margin: 0 auto 0.5em;
-}
-
 @keyframes starPop {
-    0% { transform: scale(0); }
-    60% { transform: scale(1.3); }
-    100% { transform: scale(1); }
+    0% {
+        transform: scale(0);
+    }
+    60% {
+        transform: scale(1.3);
+    }
+    100% {
+        transform: scale(1);
+    }
 }
 </style>
