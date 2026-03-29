@@ -15,6 +15,7 @@ const props = defineProps({
 const emit = defineEmits(["move"]);
 
 const boardEl = ref(null);
+const svgEl = ref(null);
 const pixelW = ref(400);
 const pixelH = ref(600);
 
@@ -34,33 +35,9 @@ const svgViewBox = computed(() => {
 
 const TOP_EXTEND = 500;
 
-function buildSmoothPath(segs, getSide) {
-    if (segs.length < 2) return "";
-    const pts = segs.map((s) => ({ x: getSide(s), y: s.y }));
-
-    let d = `M ${pts[0].x} ${pts[0].y - TOP_EXTEND}`;
-    d += ` L ${pts[0].x} ${pts[0].y}`;
-    d += ` Q ${pts[0].x} ${pts[0].y}, ${(pts[0].x + pts[1].x) / 2} ${(pts[0].y + pts[1].y) / 2}`;
-
-    for (let i = 1; i < pts.length - 1; i++) {
-        const curr = pts[i];
-        const next = pts[i + 1];
-        const cx = (curr.x + next.x) / 2;
-        const cy = (curr.y + next.y) / 2;
-        d += ` Q ${curr.x} ${curr.y}, ${cx} ${cy}`;
-    }
-
-    const last = pts[pts.length - 1];
-    d += ` Q ${last.x} ${last.y}, ${last.x} ${last.y + 30}`;
-    return d;
-}
-
 const intestinePaths = computed(() => {
     const segs = props.segments;
-    if (segs.length < 2) return { left: "", right: "", fill: "" };
-
-    const leftPath = buildSmoothPath(segs, (s) => s.leftWall);
-    const rightPath = buildSmoothPath(segs, (s) => s.rightWall);
+    if (segs.length < 2) return { fill: "" };
 
     const leftPts = segs.map((s) => ({ x: s.leftWall, y: s.y }));
     const rightPts = segs.map((s) => ({ x: s.rightWall, y: s.y }));
@@ -86,25 +63,7 @@ const intestinePaths = computed(() => {
     fill += ` Q ${rightPts[0].x} ${rightPts[0].y}, ${rightPts[0].x} ${rightPts[0].y}`;
     fill += ` L ${rightPts[0].x} ${rightPts[0].y - TOP_EXTEND} Z`;
 
-    return { left: leftPath, right: rightPath, fill };
-});
-
-const haustraFolds = computed(() => {
-    const folds = [];
-    const segs = props.segments;
-    for (let i = 1; i < segs.length - 1; i += 2) {
-        const s = segs[i];
-        const width = s.rightWall - s.leftWall;
-        const bulgeFactor = 0.12;
-        folds.push({
-            y: s.y,
-            leftX: s.leftWall,
-            rightX: s.rightWall,
-            cpLeftX: s.leftWall + width * bulgeFactor,
-            cpRightX: s.rightWall - width * bulgeFactor,
-        });
-    }
-    return folds;
+    return { fill };
 });
 
 const anusCenter = computed(() => {
@@ -114,32 +73,94 @@ const anusCenter = computed(() => {
 
 const progressBarWidth = computed(() => `${(props.progress * 100).toFixed(1)}%`);
 
+const POINTER_LAG = 0.14;
+
 let dragActive = false;
-let lastPointer = { x: 0, y: 0 };
+let grabOffset = { x: 0, y: 0 };
+let lastTarget = { x: 0, y: 0 };
+let rafId = null;
+
+function scheduleDragTick() {
+    if (rafId != null) return;
+    rafId = requestAnimationFrame(dragTick);
+}
+
+function dragTick() {
+    rafId = null;
+    if (!dragActive) return;
+    const rawDx = lastTarget.x - props.state.poopX;
+    const rawDy = lastTarget.y - props.state.poopY;
+    if (Math.abs(rawDx) > 0.06 || Math.abs(rawDy) > 0.06) {
+        emit("move", rawDx * POINTER_LAG, rawDy * POINTER_LAG);
+    }
+    if (dragActive) {
+        rafId = requestAnimationFrame(dragTick);
+    }
+}
+
+function stopDragLoop() {
+    dragActive = false;
+    if (rafId != null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+    }
+}
+
+function clientToSvg(clientX, clientY) {
+    const svg = svgEl.value;
+    if (!svg) return null;
+    const pt = svg.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return null;
+    return pt.matrixTransform(ctm.inverse());
+}
 
 function onPointerDown(e) {
     if (props.state.phase !== "playing") return;
     e.preventDefault();
+    const p = clientToSvg(e.clientX, e.clientY);
+    if (!p) return;
     dragActive = true;
-    lastPointer = { x: e.clientX, y: e.clientY };
+    grabOffset = {
+        x: props.state.poopX - p.x,
+        y: props.state.poopY - p.y,
+    };
+    lastTarget = {
+        x: p.x + grabOffset.x,
+        y: p.y + grabOffset.y,
+    };
+    try {
+        boardEl.value?.setPointerCapture?.(e.pointerId);
+    } catch {
+        /* ignore */
+    }
     document.addEventListener("pointermove", onPointerMove, { passive: false });
     document.addEventListener("pointerup", onPointerUp);
+    scheduleDragTick();
 }
 
 function onPointerMove(e) {
     if (!dragActive) return;
     e.preventDefault();
-    const scale = svgAspect.value;
-    const dx = (e.clientX - lastPointer.x) * scale;
-    const dy = (e.clientY - lastPointer.y) * scale;
-    lastPointer = { x: e.clientX, y: e.clientY };
-    emit("move", dx, dy);
+    const p = clientToSvg(e.clientX, e.clientY);
+    if (!p) return;
+    lastTarget = {
+        x: p.x + grabOffset.x,
+        y: p.y + grabOffset.y,
+    };
 }
 
-function onPointerUp() {
-    dragActive = false;
+function onPointerUp(e) {
+    try {
+        boardEl.value?.releasePointerCapture?.(e.pointerId);
+    } catch {
+        /* ignore */
+    }
     document.removeEventListener("pointermove", onPointerMove);
     document.removeEventListener("pointerup", onPointerUp);
+    stopDragLoop();
 }
 
 function onKeyDown(e) {
@@ -175,6 +196,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+    stopDragLoop();
     window.removeEventListener("resize", updateSize);
     window.removeEventListener("keydown", onKeyDown);
     document.removeEventListener("pointermove", onPointerMove);
@@ -185,6 +207,7 @@ onUnmounted(() => {
 <template>
     <div class="game-board" ref="boardEl" @pointerdown="onPointerDown">
         <svg
+            ref="svgEl"
             class="intestine-svg"
             :viewBox="svgViewBox"
             preserveAspectRatio="xMidYMid meet"
@@ -197,14 +220,6 @@ onUnmounted(() => {
                     <stop offset="75%" stop-color="#e09498" />
                     <stop offset="100%" stop-color="#c45a60" />
                 </linearGradient>
-                <filter id="organicTexture" x="-5%" y="-5%" width="110%" height="110%">
-                    <feTurbulence type="fractalNoise" baseFrequency="0.02 0.04" numOctaves="5" seed="3" result="noise" />
-                    <feColorMatrix type="saturate" values="0.3" in="noise" result="tintedNoise" />
-                    <feBlend in="SourceGraphic" in2="tintedNoise" mode="soft-light" />
-                </filter>
-                <clipPath id="intestineClip">
-                    <path :d="intestinePaths.fill" />
-                </clipPath>
                 <radialGradient id="anusGrad" cx="50%" cy="50%" r="50%">
                     <stop offset="0%" stop-color="#1a0808" />
                     <stop offset="35%" stop-color="#3d1515" />
@@ -229,86 +244,10 @@ onUnmounted(() => {
                 stroke-linejoin="round"
             />
 
-            <!-- inner mucosa layer -->
             <path
                 :d="intestinePaths.fill"
                 fill="url(#mucosaGrad)"
-                filter="url(#organicTexture)"
             />
-
-            <!-- interior details clipped to the tube shape -->
-            <g clip-path="url(#intestineClip)">
-                <!-- haustra folds (circular ridges) -->
-                <g v-for="(fold, i) in haustraFolds" :key="'fold-' + i" opacity="0.25">
-                    <path
-                        :d="`M ${fold.leftX} ${fold.y - 4} Q ${fold.cpLeftX} ${fold.y}, ${fold.leftX} ${fold.y + 4}`"
-                        fill="none"
-                        stroke="#c07080"
-                        stroke-width="1.5"
-                        stroke-linecap="round"
-                    />
-                    <path
-                        :d="`M ${fold.rightX} ${fold.y - 4} Q ${fold.cpRightX} ${fold.y}, ${fold.rightX} ${fold.y + 4}`"
-                        fill="none"
-                        stroke="#c07080"
-                        stroke-width="1.5"
-                        stroke-linecap="round"
-                    />
-                </g>
-
-                <!-- vein details -->
-                <g v-for="(seg, i) in segments" :key="'vein-' + i">
-                    <path
-                        v-if="i % 3 === 0"
-                        :d="`M ${seg.leftWall + 3} ${seg.y - 8} Q ${seg.leftWall + 10} ${seg.y} ${seg.leftWall + 5} ${seg.y + 10}`"
-                        fill="none"
-                        stroke="#b85565"
-                        stroke-width="0.8"
-                        opacity="0.35"
-                        stroke-linecap="round"
-                    />
-                    <path
-                        v-if="i % 4 === 1"
-                        :d="`M ${seg.rightWall - 3} ${seg.y - 6} Q ${seg.rightWall - 9} ${seg.y + 2} ${seg.rightWall - 4} ${seg.y + 12}`"
-                        fill="none"
-                        stroke="#b85565"
-                        stroke-width="0.7"
-                        opacity="0.3"
-                        stroke-linecap="round"
-                    />
-                </g>
-
-                <!-- inner wall shadow -->
-                <path
-                    :d="intestinePaths.left"
-                    fill="none"
-                    stroke="rgba(60,15,20,0.5)"
-                    stroke-width="6"
-                    stroke-linecap="round"
-                />
-                <path
-                    :d="intestinePaths.right"
-                    fill="none"
-                    stroke="rgba(60,15,20,0.5)"
-                    stroke-width="6"
-                    stroke-linecap="round"
-                />
-                <!-- inner wall highlight -->
-                <path
-                    :d="intestinePaths.left"
-                    fill="none"
-                    stroke="rgba(255,180,180,0.15)"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                />
-                <path
-                    :d="intestinePaths.right"
-                    fill="none"
-                    stroke="rgba(255,180,180,0.15)"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                />
-            </g>
 
             <!-- anus / exit -->
             <ellipse
@@ -403,9 +342,7 @@ onUnmounted(() => {
     align-items: center;
     justify-content: space-between;
     padding: 8px 14px;
-    background: rgba(30, 8, 12, 0.92);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background: rgba(30, 8, 12, 0.96);
     color: #f0d0c0;
     font-weight: 700;
     z-index: 20;
