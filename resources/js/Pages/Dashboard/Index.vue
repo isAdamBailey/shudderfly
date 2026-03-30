@@ -24,7 +24,7 @@ defineProps({
 
 const buildTimestamp = __BUILD_TIMESTAMP__;
 
-const { canAdmin } = usePermissions();
+const { canAdmin, canEditPages } = usePermissions();
 const { t } = useTranslations();
 const { setFlashMessage } = useFlashMessage();
 const unlockingBlockedPages = ref(false);
@@ -71,7 +71,7 @@ const unblockAllPages = async () => {
             </div>
 
             <div class="flex flex-wrap justify-around space-y-2">
-                <div class="w-full sm:px-6 lg:px-8">
+                <div v-if="canEditPages" class="w-full sm:px-6 lg:px-8">
                     <div
                         class="bg-white overflow-hidden shadow-sm sm:rounded-lg"
                     >

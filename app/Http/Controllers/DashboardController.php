@@ -22,7 +22,9 @@ class DashboardController extends Controller
         return Inertia::render('Dashboard/Index', [
             'users' => User::all(),
             'categories' => Category::withCount('books')->get(),
-            'blockedPagesCount' => Page::where('blocked', true)->count(),
+            'blockedPagesCount' => auth()->user()->can('edit pages')
+                ? Page::where('blocked', true)->count()
+                : 0,
             'stats' => Inertia::defer(fn () => [
                 'numberOfBooks' => Book::count(),
                 'numberOfPages' => Page::count(),

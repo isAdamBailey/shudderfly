@@ -346,7 +346,7 @@ class PagesTest extends TestCase
             );
     }
 
-    public function test_authenticated_user_can_unblock_all_blocked_pages_without_edit_pages_permission(): void
+    public function test_authenticated_user_cannot_unblock_all_blocked_pages_without_edit_pages_permission(): void
     {
         $this->actingAs(User::factory()->create());
 
@@ -356,8 +356,8 @@ class PagesTest extends TestCase
 
         $response = $this->post(route('pages.unblock-all'));
 
-        $response->assertRedirect();
-        $this->assertSame(0, Page::where('blocked', true)->count());
+        $response->assertForbidden();
+        $this->assertSame(2, Page::where('blocked', true)->count());
     }
 
     public function test_page_is_updated()

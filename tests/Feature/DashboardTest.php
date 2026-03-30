@@ -187,9 +187,10 @@ class DashboardTest extends TestCase
         $response->assertRedirect(route('login'));
     }
 
-    public function test_authenticated_user_can_call_unblock_all_pages_route()
+    public function test_user_with_edit_pages_permission_can_call_unblock_all_pages_route()
     {
         $user = User::factory()->create();
+        $user->givePermissionTo('edit pages');
         $this->actingAs($user);
 
         $book = Book::factory()->create();
