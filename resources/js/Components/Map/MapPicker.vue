@@ -1,9 +1,7 @@
 <template>
   <div class="w-full">
     <div class="mb-2 flex items-center justify-between">
-      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-        Address (optional)
-      </label>
+      <InputLabel :for="addressInputId" :value="addressLabel" />
       <button
         v-if="hasLocation"
         type="button"
@@ -14,53 +12,52 @@
       </button>
     </div>
     <div class="mb-3 relative">
-      <div class="flex gap-2">
-        <div class="flex-1 relative">
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Search for an address..."
-            class="w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            @keyup.enter="searchLocation"
-            @input="handleInput"
-            @focus="handleFocus"
-            @blur="handleBlur"
-          />
-          <!-- Autocomplete dropdown -->
-          <div
-            v-if="showSuggestions && suggestions.length > 0"
-            class="absolute z-[9999] w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto"
-            style="z-index: 9999"
-          >
-            <button
-              v-for="(suggestion, index) in suggestions"
-              :key="index"
-              type="button"
-              class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700 last:border-b-0"
-              @mousedown.prevent="selectSuggestion(suggestion)"
-            >
-              <span
-                v-html="
-                  suggestion.displayName ||
-                  suggestion.name ||
-                  suggestion.html ||
-                  suggestion.formatted ||
-                  suggestion.place_name ||
-                  'Location'
-                "
-              ></span>
-            </button>
-          </div>
-        </div>
-        <button
-          type="button"
-          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          :disabled="!searchQuery.trim() || isSearching"
-          @click="searchLocation"
+      <div class="relative">
+        <input
+          :id="addressInputId"
+          v-model="searchQuery"
+          type="text"
+          :placeholder="addressPlaceholder"
+          :disabled="isSearching"
+          class="w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          :class="{ 'pr-9': isSearching }"
+          @keyup.enter="searchLocation"
+          @input="handleInput"
+          @focus="handleFocus"
+          @blur="handleBlur"
+        />
+        <span
+          v-if="isSearching"
+          class="pointer-events-none absolute inset-y-0 right-2 flex items-center"
+          aria-hidden="true"
         >
-          <span v-if="!isSearching">Search</span>
-          <span v-else>Searching...</span>
-        </button>
+          <i class="ri-loader-line animate-spin text-lg text-gray-500"></i>
+        </span>
+        <!-- Autocomplete dropdown -->
+        <div
+          v-if="showSuggestions && suggestions.length > 0"
+          class="absolute z-[9999] w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto"
+          style="z-index: 9999"
+        >
+          <button
+            v-for="(suggestion, index) in suggestions"
+            :key="index"
+            type="button"
+            class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700 last:border-b-0"
+            @mousedown.prevent="selectSuggestion(suggestion)"
+          >
+            <span
+              v-html="
+                suggestion.displayName ||
+                suggestion.name ||
+                suggestion.html ||
+                suggestion.formatted ||
+                suggestion.place_name ||
+                'Location'
+              "
+            ></span>
+          </button>
+        </div>
       </div>
       <p v-if="searchError" class="mt-1 text-xs text-red-600 dark:text-red-400">
         {{ searchError }}
@@ -70,8 +67,8 @@
     <div v-if="showMap" class="mt-4">
       <div class="mb-3 text-sm text-gray-500 dark:text-gray-400">
         <p>
-          You can search for an address above and select from the results, or
-          simply click on the map to drop a pin at that location.
+          Pick a suggestion from the list as you type, press Enter to search
+          what you typed, or click the map to drop a pin.
         </p>
       </div>
       <Map
@@ -89,8 +86,11 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from "vue";
+import InputLabel from "@/Components/InputLabel.vue";
+import { computed, ref, useId, watch } from "vue";
 import Map from "./Map.vue";
+
+const addressInputId = useId();
 
 const props = defineProps({
   latitude: {
@@ -104,6 +104,14 @@ const props = defineProps({
   openMap: {
     type: Boolean,
     default: false
+  },
+  addressLabel: {
+    type: String,
+    default: "Address"
+  },
+  addressPlaceholder: {
+    type: String,
+    default: "Search for an address..."
   }
 });
 

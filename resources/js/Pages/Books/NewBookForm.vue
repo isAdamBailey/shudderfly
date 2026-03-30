@@ -114,6 +114,8 @@ const submit = () => {
                     v-model:latitude="form.latitude"
                     v-model:longitude="form.longitude"
                     :open-map="isLocationOpen"
+                    address-label="Search for address"
+                    address-placeholder="Search for address..."
                     @address-focus="handleAddressFocus"
                 />
             </div>

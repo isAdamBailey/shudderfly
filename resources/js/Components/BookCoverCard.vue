@@ -37,6 +37,14 @@
         <!-- Dark overlay for text readability -->
         <div class="absolute inset-0 bg-black/25"></div>
 
+        <div
+          v-if="hasLocation"
+          class="absolute top-2 right-2 z-[15] flex h-7 w-7 items-center justify-center rounded-full bg-black/45 text-white shadow backdrop-blur-[2px] pointer-events-none"
+          aria-hidden="true"
+        >
+          <i class="ri-map-pin-line text-base"></i>
+        </div>
+
         <!-- Centered title/excerpt -->
         <div
           class="absolute inset-0 z-10 flex flex-col items-center justify-center text-center p-3"
@@ -70,6 +78,7 @@
 <script setup>
 import LazyLoader from "@/Components/LazyLoader.vue";
 import { Link } from "@inertiajs/vue3";
+import { computed } from "vue";
 
 const props = defineProps({
   book: {
@@ -91,6 +100,11 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["click"]);
+
+const hasLocation = computed(
+  () =>
+    props.book.latitude != null && props.book.longitude != null
+);
 
 const handleClick = (event) => {
   if (props.disabled) {

@@ -132,4 +132,22 @@ describe("BookCoverCard", () => {
         expect(container.classes()).toContain("hover:opacity-80");
         expect(container.classes()).toContain("hover:shadow");
     });
+
+    it("shows map pin when book has latitude and longitude", async () => {
+        await wrapper.setProps({
+            book: {
+                ...mockBook,
+                latitude: 45.5152,
+                longitude: -122.6784,
+            },
+        });
+        expect(wrapper.find("i.ri-map-pin-line").exists()).toBe(true);
+    });
+
+    it("does not show map pin when latitude or longitude is missing", async () => {
+        await wrapper.setProps({
+            book: { ...mockBook, latitude: 45.5, longitude: null },
+        });
+        expect(wrapper.find("i.ri-map-pin-line").exists()).toBe(false);
+    });
 });
