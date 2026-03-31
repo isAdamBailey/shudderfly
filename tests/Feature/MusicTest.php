@@ -210,6 +210,19 @@ class MusicTest extends TestCase
             ->assertJsonPath('song.title', 'Test Song');
     }
 
+    public function test_music_show_redirects_to_welcome_with_open_song_flash_when_not_json_api(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $song = Song::factory()->create(['title' => 'Test Song']);
+
+        $response = $this->get(route('music.show', $song));
+
+        $response->assertRedirect(route('welcome'));
+        $response->assertSessionHas('open_song_id', $song->id);
+    }
+
     /**
      * Mock the YouTube service to avoid actual API calls during testing
      */

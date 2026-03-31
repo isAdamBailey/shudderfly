@@ -189,6 +189,7 @@
 </template>
 
 <script setup>
+import { useMusicPlayer } from "@/composables/useMusicPlayer";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import { router, usePage } from "@inertiajs/vue3";
@@ -198,6 +199,7 @@ import { computed, onUnmounted, ref, watch } from "vue";
 
 const { speak } = useSpeechSynthesis();
 const { t } = useTranslations();
+const { playSong } = useMusicPlayer();
 const props = defineProps({
   label: {
     type: String,
@@ -491,7 +493,7 @@ const navigateSuggestions = (direction) => {
   selectedIndex.value = newIndex;
 };
 
-const selectSuggestion = (suggestion) => {
+const selectSuggestion = async (suggestion) => {
   showSuggestions.value = false;
   // eslint-disable-next-line no-undef
   if (suggestion.type === "book")
@@ -499,9 +501,17 @@ const selectSuggestion = (suggestion) => {
   // eslint-disable-next-line no-undef
   else if (suggestion.type === "page")
     router.get(route("pages.show", suggestion.id));
-  // eslint-disable-next-line no-undef
-  else if (suggestion.type === "song")
-    router.get(route("music.show", suggestion.id));
+  else if (suggestion.type === "song") {
+    try {
+      const response = await window.axios.get(
+        // eslint-disable-next-line no-undef
+        route("music.show", suggestion.id)
+      );
+      if (response.data?.song) playSong(response.data.song);
+    } catch (err) {
+      console.error("Error loading song:", err);
+    }
+  }
 };
 
 const handleEnter = () => {

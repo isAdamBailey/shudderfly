@@ -92,6 +92,7 @@ class HandleInertiaRequests extends Middleware
                 'warning' => fn () => $request->session()->get('warning'),
                 'info' => fn () => $request->session()->get('info'),
                 'quota_exceeded' => fn () => $request->session()->get('quota_exceeded'),
+                'open_song_id' => fn () => $request->session()->get('open_song_id'),
             ],
             'translations' => function () {
                 $locale = app()->getLocale();

@@ -2,13 +2,44 @@
 import FlashMessage from "@/Components/Flash.vue";
 import MusicFlyout from "@/Components/Music/MusicFlyout.vue";
 import SearchInput from "@/Components/SearchInput.vue";
+import { useMusicPlayer } from "@/composables/useMusicPlayer";
 import { usePusherNotifications } from "@/composables/usePusherNotifications";
 import { usePushNotifications } from "@/composables/usePushNotifications";
 import Footer from "@/Layouts/Nav/Footer.vue";
 import Navigation from "@/Layouts/Nav/Navigation.vue";
-import { ref, watch } from "vue";
+import { usePage } from "@inertiajs/vue3";
+import { onMounted, ref, watch } from "vue";
 
 usePusherNotifications();
+
+const page = usePage();
+const { playSong, openFlyout } = useMusicPlayer();
+
+async function playSongFromFlash(songId) {
+  if (songId == null || songId === "") return;
+  try {
+    const response = await window.axios.get(
+      // eslint-disable-next-line no-undef
+      route("music.show", songId),
+      { headers: { Accept: "application/json" } }
+    );
+    if (response.data?.song) {
+      playSong(response.data.song);
+      openFlyout();
+    }
+  } catch (e) {
+    console.error("Failed to load song from redirect:", e);
+  }
+}
+
+onMounted(() => {
+  playSongFromFlash(page.props.flash?.open_song_id);
+});
+
+watch(
+  () => page.props.flash?.open_song_id,
+  (id) => playSongFromFlash(id)
+);
 
 const { isSupported, isSubscribed, subscribe } = usePushNotifications();
 const dismissedKey = "notification_prompt_dismissed";

@@ -7,6 +7,8 @@ use App\Models\SiteSetting;
 use App\Models\Song;
 use App\Services\YouTubeService;
 use App\Support\ReadThrottle;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class MusicController extends Controller
@@ -28,9 +30,18 @@ class MusicController extends Controller
     }
 
     /**
-     * Get songs data for flyout (JSON only)
+     * Get songs data for flyout (JSON for fetch/axios). Browser visits redirect to home.
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse|RedirectResponse
+    {
+        if ($request->expectsJson() && ! $request->header('X-Inertia')) {
+            return $this->indexJson($request);
+        }
+
+        return redirect()->route('welcome');
+    }
+
+    private function indexJson(Request $request): JsonResponse
     {
         $search = $request->search;
         $filter = $request->filter;
@@ -64,13 +75,17 @@ class MusicController extends Controller
     }
 
     /**
-     * Get a single song by ID (JSON only)
+     * JSON for API clients (axios/fetch). Browser/Inertia visits redirect home with flash so no extra page chunk is required.
      */
-    public function show(Song $song)
+    public function show(Request $request, Song $song): JsonResponse|RedirectResponse
     {
-        return response()->json([
-            'song' => $song,
-        ]);
+        if ($request->expectsJson() && ! $request->header('X-Inertia')) {
+            return response()->json([
+                'song' => $song,
+            ]);
+        }
+
+        return redirect()->route('welcome')->with('open_song_id', $song->id);
     }
 
     /**
