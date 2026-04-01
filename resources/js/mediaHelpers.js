@@ -1,9 +1,11 @@
 export function useMedia() {
     const isVideo = (path) => {
-        const videoFormats = ["mp4", "avi", "mpeg", "quicktime"];
-        return videoFormats.some(function (suffix) {
-            return path.endsWith(suffix);
-        });
+        if (!path || typeof path !== "string") {
+            return false;
+        }
+        const base = path.split("?")[0].split("#")[0].toLowerCase();
+        const videoFormats = [".mp4", ".avi", ".mpeg", ".mov", ".webm"];
+        return videoFormats.some((suffix) => base.endsWith(suffix));
     };
 
     const isPoster = (path) => {

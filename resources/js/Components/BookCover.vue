@@ -9,20 +9,31 @@
                 class="book-cover book-texture relative w-full h-full rounded-lg overflow-hidden shadow-2xl transform transition-all duration-300 cursor-pointer"
                 :class="
                     hasCoverImage
-                        ? 'bg-cover bg-center'
+                        ? ''
                         : 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-800 dark:to-gray-900'
                 "
                 :style="{
-                    backgroundImage: hasCoverImage
-                        ? `url(${book.cover_image.media_path})`
-                        : '',
                     transform: finalTransform,
                 }"
                 role="button"
                 tabindex="0"
                 @click="reloadBook"
             >
-                <div class="absolute inset-0 bg-black/20"></div>
+                <div
+                    v-if="hasCoverImage"
+                    class="absolute inset-0 z-0 overflow-hidden rounded-lg"
+                >
+                    <LazyLoader
+                        :src="book.cover_image.media_path"
+                        :alt="`${book.title} cover`"
+                        :is-cover="true"
+                        :object-fit="'cover'"
+                        :fill-container="true"
+                        loading="eager"
+                        fetch-priority="high"
+                    />
+                </div>
+                <div class="absolute inset-0 bg-black/20 z-[5]"></div>
 
                 <div
                     class="relative w-full h-full flex flex-col justify-between p-8 z-10"
@@ -162,6 +173,7 @@
 </template>
 
 <script setup>
+import LazyLoader from "@/Components/LazyLoader.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useDate } from "@/dateHelpers";
 import { useParallax } from "@vueuse/core";
