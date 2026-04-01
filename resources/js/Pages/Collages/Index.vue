@@ -291,6 +291,9 @@ const monthNames = [
 ];
 
 const collageMessage = computed(() => {
+  if (props.collages.length === 0) {
+    return "No collages have been created yet.";
+  }
   const now = new Date();
   const nextMonthName = monthNames[(now.getMonth() + 1) % 12];
   const isSingle = props.collages.length === 1;
