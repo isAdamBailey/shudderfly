@@ -31,6 +31,7 @@ class VoiceSearchService
         'libary' => ['library'],
         'breffast' => ['breakfast'],
         'lellow' => ['yellow'],
+        'catherine' => ['kathryn'],
     ];
 
     public function expandQuery(string $query): array
