@@ -18,6 +18,7 @@ use App\Models\Song;
 use App\Models\User;
 use App\Services\PopularityService;
 use App\Services\UserTaggingService;
+use App\Services\VoiceSearchService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,7 +34,8 @@ class PageController extends Controller
 {
     public function __construct(
         private PopularityService $popularityService,
-        private UserTaggingService $userTaggingService
+        private UserTaggingService $userTaggingService,
+        private VoiceSearchService $voiceSearchService
     ) {}
 
     /**
@@ -199,6 +201,11 @@ class PageController extends Controller
     {
         $search = $request->search;
         $filter = $request->filter;
+        $searchQueries = $search
+            ? $this->voiceSearchService->expandQuery(
+                $this->voiceSearchService->preprocessQuery($search)
+            )
+            : [];
         $youtubeEnabled = SiteSetting::where('key', 'youtube_enabled')->first()->value;
         $musicEnabled = SiteSetting::where('key', 'music_enabled')->first()->value;
 
@@ -222,12 +229,16 @@ class PageController extends Controller
             ->when(! $youtubeEnabled, function ($query) {
                 $query->whereNull('video_link');
             })
-            ->when($search, function ($query) use ($search) {
-                $query->where(function ($query) use ($search) {
-                    $query->where('content', 'LIKE', '%'.$search.'%')
-                        ->orWhereHas('book', function ($query) use ($search) {
-                            $query->where('title', 'LIKE', '%'.$search.'%');
+            ->when($search, function ($query) use ($searchQueries) {
+                $query->where(function ($query) use ($searchQueries) {
+                    foreach ($searchQueries as $term) {
+                        $query->orWhere(function ($q) use ($term) {
+                            $q->where('content', 'LIKE', '%'.$term.'%')
+                                ->orWhereHas('book', function ($query) use ($term) {
+                                    $query->where('title', 'LIKE', '%'.$term.'%');
+                                });
                         });
+                    }
                 });
             });
 
@@ -251,10 +262,14 @@ class PageController extends Controller
                 // When music is disabled, exclude all songs from all filters
                 $query->whereRaw('1 = 0');
             })
-            ->when($search, function ($query) use ($search) {
-                $query->where(function ($query) use ($search) {
-                    $query->where('title', 'LIKE', '%'.$search.'%')
-                        ->orWhere('description', 'LIKE', '%'.$search.'%');
+            ->when($search, function ($query) use ($searchQueries) {
+                $query->where(function ($query) use ($searchQueries) {
+                    foreach ($searchQueries as $term) {
+                        $query->orWhere(function ($q) use ($term) {
+                            $q->where('title', 'LIKE', '%'.$term.'%')
+                                ->orWhere('description', 'LIKE', '%'.$term.'%');
+                        });
+                    }
                 });
             });
 

@@ -321,7 +321,8 @@ const SPEECH_NORMALIZATIONS = {
   yup: "yes",
   yep: "yes",
   nah: "no",
-  nope: "no"
+  nope: "no",
+  catherine: "kathryn"
 };
 
 const processVoiceInput = (text) => {

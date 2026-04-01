@@ -12,6 +12,7 @@ use App\Models\SiteSetting;
 use App\Models\Song;
 use App\Models\User;
 use App\Services\PopularityService;
+use App\Services\VoiceSearchService;
 use App\Support\ThemeBooks;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Collection;
@@ -27,7 +28,8 @@ use Inertia\Response;
 class BookController extends Controller
 {
     public function __construct(
-        private PopularityService $popularityService
+        private PopularityService $popularityService,
+        private VoiceSearchService $voiceSearchService
     ) {}
 
     /**
@@ -38,11 +40,21 @@ class BookController extends Controller
         $search = $request->search;
 
         if ($search) {
+            $queries = $this->voiceSearchService->expandQuery(
+                $this->voiceSearchService->preprocessQuery($search)
+            );
+
             $searchCategories = Category::query()
-                ->with(['books' => fn ($book) => $book
-                    ->where('title', 'LIKE', '%'.$search.'%')
-                    ->orWhere('excerpt', 'LIKE', '%'.$search.'%')
-                    ->with('coverImage'),
+                ->with(['books' => function ($book) use ($queries) {
+                    $book->where(function ($q) use ($queries) {
+                        foreach ($queries as $term) {
+                            $q->orWhere(function ($q2) use ($term) {
+                                $q2->where('title', 'LIKE', '%'.$term.'%')
+                                    ->orWhere('excerpt', 'LIKE', '%'.$term.'%');
+                            });
+                        }
+                    })->with('coverImage');
+                },
                 ])
                 ->orderBy('name')
                 ->get();
