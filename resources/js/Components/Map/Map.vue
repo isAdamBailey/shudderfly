@@ -93,6 +93,26 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    defaultMapType: {
+        type: String,
+        default: "hybrid",
+    },
+    initialTilt: {
+        type: Number,
+        default: null,
+    },
+    initialHeading: {
+        type: Number,
+        default: 0,
+    },
+    showMapTypeControl: {
+        type: Boolean,
+        default: true,
+    },
+    showCameraControl: {
+        type: [Boolean, null],
+        default: null,
+    },
 });
 
 const emit = defineEmits([
@@ -126,6 +146,32 @@ let mapListeners = [];
 const isGoogleLoaded = () => {
     return typeof window !== "undefined" && typeof window.google !== "undefined" && window.google.maps;
 };
+
+const resolveMapTypeId = (id) => {
+    const key = String(id || "hybrid").toLowerCase();
+    const types = {
+        roadmap: window.google.maps.MapTypeId.ROADMAP,
+        satellite: window.google.maps.MapTypeId.SATELLITE,
+        hybrid: window.google.maps.MapTypeId.HYBRID,
+        terrain: window.google.maps.MapTypeId.TERRAIN,
+    };
+    return types[key] ?? window.google.maps.MapTypeId.HYBRID;
+};
+
+const resolveInitialTilt = () => {
+    if (props.initialTilt != null && !Number.isNaN(Number(props.initialTilt))) {
+        return Math.min(67.5, Math.max(0, Number(props.initialTilt)));
+    }
+    return props.rotateView ? 45 : 0;
+};
+
+const useCameraControl = () =>
+    props.showCameraControl !== null && props.showCameraControl !== undefined
+        ? props.showCameraControl
+        : props.rotateView;
+
+const gestureHandlingForMap = () =>
+    props.rotateView ? "greedy" : "cooperative";
 
 const recenterOnMarker = () => {
     if (map && markers.length > 0) {
@@ -536,18 +582,39 @@ const initializeMap = async () => {
         }
 
         const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
+        const initialHeading =
+            typeof props.initialHeading === "number" && !Number.isNaN(props.initialHeading)
+                ? props.initialHeading
+                : 0;
+        const cameraOn = useCameraControl();
 
         map = new window.google.maps.Map(mapContainer.value, {
             center: { lat: centerLat, lng: centerLng },
             zoom: zoom,
-            mapTypeId: window.google.maps.MapTypeId.HYBRID,
-            disableDefaultUI: !props.rotateView,
+            mapTypeId: resolveMapTypeId(props.defaultMapType),
+            tilt: resolveInitialTilt(),
+            heading: initialHeading,
+            disableDefaultUI: true,
             zoomControl: true,
-            cameraControl: false,
+            mapTypeControl: props.showMapTypeControl,
+            mapTypeControlOptions: {
+                style: window.google.maps.MapTypeControlStyle.DROPDOWN_MENU,
+                position: window.google.maps.ControlPosition.TOP_RIGHT,
+                mapTypeIds: [
+                    window.google.maps.MapTypeId.ROADMAP,
+                    window.google.maps.MapTypeId.SATELLITE,
+                    window.google.maps.MapTypeId.HYBRID,
+                    window.google.maps.MapTypeId.TERRAIN,
+                ],
+            },
+            cameraControl: cameraOn,
+            cameraControlOptions: {
+                position: window.google.maps.ControlPosition.RIGHT_CENTER,
+            },
             rotateControl: props.rotateView,
             streetViewControl: false,
             clickableIcons: false,
-            gestureHandling: "cooperative",
+            gestureHandling: gestureHandlingForMap(),
             renderingType: window.google.maps.RenderingType.VECTOR,
             headingInteractionEnabled: props.rotateView,
             tiltInteractionEnabled: props.rotateView,
@@ -792,6 +859,37 @@ onMounted(() => {
         }
     });
 });
+
+watch(
+    () => [
+        props.defaultMapType,
+        props.initialTilt,
+        props.initialHeading,
+        props.showMapTypeControl,
+        props.showCameraControl,
+        props.rotateView,
+    ],
+    () => {
+        if (!map || !isGoogleLoaded()) {
+            return;
+        }
+        map.setMapTypeId(resolveMapTypeId(props.defaultMapType));
+        map.setTilt(resolveInitialTilt());
+        const h =
+            typeof props.initialHeading === "number" && !Number.isNaN(props.initialHeading)
+                ? props.initialHeading
+                : 0;
+        map.setHeading(h);
+        map.setOptions({
+            mapTypeControl: props.showMapTypeControl,
+            cameraControl: useCameraControl(),
+            rotateControl: props.rotateView,
+            gestureHandling: gestureHandlingForMap(),
+        });
+        map.setHeadingInteractionEnabled(props.rotateView);
+        map.setTiltInteractionEnabled(props.rotateView);
+    }
+);
 
 watch(
     () => [props.latitude, props.longitude],

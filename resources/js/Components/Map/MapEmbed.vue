@@ -9,6 +9,11 @@
         :book-title="bookTitle"
         :show-street-view="effectiveShowStreetView"
         :rotate-view="rotateView"
+        :default-map-type="defaultMapType"
+        :initial-tilt="initialTilt"
+        :initial-heading="initialHeading"
+        :show-map-type-control="showMapTypeControl"
+        :show-camera-control="showCameraControl"
         container-class="w-full aspect-video rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden shadow-lg"
       />
     </div>
@@ -48,6 +53,26 @@ const props = defineProps({
   rotateView: {
     type: Boolean,
     default: true
+  },
+  defaultMapType: {
+    type: String,
+    default: "hybrid"
+  },
+  initialTilt: {
+    type: Number,
+    default: null
+  },
+  initialHeading: {
+    type: Number,
+    default: 0
+  },
+  showMapTypeControl: {
+    type: Boolean,
+    default: true
+  },
+  showCameraControl: {
+    type: [Boolean, null],
+    default: null
   }
 });
 
