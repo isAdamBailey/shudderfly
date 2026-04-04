@@ -16,3 +16,9 @@ export const BIG_POOP_INTRO_SCRIPT =
     "Drag or swipe to move left, right, and downward through the twisting gut. Try not to bump into the intestine " +
     "walls — each collision costs you points. Your score is based on how quickly you finish and how few walls you " +
     "hit. Reach the exit at the bottom to win! Fewer collisions means more stars. Good luck!";
+
+export const COSTCO_PIZZA_POOP_INTRO_SCRIPT =
+    "Welcome to Costco Pizza Poop! Here is how to play. There is a pizza at the top of the screen and a hungry person " +
+    "below. Drag each pizza slice from the pizza down to the person's mouth and release it there to eat it. When every " +
+    "slice has been eaten, digestion happens — then watch for the poop. You win when the person poops! Finish faster " +
+    "to earn more points. Good luck!";

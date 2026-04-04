@@ -14,7 +14,14 @@ use Inertia\Response;
 
 class GameController extends Controller
 {
+    /** Newest games first (Games index list order). */
     private const GAMES = [
+        'costco-pizza-poop' => [
+            'name' => 'Costco Pizza Poop',
+            'emoji' => '🍕',
+            'description' => 'Drag every slice into the mouth, then celebrate the inevitable.',
+            'component' => 'CostcoPizzaPoop',
+        ],
         'boom' => [
             'name' => 'Poop Boom',
             'emoji' => '💩',

@@ -1,6 +1,7 @@
 <script setup>
 import Button from "@/Components/Button.vue";
 import ShareToChatButton from "@/Components/ShareToChatButton.vue";
+import { Link } from "@inertiajs/vue3";
 
 defineProps({
     title: { type: String, required: true },
@@ -55,6 +56,12 @@ defineEmits(["play-again"]);
             >
                 <ShareToChatButton :game-slug="gameSlug" :score="score" />
             </div>
+            <Link
+                :href="route('games.index')"
+                class="mt-4 inline-block touch-manipulation text-[clamp(0.85rem,2.3vmin,0.98rem)] font-semibold text-yellow-300 transition-colors hover:text-yellow-100 hover:underline"
+            >
+                ← Back to games
+            </Link>
         </div>
     </div>
 </template>

@@ -78,5 +78,42 @@ export function useSound() {
         } catch (_) {}
     }
 
-    return { initAudio, playFart, audioReady };
+    function playChomp() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const now = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = "triangle";
+            osc.frequency.setValueAtTime(420, now);
+            osc.frequency.exponentialRampToValueAtTime(110, now + 0.09);
+            gain.gain.setValueAtTime(0.18, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.12);
+
+            const sr = ctx.sampleRate;
+            const len = Math.floor(sr * 0.05);
+            const buf = ctx.createBuffer(1, len, sr);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < len; i++) {
+                data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+            }
+            const noise = ctx.createBufferSource();
+            const nGain = ctx.createGain();
+            noise.buffer = buf;
+            nGain.gain.setValueAtTime(0.06, now);
+            nGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+            noise.connect(nGain);
+            nGain.connect(ctx.destination);
+            noise.start(now);
+            noise.stop(now + 0.05);
+
+            setTimeout(() => ctx.close(), 600);
+        } catch (_) {}
+    }
+
+    return { initAudio, playFart, playChomp, audioReady };
 }

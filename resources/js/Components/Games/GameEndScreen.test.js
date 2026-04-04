@@ -80,4 +80,11 @@ describe("GameEndScreen", () => {
         const wrapper = mountScreen({}, { "above-score": "<div>Stars here</div>" });
         expect(wrapper.text()).toContain("Stars here");
     });
+
+    it("links to the games index", () => {
+        const wrapper = mountScreen();
+        const link = wrapper.findComponent({ name: "Link" });
+        expect(link.exists()).toBe(true);
+        expect(link.props("href")).toBe("/games");
+    });
 });
