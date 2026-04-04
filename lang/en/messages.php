@@ -2,7 +2,7 @@
 
 return [
     // Sharing & books
-    'game_score_shared' => 'I scored :score in :game! 🎮',
+    'game_score_shared' => 'I scored :score in :game!',
     'game.score_shared' => 'Shared! Your score is on the chat.',
     'page_shared' => 'Look! This :media is from :book',
     'unknown_book' => 'Mystery book',
