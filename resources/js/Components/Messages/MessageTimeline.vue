@@ -667,10 +667,39 @@ const formatDate = (dateString) => {
     return date.toLocaleDateString();
 };
 
+const GAME_DISPLAY_NAME_TO_SLUG = {
+    "Costco Pizza Poop": "costco-pizza-poop",
+    "Poop Boom": "boom",
+    "Cockroach Fart": "cockroach",
+    "Big Poop": "big-poop",
+};
+
+const escapeHtml = (s) =>
+    s
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+
+const stripGameControllerEmoji = (s) => s.replace(/\s*🎮\s*/g, " ");
+
+const linkifyGameScoreShare = (s) =>
+    s.replace(/I scored (\d+) in ([^!]+)!/, (full, score, rawName) => {
+        const gameName = rawName.trim();
+        const slug = GAME_DISPLAY_NAME_TO_SLUG[gameName];
+        if (!slug) {
+            return full;
+        }
+        const href = route("games.show", slug);
+        const safe = escapeHtml(gameName);
+        return `I scored ${score} in <a href="${href}" onclick="event.stopPropagation()" class="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline">${safe}</a>!`;
+    });
+
 const formatMessage = (text) => {
     if (!text) return "";
 
-    let formatted = text;
+    let formatted = stripGameControllerEmoji(text);
+    formatted = linkifyGameScoreShare(formatted);
 
     if (props.users && props.users.length > 0) {
         const sortedUsers = [...props.users].sort(
