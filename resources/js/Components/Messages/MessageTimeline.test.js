@@ -233,6 +233,68 @@ describe("MessageTimeline", () => {
         });
     });
 
+    describe("Game score share formatting", () => {
+        it("strips legacy trailing controller emoji only on score-share lines and linkifies the game", () => {
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: [
+                        {
+                            id: 901,
+                            message: "I scored 10 in Poop Boom! 🎮",
+                            created_at: new Date().toISOString(),
+                            user: { id: 1, name: "Alice" },
+                        },
+                    ],
+                    users: [],
+                },
+            });
+
+            expect(wrapper.text()).not.toContain("🎮");
+            const link = wrapper.find('a[href="/games.show/boom"]');
+            expect(link.exists()).toBe(true);
+            expect(link.text()).toBe("Poop Boom");
+        });
+
+        it("uses embedded slug marker for links", () => {
+            const marked = "I scored 7 in Poop Boom!\uE000g:boom\uE000";
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: [
+                        {
+                            id: 902,
+                            message: marked,
+                            created_at: new Date().toISOString(),
+                            user: { id: 1, name: "Alice" },
+                        },
+                    ],
+                    users: [],
+                },
+            });
+
+            expect(wrapper.text()).not.toMatch(/\uE000/);
+            const link = wrapper.find('a[href="/games.show/boom"]');
+            expect(link.exists()).toBe(true);
+        });
+
+        it("does not strip controller emoji outside score-share messages", () => {
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: [
+                        {
+                            id: 903,
+                            message: "I love 🎮",
+                            created_at: new Date().toISOString(),
+                            user: { id: 1, name: "Alice" },
+                        },
+                    ],
+                    users: [],
+                },
+            });
+
+            expect(wrapper.text()).toContain("🎮");
+        });
+    });
+
     describe("Date formatting", () => {
         it("formats recent dates correctly", () => {
             const recentMessage = [

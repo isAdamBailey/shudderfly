@@ -153,7 +153,7 @@ class GamesTest extends TestCase
 
         $this->assertDatabaseHas('messages', [
             'user_id' => $user->id,
-            'message' => __('messages.game_score_shared', ['game' => 'Poop Boom', 'score' => 42]),
+            'message' => __('messages.game_score_shared', ['game' => 'Poop Boom', 'score' => 42])."\u{E000}g:boom\u{E000}",
             'page_id' => null,
         ]);
 

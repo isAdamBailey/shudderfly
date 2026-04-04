@@ -108,6 +108,7 @@ class GameController extends Controller
             'game' => $gameName,
             'score' => $validated['score'],
         ]);
+        $shareMessage .= "\u{E000}g:{$game}\u{E000}";
         if ($taggedUser) {
             $shareMessage = $shareMessage.' @'.$taggedUser->name;
         }

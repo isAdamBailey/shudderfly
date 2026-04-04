@@ -19,7 +19,7 @@
                     ? 'cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 transition-colors'
                     : '',
             ]"
-            @click="readOnly ? navigateToMessage(message.id) : null"
+            @click="readOnly ? handleMessageRowClick($event, message.id) : null"
         >
             <div class="flex items-start justify-between mb-2">
                 <div class="flex items-center gap-2 flex-1 min-w-0">
@@ -667,7 +667,9 @@ const formatDate = (dateString) => {
     return date.toLocaleDateString();
 };
 
-const GAME_DISPLAY_NAME_TO_SLUG = {
+const GAME_SHARE_SLUG_MARKER = /\uE000g:([a-z0-9-]+)\uE000/g;
+
+const LEGACY_GAME_DISPLAY_NAME_TO_SLUG = {
     "Costco Pizza Poop": "costco-pizza-poop",
     "Poop Boom": "boom",
     "Cockroach Fart": "cockroach",
@@ -681,25 +683,36 @@ const escapeHtml = (s) =>
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;");
 
-const stripGameControllerEmoji = (s) => s.replace(/\s*🎮\s*/g, " ");
-
-const linkifyGameScoreShare = (s) =>
-    s.replace(/I scored (\d+) in ([^!]+)!/, (full, score, rawName) => {
-        const gameName = rawName.trim();
-        const slug = GAME_DISPLAY_NAME_TO_SLUG[gameName];
-        if (!slug) {
-            return full;
-        }
-        const href = route("games.show", slug);
-        const safe = escapeHtml(gameName);
-        return `I scored ${score} in <a href="${href}" onclick="event.stopPropagation()" class="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline">${safe}</a>!`;
+const applyGameScoreShareFormatting = (text) => {
+    let slugFromMarker = null;
+    const withoutMarker = text.replace(GAME_SHARE_SLUG_MARKER, (_, slug) => {
+        slugFromMarker = slug;
+        return "";
     });
+
+    return withoutMarker.replace(
+        /I scored (\d+) in ([^!]+)!(\s*🎮)?/,
+        (full, score, rawName, trailingController) => {
+            const gameName = rawName.trim();
+            const slug =
+                slugFromMarker ?? LEGACY_GAME_DISPLAY_NAME_TO_SLUG[gameName];
+            if (!slug) {
+                if (trailingController) {
+                    return `I scored ${score} in ${gameName}!`;
+                }
+                return full;
+            }
+            const href = route("games.show", slug);
+            const safe = escapeHtml(gameName);
+            return `I scored ${score} in <a href="${href}" class="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline">${safe}</a>!`;
+        }
+    );
+};
 
 const formatMessage = (text) => {
     if (!text) return "";
 
-    let formatted = stripGameControllerEmoji(text);
-    formatted = linkifyGameScoreShare(formatted);
+    let formatted = applyGameScoreShareFormatting(text);
 
     if (props.users && props.users.length > 0) {
         const sortedUsers = [...props.users].sort(
@@ -878,12 +891,18 @@ const deleteMessage = (messageId) => {
 };
 
 const navigateToMessage = (messageId) => {
-    // Construct URL exactly like notifications do
     let url = route("messages.index");
     if (messageId) {
         url = `${url}#message-${messageId}`;
     }
     router.visit(url);
+};
+
+const handleMessageRowClick = (event, messageId) => {
+    if (event.target.closest?.("a")) {
+        return;
+    }
+    navigateToMessage(messageId);
 };
 
 const setupEchoListener = () => {
