@@ -28,6 +28,7 @@ const { canAdmin, canEditPages } = usePermissions();
 const { t } = useTranslations();
 const { setFlashMessage } = useFlashMessage();
 const unlockingBlockedPages = ref(false);
+const settingsAccordionOpen = ref(false);
 
 const unblockAllPages = async () => {
     if (unlockingBlockedPages.value) {
@@ -118,8 +119,8 @@ const unblockAllPages = async () => {
                     <div
                         class="bg-white overflow-hidden shadow-sm sm:rounded-lg"
                     >
-                        <Accordion title="Site Settings">
-                            <SettingsForm :settings="adminSettings" />
+                        <Accordion v-model="settingsAccordionOpen" title="Site Settings">
+                            <SettingsForm :settings="adminSettings" @submitted="settingsAccordionOpen = false" />
                         </Accordion>
                     </div>
                 </div>

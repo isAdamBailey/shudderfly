@@ -46,6 +46,7 @@ class SettingsTest extends TestCase
         ]);
 
         $response->assertRedirect(route('dashboard'));
+        $response->assertSessionHas('success', __('messages.settings.updated'));
 
         // Assert boolean setting was updated
         $this->assertDatabaseHas('site_settings', [
@@ -62,6 +63,33 @@ class SettingsTest extends TestCase
             'type' => 'text',
             'description' => 'Updated text description',
         ]);
+    }
+
+    public function test_can_update_settings_with_json_response(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $user->givePermissionTo('admin');
+
+        SiteSetting::create([
+            'key' => 'test_boolean',
+            'value' => '0',
+            'type' => 'boolean',
+            'description' => 'Test boolean description',
+        ]);
+
+        $response = $this->withHeaders(['Accept' => 'application/json'])
+            ->put('/settings', [
+                'settings' => [
+                    'test_boolean' => [
+                        'value' => true,
+                        'description' => 'Updated boolean description',
+                    ],
+                ],
+            ]);
+
+        $response->assertOk();
+        $response->assertJson(['message' => __('messages.settings.updated')]);
     }
 
     public function test_settings_validation(): void
