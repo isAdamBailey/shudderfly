@@ -72,6 +72,12 @@ class SettingsController extends Controller
             ]);
         }
 
-        return redirect(route('dashboard'));
+        $message = __('messages.settings.updated');
+
+        if ($request->wantsJson()) {
+            return response()->json(['message' => $message]);
+        }
+
+        return redirect(route('dashboard'))->with('success', $message);
     }
 }
