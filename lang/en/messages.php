@@ -27,6 +27,7 @@ return [
     'page.bulk_moved_to_book' => 'Moved :count pages into :book!',
     'page.blocked' => 'Page blocked.',
     'page.unblocked_all' => 'Unblocked :count blocked pages.',
+    'settings.updated' => 'Settings updated!',
     'message.deleted' => 'Message gone.',
     'comment.deleted' => 'Comment gone.',
     'avatar.updated' => 'New picture! Looking good.',
