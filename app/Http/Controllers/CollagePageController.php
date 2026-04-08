@@ -7,6 +7,7 @@ use App\Models\Collage;
 use App\Models\Page;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class CollagePageController extends Controller
 {
@@ -62,7 +63,25 @@ class CollagePageController extends Controller
             $needsReplace = $count >= $max || ($collage->is_locked && $count > 0);
 
             if ($needsReplace) {
+                if (empty($data['replace_page_id'])) {
+                    throw ValidationException::withMessages([
+                        'collage' => [__('messages.page.collage_full_need_replace')],
+                    ]);
+                }
+
                 $replaceId = (int) $data['replace_page_id'];
+
+                if ($replaceId === $pageId) {
+                    throw ValidationException::withMessages([
+                        'replace_page_id' => [__('messages.page.collage_replace_invalid')],
+                    ]);
+                }
+
+                if (! $collage->pages()->where('page_id', $replaceId)->exists()) {
+                    throw ValidationException::withMessages([
+                        'replace_page_id' => [__('messages.page.collage_replace_not_in_collage')],
+                    ]);
+                }
 
                 $collage->pages()->detach($replaceId);
                 $collage->pages()->attach($pageId);

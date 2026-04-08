@@ -200,31 +200,55 @@ const setCollageRef = (element, collageId) => {
     );
 };
 
+const gridConfigs = {
+    1: { cols: 1, rows: 1 },
+    2: { cols: 2, rows: 1 },
+    3: { cols: 3, rows: 1 },
+    4: { cols: 2, rows: 2 },
+    5: { cols: 3, rows: 2 },
+    6: { cols: 3, rows: 2 },
+    7: { cols: 4, rows: 2 },
+    8: { cols: 4, rows: 2 },
+    9: { cols: 3, rows: 3 },
+    10: { cols: 4, rows: 3 },
+    11: { cols: 4, rows: 3 },
+    12: { cols: 4, rows: 3 },
+    13: { cols: 4, rows: 4 },
+    14: { cols: 4, rows: 4 },
+    15: { cols: 4, rows: 4 },
+    16: { cols: 4, rows: 4 },
+};
+
+const gridConfigKeys = Object.keys(gridConfigs)
+    .map(Number)
+    .sort((a, b) => a - b);
+const largestGridKey = gridConfigKeys[gridConfigKeys.length - 1];
+
+const resolveGridConfig = (imageCount) => {
+    if (imageCount <= 0) {
+        return null;
+    }
+    const direct = gridConfigs[imageCount];
+    if (direct) {
+        return direct;
+    }
+    const cappedByMax = Math.min(
+        Math.max(imageCount, 1),
+        maxCollagePages.value
+    );
+    const cappedByMap = Math.min(cappedByMax, largestGridKey);
+    return (
+        gridConfigs[cappedByMax] ||
+        gridConfigs[cappedByMap] ||
+        gridConfigs[largestGridKey] || { cols: 4, rows: 4 }
+    );
+};
+
 // Function to calculate optimal grid layout based on number of images
 const getGridStyle = (imageCount) => {
     if (imageCount <= 0) return {};
 
-    const gridConfigs = {
-        1: { cols: 1, rows: 1 },
-        2: { cols: 2, rows: 1 },
-        3: { cols: 3, rows: 1 },
-        4: { cols: 2, rows: 2 },
-        5: { cols: 3, rows: 2 },
-        6: { cols: 3, rows: 2 },
-        7: { cols: 4, rows: 2 },
-        8: { cols: 4, rows: 2 },
-        9: { cols: 3, rows: 3 },
-        10: { cols: 4, rows: 3 },
-        11: { cols: 4, rows: 3 },
-        12: { cols: 4, rows: 3 },
-        13: { cols: 4, rows: 4 },
-        14: { cols: 4, rows: 4 },
-        15: { cols: 4, rows: 4 },
-        16: { cols: 4, rows: 4 },
-    };
-
-    const config =
-        gridConfigs[imageCount] || gridConfigs[maxCollagePages.value];
+    const config = resolveGridConfig(imageCount);
     const { cols, rows } = config;
     const gap = 8; // px
 
