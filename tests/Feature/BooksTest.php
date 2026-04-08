@@ -223,10 +223,10 @@ class BooksTest extends TestCase
         $payload = [
             'title' => $this->faker->sentence(3),
             'author' => $this->faker->name(),
-            'excerpt' => $this->faker->paragraph(),
+            'excerpt' => $this->faker->realText(200),
         ];
 
-        $response = $this->post(route('books.store', $payload));
+        $response = $this->post(route('books.store'), $payload);
 
         $book = Book::first();
         $this->assertSame($book->title, $payload['title']);
@@ -477,7 +477,7 @@ class BooksTest extends TestCase
         $payload = [
             'title' => $this->faker->sentence(3),
             'author' => $this->faker->name(),
-            'excerpt' => $this->faker->paragraph(),
+            'excerpt' => $this->faker->realText(200),
             'latitude' => 45.5152,
             'longitude' => -122.6784,
         ];
@@ -499,7 +499,7 @@ class BooksTest extends TestCase
         $payload = [
             'title' => $this->faker->sentence(3),
             'author' => $this->faker->name(),
-            'excerpt' => $this->faker->paragraph(),
+            'excerpt' => $this->faker->realText(200),
         ];
 
         $response = $this->post(route('books.store'), $payload);
