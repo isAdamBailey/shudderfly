@@ -26,6 +26,7 @@ return new class extends Migration
                 || str_contains($message, 'unknown key')
                 || str_contains($message, 'unknown index')
                 || str_contains($message, 'check that it exists')
+                || str_contains($message, 'check that column/key exists')
                 || str_contains($message, 'no such index')
             ) {
                 return;
