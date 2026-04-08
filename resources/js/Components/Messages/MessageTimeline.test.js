@@ -27,6 +27,23 @@ vi.mock("axios", () => ({
     },
 }));
 
+vi.mock("@/composables/useConfirmDialog", () => {
+    const { ref } = require("vue");
+    return {
+        useConfirmDialog: () => ({
+            show: ref(false),
+            message: ref(""),
+            title: ref(""),
+            confirmLabel: ref(""),
+            cancelLabel: ref(""),
+            confirmVariant: ref("primary"),
+            ask: () => Promise.resolve(true),
+            onConfirmed: () => {},
+            onCancelled: () => {},
+        }),
+    };
+});
+
 // Mock router and usePage
 vi.mock("@inertiajs/vue3", () => {
     const mockRouter = {
@@ -416,8 +433,6 @@ describe("MessageTimeline", () => {
         });
 
         it("calls delete endpoint when delete button is clicked", async () => {
-            vi.stubGlobal("confirm", () => true);
-
             const { router } = await import("@inertiajs/vue3");
 
             const wrapper = mount(MessageTimeline, {
@@ -869,7 +884,6 @@ describe("MessageTimeline", () => {
                 const inertia = await import("@inertiajs/vue3");
                 mockRouter = inertia.router;
             }
-            vi.stubGlobal("confirm", () => true);
 
             const wrapper = mount(MessageTimeline, {
                 props: {
@@ -880,7 +894,7 @@ describe("MessageTimeline", () => {
 
             await nextTick();
 
-            wrapper.vm.deleteComment(1, 1);
+            await wrapper.vm.deleteComment(1, 1);
             await nextTick();
 
             expect(mockRouter.delete).toHaveBeenCalledWith(

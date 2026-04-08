@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 const props = defineProps({
     show: {
@@ -18,15 +18,15 @@ const props = defineProps({
 
 const emit = defineEmits(["close"]);
 
+const scrollRoot = ref(null);
+
 watch(
     () => props.show,
     (isShowing) => {
         if (isShowing) {
             document.body.style.overflow = "hidden";
             setTimeout(() => {
-                globalThis.document
-                    ?.querySelector("[data-modal-scroll-root]")
-                    ?.scrollTo?.(0, 0);
+                scrollRoot.value?.scrollTo?.(0, 0);
             }, 50);
         } else {
             document.body.style.overflow = null;
@@ -68,6 +68,7 @@ const maxWidthClass = computed(() => {
     <teleport to="body">
         <transition leave-active-class="duration-200">
             <div
+                ref="scrollRoot"
                 v-show="show"
                 data-modal-scroll-root
                 class="fixed inset-0 z-50 overflow-y-auto"

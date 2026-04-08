@@ -15,9 +15,23 @@ return new class extends Migration
     {
         try {
             Schema::table('collage_page', function (Blueprint $table) {
-                $table->dropUnique(['page_id']);
+                $table->dropUnique('collage_page_page_id_unique');
             });
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $message = strtolower($e->getMessage());
+
+            if (
+                str_contains($message, 'doesn\'t exist')
+                || str_contains($message, 'does not exist')
+                || str_contains($message, 'unknown key')
+                || str_contains($message, 'unknown index')
+                || str_contains($message, 'check that it exists')
+                || str_contains($message, 'no such index')
+            ) {
+                return;
+            }
+
+            throw $e;
         }
     }
 

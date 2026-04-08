@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Events\CollagePageRemoved;
 use App\Models\Collage;
 use App\Models\Page;
-use App\Support\Collage as CollageLimit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -20,7 +19,7 @@ class CollagePageController extends Controller
         ]);
 
         $collage = Collage::query()->findOrFail($data['collage_id']);
-        $max = CollageLimit::MAX_PAGES;
+        $max = (int) config('collage.max_pages');
         $pageId = (int) $data['page_id'];
 
         if ($collage->pages()->where('page_id', $pageId)->exists()) {
@@ -53,7 +52,10 @@ class CollagePageController extends Controller
         }
 
         return DB::transaction(function () use ($collage, $data, $pageId, $max) {
-            $this->detachPageFromOtherCollages($pageId, $collage->id);
+            $detachedCollages = $this->detachPageFromOtherCollagesWithoutBroadcast(
+                $pageId,
+                $collage->id
+            );
 
             $collage->refresh();
             $count = $collage->pages()->count();
@@ -66,12 +68,16 @@ class CollagePageController extends Controller
                 $collage->pages()->attach($pageId);
 
                 $collage->load('pages');
-                CollagePageRemoved::dispatch($collage);
+                $this->scheduleCollagePageRemovedBroadcasts([
+                    ...$detachedCollages,
+                    $collage,
+                ]);
 
                 return back()->with('success', __('messages.page.collage_add_success'));
             }
 
             $collage->pages()->attach($pageId);
+            $this->scheduleCollagePageRemovedBroadcasts($detachedCollages);
 
             return back()->with('success', __('messages.page.collage_add_success'));
         });
@@ -102,30 +108,67 @@ class CollagePageController extends Controller
         return DB::transaction(function () use ($page, $data) {
             $target = Collage::query()->findOrFail($data['new_collage_id']);
 
-            $this->detachPageFromOtherCollages((int) $page->id, $target->id);
+            $detachedCollages = $this->detachPageFromOtherCollagesWithoutBroadcast(
+                (int) $page->id,
+                $target->id
+            );
 
             $target->pages()->syncWithoutDetaching($page->id);
+            $target->load('pages');
+
+            $this->scheduleCollagePageRemovedBroadcasts([
+                ...$detachedCollages,
+                $target,
+            ]);
 
             return back();
         });
     }
 
-    private function detachPageFromOtherCollages(int $pageId, int $exceptCollageId): void
+    /**
+     * @return array<int, Collage>
+     */
+    private function detachPageFromOtherCollagesWithoutBroadcast(int $pageId, int $exceptCollageId): array
     {
+        $affected = [];
         $collageIds = DB::table('collage_page')
             ->where('page_id', $pageId)
             ->where('collage_id', '!=', $exceptCollageId)
             ->pluck('collage_id');
 
         foreach ($collageIds as $collageId) {
-            $c = Collage::query()->find($collageId);
-            if ($c === null) {
+            $collage = Collage::query()->find($collageId);
+            if ($collage === null) {
                 continue;
             }
 
-            $c->pages()->detach($pageId);
-            $c->load('pages');
-            CollagePageRemoved::dispatch($c);
+            $collage->pages()->detach($pageId);
+            $collage->load('pages');
+            $affected[] = $collage;
+        }
+
+        return $affected;
+    }
+
+    /**
+     * @param  array<int, Collage>  $collages
+     */
+    private function scheduleCollagePageRemovedBroadcasts(array $collages): void
+    {
+        $ids = [];
+        foreach ($collages as $collage) {
+            if ($collage !== null) {
+                $ids[$collage->id] = true;
+            }
+        }
+
+        foreach (array_keys($ids) as $collageId) {
+            DB::afterCommit(function () use ($collageId) {
+                $fresh = Collage::query()->with('pages')->find($collageId);
+                if ($fresh !== null) {
+                    CollagePageRemoved::dispatch($fresh);
+                }
+            });
         }
     }
 }

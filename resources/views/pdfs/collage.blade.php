@@ -45,7 +45,7 @@
     <div class="grid">
         @php
             $imageCount = count($localImages);
-            $collageMax = \App\Support\Collage::MAX_PAGES;
+            $collageMax = (int) config('collage.max_pages');
 
             // Define grid configurations for different image counts
             // Always maintaining 8.5x11 aspect ratio, images scale to fill available space

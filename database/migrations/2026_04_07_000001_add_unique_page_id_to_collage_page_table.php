@@ -1,9 +1,12 @@
 <?php
 
+/**
+ * Migration filename is historical: this does not add a unique on page_id.
+ * It only removes duplicate (collage_id, page_id) rows from the pivot. The composite
+ * unique from create_collage_page_table remains the constraint for new data.
+ */
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -30,7 +33,5 @@ return new class extends Migration
         }
     }
 
-    public function down(): void
-    {
-    }
+    public function down(): void {}
 };

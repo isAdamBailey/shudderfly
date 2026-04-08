@@ -196,7 +196,7 @@ return [
     'page.collage_full_suffix' => ' (Full)',
     'page.collage_add_button' => 'Add to Collage',
     'page.collage_add_success' => 'Page successfully added to collage!',
-    'page.collage_locked_suffix' => '(Locked)',
+    'page.collage_locked_suffix' => ' (Locked)',
     'page.collage_full_need_replace' => 'Choose a picture to replace to add this page.',
     'page.collage_replace_invalid' => 'Invalid replacement.',
     'page.collage_replace_not_in_collage' => 'The selected picture is not in this collage.',

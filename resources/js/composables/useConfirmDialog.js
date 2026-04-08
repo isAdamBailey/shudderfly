@@ -18,6 +18,10 @@ export function useConfirmDialog() {
     function ask(options) {
         const o = typeof options === "string" ? { message: options } : options;
         return new Promise((resolve) => {
+            if (resolveFn !== null) {
+                resolveFn(false);
+                resolveFn = null;
+            }
             message.value = o.message ?? "";
             title.value = o.title ?? "";
             confirmLabel.value = o.confirmLabel ?? "";

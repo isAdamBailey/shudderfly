@@ -4,7 +4,6 @@ namespace App\Jobs;
 
 use App\Mail\CollagePdfMail;
 use App\Models\Collage;
-use App\Support\Collage as CollageLimit;
 use Aws\S3\S3Client;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Bus\Queueable;
@@ -174,7 +173,7 @@ class GenerateCollagePdf implements ShouldQueue
                 14 => ['cols' => 4, 'rows' => 4],   // 14 images = 4x4 grid
                 15 => ['cols' => 4, 'rows' => 4],   // 15 images = 4x4 grid
             ];
-            $gridConfigs[CollageLimit::MAX_PAGES] = ['cols' => 4, 'rows' => 4];
+            $gridConfigs[(int) config('collage.max_pages')] = ['cols' => 4, 'rows' => 4];
 
             // Use the specific config if available, otherwise use the largest available config
             $gridConfig = $gridConfigs[$actualImageCount] ?? $gridConfigs[array_key_last($gridConfigs)];

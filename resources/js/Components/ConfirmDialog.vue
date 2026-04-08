@@ -3,7 +3,12 @@ import Button from "@/Components/Button.vue";
 import DangerButton from "@/Components/DangerButton.vue";
 import Modal from "@/Components/Modal.vue";
 import SecondaryButton from "@/Components/SecondaryButton.vue";
-import { computed, useSlots } from "vue";
+import { computed, getCurrentInstance, useSlots } from "vue";
+
+const instance = getCurrentInstance();
+const dialogUid = instance?.uid ?? 0;
+const titleId = `confirm-dialog-title-${dialogUid}`;
+const descId = `confirm-dialog-desc-${dialogUid}`;
 
 const props = defineProps({
     show: {
@@ -76,12 +81,12 @@ function onConfirm() {
             class="p-6"
             role="alertdialog"
             aria-modal="true"
-            :aria-labelledby="showTitleRegion ? 'confirm-dialog-title' : undefined"
-            :aria-describedby="showBodyRegion ? 'confirm-dialog-desc' : undefined"
+            :aria-labelledby="showTitleRegion ? titleId : undefined"
+            :aria-describedby="showBodyRegion ? descId : undefined"
         >
             <div v-if="showTitleRegion" class="mb-2">
                 <h2
-                    id="confirm-dialog-title"
+                    :id="titleId"
                     class="text-lg font-medium text-gray-900 dark:text-gray-100"
                 >
                     <slot name="title">{{ title }}</slot>
@@ -89,7 +94,7 @@ function onConfirm() {
             </div>
             <div
                 v-if="showBodyRegion"
-                id="confirm-dialog-desc"
+                :id="descId"
                 class="text-sm text-gray-600 dark:text-gray-400"
             >
                 <slot>
