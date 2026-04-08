@@ -75,7 +75,7 @@
                     <div
                         v-for="(page, pageIndex) in collage.pages.slice(
                             0,
-                            MAX_COLLAGE_PAGES
+                            maxCollagePages
                         )"
                         :key="page.id"
                         class="relative"
@@ -109,11 +109,12 @@
 
 <script setup>
 import LazyLoader from "@/Components/LazyLoader.vue";
-import { MAX_COLLAGE_PAGES } from "@/constants/collage";
+import { useCollageMaxPages } from "@/composables/useCollageMaxPages";
 import { useIntersectionObserver } from "@vueuse/core";
 import { onMounted, ref } from "vue";
 import { useDate } from "@/dateHelpers";
 const { short } = useDate();
+const maxCollagePages = useCollageMaxPages();
 
 const props = defineProps({
     collages: { type: Array, required: true },
@@ -131,7 +132,7 @@ onMounted(() => {
         // Load first 8 images immediately
         const initialCount = Math.min(
             8,
-            Math.min(collage.pages.length, MAX_COLLAGE_PAGES)
+            Math.min(collage.pages.length, maxCollagePages.value)
         );
         for (let i = 0; i < initialCount; i++) {
             initialSet.add(i);
@@ -142,7 +143,7 @@ onMounted(() => {
         setTimeout(() => {
             const totalItems = Math.min(
                 collage.pages.length,
-                MAX_COLLAGE_PAGES
+                maxCollagePages.value
             );
             const currentSet = loadedImages.value.get(collage.id);
             if (currentSet && currentSet.size < totalItems) {
@@ -177,7 +178,7 @@ const setCollageRef = (element, collageId) => {
 
                 const totalItems = Math.min(
                     collage.pages.length,
-                    MAX_COLLAGE_PAGES
+                    maxCollagePages.value
                 );
                 const currentSet = loadedImages.value.get(collageId);
 
@@ -199,30 +200,55 @@ const setCollageRef = (element, collageId) => {
     );
 };
 
+const gridConfigs = {
+    1: { cols: 1, rows: 1 },
+    2: { cols: 2, rows: 1 },
+    3: { cols: 3, rows: 1 },
+    4: { cols: 2, rows: 2 },
+    5: { cols: 3, rows: 2 },
+    6: { cols: 3, rows: 2 },
+    7: { cols: 4, rows: 2 },
+    8: { cols: 4, rows: 2 },
+    9: { cols: 3, rows: 3 },
+    10: { cols: 4, rows: 3 },
+    11: { cols: 4, rows: 3 },
+    12: { cols: 4, rows: 3 },
+    13: { cols: 4, rows: 4 },
+    14: { cols: 4, rows: 4 },
+    15: { cols: 4, rows: 4 },
+    16: { cols: 4, rows: 4 },
+};
+
+const gridConfigKeys = Object.keys(gridConfigs)
+    .map(Number)
+    .sort((a, b) => a - b);
+const largestGridKey = gridConfigKeys[gridConfigKeys.length - 1];
+
+const resolveGridConfig = (imageCount) => {
+    if (imageCount <= 0) {
+        return null;
+    }
+    const direct = gridConfigs[imageCount];
+    if (direct) {
+        return direct;
+    }
+    const cappedByMax = Math.min(
+        Math.max(imageCount, 1),
+        maxCollagePages.value
+    );
+    const cappedByMap = Math.min(cappedByMax, largestGridKey);
+    return (
+        gridConfigs[cappedByMax] ||
+        gridConfigs[cappedByMap] ||
+        gridConfigs[largestGridKey] || { cols: 4, rows: 4 }
+    );
+};
+
 // Function to calculate optimal grid layout based on number of images
 const getGridStyle = (imageCount) => {
     if (imageCount <= 0) return {};
 
-    const gridConfigs = {
-        1: { cols: 1, rows: 1 },
-        2: { cols: 2, rows: 1 },
-        3: { cols: 3, rows: 1 },
-        4: { cols: 2, rows: 2 },
-        5: { cols: 3, rows: 2 },
-        6: { cols: 3, rows: 2 },
-        7: { cols: 4, rows: 2 },
-        8: { cols: 4, rows: 2 },
-        9: { cols: 3, rows: 3 },
-        10: { cols: 4, rows: 3 },
-        11: { cols: 4, rows: 3 },
-        12: { cols: 4, rows: 3 },
-        13: { cols: 4, rows: 4 },
-        14: { cols: 4, rows: 4 },
-        15: { cols: 4, rows: 4 },
-        16: { cols: 4, rows: 4 },
-    };
-
-    const config = gridConfigs[imageCount] || gridConfigs[16];
+    const config = resolveGridConfig(imageCount);
     const { cols, rows } = config;
     const gap = 8; // px
 

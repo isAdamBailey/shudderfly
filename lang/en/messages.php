@@ -1,6 +1,9 @@
 <?php
 
 return [
+    'common.cancel' => 'Cancel',
+    'common.ok' => 'OK',
+
     // Sharing & books
     'game_score_shared' => 'I scored :score in :game!',
     'game.score_shared' => 'Shared! Your score is on the chat.',
@@ -189,12 +192,20 @@ return [
     'page.share_confirm_dialog' => 'Are you sure you want to share this page?',
     'page.share_confirm_dialog_tagged' => 'Are you sure you want to share this page with :username?',
     'page.collage_select_placeholder' => 'Select collage',
-    'page.collage_all_full' => 'All collages are full',
     'page.collage_option_label' => 'Collage #:number:',
+    'page.collage_full_suffix' => ' (Full)',
     'page.collage_add_button' => 'Add to Collage',
     'page.collage_add_success' => 'Page successfully added to collage!',
-    'page.collage_confirm_speak_single' => 'Are you sure you want to add this page to collage:',
-    'page.collage_confirm_speak_choice' => 'Are you sure you want to add this page to collage #:number:',
+    'page.collage_locked_suffix' => ' (Locked)',
+    'page.collage_full_need_replace' => 'Choose a picture to replace to add this page.',
+    'page.collage_replace_invalid' => 'Invalid replacement.',
+    'page.collage_replace_not_in_collage' => 'The selected picture is not in this collage.',
+    'page.collage_replace_modal_title' => 'Choose a picture to replace',
+    'page.collage_replace_pick_speak' => 'What picture do you want to remove?',
+    'page.collage_replace_confirm_speak' => 'Are you sure you want to change pictures?',
+    'page.collage_replace_confirm_dialog' => 'Are you sure you want to change pictures?',
+    'page.collage_confirm_speak_single' => 'Add this to the collage?',
+    'page.collage_confirm_speak_choice' => 'Add this to collage :number?',
     'page.collage_confirm_dialog_single' => 'Are you sure you want to add this page to collage?',
     'page.collage_confirm_dialog_choice' => 'Are you sure you want to add this page to collage #:number?',
     'page.speak_share_action' => 'Hear share action',

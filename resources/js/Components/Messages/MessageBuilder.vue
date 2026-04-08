@@ -2,7 +2,9 @@
 /* global route */
 import Accordion from "@/Components/Accordion.vue";
 import Button from "@/Components/Button.vue";
+import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import UserTagList from "@/Components/UserTagList.vue";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useMessageBuilder } from "@/composables/useMessageBuilder";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
@@ -102,6 +104,17 @@ const hasMinimumCharacters = computed(() => {
 
 const { speak, speaking } = useSpeechSynthesis();
 const { t } = useTranslations();
+const {
+  show: confirmShow,
+  message: confirmMessage,
+  title: confirmTitle,
+  confirmLabel: confirmOkLabel,
+  cancelLabel: confirmCancelLabel,
+  confirmVariant,
+  ask: askConfirm,
+  onConfirmed: confirmOnOk,
+  onCancelled: confirmOnCancel,
+} = useConfirmDialog();
 
 const form = useForm({
   message: "",
@@ -214,11 +227,14 @@ function addFavorite() {
   }
 }
 
-function removeFavorite(index) {
+async function removeFavorite(index) {
   const text = favorites.value[index] || "this favorite";
+  const okPromise = askConfirm(`Remove favorite: "${text}"?`);
   speak(`Are you sure you want to delete ${text}?`);
-  const confirmed = window.confirm(`Remove favorite: "${text}"?`);
-  if (!confirmed) return;
+  const ok = await okPromise;
+  if (!ok) {
+    return;
+  }
   favorites.value.splice(index, 1);
   saveFavorites();
 }
@@ -852,5 +868,16 @@ function postMessage() {
         {{ t('builder.post_to_timeline') }}
       </Button>
     </div>
+
+    <ConfirmDialog
+      v-model:show="confirmShow"
+      :title="confirmTitle"
+      :message="confirmMessage"
+      :confirm-label="confirmOkLabel || t('common.ok')"
+      :cancel-label="confirmCancelLabel || t('common.cancel')"
+      :confirm-variant="confirmVariant"
+      @confirm="confirmOnOk"
+      @cancel="confirmOnCancel"
+    />
   </div>
 </template>

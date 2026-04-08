@@ -45,7 +45,8 @@
     <div class="grid">
         @php
             $imageCount = count($localImages);
-            
+            $collageMax = (int) config('collage.max_pages');
+
             // Define grid configurations for different image counts
             // Always maintaining 8.5x11 aspect ratio, images scale to fill available space
             $gridConfigs = [
@@ -64,10 +65,10 @@
                 13 => ['cols' => 4, 'rows' => 4],   // 13 images = 4x4 grid
                 14 => ['cols' => 4, 'rows' => 4],   // 14 images = 4x4 grid
                 15 => ['cols' => 4, 'rows' => 4],   // 15 images = 4x4 grid
-                16 => ['cols' => 4, 'rows' => 4]    // 16 images = 4x4 grid
             ];
-            
-            $config = $gridConfigs[$imageCount] ?? $gridConfigs[16];
+            $gridConfigs[$collageMax] = ['cols' => 4, 'rows' => 4];
+
+            $config = $gridConfigs[$imageCount] ?? $gridConfigs[$collageMax];
             
             // Use 8in x 10.25in grid (8.5x11 page with 0.5in top header and 0.25in margins elsewhere)
             $gap = 0.05; // 0.05in gap between cells

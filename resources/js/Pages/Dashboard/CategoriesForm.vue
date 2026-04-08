@@ -85,19 +85,35 @@
         </div>
       </div>
     </div>
+    <ConfirmDialog
+      v-model:show="confirmShow"
+      :title="confirmTitle"
+      :message="confirmMessage"
+      :confirm-label="confirmOkLabel || t('common.ok')"
+      :cancel-label="confirmCancelLabel || t('common.cancel')"
+      :confirm-variant="confirmVariant"
+      @confirm="confirmOnOk"
+      @cancel="confirmOnCancel"
+    />
   </div>
 </template>
 
 <script setup>
+/* global route */
+import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import Button from "@/Components/Button.vue";
 import DangerButton from "@/Components/DangerButton.vue";
 import InputError from "@/Components/InputError.vue";
 import InputLabel from "@/Components/InputLabel.vue";
 import TextInput from "@/Components/TextInput.vue";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
+import { useTranslations } from "@/composables/useTranslations";
 import { router, useForm } from "@inertiajs/vue3";
 import { useVuelidate } from "@vuelidate/core";
 import { required } from "@vuelidate/validators";
 import { ref } from "vue";
+
+const { t } = useTranslations();
 
 const props = defineProps({
   categories: { type: Array, required: true }
@@ -121,6 +137,18 @@ let v$ = useVuelidate(rules, form);
 
 const editingIndex = ref(null);
 
+const {
+  show: confirmShow,
+  message: confirmMessage,
+  title: confirmTitle,
+  confirmLabel: confirmOkLabel,
+  cancelLabel: confirmCancelLabel,
+  confirmVariant,
+  ask: askConfirm,
+  onConfirmed: confirmOnOk,
+  onCancelled: confirmOnCancel,
+} = useConfirmDialog();
+
 const editCategory = (index) => {
   editingIndex.value = index;
 };
@@ -131,17 +159,17 @@ const capitalizeFirstLetter = (string) => {
 
 const updateCategory = async (category) => {
   const name = localCategoryNames.value[editingIndex.value];
-  router.put(
-    route("categories.update", category.id),
-    { name },
-    {
-      onBefore: () =>
-        confirm(`Are you sure you want to change ${category.name}?`),
-      onSuccess: () => {
-        editingIndex.value = null;
-      }
-    }
+  const ok = await askConfirm(
+    `Are you sure you want to change ${category.name}?`
   );
+  if (!ok) {
+    return;
+  }
+  router.put(route("categories.update", category.id), { name }, {
+    onSuccess: () => {
+      editingIndex.value = null;
+    }
+  });
 };
 
 const addCategory = async () => {
@@ -159,12 +187,14 @@ const addCategory = async () => {
   }
 };
 
-const deleteCategory = (category) => {
+const deleteCategory = async (category) => {
+  const ok = await askConfirm(
+    `Are you sure you want to delete ${category.name}? If it has existing books, they will be moved to uncategorized.`
+  );
+  if (!ok) {
+    return;
+  }
   form.delete(route("categories.destroy", category.id), {
-    onBefore: () =>
-      confirm(
-        `Are you sure you want to delete ${category.name}? If it has existing books, they will be moved to uncategorized.`
-      ),
     onSuccess: () => {
       editingIndex.value = null;
     }

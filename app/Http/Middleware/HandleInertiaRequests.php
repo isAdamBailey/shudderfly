@@ -86,6 +86,7 @@ class HandleInertiaRequests extends Middleware
                 return [$setting->key => $rawValue];
             }),
             'theme' => self::getCurrentTheme(),
+            'collageMaxPages' => (int) config('collage.max_pages'),
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),

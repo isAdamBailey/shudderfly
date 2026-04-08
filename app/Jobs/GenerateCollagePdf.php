@@ -172,8 +172,8 @@ class GenerateCollagePdf implements ShouldQueue
                 13 => ['cols' => 4, 'rows' => 4],   // 13 images = 4x4 grid
                 14 => ['cols' => 4, 'rows' => 4],   // 14 images = 4x4 grid
                 15 => ['cols' => 4, 'rows' => 4],   // 15 images = 4x4 grid
-                16 => ['cols' => 4, 'rows' => 4],    // 16 images = 4x4 grid
             ];
+            $gridConfigs[(int) config('collage.max_pages')] = ['cols' => 4, 'rows' => 4];
 
             // Use the specific config if available, otherwise use the largest available config
             $gridConfig = $gridConfigs[$actualImageCount] ?? $gridConfigs[array_key_last($gridConfigs)];

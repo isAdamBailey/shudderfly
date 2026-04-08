@@ -42,6 +42,23 @@ vi.mock("@/composables/useFlashMessage", () => ({
   })
 }));
 
+vi.mock("@/composables/useConfirmDialog", () => {
+  const { ref } = require("vue");
+  return {
+    useConfirmDialog: () => ({
+      show: ref(false),
+      message: ref(""),
+      title: ref(""),
+      confirmLabel: ref(""),
+      cancelLabel: ref(""),
+      confirmVariant: ref("primary"),
+      ask: () => Promise.resolve(true),
+      onConfirmed: () => {},
+      onCancelled: () => {}
+    })
+  };
+});
+
 vi.mock("@/dateHelpers", () => ({
   useDate: () => ({
     short: vi.fn(() => "Jan 1, 2023")
@@ -69,7 +86,9 @@ vi.mock("@/composables/useTranslations", () => ({
           "Are you sure you want to share this page with :username:",
         "page.share_confirm_dialog": "Are you sure you want to share this page?",
         "page.share_confirm_dialog_tagged":
-          "Are you sure you want to share this page with :username?"
+          "Are you sure you want to share this page with :username?",
+        "common.ok": "OK",
+        "common.cancel": "Cancel"
       };
       return translations[key] || key;
     },
@@ -189,7 +208,6 @@ describe("Page/Show.vue", () => {
 
   beforeEach(() => {
     localStorage.clear();
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     if (wrapper) {
       wrapper.unmount();
     }
@@ -452,6 +470,10 @@ describe("Page/Show.vue", () => {
       });
       expect(shareButton).toBeDefined();
       await shareButton.trigger("click");
+      await nextTick();
+
+      const userTagList = share.findComponent(UserTagList);
+      userTagList.vm.$emit("select-none");
       await nextTick();
 
       expect(router.post).toHaveBeenCalled();

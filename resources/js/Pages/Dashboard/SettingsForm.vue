@@ -1,11 +1,27 @@
 <script setup>
 import Button from "@/Components/Button.vue";
 import Checkbox from "@/Components/Checkbox.vue";
+import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import Input from "@/Components/TextInput.vue";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useFlashMessage } from "@/composables/useFlashMessage";
+import { useTranslations } from "@/composables/useTranslations";
 import { router } from "@inertiajs/vue3";
 import axios from "axios";
 import { computed, ref, watch } from 'vue';
+
+const { t } = useTranslations();
+const {
+    show: confirmShow,
+    message: confirmMessage,
+    title: confirmTitle,
+    confirmLabel: confirmOkLabel,
+    cancelLabel: confirmCancelLabel,
+    confirmVariant,
+    ask: askConfirm,
+    onConfirmed: confirmOnOk,
+    onCancelled: confirmOnCancel,
+} = useConfirmDialog();
 
 const props = defineProps({
     settings: {
@@ -58,7 +74,10 @@ const stopEditing = () => {
 };
 
 const submit = async () => {
-    if (!confirm('Are you sure you want to update these settings?')) {
+    const ok = await askConfirm(
+        'Are you sure you want to update these settings?'
+    );
+    if (!ok) {
         return;
     }
 
@@ -156,6 +175,17 @@ const submit = async () => {
                 Save Settings
             </Button>
         </div>
+
+        <ConfirmDialog
+            v-model:show="confirmShow"
+            :title="confirmTitle"
+            :message="confirmMessage"
+            :confirm-label="confirmOkLabel || t('common.ok')"
+            :cancel-label="confirmCancelLabel || t('common.cancel')"
+            :confirm-variant="confirmVariant"
+            @confirm="confirmOnOk"
+            @cancel="confirmOnCancel"
+        />
     </div>
 </template>
 

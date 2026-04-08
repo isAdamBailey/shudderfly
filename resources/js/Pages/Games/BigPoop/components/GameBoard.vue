@@ -205,7 +205,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div class="game-board" ref="boardEl" @pointerdown="onPointerDown">
+    <div ref="boardEl" class="game-board" @pointerdown="onPointerDown">
         <svg
             ref="svgEl"
             class="intestine-svg"

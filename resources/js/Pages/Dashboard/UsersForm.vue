@@ -224,16 +224,43 @@
                 </div>
             </div>
         </div>
+        <ConfirmDialog
+            v-model:show="confirmShow"
+            :title="confirmTitle"
+            :message="confirmMessage"
+            :confirm-label="confirmOkLabel || t('common.ok')"
+            :cancel-label="confirmCancelLabel || t('common.cancel')"
+            :confirm-variant="confirmVariant"
+            @confirm="confirmOnOk"
+            @cancel="confirmOnCancel"
+        />
     </div>
 </template>
 
 <script setup>
+/* global route */
 import Avatar from "@/Components/Avatar.vue";
+import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import Dropdown from "@/Components/Dropdown.vue";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { usePermissions } from "@/composables/permissions";
+import { useTranslations } from "@/composables/useTranslations";
 import { Link, useForm, usePage } from "@inertiajs/vue3";
 
+const { t } = useTranslations();
 const { canAdmin } = usePermissions();
+
+const {
+    show: confirmShow,
+    message: confirmMessage,
+    title: confirmTitle,
+    confirmLabel: confirmOkLabel,
+    cancelLabel: confirmCancelLabel,
+    confirmVariant,
+    ask: askConfirm,
+    onConfirmed: confirmOnOk,
+    onCancelled: confirmOnCancel,
+} = useConfirmDialog();
 
 const isCurrentUser = (user) =>
     usePage().props.auth.user.name === user.name ||
@@ -260,13 +287,14 @@ const removePermission = (user, permission) => {
     });
 };
 
-const deleteUser = (user) => {
-    form.delete(route("admin.destroy", { email: user.email }), {
-        onBefore: () =>
-            confirm(
-                `Are you sure you want to delete ${user.name}? All data related to them will be deleted.`
-            ),
-    });
+const deleteUser = async (user) => {
+    const ok = await askConfirm(
+        `Are you sure you want to delete ${user.name}? All data related to them will be deleted.`
+    );
+    if (!ok) {
+        return;
+    }
+    form.delete(route("admin.destroy", { email: user.email }));
 };
 
 const userIsAdmin = (user) => {

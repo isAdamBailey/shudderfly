@@ -6,6 +6,8 @@ use App\Events\CollagePageRemoved;
 use App\Models\Collage;
 use App\Models\Page;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class CollagePageController extends Controller
 {
@@ -14,21 +16,90 @@ class CollagePageController extends Controller
         $data = $request->validate([
             'collage_id' => 'required|exists:collages,id',
             'page_id' => 'required|exists:pages,id',
+            'replace_page_id' => 'nullable|exists:pages,id',
         ]);
 
-        $collage = Collage::findOrFail($data['collage_id']);
+        $collage = Collage::query()->findOrFail($data['collage_id']);
+        $max = (int) config('collage.max_pages');
+        $pageId = (int) $data['page_id'];
 
-        // Check if the collage is locked
-        if ($collage->is_locked) {
-            return back()->withErrors(['collage' => 'This collage is locked and cannot be modified.']);
+        if ($collage->pages()->where('page_id', $pageId)->exists()) {
+            return back()->with('success', __('messages.page.collage_add_success'));
         }
 
-        // Check if the page already exists in the collage (safety check)
-        if (! $collage->pages()->where('page_id', $data['page_id'])->exists()) {
-            $collage->pages()->attach($data['page_id']);
+        $count = $collage->pages()->count();
+        $needsReplace = $count >= $max || ($collage->is_locked && $count > 0);
+
+        if ($needsReplace) {
+            if (empty($data['replace_page_id'])) {
+                return back()->withErrors([
+                    'collage' => __('messages.page.collage_full_need_replace'),
+                ]);
+            }
+
+            $replaceId = (int) $data['replace_page_id'];
+
+            if ($replaceId === $pageId) {
+                return back()->withErrors([
+                    'replace_page_id' => __('messages.page.collage_replace_invalid'),
+                ]);
+            }
+
+            if (! $collage->pages()->where('page_id', $replaceId)->exists()) {
+                return back()->withErrors([
+                    'replace_page_id' => __('messages.page.collage_replace_not_in_collage'),
+                ]);
+            }
         }
 
-        return back();
+        return DB::transaction(function () use ($collage, $data, $pageId, $max) {
+            $detachedCollages = $this->detachPageFromOtherCollagesWithoutBroadcast(
+                $pageId,
+                $collage->id
+            );
+
+            $collage->refresh();
+            $count = $collage->pages()->count();
+            $needsReplace = $count >= $max || ($collage->is_locked && $count > 0);
+
+            if ($needsReplace) {
+                if (empty($data['replace_page_id'])) {
+                    throw ValidationException::withMessages([
+                        'collage' => [__('messages.page.collage_full_need_replace')],
+                    ]);
+                }
+
+                $replaceId = (int) $data['replace_page_id'];
+
+                if ($replaceId === $pageId) {
+                    throw ValidationException::withMessages([
+                        'replace_page_id' => [__('messages.page.collage_replace_invalid')],
+                    ]);
+                }
+
+                if (! $collage->pages()->where('page_id', $replaceId)->exists()) {
+                    throw ValidationException::withMessages([
+                        'replace_page_id' => [__('messages.page.collage_replace_not_in_collage')],
+                    ]);
+                }
+
+                $collage->pages()->detach($replaceId);
+                $collage->pages()->attach($pageId);
+
+                $collage->load('pages');
+                $this->scheduleCollagePageRemovedBroadcasts([
+                    ...$detachedCollages,
+                    $collage,
+                ]);
+
+                return back()->with('success', __('messages.page.collage_add_success'));
+            }
+
+            $collage->pages()->attach($pageId);
+            $this->scheduleCollagePageRemovedBroadcasts($detachedCollages);
+
+            return back()->with('success', __('messages.page.collage_add_success'));
+        });
     }
 
     public function destroy(Collage $collage, Page $page)
@@ -49,14 +120,74 @@ class CollagePageController extends Controller
             'new_collage_id' => 'required|exists:collages,id',
         ]);
 
-        // Skip if the page is already in the target collage
         if ($data['new_collage_id'] == $collage->id) {
             return back();
         }
 
-        $collage->pages()->detach($page->id);
-        Collage::findOrFail($data['new_collage_id'])->pages()->syncWithoutDetaching($page->id);
+        return DB::transaction(function () use ($page, $data) {
+            $target = Collage::query()->findOrFail($data['new_collage_id']);
 
-        return back();
+            $detachedCollages = $this->detachPageFromOtherCollagesWithoutBroadcast(
+                (int) $page->id,
+                $target->id
+            );
+
+            $target->pages()->syncWithoutDetaching($page->id);
+            $target->load('pages');
+
+            $this->scheduleCollagePageRemovedBroadcasts([
+                ...$detachedCollages,
+                $target,
+            ]);
+
+            return back();
+        });
+    }
+
+    /**
+     * @return array<int, Collage>
+     */
+    private function detachPageFromOtherCollagesWithoutBroadcast(int $pageId, int $exceptCollageId): array
+    {
+        $affected = [];
+        $collageIds = DB::table('collage_page')
+            ->where('page_id', $pageId)
+            ->where('collage_id', '!=', $exceptCollageId)
+            ->pluck('collage_id');
+
+        foreach ($collageIds as $collageId) {
+            $collage = Collage::query()->find($collageId);
+            if ($collage === null) {
+                continue;
+            }
+
+            $collage->pages()->detach($pageId);
+            $collage->load('pages');
+            $affected[] = $collage;
+        }
+
+        return $affected;
+    }
+
+    /**
+     * @param  array<int, Collage>  $collages
+     */
+    private function scheduleCollagePageRemovedBroadcasts(array $collages): void
+    {
+        $ids = [];
+        foreach ($collages as $collage) {
+            if ($collage !== null) {
+                $ids[$collage->id] = true;
+            }
+        }
+
+        foreach (array_keys($ids) as $collageId) {
+            DB::afterCommit(function () use ($collageId) {
+                $fresh = Collage::query()->with('pages')->find($collageId);
+                if ($fresh !== null) {
+                    CollagePageRemoved::dispatch($fresh);
+                }
+            });
+        }
     }
 }

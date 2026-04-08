@@ -462,6 +462,17 @@
             @close="showMessageBuilderModal = false"
             @message-posted="handleMessagePosted"
         />
+
+        <ConfirmDialog
+            v-model:show="confirmShow"
+            :title="confirmTitle"
+            :message="confirmMessage"
+            :confirm-label="confirmOkLabel || t('common.ok')"
+            :cancel-label="confirmCancelLabel || t('common.cancel')"
+            :confirm-variant="confirmVariant"
+            @confirm="confirmOnOk"
+            @cancel="confirmOnCancel"
+        />
     </div>
 </template>
 
@@ -469,6 +480,7 @@
 /* global route */
 import Avatar from "@/Components/Avatar.vue";
 import Button from "@/Components/Button.vue";
+import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import Dropdown from "@/Components/Dropdown.vue";
 import CommentItem from "@/Components/Messages/CommentItem.vue";
 import MessageBuilderModal from "@/Components/Messages/MessageBuilderModal.vue";
@@ -478,6 +490,7 @@ import UserTagList from "@/Components/UserTagList.vue";
 import Modal from "@/Components/Modal.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
 import { usePermissions } from "@/composables/permissions";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useFlashMessage } from "@/composables/useFlashMessage";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 import { useMessageBuilder } from "@/composables/useMessageBuilder";
@@ -509,6 +522,17 @@ const { canAdmin } = usePermissions();
 const { speak, speaking } = useSpeechSynthesis();
 const { setFlashMessage } = useFlashMessage();
 const { t } = useTranslations();
+const {
+    show: confirmShow,
+    message: confirmMessage,
+    title: confirmTitle,
+    confirmLabel: confirmOkLabel,
+    cancelLabel: confirmCancelLabel,
+    confirmVariant,
+    ask: askConfirm,
+    onConfirmed: confirmOnOk,
+    onCancelled: confirmOnCancel,
+} = useConfirmDialog();
 const { isVideo } = useMedia();
 const { setActiveMessageInput } = useMessageBuilder();
 const loading = ref(false);
@@ -870,8 +894,11 @@ const speakAllReactions = (message) => {
     speak(fullText);
 };
 
-const deleteMessage = (messageId) => {
-    if (!confirm("Are you sure you want to delete this message?")) {
+const deleteMessage = async (messageId) => {
+    const ok = await askConfirm(
+        "Are you sure you want to delete this message?"
+    );
+    if (!ok) {
         return;
     }
 
@@ -1593,8 +1620,11 @@ const handleReplyToComment = (message, comment) => {
     }
 };
 
-const deleteComment = (messageId, commentId) => {
-    if (!confirm("Are you sure you want to delete this comment?")) {
+const deleteComment = async (messageId, commentId) => {
+    const ok = await askConfirm(
+        "Are you sure you want to delete this comment?"
+    );
+    if (!ok) {
         return;
     }
 
