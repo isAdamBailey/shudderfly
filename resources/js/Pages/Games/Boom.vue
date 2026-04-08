@@ -432,10 +432,10 @@ onUnmounted(() => {
                     class="poop"
                     :class="{ dragging: isDragging, falling: isPoopFalling }"
                     :style="poopStyle"
-                    @mousedown="startDrag"
-                    @touchstart.prevent="startDrag"
                     role="img"
                     aria-label="poop"
+                    @mousedown="startDrag"
+                    @touchstart.prevent="startDrag"
                 >💩</div>
 
                 <!-- ── splash effect ─────────────────────────────── -->

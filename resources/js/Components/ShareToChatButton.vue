@@ -1,7 +1,9 @@
 <script setup>
 /* global route */
 import Button from "@/Components/Button.vue";
+import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import UserTagList from "@/Components/UserTagList.vue";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import { router, usePage } from "@inertiajs/vue3";
@@ -27,6 +29,17 @@ const page = usePage();
 const users = computed(() => page.props.users ?? []);
 const { speak } = useSpeechSynthesis();
 const { t } = useTranslations();
+const {
+  show: confirmShow,
+  message: confirmMessage,
+  title: confirmTitle,
+  confirmLabel: confirmOkLabel,
+  cancelLabel: confirmCancelLabel,
+  confirmVariant,
+  ask: askConfirm,
+  onConfirmed: confirmOnOk,
+  onCancelled: confirmOnCancel,
+} = useConfirmDialog();
 
 const sharing = ref(false);
 const confirmPending = ref(false);
@@ -111,22 +124,26 @@ const toggleShareMenu = () => {
   }
 };
 
-const confirmThenShare = (taggedUser, postAction) => {
+const confirmThenShare = async (taggedUser, postAction) => {
   if (confirmPending.value) return;
   confirmPending.value = true;
-  const speakPhrase = taggedUser
-    ? t("page.share_confirm_speak_tagged", { username: taggedUser.name })
-    : t("page.share_confirm_speak");
-  const dialogMessage = taggedUser
-    ? t("page.share_confirm_dialog_tagged", { username: taggedUser.name })
-    : t("page.share_confirm_dialog");
-  speak(speakPhrase, () => {
-    confirmPending.value = false;
-    if (!window.confirm(dialogMessage)) {
+  try {
+    const speakPhrase = taggedUser
+      ? t("page.share_confirm_speak_tagged", { username: taggedUser.name })
+      : t("page.share_confirm_speak");
+    const dialogMessage = taggedUser
+      ? t("page.share_confirm_dialog_tagged", { username: taggedUser.name })
+      : t("page.share_confirm_dialog");
+    const okPromise = askConfirm(dialogMessage);
+    speak(speakPhrase);
+    const ok = await okPromise;
+    if (!ok) {
       return;
     }
     postAction();
-  });
+  } finally {
+    confirmPending.value = false;
+  }
 };
 
 const handleShareSelect = (user) => {
@@ -232,5 +249,15 @@ onUnmounted(() => {
         </div>
       </Teleport>
     </div>
+    <ConfirmDialog
+      v-model:show="confirmShow"
+      :title="confirmTitle"
+      :message="confirmMessage"
+      :confirm-label="confirmOkLabel || t('common.ok')"
+      :cancel-label="confirmCancelLabel || t('common.cancel')"
+      :confirm-variant="confirmVariant"
+      @confirm="confirmOnOk"
+      @cancel="confirmOnCancel"
+    />
   </div>
 </template>

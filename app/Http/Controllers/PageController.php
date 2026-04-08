@@ -358,7 +358,7 @@ class PageController extends Controller
             ? Book::all()->map->only(['id', 'title'])->sortBy('title')->values()->toArray()
             : [];
 
-        $collages = Collage::with('pages')->latest()->limit(4)->get();
+        $collages = Collage::with('pages')->withCount('pages')->latest()->limit(4)->get();
         $users = User::select('id', 'name')
             ->orderBy('name')
             ->get()

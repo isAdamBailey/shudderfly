@@ -62,7 +62,7 @@ class CollageLockingTest extends TestCase
         $this->assertFalse($collage->fresh()->is_locked);
     }
 
-    public function test_cannot_add_page_to_locked_collage(): void
+    public function test_can_add_first_page_to_empty_locked_collage(): void
     {
         /** @var User $user */
         $user = User::factory()->create();
@@ -77,8 +77,29 @@ class CollageLockingTest extends TestCase
             ]);
 
         $response->assertRedirect();
+        $response->assertSessionHas('success');
+        $this->assertTrue($collage->fresh()->pages()->where('page_id', $page->id)->exists());
+    }
+
+    public function test_locked_collage_with_pages_requires_replace_page_id(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $collage = Collage::factory()->create(['is_locked' => true]);
+        $existing = Page::factory()->create();
+        $collage->pages()->attach($existing->id);
+        $newPage = Page::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->post(route('collage-page.store'), [
+                'collage_id' => $collage->id,
+                'page_id' => $newPage->id,
+            ]);
+
+        $response->assertRedirect();
         $response->assertSessionHasErrors(['collage']);
-        $this->assertFalse($collage->pages()->where('page_id', $page->id)->exists());
+        $this->assertFalse($collage->fresh()->pages()->where('page_id', $newPage->id)->exists());
     }
 
     public function test_can_add_page_to_unlocked_collage(): void
@@ -96,6 +117,7 @@ class CollageLockingTest extends TestCase
             ]);
 
         $response->assertRedirect();
+        $response->assertSessionHas('success');
         $this->assertTrue($collage->pages()->where('page_id', $page->id)->exists());
     }
 

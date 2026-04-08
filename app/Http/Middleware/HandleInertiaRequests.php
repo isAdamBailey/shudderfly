@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\SiteSetting;
+use App\Support\Collage;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Tightenco\Ziggy\Ziggy;
@@ -86,6 +87,7 @@ class HandleInertiaRequests extends Middleware
                 return [$setting->key => $rawValue];
             }),
             'theme' => self::getCurrentTheme(),
+            'collageMaxPages' => Collage::MAX_PAGES,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),

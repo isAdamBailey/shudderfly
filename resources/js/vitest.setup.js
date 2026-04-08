@@ -37,6 +37,7 @@ vi.mock("@inertiajs/vue3", () => ({
                 user: null,
             },
             search: null,
+            collageMaxPages: 16,
         },
     })),
     router: {
@@ -113,6 +114,7 @@ config.global.mocks = {
             },
             search: null,
             theme: "",
+            collageMaxPages: 16,
         },
     },
     route: global.route,

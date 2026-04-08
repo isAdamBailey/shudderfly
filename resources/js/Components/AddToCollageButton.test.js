@@ -2,13 +2,12 @@ import AddToCollageButton from "@/Components/AddToCollageButton.vue";
 import { useForm } from "@inertiajs/vue3";
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { nextTick } from "vue";
+import { computed, nextTick } from "vue";
 
 global.route = (name) => `/${name}`;
 
-// Mock the constants
-vi.mock("@/constants/collage", () => ({
-    MAX_COLLAGE_PAGES: 10,
+vi.mock("@/composables/useCollageMaxPages", () => ({
+    useCollageMaxPages: () => computed(() => 10),
 }));
 
 // Mock the speech synthesis composable
@@ -24,16 +23,25 @@ vi.mock("@/composables/useTranslations", () => ({
     useTranslations: () => ({
         t: (key, replacements = {}) => {
             const map = {
+                "common.cancel": "Cancel",
+                "common.ok": "OK",
                 "page.collage_select_placeholder": "Select collage",
-                "page.collage_all_full": "All collages are full",
                 "page.collage_option_label": "Collage #:number:",
+                "page.collage_full_suffix": " (Full)",
+                "page.collage_locked_suffix": " (Locked)",
                 "page.collage_add_button": "Add to Collage",
                 "page.collage_add_success":
                     "Page successfully added to collage!",
-                "page.collage_confirm_speak_single":
-                    "Are you sure you want to add this page to collage:",
+                "page.collage_replace_modal_title": "Choose a picture to replace",
+                "page.collage_replace_pick_speak":
+                    "What picture do you want to remove?",
+                "page.collage_replace_confirm_speak":
+                    "Are you sure you want to change pictures?",
+                "page.collage_replace_confirm_dialog":
+                    "Are you sure you want to change pictures?",
+                "page.collage_confirm_speak_single": "Add this to the collage?",
                 "page.collage_confirm_speak_choice":
-                    "Are you sure you want to add this page to collage #:number:",
+                    "Add this to collage :number?",
                 "page.collage_confirm_dialog_single":
                     "Are you sure you want to add this page to collage?",
                 "page.collage_confirm_dialog_choice":
@@ -58,7 +66,8 @@ describe("AddToCollageButton", () => {
     const createMockForm = () => ({
         collage_id: null,
         page_id: 1,
-        data: { collage_id: null, page_id: 1 },
+        replace_page_id: null,
+        data: { collage_id: null, page_id: 1, replace_page_id: null },
         errors: {},
         processing: false,
         post: vi.fn(),
@@ -85,8 +94,17 @@ describe("AddToCollageButton", () => {
         mockSpeak.mockImplementation((phrase, onComplete) => {
             onComplete?.();
         });
-        vi.spyOn(window, "confirm").mockReturnValue(true);
     });
+
+    async function clickConfirmDialogOk() {
+        await nextTick();
+        const okBtn = Array.from(document.querySelectorAll("button")).find(
+            (b) => b.textContent.trim() === "OK"
+        );
+        expect(okBtn).toBeDefined();
+        await okBtn.click();
+        await nextTick();
+    }
 
     describe("Page already in collage", () => {
         it("shows message without number when only one collage exists", () => {
@@ -240,16 +258,54 @@ describe("AddToCollageButton", () => {
                 .findAll("button")
                 .find((btn) => btn.text().includes("Add to Collage"));
             await addButton.trigger("click");
+            await clickConfirmDialogOk();
 
             expect(mockForm.post).toHaveBeenCalledWith("/collage-page.store", {
                 preserveScroll: true,
                 onSuccess: expect.any(Function),
             });
-            // The form should have been updated with the collage ID before posting
             expect(mockForm.collage_id).toBe(3);
         });
 
-        it("ignores locked collages when determining single collage scenario", () => {
+        it("opens replace modal when single collage is full instead of posting", async () => {
+            const attachEl = document.createElement("div");
+            document.body.appendChild(attachEl);
+
+            const pages = Array(10)
+                .fill(null)
+                .map((_, i) => ({
+                    id: 50 + i,
+                    media_path: "https://example.com/a.webp",
+                    content: "",
+                }));
+            const collages = [
+                { id: 3, pages, is_archived: false, is_locked: false },
+            ];
+
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+                attachTo: attachEl,
+            });
+
+            const addButton = wrapper
+                .findAll("button")
+                .find((btn) => btn.text().includes("Add to Collage"));
+            await addButton.trigger("click");
+            await nextTick();
+
+            expect(mockForm.post).not.toHaveBeenCalled();
+            expect(document.body.textContent).toContain(
+                "Choose a picture to replace"
+            );
+
+            wrapper.unmount();
+            attachEl.remove();
+        });
+
+        it("shows select when locked and unlocked collages are both available", () => {
             const collages = [
                 { id: 1, pages: [], is_archived: false, is_locked: true },
                 { id: 2, pages: [], is_archived: false, is_locked: false },
@@ -262,9 +318,9 @@ describe("AddToCollageButton", () => {
                 },
             });
 
-            expect(wrapper.find("select").exists()).toBe(false);
+            expect(wrapper.find("select").exists()).toBe(true);
             expect(wrapper.text()).toContain("Add to Collage");
-            expect(wrapper.text()).not.toMatch(/Add to Collage #/);
+            expect(wrapper.text()).toContain("(Locked)");
         });
     });
 
@@ -301,11 +357,13 @@ describe("AddToCollageButton", () => {
             expect(addButton.text()).toBe("Add to Collage");
         });
 
-        it("disables full collages in dropdown", () => {
+        it("allows selecting full collages in dropdown", () => {
             const collages = [
                 {
                     id: 1,
-                    pages: Array(10).fill({ id: 2 }),
+                    pages: Array(10)
+                        .fill(null)
+                        .map((_, i) => ({ id: 200 + i })),
                     is_archived: false,
                     is_locked: false,
                 },
@@ -321,22 +379,26 @@ describe("AddToCollageButton", () => {
 
             const options = wrapper.findAll("option");
             expect(options.length).toBeGreaterThanOrEqual(3);
-            expect(options[1].attributes("disabled")).toBeDefined();
+            expect(options[1].attributes("disabled")).toBeUndefined();
             expect(options[1].text()).toContain("(Full)");
             expect(options[2].attributes("disabled")).toBeUndefined();
         });
 
-        it("disables entire select when all collages are full", () => {
+        it("keeps select enabled when all collages are full", () => {
             const collages = [
                 {
                     id: 1,
-                    pages: Array(10).fill({ id: 2 }),
+                    pages: Array(10)
+                        .fill(null)
+                        .map((_, i) => ({ id: 200 + i })),
                     is_archived: false,
                     is_locked: false,
                 },
                 {
                     id: 2,
-                    pages: Array(10).fill({ id: 2 }),
+                    pages: Array(10)
+                        .fill(null)
+                        .map((_, i) => ({ id: 300 + i })),
                     is_archived: false,
                     is_locked: false,
                 },
@@ -351,13 +413,13 @@ describe("AddToCollageButton", () => {
 
             const select = wrapper.find("select");
             expect(select.exists()).toBe(true);
-            expect(select.attributes("disabled")).toBeDefined();
+            expect(select.attributes("disabled")).toBeUndefined();
             expect(wrapper.find("option[value='null']").text()).toBe(
-                "All collages are full"
+                "Select collage"
             );
         });
 
-        it("ignores archived and locked collages when checking availability", () => {
+        it("excludes archived collages but includes locked collages in the dropdown", () => {
             const collages = [
                 {
                     id: 1,
@@ -381,15 +443,15 @@ describe("AddToCollageButton", () => {
                 },
             });
 
-            // Should show single collage behavior since only collage 3 is available
-            expect(wrapper.find("select").exists()).toBe(false);
+            expect(wrapper.find("select").exists()).toBe(true);
             expect(wrapper.text()).toContain("Add to Collage");
-            expect(wrapper.text()).not.toMatch(/Add to Collage #/);
+            expect(wrapper.text()).toContain("(Locked)");
+            expect(wrapper.text()).toContain("(Full)");
         });
     });
 
     describe("Add to collage functionality", () => {
-        it("disables button when no collage is selected in multi-collage scenario", () => {
+        it("uses first collage when add is clicked without selecting in multi-collage scenario", async () => {
             const collages = createCollages();
 
             wrapper = mount(AddToCollageButton, {
@@ -402,20 +464,60 @@ describe("AddToCollageButton", () => {
             const addButton = wrapper
                 .findAll("button")
                 .find((btn) => btn.text().includes("Add to Collage"));
-            expect(addButton.attributes("disabled")).toBeDefined();
+            expect(addButton.attributes("disabled")).toBeUndefined();
+            await addButton.trigger("click");
+            await nextTick();
+            await clickConfirmDialogOk();
+            expect(mockForm.post).toHaveBeenCalled();
+            expect(mockForm.collage_id).toBe(1);
         });
 
-        it("disables button when all collages are full", () => {
+        it("resolves collage when select value is string and id is number (locked full)", async () => {
+            const pages = Array(10)
+                .fill(null)
+                .map((_, i) => ({ id: 50 + i, content: "" }));
             const collages = [
                 {
                     id: 1,
-                    pages: Array(10).fill({ id: 2 }),
+                    pages,
+                    is_archived: false,
+                    is_locked: true,
+                },
+                { id: 2, pages: [], is_archived: false, is_locked: false },
+            ];
+
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 99,
+                    collages,
+                },
+            });
+
+            const select = wrapper.find("select");
+            await select.setValue("1");
+            await nextTick();
+
+            const addButton = wrapper
+                .findAll("button")
+                .find((btn) => btn.text().includes("Add to Collage"));
+            expect(addButton.attributes("disabled")).toBeUndefined();
+        });
+
+        it("enables add button when a full collage is selected", async () => {
+            const collages = [
+                {
+                    id: 1,
+                    pages: Array(10)
+                        .fill(null)
+                        .map((_, i) => ({ id: 200 + i })),
                     is_archived: false,
                     is_locked: false,
                 },
                 {
                     id: 2,
-                    pages: Array(10).fill({ id: 2 }),
+                    pages: Array(10)
+                        .fill(null)
+                        .map((_, i) => ({ id: 300 + i })),
                     is_archived: false,
                     is_locked: false,
                 },
@@ -428,10 +530,13 @@ describe("AddToCollageButton", () => {
                 },
             });
 
+            await wrapper.find("select").setValue(1);
+            await nextTick();
+
             const addButton = wrapper
                 .findAll("button")
                 .find((btn) => btn.text().includes("Add to Collage"));
-            expect(addButton.attributes("disabled")).toBeDefined();
+            expect(addButton.attributes("disabled")).toBeUndefined();
         });
 
         it("enables button when collage is selected and available", async () => {
@@ -470,6 +575,7 @@ describe("AddToCollageButton", () => {
                 .findAll("button")
                 .find((btn) => btn.text().includes("Add to Collage"));
             await button.trigger("click");
+            await clickConfirmDialogOk();
 
             expect(mockForm.post).toHaveBeenCalledWith("/collage-page.store", {
                 preserveScroll: true,
@@ -477,7 +583,7 @@ describe("AddToCollageButton", () => {
             });
         });
 
-        it("shows success message after successful submission", async () => {
+        it("calls reset on successful submission", async () => {
             const collages = createCollages();
 
             wrapper = mount(AddToCollageButton, {
@@ -494,89 +600,63 @@ describe("AddToCollageButton", () => {
                 .findAll("button")
                 .find((btn) => btn.text().includes("Add to Collage"));
             await button.trigger("click");
+            await clickConfirmDialogOk();
 
             expect(mockForm.post).toHaveBeenCalled();
             const onSuccessCallback = mockForm.post.mock.calls[0][1].onSuccess;
             onSuccessCallback();
             await nextTick();
 
-            expect(wrapper.text()).toContain(
-                "Page successfully added to collage!"
-            );
             expect(mockForm.reset).toHaveBeenCalled();
         });
+    });
 
-        it("hides success message after 3 seconds", async () => {
-            vi.useFakeTimers();
+    describe("Replace when collage is full", () => {
+        it("posts with replace_page_id after picking a page from the modal", async () => {
+            const attachEl = document.createElement("div");
+            document.body.appendChild(attachEl);
 
-            const collages = createCollages();
-
-            wrapper = mount(AddToCollageButton, {
-                props: {
-                    pageId: 1,
-                    collages,
-                },
-            });
-
-            await wrapper.find("select").setValue(1);
-            await nextTick();
-            const button = wrapper
-                .findAll("button")
-                .find((btn) => btn.text().includes("Add to Collage"));
-            await button.trigger("click");
-
-            expect(mockForm.post).toHaveBeenCalled();
-            const onSuccessCallback = mockForm.post.mock.calls[0][1].onSuccess;
-            onSuccessCallback();
-            await nextTick();
-
-            expect(wrapper.text()).toContain(
-                "Page successfully added to collage!"
-            );
-
-            vi.advanceTimersByTime(3000);
-            await nextTick();
-
-            expect(wrapper.text()).not.toContain(
-                "Page successfully added to collage!"
-            );
-
-            vi.useRealTimers();
-        });
-
-        it("resets success message when collage selection changes", async () => {
-            const collages = createCollages();
+            const pages = Array(10)
+                .fill(null)
+                .map((_, i) => ({
+                    id: 50 + i,
+                    media_path: "https://example.com/a.webp",
+                    content: "Hello",
+                }));
+            const collages = [
+                { id: 3, pages, is_archived: false, is_locked: false },
+            ];
 
             wrapper = mount(AddToCollageButton, {
                 props: {
                     pageId: 1,
                     collages,
                 },
+                attachTo: attachEl,
             });
 
-            await wrapper.find("select").setValue(1);
-            await nextTick();
-            const button = wrapper
+            await wrapper
                 .findAll("button")
-                .find((btn) => btn.text().includes("Add to Collage"));
-            await button.trigger("click");
-
-            expect(mockForm.post).toHaveBeenCalled();
-            const onSuccessCallback = mockForm.post.mock.calls[0][1].onSuccess;
-            onSuccessCallback();
+                .find((btn) => btn.text().includes("Add to Collage"))
+                .trigger("click");
             await nextTick();
 
-            expect(wrapper.text()).toContain(
-                "Page successfully added to collage!"
-            );
-
-            // Change selection
-            await wrapper.find("select").setValue(2);
+            const pickFirst = Array.from(
+                document.body.querySelectorAll("button")
+            ).find((b) => b.textContent.includes("Hello"));
+            expect(pickFirst).toBeDefined();
+            await pickFirst.click();
             await nextTick();
+            await clickConfirmDialogOk();
 
-            expect(wrapper.text()).not.toContain(
-                "Page successfully added to collage!"
-            );
+            expect(mockForm.post).toHaveBeenCalledWith("/collage-page.store", {
+                preserveScroll: true,
+                onSuccess: expect.any(Function),
+            });
+            expect(mockForm.replace_page_id).toBe(50);
+
+            wrapper.unmount();
+            attachEl.remove();
         });
     });
 
@@ -599,10 +679,9 @@ describe("AddToCollageButton", () => {
             await addButton.trigger("click");
             await nextTick();
 
-            expect(mockSpeak).toHaveBeenCalledWith(
-                "Are you sure you want to add this page to collage:",
-                expect.any(Function)
-            );
+            expect(mockSpeak).toHaveBeenCalledWith("Add this to the collage?");
+            expect(mockForm.post).not.toHaveBeenCalled();
+            await clickConfirmDialogOk();
             expect(mockForm.post).toHaveBeenCalled();
         });
 
@@ -625,10 +704,9 @@ describe("AddToCollageButton", () => {
             await addButton.trigger("click");
             await nextTick();
 
-            expect(mockSpeak).toHaveBeenCalledWith(
-                "Are you sure you want to add this page to collage #1:",
-                expect.any(Function)
-            );
+            expect(mockSpeak).toHaveBeenCalledWith("Add this to collage 1?");
+            expect(mockForm.post).not.toHaveBeenCalled();
+            await clickConfirmDialogOk();
             expect(mockForm.post).toHaveBeenCalled();
         });
     });

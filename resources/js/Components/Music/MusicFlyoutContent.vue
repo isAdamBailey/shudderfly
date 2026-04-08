@@ -69,20 +69,47 @@
         <ManEmptyCircle />
       </div>
     </div>
+
+    <ConfirmDialog
+      v-model:show="confirmShow"
+      :title="confirmTitle"
+      :message="confirmMessage"
+      :confirm-label="confirmOkLabel || t('common.ok')"
+      :cancel-label="confirmCancelLabel || t('common.cancel')"
+      :confirm-variant="confirmVariant"
+      @confirm="confirmOnOk"
+      @cancel="confirmOnCancel"
+    />
   </div>
 </template>
 
 <script setup>
+/* global route */
 import Button from "@/Components/Button.vue";
+import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import SongListItem from "@/Components/Music/SongListItem.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { usePermissions } from "@/composables/permissions";
 import { useMusicPlayer } from "@/composables/useMusicPlayer";
+import { useTranslations } from "@/composables/useTranslations";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { router } from "@inertiajs/vue3";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
 const { speak } = useSpeechSynthesis();
+const { t } = useTranslations();
+const {
+  show: confirmShow,
+  message: confirmMessage,
+  title: confirmTitle,
+  confirmLabel: confirmOkLabel,
+  cancelLabel: confirmCancelLabel,
+  confirmVariant,
+  ask: askConfirm,
+  onConfirmed: confirmOnOk,
+  onCancelled: confirmOnCancel,
+} = useConfirmDialog();
 const { canAdmin } = usePermissions();
 const {
   currentSong,
@@ -217,7 +244,10 @@ const playSong = (song) => {
 };
 
 const deleteSong = async (song) => {
-  if (!confirm(`Delete "${song.title}"? This will also remove it from the YouTube playlist.`)) {
+  const ok = await askConfirm(
+    `Delete "${song.title}"? This will also remove it from the YouTube playlist.`
+  );
+  if (!ok) {
     return;
   }
 

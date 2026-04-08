@@ -39,10 +39,10 @@
       <div v-if="canAdmin">
         <p class="font-bold text-gray-400 mt-2 underline">ADMIN INSTRUCTIONS</p>
         <p class="text-sm text-gray-400 mt-2">
-          Each collage holds up to {{ MAX_COLLAGE_PAGES }} pictures that
+          Each collage holds up to {{ maxCollagePages }} pictures that
           automatically arrange to fill the space.
-          <strong>Lock</strong> collages to prevent users from adding more
-          pictures. <strong>Generate PDF</strong> takes a few minutes - you'll
+          <strong>Lock</strong> collages to prevent adding pictures until the
+          collage is full; when full, users can still swap pictures. <strong>Generate PDF</strong> takes a few minutes - you'll
           receive an email when ready. <strong>Archive</strong> collages to
           preserve them while preventing new additions (can be restored later).
         </p>
@@ -227,22 +227,51 @@
         </div>
       </template>
     </CollageGrid>
+
+    <ConfirmDialog
+      v-model:show="confirmShow"
+      :title="confirmTitle"
+      :message="confirmMessage"
+      :confirm-label="confirmOkLabel || t('common.ok')"
+      :cancel-label="confirmCancelLabel || t('common.cancel')"
+      :confirm-variant="confirmVariant"
+      @confirm="confirmOnOk"
+      @cancel="confirmOnCancel"
+    />
   </AuthenticatedLayout>
 </template>
 
 <script setup>
+/* global route */
 import Button from "@/Components/Button.vue";
+import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { usePermissions } from "@/composables/permissions";
+import { useCollageMaxPages } from "@/composables/useCollageMaxPages";
 import { useCollageProcessing } from "@/composables/useCollageProcessing";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
-import { MAX_COLLAGE_PAGES } from "@/constants/collage";
+import { useTranslations } from "@/composables/useTranslations";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, Link, useForm } from "@inertiajs/vue3";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import CollageGrid from "./CollageGrid.vue";
 
+const { t } = useTranslations();
+const {
+  show: confirmShow,
+  message: confirmMessage,
+  title: confirmTitle,
+  confirmLabel: confirmOkLabel,
+  cancelLabel: confirmCancelLabel,
+  confirmVariant,
+  ask: askConfirm,
+  onConfirmed: confirmOnOk,
+  onCancelled: confirmOnCancel,
+} = useConfirmDialog();
+
 const { canAdmin, canEditPages } = usePermissions();
+const maxCollagePages = useCollageMaxPages();
 const { speak, speaking } = useSpeechSynthesis();
 const { startProcessing, stopProcessing, isProcessing } =
   useCollageProcessing();
@@ -342,26 +371,28 @@ const isGenerating = (collage) => {
   return false;
 };
 
-const removeImage = (collageId, pageId) => {
-  if (confirm("Remove this image from the collage?")) {
-    // eslint-disable-next-line no-undef
-    useForm().delete(route("collage-page.destroy", [collageId, pageId]), {
-      preserveScroll: true
-    });
+const removeImage = async (collageId, pageId) => {
+  const ok = await askConfirm("Remove this image from the collage?");
+  if (!ok) {
+    return;
   }
+  // eslint-disable-next-line no-undef
+  useForm().delete(route("collage-page.destroy", [collageId, pageId]), {
+    preserveScroll: true
+  });
 };
 
-const confirmDelete = (collageId) => {
-  if (
-    confirm(
-      `Are you sure you want to archive this collage? You will still be able to see the collage in the archive.`
-    )
-  ) {
-    // eslint-disable-next-line no-undef
-    deleteForm.patch(route("collages.archive", collageId), {
-      preserveScroll: true
-    });
+const confirmDelete = async (collageId) => {
+  const ok = await askConfirm(
+    `Are you sure you want to archive this collage? You will still be able to see the collage in the archive.`
+  );
+  if (!ok) {
+    return;
   }
+  // eslint-disable-next-line no-undef
+  deleteForm.patch(route("collages.archive", collageId), {
+    preserveScroll: true
+  });
 };
 
 const toggleLock = (collage) => {

@@ -83,7 +83,7 @@
     </div>
 
     <!-- Tab Content -->
-    <div id="admin-form" v-if="canEditPages && activeTab" class="w-full mt-4 md:ml-2">
+    <div v-if="canEditPages && activeTab" id="admin-form" class="w-full mt-4 md:ml-2">
       <div class="flex justify-end px-4 mb-2">
         <Button
           type="button"

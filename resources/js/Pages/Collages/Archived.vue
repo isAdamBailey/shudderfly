@@ -144,21 +144,49 @@
             </template>
         </CollageGrid>
 
+        <ConfirmDialog
+            v-model:show="confirmShow"
+            :title="confirmTitle"
+            :message="confirmMessage"
+            :confirm-label="confirmOkLabel || t('common.ok')"
+            :cancel-label="confirmCancelLabel || t('common.cancel')"
+            :confirm-variant="confirmVariant"
+            @confirm="confirmOnOk"
+            @cancel="confirmOnCancel"
+        />
+
         <ScrollTop />
     </AuthenticatedLayout>
 </template>
 
 <script setup>
+/* global route */
 import Button from "@/Components/Button.vue";
+import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { useTranslations } from "@/composables/useTranslations";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, Link, useForm } from "@inertiajs/vue3";
 import { ref } from "vue";
 import CollageGrid from "./CollageGrid.vue";
 
 import { usePermissions } from "@/composables/permissions";
+
+const { t } = useTranslations();
+const {
+    show: confirmShow,
+    message: confirmMessage,
+    title: confirmTitle,
+    confirmLabel: confirmOkLabel,
+    cancelLabel: confirmCancelLabel,
+    confirmVariant,
+    ask: askConfirm,
+    onConfirmed: confirmOnOk,
+    onCancelled: confirmOnCancel,
+} = useConfirmDialog();
 
 const { canEditPages, canAdmin } = usePermissions();
 const { speak, speaking } = useSpeechSynthesis();
@@ -174,16 +202,16 @@ const archivedText = ref(
     "These are old collages that we have already laminated."
 );
 
-const confirmDelete = (collageId) => {
-    if (
-        confirm(
-            `Are you sure you want to permanently delete this collage? This action cannot be undone and will remove all associated data.`
-        )
-    ) {
-        deleteForm.delete(route("collages.destroy", collageId), {
-            preserveScroll: true,
-        });
+const confirmDelete = async (collageId) => {
+    const ok = await askConfirm(
+        `Are you sure you want to permanently delete this collage? This action cannot be undone and will remove all associated data.`
+    );
+    if (!ok) {
+        return;
     }
+    deleteForm.delete(route("collages.destroy", collageId), {
+        preserveScroll: true,
+    });
 };
 
 defineOptions({

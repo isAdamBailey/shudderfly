@@ -133,7 +133,7 @@
         >
           <AddToCollageButton
             :page-id="props.page.id"
-            :collages="localCollages"
+            :collages="collages"
           />
         </div>
 
@@ -164,6 +164,16 @@
     </div>
 
     <ScrollTop />
+    <ConfirmDialog
+      v-model:show="confirmShow"
+      :title="confirmTitle"
+      :message="confirmMessage"
+      :confirm-label="confirmOkLabel || t('common.ok')"
+      :cancel-label="confirmCancelLabel || t('common.cancel')"
+      :confirm-variant="confirmVariant"
+      @confirm="confirmOnOk"
+      @cancel="confirmOnCancel"
+    />
     <FloatingActionMenu v-if="canEditPages">
       <button
         v-if="!showPageSettings"
@@ -194,15 +204,18 @@
 </template>
 
 <script setup>
+/* global route */
 import AddToCollageButton from "@/Components/AddToCollageButton.vue";
 import BookCoverCard from "@/Components/BookCoverCard.vue";
 import Button from "@/Components/Button.vue";
+import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import FloatingActionMenu from "@/Components/FloatingActionMenu.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import MapEmbed from "@/Components/Map/MapEmbed.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
 import ShareToChatButton from "@/Components/ShareToChatButton.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { usePermissions } from "@/composables/permissions";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
@@ -211,13 +224,24 @@ import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { useMedia } from "@/mediaHelpers";
 import EditPageForm from "@/Pages/Page/EditPageForm.vue";
 import { Head, Link, router, usePage } from "@inertiajs/vue3";
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 
 const { canEditPages } = usePermissions();
 const { short } = useDate();
 const { speak, speaking } = useSpeechSynthesis();
 const { isVideo } = useMedia();
 const { t } = useTranslations();
+const {
+  show: confirmShow,
+  message: confirmMessage,
+  title: confirmTitle,
+  confirmLabel: confirmOkLabel,
+  cancelLabel: confirmCancelLabel,
+  confirmVariant,
+  ask: askConfirm,
+  onConfirmed: confirmOnOk,
+  onCancelled: confirmOnCancel,
+} = useConfirmDialog();
 
 const props = defineProps({
   page: { type: Object, required: true },
@@ -251,12 +275,6 @@ const scrollHandler = ref(null);
 const blocking = ref(false);
 const blockConfirmPending = ref(false);
 
-const localCollages = ref([...props.collages]);
-
-watch(() => props.collages, (newCollages) => {
-  localCollages.value = [...newCollages];
-});
-
 const hasContent = computed(() => stripHtml(props.page.content));
 
 const stripHtml = (html) => {
@@ -271,7 +289,7 @@ const canAddToCollage = computed(() => {
     props.page.media_path &&
     !isVideo(props.page.media_path) &&
     !props.page.video_link &&
-    localCollages.value.length > 0
+    props.collages.length > 0
   );
 });
 
@@ -283,13 +301,15 @@ const canSharePage = computed(() => {
   );
 });
 
-const blockPage = () => {
+const blockPage = async () => {
   if (blocking.value || blockConfirmPending.value) return;
 
   blockConfirmPending.value = true;
-  speak(t("page.block_confirm_speak"), () => {
-    blockConfirmPending.value = false;
-    if (!window.confirm(t("page.block_confirm_dialog"))) {
+  try {
+    const okPromise = askConfirm(t("page.block_confirm_dialog"));
+    speak(t("page.block_confirm_speak"));
+    const ok = await okPromise;
+    if (!ok) {
       return;
     }
     blocking.value = true;
@@ -303,7 +323,9 @@ const blockPage = () => {
         }
       }
     );
-  });
+  } finally {
+    blockConfirmPending.value = false;
+  }
 };
 
 // Swipe navigation (left/right) to go to previous/next page
@@ -365,42 +387,7 @@ function onTouchEnd(event) {
   }
 }
 
-// Make book cover sticky
-const collagesChannel = ref(null);
-const collagesRetryTimeout = ref(null);
-
-const setupCollagesListener = () => {
-  if (!window.Echo) {
-    collagesRetryTimeout.value = setTimeout(setupCollagesListener, 500);
-    return;
-  }
-
-  if (collagesChannel.value) {
-    return;
-  }
-
-  try {
-    collagesChannel.value = window.Echo.private("collages");
-
-    collagesChannel.value.listen(".CollagePageRemoved", (event) => {
-      const updatedCollage = event.collage;
-      if (!updatedCollage) return;
-      const index = localCollages.value.findIndex((c) => c.id === updatedCollage.id);
-      if (index !== -1) {
-        localCollages.value[index] = {
-          ...localCollages.value[index],
-          ...updatedCollage,
-        };
-      }
-    });
-  } catch (error) {
-    console.error("Error setting up collages Echo listener:", error);
-  }
-};
-
 onMounted(() => {
-  setupCollagesListener();
-
   if (!bookCoverRef.value) return;
 
   const container = bookCoverRef.value.parentElement;
@@ -425,20 +412,6 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  if (collagesRetryTimeout.value) {
-    clearTimeout(collagesRetryTimeout.value);
-    collagesRetryTimeout.value = null;
-  }
-
-  if (collagesChannel.value && window.Echo) {
-    try {
-      window.Echo.leave("collages");
-    } catch {
-      // ignore
-    }
-    collagesChannel.value = null;
-  }
-
   if (scrollHandler.value) {
     window.removeEventListener("scroll", scrollHandler.value);
   }
