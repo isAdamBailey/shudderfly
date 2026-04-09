@@ -61,18 +61,22 @@ const canShare = computed(() => {
 });
 
 const isShareDisabled = computed(() => {
-  return hasSharedToday.value || sharing.value;
+  if (props.kind === "page") {
+    return hasSharedToday.value || sharing.value;
+  }
+  return sharing.value;
 });
 
 const storageKey = () => {
   const today = new Date().toISOString().split("T")[0];
-  if (props.kind === "page") {
-    return `page_share_${props.pageId}_${today}`;
-  }
-  return `game_score_share_${props.gameSlug}_${today}`;
+  return `page_share_${props.pageId}_${today}`;
 };
 
 const checkIfSharedToday = () => {
+  if (props.kind !== "page") {
+    hasSharedToday.value = false;
+    return;
+  }
   hasSharedToday.value = localStorage.getItem(storageKey()) !== null;
 };
 
@@ -87,8 +91,10 @@ const shareToChat = (taggedUserId = null) => {
   const options = {
     preserveScroll: true,
     onSuccess: () => {
-      localStorage.setItem(storageKey(), Date.now().toString());
-      hasSharedToday.value = true;
+      if (props.kind === "page") {
+        localStorage.setItem(storageKey(), Date.now().toString());
+        hasSharedToday.value = true;
+      }
       sharing.value = false;
     },
     onError: () => {
@@ -219,10 +225,14 @@ onUnmounted(() => {
         :disabled="isShareDisabled || sharing || confirmPending"
         class="h-10 w-10 flex items-center justify-center"
         :title="
-          hasSharedToday ? t('already_shared_today') : t('page.share_icon_title')
+          props.kind === 'page' && hasSharedToday
+            ? t('already_shared_today')
+            : t('page.share_icon_title')
         "
         :aria-label="
-          hasSharedToday ? t('already_shared_today') : t('page.share_aria')
+          props.kind === 'page' && hasSharedToday
+            ? t('already_shared_today')
+            : t('page.share_aria')
         "
         @click.stop="toggleShareMenu"
       >
