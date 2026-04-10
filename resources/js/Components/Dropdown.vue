@@ -1,6 +1,8 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
+const emit = defineEmits(["open-change"]);
+
 const props = defineProps({
     align: {
         type: String,
@@ -74,6 +76,7 @@ const updateDropdownWidth = () => {
 };
 
 watch(open, async (newValue) => {
+    emit("open-change", newValue);
     if (newValue && props.width === "full") {
         await nextTick();
         updateDropdownWidth();

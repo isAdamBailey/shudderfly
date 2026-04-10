@@ -155,6 +155,16 @@ function speakSoundTitle(sound) {
     speak(sound.title);
 }
 
+const soundMenuOpenId = ref(null);
+
+function onSoundMenuOpenChange(soundId, isOpen) {
+    if (isOpen) {
+        soundMenuOpenId.value = soundId;
+    } else if (soundMenuOpenId.value === soundId) {
+        soundMenuOpenId.value = null;
+    }
+}
+
 onBeforeUnmount(() => {
     stopAudio();
 });
@@ -190,6 +200,7 @@ onBeforeUnmount(() => {
                     v-for="sound in sounds"
                     :key="sound.id"
                     class="relative"
+                    :class="soundMenuOpenId === sound.id ? 'z-50' : ''"
                 >
                     <button
                         type="button"
@@ -209,11 +220,6 @@ onBeforeUnmount(() => {
                         <span class="text-sm font-medium text-center leading-tight break-words w-full">
                             {{ sound.title }}
                         </span>
-                        <i
-                            v-if="playingId === sound.id"
-                            class="ri-equalizer-line text-xl animate-pulse"
-                            aria-hidden="true"
-                        ></i>
                     </button>
 
                     <div class="absolute top-1 right-1 z-20" @click.stop>
@@ -221,6 +227,7 @@ onBeforeUnmount(() => {
                             align="right"
                             width="48"
                             :content-classes="soundDropdownContentClasses"
+                            @open-change="(open) => onSoundMenuOpenChange(sound.id, open)"
                         >
                             <template #trigger>
                                 <button
