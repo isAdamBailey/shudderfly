@@ -203,6 +203,23 @@ class SoundsTest extends TestCase
         $this->assertDatabaseHas('sounds', ['id' => $sound->id, 'title' => 'New Title', 'emoji' => '💨']);
     }
 
+    public function test_update_stores_null_emoji_when_cleared(): void
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo('edit pages');
+        $this->actingAs($user);
+
+        $sound = Sound::factory()->create(['title' => 'Labeled', 'emoji' => '🔊']);
+
+        $this->put(route('sounds.update', $sound->id), [
+            'title' => 'Labeled',
+            'emoji' => '',
+        ])->assertRedirect();
+
+        $sound->refresh();
+        $this->assertNull($sound->getAttributes()['emoji']);
+    }
+
     public function test_regular_user_cannot_update_a_sound(): void
     {
         $user = User::factory()->create();

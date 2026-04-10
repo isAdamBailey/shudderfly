@@ -23,8 +23,13 @@ const { canEditPages } = usePermissions();
 const playingId = ref(null);
 let audioEl = null;
 
+function handleAudioEnded() {
+    stopAudio();
+}
+
 function stopAudio() {
     if (audioEl) {
+        audioEl.removeEventListener("ended", handleAudioEnded);
         audioEl.pause();
         audioEl.src = "";
         audioEl = null;
@@ -43,7 +48,7 @@ function toggleSound(sound) {
     audioEl = new Audio(sound.audio_path);
     audioEl.preload = "none";
     audioEl.play().catch(() => {});
-    audioEl.addEventListener("ended", stopAudio);
+    audioEl.addEventListener("ended", handleAudioEnded);
     playingId.value = sound.id;
 }
 
