@@ -6,6 +6,7 @@ import ScrollTop from "@/Components/ScrollTop.vue";
 import TextInput from "@/Components/TextInput.vue";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { usePermissions } from "@/composables/permissions";
+import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, router, useForm } from "@inertiajs/vue3";
 import { ref, watch, onBeforeUnmount } from "vue";
@@ -18,6 +19,7 @@ const props = defineProps({
 });
 
 const { canEditPages } = usePermissions();
+const { speak, stopSpeech } = useSpeechSynthesis();
 
 // ── Audio playback ────────────────────────────────────────────────────────────
 const playingId = ref(null);
@@ -140,6 +142,12 @@ function toggleSoundMenu(soundId) {
         soundMenuOpenId.value === soundId ? null : soundId;
 }
 
+function speakTitleFromMenu(sound) {
+    soundMenuOpenId.value = null;
+    stopSpeech();
+    speak(sound.title);
+}
+
 function openEditFromMenu(sound) {
     soundMenuOpenId.value = null;
     openEdit(sound);
@@ -181,7 +189,7 @@ onBeforeUnmount(() => {
         <template #header>
             <div class="flex items-center justify-between flex-wrap gap-3">
                 <h2 class="font-heading text-2xl text-theme-title leading-tight">
-                    Sounds 🔊
+                    Sounds
                 </h2>
                 <p class="text-gray-300 text-sm">
                     Tap a tile to play. Tap again to stop.
@@ -238,7 +246,6 @@ onBeforeUnmount(() => {
                     </button>
 
                     <div
-                        v-if="canEditPages"
                         class="absolute top-1 right-1 z-20"
                         data-sound-menu-root
                         :data-sound-id="sound.id"
@@ -263,12 +270,23 @@ onBeforeUnmount(() => {
                                 type="button"
                                 role="menuitem"
                                 class="flex min-h-[52px] w-full touch-manipulation items-center gap-3 px-4 py-3 text-left text-base font-medium text-gray-100 active:bg-gray-700/80 hover:bg-gray-700"
+                                @click="speakTitleFromMenu(sound)"
+                            >
+                                <i class="ri-speak-fill text-lg text-sky-400" aria-hidden="true"></i>
+                                Speak title
+                            </button>
+                            <button
+                                v-if="canEditPages"
+                                type="button"
+                                role="menuitem"
+                                class="flex min-h-[52px] w-full touch-manipulation items-center gap-3 border-t border-gray-600/80 px-4 py-3 text-left text-base font-medium text-gray-100 active:bg-gray-700/80 hover:bg-gray-700"
                                 @click="openEditFromMenu(sound)"
                             >
                                 <i class="ri-pencil-line text-lg text-emerald-400" aria-hidden="true"></i>
                                 Edit
                             </button>
                             <button
+                                v-if="canEditPages"
                                 type="button"
                                 role="menuitem"
                                 class="flex min-h-[52px] w-full touch-manipulation items-center gap-3 border-t border-gray-600/80 px-4 py-3 text-left text-base font-medium text-red-300 active:bg-gray-700/80 hover:bg-gray-700"
