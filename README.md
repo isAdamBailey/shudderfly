@@ -466,7 +466,7 @@ The following models are automatically indexed when created or updated:
 The bucket uses a flat top-level folder structure:
 
 | Folder | Contents |
-|---|---|
+| --- | --- |
 | `books/{book-slug}/` | Book page images and videos |
 | `collages/` | Collage images and PDFs |
 | `sounds/` | Sound effect audio files (MP3 / AAC) |
