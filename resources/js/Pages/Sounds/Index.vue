@@ -1,6 +1,7 @@
 <script setup>
 import Button from "@/Components/Button.vue";
 import ConfirmDialog from "@/Components/ConfirmDialog.vue";
+import Dropdown from "@/Components/Dropdown.vue";
 import FloatingActionMenu from "@/Components/FloatingActionMenu.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
 import TextInput from "@/Components/TextInput.vue";
@@ -9,19 +10,36 @@ import { usePermissions } from "@/composables/permissions";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, router, useForm } from "@inertiajs/vue3";
-import { ref, watch, onBeforeUnmount } from "vue";
+import { onBeforeUnmount, ref } from "vue";
 
-const props = defineProps({
+defineProps({
     sounds: {
         type: Array,
         default: () => [],
     },
 });
 
+const soundDropdownContentClasses = [
+    "py-1",
+    "bg-gray-800",
+    "border",
+    "border-gray-600",
+    "rounded-xl",
+    "shadow-xl",
+    "overflow-hidden",
+];
+
+const soundMenuItemClass =
+    "flex min-h-[52px] w-full touch-manipulation items-center gap-3 px-4 py-3 text-left text-base font-medium text-gray-100 active:bg-gray-700/80 hover:bg-gray-700";
+
+const soundModalOverlayClass =
+    "fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4";
+const soundModalPanelClass =
+    "bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6";
+
 const { canEditPages } = usePermissions();
 const { speak, stopSpeech } = useSpeechSynthesis();
 
-// ── Audio playback ────────────────────────────────────────────────────────────
 const playingId = ref(null);
 let audioEl = null;
 
@@ -54,7 +72,6 @@ function toggleSound(sound) {
     playingId.value = sound.id;
 }
 
-// ── Upload form ───────────────────────────────────────────────────────────────
 const showUploadModal = ref(false);
 const uploadForm = useForm({
     title: "",
@@ -88,7 +105,6 @@ function onAudioFileChange(e) {
     uploadForm.audio = file;
 }
 
-// ── Edit form ────────────────────────────────────────────────────────────────
 const editingSound = ref(null);
 const editForm = useForm({ title: "", emoji: "" });
 
@@ -111,7 +127,6 @@ function submitEdit() {
     });
 }
 
-// ── Delete ───────────────────────────────────────────────────────────────────
 const {
     show: confirmShow,
     message: confirmMessage,
@@ -135,50 +150,13 @@ async function deleteSound(sound) {
     });
 }
 
-const soundMenuOpenId = ref(null);
-
-function toggleSoundMenu(soundId) {
-    soundMenuOpenId.value =
-        soundMenuOpenId.value === soundId ? null : soundId;
-}
-
-function speakTitleFromMenu(sound) {
-    soundMenuOpenId.value = null;
+function speakSoundTitle(sound) {
     stopSpeech();
     speak(sound.title);
 }
 
-function openEditFromMenu(sound) {
-    soundMenuOpenId.value = null;
-    openEdit(sound);
-}
-
-async function deleteSoundFromMenu(sound) {
-    soundMenuOpenId.value = null;
-    await deleteSound(sound);
-}
-
-let soundMenuOutsideTeardown = null;
-
-watch(soundMenuOpenId, (id) => {
-    if (soundMenuOutsideTeardown) {
-        soundMenuOutsideTeardown();
-        soundMenuOutsideTeardown = null;
-    }
-    if (id === null) return;
-    const onPointerDown = (e) => {
-        const root = e.target.closest?.("[data-sound-menu-root]");
-        if (root && Number(root.dataset.soundId) === id) return;
-        soundMenuOpenId.value = null;
-    };
-    document.addEventListener("pointerdown", onPointerDown, true);
-    soundMenuOutsideTeardown = () =>
-        document.removeEventListener("pointerdown", onPointerDown, true);
-});
-
 onBeforeUnmount(() => {
     stopAudio();
-    soundMenuOutsideTeardown?.();
 });
 </script>
 
@@ -187,18 +165,12 @@ onBeforeUnmount(() => {
 
     <AuthenticatedLayout>
         <template #header>
-            <div class="flex items-center justify-between flex-wrap gap-3">
-                <h2 class="font-heading text-2xl text-theme-title leading-tight">
-                    Sounds
-                </h2>
-                <p class="text-gray-300 text-sm">
-                    Tap a tile to play. Tap again to stop.
-                </p>
-            </div>
+            <h2 class="font-heading text-2xl text-theme-title leading-tight">
+                Sounds
+            </h2>
         </template>
 
         <div class="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-            <!-- Empty state -->
             <div
                 v-if="sounds.length === 0"
                 class="text-center py-16 text-gray-400 dark:text-gray-500"
@@ -210,7 +182,6 @@ onBeforeUnmount(() => {
                 </p>
             </div>
 
-            <!-- Sound grid -->
             <div
                 v-else
                 class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"
@@ -245,63 +216,59 @@ onBeforeUnmount(() => {
                         ></i>
                     </button>
 
-                    <div
-                        class="absolute top-1 right-1 z-20"
-                        data-sound-menu-root
-                        :data-sound-id="sound.id"
-                        @click.stop
-                    >
-                        <button
-                            type="button"
-                            class="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full border border-gray-500/80 bg-gray-800/95 text-gray-200 shadow-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-theme-primary"
-                            :aria-expanded="soundMenuOpenId === sound.id"
-                            aria-haspopup="menu"
-                            :aria-label="`More actions for ${sound.title}`"
-                            @click.stop="toggleSoundMenu(sound.id)"
+                    <div class="absolute top-1 right-1 z-20" @click.stop>
+                        <Dropdown
+                            align="right"
+                            width="48"
+                            :content-classes="soundDropdownContentClasses"
                         >
-                            <i class="ri-more-2-fill text-2xl leading-none" aria-hidden="true"></i>
-                        </button>
-                        <div
-                            v-if="soundMenuOpenId === sound.id"
-                            class="absolute right-0 top-full z-30 mt-1 min-w-[12rem] overflow-hidden rounded-xl border border-gray-600 bg-gray-800 py-1 shadow-xl"
-                            role="menu"
-                        >
-                            <button
-                                type="button"
-                                role="menuitem"
-                                class="flex min-h-[52px] w-full touch-manipulation items-center gap-3 px-4 py-3 text-left text-base font-medium text-gray-100 active:bg-gray-700/80 hover:bg-gray-700"
-                                @click="speakTitleFromMenu(sound)"
-                            >
-                                <i class="ri-speak-fill text-lg text-sky-400" aria-hidden="true"></i>
-                                Speak title
-                            </button>
-                            <button
-                                v-if="canEditPages"
-                                type="button"
-                                role="menuitem"
-                                class="flex min-h-[52px] w-full touch-manipulation items-center gap-3 border-t border-gray-600/80 px-4 py-3 text-left text-base font-medium text-gray-100 active:bg-gray-700/80 hover:bg-gray-700"
-                                @click="openEditFromMenu(sound)"
-                            >
-                                <i class="ri-pencil-line text-lg text-emerald-400" aria-hidden="true"></i>
-                                Edit
-                            </button>
-                            <button
-                                v-if="canEditPages"
-                                type="button"
-                                role="menuitem"
-                                class="flex min-h-[52px] w-full touch-manipulation items-center gap-3 border-t border-gray-600/80 px-4 py-3 text-left text-base font-medium text-red-300 active:bg-gray-700/80 hover:bg-gray-700"
-                                @click="deleteSoundFromMenu(sound)"
-                            >
-                                <i class="ri-delete-bin-line text-lg" aria-hidden="true"></i>
-                                Delete
-                            </button>
-                        </div>
+                            <template #trigger>
+                                <button
+                                    type="button"
+                                    class="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full border border-gray-500/80 bg-gray-800/95 text-gray-200 shadow-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-theme-primary"
+                                    aria-haspopup="menu"
+                                    :aria-label="`More actions for ${sound.title}`"
+                                >
+                                    <i class="ri-more-2-fill text-2xl leading-none" aria-hidden="true"></i>
+                                </button>
+                            </template>
+                            <template #content>
+                                <button
+                                    type="button"
+                                    role="menuitem"
+                                    :class="soundMenuItemClass"
+                                    @click="speakSoundTitle(sound)"
+                                >
+                                    <i class="ri-speak-fill text-lg text-sky-400" aria-hidden="true"></i>
+                                    Speak title
+                                </button>
+                                <button
+                                    v-if="canEditPages"
+                                    type="button"
+                                    role="menuitem"
+                                    :class="[soundMenuItemClass, 'border-t border-gray-600/80']"
+                                    @click="openEdit(sound)"
+                                >
+                                    <i class="ri-pencil-line text-lg text-emerald-400" aria-hidden="true"></i>
+                                    Edit
+                                </button>
+                                <button
+                                    v-if="canEditPages"
+                                    type="button"
+                                    role="menuitem"
+                                    :class="[soundMenuItemClass, 'border-t border-gray-600/80 text-red-300']"
+                                    @click="deleteSound(sound)"
+                                >
+                                    <i class="ri-delete-bin-line text-lg" aria-hidden="true"></i>
+                                    Delete
+                                </button>
+                            </template>
+                        </Dropdown>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Floating action menu (admin only) -->
         <FloatingActionMenu v-if="canEditPages">
             <button
                 type="button"
@@ -315,14 +282,13 @@ onBeforeUnmount(() => {
 
         <ScrollTop />
 
-        <!-- Upload modal -->
         <Teleport to="body">
             <div
                 v-if="showUploadModal"
-                class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+                :class="soundModalOverlayClass"
                 @click.self="closeUploadModal"
             >
-                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6">
+                <div :class="soundModalPanelClass">
                     <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
                         Upload Sound
                     </h3>
@@ -403,14 +369,13 @@ onBeforeUnmount(() => {
             </div>
         </Teleport>
 
-        <!-- Edit modal -->
         <Teleport to="body">
             <div
                 v-if="editingSound"
-                class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+                :class="soundModalOverlayClass"
                 @click.self="closeEdit"
             >
-                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6">
+                <div :class="soundModalPanelClass">
                     <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
                         Edit Sound
                     </h3>
@@ -465,7 +430,6 @@ onBeforeUnmount(() => {
             </div>
         </Teleport>
 
-        <!-- Confirm delete dialog -->
         <ConfirmDialog
             v-model:show="confirmShow"
             :title="confirmTitle"

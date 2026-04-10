@@ -473,16 +473,7 @@ The bucket uses a flat top-level folder structure:
 
 #### Sounds Setup
 
-The Sounds page streams audio from S3 (or CloudFront). To get started:
-
-1. **Enable the feature** in the admin Settings panel (`sounds_enabled = true`).
-2. **Upload sounds** via the Sounds page (floating `⋯` menu → *Upload Sound*).
-3. **Recommended audio format: AAC / M4A** — natively supported by Safari/iOS, Chrome, Firefox, and Edge. MP3 is accepted but may fail on some Safari versions.
-4. **Convert existing MP3s** to M4A using FFmpeg (one-time, on your machine):
-   ```bash
-   ffmpeg -i fart.mp3 -c:a aac -b:a 128k fart.m4a
-   ```
-5. **Game sounds** (`fart.m4a`, etc.) live in the `sounds/` S3 folder too. Upload `sounds/fart.m4a` to the bucket and the game pages will automatically use the S3/CloudFront URL instead of the legacy `public/fart.mp3` fallback.
+Turn on **`sounds_enabled`** in Settings to show the Sounds page (audio from S3 / CloudFront). **Edit pages** can upload clips (FFmpeg converts uploads to M4A in a queue job — run a **queue worker** in production). Uploaded files are stored as `sounds/{uuid}.m4a`, not a fixed filename. Everyone can use the tile menu to hear a title read aloud; edit/delete stays editor-only. Games use the bundled `public/fart.m4a` for effects unless you point `fartSoundUrl` at a specific URL yourself.
 
 #### CloudFront CDN (Optional but Recommended)
 

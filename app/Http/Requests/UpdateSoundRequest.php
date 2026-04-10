@@ -2,21 +2,12 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\NormalizesEmptyEmoji;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateSoundRequest extends FormRequest
 {
-    protected function prepareForValidation(): void
-    {
-        if (! $this->has('emoji')) {
-            return;
-        }
-
-        $raw = $this->input('emoji');
-        if (! is_string($raw) || trim($raw) === '') {
-            $this->merge(['emoji' => null]);
-        }
-    }
+    use NormalizesEmptyEmoji;
 
     public function authorize(): bool
     {
