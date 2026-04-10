@@ -226,6 +226,27 @@ class SoundsTest extends TestCase
         $this->assertDatabaseMissing('sounds', ['id' => $sound->id]);
     }
 
+    public function test_admin_can_delete_sound_when_audio_path_is_stored_as_https_url(): void
+    {
+        Storage::fake('s3');
+
+        $user = User::factory()->create();
+        $user->givePermissionTo('edit pages');
+        $this->actingAs($user);
+
+        $key = 'sounds/legacy.m4a';
+        Storage::disk('s3')->put($key, 'audio-data');
+
+        $sound = Sound::factory()->create([
+            'audio_path' => 'https://cdn.example.com/'.$key,
+        ]);
+
+        $this->delete(route('sounds.destroy', $sound->id))->assertRedirect();
+
+        $this->assertDatabaseMissing('sounds', ['id' => $sound->id]);
+        Storage::disk('s3')->assertMissing($key);
+    }
+
     public function test_regular_user_cannot_delete_a_sound(): void
     {
         $user = User::factory()->create();

@@ -62,8 +62,9 @@ class SoundsController extends Controller
     public function destroy(Sound $sound): RedirectResponse
     {
         $rawPath = $sound->getAttributes()['audio_path'] ?? null;
-        if ($rawPath && ! str_starts_with($rawPath, 'https://')) {
-            Storage::disk('s3')->delete($rawPath);
+        $key = Sound::s3KeyFromStoredPath($rawPath);
+        if ($key !== null) {
+            Storage::disk('s3')->delete($key);
         }
 
         $sound->delete();

@@ -19,11 +19,29 @@ class Sound extends Model
 
     public static function urlForPath(string $path): string
     {
-        if (app()->environment('local')) {
+        if (app()->environment(['local', 'testing'])) {
             return Storage::disk('s3')->url($path);
         }
 
         return Storage::disk('cloudfront')->url($path);
+    }
+
+    public static function s3KeyFromStoredPath(?string $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (Str::startsWith($value, 'https://')) {
+            $path = parse_url($value, PHP_URL_PATH);
+            if (! is_string($path) || $path === '') {
+                return null;
+            }
+
+            return ltrim($path, '/');
+        }
+
+        return $value;
     }
 
     public function getAudioPathAttribute($value): string
