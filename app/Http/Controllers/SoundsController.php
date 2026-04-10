@@ -20,7 +20,7 @@ class SoundsController extends Controller
             $soundsEnabled = SiteSetting::where('key', 'sounds_enabled')->first()?->value ?? false;
 
             if (! $soundsEnabled) {
-                abort(404, 'Sounds feature is currently disabled.');
+                abort(404, __('messages.sound.disabled'));
             }
 
             return $next($request);
@@ -46,7 +46,7 @@ class SoundsController extends Controller
             $data['emoji'] ?? null,
         );
 
-        return back()->with('success', 'Sound uploaded successfully.');
+        return back()->with('success', __('messages.sound.uploaded'));
     }
 
     public function update(UpdateSoundRequest $request, Sound $sound): RedirectResponse
@@ -56,7 +56,7 @@ class SoundsController extends Controller
             'emoji' => $request->emoji,
         ]);
 
-        return back()->with('success', 'Sound updated successfully.');
+        return back()->with('success', __('messages.sound.updated'));
     }
 
     public function destroy(Sound $sound): RedirectResponse
@@ -69,6 +69,6 @@ class SoundsController extends Controller
 
         $sound->delete();
 
-        return back()->with('success', 'Sound deleted successfully.');
+        return back()->with('success', __('messages.sound.deleted'));
     }
 }
