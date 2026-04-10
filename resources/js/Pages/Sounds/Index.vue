@@ -5,7 +5,6 @@ import FloatingActionMenu from "@/Components/FloatingActionMenu.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
 import TextInput from "@/Components/TextInput.vue";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
-import { useFlashMessage } from "@/composables/useFlashMessage";
 import { usePermissions } from "@/composables/permissions";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, router, useForm } from "@inertiajs/vue3";
@@ -19,7 +18,6 @@ const props = defineProps({
 });
 
 const { canEditPages } = usePermissions();
-const { setFlashMessage } = useFlashMessage();
 
 // ── Audio playback ────────────────────────────────────────────────────────────
 const playingId = ref(null);
@@ -76,7 +74,6 @@ function submitUpload() {
         forceFormData: true,
         onSuccess: () => {
             closeUploadModal();
-            setFlashMessage("success", "Sound uploaded successfully.");
         },
     });
 }
@@ -105,7 +102,6 @@ function submitEdit() {
     editForm.put(route("sounds.update", editingSound.value.id), {
         onSuccess: () => {
             closeEdit();
-            setFlashMessage("success", "Sound updated.");
         },
     });
 }
@@ -131,7 +127,6 @@ async function deleteSound(sound) {
 
     router.delete(route("sounds.destroy", sound.id), {
         preserveScroll: true,
-        onSuccess: () => setFlashMessage("success", "Sound deleted."),
     });
 }
 </script>
@@ -254,8 +249,8 @@ async function deleteSound(sound) {
 
                     <div class="mb-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-sm text-blue-700 dark:text-blue-300">
                         <i class="ri-information-line mr-1"></i>
-                        For best compatibility on <strong>all devices including Safari/iOS</strong>,
-                        upload audio in <strong>AAC (.m4a)</strong> format. MP3 may not play on some Safari versions.
+                        Uploads are converted to <strong>M4A (AAC)</strong> on the server.
+                        You can send MP3, WAV, OGG, or M4A; MP3 and other formats are normalized for Safari/iOS.
                     </div>
 
                     <form @submit.prevent="submitUpload" class="space-y-4">
@@ -291,7 +286,7 @@ async function deleteSound(sound) {
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Audio File <span class="text-red-500">*</span>
-                                <span class="text-xs text-gray-500 ml-1">(AAC/M4A recommended, MP3 accepted)</span>
+                                <span class="text-xs text-gray-500 ml-1">(MP3, WAV, OGG, or M4A)</span>
                             </label>
                             <input
                                 ref="audioFileInput"

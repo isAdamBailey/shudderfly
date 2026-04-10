@@ -39,7 +39,7 @@ import WinScreen   from "./components/WinScreen.vue";
 import { useGameState } from "./composables/useGameState.js";
 import { useSound }     from "./composables/useSound.js";
 
-const fartSoundUrl = usePage().props.fartSoundUrl ?? "/fart.mp3";
+const fartSoundUrl = usePage().props.fartSoundUrl ?? "/fart.m4a";
 const { state, stars, currentFact, startGame, hiss } = useGameState();
 const { initAudio, playFart, playVictory }            = useSound(fartSoundUrl);
 

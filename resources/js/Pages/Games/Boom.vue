@@ -223,7 +223,7 @@ function makeCtx() {
     return new (window.AudioContext || window.webkitAudioContext)();
 }
 
-const fartSoundUrl = usePage().props.fartSoundUrl ?? "/fart.mp3";
+const fartSoundUrl = usePage().props.fartSoundUrl ?? "/fart.m4a";
 const fartSound = new Audio(fartSoundUrl);
 fartSound.preload = "auto";
 fartSound.volume  = 0.9;

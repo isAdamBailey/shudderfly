@@ -68,6 +68,7 @@ import GameEndScreen from "@/Components/Games/GameEndScreen.vue";
 import { COSTCO_PIZZA_POOP_INTRO_SCRIPT } from "@/Pages/Games/shared/introScripts.js";
 import { useSound } from "@/Pages/Games/BigPoop/composables/useSound.js";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { usePage } from "@inertiajs/vue3";
 import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 
 const SLICE_COUNT = 6;
@@ -103,7 +104,8 @@ const showPoop = ref(false);
 let digestTimer = null;
 let poopTimer = null;
 
-const { initAudio, playFart, playChomp } = useSound();
+const fartSoundUrl = usePage().props.fartSoundUrl ?? "/fart.m4a";
+const { initAudio, playFart, playChomp } = useSound(fartSoundUrl);
 const { speak, stopSpeech } = useSpeechSynthesis();
 
 const slicesLeft = computed(

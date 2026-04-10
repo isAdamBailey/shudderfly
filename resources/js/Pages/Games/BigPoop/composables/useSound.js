@@ -1,6 +1,6 @@
 import { ref } from "vue";
 
-export function useSound(fartSoundUrl = "/fart.mp3") {
+export function useSound(fartSoundUrl = "/fart.m4a") {
     const audioReady = ref(false);
 
     const fartSound = new Audio(fartSoundUrl);

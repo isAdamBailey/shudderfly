@@ -78,13 +78,18 @@ class SoundsTest extends TestCase
 
     public function test_admin_can_upload_a_sound(): void
     {
+        $fixture = base_path('public/fart.m4a');
+        if (! is_file($fixture)) {
+            $this->markTestSkipped('public/fart.m4a is required for upload transcoding test.');
+        }
+
         Storage::fake('s3');
 
         $user = User::factory()->create();
         $user->givePermissionTo('edit pages');
         $this->actingAs($user);
 
-        $file = UploadedFile::fake()->create('fart.m4a', 100, 'audio/mp4');
+        $file = new UploadedFile($fixture, 'clip.m4a', 'audio/mp4', null, true);
 
         $response = $this->post(route('sounds.store'), [
             'title' => 'Test Fart',
@@ -94,6 +99,9 @@ class SoundsTest extends TestCase
 
         $response->assertRedirect();
         $this->assertDatabaseHas('sounds', ['title' => 'Test Fart', 'emoji' => '💨']);
+        $row = Sound::where('title', 'Test Fart')->first();
+        $this->assertNotNull($row);
+        $this->assertStringEndsWith('.m4a', $row->getAttributes()['audio_path']);
     }
 
     public function test_regular_user_cannot_upload_a_sound(): void

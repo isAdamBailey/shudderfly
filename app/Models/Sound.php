@@ -17,10 +17,6 @@ class Sound extends Model
         'audio_path',
     ];
 
-    /**
-     * Generate a public URL for any path stored in the sounds/ S3 folder.
-     * Used by game components to resolve URLs at runtime.
-     */
     public static function urlForPath(string $path): string
     {
         if (app()->environment('local')) {

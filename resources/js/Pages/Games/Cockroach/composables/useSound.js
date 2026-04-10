@@ -16,7 +16,7 @@ function getContext() {
     return audioCtx;
 }
 
-export function useSound(fartSoundUrl = "/fart.mp3") {
+export function useSound(fartSoundUrl = "/fart.m4a") {
     async function initAudio() {
         if (fartBuffer) return;
         const ctx = getContext();

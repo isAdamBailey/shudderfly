@@ -64,7 +64,7 @@ import { useSound } from "./composables/useSound.js";
 import { watch } from "vue";
 import { usePage } from "@inertiajs/vue3";
 
-const fartSoundUrl = usePage().props.fartSoundUrl ?? "/fart.mp3";
+const fartSoundUrl = usePage().props.fartSoundUrl ?? "/fart.m4a";
 const {
     state, segments, totalHeight, elapsedSeconds,
     stars, progress, startGame, movePoop, getPassageAt, POOP_RADIUS,

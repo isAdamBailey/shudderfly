@@ -28,7 +28,7 @@ class StoreSoundRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'audio.mimetypes' => 'The audio file must be an MP3, AAC/M4A, WAV, or OGG file. For best Safari compatibility, AAC/M4A format is recommended.',
+            'audio.mimetypes' => 'The audio file must be an MP3, AAC/M4A, WAV, or OGG file. It will be converted to M4A (AAC) for playback.',
         ];
     }
 }

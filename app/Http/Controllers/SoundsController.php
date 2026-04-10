@@ -4,8 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreSoundRequest;
 use App\Http\Requests\UpdateSoundRequest;
-use App\Models\Sound;
+use App\Jobs\StoreSoundAudio;
 use App\Models\SiteSetting;
+use App\Models\Sound;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -36,17 +37,14 @@ class SoundsController extends Controller
     public function store(StoreSoundRequest $request): RedirectResponse
     {
         $file = $request->file('audio');
-        $extension = strtolower($file->getClientOriginalExtension()) ?: 'mp3';
-        $filename = 'sounds/'.str()->uuid().'.'.$extension;
+        $storedPath = $file->store('tmp/sounds', 'local');
+        $data = $request->validated();
 
-        Storage::disk('s3')->put($filename, file_get_contents($file->getRealPath()));
-        Storage::disk('s3')->setVisibility($filename, 'public');
-
-        Sound::create([
-            'title' => $request->title,
-            'emoji' => $request->emoji,
-            'audio_path' => $filename,
-        ]);
+        StoreSoundAudio::dispatch(
+            $storedPath,
+            $data['title'],
+            $data['emoji'] ?? null,
+        );
 
         return back()->with('success', 'Sound uploaded successfully.');
     }
