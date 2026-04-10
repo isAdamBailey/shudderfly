@@ -30,6 +30,7 @@
 
 <script setup>
 import { watch, onUnmounted } from "vue";
+import { usePage } from "@inertiajs/vue3";
 
 import GameStartScreen from "@/Components/Games/GameStartScreen.vue";
 import GameBoard from "./components/GameBoard.vue";
@@ -38,8 +39,9 @@ import WinScreen   from "./components/WinScreen.vue";
 import { useGameState } from "./composables/useGameState.js";
 import { useSound }     from "./composables/useSound.js";
 
+const fartSoundUrl = usePage().props.fartSoundUrl ?? "/fart.mp3";
 const { state, stars, currentFact, startGame, hiss } = useGameState();
-const { initAudio, playFart, playVictory }            = useSound();
+const { initAudio, playFart, playVictory }            = useSound(fartSoundUrl);
 
 let victoryTimeoutId = null;
 

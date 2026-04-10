@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\MessageCreated;
 use App\Models\Message;
 use App\Models\SiteSetting;
+use App\Models\Sound;
 use App\Models\User;
 use App\Services\UserTaggingService;
 use Illuminate\Http\RedirectResponse;
@@ -72,6 +73,7 @@ class GameController extends Controller
 
         return Inertia::render('Games/'.self::GAMES[$game]['component'], [
             'users' => $users,
+            'fartSoundUrl' => Sound::urlForPath('sounds/fart.m4a'),
         ]);
     }
 

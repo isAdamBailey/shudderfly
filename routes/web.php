@@ -15,6 +15,7 @@ use App\Http\Controllers\MusicController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\SoundsController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\YouTubeProxyController;
 use Illuminate\Foundation\Application;
@@ -79,6 +80,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/music/{song}', [MusicController::class, 'show'])->name('music.show');
     Route::post('/music/{song}/increment-read-count', [MusicController::class, 'incrementReadCount'])->name('music.increment-read-count');
 
+    Route::get('/sounds', [SoundsController::class, 'index'])->name('sounds.index');
+
     Route::get('/api/youtube-iframe-api', [YouTubeProxyController::class, 'iframeApi'])->name('youtube.iframe-api');
 
     Route::get('/messages', [MessageController::class, 'index'])->name('messages.index');
@@ -107,6 +110,10 @@ Route::middleware('auth')->group(function () {
 
         Route::delete('/collage-page/{collage}/{page}', [CollagePageController::class, 'destroy'])->name('collage-page.destroy');
         Route::patch('/collage-page/{collage}/{page}', [CollagePageController::class, 'update'])->name('collage-page.update');
+
+        Route::post('/sounds', [SoundsController::class, 'store'])->name('sounds.store');
+        Route::put('/sounds/{sound}', [SoundsController::class, 'update'])->name('sounds.update');
+        Route::delete('/sounds/{sound}', [SoundsController::class, 'destroy'])->name('sounds.destroy');
     });
 
     Route::group(['middleware' => ['can:admin']], function () {

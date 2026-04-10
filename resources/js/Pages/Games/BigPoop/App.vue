@@ -62,12 +62,14 @@ import { BIG_POOP_INTRO_SCRIPT } from "@/Pages/Games/shared/introScripts.js";
 import { useGameState } from "./composables/useGameState.js";
 import { useSound } from "./composables/useSound.js";
 import { watch } from "vue";
+import { usePage } from "@inertiajs/vue3";
 
+const fartSoundUrl = usePage().props.fartSoundUrl ?? "/fart.mp3";
 const {
     state, segments, totalHeight, elapsedSeconds,
     stars, progress, startGame, movePoop, getPassageAt, POOP_RADIUS,
 } = useGameState();
-const { initAudio, playFart } = useSound();
+const { initAudio, playFart } = useSound(fartSoundUrl);
 
 watch(() => state.phase, (phase) => {
     if (phase === "win") playFart();
