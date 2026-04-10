@@ -19,7 +19,10 @@
     <env name="QUEUE_CONNECTION" value="sync"/>
     <env name="SESSION_DRIVER" value="array"/>
     <env name="SCOUT_DRIVER" value="null"/>
-    
+    <env name="AWS_ACCESS_KEY_ID" value="testing"/>
+    <env name="AWS_SECRET_ACCESS_KEY" value="testing"/>
+    <env name="AWS_DEFAULT_REGION" value="us-east-1"/>
+    <env name="AWS_BUCKET" value="testing"/>
   </php>
   <source>
     <include>

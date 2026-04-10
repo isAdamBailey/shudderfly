@@ -8,7 +8,7 @@ import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { usePermissions } from "@/composables/permissions";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, router, useForm } from "@inertiajs/vue3";
-import { ref, onBeforeUnmount } from "vue";
+import { ref, watch, onBeforeUnmount } from "vue";
 
 const props = defineProps({
     sounds: {
@@ -46,8 +46,6 @@ function toggleSound(sound) {
     audioEl.addEventListener("ended", stopAudio);
     playingId.value = sound.id;
 }
-
-onBeforeUnmount(stopAudio);
 
 // ── Upload form ───────────────────────────────────────────────────────────────
 const showUploadModal = ref(false);
@@ -129,6 +127,46 @@ async function deleteSound(sound) {
         preserveScroll: true,
     });
 }
+
+const soundMenuOpenId = ref(null);
+
+function toggleSoundMenu(soundId) {
+    soundMenuOpenId.value =
+        soundMenuOpenId.value === soundId ? null : soundId;
+}
+
+function openEditFromMenu(sound) {
+    soundMenuOpenId.value = null;
+    openEdit(sound);
+}
+
+async function deleteSoundFromMenu(sound) {
+    soundMenuOpenId.value = null;
+    await deleteSound(sound);
+}
+
+let soundMenuOutsideTeardown = null;
+
+watch(soundMenuOpenId, (id) => {
+    if (soundMenuOutsideTeardown) {
+        soundMenuOutsideTeardown();
+        soundMenuOutsideTeardown = null;
+    }
+    if (id === null) return;
+    const onPointerDown = (e) => {
+        const root = e.target.closest?.("[data-sound-menu-root]");
+        if (root && Number(root.dataset.soundId) === id) return;
+        soundMenuOpenId.value = null;
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    soundMenuOutsideTeardown = () =>
+        document.removeEventListener("pointerdown", onPointerDown, true);
+});
+
+onBeforeUnmount(() => {
+    stopAudio();
+    soundMenuOutsideTeardown?.();
+});
 </script>
 
 <template>
@@ -167,9 +205,8 @@ async function deleteSound(sound) {
                 <div
                     v-for="sound in sounds"
                     :key="sound.id"
-                    class="relative group"
+                    class="relative"
                 >
-                    <!-- Sound tile -->
                     <button
                         type="button"
                         class="w-full flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all duration-200 select-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-theme-primary min-h-[110px]"
@@ -195,27 +232,47 @@ async function deleteSound(sound) {
                         ></i>
                     </button>
 
-                    <!-- Admin per-tile actions -->
                     <div
                         v-if="canEditPages"
-                        class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex gap-1"
+                        class="absolute top-1 right-1 z-20"
+                        data-sound-menu-root
+                        :data-sound-id="sound.id"
+                        @click.stop
                     >
                         <button
                             type="button"
-                            class="p-1 rounded-lg bg-gray-700/80 text-gray-300 hover:text-white hover:bg-gray-600"
-                            :aria-label="`Edit ${sound.title}`"
-                            @click.stop="openEdit(sound)"
+                            class="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full border border-gray-500/80 bg-gray-800/95 text-gray-200 shadow-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-theme-primary"
+                            :aria-expanded="soundMenuOpenId === sound.id"
+                            aria-haspopup="menu"
+                            :aria-label="`More actions for ${sound.title}`"
+                            @click.stop="toggleSoundMenu(sound.id)"
                         >
-                            <i class="ri-pencil-line text-sm"></i>
+                            <i class="ri-more-2-fill text-2xl leading-none" aria-hidden="true"></i>
                         </button>
-                        <button
-                            type="button"
-                            class="p-1 rounded-lg bg-gray-700/80 text-gray-300 hover:text-red-400 hover:bg-gray-600"
-                            :aria-label="`Delete ${sound.title}`"
-                            @click.stop="deleteSound(sound)"
+                        <div
+                            v-if="soundMenuOpenId === sound.id"
+                            class="absolute right-0 top-full z-30 mt-1 min-w-[12rem] overflow-hidden rounded-xl border border-gray-600 bg-gray-800 py-1 shadow-xl"
+                            role="menu"
                         >
-                            <i class="ri-delete-bin-line text-sm"></i>
-                        </button>
+                            <button
+                                type="button"
+                                role="menuitem"
+                                class="flex min-h-[52px] w-full touch-manipulation items-center gap-3 px-4 py-3 text-left text-base font-medium text-gray-100 active:bg-gray-700/80 hover:bg-gray-700"
+                                @click="openEditFromMenu(sound)"
+                            >
+                                <i class="ri-pencil-line text-lg text-emerald-400" aria-hidden="true"></i>
+                                Edit
+                            </button>
+                            <button
+                                type="button"
+                                role="menuitem"
+                                class="flex min-h-[52px] w-full touch-manipulation items-center gap-3 border-t border-gray-600/80 px-4 py-3 text-left text-base font-medium text-red-300 active:bg-gray-700/80 hover:bg-gray-700"
+                                @click="deleteSoundFromMenu(sound)"
+                            >
+                                <i class="ri-delete-bin-line text-lg" aria-hidden="true"></i>
+                                Delete
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -2,11 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\StoreSoundAudio;
 use App\Models\Sound;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
+use ReflectionObject;
 use Tests\TestCase;
 
 class SoundsTest extends TestCase
@@ -16,6 +19,8 @@ class SoundsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        Storage::fake('s3');
 
         \App\Models\SiteSetting::where('key', 'sounds_enabled')->update(['value' => '1']);
     }
@@ -78,18 +83,13 @@ class SoundsTest extends TestCase
 
     public function test_admin_can_upload_a_sound(): void
     {
-        $fixture = base_path('public/fart.m4a');
-        if (! is_file($fixture)) {
-            $this->markTestSkipped('public/fart.m4a is required for upload transcoding test.');
-        }
-
-        Storage::fake('s3');
+        Bus::fake();
 
         $user = User::factory()->create();
         $user->givePermissionTo('edit pages');
         $this->actingAs($user);
 
-        $file = new UploadedFile($fixture, 'clip.m4a', 'audio/mp4', null, true);
+        $file = UploadedFile::fake()->create('clip.m4a', 100, 'audio/mp4');
 
         $response = $this->post(route('sounds.store'), [
             'title' => 'Test Fart',
@@ -98,16 +98,31 @@ class SoundsTest extends TestCase
         ]);
 
         $response->assertRedirect();
-        $this->assertDatabaseHas('sounds', ['title' => 'Test Fart', 'emoji' => '💨']);
-        $row = Sound::where('title', 'Test Fart')->first();
-        $this->assertNotNull($row);
-        $this->assertStringEndsWith('.m4a', $row->getAttributes()['audio_path']);
+        $this->assertDatabaseCount('sounds', 0);
+
+        Bus::assertDispatched(StoreSoundAudio::class, function (StoreSoundAudio $job): bool {
+            $r = new ReflectionObject($job);
+            $pathProp = $r->getProperty('localRelativePath');
+            $pathProp->setAccessible(true);
+            $titleProp = $r->getProperty('title');
+            $titleProp->setAccessible(true);
+            $emojiProp = $r->getProperty('emoji');
+            $emojiProp->setAccessible(true);
+
+            $path = $pathProp->getValue($job);
+            $title = $titleProp->getValue($job);
+            $emoji = $emojiProp->getValue($job);
+
+            if ($title !== 'Test Fart' || $emoji !== '💨' || ! is_string($path) || ! str_starts_with($path, 'tmp/sounds/')) {
+                return false;
+            }
+
+            return Storage::disk('local')->exists($path);
+        });
     }
 
     public function test_regular_user_cannot_upload_a_sound(): void
     {
-        Storage::fake('s3');
-
         $user = User::factory()->create();
         $this->actingAs($user);
 
@@ -136,8 +151,6 @@ class SoundsTest extends TestCase
 
     public function test_store_rejects_non_audio_files(): void
     {
-        Storage::fake('s3');
-
         $user = User::factory()->create();
         $user->givePermissionTo('edit pages');
         $this->actingAs($user);
@@ -155,8 +168,6 @@ class SoundsTest extends TestCase
 
     public function test_store_returns_404_when_sounds_disabled(): void
     {
-        Storage::fake('s3');
-
         \App\Models\SiteSetting::where('key', 'sounds_enabled')->update(['value' => '0']);
 
         $user = User::factory()->create();
@@ -212,8 +223,6 @@ class SoundsTest extends TestCase
 
     public function test_admin_can_delete_a_sound(): void
     {
-        Storage::fake('s3');
-
         $user = User::factory()->create();
         $user->givePermissionTo('edit pages');
         $this->actingAs($user);
@@ -228,8 +237,6 @@ class SoundsTest extends TestCase
 
     public function test_admin_can_delete_sound_when_audio_path_is_stored_as_https_url(): void
     {
-        Storage::fake('s3');
-
         $user = User::factory()->create();
         $user->givePermissionTo('edit pages');
         $this->actingAs($user);
