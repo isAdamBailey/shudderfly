@@ -304,7 +304,9 @@ class SoundsTest extends TestCase
         $response = $this->get(route('sounds.index'));
 
         $response->assertInertia(
-            fn ($page) => $page->has('sounds')
+            fn ($page) => $page
+                ->has('sounds')
+                ->where('settings.sounds_enabled', '1')
         );
     }
 }

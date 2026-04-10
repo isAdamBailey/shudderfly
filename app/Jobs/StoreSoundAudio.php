@@ -73,7 +73,7 @@ class StoreSoundAudio implements ShouldQueue
         try {
             $process->run();
         } catch (Throwable $e) {
-            $this->cleanupLocal($disk, $outputPath);
+            $this->deleteTempOutputFile($outputPath);
             Log::error('StoreSoundAudio: ffmpeg exception', [
                 'message' => $e->getMessage(),
                 'path' => $this->localRelativePath,
@@ -83,7 +83,7 @@ class StoreSoundAudio implements ShouldQueue
 
         if (! $process->isSuccessful() || ! is_file($outputPath)) {
             $err = $process->getErrorOutput();
-            $this->cleanupLocal($disk, $outputPath);
+            $this->deleteTempOutputFile($outputPath);
             Log::error('StoreSoundAudio: ffmpeg failed', [
                 'exit' => $process->getExitCode(),
                 'error' => $err,
@@ -99,15 +99,24 @@ class StoreSoundAudio implements ShouldQueue
         try {
             Storage::disk('s3')->put($s3Key, file_get_contents($outputPath));
             Storage::disk('s3')->setVisibility($s3Key, 'public');
-        } finally {
-            $this->cleanupLocal($disk, $outputPath);
+        } catch (Throwable $e) {
+            $this->deleteTempOutputFile($outputPath);
+            Log::error('StoreSoundAudio: S3 upload failed', [
+                'message' => $e->getMessage(),
+                'key' => $s3Key,
+            ]);
+            throw $e;
         }
+
+        $this->deleteTempOutputFile($outputPath);
 
         Sound::create([
             'title' => $this->title,
             'emoji' => $this->emoji,
             'audio_path' => $s3Key,
         ]);
+
+        $disk->delete($this->localRelativePath);
     }
 
     public function failed(?Throwable $exception): void
@@ -115,9 +124,8 @@ class StoreSoundAudio implements ShouldQueue
         Storage::disk('local')->delete($this->localRelativePath);
     }
 
-    protected function cleanupLocal($localDisk, string $outputPath): void
+    protected function deleteTempOutputFile(string $outputPath): void
     {
-        $localDisk->delete($this->localRelativePath);
         if (is_file($outputPath)) {
             @unlink($outputPath);
         }
