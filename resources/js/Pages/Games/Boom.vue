@@ -4,7 +4,7 @@ import GameStartScreen from "@/Components/Games/GameStartScreen.vue";
 import { POOP_BOOM_INTRO_SCRIPT } from "@/Pages/Games/shared/introScripts.js";
 import { useGameViewportLock } from "@/composables/useGameViewportLock";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import { Head } from "@inertiajs/vue3";
+import { Head, usePage } from "@inertiajs/vue3";
 import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
 
 useGameViewportLock();
@@ -223,7 +223,8 @@ function makeCtx() {
     return new (window.AudioContext || window.webkitAudioContext)();
 }
 
-const fartSound = new Audio("/fart.mp3");
+const fartSoundUrl = usePage().props.fartSoundUrl ?? "/fart.m4a";
+const fartSound = new Audio(fartSoundUrl);
 fartSound.preload = "auto";
 fartSound.volume  = 0.9;
 let fartSoundReady = false;

@@ -21,6 +21,11 @@ const messagingEnabled = computed(() => {
   const value = usePage().props.settings?.messaging_enabled;
   return value === "1" || value === 1 || value === true;
 });
+
+const soundsEnabled = computed(() => {
+  const value = usePage().props.settings?.sounds_enabled;
+  return value === "1" || value === 1 || value === true;
+});
 </script>
 
 <template>
@@ -66,6 +71,13 @@ const messagingEnabled = computed(() => {
                 :active="route().current('messages.*')"
               >
                 Chat
+              </NavLink>
+              <NavLink
+                v-if="soundsEnabled"
+                :href="route('sounds.index')"
+                :active="route().current('sounds.*')"
+              >
+                Sounds
               </NavLink>
             </div>
           </div>
@@ -248,6 +260,13 @@ const messagingEnabled = computed(() => {
             :active="route().current('messages.*')"
           >
             Chat
+          </ResponsiveNavLink>
+          <ResponsiveNavLink
+            v-if="soundsEnabled"
+            :href="route('sounds.index')"
+            :active="route().current('sounds.*')"
+          >
+            Sounds
           </ResponsiveNavLink>
         </div>
 

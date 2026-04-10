@@ -30,6 +30,10 @@ return [
     'settings.updated' => 'Settings updated!',
     'message.deleted' => 'Message gone.',
     'comment.deleted' => 'Comment gone.',
+    'sound.uploaded' => 'Sound uploaded!',
+    'sound.updated' => 'Sound updated!',
+    'sound.deleted' => 'That sound is gone.',
+    'sound.disabled' => 'Sounds are turned off right now.',
     'avatar.updated' => 'New picture! Looking good.',
 
     // Error messages (clear but gentle)

@@ -1,9 +1,9 @@
 import { ref } from "vue";
 
-export function useSound() {
+export function useSound(fartSoundUrl = "/fart.m4a") {
     const audioReady = ref(false);
 
-    const fartSound = new Audio("/fart.mp3");
+    const fartSound = new Audio(fartSoundUrl);
     fartSound.preload = "auto";
     fartSound.volume = 0.9;
     fartSound.addEventListener("canplaythrough", () => { audioReady.value = true; });

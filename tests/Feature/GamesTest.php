@@ -49,6 +49,7 @@ class GamesTest extends TestCase
             fn (Assert $page) => $page
                 ->component('Games/Boom')
                 ->has('users')
+                ->where('fartSoundUrl', asset('fart.m4a'))
         );
     }
 

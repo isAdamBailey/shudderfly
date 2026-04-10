@@ -463,11 +463,24 @@ The following models are automatically indexed when created or updated:
 ]
 ```
 
+The bucket uses a flat top-level folder structure:
+
+| Folder | Contents |
+| --- | --- |
+| `books/{book-slug}/` | Book page images and videos |
+| `collages/` | Collage images and PDFs |
+| `sounds/` | Sound effect audio files (MP3 / AAC) |
+
+#### Sounds Setup
+
+Turn on **`sounds_enabled`** in Settings to show the Sounds page (audio from S3 / CloudFront). **Edit pages** can upload clips (FFmpeg converts uploads to M4A in a queue job — run a **queue worker** in production). Uploaded files are stored as `sounds/{uuid}.m4a`, not a fixed filename. Everyone can use the tile menu to hear a title read aloud; edit/delete stays editor-only. Games use the bundled `public/fart.m4a` for effects unless you point `fartSoundUrl` at a specific URL yourself.
+
 #### CloudFront CDN (Optional but Recommended)
 
 1. Create a CloudFront distribution pointing to your S3 bucket
 2. Add `CLOUDFRONT_URL` to your `.env`
 3. Reduces latency and improves media loading speed
+4. The app automatically uses CloudFront in production and direct S3 in local dev
 
 #### SQS Queue Setup
 

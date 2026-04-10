@@ -16,13 +16,13 @@ function getContext() {
     return audioCtx;
 }
 
-export function useSound() {
+export function useSound(fartSoundUrl = "/fart.m4a") {
     async function initAudio() {
         if (fartBuffer) return;
         const ctx = getContext();
         if (!ctx) return;
         try {
-            const res = await fetch("/fart.mp3");
+            const res = await fetch(fartSoundUrl);
             if (!res.ok) return;
             const buf = await res.arrayBuffer();
             fartBuffer = await ctx.decodeAudioData(buf);

@@ -72,6 +72,7 @@ class GameController extends Controller
 
         return Inertia::render('Games/'.self::GAMES[$game]['component'], [
             'users' => $users,
+            'fartSoundUrl' => asset('fart.m4a'),
         ]);
     }
 

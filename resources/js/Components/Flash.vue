@@ -88,25 +88,39 @@ const triggerIfMessage = async () => {
   }
 };
 
-let lastFlashMessageId = null;
+let lastSpokenFlashId = null;
+let lastSpokenAt = 0;
+const speakDedupeMs = 750;
+
 watch(
   flashMessage,
   (newVal) => {
     const messageId = newVal ? `${newVal.type}-${newVal.text}` : null;
-    if (messageId === lastFlashMessageId && show.value && newVal) {
+
+    if (!newVal?.text) {
+      lastSpokenFlashId = null;
+      lastSpokenAt = 0;
+      requestAnimationFrame(() => {
+        triggerIfMessage();
+      });
       return;
     }
-    lastFlashMessageId = messageId;
-    
-    if (newVal?.text) {
+
+    const now = Date.now();
+    const isRapidDuplicate =
+      messageId === lastSpokenFlashId &&
+      now - lastSpokenAt < speakDedupeMs;
+    if (!isRapidDuplicate) {
       speak(newVal.text);
+      lastSpokenFlashId = messageId;
+      lastSpokenAt = now;
     }
-    
+
     requestAnimationFrame(() => {
       triggerIfMessage();
     });
   },
-  { immediate: true, deep: true }
+  { immediate: true }
 );
 
 onMounted(() => {
