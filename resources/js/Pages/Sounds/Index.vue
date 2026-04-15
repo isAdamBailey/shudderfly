@@ -302,8 +302,8 @@ onBeforeUnmount(() => {
 
                     <div class="mb-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-sm text-blue-700 dark:text-blue-300">
                         <i class="ri-information-line mr-1"></i>
-                        Uploads are converted to <strong>M4A (AAC)</strong> on the server.
-                        You can send MP3, WAV, OGG, or M4A; MP3 and other formats are normalized for Safari/iOS.
+                        <strong>M4A (AAC)</strong> files are stored without re-encoding.
+                        MP3, WAV, OGG, and AAC (non-M4A) uploads are converted to M4A (AAC) for consistent playback (including Safari/iOS).
                     </div>
 
                     <form @submit.prevent="submitUpload" class="space-y-4">
@@ -339,7 +339,7 @@ onBeforeUnmount(() => {
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Audio File <span class="text-red-500">*</span>
-                                <span class="text-xs text-gray-500 ml-1">(MP3, WAV, OGG, or M4A)</span>
+                                <span class="text-xs text-gray-500 ml-1">(MP3, WAV, OGG, M4A)</span>
                             </label>
                             <input
                                 ref="audioFileInput"

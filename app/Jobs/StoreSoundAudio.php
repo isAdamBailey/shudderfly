@@ -40,7 +40,7 @@ class StoreSoundAudio implements ShouldQueue
             return;
         }
 
-        $inputPath = storage_path('app/'.$this->localRelativePath);
+        $inputPath = $disk->path($this->localRelativePath);
         $tempDir = storage_path('app/tmp');
         if (! is_dir($tempDir)) {
             mkdir($tempDir, 0755, true);
@@ -48,50 +48,61 @@ class StoreSoundAudio implements ShouldQueue
 
         $outputPath = $tempDir.'/sound-m4a-'.uniqid('', true).'.m4a';
 
-        $ffmpegBinary = config('laravel-ffmpeg.ffmpeg.binaries', 'ffmpeg');
+        if ($this->shouldSkipTranscoding($inputPath)) {
+            if (! @copy($inputPath, $outputPath)) {
+                Log::error('StoreSoundAudio: could not stage M4A upload', [
+                    'path' => $this->localRelativePath,
+                ]);
+                $this->fail(new \RuntimeException('Could not process the uploaded audio file.'));
 
-        $process = new Process([
-            $ffmpegBinary,
-            '-nostdin',
-            '-hide_banner',
-            '-loglevel',
-            'error',
-            '-i',
-            $inputPath,
-            '-vn',
-            '-c:a',
-            'aac',
-            '-b:a',
-            '128k',
-            '-movflags',
-            '+faststart',
-            '-y',
-            $outputPath,
-        ]);
-        $process->setTimeout($this->timeout);
+                return;
+            }
+        } else {
+            $ffmpegBinary = config('laravel-ffmpeg.ffmpeg.binaries', 'ffmpeg');
 
-        try {
-            $process->run();
-        } catch (Throwable $e) {
-            $this->deleteTempOutputFile($outputPath);
-            Log::error('StoreSoundAudio: ffmpeg exception', [
-                'message' => $e->getMessage(),
-                'path' => $this->localRelativePath,
+            $process = new Process([
+                $ffmpegBinary,
+                '-nostdin',
+                '-hide_banner',
+                '-loglevel',
+                'error',
+                '-i',
+                $inputPath,
+                '-vn',
+                '-c:a',
+                'aac',
+                '-b:a',
+                '128k',
+                '-movflags',
+                '+faststart',
+                '-y',
+                $outputPath,
             ]);
-            throw $e;
-        }
+            $process->setTimeout($this->timeout);
 
-        if (! $process->isSuccessful() || ! is_file($outputPath)) {
-            $err = $process->getErrorOutput();
-            $this->deleteTempOutputFile($outputPath);
-            Log::error('StoreSoundAudio: ffmpeg failed', [
-                'exit' => $process->getExitCode(),
-                'error' => $err,
-                'path' => $this->localRelativePath,
-            ]);
-            $this->fail(new \RuntimeException('Could not convert audio to M4A. Check the file format and try again.'));
+            try {
+                $process->run();
+            } catch (Throwable $e) {
+                $this->deleteTempOutputFile($outputPath);
+                Log::error('StoreSoundAudio: ffmpeg exception', [
+                    'message' => $e->getMessage(),
+                    'path' => $this->localRelativePath,
+                ]);
+                throw $e;
+            }
 
-            return;
+            if (! $process->isSuccessful() || ! is_file($outputPath)) {
+                $err = $process->getErrorOutput();
+                $this->deleteTempOutputFile($outputPath);
+                Log::error('StoreSoundAudio: ffmpeg failed', [
+                    'exit' => $process->getExitCode(),
+                    'error' => $err,
+                    'path' => $this->localRelativePath,
+                ]);
+                $this->fail(new \RuntimeException('Could not convert audio to M4A. Check the file format and try again.'));
+
+                return;
+            }
         }
 
         $s3Key = 'sounds/'.str()->uuid().'.m4a';
@@ -129,5 +140,16 @@ class StoreSoundAudio implements ShouldQueue
         if (is_file($outputPath)) {
             @unlink($outputPath);
         }
+    }
+
+    protected function shouldSkipTranscoding(string $absolutePath): bool
+    {
+        if (! is_file($absolutePath)) {
+            return false;
+        }
+
+        $mime = mime_content_type($absolutePath);
+
+        return $mime !== false && in_array($mime, ['audio/mp4', 'audio/x-m4a', 'audio/m4a'], true);
     }
 }

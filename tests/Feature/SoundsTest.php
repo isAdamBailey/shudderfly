@@ -121,6 +121,28 @@ class SoundsTest extends TestCase
         });
     }
 
+    public function test_m4a_upload_job_skips_transcode_and_stores_on_s3(): void
+    {
+        Storage::fake('local');
+        Storage::fake('s3');
+
+        $fixturePath = base_path('tests/fixtures/silence.m4a');
+        $this->assertFileExists($fixturePath);
+
+        Storage::disk('local')->put(
+            'tmp/sounds/clip.m4a',
+            file_get_contents($fixturePath)
+        );
+
+        StoreSoundAudio::dispatchSync('tmp/sounds/clip.m4a', 'Silence', '🔇');
+
+        $this->assertDatabaseHas('sounds', ['title' => 'Silence', 'emoji' => '🔇']);
+        $sound = Sound::query()->first();
+        $this->assertNotNull($sound);
+        Storage::disk('s3')->assertExists($sound->getRawOriginal('audio_path'));
+        Storage::disk('local')->assertMissing('tmp/sounds/clip.m4a');
+    }
+
     public function test_regular_user_cannot_upload_a_sound(): void
     {
         $user = User::factory()->create();
