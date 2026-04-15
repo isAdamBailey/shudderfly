@@ -150,6 +150,6 @@ class StoreSoundAudio implements ShouldQueue
 
         $mime = mime_content_type($absolutePath);
 
-        return $mime !== false && in_array($mime, ['audio/mp4', 'audio/x-m4a', 'audio/m4a'], true);
+        return $mime !== false && in_array($mime, ['audio/mp4', 'audio/x-m4a', 'audio/m4a', 'video/mp4'], true);
     }
 }

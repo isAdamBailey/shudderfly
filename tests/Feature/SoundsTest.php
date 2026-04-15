@@ -188,6 +188,60 @@ class SoundsTest extends TestCase
         $this->assertDatabaseCount('sounds', 0);
     }
 
+    public function test_store_accepts_m4a_when_detected_as_video_mp4(): void
+    {
+        Bus::fake();
+
+        $user = User::factory()->create();
+        $user->givePermissionTo('edit pages');
+        $this->actingAs($user);
+
+        $file = UploadedFile::fake()->create('clip.m4a', 100, 'video/mp4');
+
+        $response = $this->post(route('sounds.store'), [
+            'title' => 'M4A Clip',
+            'audio' => $file,
+        ]);
+
+        $response->assertRedirect();
+        Bus::assertDispatched(StoreSoundAudio::class);
+    }
+
+    public function test_store_accepts_m4a_when_mime_is_octet_stream(): void
+    {
+        Bus::fake();
+
+        $user = User::factory()->create();
+        $user->givePermissionTo('edit pages');
+        $this->actingAs($user);
+
+        $file = UploadedFile::fake()->create('clip.m4a', 100, 'application/octet-stream');
+
+        $response = $this->post(route('sounds.store'), [
+            'title' => 'M4A Clip',
+            'audio' => $file,
+        ]);
+
+        $response->assertRedirect();
+        Bus::assertDispatched(StoreSoundAudio::class);
+    }
+
+    public function test_store_rejects_octet_stream_with_disallowed_extension(): void
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo('edit pages');
+        $this->actingAs($user);
+
+        $file = UploadedFile::fake()->create('clip.exe', 100, 'application/octet-stream');
+
+        $response = $this->post(route('sounds.store'), [
+            'title' => 'Bad',
+            'audio' => $file,
+        ]);
+
+        $response->assertSessionHasErrors(['audio']);
+    }
+
     public function test_store_returns_404_when_sounds_disabled(): void
     {
         \App\Models\SiteSetting::where('key', 'sounds_enabled')->update(['value' => '0']);
