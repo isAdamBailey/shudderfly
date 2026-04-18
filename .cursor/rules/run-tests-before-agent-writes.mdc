@@ -1,0 +1,24 @@
+---
+description: Run the correct unit tests before finishing work; align with Cursor pre-write hooks
+alwaysApply: true
+---
+
+# Run unit tests before agent writes land
+
+Project hooks run automatically on `preToolUse` for `Write` and `EditNotebook` (see [Cursor Hooks](https://cursor.com/docs/hooks) and `.cursor/hooks.json`). Before those tools apply, the hook may execute tests based on the target path.
+
+## Commands (run these yourself, do not rely on the hook alone)
+
+- **Frontend (JavaScript / Vue / Vite)**: use `npm run test:run` for a one-shot CI-style run. In `package.json`, `npm run test` starts Vitest in **watch** mode, which is poor for automation and will not exit; prefer `npm run test:run` when validating changes in the agent or in hooks.
+- **Backend (PHP / Laravel)**: use `sail test` before finishing work on backend paths; project hooks re-run backend tests before classified writes. Other PHP commands stay on Sail per **Use Sail for PHP**.
+
+## Scope (match the hook classifier)
+
+- **Frontend tests** apply when touching typical frontend surfaces (for example `resources/js/`, `resources/css/`, `package.json`, Vite/Vitest/ESLint/Tailwind config files).
+- **Backend tests** apply when touching typical Laravel surfaces (for example `app/`, `routes/`, `config/`, `database/`, `bootstrap/` outside cache, `resources/views/`, `tests/**/*.php`, `composer.json`, `artisan`, and other `.php` files tracked by the repo).
+- If a change spans both, run **both** commands before attempting writes, since each `Write` is classified independently.
+
+## Agent workflow expectations
+
+- Run the relevant test command(s) **before** using `Write` / `EditNotebook` so failures are fixed early; the hook will still re-run tests as a gate.
+- If the hook denies a write, read the denial message, fix tests or code, re-run the same command locally, then retry the write.

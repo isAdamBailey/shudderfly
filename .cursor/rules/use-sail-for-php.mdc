@@ -1,5 +1,5 @@
 ---
-description: 
+description: All PHP-related commands must use Laravel Sail, not bare php
 alwaysApply: true
 ---
 
@@ -7,7 +7,4 @@ alwaysApply: true
 
 All PHP-related commands must run through Sail (Docker), not `php`.
 
-Examples:
-- `sail artisan migrate`
-- `sail test`
-- `sail composer install`
+Examples: `sail artisan migrate`, `sail test`, `sail composer install`, `sail pint`

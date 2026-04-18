@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "command": ".cursor/hooks/pre-write-require-tests.py",
+        "matcher": "Write|EditNotebook",
+        "timeout": 900,
+        "failClosed": false
+      }
+    ]
+  }
+}
