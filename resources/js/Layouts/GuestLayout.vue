@@ -1,6 +1,8 @@
 <script setup>
 import ApplicationLogo from "@/Components/ApplicationLogo.vue";
 import { Link } from "@inertiajs/vue3";
+
+const currentYear = new Date().getFullYear();
 </script>
 
 <template>
@@ -18,5 +20,17 @@ import { Link } from "@inertiajs/vue3";
         >
             <slot />
         </div>
+
+        <footer class="mt-8 text-center text-xs text-gray-400">
+            &copy; {{ currentYear }}
+            <a
+                href="https://adambailey.io?utm_source=shudderfly&utm_medium=referral"
+                target="_blank"
+                rel="noopener"
+                class="hover:text-gray-200 underline"
+            >
+                Adam Bailey
+            </a>
+        </footer>
     </div>
 </template>
