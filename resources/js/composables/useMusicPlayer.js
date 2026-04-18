@@ -1,4 +1,5 @@
 import { computed, ref, watch } from "vue";
+import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 
 const STORAGE_KEY = "music_player_state";
 const FLYOUT_STORAGE_KEY = "music_flyout_open";
@@ -11,6 +12,7 @@ const isFlyoutOpen = ref(false);
 const search = ref("");
 const filter = ref("");
 const songsList = ref([]);
+const isAnnouncing = ref(false);
 
 // Load initial state from localStorage
 const loadState = () => {
@@ -67,10 +69,30 @@ watch(isFlyoutOpen, saveFlyoutState);
 loadState();
 
 export function useMusicPlayer() {
+  const { speak } = useSpeechSynthesis();
+
+  const announceSong = (song) => {
+    if (!song?.title) return;
+    try {
+      window.speechSynthesis?.cancel();
+    } catch (e) {
+      // Cancel may fail if speechSynthesis isn't available
+    }
+    isAnnouncing.value = true;
+    speak(`You are playing ${song.title}`, () => {
+      isAnnouncing.value = false;
+    });
+  };
+
   const playSong = (song) => {
+    const isNewSong =
+      !currentSong.value || currentSong.value.id !== song.id;
     currentSong.value = song;
     if (!isFlyoutOpen.value) {
       isFlyoutOpen.value = true;
+    }
+    if (isNewSong) {
+      announceSong(song);
     }
   };
 
@@ -182,6 +204,7 @@ export function useMusicPlayer() {
     search: computed(() => search.value),
     filter: computed(() => filter.value),
     songsList: computed(() => songsList.value),
+    isAnnouncing: computed(() => isAnnouncing.value),
 
     // Methods
     playSong,

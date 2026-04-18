@@ -3,40 +3,36 @@
         v-if="currentSong"
         class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm"
     >
-        <div class="px-4 py-3">
-            <div
-                class="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-4"
-            >
+        <div class="px-4 py-4">
+            <div class="flex flex-col items-center space-y-4">
                 <!-- Song Thumbnail with Visualizer Overlay -->
-                <div
-                    class="flex-shrink-0 flex justify-center sm:justify-start relative"
-                >
+                <div class="w-full flex justify-center relative">
                     <img
                         v-if="thumbnailUrl && !imageError"
                         :src="thumbnailUrl"
                         :alt="currentSong.title"
-                        class="w-32 h-32 sm:w-40 sm:h-40 rounded-lg object-cover"
+                        class="w-full max-w-xs aspect-square rounded-lg object-cover shadow-lg"
                         @error="handleImageError"
                     />
                     <div
                         v-else
-                        class="w-32 h-32 sm:w-40 sm:h-40 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center"
+                        class="w-full max-w-xs aspect-square bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center shadow-lg"
                     >
                         <i
-                            class="ri-music-2-line text-5xl sm:text-6xl text-gray-400 dark:text-gray-500"
+                            class="ri-music-2-line text-8xl text-gray-400 dark:text-gray-500"
                         ></i>
                     </div>
 
                     <!-- Visualizer Overlay -->
                     <div
                         v-if="isPlaying"
-                        class="absolute inset-0 flex items-end justify-center pb-4 pointer-events-none"
+                        class="absolute inset-0 flex items-end justify-center pb-6 pointer-events-none"
                     >
-                        <div class="flex items-end space-x-1 h-16">
+                        <div class="flex items-end space-x-1 h-20">
                             <div
                                 v-for="i in 20"
                                 :key="i"
-                                class="visualizer-bar bg-blue-500/70 dark:bg-blue-400/70 w-1 rounded-full"
+                                class="visualizer-bar bg-blue-500/70 dark:bg-blue-400/70 w-1.5 rounded-full"
                                 :style="{
                                     animationDelay: `${i * 0.05}s`,
                                     animationDuration: `${
@@ -49,11 +45,11 @@
                 </div>
 
                 <!-- Song Info and Controls Container -->
-                <div class="flex-1 w-full min-w-0 space-y-4">
+                <div class="w-full min-w-0 space-y-4">
                     <!-- Song Info -->
-                    <div class="text-center sm:text-left">
+                    <div class="text-center">
                         <h3
-                            class="text-base sm:text-lg text-gray-900 dark:text-gray-100 truncate"
+                            class="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate"
                         >
                             {{ currentSong.title }}
                         </h3>
@@ -73,98 +69,90 @@
                                 {{ currentSong.description }}
                             </p>
                         </div>
+                    </div>
 
-                        <!-- Progress Bar with Inline Visualizer -->
-                        <div class="mt-2">
+                    <!-- Progress Bar -->
+                    <div
+                        class="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400"
+                    >
+                        <span>{{ formatTime(currentTime) }}</span>
+                        <div
+                            class="relative flex-1 bg-gray-200 dark:bg-gray-600 rounded-full h-3 cursor-pointer touch-none select-none"
+                            @pointerdown="onProgressPointerDown"
+                        >
                             <div
-                                class="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400"
-                            >
-                                <span>{{ formatTime(currentTime) }}</span>
-
-                                <!-- Mini Visualizer next to progress bar -->
-                                <div
-                                    v-if="isPlaying"
-                                    class="flex items-center space-x-0.5 px-2"
-                                >
-                                    <div
-                                        v-for="i in 5"
-                                        :key="i"
-                                        class="visualizer-bar-small bg-blue-500 dark:bg-blue-400 w-0.5 rounded-full"
-                                        :style="{
-                                            animationDelay: `${i * 0.1}s`,
-                                            animationDuration: `${
-                                                0.5 + Math.random() * 0.3
-                                            }s`,
-                                        }"
-                                    ></div>
-                                </div>
-
-                                <div
-                                    class="flex-1 bg-gray-200 dark:bg-gray-600 rounded-full h-2 cursor-pointer"
-                                    @click="seekTo"
-                                >
-                                    <div
-                                        class="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all duration-100"
-                                        :style="{
-                                            width: progressPercentage + '%',
-                                        }"
-                                    ></div>
-                                </div>
-                                <span>{{ formatTime(duration) }}</span>
-                            </div>
+                                class="bg-blue-600 dark:bg-blue-500 h-3 rounded-full"
+                                :class="{
+                                    'transition-all duration-100':
+                                        !isScrubbing,
+                                }"
+                                :style="{
+                                    width: progressPercentage + '%',
+                                }"
+                            ></div>
+                            <div
+                                class="absolute top-1/2 w-5 h-5 -ml-2.5 -translate-y-1/2 rounded-full bg-white dark:bg-gray-100 border-2 border-blue-600 dark:border-blue-500 shadow pointer-events-none"
+                                :class="{
+                                    'transition-all duration-100':
+                                        !isScrubbing,
+                                    'scale-125': isScrubbing,
+                                }"
+                                :style="{ left: progressPercentage + '%' }"
+                            ></div>
                         </div>
+                        <span>{{ formatTime(duration) }}</span>
                     </div>
 
                     <!-- Playback Controls -->
                     <div
-                        class="flex items-center justify-center sm:justify-start space-x-3"
+                        class="flex items-center justify-center space-x-4"
                     >
                         <button
-                            class="w-9 h-9 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                            class="w-12 h-12 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
                             :disabled="!hasPreviousSong || isLoading"
                             title="Previous song"
                             @click="skipToPrevious"
                         >
-                            <i class="ri-skip-back-fill text-lg"></i>
+                            <i class="ri-skip-back-fill text-2xl"></i>
                         </button>
 
                         <button
-                            class="w-9 h-9 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200"
+                            class="w-12 h-12 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200"
                             :disabled="isLoading"
                             title="Rewind 10s"
                             @click="seekBackward"
                         >
-                            <i class="ri-skip-back-mini-fill text-lg"></i>
+                            <i class="ri-skip-back-mini-fill text-2xl"></i>
                         </button>
 
                         <button
-                            class="w-12 h-12 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-all duration-200"
+                            class="w-16 h-16 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-all duration-200 shadow-lg"
                             :disabled="isLoading"
                             @click="togglePlayPause"
                         >
                             <i
                                 v-if="!isPlaying"
-                                class="ri-play-fill text-2xl"
+                                class="ri-play-fill text-3xl"
                             ></i>
-                            <i v-else class="ri-pause-fill text-2xl"></i>
+                            <i v-else class="ri-pause-fill text-3xl"></i>
                         </button>
 
                         <button
-                            class="w-9 h-9 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200"
+                            class="w-12 h-12 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200"
                             :disabled="isLoading"
                             title="Forward 10s"
                             @click="seekForward"
                         >
-                            <i class="ri-skip-forward-mini-fill text-lg"></i>
+                            <i class="ri-skip-forward-mini-fill text-2xl"></i>
                         </button>
 
                         <button
-                            class="w-9 h-9 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                            class="w-12 h-12 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
                             :disabled="!hasNextSong || isLoading"
                             title="Next song"
                             @click="skipToNext"
                         >
-                            <i class="ri-skip-forward-fill text-lg"></i>
+                            <i class="ri-skip-forward-fill text-2xl"></i>
                         </button>
                     </div>
                 </div>
@@ -223,6 +211,7 @@ const {
     setPlaying,
     playNextSong,
     playPreviousSong,
+    isAnnouncing,
 } = useMusicPlayer();
 
 if (!window.__globalMusicPlayer) window.__globalMusicPlayer = null;
@@ -333,20 +322,81 @@ const togglePlayPause = async () => {
     }
 };
 
-const seekTo = (event) => {
+const isScrubbing = ref(false);
+const scrubBarEl = ref(null);
+let scrubPointerId = null;
+
+const computeTimeFromPointer = (clientX) => {
+    if (!scrubBarEl.value || duration.value === 0) return 0;
+    const rect = scrubBarEl.value.getBoundingClientRect();
+    const ratio = Math.min(
+        1,
+        Math.max(0, (clientX - rect.left) / rect.width)
+    );
+    return ratio * duration.value;
+};
+
+const commitSeek = (clientX) => {
     const player = globalPlayer();
     if (!player || duration.value === 0) return;
-
     try {
-        const rect = event.currentTarget.getBoundingClientRect();
-        const clickX = event.clientX - rect.left;
-        const percentage = clickX / rect.width;
-        const seekTime = percentage * duration.value;
-
+        const seekTime = computeTimeFromPointer(clientX);
+        currentTime.value = seekTime;
         player.seekTo(seekTime, true);
     } catch (error) {
         console.error("Error seeking:", error);
     }
+};
+
+const removeScrubListeners = (el) => {
+    if (!el) return;
+    el.removeEventListener("pointermove", onProgressPointerMove);
+    el.removeEventListener("pointerup", onProgressPointerUp);
+    el.removeEventListener("pointercancel", onProgressPointerUp);
+};
+
+const onProgressPointerDown = (event) => {
+    if (duration.value === 0) return;
+    const el = event.currentTarget;
+
+    removeScrubListeners(scrubBarEl.value);
+    removeScrubListeners(el);
+
+    scrubBarEl.value = el;
+    isScrubbing.value = true;
+    scrubPointerId = event.pointerId;
+    try {
+        el.setPointerCapture(event.pointerId);
+    } catch (e) {
+        // Pointer capture may not be supported
+    }
+    currentTime.value = computeTimeFromPointer(event.clientX);
+    el.addEventListener("pointermove", onProgressPointerMove);
+    el.addEventListener("pointerup", onProgressPointerUp);
+    el.addEventListener("pointercancel", onProgressPointerUp);
+};
+
+const onProgressPointerMove = (event) => {
+    if (!isScrubbing.value) return;
+    currentTime.value = computeTimeFromPointer(event.clientX);
+};
+
+const onProgressPointerUp = (event) => {
+    const el = event.currentTarget;
+    const wasScrubbing = isScrubbing.value;
+    isScrubbing.value = false;
+
+    if (wasScrubbing) {
+        commitSeek(event.clientX);
+    }
+
+    try {
+        if (scrubPointerId !== null) el.releasePointerCapture(scrubPointerId);
+    } catch (e) {
+        // Pointer capture may already be released
+    }
+    scrubPointerId = null;
+    removeScrubListeners(el);
 };
 
 const seekForward = () => {
@@ -470,7 +520,7 @@ const createPlayer = async () => {
                 cc_load_policy: 0,
                 iv_load_policy: 3,
                 autohide: 1,
-                autoplay: shouldAutoplay.value ? 1 : 0,
+                autoplay: 0,
                 enablejsapi: 1,
                 origin: window.location.origin,
                 playsinline: 1,
@@ -501,6 +551,7 @@ const onPlayerReady = (event) => {
     const existingInterval = globalUpdateInterval();
     if (!existingInterval) {
         const interval = setInterval(() => {
+            if (isScrubbing.value) return;
             const currentPlayer = globalPlayer();
             if (
                 currentPlayer &&
@@ -519,25 +570,39 @@ const onPlayerReady = (event) => {
         setGlobalUpdateInterval(interval);
     }
 
-    // Autoplay if a song was selected (not on initial mount)
     if (shouldAutoplay.value) {
-        setTimeout(() => {
-            const currentPlayer = globalPlayer();
-            if (
-                currentPlayer &&
-                typeof currentPlayer.playVideo === "function"
-            ) {
-                try {
-                    currentPlayer.playVideo();
-                    setPlaying(true);
-                } catch (error) {
-                    // Auto-play may fail due to browser policies
-                }
-            }
-        }, 500);
+        startPlaybackWhenAnnouncementEnds();
     }
 
     isLoading.value = false;
+};
+
+const startPlaybackWhenAnnouncementEnds = () => {
+    const tryPlay = () => {
+        const currentPlayer = globalPlayer();
+        if (
+            currentPlayer &&
+            typeof currentPlayer.playVideo === "function"
+        ) {
+            try {
+                currentPlayer.playVideo();
+                setPlaying(true);
+            } catch (error) {
+                // Auto-play may fail due to browser policies
+            }
+        }
+    };
+
+    if (isAnnouncing.value) {
+        const stop = watch(isAnnouncing, (announcing) => {
+            if (!announcing) {
+                stop();
+                setTimeout(tryPlay, 150);
+            }
+        });
+    } else {
+        setTimeout(tryPlay, 500);
+    }
 };
 
 const onPlayerStateChange = (event) => {

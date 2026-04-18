@@ -15,6 +15,7 @@ global.route = vi.fn((name, params) => {
 const mockCurrentSong = ref(null);
 const mockIsPlaying = ref(false);
 const mockSongsList = ref([]);
+const mockIsAnnouncing = ref(false);
 const mockSetPlaying = vi.fn();
 const mockGetSavedPlaybackState = vi.fn(() => null);
 const mockPlayNextSong = vi.fn();
@@ -25,6 +26,7 @@ vi.mock("@/composables/useMusicPlayer", () => ({
     currentSong: computed(() => mockCurrentSong.value),
     isPlaying: computed(() => mockIsPlaying.value),
     songsList: computed(() => mockSongsList.value),
+    isAnnouncing: computed(() => mockIsAnnouncing.value),
     setPlaying: mockSetPlaying,
     playNextSong: mockPlayNextSong,
     playPreviousSong: mockPlayPreviousSong,
@@ -49,6 +51,7 @@ describe("MusicPlayer", () => {
     mockCurrentSong.value = null;
     mockIsPlaying.value = false;
     mockSongsList.value = [];
+    mockIsAnnouncing.value = false;
     mockSetPlaying.mockClear();
     mockPlayNextSong.mockClear();
     mockPlayPreviousSong.mockClear();
@@ -307,7 +310,7 @@ describe("MusicPlayer", () => {
     expect(wrapper.vm.progressPercentage).toBe(25); // 45/180 * 100
   });
 
-  it("handles progress bar click for seeking", async () => {
+  it("seeks via pointer scrub on the progress bar", async () => {
     mockCurrentSong.value = mockSong;
     wrapper = mount(MusicPlayer);
     await nextTick();
@@ -317,25 +320,34 @@ describe("MusicPlayer", () => {
 
     const progressBar = wrapper.find(".bg-gray-200");
     if (!progressBar.exists()) {
-      // Skip if progress bar not found
       return;
     }
 
-    // Mock getBoundingClientRect
     progressBar.element.getBoundingClientRect = vi.fn(() => ({
       left: 0,
-      width: 200
+      width: 200,
+      top: 0,
+      right: 200,
+      bottom: 10,
+      height: 10
     }));
+    progressBar.element.setPointerCapture = vi.fn();
+    progressBar.element.releasePointerCapture = vi.fn();
 
-    // Create a mock click event
-    const mockEvent = {
+    wrapper.vm.onProgressPointerDown({
       currentTarget: progressBar.element,
-      clientX: 100
-    };
+      clientX: 50,
+      pointerId: 1
+    });
 
-    wrapper.vm.seekTo(mockEvent);
+    expect(mockPlayer.seekTo).not.toHaveBeenCalled();
 
-    // Should seek to 50% of duration (90 seconds)
+    wrapper.vm.onProgressPointerUp({
+      currentTarget: progressBar.element,
+      clientX: 100,
+      pointerId: 1
+    });
+
     expect(mockPlayer.seekTo).toHaveBeenCalledWith(90, true);
   });
 
@@ -365,7 +377,7 @@ describe("MusicPlayer", () => {
     }
   });
 
-  it("has responsive design classes for mobile", async () => {
+  it("stacks the player vertically", async () => {
     mockCurrentSong.value = mockSong;
     wrapper = mount(MusicPlayer);
     await nextTick();
@@ -373,37 +385,31 @@ describe("MusicPlayer", () => {
     const container = wrapper.find(".flex");
     if (container.exists()) {
       expect(container.classes()).toContain("flex-col");
-      expect(container.classes()).toContain("sm:flex-row");
     }
   });
 
-  it("displays correct image size", async () => {
+  it("displays artwork as a full-width square", async () => {
     mockCurrentSong.value = mockSong;
     wrapper = mount(MusicPlayer);
     await nextTick();
 
     const img = wrapper.find("img");
     if (img.exists()) {
-      expect(img.classes()).toContain("w-32");
-      expect(img.classes()).toContain("sm:w-40");
-      expect(img.classes()).toContain("h-32");
-      expect(img.classes()).toContain("sm:h-40");
+      expect(img.classes()).toContain("w-full");
+      expect(img.classes()).toContain("max-w-xs");
+      expect(img.classes()).toContain("aspect-square");
     }
   });
 
-  it("centers content on mobile", async () => {
+  it("centers song info and controls", async () => {
     mockCurrentSong.value = mockSong;
     wrapper = mount(MusicPlayer);
     await nextTick();
 
     const songInfo = wrapper.find(".text-center");
-    if (songInfo.exists()) {
-      expect(songInfo.classes()).toContain("sm:text-left");
-    }
+    expect(songInfo.exists()).toBe(true);
 
     const controls = wrapper.find(".justify-center");
-    if (controls.exists()) {
-      expect(controls.classes()).toContain("sm:justify-start");
-    }
+    expect(controls.exists()).toBe(true);
   });
 });

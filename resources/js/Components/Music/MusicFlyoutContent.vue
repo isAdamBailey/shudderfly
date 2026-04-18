@@ -1,7 +1,8 @@
 <template>
-  <div class="flex flex-col h-full">
+  <div class="flex flex-col">
     <!-- Header -->
     <div
+      ref="headingRef"
       class="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700"
     >
       <button @click="applyFilter()">
@@ -36,7 +37,7 @@
     </div>
 
     <!-- Song List -->
-    <div ref="scrollContainer" class="flex-1 overflow-y-auto">
+    <div>
       <div v-if="items.length > 0" class="bg-white dark:bg-gray-800">
         <SongListItem
           v-for="song in items"
@@ -138,13 +139,17 @@ const props = defineProps({
   filter: {
     type: String,
     default: ""
+  },
+  scrollRootEl: {
+    type: [Object, null],
+    default: null
   }
 });
 
 const syncing = ref(false);
 const loading = ref(false);
-const scrollContainer = ref(null);
 const infiniteScrollRef = ref(null);
+const headingRef = ref(null);
 const items = ref(
   (props.songs.data || []).map((song) => ({ ...song, loading: false }))
 );
@@ -241,6 +246,9 @@ const playSong = (song) => {
     return;
   }
   playSongGlobal(song);
+  if (props.scrollRootEl) {
+    props.scrollRootEl.scrollTo({ top: 0, behavior: "smooth" });
+  }
 };
 
 const deleteSong = async (song) => {
@@ -284,8 +292,16 @@ const applyFilter = async (filter) => {
   const titleToSpeak = getTitle(props.search, filter);
   speak(titleToSpeak);
 
-  // Emit event to parent to reload songs
   emit("reload", { filter: filter || null, search: props.search || null });
+
+  await nextTick();
+  if (props.scrollRootEl && headingRef.value) {
+    const rootRect = props.scrollRootEl.getBoundingClientRect();
+    const headingRect = headingRef.value.getBoundingClientRect();
+    const top =
+      props.scrollRootEl.scrollTop + (headingRect.top - rootRect.top);
+    props.scrollRootEl.scrollTo({ top, behavior: "smooth" });
+  }
 
   loading.value = false;
 };
@@ -312,7 +328,7 @@ const setupObserver = () => {
     observer.disconnect();
   }
 
-  if (!infiniteScrollRef.value || !scrollContainer.value) {
+  if (!infiniteScrollRef.value || !props.scrollRootEl) {
     return;
   }
 
@@ -325,7 +341,7 @@ const setupObserver = () => {
       });
     },
     {
-      root: scrollContainer.value,
+      root: props.scrollRootEl,
       rootMargin: "0px 0px 100px 0px",
       threshold: 0.1
     }
@@ -339,7 +355,7 @@ onMounted(async () => {
   setupObserver();
 });
 
-watch([infiniteScrollRef, scrollContainer], async () => {
+watch([infiniteScrollRef, () => props.scrollRootEl], async () => {
   await nextTick();
   setupObserver();
 });

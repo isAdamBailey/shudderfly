@@ -59,7 +59,7 @@
             <div class="flex flex-col h-full">
                 <!-- Header -->
                 <div
-                    class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700"
+                    class="flex-shrink-0 flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700"
                 >
                     <h2
                         class="text-2xl font-heading font-semibold text-blue-600 dark:text-gray-100"
@@ -74,24 +74,27 @@
                     </button>
                 </div>
 
-                <!-- Music Player -->
-                <MusicPlayer />
+                <!-- Scrollable body: player + song list scroll together -->
+                <div
+                    ref="scrollRootEl"
+                    class="flex-1 overflow-y-auto min-h-0"
+                >
+                    <MusicPlayer />
 
-                <!-- Flyout Content (Song List) -->
-                <div class="flex-1 overflow-hidden">
                     <div
-                        v-if="loading"
-                        class="flex items-center justify-center h-full"
+                        v-if="loading && !songsData"
+                        class="flex items-center justify-center py-10"
                     >
                         <i
                             class="ri-loader-4-line animate-spin text-4xl text-gray-400"
                         ></i>
                     </div>
                     <MusicFlyoutContent
-                        v-else-if="songsData"
+                        v-if="songsData"
                         :songs="songsData"
                         :search="searchParam"
                         :filter="filterParam"
+                        :scroll-root-el="scrollRootEl"
                         @reload="
                             (params) => loadSongs(params.search, params.filter)
                         "
@@ -127,6 +130,7 @@ const songsData = ref(null);
 const searchParam = ref("");
 const filterParam = ref("");
 const loading = ref(false);
+const scrollRootEl = ref(null);
 
 // Load songs data using fetch (since controller returns JSON)
 const loadSongs = async (searchValue = null, filterValue = null) => {
@@ -170,19 +174,19 @@ const loadSongs = async (searchValue = null, filterValue = null) => {
     }
 };
 
-// Watch for flyout opening to load songs
-watch(isFlyoutOpen, (open) => {
-    if (open && !songsData.value) {
-        loadSongs();
-    }
-});
-
-// Watch for search/filter changes in global state
-watch([search, filter], ([newSearch, newFilter]) => {
-    if (isFlyoutOpen.value && songsData.value) {
-        loadSongs(newSearch, newFilter);
-    }
-});
+// Watch for flyout opening to load songs (also fires immediately on mount
+// so refreshing with a persisted open flyout still hydrates the list).
+// Reloads triggered by filter/search changes flow through the @reload
+// event emitted by MusicFlyoutContent to avoid double-fetching.
+watch(
+    isFlyoutOpen,
+    (open) => {
+        if (open && !songsData.value && !loading.value) {
+            loadSongs();
+        }
+    },
+    { immediate: true }
+);
 </script>
 
 <style scoped>
