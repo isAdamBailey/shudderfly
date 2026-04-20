@@ -19,7 +19,7 @@ class GameController extends Controller
         'costco-pizza-poop' => [
             'name' => 'Costco Pizza Poop',
             'emoji' => '🍕',
-            'description' => 'Drag every slice into the mouth, then celebrate the inevitable.',
+            'description' => 'Feed every slice, then guide it through the intestine to the grand finale.',
             'component' => 'CostcoPizzaPoop',
         ],
         'boom' => [
@@ -33,12 +33,6 @@ class GameController extends Controller
             'emoji' => '🪳',
             'description' => "Tap the cockroach's head to make it hiss its way to the toilet.",
             'component' => 'Cockroach',
-        ],
-        'big-poop' => [
-            'name' => 'Big Poop',
-            'emoji' => '💩',
-            'description' => 'Guide the poop through the intestine and out the other end!',
-            'component' => 'BigPoop',
         ],
     ];
 

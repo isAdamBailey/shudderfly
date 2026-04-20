@@ -24,7 +24,7 @@
 - **📸 Photos**: Standalone image galleries with infinite scroll and bulk management
 - **🎵 Music**: YouTube videos presented as audio tracks with custom thumbnails
 - **🎨 Collages**: Generate beautiful PDF photo books for printing
-- **🎮 Games**: Accessible, ad-free games playable within the authenticated app (Poop Boom, Cockroach Fart, Big Poop)
+- **🎮 Games**: Accessible, ad-free games playable within the authenticated app (Costco Pizza Poop, Poop Boom, Cockroach Fart)
 - **💬 Messages**: Internal communication system with reactions and threading
 
 ---

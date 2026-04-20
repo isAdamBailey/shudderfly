@@ -10,6 +10,8 @@ const props = defineProps({
     progress: { type: Number, required: true },
     poopRadius: { type: Number, required: true },
     getPassageAt: { type: Function, required: true },
+    controlsEnabled: { type: Boolean, default: true },
+    poopVisible: { type: Boolean, default: true },
 });
 
 const emit = defineEmits(["move"]);
@@ -25,7 +27,7 @@ const svgH = computed(() => pixelH.value * svgAspect.value);
 const cameraY = computed(() => {
     return Math.max(0, Math.min(
         props.state.poopY - svgH.value / 2,
-        props.totalHeight - svgH.value
+        props.totalHeight - svgH.value,
     ));
 });
 
@@ -118,6 +120,7 @@ function clientToSvg(clientX, clientY) {
 }
 
 function onPointerDown(e) {
+    if (!props.controlsEnabled) return;
     if (props.state.phase !== "playing") return;
     e.preventDefault();
     const p = clientToSvg(e.clientX, e.clientY);
@@ -164,6 +167,7 @@ function onPointerUp(e) {
 }
 
 function onKeyDown(e) {
+    if (!props.controlsEnabled) return;
     if (props.state.phase !== "playing") return;
     const step = 7;
     switch (e.key) {
@@ -205,7 +209,12 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div ref="boardEl" class="game-board" @pointerdown="onPointerDown">
+    <div
+        ref="boardEl"
+        class="game-board"
+        :class="{ 'game-board-locked': !controlsEnabled }"
+        @pointerdown="onPointerDown"
+    >
         <svg
             ref="svgEl"
             class="intestine-svg"
@@ -228,14 +237,14 @@ onUnmounted(() => {
                 </radialGradient>
             </defs>
 
-            <!-- dark body cavity background -->
             <rect
-                x="0" :y="cameraY"
-                :width="SVG_WIDTH" :height="svgH"
+                x="0"
+                :y="cameraY"
+                :width="SVG_WIDTH"
+                :height="svgH"
                 fill="#0c0406"
             />
 
-            <!-- outer muscle wall (same shape, thick stroke behind fill) -->
             <path
                 :d="intestinePaths.fill"
                 fill="#6b2535"
@@ -249,7 +258,6 @@ onUnmounted(() => {
                 fill="url(#mucosaGrad)"
             />
 
-            <!-- anus / exit -->
             <ellipse
                 :cx="anusCenter.x"
                 :cy="anusCenter.y"
@@ -274,8 +282,8 @@ onUnmounted(() => {
                 fill="rgba(100,30,30,0.4)"
             />
 
-            <!-- poop -->
             <text
+                v-if="poopVisible"
                 :x="state.poopX"
                 :y="state.poopY"
                 text-anchor="middle"
@@ -318,6 +326,11 @@ onUnmounted(() => {
 
 .game-board:active {
     cursor: grabbing;
+}
+
+.game-board-locked,
+.game-board-locked:active {
+    cursor: default;
 }
 
 .intestine-svg {

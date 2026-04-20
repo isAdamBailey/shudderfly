@@ -697,7 +697,6 @@ const LEGACY_GAME_DISPLAY_NAME_TO_SLUG = {
     "Costco Pizza Poop": "costco-pizza-poop",
     "Poop Boom": "boom",
     "Cockroach Fart": "cockroach",
-    "Big Poop": "big-poop",
 };
 
 const escapeHtml = (s) =>

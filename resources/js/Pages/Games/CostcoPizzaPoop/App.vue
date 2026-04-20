@@ -2,19 +2,19 @@
     <GameStartScreen
         v-if="phase === 'start'"
         title="Costco Pizza Poop"
-        subtitle="Feed the slices. Wait for the miracle."
+        subtitle="Feed the slices, then watch digestion begin."
         :intro-script="COSTCO_PIZZA_POOP_INTRO_SCRIPT"
         @play="handlePlayFromStart"
     >
         <template #media>🍕</template>
         <p>
             Drag each slice from the pizza into the mouth.<br />
-            When the last slice is eaten, digestion runs — you win when they poop!
+            After all slices are eaten, steer the poop through the intestine to finish.
         </p>
     </GameStartScreen>
 
     <div
-        v-else-if="phase === 'playing' || phase === 'digesting'"
+        v-else-if="phase === 'pizza'"
         ref="gameEl"
         class="game-container"
     >
@@ -41,16 +41,34 @@
                 <div ref="mouthRef" class="mouth-hitbox" />
             </div>
         </div>
+    </div>
 
-        <div v-if="phase === 'digesting'" class="digest-overlay">
-            <p v-if="!showPoop" class="digest-text">Digesting…</p>
-            <div v-else class="poop-drop" :class="{ 'poop-drop-visible': showPoop }">💩</div>
+    <div v-else-if="phase === 'intestine'" class="intestine-wrap">
+        <GameBoard
+            :state="intestineState"
+            :segments="segments"
+            :total-height="totalHeight"
+            :elapsed-seconds="intestineElapsedSeconds"
+            :progress="progress"
+            :poop-radius="POOP_RADIUS"
+            :get-passage-at="getPassageAt"
+            :controls-enabled="!intestineIntroActive"
+            :poop-visible="!intestineIntroActive"
+            @move="movePoop"
+        />
+        <div v-if="intestineIntroActive" class="intestine-intro-overlay" aria-hidden="true">
+            <p class="digest-sub">Digesting in progress...</p>
+            <div class="morph-stage">
+                <span class="morph-impact-ring"></span>
+                <span class="morph-slice">🍕</span>
+                <span class="morph-poop">💩</span>
+            </div>
         </div>
     </div>
 
     <GameEndScreen
         v-else-if="phase === 'win'"
-        title="Costco Complete!"
+        title="Digestive Victory!"
         emoji="💩"
         :score="winScore"
         game-slug="costco-pizza-poop"
@@ -59,22 +77,26 @@
         <p class="win-sub text-[clamp(0.85rem,2.4vmin,1rem)] text-gray-400">
             Time: {{ winElapsed }}s
         </p>
+        <p class="win-sub text-[clamp(0.85rem,2.4vmin,1rem)] text-gray-400">
+            Wall hits: {{ winCollisions }}
+        </p>
     </GameEndScreen>
 </template>
 
 <script setup>
 import GameStartScreen from "@/Components/Games/GameStartScreen.vue";
 import GameEndScreen from "@/Components/Games/GameEndScreen.vue";
+import GameBoard from "@/Pages/Games/CostcoPizzaPoop/components/GameBoard.vue";
 import { COSTCO_PIZZA_POOP_INTRO_SCRIPT } from "@/Pages/Games/shared/introScripts.js";
-import { useSound } from "@/Pages/Games/BigPoop/composables/useSound.js";
-import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { useGameState } from "@/Pages/Games/CostcoPizzaPoop/composables/useGameState.js";
+import { useSound } from "@/Pages/Games/CostcoPizzaPoop/composables/useSound.js";
 import { usePage } from "@inertiajs/vue3";
-import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
 const SLICE_COUNT = 6;
 const SLICE_SIZE = 66;
-const POOP_VISIBLE_BEFORE_WIN_MS = 2000;
-const POOP_SPEECH = "You made a big giant guster.";
+const INTESTINE_INTRO_MS = 2300;
+const VICTORY_TUNE_DELAY_MS = 300;
 
 const phase = ref("start");
 const gameEl = ref(null);
@@ -97,19 +119,48 @@ let dragOffsetY = 0;
 let activeMove = null;
 let activeEnd = null;
 
-const playStartMs = ref(0);
 const winScore = ref(0);
 const winElapsed = ref(0);
-const showPoop = ref(false);
-let digestTimer = null;
-let poopTimer = null;
+const winCollisions = ref(0);
+const intestineIntroActive = ref(false);
+let intestineIntroTimer = null;
+let victoryTuneTimer = null;
 
 const fartSoundUrl = usePage().props.fartSoundUrl ?? "/fart.m4a";
-const { initAudio, playFart, playChomp } = useSound(fartSoundUrl);
-const { speak, stopSpeech } = useSpeechSynthesis();
+const { initAudio, playFart, playChomp, playVictory } = useSound(fartSoundUrl);
+const {
+    state: intestineState,
+    segments,
+    totalHeight,
+    elapsedSeconds: intestineElapsedSeconds,
+    progress,
+    startGame: startIntestineGame,
+    movePoop,
+    getPassageAt,
+    POOP_RADIUS,
+} = useGameState();
 
 const slicesLeft = computed(
     () => sliceList.value.filter((s) => !s.eaten).length,
+);
+
+watch(
+    () => intestineState.phase,
+    (newPhase) => {
+        if (phase.value !== "intestine" || newPhase !== "win") {
+            return;
+        }
+
+        playFart();
+        victoryTuneTimer = window.setTimeout(() => {
+            playVictory();
+            victoryTuneTimer = null;
+        }, VICTORY_TUNE_DELAY_MS);
+        winScore.value = intestineState.score;
+        winElapsed.value = intestineElapsedSeconds.value;
+        winCollisions.value = intestineState.collisions;
+        phase.value = "win";
+    },
 );
 
 function sliceStyle(s) {
@@ -182,7 +233,7 @@ function removeDragListeners() {
 }
 
 function startDrag(id, e) {
-    if (phase.value !== "playing") return;
+    if (phase.value !== "pizza") return;
     const s = sliceList.value.find((x) => x.id === id);
     if (!s || s.eaten) return;
 
@@ -215,7 +266,7 @@ function startDrag(id, e) {
             s.eaten = true;
             playChomp();
             if (slicesLeft.value === 0) {
-                beginDigest();
+                startIntestineRun();
             }
         } else {
             s.x = s.startX;
@@ -228,53 +279,47 @@ function startDrag(id, e) {
     document.addEventListener("pointercancel", activeEnd);
 }
 
-function beginDigest() {
-    const elapsed = (Date.now() - playStartMs.value) / 1000;
-    winElapsed.value = Math.round(elapsed * 10) / 10;
-    winScore.value = Math.max(1, 200 - Math.floor(elapsed * 3));
-
-    phase.value = "digesting";
-    showPoop.value = false;
-    digestTimer = window.setTimeout(() => {
-        showPoop.value = true;
-        playFart();
-        speak(POOP_SPEECH);
-        poopTimer = window.setTimeout(() => {
-            phase.value = "win";
-        }, POOP_VISIBLE_BEFORE_WIN_MS);
-    }, 1200);
+function startIntestineRun() {
+    startIntestineGame();
+    intestineIntroActive.value = true;
+    phase.value = "intestine";
+    intestineIntroTimer = window.setTimeout(() => {
+        intestineIntroActive.value = false;
+    }, INTESTINE_INTRO_MS);
 }
 
 async function handlePlayFromStart() {
     await initAudio();
-    phase.value = "playing";
+    phase.value = "pizza";
     await nextTick();
     updateSize();
-    playStartMs.value = Date.now();
 }
 
 async function handlePlayAgain() {
     clearTimers();
+    removeDragListeners();
     sliceList.value.forEach((s) => {
         s.eaten = false;
     });
-    showPoop.value = false;
+    winScore.value = 0;
+    winElapsed.value = 0;
+    winCollisions.value = 0;
+    intestineIntroActive.value = false;
     await initAudio();
-    phase.value = "playing";
+    phase.value = "pizza";
     await nextTick();
     updateSize();
     draggingId.value = null;
-    playStartMs.value = Date.now();
 }
 
 function clearTimers() {
-    if (digestTimer) {
-        clearTimeout(digestTimer);
-        digestTimer = null;
+    if (intestineIntroTimer) {
+        clearTimeout(intestineIntroTimer);
+        intestineIntroTimer = null;
     }
-    if (poopTimer) {
-        clearTimeout(poopTimer);
-        poopTimer = null;
+    if (victoryTuneTimer) {
+        clearTimeout(victoryTuneTimer);
+        victoryTuneTimer = null;
     }
 }
 
@@ -286,7 +331,6 @@ onUnmounted(() => {
     window.removeEventListener("resize", updateSize);
     removeDragListeners();
     clearTimers();
-    stopSpeech();
 });
 </script>
 
@@ -395,49 +439,136 @@ onUnmounted(() => {
     pointer-events: none;
 }
 
-.digest-overlay {
+.intestine-wrap {
+    position: relative;
+    width: min(100%, 700px);
+    height: min(calc(100dvh - 4rem - 48px), 720px);
+    margin: 0 auto;
+    overflow: hidden;
+    border-radius: 16px;
+    border: 3px solid #6b5344;
+    box-shadow: 0 0 48px rgba(0, 0, 0, 0.45);
+}
+
+.digest-sub {
+    margin: 0 0 0.65rem;
+    text-align: center;
+    color: #fde68a;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+    font-size: clamp(0.85rem, 2.8vmin, 1rem);
+}
+
+.intestine-intro-overlay {
     position: absolute;
     inset: 0;
     z-index: 30;
     display: flex;
     flex-direction: column;
+    justify-content: flex-start;
     align-items: center;
-    justify-content: flex-end;
-    padding-bottom: 18%;
-    background: rgba(0, 0, 0, 0.25);
+    padding-top: clamp(3.2rem, 12vmin, 5.5rem);
     pointer-events: none;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.26), rgba(0, 0, 0, 0.02) 36%);
 }
 
-.digest-text {
-    font-size: clamp(1.25rem, 5vmin, 1.75rem);
-    font-weight: 900;
-    color: #fde68a;
-    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+.morph-stage {
+    position: relative;
+    width: clamp(5rem, 15vmin, 7.5rem);
+    height: clamp(5rem, 15vmin, 7.5rem);
 }
 
-.poop-drop {
-    font-size: clamp(3rem, 15vmin, 5rem);
+.morph-impact-ring,
+.morph-slice,
+.morph-poop {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: clamp(3rem, 10.8vmin, 5rem);
     line-height: 1;
+}
+
+.morph-impact-ring {
+    border-radius: 999px;
+    border: 3px solid rgba(255, 232, 178, 0.75);
     opacity: 0;
-    transform: translateY(-20px) scale(0.5);
+    transform: scale(0.2);
+    animation: intestineImpactRing 0.72s ease-out 1.12s forwards;
 }
 
-.poop-drop-visible {
-    animation: poopPlop 0.55s ease-out forwards;
+.morph-slice {
+    transform-origin: 50% 70%;
+    animation: intestineSliceMorph 1.85s cubic-bezier(0.23, 0.71, 0.25, 0.99) forwards;
 }
 
-@keyframes poopPlop {
+.morph-poop {
+    opacity: 0;
+    transform: scale(0.35);
+    filter: drop-shadow(0 0 0 rgba(78, 37, 23, 0));
+    animation: intestinePoopMorph 1.15s cubic-bezier(0.2, 0.72, 0.25, 1) 1.42s forwards;
+}
+
+@keyframes intestineSliceMorph {
+    0% {
+        opacity: 1;
+        transform: translateY(-0.9rem) rotate(-8deg) scale(1.26);
+    }
+    46% {
+        opacity: 1;
+        transform: translateY(0.9rem) rotate(88deg) scale(1.02);
+    }
+    56% {
+        opacity: 1;
+        transform: translateY(1.75rem) rotate(116deg) scale(0.92, 0.72);
+    }
+    65% {
+        opacity: 1;
+        transform: translateY(1.42rem) rotate(132deg) scale(0.96, 0.78);
+    }
+    86% {
+        opacity: 1;
+        transform: translateY(1.95rem) rotate(150deg) scale(0.66);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(2.8rem) rotate(255deg) scale(0.42);
+    }
+}
+
+@keyframes intestinePoopMorph {
     0% {
         opacity: 0;
-        transform: translateY(-30px) scale(0.4);
+        transform: translateY(0.45rem) scale(0.32);
+        filter: drop-shadow(0 0 0 rgba(78, 37, 23, 0));
     }
-    55% {
+    52% {
         opacity: 1;
-        transform: translateY(8px) scale(1.1);
+        transform: translateY(0) scale(1.12, 0.82);
+        filter: drop-shadow(0 0 14px rgba(78, 37, 23, 0.34));
+    }
+    72% {
+        opacity: 1;
+        transform: translateY(-0.18rem) scale(0.9, 1.12);
+        filter: drop-shadow(0 0 8px rgba(78, 37, 23, 0.25));
     }
     100% {
         opacity: 1;
         transform: translateY(0) scale(1);
+        filter: drop-shadow(0 0 0 rgba(78, 37, 23, 0));
+    }
+}
+
+@keyframes intestineImpactRing {
+    0% {
+        opacity: 0;
+        transform: scale(0.2);
+    }
+    15% {
+        opacity: 0.9;
+    }
+    100% {
+        opacity: 0;
+        transform: scale(1.3);
     }
 }
 
