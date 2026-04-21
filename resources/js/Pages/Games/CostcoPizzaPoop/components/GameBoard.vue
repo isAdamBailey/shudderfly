@@ -12,6 +12,7 @@ const props = defineProps({
     getPassageAt: { type: Function, required: true },
     controlsEnabled: { type: Boolean, default: true },
     poopVisible: { type: Boolean, default: true },
+    showDigestIntro: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(["move"]);
@@ -74,6 +75,21 @@ const anusCenter = computed(() => {
 });
 
 const progressBarWidth = computed(() => `${(props.progress * 100).toFixed(1)}%`);
+
+const digestIntro = computed(() => {
+    const targetX = props.state.poopX || SVG_WIDTH / 2;
+    const targetY = props.state.poopY || 232;
+    const stomachCy = Math.max(108, targetY - 84);
+
+    return {
+        targetX,
+        targetY,
+        stomachCx: targetX,
+        stomachCy,
+        stomachRx: 86,
+        stomachRy: 66,
+    };
+});
 
 const POINTER_LAG = 0.14;
 
@@ -291,6 +307,52 @@ onUnmounted(() => {
                 :font-size="poopRadius * 2.2"
                 class="poop-sprite"
             >💩</text>
+
+            <g v-if="showDigestIntro" class="digest-intro-overlay" aria-hidden="true">
+                <ellipse
+                    :cx="digestIntro.stomachCx"
+                    :cy="digestIntro.stomachCy"
+                    :rx="digestIntro.stomachRx"
+                    :ry="digestIntro.stomachRy"
+                    class="digest-stomach-shell"
+                />
+                <ellipse
+                    :cx="digestIntro.stomachCx"
+                    :cy="digestIntro.stomachCy - 4"
+                    :rx="digestIntro.stomachRx * 0.72"
+                    :ry="digestIntro.stomachRy * 0.62"
+                    class="digest-stomach-inner"
+                />
+                <text
+                    :x="digestIntro.stomachCx"
+                    :y="digestIntro.stomachCy"
+                    text-anchor="middle"
+                    dominant-baseline="central"
+                    class="digest-slice digest-slice-a"
+                >🍕</text>
+                <text
+                    :x="digestIntro.stomachCx"
+                    :y="digestIntro.stomachCy"
+                    text-anchor="middle"
+                    dominant-baseline="central"
+                    class="digest-slice digest-slice-b"
+                >🍕</text>
+                <text
+                    :x="digestIntro.stomachCx"
+                    :y="digestIntro.stomachCy"
+                    text-anchor="middle"
+                    dominant-baseline="central"
+                    class="digest-slice digest-slice-c"
+                >🍕</text>
+                <text
+                    :x="digestIntro.stomachCx"
+                    :y="digestIntro.stomachCy"
+                    text-anchor="middle"
+                    dominant-baseline="central"
+                    class="digest-intro-poop"
+                    :style="{ '--digest-drop': `${digestIntro.targetY - digestIntro.stomachCy}px` }"
+                >💩</text>
+            </g>
         </svg>
 
         <div class="hud">
@@ -346,6 +408,47 @@ onUnmounted(() => {
     pointer-events: none;
 }
 
+.digest-intro-overlay {
+    pointer-events: none;
+}
+
+.digest-stomach-shell {
+    fill: rgba(122, 34, 50, 0.45);
+    stroke: rgba(244, 170, 152, 0.65);
+    stroke-width: 4;
+}
+
+.digest-stomach-inner {
+    fill: rgba(255, 208, 164, 0.2);
+    stroke: rgba(255, 188, 158, 0.25);
+    stroke-width: 2;
+}
+
+.digest-slice,
+.digest-intro-poop {
+    font-size: 52px;
+    line-height: 1;
+    transform-origin: center;
+}
+
+.digest-slice-a {
+    animation: digestSliceA 2.2s cubic-bezier(0.2, 0.8, 0.28, 1) forwards;
+}
+
+.digest-slice-b {
+    animation: digestSliceB 2.2s cubic-bezier(0.2, 0.8, 0.28, 1) forwards;
+}
+
+.digest-slice-c {
+    animation: digestSliceC 2.2s cubic-bezier(0.2, 0.8, 0.28, 1) forwards;
+}
+
+.digest-intro-poop {
+    opacity: 0;
+    filter: drop-shadow(0 0 0 rgba(78, 37, 23, 0));
+    animation: digestPoopDrop 1.15s cubic-bezier(0.2, 0.74, 0.28, 1) 1.2s forwards;
+}
+
 .hud {
     position: absolute;
     top: 0;
@@ -397,5 +500,85 @@ onUnmounted(() => {
     border-radius: 4px;
     background: linear-gradient(90deg, #d4606a, #4caf50);
     transition: width 0.15s ease;
+}
+
+@keyframes digestSliceA {
+    0% {
+        opacity: 1;
+        transform: translate(-34px, -20px) rotate(0deg) scale(0.96);
+    }
+    44% {
+        opacity: 1;
+        transform: translate(20px, -6px) rotate(540deg) scale(0.88);
+    }
+    72% {
+        opacity: 1;
+        transform: translate(0, 0) rotate(980deg) scale(0.44, 0.34);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(0, 0) rotate(1150deg) scale(0.08);
+    }
+}
+
+@keyframes digestSliceB {
+    0% {
+        opacity: 1;
+        transform: translate(30px, -12px) rotate(18deg) scale(1);
+    }
+    44% {
+        opacity: 1;
+        transform: translate(-22px, 2px) rotate(-500deg) scale(0.9);
+    }
+    72% {
+        opacity: 1;
+        transform: translate(0, 0) rotate(-920deg) scale(0.46, 0.35);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(0, 0) rotate(-1100deg) scale(0.08);
+    }
+}
+
+@keyframes digestSliceC {
+    0% {
+        opacity: 1;
+        transform: translate(4px, 28px) rotate(-22deg) scale(0.94);
+    }
+    44% {
+        opacity: 1;
+        transform: translate(3px, -24px) rotate(580deg) scale(0.88);
+    }
+    72% {
+        opacity: 1;
+        transform: translate(0, 0) rotate(1020deg) scale(0.42, 0.33);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(0, 0) rotate(1220deg) scale(0.08);
+    }
+}
+
+@keyframes digestPoopDrop {
+    0% {
+        opacity: 0;
+        transform: translateY(0) scale(0.2, 0.3) rotate(-22deg);
+        filter: drop-shadow(0 0 0 rgba(78, 37, 23, 0));
+    }
+    44% {
+        opacity: 1;
+        transform: translateY(0) scale(1.14, 0.84) rotate(8deg);
+        filter: drop-shadow(0 0 12px rgba(78, 37, 23, 0.36));
+    }
+    76% {
+        opacity: 1;
+        transform: translateY(calc(var(--digest-drop) * 0.72)) scale(0.95, 1.08) rotate(-5deg);
+        filter: drop-shadow(0 0 8px rgba(78, 37, 23, 0.25));
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(var(--digest-drop)) scale(1) rotate(0deg);
+        filter: drop-shadow(0 0 0 rgba(78, 37, 23, 0));
+    }
 }
 </style>

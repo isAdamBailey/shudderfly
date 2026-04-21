@@ -1,15 +1,15 @@
 import { reactive, computed, ref, onUnmounted } from "vue";
 
 export const SVG_WIDTH = 400;
-const PADDING = 50;
+const PADDING = 20;
 const Y_START = 100;
 const POOP_RADIUS = 18;
 const MAX_SCORE = 1000;
 const MIN_SCORE = 100;
 const WALL_PENALTY = 10;
 const COLLISION_COOLDOWN_MS = 400;
-const SEGMENT_HEIGHT = 55;
-const NUM_SEGMENTS = 42;
+const SEGMENT_HEIGHT = 46;
+const NUM_SEGMENTS = 30;
 
 const SEGMENTS = generateIntestinePath();
 const TOTAL_PATH_HEIGHT = SEGMENTS[SEGMENTS.length - 1].y + 140;
@@ -23,9 +23,9 @@ function generateIntestinePath() {
     for (let i = 0; i < NUM_SEGMENTS; i++) {
         const y = Y_START + i * SEGMENT_HEIGHT;
         const wave = Math.sin(i * 0.35) * 0.3 + 0.7;
-        const amplitude = (usableWidth * 0.35) * wave;
+        const amplitude = (usableWidth * 0.16) * wave;
         const centerX = midX + direction * amplitude;
-        const wallGap = 48 + Math.max(0, 10 - i) * 2.5;
+        const wallGap = 104 + Math.max(0, 8 - i) * 3.2;
 
         segments.push({
             y,
@@ -99,7 +99,7 @@ export function useGameState() {
         const entry = SEGMENTS[0];
         state.phase = "playing";
         state.poopX = entry.centerX;
-        state.poopY = entry.y + 10;
+        state.poopY = entry.y + 74;
         state.collisions = 0;
         state.startTime = Date.now();
         state.endTime = 0;

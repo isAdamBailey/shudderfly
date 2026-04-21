@@ -37,8 +37,14 @@
 
         <div class="person-wrap">
             <div class="person" aria-label="Hungry person">
-                <span class="person-emoji">🧑</span>
-                <div ref="mouthRef" class="mouth-hitbox" />
+                <div class="person-face">
+                    <span class="person-eye person-eye-left" aria-hidden="true"></span>
+                    <span class="person-eye person-eye-right" aria-hidden="true"></span>
+                    <div class="person-mouth" aria-hidden="true">
+                        <span class="person-tongue"></span>
+                        <div ref="mouthRef" class="mouth-hitbox"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -54,16 +60,9 @@
             :get-passage-at="getPassageAt"
             :controls-enabled="!intestineIntroActive"
             :poop-visible="!intestineIntroActive"
+            :show-digest-intro="intestineIntroActive"
             @move="movePoop"
         />
-        <div v-if="intestineIntroActive" class="intestine-intro-overlay" aria-hidden="true">
-            <p class="digest-sub">Digesting in progress...</p>
-            <div class="morph-stage">
-                <span class="morph-impact-ring"></span>
-                <span class="morph-slice">🍕</span>
-                <span class="morph-poop">💩</span>
-            </div>
-        </div>
     </div>
 
     <GameEndScreen
@@ -93,9 +92,9 @@ import { useSound } from "@/Pages/Games/CostcoPizzaPoop/composables/useSound.js"
 import { usePage } from "@inertiajs/vue3";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
-const SLICE_COUNT = 6;
-const SLICE_SIZE = 66;
-const INTESTINE_INTRO_MS = 2300;
+const SLICE_COUNT = 3;
+const SLICE_SIZE = 96;
+const INTESTINE_INTRO_MS = 2600;
 const VICTORY_TUNE_DELAY_MS = 300;
 
 const phase = ref("start");
@@ -127,7 +126,7 @@ let intestineIntroTimer = null;
 let victoryTuneTimer = null;
 
 const fartSoundUrl = usePage().props.fartSoundUrl ?? "/fart.m4a";
-const { initAudio, playFart, playChomp, playVictory } = useSound(fartSoundUrl);
+const { initAudio, playFart, playChomp, playVictory, playMissSound } = useSound(fartSoundUrl);
 const {
     state: intestineState,
     segments,
@@ -163,6 +162,18 @@ watch(
     },
 );
 
+watch(
+    () => intestineState.collisions,
+    (newCollisions, oldCollisions) => {
+        if (phase.value !== "intestine" || intestineIntroActive.value) {
+            return;
+        }
+        if (newCollisions > oldCollisions) {
+            playMissSound();
+        }
+    },
+);
+
 function sliceStyle(s) {
     return {
         left: `${s.x - SLICE_SIZE / 2}px`,
@@ -183,8 +194,8 @@ function updateSize() {
 
 function layoutSlices() {
     const w = gameW.value;
-    const baseY = Math.min(175, w * 0.3);
-    const margin = 20;
+    const baseY = Math.min(220, Math.max(150, w * 0.34));
+    const margin = 24;
     const usable = w - margin * 2;
     const step = usable / (SLICE_COUNT + 1);
     sliceList.value.forEach((s, i) => {
@@ -415,26 +426,77 @@ onUnmounted(() => {
 
 .person {
     position: relative;
-    width: min(260px, 56vw);
-    height: min(280px, 58vmin);
+    width: min(300px, 64vw);
+    height: min(320px, 64vmin);
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.person-emoji {
-    font-size: clamp(5.75rem, 28vmin, 9rem);
-    line-height: 1;
-    filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.35));
+.person-face {
+    position: relative;
+    width: min(220px, 50vw);
+    height: min(230px, 52vw);
+    border-radius: 45% 45% 50% 50%;
+    border: 4px solid #f2c7a6;
+    background:
+        radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.3), transparent 36%),
+        linear-gradient(180deg, #ffd9bd 0%, #f4be95 100%);
+    box-shadow:
+        inset 0 -8px 16px rgba(138, 72, 35, 0.22),
+        0 10px 20px rgba(0, 0, 0, 0.34);
+}
+
+.person-eye {
+    position: absolute;
+    top: 34%;
+    width: 14%;
+    height: 8%;
+    border-radius: 999px;
+    background: #2d130e;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.person-eye-left {
+    left: 24%;
+    transform: rotate(-7deg);
+}
+
+.person-eye-right {
+    right: 24%;
+    transform: rotate(7deg);
+}
+
+.person-mouth {
+    position: absolute;
+    left: 50%;
+    top: 69%;
+    transform: translate(-50%, -50%);
+    width: min(118px, 29vw);
+    height: min(92px, 23vw);
+    border-radius: 0 0 999px 999px;
+    border: 4px solid #340f0f;
+    border-top: 0;
+    background: radial-gradient(circle at 50% 28%, #170404 0%, #080102 76%);
+    overflow: hidden;
+    animation: mouthChew 1.45s ease-in-out infinite;
+}
+
+.person-tongue {
+    position: absolute;
+    left: 50%;
+    bottom: -8%;
+    width: 76%;
+    height: 52%;
+    border-radius: 999px 999px 40% 40%;
+    transform: translateX(-50%);
+    background: linear-gradient(180deg, #ff7c7c 0%, #e35f72 100%);
+    opacity: 0.95;
 }
 
 .mouth-hitbox {
     position: absolute;
-    left: 50%;
-    top: 58%;
-    transform: translate(-50%, -50%);
-    width: min(104px, 26vw);
-    height: min(52px, 13vw);
+    inset: 0;
     border-radius: 999px;
     pointer-events: none;
 }
@@ -450,125 +512,15 @@ onUnmounted(() => {
     box-shadow: 0 0 48px rgba(0, 0, 0, 0.45);
 }
 
-.digest-sub {
-    margin: 0 0 0.65rem;
-    text-align: center;
-    color: #fde68a;
-    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
-    font-size: clamp(0.85rem, 2.8vmin, 1rem);
-}
-
-.intestine-intro-overlay {
-    position: absolute;
-    inset: 0;
-    z-index: 30;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: center;
-    padding-top: clamp(3.2rem, 12vmin, 5.5rem);
-    pointer-events: none;
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0.26), rgba(0, 0, 0, 0.02) 36%);
-}
-
-.morph-stage {
-    position: relative;
-    width: clamp(5rem, 15vmin, 7.5rem);
-    height: clamp(5rem, 15vmin, 7.5rem);
-}
-
-.morph-impact-ring,
-.morph-slice,
-.morph-poop {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    font-size: clamp(3rem, 10.8vmin, 5rem);
-    line-height: 1;
-}
-
-.morph-impact-ring {
-    border-radius: 999px;
-    border: 3px solid rgba(255, 232, 178, 0.75);
-    opacity: 0;
-    transform: scale(0.2);
-    animation: intestineImpactRing 0.72s ease-out 1.12s forwards;
-}
-
-.morph-slice {
-    transform-origin: 50% 70%;
-    animation: intestineSliceMorph 1.85s cubic-bezier(0.23, 0.71, 0.25, 0.99) forwards;
-}
-
-.morph-poop {
-    opacity: 0;
-    transform: scale(0.35);
-    filter: drop-shadow(0 0 0 rgba(78, 37, 23, 0));
-    animation: intestinePoopMorph 1.15s cubic-bezier(0.2, 0.72, 0.25, 1) 1.42s forwards;
-}
-
-@keyframes intestineSliceMorph {
+@keyframes mouthChew {
     0% {
-        opacity: 1;
-        transform: translateY(-0.9rem) rotate(-8deg) scale(1.26);
+        transform: translate(-50%, -50%) scaleY(1);
     }
-    46% {
-        opacity: 1;
-        transform: translateY(0.9rem) rotate(88deg) scale(1.02);
-    }
-    56% {
-        opacity: 1;
-        transform: translateY(1.75rem) rotate(116deg) scale(0.92, 0.72);
-    }
-    65% {
-        opacity: 1;
-        transform: translateY(1.42rem) rotate(132deg) scale(0.96, 0.78);
-    }
-    86% {
-        opacity: 1;
-        transform: translateY(1.95rem) rotate(150deg) scale(0.66);
+    45% {
+        transform: translate(-50%, -50%) scaleY(0.9);
     }
     100% {
-        opacity: 0;
-        transform: translateY(2.8rem) rotate(255deg) scale(0.42);
-    }
-}
-
-@keyframes intestinePoopMorph {
-    0% {
-        opacity: 0;
-        transform: translateY(0.45rem) scale(0.32);
-        filter: drop-shadow(0 0 0 rgba(78, 37, 23, 0));
-    }
-    52% {
-        opacity: 1;
-        transform: translateY(0) scale(1.12, 0.82);
-        filter: drop-shadow(0 0 14px rgba(78, 37, 23, 0.34));
-    }
-    72% {
-        opacity: 1;
-        transform: translateY(-0.18rem) scale(0.9, 1.12);
-        filter: drop-shadow(0 0 8px rgba(78, 37, 23, 0.25));
-    }
-    100% {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-        filter: drop-shadow(0 0 0 rgba(78, 37, 23, 0));
-    }
-}
-
-@keyframes intestineImpactRing {
-    0% {
-        opacity: 0;
-        transform: scale(0.2);
-    }
-    15% {
-        opacity: 0.9;
-    }
-    100% {
-        opacity: 0;
-        transform: scale(1.3);
+        transform: translate(-50%, -50%) scaleY(1);
     }
 }
 
