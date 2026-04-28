@@ -69,18 +69,18 @@ const soundsEnabled = computed(() => {
                 Games
               </NavLink>
               <NavLink
-                v-if="messagingEnabled"
-                :href="route('messages.index')"
-                :active="route().current('messages.*')"
-              >
-                Chat
-              </NavLink>
-              <NavLink
                 v-if="soundsEnabled"
                 :href="route('sounds.index')"
                 :active="route().current('sounds.*')"
               >
                 Sounds
+              </NavLink>
+              <NavLink
+                v-if="messagingEnabled"
+                :href="route('messages.index')"
+                :active="route().current('messages.*')"
+              >
+                Chat
               </NavLink>
             </div>
           </div>
@@ -258,18 +258,18 @@ const soundsEnabled = computed(() => {
             Games
           </ResponsiveNavLink>
           <ResponsiveNavLink
-            v-if="messagingEnabled"
-            :href="route('messages.index')"
-            :active="route().current('messages.*')"
-          >
-            Chat
-          </ResponsiveNavLink>
-          <ResponsiveNavLink
             v-if="soundsEnabled"
             :href="route('sounds.index')"
             :active="route().current('sounds.*')"
           >
             Sounds
+          </ResponsiveNavLink>
+          <ResponsiveNavLink
+            v-if="messagingEnabled"
+            :href="route('messages.index')"
+            :active="route().current('messages.*')"
+          >
+            Chat
           </ResponsiveNavLink>
         </div>
 
