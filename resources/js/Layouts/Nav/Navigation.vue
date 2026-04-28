@@ -1,6 +1,7 @@
 <script setup>
 import ApplicationLogo from "@/Components/ApplicationLogo.vue";
 import Avatar from "@/Components/Avatar.vue";
+import CockroachCrawl from "@/Components/CockroachCrawl.vue";
 import Dropdown from "@/Components/Dropdown.vue";
 import DropdownLink from "@/Components/DropdownLink.vue";
 import FireworksAnimation from "@/Components/FireworksAnimation.vue";
@@ -30,9 +31,11 @@ const soundsEnabled = computed(() => {
 
 <template>
   <nav
-    class="bg-rainbow border-b border-gray-100 dark:border-gray-700"
+    class="relative bg-rainbow border-b border-gray-100 dark:border-gray-700"
     :class="{ fireworks: $page.props.theme === 'fireworks' }"
   >
+    <CockroachCrawl area="header" />
+
     <FireworksAnimation>
       <!-- Primary Navigation Menu -->
       <div class="px-4 sm:px-6 lg:px-8">

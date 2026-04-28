@@ -11,6 +11,15 @@ class SettingsTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_cockroaches_enabled_setting_exists_in_database(): void
+    {
+        $setting = SiteSetting::where('key', 'cockroaches_enabled')->first();
+
+        $this->assertNotNull($setting);
+        $this->assertEquals('0', $setting->value);
+        $this->assertEquals('boolean', $setting->type);
+    }
+
     public function test_can_update_settings(): void
     {
         $user = User::factory()->create();

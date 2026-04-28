@@ -1,5 +1,7 @@
 <template>
-    <footer class="mt-auto border-t border-gray-100 bg-rainbow">
+    <footer class="relative mt-auto border-t border-gray-100 bg-rainbow">
+        <CockroachCrawl area="footer" />
+
         <FireworksAnimation>
             <div class="max-w-7xl mx-auto pt-12 lg:pt-20 pb-12">
                 <div
@@ -16,5 +18,6 @@
 </template>
 
 <script setup>
+import CockroachCrawl from "@/Components/CockroachCrawl.vue";
 import FireworksAnimation from "@/Components/FireworksAnimation.vue";
 </script>
