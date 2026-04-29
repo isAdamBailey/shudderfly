@@ -13,6 +13,7 @@ use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -331,7 +332,7 @@ class PagesTest extends TestCase
             'page_id' => $page->id,
         ]);
 
-        $notificationId = \Illuminate\Support\Str::uuid()->toString();
+        $notificationId = Str::uuid()->toString();
         DB::table('notifications')->insert([
             'id' => $notificationId,
             'type' => 'App\\Notifications\\UserTagged',
