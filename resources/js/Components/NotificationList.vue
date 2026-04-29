@@ -92,7 +92,7 @@
                 <p
                   class="text-sm text-gray-700 dark:text-gray-300 italic ml-8 mb-1"
                 >
-                  "{{ notification.data.message }}"
+                  "{{ stripGameShareSlugMarker(notification.data.message) }}"
                 </p>
               </div>
               <div
@@ -122,7 +122,7 @@
                 <p
                   class="text-sm text-gray-700 dark:text-gray-300 italic ml-8 mb-1"
                 >
-                  "{{ notification.data.message }}"
+                  "{{ stripGameShareSlugMarker(notification.data.message) }}"
                 </p>
                 <p class="text-sm text-gray-600 dark:text-gray-400 ml-8 mt-1">
                   Comment: "{{ notification.data.comment }}"
@@ -174,6 +174,15 @@ import { useUnreadNotifications } from "@/composables/useUnreadNotifications";
 import { router, usePage } from "@inertiajs/vue3";
 import axios from "axios";
 import { onMounted, onUnmounted, ref } from "vue";
+
+const GAME_SHARE_SLUG_MARKER = /\uE000g:[a-z0-9-]+\uE000/g;
+
+const stripGameShareSlugMarker = (text) => {
+  if (text == null || text === "") {
+    return "";
+  }
+  return String(text).replace(GAME_SHARE_SLUG_MARKER, "");
+};
 
 const notifications = ref([]);
 const { speak, speaking } = useSpeechSynthesis();

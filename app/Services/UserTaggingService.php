@@ -6,6 +6,7 @@ use App\Models\Message;
 use App\Models\MessageComment;
 use App\Models\User;
 use App\Notifications\UserTagged;
+use App\Support\GameShareMessage;
 
 class UserTaggingService
 {
@@ -87,9 +88,13 @@ class UserTaggingService
                 ? $content->comment
                 : ($content instanceof Message ? $content->message : '');
 
-            $pushBody = mb_strlen($contentText, 'UTF-8') > 120
-                ? mb_substr($contentText, 0, 117, 'UTF-8').'...'
-                : $contentText;
+            $pushPreview = $contentType === 'comment'
+                ? $contentText
+                : GameShareMessage::stripSlugMarker($contentText);
+
+            $pushBody = mb_strlen($pushPreview, 'UTF-8') > 120
+                ? mb_substr($pushPreview, 0, 117, 'UTF-8').'...'
+                : $pushPreview;
 
             $pushData = [
                 'type' => 'user_tagged',
