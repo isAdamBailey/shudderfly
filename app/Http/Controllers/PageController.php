@@ -24,6 +24,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -660,6 +661,14 @@ class PageController extends Controller
 
     public function block(Page $page): Redirector|RedirectResponse
     {
+        $messageIds = Message::where('page_id', $page->id)->pluck('id');
+
+        if ($messageIds->isNotEmpty()) {
+            DB::table('notifications')
+                ->whereIn(DB::raw("JSON_EXTRACT(data, '$.message_id')"), $messageIds)
+                ->delete();
+        }
+
         $page->update(['blocked' => true]);
 
         return redirect(route('books.show', $page->book))->with('success', __('messages.page.blocked'));

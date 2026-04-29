@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -313,6 +314,47 @@ class PagesTest extends TestCase
 
         $response->assertRedirect(route('books.show', $book));
         $this->assertTrue($page->fresh()->blocked);
+    }
+
+    public function test_blocking_page_deletes_associated_notifications(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $book = Book::factory()->create();
+        $page = Page::factory()->for($book)->create(['blocked' => false]);
+
+        $messageAuthor = User::factory()->create();
+        $notifiedUser = User::factory()->create();
+
+        $message = Message::factory()->create([
+            'user_id' => $messageAuthor->id,
+            'page_id' => $page->id,
+        ]);
+
+        $notificationId = \Illuminate\Support\Str::uuid()->toString();
+        DB::table('notifications')->insert([
+            'id' => $notificationId,
+            'type' => 'App\\Notifications\\UserTagged',
+            'notifiable_type' => 'App\\Models\\User',
+            'notifiable_id' => $notifiedUser->id,
+            'data' => json_encode([
+                'message_id' => $message->id,
+                'message' => 'Hello @'.$notifiedUser->name.'!',
+                'tagger_id' => $messageAuthor->id,
+                'tagger_name' => $messageAuthor->name,
+                'tagger_avatar' => null,
+                'created_at' => $message->created_at->toIso8601String(),
+                'url' => route('messages.index').'#message-'.$message->id,
+            ]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->assertDatabaseHas('notifications', ['id' => $notificationId]);
+
+        $this->patch(route('pages.block', $page));
+
+        $this->assertDatabaseMissing('notifications', ['id' => $notificationId]);
     }
 
     public function test_blocked_pages_are_hidden_from_books_and_uploads_and_show_returns_404(): void
