@@ -80,30 +80,20 @@ class GenerateCollagePdf implements ShouldQueue
                     $localPath = "{$tempDir}/{$imageName}";
 
                     try {
-                        // Extract S3 key from URL
-                        $mediaPath = $page->media_path;
-                        $cloudfrontUrl = env('CLOUDFRONT_URL');
+                        $s3Path = $this->resolveS3KeyFromMediaPath($page->media_path);
 
-                        if ($cloudfrontUrl && str_contains($mediaPath, $cloudfrontUrl)) {
-                            // If it's a CloudFront URL, extract the path
-                            $s3Path = ltrim(str_replace($cloudfrontUrl, '', $mediaPath), '/');
-                        } else {
-                            // If it's an S3 URL, extract just the key part
-                            $s3Path = str_replace('https://'.config('filesystems.disks.s3.bucket').'.s3.us-west-2.amazonaws.com/', '', $mediaPath);
-                            // Remove any double-encoded URLs
-                            if (str_contains($s3Path, 'https%3A//')) {
-                                $s3Path = urldecode($s3Path);
-                                $s3Path = str_replace('https://'.config('filesystems.disks.s3.bucket').'.s3.us-west-2.amazonaws.com/', '', $s3Path);
-                            }
+                        if ($s3Path === '') {
+                            Log::error('Invalid media path for S3 download', [
+                                'collage_id' => $this->collage->id,
+                                'page_id' => $page->id,
+                                'media_path' => $page->media_path,
+                            ]);
 
-                            // Ensure we have just the key part
-                            if (str_contains($s3Path, 'https://')) {
-                                $s3Path = str_replace('https://'.config('filesystems.disks.s3.bucket').'.s3.us-west-2.amazonaws.com/', '', $s3Path);
-                            }
+                            continue;
                         }
 
                         // Download from S3 using stream
-                        $result = $s3->getObject([
+                        $s3->getObject([
                             'Bucket' => config('filesystems.disks.s3.bucket'),
                             'Key' => $s3Path,
                             'SaveAs' => $localPath,
@@ -128,6 +118,7 @@ class GenerateCollagePdf implements ShouldQueue
                             'collage_id' => $this->collage->id,
                             'page_id' => $page->id,
                             'media_path' => $page->media_path,
+                            's3_path' => $s3Path ?? null,
                             'error' => $e->getMessage(),
                         ]);
 
@@ -306,6 +297,43 @@ class GenerateCollagePdf implements ShouldQueue
                 ));
             }
         }
+    }
+
+    protected function resolveS3KeyFromMediaPath(?string $mediaPath): string
+    {
+        if (! is_string($mediaPath) || $mediaPath === '') {
+            return '';
+        }
+
+        $resolvedPath = trim($mediaPath);
+
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            $decoded = urldecode($resolvedPath);
+            if ($decoded === $resolvedPath) {
+                break;
+            }
+
+            $resolvedPath = $decoded;
+        }
+
+        if (
+            ! preg_match('/^https?:\/\//i', $resolvedPath)
+            && preg_match('/^[^\/]+\.[^\/]+\//', $resolvedPath)
+        ) {
+            $resolvedPath = 'https://'.$resolvedPath;
+        }
+
+        if (filter_var($resolvedPath, FILTER_VALIDATE_URL)) {
+            $resolvedPath = (string) parse_url($resolvedPath, PHP_URL_PATH);
+        }
+
+        $resolvedPath = trim($resolvedPath);
+
+        if (str_contains($resolvedPath, '?')) {
+            $resolvedPath = (string) strtok($resolvedPath, '?');
+        }
+
+        return ltrim($resolvedPath, '/');
     }
 
     /**
