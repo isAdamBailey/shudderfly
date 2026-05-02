@@ -108,27 +108,27 @@
           />
 
           <div
-            v-if="isSupported && lastError"
+            v-if="isSupported && speechErrorMessage"
             class="absolute right-2 top-1/2 transform -translate-y-1/2"
           >
             <div
               class="bg-red-600 text-white christmas:bg-christmas-berry halloween:bg-halloween-candy text-xs rounded-full w-4 h-4 flex items-center justify-center"
-              :title="lastError"
+              :title="speechErrorMessage"
             >
               !
             </div>
           </div>
 
           <div
-            v-if="lastError && !isListening"
-            class="absolute z-50 w-full mt-1 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-500/60 dark:bg-red-900/40 dark:text-red-200"
+            v-if="speechErrorMessage"
+            class="absolute z-[60] w-full mt-1 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-500/60 dark:bg-red-900/40 dark:text-red-200"
             role="alert"
           >
             <p class="font-semibold">
               Voice search error
             </p>
             <p class="mt-0.5 break-words">
-              {{ lastError }}
+              {{ speechErrorMessage }}
             </p>
           </div>
 
@@ -249,6 +249,30 @@ const { isSupported, isListening, isFinal, result, error, start, stop } =
 
 const finalTranscript = computed(() => result.value || "");
 const lastError = computed(() => error.value);
+const speechErrorMessage = computed(() => {
+  const rawError = lastError.value;
+  if (!rawError) return "";
+  if (typeof rawError === "string") return rawError;
+  if (typeof rawError === "object") {
+    const code = rawError.error || rawError.name || "";
+    const message = rawError.message || "";
+    if (message) return message;
+    if (code) {
+      if (code === "not-allowed") return "Microphone permission was denied.";
+      if (code === "service-not-allowed")
+        return "Speech service is not allowed in this browser.";
+      if (code === "audio-capture")
+        return "No microphone was detected for speech recognition.";
+      if (code === "network")
+        return "Network error while connecting to speech recognition.";
+      if (code === "no-speech") return "No speech was detected. Please try again.";
+      if (code === "aborted")
+        return "Speech recognition was stopped before completion.";
+      return String(code);
+    }
+  }
+  return String(rawError);
+});
 const hasGoodResult = computed(() => finalTranscript.value && isFinal.value);
 const currentTranscript = computed(() => finalTranscript.value);
 const isProcessing = computed(() => isListening.value);
