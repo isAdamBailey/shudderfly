@@ -83,6 +83,16 @@ describe("Components/SearchInput.vue", () => {
     expect(router.get).not.toHaveBeenCalled();
   });
 
+  it("keeps input empty after clearing and switching target", async () => {
+    const wrapper = mount(SearchInput);
+    await wrapper.findAll('[role="radio"]')[0].trigger("click");
+    const input = wrapper.find('input[type="search"]');
+    await input.setValue("dogs");
+    await input.setValue("");
+    await wrapper.findAll('[role="radio"]')[1].trigger("click");
+    expect(input.element.value).toBe("");
+  });
+
   it("navigates to pictures.index on Enter when target is uploads", async () => {
     Object.defineProperty(window, "location", {
       value: { pathname: "/pictures" },

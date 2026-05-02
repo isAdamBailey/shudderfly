@@ -3,7 +3,7 @@
     class="w-full bg-transparent flex flex-nowrap items-center gap-2 pl-2 md:pl-8 mt-5 pr-3 md:pr-8 mb-2"
   >
     <div
-      class="self-center w-[240px] sm:w-[200px] max-w-full flex-shrink-0"
+      :class="['self-center max-w-full flex-shrink-0', toggleContainerClass]"
       role="radiogroup"
       :aria-label="t('search.target_aria')"
     >
@@ -14,7 +14,7 @@
           role="radio"
           :aria-checked="isBooksTarget.toString()"
           :tabindex="isBooksTarget ? 0 : -1"
-          class="flex-1 px-2 sm:px-3 h-6 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 christmas:focus-visible:ring-christmas-gold halloween:focus-visible:ring-halloween-orange"
+          class="flex-1 min-w-0 px-2 sm:px-3 h-6 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 christmas:focus-visible:ring-christmas-gold halloween:focus-visible:ring-halloween-orange"
           :class="
             isBooksTarget
               ? 'bg-blue-600 text-white dark:bg-white dark:text-gray-900 christmas:bg-christmas-red christmas:text-white halloween:bg-halloween-orange halloween:text-white shadow'
@@ -30,7 +30,7 @@
           role="radio"
           :aria-checked="isUploadsTarget.toString()"
           :tabindex="isUploadsTarget ? 0 : -1"
-          class="flex-1 px-2 sm:px-3 h-6 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 christmas:focus-visible:ring-christmas-gold halloween:focus-visible:ring-halloween-orange"
+          class="flex-1 min-w-0 px-2 sm:px-3 h-6 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 christmas:focus-visible:ring-christmas-gold halloween:focus-visible:ring-halloween-orange"
           :class="
             isUploadsTarget
               ? 'bg-blue-600 text-white dark:bg-white dark:text-gray-900 christmas:bg-christmas-red christmas:text-white halloween:bg-halloween-orange halloween:text-white shadow'
@@ -199,9 +199,17 @@ import { useSpeechRecognition } from "@vueuse/core";
 import { debounce } from "lodash";
 import { computed, nextTick, onUnmounted, ref, watch } from "vue";
 
+/* global route */
+
 const { speak } = useSpeechSynthesis();
 const { t } = useTranslations();
 const { playSong } = useMusicPlayer();
+const browserLanguage =
+  typeof navigator !== "undefined" ? navigator.language || "en-US" : "en-US";
+const isSafariSpeechBrowser =
+  typeof navigator !== "undefined" &&
+  /Safari/i.test(navigator.userAgent) &&
+  !/Chrome|Chromium|CriOS|Edg|OPR|Android/i.test(navigator.userAgent);
 const props = defineProps({
   label: {
     type: String,
@@ -220,8 +228,9 @@ const props = defineProps({
 const { isSupported, isListening, isFinal, result, error, start, stop } =
   useSpeechRecognition({
     continuous: false,
-    interimResults: true,
-    lang: "en-US",
+    // Safari often fails to emit usable transcripts with interim mode.
+    interimResults: !isSafariSpeechBrowser,
+    lang: browserLanguage,
     maxAlternatives: 1
   });
 
@@ -241,6 +250,12 @@ const selectedIndex = ref(-1);
 const isVoiceSearch = ref(false);
 const searchInputRef = ref(null);
 const isSearchExpanded = ref(Boolean(search.value?.trim()));
+
+const toggleContainerClass = computed(() =>
+  isSearchExpanded.value
+    ? "w-[168px] sm:w-[200px]"
+    : "w-full max-w-[360px] sm:w-[240px]"
+);
 
 const isBooksTarget = computed(() => target.value === "books");
 const isUploadsTarget = computed(() => target.value === "uploads");
@@ -292,9 +307,6 @@ const displayValue = computed(() => {
   if (selectedIndex.value !== -1 && showSuggestions.value) {
     const selected = suggestions.value[selectedIndex.value];
     return getSuggestionTitle(selected);
-  }
-  if (finalTranscript.value && !search.value) {
-    return finalTranscript.value;
   }
   return search.value || "";
 });
@@ -432,7 +444,6 @@ const searchMethod = () => {
     target.value === "uploads" ? "pictures.index" : "books.index";
   if (search.value)
     speak(`Searching for ${currentLabel.value} with ${search.value}`);
-  // eslint-disable-next-line no-undef
   router.get(
     route(routeName),
     { search: search.value || null, filter: filter.value || null },
@@ -526,16 +537,13 @@ const navigateSuggestions = (direction) => {
 
 const selectSuggestion = async (suggestion) => {
   showSuggestions.value = false;
-  // eslint-disable-next-line no-undef
   if (suggestion.type === "book")
     router.get(route("books.show", suggestion.slug));
-  // eslint-disable-next-line no-undef
   else if (suggestion.type === "page")
     router.get(route("pages.show", suggestion.id));
   else if (suggestion.type === "song") {
     try {
       const response = await window.axios.get(
-        // eslint-disable-next-line no-undef
         route("music.show", suggestion.id)
       );
       if (response.data?.song) playSong(response.data.song);
