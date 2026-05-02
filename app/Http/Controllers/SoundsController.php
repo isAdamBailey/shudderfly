@@ -8,6 +8,7 @@ use App\Jobs\StoreSoundAudio;
 use App\Models\SiteSetting;
 use App\Models\Sound;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -27,10 +28,22 @@ class SoundsController extends Controller
         });
     }
 
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $sort = $request->query('sort', 'date_added');
+
+        $soundsQuery = Sound::query();
+
+        if ($sort === 'alphabetical') {
+            $soundsQuery->orderBy('title');
+        } else {
+            $sort = 'date_added';
+            $soundsQuery->orderByDesc('created_at');
+        }
+
         return Inertia::render('Sounds/Index', [
-            'sounds' => Sound::orderBy('title')->get(),
+            'sounds' => $soundsQuery->get(),
+            'sort' => $sort,
         ]);
     }
 

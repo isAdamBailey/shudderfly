@@ -10,13 +10,12 @@ import { usePermissions } from "@/composables/permissions";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, router, useForm } from "@inertiajs/vue3";
-import { onBeforeUnmount, ref } from "vue";
+import { computed, onBeforeUnmount, ref } from "vue";
 
-defineProps({
-    sounds: {
-        type: Array,
-        default: () => [],
-    },
+/* global route */
+
+defineOptions({
+    name: "SoundsIndexPage",
 });
 
 const soundDropdownContentClasses = [
@@ -39,6 +38,30 @@ const soundModalPanelClass =
 
 const { canEditPages } = usePermissions();
 const { speak, stopSpeech } = useSpeechSynthesis();
+const props = defineProps({
+    sounds: {
+        type: Array,
+        default: () => [],
+    },
+    sort: {
+        type: String,
+        default: "date_added",
+    },
+});
+
+const sortLoading = ref(false);
+const isDateAdded = computed(() => props.sort === "date_added");
+const isAlphabetical = computed(() => props.sort === "alphabetical");
+
+function filter(sort) {
+    sortLoading.value = true;
+    speak(sort === "alphabetical" ? "alphabetical" : "date added");
+    router.get(route("sounds.index", { sort }));
+}
+
+function refreshPage() {
+    router.get(route("sounds.index", { sort: props.sort }));
+}
 
 const playingId = ref(null);
 let audioEl = null;
@@ -175,12 +198,35 @@ onBeforeUnmount(() => {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-heading text-2xl text-theme-title leading-tight">
-                Sounds
-            </h2>
+            <button type="button" @click="refreshPage">
+                <h2 class="font-heading text-2xl text-theme-title leading-tight">
+                    Sounds
+                </h2>
+            </button>
         </template>
 
-        <div class="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-5xl mx-auto pt-3 pb-8 px-4 sm:px-6 lg:px-8">
+            <div class="p-2 pb-0 flex flex-wrap justify-around">
+                <Button
+                    type="button"
+                    :is-active="isDateAdded"
+                    :disabled="sortLoading"
+                    class="rounded-full my-3"
+                    @click="filter('date_added')"
+                >
+                    <i class="ri-time-line text-4xl"></i>
+                </Button>
+                <Button
+                    type="button"
+                    :is-active="isAlphabetical"
+                    :disabled="sortLoading"
+                    class="rounded-full my-3"
+                    @click="filter('alphabetical')"
+                >
+                    <i class="ri-sort-alphabet-asc text-4xl"></i>
+                </Button>
+            </div>
+
             <div
                 v-if="sounds.length === 0"
                 class="text-center py-16 text-gray-400 dark:text-gray-500"

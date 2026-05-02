@@ -7,6 +7,7 @@ use App\Models\Sound;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
 use ReflectionObject;
@@ -60,7 +61,36 @@ class SoundsTest extends TestCase
         );
     }
 
-    public function test_sounds_are_ordered_by_title(): void
+    public function test_sounds_are_ordered_by_date_added_descending_by_default(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $oldest = Sound::factory()->create([
+            'title' => 'Oldest Sound',
+            'created_at' => Carbon::parse('2024-01-01 00:00:00'),
+        ]);
+        $middle = Sound::factory()->create([
+            'title' => 'Middle Sound',
+            'created_at' => Carbon::parse('2024-06-01 00:00:00'),
+        ]);
+        $newest = Sound::factory()->create([
+            'title' => 'Newest Sound',
+            'created_at' => Carbon::parse('2024-12-01 00:00:00'),
+        ]);
+
+        $response = $this->get(route('sounds.index'));
+        $response->assertInertia(
+            fn ($page) => $page
+                ->component('Sounds/Index')
+                ->where('sort', 'date_added')
+                ->where('sounds.0.id', $newest->id)
+                ->where('sounds.1.id', $middle->id)
+                ->where('sounds.2.id', $oldest->id)
+        );
+    }
+
+    public function test_sounds_can_be_ordered_alphabetically(): void
     {
         $user = User::factory()->create();
         $this->actingAs($user);
@@ -69,10 +99,11 @@ class SoundsTest extends TestCase
         Sound::factory()->create(['title' => 'Apple Sound']);
         Sound::factory()->create(['title' => 'Mango Sound']);
 
-        $response = $this->get(route('sounds.index'));
+        $response = $this->get(route('sounds.index', ['sort' => 'alphabetical']));
         $response->assertInertia(
             fn ($page) => $page
                 ->component('Sounds/Index')
+                ->where('sort', 'alphabetical')
                 ->where('sounds.0.title', 'Apple Sound')
                 ->where('sounds.1.title', 'Mango Sound')
                 ->where('sounds.2.title', 'Zebra Sound')
