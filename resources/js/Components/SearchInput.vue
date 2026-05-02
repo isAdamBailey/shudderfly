@@ -1,150 +1,9 @@
 <template>
   <div
-    class="w-full bg-transparent flex flex-nowrap pl-2 md:pl-8 mt-5 pr-3 md:pr-8 mb-2 gap-2"
+    class="w-full bg-transparent flex flex-nowrap items-center gap-2 pl-2 md:pl-8 mt-5 pr-3 md:pr-8 mb-2"
   >
-    <!-- Microphone + Search Input Container (stays together) -->
-    <div class="flex gap-2 flex-1">
-      <!-- Voice Recognition Button - LEFT -->
-      <button
-        v-if="isSupported"
-        class="self-center w-8 h-8 flex-shrink-0 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 christmas:focus:ring-christmas-gold halloween:focus:ring-halloween-orange flex items-center justify-center"
-        :class="{
-          'bg-red-700 hover:bg-purple-400 dark:bg-red-700 dark:hover:bg-purple-400 text-white christmas:bg-christmas-berry christmas:hover:bg-christmas-mint halloween:bg-halloween-candy halloween:hover:bg-halloween-spooky':
-            isListening,
-          'bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white christmas:bg-christmas-holly christmas:hover:bg-christmas-green halloween:bg-halloween-witch halloween:hover:bg-halloween-purple':
-            hasGoodResult && !isListening,
-          'bg-blue-600 hover:bg-blue-700 dark:bg-gray-800 dark:hover:bg-gray-700 text-white christmas:bg-christmas-green christmas:hover:bg-christmas-holly halloween:bg-halloween-midnight halloween:hover:bg-halloween-witch':
-            !isListening && !hasGoodResult
-        }"
-        :disabled="isProcessing"
-        @click="toggleVoiceRecognition"
-      >
-        <i
-          :class="{
-            'ri-mic-line': !isListening,
-            'ri-mic-fill animate-pulse': isListening,
-            'ri-check-line': hasGoodResult && !isListening
-          }"
-          class="text-lg"
-        ></i>
-      </button>
-
-      <!-- Search Input - MIDDLE -->
-      <label for="search" class="hidden">{{ t('search.label') }}</label>
-      <div class="relative flex-1 min-w-0">
-        <input
-          id="search"
-          :value="displayValue"
-          class="h-8 w-full cursor-pointer rounded-full border bg-gray-100 dark:bg-gray-800 px-4 pb-0 pt-px text-gray-700 dark:text-gray-300 outline-none transition focus:border-blue-400 christmas:focus:border-christmas-gold halloween:focus:border-halloween-orange"
-          :class="{
-            'border-red-700 border-2 dark:border-red-700 christmas:border-christmas-berry halloween:border-halloween-candy':
-              isListening,
-            'border-green-600 border-2 dark:border-green-600 christmas:border-christmas-holly halloween:border-halloween-witch':
-              hasGoodResult && !isListening,
-            'border-blue-700 dark:border-gray-800 christmas:border-christmas-holly halloween:border-halloween-purple':
-              !isListening && !hasGoodResult,
-            'pr-5': isSupported // Add right padding when voice is supported
-          }"
-          autocomplete="off"
-          name="search"
-          :placeholder="searchPlaceholder"
-          type="search"
-          @input="handleInput"
-          @focus="handleFocus"
-          @blur="handleBlur"
-          @keyup.esc="clearSearch"
-          @keyup.enter="handleEnter"
-          @keydown.down.prevent="navigateSuggestions(1)"
-          @keydown.up.prevent="navigateSuggestions(-1)"
-        />
-
-        <!-- Error Indicator inside the input -->
-        <div
-          v-if="isSupported && lastError"
-          class="absolute right-2 top-1/2 transform -translate-y-1/2"
-        >
-          <div
-            class="bg-red-600 text-white christmas:bg-christmas-berry halloween:bg-halloween-candy text-xs rounded-full w-4 h-4 flex items-center justify-center"
-            :title="lastError"
-          >
-            !
-          </div>
-        </div>
-
-        <!-- Live Voice Feedback Display -->
-        <div
-          v-if="isListening"
-          class="absolute z-50 w-full mt-1 bg-gradient-to-r from-red-700 via-purple-400 to-blue-600 dark:from-red-700 dark:via-purple-400 dark:to-gray-800 christmas:from-christmas-berry christmas:via-christmas-mint christmas:to-christmas-green halloween:from-halloween-candy halloween:via-halloween-spooky halloween:to-halloween-midnight rounded-lg shadow-lg p-3 text-white"
-        >
-          <div class="flex items-center gap-2 mb-2">
-            <div class="flex gap-1">
-              <span
-                class="w-2 h-2 bg-white rounded-full animate-bounce"
-                style="animation-delay: 0ms"
-              ></span>
-              <span
-                class="w-2 h-2 bg-white rounded-full animate-bounce"
-                style="animation-delay: 150ms"
-              ></span>
-              <span
-                class="w-2 h-2 bg-white rounded-full animate-bounce"
-                style="animation-delay: 300ms"
-              ></span>
-            </div>
-            <span class="text-sm font-medium">{{ t('search.listening') }}</span>
-          </div>
-
-          <!-- Show what's being heard in real-time -->
-          <div
-            v-if="currentTranscript"
-            class="bg-white/20 rounded-lg p-2 min-h-[2rem]"
-          >
-            <p class="text-lg font-bold break-words">
-              "{{ currentTranscript }}"
-            </p>
-          </div>
-          <div v-else class="bg-white/20 rounded-lg p-2 min-h-[2rem]">
-            <p class="text-sm opacity-75 italic">
-              {{ t('search.say_something') }}
-            </p>
-          </div>
-
-          <!-- Tap to stop hint -->
-          <p class="text-xs mt-2 opacity-75 text-center">
-            {{ t('search.tap_to_stop') }}
-          </p>
-        </div>
-
-        <!-- Suggestions Dropdown -->
-        <div
-          v-if="
-            showSuggestions && suggestions.length > 0 && search && !isListening
-          "
-          class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-96 overflow-y-auto"
-        >
-          <div
-            v-for="(suggestion, index) in suggestions"
-            :key="`${suggestion.type}-${suggestion.id}`"
-            class="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-            :class="{
-              'bg-blue-100 dark:bg-blue-700': index === selectedIndex
-            }"
-            @mousedown.prevent="selectSuggestion(suggestion)"
-          >
-            <div class="font-semibold text-gray-900 dark:text-white">
-              {{ getSuggestionTitle(suggestion) }}
-            </div>
-            <div class="text-sm text-gray-600 dark:text-gray-400">
-              {{ getSuggestionSubtitle(suggestion) }}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Toggle Group - RIGHT -->
     <div
-      class="self-center w-[180px] flex-shrink-0"
+      class="self-center w-[240px] sm:w-[200px] max-w-full flex-shrink-0"
       role="radiogroup"
       :aria-label="t('search.target_aria')"
     >
@@ -155,7 +14,7 @@
           role="radio"
           :aria-checked="isBooksTarget.toString()"
           :tabindex="isBooksTarget ? 0 : -1"
-          class="flex-1 px-3 h-6 rounded-full text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 christmas:focus-visible:ring-christmas-gold halloween:focus-visible:ring-halloween-orange"
+          class="flex-1 px-2 sm:px-3 h-6 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 christmas:focus-visible:ring-christmas-gold halloween:focus-visible:ring-halloween-orange"
           :class="
             isBooksTarget
               ? 'bg-blue-600 text-white dark:bg-white dark:text-gray-900 christmas:bg-christmas-red christmas:text-white halloween:bg-halloween-orange halloween:text-white shadow'
@@ -165,13 +24,13 @@
           @keydown.enter.prevent="setTarget('books')"
           @keydown.space.prevent="setTarget('books')"
         >
-          {{ t('search.books') }}
+          {{ booksPillLabel }}
         </button>
         <button
           role="radio"
           :aria-checked="isUploadsTarget.toString()"
           :tabindex="isUploadsTarget ? 0 : -1"
-          class="flex-1 px-3 h-6 rounded-full text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 christmas:focus-visible:ring-christmas-gold halloween:focus-visible:ring-halloween-orange"
+          class="flex-1 px-2 sm:px-3 h-6 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 christmas:focus-visible:ring-christmas-gold halloween:focus-visible:ring-halloween-orange"
           :class="
             isUploadsTarget
               ? 'bg-blue-600 text-white dark:bg-white dark:text-gray-900 christmas:bg-christmas-red christmas:text-white halloween:bg-halloween-orange halloween:text-white shadow'
@@ -181,10 +40,153 @@
           @keydown.enter.prevent="setTarget('uploads')"
           @keydown.space.prevent="setTarget('uploads')"
         >
-          {{ t('search.all') }}
+          {{ uploadsPillLabel }}
         </button>
       </div>
     </div>
+
+    <Transition
+      enter-active-class="transition-all duration-300 ease-out"
+      enter-from-class="opacity-0 -translate-x-3"
+      enter-to-class="opacity-100 translate-x-0"
+      leave-active-class="transition-all duration-200 ease-in"
+      leave-from-class="opacity-100 translate-x-0"
+      leave-to-class="opacity-0 -translate-x-3"
+    >
+      <div v-if="isSearchExpanded" class="flex gap-2 flex-1 min-w-0">
+        <button
+          v-if="isSupported"
+          class="self-center w-8 h-8 flex-shrink-0 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 christmas:focus:ring-christmas-gold halloween:focus:ring-halloween-orange flex items-center justify-center"
+          :class="{
+            'bg-red-700 hover:bg-purple-400 dark:bg-red-700 dark:hover:bg-purple-400 text-white christmas:bg-christmas-berry christmas:hover:bg-christmas-mint halloween:bg-halloween-candy halloween:hover:bg-halloween-spooky':
+              isListening,
+            'bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white christmas:bg-christmas-holly christmas:hover:bg-christmas-green halloween:bg-halloween-witch halloween:hover:bg-halloween-purple':
+              hasGoodResult && !isListening,
+            'bg-blue-600 hover:bg-blue-700 dark:bg-gray-800 dark:hover:bg-gray-700 text-white christmas:bg-christmas-green christmas:hover:bg-christmas-holly halloween:bg-halloween-midnight halloween:hover:bg-halloween-witch':
+              !isListening && !hasGoodResult
+          }"
+          :disabled="isProcessing"
+          @click="toggleVoiceRecognition"
+        >
+          <i
+            :class="{
+              'ri-mic-line': !isListening,
+              'ri-mic-fill animate-pulse': isListening,
+              'ri-check-line': hasGoodResult && !isListening
+            }"
+            class="text-lg"
+          ></i>
+        </button>
+
+        <label for="search" class="hidden">{{ t('search.label') }}</label>
+        <div class="relative flex-1 min-w-0">
+          <input
+            id="search"
+            ref="searchInputRef"
+            :value="displayValue"
+            class="h-8 w-full cursor-pointer rounded-full border bg-gray-100 dark:bg-gray-800 px-4 pb-0 pt-px text-gray-700 dark:text-gray-300 outline-none transition focus:border-blue-400 christmas:focus:border-christmas-gold halloween:focus:border-halloween-orange"
+            :class="{
+              'border-red-700 border-2 dark:border-red-700 christmas:border-christmas-berry halloween:border-halloween-candy':
+                isListening,
+              'border-green-600 border-2 dark:border-green-600 christmas:border-christmas-holly halloween:border-halloween-witch':
+                hasGoodResult && !isListening,
+              'border-blue-700 dark:border-gray-800 christmas:border-christmas-holly halloween:border-halloween-purple':
+                !isListening && !hasGoodResult,
+              'pr-5': isSupported
+            }"
+            autocomplete="off"
+            name="search"
+            :placeholder="searchPlaceholder"
+            type="search"
+            @input="handleInput"
+            @focus="handleFocus"
+            @blur="handleBlur"
+            @keyup.esc="clearSearch"
+            @keyup.enter="handleEnter"
+            @keydown.down.prevent="navigateSuggestions(1)"
+            @keydown.up.prevent="navigateSuggestions(-1)"
+          />
+
+          <div
+            v-if="isSupported && lastError"
+            class="absolute right-2 top-1/2 transform -translate-y-1/2"
+          >
+            <div
+              class="bg-red-600 text-white christmas:bg-christmas-berry halloween:bg-halloween-candy text-xs rounded-full w-4 h-4 flex items-center justify-center"
+              :title="lastError"
+            >
+              !
+            </div>
+          </div>
+
+          <div
+            v-if="isListening"
+            class="absolute z-50 w-full mt-1 bg-gradient-to-r from-red-700 via-purple-400 to-blue-600 dark:from-red-700 dark:via-purple-400 dark:to-gray-800 christmas:from-christmas-berry christmas:via-christmas-mint christmas:to-christmas-green halloween:from-halloween-candy halloween:via-halloween-spooky halloween:to-halloween-midnight rounded-lg shadow-lg p-3 text-white"
+          >
+            <div class="flex items-center gap-2 mb-2">
+              <div class="flex gap-1">
+                <span
+                  class="w-2 h-2 bg-white rounded-full animate-bounce"
+                  style="animation-delay: 0ms"
+                ></span>
+                <span
+                  class="w-2 h-2 bg-white rounded-full animate-bounce"
+                  style="animation-delay: 150ms"
+                ></span>
+                <span
+                  class="w-2 h-2 bg-white rounded-full animate-bounce"
+                  style="animation-delay: 300ms"
+                ></span>
+              </div>
+              <span class="text-sm font-medium">{{ t('search.listening') }}</span>
+            </div>
+
+            <div
+              v-if="currentTranscript"
+              class="bg-white/20 rounded-lg p-2 min-h-[2rem]"
+            >
+              <p class="text-lg font-bold break-words">
+                "{{ currentTranscript }}"
+              </p>
+            </div>
+            <div v-else class="bg-white/20 rounded-lg p-2 min-h-[2rem]">
+              <p class="text-sm opacity-75 italic">
+                {{ t('search.say_something') }}
+              </p>
+            </div>
+
+            <p class="text-xs mt-2 opacity-75 text-center">
+              {{ t('search.tap_to_stop') }}
+            </p>
+          </div>
+
+          <div
+            v-if="
+              showSuggestions && suggestions.length > 0 && search && !isListening
+            "
+            class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-96 overflow-y-auto"
+          >
+            <div
+              v-for="(suggestion, index) in suggestions"
+              :key="`${suggestion.type}-${suggestion.id}`"
+              class="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+              :class="{
+                'bg-blue-100 dark:bg-blue-700': index === selectedIndex
+              }"
+              @mousedown.prevent="selectSuggestion(suggestion)"
+            >
+              <div class="font-semibold text-gray-900 dark:text-white">
+                {{ getSuggestionTitle(suggestion) }}
+              </div>
+              <div class="text-sm text-gray-600 dark:text-gray-400">
+                {{ getSuggestionSubtitle(suggestion) }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
   </div>
 </template>
 
@@ -195,7 +197,7 @@ import { useTranslations } from "@/composables/useTranslations";
 import { router, usePage } from "@inertiajs/vue3";
 import { useSpeechRecognition } from "@vueuse/core";
 import { debounce } from "lodash";
-import { computed, onUnmounted, ref, watch } from "vue";
+import { computed, nextTick, onUnmounted, ref, watch } from "vue";
 
 const { speak } = useSpeechSynthesis();
 const { t } = useTranslations();
@@ -237,15 +239,39 @@ const suggestions = ref([]);
 const showSuggestions = ref(false);
 const selectedIndex = ref(-1);
 const isVoiceSearch = ref(false);
+const searchInputRef = ref(null);
+const isSearchExpanded = ref(Boolean(search.value?.trim()));
 
 const isBooksTarget = computed(() => target.value === "books");
 const isUploadsTarget = computed(() => target.value === "uploads");
+const searchPrefixLabel = computed(() => {
+  const translated = t("search.label");
+  return translated === "search.label" ? "Search" : translated;
+});
+const booksLabel = computed(() => t('search.books'));
+const uploadsLabel = computed(() => {
+  const translated = t("search.photos");
+  return translated === "search.photos" ? "Photos" : translated;
+});
+const booksPillLabel = computed(() =>
+  isSearchExpanded.value
+    ? booksLabel.value
+    : `${searchPrefixLabel.value} ${booksLabel.value}`
+);
+const uploadsPillLabel = computed(() =>
+  isSearchExpanded.value
+    ? uploadsLabel.value
+    : `${searchPrefixLabel.value} ${uploadsLabel.value}`
+);
 
 const currentLabel = computed(() => {
   if (props.showTargetToggle) {
-    return target.value === "uploads" ? t('search.all') : t('search.books');
+    return target.value === "uploads" ? uploadsLabel.value : booksLabel.value;
   }
-  return props.label || (target.value === "uploads" ? t('search.all') : t('search.books'));
+  return (
+    props.label ||
+    (target.value === "uploads" ? uploadsLabel.value : booksLabel.value)
+  );
 });
 
 const searchPlaceholder = computed(() => {
@@ -371,7 +397,6 @@ watch(result, (newResult) => {
 
 watch(search, (newSearch) => {
   if (!newSearch) {
-    searchMethod();
     suggestions.value = [];
     showSuggestions.value = false;
   } else if (!isListening.value && newSearch.trim().length >= 2) {
@@ -416,10 +441,15 @@ const searchMethod = () => {
   showSuggestions.value = false;
 };
 
-function setTarget(newTarget) {
-  if (newTarget === target.value) return;
+async function setTarget(newTarget) {
+  const targetChanged = newTarget !== target.value;
   target.value = newTarget;
-  if (search.value) fetchSuggestions(search.value);
+  if (!isSearchExpanded.value) {
+    isSearchExpanded.value = true;
+    await nextTick();
+    searchInputRef.value?.focus();
+  }
+  if (targetChanged && search.value) fetchSuggestions(search.value);
 }
 
 function getDefaultTarget() {
