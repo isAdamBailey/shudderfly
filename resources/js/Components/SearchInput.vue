@@ -120,6 +120,19 @@
           </div>
 
           <div
+            v-if="lastError && !isListening"
+            class="absolute z-50 w-full mt-1 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-500/60 dark:bg-red-900/40 dark:text-red-200"
+            role="alert"
+          >
+            <p class="font-semibold">
+              Voice search error
+            </p>
+            <p class="mt-0.5 break-words">
+              {{ lastError }}
+            </p>
+          </div>
+
+          <div
             v-if="isListening"
             class="absolute z-50 w-full mt-1 bg-gradient-to-r from-red-700 via-purple-400 to-blue-600 dark:from-red-700 dark:via-purple-400 dark:to-gray-800 christmas:from-christmas-berry christmas:via-christmas-mint christmas:to-christmas-green halloween:from-halloween-candy halloween:via-halloween-spooky halloween:to-halloween-midnight rounded-lg shadow-lg p-3 text-white"
           >
