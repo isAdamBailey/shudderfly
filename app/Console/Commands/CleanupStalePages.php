@@ -40,10 +40,16 @@ class CleanupStalePages extends Command
         $deletedBooks = 0;
 
         if ($bookIds !== []) {
-            $deletedBooks = Book::query()
+            Book::query()
                 ->whereIn('id', array_keys($bookIds))
                 ->whereDoesntHave('pages')
-                ->delete();
+                ->select(['id'])
+                ->chunkById(100, function ($books) use (&$deletedBooks) {
+                    foreach ($books as $book) {
+                        $book->delete();
+                        $deletedBooks++;
+                    }
+                });
         }
 
         $this->info("Deleted {$deletedPages} stale page(s).");
