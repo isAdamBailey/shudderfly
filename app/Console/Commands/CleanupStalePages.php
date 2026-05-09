@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Storage;
 
 class CleanupStalePages extends Command
 {
+    private const MAX_URL_DECODE_ATTEMPTS = 3;
+
     protected $signature = 'pages:cleanup-stale';
 
     protected $description = 'Delete unread pages older than 30 days and remove empty books';
@@ -91,7 +93,7 @@ class CleanupStalePages extends Command
             }
         }
 
-        for ($attempt = 0; $attempt < 3; $attempt++) {
+        for ($attempt = 0; $attempt < self::MAX_URL_DECODE_ATTEMPTS; $attempt++) {
             $decoded = urldecode($resolvedPath);
             if ($decoded === $resolvedPath) {
                 break;
@@ -103,7 +105,7 @@ class CleanupStalePages extends Command
         $resolvedPath = trim($resolvedPath);
 
         if (str_contains($resolvedPath, '?')) {
-            $resolvedPath = (string) strtok($resolvedPath, '?');
+            $resolvedPath = strstr($resolvedPath, '?', true) ?: $resolvedPath;
         }
 
         return ltrim($resolvedPath, '/');
