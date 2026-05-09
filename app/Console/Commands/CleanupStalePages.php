@@ -105,7 +105,7 @@ class CleanupStalePages extends Command
         $resolvedPath = trim($resolvedPath);
 
         if (str_contains($resolvedPath, '?')) {
-            $resolvedPath = strstr($resolvedPath, '?', true) ?: $resolvedPath;
+            $resolvedPath = (string) strstr($resolvedPath, '?', true);
         }
 
         return ltrim($resolvedPath, '/');
