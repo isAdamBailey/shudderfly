@@ -93,6 +93,7 @@ class CleanupStalePages extends Command
             }
         }
 
+        // Some stored media URLs can be percent-encoded more than once.
         for ($attempt = 0; $attempt < self::MAX_URL_DECODE_ATTEMPTS; $attempt++) {
             $decoded = urldecode($resolvedPath);
             if ($decoded === $resolvedPath) {
@@ -105,7 +106,7 @@ class CleanupStalePages extends Command
         $resolvedPath = trim($resolvedPath);
 
         if (str_contains($resolvedPath, '?')) {
-            $resolvedPath = strstr($resolvedPath, '?', true);
+            [$resolvedPath] = explode('?', $resolvedPath, 2);
         }
 
         return ltrim($resolvedPath, '/');
