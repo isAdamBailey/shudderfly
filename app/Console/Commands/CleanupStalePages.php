@@ -6,7 +6,6 @@ use App\Models\Book;
 use App\Models\Page;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class CleanupStalePages extends Command
 {
@@ -61,20 +60,52 @@ class CleanupStalePages extends Command
 
     private function deletePageAsset(?string $storedValue): int
     {
-        if (! is_string($storedValue) || $storedValue === '') {
+        $path = $this->resolveS3KeyFromMediaPath($storedValue);
+
+        if ($path === '') {
             return 0;
         }
 
-        $path = $storedValue;
-        if (Str::startsWith($storedValue, 'https://')) {
-            $parsedPath = parse_url($storedValue, PHP_URL_PATH);
-            if (! is_string($parsedPath) || $parsedPath === '') {
-                return 0;
-            }
+        return Storage::disk('s3')->delete($path) ? 1 : 0;
+    }
 
-            $path = ltrim($parsedPath, '/');
+    private function resolveS3KeyFromMediaPath(?string $mediaPath): string
+    {
+        if (! is_string($mediaPath) || $mediaPath === '') {
+            return '';
         }
 
-        return Storage::disk('s3')->delete($path) ? 1 : 0;
+        $resolvedPath = trim($mediaPath);
+
+        if (
+            ! preg_match('/^https?:\/\//i', $resolvedPath)
+            && preg_match('/^[^\/]+\.[^\/]+\//', $resolvedPath)
+        ) {
+            $resolvedPath = 'https://'.$resolvedPath;
+        }
+
+        if (preg_match('/^https?:\/\//i', $resolvedPath)) {
+            $parsedPath = parse_url($resolvedPath, PHP_URL_PATH);
+            if (is_string($parsedPath) && $parsedPath !== '') {
+                $resolvedPath = $parsedPath;
+            }
+        }
+
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            $decoded = urldecode($resolvedPath);
+            if ($decoded === $resolvedPath) {
+                break;
+            }
+
+            $resolvedPath = $decoded;
+        }
+
+        $resolvedPath = trim($resolvedPath);
+
+        if (str_contains($resolvedPath, '?')) {
+            $resolvedPath = (string) strtok($resolvedPath, '?');
+        }
+
+        return ltrim($resolvedPath, '/');
     }
 }

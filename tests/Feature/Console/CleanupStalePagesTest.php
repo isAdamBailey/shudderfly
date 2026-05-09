@@ -20,8 +20,8 @@ class CleanupStalePagesTest extends TestCase
         $stalePage = Page::factory()->for($book)->create([
             'read_count' => 0.0,
             'created_at' => now()->subDays(31),
-            'media_path' => 'books/test/stale-image.webp',
-            'media_poster' => 'books/test/stale-poster.webp',
+            'media_path' => 'https://example-bucket.s3.amazonaws.com/books/test/stale%20image.webp?versionId=123',
+            'media_poster' => 'http://example-bucket.s3.amazonaws.com/books/test/stale-poster.webp?X-Amz-Signature=abc',
         ]);
         $recentUnreadPage = Page::factory()->for($book)->create([
             'read_count' => 0.0,
@@ -32,7 +32,7 @@ class CleanupStalePagesTest extends TestCase
             'created_at' => now()->subDays(45),
         ]);
 
-        Storage::disk('s3')->put('books/test/stale-image.webp', 'image');
+        Storage::disk('s3')->put('books/test/stale image.webp', 'image');
         Storage::disk('s3')->put('books/test/stale-poster.webp', 'poster');
 
         $this->artisan('pages:cleanup-stale')
@@ -44,7 +44,7 @@ class CleanupStalePagesTest extends TestCase
         $this->assertDatabaseMissing('pages', ['id' => $stalePage->id]);
         $this->assertDatabaseHas('pages', ['id' => $recentUnreadPage->id]);
         $this->assertDatabaseHas('pages', ['id' => $oldReadPage->id]);
-        Storage::disk('s3')->assertMissing('books/test/stale-image.webp');
+        Storage::disk('s3')->assertMissing('books/test/stale image.webp');
         Storage::disk('s3')->assertMissing('books/test/stale-poster.webp');
     }
 
