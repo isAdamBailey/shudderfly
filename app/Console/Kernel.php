@@ -19,6 +19,10 @@ class Kernel extends ConsoleKernel
             ->weekly()
             ->withoutOverlapping();
 
+        $schedule->command('pages:cleanup-stale')
+            ->weekly()
+            ->withoutOverlapping();
+
         // Only schedule music sync if music is enabled
         $musicEnabled = SiteSetting::where('key', 'music_enabled')->first()?->value ?? false;
 

@@ -21,6 +21,7 @@
     "@vue/test-utils": "^2.4.6",
     "autoprefixer": "^10.4.12",
     "axios": "^1.1.2",
+    "baseline-browser-mapping": "^2.10.29",
     "eslint": "^8.28.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-vue": "^9.8.0",
