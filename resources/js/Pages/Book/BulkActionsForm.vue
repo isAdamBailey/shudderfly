@@ -35,6 +35,9 @@ const booksOptions = computed(() => {
         : [];
 });
 
+const optionLabel = (option) => option.label;
+const optionId = (option) => option.value;
+
 const selectedCount = computed(() => props.selectedPages.length);
 
 const canSubmit = computed(() => {
@@ -117,8 +120,9 @@ watch(
                         id="target_book"
                         v-model="form.target_book_id"
                         :options="booksOptions"
-                        track-by="value"
-                        label="label"
+                        :option-label="optionLabel"
+                        :option-id="optionId"
+                        track-by="label"
                         placeholder="Select target book"
                         searchable
                         class="mt-1"
