@@ -268,7 +268,8 @@ class BookController extends Controller
                 foreach ($words as $word) {
                     $q->orWhereRaw('LOWER(title) LIKE ?', ['%'.$word.'%']);
                 }
-            });
+            })
+            ->orderByDesc('created_at');
 
         $similarBooks = $query->get();
 
