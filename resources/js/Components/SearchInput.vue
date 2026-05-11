@@ -302,8 +302,8 @@ const searchPrefixLabel = computed(() => {
 });
 const booksLabel = computed(() => t('search.books'));
 const uploadsLabel = computed(() => {
-  const translated = t("search.photos");
-  return translated === "search.photos" ? "Photos" : translated;
+  const translated = t("search.all");
+  return translated === "search.all" ? "ALL" : translated;
 });
 const booksPillLabel = computed(() =>
   isSearchExpanded.value

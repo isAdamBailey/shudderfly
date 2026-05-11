@@ -10,7 +10,7 @@ vi.mock("@/composables/useTranslations", () => ({
           ? `Search ${replacements.target}!`
           : "Search!",
         "search.books": "Books",
-        "search.photos": "Photos"
+        "search.all": "ALL"
       };
       return translations[key] || key;
     },
@@ -42,7 +42,7 @@ describe("Components/SearchInput.vue", () => {
     const radios = wrapper.findAll('[role="radio"]');
     expect(radios.length).toBe(2);
     expect(radios[0].text()).toContain("Search Books");
-    expect(radios[1].text()).toContain("Search Photos");
+    expect(radios[1].text()).toContain("Search ALL");
     expect(wrapper.find('input[type="search"]').exists()).toBe(false);
   });
 
@@ -57,14 +57,14 @@ describe("Components/SearchInput.vue", () => {
 
     expect(wrapper.find('input[type="search"]').exists()).toBe(true);
     expect(wrapper.findAll('[role="radio"]')[0].text()).toContain("Books");
-    expect(wrapper.findAll('[role="radio"]')[1].text()).toContain("Photos");
+    expect(wrapper.findAll('[role="radio"]')[1].text()).toContain("ALL");
     expect(wrapper.find('input[type="search"]').attributes("placeholder")).toBe(
       "Search Books!"
     );
 
     await wrapper.findAll('[role="radio"]')[1].trigger("click");
     expect(wrapper.find('input[type="search"]').attributes("placeholder")).toBe(
-      "Search Photos!"
+      "Search ALL!"
     );
   });
 
