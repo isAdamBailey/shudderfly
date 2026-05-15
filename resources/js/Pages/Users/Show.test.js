@@ -80,12 +80,22 @@ describe("UserShow", () => {
         },
     ];
 
+    const recentReplies = [
+        {
+            id: 1,
+            message_id: 99,
+            comment: "This is a reply to a message.",
+            created_at: "2024-12-30T10:00:00.000000Z",
+        },
+    ];
+
     it("renders user profile information", () => {
         const wrapper = mount(UserShow, {
             props: {
                 profileUser,
                 stats,
                 recentMessages: [],
+                recentReplies: [],
             },
             global: {
                 stubs: {
@@ -109,6 +119,7 @@ describe("UserShow", () => {
                 profileUser,
                 stats,
                 recentMessages: [],
+                recentReplies: [],
             },
             global: {
                 stubs: {
@@ -131,6 +142,7 @@ describe("UserShow", () => {
                 profileUser,
                 stats,
                 recentMessages: [],
+                recentReplies: [],
             },
             global: {
                 stubs: {
@@ -161,6 +173,7 @@ describe("UserShow", () => {
                 profileUser,
                 stats,
                 recentMessages: [],
+                recentReplies: [],
             },
             global: {
                 stubs: {
@@ -184,6 +197,7 @@ describe("UserShow", () => {
                 profileUser,
                 stats,
                 recentMessages,
+                recentReplies: [],
             },
             global: {
                 stubs: {
@@ -211,6 +225,7 @@ describe("UserShow", () => {
                 profileUser,
                 stats,
                 recentMessages: [],
+                recentReplies: [],
             },
             global: {
                 stubs: {
@@ -225,5 +240,61 @@ describe("UserShow", () => {
         });
 
         expect(wrapper.text()).toContain("No messages yet");
+    });
+
+    it("shows recent replies when available", () => {
+        const wrapper = mount(UserShow, {
+            props: {
+                profileUser,
+                stats,
+                recentMessages: [],
+                recentReplies,
+            },
+            global: {
+                stubs: {
+                    BreezeAuthenticatedLayout: {
+                        template: "<div><slot name='header' /><slot /></div>",
+                    },
+                    Avatar: true,
+                    MessageTimeline: true,
+                    Head: true,
+                    Link: {
+                        template: '<a :href="href"><slot /></a>',
+                        props: ["href"],
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain("Recent Replies");
+        expect(wrapper.text()).toContain("This is a reply to a message.");
+        expect(wrapper.text()).toContain("View message");
+    });
+
+    it("shows no replies text when user has no replies", () => {
+        const wrapper = mount(UserShow, {
+            props: {
+                profileUser,
+                stats,
+                recentMessages: [],
+                recentReplies: [],
+            },
+            global: {
+                stubs: {
+                    BreezeAuthenticatedLayout: {
+                        template: "<div><slot name='header' /><slot /></div>",
+                    },
+                    Avatar: true,
+                    MessageTimeline: true,
+                    Head: true,
+                    Link: {
+                        template: '<a :href="href"><slot /></a>',
+                        props: ["href"],
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain("No replies yet");
     });
 });

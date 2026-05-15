@@ -65,6 +65,12 @@ class UserController extends Controller
             ->take(10)
             ->get();
 
+        $recentReplies = MessageComment::where('user_id', $user->id)
+            ->with(['message.user'])
+            ->orderBy('created_at', 'desc')
+            ->take(10)
+            ->get();
+
         // Make created_at visible for the profile user
         $user->makeVisible('created_at');
 
@@ -79,6 +85,7 @@ class UserController extends Controller
                 'reactionsGiven' => $reactionsGiven,
             ],
             'recentMessages' => $recentMessages,
+            'recentReplies' => $recentReplies,
         ]);
     }
 }

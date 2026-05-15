@@ -1,12 +1,13 @@
 <script setup>
+/* global route */
 import Avatar from "@/Components/Avatar.vue";
 import Button from "@/Components/Button.vue";
 import MessageTimeline from "@/Components/Messages/MessageTimeline.vue";
 import StatCard from "@/Components/StatCard.vue";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
-import { Head } from "@inertiajs/vue3";
-import { computed, defineOptions } from "vue";
+import { Head, Link } from "@inertiajs/vue3";
+import { computed } from "vue";
 
 defineOptions({
     name: "UserShow",
@@ -24,6 +25,10 @@ const props = defineProps({
         required: true,
     },
     recentMessages: {
+        type: Array,
+        default: () => [],
+    },
+    recentReplies: {
         type: Array,
         default: () => [],
     },
@@ -45,6 +50,29 @@ const formatDate = (dateString) => {
         month: "short",
         day: "numeric",
     });
+};
+
+const replyMessageLink = (reply) => {
+    if (!reply?.message_id) {
+        return route("messages.index");
+    }
+
+    return `${route("messages.index")}#message-${reply.message_id}`;
+};
+
+const replyPreview = (text) => {
+    if (!text) {
+        return "";
+    }
+
+    const normalizedText = text.replace(/\s+/g, " ").trim();
+    const maxLength = 140;
+
+    if (normalizedText.length <= maxLength) {
+        return normalizedText;
+    }
+
+    return `${normalizedText.slice(0, maxLength)}...`;
 };
 
 const speakTopBooks = () => {
@@ -349,6 +377,82 @@ const speakUserSummary = () => {
                             class="text-center py-4 text-gray-500 dark:text-gray-400"
                         >
                             No messages yet.
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg mt-6"
+                >
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3
+                                class="text-xl font-bold text-gray-900 dark:text-gray-100"
+                            >
+                                Recent Replies
+                            </h3>
+                            <div
+                                :class="[
+                                    'flex items-center gap-2 px-3 py-1 rounded-full',
+                                    recentReplies.length > 0
+                                        ? 'bg-purple-100 dark:bg-purple-900'
+                                        : 'bg-gray-100 dark:bg-gray-700',
+                                ]"
+                            >
+                                <i
+                                    :class="[
+                                        'ri-reply-line',
+                                        recentReplies.length > 0
+                                            ? 'text-purple-600 dark:text-purple-400'
+                                            : 'text-gray-600 dark:text-gray-400',
+                                    ]"
+                                ></i>
+                                <span
+                                    :class="[
+                                        'font-semibold',
+                                        recentReplies.length > 0
+                                            ? 'text-purple-700 dark:text-purple-300'
+                                            : 'text-gray-700 dark:text-gray-300',
+                                    ]"
+                                >
+                                    {{ stats.commentsCount }} total
+                                </span>
+                            </div>
+                        </div>
+
+                        <div v-if="recentReplies.length > 0" class="space-y-3">
+                            <div
+                                v-for="reply in recentReplies"
+                                :key="reply.id"
+                                class="rounded-lg border border-gray-200 dark:border-gray-700 p-4"
+                            >
+                                <div
+                                    class="flex items-center justify-between gap-3 mb-2"
+                                >
+                                    <span
+                                        class="text-xs text-gray-500 dark:text-gray-400"
+                                    >
+                                        {{ formatDate(reply.created_at) }}
+                                    </span>
+                                    <Link
+                                        :href="replyMessageLink(reply)"
+                                        class="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                                    >
+                                        View message
+                                    </Link>
+                                </div>
+                                <p
+                                    class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words"
+                                >
+                                    {{ replyPreview(reply.comment) }}
+                                </p>
+                            </div>
+                        </div>
+                        <div
+                            v-else
+                            class="text-center py-4 text-gray-500 dark:text-gray-400"
+                        >
+                            No replies yet.
                         </div>
                     </div>
                 </div>
