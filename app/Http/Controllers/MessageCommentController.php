@@ -76,6 +76,7 @@ class MessageCommentController extends Controller
                     'url' => route('messages.index').'#message-'.$message->id,
                 ]
             );
+
         }
 
         event(new CommentCreated($comment));

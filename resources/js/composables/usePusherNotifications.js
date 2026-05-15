@@ -1,4 +1,5 @@
 import { usePage } from "@inertiajs/vue3";
+import { useFlashMessage } from "@/composables/useFlashMessage";
 import { onMounted, onUnmounted, ref } from "vue";
 
 /**
@@ -17,10 +18,33 @@ import { onMounted, onUnmounted, ref } from "vue";
  * - Clean up the channel subscription on unmount
  */
 export function usePusherNotifications() {
+  const { setFlashMessage } = useFlashMessage();
   const channel = ref(null);
   const retryTimeout = ref(null);
   const maxRetries = 10;
   const retryCount = ref(0);
+
+  const getInteractionFlashMessage = (notification, recipientName) => {
+    if (!notification || !recipientName) {
+      return null;
+    }
+
+    if (notification.type === "App\\Notifications\\UserTagged") {
+      const senderName = notification.data?.tagger_name;
+      return senderName
+        ? `${recipientName}, you received a message from ${senderName}`
+        : null;
+    }
+
+    if (notification.type === "App\\Notifications\\MessageCommented") {
+      const senderName = notification.data?.commenter_name;
+      return senderName
+        ? `${recipientName}, you received a reply from ${senderName}`
+        : null;
+    }
+
+    return null;
+  };
 
   const setupNotifications = () => {
     if (!window.Echo) {
@@ -52,6 +76,11 @@ export function usePusherNotifications() {
     }
 
     channel.value.notification((notification) => {
+      const flashMessage = getInteractionFlashMessage(notification, user.name);
+      if (flashMessage) {
+        setFlashMessage("info", flashMessage, 5000);
+      }
+
       if ("Notification" in window && Notification.permission === "granted") {
         const notificationData = {
           ...(notification.data || {}),
