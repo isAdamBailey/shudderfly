@@ -159,10 +159,12 @@ class UserWeeklyOverviewService
         $lengthInstruction = $hasActivity
             ? 'Write 2 to 3 short, warm sentences'
             : 'Write exactly 1 short, warm sentence';
+        $userNameForPrompt = json_encode($user->name, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-        return "{$lengthInstruction} (no preamble, no headings, no lists, no quoted snippets, no made-up details) about how active and popular {$user->name} is on Shudderfly this week. "
+        return "{$lengthInstruction} (no preamble, no headings, no lists, no quoted snippets, no made-up details) about how active and popular this user is on Shudderfly this week. "
+            ."User display name: {$userNameForPrompt}. "
             ."Facts you may use (and only these): {$context} "
-            ."Start the first sentence with \"{$user->name} is\". "
+            .'Start the first sentence with the user display name followed by " is". '
             .'Only reference book titles or activity that appear in the facts above; never invent titles, numbers, or events. '
             .'If a category is zero or missing, skip it entirely rather than guessing. '
             .'Describe popularity in plain language (e.g. "very popular", "a steady writer", "loved by readers") instead of listing raw numbers.';
