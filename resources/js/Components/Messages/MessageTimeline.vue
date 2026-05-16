@@ -995,15 +995,6 @@ const handleMessageEvent = (event) => {
             return dateB - dateA;
         });
 
-        const successMessage =
-            event.success_message || messageData.success_message;
-        if (successMessage) {
-            setFlashMessage("info", successMessage, 5000);
-        } else if (messageData.user?.name) {
-            const fallbackMessage = `New message added by ${messageData.user.name}`;
-            setFlashMessage("info", fallbackMessage, 5000);
-        }
-
         if (messageData.user_id === currentUserId.value) {
             nextTick(() => {
                 scrollToTimeline();

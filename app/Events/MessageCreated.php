@@ -68,7 +68,6 @@ class MessageCreated implements ShouldBroadcastNow
                 'media_poster' => $this->message->page->media_poster,
                 'video_link' => $this->message->page->video_link,
             ] : null,
-            'success_message' => 'New message added by '.$this->message->user->name,
             'grouped_reactions' => [],
         ];
     }
