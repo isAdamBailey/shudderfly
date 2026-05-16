@@ -76,6 +76,10 @@ class UserController extends Controller
 
         return Inertia::render('Users/Show', [
             'profileUser' => $user,
+            'weeklyOverview' => [
+                'text' => $user->weekly_profile_overview,
+                'generatedAt' => $user->weekly_profile_overview_generated_at,
+            ],
             'stats' => [
                 'totalBooksCount' => $totalBooksCount,
                 'topBooks' => $topBooks,

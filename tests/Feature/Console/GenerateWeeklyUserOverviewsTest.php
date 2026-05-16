@@ -1,0 +1,156 @@
+<?php
+
+namespace Tests\Feature\Console;
+
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Http;
+use Tests\TestCase;
+
+class GenerateWeeklyUserOverviewsTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private const ENDPOINT = 'https://router.huggingface.co/featherless-ai/v1/chat/completions';
+
+    private const MODEL = 'Qwen/Qwen2.5-1.5B-Instruct';
+
+    private function configureService(): void
+    {
+        config([
+            'services.huggingface.api_token' => 'test-token',
+            'services.huggingface.user_overview_endpoint' => self::ENDPOINT,
+            'services.huggingface.user_overview_model' => self::MODEL,
+        ]);
+    }
+
+    public function test_command_saves_generated_overview_on_success(): void
+    {
+        $this->configureService();
+
+        $user = User::factory()->create([
+            'name' => 'Sunny Reader',
+        ]);
+
+        Http::fake([
+            'router.huggingface.co/*' => Http::response([
+                'choices' => [
+                    [
+                        'message' => [
+                            'content' => 'Sunny Reader is the sparkly glue that keeps story time joyful for everyone.',
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $this->artisan('users:generate-weekly-overviews')
+            ->assertExitCode(0);
+
+        $user->refresh();
+
+        $this->assertSame(
+            'Sunny Reader is the sparkly glue that keeps story time joyful for everyone.',
+            $user->weekly_profile_overview
+        );
+        $this->assertNotNull($user->weekly_profile_overview_generated_at);
+    }
+
+    public function test_command_sends_openai_compatible_chat_payload(): void
+    {
+        $this->configureService();
+
+        User::factory()->create(['name' => 'Payload Reader']);
+
+        Http::fake([
+            'router.huggingface.co/*' => Http::response([
+                'choices' => [
+                    ['message' => ['content' => 'Payload Reader is delightful.']],
+                ],
+            ], 200),
+        ]);
+
+        $this->artisan('users:generate-weekly-overviews')
+            ->assertExitCode(0);
+
+        Http::assertSent(function (Request $request) {
+            $body = $request->data();
+
+            return $request->url() === self::ENDPOINT
+                && $request->hasHeader('Authorization', 'Bearer test-token')
+                && data_get($body, 'model') === self::MODEL
+                && data_get($body, 'messages.0.role') === 'user'
+                && is_string(data_get($body, 'messages.0.content'))
+                && data_get($body, 'max_tokens') === 180;
+        });
+    }
+
+    public function test_command_saves_fallback_overview_when_request_fails(): void
+    {
+        $this->configureService();
+
+        $user = User::factory()->create([
+            'name' => 'Steady Reader',
+            'weekly_profile_overview' => 'Existing profile story.',
+            'weekly_profile_overview_generated_at' => now()->subDays(5),
+        ]);
+        $originalGeneratedAt = $user->weekly_profile_overview_generated_at;
+
+        Http::fake([
+            'router.huggingface.co/*' => Http::response(['error' => 'Bad request'], 400),
+        ]);
+
+        $this->artisan('users:generate-weekly-overviews')
+            ->assertExitCode(0);
+
+        $user->refresh();
+
+        $this->assertStringContainsString('Steady Reader is', $user->weekly_profile_overview);
+        $this->assertStringContainsString('friendly, active, and welcoming', $user->weekly_profile_overview);
+        $this->assertFalse($user->weekly_profile_overview_generated_at?->equalTo($originalGeneratedAt) ?? true);
+    }
+
+    public function test_command_saves_fallback_overview_when_content_is_empty(): void
+    {
+        $this->configureService();
+
+        $user = User::factory()->create(['name' => 'Empty Reader']);
+
+        Http::fake([
+            'router.huggingface.co/*' => Http::response([
+                'choices' => [['message' => ['content' => '']]],
+            ], 200),
+        ]);
+
+        $this->artisan('users:generate-weekly-overviews')
+            ->assertExitCode(0);
+
+        $user->refresh();
+
+        $this->assertStringContainsString('Empty Reader is', $user->weekly_profile_overview);
+        $this->assertStringContainsString('friendly, active, and welcoming', $user->weekly_profile_overview);
+    }
+
+    public function test_command_saves_fallback_overview_when_token_missing(): void
+    {
+        config([
+            'services.huggingface.api_token' => '',
+            'services.huggingface.user_overview_endpoint' => self::ENDPOINT,
+            'services.huggingface.user_overview_model' => self::MODEL,
+        ]);
+
+        $user = User::factory()->create(['name' => 'Tokenless Reader']);
+
+        Http::fake();
+
+        $this->artisan('users:generate-weekly-overviews')
+            ->assertExitCode(0);
+
+        $user->refresh();
+
+        $this->assertStringContainsString('Tokenless Reader is', $user->weekly_profile_overview);
+        $this->assertNotNull($user->weekly_profile_overview_generated_at);
+        Http::assertNothingSent();
+    }
+}

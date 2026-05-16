@@ -37,9 +37,29 @@ class UserControllerTest extends TestCase
             ->has('profileUser')
             ->where('profileUser.name', 'Test User')
             ->where('profileUser.email', 'test@example.com')
+            ->has('weeklyOverview')
+            ->where('weeklyOverview.text', null)
             ->has('stats')
             ->has('recentMessages')
             ->has('recentReplies')
+        );
+    }
+
+    public function test_user_profile_includes_weekly_overview_when_available()
+    {
+        $viewer = User::factory()->createOne();
+        $profileUser = User::factory()->createOne([
+            'weekly_profile_overview' => 'A cheerful storyteller who keeps everyone smiling.',
+            'weekly_profile_overview_generated_at' => now()->subDay(),
+        ]);
+
+        $response = $this->actingAs($this->asAuthenticatable($viewer))
+            ->get(route('users.show', $profileUser->email));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->where('weeklyOverview.text', 'A cheerful storyteller who keeps everyone smiling.')
+            ->where('weeklyOverview.generatedAt', $profileUser->weekly_profile_overview_generated_at?->toJSON())
         );
     }
 

@@ -23,6 +23,10 @@ class Kernel extends ConsoleKernel
             ->weekly()
             ->withoutOverlapping();
 
+        $schedule->command('users:generate-weekly-overviews')
+            ->weekly()
+            ->withoutOverlapping();
+
         // Only schedule music sync if music is enabled
         $musicEnabled = SiteSetting::where('key', 'music_enabled')->first()?->value ?? false;
 

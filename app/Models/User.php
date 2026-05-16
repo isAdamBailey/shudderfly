@@ -24,6 +24,8 @@ class User extends Authenticatable
         'email',
         'password',
         'avatar',
+        'weekly_profile_overview',
+        'weekly_profile_overview_generated_at',
         'email_notifications_enabled',
     ];
 
@@ -50,6 +52,7 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'email_notifications_enabled' => 'boolean',
+        'weekly_profile_overview_generated_at' => 'datetime',
     ];
 
     protected $appends = [

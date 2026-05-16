@@ -9,7 +9,6 @@ global.route = (name, params) => {
     return `/${name}`;
 };
 
-// Mock Inertia
 vi.mock("@inertiajs/vue3", () => ({
     Head: { name: "Head", template: "<head><slot /></head>", props: ["title"] },
     Link: { name: "Link", template: "<a><slot /></a>", props: ["href"] },
@@ -25,7 +24,7 @@ describe("UserShow", () => {
 
     const stats = {
         totalBooksCount: 4,
-        totalReads: 165, // Sum of all book reads
+        totalReads: 165,
         topBooks: [
             {
                 id: 1,
@@ -68,6 +67,10 @@ describe("UserShow", () => {
         ],
         messagesCount: 12,
     };
+    const weeklyOverview = {
+        text: "Test User is the giggle-powered librarian hero who makes everyone feel welcome and important.",
+        generatedAt: "2024-12-31T10:00:00.000000Z",
+    };
 
     const recentMessages = [
         {
@@ -89,10 +92,11 @@ describe("UserShow", () => {
         },
     ];
 
-    it("renders user profile information", () => {
+    it("renders user profile information with inline weekly overview", () => {
         const wrapper = mount(UserShow, {
             props: {
                 profileUser,
+                weeklyOverview,
                 stats,
                 recentMessages: [],
                 recentReplies: [],
@@ -111,6 +115,9 @@ describe("UserShow", () => {
 
         expect(wrapper.text()).toContain("Test User");
         expect(wrapper.text()).toContain("test@example.com");
+        expect(wrapper.text()).toContain(weeklyOverview.text);
+        expect(wrapper.text()).toContain("Updated");
+        expect(wrapper.text()).not.toContain("Weekly AI Profile Story");
     });
 
     it("displays member since date", () => {
