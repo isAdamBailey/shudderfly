@@ -202,6 +202,9 @@ class UserWeeklyOverviewService
 
         $commentsMade = MessageComment::query()
             ->where('user_id', $user->id)
+            ->whereIn('message_id', Message::query()
+                ->where('user_id', '!=', $user->id)
+                ->select('id'))
             ->where('created_at', '>=', $oneWeekAgo)
             ->count();
 
