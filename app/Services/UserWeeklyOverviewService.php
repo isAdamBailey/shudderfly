@@ -289,6 +289,34 @@ class UserWeeklyOverviewService
             ? " Their books have been read {$metrics['total_reads']} times in total."
             : '';
 
-        return "{$user->name} is {$popularityPhrase} and brings {$activityPhrase} this week.{$bookPhrase} Their posts and reactions help keep Shudderfly friendly, active, and welcoming.";
+        $activeCategories = [];
+
+        if ($metrics['books_last_week'] > 0) {
+            $activeCategories[] = 'books';
+        }
+
+        if ($metrics['messages_last_week'] > 0) {
+            $activeCategories[] = 'messages';
+        }
+
+        if ($metrics['comments_made'] > 0) {
+            $activeCategories[] = 'comments';
+        }
+
+        if ($metrics['reactions_last_week'] > 0) {
+            $activeCategories[] = 'reactions';
+        }
+
+        $closingSentence = match (count($activeCategories)) {
+            0 => ' They are still finding their place in the Shudderfly community.',
+            1 => " Their {$activeCategories[0]} help keep Shudderfly friendly, active, and welcoming.",
+            2 => " Their {$activeCategories[0]} and {$activeCategories[1]} help keep Shudderfly friendly, active, and welcoming.",
+            default => ' Their '
+                . implode(', ', array_slice($activeCategories, 0, -1))
+                . ', and ' . $activeCategories[array_key_last($activeCategories)]
+                . ' help keep Shudderfly friendly, active, and welcoming.',
+        };
+
+        return "{$user->name} is {$popularityPhrase} and brings {$activityPhrase} this week.{$bookPhrase}{$closingSentence}";
     }
 }
