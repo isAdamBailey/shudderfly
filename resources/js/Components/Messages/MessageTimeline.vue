@@ -552,6 +552,20 @@ const showCommentReactionModal = ref(false);
 const selectedCommentForReaction = ref(null);
 const selectedMessageForCommentReaction = ref(null);
 const showMessageBuilderModal = ref(false);
+const replyScrollTimeoutIds = new Set();
+
+const clearReplyScrollTimeouts = () => {
+    replyScrollTimeoutIds.forEach((timeoutId) => clearTimeout(timeoutId));
+    replyScrollTimeoutIds.clear();
+};
+
+const scheduleReplyScrollTimeout = (callback, delay) => {
+    const timeoutId = setTimeout(() => {
+        replyScrollTimeoutIds.delete(timeoutId);
+        callback();
+    }, delay);
+    replyScrollTimeoutIds.add(timeoutId);
+};
 
 const messagesData = computed(() => {
     if (Array.isArray(props.messages)) {
@@ -1051,6 +1065,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+    clearReplyScrollTimeouts();
     cleanup();
 
     Object.keys(commentTaggingWatchers.value).forEach((messageId) => {
@@ -1558,7 +1573,7 @@ const handleReplyToComment = (message, comment) => {
     const scrollToTextarea = () => {
         let textarea = commentTextareaRefs.value[message.id];
 
-        if (!textarea) {
+        if (!textarea && typeof document !== "undefined") {
             const messageElement = document.getElementById(
                 `message-${message.id}`
             );
@@ -1572,7 +1587,7 @@ const handleReplyToComment = (message, comment) => {
             textarea.setSelectionRange(replyText.length, replyText.length);
             autoGrowCommentTextarea(message.id);
 
-            setTimeout(() => {
+            scheduleReplyScrollTimeout(() => {
                 const rect = textarea.getBoundingClientRect();
                 const absoluteElementTop = rect.top + window.pageYOffset;
                 const middle =
@@ -1598,7 +1613,7 @@ const handleReplyToComment = (message, comment) => {
                 const success = scrollToTextarea();
                 if (!success && attempts < maxAttempts) {
                     attempts++;
-                    setTimeout(tryScroll, 50);
+                    scheduleReplyScrollTimeout(tryScroll, 50);
                 }
             };
             tryScroll();
