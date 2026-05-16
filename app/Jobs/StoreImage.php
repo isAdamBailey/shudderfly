@@ -11,6 +11,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Encoders\WebpEncoder;
 use Intervention\Image\Laravel\Facades\Image;
 
 class StoreImage implements ShouldQueue
@@ -80,8 +81,8 @@ class StoreImage implements ShouldQueue
             $imageData = Storage::disk($disk)->get($filePath);
             file_put_contents($tempFile, $imageData);
 
-            $image = Image::read($tempFile);
-            $encoded = $image->toWebp(30, true);
+            $image = Image::decode($tempFile);
+            $encoded = $image->encode(new WebpEncoder(30, true));
             Storage::disk('s3')->put($this->path, (string) $encoded);
             Storage::disk('s3')->setVisibility($this->path, 'public');
 
