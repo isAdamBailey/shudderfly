@@ -211,11 +211,20 @@ class UserWeeklyOverviewService
         $userMessageIds = Message::query()
             ->where('user_id', $user->id)
             ->pluck('id');
-        $reactionsReceived = $userMessageIds->isEmpty() ? 0 : MessageReaction::query()
+        $userCommentIds = MessageComment::query()
+            ->where('user_id', $user->id)
+            ->pluck('id');
+        $messageReactionsReceived = $userMessageIds->isEmpty() ? 0 : MessageReaction::query()
             ->whereIn('message_id', $userMessageIds)
             ->where('user_id', '!=', $user->id)
             ->where('created_at', '>=', $oneWeekAgo)
             ->count();
+        $commentReactionsReceived = $userCommentIds->isEmpty() ? 0 : CommentReaction::query()
+            ->whereIn('comment_id', $userCommentIds)
+            ->where('user_id', '!=', $user->id)
+            ->where('created_at', '>=', $oneWeekAgo)
+            ->count();
+        $reactionsReceived = $messageReactionsReceived + $commentReactionsReceived;
         $commentsReceived = $userMessageIds->isEmpty() ? 0 : MessageComment::query()
             ->whereIn('message_id', $userMessageIds)
             ->where('user_id', '!=', $user->id)
