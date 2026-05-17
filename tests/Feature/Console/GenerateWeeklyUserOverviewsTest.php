@@ -107,7 +107,7 @@ class GenerateWeeklyUserOverviewsTest extends TestCase
         $user->refresh();
 
         $this->assertStringContainsString('Steady Reader is', $user->weekly_profile_overview);
-        $this->assertStringContainsString('friendly, active, and welcoming', $user->weekly_profile_overview);
+        $this->assertStringContainsString('still finding their place', $user->weekly_profile_overview);
         $this->assertFalse($user->weekly_profile_overview_generated_at?->equalTo($originalGeneratedAt) ?? true);
     }
 
@@ -129,7 +129,7 @@ class GenerateWeeklyUserOverviewsTest extends TestCase
         $user->refresh();
 
         $this->assertStringContainsString('Empty Reader is', $user->weekly_profile_overview);
-        $this->assertStringContainsString('friendly, active, and welcoming', $user->weekly_profile_overview);
+        $this->assertStringContainsString('still finding their place', $user->weekly_profile_overview);
     }
 
     public function test_command_saves_fallback_overview_when_token_missing(): void
@@ -152,5 +152,28 @@ class GenerateWeeklyUserOverviewsTest extends TestCase
         $this->assertStringContainsString('Tokenless Reader is', $user->weekly_profile_overview);
         $this->assertNotNull($user->weekly_profile_overview_generated_at);
         Http::assertNothingSent();
+    }
+
+    public function test_command_rejects_invalid_generated_overview(): void
+    {
+        $this->configureService();
+
+        $user = User::factory()->create(['name' => 'Invalid Reader']);
+
+        Http::fake([
+            'router.huggingface.co/*' => Http::response([
+                'choices' => [
+                    ['message' => ['content' => '## Not a valid overview with numbers 42']],
+                ],
+            ], 200),
+        ]);
+
+        $this->artisan('users:generate-weekly-overviews')
+            ->assertExitCode(0);
+
+        $user->refresh();
+
+        $this->assertStringStartsWith('Invalid Reader is', $user->weekly_profile_overview);
+        $this->assertStringNotContainsString('## Not a valid overview', $user->weekly_profile_overview);
     }
 }

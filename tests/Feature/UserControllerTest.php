@@ -37,6 +37,8 @@ class UserControllerTest extends TestCase
             ->has('profileUser')
             ->where('profileUser.name', 'Test User')
             ->where('profileUser.email', 'test@example.com')
+            ->missing('profileUser.weekly_profile_overview')
+            ->missing('profileUser.weekly_profile_overview_generated_at')
             ->has('weeklyOverview')
             ->where('weeklyOverview.text', null)
             ->has('stats')

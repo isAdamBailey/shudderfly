@@ -29,6 +29,11 @@ class UserWeeklyOverviewService
         private PopularityService $popularityService
     ) {}
 
+    public function prepareForBatchRun(): void
+    {
+        $this->popularityService->warmReadCountCache(Book::class);
+    }
+
     public function generateOverview(User $user): string
     {
         $metrics = $this->buildMetrics($user);
@@ -81,8 +86,8 @@ class UserWeeklyOverviewService
 
             $generatedText = trim((string) data_get($response->json(), 'choices.0.message.content', ''));
 
-            if ($generatedText === '') {
-                Log::warning('Weekly profile overview generation returned empty content', [
+            if ($generatedText === '' || ! $this->isValidGeneratedOverview($generatedText, $user)) {
+                Log::warning('Weekly profile overview generation returned unusable content', [
                     'user_id' => $user->id,
                     'body' => $response->body(),
                 ]);
@@ -101,17 +106,34 @@ class UserWeeklyOverviewService
         }
     }
 
+    private function isValidGeneratedOverview(string $text, User $user): bool
+    {
+        if (! str_starts_with($text, $user->name.' is')) {
+            return false;
+        }
+
+        if (preg_match('/^#|\n#|```|\*\*/', $text)) {
+            return false;
+        }
+
+        if (preg_match('/\d{2,}/', $text)) {
+            return false;
+        }
+
+        return mb_strlen($text) >= 20;
+    }
+
     private function buildPrompt(User $user, array $metrics): string
     {
         $contextLines = [];
-        $contextLines[] = "Roles: {$metrics['roles']}.";
 
         if ($metrics['total_books'] > 0) {
             $contextLines[] = "Books authored: {$metrics['total_books']} total, read {$metrics['total_reads']} times on Shudderfly.";
 
             if ($metrics['top_book_details'] !== []) {
                 $bookPhrases = array_map(
-                    fn (array $book) => "\"{$book['title']}\" ({$book['reads']} reads, popularity {$book['popularity']}%)",
+                    fn (array $book) => json_encode($book['title'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                        ." ({$book['reads']} reads, popularity {$book['popularity']}%)",
                     $metrics['top_book_details']
                 );
                 $contextLines[] = 'Most-read titles: '.implode(', ', $bookPhrases).'.';
@@ -210,36 +232,31 @@ class UserWeeklyOverviewService
             ->where('created_at', '>=', $oneWeekAgo)
             ->count();
 
-        $userMessageIds = Message::query()
+        $userMessagesSubquery = Message::query()
             ->where('user_id', $user->id)
-            ->pluck('id');
-        $userCommentIds = MessageComment::query()
+            ->select('id');
+        $userCommentsSubquery = MessageComment::query()
             ->where('user_id', $user->id)
-            ->pluck('id');
-        $messageReactionsReceived = $userMessageIds->isEmpty() ? 0 : MessageReaction::query()
-            ->whereIn('message_id', $userMessageIds)
+            ->select('id');
+
+        $messageReactionsReceived = MessageReaction::query()
+            ->whereIn('message_id', $userMessagesSubquery)
             ->where('user_id', '!=', $user->id)
             ->where('created_at', '>=', $oneWeekAgo)
             ->count();
-        $commentReactionsReceived = $userCommentIds->isEmpty() ? 0 : CommentReaction::query()
-            ->whereIn('comment_id', $userCommentIds)
+        $commentReactionsReceived = CommentReaction::query()
+            ->whereIn('comment_id', $userCommentsSubquery)
             ->where('user_id', '!=', $user->id)
             ->where('created_at', '>=', $oneWeekAgo)
             ->count();
         $reactionsReceived = $messageReactionsReceived + $commentReactionsReceived;
-        $commentsReceived = $userMessageIds->isEmpty() ? 0 : MessageComment::query()
-            ->whereIn('message_id', $userMessageIds)
+        $commentsReceived = MessageComment::query()
+            ->whereIn('message_id', $userMessagesSubquery)
             ->where('user_id', '!=', $user->id)
             ->where('created_at', '>=', $oneWeekAgo)
             ->count();
 
-        $topUsedEmoji = MessageReaction::query()
-            ->where('user_id', $user->id)
-            ->where('created_at', '>=', $oneWeekAgo)
-            ->selectRaw('emoji, COUNT(*) as c')
-            ->groupBy('emoji')
-            ->orderByDesc('c')
-            ->value('emoji');
+        $topUsedEmoji = $this->topUsedEmojiLastWeek($user->id, $oneWeekAgo);
 
         $totalBooks = Book::query()->where('author', $user->name)->count();
         $totalReads = (int) Book::query()->where('author', $user->name)->sum('read_count');
@@ -262,6 +279,13 @@ class UserWeeklyOverviewService
             ])
             ->all();
 
+        $engagementScore = ($booksLastWeek * 2)
+            + $messagesLastWeek
+            + $reactionsLastWeek
+            + $commentsMade
+            + $reactionsReceived
+            + $commentsReceived;
+
         return [
             'books_last_week' => $booksLastWeek,
             'messages_last_week' => $messagesLastWeek,
@@ -272,15 +296,35 @@ class UserWeeklyOverviewService
             'top_used_emoji' => $topUsedEmoji,
             'total_books' => $totalBooks,
             'total_reads' => $totalReads,
-            'roles' => $user->getRoleNames()->isNotEmpty()
-                ? $user->getRoleNames()->implode(', ')
-                : 'No assigned roles yet',
             'top_book_details' => $topBookDetails,
-            'top_books' => $topBooks->isEmpty()
-                ? 'No books yet'
-                : $topBooks->map(fn (Book $book) => $book->title)->implode(', '),
-            'engagement_score' => ($booksLastWeek * 2) + $messagesLastWeek + $reactionsLastWeek + $commentsMade,
+            'engagement_score' => $engagementScore,
         ];
+    }
+
+    private function topUsedEmojiLastWeek(int $userId, \DateTimeInterface $oneWeekAgo): ?string
+    {
+        $emojiCounts = [];
+
+        foreach ([MessageReaction::class, CommentReaction::class] as $model) {
+            $rows = $model::query()
+                ->where('user_id', $userId)
+                ->where('created_at', '>=', $oneWeekAgo)
+                ->selectRaw('emoji, COUNT(*) as c')
+                ->groupBy('emoji')
+                ->get();
+
+            foreach ($rows as $row) {
+                $emojiCounts[$row->emoji] = ($emojiCounts[$row->emoji] ?? 0) + (int) $row->c;
+            }
+        }
+
+        if ($emojiCounts === []) {
+            return null;
+        }
+
+        arsort($emojiCounts);
+
+        return array_key_first($emojiCounts);
     }
 
     private function buildFallbackOverview(User $user, array $metrics): string
@@ -296,13 +340,25 @@ class UserWeeklyOverviewService
             $metrics['total_reads'] >= 100 => 'a well-known and appreciated author on Shudderfly',
             $metrics['engagement_score'] >= 10 => 'a well-known and appreciated Shudderfly member',
             $metrics['engagement_score'] >= 4 => 'an increasingly familiar part of Shudderfly',
+            ($metrics['reactions_received'] + $metrics['comments_received']) >= 3 => 'a member other readers enjoy engaging with on Shudderfly',
             default => 'a newer presence on Shudderfly with room to grow',
         };
 
-        $bookPhrase = $metrics['total_books'] > 0
-            ? " Their books have been read {$metrics['total_reads']} times in total."
-            : '';
+        $bookPhrase = match (true) {
+            $metrics['total_books'] === 0 => '',
+            $metrics['total_reads'] >= 300 => ' Their books are widely read across Shudderfly.',
+            $metrics['total_reads'] >= 100 => ' Readers often return to their books on Shudderfly.',
+            $metrics['total_reads'] >= 25 => ' Their books are building a loyal readership on Shudderfly.',
+            default => ' They have started sharing stories on Shudderfly.',
+        };
 
+        $closingSentence = $this->buildFallbackClosingSentence($metrics);
+
+        return "{$user->name} is {$popularityPhrase} and brings {$activityPhrase} this week.{$bookPhrase}{$closingSentence}";
+    }
+
+    private function buildFallbackClosingSentence(array $metrics): string
+    {
         $activeCategories = [];
 
         if ($metrics['books_last_week'] > 0) {
@@ -321,16 +377,29 @@ class UserWeeklyOverviewService
             $activeCategories[] = 'reactions';
         }
 
-        $closingSentence = match (count($activeCategories)) {
-            0 => ' They are still finding their place in the Shudderfly community.',
+        $hasIncoming = $metrics['reactions_received'] > 0 || $metrics['comments_received'] > 0;
+
+        if ($activeCategories === [] && ! $hasIncoming) {
+            return ' They are still finding their place in the Shudderfly community.';
+        }
+
+        if ($activeCategories === [] && $hasIncoming) {
+            return ' Other members have been responding warmly to what they share on Shudderfly.';
+        }
+
+        $outgoingClosing = match (count($activeCategories)) {
             1 => " Their {$activeCategories[0]} help keep Shudderfly friendly, active, and welcoming.",
             2 => " Their {$activeCategories[0]} and {$activeCategories[1]} help keep Shudderfly friendly, active, and welcoming.",
             default => ' Their '
-                . implode(', ', array_slice($activeCategories, 0, -1))
-                . ', and ' . $activeCategories[array_key_last($activeCategories)]
-                . ' help keep Shudderfly friendly, active, and welcoming.',
+                .implode(', ', array_slice($activeCategories, 0, -1))
+                .', and '.$activeCategories[array_key_last($activeCategories)]
+                .' help keep Shudderfly friendly, active, and welcoming.',
         };
 
-        return "{$user->name} is {$popularityPhrase} and brings {$activityPhrase} this week.{$bookPhrase}{$closingSentence}";
+        if (! $hasIncoming) {
+            return $outgoingClosing;
+        }
+
+        return $outgoingClosing.' Other members have also been responding to their posts and replies this week.';
     }
 }

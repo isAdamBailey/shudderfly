@@ -42,6 +42,8 @@ class User extends Authenticatable
         'id',
         'updated_at',
         'created_at',
+        'weekly_profile_overview',
+        'weekly_profile_overview_generated_at',
     ];
 
     /**

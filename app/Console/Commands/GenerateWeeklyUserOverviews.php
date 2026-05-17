@@ -20,6 +20,8 @@ class GenerateWeeklyUserOverviews extends Command
 
     public function handle(): int
     {
+        $this->userWeeklyOverviewService->prepareForBatchRun();
+
         User::query()
             ->select('id', 'name')
             ->orderBy('id')
