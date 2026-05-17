@@ -20,6 +20,13 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    weeklyOverview: {
+        type: Object,
+        default: () => ({
+            text: null,
+            generatedAt: null,
+        }),
+    },
     stats: {
         type: Object,
         required: true,
@@ -41,6 +48,14 @@ const memberSince = computed(() => {
         month: "long",
         day: "numeric",
     });
+});
+
+const weeklyOverviewGeneratedAt = computed(() => {
+    if (!props.weeklyOverview?.generatedAt) {
+        return null;
+    }
+
+    return formatDate(props.weeklyOverview.generatedAt);
 });
 
 const formatDate = (dateString) => {
@@ -92,6 +107,11 @@ const speakRecentBooks = () => {
 };
 
 const speakUserSummary = () => {
+    if (props.weeklyOverview?.text) {
+        speak(`${props.profileUser.name}. ${props.weeklyOverview.text}`);
+        return;
+    }
+
     const books = props.stats.totalBooksCount === 1 ? "book" : "books";
     const messages = props.stats.messagesCount === 1 ? "message" : "messages";
     const comments = props.stats.commentsCount === 1 ? "comment" : "comments";
@@ -162,6 +182,22 @@ const speakUserSummary = () => {
                                     >
                                         <i class="ri-speak-fill text-lg"></i>
                                     </Button>
+                                </div>
+                                <div
+                                    v-if="weeklyOverview?.text"
+                                    class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700"
+                                >
+                                    <p
+                                        class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap"
+                                    >
+                                        {{ weeklyOverview.text }}
+                                    </p>
+                                    <p
+                                        v-if="weeklyOverviewGeneratedAt"
+                                        class="text-xs text-gray-500 dark:text-gray-400 mt-2"
+                                    >
+                                        Updated {{ weeklyOverviewGeneratedAt }}
+                                    </p>
                                 </div>
                             </div>
                         </div>

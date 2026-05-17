@@ -7,6 +7,18 @@ use Illuminate\Database\Eloquent\Model;
 
 class PopularityService
 {
+    /** @var array<class-string<Model>, list<int|float>> */
+    private array $sortedReadCountCache = [];
+
+    public function warmReadCountCache(string $modelClass): void
+    {
+        $this->sortedReadCountCache[$modelClass] = $modelClass::query()
+            ->pluck('read_count')
+            ->sort()
+            ->values()
+            ->all();
+    }
+
     public function calculatePopularity(Model $model): int
     {
         $modelClass = get_class($model);
@@ -51,7 +63,7 @@ class PopularityService
             });
         }
 
-        $allReadCounts = $modelClass::pluck('read_count')->sort()->values()->toArray();
+        $allReadCounts = $this->sortedReadCountsFor($modelClass);
 
         return $collection->map(function ($item) use ($allReadCounts, $totalCount) {
             $readCount = (float) ($item->read_count ?? 0);
@@ -75,5 +87,21 @@ class PopularityService
 
             return $item;
         });
+    }
+
+    /**
+     * @return list<int|float>
+     */
+    private function sortedReadCountsFor(string $modelClass): array
+    {
+        if (isset($this->sortedReadCountCache[$modelClass])) {
+            return $this->sortedReadCountCache[$modelClass];
+        }
+
+        return $modelClass::query()
+            ->pluck('read_count')
+            ->sort()
+            ->values()
+            ->all();
     }
 }

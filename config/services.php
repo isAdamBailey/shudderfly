@@ -38,4 +38,10 @@ return [
         'public_key' => env('VAPID_PUBLIC_KEY'),
         'private_key' => env('VAPID_PRIVATE_KEY'),
     ],
+
+    'huggingface' => [
+        'api_token' => env('HUGGINGFACE_API_TOKEN'),
+        'user_overview_model' => env('HUGGINGFACE_USER_OVERVIEW_MODEL', 'Qwen/Qwen2.5-1.5B-Instruct'),
+        'user_overview_endpoint' => env('HUGGINGFACE_USER_OVERVIEW_ENDPOINT', 'https://router.huggingface.co/featherless-ai/v1/chat/completions'),
+    ],
 ];
