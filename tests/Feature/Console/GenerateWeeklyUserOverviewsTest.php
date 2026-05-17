@@ -163,7 +163,7 @@ class GenerateWeeklyUserOverviewsTest extends TestCase
         Http::fake([
             'router.huggingface.co/*' => Http::response([
                 'choices' => [
-                    ['message' => ['content' => '## Not a valid overview with numbers 42']],
+                    ['message' => ['content' => '## Not a valid overview']],
                 ],
             ], 200),
         ]);
@@ -175,5 +175,32 @@ class GenerateWeeklyUserOverviewsTest extends TestCase
 
         $this->assertStringStartsWith('Invalid Reader is', $user->weekly_profile_overview);
         $this->assertStringNotContainsString('## Not a valid overview', $user->weekly_profile_overview);
+    }
+
+    public function test_command_accepts_overview_with_numbers_and_wrapping_quotes(): void
+    {
+        $this->configureService();
+
+        $user = User::factory()->create(['name' => 'Cara']);
+
+        $generated = '"Cara is an avid reader on Shudderfly with over 817 books and 55,000 reads this week."';
+
+        Http::fake([
+            'router.huggingface.co/*' => Http::response([
+                'choices' => [
+                    ['message' => ['content' => $generated]],
+                ],
+            ], 200),
+        ]);
+
+        $this->artisan('users:generate-weekly-overviews')
+            ->assertExitCode(0);
+
+        $user->refresh();
+
+        $this->assertSame(
+            'Cara is an avid reader on Shudderfly with over 817 books and 55,000 reads this week.',
+            $user->weekly_profile_overview
+        );
     }
 }

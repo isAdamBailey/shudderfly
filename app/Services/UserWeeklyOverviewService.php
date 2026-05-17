@@ -85,8 +85,9 @@ class UserWeeklyOverviewService
             }
 
             $generatedText = trim((string) data_get($response->json(), 'choices.0.message.content', ''));
+            $normalizedText = $this->normalizeGeneratedOverview($generatedText, $user);
 
-            if ($generatedText === '' || ! $this->isValidGeneratedOverview($generatedText, $user)) {
+            if ($normalizedText === '' || ! $this->isValidGeneratedOverview($normalizedText, $user)) {
                 Log::warning('Weekly profile overview generation returned unusable content', [
                     'user_id' => $user->id,
                     'body' => $response->body(),
@@ -95,7 +96,7 @@ class UserWeeklyOverviewService
                 return $fallbackOverview;
             }
 
-            return $generatedText;
+            return $normalizedText;
         } catch (\Throwable $exception) {
             Log::warning('Weekly profile overview generation exception', [
                 'user_id' => $user->id,
@@ -106,6 +107,24 @@ class UserWeeklyOverviewService
         }
     }
 
+    private function normalizeGeneratedOverview(string $text, User $user): string
+    {
+        $text = trim($text);
+
+        if (preg_match('/^"(.*)"$/s', $text, $matches)) {
+            $text = trim($matches[1]);
+        }
+
+        $text = trim($text, " \t\n\r\0\x0B\"'`");
+
+        $quotedNamePrefix = '"'.$user->name;
+        if (str_starts_with($text, $quotedNamePrefix)) {
+            $text = $user->name.substr($text, strlen($quotedNamePrefix));
+        }
+
+        return trim($text);
+    }
+
     private function isValidGeneratedOverview(string $text, User $user): bool
     {
         if (! str_starts_with($text, $user->name.' is')) {
@@ -113,10 +132,6 @@ class UserWeeklyOverviewService
         }
 
         if (preg_match('/^#|\n#|```|\*\*/', $text)) {
-            return false;
-        }
-
-        if (preg_match('/\d{2,}/', $text)) {
             return false;
         }
 
