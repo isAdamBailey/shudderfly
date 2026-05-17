@@ -1,10 +1,10 @@
 {
   "version": 1,
   "hooks": {
-    "preToolUse": [
+    "beforeShellExecution": [
       {
-        "command": ".cursor/hooks/pre-write-require-tests.py",
-        "matcher": "Write|EditNotebook",
+        "command": ".cursor/hooks/pre-push-require-tests.py",
+        "matcher": "\\bgit\\b[\\s\\S]*\\bpush\\b[\\s\\S]*\\borigin\\b",
         "timeout": 900,
         "failClosed": false
       }

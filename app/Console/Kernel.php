@@ -15,16 +15,21 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        $schedule->command('send:weekly-stats-mail')
-            ->weekly()
-            ->withoutOverlapping();
+        $weeklyTimezone = 'America/Los_Angeles';
 
         $schedule->command('pages:cleanup-stale')
-            ->weekly()
+            ->weeklyOn(0, '2:00')
+            ->timezone($weeklyTimezone)
+            ->withoutOverlapping();
+
+        $schedule->command('send:weekly-stats-mail')
+            ->weeklyOn(6, '16:00')
+            ->timezone($weeklyTimezone)
             ->withoutOverlapping();
 
         $schedule->command('users:generate-weekly-overviews')
-            ->weekly()
+            ->weeklyOn(0, '4:00')
+            ->timezone($weeklyTimezone)
             ->withoutOverlapping();
 
         // Only schedule music sync if music is enabled

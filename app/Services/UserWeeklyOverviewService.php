@@ -141,20 +141,29 @@ class UserWeeklyOverviewService
     private function buildPrompt(User $user, array $metrics): string
     {
         $contextLines = [];
+        $hasContributedThisWeek = $this->hasContributedThisWeek($metrics);
 
         if ($metrics['total_books'] > 0) {
-            $contextLines[] = "Books authored: {$metrics['total_books']} total, read {$metrics['total_reads']} times on Shudderfly.";
+            $contextLines[] = "Books authored on Shudderfly: {$metrics['total_books']} total.";
 
             if ($metrics['top_book_details'] !== []) {
                 $bookPhrases = array_map(
                     fn (array $book) => json_encode($book['title'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
-                        ." ({$book['reads']} reads, popularity {$book['popularity']}%)",
+                        ." (popularity {$book['popularity']}%)",
                     $metrics['top_book_details']
                 );
-                $contextLines[] = 'Most-read titles: '.implode(', ', $bookPhrases).'.';
+                $contextLines[] = 'Notable titles: '.implode(', ', $bookPhrases).'.';
             }
         } else {
             $contextLines[] = 'Has not authored any books yet — do not invent any book titles.';
+        }
+
+        if ($metrics['books_created_last_week_titles'] !== []) {
+            $titles = array_map(
+                fn (string $title) => json_encode($title, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                $metrics['books_created_last_week_titles']
+            );
+            $contextLines[] = 'Books created this week: '.implode(', ', $titles).'.';
         }
 
         $thisWeek = [];
@@ -174,10 +183,9 @@ class UserWeeklyOverviewService
             $thisWeek[] = "gave {$metrics['reactions_last_week']} emoji reactions{$emojiPart}";
         }
 
-        $isQuietWeek = $thisWeek === [];
-        $contextLines[] = $isQuietWeek
-            ? 'This week they were quiet — no posts, replies, reactions, or new books.'
-            : 'This week they '.implode(', ', $thisWeek).'.';
+        $contextLines[] = $hasContributedThisWeek
+            ? 'This week they '.implode(', ', $thisWeek).'.'
+            : 'This week they were not active on Shudderfly — no new books, posts, replies, or reactions from them.';
 
         $received = [];
         if ($metrics['reactions_received'] > 0) {
@@ -187,24 +195,37 @@ class UserWeeklyOverviewService
             $received[] = "{$metrics['comments_received']} replies";
         }
         if ($received !== []) {
-            $contextLines[] = 'Other members responded to their content with '.implode(' and ', $received).' this week.';
+            $contextLines[] = 'Other readers responded to their content with '.implode(' and ', $received).' this week.';
         }
 
         $context = implode(' ', $contextLines);
 
-        $hasActivity = $metrics['total_books'] > 0 || ! $isQuietWeek;
-        $lengthInstruction = $hasActivity
-            ? 'Write 2 to 3 short, warm sentences'
-            : 'Write exactly 1 short, warm sentence';
+        $lengthInstruction = $hasContributedThisWeek
+            ? 'Write 2 to 3 short, playful sentences'
+            : 'Write exactly 1 short, playful sentence';
         $userNameForPrompt = json_encode($user->name, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-        return "{$lengthInstruction} (no preamble, no headings, no lists, no quoted snippets, no made-up details) about how active and popular this user is on Shudderfly this week. "
+        $inactiveInstruction = 'They did not add books, post messages, or give reactions this week — do not call them popular or well-known; say they are not active on Shudderfly this week. ';
+        $activeInstruction = 'You may guess at their personality or vibe from the tone of book titles they created this week and how much they messaged and reacted. '
+            .'When describing reach or reception, use playful plain language informed by popularity ratings and engagement — never read counts or raw stats. ';
+
+        return "{$lengthInstruction} (no preamble, no headings, no lists, no quoted snippets, no made-up details) summarizing their week on Shudderfly in a whimsical, friendly tone — not a news recap or bulletin. "
             ."User display name: {$userNameForPrompt}. "
             ."Facts you may use (and only these): {$context} "
             .'Start the first sentence with the user display name followed by " is". '
             .'Only reference book titles or activity that appear in the facts above; never invent titles, numbers, or events. '
-            .'If a category is zero or missing, skip it entirely rather than guessing. '
-            .'Describe popularity in plain language (e.g. "very popular", "a steady writer", "loved by readers") instead of listing raw numbers.';
+            .'Never mention read counts or how many times a book was read; popularity percentage is fine when relevant. '
+            .'Never call Shudderfly a "community"; refer to it only as Shudderfly. '
+            .($hasContributedThisWeek ? $activeInstruction : $inactiveInstruction)
+            .'If a category is zero or missing, skip it entirely rather than guessing.';
+    }
+
+    private function hasContributedThisWeek(array $metrics): bool
+    {
+        return $metrics['books_last_week'] > 0
+            || $metrics['messages_last_week'] > 0
+            || $metrics['comments_made'] > 0
+            || $metrics['reactions_last_week'] > 0;
     }
 
     private function activityEnergyLabel(int $count, string $activity): string
@@ -221,10 +242,15 @@ class UserWeeklyOverviewService
     {
         $oneWeekAgo = now()->subWeek();
 
-        $booksLastWeek = Book::query()
+        $booksCreatedLastWeek = Book::query()
             ->where('author', $user->name)
             ->where('created_at', '>=', $oneWeekAgo)
-            ->count();
+            ->orderByDesc('created_at')
+            ->get(['title']);
+        $booksLastWeek = $booksCreatedLastWeek->count();
+        $booksCreatedLastWeekTitles = $booksCreatedLastWeek
+            ->pluck('title')
+            ->all();
         $messagesLastWeek = Message::query()
             ->where('user_id', $user->id)
             ->where('created_at', '>=', $oneWeekAgo)
@@ -289,7 +315,6 @@ class UserWeeklyOverviewService
         $topBookDetails = $topBooks
             ->map(fn (Book $book) => [
                 'title' => $book->title,
-                'reads' => (int) $book->read_count,
                 'popularity' => (int) ($book->popularity_percentage ?? 0),
             ])
             ->all();
@@ -303,6 +328,7 @@ class UserWeeklyOverviewService
 
         return [
             'books_last_week' => $booksLastWeek,
+            'books_created_last_week_titles' => $booksCreatedLastWeekTitles,
             'messages_last_week' => $messagesLastWeek,
             'reactions_last_week' => $reactionsLastWeek,
             'comments_made' => $commentsMade,
@@ -344,32 +370,43 @@ class UserWeeklyOverviewService
 
     private function buildFallbackOverview(User $user, array $metrics): string
     {
+        if (! $this->hasContributedThisWeek($metrics)) {
+            $hasIncoming = $metrics['reactions_received'] > 0 || $metrics['comments_received'] > 0;
+
+            if ($hasIncoming) {
+                return "{$user->name} is not active on Shudderfly this week, though other readers have still been responding to their earlier posts.";
+            }
+
+            return "{$user->name} is not active on Shudderfly this week.";
+        }
+
         $activityCount = $metrics['books_last_week']
             + $metrics['messages_last_week']
             + $metrics['reactions_last_week']
             + $metrics['comments_made'];
-        $activityPhrase = $this->activityEnergyLabel($activityCount, 'community');
+        $activityPhrase = $this->activityEnergyLabel($activityCount, 'weekly');
 
+        $topPopularity = collect($metrics['top_book_details'])->max('popularity') ?? 0;
         $popularityPhrase = match (true) {
-            $metrics['total_reads'] >= 300 => 'one of the most-read authors on Shudderfly',
-            $metrics['total_reads'] >= 100 => 'a well-known and appreciated author on Shudderfly',
-            $metrics['engagement_score'] >= 10 => 'a well-known and appreciated Shudderfly member',
-            $metrics['engagement_score'] >= 4 => 'an increasingly familiar part of Shudderfly',
-            ($metrics['reactions_received'] + $metrics['comments_received']) >= 3 => 'a member other readers enjoy engaging with on Shudderfly',
-            default => 'a newer presence on Shudderfly with room to grow',
+            $topPopularity >= 75 => 'a crowd-pleasing storyteller on Shudderfly',
+            $topPopularity >= 40 => 'a reader favorite on Shudderfly',
+            $metrics['engagement_score'] >= 10 => 'making a lively splash on Shudderfly',
+            $metrics['engagement_score'] >= 4 => 'finding a cheerful rhythm on Shudderfly',
+            ($metrics['reactions_received'] + $metrics['comments_received']) >= 3 => 'someone other readers enjoy cheering on at Shudderfly',
+            default => 'a newer voice on Shudderfly with room to grow',
         };
 
         $bookPhrase = match (true) {
             $metrics['total_books'] === 0 => '',
-            $metrics['total_reads'] >= 300 => ' Their books are widely read across Shudderfly.',
-            $metrics['total_reads'] >= 100 => ' Readers often return to their books on Shudderfly.',
-            $metrics['total_reads'] >= 25 => ' Their books are building a loyal readership on Shudderfly.',
+            $topPopularity >= 75 => ' Their stories are drawing a big audience on Shudderfly.',
+            $topPopularity >= 40 => ' Their books are picking up fans on Shudderfly.',
+            $metrics['total_books'] >= 3 => ' They keep adding new tales to Shudderfly.',
             default => ' They have started sharing stories on Shudderfly.',
         };
 
         $closingSentence = $this->buildFallbackClosingSentence($metrics);
 
-        return "{$user->name} is {$popularityPhrase} and brings {$activityPhrase} this week.{$bookPhrase}{$closingSentence}";
+        return "{$user->name} is {$popularityPhrase} and brings {$activityPhrase} energy this week.{$bookPhrase}{$closingSentence}";
     }
 
     private function buildFallbackClosingSentence(array $metrics): string
@@ -395,11 +432,11 @@ class UserWeeklyOverviewService
         $hasIncoming = $metrics['reactions_received'] > 0 || $metrics['comments_received'] > 0;
 
         if ($activeCategories === [] && ! $hasIncoming) {
-            return ' They are still finding their place in the Shudderfly community.';
+            return ' They are still finding their footing on Shudderfly.';
         }
 
         if ($activeCategories === [] && $hasIncoming) {
-            return ' Other members have been responding warmly to what they share on Shudderfly.';
+            return ' Other readers have been responding warmly to what they share on Shudderfly.';
         }
 
         $outgoingClosing = match (count($activeCategories)) {
@@ -415,6 +452,6 @@ class UserWeeklyOverviewService
             return $outgoingClosing;
         }
 
-        return $outgoingClosing.' Other members have also been responding to their posts and replies this week.';
+        return $outgoingClosing.' Other readers have also been responding to their posts and replies this week.';
     }
 }

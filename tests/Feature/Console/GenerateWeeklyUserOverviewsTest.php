@@ -107,7 +107,7 @@ class GenerateWeeklyUserOverviewsTest extends TestCase
         $user->refresh();
 
         $this->assertStringContainsString('Steady Reader is', $user->weekly_profile_overview);
-        $this->assertStringContainsString('still finding their place', $user->weekly_profile_overview);
+        $this->assertStringContainsString('not active on Shudderfly this week', $user->weekly_profile_overview);
         $this->assertFalse($user->weekly_profile_overview_generated_at?->equalTo($originalGeneratedAt) ?? true);
     }
 
@@ -129,7 +129,7 @@ class GenerateWeeklyUserOverviewsTest extends TestCase
         $user->refresh();
 
         $this->assertStringContainsString('Empty Reader is', $user->weekly_profile_overview);
-        $this->assertStringContainsString('still finding their place', $user->weekly_profile_overview);
+        $this->assertStringContainsString('not active on Shudderfly this week', $user->weekly_profile_overview);
     }
 
     public function test_command_saves_fallback_overview_when_token_missing(): void
