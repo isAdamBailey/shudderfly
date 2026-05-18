@@ -22,13 +22,13 @@ class Kernel extends ConsoleKernel
             ->timezone($weeklyTimezone)
             ->withoutOverlapping();
 
-        $schedule->command('send:weekly-stats-mail')
-            ->weeklyOn(6, '16:00')
+        $schedule->command('users:generate-weekly-overviews')
+            ->weeklyOn(0, '4:00')
             ->timezone($weeklyTimezone)
             ->withoutOverlapping();
 
-        $schedule->command('users:generate-weekly-overviews')
-            ->weeklyOn(0, '4:00')
+        $schedule->command('send:weekly-stats-mail')
+            ->weeklyOn(0, '8:00')
             ->timezone($weeklyTimezone)
             ->withoutOverlapping();
 
