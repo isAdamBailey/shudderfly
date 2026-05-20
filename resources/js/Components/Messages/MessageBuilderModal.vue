@@ -4,7 +4,7 @@
       <!-- Sticky Header -->
       <div class="flex items-center justify-between p-6 pb-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          {{ t("message.create_message") }}
+          {{ modalTitle }}
         </h2>
         <button
           type="button"
@@ -19,8 +19,11 @@
       <div class="p-6 pb-4 flex-shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         <MessageBuilder
           v-if="show"
+          :mode="mode"
+          :message-id="messageId"
           :users="users"
           @message-posted="$emit('message-posted')"
+          @comment-posted="$emit('comment-posted', $event)"
         />
       </div>
 
@@ -199,6 +202,7 @@ import Modal from "@/Components/Modal.vue";
 import { useMessageBuilder } from "@/composables/useMessageBuilder";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
+import { computed, watch } from "vue";
 
 const props = defineProps({
   show: {
@@ -208,15 +212,50 @@ const props = defineProps({
   users: {
     type: Array,
     default: () => []
-  }
+  },
+  mode: {
+    type: String,
+    default: "message",
+    validator: (value) => ["message", "comment"].includes(value),
+  },
+  messageId: {
+    type: Number,
+    default: null,
+  },
 });
 
-defineEmits(["close", "message-posted"]);
+defineEmits(["close", "message-posted", "comment-posted"]);
+
+const isCommentMode = computed(() => props.mode === "comment");
+
+const modalTitle = computed(() =>
+  isCommentMode.value ? t("message.add_comment") : t("message.create_message")
+);
 
 const { t } = useTranslations();
 const { speak } = useSpeechSynthesis();
-const { getActiveAddWord, getActiveAddPhrase, getActiveGetPreview } =
-  useMessageBuilder();
+const {
+  getActiveAddWord,
+  getActiveAddPhrase,
+  getActiveGetPreview,
+  setActiveCommentInput,
+  setActiveMessageInput,
+} = useMessageBuilder();
+
+watch(
+  () => [props.show, props.mode, props.messageId],
+  ([show]) => {
+    if (!show) {
+      return;
+    }
+    if (isCommentMode.value && props.messageId) {
+      setActiveCommentInput(props.messageId);
+      return;
+    }
+    setActiveMessageInput();
+  },
+  { immediate: true }
+);
 
 const people = ["I", "you", "and", "me", "Mom", "Dad", "we", "friend"];
 const bodyParts = [

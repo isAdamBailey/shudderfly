@@ -143,6 +143,16 @@ vi.mock("@/composables/useTranslations", () => ({
     }),
 }));
 
+vi.mock("@/Components/Messages/MessageBuilderModal.vue", () => ({
+    default: {
+        name: "MessageBuilderModal",
+        props: ["show", "mode", "messageId", "users"],
+        emits: ["close", "message-posted", "comment-posted"],
+        template:
+            '<div v-if="show" data-testid="message-builder-modal">{{ mode }}</div>',
+    },
+}));
+
 describe("MessageTimeline", () => {
     beforeEach(() => {
         // Ensure window.location is properly mocked
@@ -694,8 +704,9 @@ describe("MessageTimeline", () => {
             await nextTick();
             await nextTick();
 
-            const textarea = wrapper.find("textarea");
-            expect(textarea.exists()).toBe(true);
+            expect(wrapper.vm.showBuilderModal).toBe(true);
+            expect(wrapper.vm.builderModalMode).toBe("comment");
+            expect(wrapper.vm.builderModalMessageId).toBe(1);
         });
 
         it("displays preview comments without needing to expand", async () => {
@@ -712,158 +723,6 @@ describe("MessageTimeline", () => {
             expect(wrapper.text()).toContain("I agree!");
             expect(wrapper.text()).toContain("Bob");
             expect(wrapper.text()).toContain("Charlie");
-        });
-
-        it("displays comment form when section is expanded", async () => {
-            const wrapper = mount(MessageTimeline, {
-                props: {
-                    messages: messageWithComments,
-                    users: mockUsers,
-                },
-            });
-
-            await nextTick();
-
-            wrapper.vm.openCommentForm(1);
-            await nextTick();
-            await nextTick();
-
-            const textarea = wrapper.find("textarea");
-            expect(textarea.exists()).toBe(true);
-            expect(wrapper.text()).toContain("Post Comment");
-        });
-
-        it("shows character count in comment form", async () => {
-            const wrapper = mount(MessageTimeline, {
-                props: {
-                    messages: messageWithComments,
-                    users: mockUsers,
-                },
-            });
-
-            await nextTick();
-
-            wrapper.vm.openCommentForm(1);
-            await nextTick();
-            await nextTick();
-
-            wrapper.vm.commentForms[1] = "Test comment";
-            await nextTick();
-
-            expect(wrapper.text()).toContain("12/1000");
-        });
-
-        it("disables submit button when comment is empty", async () => {
-            const wrapper = mount(MessageTimeline, {
-                props: {
-                    messages: messageWithComments,
-                    users: mockUsers,
-                },
-            });
-
-            await nextTick();
-
-            wrapper.vm.openCommentForm(1);
-            await nextTick();
-            await nextTick();
-
-            const submitButtons = wrapper.findAll("button");
-            const submitButton = submitButtons.find((btn) =>
-                btn.text().includes("Post Comment")
-            );
-            if (submitButton) {
-                expect(submitButton.attributes("disabled")).toBeDefined();
-            }
-        });
-
-        it("enables submit button when comment has text", async () => {
-            const wrapper = mount(MessageTimeline, {
-                props: {
-                    messages: messageWithComments,
-                    users: mockUsers,
-                },
-            });
-
-            await nextTick();
-
-            wrapper.vm.openCommentForm(1);
-            await nextTick();
-            await nextTick();
-
-            wrapper.vm.commentForms[1] = "Test comment";
-            await nextTick();
-
-            const submitButtons = wrapper.findAll("button");
-            const submitButton = submitButtons.find((btn) =>
-                btn.text().includes("Post Comment")
-            );
-            if (submitButton) {
-                expect(submitButton.attributes("disabled")).toBeUndefined();
-            }
-        });
-
-        it("submits comment when submitComment is called", async () => {
-            if (!mockRouter) {
-                const inertia = await import("@inertiajs/vue3");
-                mockRouter = inertia.router;
-            }
-            mockRouter.post.mockResolvedValue({});
-
-            const wrapper = mount(MessageTimeline, {
-                props: {
-                    messages: messageWithComments,
-                    users: mockUsers,
-                },
-            });
-
-            await nextTick();
-
-            wrapper.vm.openCommentForm(1);
-            await nextTick();
-            await nextTick();
-
-            wrapper.vm.commentForms[1] = "New comment";
-            await nextTick();
-
-            await wrapper.vm.submitComment({ id: 1 });
-            await nextTick();
-
-            expect(mockRouter.post).toHaveBeenCalledWith(
-                expect.stringContaining("/messages.comments.store"),
-                { comment: "New comment", tagged_user_ids: [] },
-                expect.objectContaining({
-                    preserveScroll: true,
-                })
-            );
-        });
-
-        it("clears comment form after submission", async () => {
-            if (!mockRouter) {
-                const inertia = await import("@inertiajs/vue3");
-                mockRouter = inertia.router;
-            }
-            mockRouter.post.mockResolvedValue({});
-
-            const wrapper = mount(MessageTimeline, {
-                props: {
-                    messages: messageWithComments,
-                    users: mockUsers,
-                },
-            });
-
-            await nextTick();
-
-            wrapper.vm.openCommentForm(1);
-            await nextTick();
-            await nextTick();
-
-            wrapper.vm.commentForms[1] = "New comment";
-            await nextTick();
-
-            await wrapper.vm.submitComment({ id: 1 });
-            await nextTick();
-
-            expect(wrapper.vm.commentForms[1]).toBe("");
         });
 
         it("has deleteComment method for admin users", async () => {
@@ -1102,230 +961,9 @@ describe("MessageTimeline", () => {
             await nextTick();
             await nextTick();
 
-            const textarea = wrapper.find("textarea");
-            expect(textarea.exists()).toBe(true);
-            expect(wrapper.vm.activeCommentForms[1]).toBe(true);
-        });
-
-        describe("Reply functionality", () => {
-            it("formats reply text correctly for a regular comment", async () => {
-                const wrapper = mount(MessageTimeline, {
-                    props: {
-                        messages: messageWithComments,
-                        users: mockUsers,
-                    },
-                });
-
-                await nextTick();
-                wrapper.vm.openCommentForm(1);
-                await nextTick();
-                await nextTick();
-
-                const message = messageWithComments[0];
-                const comment = message.comments[0];
-
-                wrapper.vm.handleReplyToComment(message, comment);
-                await nextTick();
-                await nextTick();
-
-                expect(wrapper.vm.commentForms[1]).toBe(
-                    `@Bob\n>Great message!\n\n`
-                );
-            });
-
-            it("extracts actual comment text when replying to a reply", async () => {
-                const messageWithReply = [
-                    {
-                        id: 1,
-                        message: "Hello world!",
-                        created_at: new Date().toISOString(),
-                        user: { id: 1, name: "Alice" },
-                        comments: [
-                            {
-                                id: 1,
-                                comment: "Great message!",
-                                created_at: new Date().toISOString(),
-                                user: { id: 2, name: "Bob" },
-                                grouped_reactions: {},
-                            },
-                            {
-                                id: 2,
-                                comment: "@Bob\n>Great message!\n\nI agree!",
-                                created_at: new Date().toISOString(),
-                                user: { id: 3, name: "Charlie" },
-                                grouped_reactions: {},
-                            },
-                        ],
-                    },
-                ];
-
-                const wrapper = mount(MessageTimeline, {
-                    props: {
-                        messages: messageWithReply,
-                        users: mockUsers,
-                    },
-                });
-
-                await nextTick();
-                wrapper.vm.openCommentForm(1);
-                await nextTick();
-                await nextTick();
-
-                const message = messageWithReply[0];
-                const replyComment = message.comments[1];
-
-                wrapper.vm.handleReplyToComment(message, replyComment);
-                await nextTick();
-                await nextTick();
-
-                expect(wrapper.vm.commentForms[1]).toBe(
-                    `@Charlie\n>I agree!\n\n`
-                );
-            });
-
-            it("opens comment form when replying to a comment", async () => {
-                const wrapper = mount(MessageTimeline, {
-                    props: {
-                        messages: messageWithComments,
-                        users: mockUsers,
-                    },
-                });
-
-                await nextTick();
-
-                const message = messageWithComments[0];
-                const comment = message.comments[0];
-
-                expect(wrapper.vm.activeCommentForms[1]).toBeUndefined();
-
-                wrapper.vm.handleReplyToComment(message, comment);
-                await nextTick();
-                await nextTick();
-
-                expect(wrapper.vm.activeCommentForms[1]).toBe(true);
-                expect(wrapper.vm.commentForms[1]).toBe(
-                    `@Bob\n>Great message!\n\n`
-                );
-            });
-
-            it("keeps comment form open when replying while already active", async () => {
-                const wrapper = mount(MessageTimeline, {
-                    props: {
-                        messages: messageWithComments,
-                        users: mockUsers,
-                    },
-                });
-
-                await nextTick();
-                wrapper.vm.openCommentForm(1);
-                await nextTick();
-                await nextTick();
-
-                const message = messageWithComments[0];
-                const comment = message.comments[0];
-
-                expect(wrapper.vm.activeCommentForms[1]).toBe(true);
-
-                wrapper.vm.handleReplyToComment(message, comment);
-                await nextTick();
-                await nextTick();
-
-                expect(wrapper.vm.activeCommentForms[1]).toBe(true);
-                expect(wrapper.vm.commentForms[1]).toBe(
-                    `@Bob\n>Great message!\n\n`
-                );
-            });
-
-            it("handles reply to comment with old format blockquote", async () => {
-                const messageWithOldFormatReply = [
-                    {
-                        id: 1,
-                        message: "Hello world!",
-                        created_at: new Date().toISOString(),
-                        user: { id: 1, name: "Alice" },
-                        comments: [
-                            {
-                                id: 1,
-                                comment: "Great message!",
-                                created_at: new Date().toISOString(),
-                                user: { id: 2, name: "Bob" },
-                                grouped_reactions: {},
-                            },
-                            {
-                                id: 2,
-                                comment: "@Bob >Great message!\n\nI agree!",
-                                created_at: new Date().toISOString(),
-                                user: { id: 3, name: "Charlie" },
-                                grouped_reactions: {},
-                            },
-                        ],
-                    },
-                ];
-
-                const wrapper = mount(MessageTimeline, {
-                    props: {
-                        messages: messageWithOldFormatReply,
-                        users: mockUsers,
-                    },
-                });
-
-                await nextTick();
-                wrapper.vm.openCommentForm(1);
-                await nextTick();
-                await nextTick();
-
-                const message = messageWithOldFormatReply[0];
-                const replyComment = message.comments[1];
-
-                wrapper.vm.handleReplyToComment(message, replyComment);
-                await nextTick();
-                await nextTick();
-
-                expect(wrapper.vm.commentForms[1]).toBe(
-                    `@Charlie\n>I agree!\n\n`
-                );
-            });
-
-            it("handles reply when comment has empty text", async () => {
-                const messageWithEmptyComment = [
-                    {
-                        id: 1,
-                        message: "Hello world!",
-                        created_at: new Date().toISOString(),
-                        user: { id: 1, name: "Alice" },
-                        comments: [
-                            {
-                                id: 1,
-                                comment: "",
-                                created_at: new Date().toISOString(),
-                                user: { id: 2, name: "Bob" },
-                                grouped_reactions: {},
-                            },
-                        ],
-                    },
-                ];
-
-                const wrapper = mount(MessageTimeline, {
-                    props: {
-                        messages: messageWithEmptyComment,
-                        users: mockUsers,
-                    },
-                });
-
-                await nextTick();
-                wrapper.vm.openCommentForm(1);
-                await nextTick();
-                await nextTick();
-
-                const message = messageWithEmptyComment[0];
-                const comment = message.comments[0];
-
-                wrapper.vm.handleReplyToComment(message, comment);
-                await nextTick();
-                await nextTick();
-
-                expect(wrapper.vm.commentForms[1]).toBe(`@Bob\n>\n\n`);
-            });
+            expect(wrapper.vm.showBuilderModal).toBe(true);
+            expect(wrapper.vm.builderModalMode).toBe("comment");
+            expect(wrapper.vm.builderModalMessageId).toBe(1);
         });
     });
 

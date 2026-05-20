@@ -77,6 +77,10 @@ class UserTaggingService
         }
 
         foreach ($taggedUserIds as $userId) {
+            if ((int) $userId === $tagger->id) {
+                continue;
+            }
+
             $taggedUser = User::find($userId);
             if (! $taggedUser) {
                 continue;

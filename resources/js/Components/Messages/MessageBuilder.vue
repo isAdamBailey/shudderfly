@@ -8,7 +8,7 @@ import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useMessageBuilder } from "@/composables/useMessageBuilder";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
-import { useForm } from "@inertiajs/vue3";
+import { router, useForm } from "@inertiajs/vue3";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 // Organized by semantic/functional categories for AAC
@@ -125,10 +125,21 @@ const props = defineProps({
   users: {
     type: Array,
     default: () => []
-  }
+  },
+  mode: {
+    type: String,
+    default: "message",
+    validator: (value) => ["message", "comment"].includes(value),
+  },
+  messageId: {
+    type: Number,
+    default: null,
+  },
 });
 
-const emit = defineEmits(['messagePosted']);
+const emit = defineEmits(["messagePosted", "commentPosted"]);
+
+const isCommentMode = computed(() => props.mode === "comment");
 
 const FAVORITES_KEY = "message_builder_favorites_v1";
 const MAX_FAVORITES = 5;
@@ -412,10 +423,16 @@ let justAddedTimeoutId = null;
 
 onMounted(() => {
   loadFavorites();
-  setAddWord(addWord);
-  setAddPhrase(addPhrase);
-  setGetPreview(() => preview.value);
-  setActiveMessageInput();
+  const builderFunctions = registerBuilderFunctions();
+  if (isCommentMode.value && props.messageId) {
+    setCommentInput(props.messageId, builderFunctions);
+    setActiveCommentInput(props.messageId);
+  } else {
+    setAddWord(addWord);
+    setAddPhrase(addPhrase);
+    setGetPreview(() => preview.value);
+    setActiveMessageInput();
+  }
 
   mountTimeoutId = setTimeout(() => {
     if (keyboardInputRef.value && typeof document !== "undefined") {
@@ -463,7 +480,10 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  // Clear any pending timeouts
+  if (isCommentMode.value && props.messageId) {
+    removeCommentInput(props.messageId);
+  }
+
   if (mountTimeoutId !== null) {
     clearTimeout(mountTimeoutId);
     mountTimeoutId = null;
@@ -564,9 +584,27 @@ function addPhrase(phrase) {
   selection.value = newWords;
 }
 
-const { setAddWord, setAddPhrase, setGetPreview, setActiveMessageInput } = useMessageBuilder();
+const {
+  setAddWord,
+  setAddPhrase,
+  setGetPreview,
+  setActiveMessageInput,
+  setCommentInput,
+  removeCommentInput,
+  setActiveCommentInput,
+} = useMessageBuilder();
 
-const handleMessageInputFocus = () => {
+const registerBuilderFunctions = () => ({
+  addWord,
+  addPhrase,
+  getPreview: () => preview.value,
+});
+
+const handleInputFocus = () => {
+  if (isCommentMode.value && props.messageId) {
+    setActiveCommentInput(props.messageId);
+    return;
+  }
   setActiveMessageInput();
 };
 
@@ -631,13 +669,8 @@ function sayIt() {
   speak(currentText);
 }
 
-function postMessage() {
-  if (!preview.value?.trim() || form.processing || !hasMinimumCharacters.value)
-    return;
-  speak(`Posting message: ${preview.value}`);
-
+function collectTaggedUserIds(messageText) {
   const taggedUserIds = [];
-  const messageText = preview.value;
 
   for (const [mentionText, userId] of mentionUserIds.value.entries()) {
     if (messageText.includes(mentionText)) {
@@ -667,22 +700,94 @@ function postMessage() {
     }
   }
 
+  return taggedUserIds;
+}
+
+function clearAfterSubmit() {
+  inputValue.value = "";
+  selection.value = [];
+  mentionUserIds.value.clear();
+  actionsAccordionOpen.value = false;
+}
+
+function postMessage() {
+  if (!preview.value?.trim() || form.processing || !hasMinimumCharacters.value) {
+    return;
+  }
+
+  const messageText = preview.value;
+  speak(`Posting message: ${messageText}`);
+
   form.message = messageText;
-  form.tagged_user_ids = taggedUserIds;
+  form.tagged_user_ids = collectTaggedUserIds(messageText);
 
   form.post(route("messages.store"), {
     preserveScroll: true,
     onSuccess: () => {
-      inputValue.value = "";
-      selection.value = [];
-      mentionUserIds.value.clear();
+      clearAfterSubmit();
       form.reset();
-      actionsAccordionOpen.value = false;
-      emit('messagePosted');
+      emit("messagePosted");
     },
-    onError: () => {}
+    onError: () => {},
   });
 }
+
+const commentProcessing = ref(false);
+
+function postComment() {
+  if (
+    !isCommentMode.value ||
+    !props.messageId ||
+    !preview.value?.trim() ||
+    commentProcessing.value ||
+    !hasMinimumCharacters.value
+  ) {
+    return;
+  }
+
+  const commentText = preview.value;
+  speak(`Posting comment: ${commentText}`);
+  commentProcessing.value = true;
+
+  router.post(
+    route("messages.comments.store", props.messageId),
+    {
+      comment: commentText,
+      tagged_user_ids: collectTaggedUserIds(commentText),
+    },
+    {
+      preserveScroll: true,
+      onSuccess: () => {
+        clearAfterSubmit();
+        emit("commentPosted", props.messageId);
+      },
+      onFinish: () => {
+        commentProcessing.value = false;
+      },
+    }
+  );
+}
+
+function submitContent() {
+  if (isCommentMode.value) {
+    postComment();
+    return;
+  }
+  postMessage();
+}
+
+const submitDisabled = computed(
+  () =>
+    form.processing ||
+    commentProcessing.value ||
+    !hasMinimumCharacters.value
+);
+
+const submitLabel = computed(() =>
+  isCommentMode.value
+    ? t("message.post_comment")
+    : t("builder.post_to_timeline")
+);
 </script>
 
 <template>
@@ -707,7 +812,7 @@ function postMessage() {
             @input="handleTextareaInput"
             @change="handleInputChange"
             @keydown="handleKeydown"
-            @focus="handleMessageInputFocus"
+            @focus="handleInputFocus"
           />
 
           <!-- User Suggestions Dropdown -->
@@ -861,11 +966,11 @@ function postMessage() {
     <div class="mt-6">
       <Button
         class="py-4 text-lg w-full"
-        :disabled="form.processing || !hasMinimumCharacters"
-        @click="postMessage"
+        :disabled="submitDisabled"
+        @click="submitContent"
       >
         <i class="ri-send-plane-fill text-2xl mr-2"></i>
-        {{ t('builder.post_to_timeline') }}
+        {{ submitLabel }}
       </Button>
     </div>
 

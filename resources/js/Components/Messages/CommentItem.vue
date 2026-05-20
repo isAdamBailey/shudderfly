@@ -39,16 +39,6 @@
                     <template #content>
                         <button
                             type="button"
-                            class="block w-full px-4 py-2 text-left text-sm leading-5 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none transition duration-150 ease-in-out"
-                            @click="$emit('reply', comment)"
-                        >
-                            <div class="flex items-center gap-2">
-                                <i class="ri-reply-line"></i>
-                                <span>{{ t("comment.reply") }}</span>
-                            </div>
-                        </button>
-                        <button
-                            type="button"
                             :disabled="speaking"
                             class="block w-full px-4 py-2 text-left text-sm leading-5 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
                             @click="$emit('speak', comment)"
@@ -81,12 +71,13 @@
                 v-html="formatComment(comment.comment)"
             ></div>
             <!-- Comment Reactions -->
-            <CommentReactions
+            <MessageReactions
+                compact
                 :grouped-reactions="comment.grouped_reactions || {}"
-                :selected-reactions="selectedCommentReactions"
                 :current-user-id="currentUserId"
                 @toggle-reaction="(emoji) => $emit('toggle-reaction', emoji)"
                 @add-reaction="$emit('add-reaction')"
+                @view-reactions="$emit('view-reactions')"
             />
         </div>
     </div>
@@ -94,12 +85,11 @@
 
 <script setup>
 import Avatar from "@/Components/Avatar.vue";
-import CommentReactions from "@/Components/Messages/CommentReactions.vue";
+import MessageReactions from "@/Components/Messages/MessageReactions.vue";
 import Dropdown from "@/Components/Dropdown.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useTranslations } from "@/composables/useTranslations";
 import { Link } from "@inertiajs/vue3";
-import { computed } from "vue";
 
 const props = defineProps({
     comment: {
@@ -120,7 +110,7 @@ const props = defineProps({
     },
 });
 
-defineEmits(["speak", "delete", "toggle-reaction", "add-reaction", "reply"]);
+defineEmits(["speak", "delete", "toggle-reaction", "add-reaction", "view-reactions"]);
 
 const { canAdmin } = usePermissions();
 const { t } = useTranslations();
@@ -220,25 +210,6 @@ const formatComment = (text) => {
     );
 
     return formatted;
-};
-
-const allowedEmojis = ["👍", "❤️", "😂", "😮", "😢", "💩"];
-
-const selectedCommentReactions = computed(() => {
-    if (!props.comment.grouped_reactions) {
-        return [];
-    }
-    return allowedEmojis.filter((emoji) => getCommentReactionCount(emoji) > 0);
-});
-
-const getCommentReactionCount = (emoji) => {
-    if (
-        !props.comment.grouped_reactions ||
-        !props.comment.grouped_reactions[emoji]
-    ) {
-        return 0;
-    }
-    return props.comment.grouped_reactions[emoji].count || 0;
 };
 
 const formatDate = (dateString) => {

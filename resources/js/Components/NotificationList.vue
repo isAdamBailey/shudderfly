@@ -92,7 +92,7 @@
                 <p
                   class="text-sm text-gray-700 dark:text-gray-300 italic ml-8 mb-1"
                 >
-                  "{{ stripGameShareSlugMarker(notification.data.message) }}"
+                  "{{ stripGameShareSlugMarker(notificationBodyText(notification)) }}"
                 </p>
               </div>
               <div
@@ -124,8 +124,11 @@
                 >
                   "{{ stripGameShareSlugMarker(notification.data.message) }}"
                 </p>
-                <p class="text-sm text-gray-600 dark:text-gray-400 ml-8 mt-1">
-                  Comment: "{{ notification.data.comment }}"
+                <p
+                  v-if="notification.data.comment"
+                  class="text-sm text-gray-600 dark:text-gray-400 ml-8 mt-1"
+                >
+                  "{{ stripGameShareSlugMarker(notification.data.comment) }}"
                 </p>
               </div>
               <div
@@ -182,6 +185,21 @@ const stripGameShareSlugMarker = (text) => {
     return "";
   }
   return String(text).replace(GAME_SHARE_SLUG_MARKER, "");
+};
+
+const notificationBodyText = (notification) => {
+  if (notification.type === "App\\Notifications\\UserTagged") {
+    if (notification.data.comment) {
+      return notification.data.comment;
+    }
+    return notification.data.message || "";
+  }
+
+  if (notification.type === "App\\Notifications\\MessageCommented") {
+    return notification.data.comment || notification.data.message || "";
+  }
+
+  return notification.data.message || "";
 };
 
 const notifications = ref([]);

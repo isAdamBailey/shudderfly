@@ -112,6 +112,7 @@ class UserTagged extends Notification implements ShouldBroadcast
             $data['comment_id'] = $this->content->id;
             $data['message_id'] = $this->content->message_id;
             $data['comment'] = $this->content->comment;
+            $data['message'] = $this->content->comment;
         } else {
             $data['message_id'] = $this->content instanceof Message ? $this->content->id : null;
             $data['message'] = GameShareMessage::stripSlugMarker($contentText);
@@ -155,6 +156,7 @@ class UserTagged extends Notification implements ShouldBroadcast
             $data['comment_id'] = $this->content->id;
             $data['message_id'] = $this->content->message_id;
             $data['comment'] = $this->content->comment;
+            $data['message'] = $this->content->comment;
         } else {
             $data['message_id'] = $this->content instanceof Message ? $this->content->id : null;
             $data['message'] = GameShareMessage::stripSlugMarker($contentText);

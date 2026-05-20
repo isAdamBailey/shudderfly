@@ -1,6 +1,6 @@
 <template>
     <div ref="timelineContainer" class="space-y-4">
-        <MessageCTA v-if="!readOnly" @click="showMessageBuilderModal = true" />
+        <MessageCTA v-if="!readOnly" @click="openMessageBuilderModal" />
 
         <div
             v-if="localMessages.length === 0 && !loading"
@@ -147,7 +147,7 @@
             >
                 <!-- No comments: inviting CTA -->
                 <div
-                    v-if="getCommentCount(message) === 0 && !activeCommentForms[message.id]"
+                    v-if="getCommentCount(message) === 0 && !isCommentModalOpenFor(message.id)"
                     class="flex items-center gap-3 py-4 px-4 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 cursor-pointer group hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-all"
                     @click="openCommentForm(message.id)"
                 >
@@ -183,7 +183,7 @@
                             @delete="(commentId) => deleteComment(message.id, commentId)"
                             @toggle-reaction="(emoji) => toggleCommentReaction(message, comment, emoji)"
                             @add-reaction="openCommentReactionModal(message, comment)"
-                            @reply="(comment) => handleReplyToComment(message, comment)"
+                            @view-reactions="openViewCommentReactionsModal(comment)"
                         />
 
                         <!-- Show more / show less -->
@@ -210,7 +210,7 @@
                                 @delete="(commentId) => deleteComment(message.id, commentId)"
                                 @toggle-reaction="(emoji) => toggleCommentReaction(message, comment, emoji)"
                                 @add-reaction="openCommentReactionModal(message, comment)"
-                                @reply="(comment) => handleReplyToComment(message, comment)"
+                                @view-reactions="openViewCommentReactionsModal(comment)"
                             />
 
                             <button
@@ -226,7 +226,6 @@
 
                     <!-- Add comment button (when form is not active) -->
                     <button
-                        v-if="!activeCommentForms[message.id]"
                         type="button"
                         class="flex items-center gap-2 mt-3 text-sm text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors py-1.5"
                         @click="openCommentForm(message.id)"
@@ -234,80 +233,6 @@
                         <i class="ri-reply-line text-base"></i>
                         {{ t("message.add_comment") }}
                     </button>
-
-                    <!-- Comment form -->
-                    <form
-                        v-if="activeCommentForms[message.id]"
-                        class="space-y-2 mt-3"
-                        @submit.prevent="submitComment(message)"
-                    >
-                        <div class="relative" style="z-index: 1;">
-                            <textarea
-                                :ref="
-                                    (el) => {
-                                        if (el) {
-                                            if (!commentTextareaRefs.value) {
-                                                commentTextareaRefs.value = {};
-                                            }
-                                            commentTextareaRefs.value[message.id] = el;
-                                            const tagging = getCommentTagging(message.id);
-                                            if (tagging && tagging.textareaRef) {
-                                                tagging.textareaRef.value = el;
-                                            }
-                                        }
-                                    }
-                                "
-                                v-model="commentForms[message.id]"
-                                :placeholder="t('message.comment_placeholder')"
-                                maxlength="1000"
-                                rows="3"
-                                class="w-full px-3 py-2 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none overflow-hidden min-h-[76px] max-h-[200px]"
-                                @input="(e) => handleCommentInput(e, message.id)"
-                                @keydown="(e) => handleCommentKeydown(e, message.id)"
-                                @blur="(e) => handleCommentBlur(e, message.id)"
-                            ></textarea>
-                            <button
-                                type="button"
-                                class="absolute top-2 right-2 w-8 h-8 flex items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700"
-                                :title="t('builder.tag_user')"
-                                :aria-label="t('builder.tag_user_aria')"
-                                @click.prevent="openCommentTagList(message.id)"
-                            >
-                                @
-                            </button>
-
-                            <div
-                                v-if="getCommentTagging(message.id).showUserSuggestions"
-                                class="user-suggestions-container absolute top-full left-0 mt-1 w-full max-w-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-[9999] max-h-60 overflow-y-auto"
-                                style="pointer-events: auto;"
-                                @click.stop
-                                @mousedown.stop
-                            >
-                                <UserTagList
-                                    :users="getCommentTagging(message.id).userSuggestions"
-                                    :selected-index="getCommentTagging(message.id).selectedSuggestionIndex"
-                                    @select="
-                                        (user) => {
-                                            if (user) {
-                                                insertCommentMention(message.id, user);
-                                            }
-                                        }
-                                    "
-                                />
-                            </div>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs text-gray-500 dark:text-gray-400">
-                                {{ (commentForms[message.id] || "").length }}/1000
-                            </span>
-                            <Button
-                                type="submit"
-                                :disabled="!commentForms[message.id]?.trim()"
-                            >
-                                {{ t("message.post_comment") }}
-                            </Button>
-                        </div>
-                    </form>
                 </template>
             </div>
         </div>
@@ -352,74 +277,14 @@
             </div>
         </Modal>
 
-        <Modal
+        <ViewReactionsModal
             :show="showViewReactionsModal"
-            max-width="sm"
+            :grouped-reactions="viewReactionsGrouped"
+            :speaking="speaking"
             @close="closeViewReactionsModal"
-        >
-            <div class="p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h2
-                        class="text-lg font-medium text-gray-900 dark:text-gray-100"
-                    >
-                        {{ t("general.reactions") }}
-                    </h2>
-                    <Button
-                        v-if="selectedMessageForView"
-                        type="button"
-                        :disabled="speaking"
-                        :title="t('general.speak_all_reactions')"
-                        :aria-label="t('general.speak_all_reactions_aria')"
-                        @click="speakAllReactions(selectedMessageForView)"
-                    >
-                        <i class="ri-speak-fill text-xl"></i>
-                    </Button>
-                </div>
-                <div v-if="selectedMessageForView" class="space-y-4">
-                    <div
-                        v-for="emoji in getSelectedReactions(
-                            selectedMessageForView
-                        )"
-                        :key="emoji"
-                        class="border-b border-gray-200 dark:border-gray-700 pb-3 last:border-b-0 last:pb-0"
-                    >
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="text-2xl">{{ emoji }}</span>
-                            <span
-                                class="text-sm font-medium text-gray-700 dark:text-gray-300"
-                            >
-                                {{
-                                    getReactionCount(
-                                        selectedMessageForView,
-                                        emoji
-                                    )
-                                }}
-                                {{
-                                    getReactionCount(
-                                        selectedMessageForView,
-                                        emoji
-                                    ) === 1
-                                        ? t("message.reaction")
-                                        : t("message.reactions")
-                                }}
-                            </span>
-                        </div>
-                        <div class="space-y-1 ml-8">
-                            <div
-                                v-for="user in getReactionUsers(
-                                    selectedMessageForView,
-                                    emoji
-                                )"
-                                :key="user.id"
-                                class="text-sm text-gray-600 dark:text-gray-400"
-                            >
-                                {{ user.name }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </Modal>
+            @speak-all="speakViewReactions"
+        />
+
 
         <Modal
             :show="showCommentReactionModal"
@@ -457,10 +322,13 @@
         </Modal>
 
         <MessageBuilderModal
-            :show="showMessageBuilderModal"
+            :show="showBuilderModal"
+            :mode="builderModalMode"
+            :message-id="builderModalMessageId"
             :users="users"
-            @close="showMessageBuilderModal = false"
+            @close="closeBuilderModal"
             @message-posted="handleMessagePosted"
+            @comment-posted="handleCommentPosted"
         />
 
         <ConfirmDialog
@@ -486,7 +354,7 @@ import CommentItem from "@/Components/Messages/CommentItem.vue";
 import MessageBuilderModal from "@/Components/Messages/MessageBuilderModal.vue";
 import MessageCTA from "@/Components/Messages/MessageCTA.vue";
 import MessageReactions from "@/Components/Messages/MessageReactions.vue";
-import UserTagList from "@/Components/UserTagList.vue";
+import ViewReactionsModal from "@/Components/Messages/ViewReactionsModal.vue";
 import Modal from "@/Components/Modal.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
 import { usePermissions } from "@/composables/permissions";
@@ -497,7 +365,11 @@ import { useMessageBuilder } from "@/composables/useMessageBuilder";
 import { useMessageLocator } from "@/composables/useMessageLocator";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
-import { useUserTagging } from "@/composables/useUserTagging";
+import {
+    ALLOWED_REACTION_EMOJIS,
+    REACTION_EMOJI_NAMES,
+    useGroupedReactions,
+} from "@/composables/useGroupedReactions";
 import { useMedia } from "@/mediaHelpers";
 import { Link, router, usePage } from "@inertiajs/vue3";
 import axios from "axios";
@@ -540,32 +412,15 @@ const messagesChannel = ref(null);
 const showReactionModal = ref(false);
 const selectedMessageForReaction = ref(null);
 const showViewReactionsModal = ref(false);
-const selectedMessageForView = ref(null);
+const viewReactionsGrouped = ref({});
 const timelineContainer = ref(null);
 const expandedComments = ref({});
-const activeCommentForms = ref({});
-const commentForms = ref({});
-const commentTextareaRefs = ref({});
-const commentTaggingInstances = ref({});
-const commentTaggingWatchers = ref({});
+const showBuilderModal = ref(false);
+const builderModalMode = ref("message");
+const builderModalMessageId = ref(null);
 const showCommentReactionModal = ref(false);
 const selectedCommentForReaction = ref(null);
 const selectedMessageForCommentReaction = ref(null);
-const showMessageBuilderModal = ref(false);
-const replyScrollTimeoutIds = new Set();
-
-const clearReplyScrollTimeouts = () => {
-    replyScrollTimeoutIds.forEach((timeoutId) => clearTimeout(timeoutId));
-    replyScrollTimeoutIds.clear();
-};
-
-const scheduleReplyScrollTimeout = (callback, delay) => {
-    const timeoutId = setTimeout(() => {
-        replyScrollTimeoutIds.delete(timeoutId);
-        callback();
-    }, delay);
-    replyScrollTimeoutIds.add(timeoutId);
-};
 
 const messagesData = computed(() => {
     if (Array.isArray(props.messages)) {
@@ -616,17 +471,37 @@ const {
     resumeInfiniteScroll,
 });
 
-const allowedEmojis = ["👍", "❤️", "😂", "😮", "😢", "💩"];
+const allowedEmojis = ALLOWED_REACTION_EMOJIS;
 
 const currentUserId = computed(() => {
     return usePage().props.auth?.user?.id;
 });
 
+const openMessageBuilderModal = () => {
+    builderModalMode.value = "message";
+    builderModalMessageId.value = null;
+    showBuilderModal.value = true;
+};
+
+const closeBuilderModal = () => {
+    showBuilderModal.value = false;
+    builderModalMessageId.value = null;
+};
+
+const isCommentModalOpenFor = (messageId) =>
+    showBuilderModal.value &&
+    builderModalMode.value === "comment" &&
+    builderModalMessageId.value === messageId;
+
 const handleMessagePosted = () => {
-    showMessageBuilderModal.value = false;
+    closeBuilderModal();
     setTimeout(() => {
         scrollToTimeline();
     }, 300);
+};
+
+const handleCommentPosted = () => {
+    closeBuilderModal();
 };
 
 watch(
@@ -856,57 +731,6 @@ const speakMessage = (message) => {
     speak(`${username} says ${messageText}`);
 };
 
-const speakAllReactions = (message) => {
-    if (!message || !message.grouped_reactions) {
-        return;
-    }
-
-    const emojiNames = {
-        "👍": "thumbs up",
-        "❤️": "heart",
-        "😂": "laughing",
-        "😮": "surprised",
-        "😢": "sad",
-        "💩": "poop",
-    };
-
-    const selectedReactions = getSelectedReactions(message);
-
-    if (selectedReactions.length === 0) {
-        speak("No reactions");
-        return;
-    }
-
-    const reactionTexts = selectedReactions
-        .map((emoji) => {
-            const users = getReactionUsers(message, emoji);
-            const emojiName = emojiNames[emoji] || "reaction";
-
-            if (users.length === 0) {
-                return "";
-            }
-
-            const userNames = users.map((u) => u.name).join(", ");
-            const lastCommaIndex = userNames.lastIndexOf(", ");
-
-            let formattedNames;
-            if (lastCommaIndex !== -1) {
-                formattedNames =
-                    userNames.substring(0, lastCommaIndex) +
-                    ", and " +
-                    userNames.substring(lastCommaIndex + 2);
-            } else {
-                formattedNames = userNames;
-            }
-
-            return `${emojiName} from ${formattedNames}`;
-        })
-        .filter((text) => text !== "");
-
-    const fullText = reactionTexts.join(". ") + ".";
-    speak(fullText);
-};
-
 const deleteMessage = async (messageId) => {
     const ok = await askConfirm(
         "Are you sure you want to delete this message?"
@@ -915,8 +739,9 @@ const deleteMessage = async (messageId) => {
         return;
     }
 
-    delete commentForms.value[messageId];
-    delete activeCommentForms.value[messageId];
+    if (builderModalMessageId.value === messageId) {
+        closeBuilderModal();
+    }
     expandedComments.value[messageId] = false;
 
     router.delete(route("messages.destroy", messageId), {
@@ -1051,26 +876,10 @@ const scrollToTimeline = () => {
 
 onMounted(() => {
     setupEchoListener();
-
-    nextTick(() => {
-        Object.keys(activeCommentForms.value).forEach((messageId) => {
-            if (
-                activeCommentForms.value[messageId] &&
-                commentTextareaRefs.value[messageId]
-            ) {
-                autoGrowCommentTextarea(messageId);
-            }
-        });
-    });
 });
 
 onUnmounted(() => {
-    clearReplyScrollTimeouts();
     cleanup();
-
-    Object.keys(commentTaggingWatchers.value).forEach((messageId) => {
-        cleanupCommentTagging(messageId);
-    });
 });
 
 const getSelectedReactions = (message) => {
@@ -1103,13 +912,18 @@ const hasUserReacted = (message, emoji) => {
 };
 
 const openViewReactionsModal = (message) => {
-    selectedMessageForView.value = message;
+    viewReactionsGrouped.value = message.grouped_reactions || {};
+    showViewReactionsModal.value = true;
+};
+
+const openViewCommentReactionsModal = (comment) => {
+    viewReactionsGrouped.value = comment.grouped_reactions || {};
     showViewReactionsModal.value = true;
 };
 
 const closeViewReactionsModal = () => {
     showViewReactionsModal.value = false;
-    selectedMessageForView.value = null;
+    viewReactionsGrouped.value = {};
 };
 
 const openReactionModal = (message) => {
@@ -1207,248 +1021,6 @@ const toggleReaction = async (message, emoji) => {
     }
 };
 
-function autoGrowCommentTextarea(messageId) {
-    const textarea = commentTextareaRefs.value[messageId];
-    if (!textarea) return;
-    textarea.style.height = "auto";
-    const newHeight = Math.min(textarea.scrollHeight, 200);
-    textarea.style.height = `${newHeight}px`;
-}
-
-function getCommentTagging(messageId) {
-    if (!commentTaggingInstances.value[messageId]) {
-        const textareaRef = ref(null);
-        const inputValue = ref(commentForms.value[messageId] || "");
-        const users = ref(props.users || []);
-
-        const stopWatch1 = watch(
-            () => commentForms.value[messageId],
-            (newValue) => {
-                if (inputValue.value !== (newValue || "")) {
-                    inputValue.value = newValue || "";
-                }
-            }
-        );
-
-        const stopWatch2 = watch(inputValue, (newValue) => {
-            if (commentForms.value[messageId] !== newValue) {
-                commentForms.value[messageId] = newValue;
-            }
-        });
-
-        const stopWatch3 = watch(
-            () => commentTextareaRefs.value[messageId],
-            (newRef) => {
-                if (newRef) {
-                    textareaRef.value = newRef;
-                }
-            },
-            { immediate: true }
-        );
-
-        commentTaggingWatchers.value[messageId] = [
-            stopWatch1,
-            stopWatch2,
-            stopWatch3,
-        ];
-
-        const tagging = useUserTagging({
-            users,
-            textareaRef,
-            inputValue,
-        });
-
-        commentTaggingInstances.value[messageId] = tagging;
-    }
-    return commentTaggingInstances.value[messageId];
-}
-
-function cleanupCommentTagging(messageId) {
-    if (commentTaggingWatchers.value[messageId]) {
-        commentTaggingWatchers.value[messageId].forEach((stop) => stop());
-        delete commentTaggingWatchers.value[messageId];
-    }
-
-    if (commentTaggingInstances.value[messageId]) {
-        commentTaggingInstances.value[messageId].clearMentions();
-        delete commentTaggingInstances.value[messageId];
-    }
-
-    if (commentTextareaRefs.value[messageId]) {
-        delete commentTextareaRefs.value[messageId];
-    }
-}
-
-function insertCommentMention(messageId, user) {
-    if (!user) return;
-    
-    const tagging = getCommentTagging(messageId);
-    if (!tagging) return;
-    
-    let textarea = commentTextareaRefs.value?.[messageId];
-    
-    if (!textarea) {
-        const messageElement = document.querySelector(`#message-${messageId}`);
-        if (messageElement) {
-            textarea = messageElement.querySelector('textarea');
-            if (textarea && commentTextareaRefs.value) {
-                commentTextareaRefs.value[messageId] = textarea;
-            }
-        }
-    }
-    
-    if (!textarea) return;
-    
-    const userId = user.id ?? user.user_id ?? user.ID;
-    const userName = user.name ?? user.user_name ?? user.Name;
-    
-    if (!userName) return;
-    
-    const currentValue = textarea.value || commentForms.value[messageId] || "";
-    const cursorPos = textarea.selectionStart ?? currentValue.length;
-    const textBeforeCursor = currentValue.substring(0, cursorPos);
-    const lastAtIndex = textBeforeCursor.lastIndexOf("@");
-    
-    if (lastAtIndex === -1) {
-        return;
-    }
-    
-    const beforeMention = currentValue.substring(0, lastAtIndex);
-    const mentionText = `@${userName}`;
-    const textAfterAt = currentValue.substring(lastAtIndex);
-    const afterMention = textAfterAt.replace(/@[\w\s]*/, `${mentionText} `);
-    const newValue = beforeMention + afterMention;
-    
-    commentForms.value[messageId] = newValue;
-    
-    if (tagging.inputValue) {
-        tagging.inputValue.value = newValue;
-    }
-    
-    nextTick(() => {
-        if (textarea) {
-            if (textarea.value !== newValue) {
-                textarea.value = newValue;
-            }
-            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-                window.HTMLTextAreaElement.prototype,
-                "value"
-            )?.set;
-            if (nativeInputValueSetter) {
-                nativeInputValueSetter.call(textarea, newValue);
-            }
-            const event = new Event("input", { bubbles: true });
-            textarea.dispatchEvent(event);
-        }
-    });
-    
-    if (userId !== undefined && userId !== null && tagging.mentionUserIds && tagging.mentionUserIds.value) {
-        const parsedUserId = parseInt(userId, 10);
-        if (!isNaN(parsedUserId)) {
-            tagging.mentionUserIds.value.set(mentionText, parsedUserId);
-        }
-    }
-    
-    if (tagging.showUserSuggestions) {
-        if (typeof tagging.showUserSuggestions === 'object' && 'value' in tagging.showUserSuggestions) {
-            tagging.showUserSuggestions.value = false;
-        }
-    }
-    if (tagging.mentionQuery) {
-        if (typeof tagging.mentionQuery === 'object' && 'value' in tagging.mentionQuery) {
-            tagging.mentionQuery.value = "";
-        }
-    }
-    if (tagging.mentionStartPos) {
-        if (typeof tagging.mentionStartPos === 'object' && 'value' in tagging.mentionStartPos) {
-            tagging.mentionStartPos.value = -1;
-        }
-    }
-    
-    autoGrowCommentTextarea(messageId);
-    
-    setTimeout(() => {
-        if (textarea) {
-            const newCursorPos = beforeMention.length + mentionText.length + 1;
-            textarea.focus();
-            textarea.setSelectionRange(newCursorPos, newCursorPos);
-        }
-    }, 10);
-}
-
-function handleCommentInput(event, messageId) {
-    const value = event.target.value;
-    commentForms.value[messageId] = value;
-
-    const tagging = getCommentTagging(messageId);
-    const cursorPos = event.target.selectionStart ?? value.length;
-    tagging.checkForMentions(value, cursorPos);
-
-    autoGrowCommentTextarea(messageId);
-}
-
-function handleCommentKeydown(event, messageId) {
-    const tagging = getCommentTagging(messageId);
-    tagging.handleKeydown(event);
-
-    if (event.key === "Enter" && tagging.selectedSuggestionIndex.value >= 0) {
-        nextTick(() => {
-            autoGrowCommentTextarea(messageId);
-        });
-    }
-}
-
-function handleCommentBlur(event, messageId) {
-    const relatedTarget = event.relatedTarget;
-    const tagging = getCommentTagging(messageId);
-    
-    if (!tagging) return;
-    
-    if (relatedTarget?.closest(".user-suggestions-container")) {
-        setTimeout(() => {
-            const textarea = commentTextareaRefs.value?.[messageId];
-            if (textarea) {
-                textarea.focus();
-            }
-        }, 0);
-        return;
-    }
-    
-    setTimeout(() => {
-        if (!tagging || !tagging.showUserSuggestions) return;
-        
-        const activeElement = document.activeElement;
-        const isClickingInSuggestions = activeElement?.closest(".user-suggestions-container");
-        if (!isClickingInSuggestions && 
-            activeElement !== commentTextareaRefs.value?.[messageId]) {
-            if (tagging.showUserSuggestions.value !== undefined) {
-                tagging.showUserSuggestions.value = false;
-            }
-        }
-    }, 200);
-}
-
-function openCommentTagList(messageId) {
-    if (!commentForms.value[messageId]) {
-        commentForms.value[messageId] = "";
-    }
-    const textarea = commentTextareaRefs.value[messageId];
-    const tagging = getCommentTagging(messageId);
-    const currentValue = commentForms.value[messageId] || "";
-    const cursorPos = textarea?.selectionStart ?? currentValue.length;
-    const newValue =
-        currentValue.slice(0, cursorPos) + "@" + currentValue.slice(cursorPos);
-
-    commentForms.value[messageId] = newValue;
-    if (textarea) {
-        textarea.value = newValue;
-        textarea.focus();
-        textarea.setSelectionRange(cursorPos + 1, cursorPos + 1);
-    }
-    tagging.checkForMentions(newValue, cursorPos + 1);
-    autoGrowCommentTextarea(messageId);
-}
-
 const getComments = (message) => {
     if (!message.comments) {
         return [];
@@ -1473,60 +1045,9 @@ const getCommentCount = (message) => {
 };
 
 const openCommentForm = (messageId) => {
-    activeCommentForms.value[messageId] = true;
-    if (!commentForms.value[messageId]) {
-        commentForms.value[messageId] = "";
-    }
-    getCommentTagging(messageId);
-    nextTick(() => {
-        if (commentTextareaRefs.value[messageId]) {
-            commentTextareaRefs.value[messageId].focus();
-        }
-    });
-};
-
-const submitComment = async (message) => {
-    const commentText = commentForms.value[message.id]?.trim();
-    if (!commentText) {
-        return;
-    }
-
-    const tagging = getCommentTagging(message.id);
-    const taggedUserIds = tagging.getTaggedUserIds(commentText);
-
-    const commentTextToSubmit = commentText;
-    commentForms.value[message.id] = "";
-
-    tagging.clearMentions();
-
-    try {
-        await router.post(
-            route("messages.comments.store", message.id),
-            {
-                comment: commentTextToSubmit,
-                tagged_user_ids: taggedUserIds,
-            },
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    if (commentTextareaRefs.value[message.id]) {
-                        commentTextareaRefs.value[message.id].style.height =
-                            "auto";
-                    }
-                },
-                onError: () => {
-                    commentForms.value[message.id] = commentTextToSubmit;
-                },
-            }
-        );
-    } catch (error) {
-        commentForms.value[message.id] = commentTextToSubmit;
-        setFlashMessage(
-            "error",
-            "Failed to post comment. Please try again.",
-            3000
-        );
-    }
+    builderModalMode.value = "comment";
+    builderModalMessageId.value = messageId;
+    showBuilderModal.value = true;
 };
 
 const speakComment = (comment) => {
@@ -1535,94 +1056,46 @@ const speakComment = (comment) => {
     speak(`${username} says ${commentText}`);
 };
 
-const extractActualCommentText = (commentText) => {
-    if (!commentText) return "";
+const speakViewReactions = () => {
+    const {
+        getSelectedReactions,
+        getReactionUsers,
+    } = useGroupedReactions(viewReactionsGrouped);
 
-    const blockquotePattern1 = /@[^\n]+\n>\s*[^\n]*(?:\n\n|\n)(.*)/s;
-    const blockquotePattern2 = /@[^\s>]+\s*>\s*[^\n]*(?:\n\n|\n)(.*)/s;
+    const selectedReactions = getSelectedReactions();
 
-    let match = commentText.match(blockquotePattern1);
-    if (!match) {
-        match = commentText.match(blockquotePattern2);
+    if (selectedReactions.length === 0) {
+        speak("No reactions");
+        return;
     }
 
-    if (match && match[1]) {
-        return match[1].trim();
-    }
+    const reactionTexts = selectedReactions
+        .map((emoji) => {
+            const users = getReactionUsers(emoji);
+            const emojiName = REACTION_EMOJI_NAMES[emoji] || "reaction";
 
-    return commentText.trim();
-};
-
-const handleReplyToComment = (message, comment) => {
-    const formWasHidden = !activeCommentForms.value[message.id];
-
-    if (formWasHidden) {
-        openCommentForm(message.id);
-    }
-
-    const username = comment.user?.name || "";
-    const actualCommentText = extractActualCommentText(comment.comment || "");
-    const replyText = `@${username}\n>${actualCommentText}\n\n`;
-
-    if (!commentForms.value[message.id]) {
-        commentForms.value[message.id] = "";
-    }
-
-    commentForms.value[message.id] = replyText;
-
-    const scrollToTextarea = () => {
-        let textarea = commentTextareaRefs.value[message.id];
-
-        if (!textarea && typeof document !== "undefined") {
-            const messageElement = document.getElementById(
-                `message-${message.id}`
-            );
-            if (messageElement) {
-                textarea = messageElement.querySelector("textarea");
+            if (users.length === 0) {
+                return "";
             }
-        }
 
-        if (textarea) {
-            textarea.focus();
-            textarea.setSelectionRange(replyText.length, replyText.length);
-            autoGrowCommentTextarea(message.id);
+            const userNames = users.map((u) => u.name).join(", ");
+            const lastCommaIndex = userNames.lastIndexOf(", ");
 
-            scheduleReplyScrollTimeout(() => {
-                const rect = textarea.getBoundingClientRect();
-                const absoluteElementTop = rect.top + window.pageYOffset;
-                const middle =
-                    absoluteElementTop -
-                    window.innerHeight / 2 +
-                    rect.height / 2;
+            let formattedNames;
+            if (lastCommaIndex !== -1) {
+                formattedNames =
+                    userNames.substring(0, lastCommaIndex) +
+                    ", and " +
+                    userNames.substring(lastCommaIndex + 2);
+            } else {
+                formattedNames = userNames;
+            }
 
-                window.scrollTo({
-                    top: middle,
-                    behavior: "smooth",
-                });
-            }, 100);
-            return true;
-        }
-        return false;
-    };
+            return `${emojiName} from ${formattedNames}`;
+        })
+        .filter((text) => text !== "");
 
-    if (formWasHidden) {
-        nextTick(() => {
-            let attempts = 0;
-            const maxAttempts = 20;
-            const tryScroll = () => {
-                const success = scrollToTextarea();
-                if (!success && attempts < maxAttempts) {
-                    attempts++;
-                    scheduleReplyScrollTimeout(tryScroll, 50);
-                }
-            };
-            tryScroll();
-        });
-    } else {
-        nextTick(() => {
-            scrollToTextarea();
-        });
-    }
+    speak(`${reactionTexts.join(". ")}.`);
 };
 
 const deleteComment = async (messageId, commentId) => {

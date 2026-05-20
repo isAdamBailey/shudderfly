@@ -2,6 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Events\CommentCreated;
+use App\Events\CommentReactionUpdated;
+use App\Events\MessageCreated;
+use App\Events\MessageReactionUpdated;
 use App\Models\Book;
 use App\Models\CommentReaction;
 use App\Models\Message;
@@ -10,10 +14,13 @@ use App\Models\MessageReaction;
 use App\Models\Page;
 use App\Models\SiteSetting;
 use App\Models\User;
+use App\Notifications\MessageCommented;
+use App\Notifications\UserTagged;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class MessagesTest extends TestCase
@@ -137,7 +144,7 @@ class MessagesTest extends TestCase
             'message' => 'Hello, world!',
         ]);
 
-        Event::assertDispatched(\App\Events\MessageCreated::class);
+        Event::assertDispatched(MessageCreated::class);
     }
 
     public function test_message_creation_requires_authentication(): void
@@ -201,7 +208,7 @@ class MessagesTest extends TestCase
 
         $response->assertRedirect();
 
-        Notification::assertSentTo($taggedUser, \App\Notifications\UserTagged::class);
+        Notification::assertSentTo($taggedUser, UserTagged::class);
     }
 
     public function test_message_creation_validates_tagged_user_ids_exist(): void
@@ -262,7 +269,7 @@ class MessagesTest extends TestCase
         ]);
 
         // Create a notification for this message
-        $notificationId = \Illuminate\Support\Str::uuid()->toString();
+        $notificationId = Str::uuid()->toString();
         DB::table('notifications')->insert([
             'id' => $notificationId,
             'type' => 'App\\Notifications\\UserTagged',
@@ -472,7 +479,7 @@ class MessagesTest extends TestCase
         ]);
 
         // Create a notification for this message
-        $notificationId = \Illuminate\Support\Str::uuid()->toString();
+        $notificationId = Str::uuid()->toString();
         DB::table('notifications')->insert([
             'id' => $notificationId,
             'type' => 'App\\Notifications\\UserTagged',
@@ -497,7 +504,7 @@ class MessagesTest extends TestCase
             'created_at' => now()->subDays(10),
         ]);
 
-        $recentNotificationId = \Illuminate\Support\Str::uuid()->toString();
+        $recentNotificationId = Str::uuid()->toString();
         DB::table('notifications')->insert([
             'id' => $recentNotificationId,
             'type' => 'App\\Notifications\\UserTagged',
@@ -589,7 +596,7 @@ class MessagesTest extends TestCase
             'emoji' => '👍',
         ]);
 
-        Event::assertDispatched(\App\Events\MessageReactionUpdated::class);
+        Event::assertDispatched(MessageReactionUpdated::class);
     }
 
     public function test_user_can_remove_reaction_from_message(): void
@@ -618,7 +625,7 @@ class MessagesTest extends TestCase
             'user_id' => $user->id,
         ]);
 
-        Event::assertDispatched(\App\Events\MessageReactionUpdated::class);
+        Event::assertDispatched(MessageReactionUpdated::class);
     }
 
     public function test_user_can_change_reaction(): void
@@ -662,7 +669,7 @@ class MessagesTest extends TestCase
             ->where('user_id', $user->id)
             ->count());
 
-        Event::assertDispatched(\App\Events\MessageReactionUpdated::class);
+        Event::assertDispatched(MessageReactionUpdated::class);
     }
 
     public function test_user_can_only_have_one_reaction_per_message(): void
@@ -973,7 +980,7 @@ class MessagesTest extends TestCase
             'comment' => 'This is a test comment',
         ]);
 
-        Event::assertDispatched(\App\Events\CommentCreated::class);
+        Event::assertDispatched(CommentCreated::class);
     }
 
     public function test_comment_creation_requires_authentication(): void
@@ -1030,7 +1037,40 @@ class MessagesTest extends TestCase
 
         $response->assertRedirect();
 
-        Notification::assertSentTo($messageAuthor, \App\Notifications\MessageCommented::class);
+        Notification::assertSentTo($messageAuthor, MessageCommented::class);
+    }
+
+    public function test_comment_creation_notifies_message_author_and_tagged_user(): void
+    {
+        Notification::fake();
+        Event::fake();
+
+        $messageAuthor = User::factory()->create(['name' => 'Alice']);
+        $commenter = User::factory()->create(['name' => 'Bob']);
+        $taggedUser = User::factory()->create(['name' => 'Charlie']);
+        $message = Message::factory()->create([
+            'user_id' => $messageAuthor->id,
+            'message' => 'Original post text',
+        ]);
+
+        $this->actingAs($commenter);
+
+        $response = $this->post(route('messages.comments.store', $message), [
+            'comment' => '@Charlie thanks for reading',
+            'tagged_user_ids' => [$taggedUser->id],
+        ]);
+
+        $response->assertRedirect();
+
+        Notification::assertSentTo($messageAuthor, MessageCommented::class);
+        Notification::assertSentTo($taggedUser, UserTagged::class);
+
+        $authorNotification = Notification::sent($messageAuthor, MessageCommented::class)->first();
+        $this->assertSame('Original post text', $authorNotification->toArray($messageAuthor)['message']);
+        $this->assertSame('@Charlie thanks for reading', $authorNotification->toArray($messageAuthor)['comment']);
+
+        $taggedNotification = Notification::sent($taggedUser, UserTagged::class)->first();
+        $this->assertSame('@Charlie thanks for reading', $taggedNotification->toArray($taggedUser)['message']);
     }
 
     public function test_comment_creation_does_not_send_notification_when_commenting_on_own_message(): void
@@ -1210,7 +1250,7 @@ class MessagesTest extends TestCase
             'emoji' => '👍',
         ]);
 
-        Event::assertDispatched(\App\Events\CommentReactionUpdated::class);
+        Event::assertDispatched(CommentReactionUpdated::class);
     }
 
     public function test_user_can_remove_reaction_from_comment(): void
@@ -1240,7 +1280,7 @@ class MessagesTest extends TestCase
             'user_id' => $user->id,
         ]);
 
-        Event::assertDispatched(\App\Events\CommentReactionUpdated::class);
+        Event::assertDispatched(CommentReactionUpdated::class);
     }
 
     public function test_user_can_change_comment_reaction(): void
@@ -1285,7 +1325,7 @@ class MessagesTest extends TestCase
             ->where('user_id', $user->id)
             ->count());
 
-        Event::assertDispatched(\App\Events\CommentReactionUpdated::class);
+        Event::assertDispatched(CommentReactionUpdated::class);
     }
 
     public function test_user_can_only_have_one_reaction_per_comment(): void
@@ -1595,7 +1635,7 @@ class MessagesTest extends TestCase
             'page_id' => $page->id,
         ]);
 
-        Event::assertDispatched(\App\Events\MessageCreated::class);
+        Event::assertDispatched(MessageCreated::class);
     }
 
     public function test_page_share_creates_message_with_correct_text(): void
@@ -1653,7 +1693,7 @@ class MessagesTest extends TestCase
 
         $this->post(route('pages.share', $page));
 
-        Event::assertDispatched(\App\Events\MessageCreated::class, function ($event) use ($user, $page, $book) {
+        Event::assertDispatched(MessageCreated::class, function ($event) use ($user, $page, $book) {
             return $event->message->user_id === $user->id &&
                    $event->message->page_id === $page->id &&
                    $event->message->message === __('messages.page_shared', ['media' => 'picture', 'book' => $book->title]);
