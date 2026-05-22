@@ -753,8 +753,31 @@ const stripHtml = (html) => {
   return tmp.textContent || tmp.innerText || "";
 };
 
+const formatMentionsForSpeech = (text) => {
+  if (!text) return "";
+
+  let formatted = text;
+
+  if (props.users?.length) {
+    const sortedUsers = [...props.users].sort(
+      (a, b) => b.name.length - a.name.length
+    );
+
+    for (const user of sortedUsers) {
+      const escapedName = user.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const pattern = new RegExp(
+        `@${escapedName}(?=\\s|$|[^\\w\\s>\\n])`,
+        "gi"
+      );
+      formatted = formatted.replace(pattern, user.name);
+    }
+  }
+
+  return formatted.replace(/@([a-zA-Z0-9_]+)(?!\w)/g, "$1");
+};
+
 const speakMessage = (message) => {
-  const messageText = stripHtml(formatMessage(message.message));
+  const messageText = formatMentionsForSpeech(message.message);
   const username = message.user?.name || "Someone";
   speak(`${username} says ${messageText}`);
 };
@@ -1073,7 +1096,7 @@ const openCommentForm = (messageId) => {
 };
 
 const speakComment = (comment) => {
-  const commentText = comment.comment || "";
+  const commentText = formatMentionsForSpeech(comment.comment || "");
   const username = comment.user?.name || "Someone";
   speak(`${username} says ${commentText}`);
 };

@@ -27,15 +27,23 @@ vi.mock("axios", () => ({
     },
 }));
 
-const { mockPlaySong, mockOpenFlyout } = vi.hoisted(() => ({
+const { mockPlaySong, mockOpenFlyout, mockSpeak } = vi.hoisted(() => ({
     mockPlaySong: vi.fn(),
     mockOpenFlyout: vi.fn(),
+    mockSpeak: vi.fn(),
 }));
 
 vi.mock("@/composables/useMusicPlayer", () => ({
     useMusicPlayer: () => ({
         playSong: mockPlaySong,
         openFlyout: mockOpenFlyout,
+    }),
+}));
+
+vi.mock("@/composables/useSpeechSynthesis", () => ({
+    useSpeechSynthesis: () => ({
+        speak: mockSpeak,
+        speaking: { value: false },
     }),
 }));
 
@@ -405,6 +413,48 @@ describe("MessageTimeline", () => {
             // Check if mention text is present (formatting may vary)
             const html = wrapper.html();
             expect(html).toMatch(/@John/);
+        });
+
+        it("speaks mentions without reading @ as at", () => {
+            const messageWithMention = [
+                {
+                    id: 1,
+                    message: "Hello @John Doe!",
+                    created_at: new Date().toISOString(),
+                    user: { id: 1, name: "Alice" },
+                },
+            ];
+
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: messageWithMention,
+                    users: mockUsers,
+                },
+            });
+
+            wrapper.vm.speakMessage(messageWithMention[0]);
+
+            expect(mockSpeak).toHaveBeenCalledWith(
+                "Alice says Hello John Doe!"
+            );
+        });
+
+        it("speaks comment mentions without reading @ as at", () => {
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: mockMessages,
+                    users: mockUsers,
+                },
+            });
+
+            wrapper.vm.speakComment({
+                comment: "Thanks @John Doe!",
+                user: { id: 2, name: "Bob" },
+            });
+
+            expect(mockSpeak).toHaveBeenCalledWith(
+                "Bob says Thanks John Doe!"
+            );
         });
 
         it("displays messages with full usernames", () => {
