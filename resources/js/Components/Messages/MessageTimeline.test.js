@@ -1261,7 +1261,7 @@ describe("MessageTimeline", () => {
 
             await nextTick();
 
-            const img = wrapper.find("img");
+            const img = wrapper.find('img[alt="Test Song"]');
             expect(img.exists()).toBe(true);
             expect(img.attributes("src")).toBe("https://example.com/song.jpg");
         });
@@ -1302,12 +1302,14 @@ describe("MessageTimeline", () => {
 
             await nextTick();
 
-            const button = wrapper.find("button");
             const songButton = wrapper.findAll("button").find((btn) =>
-                btn.find("img").exists()
+                btn.find('img[alt="Test Song"]').exists()
             );
             expect(songButton).toBeDefined();
-            await songButton.trigger("click");
+            songButton.element.dispatchEvent(
+                new Event("click", { bubbles: true })
+            );
+            await nextTick();
 
             expect(axios.get).toHaveBeenCalledWith("/music.show/42", {
                 headers: { Accept: "application/json" },

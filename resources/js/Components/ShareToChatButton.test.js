@@ -1,4 +1,5 @@
 import ShareToChatButton from "@/Components/ShareToChatButton.vue";
+import UserTagList from "@/Components/UserTagList.vue";
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
@@ -70,20 +71,25 @@ describe("ShareToChatButton song kind", () => {
     });
   });
 
-  it("posts to music.share when share without tag is selected", async () => {
-    const wrapper = mount(ShareToChatButton, {
+  const mountSongShareButton = () =>
+    mount(ShareToChatButton, {
       props: { kind: "song", songId: 5 },
+      global: {
+        stubs: {
+          Teleport: { template: "<div><slot /></div>" },
+        },
+      },
     });
 
-    const shareButton = wrapper.find("button");
-    await shareButton.trigger("click");
+  it("posts to music.share when share without tag is selected", async () => {
+    const wrapper = mountSongShareButton();
+
+    await wrapper.find("button").trigger("click");
     await nextTick();
 
-    const noneButton = wrapper
-      .findAll("button")
-      .find((btn) => btn.text().includes("Share without tag"));
-    expect(noneButton).toBeDefined();
-    await noneButton.trigger("click");
+    const userTagList = wrapper.findComponent(UserTagList);
+    expect(userTagList.exists()).toBe(true);
+    userTagList.vm.$emit("select-none");
     await nextTick();
 
     expect(mockPost).toHaveBeenCalledWith(
@@ -94,18 +100,12 @@ describe("ShareToChatButton song kind", () => {
   });
 
   it("stores once-per-day localStorage key after sharing song", async () => {
-    const wrapper = mount(ShareToChatButton, {
-      props: { kind: "song", songId: 5 },
-    });
+    const wrapper = mountSongShareButton();
 
-    const shareButton = wrapper.find("button");
-    await shareButton.trigger("click");
+    await wrapper.find("button").trigger("click");
     await nextTick();
 
-    const noneButton = wrapper
-      .findAll("button")
-      .find((btn) => btn.text().includes("Share without tag"));
-    await noneButton.trigger("click");
+    wrapper.findComponent(UserTagList).vm.$emit("select-none");
     await nextTick();
 
     const today = new Date().toISOString().split("T")[0];
@@ -113,18 +113,12 @@ describe("ShareToChatButton song kind", () => {
   });
 
   it("closes the music flyout after sharing a song", async () => {
-    const wrapper = mount(ShareToChatButton, {
-      props: { kind: "song", songId: 5 },
-    });
+    const wrapper = mountSongShareButton();
 
-    const shareButton = wrapper.find("button");
-    await shareButton.trigger("click");
+    await wrapper.find("button").trigger("click");
     await nextTick();
 
-    const noneButton = wrapper
-      .findAll("button")
-      .find((btn) => btn.text().includes("Share without tag"));
-    await noneButton.trigger("click");
+    wrapper.findComponent(UserTagList).vm.$emit("select-none");
     await nextTick();
 
     expect(mockCloseFlyout).toHaveBeenCalled();
