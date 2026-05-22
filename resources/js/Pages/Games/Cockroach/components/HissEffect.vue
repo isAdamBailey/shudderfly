@@ -1,5 +1,11 @@
+<script setup>
+defineProps({
+    flipped: { type: Boolean, default: false },
+});
+</script>
+
 <template>
-    <div class="hiss-effect">HISSSSS!</div>
+    <div class="hiss-effect" :class="{ 'hiss-effect-flipped': flipped }">HISSSSS!</div>
 </template>
 
 <style scoped>
@@ -20,6 +26,11 @@
     animation: hissPop 0.85s ease-out forwards;
     z-index: 30;
     white-space: nowrap;
+}
+
+.hiss-effect-flipped {
+    right: auto;
+    left: -10%;
 }
 
 @keyframes hissPop {

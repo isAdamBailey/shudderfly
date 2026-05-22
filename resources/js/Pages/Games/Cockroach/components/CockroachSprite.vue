@@ -1,17 +1,23 @@
 <template>
     <div
         class="cockroach-wrapper"
+        :class="{ fighting: fighting }"
         :style="wrapperStyle"
     >
-        <div class="hit-area head-area" @pointerdown.prevent="onHeadTap($event)"></div>
+        <div
+            v-if="!disabled"
+            class="hit-area head-area"
+            :class="{ 'head-area-flipped': flipped }"
+            @pointerdown.prevent="onHeadTap($event)"
+        ></div>
         <img
             src="/img/cockroach.png"
             alt="Madagascar hissing cockroach"
             class="cockroach-img"
-            :class="{ hissing: isHissing }"
+            :class="{ hissing: isHissing, flipped: flipped }"
             draggable="false"
         />
-        <HissEffect v-if="isHissing" />
+        <HissEffect v-if="isHissing" :flipped="flipped" />
     </div>
 </template>
 
@@ -24,6 +30,9 @@ const props = defineProps({
     y:         { type: Number,  required: true },
     rotation:  { type: Number,  default: 0 },
     isHissing: { type: Boolean, default: false },
+    flipped:   { type: Boolean, default: false },
+    fighting:  { type: Boolean, default: false },
+    disabled:  { type: Boolean, default: false },
 });
 
 const emit = defineEmits(["head-tap"]);
@@ -35,6 +44,7 @@ const wrapperStyle = computed(() => ({
 }));
 
 function onHeadTap(event) {
+    if (props.disabled) return;
     if (navigator.vibrate) {
         navigator.vibrate(30);
     }
@@ -68,6 +78,18 @@ function onHeadTap(event) {
     animation: wiggle 0.15s ease-in-out 5;
 }
 
+.cockroach-img.flipped {
+    transform: scaleX(-1);
+}
+
+.cockroach-wrapper.fighting {
+    animation: fightOscillate 0.12s ease-in-out infinite alternate;
+}
+
+.cockroach-wrapper.fighting .cockroach-img {
+    animation: fightShake 0.08s ease-in-out infinite alternate;
+}
+
 .hit-area {
     position: absolute;
     z-index: 20;
@@ -82,9 +104,33 @@ function onHeadTap(event) {
     border-radius: 50%;
 }
 
+.head-area-flipped {
+    right: auto;
+    left: 0;
+}
+
 @keyframes wiggle {
     0%, 100% { transform: rotate(0deg); }
     25%       { transform: rotate(-4deg) scale(1.03); }
     75%       { transform: rotate(4deg)  scale(1.03); }
+}
+
+@keyframes fightOscillate {
+    0%   { margin-left: -1.5%; }
+    100% { margin-left:  1.5%; }
+}
+
+@keyframes fightShake {
+    0%   { transform: rotate(-6deg) scale(1.05); }
+    100% { transform: rotate( 6deg) scale(1.05); }
+}
+
+.cockroach-wrapper.fighting .cockroach-img.flipped {
+    animation: fightShakeFlipped 0.08s ease-in-out infinite alternate;
+}
+
+@keyframes fightShakeFlipped {
+    0%   { transform: scaleX(-1) rotate(-6deg) scale(1.05); }
+    100% { transform: scaleX(-1) rotate( 6deg) scale(1.05); }
 }
 </style>

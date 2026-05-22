@@ -624,6 +624,7 @@ const formatDate = (dateString) => {
 const GAME_SHARE_SLUG_MARKER = /\uE000g:([a-z0-9-]+)\uE000/g;
 
 const LEGACY_GAME_DISPLAY_NAME_TO_SLUG = {
+  "Cockroach Fight": "cockroach-fight",
   "Costco Pizza Poop": "costco-pizza-poop",
   "Poop Boom": "boom",
   "Cockroach Fart": "cockroach"

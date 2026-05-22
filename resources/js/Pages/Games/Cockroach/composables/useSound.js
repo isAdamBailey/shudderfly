@@ -18,9 +18,9 @@ function getContext() {
 
 export function useSound(fartSoundUrl = "/fart.m4a") {
     async function initAudio() {
-        if (fartBuffer) return;
         const ctx = getContext();
         if (!ctx) return;
+        if (!fartSoundUrl || fartBuffer) return;
         try {
             const res = await fetch(fartSoundUrl);
             if (!res.ok) return;

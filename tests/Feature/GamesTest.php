@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Events\MessageCreated;
 use App\Models\Message;
 use App\Models\SiteSetting;
 use App\Models\User;
@@ -25,13 +26,15 @@ class GamesTest extends TestCase
         $response->assertInertia(
             fn (Assert $page) => $page
                 ->component('Games/Index')
-                ->has('games', 3)
-                ->where('games.0.slug', 'costco-pizza-poop')
-                ->where('games.0.name', 'Costco Pizza Poop')
-                ->where('games.1.slug', 'boom')
-                ->where('games.1.name', 'Poop Boom')
-                ->where('games.2.slug', 'cockroach')
-                ->where('games.2.name', 'Cockroach Fart')
+                ->has('games', 4)
+                ->where('games.0.slug', 'cockroach-fight')
+                ->where('games.0.name', 'Cockroach Fight')
+                ->where('games.1.slug', 'costco-pizza-poop')
+                ->where('games.1.name', 'Costco Pizza Poop')
+                ->where('games.2.slug', 'boom')
+                ->where('games.2.name', 'Poop Boom')
+                ->where('games.3.slug', 'cockroach')
+                ->where('games.3.name', 'Cockroach Fart')
         );
     }
 
@@ -65,6 +68,23 @@ class GamesTest extends TestCase
                 ->has('users')
         );
     }
+
+    public function test_cockroach_fight_game_page_is_displayed(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $response = $this->get(route('games.show', 'cockroach-fight'));
+
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Games/CockroachFight')
+                ->has('users')
+                ->where('fartSoundUrl', asset('fart.m4a'))
+        );
+    }
+
     public function test_costco_pizza_poop_game_page_is_displayed(): void
     {
         /** @var User $user */
@@ -95,6 +115,7 @@ class GamesTest extends TestCase
         $this->get(route('games.show', 'boom'))->assertRedirect(route('login'));
         $this->get(route('games.show', 'cockroach'))->assertRedirect(route('login'));
         $this->get(route('games.show', 'costco-pizza-poop'))->assertRedirect(route('login'));
+        $this->get(route('games.show', 'cockroach-fight'))->assertRedirect(route('login'));
     }
 
     public function test_share_game_score_requires_authentication(): void
@@ -139,7 +160,7 @@ class GamesTest extends TestCase
             'page_id' => null,
         ]);
 
-        Event::assertDispatched(\App\Events\MessageCreated::class);
+        Event::assertDispatched(MessageCreated::class);
     }
 
     public function test_share_game_score_fails_when_messaging_disabled(): void

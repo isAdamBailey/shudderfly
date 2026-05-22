@@ -1,3 +1,9 @@
+export const COCKROACH_FIGHT_INTRO_SCRIPT =
+    "Welcome to Cockroach Fight! Two Madagascar hissing cockroaches face off on opposite sides of the screen. " +
+    "Tap either cockroach's head to make both of them scuttle toward each other. Each tap moves them a little closer " +
+    "with a random wobble. Keep tapping until they collide and start fighting! When they meet, they will shake and " +
+    "jostle in an epic battle. Fewer taps means a higher score and more stars. Good luck!";
+
 export const COCKROACH_INTRO_SCRIPT =
     "Welcome to Cockroach Fart! Here is how to play. You see a big Madagascar hissing cockroach on the screen. " +
     "Tap the cockroach's head to make it hiss. Each hiss moves the cockroach a little bit toward the toilet on " +
