@@ -2,12 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Events\MessageCreated;
 use App\Jobs\IncrementSongReadCount;
+use App\Models\SiteSetting;
 use App\Models\Song;
 use App\Models\User;
+use App\Services\YouTubeService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -223,12 +227,95 @@ class MusicTest extends TestCase
         $response->assertSessionHas('open_song_id', $song->id);
     }
 
+    public function test_share_song_requires_authentication(): void
+    {
+        $song = Song::factory()->create();
+
+        $response = $this->post(route('music.share', $song));
+
+        $response->assertRedirect(route('login'));
+    }
+
+    public function test_share_song_fails_when_messaging_disabled(): void
+    {
+        SiteSetting::updateOrCreate(
+            ['key' => 'messaging_enabled'],
+            ['value' => '0']
+        );
+
+        $user = User::factory()->create();
+        $song = Song::factory()->create(['title' => 'Test Song']);
+        $this->actingAs($user);
+
+        $response = $this->post(route('music.share', $song));
+
+        $response->assertRedirect();
+        $response->assertSessionHasErrors(['message']);
+        $this->assertDatabaseMissing('messages', [
+            'song_id' => $song->id,
+        ]);
+    }
+
+    public function test_authenticated_user_can_share_song(): void
+    {
+        Event::fake();
+
+        SiteSetting::updateOrCreate(
+            ['key' => 'messaging_enabled'],
+            ['value' => '1']
+        );
+
+        $user = User::factory()->create();
+        $song = Song::factory()->create(['title' => 'Amazing Song']);
+        $this->actingAs($user);
+
+        $response = $this->post(route('music.share', $song));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('messages', [
+            'user_id' => $user->id,
+            'song_id' => $song->id,
+            'message' => __('messages.song_shared', ['title' => 'Amazing Song']),
+        ]);
+
+        Event::assertDispatched(MessageCreated::class);
+    }
+
+    public function test_share_song_with_tagged_user(): void
+    {
+        Event::fake();
+
+        SiteSetting::updateOrCreate(
+            ['key' => 'messaging_enabled'],
+            ['value' => '1']
+        );
+
+        $user = User::factory()->create();
+        $taggedUser = User::factory()->create(['name' => 'Bob']);
+        $song = Song::factory()->create(['title' => 'Tagged Song']);
+        $this->actingAs($user);
+
+        $response = $this->post(route('music.share', $song), [
+            'tagged_user_ids' => [$taggedUser->id],
+        ]);
+
+        $response->assertRedirect();
+
+        $this->assertDatabaseHas('messages', [
+            'user_id' => $user->id,
+            'song_id' => $song->id,
+            'message' => __('messages.song_shared', ['title' => 'Tagged Song']).' @'.$taggedUser->name,
+        ]);
+    }
+
     /**
      * Mock the YouTube service to avoid actual API calls during testing
      */
     private function mockYouTubeService(): void
     {
-        $mock = $this->createMock(\App\Services\YouTubeService::class);
+        $mock = $this->createMock(YouTubeService::class);
         $mock->method('syncPlaylist')
             ->willReturn([
                 'success' => true,
@@ -236,6 +323,6 @@ class MusicTest extends TestCase
                 'synced' => 5,
             ]);
 
-        $this->app->instance(\App\Services\YouTubeService::class, $mock);
+        $this->app->instance(YouTubeService::class, $mock);
     }
 }

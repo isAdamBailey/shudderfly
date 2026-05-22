@@ -17,6 +17,7 @@ class Message extends Model
         'user_id',
         'message',
         'page_id',
+        'song_id',
     ];
 
     protected $casts = [
@@ -77,6 +78,14 @@ class Message extends Model
     public function page(): BelongsTo
     {
         return $this->belongsTo(Page::class);
+    }
+
+    /**
+     * Get the song that this message shares (if any).
+     */
+    public function song(): BelongsTo
+    {
+        return $this->belongsTo(Song::class);
     }
 
     /**

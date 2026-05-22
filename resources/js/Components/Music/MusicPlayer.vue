@@ -104,56 +104,64 @@
                     </div>
 
                     <!-- Playback Controls -->
-                    <div
-                        class="flex items-center justify-center space-x-4"
-                    >
-                        <button
-                            class="w-12 h-12 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
-                            :disabled="!hasPreviousSong || isLoading"
-                            title="Previous song"
-                            @click="skipToPrevious"
+                    <div class="flex flex-col items-center gap-3">
+                        <div
+                            class="flex items-center justify-center gap-2 sm:gap-4 w-full max-w-xs"
                         >
-                            <i class="ri-skip-back-fill text-2xl"></i>
-                        </button>
+                            <button
+                                class="w-12 h-12 shrink-0 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                                :disabled="!hasPreviousSong || isLoading"
+                                title="Previous song"
+                                @click="skipToPrevious"
+                            >
+                                <i class="ri-skip-back-fill text-2xl"></i>
+                            </button>
 
-                        <button
-                            class="w-12 h-12 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200"
-                            :disabled="isLoading"
-                            title="Rewind 10s"
-                            @click="seekBackward"
-                        >
-                            <i class="ri-skip-back-mini-fill text-2xl"></i>
-                        </button>
+                            <button
+                                class="w-12 h-12 shrink-0 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200"
+                                :disabled="isLoading"
+                                title="Rewind 10s"
+                                @click="seekBackward"
+                            >
+                                <i class="ri-skip-back-mini-fill text-2xl"></i>
+                            </button>
 
-                        <button
-                            class="w-16 h-16 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-all duration-200 shadow-lg"
-                            :disabled="isLoading"
-                            @click="togglePlayPause"
-                        >
-                            <i
-                                v-if="!isPlaying"
-                                class="ri-play-fill text-3xl"
-                            ></i>
-                            <i v-else class="ri-pause-fill text-3xl"></i>
-                        </button>
+                            <button
+                                class="w-16 h-16 shrink-0 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-all duration-200 shadow-lg"
+                                :disabled="isLoading"
+                                @click="togglePlayPause"
+                            >
+                                <i
+                                    v-if="!isPlaying"
+                                    class="ri-play-fill text-3xl"
+                                ></i>
+                                <i v-else class="ri-pause-fill text-3xl"></i>
+                            </button>
 
-                        <button
-                            class="w-12 h-12 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200"
-                            :disabled="isLoading"
-                            title="Forward 10s"
-                            @click="seekForward"
-                        >
-                            <i class="ri-skip-forward-mini-fill text-2xl"></i>
-                        </button>
+                            <button
+                                class="w-12 h-12 shrink-0 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200"
+                                :disabled="isLoading"
+                                title="Forward 10s"
+                                @click="seekForward"
+                            >
+                                <i class="ri-skip-forward-mini-fill text-2xl"></i>
+                            </button>
 
-                        <button
-                            class="w-12 h-12 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
-                            :disabled="!hasNextSong || isLoading"
-                            title="Next song"
-                            @click="skipToNext"
-                        >
-                            <i class="ri-skip-forward-fill text-2xl"></i>
-                        </button>
+                            <button
+                                class="w-12 h-12 shrink-0 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                                :disabled="!hasNextSong || isLoading"
+                                title="Next song"
+                                @click="skipToNext"
+                            >
+                                <i class="ri-skip-forward-fill text-2xl"></i>
+                            </button>
+                        </div>
+
+                        <ShareToChatButton
+                            kind="song"
+                            :song-id="currentSong.id"
+                            wrapper-class="inline-flex shrink-0"
+                        />
                     </div>
                 </div>
             </div>
@@ -201,6 +209,7 @@
 </template>
 
 <script setup>
+import ShareToChatButton from "@/Components/ShareToChatButton.vue";
 import { useMusicPlayer } from "@/composables/useMusicPlayer";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 

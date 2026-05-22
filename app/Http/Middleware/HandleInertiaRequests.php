@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\SiteSetting;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Tightenco\Ziggy\Ziggy;
@@ -67,6 +68,9 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $userArray,
             ],
+            'users' => fn () => $request->user()
+                ? User::select('id', 'name')->orderBy('name')->get()->makeVisible(['id'])
+                : [],
             'unread_notifications_count' => function () use ($request) {
                 if (! $request->user()) {
                     return 0;

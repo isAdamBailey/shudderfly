@@ -4,6 +4,7 @@ import Button from "@/Components/Button.vue";
 import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import UserTagList from "@/Components/UserTagList.vue";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
+import { useMusicPlayer } from "@/composables/useMusicPlayer";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import { router, usePage } from "@inertiajs/vue3";
@@ -13,11 +14,12 @@ const props = defineProps({
   kind: {
     type: String,
     default: "game",
-    validator: (v) => v === "game" || v === "page",
+    validator: (v) => v === "game" || v === "page" || v === "song",
   },
   gameSlug: { type: String, default: undefined },
   score: { type: Number, default: undefined },
   pageId: { type: [Number, String], default: undefined },
+  songId: { type: [Number, String], default: undefined },
   wrapperClass: {
     type: String,
     default: "inline-flex items-center justify-center gap-2",
@@ -27,6 +29,7 @@ const props = defineProps({
 const page = usePage();
 
 const users = computed(() => page.props.users ?? []);
+const { closeFlyout } = useMusicPlayer();
 const { speak } = useSpeechSynthesis();
 const { t } = useTranslations();
 const {
@@ -60,8 +63,12 @@ const canShare = computed(() => {
   return messagingEnabled.value && Boolean(page.props.auth?.user);
 });
 
+const hasDailyShareLimit = computed(() => {
+  return props.kind === "page" || props.kind === "song";
+});
+
 const isShareDisabled = computed(() => {
-  if (props.kind === "page") {
+  if (hasDailyShareLimit.value) {
     return hasSharedToday.value || sharing.value;
   }
   return sharing.value;
@@ -69,11 +76,14 @@ const isShareDisabled = computed(() => {
 
 const storageKey = () => {
   const today = new Date().toISOString().split("T")[0];
+  if (props.kind === "song") {
+    return `song_share_${props.songId}_${today}`;
+  }
   return `page_share_${props.pageId}_${today}`;
 };
 
 const checkIfSharedToday = () => {
-  if (props.kind !== "page") {
+  if (!hasDailyShareLimit.value) {
     hasSharedToday.value = false;
     return;
   }
@@ -91,9 +101,12 @@ const shareToChat = (taggedUserId = null) => {
   const options = {
     preserveScroll: true,
     onSuccess: () => {
-      if (props.kind === "page") {
+      if (hasDailyShareLimit.value) {
         localStorage.setItem(storageKey(), Date.now().toString());
         hasSharedToday.value = true;
+      }
+      if (props.kind === "song") {
+        closeFlyout();
       }
       sharing.value = false;
     },
@@ -105,6 +118,12 @@ const shareToChat = (taggedUserId = null) => {
   if (props.kind === "page") {
     router.post(
       route("pages.share", props.pageId),
+      { tagged_user_ids: tagged },
+      options
+    );
+  } else if (props.kind === "song") {
+    router.post(
+      route("music.share", props.songId),
       { tagged_user_ids: tagged },
       options
     );
@@ -130,16 +149,44 @@ const toggleShareMenu = () => {
   }
 };
 
+const confirmPrefix = computed(() => {
+  if (props.kind === "song") {
+    return "song";
+  }
+  return "page";
+});
+
+const shareIconTitle = computed(() => {
+  if (hasDailyShareLimit.value && hasSharedToday.value) {
+    return t("already_shared_today");
+  }
+  if (props.kind === "song") {
+    return t("song.share_icon_title");
+  }
+  return t("page.share_icon_title");
+});
+
+const shareAriaLabel = computed(() => {
+  if (hasDailyShareLimit.value && hasSharedToday.value) {
+    return t("already_shared_today");
+  }
+  if (props.kind === "song") {
+    return t("song.share_aria");
+  }
+  return t("page.share_aria");
+});
+
 const confirmThenShare = async (taggedUser, postAction) => {
   if (confirmPending.value) return;
   confirmPending.value = true;
   try {
+    const prefix = confirmPrefix.value;
     const speakPhrase = taggedUser
-      ? t("page.share_confirm_speak_tagged", { username: taggedUser.name })
-      : t("page.share_confirm_speak");
+      ? t(`${prefix}.share_confirm_speak_tagged`, { username: taggedUser.name })
+      : t(`${prefix}.share_confirm_speak`);
     const dialogMessage = taggedUser
-      ? t("page.share_confirm_dialog_tagged", { username: taggedUser.name })
-      : t("page.share_confirm_dialog");
+      ? t(`${prefix}.share_confirm_dialog_tagged`, { username: taggedUser.name })
+      : t(`${prefix}.share_confirm_dialog`);
     const okPromise = askConfirm(dialogMessage);
     speak(speakPhrase);
     const ok = await okPromise;
@@ -224,16 +271,8 @@ onUnmounted(() => {
         type="button"
         :disabled="isShareDisabled || sharing || confirmPending"
         class="h-10 w-10 flex items-center justify-center"
-        :title="
-          props.kind === 'page' && hasSharedToday
-            ? t('already_shared_today')
-            : t('page.share_icon_title')
-        "
-        :aria-label="
-          props.kind === 'page' && hasSharedToday
-            ? t('already_shared_today')
-            : t('page.share_aria')
-        "
+        :title="shareIconTitle"
+        :aria-label="shareAriaLabel"
         @click.stop="toggleShareMenu"
       >
         <i v-if="sharing" class="ri-loader-line text-xl animate-spin"></i>

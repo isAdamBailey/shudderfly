@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\MessageCreated;
 use App\Jobs\IncrementSongReadCount;
+use App\Models\Message;
 use App\Models\SiteSetting;
 use App\Models\Song;
+use App\Models\User;
+use App\Services\UserTaggingService;
 use App\Services\YouTubeService;
 use App\Support\ReadThrottle;
 use Illuminate\Http\JsonResponse;
@@ -16,8 +20,9 @@ class MusicController extends Controller
     /**
      * Create a new controller instance.
      */
-    public function __construct()
-    {
+    public function __construct(
+        protected UserTaggingService $userTaggingService
+    ) {
         $this->middleware(function ($request, $next) {
             $musicEnabled = SiteSetting::where('key', 'music_enabled')->first()?->value ?? true;
 
@@ -164,5 +169,57 @@ class MusicController extends Controller
         }
 
         return response()->json(['success' => true]);
+    }
+
+    public function share(Song $song, Request $request): RedirectResponse
+    {
+        $setting = SiteSetting::where('key', 'messaging_enabled')->first();
+        $messagingEnabled = $setting && ($setting->getAttributes()['value'] ?? $setting->value) === '1';
+
+        if (! $messagingEnabled) {
+            return back()->withErrors(['message' => __('messages.messaging.disabled')]);
+        }
+
+        $validated = $request->validate([
+            'tagged_user_ids' => ['sometimes', 'array'],
+            'tagged_user_ids.*' => ['integer', 'exists:users,id'],
+        ]);
+
+        $taggedUserIds = $validated['tagged_user_ids'] ?? [];
+        if (! is_array($taggedUserIds)) {
+            $taggedUserIds = [];
+        }
+
+        $taggedUser = null;
+        if (! empty($taggedUserIds)) {
+            $taggedUser = User::select('id', 'name')->find($taggedUserIds[0]);
+        }
+
+        $shareMessage = __('messages.song_shared', ['title' => $song->title]);
+        if ($taggedUser) {
+            $shareMessage = $shareMessage.' @'.$taggedUser->name;
+        }
+
+        $message = Message::create([
+            'user_id' => $request->user()->id,
+            'message' => $shareMessage,
+            'song_id' => $song->id,
+        ]);
+
+        $message->load(['song', 'user']);
+
+        if (! empty($taggedUserIds)) {
+            $this->userTaggingService->notifyTaggedUsers(
+                $taggedUserIds,
+                $request->user(),
+                $message,
+                'message'
+            );
+        }
+        event(new MessageCreated($message));
+
+        return redirect()
+            ->to(route('messages.index').'#message-'.$message->id)
+            ->with('success', __('messages.song.shared'));
     }
 }

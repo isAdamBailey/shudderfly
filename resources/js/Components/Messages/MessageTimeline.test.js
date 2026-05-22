@@ -27,6 +27,18 @@ vi.mock("axios", () => ({
     },
 }));
 
+const { mockPlaySong, mockOpenFlyout } = vi.hoisted(() => ({
+    mockPlaySong: vi.fn(),
+    mockOpenFlyout: vi.fn(),
+}));
+
+vi.mock("@/composables/useMusicPlayer", () => ({
+    useMusicPlayer: () => ({
+        playSong: mockPlaySong,
+        openFlyout: mockOpenFlyout,
+    }),
+}));
+
 vi.mock("@/composables/useConfirmDialog", () => {
     const { ref } = require("vue");
     return {
@@ -119,6 +131,7 @@ vi.mock("@/composables/useTranslations", () => ({
                 "message.reactions": "reactions",
                 "message.loading": "Loading...",
                 "message.shared_page": "Shared page",
+                "message.shared_song": "Shared song",
                 "message.start_conversation": "Be the first to reply!",
                 "message.show_more_comments": "Show :count more",
                 "message.show_less_comments": "Show less",
@@ -1169,6 +1182,92 @@ describe("MessageTimeline", () => {
             expect(img.attributes("src")).toBe(
                 "https://example.com/poster.jpg"
             );
+        });
+    });
+
+    describe("Song sharing", () => {
+        it("displays song thumbnail when message has song_id and song", async () => {
+            const mockMessages = [
+                {
+                    id: 1,
+                    message: "Listen to this song: Test Song",
+                    created_at: new Date().toISOString(),
+                    user: { id: 1, name: "Alice" },
+                    song_id: 42,
+                    song: {
+                        id: 42,
+                        title: "Test Song",
+                        thumbnail_high: "https://example.com/song.jpg",
+                    },
+                },
+            ];
+
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: mockMessages,
+                    users: mockUsers,
+                },
+            });
+
+            await nextTick();
+
+            const img = wrapper.find("img");
+            expect(img.exists()).toBe(true);
+            expect(img.attributes("src")).toBe("https://example.com/song.jpg");
+        });
+
+        it("plays shared song when thumbnail is clicked", async () => {
+            const axios = (await import("axios")).default;
+            axios.get.mockResolvedValueOnce({
+                data: {
+                    song: {
+                        id: 42,
+                        title: "Test Song",
+                        youtube_video_id: "abc123",
+                    },
+                },
+            });
+
+            const mockMessages = [
+                {
+                    id: 1,
+                    message: "Listen to this song: Test Song",
+                    created_at: new Date().toISOString(),
+                    user: { id: 1, name: "Alice" },
+                    song_id: 42,
+                    song: {
+                        id: 42,
+                        title: "Test Song",
+                        thumbnail_default: "https://example.com/song-default.jpg",
+                    },
+                },
+            ];
+
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: mockMessages,
+                    users: mockUsers,
+                },
+            });
+
+            await nextTick();
+
+            const button = wrapper.find("button");
+            const songButton = wrapper.findAll("button").find((btn) =>
+                btn.find("img").exists()
+            );
+            expect(songButton).toBeDefined();
+            await songButton.trigger("click");
+
+            expect(axios.get).toHaveBeenCalledWith("/music.show/42", {
+                headers: { Accept: "application/json" },
+            });
+            expect(mockPlaySong).toHaveBeenCalledWith({
+                id: 42,
+                title: "Test Song",
+                youtube_video_id: "abc123",
+            });
+            expect(mockOpenFlyout).toHaveBeenCalled();
         });
     });
 });

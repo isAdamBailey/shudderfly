@@ -21,6 +21,14 @@ const mockGetSavedPlaybackState = vi.fn(() => null);
 const mockPlayNextSong = vi.fn();
 const mockPlayPreviousSong = vi.fn();
 
+vi.mock("@/Components/ShareToChatButton.vue", () => ({
+  default: {
+    name: "ShareToChatButton",
+    template: '<div class="share-stub" />',
+    props: ["kind", "songId", "wrapperClass"],
+  },
+}));
+
 vi.mock("@/composables/useMusicPlayer", () => ({
   useMusicPlayer: () => ({
     currentSong: computed(() => mockCurrentSong.value),
@@ -411,5 +419,16 @@ describe("MusicPlayer", () => {
 
     const controls = wrapper.find(".justify-center");
     expect(controls.exists()).toBe(true);
+  });
+
+  it("renders ShareToChatButton for current song", async () => {
+    mockCurrentSong.value = mockSong;
+    wrapper = mount(MusicPlayer);
+    await nextTick();
+
+    const share = wrapper.findComponent({ name: "ShareToChatButton" });
+    expect(share.exists()).toBe(true);
+    expect(share.props("kind")).toBe("song");
+    expect(share.props("songId")).toBe(mockSong.id);
   });
 });

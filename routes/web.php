@@ -79,6 +79,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/music', [MusicController::class, 'index'])->name('music.index');
     Route::get('/music/{song}', [MusicController::class, 'show'])->name('music.show');
     Route::post('/music/{song}/increment-read-count', [MusicController::class, 'incrementReadCount'])->name('music.increment-read-count');
+    Route::post('/music/{song}/share', [MusicController::class, 'share'])->name('music.share');
 
     Route::get('/sounds', [SoundsController::class, 'index'])->name('sounds.index');
 

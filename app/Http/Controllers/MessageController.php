@@ -8,6 +8,7 @@ use App\Models\SiteSetting;
 use App\Models\User;
 use App\Services\PushNotificationService;
 use App\Services\UserTaggingService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -37,7 +38,7 @@ class MessageController extends Controller
             ]);
         }
 
-        $messages = Message::with(['user', 'page', 'reactions.user', 'comments.user', 'comments.reactions.user'])
+        $messages = Message::with(['user', 'page', 'song', 'reactions.user', 'comments.user', 'comments.reactions.user'])
             ->whereDoesntHave('page', fn ($query) => $query->where('blocked', true))
             ->recent()
             ->withinRetentionPeriod()
@@ -72,9 +73,9 @@ class MessageController extends Controller
     /**
      * Get a specific message by ID.
      */
-    public function show(Message $message): \Illuminate\Http\JsonResponse
+    public function show(Message $message): JsonResponse
     {
-        $message->load(['user', 'page', 'reactions.user', 'comments.user', 'comments.reactions.user']);
+        $message->load(['user', 'page', 'song', 'reactions.user', 'comments.user', 'comments.reactions.user']);
 
         if ($message->page?->blocked) {
             return response()->json(['message' => 'Not found'], 404);
