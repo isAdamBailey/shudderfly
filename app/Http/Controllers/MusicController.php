@@ -206,8 +206,6 @@ class MusicController extends Controller
             'song_id' => $song->id,
         ]);
 
-        $message->load(['song', 'user']);
-
         if (! empty($taggedUserIds)) {
             $this->userTaggingService->notifyTaggedUsers(
                 $taggedUserIds,
@@ -216,6 +214,8 @@ class MusicController extends Controller
                 'message'
             );
         }
+
+        $message->load(['song', 'user']);
         event(new MessageCreated($message));
 
         return redirect()

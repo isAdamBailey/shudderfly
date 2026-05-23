@@ -27,7 +27,7 @@ class UserTagged extends Notification implements ShouldBroadcast
      */
     public function __construct(Message|MessageComment $content, User $tagger, string $contentType = 'message')
     {
-        $this->content = $content;
+        $this->content = $content->withoutRelations();
         $this->tagger = $tagger;
         $this->contentType = $contentType;
     }

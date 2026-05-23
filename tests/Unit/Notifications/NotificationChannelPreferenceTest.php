@@ -4,6 +4,7 @@ namespace Tests\Unit\Notifications;
 
 use App\Models\Message;
 use App\Models\MessageComment;
+use App\Models\Song;
 use App\Models\User;
 use App\Notifications\MessageCommented;
 use App\Notifications\UserTagged;
@@ -66,5 +67,21 @@ class NotificationChannelPreferenceTest extends TestCase
         $channels = (new UserTagged($message, $tagger, 'message'))->via($notifiable);
 
         $this->assertNotContains('mail', $channels);
+    }
+
+    public function test_user_tagged_can_be_queued_after_message_has_song_loaded(): void
+    {
+        $tagger = User::factory()->create();
+        $song = Song::factory()->create();
+        $message = Message::factory()->for($tagger)->create(['song_id' => $song->id]);
+        $message->load(['song', 'user']);
+
+        $notification = new UserTagged($message, $tagger, 'message');
+
+        /** @var UserTagged $restored */
+        $restored = unserialize(serialize($notification));
+
+        $this->assertSame($message->id, $restored->content->id);
+        $this->assertFalse($restored->content->relationLoaded('song'));
     }
 }

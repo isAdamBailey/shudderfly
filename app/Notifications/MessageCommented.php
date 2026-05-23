@@ -27,8 +27,8 @@ class MessageCommented extends Notification implements ShouldBroadcast
      */
     public function __construct(Message $message, MessageComment $comment, User $commenter)
     {
-        $this->message = $message;
-        $this->comment = $comment;
+        $this->message = $message->withoutRelations();
+        $this->comment = $comment->withoutRelations();
         $this->commenter = $commenter;
     }
 
