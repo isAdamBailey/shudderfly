@@ -26,12 +26,13 @@
         }
         .cell {
             position: absolute;
+            background-color: white;
             overflow: hidden;
         }
         .cell img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
             display: block;
         }
     </style>

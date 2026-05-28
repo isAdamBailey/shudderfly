@@ -169,9 +169,10 @@ class GenerateCollagePdf implements ShouldQueue
             // Use the specific config if available, otherwise use the largest available config
             $gridConfig = $gridConfigs[$actualImageCount] ?? $gridConfigs[array_key_last($gridConfigs)];
 
-            // Calculate cell dimensions in inches (8in x 10.25in usable area) once
-            $cellWidthInches = 8 / $gridConfig['cols'];
-            $cellHeightInches = 10.25 / $gridConfig['rows'];
+            // Calculate cell dimensions in inches matching the PDF template (8in x 10.25in with 0.05in gaps)
+            $pdfGap = 0.05;
+            $cellWidthInches = (8 - ($gridConfig['cols'] - 1) * $pdfGap) / $gridConfig['cols'];
+            $cellHeightInches = (10.25 - ($gridConfig['rows'] - 1) * $pdfGap) / $gridConfig['rows'];
 
             // Convert to pixels at 100 DPI once
             $targetWidth = (int) ($cellWidthInches * 100);
@@ -186,8 +187,8 @@ class GenerateCollagePdf implements ShouldQueue
                 // Optimize image before converting to base64
                 $image = Image::read($localPath);
 
-                // Resize image to the pre-calculated target dimensions
-                $image->resize($targetWidth, $targetHeight);
+                // Fit image within cell dimensions while preserving aspect ratio, padding with white
+                $image->contain($targetWidth, $targetHeight, 'ffffff');
 
                 // Optimize image quality and convert to JPG
                 $encoded = $image->toJpeg(80);
@@ -213,7 +214,7 @@ class GenerateCollagePdf implements ShouldQueue
             $localImages = $processedImages;
 
             // Configure DomPDF for better performance and smaller size
-            $pdf = PDF::setOptions([
+            $pdf = Pdf::setOptions([
                 'isHtml5ParserEnabled' => true,
                 'isRemoteEnabled' => true,
                 'isPhpEnabled' => true,
@@ -224,7 +225,7 @@ class GenerateCollagePdf implements ShouldQueue
             ])->loadView('pdfs.collage', [
                 'collage' => $this->collage,
                 'localImages' => $localImages,
-                'printedAt' => Carbon::now(config('app.timezone'))->format('M j, Y h:ia'),
+                'printedAt' => Carbon::now(config('app.timezone'))->format('F Y'),
             ]);
 
             // Create collages directory if it doesn't exist
@@ -400,14 +401,22 @@ class GenerateCollagePdf implements ShouldQueue
                 $x = $col * ($cellWidth + $gap);
                 $y = $row * ($cellHeight + $gap);
 
-                // Resize and copy image to canvas (cast to integers for consistency)
+                // Scale image to fit within cell while preserving aspect ratio, centered with white background
+                $srcWidth = imagesx($image);
+                $srcHeight = imagesy($image);
+                $scale = min($cellWidth / $srcWidth, $cellHeight / $srcHeight);
+                $drawWidth = (int) ($srcWidth * $scale);
+                $drawHeight = (int) ($srcHeight * $scale);
+                $drawX = (int) ($x + ($cellWidth - $drawWidth) / 2);
+                $drawY = (int) ($y + ($cellHeight - $drawHeight) / 2);
+
                 imagecopyresampled(
                     $canvas,
                     $image,
-                    (int) $x, (int) $y,
+                    $drawX, $drawY,
                     0, 0,
-                    (int) $cellWidth, (int) $cellHeight,
-                    imagesx($image), imagesy($image)
+                    $drawWidth, $drawHeight,
+                    $srcWidth, $srcHeight
                 );
 
                 // Clean up
