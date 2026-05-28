@@ -82,6 +82,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/music/{song}/share', [MusicController::class, 'share'])->name('music.share');
 
     Route::get('/sounds', [SoundsController::class, 'index'])->name('sounds.index');
+    Route::patch('/sounds/{sound}/block', [SoundsController::class, 'block'])->name('sounds.block');
 
     Route::get('/api/youtube-iframe-api', [YouTubeProxyController::class, 'iframeApi'])->name('youtube.iframe-api');
 

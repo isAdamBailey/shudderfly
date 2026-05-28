@@ -6,6 +6,7 @@ use App\Models\Book;
 use App\Models\Category;
 use App\Models\Page;
 use App\Models\Song;
+use App\Models\Sound;
 use App\Models\User;
 use App\Services\PopularityService;
 use Inertia\Inertia;
@@ -22,8 +23,8 @@ class DashboardController extends Controller
         return Inertia::render('Dashboard/Index', [
             'users' => User::all(),
             'categories' => Category::withCount('books')->get(),
-            'blockedPagesCount' => auth()->user()->can('edit pages')
-                ? Page::where('blocked', true)->count()
+            'blockedCount' => auth()->user()->can('edit pages')
+                ? Page::where('blocked', true)->count() + Sound::where('blocked', true)->count()
                 : 0,
             'stats' => Inertia::defer(fn () => [
                 'numberOfBooks' => Book::count(),

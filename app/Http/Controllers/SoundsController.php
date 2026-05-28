@@ -9,6 +9,7 @@ use App\Models\SiteSetting;
 use App\Models\Sound;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Redirector;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -32,7 +33,7 @@ class SoundsController extends Controller
     {
         $sort = $request->query('sort', 'date_added');
 
-        $soundsQuery = Sound::query();
+        $soundsQuery = Sound::notBlocked();
 
         if ($sort === 'alphabetical') {
             $soundsQuery->orderBy('title');
@@ -70,6 +71,13 @@ class SoundsController extends Controller
         ]);
 
         return back()->with('success', __('messages.sound.updated'));
+    }
+
+    public function block(Sound $sound): Redirector|RedirectResponse
+    {
+        $sound->update(['blocked' => true]);
+
+        return redirect(route('sounds.index'))->with('success', __('messages.sound.blocked'));
     }
 
     public function destroy(Sound $sound): RedirectResponse

@@ -15,13 +15,16 @@ use App\Models\Message;
 use App\Models\Page;
 use App\Models\SiteSetting;
 use App\Models\Song;
+use App\Models\Sound;
 use App\Models\User;
 use App\Services\PopularityService;
 use App\Services\UserTaggingService;
 use App\Services\VoiceSearchService;
+use App\Support\ReadThrottle;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Routing\Redirector;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -281,7 +284,7 @@ class PageController extends Controller
         // Get filtered items with pagination
         $result = $this->getFilteredItems($pagesQuery, $songsQuery, $filter, $perPage, $currentPage);
 
-        $photos = new \Illuminate\Pagination\LengthAwarePaginator(
+        $photos = new LengthAwarePaginator(
             $result['items'],
             $result['total'],
             $perPage,
@@ -315,12 +318,12 @@ class PageController extends Controller
 
         if ($canIncrement) {
             // Per-actor throttle: only count one view per user/session/IP per 5 minutes (cache only)
-            $cacheKey = \App\Support\ReadThrottle::cacheKey('page', $page->id, $request);
+            $cacheKey = ReadThrottle::cacheKey('page', $page->id, $request);
             $throttleSeconds = 5 * 60;
-            $fingerprint = \App\Support\ReadThrottle::fingerprint($request);
+            $fingerprint = ReadThrottle::fingerprint($request);
             try {
                 if (Cache::add($cacheKey, 1, now()->addSeconds($throttleSeconds))) {
-                    \App\Support\ReadThrottle::dispatchJob(new IncrementPageReadCount($page, $fingerprint));
+                    ReadThrottle::dispatchJob(new IncrementPageReadCount($page, $fingerprint));
                 }
             } catch (\Throwable $e) {
                 // If cache is unavailable/misconfigured, skip increment to avoid inflation
@@ -676,8 +679,10 @@ class PageController extends Controller
 
     public function unblockAll(Request $request): Redirector|RedirectResponse|JsonResponse
     {
-        $count = Page::where('blocked', true)->update(['blocked' => false]);
-        $message = __('messages.page.unblocked_all', ['count' => $count]);
+        $pageCount = Page::where('blocked', true)->update(['blocked' => false]);
+        $soundCount = Sound::where('blocked', true)->update(['blocked' => false]);
+        $total = $pageCount + $soundCount;
+        $message = __('messages.unblocked_all', ['count' => $total]);
 
         if ($request->header('X-Inertia')) {
             return redirect()->back()->with('success', $message);

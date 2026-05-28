@@ -15,7 +15,17 @@ class Sound extends Model
         'title',
         'emoji',
         'audio_path',
+        'blocked',
     ];
+
+    protected $casts = [
+        'blocked' => 'boolean',
+    ];
+
+    public function scopeNotBlocked($query)
+    {
+        return $query->where('blocked', false);
+    }
 
     public static function urlForPath(string $path): string
     {

@@ -8,6 +8,7 @@ import TextInput from "@/Components/TextInput.vue";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { usePermissions } from "@/composables/permissions";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { useTranslations } from "@/composables/useTranslations";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, router, useForm } from "@inertiajs/vue3";
 import { computed, onBeforeUnmount, ref } from "vue";
@@ -38,6 +39,7 @@ const soundModalPanelClass =
 
 const { canEditPages } = usePermissions();
 const { speak, stopSpeech } = useSpeechSynthesis();
+const { t } = useTranslations();
 const props = defineProps({
     sounds: {
         type: Array,
@@ -173,6 +175,17 @@ async function deleteSound(sound) {
     });
 }
 
+async function blockSound(sound) {
+    if (playingId.value === sound.id) stopAudio();
+
+    const okPromise = askConfirm(t("sound.block_confirm_dialog", { title: sound.title }));
+    speak(t("sound.block_confirm_speak", { title: sound.title }));
+    const ok = await okPromise;
+    if (!ok) return;
+
+    router.patch(route("sounds.block", sound.id));
+}
+
 function speakSoundTitle(sound) {
     stopSpeech();
     speak(sound.title);
@@ -294,6 +307,15 @@ onBeforeUnmount(() => {
                                 >
                                     <i class="ri-speak-fill text-lg text-sky-400" aria-hidden="true"></i>
                                     Speak title
+                                </button>
+                                <button
+                                    type="button"
+                                    role="menuitem"
+                                    :class="[soundMenuItemClass, 'border-t border-gray-600/80 text-orange-300']"
+                                    @click="blockSound(sound)"
+                                >
+                                    <i class="ri-forbid-line text-lg" aria-hidden="true"></i>
+                                    Block sound
                                 </button>
                                 <button
                                     v-if="canEditPages"

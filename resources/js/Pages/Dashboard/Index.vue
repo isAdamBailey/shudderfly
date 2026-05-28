@@ -19,7 +19,7 @@ defineProps({
     stats: { type: [Object, Function], default: () => ({}) },
     categories: { type: Array, default: () => [] },
     adminSettings: { type: Array, default: () => [] },
-    blockedPagesCount: { type: Number, default: 0 },
+    blockedCount: { type: Number, default: 0 },
 });
 
 const buildTimestamp = __BUILD_TIMESTAMP__;
@@ -46,7 +46,7 @@ const unblockAllPages = async () => {
         );
         setFlashMessage("success", data.message);
         router.reload({
-            only: ["blockedPagesCount"],
+            only: ["blockedCount"],
             preserveScroll: true,
             async: true,
         });
@@ -79,12 +79,12 @@ const unblockAllPages = async () => {
                         <Accordion :title="t('dashboard.unblock')">
                             <div class="space-y-3">
                                 <p class="text-gray-900 dark:text-gray-100">
-                                    {{ t("dashboard.blocked_pages_count", { count: blockedPagesCount }) }}
+                                    {{ t("dashboard.blocked_pages_count", { count: blockedCount }) }}
                                 </p>
                                 <div class="flex items-center gap-2">
                                     <Button
                                         type="button"
-                                        :disabled="unlockingBlockedPages || blockedPagesCount === 0"
+                                        :disabled="unlockingBlockedPages || blockedCount === 0"
                                         :aria-label="t('dashboard.unlock_all_blocked_pages_aria')"
                                         @click="unblockAllPages"
                                     >
