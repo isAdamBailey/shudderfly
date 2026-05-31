@@ -25,6 +25,7 @@ class CleanupStalePages extends Command
         Page::query()
             ->where('read_count', 0)
             ->where('created_at', '<', $cutoffDate)
+            ->whereNotIn('id', Book::query()->whereNotNull('cover_page')->select('cover_page'))
             ->select(['id', 'book_id', 'media_path', 'media_poster'])
             ->chunkById(100, function ($pages) use (&$bookIds, &$deletedPages, &$deletedAssets) {
                 foreach ($pages as $page) {
