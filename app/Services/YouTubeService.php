@@ -14,11 +14,14 @@ class YouTubeService
 
     private $playlistId;
 
+    private $oauthAccessToken;
+
     private const BATCH_SIZE = 50; // YouTube allows up to 50 video IDs per request
 
     public function __construct()
     {
         $this->apiKey = config('services.youtube.api_key');
+        $this->oauthAccessToken = config('services.youtube.oauth_access_token');
 
         // Get playlist ID from site settings
         $playlistIdSetting = SiteSetting::where('key', 'youtube_playlist_id')->first();
@@ -357,7 +360,14 @@ class YouTubeService
             ];
         }
 
-        $playlistItemId = $this->findPlaylistItemId($videoId);
+        if (! $this->oauthAccessToken) {
+            return [
+                'success' => true,
+                'message' => 'Skipped YouTube playlist removal (OAuth token not configured)',
+            ];
+        }
+
+        $playlistItemId = $this->findPlaylistItemId($videoId, $this->oauthAccessToken);
 
         if (! $playlistItemId) {
             return [
@@ -367,12 +377,11 @@ class YouTubeService
         }
 
         try {
-            $response = Http::withHeaders([
+            $response = Http::withToken($this->oauthAccessToken)->withHeaders([
                 'User-Agent' => 'Laravel-App/1.0',
                 'Accept' => 'application/json',
             ])->delete('https://www.googleapis.com/youtube/v3/playlistItems', [
                 'id' => $playlistItemId,
-                'key' => $this->apiKey,
             ]);
 
             if ($response->successful()) {
@@ -398,12 +407,12 @@ class YouTubeService
         }
     }
 
-    private function findPlaylistItemId(string $videoId): ?string
+    private function findPlaylistItemId(string $videoId, ?string $accessToken = null): ?string
     {
         $nextPageToken = null;
 
         do {
-            $response = $this->getPlaylistItems($nextPageToken);
+            $response = $this->getPlaylistItems($nextPageToken, $accessToken);
 
             if (! $response->successful()) {
                 return null;
@@ -467,22 +476,31 @@ class YouTubeService
     /**
      * Get playlist items from YouTube API
      */
-    private function getPlaylistItems($pageToken = null)
+    private function getPlaylistItems($pageToken = null, ?string $accessToken = null)
     {
         $params = [
             'part' => 'snippet,contentDetails',
             'playlistId' => $this->playlistId,
-            'key' => $this->apiKey,
             'maxResults' => 50,
         ];
+
+        if (! $accessToken) {
+            $params['key'] = $this->apiKey;
+        }
 
         if ($pageToken) {
             $params['pageToken'] = $pageToken;
         }
 
-        return Http::withHeaders([
+        $request = Http::withHeaders([
             'User-Agent' => 'Laravel-App/1.0',
             'Accept' => 'application/json',
-        ])->get('https://www.googleapis.com/youtube/v3/playlistItems', $params);
+        ]);
+
+        if ($accessToken) {
+            $request = $request->withToken($accessToken);
+        }
+
+        return $request->get('https://www.googleapis.com/youtube/v3/playlistItems', $params);
     }
 }

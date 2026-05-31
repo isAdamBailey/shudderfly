@@ -32,6 +32,7 @@ return [
 
     'youtube' => [
         'api_key' => env('YOUTUBE_API_KEY'),
+        'oauth_access_token' => env('YOUTUBE_OAUTH_ACCESS_TOKEN'),
     ],
 
     'webpush' => [
