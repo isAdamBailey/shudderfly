@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use ProtoneMedia\LaravelFFMpeg\Exporters\EncodingException;
 use ProtoneMedia\LaravelFFMpeg\Support\FFMpeg;
+use Symfony\Component\Process\Process;
 use Throwable;
 
 class StoreVideo implements ShouldQueue
@@ -69,6 +70,8 @@ class StoreVideo implements ShouldQueue
 
     public function handle(): void
     {
+        $shouldDeleteSourceFile = false;
+
         // Validate that models still exist if provided
         if ($this->book && ! $this->book->exists) {
             Log::warning('Book model no longer exists, skipping job', [
@@ -164,7 +167,15 @@ class StoreVideo implements ShouldQueue
                 throw new \RuntimeException('Failed to copy video file to temp location');
             }
 
-            $media = FFMpeg::fromDisk('local')->open($this->filePath);
+            try {
+                $media = FFMpeg::fromDisk('local')->open($this->filePath);
+            } catch (Throwable $probeException) {
+                if ($this->isNonRetryableProcessingError($probeException)) {
+                    throw new \RuntimeException('Invalid video file format or corrupted video data.', previous: $probeException);
+                }
+
+                throw $probeException;
+            }
 
             $videoStream = $media->getVideoStream();
             if (! $videoStream) {
@@ -246,7 +257,7 @@ class StoreVideo implements ShouldQueue
                 return $value !== null;
             });
 
-            $process = new \Symfony\Component\Process\Process(['ffmpeg', ...$ffmpegParams]);
+            $process = new Process(['ffmpeg', ...$ffmpegParams]);
             $process->setTimeout(1800);
             $process->setIdleTimeout(1800);
             $process->setOptions([
@@ -419,6 +430,8 @@ class StoreVideo implements ShouldQueue
                     ]);
                 }
 
+                $shouldDeleteSourceFile = true;
+
             } catch (Throwable $e) {
                 Log::error('Failed to upload video to S3', [
                     'exception' => $e->getMessage(),
@@ -471,6 +484,12 @@ class StoreVideo implements ShouldQueue
 
             // Retry unexpected errors unless we've hit max attempts
             if ($this->attempts() < $this->tries) {
+                if ($this->isNonRetryableProcessingError($e)) {
+                    $this->fail($e);
+
+                    return;
+                }
+
                 throw $e;
             }
             $this->fail($e);
@@ -487,7 +506,7 @@ class StoreVideo implements ShouldQueue
                 }
             }
 
-            if (Storage::disk('local')->exists($this->filePath)) {
+            if ($shouldDeleteSourceFile && Storage::disk('local')->exists($this->filePath)) {
                 Storage::disk('local')->delete($this->filePath);
             }
         }
@@ -513,6 +532,18 @@ class StoreVideo implements ShouldQueue
             default:
                 return $value;
         }
+    }
+
+    private function isNonRetryableProcessingError(Throwable $exception): bool
+    {
+        $message = strtolower($exception->getMessage());
+
+        return str_contains($message, 'unable to probe')
+            || str_contains($message, 'invalid data found')
+            || str_contains($message, 'invalid video file format')
+            || str_contains($message, 'corrupted video data')
+            || str_contains($message, 'no video stream found')
+            || str_contains($message, 'invalid video dimensions');
     }
 
     public function middleware(): array
