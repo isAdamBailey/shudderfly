@@ -27,6 +27,11 @@ const updates = [
     title: "Black Circles",
     href: "https://records.adambailey.io/",
     description: "New app to see and hear dads music!"
+  },
+  {
+    title: "Movie Cast",
+    href: "https://movie-cast.adambailey.io/",
+    description: "New app to see and hear movie casts!"
   }
 ];
 
