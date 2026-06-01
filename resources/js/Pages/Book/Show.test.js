@@ -362,4 +362,47 @@ describe("Book/Show.vue", () => {
       expect(wrapper.vm.selectedPages).toEqual(newSelection);
     });
   });
+
+  it("shows movie cast link when category is movies", async () => {
+    wrapper.unmount();
+    wrapper = mount(Show, {
+      props: {
+        book: {
+          ...book,
+          title: "Toy Story",
+          slug: "toy-story",
+          category: { name: "movies" }
+        },
+        pages,
+        authors,
+        categories,
+        books
+      },
+      global: {
+        mocks: {
+          $page: {
+            props: {
+              auth: { user: { permissions_list: [] } },
+              search: null
+            }
+          }
+        }
+      }
+    });
+
+    const movieLink = wrapper
+      .findAllComponents({ name: "Link" })
+      .find((item) => item.props("href")?.includes("movie-cast"));
+
+    expect(movieLink).toBeDefined();
+    expect(movieLink.props("href")).toBe("/movie-cast?title=Toy+Story");
+  });
+
+  it("does not show movie cast link for non-movies categories", () => {
+    const movieLinks = wrapper
+      .findAllComponents({ name: "Link" })
+      .filter((item) => item.props("href")?.includes("movie-cast"));
+
+    expect(movieLinks).toHaveLength(0);
+  });
 });

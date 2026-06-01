@@ -91,6 +91,26 @@ export const ROUTE_MAPPINGS = {
     "games.share-score": (params) => `/games/${params}/share-score`,
     "music.share": (params) => `/music/${params}/share`,
     "music.show": (params) => `/music/${params}`,
+    "movie-cast.index": (params) => {
+        if (params?.title || params?.movieId) {
+            const query = new URLSearchParams();
+            if (params?.title) {
+                query.set("title", params.title);
+            }
+            if (params?.movieId != null) {
+                query.set("movieId", String(params.movieId));
+            }
+            return `/movie-cast?${query.toString()}`;
+        }
+
+        return "/movie-cast";
+    },
+    "movie-cast.search": "/api/movie-cast/search",
+    "movie-cast.credits": (params) => `/api/movie-cast/${params}/credits`,
+    "movie-cast.details": (params) => `/api/movie-cast/${params}/details`,
+    "movie-cast.favorites.store": "/movie-cast/favorites",
+    "movie-cast.favorites.destroy": (params) => `/movie-cast/favorites/${params}`,
+    "movie-cast.share": "/movie-cast/share",
 };
 
 export const createRouteMock = () =>

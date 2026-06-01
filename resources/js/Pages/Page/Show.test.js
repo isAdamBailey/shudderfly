@@ -15,6 +15,10 @@ global.route = vi.fn((name, params) => {
   if (name === "pages.show" && params?.page != null) {
     return `/pages/${params.page}`;
   }
+  if (name === "movie-cast.index") {
+    const title = params?.title ? `?title=${encodeURIComponent(params.title)}` : "";
+    return `/movie-cast${title}`;
+  }
   return `/${name}`;
 });
 
@@ -508,5 +512,58 @@ describe("Page/Show.vue", () => {
 
       expect(router.post).toHaveBeenCalled();
     });
+  });
+
+  it("shows movie cast link when category is movies", async () => {
+    wrapper.unmount();
+    wrapper = mount(Show, {
+      props: {
+        page: {
+          ...page,
+          book: {
+            id: 1,
+            title: "Toy Story",
+            slug: "toy-story",
+            category: { name: "movies" }
+          }
+        },
+        previousPage,
+        nextPage,
+        books,
+        collages,
+        users
+      },
+      global: {
+        stubs: {
+          Teleport: { template: "<div><slot /></div>" }
+        },
+        mocks: {
+          $page: {
+            props: {
+              auth: { user: { permissions_list: [] } },
+              search: null,
+              settings: {
+                messaging_enabled: "1"
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const movieLink = wrapper
+      .findAllComponents({ name: "Link" })
+      .find((item) => item.props("href")?.includes("movie-cast"));
+
+    expect(movieLink).toBeDefined();
+    expect(movieLink.props("href")).toBe("/movie-cast?title=Toy+Story");
+  });
+
+  it("does not show movie cast link for non-movies categories", () => {
+    const movieLinks = wrapper
+      .findAllComponents({ name: "Link" })
+      .filter((item) => item.props("href")?.includes("movie-cast"));
+
+    expect(movieLinks).toHaveLength(0);
   });
 });

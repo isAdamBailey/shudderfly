@@ -18,6 +18,9 @@ class Message extends Model
         'message',
         'page_id',
         'song_id',
+        'movie_tmdb_id',
+        'movie_title',
+        'movie_image_path',
     ];
 
     protected $casts = [

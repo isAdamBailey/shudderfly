@@ -67,6 +67,7 @@ class MessageController extends Controller
             'messages' => $messages,
             'messagingEnabled' => true,
             'users' => $users,
+            'tmdbImageBaseUrl' => config('services.tmdb.base_image_url'),
         ]);
     }
 

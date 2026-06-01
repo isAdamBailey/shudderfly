@@ -18,7 +18,11 @@
       <div v-else class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <!-- Message Timeline -->
         <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg p-6">
-          <MessageTimeline :messages="messages" :users="users" />
+          <MessageTimeline
+            :messages="messages"
+            :users="users"
+            :tmdb-image-base-url="tmdbImageBaseUrl"
+          />
         </div>
       </div>
     </div>
@@ -42,6 +46,10 @@ defineProps({
   users: {
     type: Array,
     default: () => []
+  },
+  tmdbImageBaseUrl: {
+    type: String,
+    default: ""
   }
 });
 </script>

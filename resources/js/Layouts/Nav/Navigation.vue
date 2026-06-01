@@ -47,6 +47,12 @@ const topNavItems = computed(() => {
       href: route("games.index"),
       active: route().current("games.*"),
       icon: "ri-gamepad-line"
+    },
+    {
+      label: "Movies",
+      href: route("movie-cast.index"),
+      active: route().current("movie-cast.*"),
+      icon: "ri-film-line"
     }
   ];
 
@@ -97,6 +103,12 @@ const secondaryMobilePageItems = computed(() => {
       href: route("games.index"),
       active: route().current("games.*"),
       icon: "ri-gamepad-line"
+    },
+    {
+      label: "Movies",
+      href: route("movie-cast.index"),
+      active: route().current("movie-cast.*"),
+      icon: "ri-film-line"
     }
   ];
 

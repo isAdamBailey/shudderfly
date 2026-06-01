@@ -150,4 +150,14 @@ describe("BookCoverCard", () => {
         });
         expect(wrapper.find("i.ri-map-pin-line").exists()).toBe(false);
     });
+
+    it("uses custom href when provided", async () => {
+        await wrapper.setProps({
+            href: "/movie-cast?title=Test%20Book",
+        });
+
+        expect(wrapper.findComponent({ name: "Link" }).props("href")).toBe(
+            "/movie-cast?title=Test%20Book"
+        );
+    });
 });

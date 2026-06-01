@@ -72,12 +72,28 @@
         </Button>
       </div>
 
-      <SpeakButton
-        :disabled="speaking"
-        aria-label="Speak book title and excerpt"
-        icon-class="ri-speak-fill text-lg"
-        @click="readTitleAndExcerpt"
-      />
+      <div class="flex flex-wrap items-center gap-2">
+        <Link
+          v-if="isMoviesCategory"
+          :href="route('movie-cast.index', { title: book.title })"
+        >
+          <Button
+            type="button"
+            class="h-10 w-10 flex items-center justify-center"
+            :title="`Search cast for ${book.title}`"
+            :aria-label="`Search cast for ${book.title}`"
+          >
+            <i class="ri-film-line text-xl" aria-hidden="true"></i>
+          </Button>
+        </Link>
+
+        <SpeakButton
+          :disabled="speaking"
+          aria-label="Speak book title and excerpt"
+          icon-class="ri-speak-fill text-lg"
+          @click="readTitleAndExcerpt"
+        />
+      </div>
     </div>
 
     <!-- Tab Content -->
@@ -330,6 +346,7 @@ const sortLoading = ref(false);
 const isNewest = computed(() => props.sort === "newest");
 const isOldest = computed(() => props.sort === "oldest");
 const isPopular = computed(() => props.sort === "popular");
+const isMoviesCategory = computed(() => props.book.category?.name === "movies");
 
 function sortPages(sortValue) {
   sortLoading.value = true;

@@ -1,6 +1,6 @@
 <template>
   <Link
-    :href="route('books.show', { book: book.slug })"
+    :href="href ?? route('books.show', { book: book.slug })"
     :class="[
       'relative overflow-hidden rounded-lg transition hover:opacity-80 hover:shadow hover:shadow-gray-300/50',
       containerClass,
@@ -96,6 +96,10 @@ const props = defineProps({
   disabled: {
     type: Boolean,
     default: false
+  },
+  href: {
+    type: String,
+    default: null
   }
 });
 

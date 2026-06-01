@@ -330,7 +330,7 @@ class PageController extends Controller
             }
         }
 
-        $page->load(['book', 'book.coverImage']);
+        $page->load(['book', 'book.coverImage', 'book.category']);
 
         $query = Page::notBlocked()->where('book_id', $page->book_id);
 

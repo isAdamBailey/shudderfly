@@ -4,6 +4,16 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 
 global.route = (name, params) => {
+    if (name === "movie-cast.index" && params && typeof params === "object") {
+        const query = new URLSearchParams();
+        if (params.title) {
+            query.set("title", params.title);
+        }
+        if (params.movieId != null) {
+            query.set("movieId", String(params.movieId));
+        }
+        return `/movie-cast?${query.toString()}`;
+    }
     if (params) {
         return `/${name}/${params}`;
     }
@@ -1320,6 +1330,47 @@ describe("MessageTimeline", () => {
                 youtube_video_id: "abc123",
             });
             expect(mockOpenFlyout).toHaveBeenCalled();
+        });
+    });
+
+    describe("Movie sharing", () => {
+        it("links shared movie poster to movie cast page", async () => {
+            const mockMessages = [
+                {
+                    id: 1,
+                    message: "Check out this movie: Toy Story",
+                    created_at: new Date().toISOString(),
+                    user: { id: 1, name: "Alice" },
+                    movie_tmdb_id: 862,
+                    movie_title: "Toy Story",
+                    movie_image_path: "/toy.jpg",
+                },
+            ];
+
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: mockMessages,
+                    users: mockUsers,
+                    tmdbImageBaseUrl: "https://image.tmdb.org/t/p/w200",
+                },
+            });
+
+            await nextTick();
+
+            const link = wrapper
+                .findAllComponents({ name: "Link" })
+                .find((item) => item.props("href")?.includes("movie-cast"));
+
+            expect(link).toBeDefined();
+            expect(link.props("href")).toBe(
+                "/movie-cast?title=Toy+Story&movieId=862"
+            );
+
+            const img = wrapper.find('img[alt="Toy Story"]');
+            expect(img.exists()).toBe(true);
+            expect(img.attributes("src")).toBe(
+                "https://image.tmdb.org/t/p/w200/toy.jpg"
+            );
         });
     });
 });

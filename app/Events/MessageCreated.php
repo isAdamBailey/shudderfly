@@ -57,6 +57,9 @@ class MessageCreated implements ShouldBroadcastNow
             'message' => $this->message->message,
             'page_id' => $this->message->page_id,
             'song_id' => $this->message->song_id,
+            'movie_tmdb_id' => $this->message->movie_tmdb_id,
+            'movie_title' => $this->message->movie_title,
+            'movie_image_path' => $this->message->movie_image_path,
             'created_at' => $this->message->created_at->toIso8601String(),
             'user' => [
                 'id' => $this->message->user->id,

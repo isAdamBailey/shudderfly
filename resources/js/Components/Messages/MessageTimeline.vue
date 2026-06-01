@@ -135,6 +135,33 @@
             />
           </button>
         </div>
+        <div
+          v-if="message.movie_tmdb_id && message.movie_title"
+          class="mt-2 md:mt-3"
+        >
+          <Link
+            :href="getMovieCastHref(message)"
+            class="block rounded-lg overflow-hidden w-full max-w-[200px] sm:max-w-[250px] mt-2"
+            @click.stop
+          >
+            <img
+              v-if="message.movie_image_path && tmdbImageBaseUrl"
+              :src="`${tmdbImageBaseUrl}${message.movie_image_path}`"
+              :alt="message.movie_title || t('message.shared_movie')"
+              class="w-full h-auto max-h-[200px] sm:max-h-[250px] object-cover rounded-lg"
+              loading="lazy"
+            />
+            <div
+              v-else
+              class="flex items-center justify-center w-full max-w-[200px] aspect-[2/3] rounded-lg bg-gray-200 dark:bg-gray-700"
+            >
+              <i
+                class="ri-film-line text-4xl text-gray-500 dark:text-gray-400"
+                aria-hidden="true"
+              ></i>
+            </div>
+          </Link>
+        </div>
         <MessageReactions
           v-if="!readOnly"
           :grouped-reactions="message.grouped_reactions || {}"
@@ -411,6 +438,10 @@ const props = defineProps({
   readOnly: {
     type: Boolean,
     default: false
+  },
+  tmdbImageBaseUrl: {
+    type: String,
+    default: ""
   }
 });
 
@@ -586,6 +617,13 @@ const getPageImageSrc = (page) => {
 
 const getSongThumbnailSrc = (song) => {
   return song.thumbnail_high || song.thumbnail_default;
+};
+
+const getMovieCastHref = (message) => {
+  return route("movie-cast.index", {
+    movieId: message.movie_tmdb_id,
+    title: message.movie_title,
+  });
 };
 
 const playSharedSong = async (song) => {

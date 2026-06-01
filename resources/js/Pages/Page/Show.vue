@@ -142,6 +142,21 @@
           wrapper-class="flex shrink-0 items-center gap-2"
         />
 
+        <Link
+          v-if="isMoviesCategory"
+          :href="route('movie-cast.index', { title: page.book.title })"
+          class="flex shrink-0 items-center gap-2"
+        >
+          <Button
+            type="button"
+            class="h-10 w-10 flex items-center justify-center"
+            :title="`Search cast for ${page.book.title}`"
+            :aria-label="`Search cast for ${page.book.title}`"
+          >
+            <i class="ri-film-line text-xl" aria-hidden="true"></i>
+          </Button>
+        </Link>
+
         <div
           v-if="$page.props.auth.user"
           class="flex shrink-0 items-center gap-2"
@@ -298,6 +313,10 @@ const canSharePage = computed(() => {
     Boolean(props.page.media_path || props.page.video_link || props.page.media_poster) &&
     Boolean(usePage().props.auth?.user)
   );
+});
+
+const isMoviesCategory = computed(() => {
+  return props.page.book?.category?.name === "movies";
 });
 
 const blockPage = async () => {

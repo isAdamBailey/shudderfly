@@ -45,4 +45,10 @@ return [
         'user_overview_model' => env('HUGGINGFACE_USER_OVERVIEW_MODEL', 'Qwen/Qwen2.5-1.5B-Instruct'),
         'user_overview_endpoint' => env('HUGGINGFACE_USER_OVERVIEW_ENDPOINT', 'https://router.huggingface.co/featherless-ai/v1/chat/completions'),
     ],
+
+    'tmdb' => [
+        'api_key' => env('TMDB_API_KEY'),
+        'base_api_url' => env('TMDB_BASE_API_URL', 'https://api.themoviedb.org/3'),
+        'base_image_url' => env('TMDB_BASE_IMAGE_URL', 'https://image.tmdb.org/t/p/w200'),
+    ],
 ];
