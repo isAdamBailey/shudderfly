@@ -177,7 +177,7 @@ const mobileMoreActive = computed(() => {
             <div class="ml-4 flex items-center md:hidden">
               <Link
                 :href="route('pictures.index')"
-                class="inline-flex min-h-12 items-center border-b-2 px-1 text-lg font-heading leading-5 focus:outline-none transition duration-150 ease-in-out"
+                class="btn-bulge inline-flex min-h-12 items-center border-b-2 px-1 text-lg font-heading leading-5 focus:outline-none transition-colors duration-150 ease-in-out"
                 :class="
                   route().current('pictures.*')
                     ? 'border-theme-primary text-theme-primary'
@@ -346,7 +346,7 @@ const mobileMoreActive = computed(() => {
             </div>
             <button
               type="button"
-              class="inline-flex min-h-12 min-w-12 items-center justify-center rounded-lg border border-transparent bg-transparent text-white transition focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-primary"
+              class="btn-bulge inline-flex min-h-12 min-w-12 items-center justify-center rounded-lg border border-transparent bg-transparent text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-primary"
               :class="
                 mobileMoreActive
                   ? 'border-theme-primary text-theme-primary'

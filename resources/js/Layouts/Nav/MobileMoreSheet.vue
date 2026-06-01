@@ -59,7 +59,7 @@ const emit = defineEmits(["close"]);
       <Link
         v-if="user"
         :href="route('users.show', user.email)"
-        class="mb-4 flex items-center gap-3 rounded-xl border border-gray-700 bg-gray-800 px-3 py-3 transition hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-200"
+        class="btn-bulge mb-4 flex items-center gap-3 rounded-xl border border-gray-700 bg-gray-800 px-3 py-3 transition-colors hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-200"
         @click="emit('close')"
       >
         <Avatar :user="user" size="md" />

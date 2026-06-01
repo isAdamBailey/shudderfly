@@ -2,6 +2,7 @@
 /* global route */
 import Accordion from "@/Components/Accordion.vue";
 import Button from "@/Components/Button.vue";
+import SpeakButton from "@/Components/SpeakButton.vue";
 import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import UserTagList from "@/Components/UserTagList.vue";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
@@ -826,16 +827,13 @@ const submitLabel = computed(() =>
               @select="insertMention"
             />
           </div>
-          <button
-            type="button"
-            class="ml-3 px-3 py-2 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-md self-start"
-            :aria-label="t('builder.say_message_aria')"
-            :title="t('builder.say_message')"
+          <SpeakButton
+            class="ml-3 self-start"
             :disabled="speaking"
+            :aria-label="t('builder.say_message_aria')"
+            icon-class="ri-speak-fill text-lg"
             @click="sayIt"
-          >
-            <i class="ri-speak-fill text-lg"></i>
-          </button>
+          />
         </div>
       </div>
     </div>

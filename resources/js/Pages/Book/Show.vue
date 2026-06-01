@@ -72,14 +72,12 @@
         </Button>
       </div>
 
-      <Button
-        type="button"
-        class="text-gray-100"
+      <SpeakButton
         :disabled="speaking"
+        aria-label="Speak book title and excerpt"
+        icon-class="ri-speak-fill text-lg"
         @click="readTitleAndExcerpt"
-      >
-        <i class="ri-speak-fill text-lg"></i>
-      </Button>
+      />
     </div>
 
     <!-- Tab Content -->
@@ -282,6 +280,7 @@
 import Accordion from "@/Components/Accordion.vue";
 import BookCover from "@/Components/BookCover.vue";
 import Button from "@/Components/Button.vue";
+import SpeakButton from "@/Components/SpeakButton.vue";
 import FloatingActionMenu from "@/Components/FloatingActionMenu.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import MapEmbed from "@/Components/Map/MapEmbed.vue";

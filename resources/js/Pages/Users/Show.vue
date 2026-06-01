@@ -1,7 +1,7 @@
 <script setup>
 /* global route */
 import Avatar from "@/Components/Avatar.vue";
-import Button from "@/Components/Button.vue";
+import SpeakButton from "@/Components/SpeakButton.vue";
 import MessageTimeline from "@/Components/Messages/MessageTimeline.vue";
 import StatCard from "@/Components/StatCard.vue";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
@@ -173,15 +173,12 @@ const speakUserSummary = () => {
                                             >
                                         </div>
                                     </div>
-                                    <Button
-                                        type="button"
+                                    <SpeakButton
                                         :disabled="speaking"
-                                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 p-1.5 h-8 w-8"
                                         aria-label="Speak user summary"
+                                        icon-class="ri-speak-fill text-lg"
                                         @click="speakUserSummary"
-                                    >
-                                        <i class="ri-speak-fill text-lg"></i>
-                                    </Button>
+                                    />
                                 </div>
                                 <div
                                     v-if="weeklyOverview?.text"
@@ -233,16 +230,13 @@ const speakUserSummary = () => {
                                         </p>
                                     </div>
                                 </div>
-                                <Button
+                                <SpeakButton
                                     v-if="stats.topBooks.length > 0"
-                                    type="button"
                                     :disabled="speaking"
-                                    class="text-gray-500 hover:text-gray-700 dark:text-gray-400 p-1.5 h-8 w-8"
                                     aria-label="Speak top books"
+                                    icon-class="ri-speak-fill text-lg"
                                     @click="speakTopBooks"
-                                >
-                                    <i class="ri-speak-fill text-lg"></i>
-                                </Button>
+                                />
                             </div>
 
                             <div
@@ -295,16 +289,13 @@ const speakUserSummary = () => {
                                         </p>
                                     </div>
                                 </div>
-                                <Button
+                                <SpeakButton
                                     v-if="stats.recentBooks.length > 0"
-                                    type="button"
                                     :disabled="speaking"
-                                    class="text-gray-500 hover:text-gray-700 dark:text-gray-400 p-1.5 h-8 w-8"
                                     aria-label="Speak recent books"
+                                    icon-class="ri-speak-fill text-lg"
                                     @click="speakRecentBooks"
-                                >
-                                    <i class="ri-speak-fill text-lg"></i>
-                                </Button>
+                                />
                             </div>
 
                             <div

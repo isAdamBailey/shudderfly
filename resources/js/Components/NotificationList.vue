@@ -16,19 +16,13 @@
     <div
       class="px-4 py-2 flex items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50"
     >
-      <button
+      <SpeakButton
         v-if="notifications.length > 0"
-        type="button"
-        title="Speak unread notifications summary"
-        class="p-1.5 rounded text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors disabled:opacity-50"
         :disabled="speaking"
+        aria-label="Speak unread notifications summary"
+        icon-class="ri-speak-fill text-lg"
         @click.stop="speakSummary"
-      >
-        <i
-          class="ri-speak-fill text-lg"
-          :class="{ 'animate-pulse': speaking }"
-        ></i>
-      </button>
+      />
       <button
         v-if="unreadCount > 0"
         type="button"
@@ -171,6 +165,7 @@
 <script setup>
 /* global route */
 import Avatar from "@/Components/Avatar.vue";
+import SpeakButton from "@/Components/SpeakButton.vue";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import { useUnreadNotifications } from "@/composables/useUnreadNotifications";

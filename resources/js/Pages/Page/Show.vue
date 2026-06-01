@@ -89,13 +89,11 @@
               v-html="page.content"
             ></div>
             <div class="flex justify-end mt-6">
-              <Button
-                type="button"
+              <SpeakButton
                 :disabled="speaking"
+                aria-label="Speak page content"
                 @click="speak(stripHtml(page.content))"
-              >
-                <i class="ri-speak-fill text-xl"></i>
-              </Button>
+              />
             </div>
           </div>
         </div>
@@ -208,6 +206,7 @@
 import AddToCollageButton from "@/Components/AddToCollageButton.vue";
 import BookCoverCard from "@/Components/BookCoverCard.vue";
 import Button from "@/Components/Button.vue";
+import SpeakButton from "@/Components/SpeakButton.vue";
 import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import FloatingActionMenu from "@/Components/FloatingActionMenu.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";

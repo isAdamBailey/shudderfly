@@ -5,15 +5,12 @@
             class="mb-2 flex items-center gap-2 text-sm text-gray-500"
         >
             <div><strong>Address:</strong> {{ currentAddress }}</div>
-            <Button
-                type="button"
+            <SpeakButton
                 :disabled="speaking"
-                class="speak-btn"
                 aria-label="Speak address"
+                icon-class="ri-speak-fill text-lg"
                 @click="speak(`the address is ${currentAddress}`)"
-            >
-                <i class="ri-speak-fill text-lg"></i>
-            </Button>
+            />
         </div>
         <div v-if="apiKeyMissing" class="p-4 text-center text-red-600 bg-red-50 rounded-lg">
             Google Maps API key is not configured. Please add VITE_GOOGLE_MAPS_API_KEY to your .env file.
@@ -38,7 +35,7 @@
 <script setup>
 /* global route */
 import Accordion from "@/Components/Accordion.vue";
-import Button from "@/Components/Button.vue";
+import SpeakButton from "@/Components/SpeakButton.vue";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";

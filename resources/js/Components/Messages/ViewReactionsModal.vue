@@ -7,15 +7,11 @@
                 >
                     {{ t("general.reactions") }}
                 </h2>
-                <Button
-                    type="button"
+                <SpeakButton
                     :disabled="speaking"
-                    :title="t('general.speak_all_reactions')"
                     :aria-label="t('general.speak_all_reactions_aria')"
                     @click="$emit('speak-all')"
-                >
-                    <i class="ri-speak-fill text-xl"></i>
-                </Button>
+                />
             </div>
             <div v-if="hasReactions" class="space-y-4">
                 <div
@@ -52,7 +48,7 @@
 </template>
 
 <script setup>
-import Button from "@/Components/Button.vue";
+import SpeakButton from "@/Components/SpeakButton.vue";
 import Modal from "@/Components/Modal.vue";
 import { useGroupedReactions } from "@/composables/useGroupedReactions";
 import { useTranslations } from "@/composables/useTranslations";

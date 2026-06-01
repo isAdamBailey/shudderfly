@@ -16,12 +16,12 @@
             >
                 {{ title }}
             </Link>
-            <button
-                class="px-2 py-1 mr-3 rounded-md bg-theme-primary text-theme-button"
+            <SpeakButton
+                class="mr-3"
+                aria-label="Speak category title"
+                icon-class="ri-speak-line text-xl"
                 @click="speak(title)"
-            >
-                <i class="ri-speak-line text-xl"></i>
-            </button>
+            />
         </div>
         <div
             ref="content"
@@ -45,6 +45,7 @@
 <script setup>
 /* global route */
 import BookCoverCard from "@/Components/BookCoverCard.vue";
+import SpeakButton from "@/Components/SpeakButton.vue";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { Link } from "@inertiajs/vue3";
 import axios from "axios";

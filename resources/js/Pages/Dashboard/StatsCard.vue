@@ -22,10 +22,10 @@
                     </div>
                 </Link>
                 <div class="flex items-center">
-                    <Button
-                        type="button"
+                    <SpeakButton
                         :disabled="speaking"
-                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 mr-2 p-1.5 h-8 w-8 speak-btn"
+                        class="mr-2"
+                        icon-class="ri-speak-fill text-lg"
                         aria-label="Speak books"
                         @click="
                             speak(
@@ -35,9 +35,7 @@
                                 }`
                             )
                         "
-                    >
-                        <i class="ri-speak-fill text-lg"></i>
-                    </Button>
+                    />
                 </div>
             </div>
 
@@ -63,10 +61,10 @@
                     </div>
                 </Link>
                 <div class="flex items-center">
-                    <Button
-                        type="button"
+                    <SpeakButton
                         :disabled="speaking"
-                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 mr-2 p-1.5 h-8 w-8 speak-btn"
+                        class="mr-2"
+                        icon-class="ri-speak-fill text-lg"
                         aria-label="Speak total number of pages"
                         @click="
                             speak(
@@ -76,9 +74,7 @@
                                 }`
                             )
                         "
-                    >
-                        <i class="ri-speak-fill text-lg"></i>
-                    </Button>
+                    />
                 </div>
             </div>
 
@@ -102,10 +98,10 @@
                     </div>
                 </Link>
                 <div class="flex items-center">
-                    <Button
-                        type="button"
+                    <SpeakButton
                         :disabled="speaking"
-                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 mr-2 p-1.5 h-8 w-8 speak-btn"
+                        class="mr-2"
+                        icon-class="ri-speak-fill text-lg"
                         aria-label="Speak songs"
                         @click="
                             speak(
@@ -115,9 +111,7 @@
                                 }`
                             )
                         "
-                    >
-                        <i class="ri-speak-fill text-lg"></i>
-                    </Button>
+                    />
                 </div>
             </div>
 
@@ -142,10 +136,10 @@
                     </div>
                 </Link>
                 <div class="flex items-center">
-                    <Button
-                        type="button"
+                    <SpeakButton
                         :disabled="speaking"
-                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 mr-2 p-1.5 h-8 w-8 speak-btn"
+                        class="mr-2"
+                        icon-class="ri-speak-fill text-lg"
                         aria-label="Speak images"
                         @click="
                             speak(
@@ -155,9 +149,7 @@
                                 }`
                             )
                         "
-                    >
-                        <i class="ri-speak-fill text-lg"></i>
-                    </Button>
+                    />
                 </div>
             </div>
 
@@ -183,10 +175,10 @@
                     </div>
                 </Link>
                 <div class="flex items-center">
-                    <Button
-                        type="button"
+                    <SpeakButton
                         :disabled="speaking"
-                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 mr-2 p-1.5 h-8 w-8 speak-btn"
+                        class="mr-2"
+                        icon-class="ri-speak-fill text-lg"
                         aria-label="Speak videos"
                         @click="
                             speak(
@@ -196,9 +188,7 @@
                                 }`
                             )
                         "
-                    >
-                        <i class="ri-speak-fill text-lg"></i>
-                    </Button>
+                    />
                 </div>
             </div>
 
@@ -226,10 +216,10 @@
                     </div>
                 </Link>
                 <div class="flex items-center">
-                    <Button
-                        type="button"
+                    <SpeakButton
                         :disabled="speaking"
-                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 mr-2 p-1.5 h-8 w-8 speak-btn"
+                        class="mr-2"
+                        icon-class="ri-speak-fill text-lg"
                         aria-label="Speak YouTube videos"
                         @click="
                             speak(
@@ -239,9 +229,7 @@
                                 }`
                             )
                         "
-                    >
-                        <i class="ri-speak-fill text-lg"></i>
-                    </Button>
+                    />
                 </div>
             </div>
 
@@ -267,10 +255,10 @@
                     </div>
                 </Link>
                 <div class="flex items-center">
-                    <Button
-                        type="button"
+                    <SpeakButton
                         :disabled="speaking"
-                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 mr-2 p-1.5 h-8 w-8 speak-btn"
+                        class="mr-2"
+                        icon-class="ri-speak-fill text-lg"
                         aria-label="Speak screenshots"
                         @click="
                             speak(
@@ -280,9 +268,7 @@
                                 }`
                             )
                         "
-                    >
-                        <i class="ri-speak-fill text-lg"></i>
-                    </Button>
+                    />
                 </div>
             </div>
         </div>
@@ -349,10 +335,9 @@
                             </div>
 
                             <div class="ml-4">
-                                <Button
-                                    type="button"
+                                <SpeakButton
                                     :disabled="speaking"
-                                    class="text-gray-500 hover:text-gray-700 dark:text-gray-400 p-1.5 h-8 w-8 speak-btn"
+                                    icon-class="ri-speak-fill text-lg"
                                     aria-label="Speak book with most pages"
                                     @click="
                                         speak(
@@ -364,9 +349,7 @@
                                             } pages.`
                                         )
                                     "
-                                >
-                                    <i class="ri-speak-fill text-lg"></i>
-                                </Button>
+                                />
                             </div>
                         </div>
                     </div>
@@ -433,10 +416,9 @@
                             </div>
 
                             <div class="ml-4">
-                                <Button
-                                    type="button"
+                                <SpeakButton
                                     :disabled="speaking"
-                                    class="text-gray-500 hover:text-gray-700 dark:text-gray-400 p-1.5 h-8 w-8 speak-btn"
+                                    icon-class="ri-speak-fill text-lg"
                                     aria-label="Speak book with least pages"
                                     @click="
                                         speak(
@@ -449,9 +431,7 @@
                                             } pages.`
                                         )
                                     "
-                                >
-                                    <i class="ri-speak-fill text-lg"></i>
-                                </Button>
+                                />
                             </div>
                         </div>
                     </div>
@@ -466,15 +446,13 @@
             >
                 <div class="flex items-center justify-between mb-2">
                     <div class="flex items-center">
-                        <Button
-                            class="mr-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 p-1.5 h-8 w-8 speak-btn"
-                            type="button"
+                        <SpeakButton
+                            class="mr-3"
                             :disabled="speaking"
+                            icon-class="ri-speak-fill text-lg"
                             aria-label="Speak top 5 books"
                             @click="speakTopBooks"
-                        >
-                            <i class="ri-speak-fill text-lg"></i>
-                        </Button>
+                        />
                         <p class="font-bold text-lg">
                             Top 5 Most Popular Books
                         </p>
@@ -549,15 +527,13 @@
             >
                 <div class="flex items-center justify-between mb-2">
                     <div class="flex items-center">
-                        <Button
-                            class="mr-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 p-1.5 h-8 w-8 speak-btn"
-                            type="button"
+                        <SpeakButton
+                            class="mr-3"
                             :disabled="speaking"
+                            icon-class="ri-speak-fill text-lg"
                             aria-label="Speak top 5 songs"
                             @click="speakTopSongs"
-                        >
-                            <i class="ri-speak-fill text-lg"></i>
-                        </Button>
+                        />
                         <p class="font-bold text-lg">
                             Top 5 Most Popular Songs
                         </p>
@@ -615,7 +591,7 @@
 </template>
 
 <script setup>
-import Button from "@/Components/Button.vue";
+import SpeakButton from "@/Components/SpeakButton.vue";
 import { useMusicPlayer } from "@/composables/useMusicPlayer";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { Link } from "@inertiajs/vue3";
@@ -696,10 +672,3 @@ function speakTopSongs() {
 }
 </script>
 
-<style scoped>
-.speak-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-</style>

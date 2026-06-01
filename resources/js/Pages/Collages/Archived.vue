@@ -20,13 +20,13 @@
             </div>
             <div class="flex justify-between items-center">
                 <p class="text-gray-400 mt-2">{{ archivedText }}</p>
-                <Button
+                <SpeakButton
                     class="ml-2"
                     :disabled="speaking"
+                    aria-label="Speak archived collages summary"
+                    icon-class="ri-speak-fill text-lg"
                     @click="speak(archivedText)"
-                >
-                    <i class="ri-speak-fill text-lg"></i>
-                </Button>
+                />
             </div>
             <div v-if="canAdmin">
                 <p class="font-bold text-gray-400 mt-2 underline">
@@ -161,7 +161,7 @@
 
 <script setup>
 /* global route */
-import Button from "@/Components/Button.vue";
+import SpeakButton from "@/Components/SpeakButton.vue";
 import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";

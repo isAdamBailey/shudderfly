@@ -28,13 +28,13 @@
       </div>
       <div class="flex justify-between items-center">
         <p class="text-gray-400 mt-2">{{ collageMessage }}</p>
-        <Button
+        <SpeakButton
           class="ml-2"
           :disabled="speaking"
+          aria-label="Speak collage summary"
+          icon-class="ri-speak-fill text-lg"
           @click="speak(collageMessage)"
-        >
-          <i class="ri-speak-fill text-lg"></i>
-        </Button>
+        />
       </div>
       <div v-if="canAdmin">
         <p class="font-bold text-gray-400 mt-2 underline">ADMIN INSTRUCTIONS</p>
@@ -244,6 +244,7 @@
 <script setup>
 /* global route */
 import Button from "@/Components/Button.vue";
+import SpeakButton from "@/Components/SpeakButton.vue";
 import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";

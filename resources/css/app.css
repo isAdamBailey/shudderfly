@@ -79,6 +79,13 @@
     halloween:border-halloween-pumpkin;
   }
 
+  .ring-theme-primary {
+    @apply ring-yellow-200
+    dark:ring-indigo-400
+    christmas:ring-christmas-gold
+    halloween:ring-halloween-pumpkin;
+  }
+
   .border-theme-input {
     @apply border-blue-700
     dark:border-gray-800
@@ -380,6 +387,71 @@
 @tailwind utilities;
 
 @layer components {
+  .btn-bulge {
+    @apply transform-gpu transition-[transform,box-shadow,filter] duration-150 ease-out;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    @apply motion-reduce:transition-none;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .btn-bulge:hover:not(:disabled) {
+      @apply scale-105 -translate-y-0.5 shadow-lg;
+    }
+
+    .btn-bulge:active:not(:disabled) {
+      @apply scale-95 translate-y-0 shadow-md duration-100;
+    }
+  }
+
+  @media (hover: none), (pointer: coarse) {
+    .btn-bulge:active:not(:disabled),
+    .btn-bulge.btn-bulge--tap {
+      @apply scale-110 shadow-xl brightness-110;
+    }
+  }
+
+  .btn-bulge.btn-bulge--tap {
+    @apply scale-110 shadow-xl brightness-110;
+  }
+
+  .btn-bulge:disabled,
+  .btn-bulge:disabled:hover,
+  .btn-bulge:disabled:active,
+  .btn-bulge.btn-bulge--tap:disabled {
+    @apply scale-100 translate-y-0 shadow-none brightness-100;
+  }
+
+  .speak-btn.btn-bulge {
+    @apply min-h-11 min-w-11;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .speak-btn.btn-bulge:hover:not(:disabled) {
+      @apply scale-[1.15] -translate-y-0.5 shadow-md;
+    }
+
+    .speak-btn.btn-bulge:active:not(:disabled) {
+      @apply scale-[1.2] translate-y-0 shadow-lg ring-2 ring-theme-primary duration-100;
+    }
+  }
+
+  .speak-btn.btn-bulge.btn-bulge--tap:not(:disabled),
+  .speak-btn.btn-bulge:active:not(:disabled) {
+    @apply scale-[1.2] shadow-lg ring-2 ring-theme-primary brightness-105;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .btn-bulge:hover,
+    .btn-bulge:active,
+    .btn-bulge.btn-bulge--tap,
+    .speak-btn.btn-bulge:hover,
+    .speak-btn.btn-bulge:active,
+    .speak-btn.btn-bulge.btn-bulge--tap {
+      @apply scale-100 translate-y-0 shadow-none brightness-100;
+    }
+  }
+
   /* Shared static mini book card styles (used by BooksGrid and SimilarBooks) */
   .mini-book {
     position: relative;
