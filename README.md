@@ -7,12 +7,13 @@ Private family media management built with Laravel, Vue, and AWS-backed services
 
 ## Overview
 
-Shudderfly is a private media app for sharing family-friendly content without ads, public feeds, or third-party social distractions. It supports books, pages, songs, collages, messages, searchable media, and AI-generated user summaries.
+Shudderfly is a private media app for sharing family-friendly content without ads, public feeds, or third-party social distractions. It supports books, pages, songs, movie cast lookup, collages, messages, searchable media, and AI-generated user summaries.
 
 ## Core Features
 
 - Private, authenticated media experience
 - Books and pages for photo and video collections
+- Movie cast lookup (TMDB search, trailers, favorites, share to chat)
 - Song library with YouTube-based playback
 - PDF collage generation
 - Internal messaging and notifications
@@ -69,6 +70,7 @@ Shudderfly includes AI-powered user overview support via Hugging Face.
 - **Web Push (VAPID)** for browser notifications
 - **FFmpeg** for video processing
 - **YouTube API** for song content
+- **TMDB API** for movie cast lookup
 
 ## Local Development
 
@@ -107,6 +109,7 @@ FILESYSTEM_DISK=local
 QUEUE_CONNECTION=sync
 SCOUT_DRIVER=meilisearch
 MEILISEARCH_HOST=http://meilisearch:7700
+TMDB_API_KEY=
 ```
 
 ### Seeded data
