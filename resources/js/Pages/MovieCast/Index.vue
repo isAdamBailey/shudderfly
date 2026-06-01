@@ -179,10 +179,16 @@ const speakMovieTitle = (title) => {
   speak(title.trim());
 };
 
-const loadMovieById = async (movieId, preferredTitle) => {
+const loadMovieById = async (
+  movieId,
+  preferredTitle,
+  { preserveSearchResults = false } = {}
+) => {
   isLoading.value = true;
   hasSearched.value = true;
-  searchResults.value = [];
+  if (!preserveSearchResults) {
+    searchResults.value = [];
+  }
   castMembers.value = [];
   movieTitle.value = preferredTitle?.trim() || "";
   movieDetails.value = null;
@@ -248,7 +254,19 @@ const onSubmit = async () => {
 };
 
 const onSelectSearchResult = async (movie) => {
-  await loadMovieById(movie.id, movie.title);
+  await loadMovieById(movie.id, movie.title, { preserveSearchResults: true });
+};
+
+const canReturnToSearchResults = computed(() => {
+  return searchResults.value.length > 0 && !!movieDetails.value;
+});
+
+const returnToSearchResults = () => {
+  movieDetails.value = null;
+  castMembers.value = [];
+  movieTitle.value = "";
+  errorMessage.value = "";
+  window.speechSynthesis?.cancel();
 };
 
 const onFavoriteButtonClick = async () => {
@@ -539,7 +557,7 @@ onBeforeUnmount(() => {
           {{ errorMessage }}
         </p>
 
-        <div v-if="searchResults.length" class="space-y-3">
+        <div v-if="searchResults.length && !movieDetails" class="space-y-3">
           <h3 class="text-lg font-semibold text-gray-100">
             Multiple movies found. Choose one:
           </h3>
@@ -568,6 +586,15 @@ onBeforeUnmount(() => {
         </div>
 
         <div v-if="movieDetails" class="space-y-6">
+          <Button
+            v-if="canReturnToSearchResults"
+            type="button"
+            @click="returnToSearchResults"
+          >
+            <i class="ri-arrow-left-line text-lg mr-2" aria-hidden="true"></i>
+            Back to results
+          </Button>
+
           <div class="rounded-lg bg-gray-800 p-4 sm:p-6">
             <div class="flex flex-col md:flex-row gap-6">
               <img
