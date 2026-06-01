@@ -15,6 +15,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Encoders\JpegEncoder;
 use Intervention\Image\Laravel\Facades\Image;
 use Spatie\Permission\Models\Permission;
 
@@ -185,13 +186,13 @@ class GenerateCollagePdf implements ShouldQueue
                 $page = $imageData['page'];
 
                 // Optimize image before converting to base64
-                $image = Image::read($localPath);
+                $image = Image::decode($localPath);
 
                 // Fit image within cell dimensions while preserving aspect ratio, padding with white
                 $image->contain($targetWidth, $targetHeight, 'ffffff');
 
                 // Optimize image quality and convert to JPG
-                $encoded = $image->toJpeg(80);
+                $encoded = $image->encode(new JpegEncoder(quality: 80));
 
                 // Convert to base64
                 $imageData = base64_encode((string) $encoded);
