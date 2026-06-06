@@ -18,6 +18,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SoundsController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\WorldClockController;
 use App\Http\Controllers\YouTubeProxyController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -83,6 +84,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/movie-cast/favorites', [MovieCastController::class, 'storeFavorite'])->name('movie-cast.favorites.store');
     Route::delete('/movie-cast/favorites/{tmdbId}', [MovieCastController::class, 'destroyFavorite'])->name('movie-cast.favorites.destroy');
     Route::post('/movie-cast/share', [MovieCastController::class, 'share'])->name('movie-cast.share');
+
+    Route::get('/world-clock', [WorldClockController::class, 'index'])->name('world-clock.index');
+    Route::get('/api/world-clock/cities/search', [WorldClockController::class, 'searchCities'])
+        ->name('world-clock.cities.search');
 
     Route::post('/collage-page', [CollagePageController::class, 'store'])->name('collage-page.store');
 
