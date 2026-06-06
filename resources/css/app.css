@@ -1,6 +1,63 @@
 @tailwind base;
 @tailwind components;
 
+/* World Clock face palette — follows the app theme (data-theme on <html>) and
+   dark mode (.dark on <html>) so the "Theme" clock face matches the site. */
+:root {
+  --wc-face: #fffdf5;
+  --wc-rim: #1d4ed8;
+  --wc-tick: #1f2937;
+  --wc-tick-minor: #9ca3af;
+  --wc-numeral: #1f2937;
+  --wc-hand: #111827;
+  --wc-second: #dc2626;
+  --wc-cap: #111827;
+}
+
+.dark {
+  --wc-face: #1f2937;
+  --wc-rim: #6366f1;
+  --wc-tick: #e5e7eb;
+  --wc-tick-minor: #6b7280;
+  --wc-numeral: #f3f4f6;
+  --wc-hand: #f9fafb;
+  --wc-second: #fbbf24;
+  --wc-cap: #f9fafb;
+}
+
+[data-theme="christmas"] {
+  --wc-face: #f8f8ff;
+  --wc-rim: #ffd700;
+  --wc-tick: #165b33;
+  --wc-tick-minor: #2d5a27;
+  --wc-numeral: #be0b31;
+  --wc-hand: #165b33;
+  --wc-second: #d42426;
+  --wc-cap: #ffd700;
+}
+
+[data-theme="halloween"] {
+  --wc-face: #2b1b3d;
+  --wc-rim: #ff7518;
+  --wc-tick: #ff8c42;
+  --wc-tick-minor: #6b2d8f;
+  --wc-numeral: #ff6600;
+  --wc-hand: #f5f5f5;
+  --wc-second: #ff6600;
+  --wc-cap: #ff7518;
+}
+
+[data-theme="fireworks"] {
+  --wc-face: #0f172a;
+  --wc-rim: #ef4444;
+  --wc-tick: #e2e8f0;
+  --wc-tick-minor: #475569;
+  --wc-numeral: #f8fafc;
+  --wc-hand: #f8fafc;
+  --wc-second: #3b82f6;
+  --wc-cap: #ef4444;
+}
+
 @layer utilities {
   /* Text Colors */
   .text-theme-title {

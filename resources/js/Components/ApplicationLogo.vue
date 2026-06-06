@@ -1,5 +1,17 @@
 <template>
+    <AnalogClock
+        v-if="logo.enabled && logo.timezone"
+        :timezone="logo.timezone"
+        :city-name="logo.cityName"
+        size="100%"
+        :face-preset="logo.facePreset"
+        :hand-preset="logo.handPreset"
+        :numerals="logo.numerals"
+        :show-seconds="true"
+        second-hand-mode="tick"
+    />
     <svg
+        v-else
         width="100%"
         height="100%"
         viewBox="0 0 200 200"
@@ -616,6 +628,8 @@
 </template>
 
 <script setup>
+import AnalogClock from "@/Components/WorldClock/AnalogClock.vue";
+import { useLogoPreference } from "@/composables/useLogoPreference";
 import { usePage } from "@inertiajs/vue3";
 import { computed } from "vue";
 
@@ -623,4 +637,6 @@ const page = usePage();
 const isChristmas = computed(() => page.props.theme === "christmas");
 const isJuly = computed(() => page.props.theme === "fireworks");
 const isHalloween = computed(() => page.props.theme === "halloween");
+
+const { logo } = useLogoPreference();
 </script>
