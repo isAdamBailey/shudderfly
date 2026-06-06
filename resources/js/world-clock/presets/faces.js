@@ -2,8 +2,6 @@
 // the face fill (solid color or radial gradient stops), rim, tick marks,
 // numeral styling, and hand/second/cap colors. The hand *silhouette* comes
 // from the hand presets; faces only provide colors so the two compose freely.
-// A custom face image (if provided) overrides `faceFill` but keeps everything
-// drawn on top (ticks, numerals, hands).
 
 export const FACE_PRESETS = {
   theme: {

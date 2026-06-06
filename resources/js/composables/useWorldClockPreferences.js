@@ -39,6 +39,8 @@ export function useWorldClockPreferences(defaultCities = [], maxCities = 6) {
     console.error("Error loading world clock preferences:", e);
   }
 
+  prefs.cities = prefs.cities.slice(0, maxCities);
+
   if (!prefs.cities.length) {
     prefs.cities = defaultCities.slice(0, maxCities).map((c) => ({
       name: c.name,

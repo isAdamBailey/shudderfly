@@ -3,7 +3,7 @@
         v-if="logo.enabled && logo.timezone"
         :timezone="logo.timezone"
         :city-name="logo.cityName"
-        :size="56"
+        size="100%"
         :face-preset="logo.facePreset"
         :hand-preset="logo.handPreset"
         :numerals="logo.numerals"

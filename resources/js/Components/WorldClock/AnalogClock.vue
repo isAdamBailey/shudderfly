@@ -14,7 +14,7 @@ import { computed, toRef } from "vue";
 const props = defineProps({
   timezone: { type: String, required: true },
   cityName: { type: String, default: "" },
-  size: { type: Number, default: 280 },
+  size: { type: [Number, String], default: 280 },
   facePreset: { type: String, default: "classic" },
   handPreset: { type: String, default: "classic" },
   numerals: { type: String, default: "arabic" }, // 'arabic' | 'roman' | 'none'

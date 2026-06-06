@@ -45,7 +45,7 @@ export function useLogoPreference() {
     Object.assign(logo, {
       enabled: true,
       cityName: config.cityName || "",
-      timezone: config.timezone,
+      timezone: config.timezone || "",
       facePreset: config.facePreset || "classic",
       handPreset: config.handPreset || "classic",
       numerals: config.numerals || "none"
