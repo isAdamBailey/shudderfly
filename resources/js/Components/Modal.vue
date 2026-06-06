@@ -68,8 +68,8 @@ const maxWidthClass = computed(() => {
     <teleport to="body">
         <transition leave-active-class="duration-200">
             <div
-                ref="scrollRoot"
                 v-show="show"
+                ref="scrollRoot"
                 data-modal-scroll-root
                 class="fixed inset-0 z-50 overflow-y-auto"
                 scroll-region

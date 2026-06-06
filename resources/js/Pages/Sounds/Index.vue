@@ -374,7 +374,7 @@ onBeforeUnmount(() => {
                         MP3, WAV, OGG, and AAC (non-M4A) uploads are converted to M4A (AAC) for consistent playback (including Safari/iOS).
                     </div>
 
-                    <form @submit.prevent="submitUpload" class="space-y-4">
+                    <form class="space-y-4" @submit.prevent="submitUpload">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Title <span class="text-red-500">*</span>
@@ -455,7 +455,7 @@ onBeforeUnmount(() => {
                         Edit Sound
                     </h3>
 
-                    <form @submit.prevent="submitEdit" class="space-y-4">
+                    <form class="space-y-4" @submit.prevent="submitEdit">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Title <span class="text-red-500">*</span>

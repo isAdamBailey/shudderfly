@@ -36,8 +36,8 @@ const emit = defineEmits(["close"]);
     <button
       type="button"
       class="absolute inset-0 bg-gray-950/60"
-      @click="emit('close')"
       aria-label="Close more menu"
+      @click="emit('close')"
     ></button>
 
     <section
@@ -49,8 +49,8 @@ const emit = defineEmits(["close"]);
         <button
           type="button"
           class="inline-flex min-h-12 min-w-12 items-center justify-center rounded-lg border border-gray-600 text-white transition hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-200"
-          @click="emit('close')"
           aria-label="Close more menu"
+          @click="emit('close')"
         >
           <i class="ri-close-line text-2xl" aria-hidden="true"></i>
         </button>
