@@ -50,6 +50,7 @@ export function useLogoPreference() {
       handPreset: config.handPreset || "classic",
       numerals: config.numerals || "none"
     });
+    });
   }
 
   function clearLogoClock() {
