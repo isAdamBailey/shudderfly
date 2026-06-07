@@ -49,3 +49,77 @@ describe("composables/useGlobalTimer", () => {
     expect(window.speechSynthesis.speak).not.toHaveBeenCalled();
   });
 });
+
+describe("composables/useGlobalTimer persistence", () => {
+  const STORAGE_KEY = "shudderfly.worldClock.timer";
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2024-01-01T00:00:00Z"));
+    window.speechSynthesis.speak.mockClear();
+    localStorage.removeItem(STORAGE_KEY);
+  });
+
+  afterEach(() => {
+    useGlobalTimer().stop();
+    localStorage.removeItem(STORAGE_KEY);
+    vi.useRealTimers();
+  });
+
+  it("writes only the end time on start, and clears it on stop (no per-tick writes)", () => {
+    const t = useGlobalTimer();
+    t.start(10 * 60);
+
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY))).toEqual({
+      endTime: Date.now() + 10 * 60 * 1000
+    });
+
+    vi.advanceTimersByTime(60 * 1000);
+    // Still the original end time — ticking doesn't rewrite storage.
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY)).endTime).toBe(
+      Date.now() - 60 * 1000 + 10 * 60 * 1000
+    );
+
+    t.stop();
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it("clears the persisted end time once the countdown finishes naturally", () => {
+    const t = useGlobalTimer();
+    t.start(60);
+    vi.advanceTimersByTime(60 * 1000);
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it("resumes a still-running countdown from the stored end time on reload", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ endTime: Date.now() + 10 * 60 * 1000 })
+    );
+
+    vi.resetModules();
+    const { useGlobalTimer: reloadedUseGlobalTimer } = await import(
+      "@/composables/useGlobalTimer"
+    );
+    const t = reloadedUseGlobalTimer();
+
+    expect(t.active.value).toBe(true);
+    expect(t.remainingSeconds.value).toBe(10 * 60);
+
+    t.stop();
+  });
+
+  it("discards an already-expired stored end time without re-announcing", async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ endTime: Date.now() - 1000 }));
+
+    vi.resetModules();
+    const { useGlobalTimer: reloadedUseGlobalTimer } = await import(
+      "@/composables/useGlobalTimer"
+    );
+    const t = reloadedUseGlobalTimer();
+
+    expect(t.active.value).toBe(false);
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+    expect(window.speechSynthesis.speak).not.toHaveBeenCalled();
+  });
+});

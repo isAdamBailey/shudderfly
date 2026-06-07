@@ -6,6 +6,7 @@ import { computed, ref } from "vue";
 // Clock customizer) but the visual applies to all clocks.
 
 const HOUR_MS = 60 * 60 * 1000;
+const STORAGE_KEY = "shudderfly.worldClock.timer";
 
 const endTime = ref(0);
 const remainingMs = ref(0);
@@ -17,6 +18,25 @@ const clear = () => {
   if (intervalId !== null) {
     clearInterval(intervalId);
     intervalId = null;
+  }
+};
+
+// Persisting only happens on start/stop/completion (not on every 250ms tick)
+// so a running countdown survives a refresh without adding storage writes to
+// the hot loop — `endTime` alone is enough to recompute everything on load.
+const clearStored = () => {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (e) {
+    console.error("Error clearing timer state:", e);
+  }
+};
+
+const persistEndTime = (value) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ endTime: value }));
+  } catch (e) {
+    console.error("Error saving timer state:", e);
   }
 };
 
@@ -45,6 +65,7 @@ const update = () => {
   if (rem <= 0 && active.value) {
     active.value = false;
     clear();
+    clearStored();
     if (!completed) {
       completed = true;
       announce("Time's up!");
@@ -59,6 +80,7 @@ const start = (seconds) => {
   active.value = true;
   clear();
   intervalId = setInterval(update, 250);
+  persistEndTime(endTime.value);
 };
 
 const stop = () => {
@@ -66,7 +88,33 @@ const stop = () => {
   completed = false;
   remainingMs.value = 0;
   clear();
+  clearStored();
 };
+
+// Resume a countdown that was already running before a refresh/reload. Only
+// `endTime` (a fixed timestamp) needs to be stored — remaining time is
+// recomputed from the current clock, so the countdown picks up exactly where
+// it should be rather than resetting.
+(function restore() {
+  let stored = null;
+  try {
+    stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+  } catch (e) {
+    console.error("Error loading timer state:", e);
+  }
+
+  const storedEndTime = Number(stored?.endTime);
+  const remaining = storedEndTime - Date.now();
+  if (!Number.isFinite(storedEndTime) || remaining <= 0) {
+    if (stored) clearStored();
+    return;
+  }
+
+  endTime.value = storedEndTime;
+  remainingMs.value = remaining;
+  active.value = true;
+  intervalId = setInterval(update, 250);
+})();
 
 const remainingSeconds = computed(() => Math.ceil(remainingMs.value / 1000));
 const fraction = computed(() => Math.min(1, remainingMs.value / HOUR_MS));
