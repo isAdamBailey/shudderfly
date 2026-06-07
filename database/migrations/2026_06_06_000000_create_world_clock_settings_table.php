@@ -10,6 +10,7 @@ return new class extends Migration
     {
         Schema::create('world_clock_settings', function (Blueprint $table) {
             $table->id();
+            $table->string('key')->unique()->default('global'); // singleton key
             $table->json('cities')->nullable();              // [{name,timezone,country}]
             $table->string('face_preset')->default('theme');
             $table->string('hand_preset')->default('classic');

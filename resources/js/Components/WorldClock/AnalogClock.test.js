@@ -4,11 +4,14 @@ import { mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { nextTick } from "vue";
 
-const sync = useWorldClockSync();
+let sync;
 
 // Set (or clear) the shared timer end time the way the server would, then let
 // the countdown watcher react.
 const setTimer = async (secondsFromNow) => {
+  if (!sync) {
+    sync = useWorldClockSync();
+  }
   const now = new Date();
   sync.applyRemote({
     timer_ends_at:

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class WorldClockSetting extends Model
 {
     protected $fillable = [
+        'key',
         'cities',
         'face_preset',
         'hand_preset',
@@ -29,7 +30,7 @@ class WorldClockSetting extends Model
      */
     public static function instance(): self
     {
-        $setting = static::firstOrCreate([]);
+        $setting = static::firstOrCreate(['key' => 'global']);
         $max = config('world_clock.max_cities', 6);
         $cities = $setting->cities ?? [];
 

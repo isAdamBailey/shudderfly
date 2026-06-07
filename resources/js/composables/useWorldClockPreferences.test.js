@@ -3,9 +3,8 @@ import { useWorldClockSync } from "@/composables/useWorldClockSync";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 
-// One shared watcher for the file, mirroring the singleton in the app.
-const sync = useWorldClockSync();
-const { prefs } = useWorldClockPreferences(6);
+let sync;
+let prefs;
 
 describe("composables/useWorldClockPreferences", () => {
   beforeEach(() => {
@@ -19,6 +18,12 @@ describe("composables/useWorldClockPreferences", () => {
       })
     };
     vi.useFakeTimers();
+
+    // Initialize after stubs are in place so setupEcho() doesn't schedule retries.
+    if (!sync) {
+      sync = useWorldClockSync();
+      ({ prefs } = useWorldClockPreferences(6));
+    }
   });
 
   afterEach(() => {
