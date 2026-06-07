@@ -32,7 +32,11 @@ class WorldClockSetting extends Model
         $setting = static::firstOrCreate([]);
 
         if (empty($setting->cities)) {
-            $setting->cities = config('world_clock.default_cities', []);
+            $setting->cities = array_slice(
+                config('world_clock.default_cities', []),
+                0,
+                config('world_clock.max_cities', 6)
+            );
             $setting->save();
         }
 

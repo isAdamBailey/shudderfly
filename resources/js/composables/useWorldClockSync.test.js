@@ -45,16 +45,20 @@ describe("useWorldClockSync", () => {
     expect(sync.isApplyingRemote()).toBe(false);
   });
 
-  it("push sends the socket id header and reconciles from the response", async () => {
-    const responseNow = new Date().toISOString();
+  it("push sends the socket id header and returns the response without clobbering local state", async () => {
     window.axios = {
       request: vi.fn().mockResolvedValue({
-        data: { face_preset: "minimal", server_now: responseNow }
+        data: { face_preset: "minimal", server_now: new Date().toISOString() }
       })
     };
 
     const sync = useWorldClockSync();
-    await sync.push("world-clock.settings.update", "put", { face_preset: "minimal" });
+    // Local edit the user is in the middle of making.
+    sync.state.facePreset = "classic";
+
+    const data = await sync.push("world-clock.settings.update", "put", {
+      face_preset: "classic"
+    });
 
     expect(window.axios.request).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -63,6 +67,16 @@ describe("useWorldClockSync", () => {
         headers: expect.objectContaining({ "X-Socket-ID": "socket-123" })
       })
     );
-    expect(sync.state.facePreset).toBe("minimal");
+    // push returns the server payload but must NOT overwrite local state — that
+    // would clobber an edit the user is still making.
+    expect(data.face_preset).toBe("minimal");
+    expect(sync.state.facePreset).toBe("classic");
+  });
+
+  it("a remote apply bumps the epoch so stale local saves can detect it", () => {
+    const sync = useWorldClockSync();
+    const before = sync.remoteEpoch();
+    sync.applyRemote({ face_preset: "night", server_now: new Date().toISOString() });
+    expect(sync.remoteEpoch()).toBe(before + 1);
   });
 });

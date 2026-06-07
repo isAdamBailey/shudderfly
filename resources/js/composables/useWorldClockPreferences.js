@@ -24,8 +24,12 @@ export function useWorldClockPreferences(maxCities = 6) {
       // Skip saves triggered by an incoming server payload — otherwise the
       // remote update would echo straight back as a new write.
       if (sync.isApplyingRemote()) return;
+      const scheduledEpoch = sync.remoteEpoch();
       clearTimeout(timer);
       timer = setTimeout(() => {
+        // A remote update arrived while we were waiting — it supersedes this
+        // local edit, so don't write the now-stale value back.
+        if (sync.remoteEpoch() !== scheduledEpoch) return;
         sync.push("world-clock.settings.update", "put", {
           cities: prefs.cities,
           face_preset: prefs.facePreset,

@@ -36,8 +36,13 @@ const serverOffsetMs = ref(0);
 let applyingRemote = false;
 let echoReady = false;
 let echoAttempts = 0;
+// Bumped on every full remote apply (hydrate / Echo broadcast). A pending
+// debounced local save captures the epoch when scheduled and bails if it has
+// changed, so a genuine remote update can't be clobbered by a stale save.
+let remoteEpochValue = 0;
 
 const isApplyingRemote = () => applyingRemote;
+const remoteEpoch = () => remoteEpochValue;
 
 function assignPayload(payload) {
   if (!payload || typeof payload !== "object") return;
@@ -61,14 +66,29 @@ function assignPayload(payload) {
   }
 }
 
-// Apply state that originated from the server (initial hydration or a broadcast)
-// without triggering the local save watchers.
+// Apply full state that originated from the server (initial hydration or a live
+// broadcast from another client) without triggering the local save watchers.
+// Bumps the remote epoch so any in-flight local save is superseded.
 function applyRemote(payload) {
   applyingRemote = true;
+  remoteEpochValue += 1;
   assignPayload(payload);
   nextTick(() => {
     applyingRemote = false;
   });
+}
+
+// Apply only the timer fields from a server response. Used by the originating
+// client after starting/stopping a timer to pick up the authoritative absolute
+// end time + clock offset, WITHOUT touching cities/appearance/logo (which would
+// clobber any local edit that hasn't been saved yet).
+function reconcileTimer(payload) {
+  if (!payload || typeof payload !== "object") return;
+  state.timerEndsAt = payload.timer_ends_at || null;
+  if (payload.server_now) {
+    const parsed = Date.parse(payload.server_now);
+    if (!Number.isNaN(parsed)) serverOffsetMs.value = parsed - Date.now();
+  }
 }
 
 // Idempotent: called from both the layout (app-wide, for the nav logo + timer)
@@ -77,9 +97,11 @@ function hydrate(initial) {
   applyRemote(initial);
 }
 
-// Persist a change to the server and reconcile from the response (so it works
-// even when websockets are unavailable). The X-Socket-ID header lets the server
-// exclude this client from the broadcast, preventing a feedback loop.
+// Persist a change to the server and return the fresh state. The originating
+// client's local state is already authoritative, so we deliberately do NOT
+// re-apply the full response here — that would overwrite fields the user is
+// still editing. Other clients receive the change via the Echo broadcast; the
+// X-Socket-ID header excludes this client from it, preventing a feedback loop.
 async function push(routeName, method, body = {}) {
   try {
     const headers = {};
@@ -92,9 +114,10 @@ async function push(routeName, method, body = {}) {
       data: body,
       headers
     });
-    applyRemote(response.data);
+    return response.data;
   } catch (e) {
     console.error(`Error syncing world clock (${routeName}):`, e);
+    return null;
   }
 }
 
@@ -121,5 +144,14 @@ function setupEcho() {
 
 export function useWorldClockSync() {
   setupEcho();
-  return { state, serverOffsetMs, hydrate, applyRemote, push, isApplyingRemote };
+  return {
+    state,
+    serverOffsetMs,
+    hydrate,
+    applyRemote,
+    reconcileTimer,
+    push,
+    isApplyingRemote,
+    remoteEpoch
+  };
 }

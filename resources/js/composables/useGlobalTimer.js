@@ -93,9 +93,17 @@ const fraction = computed(() => Math.min(1, remainingMs.value / HOUR_MS));
 export function useGlobalTimer() {
   const sync = useWorldClockSync();
 
-  const start = (seconds) =>
-    sync.push("world-clock.timer.start", "post", { seconds });
-  const stop = () => sync.push("world-clock.timer.stop", "delete");
+  // Reconcile only the timer fields from the response so we pick up the
+  // server's authoritative end time + clock offset without disturbing any
+  // unsaved appearance/city edits.
+  const start = async (seconds) => {
+    const data = await sync.push("world-clock.timer.start", "post", { seconds });
+    sync.reconcileTimer(data);
+  };
+  const stop = async () => {
+    const data = await sync.push("world-clock.timer.stop", "delete");
+    sync.reconcileTimer(data);
+  };
 
   return { active, remainingMs, remainingSeconds, fraction, start, stop };
 }

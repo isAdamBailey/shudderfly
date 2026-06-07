@@ -28,10 +28,7 @@ const isLogo = computed(
 const setAsLogo = () => {
   setLogoClock({
     cityName: props.city.name,
-    timezone: props.city.timezone,
-    facePreset: props.facePreset,
-    handPreset: props.handPreset,
-    numerals: props.numerals
+    timezone: props.city.timezone
   });
   emit("speak", `${props.city.name} clock set as the app logo`);
 };
