@@ -3,11 +3,12 @@
 namespace Database\Factories;
 
 use App\Models\Message;
+use App\Models\MessageComment;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\MessageComment>
+ * @extends Factory<MessageComment>
  */
 class MessageCommentFactory extends Factory
 {

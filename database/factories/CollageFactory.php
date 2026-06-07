@@ -2,10 +2,11 @@
 
 namespace Database\Factories;
 
+use App\Models\Collage;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Collage>
+ * @extends Factory<Collage>
  */
 class CollageFactory extends Factory
 {

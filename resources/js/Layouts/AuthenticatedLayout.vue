@@ -5,6 +5,7 @@ import SearchInput from "@/Components/SearchInput.vue";
 import { useMusicPlayer } from "@/composables/useMusicPlayer";
 import { usePusherNotifications } from "@/composables/usePusherNotifications";
 import { usePushNotifications } from "@/composables/usePushNotifications";
+import { useWorldClockSync } from "@/composables/useWorldClockSync";
 import Footer from "@/Layouts/Nav/Footer.vue";
 import Navigation from "@/Layouts/Nav/Navigation.vue";
 import { usePage } from "@inertiajs/vue3";
@@ -14,6 +15,12 @@ usePusherNotifications();
 
 const page = usePage();
 const { playSong, openFlyout } = useMusicPlayer();
+
+// Seed the shared World Clock state app-wide (once) so the nav logo clock and
+// the shared timer work on every page. Live updates arrive via Echo; a full
+// page refresh re-seeds from the server, keeping every session consistent.
+const worldClockSync = useWorldClockSync();
+if (page.props.worldClock) worldClockSync.hydrate(page.props.worldClock);
 
 async function playSongFromFlash(songId) {
   if (songId == null || songId === "") return;

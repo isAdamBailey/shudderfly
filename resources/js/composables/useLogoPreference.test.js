@@ -1,43 +1,43 @@
 import { useLogoPreference } from "@/composables/useLogoPreference";
-import { beforeEach, describe, expect, it } from "vitest";
-import { nextTick } from "vue";
-
-const STORAGE_KEY = "shudderfly.worldClock.logo";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 describe("composables/useLogoPreference", () => {
   beforeEach(() => {
-    const { clearLogoClock } = useLogoPreference();
-    clearLogoClock();
-    localStorage.clear();
+    window.Echo = {
+      socketId: () => "socket-123",
+      private: () => ({ listen: () => {} })
+    };
+    window.axios = {
+      request: vi.fn().mockResolvedValue({
+        data: { server_now: new Date().toISOString() }
+      })
+    };
+    useLogoPreference().clearLogoClock();
+    window.axios.request.mockClear();
   });
 
-  it("starts disabled by default", () => {
-    const { logo } = useLogoPreference();
-    expect(logo.enabled).toBe(false);
-  });
-
-  it("setLogoClock enables and stores the chosen clock", async () => {
+  it("setLogoClock enables the chosen clock and pushes to the server", () => {
     const { logo, setLogoClock } = useLogoPreference();
-    setLogoClock({
-      cityName: "Tokyo",
-      timezone: "Asia/Tokyo",
-      facePreset: "night",
-      handPreset: "ornate",
-      numerals: "roman"
-    });
+    setLogoClock({ cityName: "Tokyo", timezone: "Asia/Tokyo" });
 
     expect(logo.enabled).toBe(true);
     expect(logo.timezone).toBe("Asia/Tokyo");
     expect(logo.cityName).toBe("Tokyo");
 
-    await nextTick();
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    expect(stored.enabled).toBe(true);
-    expect(stored.timezone).toBe("Asia/Tokyo");
-    expect(stored.facePreset).toBe("night");
+    expect(window.axios.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: "/api/world-clock/logo",
+        method: "put",
+        data: {
+          enabled: true,
+          cityName: "Tokyo",
+          timezone: "Asia/Tokyo"
+        }
+      })
+    );
   });
 
-  it("clearLogoClock resets to the default logo", async () => {
+  it("clearLogoClock resets to the default logo and pushes", () => {
     const { logo, setLogoClock, clearLogoClock } = useLogoPreference();
     setLogoClock({ cityName: "Paris", timezone: "Europe/Paris" });
     expect(logo.enabled).toBe(true);
@@ -46,8 +46,12 @@ describe("composables/useLogoPreference", () => {
     expect(logo.enabled).toBe(false);
     expect(logo.timezone).toBe("");
 
-    await nextTick();
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    expect(stored.enabled).toBe(false);
+    expect(window.axios.request).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        url: "/api/world-clock/logo",
+        method: "put",
+        data: { enabled: false, cityName: "", timezone: "" }
+      })
+    );
   });
 });

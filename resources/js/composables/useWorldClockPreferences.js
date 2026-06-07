@@ -1,65 +1,40 @@
-import { reactive, toRaw, watch } from "vue";
+import { watch } from "vue";
+import { useWorldClockSync } from "@/composables/useWorldClockSync";
 
-const STORAGE_KEY = "shudderfly.worldClock";
+// Clock cities + appearance presets, backed by the shared server state (see
+// useWorldClockSync). The reactive `prefs` object IS the global state, so any
+// change a user makes is debounced and pushed to the server, then broadcast to
+// everyone. Public API is unchanged from the old localStorage version.
 
-const DEFAULTS = {
-  facePreset: "theme",
-  handPreset: "classic",
-  numerals: "arabic",
-  secondHandMode: "smooth",
-  cities: []
-};
-
-function sanitize(raw) {
-  const clean = {};
-  if (typeof raw.facePreset === "string") clean.facePreset = raw.facePreset;
-  if (typeof raw.handPreset === "string") clean.handPreset = raw.handPreset;
-  if (typeof raw.numerals === "string") clean.numerals = raw.numerals;
-  if (typeof raw.secondHandMode === "string")
-    clean.secondHandMode = raw.secondHandMode;
-  if (Array.isArray(raw.cities)) {
-    clean.cities = raw.cities
-      .filter((c) => c && c.timezone && c.name)
-      .map((c) => ({
-        name: String(c.name),
-        timezone: String(c.timezone),
-        country: c.country ? String(c.country) : ""
-      }));
-  }
-  return clean;
-}
-
-export function useWorldClockPreferences(defaultCities = [], maxCities = 6) {
-  const prefs = reactive({ ...DEFAULTS });
-
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) Object.assign(prefs, sanitize(JSON.parse(stored)));
-  } catch (e) {
-    console.error("Error loading world clock preferences:", e);
-  }
-
-  prefs.cities = prefs.cities.slice(0, maxCities);
-
-  if (!prefs.cities.length) {
-    prefs.cities = defaultCities.slice(0, maxCities).map((c) => ({
-      name: c.name,
-      timezone: c.timezone,
-      country: c.country || ""
-    }));
-  }
+// Cities are seeded server-side now, so this no longer takes default cities.
+export function useWorldClockPreferences(maxCities = 6) {
+  const sync = useWorldClockSync();
+  const prefs = sync.state;
 
   let timer = null;
   watch(
-    prefs,
+    () => [
+      prefs.cities,
+      prefs.facePreset,
+      prefs.handPreset,
+      prefs.numerals,
+      prefs.secondHandMode
+    ],
     () => {
+      // Skip saves triggered by an incoming server payload — otherwise the
+      // remote update would echo straight back as a new write (feedback loop).
+      if (sync.isApplyingRemote()) return;
       clearTimeout(timer);
       timer = setTimeout(() => {
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(toRaw(prefs)));
-        } catch (e) {
-          console.error("Error saving world clock preferences:", e);
-        }
+        sync.push("world-clock.settings.update", "put", {
+          // Cap defensively so a stale, over-limit city list can't fail
+          // validation and silently drop the appearance change.
+          cities: prefs.cities.slice(0, maxCities),
+          face_preset: prefs.facePreset,
+          hand_preset: prefs.handPreset,
+          numerals: prefs.numerals,
+          second_hand_mode: prefs.secondHandMode
+        });
       }, 300);
     },
     { deep: true }

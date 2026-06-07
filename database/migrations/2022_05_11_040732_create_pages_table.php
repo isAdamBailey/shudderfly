@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Book;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -15,7 +16,7 @@ return new class extends Migration
     {
         Schema::create('pages', function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(\App\Models\Book::class);
+            $table->foreignIdFor(Book::class);
             $table->longText('content')->nullable();
             $table->string('image_path')->nullable();
             $table->timestamps();

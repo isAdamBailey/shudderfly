@@ -1,9 +1,28 @@
 import AnalogClock from "@/Components/WorldClock/AnalogClock.vue";
-import { useGlobalTimer } from "@/composables/useGlobalTimer";
+import { useWorldClockSync } from "@/composables/useWorldClockSync";
 import { mount } from "@vue/test-utils";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { nextTick } from "vue";
 
-const timer = useGlobalTimer();
+let sync;
+
+// Set (or clear) the shared timer end time the way the server would, then let
+// the countdown watcher react.
+const setTimer = async (secondsFromNow) => {
+  if (!sync) {
+    sync = useWorldClockSync();
+  }
+  const now = new Date();
+  sync.applyRemote({
+    timer_ends_at:
+      secondsFromNow == null
+        ? null
+        : new Date(now.getTime() + secondsFromNow * 1000).toISOString(),
+    server_now: now.toISOString()
+  });
+  await nextTick();
+  await nextTick();
+};
 
 describe("Components/WorldClock/AnalogClock.vue", () => {
   it("renders Roman numerals when numerals='roman'", () => {
@@ -52,24 +71,31 @@ describe("Components/WorldClock/AnalogClock.vue", () => {
     expect(rotated.length).toBe(2);
   });
 
-  afterEach(() => timer.stop());
+  beforeEach(() => {
+    window.Echo = {
+      socketId: () => "socket-123",
+      private: () => ({ listen: () => {} })
+    };
+  });
 
-  it("renders no timer wedge when the global timer is inactive", () => {
-    timer.stop();
+  afterEach(() => setTimer(null));
+
+  it("renders no timer wedge when the global timer is inactive", async () => {
+    await setTimer(null);
     const wrapper = mount(AnalogClock, { props: { timezone: "UTC" } });
     expect(wrapper.findAll('[fill="#b91c1c"]').length).toBe(0);
   });
 
-  it("renders a partial deep-red wedge (path) for a fractional timer", () => {
-    timer.start(15 * 60);
+  it("renders a partial deep-red wedge (path) for a fractional timer", async () => {
+    await setTimer(15 * 60);
     const wrapper = mount(AnalogClock, { props: { timezone: "UTC" } });
     const wedges = wrapper.findAll('[fill="#b91c1c"]');
     expect(wedges.length).toBe(1);
     expect(wedges[0].element.tagName.toLowerCase()).toBe("path");
   });
 
-  it("renders a full deep-red disk (circle) when the timer fills the hour", () => {
-    timer.start(60 * 60);
+  it("renders a full deep-red disk (circle) when the timer fills the hour", async () => {
+    await setTimer(60 * 60 + 10);
     const wrapper = mount(AnalogClock, { props: { timezone: "UTC" } });
     const wedges = wrapper.findAll('[fill="#b91c1c"]');
     expect(wedges.length).toBe(1);
