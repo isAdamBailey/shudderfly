@@ -6,6 +6,7 @@ const { speak } = useSpeechSynthesis();
 
 defineProps({
   cities: { type: Array, default: () => [] },
+  labels: { type: Object, default: () => ({}) },
   facePreset: { type: String, default: "classic" },
   handPreset: { type: String, default: "classic" },
   numerals: { type: String, default: "arabic" },
@@ -22,6 +23,7 @@ defineProps({
       v-for="city in cities"
       :key="`${city.timezone}-${city.name}`"
       :city="city"
+      :label="labels[city.timezone] ?? null"
       :face-preset="facePreset"
       :hand-preset="handPreset"
       :numerals="numerals"

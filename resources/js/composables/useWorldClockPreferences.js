@@ -23,7 +23,7 @@ function sanitize(raw) {
       .map((c) => ({
         name: String(c.name),
         timezone: String(c.timezone),
-        country: c.country ? String(c.country) : ""
+        region: c.region ? String(c.region) : ""
       }));
   }
   return clean;
@@ -45,7 +45,7 @@ export function useWorldClockPreferences(defaultCities = [], maxCities = 6) {
     prefs.cities = defaultCities.slice(0, maxCities).map((c) => ({
       name: c.name,
       timezone: c.timezone,
-      country: c.country || ""
+      region: c.region || ""
     }));
   }
 
@@ -76,7 +76,7 @@ export function useWorldClockPreferences(defaultCities = [], maxCities = 6) {
     prefs.cities.push({
       name: city.name,
       timezone: city.timezone,
-      country: city.country || ""
+      region: city.region || ""
     });
     return true;
   }

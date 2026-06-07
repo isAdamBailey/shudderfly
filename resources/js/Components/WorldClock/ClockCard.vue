@@ -7,6 +7,7 @@ import { computed } from "vue";
 
 const props = defineProps({
   city: { type: Object, required: true },
+  label: { type: String, default: null },
   size: { type: Number, default: 220 },
   facePreset: { type: String, default: "classic" },
   handPreset: { type: String, default: "classic" },
@@ -49,15 +50,19 @@ const clockTime = computed(() => {
 
 const digital = computed(() => clockTime.value);
 
+// A shared, DB-backed custom label for this timezone, shown only on this
+// page — the pinned "logo" clock always shows the real city name.
+const displayName = computed(() => props.label || props.city.name);
+
 // City + local time spoken in 12-hour format, e.g. "Tokyo, 3:05 PM".
-const spokenTime = computed(() => `${props.city.name}, ${clockTime.value}`);
+const spokenTime = computed(() => `${displayName.value}, ${clockTime.value}`);
 </script>
 
 <template>
   <div class="flex flex-col items-center gap-2">
     <AnalogClock
       :timezone="city.timezone"
-      :city-name="city.name"
+      :city-name="displayName"
       :size="size"
       :face-preset="facePreset"
       :hand-preset="handPreset"
@@ -65,12 +70,12 @@ const spokenTime = computed(() => `${props.city.name}, ${clockTime.value}`);
       :second-hand-mode="secondHandMode"
     />
     <div class="text-center">
-      <div class="font-heading text-lg text-gray-100">{{ city.name }}</div>
+      <div class="font-heading text-lg text-gray-100">{{ displayName }}</div>
       <div class="text-sm text-gray-400">{{ digital }}</div>
     </div>
     <div class="flex items-center gap-2">
       <SpeakButton
-        :aria-label="`Say the time in ${city.name}`"
+        :aria-label="`Say the time in ${displayName}`"
         @click="emit('speak', spokenTime)"
       />
       <button
