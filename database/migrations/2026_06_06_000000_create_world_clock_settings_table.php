@@ -15,7 +15,7 @@ return new class extends Migration
             $table->string('hand_preset')->default('classic');
             $table->string('numerals')->default('arabic');
             $table->string('second_hand_mode')->default('smooth');
-            $table->json('logo')->nullable();                // {enabled,cityName,timezone,facePreset,handPreset,numerals}
+            $table->json('logo')->nullable();                // {enabled,cityName,timezone}
             $table->timestamp('timer_ends_at')->nullable();  // absolute expiry; null = no timer
             $table->timestamps();
         });

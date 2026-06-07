@@ -18,13 +18,7 @@ describe("composables/useLogoPreference", () => {
 
   it("setLogoClock enables the chosen clock and pushes to the server", () => {
     const { logo, setLogoClock } = useLogoPreference();
-    setLogoClock({
-      cityName: "Tokyo",
-      timezone: "Asia/Tokyo",
-      facePreset: "night",
-      handPreset: "ornate",
-      numerals: "roman"
-    });
+    setLogoClock({ cityName: "Tokyo", timezone: "Asia/Tokyo" });
 
     expect(logo.enabled).toBe(true);
     expect(logo.timezone).toBe("Asia/Tokyo");
@@ -34,7 +28,11 @@ describe("composables/useLogoPreference", () => {
       expect.objectContaining({
         url: "/api/world-clock/logo",
         method: "put",
-        data: expect.objectContaining({ enabled: true, cityName: "Tokyo" })
+        data: {
+          enabled: true,
+          cityName: "Tokyo",
+          timezone: "Asia/Tokyo"
+        }
       })
     );
   });
@@ -52,7 +50,7 @@ describe("composables/useLogoPreference", () => {
       expect.objectContaining({
         url: "/api/world-clock/logo",
         method: "put",
-        data: expect.objectContaining({ enabled: false })
+        data: { enabled: false, cityName: "", timezone: "" }
       })
     );
   });

@@ -116,20 +116,29 @@ class WorldClockTest extends TestCase
         ])->assertUnauthorized();
     }
 
-    public function test_update_logo_persists(): void
+    public function test_update_logo_persists_pinned_city_only(): void
     {
         $this->actingAs(User::factory()->create());
+
+        WorldClockSetting::instance()->update([
+            'face_preset' => 'night',
+            'hand_preset' => 'ornate',
+            'numerals' => 'roman',
+        ]);
 
         $this->putJson(route('world-clock.logo.update'), [
             'enabled' => true,
             'cityName' => 'Tokyo',
             'timezone' => 'Asia/Tokyo',
-            'facePreset' => 'minimal',
-            'handPreset' => 'skeleton',
-            'numerals' => 'none',
         ])->assertOk()->assertJsonPath('logo.enabled', true);
 
-        $this->assertSame('Tokyo', WorldClockSetting::instance()->logo['cityName']);
+        $logo = WorldClockSetting::instance()->logo;
+        $this->assertSame('Tokyo', $logo['cityName']);
+        $this->assertSame('Asia/Tokyo', $logo['timezone']);
+        $this->assertTrue($logo['enabled']);
+        $this->assertArrayNotHasKey('facePreset', $logo);
+        $this->assertArrayNotHasKey('handPreset', $logo);
+        $this->assertArrayNotHasKey('numerals', $logo);
     }
 
     public function test_start_and_stop_timer(): void

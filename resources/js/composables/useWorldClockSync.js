@@ -10,10 +10,7 @@ import { nextTick, reactive, ref } from "vue";
 const DEFAULT_LOGO = {
   enabled: false,
   cityName: "",
-  timezone: "",
-  facePreset: "theme",
-  handPreset: "classic",
-  numerals: "none"
+  timezone: ""
 };
 
 const state = reactive({

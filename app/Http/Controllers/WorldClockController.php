@@ -75,9 +75,6 @@ class WorldClockController extends Controller
             'enabled' => ['required', 'boolean'],
             'cityName' => ['nullable', 'string', 'max:100'],
             'timezone' => ['nullable', 'string', 'max:100'],
-            'facePreset' => ['nullable', 'string', 'max:50'],
-            'handPreset' => ['nullable', 'string', 'max:50'],
-            'numerals' => ['nullable', 'string', 'max:50'],
         ]);
 
         $setting = WorldClockSetting::instance();
@@ -85,9 +82,6 @@ class WorldClockController extends Controller
             'enabled' => $validated['enabled'],
             'cityName' => $validated['cityName'] ?? '',
             'timezone' => $validated['timezone'] ?? '',
-            'facePreset' => $validated['facePreset'] ?? 'theme',
-            'handPreset' => $validated['handPreset'] ?? 'classic',
-            'numerals' => $validated['numerals'] ?? 'none',
         ]]);
 
         return $this->broadcastAndRespond($setting);
