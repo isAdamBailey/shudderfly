@@ -30,13 +30,18 @@ class WorldClockSetting extends Model
     public static function instance(): self
     {
         $setting = static::firstOrCreate([]);
+        $max = config('world_clock.max_cities', 6);
+        $cities = $setting->cities ?? [];
 
-        if (empty($setting->cities)) {
-            $setting->cities = array_slice(
-                config('world_clock.default_cities', []),
-                0,
-                config('world_clock.max_cities', 6)
-            );
+        if (empty($cities)) {
+            // Seed from config on first use.
+            $setting->cities = array_slice(config('world_clock.default_cities', []), 0, $max);
+            $setting->save();
+        } elseif (count($cities) > $max) {
+            // Heal rows that exceed the limit (e.g. seeded before the cap), so
+            // saving settings — which sends the whole city list — doesn't fail
+            // validation and silently drop appearance changes.
+            $setting->cities = array_slice($cities, 0, $max);
             $setting->save();
         }
 

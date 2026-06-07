@@ -46,7 +46,22 @@ class WorldClockTest extends TestCase
 
         $this->assertNotEmpty($setting->cities);
         $this->assertSame('America/New_York', $setting->cities[0]['timezone']);
+        $this->assertLessThanOrEqual(config('world_clock.max_cities'), count($setting->cities));
         $this->assertSame(1, WorldClockSetting::count());
+    }
+
+    public function test_instance_heals_city_list_that_exceeds_the_limit(): void
+    {
+        $max = config('world_clock.max_cities');
+        $cities = [];
+        for ($i = 0; $i < $max + 4; $i++) {
+            $cities[] = ['name' => "City {$i}", 'timezone' => 'UTC', 'country' => ''];
+        }
+        WorldClockSetting::create(['cities' => $cities]);
+
+        // Reloading the singleton trims the over-limit list so settings saves
+        // (which include the full city list) pass validation.
+        $this->assertCount($max, WorldClockSetting::instance()->cities);
     }
 
     public function test_update_settings_persists_and_broadcasts(): void

@@ -27,7 +27,9 @@ export function useWorldClockPreferences(maxCities = 6) {
       clearTimeout(timer);
       timer = setTimeout(() => {
         sync.push("world-clock.settings.update", "put", {
-          cities: prefs.cities,
+          // Cap defensively so a stale, over-limit city list can't fail
+          // validation and silently drop the appearance change.
+          cities: prefs.cities.slice(0, maxCities),
           face_preset: prefs.facePreset,
           hand_preset: prefs.handPreset,
           numerals: prefs.numerals,
