@@ -3,11 +3,12 @@
 namespace Database\Factories;
 
 use App\Models\Book;
+use App\Models\Page;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Mmo\Faker\PicsumProvider;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Page>
+ * @extends Factory<Page>
  */
 class PageFactory extends Factory
 {

@@ -13,6 +13,7 @@ use App\Models\Song;
 use App\Models\User;
 use App\Services\PopularityService;
 use App\Services\VoiceSearchService;
+use App\Support\ReadThrottle;
 use App\Support\ThemeBooks;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Collection;
@@ -139,20 +140,20 @@ class BookController extends Controller
 
         if ($canIncrement) {
             // Per-actor throttle: only count one view per user/session/IP per 5 minutes (cache only)
-            $cacheKey = \App\Support\ReadThrottle::cacheKey('book', $book->id, $request);
+            $cacheKey = ReadThrottle::cacheKey('book', $book->id, $request);
             $throttleSeconds = 5 * 60;
-            $fingerprint = \App\Support\ReadThrottle::fingerprint($request);
+            $fingerprint = ReadThrottle::fingerprint($request);
             try {
                 if (Cache::add($cacheKey, 1, now()->addSeconds($throttleSeconds))) {
                     // Added successfully => no recent view by this actor
-                    \App\Support\ReadThrottle::dispatchJob(new IncrementBookReadCount($book, $fingerprint));
+                    ReadThrottle::dispatchJob(new IncrementBookReadCount($book, $fingerprint));
                 }
             } catch (\Throwable $e) {
                 // If cache is unavailable/misconfigured, skip increment to avoid inflation
             }
         }
 
-        $youtubeEnabled = \App\Models\SiteSetting::where('key', 'youtube_enabled')->first()->value;
+        $youtubeEnabled = SiteSetting::where('key', 'youtube_enabled')->first()->value;
         $sort = $request->query('sort', 'newest');
 
         $pages = $book->pages()

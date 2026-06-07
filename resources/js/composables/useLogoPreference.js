@@ -1,46 +1,14 @@
-import { reactive, toRaw, watch } from "vue";
+import { useWorldClockSync } from "@/composables/useWorldClockSync";
 
-// Lets the user replace the top-left nav logo with a configured clock. State is
-// a module-level singleton reactive object so a write from the World Clock page
-// is reflected live in the nav (localStorage alone is not cross-component
-// reactive). The choice persists in localStorage across reloads.
-
-const STORAGE_KEY = "shudderfly.worldClock.logo";
-
-const DEFAULT = {
-  enabled: false,
-  cityName: "",
-  timezone: "",
-  facePreset: "theme",
-  handPreset: "classic",
-  numerals: "none"
-};
-
-const logo = reactive({ ...DEFAULT });
-
-try {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    const parsed = JSON.parse(stored);
-    if (parsed && typeof parsed === "object") Object.assign(logo, parsed);
-  }
-} catch (e) {
-  console.error("Error loading logo preference:", e);
-}
-
-watch(
-  logo,
-  () => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(toRaw(logo)));
-    } catch (e) {
-      console.error("Error saving logo preference:", e);
-    }
-  },
-  { deep: true }
-);
+// Lets users replace the top-left nav logo with a configured clock. The choice
+// is now part of the shared server state (see useWorldClockSync), so the same
+// logo clock shows for everyone. `logo` is the live shared object — mutated in
+// place so the nav logo updates app-wide. Public API is unchanged.
 
 export function useLogoPreference() {
+  const sync = useWorldClockSync();
+  const logo = sync.state.logo;
+
   function setLogoClock(config) {
     Object.assign(logo, {
       enabled: true,
@@ -50,10 +18,19 @@ export function useLogoPreference() {
       handPreset: config.handPreset || "classic",
       numerals: config.numerals || "none"
     });
+    sync.push("world-clock.logo.update", "put", { ...logo });
   }
 
   function clearLogoClock() {
-    Object.assign(logo, { ...DEFAULT });
+    Object.assign(logo, {
+      enabled: false,
+      cityName: "",
+      timezone: "",
+      facePreset: "theme",
+      handPreset: "classic",
+      numerals: "none"
+    });
+    sync.push("world-clock.logo.update", "put", { ...logo });
   }
 
   return { logo, setLogoClock, clearLogoClock };

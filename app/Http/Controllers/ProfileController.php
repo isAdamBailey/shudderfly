@@ -7,12 +7,15 @@ use App\Mail\ContactAdmins;
 use App\Models\User;
 use App\Services\PushNotificationService;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class ProfileController extends Controller
 {
@@ -23,7 +26,7 @@ class ProfileController extends Controller
     /**
      * Display the user's profile form.
      *
-     * @return \Inertia\Response
+     * @return Response
      */
     public function edit(Request $request)
     {
@@ -39,7 +42,7 @@ class ProfileController extends Controller
     /**
      * Update the user's profile information.
      *
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function update(ProfileUpdateRequest $request)
     {
@@ -57,7 +60,7 @@ class ProfileController extends Controller
     /**
      * Update the user's notification preferences.
      *
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function updateNotificationPreferences(Request $request)
     {
@@ -74,7 +77,7 @@ class ProfileController extends Controller
     /**
      * Update the user's avatar.
      *
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function updateAvatar(Request $request)
     {
@@ -115,7 +118,7 @@ class ProfileController extends Controller
     /**
      * Delete the user's account.
      *
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function destroy(Request $request)
     {
@@ -174,7 +177,7 @@ class ProfileController extends Controller
     /**
      * Get the user's notifications.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function notifications(Request $request)
     {
@@ -189,7 +192,7 @@ class ProfileController extends Controller
     /**
      * Mark a notification as read.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function markNotificationAsRead(Request $request, string $id)
     {
@@ -208,7 +211,7 @@ class ProfileController extends Controller
     /**
      * Mark all notifications as read.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function markAllNotificationsAsRead(Request $request)
     {
@@ -220,7 +223,7 @@ class ProfileController extends Controller
     /**
      * Delete a notification.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function deleteNotification(Request $request, string $id)
     {

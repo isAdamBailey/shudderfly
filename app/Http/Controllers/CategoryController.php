@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Requests\StoreCategoryRequest;
 use App\Http\Requests\UpdateCategoryRequest;
 use App\Models\Book;
@@ -32,7 +33,7 @@ class CategoryController extends Controller
                 ->orderBy('read_count', 'asc')
                 ->paginate(),
             'themed' => ThemeBooks::getBooksForThemePaginated(
-                \App\Http\Middleware\HandleInertiaRequests::getCurrentTheme() ?? ''
+                HandleInertiaRequests::getCurrentTheme() ?? ''
             ),
             default => Category::where('name', $categoryName)
                 ->firstOrFail()
@@ -43,7 +44,7 @@ class CategoryController extends Controller
 
         // Get all pages with locations for ALL books in this category (not just current page)
         if ($categoryName === 'themed') {
-            $theme = \App\Http\Middleware\HandleInertiaRequests::getCurrentTheme() ?? '';
+            $theme = HandleInertiaRequests::getCurrentTheme() ?? '';
             $keywords = ThemeBooks::getKeywords($theme);
             $allBookIds = empty($keywords) ? collect([]) : Book::query()
                 ->where(function ($q) use ($keywords) {

@@ -5,17 +5,19 @@ import CityPicker from "@/Components/WorldClock/CityPicker.vue";
 import ClockCustomizer from "@/Components/WorldClock/ClockCustomizer.vue";
 import WorldClockGrid from "@/Components/WorldClock/WorldClockGrid.vue";
 import { useWorldClockPreferences } from "@/composables/useWorldClockPreferences";
+import { useWorldClockSync } from "@/composables/useWorldClockSync";
 import { Head } from "@inertiajs/vue3";
 
 const props = defineProps({
   defaultCities: { type: Array, default: () => [] },
-  maxCities: { type: Number, default: 6 }
+  maxCities: { type: Number, default: 6 },
+  worldClock: { type: Object, default: null }
 });
 
-const { prefs, addCity, removeCity } = useWorldClockPreferences(
-  props.defaultCities,
-  props.maxCities
-);
+// Seed the shared state from this page's server props before reading it.
+if (props.worldClock) useWorldClockSync().hydrate(props.worldClock);
+
+const { prefs, addCity, removeCity } = useWorldClockPreferences(props.maxCities);
 
 // Settings start expanded on desktop and collapsed on mobile, so phones lead
 // with the clocks themselves.
