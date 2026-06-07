@@ -4,10 +4,15 @@ import { computed, onBeforeUnmount, ref, watch } from "vue";
 
 const props = defineProps({
   selectedCities: { type: Array, default: () => [] },
-  maxCities: { type: Number, default: 6 }
+  maxCities: { type: Number, default: 6 },
+  labels: { type: Object, default: () => ({}) }
 });
 
-const emit = defineEmits(["add", "remove"]);
+const emit = defineEmits(["add", "remove", "relabel"]);
+
+const onRelabelInput = (city, event) => {
+  emit("relabel", city.timezone, event.target.value.trim());
+};
 
 const query = ref("");
 const results = ref([]);
@@ -99,7 +104,7 @@ const onAdd = (city) => {
         >
           <span>
             {{ city.name }}
-            <span class="text-gray-400">· {{ city.country }}</span>
+            <span v-if="city.country" class="text-gray-400">· {{ city.country }}</span>
           </span>
           <i
             v-if="isSelected(city)"
@@ -111,22 +116,30 @@ const onAdd = (city) => {
       </li>
     </ul>
 
-    <div class="mt-4 flex flex-wrap gap-2">
-      <span
+    <ul v-if="selectedCities.length" class="mt-4 space-y-2">
+      <li
         v-for="city in selectedCities"
         :key="`chip-${city.timezone}-${city.name}`"
-        class="inline-flex items-center gap-1 rounded-full bg-gray-700 px-3 py-1 text-xs text-gray-100"
+        class="flex items-center gap-2 rounded-md bg-gray-700 px-3 py-2"
       >
-        {{ city.name }}
+        <span class="shrink-0 text-sm text-gray-100">{{ city.name }}</span>
+        <input
+          type="text"
+          :value="labels[city.timezone] || ''"
+          placeholder="Custom label (optional)"
+          class="min-w-0 flex-1 rounded-md border-gray-600 bg-gray-900 px-2 py-1 text-xs text-gray-100 placeholder-gray-500 focus:border-indigo-500 focus:ring-indigo-500"
+          :aria-label="`Custom label for ${city.name}`"
+          @change="onRelabelInput(city, $event)"
+        />
         <button
           type="button"
-          class="text-gray-400 hover:text-red-400"
+          class="shrink-0 text-gray-400 hover:text-red-400"
           :aria-label="`Remove ${city.name}`"
           @click="emit('remove', city)"
         >
           <i class="ri-close-line" aria-hidden="true"></i>
         </button>
-      </span>
-    </div>
+      </li>
+    </ul>
   </div>
 </template>

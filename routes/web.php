@@ -86,8 +86,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/movie-cast/share', [MovieCastController::class, 'share'])->name('movie-cast.share');
 
     Route::get('/world-clock', [WorldClockController::class, 'index'])->name('world-clock.index');
-    Route::get('/api/world-clock/cities/search', [WorldClockController::class, 'searchCities'])
-        ->name('world-clock.cities.search');
     Route::put('/api/world-clock/settings', [WorldClockController::class, 'updateSettings'])
         ->name('world-clock.settings.update');
     Route::put('/api/world-clock/logo', [WorldClockController::class, 'updateLogo'])
@@ -139,6 +137,11 @@ Route::middleware('auth')->group(function () {
         Route::post('/sounds', [SoundsController::class, 'store'])->name('sounds.store');
         Route::put('/sounds/{sound}', [SoundsController::class, 'update'])->name('sounds.update');
         Route::delete('/sounds/{sound}', [SoundsController::class, 'destroy'])->name('sounds.destroy');
+
+        Route::get('/api/world-clock/cities/search', [WorldClockController::class, 'searchCities'])
+            ->name('world-clock.cities.search');
+        Route::put('/world-clock/labels', [WorldClockController::class, 'updateLabel'])
+            ->name('world-clock.labels.update');
     });
 
     Route::group(['middleware' => ['can:admin']], function () {

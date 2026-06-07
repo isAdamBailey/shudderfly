@@ -18,10 +18,10 @@ describe("Components/WorldClock/ClockCard.vue", () => {
     vi.useRealTimers();
   });
 
-  const mountAt = async (isoInstant, timezone) => {
+  const mountAt = async (isoInstant, timezone, extraProps = {}) => {
     vi.setSystemTime(new Date(isoInstant));
     wrapper = mount(ClockCard, {
-      props: { city: { name: "Testville", timezone } }
+      props: { city: { name: "Testville", timezone }, ...extraProps }
     });
     // The clock tick fires in onMounted; flush so the DOM reflects it.
     await nextTick();
@@ -42,5 +42,28 @@ describe("Components/WorldClock/ClockCard.vue", () => {
     await mountAt("2024-01-15T15:05:00Z", "UTC");
     await wrapper.find('[aria-label="Say the time in Testville"]').trigger("click");
     expect(wrapper.emitted("speak")?.[0]?.[0]).toBe("Testville, 3:05 PM");
+  });
+
+  it("falls back to the city name when no label is set", async () => {
+    await mountAt("2024-01-15T15:05:00Z", "UTC");
+    expect(wrapper.text()).toContain("Testville");
+  });
+
+  it("shows the custom label instead of the city name when provided", async () => {
+    await mountAt("2024-01-15T15:05:00Z", "UTC", { label: "Grandma's House" });
+    expect(wrapper.text()).toContain("Grandma's House");
+    expect(wrapper.text()).not.toContain("Testville");
+    await wrapper.find('[aria-label="Say the time in Grandma\'s House"]').trigger("click");
+    expect(wrapper.emitted("speak")?.[0]?.[0]).toBe("Grandma's House, 3:05 PM");
+  });
+
+  it("keeps the logo pin tied to the real city name, not the label", async () => {
+    await mountAt("2024-01-15T15:05:00Z", "UTC", { label: "Grandma's House" });
+    await wrapper
+      .find('[aria-label="Use the Testville clock as the app logo"]')
+      .trigger("click");
+    expect(wrapper.emitted("speak")?.[0]?.[0]).toBe(
+      "Testville clock set as the app logo"
+    );
   });
 });

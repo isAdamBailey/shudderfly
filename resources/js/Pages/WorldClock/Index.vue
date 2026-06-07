@@ -1,23 +1,50 @@
 <script setup>
+/* global route */
 import Accordion from "@/Components/Accordion.vue";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import CityPicker from "@/Components/WorldClock/CityPicker.vue";
 import ClockCustomizer from "@/Components/WorldClock/ClockCustomizer.vue";
 import WorldClockGrid from "@/Components/WorldClock/WorldClockGrid.vue";
 import { useWorldClockPreferences } from "@/composables/useWorldClockPreferences";
+import { usePermissions } from "@/composables/permissions";
 import { useWorldClockSync } from "@/composables/useWorldClockSync";
 import { Head } from "@inertiajs/vue3";
+import { reactive } from "vue";
 
 const props = defineProps({
   defaultCities: { type: Array, default: () => [] },
   maxCities: { type: Number, default: 6 },
+  timezoneLabels: { type: Object, default: () => ({}) },
   worldClock: { type: Object, default: null }
 });
+
+const { canEditPages } = usePermissions();
 
 // Seed the shared state from this page's server props before reading it.
 if (props.worldClock) useWorldClockSync().hydrate(props.worldClock);
 
 const { prefs, addCity, removeCity } = useWorldClockPreferences(props.maxCities);
+
+// Custom labels are shared across all users and persisted server-side
+// (keyed by IANA timezone), unlike the rest of the per-browser preferences.
+const labels = reactive({ ...props.timezoneLabels });
+
+const onRelabel = async (timezone, label) => {
+  try {
+    const response = await window.axios.put(route("world-clock.labels.update"), {
+      timezone,
+      label
+    });
+    if (response.data.label) {
+      labels[timezone] = response.data.label;
+    } else {
+      delete labels[timezone];
+    }
+  } catch {
+    // Leave the label state untouched if the request fails; the input
+    // keeps whatever the user typed so they can retry.
+  }
+};
 
 // Settings start expanded on desktop and collapsed on mobile, so phones lead
 // with the clocks themselves.
@@ -55,10 +82,13 @@ const settingsOpen =
                 v-model:second-hand-mode="prefs.secondHandMode"
               />
               <CityPicker
+                v-if="canEditPages"
                 :selected-cities="prefs.cities"
                 :max-cities="maxCities"
+                :labels="labels"
                 @add="addCity"
                 @remove="removeCity"
+                @relabel="onRelabel"
               />
             </div>
           </Accordion>
@@ -67,6 +97,7 @@ const settingsOpen =
         <div class="lg:col-span-2">
           <WorldClockGrid
             :cities="prefs.cities"
+            :labels="labels"
             :face-preset="prefs.facePreset"
             :hand-preset="prefs.handPreset"
             :numerals="prefs.numerals"
