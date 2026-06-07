@@ -36,13 +36,12 @@ const serverOffsetMs = ref(0);
 let applyingRemote = false;
 let echoReady = false;
 let echoAttempts = 0;
-// Bumped on every full remote apply (hydrate / Echo broadcast). A pending
-// debounced local save captures the epoch when scheduled and bails if it has
-// changed, so a genuine remote update can't be clobbered by a stale save.
-let remoteEpochValue = 0;
+// Seeded from server props exactly once per page load. Re-seeding on later prop
+// refreshes is avoided so a background update can never revert an in-flight
+// local edit; live updates from other clients arrive via the Echo broadcast.
+let hydrated = false;
 
 const isApplyingRemote = () => applyingRemote;
-const remoteEpoch = () => remoteEpochValue;
 
 function assignPayload(payload) {
   if (!payload || typeof payload !== "object") return;
@@ -68,10 +67,8 @@ function assignPayload(payload) {
 
 // Apply full state that originated from the server (initial hydration or a live
 // broadcast from another client) without triggering the local save watchers.
-// Bumps the remote epoch so any in-flight local save is superseded.
 function applyRemote(payload) {
   applyingRemote = true;
-  remoteEpochValue += 1;
   assignPayload(payload);
   nextTick(() => {
     applyingRemote = false;
@@ -91,9 +88,12 @@ function reconcileTimer(payload) {
   }
 }
 
-// Idempotent: called from both the layout (app-wide, for the nav logo + timer)
-// and the World Clock page. Each Inertia navigation carries fresh server props.
+// Seed the shared state from server props. Runs only the first time (per page
+// load) — both the layout and the World Clock page call it, and later prop
+// refreshes must not overwrite local edits or live broadcast state.
 function hydrate(initial) {
+  if (hydrated) return;
+  hydrated = true;
   applyRemote(initial);
 }
 
@@ -151,7 +151,6 @@ export function useWorldClockSync() {
     applyRemote,
     reconcileTimer,
     push,
-    isApplyingRemote,
-    remoteEpoch
+    isApplyingRemote
   };
 }

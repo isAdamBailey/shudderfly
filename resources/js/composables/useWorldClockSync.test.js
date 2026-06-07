@@ -72,11 +72,4 @@ describe("useWorldClockSync", () => {
     expect(data.face_preset).toBe("minimal");
     expect(sync.state.facePreset).toBe("classic");
   });
-
-  it("a remote apply bumps the epoch so stale local saves can detect it", () => {
-    const sync = useWorldClockSync();
-    const before = sync.remoteEpoch();
-    sync.applyRemote({ face_preset: "night", server_now: new Date().toISOString() });
-    expect(sync.remoteEpoch()).toBe(before + 1);
-  });
 });

@@ -16,16 +16,11 @@ usePusherNotifications();
 const page = usePage();
 const { playSong, openFlyout } = useMusicPlayer();
 
-// Seed the shared World Clock state app-wide so the nav logo clock and the
-// shared timer work on every page. The prop refreshes on each navigation.
+// Seed the shared World Clock state app-wide (once) so the nav logo clock and
+// the shared timer work on every page. Live updates arrive via Echo; a full
+// page refresh re-seeds from the server, keeping every session consistent.
 const worldClockSync = useWorldClockSync();
 if (page.props.worldClock) worldClockSync.hydrate(page.props.worldClock);
-watch(
-  () => page.props.worldClock,
-  (wc) => {
-    if (wc) worldClockSync.hydrate(wc);
-  }
-);
 
 async function playSongFromFlash(songId) {
   if (songId == null || songId === "") return;

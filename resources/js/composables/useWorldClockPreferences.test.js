@@ -37,17 +37,17 @@ describe("composables/useWorldClockPreferences", () => {
     );
   });
 
-  it("does not write a stale value when a remote update supersedes the edit", async () => {
+  it("does not re-save a change that arrived from a remote broadcast", async () => {
     window.axios.request.mockClear();
-    prefs.facePreset = "ornate";
-    await nextTick();
-    // A genuine remote change arrives before the debounce fires.
+    // A live update from another client must update local state without echoing
+    // back as a new save (which would cause a feedback loop).
     sync.applyRemote({
       face_preset: "minimal",
       server_now: new Date().toISOString()
     });
     await nextTick();
     vi.advanceTimersByTime(300);
+    expect(prefs.facePreset).toBe("minimal");
     expect(window.axios.request).not.toHaveBeenCalled();
   });
 });
