@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\IncrementPageReadCount;
 use App\Models\Book;
 use App\Models\Message;
 use App\Models\Page;
@@ -47,7 +48,7 @@ class PagesTest extends TestCase
         ); // Video pages
 
         // Set youtube_enabled to false
-        \App\Models\SiteSetting::where('key', 'youtube_enabled')->update(['value' => '0']);
+        SiteSetting::where('key', 'youtube_enabled')->update(['value' => '0']);
 
         // Test index page - should only show regular pages when YouTube is disabled
         $this->get(route('pictures.index'))->assertInertia(
@@ -64,7 +65,7 @@ class PagesTest extends TestCase
         );
 
         // Enable YouTube
-        \App\Models\SiteSetting::where('key', 'youtube_enabled')->update(['value' => '1']);
+        SiteSetting::where('key', 'youtube_enabled')->update(['value' => '1']);
 
         // Test index page again - should now show all pages
         $this->get(route('pictures.index'))->assertInertia(
@@ -90,7 +91,7 @@ class PagesTest extends TestCase
         $videoPage = Page::factory()->for($book)->state(['video_link' => 'https://youtube.com/watch?v=123'])->create();
 
         // Set youtube_enabled to false
-        \App\Models\SiteSetting::where('key', 'youtube_enabled')->update(['value' => '0']);
+        SiteSetting::where('key', 'youtube_enabled')->update(['value' => '0']);
 
         // Regular page should be accessible
         $this->get(route('pages.show', $regularPage))->assertStatus(200);
@@ -247,11 +248,11 @@ class PagesTest extends TestCase
         ); // >90 days: 1.0x
 
         // Run jobs directly for testing
-        (new \App\Jobs\IncrementPageReadCount($newPage, 'test-fingerprint'))->handle();
-        (new \App\Jobs\IncrementPageReadCount($monthOldPage, 'test-fingerprint'))->handle();
-        (new \App\Jobs\IncrementPageReadCount($threeMonthOldPage, 'test-fingerprint'))->handle();
-        (new \App\Jobs\IncrementPageReadCount($yearOldPage, 'test-fingerprint'))->handle();
-        (new \App\Jobs\IncrementPageReadCount($veryOldPage, 'test-fingerprint'))->handle();
+        (new IncrementPageReadCount($newPage, 'test-fingerprint'))->handle();
+        (new IncrementPageReadCount($monthOldPage, 'test-fingerprint'))->handle();
+        (new IncrementPageReadCount($threeMonthOldPage, 'test-fingerprint'))->handle();
+        (new IncrementPageReadCount($yearOldPage, 'test-fingerprint'))->handle();
+        (new IncrementPageReadCount($veryOldPage, 'test-fingerprint'))->handle();
 
         // Verify age-based behavior with new logic
         $this->assertSame(-1.0 + 3.0, $newPage->fresh()->read_count); // ≤7 days: initial 3.0x boost
@@ -1045,7 +1046,7 @@ class PagesTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
+        SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
 
         $book = Book::factory()->create();
         Page::factory()->for($book)->count(5)->create();
@@ -1063,7 +1064,7 @@ class PagesTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '1']);
+        SiteSetting::where('key', 'music_enabled')->update(['value' => '1']);
 
         $book = Book::factory()->create();
         Page::factory()->for($book)->count(3)->create();
@@ -1081,7 +1082,7 @@ class PagesTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
+        SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
 
         $book = Book::factory()->create();
         Page::factory()->for($book)->count(5)->create();
@@ -1099,7 +1100,7 @@ class PagesTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
+        SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
 
         $book = Book::factory()->create();
         Page::factory()->for($book)->count(3)->create(['read_count' => 100]);
@@ -1117,7 +1118,7 @@ class PagesTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
+        SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
 
         $book = Book::factory()->create();
         Page::factory()->for($book)->count(10)->create();
@@ -1135,7 +1136,7 @@ class PagesTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
+        SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
 
         $yearAgo = now()->subYear();
         $book = Book::factory()->create();
@@ -1154,7 +1155,7 @@ class PagesTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
+        SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
 
         $book = Book::factory()->create();
         Page::factory()->for($book)->create(['content' => 'Test content with keyword']);
@@ -1172,7 +1173,7 @@ class PagesTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '1']);
+        SiteSetting::where('key', 'music_enabled')->update(['value' => '1']);
 
         $book = Book::factory()->create();
         Page::factory()->for($book)->create(['content' => 'Test content with keyword']);
@@ -1190,7 +1191,7 @@ class PagesTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
+        SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
 
         $book = Book::factory()->create();
         Page::factory()->for($book)->count(30)->create();
@@ -1209,7 +1210,7 @@ class PagesTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '1']);
+        SiteSetting::where('key', 'music_enabled')->update(['value' => '1']);
 
         $book = Book::factory()->create();
         Page::factory()->for($book)->count(20)->create();
@@ -1233,7 +1234,7 @@ class PagesTest extends TestCase
         Song::factory()->count(5)->create();
 
         // Start with music enabled
-        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '1']);
+        SiteSetting::where('key', 'music_enabled')->update(['value' => '1']);
 
         $response1 = $this->get(route('pictures.index'));
         $response1->assertInertia(
@@ -1241,7 +1242,7 @@ class PagesTest extends TestCase
         );
 
         // Disable music
-        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
+        SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
 
         $response2 = $this->get(route('pictures.index'));
         $response2->assertInertia(
@@ -1249,7 +1250,7 @@ class PagesTest extends TestCase
         );
 
         // Re-enable music
-        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '1']);
+        SiteSetting::where('key', 'music_enabled')->update(['value' => '1']);
 
         $response3 = $this->get(route('pictures.index'));
         $response3->assertInertia(
@@ -1261,8 +1262,8 @@ class PagesTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
-        \App\Models\SiteSetting::where('key', 'youtube_enabled')->update(['value' => '0']);
+        SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
+        SiteSetting::where('key', 'youtube_enabled')->update(['value' => '0']);
 
         $book = Book::factory()->create();
         Page::factory()->for($book)->count(2)->create();
@@ -1281,8 +1282,8 @@ class PagesTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '1']);
-        \App\Models\SiteSetting::where('key', 'youtube_enabled')->update(['value' => '1']);
+        SiteSetting::where('key', 'music_enabled')->update(['value' => '1']);
+        SiteSetting::where('key', 'youtube_enabled')->update(['value' => '1']);
 
         $book = Book::factory()->create();
         Page::factory()->for($book)->count(2)->create();
@@ -1301,7 +1302,7 @@ class PagesTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        \App\Models\SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
+        SiteSetting::where('key', 'music_enabled')->update(['value' => '0']);
 
         // Create only songs, no pages
         Song::factory()->count(5)->create();

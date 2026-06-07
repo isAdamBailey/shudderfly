@@ -7,21 +7,23 @@ import ClockCustomizer from "@/Components/WorldClock/ClockCustomizer.vue";
 import WorldClockGrid from "@/Components/WorldClock/WorldClockGrid.vue";
 import { useWorldClockPreferences } from "@/composables/useWorldClockPreferences";
 import { usePermissions } from "@/composables/permissions";
+import { useWorldClockSync } from "@/composables/useWorldClockSync";
 import { Head } from "@inertiajs/vue3";
 import { reactive } from "vue";
 
 const props = defineProps({
   defaultCities: { type: Array, default: () => [] },
   maxCities: { type: Number, default: 6 },
-  timezoneLabels: { type: Object, default: () => ({}) }
+  timezoneLabels: { type: Object, default: () => ({}) },
+  worldClock: { type: Object, default: null }
 });
 
 const { canEditPages } = usePermissions();
 
-const { prefs, addCity, removeCity } = useWorldClockPreferences(
-  props.defaultCities,
-  props.maxCities
-);
+// Seed the shared state from this page's server props before reading it.
+if (props.worldClock) useWorldClockSync().hydrate(props.worldClock);
+
+const { prefs, addCity, removeCity } = useWorldClockPreferences(props.maxCities);
 
 // Custom labels are shared across all users and persisted server-side
 // (keyed by IANA timezone), unlike the rest of the per-browser preferences.

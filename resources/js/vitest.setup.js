@@ -113,6 +113,10 @@ export const ROUTE_MAPPINGS = {
     "movie-cast.share": "/movie-cast/share",
     "world-clock.index": "/world-clock",
     "world-clock.cities.search": "/api/world-clock/cities/search",
+    "world-clock.settings.update": "/api/world-clock/settings",
+    "world-clock.logo.update": "/api/world-clock/logo",
+    "world-clock.timer.start": "/api/world-clock/timer",
+    "world-clock.timer.stop": "/api/world-clock/timer",
 };
 
 export const createRouteMock = () =>

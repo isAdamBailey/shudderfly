@@ -5,6 +5,8 @@ namespace Tests\Unit;
 use App\Models\CommentReaction;
 use App\Models\MessageComment;
 use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -75,8 +77,8 @@ class CommentReactionTest extends TestCase
     {
         $reaction = CommentReaction::factory()->create();
 
-        $this->assertInstanceOf(\Carbon\Carbon::class, $reaction->created_at);
-        $this->assertInstanceOf(\Carbon\Carbon::class, $reaction->updated_at);
+        $this->assertInstanceOf(Carbon::class, $reaction->created_at);
+        $this->assertInstanceOf(Carbon::class, $reaction->updated_at);
     }
 
     public function test_unique_constraint_exists_on_comment_and_user(): void
@@ -93,7 +95,7 @@ class CommentReactionTest extends TestCase
 
         // Verify we can't create a duplicate reaction directly
         // (The application handles this by updating, but the constraint exists)
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
 
         CommentReaction::create([
             'comment_id' => $comment->id,

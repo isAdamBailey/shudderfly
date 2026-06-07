@@ -6,6 +6,7 @@ use App\Models\CommentReaction;
 use App\Models\Message;
 use App\Models\MessageComment;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -142,7 +143,7 @@ class MessageCommentTest extends TestCase
     {
         $comment = MessageComment::factory()->create();
 
-        $this->assertInstanceOf(\Carbon\Carbon::class, $comment->created_at);
-        $this->assertInstanceOf(\Carbon\Carbon::class, $comment->updated_at);
+        $this->assertInstanceOf(Carbon::class, $comment->created_at);
+        $this->assertInstanceOf(Carbon::class, $comment->updated_at);
     }
 }

@@ -4,9 +4,9 @@
         :timezone="logo.timezone"
         :city-name="logo.cityName"
         size="100%"
-        :face-preset="logo.facePreset"
-        :hand-preset="logo.handPreset"
-        :numerals="logo.numerals"
+        :face-preset="state.facePreset"
+        :hand-preset="state.handPreset"
+        :numerals="state.numerals"
         :show-seconds="true"
         second-hand-mode="tick"
     />
@@ -630,6 +630,7 @@
 <script setup>
 import AnalogClock from "@/Components/WorldClock/AnalogClock.vue";
 import { useLogoPreference } from "@/composables/useLogoPreference";
+import { useWorldClockSync } from "@/composables/useWorldClockSync";
 import { usePage } from "@inertiajs/vue3";
 import { computed } from "vue";
 
@@ -639,4 +640,7 @@ const isJuly = computed(() => page.props.theme === "fireworks");
 const isHalloween = computed(() => page.props.theme === "halloween");
 
 const { logo } = useLogoPreference();
+// The logo clock uses the shared global appearance so it matches the other
+// clocks; the logo itself only records which city is pinned.
+const { state } = useWorldClockSync();
 </script>

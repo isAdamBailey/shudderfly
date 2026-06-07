@@ -104,7 +104,7 @@ const onAdd = (city) => {
         >
           <span>
             {{ city.name }}
-            <span v-if="city.region" class="text-gray-400">· {{ city.region }}</span>
+            <span v-if="city.country" class="text-gray-400">· {{ city.country }}</span>
           </span>
           <i
             v-if="isSelected(city)"

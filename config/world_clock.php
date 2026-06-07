@@ -7,7 +7,7 @@ return [
     | Maximum clocks
     |--------------------------------------------------------------------------
     |
-    | The maximum number of city clocks a user may display at once on the
+    | The maximum number of city clocks that may be displayed at once on the
     | World Clock page.
     |
     */
@@ -19,19 +19,19 @@ return [
     | Default cities
     |--------------------------------------------------------------------------
     |
-    | Shown on first load so the page works with zero searches. Each entry is
-    | a canonical IANA timezone identifier; the controller decorates these
-    | with a friendly name/region using the same logic as the search results.
+    | Seeds the shared world clock setting on first use, and is shown as the
+    | `defaultCities` Inertia prop. Each entry is
+    | ['name' => ..., 'timezone' => <IANA>, 'country' => ...].
     |
     */
 
     'default_cities' => [
-        'America/New_York',
-        'America/Los_Angeles',
-        'Europe/London',
-        'Europe/Paris',
-        'Asia/Tokyo',
-        'Australia/Sydney',
+        ['name' => 'New York', 'timezone' => 'America/New_York', 'country' => 'United States'],
+        ['name' => 'Los Angeles', 'timezone' => 'America/Los_Angeles', 'country' => 'United States'],
+        ['name' => 'London', 'timezone' => 'Europe/London', 'country' => 'United Kingdom'],
+        ['name' => 'Paris', 'timezone' => 'Europe/Paris', 'country' => 'France'],
+        ['name' => 'Tokyo', 'timezone' => 'Asia/Tokyo', 'country' => 'Japan'],
+        ['name' => 'Sydney', 'timezone' => 'Australia/Sydney', 'country' => 'Australia'],
     ],
 
 ];

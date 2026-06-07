@@ -6,6 +6,7 @@ use App\Models\Book;
 use App\Models\Page;
 use App\Models\Song;
 use App\Services\VoiceSearchService;
+use GuzzleHttp\Client;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -206,7 +207,7 @@ class SearchController extends Controller
 
         try {
             // Use Guzzle's query parameter handling to properly encode values
-            $client = new \GuzzleHttp\Client;
+            $client = new Client;
             $response = $client->get('https://nominatim.openstreetmap.org/reverse', [
                 'query' => [
                     'format' => 'json',

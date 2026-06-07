@@ -17,7 +17,7 @@ return new class extends Migration
             Schema::table('collage_page', function (Blueprint $table) {
                 $table->dropUnique('collage_page_page_id_unique');
             });
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $message = strtolower($e->getMessage());
 
             if (

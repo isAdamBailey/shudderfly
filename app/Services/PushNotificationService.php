@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\PushSubscription;
 use Illuminate\Support\Facades\Log;
+use Minishlink\WebPush\Subscription;
+use Minishlink\WebPush\WebPush;
 
 class PushNotificationService
 {
@@ -75,7 +77,7 @@ class PushNotificationService
             ],
         ];
 
-        /** @var \Minishlink\WebPush\WebPush $webPush */
+        /** @var WebPush $webPush */
         $webPush = new $webPushClass($auth);
 
         // Track endpoint to subscription mapping for cleanup
@@ -96,7 +98,7 @@ class PushNotificationService
                     continue;
                 }
 
-                /** @var \Minishlink\WebPush\Subscription $pushSubscription */
+                /** @var Subscription $pushSubscription */
                 $pushSubscription = $subscriptionClass::create([
                     'endpoint' => $subscription->endpoint,
                     'keys' => $subscription->keys,

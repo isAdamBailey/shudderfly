@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Jobs\StoreSoundAudio;
+use App\Models\SiteSetting;
 use App\Models\Sound;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,7 +24,7 @@ class SoundsTest extends TestCase
 
         Storage::fake('s3');
 
-        \App\Models\SiteSetting::where('key', 'sounds_enabled')->update(['value' => '1']);
+        SiteSetting::where('key', 'sounds_enabled')->update(['value' => '1']);
     }
 
     // ── Access / gating ────────────────────────────────────────────────────────
@@ -36,7 +37,7 @@ class SoundsTest extends TestCase
 
     public function test_sounds_page_returns_404_when_disabled(): void
     {
-        \App\Models\SiteSetting::where('key', 'sounds_enabled')->update(['value' => '0']);
+        SiteSetting::where('key', 'sounds_enabled')->update(['value' => '0']);
 
         $user = User::factory()->create();
         $this->actingAs($user);
@@ -275,7 +276,7 @@ class SoundsTest extends TestCase
 
     public function test_store_returns_404_when_sounds_disabled(): void
     {
-        \App\Models\SiteSetting::where('key', 'sounds_enabled')->update(['value' => '0']);
+        SiteSetting::where('key', 'sounds_enabled')->update(['value' => '0']);
 
         $user = User::factory()->create();
         $user->givePermissionTo('edit pages');
@@ -396,10 +397,10 @@ class SoundsTest extends TestCase
     public function test_sounds_enabled_setting_exists_in_database(): void
     {
         $this->assertTrue(
-            \App\Models\SiteSetting::where('key', 'sounds_enabled')->exists()
+            SiteSetting::where('key', 'sounds_enabled')->exists()
         );
 
-        $setting = \App\Models\SiteSetting::where('key', 'sounds_enabled')->first();
+        $setting = SiteSetting::where('key', 'sounds_enabled')->first();
         $this->assertEquals('boolean', $setting->type);
     }
 

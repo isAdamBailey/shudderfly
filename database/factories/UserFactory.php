@@ -2,11 +2,14 @@
 
 namespace Database\Factories;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\User>
+ * @extends Factory<User>
  */
 class UserFactory extends Factory
 {
@@ -47,10 +50,10 @@ class UserFactory extends Factory
     {
         return $this->afterCreating(function ($user) {
             // Create the admin permission if it doesn't exist
-            $adminPermission = \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'admin']);
+            $adminPermission = Permission::firstOrCreate(['name' => 'admin']);
 
             // Create the admin role if it doesn't exist
-            $adminRole = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'admin']);
+            $adminRole = Role::firstOrCreate(['name' => 'admin']);
 
             // Give the admin role the admin permission
             $adminRole->givePermissionTo($adminPermission);

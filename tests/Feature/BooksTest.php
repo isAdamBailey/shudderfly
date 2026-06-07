@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\IncrementBookReadCount;
 use App\Models\Book;
 use App\Models\Category;
 use App\Models\Page;
@@ -172,11 +173,11 @@ class BooksTest extends TestCase
         Book::factory()->count(20)->create(['read_count' => 300]);
 
         // Run jobs directly for testing
-        (new \App\Jobs\IncrementBookReadCount($newBook, 'test-fingerprint'))->handle();
-        (new \App\Jobs\IncrementBookReadCount($twoWeekOldBook, 'test-fingerprint'))->handle();
-        (new \App\Jobs\IncrementBookReadCount($twoMonthOldBook, 'test-fingerprint'))->handle();
-        (new \App\Jobs\IncrementBookReadCount($sixMonthOldBook, 'test-fingerprint'))->handle();
-        (new \App\Jobs\IncrementBookReadCount($veryOldBook, 'test-fingerprint'))->handle();
+        (new IncrementBookReadCount($newBook, 'test-fingerprint'))->handle();
+        (new IncrementBookReadCount($twoWeekOldBook, 'test-fingerprint'))->handle();
+        (new IncrementBookReadCount($twoMonthOldBook, 'test-fingerprint'))->handle();
+        (new IncrementBookReadCount($sixMonthOldBook, 'test-fingerprint'))->handle();
+        (new IncrementBookReadCount($veryOldBook, 'test-fingerprint'))->handle();
 
         // Verify age-based multipliers
         $this->assertSame(3.0, $newBook->fresh()->read_count);
@@ -294,7 +295,7 @@ class BooksTest extends TestCase
         Page::factory()->for($book)->count(2)->state(['video_link' => 'https://youtube.com/watch?v=123'])->create(); // Video pages
 
         // Set youtube_enabled to false
-        \App\Models\SiteSetting::where('key', 'youtube_enabled')->update(['value' => '0']);
+        SiteSetting::where('key', 'youtube_enabled')->update(['value' => '0']);
 
         // Test book show page - should only show regular pages
         $this->get(route('books.show', $book))->assertInertia(
@@ -304,7 +305,7 @@ class BooksTest extends TestCase
         );
 
         // Enable YouTube
-        \App\Models\SiteSetting::where('key', 'youtube_enabled')->update(['value' => '1']);
+        SiteSetting::where('key', 'youtube_enabled')->update(['value' => '1']);
 
         // Test book show page again - should now show all pages
         $this->get(route('books.show', $book))->assertInertia(

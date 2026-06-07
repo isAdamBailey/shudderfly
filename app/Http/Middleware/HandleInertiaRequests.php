@@ -4,6 +4,8 @@ namespace App\Http\Middleware;
 
 use App\Models\SiteSetting;
 use App\Models\User;
+use App\Models\WorldClockSetting;
+use App\Support\WorldClockState;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Tightenco\Ziggy\Ziggy;
@@ -91,6 +93,9 @@ class HandleInertiaRequests extends Middleware
             }),
             'theme' => self::getCurrentTheme(),
             'collageMaxPages' => (int) config('collage.max_pages'),
+            'worldClock' => fn () => $request->user()
+                ? WorldClockState::payload(WorldClockSetting::instance())
+                : null,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),

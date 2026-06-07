@@ -86,6 +86,14 @@ Route::middleware('auth')->group(function () {
     Route::post('/movie-cast/share', [MovieCastController::class, 'share'])->name('movie-cast.share');
 
     Route::get('/world-clock', [WorldClockController::class, 'index'])->name('world-clock.index');
+    Route::put('/api/world-clock/settings', [WorldClockController::class, 'updateSettings'])
+        ->name('world-clock.settings.update');
+    Route::put('/api/world-clock/logo', [WorldClockController::class, 'updateLogo'])
+        ->name('world-clock.logo.update');
+    Route::post('/api/world-clock/timer', [WorldClockController::class, 'startTimer'])
+        ->name('world-clock.timer.start');
+    Route::delete('/api/world-clock/timer', [WorldClockController::class, 'stopTimer'])
+        ->name('world-clock.timer.stop');
 
     Route::post('/collage-page', [CollagePageController::class, 'store'])->name('collage-page.store');
 
