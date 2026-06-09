@@ -59,9 +59,9 @@ function onPointerEnd() {
     :class="[
       props.useActiveStyle
         ? props.active
-          ? 'border-yellow-200 bg-yellow-200 text-gray-900'
-          : 'border-gray-700 bg-gray-800 text-gray-100 hover:bg-gray-700'
-        : 'border-gray-700 bg-gray-800 text-gray-100 hover:bg-gray-700',
+          ? 'border-yellow-400 bg-yellow-200 text-gray-900 dark:border-yellow-200'
+          : 'border-gray-200 bg-gray-100 text-gray-900 hover:bg-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700'
+        : 'border-gray-200 bg-gray-100 text-gray-900 hover:bg-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700',
       { 'btn-bulge--tap': tapping }
     ]"
     :aria-current="props.active ? 'page' : undefined"

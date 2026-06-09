@@ -6,7 +6,6 @@ import Dropdown from "@/Components/Dropdown.vue";
 import FireworksAnimation from "@/Components/FireworksAnimation.vue";
 import NavLink from "@/Components/NavLink.vue";
 import NotificationList from "@/Components/NotificationList.vue";
-import MobileMoreSheet from "@/Layouts/Nav/MobileMoreSheet.vue";
 import NavMenuItem from "@/Layouts/Nav/NavMenuItem.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useUnreadNotifications } from "@/composables/useUnreadNotifications";
@@ -15,7 +14,6 @@ import { Link, usePage } from "@inertiajs/vue3";
 import { computed, ref } from "vue";
 
 const { canEditPages, canEditProfile } = usePermissions();
-const isMoreSheetOpen = ref(false);
 const isDesktopProfileOpen = ref(false);
 const { unreadCount } = useUnreadNotifications();
 
@@ -173,7 +171,6 @@ const utilityMobileItems = computed(() => {
 });
 
 const mobileMoreActive = computed(() => {
-  if (isMoreSheetOpen.value) return true;
   if (route().current("dashboard")) return true;
   if (route().current("profile.*")) return true;
   if (route().current("users.show")) return true;
@@ -183,7 +180,7 @@ const mobileMoreActive = computed(() => {
 
 <template>
   <nav
-    class="relative bg-rainbow border-b border-gray-100 dark:border-gray-700"
+    class="sticky top-0 z-50 bg-rainbow border-b border-gray-100 dark:border-gray-700"
     :class="{ fireworks: $page.props.theme === 'fireworks' }"
   >
     <CockroachCrawl area="header" />
@@ -212,7 +209,7 @@ const mobileMoreActive = computed(() => {
               </Link>
             </div>
 
-            <div class="hidden md:-my-px md:ml-10 md:flex md:items-center md:gap-6">
+            <div class="hidden md:-my-px md:ml-10 md:flex md:items-stretch md:gap-6">
               <NavLink
                 v-for="item in desktopPrimaryItems"
                 :key="item.label"
@@ -226,7 +223,8 @@ const mobileMoreActive = computed(() => {
                 v-if="desktopOverflowItems.length > 0"
                 align="left"
                 width="48"
-                :content-classes="['p-2 bg-gray-900']"
+                :content-classes="['p-2 bg-white dark:bg-gray-900']"
+                connected
               >
                 <template #trigger>
                   <button
@@ -261,9 +259,9 @@ const mobileMoreActive = computed(() => {
 
           <ThemeToggle />
 
-          <div class="hidden md:flex md:items-center md:ml-6">
+          <div class="hidden md:flex md:items-stretch md:ml-6">
             <div v-if="messagingEnabled" class="ml-3 relative">
-              <Dropdown align="right" width="80">
+              <Dropdown align="right" width="80" connected>
                 <template #trigger>
                   <button
                     type="button"
@@ -287,7 +285,8 @@ const mobileMoreActive = computed(() => {
               <Dropdown
                 align="right"
                 width="56"
-                :content-classes="['p-2 bg-gray-900']"
+                :content-classes="['p-2 bg-white dark:bg-gray-900']"
+                connected
                 @open-change="isDesktopProfileOpen = $event"
               >
                 <template #trigger>
@@ -308,15 +307,15 @@ const mobileMoreActive = computed(() => {
                 <template #content>
                   <Link
                     :href="route('users.show', $page.props.auth.user.email)"
-                    class="mb-2 block rounded-xl border border-gray-700 bg-gray-800 px-4 py-3 transition-colors hover:bg-gray-700"
+                    class="mb-2 block rounded-xl border border-gray-200 bg-gray-100 px-4 py-3 transition-colors hover:bg-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
                   >
                     <div class="flex items-center gap-3">
                       <Avatar :user="$page.props.auth.user" size="md" />
                       <div>
-                        <div class="text-sm font-semibold text-white">
+                        <div class="text-sm font-semibold text-gray-900 dark:text-white">
                           {{ $page.props.auth.user.name }}
                         </div>
-                        <div class="text-xs text-gray-300">
+                        <div class="text-xs text-gray-500 dark:text-gray-300">
                           {{ $page.props.auth.user.email }}
                         </div>
                       </div>
@@ -346,9 +345,9 @@ const mobileMoreActive = computed(() => {
             </div>
           </div>
 
-          <div class="-mr-2 flex items-center gap-2 md:hidden">
+          <div class="-mr-2 flex items-stretch gap-2 md:hidden">
             <div v-if="messagingEnabled" class="relative">
-              <Dropdown align="right" width="80">
+              <Dropdown align="right" width="80" connected>
                 <template #trigger>
                   <button
                     type="button"
@@ -368,32 +367,71 @@ const mobileMoreActive = computed(() => {
                 </template>
               </Dropdown>
             </div>
-            <button
-              type="button"
-              class="btn-bulge inline-flex min-h-12 min-w-12 items-center justify-center rounded-lg border border-transparent bg-transparent text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-primary"
-              :class="
-                mobileMoreActive
-                  ? 'border-theme-primary text-theme-primary'
-                  : 'text-white hover:text-white'
-              "
-              aria-haspopup="dialog"
-              :aria-expanded="isMoreSheetOpen ? 'true' : 'false'"
-              aria-label="Open more menu"
-              @click="isMoreSheetOpen = true"
+            <Dropdown
+              align="right"
+              width="80"
+              :content-classes="['p-2 bg-white dark:bg-gray-900']"
+              connected
             >
-              <i class="ri-menu-line text-2xl" aria-hidden="true"></i>
-            </button>
+              <template #trigger>
+                <button
+                  type="button"
+                  class="btn-bulge inline-flex min-h-12 min-w-12 items-center justify-center rounded-lg border border-transparent bg-transparent text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-primary"
+                  :class="
+                    mobileMoreActive
+                      ? 'border-theme-primary text-theme-primary'
+                      : 'text-white hover:text-white'
+                  "
+                  aria-label="Open more menu"
+                >
+                  <i class="ri-menu-line text-2xl" aria-hidden="true"></i>
+                </button>
+              </template>
+
+              <template #content>
+                <div class="max-h-[70vh] overflow-y-auto space-y-2">
+                  <Link
+                    :href="route('users.show', $page.props.auth.user.email)"
+                    class="mb-2 flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-100 px-4 py-3 transition-colors hover:bg-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+                  >
+                    <Avatar :user="$page.props.auth.user" size="md" />
+                    <div>
+                      <div class="text-sm font-semibold text-gray-900 dark:text-white">
+                        {{ $page.props.auth.user.name }}
+                      </div>
+                      <div class="text-xs text-gray-500 dark:text-gray-300">
+                        {{ $page.props.auth.user.email }}
+                      </div>
+                    </div>
+                  </Link>
+
+                  <NavMenuItem
+                    v-for="item in secondaryMobilePageItems"
+                    :key="item.label"
+                    :href="item.href"
+                    :label="item.label"
+                    :icon="item.icon"
+                    :active="item.active"
+                  />
+
+                  <div class="pt-1 mt-1 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                    <NavMenuItem
+                      v-for="item in utilityMobileItems"
+                      :key="item.label"
+                      :href="item.href"
+                      :label="item.label"
+                      :icon="item.icon"
+                      :method="item.method"
+                      :as="item.as"
+                      :use-active-style="false"
+                    />
+                  </div>
+                </div>
+              </template>
+            </Dropdown>
           </div>
         </div>
       </div>
-
-      <MobileMoreSheet
-        :open="isMoreSheetOpen"
-        :page-items="secondaryMobilePageItems"
-        :utility-items="utilityMobileItems"
-        :user="$page.props.auth.user"
-        @close="isMoreSheetOpen = false"
-      />
     </FireworksAnimation>
   </nav>
 </template>

@@ -20,6 +20,10 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    connected: {
+        type: Boolean,
+        default: false,
+    },
 });
 
 const closeOnEscape = (e) => {
@@ -85,7 +89,7 @@ watch(open, async (newValue) => {
 </script>
 
 <template>
-    <div class="relative">
+    <div :class="['relative', connected && !dropUp ? 'h-full flex items-center' : '']">
         <div ref="triggerRef" @click="open = !open">
             <slot name="trigger" />
         </div>
@@ -107,14 +111,14 @@ watch(open, async (newValue) => {
         >
             <div
                 v-show="open"
-                class="absolute z-[9999] rounded-md shadow-lg"
-                :class="[widthClass, alignmentClasses, dropUp ? 'mb-2 bottom-full' : 'mt-2']"
+                class="absolute z-[9999] shadow-lg"
+                :class="[widthClass, alignmentClasses, dropUp ? 'mb-2 bottom-full rounded-md' : connected ? 'top-full rounded-b-md' : 'mt-2 rounded-md']"
                 :style="widthStyle"
                 @click="open = false"
             >
                 <div
-                    class="rounded-md ring-1 ring-black ring-opacity-5"
-                    :class="contentClasses"
+                    class="ring-1 ring-black ring-opacity-5"
+                    :class="[connected && !dropUp ? 'rounded-b-md' : 'rounded-md', ...contentClasses]"
                 >
                     <slot name="content" />
                 </div>
