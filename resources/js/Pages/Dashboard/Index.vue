@@ -7,6 +7,7 @@ import { usePermissions } from "@/composables/permissions";
 import { useTranslations } from "@/composables/useTranslations";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import CategoriesForm from "@/Pages/Dashboard/CategoriesForm.vue";
+import ClocksSection from "@/Pages/Dashboard/ClocksSection.vue";
 import SettingsForm from "@/Pages/Dashboard/SettingsForm.vue";
 import StatsCard from "@/Pages/Dashboard/StatsCard.vue";
 import UsersForm from "@/Pages/Dashboard/UsersForm.vue";
@@ -20,6 +21,10 @@ defineProps({
     categories: { type: Array, default: () => [] },
     adminSettings: { type: Array, default: () => [] },
     blockedCount: { type: Number, default: 0 },
+    defaultCities: { type: Array, default: () => [] },
+    maxCities: { type: Number, default: 6 },
+    timezoneLabels: { type: Object, default: () => ({}) },
+    worldClock: { type: Object, default: null },
 });
 
 const buildTimestamp = __BUILD_TIMESTAMP__;
@@ -111,6 +116,21 @@ const unblockAllPages = async () => {
                     >
                         <Accordion title="Users">
                             <UsersForm :users="users" />
+                        </Accordion>
+                    </div>
+                </div>
+
+                <div class="w-full sm:px-6 lg:px-8">
+                    <div
+                        class="bg-white overflow-hidden shadow-sm sm:rounded-lg"
+                    >
+                        <Accordion title="Clocks">
+                            <ClocksSection
+                                :default-cities="defaultCities"
+                                :max-cities="maxCities"
+                                :timezone-labels="timezoneLabels"
+                                :world-clock="worldClock"
+                            />
                         </Accordion>
                     </div>
                 </div>

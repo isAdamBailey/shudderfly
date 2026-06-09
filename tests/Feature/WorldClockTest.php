@@ -17,22 +17,21 @@ class WorldClockTest extends TestCase
 
     public function test_guest_cannot_access_world_clock(): void
     {
-        $this->get(route('world-clock.index'))->assertRedirect(route('login'));
         $this->getJson(route('world-clock.cities.search', ['q' => 'tokyo']))
             ->assertUnauthorized();
         $this->putJson(route('world-clock.labels.update'), ['timezone' => 'Asia/Tokyo', 'label' => 'Office'])
             ->assertUnauthorized();
     }
 
-    public function test_world_clock_page_renders(): void
+    public function test_dashboard_renders_world_clock_data(): void
     {
         $this->actingAs(User::factory()->create());
 
         TimezoneLabel::create(['timezone' => 'Asia/Tokyo', 'label' => 'Office']);
 
-        $this->get(route('world-clock.index'))->assertInertia(
+        $this->get(route('dashboard'))->assertInertia(
             fn (Assert $page) => $page
-                ->component('WorldClock/Index')
+                ->component('Dashboard/Index')
                 ->where('maxCities', 6)
                 ->has('defaultCities')
                 ->where('defaultCities.0.timezone', 'America/New_York')
@@ -174,20 +173,24 @@ class WorldClockTest extends TestCase
             ->assertStatus(422);
     }
 
-    public function test_user_without_edit_pages_cannot_search_or_relabel(): void
+    public function test_any_auth_user_can_search_cities(): void
     {
         $this->actingAs(User::factory()->create());
 
-        $this->getJson(route('world-clock.cities.search', ['q' => 'tokyo']))->assertForbidden();
+        $this->getJson(route('world-clock.cities.search', ['q' => 'tokyo']))->assertOk();
+    }
+
+    public function test_user_without_edit_pages_cannot_relabel(): void
+    {
+        $this->actingAs(User::factory()->create());
+
         $this->putJson(route('world-clock.labels.update'), ['timezone' => 'Asia/Tokyo', 'label' => 'Office'])
             ->assertForbidden();
     }
 
     public function test_city_search_requires_query(): void
     {
-        $user = User::factory()->create();
-        $user->givePermissionTo('edit pages');
-        $this->actingAs($user);
+        $this->actingAs(User::factory()->create());
 
         $this->getJson(route('world-clock.cities.search'))->assertStatus(422);
         $this->getJson(route('world-clock.cities.search', ['q' => 'a']))->assertStatus(422);
@@ -195,9 +198,7 @@ class WorldClockTest extends TestCase
 
     public function test_city_search_returns_matches(): void
     {
-        $user = User::factory()->create();
-        $user->givePermissionTo('edit pages');
-        $this->actingAs($user);
+        $this->actingAs(User::factory()->create());
 
         $response = $this->getJson(route('world-clock.cities.search', ['q' => 'tok']));
 
@@ -216,9 +217,7 @@ class WorldClockTest extends TestCase
 
     public function test_city_search_matches_by_country(): void
     {
-        $user = User::factory()->create();
-        $user->givePermissionTo('edit pages');
-        $this->actingAs($user);
+        $this->actingAs(User::factory()->create());
 
         $response = $this->getJson(route('world-clock.cities.search', ['q' => 'argentina']));
 
@@ -228,9 +227,7 @@ class WorldClockTest extends TestCase
 
     public function test_city_search_no_match_returns_empty(): void
     {
-        $user = User::factory()->create();
-        $user->givePermissionTo('edit pages');
-        $this->actingAs($user);
+        $this->actingAs(User::factory()->create());
 
         $this->getJson(route('world-clock.cities.search', ['q' => 'zzzznowhere']))
             ->assertOk()

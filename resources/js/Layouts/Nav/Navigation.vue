@@ -51,12 +51,6 @@ const topNavItems = computed(() => {
       href: route("movie-cast.index"),
       active: route().current("movie-cast.*"),
       icon: "ri-film-line"
-    },
-    {
-      label: "World Clock",
-      href: route("world-clock.index"),
-      active: route().current("world-clock.*"),
-      icon: "ri-time-line"
     }
   ];
 
@@ -113,12 +107,6 @@ const secondaryMobilePageItems = computed(() => {
       href: route("movie-cast.index"),
       active: route().current("movie-cast.*"),
       icon: "ri-film-line"
-    },
-    {
-      label: "World Clock",
-      href: route("world-clock.index"),
-      active: route().current("world-clock.*"),
-      icon: "ri-time-line"
     }
   ];
 

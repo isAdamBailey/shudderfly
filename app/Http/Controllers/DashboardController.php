@@ -7,8 +7,11 @@ use App\Models\Category;
 use App\Models\Page;
 use App\Models\Song;
 use App\Models\Sound;
+use App\Models\TimezoneLabel;
 use App\Models\User;
 use App\Services\PopularityService;
+use App\Support\WorldClockState;
+use App\Models\WorldClockSetting;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
@@ -66,6 +69,10 @@ class DashboardController extends Controller
                     ->toArray(),
             ]),
             'adminSettings' => $this->settingsController->index(),
+            'defaultCities' => config('world_clock.default_cities'),
+            'maxCities' => config('world_clock.max_cities'),
+            'timezoneLabels' => TimezoneLabel::pluck('label', 'timezone'),
+            'worldClock' => WorldClockState::payload(WorldClockSetting::instance()),
         ]);
     }
 }

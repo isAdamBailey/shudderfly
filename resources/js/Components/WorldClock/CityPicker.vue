@@ -5,7 +5,8 @@ import { computed, onBeforeUnmount, ref, watch } from "vue";
 const props = defineProps({
   selectedCities: { type: Array, default: () => [] },
   maxCities: { type: Number, default: 6 },
-  labels: { type: Object, default: () => ({}) }
+  labels: { type: Object, default: () => ({}) },
+  canRelabel: { type: Boolean, default: false }
 });
 
 const emit = defineEmits(["add", "remove", "relabel"]);
@@ -124,6 +125,7 @@ const onAdd = (city) => {
       >
         <span class="shrink-0 text-sm text-gray-100">{{ city.name }}</span>
         <input
+          v-if="canRelabel"
           type="text"
           :value="labels[city.timezone] || ''"
           placeholder="Custom label (optional)"
