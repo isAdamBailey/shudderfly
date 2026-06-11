@@ -243,6 +243,131 @@ return [
 
     // World Clock - Timer
     'world_clock.timer_done' => "Time's up!",
+    'world_clock.timer_started' => ':minutes minute timer started',
+    'world_clock.timer_stopped' => 'Timer stopped',
+    'world_clock.default_logo_restored' => 'Default logo restored',
+    'world_clock.clock_set_as_logo' => ':city clock set as the app logo',
+    'world_clock.minute' => 'minute',
+    'world_clock.minutes' => 'minutes',
+    'world_clock.second' => 'second',
+    'world_clock.seconds' => 'seconds',
+    'world_clock.zero_seconds' => '0 seconds',
+    'world_clock.and' => 'and',
+    'world_clock.time_left' => ':time left',
+    'world_clock.numerals_arabic' => 'Arabic numbers',
+    'world_clock.numerals_roman' => 'Roman numerals',
+    'world_clock.numerals_none' => 'No numbers',
+    'world_clock.second_hand_smooth' => 'Smooth second hand',
+    'world_clock.second_hand_tick' => 'Ticking second hand',
+    'world_clock.face_speech' => ':label face',
+    'world_clock.hands_speech' => ':label hands',
+
+    // Speech & voice settings
+    'speech.voice_changed' => 'Voice changed to :name',
+    'speech.rate_set' => 'Speech rate set to :rate',
+    'speech.pitch_set' => 'Pitch set to :pitch',
+    'speech.volume_set' => 'Volume set to :volume',
+    'speech.emotion_set' => 'Emotion set to :emotion',
+    'speech.emotion_reset' => 'Emotion reset to normal',
+    'speech.rate_slow' => 'slow',
+    'speech.rate_normal' => 'normal',
+    'speech.rate_fast' => 'fast',
+    'speech.pitch_low' => 'low',
+    'speech.pitch_normal' => 'normal',
+    'speech.pitch_high' => 'high',
+    'speech.volume_quiet' => 'quiet',
+    'speech.volume_normal' => 'normal',
+    'speech.volume_loud' => 'loud',
+
+    // Music
+    'music.now_playing' => 'You are playing :title',
+
+    // Map
+    'map.address_speak' => 'The address is :address',
+
+    // Snapshots
+    'snapshot.wait_cooldown' => 'Please wait :time before taking another screenshot',
+    'snapshot.wait_less_than_one_minute' => 'less than one minute',
+    'snapshot.wait_minutes' => ':count minutes',
+    'snapshot.got_screenshot' => ':name, I got your screenshot.',
+
+    // Search
+    'search.searching_for' => 'Searching for :target with :query',
+    'search.not_found_books' => "I can't find any books like that",
+    'search.not_found_uploads' => "I can't find any uploads like that",
+    'search.not_found_music' => "I can't find any music like that",
+
+    // Sounds
+    'sound.sort_alphabetical' => 'alphabetical',
+    'sound.sort_date_added' => 'date added',
+
+    // Upload filters (spoken)
+    'uploads.filter_newest' => 'newest',
+    'uploads.filter_youtube' => 'YouTube videos',
+    'uploads.filter_old' => 'a year ago',
+    'uploads.filter_random' => 'mixed',
+    'uploads.filter_popular' => 'favorites',
+    'uploads.filter_snapshot' => 'screenshots',
+    'uploads.filter_music' => 'songs',
+
+    // Book sort (spoken)
+    'book.sort_newest' => 'newest',
+    'book.sort_oldest' => 'oldest',
+    'book.sort_favorites' => 'favorites',
+
+    // Collages
+    'collage.none_created' => 'No collages have been created yet.',
+    'collage.single_for_month' => 'This is the collage for :month!',
+    'collage.multiple_for_month' => 'These are the collages for :month!',
+    'collage.archived_description' => 'These are old collages that we have already laminated.',
+
+    // Dashboard stats (spoken)
+    'stats.all_books' => 'all books: :count',
+    'stats.all_pages' => 'all pages: :count',
+    'stats.songs' => 'songs: :count',
+    'stats.images' => 'images: :count',
+    'stats.videos' => 'videos: :count',
+    'stats.youtube_videos' => 'YouTube videos: :count',
+    'stats.screenshots' => 'screenshots: :count',
+    'stats.top_books' => 'Top five most popular books: :list.',
+    'stats.top_songs' => 'Top five most popular songs: :list.',
+    'stats.book_most_pages' => 'Book with most pages: :title. :count pages.',
+    'stats.book_least_pages' => 'Book with least pages: :title. :count pages.',
+
+    // User profile (spoken)
+    'profile.top_books_by_popularity' => 'Top books by popularity. :list.',
+    'profile.recent_books_created' => 'Recent books created. :list.',
+    'profile.member_since' => 'Member since :date.',
+    'profile.books_created' => ':count :word created.',
+    'profile.messages_posted' => ':count :word posted.',
+    'profile.comments_posted' => ':count :word posted.',
+    'profile.reactions_given' => ':count :word given.',
+    'general.book' => 'book',
+    'general.books' => 'books',
+    'general.message' => 'message',
+    'general.messages' => 'messages',
+    'general.comment' => 'comment',
+    'general.comments' => 'comments',
+    'general.reaction' => 'reaction',
+    'general.reactions' => 'reactions',
+    'general.someone' => 'Someone',
+
+    // Message speech
+    'message.user_says' => ':username says :text',
+    'message.no_reactions' => 'No reactions',
+    'message.reaction_from' => ':emoji from :names',
+    'message.posting' => 'Posting message: :text',
+    'comment.posting' => 'Posting comment: :text',
+    'builder.delete_confirm_speak' => 'Are you sure you want to delete :text?',
+
+    // Reaction emoji names (spoken)
+    'reaction.thumbs_up' => 'thumbs up',
+    'reaction.heart' => 'heart',
+    'reaction.laughing' => 'laughing',
+    'reaction.surprised' => 'surprised',
+    'reaction.sad' => 'sad',
+    'reaction.poop' => 'poop',
+    'reaction.generic' => 'reaction',
 
     // UI Labels - App Language
     'locale.app_language' => 'App Language',

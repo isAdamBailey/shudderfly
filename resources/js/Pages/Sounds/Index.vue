@@ -57,7 +57,7 @@ const isAlphabetical = computed(() => props.sort === "alphabetical");
 
 function filter(sort) {
     sortLoading.value = true;
-    speak(sort === "alphabetical" ? "alphabetical" : "date added");
+    speak(sort === "alphabetical" ? t("sound.sort_alphabetical") : t("sound.sort_date_added"));
     router.get(route("sounds.index", { sort }));
 }
 

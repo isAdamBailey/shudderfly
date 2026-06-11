@@ -3,6 +3,7 @@ import AnalogClock from "@/Components/WorldClock/AnalogClock.vue";
 import SpeakButton from "@/Components/SpeakButton.vue";
 import { useClockTime } from "@/composables/useClockTime";
 import { useLogoPreference } from "@/composables/useLogoPreference";
+import { useTranslations } from "@/composables/useTranslations";
 import { computed } from "vue";
 
 const props = defineProps({
@@ -18,6 +19,7 @@ const props = defineProps({
 const emit = defineEmits(["speak"]);
 
 const { logo, setLogoClock } = useLogoPreference();
+const { t } = useTranslations();
 
 const isLogo = computed(
   () =>
@@ -31,7 +33,7 @@ const setAsLogo = () => {
     cityName: props.city.name,
     timezone: props.city.timezone
   });
-  emit("speak", `${props.city.name} clock set as the app logo`);
+  emit("speak", t("world_clock.clock_set_as_logo", { city: props.city.name }));
 };
 
 const { hour24, minutes } = useClockTime(computed(() => props.city.timezone));

@@ -4,6 +4,7 @@ import SpeakButton from "@/Components/SpeakButton.vue";
 import { useGlobalTimer } from "@/composables/useGlobalTimer";
 import { useLogoPreference } from "@/composables/useLogoPreference";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { useTranslations } from "@/composables/useTranslations";
 import { FACE_OPTIONS } from "@/world-clock/presets/faces";
 import { HAND_OPTIONS } from "@/world-clock/presets/hands";
 import { computed } from "vue";
@@ -23,6 +24,7 @@ const emit = defineEmits([
 ]);
 
 const { speak } = useSpeechSynthesis();
+const { t } = useTranslations();
 const { logo, clearLogoClock } = useLogoPreference();
 const {
   active: timerActive,
@@ -35,12 +37,12 @@ const TIMER_OPTIONS = [15, 30, 45, 60];
 
 const startTimerMinutes = (minutes) => {
   startTimer(minutes * 60);
-  speak(`${minutes} minute timer started`);
+  speak(t("world_clock.timer_started", { minutes }));
 };
 
 const cancelTimer = () => {
   stopTimer();
-  speak("Timer stopped");
+  speak(t("world_clock.timer_stopped"));
 };
 
 const timerLabel = computed(() => {
@@ -55,21 +57,25 @@ const spokenRemaining = computed(() => {
   const mm = Math.floor(total / 60);
   const ss = total % 60;
   const parts = [];
-  if (mm > 0) parts.push(`${mm} minute${mm === 1 ? "" : "s"}`);
-  if (ss > 0) parts.push(`${ss} second${ss === 1 ? "" : "s"}`);
-  if (parts.length === 0) parts.push("0 seconds");
-  return `${parts.join(" and ")} left`;
+  if (mm > 0) {
+    parts.push(`${mm} ${mm === 1 ? t("world_clock.minute") : t("world_clock.minutes")}`);
+  }
+  if (ss > 0) {
+    parts.push(`${ss} ${ss === 1 ? t("world_clock.second") : t("world_clock.seconds")}`);
+  }
+  if (parts.length === 0) parts.push(t("world_clock.zero_seconds"));
+  return t("world_clock.time_left", { time: parts.join(` ${t("world_clock.and")} `) });
 });
 
 const NUMERAL_OPTIONS = [
-  { value: "arabic", label: "Arabic", speech: "Arabic numbers" },
-  { value: "roman", label: "Roman", speech: "Roman numerals" },
-  { value: "none", label: "None", speech: "No numbers" }
+  { value: "arabic", label: "Arabic", speech: t("world_clock.numerals_arabic") },
+  { value: "roman", label: "Roman", speech: t("world_clock.numerals_roman") },
+  { value: "none", label: "None", speech: t("world_clock.numerals_none") }
 ];
 
 const SECOND_OPTIONS = [
-  { value: "smooth", label: "Smooth", speech: "Smooth second hand" },
-  { value: "tick", label: "Tick", speech: "Ticking second hand" }
+  { value: "smooth", label: "Smooth", speech: t("world_clock.second_hand_smooth") },
+  { value: "tick", label: "Tick", speech: t("world_clock.second_hand_tick") }
 ];
 
 // Each settings group renders as a row of large, tap-friendly buttons.
@@ -78,13 +84,19 @@ const groups = computed(() => [
     key: "facePreset",
     title: "Clock face",
     value: props.facePreset,
-    options: FACE_OPTIONS.map((o) => ({ ...o, speech: `${o.label} face` }))
+    options: FACE_OPTIONS.map((o) => ({
+      ...o,
+      speech: t("world_clock.face_speech", { label: o.label })
+    }))
   },
   {
     key: "handPreset",
     title: "Hands",
     value: props.handPreset,
-    options: HAND_OPTIONS.map((o) => ({ ...o, speech: `${o.label} hands` }))
+    options: HAND_OPTIONS.map((o) => ({
+      ...o,
+      speech: t("world_clock.hands_speech", { label: o.label })
+    }))
   },
   {
     key: "numerals",
@@ -107,7 +119,7 @@ const pick = (group, option) => {
 
 const resetLogo = () => {
   clearLogoClock();
-  speak("Default logo restored");
+  speak(t("world_clock.default_logo_restored"));
 };
 </script>
 

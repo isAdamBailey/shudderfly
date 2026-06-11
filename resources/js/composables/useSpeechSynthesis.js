@@ -1,10 +1,21 @@
 import { onMounted, ref } from "vue";
+import { usePage } from "@inertiajs/vue3";
+import {
+  applySpeechSettingsToUtterance,
+  getAppLocaleFromPage,
+  getStoredAppLocale,
+  resolveSpeechVoice,
+  syncStoredSpeechLanguage,
+} from "@/composables/speechVoice";
+import { useTranslations } from "@/composables/useTranslations";
 
 const INITIAL_VOICE_RETRY_DELAY = 100;
 const VOICE_RETRY_INTERVAL = 200;
 const MAX_VOICE_LOADING_ATTEMPTS = 5;
 
 export function useSpeechSynthesis() {
+  const { t } = useTranslations();
+  const page = usePage();
   const speaking = ref(false);
   const voices = ref([]);
   const selectedVoice = ref(null);
@@ -18,22 +29,31 @@ export function useSpeechSynthesis() {
   const selectedEmotion = ref(localStorage.getItem("selectedEmotion") || "");
   const isPaused = ref(false);
 
+  const getAppLocale = () => {
+    const fromPage = page.props.locale;
+    if (fromPage) {
+      return getAppLocaleFromPage(page);
+    }
+
+    return getStoredAppLocale();
+  };
+
   const getVoices = () => {
     if ("speechSynthesis" in window) {
       const availableVoices = window.speechSynthesis.getVoices();
       voices.value = availableVoices;
 
       if (availableVoices.length > 0) {
-        const index = parseInt(
-          localStorage.getItem("selectedVoiceIndex") || "0",
-          10
+        selectedVoice.value = resolveSpeechVoice(
+          availableVoices,
+          getAppLocale()
         );
 
-        if (index >= 0 && index < availableVoices.length) {
-          selectedVoice.value = availableVoices[index];
-        } else {
-          selectedVoice.value = availableVoices[0];
-          localStorage.setItem("selectedVoiceIndex", "0");
+        if (selectedVoice.value) {
+          const index = availableVoices.indexOf(selectedVoice.value);
+          if (index !== -1) {
+            localStorage.setItem("selectedVoiceIndex", index.toString());
+          }
         }
       }
     }
@@ -44,26 +64,26 @@ export function useSpeechSynthesis() {
     if (index !== -1) {
       selectedVoice.value = voice;
       localStorage.setItem("selectedVoiceIndex", index.toString());
-      speak(`Voice changed to ${selectedVoice.value.name}`);
+      speak(t("speech.voice_changed", { name: selectedVoice.value.name }));
     }
   };
 
   const setSpeechRate = (rate) => {
     speechRate.value = rate;
     localStorage.setItem("speechRate", rate.toString());
-    speak(`Speech rate set to ${rate}x`);
+    speak(t("speech.rate_set", { rate: `${rate}x` }));
   };
 
   const setSpeechPitch = (pitch) => {
     speechPitch.value = pitch;
     localStorage.setItem("speechPitch", pitch.toString());
-    speak(`Pitch set to ${pitch}`);
+    speak(t("speech.pitch_set", { pitch: String(pitch) }));
   };
 
   const setSpeechVolume = (volume) => {
     speechVolume.value = volume;
     localStorage.setItem("speechVolume", volume.toString());
-    speak(`Volume set to ${Math.round(volume * 100)}%`);
+    speak(t("speech.volume_set", { volume: `${Math.round(volume * 100)}%` }));
   };
 
   // Silent versions for use with debounced updates
@@ -120,21 +140,7 @@ export function useSpeechSynthesis() {
       }
 
       const utterance = new SpeechSynthesisUtterance(phrase);
-
-      const index = parseInt(
-        localStorage.getItem("selectedVoiceIndex") || "0",
-        10
-      );
-
-      if (index >= 0 && index < currentVoices.length) {
-        utterance.voice = currentVoices[index];
-      } else {
-        utterance.voice = currentVoices[0];
-      }
-
-      utterance.rate = speechRate.value;
-      utterance.volume = speechVolume.value;
-      utterance.pitch = speechPitch.value;
+      applySpeechSettingsToUtterance(utterance, currentVoices, getAppLocale());
 
       utterance.onstart = () => {
         speaking.value = true;
@@ -170,7 +176,7 @@ export function useSpeechSynthesis() {
 
     if (emotion) {
       applyEmotionalEffect(emotion);
-      speak(`Emotion set to ${emotion}`);
+      speak(t("speech.emotion_set", { emotion }));
     } else {
       // Reset to defaults when emotion is empty (Normal)
       speechRate.value = 1;
@@ -180,9 +186,12 @@ export function useSpeechSynthesis() {
       localStorage.setItem("speechRate", "1");
       localStorage.setItem("speechPitch", "1");
       localStorage.setItem("speechVolume", "1");
-      localStorage.setItem("selectedLanguage", "en-US");
+      syncStoredSpeechLanguage(
+        window.speechSynthesis.getVoices(),
+        getAppLocale()
+      );
 
-      speak("Emotion reset to normal");
+      speak(t("speech.emotion_reset"));
     }
   };
 

@@ -6,6 +6,7 @@ import VideoWrapper from "@/Components/VideoWrapper.vue";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 import { useMusicPlayer } from "@/composables/useMusicPlayer";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { useTranslations } from "@/composables/useTranslations";
 import { Link, usePage } from "@inertiajs/vue3";
 import { computed, watch } from "vue";
 
@@ -22,9 +23,10 @@ const { items, infiniteScrollRef, setItemLoading } = useInfiniteScroll(
 );
 
 const { speak } = useSpeechSynthesis();
+const { t } = useTranslations();
 const { playSong, openFlyout } = useMusicPlayer();
 
-const notFountContent = "I can't find any uploads like that";
+const notFountContent = computed(() => t("search.not_found_uploads"));
 
 watch(
   () => usePage().props.search,
@@ -35,7 +37,7 @@ watch(
         loading: false
       }));
       if (items.value.length === 0) {
-        speak(notFountContent);
+        speak(notFountContent.value);
       }
     }
   },

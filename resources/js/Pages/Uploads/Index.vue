@@ -80,6 +80,7 @@
 import Button from "@/Components/Button.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { useTranslations } from "@/composables/useTranslations";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import UploadsGrid from "@/Pages/Uploads/UploadsGrid.vue";
 import { Head, router, usePage } from "@inertiajs/vue3";
@@ -88,6 +89,7 @@ import { computed, ref } from "vue";
 /* global route */
 
 const { speak } = useSpeechSynthesis();
+const { t } = useTranslations();
 
 defineProps({
   photos: { type: Object, required: true }
@@ -163,28 +165,15 @@ const title = computed(() => {
 
 function filter(filter) {
   loading.value = true;
-  let phrase = " newest";
-  switch (filter) {
-    case "youtube":
-      phrase = "YouTube videos";
-      break;
-    case "old":
-      phrase = "a year ago";
-      break;
-    case "random":
-      phrase = "mixed";
-      break;
-    case "popular":
-      phrase = "favorites";
-      break;
-    case "snapshot":
-      phrase = "screenshots";
-      break;
-    case "music":
-      phrase = "songs";
-      break;
-  }
-  speak(phrase);
+  const filterKeys = {
+    youtube: "uploads.filter_youtube",
+    old: "uploads.filter_old",
+    random: "uploads.filter_random",
+    popular: "uploads.filter_popular",
+    snapshot: "uploads.filter_snapshot",
+    music: "uploads.filter_music",
+  };
+  speak(t(filterKeys[filter] || "uploads.filter_newest"));
   router.get(route("pictures.index", { filter }));
 }
 </script>

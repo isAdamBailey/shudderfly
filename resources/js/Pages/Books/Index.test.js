@@ -61,6 +61,25 @@ vi.mock("@/composables/permissions", () => ({
 vi.mock("@/composables/useSpeechSynthesis", () => ({
     useSpeechSynthesis: () => ({
         speak: vi.fn(),
+        speaking: false,
+    }),
+}));
+
+vi.mock("@/composables/useTranslations", () => ({
+    useTranslations: () => ({
+        t: (key, replacements = {}) => {
+            const translations = {
+                "search.not_found_books": "I can't find any books like that",
+            };
+            let translation = translations[key] || key;
+            Object.keys(replacements).forEach((placeholder) => {
+                translation = translation.replace(
+                    new RegExp(`:${placeholder}`, "g"),
+                    replacements[placeholder]
+                );
+            });
+            return translation;
+        },
     }),
 }));
 

@@ -8,6 +8,10 @@ import { usePushNotifications } from "@/composables/usePushNotifications";
 import { useWorldClockSync } from "@/composables/useWorldClockSync";
 import Footer from "@/Layouts/Nav/Footer.vue";
 import Navigation from "@/Layouts/Nav/Navigation.vue";
+import {
+  syncAppLocaleFromPage,
+  syncStoredSpeechLanguage,
+} from "@/composables/speechVoice";
 import { usePage } from "@inertiajs/vue3";
 import { onMounted, ref, watch } from "vue";
 
@@ -46,6 +50,20 @@ onMounted(() => {
 watch(
   () => page.props.flash?.open_song_id,
   (id) => playSongFromFlash(id)
+);
+
+watch(
+  () => page.props.locale,
+  () => {
+    const locale = syncAppLocaleFromPage(page);
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        syncStoredSpeechLanguage(voices, locale);
+      }
+    }
+  },
+  { immediate: true }
 );
 
 const { isSupported, isSubscribed, subscribe } = usePushNotifications();

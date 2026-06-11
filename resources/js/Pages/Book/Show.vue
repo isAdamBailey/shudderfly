@@ -306,6 +306,7 @@ import VideoWrapper from "@/Components/VideoWrapper.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { useTranslations } from "@/composables/useTranslations";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import BulkActionsForm from "@/Pages/Book/BulkActionsForm.vue";
 import EditBookForm from "@/Pages/Book/EditBookForm.vue";
@@ -324,6 +325,7 @@ defineOptions({
 
 const { canEditPages } = usePermissions();
 const { speak, speaking } = useSpeechSynthesis();
+const { t } = useTranslations();
 
 const props = defineProps({
   book: { type: Object, required: true },
@@ -350,16 +352,11 @@ const isMoviesCategory = computed(() => props.book.category?.name === "movies");
 
 function sortPages(sortValue) {
   sortLoading.value = true;
-  let phrase = "newest";
-  switch (sortValue) {
-    case "oldest":
-      phrase = "oldest";
-      break;
-    case "popular":
-      phrase = "favorites";
-      break;
-  }
-  speak(phrase);
+  const sortKeys = {
+    oldest: "book.sort_oldest",
+    popular: "book.sort_favorites",
+  };
+  speak(t(sortKeys[sortValue] || "book.sort_newest"));
   router.get(
     route("books.show", { book: props.book.slug, sort: sortValue }) + "#pages",
     {},

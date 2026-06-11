@@ -125,7 +125,7 @@ const {
 
 const emit = defineEmits(["play", "reload"]);
 
-const notFoundContent = "I can't find any music like that";
+const notFoundContent = computed(() => t("search.not_found_music"));
 
 const props = defineProps({
   songs: {
@@ -222,7 +222,7 @@ watch(
       fetchedPages.clear();
       setSongsList(items.value);
       if (items.value.length === 0) {
-        speak(notFoundContent);
+        speak(notFoundContent.value);
       }
       await nextTick();
       setupObserver();

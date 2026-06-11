@@ -480,7 +480,7 @@ const searchMethod = () => {
   const routeName =
     target.value === "uploads" ? "pictures.index" : "books.index";
   if (search.value)
-    speak(`Searching for ${currentLabel.value} with ${search.value}`);
+    speak(t("search.searching_for", { target: currentLabel.value, query: search.value }));
   router.get(
     route(routeName),
     { search: search.value || null, filter: filter.value || null },

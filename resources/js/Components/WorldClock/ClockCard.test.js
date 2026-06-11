@@ -3,6 +3,24 @@ import { mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 
+vi.mock("@/composables/useTranslations", () => ({
+  useTranslations: () => ({
+    t: (key, replacements = {}) => {
+      const translations = {
+        "world_clock.clock_set_as_logo": ":city clock set as the app logo",
+      };
+      let translation = translations[key] || key;
+      Object.keys(replacements).forEach((placeholder) => {
+        translation = translation.replace(
+          new RegExp(`:${placeholder}`, "g"),
+          replacements[placeholder]
+        );
+      });
+      return translation;
+    },
+  }),
+}));
+
 describe("Components/WorldClock/ClockCard.vue", () => {
   let wrapper = null;
 

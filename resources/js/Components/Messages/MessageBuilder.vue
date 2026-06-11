@@ -242,7 +242,7 @@ function addFavorite() {
 async function removeFavorite(index) {
   const text = favorites.value[index] || "this favorite";
   const okPromise = askConfirm(`Remove favorite: "${text}"?`);
-  speak(`Are you sure you want to delete ${text}?`);
+  speak(t("builder.delete_confirm_speak", { text }));
   const ok = await okPromise;
   if (!ok) {
     return;
@@ -717,7 +717,7 @@ function postMessage() {
   }
 
   const messageText = preview.value;
-  speak(`Posting message: ${messageText}`);
+  speak(t("message.posting", { text: messageText }));
 
   form.message = messageText;
   form.tagged_user_ids = collectTaggedUserIds(messageText);
@@ -747,7 +747,7 @@ function postComment() {
   }
 
   const commentText = preview.value;
-  speak(`Posting comment: ${commentText}`);
+  speak(t("comment.posting", { text: commentText }));
   commentProcessing.value = true;
 
   router.post(

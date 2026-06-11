@@ -170,7 +170,7 @@ import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, Link, useForm } from "@inertiajs/vue3";
-import { ref } from "vue";
+import { computed } from "vue";
 import CollageGrid from "./CollageGrid.vue";
 
 import { usePermissions } from "@/composables/permissions";
@@ -198,9 +198,7 @@ defineProps({
 const restoreForm = useForm();
 const deleteForm = useForm();
 
-const archivedText = ref(
-    "These are old collages that we have already laminated."
-);
+const archivedText = computed(() => t("collage.archived_description"));
 
 const confirmDelete = async (collageId) => {
     const ok = await askConfirm(

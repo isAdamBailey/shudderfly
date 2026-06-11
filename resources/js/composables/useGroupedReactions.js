@@ -1,13 +1,18 @@
 export const ALLOWED_REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "💩"];
 
 export const REACTION_EMOJI_NAMES = {
-    "👍": "thumbs up",
-    "❤️": "heart",
-    "😂": "laughing",
-    "😮": "surprised",
-    "😢": "sad",
-    "💩": "poop",
+    "👍": "reaction.thumbs_up",
+    "❤️": "reaction.heart",
+    "😂": "reaction.laughing",
+    "😮": "reaction.surprised",
+    "😢": "reaction.sad",
+    "💩": "reaction.poop",
 };
+
+export function getReactionEmojiName(emoji, t) {
+    const key = REACTION_EMOJI_NAMES[emoji];
+    return key ? t(key) : t("reaction.generic");
+}
 
 export function useGroupedReactions(groupedReactions) {
     const getGrouped = () => groupedReactions?.value ?? groupedReactions ?? {};

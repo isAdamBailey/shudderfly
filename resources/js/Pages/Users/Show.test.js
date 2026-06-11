@@ -14,6 +14,28 @@ vi.mock("@inertiajs/vue3", () => ({
     Link: { name: "Link", template: "<a><slot /></a>", props: ["href"] },
 }));
 
+vi.mock("@/composables/useSpeechSynthesis", () => ({
+    useSpeechSynthesis: () => ({
+        speak: vi.fn(),
+        speaking: false,
+    }),
+}));
+
+vi.mock("@/composables/useTranslations", () => ({
+    useTranslations: () => ({
+        t: (key, replacements = {}) => {
+            let translation = key;
+            Object.keys(replacements).forEach((placeholder) => {
+                translation = translation.replace(
+                    new RegExp(`:${placeholder}`, "g"),
+                    replacements[placeholder]
+                );
+            });
+            return translation;
+        },
+    }),
+}));
+
 describe("UserShow", () => {
     const profileUser = {
         name: "Test User",

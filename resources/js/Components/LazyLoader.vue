@@ -69,6 +69,7 @@ import Button from "@/Components/Button.vue";
 import TypePill from "@/Components/TypePill.vue";
 import { useSnapshotCooldown } from "@/composables/useSnapshotCooldown";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { useTranslations } from "@/composables/useTranslations";
 import { useMedia } from "@/mediaHelpers";
 import { useForm, usePage } from "@inertiajs/vue3";
 import { useImage } from "@vueuse/core";
@@ -77,6 +78,7 @@ import { computed, onUnmounted, ref } from "vue";
 const { isVideo, isPoster, isSnapshot } = useMedia();
 const videoRef = ref(null);
 const { speak } = useSpeechSynthesis();
+const { t } = useTranslations();
 const user = usePage().props.auth.user;
 
 const props = defineProps({
@@ -222,9 +224,9 @@ const takeSnapshot = () => {
     if (isOnCooldown.value) {
         const timeMessage =
             remainingMinutes.value <= 1
-                ? "less than one minute"
-                : `${remainingMinutes.value} minutes`;
-        speak(`Please wait ${timeMessage} before taking another screenshot`);
+                ? t("snapshot.wait_less_than_one_minute")
+                : t("snapshot.wait_minutes", { count: remainingMinutes.value });
+        speak(t("snapshot.wait_cooldown", { time: timeMessage }));
         return;
     }
     setCooldown();
@@ -248,7 +250,7 @@ const takeSnapshot = () => {
     form.post(route("pages.snapshot"), {
         preserveScroll: true,
         onSuccess: () => {
-            speak(`${user.name}, I got your screenshot.`);
+            speak(t("snapshot.got_screenshot", { name: user.name }));
         },
         onError: (err) => {
             resetCooldown();

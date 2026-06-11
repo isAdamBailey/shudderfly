@@ -322,15 +322,15 @@ const monthNames = [
 
 const collageMessage = computed(() => {
   if (props.collages.length === 0) {
-    return "No collages have been created yet.";
+    return t("collage.none_created");
   }
   const now = new Date();
   const nextMonthName = monthNames[(now.getMonth() + 1) % 12];
-  const isSingle = props.collages.length === 1;
-  const prefix = isSingle
-    ? "This is the collage for"
-    : "These are the collages for";
-  return `${prefix} ${nextMonthName}!`;
+  const key =
+    props.collages.length === 1
+      ? "collage.single_for_month"
+      : "collage.multiple_for_month";
+  return t(key, { month: nextMonthName });
 });
 
 const hasPages = (collage) => {

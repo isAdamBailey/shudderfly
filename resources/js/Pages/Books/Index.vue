@@ -73,6 +73,7 @@ import ScrollTop from "@/Components/ScrollTop.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { useTranslations } from "@/composables/useTranslations";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import BooksGrid from "@/Pages/Books/BooksGrid.vue";
 import NewBookForm from "@/Pages/Books/NewBookForm.vue";
@@ -81,7 +82,8 @@ import { computed, ref, watch } from "vue";
 
 const { canEditPages } = usePermissions();
 const { speak } = useSpeechSynthesis();
-const notFoundContent = "I can't find any books like that";
+const { t } = useTranslations();
+const notFoundContent = computed(() => t("search.not_found_books"));
 
 const props = defineProps({
   categories: {
@@ -127,7 +129,7 @@ watch(
   () => usePage().props.search,
   (newSearch) => {
     if (newSearch && areAllBooksEmpty.value) {
-      speak(notFoundContent);
+      speak(notFoundContent.value);
     }
   },
   { immediate: true }

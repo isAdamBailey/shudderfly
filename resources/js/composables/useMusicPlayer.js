@@ -1,5 +1,6 @@
 import { computed, ref, watch } from "vue";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { useTranslations } from "@/composables/useTranslations";
 
 const STORAGE_KEY = "music_player_state";
 const FLYOUT_STORAGE_KEY = "music_flyout_open";
@@ -70,6 +71,7 @@ loadState();
 
 export function useMusicPlayer() {
   const { speak } = useSpeechSynthesis();
+  const { t } = useTranslations();
 
   const announceSong = (song) => {
     if (!song?.title) return;
@@ -79,7 +81,7 @@ export function useMusicPlayer() {
       // Cancel may fail if speechSynthesis isn't available
     }
     isAnnouncing.value = true;
-    speak(`You are playing ${song.title}`, () => {
+    speak(t("music.now_playing", { title: song.title }), () => {
       isAnnouncing.value = false;
     });
   };

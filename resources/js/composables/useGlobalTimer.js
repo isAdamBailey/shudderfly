@@ -1,6 +1,10 @@
-import { computed, ref, watch } from "vue";
+import {
+  applySpeechSettingsToUtterance,
+  getStoredAppLocale,
+} from "@/composables/speechVoice";
 import { useWorldClockSync } from "@/composables/useWorldClockSync";
 import { useTranslations } from "@/composables/useTranslations";
+import { computed, ref, watch } from "vue";
 
 // A single shared countdown timer for the whole app, backed by the global server
 // state (see useWorldClockSync). The timer is stored as an absolute end time, so
@@ -34,16 +38,12 @@ const clear = () => {
 
 // Speak "Time's up!" using the user's stored speech settings, independent of any
 // mounted component so it fires even when the timer finishes on another page.
-const announce = (text) => {
+const announce = (text, appLocale) => {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
   try {
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = parseFloat(localStorage.getItem("speechRate") || "1");
-    utterance.pitch = parseFloat(localStorage.getItem("speechPitch") || "1");
-    utterance.volume = parseFloat(localStorage.getItem("speechVolume") || "1");
     const voices = window.speechSynthesis.getVoices();
-    const index = parseInt(localStorage.getItem("selectedVoiceIndex") || "0", 10);
-    if (voices && voices[index]) utterance.voice = voices[index];
+    applySpeechSettingsToUtterance(utterance, voices, appLocale);
     window.speechSynthesis.speak(utterance);
   } catch (e) {
     console.error("Error announcing timer:", e);
@@ -72,7 +72,7 @@ const update = () => {
     if (wasActive && announcedFor !== end) {
       announcedFor = end;
       const { t } = useTranslations();
-      announce(t("world_clock.timer_done"));
+      announce(t("world_clock.timer_done"), getStoredAppLocale());
     }
   } else {
     active.value = true;

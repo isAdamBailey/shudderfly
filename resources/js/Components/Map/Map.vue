@@ -9,7 +9,7 @@
                 :disabled="speaking"
                 aria-label="Speak address"
                 icon-class="ri-speak-fill text-lg"
-                @click="speak(`the address is ${currentAddress}`)"
+                @click="speakAddress"
             />
         </div>
         <div v-if="apiKeyMissing" class="p-4 text-center text-red-600 bg-red-50 rounded-lg">
@@ -37,6 +37,7 @@
 import Accordion from "@/Components/Accordion.vue";
 import SpeakButton from "@/Components/SpeakButton.vue";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { useTranslations } from "@/composables/useTranslations";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
@@ -119,6 +120,11 @@ const emit = defineEmits([
 ]);
 
 const { speak, speaking } = useSpeechSynthesis();
+const { t } = useTranslations();
+
+const speakAddress = () => {
+    speak(t("map.address_speak", { address: currentAddress.value }));
+};
 
 const mapContainer = ref(null);
 const streetViewContainer = ref(null);

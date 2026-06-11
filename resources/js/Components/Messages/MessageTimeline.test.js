@@ -132,7 +132,7 @@ vi.mock("@/mediaHelpers", () => ({
 // Mock useTranslations composable
 vi.mock("@/composables/useTranslations", () => ({
     useTranslations: () => ({
-        t: (key) => {
+        t: (key, replacements = {}) => {
             const translations = {
                 "message.add_comment": "Add Comment",
                 "message.post_comment": "Post Comment",
@@ -153,6 +153,9 @@ vi.mock("@/composables/useTranslations", () => ({
                 "message.start_conversation": "Be the first to reply!",
                 "message.show_more_comments": "Show :count more",
                 "message.show_less_comments": "Show less",
+                "message.user_says": ":username says :text",
+                "message.no_reactions": "No reactions",
+                "message.reaction_from": ":emoji from :names",
                 "comment.add_reaction": "Add reaction",
                 "comment.speak": "Speak comment",
                 "comment.speak_aria": "Speak comment",
@@ -165,8 +168,23 @@ vi.mock("@/composables/useTranslations", () => ({
                 "general.speak_all_reactions": "Speak all reactions",
                 "general.speak_all_reactions_aria": "Speak all reactions",
                 "general.view_message": "View Message",
+                "general.someone": "Someone",
+                "reaction.thumbs_up": "thumbs up",
+                "reaction.heart": "heart",
+                "reaction.laughing": "laughing",
+                "reaction.surprised": "surprised",
+                "reaction.sad": "sad",
+                "reaction.poop": "poop",
+                "reaction.generic": "reaction",
             };
-            return translations[key] || key;
+            let translation = translations[key] || key;
+            Object.keys(replacements).forEach((placeholder) => {
+                translation = translation.replace(
+                    new RegExp(`:${placeholder}`, "g"),
+                    replacements[placeholder]
+                );
+            });
+            return translation;
         },
         translations: {
             value: {},

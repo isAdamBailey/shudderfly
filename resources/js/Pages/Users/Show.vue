@@ -6,6 +6,7 @@ import MessageTimeline from "@/Components/Messages/MessageTimeline.vue";
 import StatCard from "@/Components/StatCard.vue";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { useTranslations } from "@/composables/useTranslations";
 import { Head, Link } from "@inertiajs/vue3";
 import { computed } from "vue";
 
@@ -14,6 +15,7 @@ defineOptions({
 });
 
 const { speak, speaking } = useSpeechSynthesis();
+const { t } = useTranslations();
 
 const props = defineProps({
     profileUser: {
@@ -94,16 +96,14 @@ const speakTopBooks = () => {
     const bookTexts = props.stats.topBooks.map((book, index) => {
         return `${index + 1}. ${book.title}`;
     });
-    const fullText = "Top books by popularity. " + bookTexts.join(". ") + ".";
-    speak(fullText);
+    speak(t("profile.top_books_by_popularity", { list: bookTexts.join(". ") }));
 };
 
 const speakRecentBooks = () => {
     const bookTexts = props.stats.recentBooks.map((book, index) => {
         return `${index + 1}. ${book.title}`;
     });
-    const fullText = "Recent books created. " + bookTexts.join(". ") + ".";
-    speak(fullText);
+    speak(t("profile.recent_books_created", { list: bookTexts.join(". ") }));
 };
 
 const speakUserSummary = () => {
@@ -112,19 +112,34 @@ const speakUserSummary = () => {
         return;
     }
 
-    const books = props.stats.totalBooksCount === 1 ? "book" : "books";
-    const messages = props.stats.messagesCount === 1 ? "message" : "messages";
-    const comments = props.stats.commentsCount === 1 ? "comment" : "comments";
-    const reactions =
-        props.stats.reactionsGiven === 1 ? "reaction" : "reactions";
+    const booksWord =
+        props.stats.totalBooksCount === 1 ? t("general.book") : t("general.books");
+    const messagesWord =
+        props.stats.messagesCount === 1 ? t("general.message") : t("general.messages");
+    const commentsWord =
+        props.stats.commentsCount === 1 ? t("general.comment") : t("general.comments");
+    const reactionsWord =
+        props.stats.reactionsGiven === 1 ? t("general.reaction") : t("general.reactions");
 
     const summary = [
         `${props.profileUser.name}.`,
-        `Member since ${memberSince.value}.`,
-        `${props.stats.totalBooksCount} ${books} created.`,
-        `${props.stats.messagesCount} ${messages} posted.`,
-        `${props.stats.commentsCount} ${comments} posted.`,
-        `${props.stats.reactionsGiven} ${reactions} given.`,
+        t("profile.member_since", { date: memberSince.value }),
+        t("profile.books_created", {
+            count: props.stats.totalBooksCount,
+            word: booksWord,
+        }),
+        t("profile.messages_posted", {
+            count: props.stats.messagesCount,
+            word: messagesWord,
+        }),
+        t("profile.comments_posted", {
+            count: props.stats.commentsCount,
+            word: commentsWord,
+        }),
+        t("profile.reactions_given", {
+            count: props.stats.reactionsGiven,
+            word: reactionsWord,
+        }),
     ].join(" ");
 
     speak(summary);

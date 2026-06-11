@@ -1,6 +1,13 @@
 <script setup>
 import Button from "@/Components/Button.vue";
 import { usePermissions } from "@/composables/permissions";
+import {
+    getAppLocaleFromPage,
+    normalizeAppLocale,
+    resolveSpeechLanguageForAppLocale,
+    syncAppLocaleFromPage,
+    syncStoredSpeechLanguage,
+} from "@/composables/speechVoice";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import { router, usePage } from "@inertiajs/vue3";
@@ -17,32 +24,33 @@ const SPEECH_PITCH_MAX = 2;
 const SPEECH_VOLUME_MIN = 0.1;
 const SPEECH_VOLUME_MAX = 1;
 
-// Helper functions to convert numeric values to descriptive words
+const { t } = useTranslations();
+
 function getSpeechRateDescription(value) {
     const range = SPEECH_RATE_MAX - SPEECH_RATE_MIN;
     const third = range / 3;
 
-    if (value <= SPEECH_RATE_MIN + third) return "slow";
-    if (value <= SPEECH_RATE_MIN + 2 * third) return "normal";
-    return "fast";
+    if (value <= SPEECH_RATE_MIN + third) return t("speech.rate_slow");
+    if (value <= SPEECH_RATE_MIN + 2 * third) return t("speech.rate_normal");
+    return t("speech.rate_fast");
 }
 
 function getSpeechPitchDescription(value) {
     const range = SPEECH_PITCH_MAX - SPEECH_PITCH_MIN;
     const third = range / 3;
 
-    if (value <= SPEECH_PITCH_MIN + third) return "low";
-    if (value <= SPEECH_PITCH_MIN + 2 * third) return "normal";
-    return "high";
+    if (value <= SPEECH_PITCH_MIN + third) return t("speech.pitch_low");
+    if (value <= SPEECH_PITCH_MIN + 2 * third) return t("speech.pitch_normal");
+    return t("speech.pitch_high");
 }
 
 function getSpeechVolumeDescription(value) {
     const range = SPEECH_VOLUME_MAX - SPEECH_VOLUME_MIN;
     const third = range / 3;
 
-    if (value <= SPEECH_VOLUME_MIN + third) return "quiet";
-    if (value <= SPEECH_VOLUME_MIN + 2 * third) return "normal";
-    return "loud";
+    if (value <= SPEECH_VOLUME_MIN + third) return t("speech.volume_quiet");
+    if (value <= SPEECH_VOLUME_MIN + 2 * third) return t("speech.volume_normal");
+    return t("speech.volume_loud");
 }
 
 const {
@@ -61,7 +69,6 @@ const {
     speak,
 } = useSpeechSynthesis();
 const { canEditPages } = usePermissions();
-const { t } = useTranslations();
 
 const voicesLoading = ref(true);
 let voiceLoadingTimeoutId = null;
@@ -82,12 +89,37 @@ function handleAppLocaleChange(value) {
             preserveScroll: true,
             onSuccess: () => {
                 appLocale.value = value;
+                syncSpeechLanguageForLocale(syncAppLocaleFromPage(usePage()));
             },
             onFinish: () => {
                 appLocaleSaving.value = false;
             },
         }
     );
+}
+
+function syncSpeechLanguageForLocale(appLocale) {
+    const normalizedLocale = normalizeAppLocale(appLocale);
+    const availableVoices =
+        voices.value.length > 0
+            ? voices.value
+            : window.speechSynthesis?.getVoices?.() || [];
+
+    if (!availableVoices.length) {
+        selectedLanguage.value =
+            resolveSpeechLanguageForAppLocale(normalizedLocale);
+        localStorage.setItem("selectedLanguage", selectedLanguage.value);
+        return;
+    }
+
+    const { speechLang, voice } = syncStoredSpeechLanguage(
+        availableVoices,
+        normalizedLocale
+    );
+    selectedLanguage.value = speechLang;
+    if (voice) {
+        setVoice(voice);
+    }
 }
 
 const getLanguageDisplayName = (languageCode) => {
@@ -275,17 +307,17 @@ const localSpeechVolume = ref(speechVolume.value);
 
 const debouncedSpeechRateUpdate = debounce((value) => {
     setSpeechRateSilent(value);
-    speak(`Speech rate set to ${getSpeechRateDescription(value)}`);
+    speak(t("speech.rate_set", { rate: getSpeechRateDescription(value) }));
 }, 500);
 
 const debouncedSpeechPitchUpdate = debounce((value) => {
     setSpeechPitchSilent(value);
-    speak(`Pitch set to ${getSpeechPitchDescription(value)}`);
+    speak(t("speech.pitch_set", { pitch: getSpeechPitchDescription(value) }));
 }, 500);
 
 const debouncedSpeechVolumeUpdate = debounce((value) => {
     setSpeechVolumeSilent(value);
-    speak(`Volume set to ${getSpeechVolumeDescription(value)}`);
+    speak(t("speech.volume_set", { volume: getSpeechVolumeDescription(value) }));
 }, 500);
 
 function handleSpeechRateChange(value) {
@@ -321,19 +353,7 @@ watch(speechVolume, (newVolume) => {
 // Watch for language changes from the composable (when Normal emotion is selected)
 watch(selectedEmotion, (newEmotion) => {
     if (newEmotion === "") {
-        // Normal emotion selected, reset language to en-US
-        selectedLanguage.value = "en-US";
-
-        // Small delay to ensure language change is processed
-        setTimeout(() => {
-            // Reset voice selection to first available English voice
-            const englishVoices = voices.value.filter(
-                (voice) => voice.lang === "en-US"
-            );
-            if (englishVoices.length > 0) {
-                setVoice(englishVoices[0]);
-            }
-        }, 100);
+        syncSpeechLanguageForLocale(getAppLocaleFromPage(usePage()));
     }
 });
 

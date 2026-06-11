@@ -412,7 +412,7 @@ import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useFlashMessage } from "@/composables/useFlashMessage";
 import {
   ALLOWED_REACTION_EMOJIS,
-  REACTION_EMOJI_NAMES,
+  getReactionEmojiName,
   useGroupedReactions
 } from "@/composables/useGroupedReactions";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
@@ -817,8 +817,8 @@ const formatMentionsForSpeech = (text) => {
 
 const speakMessage = (message) => {
   const messageText = formatMentionsForSpeech(message.message);
-  const username = message.user?.name || "Someone";
-  speak(`${username} says ${messageText}`);
+  const username = message.user?.name || t("general.someone");
+  speak(t("message.user_says", { username, text: messageText }));
 };
 
 const deleteMessage = async (messageId) => {
@@ -1136,8 +1136,8 @@ const openCommentForm = (messageId) => {
 
 const speakComment = (comment) => {
   const commentText = formatMentionsForSpeech(comment.comment || "");
-  const username = comment.user?.name || "Someone";
-  speak(`${username} says ${commentText}`);
+  const username = comment.user?.name || t("general.someone");
+  speak(t("message.user_says", { username, text: commentText }));
 };
 
 const speakViewReactions = () => {
@@ -1147,14 +1147,14 @@ const speakViewReactions = () => {
   const selectedReactions = getSelectedReactions();
 
   if (selectedReactions.length === 0) {
-    speak("No reactions");
+    speak(t("message.no_reactions"));
     return;
   }
 
   const reactionTexts = selectedReactions
     .map((emoji) => {
       const users = getReactionUsers(emoji);
-      const emojiName = REACTION_EMOJI_NAMES[emoji] || "reaction";
+      const emojiName = getReactionEmojiName(emoji, t);
 
       if (users.length === 0) {
         return "";
@@ -1173,7 +1173,7 @@ const speakViewReactions = () => {
         formattedNames = userNames;
       }
 
-      return `${emojiName} from ${formattedNames}`;
+      return t("message.reaction_from", { emoji: emojiName, names: formattedNames });
     })
     .filter((text) => text !== "");
 

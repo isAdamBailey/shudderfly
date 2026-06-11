@@ -27,14 +27,7 @@
                         class="mr-2"
                         icon-class="ri-speak-fill text-lg"
                         aria-label="Speak books"
-                        @click="
-                            speak(
-                                `all books: ${
-                                    statsData.numberOfBooks?.toLocaleString?.() ??
-                                    0
-                                }`
-                            )
-                        "
+                        @click="speakStat('all_books', statsData.numberOfBooks)"
                     />
                 </div>
             </div>
@@ -66,14 +59,7 @@
                         class="mr-2"
                         icon-class="ri-speak-fill text-lg"
                         aria-label="Speak total number of pages"
-                        @click="
-                            speak(
-                                `all pages: ${
-                                    statsData.numberOfPages?.toLocaleString?.() ??
-                                    0
-                                }`
-                            )
-                        "
+                        @click="speakStat('all_pages', statsData.numberOfPages)"
                     />
                 </div>
             </div>
@@ -103,14 +89,7 @@
                         class="mr-2"
                         icon-class="ri-speak-fill text-lg"
                         aria-label="Speak songs"
-                        @click="
-                            speak(
-                                `songs: ${
-                                    statsData.numberOfSongs?.toLocaleString?.() ??
-                                    0
-                                }`
-                            )
-                        "
+                        @click="speakStat('songs', statsData.numberOfSongs)"
                     />
                 </div>
             </div>
@@ -141,14 +120,7 @@
                         class="mr-2"
                         icon-class="ri-speak-fill text-lg"
                         aria-label="Speak images"
-                        @click="
-                            speak(
-                                `images: ${
-                                    statsData.numberOfImages?.toLocaleString?.() ??
-                                    0
-                                }`
-                            )
-                        "
+                        @click="speakStat('images', statsData.numberOfImages)"
                     />
                 </div>
             </div>
@@ -180,14 +152,7 @@
                         class="mr-2"
                         icon-class="ri-speak-fill text-lg"
                         aria-label="Speak videos"
-                        @click="
-                            speak(
-                                `videos: ${
-                                    statsData.numberOfVideos?.toLocaleString?.() ??
-                                    0
-                                }`
-                            )
-                        "
+                        @click="speakStat('videos', statsData.numberOfVideos)"
                     />
                 </div>
             </div>
@@ -221,14 +186,7 @@
                         class="mr-2"
                         icon-class="ri-speak-fill text-lg"
                         aria-label="Speak YouTube videos"
-                        @click="
-                            speak(
-                                `YouTube videos: ${
-                                    statsData.numberOfYouTubeVideos?.toLocaleString?.() ??
-                                    0
-                                }`
-                            )
-                        "
+                        @click="speakStat('youtube_videos', statsData.numberOfYouTubeVideos)"
                     />
                 </div>
             </div>
@@ -260,14 +218,7 @@
                         class="mr-2"
                         icon-class="ri-speak-fill text-lg"
                         aria-label="Speak screenshots"
-                        @click="
-                            speak(
-                                `screenshots: ${
-                                    statsData.numberOfScreenshots?.toLocaleString?.() ??
-                                    0
-                                }`
-                            )
-                        "
+                        @click="speakStat('screenshots', statsData.numberOfScreenshots)"
                     />
                 </div>
             </div>
@@ -339,16 +290,7 @@
                                     :disabled="speaking"
                                     icon-class="ri-speak-fill text-lg"
                                     aria-label="Speak book with most pages"
-                                    @click="
-                                        speak(
-                                            `Book with most pages: ${
-                                                statsData.mostPages?.title || ''
-                                            }. ${
-                                                statsData.mostPages
-                                                    ?.pages_count || 0
-                                            } pages.`
-                                        )
-                                    "
+                                    @click="speakBookPageStat('book_most_pages', statsData.mostPages)"
                                 />
                             </div>
                         </div>
@@ -420,17 +362,7 @@
                                     :disabled="speaking"
                                     icon-class="ri-speak-fill text-lg"
                                     aria-label="Speak book with least pages"
-                                    @click="
-                                        speak(
-                                            `Book with least pages: ${
-                                                statsData.leastPages?.title ||
-                                                ''
-                                            }. ${
-                                                statsData.leastPages
-                                                    ?.pages_count || 0
-                                            } pages.`
-                                        )
-                                    "
+                                    @click="speakBookPageStat('book_least_pages', statsData.leastPages)"
                                 />
                             </div>
                         </div>
@@ -594,6 +526,7 @@
 import SpeakButton from "@/Components/SpeakButton.vue";
 import { useMusicPlayer } from "@/composables/useMusicPlayer";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { useTranslations } from "@/composables/useTranslations";
 import { Link } from "@inertiajs/vue3";
 import { ref, watch } from "vue";
 
@@ -639,6 +572,24 @@ resolveStats();
 watch(() => props.stats, resolveStats);
 
 const { speak, speaking } = useSpeechSynthesis();
+const { t } = useTranslations();
+
+function formatCount(count) {
+    return count?.toLocaleString?.() ?? 0;
+}
+
+function speakStat(key, count) {
+    speak(t(`stats.${key}`, { count: formatCount(count) }));
+}
+
+function speakBookPageStat(key, book) {
+    speak(
+        t(`stats.${key}`, {
+            title: book?.title || "",
+            count: book?.pages_count || 0,
+        })
+    );
+}
 
 // Accept either a number or a string (possibly already formatted with commas).
 function countAddS(count, word) {
@@ -658,7 +609,7 @@ function speakTopBooks() {
     if (!books.length) return;
 
     const items = books.slice(0, 5).map((b, i) => `${i + 1}. ${b.title}`);
-    const phrase = `Top five most popular books: ${items.join(". ")}.`;
+    const phrase = t("stats.top_books", { list: items.join(". ") });
     speak(phrase);
 }
 
@@ -667,7 +618,7 @@ function speakTopSongs() {
     if (!songs.length) return;
 
     const items = songs.slice(0, 5).map((s, i) => `${i + 1}. ${s.title}`);
-    const phrase = `Top five most popular songs: ${items.join(". ")}.`;
+    const phrase = t("stats.top_songs", { list: items.join(". ") });
     speak(phrase);
 }
 </script>
