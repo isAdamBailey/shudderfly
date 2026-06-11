@@ -66,6 +66,17 @@ describe("composables/useGlobalTimer", () => {
     expect(window.speechSynthesis.speak).toHaveBeenCalledTimes(1);
   });
 
+  it("does not announce on load when the timer already elapsed before this client connected", async () => {
+    const t = useGlobalTimer();
+    // Simulate hydration from server props where the timer ended in the past,
+    // before this browser ever observed it counting down.
+    setTimer(sync, -60 * 1000);
+    await nextTick();
+    await nextTick();
+    expect(t.active.value).toBe(false);
+    expect(window.speechSynthesis.speak).not.toHaveBeenCalled();
+  });
+
   it("clearing the shared timer halts it without announcing", async () => {
     const t = useGlobalTimer();
     setTimer(sync, 30 * 60 * 1000);

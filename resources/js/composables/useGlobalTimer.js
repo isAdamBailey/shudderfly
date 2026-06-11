@@ -1,5 +1,6 @@
 import { computed, ref, watch } from "vue";
 import { useWorldClockSync } from "@/composables/useWorldClockSync";
+import { useTranslations } from "@/composables/useTranslations";
 
 // A single shared countdown timer for the whole app, backed by the global server
 // state (see useWorldClockSync). The timer is stored as an absolute end time, so
@@ -61,11 +62,17 @@ const update = () => {
   const rem = Math.max(0, end - serverNow);
   remainingMs.value = rem;
   if (rem <= 0) {
+    // Only announce if this client actually observed the timer counting down
+    // (active was true on the previous tick). On initial page load the server
+    // may report an end time that already passed before this client
+    // connected — that should stay silent.
+    const wasActive = active.value;
     active.value = false;
     clear();
-    if (announcedFor !== end) {
+    if (wasActive && announcedFor !== end) {
       announcedFor = end;
-      announce("Time's up!");
+      const { t } = useTranslations();
+      announce(t("world_clock.timer_done"));
     }
   } else {
     active.value = true;

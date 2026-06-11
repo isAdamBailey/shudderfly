@@ -240,4 +240,7 @@ return [
     'dashboard.unlock_all_blocked_pages_aria' => 'Unblock all blocked pages and sounds',
     'dashboard.unblock' => 'Unblock',
     'dashboard.blocked_pages_count' => ':count blocked items',
+
+    // World Clock - Timer
+    'world_clock.timer_done' => "Time's up!",
 ];
