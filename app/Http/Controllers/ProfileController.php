@@ -75,6 +75,23 @@ class ProfileController extends Controller
     }
 
     /**
+     * Update the user's locale (app display language) preference.
+     *
+     * @return RedirectResponse
+     */
+    public function updateLocalePreference(Request $request)
+    {
+        $validated = $request->validate([
+            'locale' => ['nullable', Rule::in(['en', 'es'])],
+        ]);
+
+        $request->user()->update($validated);
+
+        return Redirect::route('profile.edit')
+            ->with('success', __('messages.locale.updated'));
+    }
+
+    /**
      * Update the user's avatar.
      *
      * @return RedirectResponse

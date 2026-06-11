@@ -243,4 +243,11 @@ return [
 
     // World Clock - Timer
     'world_clock.timer_done' => "Time's up!",
+
+    // UI Labels - App Language
+    'locale.app_language' => 'App Language',
+    'locale.automatic' => 'Automatic',
+    'locale.english' => 'English',
+    'locale.spanish' => 'Español',
+    'locale.updated' => 'Language updated!',
 ];

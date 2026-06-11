@@ -223,4 +223,57 @@ class ProfileTest extends TestCase
             ->assertSessionHasErrors('email_notifications_enabled')
             ->assertRedirect('/profile');
     }
+
+    public function test_locale_preference_can_be_updated()
+    {
+        $user = User::factory()->create([
+            'locale' => null,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->patch('/profile/locale/preference', [
+                'locale' => 'es',
+            ]);
+
+        $response
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success', __('messages.locale.updated'))
+            ->assertRedirect('/profile');
+
+        $this->assertSame('es', $user->refresh()->locale);
+    }
+
+    public function test_locale_preference_can_be_reset_to_automatic()
+    {
+        $user = User::factory()->create([
+            'locale' => 'es',
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->patch('/profile/locale/preference', [
+                'locale' => null,
+            ]);
+
+        $response->assertSessionHasNoErrors();
+
+        $this->assertNull($user->refresh()->locale);
+    }
+
+    public function test_locale_preference_rejects_invalid_value()
+    {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->from('/profile')
+            ->patch('/profile/locale/preference', [
+                'locale' => 'fr',
+            ]);
+
+        $response
+            ->assertSessionHasErrors('locale')
+            ->assertRedirect('/profile');
+    }
 }

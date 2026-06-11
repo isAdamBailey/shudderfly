@@ -27,6 +27,7 @@ class User extends Authenticatable
         'weekly_profile_overview',
         'weekly_profile_overview_generated_at',
         'email_notifications_enabled',
+        'locale',
     ];
 
     /**
