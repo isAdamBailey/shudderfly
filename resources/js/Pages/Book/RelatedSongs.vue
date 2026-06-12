@@ -1,18 +1,18 @@
 <template>
-  <div v-if="songs.length > 0" class="md:pl-3 mt-10">
+  <div v-if="songs.length > 0">
     <h3
-      class="pt-2 text-2xl text-yellow-200 dark:text-gray-100 font-heading"
+      class="mb-3 text-2xl text-yellow-200 dark:text-gray-100 font-heading"
     >
       {{ label }}
     </h3>
     <div
-      class="horizontal-scroll-strip flex min-w-0 w-full max-w-full flex-nowrap snap-x touch-pan-x space-x-1 overflow-x-auto overflow-y-hidden overscroll-x-contain pb-2"
+      class="horizontal-scroll-strip flex min-w-0 w-full max-w-full flex-nowrap snap-x touch-pan-x gap-3 overflow-x-auto overflow-y-hidden overscroll-x-contain pb-2"
     >
       <button
         v-for="song in songs"
         :key="song.id"
         type="button"
-        class="w-48 shrink-0 snap-start text-left rounded-lg overflow-hidden border border-gray-600 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        class="btn-bulge w-48 shrink-0 snap-start text-left rounded-lg overflow-hidden border border-gray-600 dark:border-gray-700 bg-gray-800 hover:bg-gray-700 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-200"
         @click="handlePlay(song)"
       >
         <div class="relative w-full aspect-video bg-gray-200 dark:bg-gray-900">
@@ -30,7 +30,7 @@
           </div>
         </div>
         <div class="p-2">
-          <p class="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2">
+          <p class="text-sm font-medium text-gray-100 line-clamp-2">
             {{ song.title }}
           </p>
         </div>

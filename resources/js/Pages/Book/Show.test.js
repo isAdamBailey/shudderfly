@@ -5,19 +5,20 @@ import { ref } from "vue";
 
 // Mock composables
 vi.mock("@/composables/useInfiniteScroll", () => ({
-  useInfiniteScroll: () => ({
-    items: [
-      { id: 1, title: "Page 1", content: "Content 1" },
-      { id: 2, title: "Page 2", content: "Content 2" }
-    ],
+  useInfiniteScroll: (initialItems) => ({
+    items: ref(initialItems || []),
     infiniteScrollRef: ref(null),
     setItemLoading: vi.fn()
   })
 }));
 
+const mockCanEditPages = vi.fn(() => true);
+
 vi.mock("@/composables/permissions", () => ({
   usePermissions: () => ({
-    canEditPages: true
+    get canEditPages() {
+      return mockCanEditPages();
+    }
   })
 }));
 
@@ -25,6 +26,23 @@ vi.mock("@/composables/useSpeechSynthesis", () => ({
   useSpeechSynthesis: () => ({
     speak: vi.fn(),
     speaking: false
+  })
+}));
+
+vi.mock("@/composables/useTranslations", () => ({
+  useTranslations: () => ({
+    t: (key, params = {}) => {
+      if (key === "book.pages_count") {
+        return `${params.count} pages`;
+      }
+      if (key === "book.no_pages") {
+        return "No pages in this book yet.";
+      }
+      if (key === "book.sort_group") {
+        return "Sort pages";
+      }
+      return key;
+    }
   })
 }));
 
@@ -41,6 +59,13 @@ vi.mock("@/Components/Button.vue", () => ({
 
 vi.mock("@/Components/ScrollTop.vue", () => ({
   default: { name: "ScrollTop", template: '<div class="scroll-top" />' }
+}));
+
+vi.mock("@/Components/svg/ManEmptyCircle.vue", () => ({
+  default: {
+    name: "ManEmptyCircle",
+    template: '<div class="man-empty-circle" />'
+  }
 }));
 
 vi.mock("@/Components/SearchInput.vue", () => ({
@@ -149,6 +174,7 @@ describe("Book/Show.vue", () => {
   ];
 
   beforeEach(() => {
+    mockCanEditPages.mockReturnValue(true);
     wrapper = mount(Show, {
       props: {
         book,
@@ -217,6 +243,35 @@ describe("Book/Show.vue", () => {
     });
 
     expect(wrapperWithNoPages.vm.activeTab).toBe("pages");
+  });
+
+  it("shows empty state when book has no pages for non-editors", async () => {
+    mockCanEditPages.mockReturnValue(false);
+
+    const wrapperWithNoPages = mount(Show, {
+      props: {
+        book,
+        pages: { data: [], total: 0 },
+        authors,
+        categories,
+        books
+      },
+      global: {
+        mocks: {
+          $page: {
+            props: {
+              auth: { user: { permissions_list: [] } },
+              search: null
+            }
+          }
+        }
+      }
+    });
+
+    expect(wrapperWithNoPages.text()).toContain("No pages in this book yet.");
+    expect(
+      wrapperWithNoPages.findComponent({ name: "ManEmptyCircle" }).exists()
+    ).toBe(true);
   });
 
   // SearchInput is now in the global layout header, not inside Book/Show

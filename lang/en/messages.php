@@ -314,6 +314,9 @@ return [
     'book.sort_newest' => 'newest',
     'book.sort_oldest' => 'oldest',
     'book.sort_favorites' => 'favorites',
+    'book.sort_group' => 'Sort pages',
+    'book.pages_count' => ':count pages',
+    'book.no_pages' => 'No pages in this book yet.',
 
     // Collages
     'collage.none_created' => 'No collages have been created yet.',

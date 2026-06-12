@@ -82,7 +82,7 @@
           </p>
         </div>
       </div>
-      <div v-if="hasContent" class="mx-5 mt-8 mb-5 relative z-20">
+      <div v-if="hasContent" class="mt-8 mb-5 relative z-20">
           <div class="text-container">
             <div
               class="font-content page-content max-w-5xl mx-auto text-lg text-left relative"
@@ -97,7 +97,7 @@
             </div>
           </div>
         </div>
-      <div class="mx-5">
+      <div>
         <MapEmbed
           :latitude="props.page.latitude ?? props.page.book.latitude"
           :longitude="props.page.longitude ?? props.page.book.longitude"
@@ -113,7 +113,7 @@
       <div
         v-if="canEditPages && showPageSettings"
         id="page-edit-form"
-        class="mx-5 mb-3 scroll-mt-4"
+        class="mb-3 scroll-mt-4"
       >
         <EditPageForm
           :page="page"
@@ -122,40 +122,40 @@
           @close-page-form="showPageSettings = false"
         />
       </div>
-      <div
-        class="my-4 mx-5 flex flex-row flex-wrap items-center justify-between gap-2 sm:gap-3"
-      >
-        <div
-          v-if="canAddToCollage"
-          class="flex shrink-0 items-center gap-2"
-        >
-          <AddToCollageButton
-            :page-id="props.page.id"
-            :collages="collages"
-          />
-        </div>
-
-        <ShareToChatButton
-          v-if="canSharePage"
-          kind="page"
-          :page-id="page.id"
-          wrapper-class="flex shrink-0 items-center gap-2"
-        />
-
-        <Link
-          v-if="isMoviesCategory"
-          :href="route('movie-cast.index', { title: page.book.title })"
-          class="flex shrink-0 items-center gap-2"
-        >
-          <Button
-            type="button"
-            class="h-10 w-10 flex items-center justify-center"
-            :title="`Search cast for ${page.book.title}`"
-            :aria-label="`Search cast for ${page.book.title}`"
+      <div class="my-4 flex flex-wrap items-center justify-between gap-2 sm:gap-3">
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div
+            v-if="canAddToCollage"
+            class="flex shrink-0 items-center gap-2"
           >
-            <i class="ri-film-line text-xl" aria-hidden="true"></i>
-          </Button>
-        </Link>
+            <AddToCollageButton
+              :page-id="props.page.id"
+              :collages="collages"
+            />
+          </div>
+
+          <ShareToChatButton
+            v-if="canSharePage"
+            kind="page"
+            :page-id="page.id"
+            wrapper-class="flex shrink-0 items-center gap-2"
+          />
+
+          <Link
+            v-if="isMoviesCategory"
+            :href="route('movie-cast.index', { title: page.book.title })"
+            class="flex shrink-0 items-center gap-2"
+          >
+            <Button
+              type="button"
+              class="h-10 w-10 flex items-center justify-center"
+              :title="`Search cast for ${page.book.title}`"
+              :aria-label="`Search cast for ${page.book.title}`"
+            >
+              <i class="ri-film-line text-xl" aria-hidden="true"></i>
+            </Button>
+          </Link>
+        </div>
 
         <div
           v-if="$page.props.auth.user"

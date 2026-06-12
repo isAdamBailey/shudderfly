@@ -5,19 +5,18 @@
         >
     </div>
     <div v-else-if="workingBooks.length > 0">
-        <div class="flex justify-between items-center ml-3 my-3">
+        <div class="flex justify-between items-center gap-2 mb-3">
             <Link
                 :href="
                     route('categories.show', {
                         categoryName: props.category?.name || '',
                     })
                 "
-                class="ml-2 text-2xl text-theme-primary font-heading hover:underline cursor-pointer transition"
+                class="min-w-0 truncate text-2xl text-theme-primary font-heading hover:underline cursor-pointer transition"
             >
                 {{ title }}
             </Link>
             <SpeakButton
-                class="mr-3"
                 aria-label="Speak category title"
                 icon-class="ri-speak-line text-xl"
                 @click="speak(title)"
@@ -25,7 +24,7 @@
         </div>
         <div
             ref="content"
-            class="flex snap-x space-x-1 overflow-x-auto overflow-y-hidden pb-2 scrollbar scrollbar-thumb-gray-500 scrollbar-thumb-rounded -webkit-overflow-scrolling: touch overscroll-x-contain"
+            class="flex snap-x gap-3 overflow-x-auto overflow-y-hidden pb-2 scrollbar scrollbar-thumb-gray-500 scrollbar-thumb-rounded overscroll-x-contain"
             @scroll="handleScroll"
             @touchmove="handleScroll"
             @touchend="handleScroll"

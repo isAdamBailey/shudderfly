@@ -35,33 +35,37 @@
         />
       </div>
     </template>
-    <!-- Themed Books Section -->
-    <div v-if="currentTheme && !searchCategories" class="mb-4">
-      <BooksGrid :category="{ name: 'themed' }" :label="themeLabel" />
-    </div>
-
-    <div v-if="!areAllBooksEmpty" class="mb-10">
-      <BooksGrid
-        v-if="!searchCategories"
-        :category="{ name: 'forgotten' }"
-        label="Remember these books?"
-      />
-
-      <div v-for="(category, index) in workingCategories" :key="index">
-        <BooksGrid :category="category" />
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 sm:space-y-10">
+      <!-- Themed Books Section -->
+      <div v-if="currentTheme && !searchCategories">
+        <BooksGrid :category="{ name: 'themed' }" :label="themeLabel" />
       </div>
 
-      <BooksGrid
-        v-if="!searchCategories"
-        :category="{ name: 'popular' }"
-        label="Your favorite books!"
-      />
-    </div>
-    <div v-else class="flex flex-col items-center mt-10">
-      <h2 class="mb-8 font-semibold text-2xl text-gray-100 leading-tight">
-        {{ notFoundContent }}
-      </h2>
-      <ManEmptyCircle />
+      <template v-if="!areAllBooksEmpty">
+        <BooksGrid
+          v-if="!searchCategories"
+          :category="{ name: 'forgotten' }"
+          label="Remember these books?"
+        />
+
+        <BooksGrid
+          v-for="(category, index) in workingCategories"
+          :key="index"
+          :category="category"
+        />
+
+        <BooksGrid
+          v-if="!searchCategories"
+          :category="{ name: 'popular' }"
+          label="Your favorite books!"
+        />
+      </template>
+      <div v-else class="flex flex-col items-center py-8">
+        <h2 class="mb-8 font-semibold text-2xl text-gray-100 leading-tight">
+          {{ notFoundContent }}
+        </h2>
+        <ManEmptyCircle />
+      </div>
     </div>
     <ScrollTop />
   </BreezeAuthenticatedLayout>

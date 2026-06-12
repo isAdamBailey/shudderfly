@@ -1,12 +1,12 @@
 <template>
-    <div v-if="workingBooks.length > 0" class="md:pl-3 mt-10">
+    <div v-if="workingBooks.length > 0">
         <h3
-            class="pt-2 text-2xl text-yellow-200 dark:text-gray-100 font-heading"
+            class="mb-3 text-2xl text-yellow-200 dark:text-gray-100 font-heading"
         >
             {{ label }}
         </h3>
         <div
-            class="horizontal-scroll-strip flex min-w-0 w-full max-w-full flex-nowrap snap-x touch-pan-x space-x-1 overflow-x-auto overflow-y-hidden overscroll-x-contain pb-2"
+            class="horizontal-scroll-strip flex min-w-0 w-full max-w-full flex-nowrap snap-x touch-pan-x gap-3 overflow-x-auto overflow-y-hidden overscroll-x-contain pb-2"
         >
             <BookCoverCard
                 v-for="book in workingBooks"
