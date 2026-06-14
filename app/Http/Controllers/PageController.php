@@ -446,6 +446,8 @@ class PageController extends Controller
      */
     public function update(UpdatePageRequest $request, Page $page): Redirector|RedirectResponse
     {
+        $successMessage = __('messages.page.updated');
+
         if ($request->hasFile('image')) {
             $file = $request->file('image');
 
@@ -458,6 +460,7 @@ class PageController extends Controller
                 $filePath = Storage::disk('local')->put('temp', $file);
 
                 if (Str::startsWith($mimeType, 'image/')) {
+                    $successMessage = __('messages.page.queued_image', ['filename' => $file->getClientOriginalName()]);
                     $filename = pathinfo($file->hashName(), PATHINFO_FILENAME);
                     $mediaPath = 'books/'.$page->book->slug.'/'.$filename.'.webp';
                     // Preserve page location if not provided in request, fall back to book location if page has none
@@ -476,6 +479,7 @@ class PageController extends Controller
                         $longitude
                     );
                 } elseif (Str::startsWith($mimeType, 'video/')) {
+                    $successMessage = __('messages.page.queued_video', ['filename' => $file->getClientOriginalName()]);
                     $mediaPath = 'books/'.$page->book->slug.'/'.$file->getClientOriginalName();
 
                     try {
@@ -572,7 +576,7 @@ class PageController extends Controller
             }
         }
 
-        return redirect(route('pages.show', $page))->with('success', __('messages.page.updated'));
+        return redirect(route('pages.show', $page))->with('success', $successMessage);
     }
 
     /**

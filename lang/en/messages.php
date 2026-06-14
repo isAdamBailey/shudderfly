@@ -26,6 +26,7 @@ return [
     'movie.shared' => 'Shared! Your friends can look up the cast.',
     'page.queued_image' => 'We got :filename! It might take a minute to show up.',
     'page.queued_video' => 'We got :filename! It might take a minute to show up.',
+    'page.uploads_batch_queued_speech' => 'Uploads successful! Give us a few minutes to process them.',
     'page.bulk_deleted' => 'Those :count pages are gone.',
     'page.bulk_moved_to_top' => ':count pages moved to the top!',
     'page.bulk_moved_to_book' => 'Moved :count pages into :book!',

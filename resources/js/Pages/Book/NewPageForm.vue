@@ -12,7 +12,8 @@ import MapPicker from "@/Components/Map/MapPicker.vue";
 import TextInput from "@/Components/TextInput.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
-import Accordion from "@/Components/Accordion.vue";
+import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { useTranslations } from "@/composables/useTranslations";
 import { useForm, usePage } from "@inertiajs/vue3";
 import { useVuelidate } from "@vuelidate/core";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
@@ -20,6 +21,8 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 const isLocationOpen = ref(false);
 
 const emit = defineEmits(["close-form"]);
+const { speak } = useSpeechSynthesis();
+const { t } = useTranslations();
 
 const props = defineProps({
   book: { type: Object, required: true }
@@ -167,6 +170,7 @@ const onPondProcessed = () => {
 };
 
 const onPondAllDone = () => {
+  speak(t("page.uploads_batch_queued_speech"));
   try {
     uploaderRef.value?.removeFiles?.();
   } catch (e) {

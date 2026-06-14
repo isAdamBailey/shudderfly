@@ -137,8 +137,6 @@ const server = {
       xhr.timeout = calculateUploadTimeout(file.size);
 
       xhr.send(formData);
-
-      xhr.send(formData);
     };
 
     // initial send

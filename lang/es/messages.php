@@ -26,6 +26,7 @@ return [
     'movie.shared' => '¡Compartido! Tus amigos pueden ver el reparto.',
     'page.queued_image' => '¡Recibimos :filename! Puede tardar un minuto en aparecer.',
     'page.queued_video' => '¡Recibimos :filename! Puede tardar un minuto en aparecer.',
+    'page.uploads_batch_queued_speech' => '¡Subidas exitosas! Danos unos minutos para procesarlas.',
     'page.bulk_deleted' => 'Esas :count páginas ya no están.',
     'page.bulk_moved_to_top' => '¡:count páginas se movieron arriba de todo!',
     'page.bulk_moved_to_book' => '¡Se movieron :count páginas a :book!',
