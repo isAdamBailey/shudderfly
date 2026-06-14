@@ -113,7 +113,7 @@
       <div
         v-if="canEditPages && showPageSettings"
         id="page-edit-form"
-        class="mb-3 scroll-mt-4"
+        class="mb-3 scroll-mt-4 w-full md:w-1/2 mx-auto"
       >
         <EditPageForm
           :page="page"

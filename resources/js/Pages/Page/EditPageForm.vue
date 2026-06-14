@@ -6,11 +6,11 @@ import {
   default as InputLabel
 } from "@/Components/InputLabel.vue";
 import MapPicker from "@/Components/Map/MapPicker.vue";
+import SecondaryButton from "@/Components/SecondaryButton.vue";
 import VideoIcon from "@/Components/svg/VideoIcon.vue";
 import TextInput from "@/Components/TextInput.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
-import Accordion from "@/Components/Accordion.vue";
 import DeletePageForm from "@/Pages/Book/DeletePageForm.vue";
 import { useForm, usePage } from "@inertiajs/vue3";
 import Multiselect from "@vueform/multiselect";
@@ -44,6 +44,8 @@ const pageForm = useForm({
 const bookForm = useForm({
   cover_page: props.book.cover_page
 });
+
+const pendingCoverPage = ref(false);
 
 const imagePreview = ref(props.page.media_path);
 
@@ -85,6 +87,16 @@ const isCoverPage = computed(() => {
   return props.book.cover_page === props.page.id;
 });
 
+const isImagePage = computed(() => {
+  return (
+    props.page.media_path?.includes(".jpg") ||
+    props.page.media_path?.includes(".png") ||
+    props.page.media_path?.includes(".webp")
+  );
+});
+
+const hasCoverAction = computed(() => isCoverPage.value || isImagePage.value);
+
 function selectNewImage() {
   imageInput.value.click();
 }
@@ -110,28 +122,50 @@ function clearImageFileInput() {
   }
 }
 
-const submit = () => {
-  pageForm.post(route("pages.update", props.page), {
-    onSuccess: () => {
-      clearImageFileInput();
-      pageForm.reset();
-      emit("close-page-form");
-    }
-  });
+const finishSubmit = () => {
+  clearImageFileInput();
+  pageForm.reset();
+  emit("close-page-form");
 };
 
-const makeCoverPage = () => {
+const applyPendingCoverPage = (onDone) => {
+  if (!pendingCoverPage.value) {
+    onDone();
+    return;
+  }
+
   bookForm.cover_page = props.page.id;
   bookForm.put(route("books.update", props.book), {
     onSuccess: () => {
       bookForm.reset();
-      emit("close-page-form");
+      pendingCoverPage.value = false;
+      onDone();
     }
   });
 };
 
-const setCreatedAtToNow = () => {
-  pageForm.created_at = new Date().toISOString().slice(0, 16);
+const submit = () => {
+  if (pageForm.isDirty) {
+    pageForm.post(route("pages.update", props.page), {
+      onSuccess: () => applyPendingCoverPage(finishSubmit)
+    });
+  } else {
+    applyPendingCoverPage(finishSubmit);
+  }
+};
+
+const toggleCoverPagePending = () => {
+  pendingCoverPage.value = !pendingCoverPage.value;
+};
+
+const pendingMoveToTop = computed(
+  () => pageForm.created_at !== props.page.created_at
+);
+
+const toggleMoveToTop = () => {
+  pageForm.created_at = pendingMoveToTop.value
+    ? props.page.created_at
+    : new Date().toISOString().slice(0, 16);
 };
 
 const handleAddressFocus = () => {
@@ -140,21 +174,29 @@ const handleAddressFocus = () => {
 </script>
 
 <template>
-  <div class="border-t-2 bg-white dark:bg-gray-800 rounded p-5 mt-10">
+  <div class="bg-white dark:bg-gray-800 rounded m-5 md:w-full p-5">
+    <h3 class="text-xl dark:text-gray-100 w-full border-b mb-5">Edit Page</h3>
     <form ref="pageFormRef">
-      <div v-if="isYouTubeEnabled" class="mb-4">
+      <div
+        v-if="isYouTubeEnabled"
+        class="mb-4 flex gap-2"
+        role="group"
+        aria-label="Media source"
+      >
         <Button
           :is-active="mediaOption === 'upload'"
-          class="rounded-none w-24 justify-center"
+          class="flex-1 justify-center sm:flex-none sm:w-28"
           @click.prevent="selectUpload"
         >
+          <i class="ri-image-line mr-2" aria-hidden="true"></i>
           Upload
         </Button>
         <Button
           :is-active="mediaOption === 'link'"
-          class="rounded-none w-24 justify-center"
+          class="flex-1 justify-center sm:flex-none sm:w-28"
           @click.prevent="selectLink"
         >
+          <i class="ri-youtube-line mr-2" aria-hidden="true"></i>
           YouTube
         </Button>
       </div>
@@ -275,85 +317,101 @@ const handleAddressFocus = () => {
 
     <!-- Page Actions Section -->
     <div class="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
-      <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+      <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">
         Page Actions
       </h3>
 
-      <!-- Cover Image Actions -->
-      <div class="mb-6">
+      <div class="space-y-4">
+        <!-- Cover Image Actions -->
         <div
           v-if="isCoverPage"
-          class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
+          class="flex items-start gap-3 rounded-md border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4"
         >
-          <div class="flex items-start">
-            <div class="flex-shrink-0">
-              <i class="ri-information-line text-blue-400 text-xl"></i>
-            </div>
-            <div class="ml-3">
-              <p class="text-sm text-blue-800 dark:text-blue-200">
-                This image is currently the cover image for this book. To change
-                the cover, go to another page and click "Make Cover Image".
-              </p>
-            </div>
+          <i
+            class="ri-information-line text-blue-400 text-xl shrink-0"
+            aria-hidden="true"
+          ></i>
+          <p class="text-sm text-blue-800 dark:text-blue-200">
+            This image is currently the cover for this book. To change it, open
+            another page and use "Make Cover Image" there.
+          </p>
+        </div>
+        <div v-else-if="isImagePage" class="flex flex-col gap-2">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <SecondaryButton type="button" @click="toggleCoverPagePending">
+              <i class="ri-image-line mr-2" aria-hidden="true"></i>
+              {{ pendingCoverPage ? "Cancel Cover Image" : "Make Cover Image" }}
+            </SecondaryButton>
+            <p
+              v-if="!pendingCoverPage"
+              class="text-sm text-gray-600 dark:text-gray-400"
+            >
+              Use this image as the book's cover
+            </p>
+          </div>
+          <div
+            v-if="pendingCoverPage"
+            class="flex items-center space-x-2 rounded border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-3 text-sm text-blue-700 dark:text-blue-300"
+          >
+            <i class="ri-check-line" aria-hidden="true"></i>
+            <span>Will become the cover when you save</span>
           </div>
         </div>
+
+        <!-- Page Management Actions -->
         <div
-          v-else-if="
-            page.media_path.includes('.jpg') ||
-            page.media_path.includes('.png') ||
-            page.media_path.includes('.webp')
-          "
-          class="flex items-center space-x-4"
+          class="flex flex-col gap-4"
+          :class="hasCoverAction ? 'border-t border-gray-100 dark:border-gray-700/60 pt-4' : ''"
         >
-          <Button
-            class="bg-green-600 hover:bg-green-700 focus:ring-green-500"
-            :class="{ 'opacity-25': bookForm.processing }"
-            :disabled="bookForm.processing"
-            @click.prevent="makeCoverPage"
-          >
-            <i class="ri-image-line mr-2"></i>
-            Make Cover Image
-          </Button>
-          <span class="text-sm text-gray-600 dark:text-gray-400">
-            Use this image as the book's cover
-          </span>
-        </div>
-      </div>
+          <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <SecondaryButton type="button" @click="toggleMoveToTop">
+                <i class="ri-arrow-up-line mr-2" aria-hidden="true"></i>
+                {{ pendingMoveToTop ? "Cancel Move to Top" : "Move to Top" }}
+              </SecondaryButton>
+              <p
+                v-if="!pendingMoveToTop"
+                class="text-sm text-gray-600 dark:text-gray-400"
+              >
+                Update timestamp to now
+              </p>
+            </div>
 
-      <!-- Page Management Actions -->
-      <div class="flex items-center justify-between">
-        <div class="flex items-center space-x-4">
-          <Button
-            type="button"
-            class="bg-gray-600 hover:bg-gray-700 focus:ring-gray-500"
-            @click="setCreatedAtToNow"
-          >
-            <i class="ri-arrow-up-line mr-2"></i>
-            Move to Top
-          </Button>
-          <span class="text-sm text-gray-600 dark:text-gray-400">
-            Update timestamp to now
-          </span>
-        </div>
+            <DeletePageForm
+              :page="page"
+              @close-page-form="$emit('close-page-form')"
+            />
+          </div>
 
-        <DeletePageForm
-          :page="page"
-          @close-page-form="$emit('close-page-form')"
-        />
+          <div
+            v-if="pendingMoveToTop"
+            class="flex items-center space-x-2 rounded border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-3 text-sm text-blue-700 dark:text-blue-300"
+          >
+            <i class="ri-check-line" aria-hidden="true"></i>
+            <span>Will move to the top when you save</span>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Save Button -->
     <div class="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
       <Button
-        class="w-full flex justify-center py-3 bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
-        :class="{ 'opacity-25': pageForm.processing }"
-        :disabled="pageForm.processing || !pageForm.isDirty"
+        type="button"
+        class="w-full justify-center py-4 text-sm"
+        :disabled="
+          pageForm.processing ||
+          bookForm.processing ||
+          (!pageForm.isDirty && !pendingCoverPage)
+        "
         @click="submit"
       >
-        <span class="text-lg font-medium">
-          Update Page
-        </span>
+        <i
+          v-if="pageForm.processing || bookForm.processing"
+          class="ri-loader-line mr-2 animate-spin"
+          aria-hidden="true"
+        ></i>
+        Update Page
       </Button>
     </div>
   </div>

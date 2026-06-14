@@ -68,7 +68,7 @@ const editor = useEditor({
   editorProps: {
     attributes: {
       class:
-        "prose max-w-full h-48 my-2 mx-5 border-t overflow-y-auto focus:outline-none"
+        "prose max-w-full min-h-16 max-h-96 my-2 mx-5 border-t overflow-y-auto focus:outline-none"
     }
   },
   extensions: [
