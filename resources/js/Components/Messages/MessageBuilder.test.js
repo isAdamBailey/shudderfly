@@ -297,7 +297,10 @@ describe("MessageBuilder", () => {
   });
 
   describe("Form submission", () => {
-    it("submits form when send button is clicked", async () => {
+    // The submit button lives in MessageBuilderModal's sticky footer, not in
+    // this component; MessageBuilder exposes submitContent/submitDisabled/
+    // submitLabel for the modal to drive.
+    it("submits form when submitContent is called", async () => {
       const wrapper = mount(MessageBuilder, {
         props: { users: defaultUsers },
         global: {
@@ -314,21 +317,15 @@ describe("MessageBuilder", () => {
 
       await nextTick();
 
-      const sendButton = wrapper
-        .findAll("button")
-        .find(
-          (btn) => btn.text().includes("Send") || btn.text().includes("Post")
-        );
+      expect(wrapper.vm.submitDisabled).toBe(false);
 
-      if (sendButton && !sendButton.attributes("disabled")) {
-        await sendButton.trigger("click");
-        await nextTick();
+      wrapper.vm.submitContent();
+      await nextTick();
 
-        expect(mockForm.post).toHaveBeenCalled();
-      }
+      expect(mockForm.post).toHaveBeenCalled();
     });
 
-    it("disables send button when form is processing", () => {
+    it("exposes submitDisabled as true when form is processing", () => {
       mockForm.processing = true;
 
       const wrapper = mount(MessageBuilder, {
@@ -341,15 +338,7 @@ describe("MessageBuilder", () => {
         }
       });
 
-      const sendButton = wrapper
-        .findAll("button")
-        .find(
-          (btn) => btn.text().includes("Send") || btn.text().includes("Post")
-        );
-
-      if (sendButton) {
-        expect(sendButton.attributes("disabled")).toBeDefined();
-      }
+      expect(wrapper.vm.submitDisabled).toBe(true);
     });
 
     it("resets form after successful submission", async () => {
@@ -369,16 +358,14 @@ describe("MessageBuilder", () => {
 
       await nextTick();
 
-      // Simulate form submission success
-      if (mockForm.post.mock.calls.length > 0) {
-        const onSuccess = mockForm.post.mock.calls[0][1]?.onSuccess;
-        if (onSuccess) {
-          onSuccess();
-          await nextTick();
+      wrapper.vm.submitContent();
+      await nextTick();
 
-          expect(mockForm.reset).toHaveBeenCalled();
-        }
-      }
+      const onSuccess = mockForm.post.mock.calls[0][1]?.onSuccess;
+      onSuccess();
+      await nextTick();
+
+      expect(mockForm.reset).toHaveBeenCalled();
     });
   });
 

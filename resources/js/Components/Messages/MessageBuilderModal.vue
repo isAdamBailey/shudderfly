@@ -1,24 +1,11 @@
 <template>
   <Modal :show="show" max-width="2xl" @close="$emit('close')">
-    <div class="flex flex-col" style="max-height: 85vh;">
-      <!-- Sticky Header -->
-      <div class="flex items-center justify-between p-6 pb-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          {{ modalTitle }}
-        </h2>
-        <button
-          type="button"
-          class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-          @click="$emit('close')"
-        >
-          <i class="ri-close-line text-2xl"></i>
-        </button>
-      </div>
-      
-      <!-- Sticky Message Builder Input -->
-      <div class="p-6 pb-4 flex-shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+    <div class="flex flex-col" style="max-height: 85vh; max-height: 85dvh;">
+      <!-- Message Builder: capped height, scrolls internally so the accordion below stays reachable. Doubles as the modal header (closes via backdrop click or on submit). -->
+      <div class="p-4 pb-3 sm:p-6 sm:pb-4 max-h-[45vh] overflow-y-auto border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         <MessageBuilder
           v-if="show"
+          ref="messageBuilderRef"
           :mode="mode"
           :message-id="messageId"
           :users="users"
@@ -47,7 +34,7 @@
                 v-for="(phrase, i) in quickPhrases"
                 :key="`qp-${i}`"
                 type="button"
-                class="px-4 py-1.5 rounded-lg bg-blue-600 text-white text-xl font-semibold shadow-md hover:bg-blue-700 transition-colors"
+                class="px-4 py-2 rounded-lg bg-blue-600 text-white text-xl font-semibold shadow-md hover:bg-blue-700 transition-colors"
                 @click="handleAddPhrase(phrase)"
               >
                 {{ phrase }}
@@ -68,7 +55,7 @@
                 v-for="(starter, i) in commonStarters"
                 :key="`cs-${i}`"
                 type="button"
-                class="px-4 py-1.5 rounded-lg bg-teal-600 text-white text-xl font-semibold shadow-md hover:bg-teal-700 transition-colors"
+                class="px-4 py-2 rounded-lg bg-teal-600 text-white text-xl font-semibold shadow-md hover:bg-teal-700 transition-colors"
                 @click="handleAddPhrase(starter)"
               >
                 {{ starter }}
@@ -87,7 +74,7 @@
                 v-for="(thing, i) in things"
                 :key="`t-${i}`"
                 type="button"
-                class="px-4 py-1.5 rounded-full bg-orange-600 text-white text-xl font-semibold shadow-md hover:bg-orange-700 transition-colors"
+                class="px-4 py-2 rounded-full bg-orange-600 text-white text-xl font-semibold shadow-md hover:bg-orange-700 transition-colors"
                 @click="handleAddPhrase(thing)"
               >
                 {{ thing }}
@@ -106,7 +93,7 @@
                 v-for="(person, i) in people"
                 :key="`p-${i}`"
                 type="button"
-                class="px-4 py-1.5 rounded-full bg-purple-600 text-white text-xl font-semibold shadow-md hover:bg-purple-700 transition-colors"
+                class="px-4 py-2 rounded-full bg-purple-600 text-white text-xl font-semibold shadow-md hover:bg-purple-700 transition-colors"
                 @click="handleAddWord(person)"
               >
                 {{ person }}
@@ -125,7 +112,7 @@
                 v-for="(part, i) in bodyParts"
                 :key="`bp-${i}`"
                 type="button"
-                class="px-4 py-1.5 rounded-full bg-red-600 text-white text-xl font-semibold shadow-md hover:bg-red-700 transition-colors"
+                class="px-4 py-2 rounded-full bg-red-600 text-white text-xl font-semibold shadow-md hover:bg-red-700 transition-colors"
                 @click="handleAddPhrase(part)"
               >
                 {{ part }}
@@ -144,7 +131,7 @@
                 v-for="(action, i) in actions"
                 :key="`a-${i}`"
                 type="button"
-                class="px-4 py-1.5 rounded-full bg-green-600 text-white text-xl font-semibold shadow-md hover:bg-green-700 transition-colors"
+                class="px-4 py-2 rounded-full bg-green-600 text-white text-xl font-semibold shadow-md hover:bg-green-700 transition-colors"
                 @click="handleAddWord(action)"
               >
                 {{ action }}
@@ -163,7 +150,7 @@
                 v-for="(feeling, i) in feelings"
                 :key="`f-${i}`"
                 type="button"
-                class="px-4 py-1.5 rounded-full bg-yellow-600 text-white text-xl font-semibold shadow-md hover:bg-yellow-700 transition-colors"
+                class="px-4 py-2 rounded-full bg-yellow-600 text-white text-xl font-semibold shadow-md hover:bg-yellow-700 transition-colors"
                 @click="handleAddWord(feeling)"
               >
                 {{ feeling }}
@@ -182,7 +169,7 @@
                 v-for="(desc, i) in descriptors"
                 :key="`d-${i}`"
                 type="button"
-                class="px-4 py-1.5 rounded-full bg-indigo-600 text-white text-xl font-semibold shadow-md hover:bg-indigo-700 transition-colors"
+                class="px-4 py-2 rounded-full bg-indigo-600 text-white text-xl font-semibold shadow-md hover:bg-indigo-700 transition-colors"
                 @click="handleAddWord(desc)"
               >
                 {{ desc }}
@@ -191,18 +178,27 @@
           </div>
         </Accordion>
       </div>
+
+      <!-- Sticky Footer: submit button always visible -->
+      <div class="flex-shrink-0 p-4 pt-3 sm:p-6 sm:pt-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+        <Button class="py-4 text-lg w-full" :disabled="submitDisabled" @click="submit">
+          <i class="ri-send-plane-fill text-2xl mr-2"></i>
+          {{ submitLabel }}
+        </Button>
+      </div>
     </div>
   </Modal>
 </template>
 
 <script setup>
 import Accordion from "@/Components/Accordion.vue";
+import Button from "@/Components/Button.vue";
 import MessageBuilder from "@/Components/Messages/MessageBuilder.vue";
 import Modal from "@/Components/Modal.vue";
 import { useMessageBuilder } from "@/composables/useMessageBuilder";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
-import { computed, watch } from "vue";
+import { computed, ref, watch } from "vue";
 
 const props = defineProps({
   show: {
@@ -228,9 +224,18 @@ defineEmits(["close", "message-posted", "comment-posted"]);
 
 const isCommentMode = computed(() => props.mode === "comment");
 
-const modalTitle = computed(() =>
-  isCommentMode.value ? t("message.add_comment") : t("message.create_message")
+const messageBuilderRef = ref(null);
+
+const submitDisabled = computed(
+  () => messageBuilderRef.value?.submitDisabled ?? true
 );
+const submitLabel = computed(
+  () => messageBuilderRef.value?.submitLabel ?? ""
+);
+
+function submit() {
+  messageBuilderRef.value?.submitContent();
+}
 
 const { t } = useTranslations();
 const { speak } = useSpeechSynthesis();

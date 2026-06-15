@@ -1,7 +1,6 @@
 <script setup>
 /* global route */
 import Accordion from "@/Components/Accordion.vue";
-import Button from "@/Components/Button.vue";
 import SpeakButton from "@/Components/SpeakButton.vue";
 import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import UserTagList from "@/Components/UserTagList.vue";
@@ -98,10 +97,6 @@ const preview = computed(() => {
 });
 const keyboardInputRef = ref(null);
 const actionsAccordionOpen = ref(false);
-
-const hasMinimumCharacters = computed(() => {
-  return preview.value && preview.value.trim().length >= 10;
-});
 
 const { speak, speaking } = useSpeechSynthesis();
 const { t } = useTranslations();
@@ -712,7 +707,7 @@ function clearAfterSubmit() {
 }
 
 function postMessage() {
-  if (!preview.value?.trim() || form.processing || !hasMinimumCharacters.value) {
+  if (!preview.value?.trim() || form.processing) {
     return;
   }
 
@@ -740,8 +735,7 @@ function postComment() {
     !isCommentMode.value ||
     !props.messageId ||
     !preview.value?.trim() ||
-    commentProcessing.value ||
-    !hasMinimumCharacters.value
+    commentProcessing.value
   ) {
     return;
   }
@@ -779,9 +773,7 @@ function submitContent() {
 
 const submitDisabled = computed(
   () =>
-    form.processing ||
-    commentProcessing.value ||
-    !hasMinimumCharacters.value
+    form.processing || commentProcessing.value || !preview.value?.trim()
 );
 
 const submitLabel = computed(() =>
@@ -789,27 +781,37 @@ const submitLabel = computed(() =>
     ? t("message.post_comment")
     : t("builder.post_to_timeline")
 );
+
+defineExpose({
+  submitContent,
+  submitDisabled,
+  submitLabel,
+});
 </script>
 
 <template>
   <div
     class="p-4 rounded-md bg-white dark:bg-slate-800 border shadow-sm w-full"
   >
-    <!-- Message Input -->
-    <div class="mb-3">
+    <!-- Message Input: sticky so it stays visible while accordions below expand -->
+    <div
+      class="sticky top-0 z-10 -mt-4 mb-3 border-b border-gray-100 bg-white pt-4 pb-3 dark:border-gray-700 dark:bg-slate-800"
+    >
       <div
         :class="[
-          'min-h-[44px] flex items-start px-3 py-2 rounded-md bg-gray-50 dark:bg-slate-700 text-sm font-medium',
-          { 'ring-2 ring-green-400 animate-pulse': speaking }
+          'min-h-11 flex items-start px-3 py-2 rounded-md border-2 bg-blue-50 dark:bg-slate-700 text-sm font-medium transition-shadow',
+          speaking
+            ? 'border-green-400 ring-2 ring-green-400 animate-pulse'
+            : 'border-blue-300 dark:border-blue-700 focus-within:border-blue-400 dark:focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-400 dark:focus-within:ring-blue-500'
         ]"
       >
         <div class="flex items-center justify-between w-full relative">
           <textarea
             ref="keyboardInputRef"
             v-model="inputValue"
-            class="message-input flex-1 text-gray-700 dark:text-gray-100 break-words text-lg md:text-xl font-bold leading-tight bg-transparent border-none outline-none focus:outline-none resize-none overflow-hidden min-h-[32px] max-h-[200px]"
+            class="message-input flex-1 text-gray-700 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-300 break-words text-base md:text-lg font-bold leading-tight bg-transparent border-none outline-none focus:outline-none resize-none overflow-hidden min-h-[3.5rem] max-h-[200px]"
             :placeholder="t('builder.placeholder')"
-            rows="1"
+            rows="2"
             @input="handleTextareaInput"
             @change="handleInputChange"
             @keydown="handleKeydown"
@@ -857,7 +859,7 @@ const submitLabel = computed(() =>
           @
         </button>
         <button
-          class="p-3 rounded-md bg-slate-700 dark:bg-slate-600 text-white shadow-md"
+          class="p-3 rounded-md bg-slate-700 dark:bg-slate-600 text-white shadow-md hover:bg-slate-600 dark:hover:bg-slate-500"
           type="button"
           :title="t('builder.remove_last_word')"
           :aria-label="t('builder.remove_last_word_aria')"
@@ -867,7 +869,7 @@ const submitLabel = computed(() =>
         </button>
 
         <button
-          class="px-4 py-3 rounded-md bg-red-600 hover:bg-red-700 text-white shadow-md font-semibold flex items-center gap-2"
+          class="px-4 py-3 rounded-md bg-red-600 dark:bg-red-700 hover:bg-red-700 dark:hover:bg-red-600 text-white shadow-md font-semibold flex items-center gap-2"
           type="button"
           :title="t('builder.clear_all')"
           :aria-label="t('builder.clear_all_aria')"
@@ -877,7 +879,7 @@ const submitLabel = computed(() =>
         </button>
 
         <button
-          class="p-3 rounded-md bg-slate-700 dark:bg-slate-600 text-white shadow-md"
+          class="p-3 rounded-md bg-slate-700 dark:bg-slate-600 text-white shadow-md hover:bg-slate-600 dark:hover:bg-slate-500"
           type="button"
           :title="t('builder.surprise')"
           :aria-label="t('builder.surprise_aria')"
@@ -890,8 +892,8 @@ const submitLabel = computed(() =>
           class="ml-2 p-3 rounded-md shadow-md flex items-center"
           :class="
             canSaveFavorite
-              ? 'bg-red-500 text-white hover:bg-red-600'
-              : 'bg-gray-400 text-white opacity-60 cursor-not-allowed'
+              ? 'bg-rose-600 text-white hover:bg-rose-700 dark:hover:bg-rose-500'
+              : 'bg-gray-400 dark:bg-gray-600 text-white opacity-60 cursor-not-allowed'
           "
           type="button"
           :title="
@@ -914,7 +916,7 @@ const submitLabel = computed(() =>
 
         <div
           v-if="addFeedback"
-          class="ml-3 inline-flex items-center gap-2 bg-green-100 text-green-800 px-3 py-1 rounded"
+          class="inline-flex items-center gap-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-3 py-1 rounded-md"
         >
           <i class="ri-check-line"></i>
           <span class="text-sm">{{ t('builder.saved') }}</span>
@@ -933,22 +935,22 @@ const submitLabel = computed(() =>
           <div
             v-for="(f, i) in favorites"
             :key="`fav-${i}`"
-            class="flex items-center bg-yellow-500 rounded overflow-hidden"
+            class="flex items-center max-w-full bg-rose-600 rounded-md overflow-hidden"
             :class="{ 'ring-2 ring-green-400': justAdded === f }"
           >
             <button
               type="button"
-              class="flex items-center gap-2 px-3 py-2 text-white text-sm"
+              class="flex items-center gap-2 min-w-0 min-h-11 px-3 py-2 text-white text-sm font-semibold text-left hover:bg-rose-700 transition-colors"
               :title="f"
               :aria-label="t('builder.apply_favorite', { favorite: f })"
               @click="applyFavorite(f)"
             >
-              <i class="ri-heart-fill text-lg"></i>
-              <span class="sr-only">Apply favorite</span>
+              <i class="ri-heart-fill text-base shrink-0" aria-hidden="true"></i>
+              <span class="break-words">{{ f }}</span>
             </button>
             <button
               type="button"
-              class="px-2 py-2 text-white bg-yellow-600 hover:bg-yellow-700"
+              class="shrink-0 min-h-11 min-w-11 flex items-center justify-center text-white bg-rose-700 hover:bg-red-700"
               :title="t('builder.remove_favorite', { favorite: f })"
               :aria-label="t('builder.remove_favorite', { favorite: f })"
               @click="removeFavorite(i)"
@@ -959,18 +961,6 @@ const submitLabel = computed(() =>
         </div>
       </div>
     </Accordion>
-
-    <!-- Post to Timeline button: bottom action -->
-    <div class="mt-6">
-      <Button
-        class="py-4 text-lg w-full"
-        :disabled="submitDisabled"
-        @click="submitContent"
-      >
-        <i class="ri-send-plane-fill text-2xl mr-2"></i>
-        {{ submitLabel }}
-      </Button>
-    </div>
 
     <ConfirmDialog
       v-model:show="confirmShow"
