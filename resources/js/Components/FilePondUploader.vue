@@ -201,6 +201,7 @@ const onUpdateFiles = (newFileList) => {
     :allow-multiple="allowMultiple"
     :accepted-file-types="acceptedFileTypes"
     :server="server"
+    :max-parallel-uploads="1"
     :instant-upload="instantUpload"
     :label-idle="labelIdle"
     :oninit="oninit"
