@@ -1,7 +1,7 @@
 <template>
   <div v-if="songs.length > 0">
     <h3
-      class="mb-3 text-2xl text-yellow-200 dark:text-gray-100 font-heading"
+      class="mb-3 text-2xl text-theme-title font-heading"
     >
       {{ label }}
     </h3>
@@ -12,7 +12,7 @@
         v-for="song in songs"
         :key="song.id"
         type="button"
-        class="btn-bulge w-48 shrink-0 snap-start text-left rounded-lg overflow-hidden border border-gray-600 dark:border-gray-700 bg-gray-800 hover:bg-gray-700 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-200"
+        class="btn-bulge w-48 shrink-0 snap-start text-left rounded-lg overflow-hidden border border-gray-600 dark:border-gray-700 bg-gray-800 hover:bg-gray-700 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
         @click="handlePlay(song)"
       >
         <div class="relative w-full aspect-video bg-gray-200 dark:bg-gray-900">

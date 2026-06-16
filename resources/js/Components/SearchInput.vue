@@ -14,10 +14,10 @@
           role="radio"
           :aria-checked="isBooksTarget.toString()"
           :tabindex="isBooksTarget ? 0 : -1"
-          class="flex-1 min-w-0 px-2 sm:px-3 h-6 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 christmas:focus-visible:ring-christmas-gold halloween:focus-visible:ring-halloween-orange"
+          class="flex-1 min-w-0 px-2 sm:px-3 h-6 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 christmas:focus-visible:ring-christmas-gold halloween:focus-visible:ring-halloween-orange"
           :class="
             isBooksTarget
-              ? 'bg-blue-600 text-white dark:bg-white dark:text-gray-900 christmas:bg-christmas-red christmas:text-white halloween:bg-halloween-orange halloween:text-white shadow'
+              ? 'bg-teal-700 text-white dark:bg-white dark:text-gray-900 christmas:bg-christmas-red christmas:text-white halloween:bg-halloween-orange halloween:text-white shadow'
               : 'text-gray-700 dark:text-gray-300'
           "
           @click="setTarget('books')"
@@ -30,10 +30,10 @@
           role="radio"
           :aria-checked="isUploadsTarget.toString()"
           :tabindex="isUploadsTarget ? 0 : -1"
-          class="flex-1 min-w-0 px-2 sm:px-3 h-6 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 christmas:focus-visible:ring-christmas-gold halloween:focus-visible:ring-halloween-orange"
+          class="flex-1 min-w-0 px-2 sm:px-3 h-6 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 christmas:focus-visible:ring-christmas-gold halloween:focus-visible:ring-halloween-orange"
           :class="
             isUploadsTarget
-              ? 'bg-blue-600 text-white dark:bg-white dark:text-gray-900 christmas:bg-christmas-red christmas:text-white halloween:bg-halloween-orange halloween:text-white shadow'
+              ? 'bg-teal-700 text-white dark:bg-white dark:text-gray-900 christmas:bg-christmas-red christmas:text-white halloween:bg-halloween-orange halloween:text-white shadow'
               : 'text-gray-700 dark:text-gray-300'
           "
           @click="setTarget('uploads')"
@@ -56,13 +56,13 @@
       <div v-if="isSearchExpanded" class="flex gap-2 flex-1 min-w-0">
         <button
           v-if="isSupported"
-          class="self-center w-8 h-8 flex-shrink-0 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 christmas:focus:ring-christmas-gold halloween:focus:ring-halloween-orange flex items-center justify-center"
+          class="self-center w-8 h-8 flex-shrink-0 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-400 christmas:focus:ring-christmas-gold halloween:focus:ring-halloween-orange flex items-center justify-center"
           :class="{
-            'bg-red-700 hover:bg-purple-400 dark:bg-red-700 dark:hover:bg-purple-400 text-white christmas:bg-christmas-berry christmas:hover:bg-christmas-mint halloween:bg-halloween-candy halloween:hover:bg-halloween-spooky':
+            'bg-red-700 hover:bg-red-800 dark:bg-red-700 dark:hover:bg-red-800 text-white christmas:bg-christmas-berry christmas:hover:bg-christmas-mint halloween:bg-halloween-candy halloween:hover:bg-halloween-spooky':
               isListening,
             'bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white christmas:bg-christmas-holly christmas:hover:bg-christmas-green halloween:bg-halloween-witch halloween:hover:bg-halloween-purple':
               hasGoodResult && !isListening,
-            'bg-blue-600 hover:bg-blue-700 dark:bg-gray-800 dark:hover:bg-gray-700 text-white christmas:bg-christmas-green christmas:hover:bg-christmas-holly halloween:bg-halloween-midnight halloween:hover:bg-halloween-witch':
+            'bg-teal-700 hover:bg-teal-600 dark:bg-gray-800 dark:hover:bg-gray-700 text-white christmas:bg-christmas-green christmas:hover:bg-christmas-holly halloween:bg-halloween-midnight halloween:hover:bg-halloween-witch':
               !isListening && !hasGoodResult
           }"
           :disabled="isProcessing"
@@ -84,13 +84,13 @@
             id="search"
             ref="searchInputRef"
             :value="displayValue"
-            class="h-8 w-full cursor-pointer rounded-full border bg-gray-100 dark:bg-gray-800 px-4 pb-0 pt-px text-gray-700 dark:text-gray-300 outline-none transition focus:border-blue-400 christmas:focus:border-christmas-gold halloween:focus:border-halloween-orange"
+            class="h-8 w-full cursor-pointer rounded-full border bg-gray-100 dark:bg-gray-800 px-4 pb-0 pt-px text-gray-700 dark:text-gray-300 outline-none transition focus:border-teal-400 christmas:focus:border-christmas-gold halloween:focus:border-halloween-orange"
             :class="{
               'border-red-700 border-2 dark:border-red-700 christmas:border-christmas-berry halloween:border-halloween-candy':
                 isListening,
               'border-green-600 border-2 dark:border-green-600 christmas:border-christmas-holly halloween:border-halloween-witch':
                 hasGoodResult && !isListening,
-              'border-blue-700 dark:border-gray-800 christmas:border-christmas-holly halloween:border-halloween-purple':
+              'border-teal-700 dark:border-gray-800 christmas:border-christmas-holly halloween:border-halloween-purple':
                 !isListening && !hasGoodResult,
               'pr-5': isSupported
             }"
@@ -134,7 +134,7 @@
 
           <div
             v-if="isListening"
-            class="absolute z-50 w-full mt-1 bg-gradient-to-r from-red-700 via-purple-400 to-blue-600 dark:from-red-700 dark:via-purple-400 dark:to-gray-800 christmas:from-christmas-berry christmas:via-christmas-mint christmas:to-christmas-green halloween:from-halloween-candy halloween:via-halloween-spooky halloween:to-halloween-midnight rounded-lg shadow-lg p-3 text-white"
+            class="absolute z-50 w-full mt-1 bg-gradient-to-r from-orange-700 via-amber-500 to-teal-700 dark:from-red-700 dark:via-amber-600 dark:to-gray-800 christmas:from-christmas-berry christmas:via-christmas-mint christmas:to-christmas-green halloween:from-halloween-candy halloween:via-halloween-spooky halloween:to-halloween-midnight rounded-lg shadow-lg p-3 text-white"
           >
             <div class="flex items-center gap-2 mb-2">
               <div class="flex gap-1">
@@ -184,7 +184,7 @@
               :key="`${suggestion.type}-${suggestion.id}`"
               class="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
               :class="{
-                'bg-blue-100 dark:bg-blue-700': index === selectedIndex
+                'bg-teal-100 dark:bg-teal-700': index === selectedIndex
               }"
               @mousedown.prevent="selectSuggestion(suggestion)"
             >

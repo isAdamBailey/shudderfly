@@ -339,7 +339,7 @@ const mobileMoreActive = computed(() => {
                 <template #trigger>
                   <button
                     type="button"
-                    class="relative inline-flex min-h-12 min-w-12 items-center justify-center rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-200 transition-opacity hover:opacity-80"
+                    class="relative inline-flex min-h-12 min-w-12 items-center justify-center rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition-opacity hover:opacity-80"
                   >
                     <i class="ri-notification-fill text-2xl text-white"></i>
                     <span

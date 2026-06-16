@@ -32,7 +32,7 @@
                             <div
                                 v-for="i in 20"
                                 :key="i"
-                                class="visualizer-bar bg-blue-500/70 dark:bg-blue-400/70 w-1.5 rounded-full"
+                                class="visualizer-bar bg-teal-500/70 dark:bg-teal-400/70 w-1.5 rounded-full"
                                 :style="{
                                     animationDelay: `${i * 0.05}s`,
                                     animationDuration: `${
@@ -81,7 +81,7 @@
                             @pointerdown="onProgressPointerDown"
                         >
                             <div
-                                class="bg-blue-600 dark:bg-blue-500 h-3 rounded-full"
+                                class="bg-teal-600 dark:bg-teal-500 h-3 rounded-full"
                                 :class="{
                                     'transition-all duration-100':
                                         !isScrubbing,
@@ -91,7 +91,7 @@
                                 }"
                             ></div>
                             <div
-                                class="absolute top-1/2 w-5 h-5 -ml-2.5 -translate-y-1/2 rounded-full bg-white dark:bg-gray-100 border-2 border-blue-600 dark:border-blue-500 shadow pointer-events-none"
+                                class="absolute top-1/2 w-5 h-5 -ml-2.5 -translate-y-1/2 rounded-full bg-white dark:bg-gray-100 border-2 border-teal-600 dark:border-teal-500 shadow pointer-events-none"
                                 :class="{
                                     'transition-all duration-100':
                                         !isScrubbing,
@@ -127,7 +127,7 @@
                             </button>
 
                             <button
-                                class="w-16 h-16 shrink-0 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-all duration-200 shadow-lg"
+                                class="w-16 h-16 shrink-0 bg-teal-600 hover:bg-teal-700 dark:bg-teal-700 dark:hover:bg-teal-600 text-white rounded-full flex items-center justify-center transition-all duration-200 shadow-lg"
                                 :disabled="isLoading"
                                 @click="togglePlayPause"
                             >
@@ -200,7 +200,7 @@
         >
             <div class="flex flex-col items-center">
                 <i
-                    class="ri-loader-4-line animate-spin text-blue-600 text-4xl mb-2"
+                    class="ri-loader-4-line animate-spin text-teal-600 text-4xl mb-2"
                 ></i>
                 <span class="text-white text-sm">Loading song...</span>
             </div>

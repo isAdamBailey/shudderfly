@@ -44,7 +44,7 @@
         <!-- Play Button -->
         <div class="flex-shrink-0 ml-4">
             <div
-                class="w-10 h-10 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-colors duration-200"
+                class="w-10 h-10 bg-teal-600 hover:bg-teal-700 dark:bg-teal-700 dark:hover:bg-teal-600 text-white rounded-full flex items-center justify-center transition-colors duration-200"
                 :class="{
                     'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600':
                         isCurrentSong && isPlaying,
@@ -64,7 +64,7 @@
                 <div
                     v-for="i in 3"
                     :key="i"
-                    class="w-1 bg-blue-600 dark:bg-blue-400 rounded-full animate-pulse"
+                    class="w-1 bg-amber-500 dark:bg-amber-400 rounded-full animate-pulse"
                     :class="isPlaying ? 'h-4' : 'h-2'"
                     :style="{ animationDelay: `${i * 0.1}s` }"
                 ></div>

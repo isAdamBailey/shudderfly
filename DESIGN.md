@@ -2,10 +2,10 @@
 name: Shudderfly
 description: A private family memory app — a dark carnival marquee for storybook moments.
 colors:
-    marquee-yellow: "#fef08a"
-    storybook-blue: "#2563eb"
-    curtain-red: "#b91c1c"
-    marquee-bulb: "#facc15"
+    marquee-amber: "#fbbf24"
+    storybook-teal: "#0f766e"
+    curtain-orange: "#c2410c"
+    marquee-bulb: "#f59e0b"
     stage-night: "#111827"
     backstage-charcoal: "#1f2937"
     paper-white: "#ffffff"
@@ -48,14 +48,14 @@ spacing:
     container: "80rem"
 components:
     button-primary:
-        backgroundColor: "{colors.storybook-blue}"
-        textColor: "{colors.marquee-yellow}"
+        backgroundColor: "{colors.storybook-teal}"
+        textColor: "{colors.marquee-amber}"
         typography: "{typography.label}"
         rounded: "{rounded.sm}"
         padding: "12px 24px"
     button-primary-hover:
-        backgroundColor: "{colors.curtain-red}"
-        textColor: "{colors.marquee-yellow}"
+        backgroundColor: "{colors.curtain-orange}"
+        textColor: "{colors.marquee-amber}"
     button-primary-active:
         backgroundColor: "{colors.marquee-bulb}"
         textColor: "{colors.backstage-charcoal}"
@@ -91,15 +91,17 @@ components:
 
 ## 1. Overview
 
-**Creative North Star: "The Midnight Marquee"**
+**Creative North Star: "The Ember Marquee"**
 
-Shudderfly's stage is a charcoal-navy backdrop (Stage Night, #111827) lit by a single spotlight color — Marquee Yellow — and framed top and bottom by a hand-painted rainbow light bar. Page titles, book covers, and primary nav labels are set in Spicy Rice, the chunky hand-lettered typeface of a backyard movie-night marquee. Family memories sit on this stage like keepsakes on a shelf: 3D "mini-book" covers with spines, shelf shadows, and shelf-light highlights, and a frosted-glass reading panel where Newsreader serif text and a dropped first letter turn the page into a storybook.
+Shudderfly's stage is a deep warm-charcoal backdrop (Stage Night, #111827 in dark mode / #1f2937 in default mode) lit by a rich amber-gold spotlight — Marquee Amber — and framed top and bottom by a hand-painted rainbow light bar. Page titles, book covers, and primary nav labels are set in Spicy Rice, the chunky hand-lettered typeface of a backyard movie-night marquee. Family memories sit on this stage like keepsakes on a shelf: 3D "mini-book" covers with spines, shelf shadows, and shelf-light highlights, and a frosted-glass reading panel where Newsreader serif text and a dropped first letter turn the page into a storybook.
 
 Four times a year the marquee changes its bulbs for the season — Christmas, Halloween, Fireworks — repainting the rainbow bar, the spotlight color, and adding seasonal effects (falling snow, fireworks bursts) without rebuilding the stage itself. The marquee never goes quiet, and it never goes corporate: this system explicitly rejects public-feed mechanics (infinite scroll, like counters, social proof), generic gray SaaS dashboard chrome, and "generic AI UI" tropes — cream/sand backgrounds, gradient text, tracked-uppercase eyebrow labels, numbered section scaffolds — per PRODUCT.md's anti-references.
 
 **Key Characteristics:**
 
--   Dark stage by default (Stage Night #111827), lit by a single Marquee Yellow accent
+-   Warm dark stage by default (gray-800 #1f2937), deepening to Stage Night (gray-900 #111827) in dark mode — the stage is always dark but breathes more in the default view
+-   Amber-gold (`amber-400` #fbbf24) as the spotlight color — richer and warmer than the prior pale yellow
+-   Deep ocean teal (`teal-700` #0f766e) as the primary button/action surface — a bold, unexpected anchor color
 -   A rainbow gradient light bar bookends every page — nav at top, footer at bottom — and nowhere else
 -   Spicy Rice display type for titles and labels only — never body copy
 -   3D "mini-book" covers (spine, shelf shadow, radial highlight) as the primary content card
@@ -109,26 +111,27 @@ Four times a year the marquee changes its bulbs for the season — Christmas, Ha
 
 ## 2. Colors
 
-The marquee runs on three colors against a near-black stage: Marquee Yellow for the spotlight, Storybook Blue for memory, and Curtain Red for action — with the rainbow light bar as the system's one festive flourish.
+The marquee runs on three colors against a warm dark stage: Marquee Amber for the spotlight, Storybook Teal for memory/action, and Curtain Orange for emphasis — with the rainbow light bar as the system's one festive flourish.
 
 ### Primary
 
--   **Marquee Yellow** (#fef08a): page titles, book titles, active nav and profile states, focus accents on the dark stage. The spotlight color — used sparingly, for titles and "you are here" states only.
+-   **Marquee Amber** (#fbbf24 / amber-400): page titles, book titles, active nav and profile states, focus accents on the dark stage. The spotlight color — used sparingly, for titles and "you are here" states only. Richer and more saturated than the prior pale yellow.
 
 ### Secondary
 
--   **Storybook Blue** (#2563eb): book titles in light surfaces, links inside reading content, the default button surface (`bg-theme-primary`). The "memory" color.
+-   **Storybook Teal** (#0f766e / teal-700): book titles in light surfaces, links inside reading content, the default button surface (`bg-theme-primary`). The "memory" color. A bold unexpected anchor that reads warm against the dark stage.
 
 ### Tertiary
 
--   **Curtain Red** (#b91c1c): the default button's hover/press surface (`bg-theme-button`), paired with Marquee Yellow text. The "action" color.
+-   **Curtain Orange** (#c2410c / orange-700): the default button's hover/press surface (`bg-theme-button`), paired with Marquee Amber text. The "action" color. Warmer and more carnival than the prior red.
 
 ### Neutral
 
--   **Stage Night** (#111827 / gray-900): the base background. Every page is a dark stage by default.
+-   **Stage Night** (#111827 / gray-900): the dark-mode background. The deep stage.
+-   **Warm Stage** (#1f2937 / gray-800): the default-mode background — one step lighter than Stage Night, giving pages more breathing room without leaving the dark palette.
 -   **Backstage Charcoal** (#1f2937 / gray-800): elevated dark surfaces — modals, dropdown panels, dark-mode form fields.
 -   **Paper White** (#ffffff): floating light surfaces — dropdown menus, modal cards, admin stat cards. Never the page background.
--   **Marquee Bulb** (#facc15 / yellow-400): the "currently active/pressed" feedback color — a brighter yellow than the spotlight, reserved for active states.
+-   **Marquee Bulb** (#f59e0b / amber-500): the "currently active/pressed" feedback color — a richer amber than the spotlight, reserved for active states.
 -   **Mist Gray** (#f3f4f6 / gray-100): text and labels sitting on the rainbow bar or the dark stage, where pure white is too harsh.
 
 ### Named Rules
@@ -177,9 +180,9 @@ Layered, not flat — depth and shadow are part of the brand voice everywhere, f
 ### Buttons
 
 -   **Shape:** `rounded-md` (6px corners) on every button
--   **Primary** (theme `Button`, default theme): Storybook Blue background, Marquee Yellow uppercase `tracking-widest` text, 12px/24px padding
+-   **Primary** (theme `Button`, default theme): Storybook Teal background, Marquee Amber uppercase `tracking-widest` text, 12px/24px padding
 -   **Hover/Press:** `.btn-bulge` — on hover, scale to 105% and lift 2px; on press, scale to 95% and settle; on touch-tap, scale to 110% and brighten. Ease-out only, no bounce/elastic. `prefers-reduced-motion` strips all transform/scale to a flat color change.
--   **Active state:** background shifts to Marquee Bulb (#facc15) with Backstage Charcoal text — the "currently selected" treatment
+-   **Active state:** background shifts to Marquee Bulb (amber-500) with Backstage Charcoal text — the "currently selected" treatment
 -   **Form (admin/profile — `PrimaryButton` / `SecondaryButton`):** Backstage Charcoal / Paper White (inverted per dark mode), uppercase `tracking-widest text-xs`, 8px/16px padding. Quieter, Breeze-derived, scoped to profile and account-settings forms.
 
 ### Cards / Containers

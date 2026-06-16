@@ -7,7 +7,7 @@
     >
       <button @click="applyFilter()">
         <h2
-          class="font-heading text-2xl text-blue-600 dark:text-gray-100 leading-tight"
+          class="font-heading text-2xl text-teal-600 dark:text-gray-100 leading-tight"
         >
           {{ title }}
         </h2>

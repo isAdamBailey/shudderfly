@@ -182,7 +182,7 @@
             "
             as="button"
             replace
-            class="relative w-full h-full block focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-200 focus-visible:ring-inset"
+            class="relative w-full h-full block focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-inset"
             @click="activeTab !== 'bulk' ? setItemLoading(page) : undefined"
           >
             <div

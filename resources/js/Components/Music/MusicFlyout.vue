@@ -23,9 +23,9 @@
             >
                 <button
                     type="button"
-                    class="bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 dark:from-blue-700 dark:to-blue-800 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white dark:text-white shadow-xl dark:shadow-gray-900 flex items-center justify-center transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:ring-offset-2 dark:focus:ring-offset-gray-800 rounded-l-2xl px-3 py-4 relative w-12 h-20 hover:scale-105"
+                    class="bg-gradient-to-br from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 dark:from-teal-700 dark:to-teal-800 dark:hover:from-teal-600 dark:hover:to-teal-700 text-white dark:text-white shadow-xl dark:shadow-gray-900 flex items-center justify-center transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-amber-400 dark:focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 rounded-l-2xl px-3 py-4 relative w-12 h-20 hover:scale-105"
                     :class="{
-                        'ring-2 ring-blue-400 dark:ring-blue-500 ring-offset-2 dark:ring-offset-gray-800 music-playing-bounce':
+                        'ring-2 ring-amber-400 dark:ring-amber-500 ring-offset-2 dark:ring-offset-gray-800 music-playing-bounce':
                             isPlaying && currentSong,
                     }"
                     :aria-label="
@@ -62,7 +62,7 @@
                     class="flex-shrink-0 flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700"
                 >
                     <h2
-                        class="text-2xl font-heading font-semibold text-blue-600 dark:text-gray-100"
+                        class="text-2xl font-heading font-semibold text-teal-600 dark:text-gray-100"
                     >
                         Music
                     </h2>
