@@ -3,6 +3,8 @@ import { onMounted, onUnmounted, ref, watch } from "vue";
 
 export function useUnreadNotifications() {
   const unreadCount = ref(0);
+  const isNewNotification = ref(false);
+  const animationTimer = ref(null);
   const notificationsChannel = ref(null);
   const retryTimeout = ref(null);
   const maxRetries = 10;
@@ -35,6 +37,11 @@ export function useUnreadNotifications() {
 
     notificationsChannel.value.notification(() => {
       unreadCount.value++;
+      isNewNotification.value = true;
+      if (animationTimer.value) clearTimeout(animationTimer.value);
+      animationTimer.value = setTimeout(() => {
+        isNewNotification.value = false;
+      }, 4000);
     });
   };
 
@@ -42,6 +49,10 @@ export function useUnreadNotifications() {
     if (retryTimeout.value) {
       clearTimeout(retryTimeout.value);
       retryTimeout.value = null;
+    }
+    if (animationTimer.value) {
+      clearTimeout(animationTimer.value);
+      animationTimer.value = null;
     }
 
     const user = page.props.auth?.user;
@@ -86,6 +97,7 @@ export function useUnreadNotifications() {
   });
 
   return {
-    unreadCount
+    unreadCount,
+    isNewNotification
   };
 }

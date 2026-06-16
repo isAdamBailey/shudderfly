@@ -15,7 +15,7 @@ import { computed, ref } from "vue";
 
 const { canEditPages, canEditProfile } = usePermissions();
 const isDesktopProfileOpen = ref(false);
-const { unreadCount } = useUnreadNotifications();
+const { unreadCount, isNewNotification } = useUnreadNotifications();
 
 const messagingEnabled = computed(() => {
   const value = usePage().props.settings?.messaging_enabled;
@@ -258,9 +258,15 @@ const mobileMoreActive = computed(() => {
                     <i class="ri-notification-fill text-2xl text-white"></i>
                     <span
                       v-if="unreadCount > 0"
-                      class="absolute top-0 right-0 h-3 w-3 bg-red-600 rounded-full border-2 border-white dark:border-gray-800"
+                      class="absolute top-0 right-0 flex h-3 w-3"
                       title="You have unread notifications"
-                    ></span>
+                    >
+                      <span
+                        v-if="isNewNotification"
+                        class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"
+                      ></span>
+                      <span class="relative inline-flex h-3 w-3 rounded-full bg-red-600 border-2 border-white dark:border-gray-800"></span>
+                    </span>
                   </button>
                 </template>
 
@@ -344,9 +350,15 @@ const mobileMoreActive = computed(() => {
                     <i class="ri-notification-fill text-2xl text-white"></i>
                     <span
                       v-if="unreadCount > 0"
-                      class="absolute top-0 right-0 h-3 w-3 bg-red-600 rounded-full border-2 border-white dark:border-gray-800"
+                      class="absolute top-0 right-0 flex h-3 w-3"
                       title="You have unread notifications"
-                    ></span>
+                    >
+                      <span
+                        v-if="isNewNotification"
+                        class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"
+                      ></span>
+                      <span class="relative inline-flex h-3 w-3 rounded-full bg-red-600 border-2 border-white dark:border-gray-800"></span>
+                    </span>
                   </button>
                 </template>
 
