@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from "vue";
+import { isImageMimeType, isVideoMimeType } from "@/mediaHelpers";
 
 const props = defineProps({
   files: { type: Array, required: true },
@@ -50,7 +51,7 @@ const hasActiveProcessing = computed(() =>
       <div class="mb-2">
         <div v-if="fileObj.preview">
           <img
-            v-if="fileObj.file.type.startsWith('image/')"
+            v-if="isImageMimeType(fileObj.file.type)"
             :src="fileObj.preview"
             class="w-full h-24 object-cover rounded"
             :alt="fileObj.file.name"
@@ -67,7 +68,7 @@ const hasActiveProcessing = computed(() =>
           class="w-full h-24 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center"
         >
           <i
-            v-if="fileObj.file.type.startsWith('video/')"
+            v-if="isVideoMimeType(fileObj.file.type)"
             class="ri-vidicon-line text-2xl text-gray-400"
           ></i>
           <i v-else class="ri-image text-2xl text-gray-400"></i>
@@ -118,7 +119,7 @@ const hasActiveProcessing = computed(() =>
         <div v-else-if="fileObj.processed" class="text-green-600">
           <span
             v-if="
-              fileObj.file.type.startsWith('video/') &&
+              isVideoMimeType(fileObj.file.type) &&
               fileObj.file.size !== fileObj.processedFile?.size
             "
           >
@@ -182,7 +183,7 @@ const hasActiveProcessing = computed(() =>
           <p
             v-if="
               !isFileSizeValid(fileObj.file.size) &&
-              !fileObj.file.type.startsWith('video/')
+              !isVideoMimeType(fileObj.file.type)
             "
           >
             File too large (max 512MB)
@@ -190,7 +191,7 @@ const hasActiveProcessing = computed(() =>
           <p
             v-if="
               !isFileSizeValid(fileObj.file.size) &&
-              fileObj.file.type.startsWith('video/')
+              isVideoMimeType(fileObj.file.type)
             "
           >
             Video file too large (max 512MB)

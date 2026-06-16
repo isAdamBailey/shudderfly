@@ -1,6 +1,7 @@
 <script setup>
 import { usePage } from "@inertiajs/vue3";
 import { defineExpose, onMounted, ref, watch } from "vue";
+import { isImageMimeType } from "@/mediaHelpers";
 import vueFilePond from "vue-filepond";
 // Import FilePond styles
 import "filepond-plugin-file-poster/dist/filepond-plugin-file-poster.css";
@@ -168,7 +169,15 @@ watch(files, (newFiles) => {
   }
 });
 
-const process = () => pond.value?.processFiles();
+const process = () => {
+  const allFiles = pond.value?.getFiles?.() ?? [];
+  if (!allFiles.length) return pond.value?.processFiles();
+  const sorted = [
+    ...allFiles.filter((f) => isImageMimeType(f.fileType)),
+    ...allFiles.filter((f) => !isImageMimeType(f.fileType)),
+  ];
+  pond.value?.processFiles(sorted.map((f) => f.id));
+};
 const getFileCount = () => (pond.value?.getFiles?.() || []).length;
 const removeFiles = () => pond.value?.removeFiles?.();
 

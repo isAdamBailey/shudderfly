@@ -1,3 +1,11 @@
+export function isImageMimeType(mimeType) {
+    return typeof mimeType === "string" && mimeType.startsWith("image/");
+}
+
+export function isVideoMimeType(mimeType) {
+    return typeof mimeType === "string" && mimeType.startsWith("video/");
+}
+
 export function useMedia() {
     const isVideo = (path) => {
         if (!path || typeof path !== "string") {
