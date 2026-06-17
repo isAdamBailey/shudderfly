@@ -4,19 +4,19 @@
             v-for="collage in collages"
             :key="collage.id"
             :ref="(el) => setCollageRef(el, collage.id)"
-            class="bg-white shadow p-4 flex flex-col space-y-2"
+            class="bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col space-y-2"
         >
             <div class="flex justify-between items-start mb-2 min-w-0">
                 <div class="flex items-center gap-2">
                     <span
                         v-if="!showIndex && collage.updated_at"
-                        class="text-sm text-gray-500"
+                        class="text-sm text-gray-400"
                     >
                         {{ short(collage.updated_at) }}
                     </span>
                     <span
                         v-if="collage.is_locked"
-                        class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800"
+                        class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-900/40 text-red-300"
                         title="This collage is locked"
                     >
                         <i class="ri-lock-line mr-1"></i>

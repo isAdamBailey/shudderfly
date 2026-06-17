@@ -28,7 +28,7 @@
                 <select
                     v-if="availableCollages.length > 1"
                     v-model="selectedCollageId"
-                    class="rounded"
+                    class="rounded bg-gray-700 border border-gray-600 text-white text-sm px-2 py-1.5 focus:border-teal-500 focus:outline-none"
                     :disabled="!hasSelectableCollages"
                 >
                     <option :value="null" disabled>

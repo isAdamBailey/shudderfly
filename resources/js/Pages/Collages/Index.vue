@@ -11,10 +11,10 @@
         <div class="flex items-center gap-4">
           <Link
             :href="route('collages.archived')"
-            class="text-white hover:text-blue-300"
+            class="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-200 transition-colors"
           >
-            <i class="ri-archive-line mr-1"></i>
-            View Archived Collages
+            <i class="ri-archive-line"></i>
+            Archived
           </Link>
 
           <Button
@@ -36,17 +36,12 @@
           @click="speak(collageMessage)"
         />
       </div>
-      <div v-if="canAdmin">
-        <p class="font-bold text-gray-400 mt-2 underline">ADMIN INSTRUCTIONS</p>
-        <p class="text-sm text-gray-400 mt-2">
-          Each collage holds up to {{ maxCollagePages }} pictures that
-          automatically arrange to fill the space.
-          <strong>Lock</strong> collages to prevent adding pictures until the
-          collage is full; when full, users can still swap pictures. <strong>Generate PDF</strong> takes a few minutes - you'll
-          receive an email when ready. <strong>Archive</strong> collages to
-          preserve them while preventing new additions (can be restored later).
-        </p>
-      </div>
+      <p v-if="canAdmin" class="mt-3 text-sm text-gray-500">
+        Each collage holds up to {{ maxCollagePages }} pictures that automatically arrange to fill the space.
+        <strong class="text-gray-400 font-medium">Lock</strong> to prevent new additions;
+        <strong class="text-gray-400 font-medium">Generate PDF</strong> takes a few minutes — you'll receive an email when ready;
+        <strong class="text-gray-400 font-medium">Archive</strong> to preserve while preventing edits.
+      </p>
     </template>
 
     <div v-if="collages.length === 0" class="flex flex-col items-center mt-10">
@@ -73,156 +68,54 @@
       </template>
 
       <template #actions="{ collage }">
-        <!-- Consolidated Control Panel at Bottom -->
-        <div class="w-full bg-gray-50 rounded-lg p-3 border">
-          <div
-            class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+        <div class="w-full flex flex-wrap items-center gap-x-4 gap-y-2">
+          <button
+            v-if="canAdmin"
+            class="flex items-center gap-1.5 text-sm transition-colors"
+            :class="[
+              collage.is_locked ? 'text-amber-400 hover:text-amber-300' : 'text-gray-500 hover:text-gray-300',
+              updateForm.processing ? 'opacity-50 cursor-not-allowed' : ''
+            ]"
+            :disabled="updateForm.processing"
+            @click="toggleLock(collage)"
           >
-            <!-- Primary Actions Row -->
-            <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-              <!-- Lock Toggle -->
-              <button
-                v-if="canAdmin"
-                class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 min-w-0"
-                :class="[
-                  collage.is_locked
-                    ? 'bg-red-500 hover:bg-red-600 text-white'
-                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700',
-                  updateForm.processing
-                    ? 'opacity-50 cursor-not-allowed'
-                    : 'cursor-pointer'
-                ]"
-                :disabled="updateForm.processing"
-                :title="
-                  collage.is_locked
-                    ? 'Click to unlock collage'
-                    : 'Click to lock collage'
-                "
-                @click="toggleLock(collage)"
-              >
-                <div
-                  class="relative inline-flex w-5 h-3 rounded-full transition-colors duration-200 flex-shrink-0"
-                  :class="collage.is_locked ? 'bg-red-600' : 'bg-gray-400'"
-                >
-                  <div
-                    class="absolute top-0.5 left-0.5 w-2 h-2 bg-white rounded-full transition-transform duration-200 transform"
-                    :class="
-                      collage.is_locked ? 'translate-x-2' : 'translate-x-0'
-                    "
-                  ></div>
-                </div>
-                <i
-                  :class="
-                    collage.is_locked ? 'ri-lock-line' : 'ri-lock-unlock-line'
-                  "
-                  class="flex-shrink-0"
-                ></i>
-                <span class="hidden xs:inline">
-                  {{ collage.is_locked ? "Locked" : "Unlocked" }}
-                </span>
-              </button>
+            <i :class="collage.is_locked ? 'ri-lock-fill' : 'ri-lock-unlock-line'"></i>
+            {{ collage.is_locked ? 'Locked' : 'Lock' }}
+          </button>
 
-              <!-- View PDF Button -->
-              <a
-                v-if="collage.storage_path && canEditPages"
-                :href="collage.storage_path"
-                target="_blank"
-                class="flex items-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors duration-200 min-w-0"
-              >
-                <i class="ri-external-link-line flex-shrink-0"></i>
-                <span class="hidden xs:inline">View</span>
-                <span class="xs:hidden">PDF</span>
-              </a>
-            </div>
+          <a
+            v-if="collage.storage_path && canEditPages"
+            :href="collage.storage_path"
+            target="_blank"
+            class="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-200 transition-colors"
+          >
+            <i class="ri-file-pdf-line"></i>
+            View PDF
+          </a>
 
-            <!-- Secondary Actions Row -->
-            <div
-              v-if="canAdmin"
-              class="flex flex-wrap items-center gap-2 w-full sm:w-auto"
+          <div v-if="canAdmin" class="flex items-center gap-4 ml-auto">
+            <button
+              class="flex items-center gap-1.5 text-sm transition-colors"
+              :class="[
+                isGenerating(collage) ? 'text-amber-400' : (!hasPages(collage) ? 'text-gray-600 cursor-not-allowed' : 'text-teal-400 hover:text-teal-300'),
+                (printForm.processing || !hasPages(collage) || isGenerating(collage)) ? 'opacity-50 cursor-not-allowed' : ''
+              ]"
+              :disabled="printForm.processing || !hasPages(collage) || isGenerating(collage)"
+              @click="generatePdf(collage.id)"
             >
-              <!-- Generate PDF Button -->
-              <button
-                class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 min-w-0"
-                :class="[
-                  isGenerating(collage)
-                    ? 'bg-orange-100 text-orange-600'
-                    : 'bg-green-500 hover:bg-green-600 text-white',
-                  printForm.processing ||
-                  !hasPages(collage) ||
-                  isGenerating(collage)
-                    ? 'opacity-50 cursor-not-allowed'
-                    : 'cursor-pointer'
-                ]"
-                :disabled="
-                  printForm.processing ||
-                  !hasPages(collage) ||
-                  isGenerating(collage)
-                "
-                @click="generatePdf(collage.id)"
-              >
-                <i
-                  :class="
-                    isGenerating(collage)
-                      ? 'ri-loader-4-line animate-spin'
-                      : 'ri-file-pdf-line'
-                  "
-                  class="flex-shrink-0"
-                ></i>
-                <span class="hidden sm:inline">
-                  {{
-                    isGenerating(collage)
-                      ? "Generating..."
-                      : collage.storage_path
-                      ? "Regenerate PDF"
-                      : "Generate PDF"
-                  }}
-                </span>
-                <span class="sm:hidden">
-                  {{
-                    isGenerating(collage)
-                      ? "Gen..."
-                      : collage.storage_path
-                      ? "Regen"
-                      : "Gen"
-                  }}
-                </span>
-              </button>
+              <i :class="isGenerating(collage) ? 'ri-loader-4-line animate-spin' : 'ri-file-pdf-line'"></i>
+              {{ isGenerating(collage) ? 'Generating…' : collage.storage_path ? 'Regenerate PDF' : 'Generate PDF' }}
+            </button>
 
-              <!-- Archive Button -->
-              <button
-                class="flex items-center gap-2 px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors duration-200 min-w-0"
-                :class="{
-                  'opacity-50 cursor-not-allowed':
-                    deleteForm.processing ||
-                    !hasPages(collage) ||
-                    isGenerating(collage)
-                }"
-                :disabled="
-                  deleteForm.processing ||
-                  !hasPages(collage) ||
-                  isGenerating(collage)
-                "
-                @click="confirmDelete(collage.id)"
-              >
-                <i class="ri-archive-line flex-shrink-0"></i>
-                <span class="hidden xs:inline">Archive</span>
-              </button>
-            </div>
-
-            <!-- Non-Admin View PDF (Full Width on Mobile) -->
-            <div
-              v-else-if="collage.storage_path && canEditPages"
-              class="flex items-center w-full sm:w-auto"
+            <button
+              class="flex items-center gap-1.5 text-sm text-red-400 hover:text-red-300 transition-colors"
+              :class="{ 'opacity-40 cursor-not-allowed': deleteForm.processing || !hasPages(collage) || isGenerating(collage) }"
+              :disabled="deleteForm.processing || !hasPages(collage) || isGenerating(collage)"
+              @click="confirmDelete(collage.id)"
             >
-              <a
-                :href="collage.storage_path"
-                target="_blank"
-                class="flex items-center justify-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors duration-200 w-full sm:w-auto"
-              >
-                <i class="ri-external-link-line"></i>
-                <span>View PDF</span>
-              </a>
-            </div>
+              <i class="ri-archive-line"></i>
+              Archive
+            </button>
           </div>
         </div>
       </template>
@@ -255,7 +148,7 @@ import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, Link, useForm } from "@inertiajs/vue3";
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed } from "vue";
 import CollageGrid from "./CollageGrid.vue";
 
 const { t } = useTranslations();
@@ -288,48 +181,13 @@ const updateForm = useForm({
   is_locked: false
 });
 
-// Dropdown state management
-const activeDropdown = ref(null);
-
-// Close dropdown when clicking outside
-const closeDropdowns = () => {
-  activeDropdown.value = null;
-};
-
-// Add click outside listener
-onMounted(() => {
-  document.addEventListener("click", closeDropdowns);
-});
-
-onUnmounted(() => {
-  document.removeEventListener("click", closeDropdowns);
-});
-
-const monthNames = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December"
-];
-
 const collageMessage = computed(() => {
   if (props.collages.length === 0) {
     return t("collage.none_created");
   }
   const now = new Date();
-  const nextMonthName = monthNames[(now.getMonth() + 1) % 12];
-  const key =
-    props.collages.length === 1
-      ? "collage.single_for_month"
-      : "collage.multiple_for_month";
+  const nextMonthName = new Date(now.getFullYear(), now.getMonth() + 1, 1).toLocaleString('en-US', { month: 'long' });
+  const key = props.collages.length === 1 ? "collage.single_for_month" : "collage.multiple_for_month";
   return t(key, { month: nextMonthName });
 });
 

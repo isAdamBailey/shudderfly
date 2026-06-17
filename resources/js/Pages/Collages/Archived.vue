@@ -12,10 +12,10 @@
 
                 <Link
                     :href="route('collages.index')"
-                    class="text-white hover:text-blue-300"
+                    class="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-200 transition-colors"
                 >
-                    <i class="ri-arrow-left-line mr-1"></i>
-                    Back to Collages
+                    <i class="ri-arrow-left-line"></i>
+                    Collages
                 </Link>
             </div>
             <div class="flex justify-between items-center">
@@ -28,18 +28,12 @@
                     @click="speak(archivedText)"
                 />
             </div>
-            <div v-if="canAdmin">
-                <p class="font-bold text-gray-400 mt-2 underline">
-                    ADMIN INSTRUCTIONS
-                </p>
-                <p class="text-sm text-gray-400 mt-2">
-                    Archived collages are preserved but cannot be edited.
-                    <strong>View/Print</strong> PDFs anytime.
-                    <strong>Restore</strong> to make editable again.
-                    <strong>Delete Permanently</strong> removes all data forever
-                    (irreversible).
-                </p>
-            </div>
+            <p v-if="canAdmin" class="mt-3 text-sm text-gray-500">
+                Archived collages are preserved but cannot be edited.
+                <strong class="text-gray-400 font-medium">View PDF</strong> anytime.
+                <strong class="text-gray-400 font-medium">Restore</strong> to make editable again.
+                <strong class="text-gray-400 font-medium">Delete Permanently</strong> removes all data forever — this cannot be undone.
+            </p>
         </template>
 
         <div
@@ -58,87 +52,37 @@
             :show-screenshots="true"
         >
             <template #actions="{ collage }">
-                <!-- Consolidated Control Panel at Bottom -->
-                <div class="w-full bg-gray-50 rounded-lg p-3 border">
-                    <div
-                        class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+                <div class="w-full flex flex-wrap items-center gap-x-4 gap-y-2">
+                    <a
+                        v-if="canEditPages && collage.storage_path"
+                        :href="collage.storage_path"
+                        target="_blank"
+                        class="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-200 transition-colors"
                     >
-                        <!-- Left Side: Primary Actions -->
-                        <div
-                            class="flex flex-wrap items-center gap-2 w-full sm:w-auto"
-                        >
-                            <!-- View PDF Button -->
-                            <a
-                                v-if="canEditPages && collage.storage_path"
-                                :href="collage.storage_path"
-                                target="_blank"
-                                class="flex items-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors duration-200 min-w-0"
-                            >
-                                <i
-                                    class="ri-external-link-line flex-shrink-0"
-                                ></i>
-                                <span class="hidden xs:inline">View</span>
-                                <span class="xs:hidden">PDF</span>
-                            </a>
-                        </div>
+                        <i class="ri-file-pdf-line"></i>
+                        View PDF
+                    </a>
 
-                        <!-- Right Side: Admin Actions -->
-                        <div
-                            v-if="canAdmin"
-                            class="flex flex-wrap items-center gap-2 w-full sm:w-auto"
+                    <div v-if="canAdmin" class="flex items-center gap-4 ml-auto">
+                        <button
+                            class="flex items-center gap-1.5 text-sm text-teal-400 hover:text-teal-300 transition-colors"
+                            :class="{ 'opacity-50 cursor-not-allowed': restoreForm.processing }"
+                            :disabled="restoreForm.processing"
+                            @click="restoreForm.patch(route('collages.restore', collage.id))"
                         >
-                            <!-- Restore Button -->
-                            <button
-                                class="flex items-center gap-2 px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-colors duration-200 min-w-0"
-                                :class="{
-                                    'opacity-50 cursor-not-allowed':
-                                        restoreForm.processing,
-                                }"
-                                :disabled="restoreForm.processing"
-                                @click="
-                                    restoreForm.patch(
-                                        route('collages.restore', collage.id)
-                                    )
-                                "
-                            >
-                                <i
-                                    class="ri-arrow-go-back-line flex-shrink-0"
-                                ></i>
-                                <span class="xs:inline">Restore</span>
-                            </button>
+                            <i class="ri-arrow-go-back-line"></i>
+                            Restore
+                        </button>
 
-                            <!-- Delete Permanently Button -->
-                            <button
-                                class="flex items-center gap-2 px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors duration-200 min-w-0"
-                                :class="{
-                                    'opacity-50 cursor-not-allowed':
-                                        deleteForm.processing,
-                                }"
-                                :disabled="deleteForm.processing"
-                                @click="confirmDelete(collage.id)"
-                            >
-                                <i class="ri-delete-bin-line flex-shrink-0"></i>
-                                <span class="hidden sm:inline"
-                                    >Delete Permanently</span
-                                >
-                                <span class="sm:hidden">Delete</span>
-                            </button>
-                        </div>
-
-                        <!-- Non-Admin View PDF (Full Width on Mobile) -->
-                        <div
-                            v-else-if="canEditPages && collage.storage_path"
-                            class="flex items-center w-full sm:w-auto"
+                        <button
+                            class="flex items-center gap-1.5 text-sm text-red-400 hover:text-red-300 transition-colors"
+                            :class="{ 'opacity-50 cursor-not-allowed': deleteForm.processing }"
+                            :disabled="deleteForm.processing"
+                            @click="confirmDelete(collage.id)"
                         >
-                            <a
-                                :href="collage.storage_path"
-                                target="_blank"
-                                class="flex items-center justify-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors duration-200 w-full sm:w-auto"
-                            >
-                                <i class="ri-external-link-line"></i>
-                                <span>View PDF</span>
-                            </a>
-                        </div>
+                            <i class="ri-delete-bin-line"></i>
+                            Delete
+                        </button>
                     </div>
                 </div>
             </template>
