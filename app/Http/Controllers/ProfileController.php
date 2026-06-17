@@ -4,8 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Mail\ContactAdmins;
+use App\Models\Book;
+use App\Models\Category;
+use App\Models\Page;
+use App\Models\Song;
+use App\Models\Sound;
+use App\Models\TimezoneLabel;
 use App\Models\User;
+use App\Models\WorldClockSetting;
+use App\Services\PopularityService;
 use App\Services\PushNotificationService;
+use App\Support\WorldClockState;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -20,7 +29,9 @@ use Inertia\Response;
 class ProfileController extends Controller
 {
     public function __construct(
-        protected PushNotificationService $pushNotificationService
+        protected PushNotificationService $pushNotificationService,
+        protected SettingsController $settingsController,
+        protected PopularityService $popularityService,
     ) {}
 
     /**
@@ -36,6 +47,55 @@ class ProfileController extends Controller
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => session('status'),
             'adminUsers' => $adminUsers,
+            'users' => User::all(),
+            'categories' => Category::withCount('books')->get(),
+            'blockedCount' => auth()->user()->can('edit pages')
+                ? Page::where('blocked', true)->count() + Sound::where('blocked', true)->count()
+                : 0,
+            'stats' => Inertia::defer(fn () => [
+                'numberOfBooks' => Book::count(),
+                'numberOfPages' => Page::count(),
+                'numberOfSongs' => Song::count(),
+                'numberOfYouTubeVideos' => Page::whereNotNull('video_link')->count(),
+                'numberOfVideos' => Page::where('media_path', 'like', '%.mp4')->count(),
+                'numberOfImages' => Page::where('media_path', 'like', '%.webp')
+                    ->where('media_path', 'not like', '%snapshot%')
+                    ->count(),
+                'numberOfScreenshots' => Page::where('media_path', 'like', '%snapshot%')->count(),
+                'mostReadBooks' => $this->popularityService->addPopularityToCollection(
+                    Book::query()
+                        ->with('coverImage')
+                        ->orderBy('read_count', 'desc')
+                        ->orderBy('created_at')
+                        ->take(5)
+                        ->get(),
+                    Book::class
+                )->toArray(),
+                'mostReadSongs' => $this->popularityService->addPopularityToCollection(
+                    Song::query()
+                        ->orderBy('read_count', 'desc')
+                        ->take(5)
+                        ->get(),
+                    Song::class
+                )->toArray(),
+                'leastPages' => Book::with('coverImage')
+                    ->withCount('pages')
+                    ->orderBy('pages_count')
+                    ->orderBy('created_at')
+                    ->first()
+                    ?->toArray(),
+                'mostPages' => Book::with('coverImage')
+                    ->withCount('pages')
+                    ->orderBy('pages_count', 'desc')
+                    ->orderBy('created_at')
+                    ->first()
+                    ?->toArray(),
+            ]),
+            'adminSettings' => $this->settingsController->index(),
+            'defaultCities' => config('world_clock.default_cities'),
+            'maxCities' => config('world_clock.max_cities'),
+            'timezoneLabels' => TimezoneLabel::pluck('label', 'timezone'),
+            'worldClock' => WorldClockState::payload(WorldClockSetting::instance()),
         ]);
     }
 

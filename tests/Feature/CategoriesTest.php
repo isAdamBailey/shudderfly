@@ -31,7 +31,7 @@ class CategoriesTest extends TestCase
         $category = Category::first();
         $this->assertSame($category->name, $payload['name']);
 
-        $response->assertRedirect(route('dashboard'));
+        $response->assertRedirect(route('profile.edit'));
     }
 
     public function test_category_is_updated()
@@ -50,7 +50,7 @@ class CategoriesTest extends TestCase
         $freshCategory = Category::find($category->id);
         $this->assertSame($freshCategory->name, $payload['name']);
 
-        $response->assertRedirect(route('dashboard'));
+        $response->assertRedirect(route('profile.edit'));
     }
 
     public function test_category_is_destroyed()
@@ -79,7 +79,7 @@ class CategoriesTest extends TestCase
 
         $this->assertNull(Category::find($category->id));
 
-        $response->assertRedirect(route('dashboard'));
+        $response->assertRedirect(route('profile.edit'));
     }
 
     public function test_category_show_displays_books_for_regular_category()

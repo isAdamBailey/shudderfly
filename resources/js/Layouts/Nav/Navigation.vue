@@ -72,13 +72,6 @@ const topNavItems = computed(() => {
     });
   }
 
-  items.push({
-    label: "Admin",
-    href: route("dashboard"),
-    active: route().current("dashboard"),
-    icon: "ri-dashboard-line"
-  });
-
   return items;
 });
 
@@ -134,11 +127,6 @@ const secondaryMobilePageItems = computed(() => {
 const utilityMobileItems = computed(() => {
   const items = [
     {
-      label: "Admin",
-      href: route("dashboard"),
-      icon: "ri-dashboard-line"
-    },
-    {
       label: "Account",
       href: route("profile.edit"),
       icon: "ri-user-settings-line"
@@ -159,7 +147,6 @@ const utilityMobileItems = computed(() => {
 });
 
 const mobileMoreActive = computed(() => {
-  if (route().current("dashboard")) return true;
   if (route().current("profile.*")) return true;
   if (route().current("users.show")) return true;
   return secondaryMobilePageItems.value.some((item) => item.active);

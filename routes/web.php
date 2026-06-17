@@ -6,7 +6,6 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CollageController;
 use App\Http\Controllers\CollagePageController;
 use App\Http\Controllers\CommentReactionController;
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\MessageCommentController;
 use App\Http\Controllers\MessageController;
@@ -46,8 +45,6 @@ Route::middleware('auth')->group(function () {
             'appName' => config('app.name'),
         ]);
     })->name('rules');
-
-    Route::get('/dashboard', [DashboardController::class, 'show'])->name('dashboard');
 
     Route::get('/users/{user:email}', [UserController::class, 'show'])->name('users.show');
 

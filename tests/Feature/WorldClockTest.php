@@ -23,15 +23,15 @@ class WorldClockTest extends TestCase
             ->assertUnauthorized();
     }
 
-    public function test_dashboard_renders_world_clock_data(): void
+    public function test_profile_renders_world_clock_data(): void
     {
         $this->actingAs(User::factory()->create());
 
         TimezoneLabel::create(['timezone' => 'Asia/Tokyo', 'label' => 'Office']);
 
-        $this->get(route('dashboard'))->assertInertia(
+        $this->get(route('profile.edit'))->assertInertia(
             fn (Assert $page) => $page
-                ->component('Dashboard/Index')
+                ->component('Profile/Edit')
                 ->where('maxCities', 6)
                 ->has('defaultCities')
                 ->where('defaultCities.0.timezone', 'America/New_York')

@@ -96,14 +96,14 @@ class CategoryController extends Controller
     {
         Category::create($request->validated());
 
-        return redirect(route('dashboard'));
+        return redirect(route('profile.edit'));
     }
 
     public function update(UpdateCategoryRequest $request, Category $category): Application|RedirectResponse|Redirector
     {
         $category->update($request->validated());
 
-        return redirect(route('dashboard'));
+        return redirect(route('profile.edit'));
     }
 
     public function destroy(Category $category): Redirector|RedirectResponse|Application
@@ -116,6 +116,6 @@ class CategoryController extends Controller
 
         $category->delete();
 
-        return redirect(route('dashboard'));
+        return redirect(route('profile.edit'));
     }
 }

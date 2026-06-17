@@ -25,7 +25,7 @@ class AdminController extends Controller
 
         $user->syncPermissions($request->permissions);
 
-        return redirect(route('dashboard'));
+        return redirect(route('profile.edit'));
     }
 
     /**
@@ -44,6 +44,6 @@ class AdminController extends Controller
         $user->syncPermissions();
         $user->delete();
 
-        return redirect(route('dashboard'));
+        return redirect(route('profile.edit'));
     }
 }

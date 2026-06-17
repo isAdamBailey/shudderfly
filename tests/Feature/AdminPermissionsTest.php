@@ -26,7 +26,7 @@ class AdminPermissionsTest extends TestCase
 
         $this->assertTrue($editUser->fresh()->hasPermissionTo('edit pages'));
 
-        $response->assertRedirect(route('dashboard'));
+        $response->assertRedirect(route('profile.edit'));
     }
 
     public function test_users_permissions_are_revoked()
@@ -46,7 +46,7 @@ class AdminPermissionsTest extends TestCase
 
         $this->assertFalse($editUser->fresh()->hasPermissionTo('edit pages'));
 
-        $response->assertRedirect(route('dashboard'));
+        $response->assertRedirect(route('profile.edit'));
     }
 
     public function test_users_can_be_deleted()
@@ -65,7 +65,7 @@ class AdminPermissionsTest extends TestCase
 
         $this->assertFalse(User::where('id', $deleteUser->id)->exists());
 
-        $response->assertRedirect(route('dashboard'));
+        $response->assertRedirect(route('profile.edit'));
     }
 
     public function test_non_admin_users_cannot_update_permissions()

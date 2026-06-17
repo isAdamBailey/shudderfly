@@ -17,7 +17,7 @@ class ThemeTest extends TestCase
         $user->givePermissionTo('edit pages');
         $this->actingAs($user);
 
-        $response = $this->get(route('dashboard'));
+        $response = $this->get(route('profile.edit'));
 
         // Check that the response contains the data-theme attribute on the <html> tag
         $response->assertSee('<html', false);
@@ -33,25 +33,25 @@ class ThemeTest extends TestCase
 
         // Simulate December for 'christmas' theme
         $this->travelTo('2024-12-15');
-        $response = $this->get(route('dashboard'));
+        $response = $this->get(route('profile.edit'));
         $response->assertSee('<html', false);
         $this->assertMatchesRegularExpression('/<html[^>]+data-theme="christmas"/', $response->getContent());
 
         // Simulate July for 'fireworks' theme
         $this->travelTo('2024-07-04');
-        $response = $this->get(route('dashboard'));
+        $response = $this->get(route('profile.edit'));
         $response->assertSee('<html', false);
         $this->assertMatchesRegularExpression('/<html[^>]+data-theme="fireworks"/', $response->getContent());
 
         // Simulate October for 'halloween' theme
         $this->travelTo('2024-10-31');
-        $response = $this->get(route('dashboard'));
+        $response = $this->get(route('profile.edit'));
         $response->assertSee('<html', false);
         $this->assertMatchesRegularExpression('/<html[^>]+data-theme="halloween"/', $response->getContent());
 
         // Simulate March for no theme
         $this->travelTo('2024-03-15');
-        $response = $this->get(route('dashboard'));
+        $response = $this->get(route('profile.edit'));
         $response->assertSee('<html', false);
         $this->assertMatchesRegularExpression('/<html[^>]+data-theme=""/', $response->getContent());
 
@@ -68,7 +68,7 @@ class ThemeTest extends TestCase
         // Mock the current date to be December
         $this->travelTo('2024-12-15');
 
-        $response = $this->get(route('dashboard'));
+        $response = $this->get(route('profile.edit'));
 
         // Should have christmas theme
         $this->assertStringContainsString('data-theme="christmas"', $response->getContent());
@@ -86,7 +86,7 @@ class ThemeTest extends TestCase
         // Mock the current date to be July
         $this->travelTo('2024-07-04');
 
-        $response = $this->get(route('dashboard'));
+        $response = $this->get(route('profile.edit'));
 
         // Should have fireworks theme
         $this->assertStringContainsString('data-theme="fireworks"', $response->getContent());
@@ -104,7 +104,7 @@ class ThemeTest extends TestCase
         // Mock the current date to be October
         $this->travelTo('2024-10-31');
 
-        $response = $this->get(route('dashboard'));
+        $response = $this->get(route('profile.edit'));
 
         // Should have halloween theme
         $this->assertStringContainsString('data-theme="halloween"', $response->getContent());
@@ -122,7 +122,7 @@ class ThemeTest extends TestCase
         // Mock the current date to be a non-theme month (e.g., March)
         $this->travelTo('2024-03-15');
 
-        $response = $this->get(route('dashboard'));
+        $response = $this->get(route('profile.edit'));
 
         // Should have empty theme
         $this->assertStringContainsString('data-theme=""', $response->getContent());
@@ -140,7 +140,7 @@ class ThemeTest extends TestCase
         // Mock the current date to be December
         $this->travelTo('2024-12-15');
 
-        $response = $this->get(route('dashboard'));
+        $response = $this->get(route('profile.edit'));
 
         // Check that the theme is included in the Inertia page props
         $response->assertInertia(
@@ -160,7 +160,7 @@ class ThemeTest extends TestCase
         // Mock the current date to be March
         $this->travelTo('2024-03-15');
 
-        $response = $this->get(route('dashboard'));
+        $response = $this->get(route('profile.edit'));
 
         // Check that the theme is empty in non-theme months
         $response->assertInertia(
@@ -182,7 +182,7 @@ class ThemeTest extends TestCase
 
         // Test multiple pages to ensure theme is consistent
         $pages = [
-            route('dashboard'),
+            route('profile.edit'),
             route('books.index'),
             route('welcome'),
         ];
@@ -218,25 +218,25 @@ class ThemeTest extends TestCase
 
         // Test December
         $this->travelTo('2024-12-15');
-        $response = $this->get(route('dashboard'));
+        $response = $this->get(route('profile.edit'));
         $this->assertStringContainsString('data-theme="christmas"', $response->getContent());
         $this->travelBack();
 
         // Test July
         $this->travelTo('2024-07-04');
-        $response = $this->get(route('dashboard'));
+        $response = $this->get(route('profile.edit'));
         $this->assertStringContainsString('data-theme="fireworks"', $response->getContent());
         $this->travelBack();
 
         // Test October
         $this->travelTo('2024-10-31');
-        $response = $this->get(route('dashboard'));
+        $response = $this->get(route('profile.edit'));
         $this->assertStringContainsString('data-theme="halloween"', $response->getContent());
         $this->travelBack();
 
         // Test March (no theme)
         $this->travelTo('2024-03-15');
-        $response = $this->get(route('dashboard'));
+        $response = $this->get(route('profile.edit'));
         $this->assertStringContainsString('data-theme=""', $response->getContent());
         $this->travelBack();
     }
