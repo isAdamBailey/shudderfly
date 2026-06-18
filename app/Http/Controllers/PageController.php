@@ -33,6 +33,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use RahulHaque\Filepond\Facades\Filepond;
 
 class PageController extends Controller
 {
@@ -383,15 +384,29 @@ class PageController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StorePageRequest $request): Redirector|RedirectResponse|JsonResponse
+    public function store(StorePageRequest $request): Redirector|RedirectResponse
     {
         $book = Book::find($request->book_id);
         $successMessage = __('messages.page.created');
 
-        if ($request->hasFile('image')) {
-            $file = $request->file('image');
+        // FilePond uploads each file to temporary storage (chunked/resumable) and
+        // submits the encrypted server ids in `images`. Resolve each back to its
+        // temporary file and queue the existing media-processing jobs.
+        $serverIds = array_filter((array) $request->input('images', []));
 
-            if ($file->isValid()) {
+        if (! empty($serverIds)) {
+            $files = Filepond::field($serverIds)->getFile();
+            $files = is_array($files) ? $files : [$files];
+
+            // Latitude/longitude are shared across the batch; fall back to the book.
+            $latitude = $request->input('latitude') ?? $book->latitude;
+            $longitude = $request->input('longitude') ?? $book->longitude;
+
+            foreach ($files as $file) {
+                if (! $file || ! $file->isValid()) {
+                    continue;
+                }
+
                 $mimeType = $file->getMimeType();
                 $originalName = $file->getClientOriginalName();
                 $filePath = Storage::disk('local')->put('temp', $file);
@@ -399,18 +414,12 @@ class PageController extends Controller
                 if (Str::startsWith($mimeType, 'image/')) {
                     $filename = pathinfo($file->hashName(), PATHINFO_FILENAME);
                     $mediaPath = 'books/'.$book->slug.'/'.$filename.'.webp';
-                    // Use book location as default if page doesn't have location
-                    $latitude = $request->input('latitude') ?? $book->latitude;
-                    $longitude = $request->input('longitude') ?? $book->longitude;
                     StoreImage::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'), null, null, null, $latitude, $longitude);
                     $successMessage = __('messages.page.queued_image', ['filename' => $originalName]);
                 } elseif (Str::startsWith($mimeType, 'video/')) {
                     $mediaPath = 'books/'.$book->slug.'/'.$originalName;
 
                     try {
-                        // Use book location as default if page doesn't have location
-                        $latitude = $request->input('latitude') ?? $book->latitude;
-                        $longitude = $request->input('longitude') ?? $book->longitude;
                         StoreVideo::dispatch($filePath, $mediaPath, $book, $request->input('content'), $request->input('video_link'), null, null, null, $latitude, $longitude);
                         $successMessage = __('messages.page.queued_video', ['filename' => $originalName]);
                     } catch (\Exception $e) {
@@ -425,13 +434,8 @@ class PageController extends Controller
                 }
             }
 
-            // The FilePond uploader posts via a plain XHR (no X-Inertia header)
-            // and only needs a lightweight acknowledgement. Returning JSON here
-            // avoids forcing the XHR to follow a 302 and download the full
-            // books.show HTML page, which adds latency and connection-drop risk.
-            if (! $request->header('X-Inertia')) {
-                return response()->json(['success' => true, 'message' => $successMessage]);
-            }
+            // Clear the FilePond temporary uploads now they have been queued.
+            Filepond::field($serverIds)->delete();
         } else {
             // If no file is uploaded, create the page immediately
             // Use book location as default if page doesn't have location
