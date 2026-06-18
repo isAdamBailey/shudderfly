@@ -74,6 +74,22 @@ const server = {
   ) => {
     let aborted = false;
     let xhr = null;
+    let uploadFile = originalFile;
+
+    // Chrome (and other Chromium browsers) re-validates a File's link to its
+    // underlying disk entry when the upload actually starts, and aborts with
+    // net::ERR_UPLOAD_FILE_CHANGED if it looks different from when it was
+    // selected - common for cloud-synced/virtual file handles (a just-taken
+    // photo still being optimized/uploaded by iCloud or Google Photos, for
+    // example). That error code isn't exposed to JS, so it surfaces here as
+    // a generic, instant "error" event with zero bytes ever reaching the
+    // server - no amount of retrying helps because the live file reference
+    // is the problem, not the network. Snapshotting the bytes into memory up
+    // front decouples the upload from that reference entirely. Skipped for
+    // very large files (e.g. videos) to avoid loading hundreds of MB into
+    // memory on a mobile device for a failure mode that's only been
+    // observed with smaller, camera-roll-style files.
+    const MAX_SNAPSHOT_BYTES = 100 * 1024 * 1024;
 
     // Mobile connections sometimes drop mid-handshake or mid-transfer,
     // surfacing as an XHR "error" event. The upload-progress event can
@@ -90,7 +106,7 @@ const server = {
     const RETRY_BACKOFF_MS = 800;
 
     const send = async (attempt = 0) => {
-      const file = originalFile;
+      const file = uploadFile;
       const startedAt = Date.now();
       let bytesSent = 0;
       const diagnostics = () => {
@@ -180,8 +196,25 @@ const server = {
       xhr.send(formData);
     };
 
-    // initial send
-    send();
+    // Snapshot the file into memory (see comment above) before the first
+    // send, then proceed whether or not the snapshot succeeded.
+    const start = async () => {
+      if (originalFile.size > 0 && originalFile.size <= MAX_SNAPSHOT_BYTES) {
+        try {
+          const buffer = await originalFile.arrayBuffer();
+          if (aborted) return;
+          uploadFile = new File([buffer], originalFile.name, {
+            type: originalFile.type,
+            lastModified: Date.now()
+          });
+        } catch (_e) {
+          // Fall back to the live file reference if reading fails.
+        }
+      }
+      if (!aborted) send();
+    };
+
+    start();
 
     return {
       abort: () => {
