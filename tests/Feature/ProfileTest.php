@@ -120,6 +120,27 @@ class ProfileTest extends TestCase
         $this->assertSame('avatar-1', $user->avatar);
     }
 
+    public function test_avatar_can_be_updated_with_new_styles()
+    {
+        $user = User::factory()->create();
+
+        foreach (['bigears-1', 'avataaars-6', 'adventurer-12'] as $avatarId) {
+            $response = $this
+                ->actingAs($user)
+                ->patch('/profile/avatar', [
+                    'avatar' => $avatarId,
+                ]);
+
+            $response
+                ->assertSessionHasNoErrors()
+                ->assertRedirect('/profile');
+
+            $user->refresh();
+
+            $this->assertSame($avatarId, $user->avatar);
+        }
+    }
+
     public function test_avatar_can_be_updated_without_edit_profile_permission()
     {
         $user = User::factory()->create();

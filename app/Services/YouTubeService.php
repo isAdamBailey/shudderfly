@@ -49,6 +49,11 @@ class YouTubeService
         $playlistItems = [];
         $quotaExceeded = false;
 
+        // Preload every existing song once, keyed by video ID, so the per-item
+        // skip/create/update checks below are in-memory lookups instead of a
+        // separate SELECT per playlist item.
+        $existingSongs = Song::all()->keyBy('youtube_video_id');
+
         // First pass: Collect all video IDs from playlist without fetching details
         do {
             $response = $this->getPlaylistItems($nextPageToken);
@@ -77,7 +82,7 @@ class YouTubeService
                 $allPlaylistVideoIds[] = $videoId;
 
                 // Skip if we already have this video and it hasn't been updated recently
-                if ($this->shouldSkipVideo($videoId, $item['snippet']['publishedAt'], $title)) {
+                if ($this->shouldSkipVideo($existingSongs->get($videoId), $item['snippet']['publishedAt'], $title)) {
                     continue;
                 }
 
@@ -89,9 +94,12 @@ class YouTubeService
 
         } while ($nextPageToken && ! $quotaExceeded);
 
-        // Delete songs that are no longer in the playlist (even if we have no new videos to sync)
+        // Delete songs no longer in the playlist — but ONLY when we enumerated the
+        // entire playlist. If the quota was exceeded mid-pagination, the list of
+        // current IDs is incomplete and deleting against it would wipe songs that
+        // are still in the playlist.
         $deletedCount = 0;
-        if (! empty($allPlaylistVideoIds)) {
+        if (! $quotaExceeded && ! empty($allPlaylistVideoIds)) {
             $deletedCount = $this->removeMissingPlaylistSongs($allPlaylistVideoIds);
         }
 
@@ -127,7 +135,7 @@ class YouTubeService
                 if (isset($playlistItems[$videoId])) {
                     $playlistItem = $playlistItems[$videoId];
                     $details = $videoDetails[$videoId] ?? null;
-                    $isNew = $this->createOrUpdateSongWithDetails($playlistItem, $details);
+                    $isNew = $this->createOrUpdateSongWithDetails($playlistItem, $details, $existingSongs->get($videoId));
                     if ($isNew) {
                         $totalSynced++;
                     }
@@ -184,13 +192,12 @@ class YouTubeService
     /**
      * Check if we should skip syncing a video (already exists and unchanged)
      */
-    private function shouldSkipVideo($videoId, $publishedAt, $title = null)
+    private function shouldSkipVideo(?Song $existingSong, $publishedAt, $title = null)
     {
         // Skip if the title is 'Private video'
         if ($title !== null && strtolower(trim($title)) === 'private video') {
             return true;
         }
-        $existingSong = Song::where('youtube_video_id', $videoId)->first();
 
         if (! $existingSong) {
             return false; // New video, don't skip
@@ -225,12 +232,9 @@ class YouTubeService
         $allVideoDetails = [];
         $batches = array_chunk($videoIds, self::BATCH_SIZE);
 
-        foreach ($batches as $batchIndex => $batch) {
+        foreach ($batches as $batch) {
             try {
-                $response = Http::withHeaders([
-                    'User-Agent' => 'Laravel-App/1.0',
-                    'Accept' => 'application/json',
-                ])->get('https://www.googleapis.com/youtube/v3/videos', [
+                $response = $this->getWithRetry('https://www.googleapis.com/youtube/v3/videos', [
                     'part' => 'contentDetails,snippet',
                     'id' => implode(',', $batch),
                     'key' => $this->apiKey,
@@ -252,10 +256,6 @@ class YouTubeService
                     ];
                 }
 
-                if ($batchIndex < count($batches) - 1) {
-                    usleep(200000); // 200ms delay
-                }
-
             } catch (\Exception $e) {
                 Log::error('Error in batch video details request: '.$e->getMessage());
 
@@ -270,7 +270,7 @@ class YouTubeService
      * Create or update song with playlist and video details combined
      * Returns true if a new song was created, false otherwise
      */
-    private function createOrUpdateSongWithDetails($playlistItem, $videoDetails = null)
+    private function createOrUpdateSongWithDetails($playlistItem, $videoDetails = null, ?Song $existingSong = null)
     {
         $snippet = $playlistItem['snippet'];
         $title = strtolower(trim($snippet['title']));
@@ -304,8 +304,6 @@ class YouTubeService
         if (empty($songData['thumbnail_high'])) {
             $songData['thumbnail_url'] = "https://img.youtube.com/vi/{$videoId}/hqdefault.jpg";
         }
-
-        $existingSong = Song::where('youtube_video_id', $videoId)->first();
 
         if ($existingSong) {
             // Build update data, only including fields that have actually changed
@@ -453,8 +451,7 @@ class YouTubeService
             }
 
             if ($reason === 'rateLimitExceeded') {
-                Log::warning('YouTube API rate limit exceeded. Adding delay and retrying.');
-                sleep(5); // Wait 5 seconds before retry
+                Log::warning('YouTube API rate limit exceeded after retries.');
 
                 return [
                     'success' => false,
@@ -492,15 +489,53 @@ class YouTubeService
             $params['pageToken'] = $pageToken;
         }
 
-        $request = Http::withHeaders([
-            'User-Agent' => 'Laravel-App/1.0',
-            'Accept' => 'application/json',
-        ]);
+        return $this->getWithRetry('https://www.googleapis.com/youtube/v3/playlistItems', $params, $accessToken);
+    }
 
-        if ($accessToken) {
-            $request = $request->withToken($accessToken);
-        }
+    /**
+     * Perform a YouTube API GET, retrying with exponential backoff when the API
+     * reports a transient rate-limit error. Quota-exceeded errors are NOT retried
+     * (they won't recover until the daily quota resets), and successful responses
+     * return immediately.
+     */
+    private function getWithRetry(string $url, array $params, ?string $accessToken = null, int $maxAttempts = 3)
+    {
+        $attempt = 0;
 
-        return $request->get('https://www.googleapis.com/youtube/v3/playlistItems', $params);
+        do {
+            $attempt++;
+
+            $request = Http::withHeaders([
+                'User-Agent' => 'Laravel-App/1.0',
+                'Accept' => 'application/json',
+            ]);
+
+            if ($accessToken) {
+                $request = $request->withToken($accessToken);
+            }
+
+            $response = $request->get($url, $params);
+
+            if ($response->successful() || ! $this->isRateLimited($response)) {
+                return $response;
+            }
+
+            if ($attempt < $maxAttempts) {
+                $backoffMs = 500 * (2 ** ($attempt - 1)); // 0.5s, 1s, ...
+                Log::warning("YouTube API rate limit hit; retrying in {$backoffMs}ms (attempt {$attempt}/{$maxAttempts})");
+                usleep($backoffMs * 1000);
+            }
+        } while ($attempt < $maxAttempts);
+
+        return $response;
+    }
+
+    /**
+     * Whether a failed response is a transient rate-limit error (worth retrying)
+     * as opposed to a quota-exceeded or other hard error.
+     */
+    private function isRateLimited($response): bool
+    {
+        return $response->json('error.errors.0.reason') === 'rateLimitExceeded';
     }
 }
