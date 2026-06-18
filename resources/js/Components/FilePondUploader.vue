@@ -93,6 +93,10 @@ const onUpdateFiles = (items) => {
 </script>
 
 <template>
+    <!-- maxParallelUploads=1: each chunk request shares the same PHP session,
+    which serializes on its file lock at write time. With FilePond's default of
+    2 files in flight, that contention surfaces as upload failures on slow
+    mobile connections once more than one file is uploading at once. -->
     <FilePond
         ref="pond"
         v-model="files"
@@ -102,6 +106,7 @@ const onUpdateFiles = (items) => {
         :chunk-uploads="true"
         :chunk-size="5242880"
         :chunk-retry-delays="[500, 1000, 3000]"
+        :max-parallel-uploads="1"
         :max-file-size="maxFileSize"
         :label-idle="labelIdle"
         name="image"
