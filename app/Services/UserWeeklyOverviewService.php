@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Log;
 
 class UserWeeklyOverviewService
 {
-    private const MAX_NEW_TOKENS = 180;
+    private const MAX_NEW_TOKENS = 90;
 
     private const CONNECT_TIMEOUT_SECONDS = 10;
 
@@ -201,15 +201,15 @@ class UserWeeklyOverviewService
         $context = implode(' ', $contextLines);
 
         $lengthInstruction = $hasContributedThisWeek
-            ? 'Write 2 to 3 short, playful sentences'
-            : 'Write exactly 1 short, playful sentence';
+            ? 'Write 1 to 2 short, goofy sentences'
+            : 'Write exactly 1 short, goofy sentence';
         $userNameForPrompt = json_encode($user->name, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
         $inactiveInstruction = 'They did not add books, post messages, or give reactions this week — do not call them popular or well-known; say they are not active on Shudderfly this week. ';
         $activeInstruction = 'You may guess at their personality or vibe from the tone of book titles they created this week and how much they messaged and reacted. '
             .'When describing reach or reception, use playful plain language informed by popularity ratings and engagement — never read counts or raw stats. ';
 
-        return "{$lengthInstruction} (no preamble, no headings, no lists, no quoted snippets, no made-up details) summarizing their week on Shudderfly in a whimsical, friendly tone — not a news recap or bulletin. "
+        return "{$lengthInstruction} (no preamble, no headings, no lists, no quoted snippets, no made-up details) summarizing their week on Shudderfly in a silly, playful, slightly absurd tone — like a goofy friend hyping them up, not a news recap or bulletin. Keep it punchy and short. "
             ."User display name: {$userNameForPrompt}. "
             ."Facts you may use (and only these): {$context} "
             .'Start the first sentence with the user display name followed by " is". '
@@ -374,10 +374,10 @@ class UserWeeklyOverviewService
             $hasIncoming = $metrics['reactions_received'] > 0 || $metrics['comments_received'] > 0;
 
             if ($hasIncoming) {
-                return "{$user->name} is not active on Shudderfly this week, though other readers have still been responding to their earlier posts.";
+                return "{$user->name} is not active on Shudderfly this week, but the fans are still hollering into the void for them.";
             }
 
-            return "{$user->name} is not active on Shudderfly this week.";
+            return "{$user->name} is not active on Shudderfly this week, presumably off having a snack somewhere.";
         }
 
         $activityCount = $metrics['books_last_week']
@@ -388,70 +388,14 @@ class UserWeeklyOverviewService
 
         $topPopularity = collect($metrics['top_book_details'])->max('popularity') ?? 0;
         $popularityPhrase = match (true) {
-            $topPopularity >= 75 => 'a crowd-pleasing storyteller on Shudderfly',
-            $topPopularity >= 40 => 'a reader favorite on Shudderfly',
-            $metrics['engagement_score'] >= 10 => 'making a lively splash on Shudderfly',
-            $metrics['engagement_score'] >= 4 => 'finding a cheerful rhythm on Shudderfly',
-            ($metrics['reactions_received'] + $metrics['comments_received']) >= 3 => 'someone other readers enjoy cheering on at Shudderfly',
-            default => 'a newer voice on Shudderfly with room to grow',
+            $topPopularity >= 75 => 'basically Shudderfly royalty',
+            $topPopularity >= 40 => 'a certified Shudderfly crowd-pleaser',
+            $metrics['engagement_score'] >= 10 => 'making a glorious ruckus on Shudderfly',
+            $metrics['engagement_score'] >= 4 => 'bouncing around Shudderfly with snacks in hand',
+            ($metrics['reactions_received'] + $metrics['comments_received']) >= 3 => 'getting cheered on like a tiny celebrity on Shudderfly',
+            default => 'a fresh little gremlin on Shudderfly',
         };
 
-        $bookPhrase = match (true) {
-            $metrics['total_books'] === 0 => '',
-            $topPopularity >= 75 => ' Their stories are drawing a big audience on Shudderfly.',
-            $topPopularity >= 40 => ' Their books are picking up fans on Shudderfly.',
-            $metrics['total_books'] >= 3 => ' They keep adding new tales to Shudderfly.',
-            default => ' They have started sharing stories on Shudderfly.',
-        };
-
-        $closingSentence = $this->buildFallbackClosingSentence($metrics);
-
-        return "{$user->name} is {$popularityPhrase} and brings {$activityPhrase} energy this week.{$bookPhrase}{$closingSentence}";
-    }
-
-    private function buildFallbackClosingSentence(array $metrics): string
-    {
-        $activeCategories = [];
-
-        if ($metrics['books_last_week'] > 0) {
-            $activeCategories[] = 'books';
-        }
-
-        if ($metrics['messages_last_week'] > 0) {
-            $activeCategories[] = 'messages';
-        }
-
-        if ($metrics['comments_made'] > 0) {
-            $activeCategories[] = 'comments';
-        }
-
-        if ($metrics['reactions_last_week'] > 0) {
-            $activeCategories[] = 'reactions';
-        }
-
-        $hasIncoming = $metrics['reactions_received'] > 0 || $metrics['comments_received'] > 0;
-
-        if ($activeCategories === [] && ! $hasIncoming) {
-            return ' They are still finding their footing on Shudderfly.';
-        }
-
-        if ($activeCategories === [] && $hasIncoming) {
-            return ' Other readers have been responding warmly to what they share on Shudderfly.';
-        }
-
-        $outgoingClosing = match (count($activeCategories)) {
-            1 => " Their {$activeCategories[0]} help keep Shudderfly friendly, active, and welcoming.",
-            2 => " Their {$activeCategories[0]} and {$activeCategories[1]} help keep Shudderfly friendly, active, and welcoming.",
-            default => ' Their '
-                .implode(', ', array_slice($activeCategories, 0, -1))
-                .', and '.$activeCategories[array_key_last($activeCategories)]
-                .' help keep Shudderfly friendly, active, and welcoming.',
-        };
-
-        if (! $hasIncoming) {
-            return $outgoingClosing;
-        }
-
-        return $outgoingClosing.' Other readers have also been responding to their posts and replies this week.';
+        return "{$user->name} is {$popularityPhrase}, radiating {$activityPhrase} energy this week.";
     }
 }

@@ -82,7 +82,7 @@ class GenerateWeeklyUserOverviewsTest extends TestCase
                 && data_get($body, 'model') === self::MODEL
                 && data_get($body, 'messages.0.role') === 'user'
                 && is_string(data_get($body, 'messages.0.content'))
-                && data_get($body, 'max_tokens') === 180;
+                && data_get($body, 'max_tokens') === 90;
         });
     }
 
