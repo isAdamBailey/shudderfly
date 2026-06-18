@@ -4,7 +4,6 @@ namespace App\Http\Requests;
 
 use App\Rules\AtLeastOneField;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class StorePageRequest extends FormRequest
 {
@@ -27,18 +26,14 @@ class StorePageRequest extends FormRequest
     {
         return [
             'book_id' => 'integer|required',
-            'content' => ['string', 'nullable', new AtLeastOneField(['content', 'images', 'video_link'])],
-            // FilePond submits an array of encrypted temporary-upload ids. Each is
-            // validated against its temp file using the same media rules as before.
-            'images' => ['nullable', 'array', new AtLeastOneField(['content', 'images', 'video_link'])],
-            'images.*' => [
-                Rule::filepond([
-                    'required',
-                    'mimetypes:image/jpeg,image/jpg,image/png,image/bmp,image/gif,image/svg+xml,image/webp,video/mp4,video/avi,video/quicktime,video/mpeg,video/webm,video/x-matroska,application/octet-stream',
-                    'max:524288', // 512MB in kilobytes
-                ]),
+            'content' => ['string', 'nullable', new AtLeastOneField(['content', 'image', 'video_link'])],
+            'image' => [
+                'nullable',
+                'max:524288', // 512MB in kilobytes
+                'mimetypes:image/jpeg,image/jpg,image/png,image/bmp,image/gif,image/svg+xml,image/webp,video/mp4,video/avi,video/quicktime,video/mpeg,video/webm,video/x-matroska,application/octet-stream',
+                new AtLeastOneField(['content', 'image', 'video_link']),
             ],
-            'video_link' => ['string', 'nullable', new AtLeastOneField(['content', 'images', 'video_link'])],
+            'video_link' => ['string', 'nullable', new AtLeastOneField(['content', 'image', 'video_link'])],
             'category_id' => 'integer',
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',

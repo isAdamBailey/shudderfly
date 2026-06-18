@@ -40,6 +40,22 @@ sail artisan scout:import "App\Models\Song"
 
 A Cursor hook runs both `npm run test:run` and `sail test` before any `git push` to `origin`. Failing tests block the push — fix them and retry.
 
+## Running tests without Docker/Sail
+
+Some sandboxed/remote environments (e.g. Claude Code's cloud execution environment) cannot pull Docker images, so `sail up -d` fails with a DNS/registry error and Sail is unusable. In that situation, fall back to running PHP tests directly against the project's `vendor/bin/phpunit` — `phpunit.xml` already configures SQLite in-memory (`DB_CONNECTION=sqlite`, `DB_DATABASE=:memory:`) and stubbed AWS/mail/cache drivers, so no Docker services are required:
+
+```bash
+cp .env.example .env              # if .env doesn't exist yet
+php artisan key:generate --force  # phpunit needs APP_KEY set
+npm run build                     # generates public/build manifest; without it
+                                   # any test asserting an Inertia response fails
+                                   # with "Not a valid Inertia response"
+./vendor/bin/phpunit                          # full suite
+./vendor/bin/phpunit tests/Feature/BooksTest.php   # single test class
+```
+
+This is a fallback for when Sail genuinely cannot run — prefer `sail test` whenever Docker is available, since it matches CI/production more closely (MySQL instead of SQLite, etc).
+
 ## Architecture
 
 ### Stack
