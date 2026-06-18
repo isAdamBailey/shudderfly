@@ -165,10 +165,6 @@ const onPondProcessingStart = () => {
   isUploading.value = true;
 };
 
-const onPondProcessed = () => {
-  // no-op per file; FilePond handles progress
-};
-
 const onPondAllDone = () => {
   speak(t("page.uploads_batch_queued_speech"));
   try {
@@ -437,7 +433,6 @@ const handleAddressFocus = () => {
               @queue-update="onPondQueueUpdate"
               @processing-start="onPondProcessingStart"
               @error="onPondError"
-              @processed="onPondProcessed"
               @all-done="onPondAllDone"
             />
           </div>

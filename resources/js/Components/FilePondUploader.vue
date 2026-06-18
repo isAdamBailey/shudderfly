@@ -1,6 +1,6 @@
 <script setup>
 import { usePage } from "@inertiajs/vue3";
-import { defineExpose, onMounted, ref, watch } from "vue";
+import { defineExpose, ref, watch } from "vue";
 import vueFilePond from "vue-filepond";
 // Import FilePond styles
 import "filepond-plugin-file-poster/dist/filepond-plugin-file-poster.css";
@@ -16,7 +16,6 @@ import FilePondPluginMediaPreview from "filepond-plugin-media-preview";
 
 const emit = defineEmits([
   "error",
-  "processed",
   "all-done",
   "queue-update",
   "processing-start"
@@ -32,8 +31,7 @@ const props = defineProps({
     default:
       'Drag & Drop your files or <span class="filepond--label-action">Browse</span>'
   },
-  instantUpload: { type: Boolean, default: false },
-  maxFileSize: { type: [String, Number], default: null } // e.g. '512MB' or 536870912
+  instantUpload: { type: Boolean, default: false }
 });
 
 const FilePond = vueFilePond(
@@ -95,9 +93,9 @@ const calculateUploadTimeout = (fileSizeBytes) => {
 
 const server = {
   process: (
-    fieldName,
+    _fieldName,
     originalFile,
-    metadata,
+    _metadata,
     load,
     error,
     progress,
@@ -162,11 +160,6 @@ const server = {
             const response = JSON.parse(xhr.responseText);
             const serverId = response?.id || `${Date.now()}`;
             load(serverId);
-            emit("processed", {
-              name: file.name,
-              size: file.size,
-              type: file.type
-            });
           } catch (_e) {
             load(`${Date.now()}`);
           }
@@ -284,18 +277,11 @@ const server = {
 
 // FilePond ItemStatus values we care about.
 const STATUS = {
-  PROCESSING: 3,
   PROCESSING_COMPLETE: 5,
   PROCESSING_ERROR: 6,
-  LOADING: 7,
-  LOAD_ERROR: 8,
-  PROCESSING_QUEUED: 9
+  LOAD_ERROR: 8
 };
 
-const isActive = (s) =>
-  s === STATUS.PROCESSING ||
-  s === STATUS.PROCESSING_QUEUED ||
-  s === STATUS.LOADING;
 const isErrored = (s) =>
   s === STATUS.PROCESSING_ERROR || s === STATUS.LOAD_ERROR;
 
@@ -306,24 +292,31 @@ watch(files, (newFiles) => {
   } catch (_e) {
     // ignore
   }
+});
 
-  if (!newFiles.length) return;
-
-  // Wait until nothing is actively uploading/queued before deciding.
-  if (newFiles.some((f) => isActive(f.status))) return;
+// Completion is driven by FilePond's `processfiles` event, which fires once the
+// whole queue has finished processing. The previous approach watched the
+// v-model `files` array for status transitions, but vue-filepond mutates item
+// objects in place without changing the array reference, so the (non-deep)
+// watch never re-fired on the final PROCESSING_COMPLETE transition and
+// "all-done" was never emitted. We read authoritative statuses from getFiles()
+// here instead of trusting the watched copy.
+const onProcessFiles = () => {
+  const items = pond.value?.getFiles?.() || [];
+  if (!items.length) return;
 
   // Only signal "all-done" on a clean batch: at least one completed upload and
   // no errored files. If any file errored we keep it in the queue (status
   // PROCESSING_ERROR) so the Retry button has something to re-process instead
   // of wiping the queue and closing the form.
-  const anyErrored = newFiles.some((f) => isErrored(f.status));
-  const anyComplete = newFiles.some(
+  const anyErrored = items.some((f) => isErrored(f.status));
+  const anyComplete = items.some(
     (f) => f.status === STATUS.PROCESSING_COMPLETE
   );
   if (!anyErrored && anyComplete) {
     emit("all-done");
   }
-});
+};
 
 // Process all queued/errored files. Calling processFiles() with no arguments
 // lets FilePond decide what to (re)process: it skips files that are already
@@ -334,12 +327,6 @@ const getFileCount = () => (pond.value?.getFiles?.() || []).length;
 const removeFiles = () => pond.value?.removeFiles?.();
 
 defineExpose({ process, getFileCount, removeFiles, getPond: () => pond.value });
-
-onMounted(() => {});
-
-// Completion is signalled by the status-aware watch on `files`, not here, so a
-// batch that finished with errors does not get treated as a success.
-const oninit = () => {};
 
 const onUpdateFiles = (newFileList) => {
   emit("queue-update", newFileList.length);
@@ -355,11 +342,11 @@ const onUpdateFiles = (newFileList) => {
     :server="server"
     :instant-upload="instantUpload"
     :label-idle="labelIdle"
-    :oninit="oninit"
     credits="false"
     @addfile="onAddFile"
     @removefile="onRemoveFile"
     @processfilestart="$emit('processing-start')"
+    @processfiles="onProcessFiles"
     @updatefiles="onUpdateFiles"
   />
 </template>
