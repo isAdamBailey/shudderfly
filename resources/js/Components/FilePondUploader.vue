@@ -75,11 +75,17 @@ const server = {
     let aborted = false;
     let xhr = null;
 
-    // Mobile WiFi radios sometimes drop the very first connection attempt
-    // (DNS/TCP/TLS handshake) when waking from a power-saving sleep state,
-    // surfacing as an instant XHR "error" event before any bytes are sent.
-    // Since nothing reached the server yet, retrying is safe and avoids
-    // bothering the user with a transient, self-resolving network hiccup.
+    // Mobile connections sometimes drop mid-handshake or mid-transfer,
+    // surfacing as an XHR "error" event. The upload-progress event can
+    // report a few KB "sent" before the drop (data queued into the OS
+    // socket buffer, not necessarily delivered), so gating retries on
+    // bytesSent === 0 missed almost every real-world case and only caught
+    // failures in the first few milliseconds. Retrying is safe as long as
+    // the transfer wasn't complete: an incomplete multipart body can't have
+    // been processed server-side, so there's no risk of creating a
+    // duplicate page. Only skip the retry once the full file was handed off
+    // and the response itself is what's missing, since the request may have
+    // already succeeded server-side.
     const MAX_NETWORK_ERROR_RETRIES = 2;
     const RETRY_BACKOFF_MS = 800;
 
@@ -147,7 +153,7 @@ const server = {
       xhr.addEventListener("error", () => {
         if (aborted) return;
 
-        if (bytesSent === 0 && attempt < MAX_NETWORK_ERROR_RETRIES) {
+        if (bytesSent < file.size && attempt < MAX_NETWORK_ERROR_RETRIES) {
           setTimeout(() => {
             if (!aborted) send(attempt + 1);
           }, RETRY_BACKOFF_MS * (attempt + 1));
