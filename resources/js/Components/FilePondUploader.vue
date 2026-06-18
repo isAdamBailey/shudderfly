@@ -46,6 +46,37 @@ const FilePond = vueFilePond(
 const pond = ref(null);
 const page = usePage();
 
+// iOS WebKit backs a picker-selected File with a live handle to the Photos
+// asset. When a file sits queued (allowMultiple + instantUpload=false means
+// files wait in the form until submit) WebKit eventually invalidates that
+// handle, after which xhr.send() errors instantly (status 0, readyState 4,
+// 0 bytes) and never reaches the server. Reading the bytes into a plain
+// in-memory Blob the moment the file is added, while the handle is still
+// valid, sidesteps the invalidation entirely. Large files (videos) are left
+// to stream directly: they already upload reliably and copying them into RAM
+// would risk an out-of-memory crash on mobile.
+const MAX_SNAPSHOT_BYTES = 50 * 1024 * 1024;
+
+// native File -> Promise<Blob | null>. Keyed by the File reference, which is
+// the same object FilePond hands back to server.process().
+const snapshots = new Map();
+
+const onAddFile = (error, item) => {
+  const file = item?.file;
+  if (error || !file || !file.size || file.size > MAX_SNAPSHOT_BYTES) return;
+  // Resolve to null (rather than reject) if the file is somehow already
+  // unreadable, so server.process() can fall back / surface a clear error.
+  const snapshot = file
+    .arrayBuffer()
+    .then((buffer) => new Blob([buffer], { type: file.type }))
+    .catch(() => null);
+  snapshots.set(file, snapshot);
+};
+
+const onRemoveFile = (_error, item) => {
+  if (item?.file) snapshots.delete(item.file);
+};
+
 const calculateUploadTimeout = (fileSizeBytes) => {
   const MIN_TIMEOUT_MS = 5 * 60 * 1000;
   const MAX_TIMEOUT_MS = 2 * 60 * 60 * 1000;
@@ -89,22 +120,25 @@ const server = {
     const MAX_NETWORK_ERROR_RETRIES = 2;
     const RETRY_BACKOFF_MS = 800;
 
-    const send = async (attempt = 0) => {
+    const send = async (body, bodySource, attempt = 0) => {
       const file = originalFile;
       const startedAt = Date.now();
       let bytesSent = 0;
       const diagnostics = () => {
         const elapsedSec = ((Date.now() - startedAt) / 1000).toFixed(1);
-        const sizeMb = file.size ? (file.size / (1024 * 1024)).toFixed(2) : "?";
+        const sizeMb = body.size ? (body.size / (1024 * 1024)).toFixed(2) : "?";
         return (
           `[readyState=${xhr ? xhr.readyState : "?"} ` +
           `online=${typeof navigator !== "undefined" ? navigator.onLine : "?"} ` +
-          `elapsed=${elapsedSec}s size=${sizeMb}MB type=${file.type || "?"}]`
+          `elapsed=${elapsedSec}s size=${sizeMb}MB type=${file.type || "?"} ` +
+          `body=${bodySource} attempt=${attempt}]`
         );
       };
 
       const formData = new FormData();
-      formData.append("image", file);
+      // Always pass the filename so the server keeps the original extension
+      // even when body is an in-memory Blob (which carries no name).
+      formData.append("image", body, file.name);
 
       Object.keys(props.extraData).forEach((key) => {
         formData.append(key, props.extraData[key]);
@@ -123,6 +157,7 @@ const server = {
         if (aborted) return;
 
         if (xhr.status >= 200 && xhr.status < 300) {
+          snapshots.delete(originalFile);
           try {
             const response = JSON.parse(xhr.responseText);
             const serverId = response?.id || `${Date.now()}`;
@@ -136,6 +171,7 @@ const server = {
             load(`${Date.now()}`);
           }
         } else {
+          snapshots.delete(originalFile);
           let serverMsg = "";
           try {
             serverMsg = JSON.parse(xhr.responseText)?.message || "";
@@ -153,13 +189,19 @@ const server = {
       xhr.addEventListener("error", () => {
         if (aborted) return;
 
-        if (bytesSent < file.size && attempt < MAX_NETWORK_ERROR_RETRIES) {
+        // A network error before the full body was sent never reached the
+        // server (an incomplete multipart body can't be processed), so a
+        // retry can't create a duplicate. body.size is the real byte count
+        // even for an in-memory Blob, so a 0-byte instant failure now
+        // satisfies bytesSent < body.size and actually retries.
+        if (bytesSent < body.size && attempt < MAX_NETWORK_ERROR_RETRIES) {
           setTimeout(() => {
-            if (!aborted) send(attempt + 1);
+            if (!aborted) send(body, bodySource, attempt + 1);
           }, RETRY_BACKOFF_MS * (attempt + 1));
           return;
         }
 
+        snapshots.delete(originalFile);
         const errorMsg = `Upload failed due to network error ${diagnostics()}`;
         emit("error", errorMsg);
         error(errorMsg);
@@ -167,6 +209,7 @@ const server = {
 
       xhr.addEventListener("timeout", () => {
         if (aborted) return;
+        snapshots.delete(originalFile);
         const errorMsg = `Upload timed out. The file may be too large or your connection is slow. ${diagnostics()}`;
         emit("error", errorMsg);
         error(errorMsg);
@@ -175,13 +218,55 @@ const server = {
       xhr.open("POST", props.uploadUrl);
       xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
       xhr.setRequestHeader("X-CSRF-TOKEN", page.props.csrf_token);
-      xhr.timeout = calculateUploadTimeout(file.size);
+      xhr.timeout = calculateUploadTimeout(body.size);
 
       xhr.send(formData);
     };
 
-    // initial send
-    send();
+    // Resolve the request body before sending. Prefer the in-memory Blob
+    // snapshot captured at add time (immune to iOS invalidating the picker
+    // File). If there's no snapshot (large file, left to stream) fall back to
+    // a fresh read; if that read also fails the File is genuinely dead, so
+    // surface a clear, actionable error instead of an opaque network error.
+    const start = async () => {
+      let body = null;
+      let bodySource = "snapshot";
+
+      const snapshot = snapshots.get(originalFile);
+      if (snapshot) {
+        body = await snapshot;
+      }
+
+      if (!body && originalFile.size && originalFile.size <= MAX_SNAPSHOT_BYTES) {
+        bodySource = "fresh-read";
+        try {
+          const buffer = await originalFile.arrayBuffer();
+          body = new Blob([buffer], { type: originalFile.type });
+        } catch (_e) {
+          body = null;
+        }
+        if (!body) {
+          if (aborted) return;
+          snapshots.delete(originalFile);
+          const errorMsg = `Could not read "${originalFile.name}". Please remove it and add it again.`;
+          emit("error", errorMsg);
+          error(errorMsg);
+          return;
+        }
+      }
+
+      // Large files with no snapshot: stream the File directly, which already
+      // uploads reliably and avoids copying hundreds of MB into memory.
+      if (!body) {
+        body = originalFile;
+        bodySource = "stream";
+      }
+
+      if (aborted) return;
+      send(body, bodySource, 0);
+    };
+
+    start();
 
     return {
       abort: () => {
@@ -189,6 +274,7 @@ const server = {
         if (xhr) {
           xhr.abort();
         }
+        snapshots.delete(originalFile);
         abort();
       }
     };
@@ -271,6 +357,8 @@ const onUpdateFiles = (newFileList) => {
     :label-idle="labelIdle"
     :oninit="oninit"
     credits="false"
+    @addfile="onAddFile"
+    @removefile="onRemoveFile"
     @processfilestart="$emit('processing-start')"
     @updatefiles="onUpdateFiles"
   />
