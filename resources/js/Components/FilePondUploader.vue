@@ -77,6 +77,16 @@ const server = {
 
     const send = async () => {
       const file = originalFile;
+      const startedAt = Date.now();
+      const diagnostics = () => {
+        const elapsedSec = ((Date.now() - startedAt) / 1000).toFixed(1);
+        const sizeMb = file.size ? (file.size / (1024 * 1024)).toFixed(2) : "?";
+        return (
+          `[readyState=${xhr ? xhr.readyState : "?"} ` +
+          `online=${typeof navigator !== "undefined" ? navigator.onLine : "?"} ` +
+          `elapsed=${elapsedSec}s size=${sizeMb}MB type=${file.type || "?"}]`
+        );
+      };
 
       const formData = new FormData();
       formData.append("image", file);
@@ -126,15 +136,14 @@ const server = {
 
       xhr.addEventListener("error", () => {
         if (aborted) return;
-        const errorMsg = "Upload failed due to network error";
+        const errorMsg = `Upload failed due to network error ${diagnostics()}`;
         emit("error", errorMsg);
         error(errorMsg);
       });
 
       xhr.addEventListener("timeout", () => {
         if (aborted) return;
-        const errorMsg =
-          "Upload timed out. The file may be too large or your connection is slow.";
+        const errorMsg = `Upload timed out. The file may be too large or your connection is slow. ${diagnostics()}`;
         emit("error", errorMsg);
         error(errorMsg);
       });
