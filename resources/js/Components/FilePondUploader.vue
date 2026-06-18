@@ -75,9 +75,18 @@ const server = {
     let aborted = false;
     let xhr = null;
 
-    const send = async () => {
+    // Mobile WiFi radios sometimes drop the very first connection attempt
+    // (DNS/TCP/TLS handshake) when waking from a power-saving sleep state,
+    // surfacing as an instant XHR "error" event before any bytes are sent.
+    // Since nothing reached the server yet, retrying is safe and avoids
+    // bothering the user with a transient, self-resolving network hiccup.
+    const MAX_NETWORK_ERROR_RETRIES = 2;
+    const RETRY_BACKOFF_MS = 800;
+
+    const send = async (attempt = 0) => {
       const file = originalFile;
       const startedAt = Date.now();
+      let bytesSent = 0;
       const diagnostics = () => {
         const elapsedSec = ((Date.now() - startedAt) / 1000).toFixed(1);
         const sizeMb = file.size ? (file.size / (1024 * 1024)).toFixed(2) : "?";
@@ -99,6 +108,7 @@ const server = {
 
       xhr.upload.addEventListener("progress", (e) => {
         if (!aborted && e.lengthComputable) {
+          bytesSent = e.loaded;
           progress(true, e.loaded, e.total);
         }
       });
@@ -136,6 +146,14 @@ const server = {
 
       xhr.addEventListener("error", () => {
         if (aborted) return;
+
+        if (bytesSent === 0 && attempt < MAX_NETWORK_ERROR_RETRIES) {
+          setTimeout(() => {
+            if (!aborted) send(attempt + 1);
+          }, RETRY_BACKOFF_MS * (attempt + 1));
+          return;
+        }
+
         const errorMsg = `Upload failed due to network error ${diagnostics()}`;
         emit("error", errorMsg);
         error(errorMsg);
