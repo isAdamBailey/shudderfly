@@ -93,10 +93,10 @@ const onUpdateFiles = (items) => {
 </script>
 
 <template>
-    <!-- maxParallelUploads=1: each chunk request shares the same PHP session,
-    which serializes on its file lock at write time. With FilePond's default of
-    2 files in flight, that contention surfaces as upload failures on slow
-    mobile connections once more than one file is uploading at once. -->
+    <!-- chunkForce: FilePond only chunks files larger than chunkSize by default,
+    so most phone photos (under 5MB) would otherwise upload as a single
+    unresumable POST - the same failure mode the chunked/resumable rewrite was
+    meant to fix. Force every file through the chunked path regardless of size. -->
     <FilePond
         ref="pond"
         v-model="files"
@@ -104,9 +104,9 @@ const onUpdateFiles = (items) => {
         :accepted-file-types="acceptedFileTypes"
         :server="server"
         :chunk-uploads="true"
+        :chunk-force="true"
         :chunk-size="5242880"
         :chunk-retry-delays="[500, 1000, 3000]"
-        :max-parallel-uploads="1"
         :max-file-size="maxFileSize"
         :label-idle="labelIdle"
         name="image"
