@@ -36,6 +36,9 @@
     "vue": "^3.2.41"
   },
   "dependencies": {
+    "@dicebear/adventurer-neutral": "^9.4.2",
+    "@dicebear/avataaars-neutral": "^9.4.2",
+    "@dicebear/big-ears-neutral": "^9.4.2",
     "@dicebear/core": "^9.2.4",
     "@dicebear/fun-emoji": "^9.2.4",
     "@googlemaps/js-api-loader": "^2.0.2",

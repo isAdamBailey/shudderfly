@@ -78,13 +78,16 @@ const getSvgWithDimensions = (svg) => {
         </div>
       </div>
 
-      <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+      <div
+        class="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-9 lg:grid-cols-10 gap-2"
+      >
         <button
           v-for="avatar in avatars"
           :key="avatar.id"
           type="button"
+          :title="avatar.name"
           :class="[
-            'relative p-3 rounded-lg border-2 transition-all hover:scale-105',
+            'relative p-1 rounded-md border-2 transition-all hover:scale-105',
             form.avatar === avatar.id
               ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
               : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',
@@ -94,18 +97,15 @@ const getSvgWithDimensions = (svg) => {
           @click="selectAvatar(avatar.id)"
         >
           <div
-            class="w-full aspect-square flex items-center justify-center"
+            class="w-full aspect-square flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
             v-html="getSvgWithDimensions(avatar.svg)"
           ></div>
-          <p class="mt-2 text-xs text-center text-gray-600 dark:text-gray-400">
-            {{ avatar.name }}
-          </p>
           <div
             v-if="form.avatar === avatar.id"
-            class="absolute top-1 right-1 w-5 h-5 bg-blue-500 dark:bg-blue-400 rounded-full flex items-center justify-center"
+            class="absolute top-0.5 right-0.5 w-4 h-4 bg-blue-500 dark:bg-blue-400 rounded-full flex items-center justify-center"
           >
             <svg
-              class="w-3 h-3 text-white"
+              class="w-2.5 h-2.5 text-white"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
