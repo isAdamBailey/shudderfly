@@ -1,6 +1,7 @@
 <script setup>
 import { usePage } from "@inertiajs/vue3";
-import { defineExpose, onMounted, ref, watch } from "vue";
+import { ref } from "vue";
+import { FileStatus } from "filepond";
 import vueFilePond from "vue-filepond";
 // Import FilePond styles
 import "filepond-plugin-file-poster/dist/filepond-plugin-file-poster.css";
@@ -15,230 +16,99 @@ import FilePondPluginImagePreview from "filepond-plugin-image-preview";
 import FilePondPluginMediaPreview from "filepond-plugin-media-preview";
 
 const emit = defineEmits([
-  "error",
-  "processed",
-  "all-done",
-  "queue-update",
-  "processing-start"
+    "error",
+    "all-done",
+    "queue-update",
+    "processing-start",
 ]);
 
-const props = defineProps({
-  uploadUrl: { type: String, required: true },
-  allowMultiple: { type: Boolean, default: false },
-  acceptedFileTypes: { type: Array, default: () => ["image/*", "video/*"] },
-  extraData: { type: Object, default: () => ({}) },
-  labelIdle: {
-    type: String,
-    default:
-      'Drag & Drop your files or <span class="filepond--label-action">Browse</span>'
-  },
-  instantUpload: { type: Boolean, default: false },
-  maxFileSize: { type: [String, Number], default: null } // e.g. '512MB' or 536870912
+defineProps({
+    allowMultiple: { type: Boolean, default: false },
+    acceptedFileTypes: { type: Array, default: () => ["image/*", "video/*"] },
+    labelIdle: {
+        type: String,
+        default:
+            'Drag & Drop your files or <span class="filepond--label-action">Browse</span>',
+    },
+    maxFileSize: { type: [String, Number], default: null }, // e.g. '512MB' or 536870912
 });
 
 const FilePond = vueFilePond(
-  FilePondPluginFileValidateType,
-  FilePondPluginImagePreview,
-  FilePondPluginFilePoster,
-  FilePondPluginMediaPreview
+    FilePondPluginFileValidateType,
+    FilePondPluginImagePreview,
+    FilePondPluginFilePoster,
+    FilePondPluginMediaPreview
 );
 
 const pond = ref(null);
+const files = ref([]);
 const page = usePage();
 
-const calculateUploadTimeout = (fileSizeBytes) => {
-  const MIN_TIMEOUT_MS = 5 * 60 * 1000;
-  const MAX_TIMEOUT_MS = 2 * 60 * 60 * 1000;
-  const MIN_BANDWIDTH_BYTES_PER_SEC = 62500;
-  const BUFFER_MULTIPLIER = 1.5;
-
-  if (!fileSizeBytes || fileSizeBytes <= 0) {
-    return MIN_TIMEOUT_MS;
-  }
-
-  const calculatedTimeout =
-    (fileSizeBytes / MIN_BANDWIDTH_BYTES_PER_SEC) * BUFFER_MULTIPLIER * 1000;
-
-  return Math.max(MIN_TIMEOUT_MS, Math.min(MAX_TIMEOUT_MS, calculatedTimeout));
-};
-
+// laravel-filepond exposes every action on the same /filepond URL, differentiated
+// by HTTP verb (POST/PATCH/HEAD/DELETE). FilePond's transfer layer handles the
+// chunked + resumable upload, so a dropped chunk on a flaky mobile connection is
+// retried/resumed instead of failing the whole file.
 const server = {
-  process: (
-    fieldName,
-    originalFile,
-    metadata,
-    load,
-    error,
-    progress,
-    abort
-  ) => {
-    let aborted = false;
-    let xhr = null;
-
-    const send = async () => {
-      const file = originalFile;
-
-      const formData = new FormData();
-      formData.append("image", file);
-
-      Object.keys(props.extraData).forEach((key) => {
-        formData.append(key, props.extraData[key]);
-      });
-
-      xhr = new XMLHttpRequest();
-
-      xhr.upload.addEventListener("progress", (e) => {
-        if (!aborted && e.lengthComputable) {
-          progress(true, e.loaded, e.total);
-        }
-      });
-
-      xhr.addEventListener("load", () => {
-        if (aborted) return;
-
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const response = JSON.parse(xhr.responseText);
-            const serverId = response?.id || `${Date.now()}`;
-            load(serverId);
-            emit("processed", {
-              name: file.name,
-              size: file.size,
-              type: file.type
-            });
-          } catch (_e) {
-            load(`${Date.now()}`);
-          }
-        } else {
-          let serverMsg = "";
-          try {
-            serverMsg = JSON.parse(xhr.responseText)?.message || "";
-          } catch (_e) {
-            // response wasn't JSON (e.g. an HTML error page)
-          }
-          const errorMsg = serverMsg
-            ? `Upload failed (${xhr.status}): ${serverMsg}`
-            : `Upload failed (${xhr.status})`;
-          emit("error", errorMsg);
-          error(errorMsg);
-        }
-      });
-
-      xhr.addEventListener("error", () => {
-        if (aborted) return;
-        const errorMsg = "Upload failed due to network error";
-        emit("error", errorMsg);
-        error(errorMsg);
-      });
-
-      xhr.addEventListener("timeout", () => {
-        if (aborted) return;
-        const errorMsg =
-          "Upload timed out. The file may be too large or your connection is slow.";
-        emit("error", errorMsg);
-        error(errorMsg);
-      });
-
-      xhr.open("POST", props.uploadUrl);
-      xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
-      xhr.setRequestHeader("X-CSRF-TOKEN", page.props.csrf_token);
-      xhr.timeout = calculateUploadTimeout(file.size);
-
-      xhr.send(formData);
-    };
-
-    // initial send
-    send();
-
-    return {
-      abort: () => {
-        aborted = true;
-        if (xhr) {
-          xhr.abort();
-        }
-        abort();
-      }
-    };
-  },
-  revert: null
+    url: "/filepond",
+    headers: { "X-CSRF-TOKEN": page.props.csrf_token },
 };
 
-// FilePond ItemStatus values we care about.
-const STATUS = {
-  PROCESSING: 3,
-  PROCESSING_COMPLETE: 5,
-  PROCESSING_ERROR: 6,
-  LOADING: 7,
-  LOAD_ERROR: 8,
-  PROCESSING_QUEUED: 9
-};
-
-const isActive = (s) =>
-  s === STATUS.PROCESSING ||
-  s === STATUS.PROCESSING_QUEUED ||
-  s === STATUS.LOADING;
-const isErrored = (s) =>
-  s === STATUS.PROCESSING_ERROR || s === STATUS.LOAD_ERROR;
-
-const files = ref([]);
-watch(files, (newFiles) => {
-  try {
-    emit("queue-update", Array.isArray(newFiles) ? newFiles.length : 0);
-  } catch (_e) {
-    // ignore
-  }
-
-  if (!newFiles.length) return;
-
-  // Wait until nothing is actively uploading/queued before deciding.
-  if (newFiles.some((f) => isActive(f.status))) return;
-
-  // Only signal "all-done" on a clean batch: at least one completed upload and
-  // no errored files. If any file errored we keep it in the queue (status
-  // PROCESSING_ERROR) so the Retry button has something to re-process instead
-  // of wiping the queue and closing the form.
-  const anyErrored = newFiles.some((f) => isErrored(f.status));
-  const anyComplete = newFiles.some(
-    (f) => f.status === STATUS.PROCESSING_COMPLETE
-  );
-  if (!anyErrored && anyComplete) {
-    emit("all-done");
-  }
-});
-
-// Process all queued/errored files. Calling processFiles() with no arguments
-// lets FilePond decide what to (re)process: it skips files that are already
-// PROCESSING_COMPLETE so a retry never re-uploads files that already succeeded,
-// while errored files (PROCESSING_ERROR) are re-queued.
-const process = () => pond.value?.processFiles();
+// Encrypted temporary-upload ids for files that finished uploading. These are
+// submitted with the form and resolved back to files server-side.
+const getServerIds = () =>
+    (pond.value?.getFiles?.() || []).map((f) => f.serverId).filter(Boolean);
 const getFileCount = () => (pond.value?.getFiles?.() || []).length;
 const removeFiles = () => pond.value?.removeFiles?.();
+// FilePond's documented retry/resume — re-processes queued or errored items.
+const process = () => pond.value?.processFiles?.();
 
-defineExpose({ process, getFileCount, removeFiles, getPond: () => pond.value });
+defineExpose({
+    getServerIds,
+    getFileCount,
+    removeFiles,
+    process,
+    getPond: () => pond.value,
+});
 
-onMounted(() => {});
+const onProcessFile = (error) => {
+    if (error) {
+        emit("error", error.body || error.main || "Upload failed.");
+    }
+};
 
-// Completion is signalled by the status-aware watch on `files`, not here, so a
-// batch that finished with errors does not get treated as a success.
-const oninit = () => {};
+const onProcessFiles = () => {
+    // Batch finished. Only signal success when no file is left in an error state,
+    // so errored files stay in the queue for the user to retry.
+    const hasError = (pond.value?.getFiles?.() || []).some(
+        (f) => f.status === FileStatus.PROCESSING_ERROR
+    );
+    if (!hasError) {
+        emit("all-done");
+    }
+};
 
-const onUpdateFiles = (newFileList) => {
-  emit("queue-update", newFileList.length);
+const onUpdateFiles = (items) => {
+    emit("queue-update", items.length);
 };
 </script>
 
 <template>
-  <FilePond
-    ref="pond"
-    v-model="files"
-    :allow-multiple="allowMultiple"
-    :accepted-file-types="acceptedFileTypes"
-    :server="server"
-    :instant-upload="instantUpload"
-    :label-idle="labelIdle"
-    :oninit="oninit"
-    credits="false"
-    @processfilestart="$emit('processing-start')"
-    @updatefiles="onUpdateFiles"
-  />
+    <FilePond
+        ref="pond"
+        v-model="files"
+        :allow-multiple="allowMultiple"
+        :accepted-file-types="acceptedFileTypes"
+        :server="server"
+        :chunk-uploads="true"
+        :chunk-size="5242880"
+        :chunk-retry-delays="[500, 1000, 3000]"
+        :max-file-size="maxFileSize"
+        :label-idle="labelIdle"
+        name="image"
+        credits="false"
+        @processfilestart="$emit('processing-start')"
+        @processfile="onProcessFile"
+        @processfiles="onProcessFiles"
+        @updatefiles="onUpdateFiles"
+    />
 </template>

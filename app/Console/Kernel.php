@@ -22,6 +22,11 @@ class Kernel extends ConsoleKernel
             ->timezone($weeklyTimezone)
             ->withoutOverlapping();
 
+        // Remove abandoned FilePond temporary uploads.
+        $schedule->command('filepond:clear')
+            ->daily()
+            ->withoutOverlapping();
+
         $schedule->command('users:generate-weekly-overviews')
             ->weeklyOn(0, '4:00')
             ->timezone($weeklyTimezone)
