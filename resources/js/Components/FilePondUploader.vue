@@ -93,6 +93,10 @@ const onUpdateFiles = (items) => {
 </script>
 
 <template>
+    <!-- chunkForce: FilePond only chunks files larger than chunkSize by default,
+    so most phone photos (under 5MB) would otherwise upload as a single
+    unresumable POST - the same failure mode the chunked/resumable rewrite was
+    meant to fix. Force every file through the chunked path regardless of size. -->
     <FilePond
         ref="pond"
         v-model="files"
@@ -100,6 +104,7 @@ const onUpdateFiles = (items) => {
         :accepted-file-types="acceptedFileTypes"
         :server="server"
         :chunk-uploads="true"
+        :chunk-force="true"
         :chunk-size="5242880"
         :chunk-retry-delays="[500, 1000, 3000]"
         :max-file-size="maxFileSize"
