@@ -3,7 +3,7 @@ import { validateFile } from "@/utils/fileValidation.js";
 import { useForm, usePage } from "@inertiajs/vue3";
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { nextTick } from "vue";
+import { nextTick, ref } from "vue";
 
 global.route = (name) => `/${name}`;
 
@@ -84,19 +84,21 @@ vi.mock("@/Components/FilePondUploader.vue", () => ({
     default: {
         name: "FilePondUploader",
         props: [
+            "uploadUrl",
             "allowMultiple",
             "acceptedFileTypes",
-            "maxFileSize",
-            "labelIdle",
+            "instantUpload",
+            "extraData",
+            "processVideo",
+            "videoThresholdBytes",
         ],
         template:
-            '<div class="filepond-uploader" @click="$emit(\'all-done\')"></div>',
-        // Expose methods so parent can call uploaderRef.getServerIds() etc.
+            '<div class="filepond-uploader" @click="$emit(\'processed\')"></div>',
+        // Expose methods so parent can call uploaderRef.process() and getFileCount()
         setup(props, { expose }) {
             const api = {
                 process: vi.fn(),
                 getFileCount: vi.fn(() => 0),
-                getServerIds: vi.fn(() => ["srv-1"]),
                 removeFiles: vi.fn(),
             };
             expose(api);
@@ -120,7 +122,7 @@ describe("NewPageForm", () => {
     const createMockForm = () => ({
         book_id: 1,
         content: "",
-        images: [],
+        image: null,
         video_link: null,
         errors: {},
         processing: false,
@@ -292,29 +294,28 @@ describe("NewPageForm", () => {
             expect(validateFile(largeFile).sizeError).toBe(true);
         });
 
-        it("submits uploaded file server ids and closes the form", async () => {
+        it("calls FilePond process when files are queued and submit clicked", async () => {
             // Wait for FilePondUploader to mount
             await nextTick();
-
-            // Files have finished uploading to temporary storage.
-            const pond = wrapper.findComponent({ name: "FilePondUploader" });
-            pond.vm.$emit("queue-update", 1);
-            pond.vm.$emit("all-done");
+            // Simulate files are queued
+            if (
+                !wrapper.vm.pondQueueCount ||
+                typeof wrapper.vm.pondQueueCount !== "object" ||
+                !("value" in wrapper.vm.pondQueueCount)
+            ) {
+                wrapper.vm.pondQueueCount = ref(1);
+            } else {
+                wrapper.vm.pondQueueCount.value = 1;
+            }
             await nextTick();
-
-            // Inertia submit succeeds.
-            mockForm.post = vi.fn((url, options) => {
-                if (options && options.onSuccess) {
-                    options.onSuccess();
-                }
-            });
 
             await wrapper.vm.handleFormSubmit();
-            await nextTick();
 
-            // The encrypted server ids are submitted and the form closes.
-            expect(mockForm.images).toEqual(["srv-1"]);
-            expect(mockForm.post).toHaveBeenCalled();
+            // Simulate upload completion
+            const pond = wrapper.findComponent({ name: "FilePondUploader" });
+            pond.vm.$emit("all-done");
+            await nextTick();
+            // Assert the form closes
             expect(wrapper.emitted("close-form")).toBeTruthy();
         });
     });

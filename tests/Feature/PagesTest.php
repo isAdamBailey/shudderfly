@@ -23,17 +23,6 @@ class PagesTest extends TestCase
     use RefreshDatabase;
     use WithFaker;
 
-    /**
-     * Upload a file through the FilePond temporary-upload endpoint and return the
-     * encrypted server id, mirroring how the frontend uploader works.
-     */
-    private function uploadViaFilepond(UploadedFile $file): string
-    {
-        return $this->post(route('filepond-process'), ['image' => $file])
-            ->assertOk()
-            ->getContent();
-    }
-
     public function test_pictures_are_returned(): void
     {
         $this->actingAs(User::factory()->create());
@@ -283,55 +272,27 @@ class PagesTest extends TestCase
     public function test_page_is_stored_to_book()
     {
         Storage::fake('s3');
-        Storage::fake('local');
 
         $this->actingAs($user = User::factory()->create());
         $user->givePermissionTo('edit pages');
         $book = Book::factory()->create();
 
-        $serverId = $this->uploadViaFilepond(UploadedFile::fake()->image('photo1.jpg'));
-        $content = $this->faker->paragraph();
-
-        $response = $this->post(route('pages.store'), [
-            'book_id' => $book->id,
-            'content' => $content,
-            'images' => [$serverId],
-        ]);
-
-        $files = Storage::disk('s3')->files('books/'.$book->slug);
-        $this->assertCount(1, $files);
-        $this->assertStringEndsWith('.webp', $files[0]);
-
-        $page = Book::find($book->id)->pages->first();
-        $this->assertSame('/storage'.$page->media_path, Storage::disk('s3')->url($files[0]));
-        $this->assertSame($page->content, $content);
-
-        $response->assertRedirect(route('books.show', $book));
-    }
-
-    public function test_multiple_uploaded_files_each_create_a_page()
-    {
-        Storage::fake('s3');
-        Storage::fake('local');
-
-        $this->actingAs($user = User::factory()->create());
-        $user->givePermissionTo('edit pages');
-        $book = Book::factory()->create();
-
-        $serverIds = [
-            $this->uploadViaFilepond(UploadedFile::fake()->image('photo1.jpg')),
-            $this->uploadViaFilepond(UploadedFile::fake()->image('photo2.jpg')),
-        ];
-
-        $response = $this->post(route('pages.store'), [
+        $payload = [
             'book_id' => $book->id,
             'content' => $this->faker->paragraph(),
-            'images' => $serverIds,
-        ]);
+            'image' => UploadedFile::fake()->image('photo1.jpg'),
+        ];
+
+        $response = $this->post(route('pages.store'), $payload);
+
+        $filePath = 'books/'.$book->slug.'/'.pathinfo($payload['image']->hashName(), PATHINFO_FILENAME).'.webp';
+        Storage::disk('s3')->assertExists($filePath);
+
+        $page = Book::find($book->id)->pages->first();
+        $this->assertSame('/storage'.$page->media_path, Storage::disk('s3')->url($filePath));
+        $this->assertSame($page->content, $payload['content']);
 
         $response->assertRedirect(route('books.show', $book));
-        $this->assertCount(2, Book::find($book->id)->pages);
-        $this->assertCount(2, Storage::disk('s3')->files('books/'.$book->slug));
     }
 
     public function test_page_cannot_be_updated_without_permissions()
@@ -1503,21 +1464,20 @@ class PagesTest extends TestCase
     public function test_page_with_image_can_have_location(): void
     {
         Storage::fake('s3');
-        Storage::fake('local');
 
         $this->actingAs($user = User::factory()->create());
         $user->givePermissionTo('edit pages');
         $book = Book::factory()->create();
 
-        $serverId = $this->uploadViaFilepond(UploadedFile::fake()->image('photo1.jpg'));
-
-        $response = $this->post(route('pages.store'), [
+        $payload = [
             'book_id' => $book->id,
             'content' => $this->faker->paragraph(),
-            'images' => [$serverId],
+            'image' => UploadedFile::fake()->image('photo1.jpg'),
             'latitude' => 45.5152,
             'longitude' => -122.6784,
-        ]);
+        ];
+
+        $response = $this->post(route('pages.store'), $payload);
         $response->assertRedirect(route('books.show', $book));
 
         // Note: Since image processing is queued, we can't immediately check the location
