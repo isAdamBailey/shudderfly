@@ -172,24 +172,24 @@ class ProfileController extends Controller
     /**
      * Get the list of allowed avatar IDs.
      *
+     * Must stay in sync with the styles defined in
+     * resources/js/constants/avatars.js (12 avatars per style).
+     *
      * @return array<string>
      */
     protected function getAllowedAvatarIds(): array
     {
-        return [
-            'avatar-1',
-            'avatar-2',
-            'avatar-3',
-            'avatar-4',
-            'avatar-5',
-            'avatar-6',
-            'avatar-7',
-            'avatar-8',
-            'avatar-9',
-            'avatar-10',
-            'avatar-11',
-            'avatar-12',
-        ];
+        $stylePrefixes = ['avatar', 'bigears', 'avataaars', 'adventurer'];
+        $countPerStyle = 12;
+
+        $ids = [];
+        foreach ($stylePrefixes as $prefix) {
+            for ($i = 1; $i <= $countPerStyle; $i++) {
+                $ids[] = "{$prefix}-{$i}";
+            }
+        }
+
+        return $ids;
     }
 
     /**
