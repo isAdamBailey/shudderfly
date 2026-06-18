@@ -192,7 +192,9 @@ const hasCoverImage = computed(() => {
 });
 
 const reloadBook = () => {
-    window.location.reload();
+    const url = new URL(window.location.href);
+    url.searchParams.delete("page");
+    window.location.href = url.toString();
 };
 
 const bookCoverRef = ref(null);
