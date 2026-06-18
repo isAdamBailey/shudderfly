@@ -287,6 +287,9 @@ const submitTextOrLinkOnly = async () => {
 // FilePond event handlers
 const onPondError = (msg) => {
   singleError.value = msg || "Upload error.";
+  // Reset uploading state so the UI isn't stuck on "Uploading..." and the
+  // main/Retry buttons become interactive again.
+  isUploading.value = false;
   scrollToSingleError();
 };
 

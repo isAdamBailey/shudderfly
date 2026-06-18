@@ -383,7 +383,7 @@ class PageController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StorePageRequest $request): Redirector|RedirectResponse
+    public function store(StorePageRequest $request): Redirector|RedirectResponse|JsonResponse
     {
         $book = Book::find($request->book_id);
         $successMessage = __('messages.page.created');
@@ -423,6 +423,14 @@ class PageController extends Controller
                         throw $e;
                     }
                 }
+            }
+
+            // The FilePond uploader posts via a plain XHR (no X-Inertia header)
+            // and only needs a lightweight acknowledgement. Returning JSON here
+            // avoids forcing the XHR to follow a 302 and download the full
+            // books.show HTML page, which adds latency and connection-drop risk.
+            if (! $request->header('X-Inertia')) {
+                return response()->json(['success' => true, 'message' => $successMessage]);
             }
         } else {
             // If no file is uploaded, create the page immediately

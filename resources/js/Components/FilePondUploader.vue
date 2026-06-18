@@ -1,7 +1,6 @@
 <script setup>
 import { usePage } from "@inertiajs/vue3";
 import { defineExpose, onMounted, ref, watch } from "vue";
-import { isImageMimeType } from "@/mediaHelpers";
 import vueFilePond from "vue-filepond";
 // Import FilePond styles
 import "filepond-plugin-file-poster/dist/filepond-plugin-file-poster.css";
@@ -111,7 +110,15 @@ const server = {
             load(`${Date.now()}`);
           }
         } else {
-          const errorMsg = `Upload failed (${xhr.status})`;
+          let serverMsg = "";
+          try {
+            serverMsg = JSON.parse(xhr.responseText)?.message || "";
+          } catch (_e) {
+            // response wasn't JSON (e.g. an HTML error page)
+          }
+          const errorMsg = serverMsg
+            ? `Upload failed (${xhr.status}): ${serverMsg}`
+            : `Upload failed (${xhr.status})`;
           emit("error", errorMsg);
           error(errorMsg);
         }
@@ -156,6 +163,23 @@ const server = {
   revert: null
 };
 
+// FilePond ItemStatus values we care about.
+const STATUS = {
+  PROCESSING: 3,
+  PROCESSING_COMPLETE: 5,
+  PROCESSING_ERROR: 6,
+  LOADING: 7,
+  LOAD_ERROR: 8,
+  PROCESSING_QUEUED: 9
+};
+
+const isActive = (s) =>
+  s === STATUS.PROCESSING ||
+  s === STATUS.PROCESSING_QUEUED ||
+  s === STATUS.LOADING;
+const isErrored = (s) =>
+  s === STATUS.PROCESSING_ERROR || s === STATUS.LOAD_ERROR;
+
 const files = ref([]);
 watch(files, (newFiles) => {
   try {
@@ -163,21 +187,30 @@ watch(files, (newFiles) => {
   } catch (_e) {
     // ignore
   }
-  const stillProcessing = newFiles.some((f) => f.status && f.status < 5);
-  if (!stillProcessing && newFiles.length > 0) {
+
+  if (!newFiles.length) return;
+
+  // Wait until nothing is actively uploading/queued before deciding.
+  if (newFiles.some((f) => isActive(f.status))) return;
+
+  // Only signal "all-done" on a clean batch: at least one completed upload and
+  // no errored files. If any file errored we keep it in the queue (status
+  // PROCESSING_ERROR) so the Retry button has something to re-process instead
+  // of wiping the queue and closing the form.
+  const anyErrored = newFiles.some((f) => isErrored(f.status));
+  const anyComplete = newFiles.some(
+    (f) => f.status === STATUS.PROCESSING_COMPLETE
+  );
+  if (!anyErrored && anyComplete) {
     emit("all-done");
   }
 });
 
-const process = () => {
-  const allFiles = pond.value?.getFiles?.() ?? [];
-  if (!allFiles.length) return pond.value?.processFiles();
-  const sorted = [
-    ...allFiles.filter((f) => isImageMimeType(f.fileType)),
-    ...allFiles.filter((f) => !isImageMimeType(f.fileType)),
-  ];
-  pond.value?.processFiles(sorted.map((f) => f.id));
-};
+// Process all queued/errored files. Calling processFiles() with no arguments
+// lets FilePond decide what to (re)process: it skips files that are already
+// PROCESSING_COMPLETE so a retry never re-uploads files that already succeeded,
+// while errored files (PROCESSING_ERROR) are re-queued.
+const process = () => pond.value?.processFiles();
 const getFileCount = () => (pond.value?.getFiles?.() || []).length;
 const removeFiles = () => pond.value?.removeFiles?.();
 
@@ -185,18 +218,9 @@ defineExpose({ process, getFileCount, removeFiles, getPond: () => pond.value });
 
 onMounted(() => {});
 
-const oninit = () => {
-  try {
-    const instance = pond.value;
-    if (instance && typeof instance.on === "function") {
-      instance.on("processfiles", () => {
-        emit("all-done");
-      });
-    }
-  } catch (_e) {
-    // ignore
-  }
-};
+// Completion is signalled by the status-aware watch on `files`, not here, so a
+// batch that finished with errors does not get treated as a success.
+const oninit = () => {};
 
 const onUpdateFiles = (newFileList) => {
   emit("queue-update", newFileList.length);
@@ -210,13 +234,11 @@ const onUpdateFiles = (newFileList) => {
     :allow-multiple="allowMultiple"
     :accepted-file-types="acceptedFileTypes"
     :server="server"
-    :max-parallel-uploads="1"
     :instant-upload="instantUpload"
     :label-idle="labelIdle"
     :oninit="oninit"
     credits="false"
     @processfilestart="$emit('processing-start')"
-    @processfiles="$emit('all-done')"
     @updatefiles="onUpdateFiles"
   />
 </template>
