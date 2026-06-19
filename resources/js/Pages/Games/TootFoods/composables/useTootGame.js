@@ -3,6 +3,7 @@ import { reactive, ref, computed, onUnmounted } from "vue";
 export const ROUND_SECONDS = 30;
 const COMBO_WINDOW_MS = 1200;
 const MAX_COMBO_BONUS = 5;
+const START_SPEED_FACTOR = 0.25; // butt begins at 25% of top speed, ramps to 100%
 const FOOD_COUNT = 5;
 const HUD_SAFE_TOP = 96; // keep foods/butt clear of the score+timer HUD
 const EDGE_MARGIN = 56;
@@ -137,8 +138,11 @@ export function useTootGame(callbacks = {}) {
             state.combo = 0;
         }
 
-        // Butt wanders toward its target at a steady chase speed.
-        const speed = Math.max(150, Math.min(360, Math.min(bounds.w, bounds.h) * 0.95));
+        // Butt wanders toward its target. It starts slow and eases up to full
+        // speed as the round elapses, but never exceeds the top speed.
+        const maxSpeed = Math.max(120, Math.min(290, Math.min(bounds.w, bounds.h) * 0.78));
+        const elapsedFrac = Math.min(1, Math.max(0, 1 - remaining / ROUND_SECONDS));
+        const speed = maxSpeed * (START_SPEED_FACTOR + (1 - START_SPEED_FACTOR) * elapsedFrac);
         const dx = target.x - butt.x;
         const dy = target.y - butt.y;
         const dist = Math.hypot(dx, dy);
