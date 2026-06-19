@@ -396,6 +396,6 @@ class UserWeeklyOverviewService
             default => 'a fresh little gremlin on Shudderfly',
         };
 
-        return "{$user->name} is {$popularityPhrase}, radiating {$activityPhrase} energy this week.";
+        return "{$user->name} is {$popularityPhrase}, radiating {$activityPhrase} this week.";
     }
 }
