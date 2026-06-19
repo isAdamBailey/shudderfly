@@ -11,15 +11,19 @@ defineProps({
     playAgainLabel: { type: String, default: "Play Again" },
 });
 
-defineEmits(["play-again"]);
+const emit = defineEmits(["play-again"]);
+
+function playAgain() {
+    emit("play-again");
+}
 </script>
 
 <template>
     <div
-        class="game-end-screen absolute inset-0 z-50 flex touch-manipulation items-center justify-center bg-black/75 backdrop-blur-sm"
+        class="game-end-screen fixed inset-x-0 bottom-0 top-16 z-40 flex touch-manipulation items-center justify-center bg-black/75 p-3 backdrop-blur-sm sm:p-6"
     >
         <div
-            class="max-w-[min(90vw,28rem)] rounded-2xl border-2 border-theme-primary bg-game-modal px-[clamp(1.125rem,4vmin,2.75rem)] py-[clamp(1.25rem,4vmin,2.5rem)] text-center"
+            class="game-modal-panel max-w-[min(90vw,28rem)] rounded-2xl border-2 border-theme-primary bg-game-modal px-[clamp(1.125rem,4vmin,2.75rem)] py-[clamp(1.25rem,4vmin,2.5rem)] text-center"
         >
             <div
                 v-if="emoji"
@@ -47,7 +51,9 @@ defineEmits(["play-again"]);
                 type="button"
                 data-testid="game-end-play-again"
                 class="game-end-play-again mt-2 active:scale-95 !rounded-full !px-6 !py-2.5 !text-sm !font-extrabold !normal-case !tracking-normal transition-transform sm:!px-8 sm:!py-3 sm:!text-base"
-                @pointerdown.prevent="$emit('play-again')"
+                @pointerdown.prevent="playAgain"
+                @keydown.enter.prevent="playAgain"
+                @keydown.space.prevent="playAgain"
             >
                 {{ playAgainLabel }}
             </Button>
@@ -58,7 +64,7 @@ defineEmits(["play-again"]);
             </div>
             <Link
                 :href="route('games.index')"
-                class="mt-4 inline-block touch-manipulation text-[clamp(0.85rem,2.3vmin,0.98rem)] font-semibold text-yellow-300 transition-colors hover:text-yellow-100 hover:underline"
+                class="mt-4 inline-block touch-manipulation rounded-md text-[clamp(0.85rem,2.3vmin,0.98rem)] font-semibold text-game-modal-accent transition-[color,opacity] hover:underline hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-primary focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
             >
                 ← Back to games
             </Link>
@@ -68,15 +74,53 @@ defineEmits(["play-again"]);
 
 <style scoped>
 .game-end-screen {
-    animation: gameEndFadeIn 0.4s ease-out;
+    animation: gameModalBackdropIn 0.25s ease-out both;
 }
 
-@keyframes gameEndFadeIn {
+.game-modal-panel {
+    animation: gameModalPanelIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.game-end-emoji {
+    animation: gameModalEmojiIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+}
+
+@keyframes gameModalBackdropIn {
     from {
         opacity: 0;
     }
     to {
         opacity: 1;
+    }
+}
+
+@keyframes gameModalPanelIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes gameModalEmojiIn {
+    from {
+        opacity: 0;
+        transform: scale(0.6) rotate(-8deg);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) rotate(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .game-end-screen,
+    .game-modal-panel,
+    .game-end-emoji {
+        animation: gameModalBackdropIn 0.2s ease-out both;
     }
 }
 </style>

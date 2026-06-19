@@ -9,15 +9,19 @@ defineProps({
     introScript: { type: String, required: true },
     highScore: { type: Number, default: 0 },
     playLabel: { type: String, default: "Play" },
-    zIndex: { type: Number, default: 50 },
+    zIndex: { type: Number, default: 40 },
 });
 
-defineEmits(["play"]);
+const emit = defineEmits(["play"]);
+
+function play() {
+    emit("play");
+}
 </script>
 
 <template>
     <div
-        class="absolute inset-0 flex items-center justify-center touch-manipulation bg-black/75 p-3 backdrop-blur-md sm:p-6"
+        class="game-start-screen fixed inset-x-0 bottom-0 top-16 flex items-center justify-center touch-manipulation bg-black/75 p-3 backdrop-blur-md sm:p-6"
         role="dialog"
         aria-modal="true"
         aria-labelledby="game-start-title"
@@ -25,11 +29,11 @@ defineEmits(["play"]);
     >
         <div class="w-full max-w-xl">
             <div
-                class="rounded-2xl border-2 border-theme-primary bg-game-modal px-[clamp(1.125rem,4vmin,2.75rem)] py-[clamp(1.25rem,4vmin,2.5rem)] text-center"
+                class="game-modal-panel rounded-2xl border-2 border-theme-primary bg-game-modal px-[clamp(1.125rem,4vmin,2.75rem)] py-[clamp(1.25rem,4vmin,2.5rem)] text-center"
             >
                 <div
                     v-if="$slots.media"
-                    class="mb-1 text-[clamp(3rem,12vmin,5rem)] leading-none"
+                    class="game-start-media mb-1 text-[clamp(3rem,12vmin,5rem)] leading-none"
                 >
                     <slot name="media" />
                 </div>
@@ -47,21 +51,23 @@ defineEmits(["play"]);
                 </p>
                 <div
                     v-if="$slots.default"
-                    class="mb-4 text-[clamp(0.9rem,2.5vmin,1.05rem)] leading-relaxed text-gray-300 [&_p]:m-0"
+                    class="text-[clamp(0.9rem,2.5vmin,1.05rem)] leading-relaxed text-gray-300 [&_p]:m-0"
                 >
                     <slot />
                 </div>
-                <div v-if="$slots.extra" class="game-start-extra-wrap mb-4">
+                <div v-if="$slots.extra" class="game-start-extra-wrap mt-4">
                     <slot name="extra" />
                 </div>
                 <div
-                    class="flex flex-wrap items-center justify-center gap-[clamp(0.625rem,2.5vmin,0.875rem)]"
+                    class="mt-5 flex flex-wrap items-center justify-center gap-[clamp(0.625rem,2.5vmin,0.875rem)]"
                 >
                     <GameStartSpeechButton variant="panel" :script="introScript" />
                     <Button
                         type="button"
                         class="game-start-play active:scale-95 !rounded-full !px-6 !py-2.5 !text-sm !font-extrabold !normal-case !tracking-normal transition-transform sm:!px-8 sm:!py-3 sm:!text-base"
-                        @pointerdown.prevent="$emit('play')"
+                        @pointerdown.prevent="play"
+                        @keydown.enter.prevent="play"
+                        @keydown.space.prevent="play"
                     >
                         {{ playLabel }}
                     </Button>
@@ -74,7 +80,7 @@ defineEmits(["play"]);
                 </p>
                 <Link
                     :href="route('games.index')"
-                    class="mt-3 inline-block touch-manipulation text-[clamp(0.85rem,2.3vmin,0.98rem)] font-semibold text-yellow-300 transition-colors hover:text-yellow-100 hover:underline"
+                    class="mt-3 inline-block touch-manipulation rounded-md text-[clamp(0.85rem,2.3vmin,0.98rem)] font-semibold text-game-modal-accent transition-[color,opacity] hover:underline hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-primary focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
                 >
                     ← Back to games
                 </Link>
@@ -84,6 +90,57 @@ defineEmits(["play"]);
 </template>
 
 <style scoped>
+.game-start-screen {
+    animation: gameModalBackdropIn 0.25s ease-out both;
+}
+
+.game-modal-panel {
+    animation: gameModalPanelIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.game-start-media {
+    animation: gameModalEmojiIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+}
+
+@keyframes gameModalBackdropIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes gameModalPanelIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes gameModalEmojiIn {
+    from {
+        opacity: 0;
+        transform: scale(0.6) rotate(-8deg);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) rotate(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .game-start-screen,
+    .game-modal-panel,
+    .game-start-media {
+        animation: gameModalBackdropIn 0.2s ease-out both;
+    }
+}
+
 .game-start-extra-wrap :deep(.game-start-aside) {
     @apply mx-auto max-w-lg rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-left text-sm leading-relaxed text-gray-300 sm:px-4 sm:py-3 sm:text-[0.98rem];
 }
