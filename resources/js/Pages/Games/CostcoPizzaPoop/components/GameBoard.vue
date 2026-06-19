@@ -449,37 +449,44 @@ onUnmounted(() => {
     fill: rgba(122, 34, 50, 0.45);
     stroke: rgba(244, 170, 152, 0.65);
     stroke-width: 4;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: digestChurn 0.85s ease-in-out infinite;
 }
 
 .digest-stomach-inner {
     fill: rgba(255, 208, 164, 0.2);
     stroke: rgba(255, 188, 158, 0.25);
     stroke-width: 2;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: digestChurnGlow 1.8s ease-in-out infinite;
 }
 
 .digest-slice,
 .digest-intro-poop {
     font-size: 52px;
     line-height: 1;
+    transform-box: fill-box;
     transform-origin: center;
 }
 
 .digest-slice-a {
-    animation: digestSliceA 2.2s cubic-bezier(0.2, 0.8, 0.28, 1) forwards;
+    animation: digestSliceA 1.4s cubic-bezier(0.5, 0, 0.4, 1) forwards;
 }
 
 .digest-slice-b {
-    animation: digestSliceB 2.2s cubic-bezier(0.2, 0.8, 0.28, 1) forwards;
+    animation: digestSliceB 1.4s cubic-bezier(0.5, 0, 0.4, 1) forwards;
 }
 
 .digest-slice-c {
-    animation: digestSliceC 2.2s cubic-bezier(0.2, 0.8, 0.28, 1) forwards;
+    animation: digestSliceC 1.4s cubic-bezier(0.5, 0, 0.4, 1) forwards;
 }
 
 .digest-intro-poop {
     opacity: 0;
     filter: drop-shadow(0 0 0 rgba(78, 37, 23, 0));
-    animation: digestPoopDrop 1.15s cubic-bezier(0.2, 0.74, 0.28, 1) 1.2s forwards;
+    animation: digestPoopForm 1.25s cubic-bezier(0.22, 0.78, 0.3, 1) 1.15s forwards;
 }
 
 .hud {
@@ -594,82 +601,123 @@ onUnmounted(() => {
     opacity: 0;
 }
 
+/* Stomach kneading the slices into a churning mass. */
+@keyframes digestChurn {
+    0%,
+    100% {
+        transform: scale(1, 1);
+    }
+    32% {
+        transform: scale(1.07, 0.91);
+    }
+    64% {
+        transform: scale(0.94, 1.08);
+    }
+}
+
+/* Inner belly churns and brightens as the mass forms (~70% = the moment poop emerges). */
+@keyframes digestChurnGlow {
+    0% {
+        transform: scale(1, 1);
+        opacity: 0.18;
+    }
+    40% {
+        transform: scale(1.05, 0.95);
+        opacity: 0.34;
+    }
+    70% {
+        transform: scale(0.95, 1.07);
+        opacity: 0.72;
+    }
+    100% {
+        transform: scale(1, 1);
+        opacity: 0.28;
+    }
+}
+
+/* Slices spiral inward and compress into the belly — moderate spin, downward bias. */
 @keyframes digestSliceA {
     0% {
         opacity: 1;
-        transform: translate(-34px, -20px) rotate(0deg) scale(0.96);
+        transform: translate(-34px, -22px) rotate(-14deg) scale(1);
     }
-    44% {
+    55% {
         opacity: 1;
-        transform: translate(20px, -6px) rotate(540deg) scale(0.88);
+        transform: translate(-10px, 0) rotate(170deg) scale(0.76);
     }
-    72% {
-        opacity: 1;
-        transform: translate(0, 0) rotate(980deg) scale(0.44, 0.34);
+    82% {
+        opacity: 0.85;
+        transform: translate(0, 12px) rotate(300deg) scale(0.4, 0.3);
     }
     100% {
         opacity: 0;
-        transform: translate(0, 0) rotate(1150deg) scale(0.08);
+        transform: translate(0, 16px) rotate(360deg) scale(0.06);
     }
 }
 
 @keyframes digestSliceB {
     0% {
         opacity: 1;
-        transform: translate(30px, -12px) rotate(18deg) scale(1);
+        transform: translate(32px, -14px) rotate(16deg) scale(1);
     }
-    44% {
+    55% {
         opacity: 1;
-        transform: translate(-22px, 2px) rotate(-500deg) scale(0.9);
+        transform: translate(9px, 1px) rotate(-180deg) scale(0.78);
     }
-    72% {
-        opacity: 1;
-        transform: translate(0, 0) rotate(-920deg) scale(0.46, 0.35);
+    82% {
+        opacity: 0.85;
+        transform: translate(0, 12px) rotate(-320deg) scale(0.4, 0.3);
     }
     100% {
         opacity: 0;
-        transform: translate(0, 0) rotate(-1100deg) scale(0.08);
+        transform: translate(0, 16px) rotate(-380deg) scale(0.06);
     }
 }
 
 @keyframes digestSliceC {
     0% {
         opacity: 1;
-        transform: translate(4px, 28px) rotate(-22deg) scale(0.94);
+        transform: translate(2px, 26px) rotate(-20deg) scale(0.96);
     }
-    44% {
+    55% {
         opacity: 1;
-        transform: translate(3px, -24px) rotate(580deg) scale(0.88);
+        transform: translate(1px, 6px) rotate(200deg) scale(0.74);
     }
-    72% {
-        opacity: 1;
-        transform: translate(0, 0) rotate(1020deg) scale(0.42, 0.33);
+    82% {
+        opacity: 0.85;
+        transform: translate(0, 13px) rotate(330deg) scale(0.38, 0.28);
     }
     100% {
         opacity: 0;
-        transform: translate(0, 0) rotate(1220deg) scale(0.08);
+        transform: translate(0, 16px) rotate(400deg) scale(0.06);
     }
 }
 
-@keyframes digestPoopDrop {
+/* Poop forms in the belly with a squash-pop, then oozes down to its start. */
+@keyframes digestPoopForm {
     0% {
         opacity: 0;
-        transform: translateY(0) scale(0.2, 0.3) rotate(-22deg);
-        filter: drop-shadow(0 0 0 rgba(78, 37, 23, 0));
+        transform: translateY(0) scale(0.08, 0.12) rotate(-18deg);
+        filter: drop-shadow(0 0 0 rgba(120, 60, 30, 0));
     }
-    44% {
+    22% {
         opacity: 1;
-        transform: translateY(0) scale(1.14, 0.84) rotate(8deg);
-        filter: drop-shadow(0 0 12px rgba(78, 37, 23, 0.36));
+        transform: translateY(0) scale(1.22, 0.82) rotate(6deg);
+        filter: drop-shadow(0 0 16px rgba(150, 80, 40, 0.55));
     }
-    76% {
+    40% {
         opacity: 1;
-        transform: translateY(calc(var(--digest-drop) * 0.72)) scale(0.95, 1.08) rotate(-5deg);
-        filter: drop-shadow(0 0 8px rgba(78, 37, 23, 0.25));
+        transform: translateY(calc(var(--digest-drop) * 0.18)) scale(0.88, 1.14) rotate(-4deg);
+        filter: drop-shadow(0 0 10px rgba(120, 60, 30, 0.4));
+    }
+    74% {
+        opacity: 1;
+        transform: translateY(calc(var(--digest-drop) * 0.84)) scale(1.08, 0.92) rotate(3deg);
+        filter: drop-shadow(0 0 6px rgba(78, 37, 23, 0.3));
     }
     100% {
         opacity: 1;
-        transform: translateY(var(--digest-drop)) scale(1) rotate(0deg);
+        transform: translateY(var(--digest-drop)) scale(1, 1) rotate(0deg);
         filter: drop-shadow(0 0 0 rgba(78, 37, 23, 0));
     }
 }
@@ -677,6 +725,15 @@ onUnmounted(() => {
 @media (prefers-reduced-motion: reduce) {
     .progress-fill {
         transition: none;
+    }
+
+    .digest-stomach-shell,
+    .digest-stomach-inner {
+        animation: none;
+    }
+
+    .digest-stomach-inner {
+        opacity: 0.4;
     }
 
     .digest-slice-a,

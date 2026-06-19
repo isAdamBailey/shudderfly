@@ -22,10 +22,13 @@ function generateIntestinePath() {
 
     for (let i = 0; i < NUM_SEGMENTS; i++) {
         const y = Y_START + i * SEGMENT_HEIGHT;
-        const wave = Math.sin(i * 0.35) * 0.3 + 0.7;
-        const amplitude = (usableWidth * 0.16) * wave;
+        const t = i / (NUM_SEGMENTS - 1); // 0 at the top, 1 at the exit
+        // Winding is sharper and the bends swing wider the deeper you go.
+        const wave = Math.sin(i * 0.45) * 0.35 + 0.72;
+        const amplitude = (usableWidth * 0.2) * wave * (0.72 + 0.28 * t);
         const centerX = midX + direction * amplitude;
-        const wallGap = 104 + Math.max(0, 8 - i) * 3.2;
+        // Forgiving, wide entrance that tightens toward the exit.
+        const wallGap = 92 - t * 26 + Math.max(0, 8 - i) * 3.0;
 
         segments.push({
             y,
@@ -34,7 +37,9 @@ function generateIntestinePath() {
             rightWall: Math.min(SVG_WIDTH - PADDING, centerX + wallGap),
         });
 
-        if (i % 3 === 2) direction *= -1;
+        // Tighter zig-zag in the second half — turns come more often near the end.
+        const flipEvery = i < NUM_SEGMENTS / 2 ? 3 : 2;
+        if (i % flipEvery === flipEvery - 1) direction *= -1;
     }
 
     return segments;
