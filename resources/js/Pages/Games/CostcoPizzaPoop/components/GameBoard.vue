@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { Link } from "@inertiajs/vue3";
 import { SVG_WIDTH } from "../composables/useGameState.js";
 
 const props = defineProps({
@@ -74,7 +75,21 @@ const anusCenter = computed(() => {
     return { x: last.centerX, y: last.y + 100 };
 });
 
-const progressBarWidth = computed(() => `${(props.progress * 100).toFixed(1)}%`);
+const showSteerHint = ref(false);
+let steerHintTimer = null;
+
+watch(
+    () => props.controlsEnabled,
+    (enabled) => {
+        if (!enabled) return;
+        showSteerHint.value = true;
+        if (steerHintTimer) clearTimeout(steerHintTimer);
+        steerHintTimer = window.setTimeout(() => {
+            showSteerHint.value = false;
+            steerHintTimer = null;
+        }, 2600);
+    },
+);
 
 const digestIntro = computed(() => {
     const targetX = props.state.poopX || SVG_WIDTH / 2;
@@ -139,6 +154,7 @@ function onPointerDown(e) {
     if (!props.controlsEnabled) return;
     if (props.state.phase !== "playing") return;
     e.preventDefault();
+    showSteerHint.value = false;
     const p = clientToSvg(e.clientX, e.clientY);
     if (!p) return;
     dragActive = true;
@@ -185,6 +201,7 @@ function onPointerUp(e) {
 function onKeyDown(e) {
     if (!props.controlsEnabled) return;
     if (props.state.phase !== "playing") return;
+    showSteerHint.value = false;
     const step = 7;
     switch (e.key) {
         case "ArrowLeft":
@@ -217,6 +234,7 @@ onMounted(() => {
 
 onUnmounted(() => {
     stopDragLoop();
+    if (steerHintTimer) clearTimeout(steerHintTimer);
     window.removeEventListener("resize", updateSize);
     window.removeEventListener("keydown", onKeyDown);
     document.removeEventListener("pointermove", onPointerMove);
@@ -357,13 +375,16 @@ onUnmounted(() => {
 
         <div class="hud">
             <div class="hud-item">
-                <span class="hud-label">Hits</span>
+                <span class="hud-label">Wall hits</span>
                 <span class="hud-value">{{ state.collisions }}</span>
             </div>
             <div class="hud-item progress-wrap">
                 <span class="hud-label">Progress</span>
                 <div class="progress-bar">
-                    <div class="progress-fill" :style="{ width: progressBarWidth }"></div>
+                    <div
+                        class="progress-fill"
+                        :style="{ transform: `scaleX(${progress})` }"
+                    ></div>
                 </div>
             </div>
             <div class="hud-item">
@@ -371,6 +392,18 @@ onUnmounted(() => {
                 <span class="hud-value">{{ elapsedSeconds }}s</span>
             </div>
         </div>
+
+        <Link
+            :href="route('games.index')"
+            class="game-quit"
+            aria-label="Quit to games"
+        >✕</Link>
+
+        <transition name="steer-hint-fade">
+            <div v-if="showSteerHint" class="steer-hint" aria-hidden="true">
+                Drag to steer 👇
+            </div>
+        </transition>
     </div>
 </template>
 
@@ -496,10 +529,69 @@ onUnmounted(() => {
 }
 
 .progress-fill {
+    width: 100%;
     height: 100%;
     border-radius: 4px;
     background: linear-gradient(90deg, #d4606a, #4caf50);
-    transition: width 0.15s ease;
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 0.15s ease;
+}
+
+.game-quit {
+    position: absolute;
+    top: 6px;
+    left: 8px;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    background: rgba(20, 6, 8, 0.7);
+    color: #f0d0c0;
+    font-size: 1.1rem;
+    line-height: 1;
+    text-decoration: none;
+    pointer-events: auto;
+    transition: background-color 0.15s ease;
+}
+
+.game-quit:hover {
+    background: rgba(160, 60, 70, 0.7);
+}
+
+.game-quit:focus-visible {
+    outline: 2px solid #fbbf24;
+    outline-offset: 2px;
+}
+
+.steer-hint {
+    position: absolute;
+    left: 50%;
+    bottom: 14%;
+    transform: translateX(-50%);
+    z-index: 18;
+    padding: 8px 16px;
+    border-radius: 999px;
+    background: rgba(20, 6, 8, 0.82);
+    color: #ffe9d6;
+    font-size: clamp(0.95rem, 3vmin, 1.2rem);
+    font-weight: 800;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.steer-hint-fade-enter-active,
+.steer-hint-fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+
+.steer-hint-fade-enter-from,
+.steer-hint-fade-leave-to {
+    opacity: 0;
 }
 
 @keyframes digestSliceA {
@@ -579,6 +671,45 @@ onUnmounted(() => {
         opacity: 1;
         transform: translateY(var(--digest-drop)) scale(1) rotate(0deg);
         filter: drop-shadow(0 0 0 rgba(78, 37, 23, 0));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .progress-fill {
+        transition: none;
+    }
+
+    .digest-slice-a,
+    .digest-slice-b,
+    .digest-slice-c {
+        animation: digestSliceFade 0.7s ease forwards;
+    }
+
+    .digest-intro-poop {
+        animation: digestPoopFade 0.5s ease 0.9s forwards;
+    }
+
+    .steer-hint-fade-enter-active,
+    .steer-hint-fade-leave-active {
+        transition: opacity 0.2s ease;
+    }
+}
+
+@keyframes digestSliceFade {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes digestPoopFade {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
     }
 }
 </style>

@@ -23,26 +23,67 @@
             <span class="hud-value">{{ slicesLeft }}</span>
         </div>
 
-        <div
+        <Link
+            :href="route('games.index')"
+            class="game-quit"
+            aria-label="Quit to games"
+        >✕</Link>
+
+        <transition name="pizza-hint-fade">
+            <div v-if="showPizzaHint" class="pizza-hint" aria-hidden="true">
+                Drag a slice into the mouth 👇
+            </div>
+        </transition>
+
+        <button
             v-for="s in sliceList"
             v-show="!s.eaten"
             :key="s.id"
+            type="button"
             class="slice"
             :class="{ dragging: draggingId === s.id }"
             :style="sliceStyle(s)"
+            :aria-label="`Pizza slice ${s.id + 1} — drag into the mouth, or press Enter to eat`"
             @pointerdown.prevent="startDrag(s.id, $event)"
+            @keydown.enter.prevent="feedSlice(s.id)"
+            @keydown.space.prevent="feedSlice(s.id)"
         >
             🍕
-        </div>
+        </button>
 
         <div class="person-wrap">
-            <div class="person" aria-label="Hungry person">
-                <div class="person-face">
-                    <span class="person-eye person-eye-left" aria-hidden="true"></span>
-                    <span class="person-eye person-eye-right" aria-hidden="true"></span>
+            <div
+                class="person"
+                :class="{ anticipating, gulping }"
+                aria-label="Hungry person"
+            >
+                <div
+                    ref="faceRef"
+                    class="person-face"
+                    :style="{ '--gaze-x': `${gazeX}px`, '--gaze-y': `${gazeY}px` }"
+                >
+                    <span class="person-brow person-brow-left" aria-hidden="true"></span>
+                    <span class="person-brow person-brow-right" aria-hidden="true"></span>
+                    <span class="person-eye person-eye-left" aria-hidden="true">
+                        <span class="person-pupil"></span>
+                    </span>
+                    <span class="person-eye person-eye-right" aria-hidden="true">
+                        <span class="person-pupil"></span>
+                    </span>
+                    <span class="person-cheek person-cheek-left" aria-hidden="true"></span>
+                    <span class="person-cheek person-cheek-right" aria-hidden="true"></span>
                     <div class="person-mouth" aria-hidden="true">
+                        <span class="person-teeth"></span>
                         <span class="person-tongue"></span>
                         <div ref="mouthRef" class="mouth-hitbox"></div>
+                    </div>
+                    <div
+                        v-if="gulping"
+                        :key="chompCount"
+                        class="chomp-burst"
+                        aria-hidden="true"
+                    >
+                        <span></span><span></span><span></span><span></span><span></span>
                     </div>
                 </div>
             </div>
@@ -89,7 +130,7 @@ import GameBoard from "@/Pages/Games/CostcoPizzaPoop/components/GameBoard.vue";
 import { COSTCO_PIZZA_POOP_INTRO_SCRIPT } from "@/Pages/Games/shared/introScripts.js";
 import { useGameState } from "@/Pages/Games/CostcoPizzaPoop/composables/useGameState.js";
 import { useSound } from "@/Pages/Games/CostcoPizzaPoop/composables/useSound.js";
-import { usePage } from "@inertiajs/vue3";
+import { Link, usePage } from "@inertiajs/vue3";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
 const SLICE_COUNT = 3;
@@ -100,8 +141,16 @@ const VICTORY_TUNE_DELAY_MS = 300;
 const phase = ref("start");
 const gameEl = ref(null);
 const mouthRef = ref(null);
+const faceRef = ref(null);
 const gameW = ref(400);
 const gameH = ref(600);
+
+const gazeX = ref(0);
+const gazeY = ref(0);
+const anticipating = ref(false);
+const gulping = ref(false);
+const chompCount = ref(0);
+let gulpTimer = null;
 const sliceList = ref(
     Array.from({ length: SLICE_COUNT }, (_, id) => ({
         id,
@@ -113,6 +162,7 @@ const sliceList = ref(
     })),
 );
 const draggingId = ref(null);
+const showPizzaHint = ref(false);
 let dragOffsetX = 0;
 let dragOffsetY = 0;
 let activeMove = null;
@@ -231,6 +281,49 @@ function pointInMouth(px, py) {
     );
 }
 
+function mouthCenterLocal() {
+    if (!mouthRef.value || !gameEl.value) return null;
+    const m = mouthRef.value.getBoundingClientRect();
+    const g = gameEl.value.getBoundingClientRect();
+    return { x: m.left + m.width / 2 - g.left, y: m.top + m.height / 2 - g.top };
+}
+
+function faceCenterLocal() {
+    if (!faceRef.value || !gameEl.value) return null;
+    const f = faceRef.value.getBoundingClientRect();
+    const g = gameEl.value.getBoundingClientRect();
+    return { x: f.left + f.width / 2 - g.left, y: f.top + f.height / 2 - g.top };
+}
+
+function updateFaceFocus(px, py) {
+    const fc = faceCenterLocal();
+    if (fc) {
+        gazeX.value = Math.max(-9, Math.min(9, (px - fc.x) * 0.045));
+        gazeY.value = Math.max(-5, Math.min(8, (py - fc.y) * 0.045));
+    }
+    const mc = mouthCenterLocal();
+    if (mc) {
+        anticipating.value = Math.hypot(px - mc.x, py - mc.y) < 170;
+    }
+}
+
+function resetFaceFocus() {
+    gazeX.value = 0;
+    gazeY.value = 0;
+    anticipating.value = false;
+}
+
+function triggerGulp() {
+    anticipating.value = false;
+    chompCount.value += 1;
+    gulping.value = true;
+    if (gulpTimer) clearTimeout(gulpTimer);
+    gulpTimer = window.setTimeout(() => {
+        gulping.value = false;
+        gulpTimer = null;
+    }, 460);
+}
+
 function removeDragListeners() {
     if (activeMove) {
         document.removeEventListener("pointermove", activeMove);
@@ -240,6 +333,19 @@ function removeDragListeners() {
         document.removeEventListener("pointerup", activeEnd);
         document.removeEventListener("pointercancel", activeEnd);
         activeEnd = null;
+    }
+}
+
+function feedSlice(id) {
+    if (phase.value !== "pizza") return;
+    const s = sliceList.value.find((x) => x.id === id);
+    if (!s || s.eaten) return;
+    s.eaten = true;
+    showPizzaHint.value = false;
+    triggerGulp();
+    playChomp();
+    if (slicesLeft.value === 0) {
+        startIntestineRun();
     }
 }
 
@@ -266,6 +372,7 @@ function startDrag(id, e) {
             SLICE_SIZE / 2,
             Math.min(gameH.value - SLICE_SIZE / 2, p.y - dragOffsetY),
         );
+        updateFaceFocus(s.x, s.y);
     };
 
     activeEnd = () => {
@@ -274,15 +381,12 @@ function startDrag(id, e) {
         draggingId.value = null;
 
         if (pointInMouth(s.x, s.y)) {
-            s.eaten = true;
-            playChomp();
-            if (slicesLeft.value === 0) {
-                startIntestineRun();
-            }
+            feedSlice(id);
         } else {
             s.x = s.startX;
             s.y = s.startY;
         }
+        resetFaceFocus();
     };
 
     document.addEventListener("pointermove", activeMove, { passive: false });
@@ -302,6 +406,7 @@ function startIntestineRun() {
 async function handlePlayFromStart() {
     await initAudio();
     phase.value = "pizza";
+    showPizzaHint.value = true;
     await nextTick();
     updateSize();
 }
@@ -316,8 +421,11 @@ async function handlePlayAgain() {
     winElapsed.value = 0;
     winCollisions.value = 0;
     intestineIntroActive.value = false;
+    gulping.value = false;
+    resetFaceFocus();
     await initAudio();
     phase.value = "pizza";
+    showPizzaHint.value = true;
     await nextTick();
     updateSize();
     draggingId.value = null;
@@ -331,6 +439,10 @@ function clearTimers() {
     if (victoryTuneTimer) {
         clearTimeout(victoryTuneTimer);
         victoryTuneTimer = null;
+    }
+    if (gulpTimer) {
+        clearTimeout(gulpTimer);
+        gulpTimer = null;
     }
 }
 
@@ -398,11 +510,23 @@ onUnmounted(() => {
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    -webkit-appearance: none;
+    appearance: none;
     line-height: 1;
     cursor: grab;
     touch-action: none;
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
     transition: transform 0.12s ease;
+}
+
+.slice:focus-visible {
+    outline: 3px solid #fbbf24;
+    outline-offset: 4px;
+    border-radius: 12px;
 }
 
 .slice.dragging {
@@ -431,6 +555,11 @@ onUnmounted(() => {
     display: flex;
     align-items: center;
     justify-content: center;
+    animation: headBob 3.6s ease-in-out infinite;
+}
+
+.person.gulping {
+    animation: headGulp 0.46s cubic-bezier(0.3, 0.7, 0.3, 1);
 }
 
 .person-face {
@@ -447,24 +576,106 @@ onUnmounted(() => {
         0 10px 20px rgba(0, 0, 0, 0.34);
 }
 
-.person-eye {
+.person-brow {
     position: absolute;
-    top: 34%;
-    width: 14%;
-    height: 8%;
+    top: 22%;
+    width: 19%;
+    height: 5.5%;
     border-radius: 999px;
-    background: #2d130e;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25);
+    background: #c79b76;
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.person-eye-left {
-    left: 24%;
+.person-brow-left {
+    left: 20%;
     transform: rotate(-7deg);
 }
 
-.person-eye-right {
-    right: 24%;
+.person-brow-right {
+    right: 20%;
     transform: rotate(7deg);
+}
+
+.person.anticipating .person-brow-left {
+    transform: translateY(-6px) rotate(-15deg);
+}
+
+.person.anticipating .person-brow-right {
+    transform: translateY(-6px) rotate(15deg);
+}
+
+.person-eye {
+    position: absolute;
+    top: 30%;
+    width: 21%;
+    height: 18%;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 35%, #ffffff 0%, #efe1d4 100%);
+    box-shadow: inset 0 2px 5px rgba(96, 48, 24, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition: height 0.18s ease;
+}
+
+.person-eye-left {
+    left: 19%;
+}
+
+.person-eye-right {
+    right: 19%;
+}
+
+.person-pupil {
+    width: 46%;
+    height: 58%;
+    border-radius: 50%;
+    background: radial-gradient(circle at 38% 30%, #6a3d2a 0%, #1c0d08 72%);
+    transform: translate(var(--gaze-x, 0px), var(--gaze-y, 0px));
+    transition: transform 0.12s ease-out;
+}
+
+.person-pupil::after {
+    content: "";
+    position: absolute;
+    top: 22%;
+    left: 30%;
+    width: 26%;
+    height: 26%;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.person.anticipating .person-eye {
+    height: 21%;
+}
+
+.person-cheek {
+    position: absolute;
+    top: 55%;
+    width: 17%;
+    height: 12%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 138, 116, 0.6) 0%, transparent 70%);
+    opacity: 0.45;
+    transition:
+        opacity 0.2s ease,
+        transform 0.2s ease;
+}
+
+.person-cheek-left {
+    left: 11%;
+}
+
+.person-cheek-right {
+    right: 11%;
+}
+
+.person.anticipating .person-cheek,
+.person.gulping .person-cheek {
+    opacity: 0.9;
+    transform: scale(1.18);
 }
 
 .person-mouth {
@@ -480,6 +691,70 @@ onUnmounted(() => {
     background: radial-gradient(circle at 50% 28%, #170404 0%, #080102 76%);
     overflow: hidden;
     animation: mouthChew 1.45s ease-in-out infinite;
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.person.anticipating .person-mouth {
+    animation: none;
+    transform: translate(-50%, -50%) scaleX(1.08) scaleY(1.4);
+}
+
+.person.gulping .person-mouth {
+    animation: none;
+    transform: translate(-50%, -50%) scaleX(0.94) scaleY(0.5);
+}
+
+.person-teeth {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 82%;
+    height: 17%;
+    border-radius: 0 0 45% 45%;
+    background: linear-gradient(180deg, #fffdf8 0%, #f0e2d2 100%);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.chomp-burst {
+    position: absolute;
+    left: 50%;
+    top: 67%;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.chomp-burst span {
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    background: #e8b04b;
+    box-shadow: inset 0 0 0 1px rgba(120, 70, 20, 0.45);
+    animation: crumbFly 0.5s ease-out forwards;
+}
+
+.chomp-burst span:nth-child(1) {
+    --tx: -36px;
+    --ty: -28px;
+}
+.chomp-burst span:nth-child(2) {
+    --tx: 34px;
+    --ty: -24px;
+}
+.chomp-burst span:nth-child(3) {
+    --tx: -20px;
+    --ty: -40px;
+}
+.chomp-burst span:nth-child(4) {
+    --tx: 22px;
+    --ty: -38px;
+}
+.chomp-burst span:nth-child(5) {
+    --tx: 2px;
+    --ty: -46px;
 }
 
 .person-tongue {
@@ -524,7 +799,125 @@ onUnmounted(() => {
     }
 }
 
+@keyframes headBob {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+@keyframes headGulp {
+    0% {
+        transform: translateY(0) scale(1, 1);
+    }
+    35% {
+        transform: translateY(7px) scale(1.05, 0.94);
+    }
+    70% {
+        transform: translateY(-2px) scale(0.98, 1.03);
+    }
+    100% {
+        transform: translateY(0) scale(1, 1);
+    }
+}
+
+@keyframes crumbFly {
+    0% {
+        opacity: 1;
+        transform: translate(0, 0) scale(1) rotate(0deg);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(var(--tx, 0), var(--ty, 0)) scale(0.4) rotate(140deg);
+    }
+}
+
 .win-sub {
     margin-top: 0.25rem;
+}
+
+.game-quit {
+    position: absolute;
+    top: 6px;
+    left: 8px;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    background: rgba(40, 32, 24, 0.8);
+    color: #fff5e6;
+    font-size: 1.1rem;
+    line-height: 1;
+    text-decoration: none;
+    transition: background-color 0.15s ease;
+}
+
+.game-quit:hover {
+    background: rgba(107, 83, 68, 0.85);
+}
+
+.game-quit:focus-visible {
+    outline: 2px solid #fbbf24;
+    outline-offset: 2px;
+}
+
+.pizza-hint {
+    position: absolute;
+    left: 50%;
+    top: 64px;
+    transform: translateX(-50%);
+    z-index: 18;
+    padding: 8px 16px;
+    border-radius: 999px;
+    background: rgba(40, 32, 24, 0.85);
+    color: #fff5e6;
+    font-size: clamp(0.95rem, 3vmin, 1.2rem);
+    font-weight: 800;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.pizza-hint-fade-enter-active,
+.pizza-hint-fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+
+.pizza-hint-fade-enter-from,
+.pizza-hint-fade-leave-to {
+    opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .person,
+    .person.gulping,
+    .person-mouth {
+        animation: none;
+    }
+
+    .slice,
+    .person-mouth,
+    .person-pupil,
+    .person-brow,
+    .person-cheek,
+    .person-eye {
+        transition: none;
+    }
+
+    .chomp-burst span {
+        animation: none;
+        opacity: 0;
+    }
+
+    .pizza-hint-fade-enter-active,
+    .pizza-hint-fade-leave-active {
+        transition: opacity 0.2s ease;
+    }
 }
 </style>
