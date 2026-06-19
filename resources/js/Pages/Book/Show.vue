@@ -39,12 +39,6 @@
         class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
       >
         <div class="flex flex-wrap items-center gap-3">
-          <p
-            v-if="pages.total > 0"
-            class="text-sm font-semibold text-gray-300"
-          >
-            {{ t("book.pages_count", { count: pages.total }) }}
-          </p>
           <div
             role="group"
             :aria-label="t('book.sort_group')"
