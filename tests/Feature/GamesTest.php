@@ -26,15 +26,17 @@ class GamesTest extends TestCase
         $response->assertInertia(
             fn (Assert $page) => $page
                 ->component('Games/Index')
-                ->has('games', 4)
-                ->where('games.0.slug', 'cockroach-fight')
-                ->where('games.0.name', 'Cockroach Fight')
-                ->where('games.1.slug', 'costco-pizza-poop')
-                ->where('games.1.name', 'Costco Pizza Poop')
-                ->where('games.2.slug', 'boom')
-                ->where('games.2.name', 'Poop Boom')
-                ->where('games.3.slug', 'cockroach')
-                ->where('games.3.name', 'Cockroach Fart')
+                ->has('games', 5)
+                ->where('games.0.slug', 'toot-foods')
+                ->where('games.0.name', 'Toot Foods')
+                ->where('games.1.slug', 'cockroach-fight')
+                ->where('games.1.name', 'Cockroach Fight')
+                ->where('games.2.slug', 'costco-pizza-poop')
+                ->where('games.2.name', 'Costco Pizza Poop')
+                ->where('games.3.slug', 'boom')
+                ->where('games.3.name', 'Poop Boom')
+                ->where('games.4.slug', 'cockroach')
+                ->where('games.4.name', 'Cockroach Fart')
         );
     }
 
@@ -100,6 +102,22 @@ class GamesTest extends TestCase
         );
     }
 
+    public function test_toot_foods_game_page_is_displayed(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $response = $this->get(route('games.show', 'toot-foods'));
+
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Games/TootFoods')
+                ->has('users')
+                ->where('fartSoundUrl', asset('fart.m4a'))
+        );
+    }
+
     public function test_unknown_game_returns_404(): void
     {
         /** @var User $user */
@@ -116,6 +134,7 @@ class GamesTest extends TestCase
         $this->get(route('games.show', 'cockroach'))->assertRedirect(route('login'));
         $this->get(route('games.show', 'costco-pizza-poop'))->assertRedirect(route('login'));
         $this->get(route('games.show', 'cockroach-fight'))->assertRedirect(route('login'));
+        $this->get(route('games.show', 'toot-foods'))->assertRedirect(route('login'));
     }
 
     public function test_share_game_score_requires_authentication(): void

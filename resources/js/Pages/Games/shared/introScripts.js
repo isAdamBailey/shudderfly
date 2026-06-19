@@ -1,3 +1,10 @@
+export const TOOT_FOODS_INTRO_SCRIPT =
+    "Welcome to Toot Foods! Here is how to play. Five snacks are scattered around the screen: a strawberry, grapes, " +
+    "an apple, blueberries, and a brussels sprout. A wiggly butt wanders around. Press or click any food, drag it onto " +
+    "the moving butt, and let go. When the food lands on the butt it makes a big toot and you score a point! Feed foods " +
+    "quickly one after another to build a combo for bonus points. You have thirty seconds, so toot as many as you can. " +
+    "Good luck!";
+
 export const COCKROACH_FIGHT_INTRO_SCRIPT =
     "Welcome to Cockroach Fight! Two Madagascar hissing cockroaches face off on opposite sides of the screen. " +
     "Tap either cockroach's head to make both of them scuttle toward each other. Each tap moves them a little closer " +

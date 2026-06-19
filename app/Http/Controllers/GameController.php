@@ -16,6 +16,12 @@ class GameController extends Controller
 {
     /** Newest games first (Games index list order). */
     private const GAMES = [
+        'toot-foods' => [
+            'name' => 'Toot Foods',
+            'emoji' => '🍑',
+            'description' => 'Drag snacks into the wandering butt to make it toot. How many in 30 seconds?',
+            'component' => 'TootFoods',
+        ],
         'cockroach-fight' => [
             'name' => 'Cockroach Fight',
             'emoji' => '🪳',
