@@ -31,7 +31,7 @@ defineProps({
       @speak="speak"
     />
   </div>
-  <p v-else class="text-center text-gray-400">
+  <p v-else class="text-center text-gray-600 dark:text-gray-400">
     Add a city to see its clock.
   </p>
 </template>

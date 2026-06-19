@@ -247,7 +247,7 @@ return [
     'world_clock.timer_started' => ':minutes minute timer started',
     'world_clock.timer_stopped' => 'Timer stopped',
     'world_clock.default_logo_restored' => 'Default logo restored',
-    'world_clock.clock_set_as_logo' => ':city clock set as the app logo',
+    'world_clock.clock_set_as_logo' => ':city clock was put on top',
     'world_clock.minute' => 'minute',
     'world_clock.minutes' => 'minutes',
     'world_clock.second' => 'second',

@@ -247,7 +247,7 @@ return [
     'world_clock.timer_started' => 'Temporizador de :minutes minutos iniciado',
     'world_clock.timer_stopped' => 'Temporizador detenido',
     'world_clock.default_logo_restored' => 'Logo predeterminado restaurado',
-    'world_clock.clock_set_as_logo' => 'Reloj de :city establecido como logo de la app',
+    'world_clock.clock_set_as_logo' => 'El reloj de :city se puso arriba',
     'world_clock.minute' => 'minuto',
     'world_clock.minutes' => 'minutos',
     'world_clock.second' => 'segundo',

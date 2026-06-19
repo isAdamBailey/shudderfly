@@ -7,7 +7,7 @@ vi.mock("@/composables/useTranslations", () => ({
   useTranslations: () => ({
     t: (key, replacements = {}) => {
       const translations = {
-        "world_clock.clock_set_as_logo": ":city clock set as the app logo",
+        "world_clock.clock_set_as_logo": ":city clock was put on top",
       };
       let translation = translations[key] || key;
       Object.keys(replacements).forEach((placeholder) => {
@@ -75,13 +75,13 @@ describe("Components/WorldClock/ClockCard.vue", () => {
     expect(wrapper.emitted("speak")?.[0]?.[0]).toBe("Grandma's House, 3:05 PM");
   });
 
-  it("keeps the logo pin tied to the real city name, not the label", async () => {
+  it("announces the custom label when the logo pin is pressed", async () => {
     await mountAt("2024-01-15T15:05:00Z", "UTC", { label: "Grandma's House" });
     await wrapper
-      .find('[aria-label="Use the Testville clock as the app logo"]')
+      .find('[aria-label="Use the Grandma\'s House clock as the app logo"]')
       .trigger("click");
     expect(wrapper.emitted("speak")?.[0]?.[0]).toBe(
-      "Testville clock set as the app logo"
+      "Grandma's House clock was put on top"
     );
   });
 });

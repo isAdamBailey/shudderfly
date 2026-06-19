@@ -33,7 +33,7 @@ const setAsLogo = () => {
     cityName: props.city.name,
     timezone: props.city.timezone
   });
-  emit("speak", t("world_clock.clock_set_as_logo", { city: props.city.name }));
+  emit("speak", t("world_clock.clock_set_as_logo", { city: displayName.value }));
 };
 
 const { hour24, minutes } = useClockTime(computed(() => props.city.timezone));
@@ -69,8 +69,10 @@ const spokenTime = computed(() => `${displayName.value}, ${clockTime.value}`);
       :second-hand-mode="secondHandMode"
     />
     <div class="text-center">
-      <div class="font-heading text-lg text-gray-100">{{ displayName }}</div>
-      <div class="text-sm text-gray-400">{{ digital }}</div>
+      <div class="font-heading text-lg text-gray-900 dark:text-gray-100">
+        {{ displayName }}
+      </div>
+      <div class="text-sm text-gray-600 dark:text-gray-400">{{ digital }}</div>
     </div>
     <div class="flex items-center gap-2">
       <SpeakButton
@@ -86,8 +88,8 @@ const spokenTime = computed(() => `${displayName.value}, ${clockTime.value}`);
             : 'border-theme-primary bg-theme-primary text-theme-button hover:bg-theme-button hover:text-theme-button-hover'
         "
         :aria-pressed="isLogo"
-        :aria-label="`Use the ${city.name} clock as the app logo`"
-        :title="`Use the ${city.name} clock as the app logo`"
+        :aria-label="`Use the ${displayName} clock as the app logo`"
+        :title="`Use the ${displayName} clock as the app logo`"
         @click="setAsLogo"
       >
         <i
