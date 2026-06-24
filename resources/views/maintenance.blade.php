@@ -518,10 +518,19 @@
 
             // A short, silly descending "toot" via WebAudio — no asset needed.
             let audioCtx = null;
+            function unlockAudio() {
+                audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+            }
+            // Safari's autoplay-unlock only recognizes a handful of legacy event
+            // types (not pointerdown/pointerup), so prime the context on the first
+            // touch/mouse/key interaction rather than relying on the drag gesture.
+            ['touchstart', 'mousedown', 'keydown'].forEach((type) => {
+                document.addEventListener(type, unlockAudio, { once: true, passive: true });
+            });
             function playToot(emoji) {
                 try {
-                    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-                    if (audioCtx.state === 'suspended') audioCtx.resume();
+                    unlockAudio();
                     const pitchMap = { '🫐': 1.4, '🍇': 1.22, '🍓': 1.1, '🍎': 0.92, '🥦': 0.78 };
                     const base = 150 * (pitchMap[emoji] || 1);
                     const t = audioCtx.currentTime;
@@ -652,8 +661,10 @@
                 synth.speak(u);
             }
 
-            btn.addEventListener('pointerdown', (e) => {
-                e.preventDefault();
+            // Safari only treats certain events (click, mouseup, touchend, keydown)
+            // as a "user gesture" for speechSynthesis; pointerdown is not honored
+            // there even though Chrome accepts it.
+            btn.addEventListener('click', () => {
                 speaking ? stop() : start();
             });
 
@@ -669,8 +680,7 @@
         (function () {
             const btn = document.getElementById('homeBtn');
             if (!btn) return;
-            btn.addEventListener('pointerdown', function (e) {
-                e.preventDefault();
+            btn.addEventListener('click', function () {
                 location.href = '/';
             });
         })();
