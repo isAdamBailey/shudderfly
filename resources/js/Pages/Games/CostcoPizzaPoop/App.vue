@@ -109,7 +109,7 @@
     <GameEndScreen
         v-else-if="phase === 'win'"
         title="Digestive Victory!"
-        emoji="💩"
+        :emoji="POOP"
         :score="winScore"
         game-slug="costco-pizza-poop"
         @play-again="handlePlayAgain"
@@ -128,6 +128,7 @@ import GameStartScreen from "@/Components/Games/GameStartScreen.vue";
 import GameEndScreen from "@/Components/Games/GameEndScreen.vue";
 import GameBoard from "@/Pages/Games/CostcoPizzaPoop/components/GameBoard.vue";
 import { COSTCO_PIZZA_POOP_INTRO_SCRIPT } from "@/Pages/Games/shared/introScripts.js";
+import { POOP } from "@/constants/characters.js";
 import { useGameState } from "@/Pages/Games/CostcoPizzaPoop/composables/useGameState.js";
 import { useSound } from "@/Pages/Games/CostcoPizzaPoop/composables/useSound.js";
 import { Link, usePage } from "@inertiajs/vue3";

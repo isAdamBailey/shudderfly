@@ -2,6 +2,7 @@
 import GameEndScreen from "@/Components/Games/GameEndScreen.vue";
 import GameStartScreen from "@/Components/Games/GameStartScreen.vue";
 import { POOP_BOOM_INTRO_SCRIPT } from "@/Pages/Games/shared/introScripts.js";
+import { TOILET } from "@/constants/characters.js";
 import { useGameViewportLock } from "@/composables/useGameViewportLock";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, usePage } from "@inertiajs/vue3";
@@ -457,7 +458,7 @@ onUnmounted(() => {
 
                 <!-- ── toilet ────────────────────────────────────── -->
                 <div class="toilet-wrap" :style="toiletStyle">
-                    <div class="toilet-emoji" role="img" aria-label="toilet">🚽</div>
+                    <div class="toilet-emoji" role="img" aria-label="toilet">{{ TOILET }}</div>
                 </div>
 
                 <!-- ── floor line ─────────────────────────────────── -->

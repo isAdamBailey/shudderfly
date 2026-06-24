@@ -5,6 +5,7 @@ import GameStartScreen from "@/Components/Games/GameStartScreen.vue";
 import GameEndScreen from "@/Components/Games/GameEndScreen.vue";
 import { TOOT_FOODS_INTRO_SCRIPT } from "../shared/introScripts.js";
 import { useTootGame, ROUND_SECONDS } from "./composables/useTootGame.js";
+import { BUTT } from "@/constants/characters.js";
 import { useTootSound } from "./composables/useTootSound.js";
 
 const page = usePage();
@@ -140,7 +141,7 @@ function buttStyle() {
         :high-score="highScore"
         @play="handlePlay"
     >
-        <template #media>🍑</template>
+        <template #media>{{ BUTT }}</template>
         <p>
             Drag the snacks 🍓🍇🍎🫐🥦 into the wandering butt to make it toot.<br />
             Stack quick hits for a combo bonus. How many in {{ ROUND_SECONDS }} seconds?
@@ -177,7 +178,7 @@ function buttStyle() {
 
         <!-- The wandering butt -->
         <div class="butt" :style="buttStyle()" aria-label="Wandering butt">
-            🍑
+            {{ BUTT }}
         </div>
 
         <!-- Toot puffs -->
@@ -225,7 +226,7 @@ function buttStyle() {
     <GameEndScreen
         v-else-if="state.phase === 'end'"
         title="Toot Champion!"
-        emoji="🍑"
+        :emoji="BUTT"
         :score="state.score"
         game-slug="toot-foods"
         @play-again="handlePlayAgain"

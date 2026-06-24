@@ -1,7 +1,7 @@
 <template>
     <GameEndScreen
         title="Fight Over!"
-        emoji="🪳"
+        :emoji="COCKROACH"
         :score="score"
         game-slug="cockroach-fight"
         @play-again="$emit('play-again')"
@@ -40,6 +40,7 @@
 
 <script setup>
 import GameEndScreen from "@/Components/Games/GameEndScreen.vue";
+import { COCKROACH } from "@/constants/characters.js";
 
 defineProps({
     score: { type: Number, required: true },

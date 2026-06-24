@@ -346,8 +346,7 @@
             const fx = document.getElementById('fx');
             const scoreEl = document.getElementById('score');
 
-            // The cast — emoji "characters" pulled straight from the games:
-            // the Toot Foods butt + snacks, plus the cockroach, pizza, poop and toilet.
+            // Characters mirror resources/js/constants/characters.js (inline here; can't import modules in a standalone blade template).
             const SNACKS = ['🫐', '🍇', '🍓', '🍎', '🥦'];
             const CAST = [
                 { emoji: '🍑', role: 'butt', size: 1.6, speed: 0.85 },
