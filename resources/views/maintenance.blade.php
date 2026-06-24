@@ -236,6 +236,10 @@
         }
         .controls {
             margin-top: 18px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
         }
         .speak-btn {
             display: inline-flex;
@@ -326,6 +330,11 @@
             <p class="lead">We&rsquo;re away setting a toot trap.</p>
 
             <div class="controls">
+                <button type="button" id="homeBtn" class="speak-btn"
+                        aria-label="Go to home page">
+                    <span class="speak-icon" aria-hidden="true">🏠</span>
+                    <span>Take me home</span>
+                </button>
                 <button type="button" id="speakBtn" class="speak-btn" hidden
                         aria-label="Read this page aloud">
                     <span class="speak-icon" aria-hidden="true">🔊</span>
@@ -658,68 +667,12 @@
 
     <script>
         (function () {
-            const POLL_INTERVAL = 30000;
-
-            function poll() {
-                fetch(location.href, { method: 'HEAD', cache: 'no-store' })
-                    .then(function (r) { if (r.status !== 503) location.reload(); })
-                    .catch(function () {});
-            }
-            setInterval(poll, POLL_INTERVAL);
-        })();
-
-        (function () {
-            const THRESHOLD = 80;
-            let startY = 0;
-            let pulling = false;
-            let indicator = null;
-
-            function getIndicator() {
-                if (indicator) return indicator;
-                indicator = document.createElement('div');
-                indicator.style.cssText = [
-                    'position:fixed', 'top:0', 'left:0', 'right:0',
-                    'display:flex', 'align-items:center', 'justify-content:center', 'gap:6px',
-                    'padding:10px 16px',
-                    'background:rgba(15,118,110,0.92)',
-                    'color:#fff', 'font-size:14px', 'font-family:system-ui,sans-serif',
-                    'z-index:9999',
-                    'transform:translateY(-100%)',
-                    'transition:transform 0.15s ease',
-                    'pointer-events:none',
-                    'border-bottom:1px solid rgba(255,255,255,0.15)',
-                ].join(';');
-                document.body.appendChild(indicator);
-                return indicator;
-            }
-
-            document.addEventListener('touchstart', function (e) {
-                startY = e.touches[0].clientY;
-                pulling = startY < 80;
-            }, { passive: true });
-
-            document.addEventListener('touchmove', function (e) {
-                if (!pulling) return;
-                const dy = e.touches[0].clientY - startY;
-                if (dy <= 0) { pulling = false; return; }
-                const el = getIndicator();
-                const progress = Math.min(dy / THRESHOLD, 1);
-                el.style.transform = 'translateY(' + ((progress - 1) * 100) + '%)';
-                el.textContent = dy >= THRESHOLD ? '↑  Release to refresh' : '↓  Pull to refresh';
-            }, { passive: true });
-
-            document.addEventListener('touchend', function (e) {
-                if (!pulling || !indicator) { pulling = false; return; }
-                const dy = (e.changedTouches[0] ? e.changedTouches[0].clientY : startY) - startY;
-                if (dy >= THRESHOLD) {
-                    indicator.style.transform = 'translateY(0%)';
-                    indicator.textContent = 'Refreshing…';
-                    setTimeout(function () { location.reload(); }, 400);
-                } else {
-                    indicator.style.transform = 'translateY(-100%)';
-                }
-                pulling = false;
-            }, { passive: true });
+            const btn = document.getElementById('homeBtn');
+            if (!btn) return;
+            btn.addEventListener('pointerdown', function (e) {
+                e.preventDefault();
+                location.href = '/';
+            });
         })();
     </script>
 </body>
