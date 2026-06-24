@@ -36,7 +36,7 @@
 
       <div
         id="pages"
-        class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+        class="flex items-center justify-between gap-3 scroll-mt-16"
       >
         <div class="flex flex-wrap items-center gap-3">
           <div
@@ -77,7 +77,7 @@
           </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
           <Link
             v-if="isMoviesCategory"
             :href="route('movie-cast.index', { title: book.title })"
