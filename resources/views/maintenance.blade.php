@@ -414,6 +414,7 @@
                     target: randomTarget(size),
                     dragging: false,
                     grabDx: 0, grabDy: 0,
+                    lastToot: 0,
                 };
                 place(actor);
                 attachDrag(actor);
@@ -551,6 +552,17 @@
                         a.y += (dy / dist) * step;
                     }
                     place(a);
+
+                    if (a.def.role === 'food') {
+                        const b = butt();
+                        if (b && now - a.lastToot > 800) {
+                            const hitRadius = b.size * 0.62;
+                            if (Math.hypot(a.x - b.x, a.y - b.y) < hitRadius) {
+                                a.lastToot = now;
+                                tryToot(a);
+                            }
+                        }
+                    }
                 }
                 requestAnimationFrame(frame);
             }
