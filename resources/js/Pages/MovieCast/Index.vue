@@ -3,7 +3,6 @@
 import Button from "@/Components/Button.vue";
 import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
-import SecondaryButton from "@/Components/SecondaryButton.vue";
 import SpeakButton from "@/Components/SpeakButton.vue";
 import ShareToChatButton from "@/Components/ShareToChatButton.vue";
 import TextInput from "@/Components/TextInput.vue";
@@ -11,7 +10,7 @@ import VideoWrapper from "@/Components/VideoWrapper.vue";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import { Head } from "@inertiajs/vue3";
+import { Head, router } from "@inertiajs/vue3";
 import { useSpeechRecognition } from "@vueuse/core";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
@@ -68,22 +67,22 @@ const speechErrorMessage = computed(() => {
       return message;
     }
     if (code === "not-allowed") {
-      return "Microphone permission was denied.";
+      return t("search.voice_not_allowed");
     }
     if (code === "service-not-allowed") {
-      return "Speech service is not allowed in this browser.";
+      return t("search.voice_service_not_allowed");
     }
     if (code === "audio-capture") {
-      return "No microphone was detected for speech recognition.";
+      return t("search.voice_no_microphone");
     }
     if (code === "network") {
-      return "Network error while connecting to speech recognition.";
+      return t("search.voice_network_error");
     }
     if (code === "no-speech") {
-      return "No speech was detected. Please try again.";
+      return t("search.voice_no_speech");
     }
     if (code === "aborted") {
-      return "Speech recognition was stopped before completion.";
+      return t("search.voice_aborted");
     }
     if (code) {
       return String(code);
@@ -97,7 +96,7 @@ const searchPlaceholder = computed(() => {
     return t("search.listening");
   }
 
-  return "Enter a movie title";
+  return t("movie.search_placeholder");
 });
 const searchInputClass = computed(() => [
   "flex-1 w-full dark:bg-gray-800 dark:text-gray-100",
@@ -117,7 +116,6 @@ const movieDetails = ref(null);
 const isLoading = ref(false);
 const errorMessage = ref("");
 const hasSearched = ref(false);
-const showFavorites = ref(false);
 const favoritesList = ref([...props.favorites]);
 const isRemoveDialogOpen = ref(false);
 const pendingRemoveMovie = ref(null);
@@ -157,15 +155,41 @@ const isCurrentMovieFavorite = computed(() => {
 });
 
 const removeDialogMessage = computed(() => {
-  if (!pendingRemoveMovie.value) {
-    return "Remove this movie from favorites?";
+  if (!pendingRemoveMovie.value?.title) {
+    return t("movie.remove_favorite_confirm_dialog_generic");
   }
 
-  return `Remove ${pendingRemoveMovie.value.title} from favorites?`;
+  return t("movie.remove_favorite_confirm_dialog", {
+    title: pendingRemoveMovie.value.title,
+  });
 });
 
+const showFavoritesUnderSearch = computed(() => {
+  return !searchResults.value.length && !movieDetails.value;
+});
+
+const notifyError = (key, replacements = {}) => {
+  const message = t(key, replacements);
+  errorMessage.value = message;
+  speak(message);
+};
+
+const openRemoveFavoriteDialog = (movie) => {
+  pendingRemoveMovie.value = movie;
+  isRemoveDialogOpen.value = true;
+  speak(t("movie.remove_favorite_confirm_speak", { title: movie.title }));
+};
+
+const resetPage = () => {
+  window.speechSynthesis?.cancel();
+  if (isListening.value) {
+    stop();
+  }
+  router.get(route("movie-cast.index"));
+};
+
 const getReleaseYear = (releaseDate) => {
-  return releaseDate ? releaseDate.slice(0, 4) : "Unknown year";
+  return releaseDate ? releaseDate.slice(0, 4) : t("movie.unknown_year");
 };
 
 const getProfileImageUrl = (profilePath) => `${props.tmdbImageBaseUrl}${profilePath}`;
@@ -193,7 +217,6 @@ const loadMovieById = async (
   movieTitle.value = preferredTitle?.trim() || "";
   movieDetails.value = null;
   errorMessage.value = "";
-  showFavorites.value = false;
 
   try {
     const [creditsResponse, detailsResponse] = await Promise.all([
@@ -206,7 +229,7 @@ const loadMovieById = async (
     movieDetails.value = detailsResponse.data;
     speakMovieTitle(movieTitle.value);
   } catch {
-    errorMessage.value = "Unable to fetch movie data right now.";
+    notifyError("movie.fetch_failed");
   } finally {
     isLoading.value = false;
   }
@@ -221,11 +244,10 @@ const onSubmit = async () => {
   castMembers.value = [];
   movieTitle.value = "";
   movieDetails.value = null;
-  showFavorites.value = false;
 
   if (!query) {
     isLoading.value = false;
-    errorMessage.value = "Enter a movie title to search.";
+    notifyError("movie.search_empty");
     return;
   }
 
@@ -236,7 +258,7 @@ const onSubmit = async () => {
     const movies = response.data;
 
     if (!movies.length) {
-      errorMessage.value = "No matching movie was found.";
+      notifyError("search.not_found_movies");
       return;
     }
 
@@ -247,7 +269,7 @@ const onSubmit = async () => {
 
     searchResults.value = movies;
   } catch {
-    errorMessage.value = "Unable to fetch movie data right now.";
+    notifyError("movie.fetch_failed");
   } finally {
     isLoading.value = false;
   }
@@ -275,8 +297,7 @@ const onFavoriteButtonClick = async () => {
   }
 
   if (isCurrentMovieFavorite.value) {
-    pendingRemoveMovie.value = currentFavoriteMovie.value;
-    isRemoveDialogOpen.value = true;
+    openRemoveFavoriteDialog(currentFavoriteMovie.value);
     return;
   }
 
@@ -287,7 +308,7 @@ const onFavoriteButtonClick = async () => {
     );
     favoritesList.value = response.data;
   } catch {
-    errorMessage.value = "Unable to save favorite right now.";
+    notifyError("movie.favorite_save_failed");
   }
 };
 
@@ -302,7 +323,7 @@ const confirmRemoveFavorite = async () => {
     );
     favoritesList.value = response.data;
   } catch {
-    errorMessage.value = "Unable to remove favorite right now.";
+    notifyError("movie.favorite_remove_failed");
   } finally {
     pendingRemoveMovie.value = null;
   }
@@ -313,8 +334,7 @@ const cancelRemoveFavorite = () => {
 };
 
 const requestRemoveFavorite = (movie) => {
-  pendingRemoveMovie.value = movie;
-  isRemoveDialogOpen.value = true;
+  openRemoveFavoriteDialog(movie);
 };
 
 const toggleVoiceSearch = async () => {
@@ -336,9 +356,7 @@ const toggleVoiceSearch = async () => {
       start();
     }
   } catch (voiceError) {
-    errorMessage.value = t("search.voice_failed", {
-      error: voiceError.message,
-    });
+    notifyError("search.voice_failed", { error: voiceError.message });
   }
 };
 
@@ -365,6 +383,7 @@ watch(result, (newResult) => {
 watch(error, () => {
   if (speechErrorMessage.value) {
     errorMessage.value = speechErrorMessage.value;
+    speak(speechErrorMessage.value);
   }
 });
 
@@ -375,7 +394,7 @@ const speakCharacter = (member) => {
     return;
   }
 
-  const characterName = member.character?.trim() || "Unknown character";
+  const characterName = member.character?.trim() || t("movie.unknown_character");
   speakingMemberId.value = member.id;
 
   speak(characterName, () => {
@@ -392,7 +411,7 @@ const speakMovieDescription = () => {
 
   const description = movieDetails.value?.overview?.trim();
   if (!description) {
-    errorMessage.value = "No movie description is available to speak.";
+    notifyError("movie.no_description_speak");
     return;
   }
 
@@ -423,78 +442,21 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Head title="Movie Cast" />
+  <Head :title="t('movie.page_title')" />
 
   <AuthenticatedLayout>
     <template #header>
-      <div class="flex flex-wrap items-center justify-between gap-3">
+      <button type="button" @click="resetPage">
         <h2 class="font-heading text-2xl text-theme-title leading-tight">
-          Movie Cast Lookup
+          {{ t("movie.page_heading") }}
         </h2>
-        <div class="flex flex-wrap gap-2">
-          <SecondaryButton
-            type="button"
-            @click="showFavorites = !showFavorites"
-          >
-            {{ showFavorites ? "Back to Search" : "Favorites" }}
-          </SecondaryButton>
-        </div>
-      </div>
+      </button>
     </template>
 
     <div class="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <div v-if="showFavorites" class="space-y-6">
-        <p
-          v-if="!favoritesList.length"
-          class="text-center text-gray-300"
-        >
-          No favorites yet. Add one from the movie page.
-        </p>
-
-        <div
-          v-else
-          class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"
-        >
-          <div
-            v-for="movie in favoritesList"
-            :key="movie.id"
-            class="rounded-lg bg-gray-800 p-3 flex flex-col gap-3"
-          >
-            <button
-              type="button"
-              class="text-left"
-              @click="loadMovieById(movie.id, movie.title)"
-            >
-              <img
-                v-if="movie.image_path"
-                :src="getMovieImageUrl(movie.image_path)"
-                :alt="movie.title"
-                class="w-full aspect-[2/3] object-cover rounded-md"
-              />
-              <div
-                v-else
-                class="w-full aspect-[2/3] rounded-md bg-gray-700 flex items-center justify-center text-gray-400 text-sm"
-              >
-                No image
-              </div>
-              <p class="mt-2 text-sm font-semibold text-gray-100">
-                {{ movie.title }}
-              </p>
-            </button>
-            <Button
-              type="button"
-              class="w-full justify-center"
-              @click="requestRemoveFavorite(movie)"
-            >
-              Remove
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <div v-else class="space-y-8">
+      <div class="space-y-8">
         <p class="text-gray-300">
-          Search by movie title to view cast members and character names.
+          {{ t("movie.search_prompt") }}
         </p>
 
         <form class="flex flex-col sm:flex-row gap-3" @submit.prevent="onSubmit">
@@ -512,7 +474,7 @@ onBeforeUnmount(() => {
                   !isListening && !hasGoodResult,
               }"
               :disabled="isLoading"
-              :aria-label="isListening ? t('search.listening') : 'Voice search'"
+              :aria-label="isListening ? t('search.listening') : t('movie.voice_search_aria')"
               @click="toggleVoiceSearch"
             >
               <i
@@ -549,7 +511,7 @@ onBeforeUnmount(() => {
           </div>
 
           <PrimaryButton type="submit" :disabled="isLoading" class="self-center">
-            {{ isLoading ? "Searching..." : "Search" }}
+            {{ isLoading ? t("movie.searching") : t("movie.search_button") }}
           </PrimaryButton>
         </form>
 
@@ -557,9 +519,58 @@ onBeforeUnmount(() => {
           {{ errorMessage }}
         </p>
 
+        <div v-if="showFavoritesUnderSearch" class="space-y-3">
+          <h3 class="text-lg font-semibold text-gray-100">
+            {{ t("movie.favorites_heading") }}
+          </h3>
+          <p v-if="!favoritesList.length" class="text-gray-400">
+            {{ t("movie.favorites_empty") }}
+          </p>
+          <div
+            v-else
+            class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"
+          >
+            <div
+              v-for="movie in favoritesList"
+              :key="movie.id"
+              class="relative rounded-lg bg-gray-800 p-3"
+            >
+              <button
+                type="button"
+                class="absolute top-2 right-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-white shadow-lg transition-colors hover:bg-red-600"
+                :aria-label="t('movie.remove_favorite_aria')"
+                @click="requestRemoveFavorite(movie)"
+              >
+                <i class="ri-close-line text-base" aria-hidden="true"></i>
+              </button>
+              <button
+                type="button"
+                class="w-full text-left"
+                @click="loadMovieById(movie.id, movie.title)"
+              >
+                <img
+                  v-if="movie.image_path"
+                  :src="getMovieImageUrl(movie.image_path)"
+                  :alt="movie.title"
+                  class="w-full aspect-[2/3] object-cover rounded-md"
+                />
+                <div
+                  v-else
+                  class="w-full aspect-[2/3] rounded-md bg-gray-700 flex items-center justify-center text-gray-400 text-sm"
+                >
+                  {{ t("movie.no_image") }}
+                </div>
+                <p class="mt-2 text-sm font-semibold text-gray-100">
+                  {{ movie.title }}
+                </p>
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div v-if="searchResults.length && !movieDetails" class="space-y-3">
           <h3 class="text-lg font-semibold text-gray-100">
-            Multiple movies found. Choose one:
+            {{ t("movie.multiple_results") }}
           </h3>
           <div class="grid gap-2">
             <button
@@ -592,7 +603,7 @@ onBeforeUnmount(() => {
             @click="returnToSearchResults"
           >
             <i class="ri-arrow-left-line text-lg mr-2" aria-hidden="true"></i>
-            Back to results
+            {{ t("movie.back_to_results") }}
           </Button>
 
           <div class="rounded-lg bg-gray-800 p-4 sm:p-6">
@@ -614,7 +625,7 @@ onBeforeUnmount(() => {
                       :is-active="isCurrentMovieFavorite"
                       @click="onFavoriteButtonClick"
                     >
-                      {{ isCurrentMovieFavorite ? "Favorited" : "Add Favorite" }}
+                      {{ isCurrentMovieFavorite ? t("movie.favorited") : t("movie.add_favorite") }}
                     </Button>
                     <ShareToChatButton
                       kind="movie"
@@ -625,21 +636,25 @@ onBeforeUnmount(() => {
                       "
                     />
                     <SpeakButton
-                      aria-label="Speak movie title"
+                      :aria-label="t('movie.speak_title_aria')"
                       @click="speakMovieTitle(movieDetails.title)"
                     />
                   </div>
                 </div>
                 <p class="text-sm text-gray-400">
-                  Released: {{ movieDetails.release_date || "Unknown" }}
+                  {{
+                    movieDetails.release_date
+                      ? t("movie.released", { date: movieDetails.release_date })
+                      : t("movie.released_unknown")
+                  }}
                 </p>
                 <p class="text-gray-200">
-                  {{ movieDetails.overview || "No description available." }}
+                  {{ movieDetails.overview || t("movie.no_description") }}
                 </p>
                 <div class="flex justify-end">
                   <SpeakButton
                     :disabled="speaking"
-                    aria-label="Speak movie description"
+                    :aria-label="t('movie.speak_description_aria')"
                     @click="speakMovieDescription"
                   />
                 </div>
@@ -663,14 +678,14 @@ onBeforeUnmount(() => {
                 class="w-full max-h-80 object-cover rounded-lg"
               />
               <p v-else class="text-gray-400 text-center">
-                No trailer or movie image available.
+                {{ t("movie.no_trailer") }}
               </p>
             </div>
           </div>
 
           <div v-if="castMembers.length" class="space-y-4">
             <h3 class="text-xl font-semibold text-gray-100">
-              Cast for {{ movieTitle }}
+              {{ t("movie.cast_heading", { title: movieTitle }) }}
             </h3>
             <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               <div
@@ -688,17 +703,17 @@ onBeforeUnmount(() => {
                   v-else
                   class="w-full aspect-[2/3] rounded-md bg-gray-700 flex items-center justify-center text-gray-400 text-xs"
                 >
-                  No photo
+                  {{ t("movie.no_photo") }}
                 </div>
                 <p class="text-sm font-semibold text-gray-100">
-                  {{ member.character || "Unknown Character" }}
+                  {{ member.character || t("movie.unknown_character") }}
                 </p>
                 <p class="text-xs text-gray-400">
-                  Played by {{ member.name }}
+                  {{ t("movie.played_by", { name: member.name }) }}
                 </p>
                 <SpeakButton
                   :disabled="speaking && speakingMemberId !== member.id"
-                  :aria-label="`Speak character name for ${member.name}`"
+                  :aria-label="t('movie.speak_character_aria', { name: member.name })"
                   @click="speakCharacter(member)"
                 />
               </div>
@@ -706,7 +721,7 @@ onBeforeUnmount(() => {
           </div>
 
           <p v-else-if="hasSearched && !isLoading" class="text-gray-400">
-            No cast data is available for this movie.
+            {{ t("movie.no_cast") }}
           </p>
         </div>
       </div>
@@ -718,10 +733,10 @@ onBeforeUnmount(() => {
 
     <ConfirmDialog
       v-model:show="isRemoveDialogOpen"
-      title="Remove favorite"
+      :title="t('movie.remove_favorite_title')"
       :message="removeDialogMessage"
-      confirm-label="Remove"
-      cancel-label="Cancel"
+      :confirm-label="t('movie.remove_favorite_confirm_button')"
+      :cancel-label="t('common.cancel')"
       confirm-variant="danger"
       @confirm="confirmRemoveFavorite"
       @cancel="cancelRemoveFavorite"
