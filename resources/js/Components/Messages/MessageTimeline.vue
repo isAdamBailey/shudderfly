@@ -409,6 +409,7 @@ import Modal from "@/Components/Modal.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
+import { useEmojiRise } from "@/composables/useEmojiRise";
 import { useFlashMessage } from "@/composables/useFlashMessage";
 import {
   ALLOWED_REACTION_EMOJIS,
@@ -461,6 +462,7 @@ const {
   onCancelled: confirmOnCancel
 } = useConfirmDialog();
 const { isVideo } = useMedia();
+const { spawnEmojiRise } = useEmojiRise();
 const { playSong, openFlyout } = useMusicPlayer();
 const { setActiveMessageInput } = useMessageBuilder();
 const loading = ref(false);
@@ -1053,6 +1055,10 @@ const selectReaction = async (emoji) => {
       message.grouped_reactions = response.data.grouped_reactions;
     }
 
+    if (!currentlyReacted) {
+      spawnEmojiRise();
+    }
+
     closeReactionModal();
   } catch (error) {
     console.error("Error toggling reaction:", error);
@@ -1094,6 +1100,10 @@ const toggleReaction = async (message, emoji) => {
     // Update local state with server response
     if (response?.data?.grouped_reactions) {
       message.grouped_reactions = response.data.grouped_reactions;
+    }
+
+    if (!currentlyReacted) {
+      spawnEmojiRise();
     }
   } catch (error) {
     console.error("Error toggling reaction:", error);
@@ -1257,6 +1267,10 @@ const selectCommentReaction = async (emoji) => {
       comment.grouped_reactions = response.data.grouped_reactions;
     }
 
+    if (!currentlyReacted) {
+      spawnEmojiRise();
+    }
+
     closeCommentReactionModal();
   } catch (error) {
     setFlashMessage(
@@ -1293,6 +1307,10 @@ const toggleCommentReaction = async (message, comment, emoji) => {
 
     if (response?.data?.grouped_reactions) {
       comment.grouped_reactions = response.data.grouped_reactions;
+    }
+
+    if (!currentlyReacted) {
+      spawnEmojiRise();
     }
   } catch (error) {
     setFlashMessage(

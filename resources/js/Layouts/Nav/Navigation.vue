@@ -3,6 +3,7 @@ import ApplicationLogo from "@/Components/ApplicationLogo.vue";
 import Avatar from "@/Components/Avatar.vue";
 import CockroachCrawl from "@/Components/CockroachCrawl.vue";
 import Dropdown from "@/Components/Dropdown.vue";
+import EmojiRiseOverlay from "@/Components/EmojiRiseOverlay.vue";
 import FireworksAnimation from "@/Components/FireworksAnimation.vue";
 import NavLink from "@/Components/NavLink.vue";
 import NotificationList from "@/Components/NotificationList.vue";
@@ -159,6 +160,7 @@ const mobileMoreActive = computed(() => {
     :class="{ fireworks: $page.props.theme === 'fireworks' }"
   >
     <CockroachCrawl area="header" />
+    <EmojiRiseOverlay />
 
     <FireworksAnimation>
       <div class="px-4 sm:px-6 lg:px-8">
