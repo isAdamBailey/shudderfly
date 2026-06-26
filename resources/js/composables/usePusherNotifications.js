@@ -46,6 +46,17 @@ export function usePusherNotifications() {
     return null;
   };
 
+  const recentNotificationIds = new Set();
+
+  const isDuplicateNotification = (notification) => {
+    const id = notification?.id;
+    if (!id) return false;
+    if (recentNotificationIds.has(id)) return true;
+    recentNotificationIds.add(id);
+    setTimeout(() => recentNotificationIds.delete(id), 30000);
+    return false;
+  };
+
   const setupNotifications = () => {
     if (!window.Echo) {
       if (retryCount.value < maxRetries) {
@@ -64,7 +75,7 @@ export function usePusherNotifications() {
 
     const page = usePage();
     const user = page.props.auth?.user;
-    
+
     if (!user || !user.id) {
       return;
     }
@@ -76,6 +87,8 @@ export function usePusherNotifications() {
     }
 
     channel.value.notification((notification) => {
+      if (isDuplicateNotification(notification)) return;
+
       const flashMessage = getInteractionFlashMessage(notification, user.name);
       if (flashMessage) {
         setFlashMessage("info", flashMessage, 5000);

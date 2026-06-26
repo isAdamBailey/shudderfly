@@ -43,15 +43,17 @@ class MessageCommentController extends Controller
         $comment->load('user');
         $message->load('user');
 
-        $this->userTaggingService->processAndNotifyTaggedUsers(
-            $validated,
-            $user,
-            $comment,
-            'comment',
-            'comment'
-        );
+        $taggedUserIds = $this->userTaggingService->extractTaggedUserIds($validated, $comment, 'comment');
 
-        if ($message->user_id !== $user->id) {
+        if (! empty($taggedUserIds)) {
+            $this->userTaggingService->notifyTaggedUsers($taggedUserIds, $user, $comment, 'comment');
+        }
+
+        // Skip MessageCommented if the author is already receiving a UserTagged notification
+        // to avoid sending them two notifications for the same action.
+        $authorAlreadyTagged = in_array($message->user_id, array_map('intval', $taggedUserIds));
+
+        if ($message->user_id !== $user->id && ! $authorAlreadyTagged) {
             $messageAuthor = $message->user;
 
             $messageAuthor->notify(new MessageCommented($message, $comment, $user));
@@ -76,7 +78,6 @@ class MessageCommentController extends Controller
                     'url' => route('messages.index').'#message-'.$message->id,
                 ]
             );
-
         }
 
         event(new CommentCreated($comment));

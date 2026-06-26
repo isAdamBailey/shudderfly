@@ -2,15 +2,7 @@
 import { useFlashMessage } from "@/composables/useFlashMessage";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
-import { router } from "@inertiajs/vue3";
-import {
-  computed,
-  nextTick,
-  onBeforeUnmount,
-  onMounted,
-  ref,
-  watch
-} from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 
 const { flashMessage, clearFlashMessage } = useFlashMessage();
 const { speak } = useSpeechSynthesis();
@@ -18,8 +10,6 @@ const { t } = useTranslations();
 const show = ref(false);
 const forceRender = ref(0);
 const hideTimeoutId = ref(null);
-const disposeSuccess = ref(null);
-const routerSuccessHandler = ref(null);
 
 const close = () => {
   show.value = false;
@@ -72,82 +62,40 @@ const messageStyles = computed(() => {
   }
 });
 
-const triggerIfMessage = async () => {
-  if (flashMessage.value) {
-    forceRender.value++;
-    show.value = true;
-    await nextTick();
-    await nextTick();
-    if (hideTimeoutId.value) clearTimeout(hideTimeoutId.value);
-    const hideDelay = ["error", "warning"].includes(flashMessage.value.type)
-      ? 5000
-      : 3000;
-    hideTimeoutId.value = setTimeout(close, hideDelay);
-  } else {
-    show.value = false;
-  }
-};
-
-let lastSpokenFlashId = null;
+let lastSpokenId = null;
 let lastSpokenAt = 0;
-const speakDedupeMs = 750;
+const SPEAK_DEDUPE_MS = 750;
 
 watch(
   flashMessage,
   (newVal) => {
-    const messageId = newVal ? `${newVal.type}-${newVal.text}` : null;
-
     if (!newVal?.text) {
-      lastSpokenFlashId = null;
+      lastSpokenId = null;
       lastSpokenAt = 0;
-      requestAnimationFrame(() => {
-        triggerIfMessage();
-      });
+      requestAnimationFrame(() => { show.value = false; });
       return;
     }
 
+    const messageId = `${newVal.type}-${newVal.text}`;
     const now = Date.now();
-    const isRapidDuplicate =
-      messageId === lastSpokenFlashId &&
-      now - lastSpokenAt < speakDedupeMs;
-    if (!isRapidDuplicate) {
+    if (messageId !== lastSpokenId || now - lastSpokenAt >= SPEAK_DEDUPE_MS) {
       speak(newVal.text);
-      lastSpokenFlashId = messageId;
+      lastSpokenId = messageId;
       lastSpokenAt = now;
     }
 
     requestAnimationFrame(() => {
-      triggerIfMessage();
+      forceRender.value++;
+      show.value = true;
+      if (hideTimeoutId.value) clearTimeout(hideTimeoutId.value);
+      const hideDelay = ["error", "warning"].includes(newVal.type) ? 5000 : 3000;
+      hideTimeoutId.value = setTimeout(close, hideDelay);
     });
   },
   { immediate: true }
 );
 
-onMounted(() => {
-  requestAnimationFrame(() => {
-    triggerIfMessage();
-  });
-
-  const handler = () => {
-    requestAnimationFrame(() => {
-      triggerIfMessage();
-    });
-  };
-  routerSuccessHandler.value = handler;
-  const maybeDisposer = router.on("success", handler);
-  if (typeof maybeDisposer === "function") {
-    disposeSuccess.value = maybeDisposer;
-  }
-});
-
 onBeforeUnmount(() => {
-  if (typeof disposeSuccess.value === "function") {
-    disposeSuccess.value();
-    disposeSuccess.value = null;
-  } else if (typeof router.off === "function" && routerSuccessHandler.value) {
-    router.off("success", routerSuccessHandler.value);
-    routerSuccessHandler.value = null;
-  }
   if (hideTimeoutId.value) {
     clearTimeout(hideTimeoutId.value);
     hideTimeoutId.value = null;
