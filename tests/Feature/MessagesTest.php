@@ -1073,6 +1073,27 @@ class MessagesTest extends TestCase
         $this->assertSame('@Charlie thanks for reading', $taggedNotification->toArray($taggedUser)['message']);
     }
 
+    public function test_comment_creation_does_not_send_message_commented_when_author_is_tagged(): void
+    {
+        Notification::fake();
+        Event::fake();
+
+        $messageAuthor = User::factory()->create(['name' => 'Alice']);
+        $commenter = User::factory()->create(['name' => 'Bob']);
+        $message = Message::factory()->create(['user_id' => $messageAuthor->id]);
+
+        $this->actingAs($commenter);
+
+        $this->post(route('messages.comments.store', $message), [
+            'comment' => '@Alice great post!',
+            'tagged_user_ids' => [$messageAuthor->id],
+        ]);
+
+        // Author should get UserTagged (they were @mentioned), not MessageCommented
+        Notification::assertSentTo($messageAuthor, UserTagged::class);
+        Notification::assertNotSentTo($messageAuthor, MessageCommented::class);
+    }
+
     public function test_comment_creation_does_not_send_notification_when_commenting_on_own_message(): void
     {
         Notification::fake();
