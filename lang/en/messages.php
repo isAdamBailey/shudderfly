@@ -42,6 +42,7 @@ return [
     'sound.blocked' => 'Sound blocked.',
     'sound.disabled' => 'Sounds are turned off right now.',
     'avatar.updated' => 'New picture! Looking good.',
+    'user.weekly_overview_regenerated' => 'Made a new weekly story for :name!',
 
     // Error messages (clear but gentle)
     'messaging.disabled' => 'Chat is turned off right now.',

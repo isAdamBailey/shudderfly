@@ -110,6 +110,6 @@ class UserController extends Controller
             'weekly_profile_overview_generated_at' => now(),
         ])->save();
 
-        return back()->with('success', "Regenerated weekly overview for {$user->name}.");
+        return back()->with('success', __('messages.user.weekly_overview_regenerated', ['name' => $user->name]));
     }
 }

@@ -42,6 +42,7 @@ return [
     'sound.blocked' => 'Sonido bloqueado.',
     'sound.disabled' => 'Los sonidos están apagados ahora mismo.',
     'avatar.updated' => '¡Foto nueva! Te ves genial.',
+    'user.weekly_overview_regenerated' => '¡Se hizo una nueva historia semanal para :name!',
 
     // Error messages (clear but gentle)
     'messaging.disabled' => 'El chat está apagado ahora mismo.',
