@@ -166,6 +166,9 @@ Route::middleware('auth')->group(function () {
 
         Route::delete('/messages/{message}', [MessageController::class, 'destroy'])->name('messages.destroy');
         Route::delete('/messages/{message}/comments/{comment}', [MessageCommentController::class, 'destroy'])->name('messages.comments.destroy');
+
+        Route::post('/users/{user:email}/regenerate-weekly-overview', [UserController::class, 'regenerateWeeklyOverview'])
+            ->name('users.regenerate-weekly-overview');
     });
 });
 

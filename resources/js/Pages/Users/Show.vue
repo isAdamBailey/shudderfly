@@ -5,10 +5,11 @@ import SpeakButton from "@/Components/SpeakButton.vue";
 import MessageTimeline from "@/Components/Messages/MessageTimeline.vue";
 import StatCard from "@/Components/StatCard.vue";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import { usePermissions } from "@/composables/permissions";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
-import { Head, Link } from "@inertiajs/vue3";
-import { computed } from "vue";
+import { Head, Link, router } from "@inertiajs/vue3";
+import { computed, ref } from "vue";
 
 defineOptions({
     name: "UserShow",
@@ -16,6 +17,8 @@ defineOptions({
 
 const { speak, speaking } = useSpeechSynthesis();
 const { t } = useTranslations();
+const { canAdmin } = usePermissions();
+const regenerating = ref(false);
 
 const props = defineProps({
     profileUser: {
@@ -51,6 +54,23 @@ const memberSince = computed(() => {
         day: "numeric",
     });
 });
+
+const regenerateWeeklyOverview = () => {
+    if (regenerating.value) return;
+
+    regenerating.value = true;
+    router.post(
+        route("users.regenerate-weekly-overview", {
+            user: props.profileUser.email,
+        }),
+        {},
+        {
+            onFinish: () => {
+                regenerating.value = false;
+            },
+        },
+    );
+};
 
 const weeklyOverviewGeneratedAt = computed(() => {
     if (!props.weeklyOverview?.generatedAt) {
@@ -196,20 +216,42 @@ const speakUserSummary = () => {
                                     />
                                 </div>
                                 <div
-                                    v-if="weeklyOverview?.text"
+                                    v-if="weeklyOverview?.text || canAdmin"
                                     class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700"
                                 >
                                     <p
+                                        v-if="weeklyOverview?.text"
                                         class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap"
                                     >
                                         {{ weeklyOverview.text }}
                                     </p>
-                                    <p
-                                        v-if="weeklyOverviewGeneratedAt"
-                                        class="text-xs text-gray-500 dark:text-gray-400 mt-2"
+                                    <div
+                                        class="flex items-center gap-3 mt-2"
                                     >
-                                        Updated {{ weeklyOverviewGeneratedAt }}
-                                    </p>
+                                        <p
+                                            v-if="weeklyOverviewGeneratedAt"
+                                            class="text-xs text-gray-500 dark:text-gray-400"
+                                        >
+                                            Updated {{ weeklyOverviewGeneratedAt }}
+                                        </p>
+                                        <button
+                                            v-if="canAdmin"
+                                            type="button"
+                                            :disabled="regenerating"
+                                            class="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1"
+                                            @click="regenerateWeeklyOverview"
+                                        >
+                                            <i
+                                                class="ri-refresh-line"
+                                                :class="{ 'animate-spin': regenerating }"
+                                            ></i>
+                                            {{
+                                                regenerating
+                                                    ? "Regenerating..."
+                                                    : "Regenerate AI overview"
+                                            }}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

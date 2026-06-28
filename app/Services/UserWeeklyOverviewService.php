@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Log;
 
 class UserWeeklyOverviewService
 {
-    private const MAX_NEW_TOKENS = 90;
+    private const MAX_NEW_TOKENS = 110;
 
     private const CONNECT_TIMEOUT_SECONDS = 10;
 
@@ -24,6 +24,8 @@ class UserWeeklyOverviewService
     private const RETRY_TIMES = 3;
 
     private const RETRY_SLEEP_MS = 1000;
+
+    private const GENERATION_ATTEMPTS = 3;
 
     public function __construct(
         private PopularityService $popularityService
@@ -52,6 +54,19 @@ class UserWeeklyOverviewService
         $model = (string) config('services.huggingface.user_overview_model');
         $prompt = $this->buildPrompt($user, $metrics);
 
+        for ($attempt = 1; $attempt <= self::GENERATION_ATTEMPTS; $attempt++) {
+            $text = $this->attemptGeneration($user, $token, $endpoint, $model, $prompt, $attempt);
+
+            if ($text !== null) {
+                return $text;
+            }
+        }
+
+        return $fallbackOverview;
+    }
+
+    private function attemptGeneration(User $user, string $token, string $endpoint, string $model, string $prompt, int $attempt): ?string
+    {
         try {
             $response = Http::withToken($token)
                 ->connectTimeout(self::CONNECT_TIMEOUT_SECONDS)
@@ -61,7 +76,7 @@ class UserWeeklyOverviewService
                         return true;
                     }
                     if ($exception instanceof RequestException && $exception->response) {
-                        return $exception->response->serverError();
+                        return $exception->response->serverError() || $exception->response->status() === 429;
                     }
 
                     return false;
@@ -77,11 +92,12 @@ class UserWeeklyOverviewService
             if (! $response->successful()) {
                 Log::warning('Weekly profile overview generation failed', [
                     'user_id' => $user->id,
+                    'attempt' => $attempt,
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
 
-                return $fallbackOverview;
+                return null;
             }
 
             $generatedText = trim((string) data_get($response->json(), 'choices.0.message.content', ''));
@@ -90,20 +106,22 @@ class UserWeeklyOverviewService
             if ($normalizedText === '' || ! $this->isValidGeneratedOverview($normalizedText, $user)) {
                 Log::warning('Weekly profile overview generation returned unusable content', [
                     'user_id' => $user->id,
+                    'attempt' => $attempt,
                     'body' => $response->body(),
                 ]);
 
-                return $fallbackOverview;
+                return null;
             }
 
             return $normalizedText;
         } catch (\Throwable $exception) {
             Log::warning('Weekly profile overview generation exception', [
                 'user_id' => $user->id,
+                'attempt' => $attempt,
                 'error' => $exception->getMessage(),
             ]);
 
-            return $fallbackOverview;
+            return null;
         }
     }
 
@@ -122,7 +140,32 @@ class UserWeeklyOverviewService
             $text = $user->name.substr($text, strlen($quotedNamePrefix));
         }
 
-        return trim($text);
+        return $this->trimToCompleteSentence(trim($text));
+    }
+
+    /**
+     * Drop a trailing sentence fragment left by hitting the token limit
+     * mid-sentence, so the overview never ends on a cut-off word.
+     */
+    private function trimToCompleteSentence(string $text): string
+    {
+        if ($text === '' || preg_match('/[.!?]["\')]?$/', $text)) {
+            return $text;
+        }
+
+        $lastTerminator = null;
+        foreach (['.', '!', '?'] as $punctuation) {
+            $position = mb_strrpos($text, $punctuation);
+            if ($position !== false && ($lastTerminator === null || $position > $lastTerminator)) {
+                $lastTerminator = $position;
+            }
+        }
+
+        if ($lastTerminator === null) {
+            return '';
+        }
+
+        return trim(mb_substr($text, 0, $lastTerminator + 1));
     }
 
     private function isValidGeneratedOverview(string $text, User $user): bool
