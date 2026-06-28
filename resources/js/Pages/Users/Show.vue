@@ -207,12 +207,12 @@ const speakUserSummary = () => {
                                             {{ profileUser.name }}
                                         </h1>
                                         <p
-                                            class="text-sm text-gray-500 dark:text-gray-400 mb-3"
+                                            class="text-sm text-gray-600 dark:text-gray-400 mb-3"
                                         >
                                             {{ profileUser.email }}
                                         </p>
                                         <div
-                                            class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400"
+                                            class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400"
                                         >
                                             <i class="ri-calendar-line flex-shrink-0"></i>
                                             <span>Member since {{ memberSince }}</span>
@@ -231,7 +231,7 @@ const speakUserSummary = () => {
                                     class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700"
                                 >
                                     <div v-if="weeklyOverview?.text">
-                                        <p class="text-xs text-gray-400 dark:text-gray-500 mb-1.5">
+                                        <p class="text-xs text-gray-600 dark:text-gray-400 mb-1.5">
                                             Weekly AI story
                                         </p>
                                         <p
@@ -245,7 +245,7 @@ const speakUserSummary = () => {
                                     >
                                         <p
                                             v-if="weeklyOverviewGeneratedAt"
-                                            class="text-xs text-gray-500 dark:text-gray-400"
+                                            class="text-xs text-gray-600 dark:text-gray-400"
                                         >
                                             Updated {{ weeklyOverviewGeneratedAt }}
                                         </p>
@@ -287,7 +287,7 @@ const speakUserSummary = () => {
                                         class="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2"
                                     >
                                         <i class="ri-fire-line text-teal-700 dark:text-teal-400"></i>
-                                        Top Books <span class="font-normal text-gray-500 dark:text-gray-400">by popularity</span>
+                                        Top Books <span class="font-normal text-gray-600 dark:text-gray-400">by popularity</span>
                                     </h3>
                                 </div>
                                 <SpeakButton
@@ -315,7 +315,7 @@ const speakUserSummary = () => {
                             </div>
                             <p
                                 v-else
-                                class="text-center py-4 text-gray-500 dark:text-gray-400"
+                                class="text-center py-4 text-gray-600 dark:text-gray-400"
                             >
                                 No books created yet.
                             </p>
@@ -335,7 +335,7 @@ const speakUserSummary = () => {
                                         <i class="ri-book-2-line text-amber-500 dark:text-amber-400"></i>
                                         Recently Created
                                     </h3>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
                                         {{ stats.totalBooksCount }} books total
                                     </p>
                                 </div>
@@ -368,7 +368,7 @@ const speakUserSummary = () => {
                             </div>
                             <p
                                 v-else
-                                class="text-center py-4 text-gray-500 dark:text-gray-400"
+                                class="text-center py-4 text-gray-600 dark:text-gray-400"
                             >
                                 No books created yet.
                             </p>
@@ -450,7 +450,7 @@ const speakUserSummary = () => {
                                 Recent Messages
                             </h3>
                             <div class="flex items-center gap-2">
-                                <span class="text-sm text-gray-500 dark:text-gray-400">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">
                                     {{ stats.messagesCount }} total
                                 </span>
                                 <SpeakButton
@@ -468,7 +468,7 @@ const speakUserSummary = () => {
                         />
                         <p
                             v-else
-                            class="text-center py-4 text-gray-500 dark:text-gray-400"
+                            class="text-center py-4 text-gray-600 dark:text-gray-400"
                         >
                             No messages yet.
                         </p>
@@ -488,7 +488,7 @@ const speakUserSummary = () => {
                                 Recent Replies
                             </h3>
                             <div class="flex items-center gap-2">
-                                <span class="text-sm text-gray-500 dark:text-gray-400">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">
                                     {{ stats.commentsCount }} total
                                 </span>
                                 <SpeakButton
@@ -510,7 +510,7 @@ const speakUserSummary = () => {
                                     class="flex items-center justify-between gap-3 mb-2"
                                 >
                                     <span
-                                        class="text-xs text-gray-500 dark:text-gray-400"
+                                        class="text-xs text-gray-600 dark:text-gray-400"
                                     >
                                         {{ formatDate(reply.created_at) }}
                                     </span>
@@ -531,7 +531,7 @@ const speakUserSummary = () => {
                         </div>
                         <p
                             v-else
-                            class="text-center py-4 text-gray-500 dark:text-gray-400"
+                            class="text-center py-4 text-gray-600 dark:text-gray-400"
                         >
                             No replies yet.
                         </p>
