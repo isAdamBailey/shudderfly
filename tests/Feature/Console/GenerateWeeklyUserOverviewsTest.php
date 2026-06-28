@@ -82,7 +82,7 @@ class GenerateWeeklyUserOverviewsTest extends TestCase
                 && data_get($body, 'model') === self::MODEL
                 && data_get($body, 'messages.0.role') === 'user'
                 && is_string(data_get($body, 'messages.0.content'))
-                && data_get($body, 'max_tokens') === 90;
+                && data_get($body, 'max_tokens') === 110;
         });
     }
 
@@ -202,5 +202,97 @@ class GenerateWeeklyUserOverviewsTest extends TestCase
             'Cara is an avid reader on Shudderfly with over 817 books and 55,000 reads this week.',
             $user->weekly_profile_overview
         );
+    }
+
+    public function test_command_trims_truncated_overview_to_last_complete_sentence(): void
+    {
+        $this->configureService();
+
+        $user = User::factory()->create(['name' => 'Tess']);
+
+        $truncated = 'Tess is the snack-fueled story machine of Shudderfly. They also posted messages while munching on imaginary pretz';
+
+        Http::fake([
+            'router.huggingface.co/*' => Http::response([
+                'choices' => [
+                    ['message' => ['content' => $truncated]],
+                ],
+            ], 200),
+        ]);
+
+        $this->artisan('users:generate-weekly-overviews')
+            ->assertExitCode(0);
+
+        $user->refresh();
+
+        $this->assertSame(
+            'Tess is the snack-fueled story machine of Shudderfly.',
+            $user->weekly_profile_overview
+        );
+    }
+
+    public function test_command_retries_generation_when_first_attempt_is_unusable(): void
+    {
+        $this->configureService();
+
+        $user = User::factory()->create(['name' => 'Remi']);
+
+        Http::fake([
+            'router.huggingface.co/*' => Http::sequence()
+                ->push([
+                    'choices' => [
+                        ['message' => ['content' => 'Remi is having the best time ever with snacks and gigg']],
+                    ],
+                ], 200)
+                ->push([
+                    'choices' => [
+                        ['message' => ['content' => 'Remi is the giggliest snack connoisseur on Shudderfly this week.']],
+                    ],
+                ], 200),
+        ]);
+
+        $this->artisan('users:generate-weekly-overviews')
+            ->assertExitCode(0);
+
+        $user->refresh();
+
+        $this->assertSame(
+            'Remi is the giggliest snack connoisseur on Shudderfly this week.',
+            $user->weekly_profile_overview
+        );
+        Http::assertSentCount(2);
+    }
+
+    public function test_command_retries_on_connection_timeout_then_succeeds(): void
+    {
+        $this->configureService();
+
+        $user = User::factory()->create(['name' => 'Tory']);
+
+        $callCount = 0;
+        Http::fake(function () use (&$callCount) {
+            $callCount++;
+
+            if ($callCount === 1) {
+                throw new \Illuminate\Http\Client\ConnectionException('Connection timed out.');
+            }
+
+            return Http::response([
+                'choices' => [
+                    ['message' => ['content' => 'Tory is back online and reading like a champ this week.']],
+                ],
+            ], 200);
+        });
+
+        $this->artisan('users:generate-weekly-overviews')
+            ->assertExitCode(0);
+
+        $user->refresh();
+
+        $this->assertSame(
+            'Tory is back online and reading like a champ this week.',
+            $user->weekly_profile_overview
+        );
+        $this->assertGreaterThanOrEqual(2, $callCount);
     }
 }

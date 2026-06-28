@@ -3,15 +3,30 @@ import { mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 global.route = (name, params) => {
+    if (params && typeof params === "object") {
+        return `/${name}/${Object.values(params)[0]}`;
+    }
     if (params) {
         return `/${name}/${params}`;
     }
     return `/${name}`;
 };
 
+const mockRouterPost = vi.hoisted(() => vi.fn());
+const mockCanAdmin = vi.hoisted(() => vi.fn(() => false));
+
 vi.mock("@inertiajs/vue3", () => ({
     Head: { name: "Head", template: "<head><slot /></head>", props: ["title"] },
     Link: { name: "Link", template: "<a><slot /></a>", props: ["href"] },
+    router: { post: mockRouterPost },
+}));
+
+vi.mock("@/composables/permissions", () => ({
+    usePermissions: () => ({
+        get canAdmin() {
+            return mockCanAdmin();
+        },
+    }),
 }));
 
 vi.mock("@/composables/useSpeechSynthesis", () => ({
@@ -325,5 +340,69 @@ describe("UserShow", () => {
         });
 
         expect(wrapper.text()).toContain("No replies yet");
+    });
+
+    it("hides the regenerate overview button for non-admins", () => {
+        mockCanAdmin.mockReturnValueOnce(false);
+
+        const wrapper = mount(UserShow, {
+            props: {
+                profileUser,
+                weeklyOverview,
+                stats,
+                recentMessages: [],
+                recentReplies: [],
+            },
+            global: {
+                stubs: {
+                    BreezeAuthenticatedLayout: {
+                        template: "<div><slot name='header' /><slot /></div>",
+                    },
+                    Avatar: true,
+                    MessageTimeline: true,
+                    Head: true,
+                },
+            },
+        });
+
+        expect(wrapper.text()).not.toContain("Regenerate AI overview");
+    });
+
+    it("shows the regenerate overview button for admins and posts on click", async () => {
+        mockCanAdmin.mockReturnValueOnce(true);
+
+        const wrapper = mount(UserShow, {
+            props: {
+                profileUser,
+                weeklyOverview,
+                stats,
+                recentMessages: [],
+                recentReplies: [],
+            },
+            global: {
+                stubs: {
+                    BreezeAuthenticatedLayout: {
+                        template: "<div><slot name='header' /><slot /></div>",
+                    },
+                    Avatar: true,
+                    MessageTimeline: true,
+                    Head: true,
+                },
+            },
+        });
+
+        const button = wrapper
+            .findAll("button")
+            .find((b) => b.text().includes("Regenerate AI overview"));
+        expect(button).toBeTruthy();
+        expect(button.text()).toContain("Regenerate AI overview");
+
+        await button.trigger("click");
+
+        expect(mockRouterPost).toHaveBeenCalledWith(
+            "/users.regenerate-weekly-overview/test@example.com",
+            {},
+            expect.objectContaining({ onFinish: expect.any(Function) })
+        );
     });
 });

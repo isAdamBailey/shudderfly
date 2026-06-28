@@ -7,13 +7,16 @@ use App\Models\Message;
 use App\Models\MessageComment;
 use App\Models\User;
 use App\Services\PopularityService;
+use App\Services\UserWeeklyOverviewService;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class UserController extends Controller
 {
     public function __construct(
-        private PopularityService $popularityService
+        private PopularityService $popularityService,
+        private UserWeeklyOverviewService $userWeeklyOverviewService
     ) {}
 
     /**
@@ -91,5 +94,22 @@ class UserController extends Controller
             'recentMessages' => $recentMessages,
             'recentReplies' => $recentReplies,
         ]);
+    }
+
+    /**
+     * Regenerate the AI-written weekly profile overview for the given user.
+     */
+    public function regenerateWeeklyOverview(User $user): RedirectResponse
+    {
+        $this->authorize('admin');
+
+        $overview = $this->userWeeklyOverviewService->generateOverview($user);
+
+        $user->forceFill([
+            'weekly_profile_overview' => trim($overview),
+            'weekly_profile_overview_generated_at' => now(),
+        ])->save();
+
+        return back()->with('success', __('messages.user.weekly_overview_regenerated', ['name' => $user->name]));
     }
 }

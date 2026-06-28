@@ -42,6 +42,7 @@ return [
     'sound.blocked' => 'Sonido bloqueado.',
     'sound.disabled' => 'Los sonidos están apagados ahora mismo.',
     'avatar.updated' => '¡Foto nueva! Te ves genial.',
+    'user.weekly_overview_regenerated' => '¡Se hizo una nueva historia semanal para :name!',
 
     // Error messages (clear but gentle)
     'messaging.disabled' => 'El chat está apagado ahora mismo.',
@@ -391,6 +392,10 @@ return [
     'profile.messages_posted' => ':count :word publicados.',
     'profile.comments_posted' => ':count :word publicados.',
     'profile.reactions_given' => ':count :word dados.',
+    'profile.stat_total_books' => 'Libros en total: :count.',
+    'profile.stat_messages' => 'Mensajes: :count.',
+    'profile.stat_comments' => 'Comentarios publicados: :count.',
+    'profile.stat_reactions' => 'Reacciones dadas: :count.',
     'general.book' => 'libro',
     'general.books' => 'libros',
     'general.message' => 'mensaje',
