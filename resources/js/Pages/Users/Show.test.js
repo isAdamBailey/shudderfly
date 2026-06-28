@@ -12,15 +12,14 @@ global.route = (name, params) => {
     return `/${name}`;
 };
 
-const mockRouterPost = vi.fn();
+const mockRouterPost = vi.hoisted(() => vi.fn());
+const mockCanAdmin = vi.hoisted(() => vi.fn(() => false));
 
 vi.mock("@inertiajs/vue3", () => ({
     Head: { name: "Head", template: "<head><slot /></head>", props: ["title"] },
     Link: { name: "Link", template: "<a><slot /></a>", props: ["href"] },
     router: { post: mockRouterPost },
 }));
-
-const mockCanAdmin = vi.fn(() => false);
 
 vi.mock("@/composables/permissions", () => ({
     usePermissions: () => ({
@@ -392,7 +391,10 @@ describe("UserShow", () => {
             },
         });
 
-        const button = wrapper.find("button");
+        const button = wrapper
+            .findAll("button")
+            .find((b) => b.text().includes("Regenerate AI overview"));
+        expect(button).toBeTruthy();
         expect(button.text()).toContain("Regenerate AI overview");
 
         await button.trigger("click");
