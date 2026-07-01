@@ -1,15 +1,17 @@
 <template>
     <div :class="{ fireworks: $page.props.theme === 'fireworks' }">
-        <div class="spark-1"></div>
-        <div class="spark-2"></div>
-        <div class="spark-3"></div>
-        <div class="spark-4"></div>
-        <div class="spark-5"></div>
-        <div class="burst red" style="left: 25%; top: 50%;"></div>
-        <div class="burst blue" style="left: 50%; top: 50%;"></div>
-        <div class="burst green" style="left: 75%; top: 50%;"></div>
-        <div class="burst purple" style="left: 15%; top: 50%;"></div>
-        <div class="burst orange" style="left: 85%; top: 50%;"></div>
+        <div v-if="$page.props.theme === 'fireworks'" class="sparks">
+            <div class="spark-1"></div>
+            <div class="spark-2"></div>
+            <div class="spark-3"></div>
+            <div class="spark-4"></div>
+            <div class="spark-5"></div>
+            <div class="burst red" style="left: 25%; top: 50%;"></div>
+            <div class="burst blue" style="left: 50%; top: 50%;"></div>
+            <div class="burst green" style="left: 75%; top: 50%;"></div>
+            <div class="burst purple" style="left: 15%; top: 50%;"></div>
+            <div class="burst orange" style="left: 85%; top: 50%;"></div>
+        </div>
         <div class="content">
             <slot></slot>
         </div>
@@ -23,7 +25,14 @@
     /* Fireworks Animation */
     .fireworks {
         position: relative;
+    }
+
+    .fireworks .sparks {
+        position: absolute;
+        inset: 0;
         overflow: hidden;
+        z-index: 1;
+        pointer-events: none;
     }
 
     .fireworks .spark-1,
