@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Book;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class ThemeBooks
@@ -36,13 +37,33 @@ class ThemeBooks
             ->where(function ($q) use ($keywords) {
                 foreach ($keywords as $keyword) {
                     $q->orWhere(function ($subQuery) use ($keyword) {
-                        $subQuery->whereRaw('LOWER(title) LIKE ?', ['%'.strtolower($keyword).'%'])
-                            ->orWhereRaw('LOWER(excerpt) LIKE ?', ['%'.strtolower($keyword).'%']);
+                        self::applyKeywordMatch($subQuery, 'title', $keyword);
+                        self::applyKeywordMatch($subQuery, 'excerpt', $keyword, 'or');
                     });
                 }
             });
 
         return $query->paginate($perPage);
+    }
+
+    /**
+     * Add a LIKE match for a keyword against a column, excluding false
+     * positives where a digit keyword (e.g. "4th") is preceded by another
+     * digit (e.g. "14th", "24th").
+     */
+    protected static function applyKeywordMatch(Builder $query, string $column, string $keyword, string $boolean = 'and'): void
+    {
+        $method = $boolean === 'or' ? 'orWhere' : 'where';
+
+        $query->$method(function ($q) use ($column, $keyword) {
+            $q->whereRaw("LOWER({$column}) LIKE ?", ['%'.strtolower($keyword).'%']);
+
+            if (ctype_digit($keyword[0] ?? '')) {
+                foreach (range(0, 9) as $digit) {
+                    $q->whereRaw("LOWER({$column}) NOT LIKE ?", ['%'.$digit.strtolower($keyword).'%']);
+                }
+            }
+        });
     }
 
     /**
