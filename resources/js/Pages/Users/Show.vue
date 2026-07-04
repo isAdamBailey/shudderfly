@@ -9,10 +9,11 @@ import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import NewBookForm from "@/Pages/Books/NewBookForm.vue";
 import OwnerPanel from "@/Pages/Users/Partials/OwnerPanel.vue";
 import { usePermissions } from "@/composables/permissions";
+import { FOOD_EMOJI_POOL, useEmojiRise } from "@/composables/useEmojiRise";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import { Head, Link, router } from "@inertiajs/vue3";
-import { computed, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 
 defineOptions({
     name: "UserShow",
@@ -21,6 +22,7 @@ defineOptions({
 const { speak, speaking } = useSpeechSynthesis();
 const { t } = useTranslations();
 const { canAdmin, canEditPages } = usePermissions();
+const { spawnEmojiRise } = useEmojiRise();
 const regenerating = ref(false);
 const showNewBookForm = ref(false);
 
@@ -116,6 +118,31 @@ const props = defineProps({
         type: Object,
         default: null,
     },
+});
+
+let tootFoodsTimer = null;
+
+const scheduleTootFoodsRise = (minDelay = 8000, maxDelay = 22000) => {
+    const delay = minDelay + Math.random() * (maxDelay - minDelay);
+
+    tootFoodsTimer = setTimeout(() => {
+        spawnEmojiRise(1, {
+            pool: FOOD_EMOJI_POOL,
+            minDuration: 7,
+            maxDuration: 11,
+        });
+        scheduleTootFoodsRise();
+    }, delay);
+};
+
+onMounted(() => {
+    if (props.isOwner) {
+        scheduleTootFoodsRise(2000, 4000);
+    }
+});
+
+onUnmounted(() => {
+    clearTimeout(tootFoodsTimer);
 });
 
 const memberSince = computed(() => {
