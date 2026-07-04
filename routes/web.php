@@ -35,7 +35,7 @@ use Inertia\Inertia;
 */
 
 Route::middleware('auth')->group(function () {
-    Route::get('/', [BookController::class, 'index'])->name('welcome');
+    Route::get('/', [UserController::class, 'dashboard'])->name('welcome');
     Route::get('/books', [BookController::class, 'index'])->name('books.index');
     Route::get('/books-category', [BookController::class, 'category'])->name('books.category');
     Route::get('/categories/{categoryName}', [CategoryController::class, 'show'])->name('categories.show');
@@ -57,7 +57,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/contact-admins-email', [ProfileController::class, 'contactAdminsEmail'])
         ->name('profile.contact-admins-email');
 
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
     Route::patch('/profile/notifications/preferences', [ProfileController::class, 'updateNotificationPreferences'])
         ->name('profile.notifications.preferences');
@@ -65,6 +64,7 @@ Route::middleware('auth')->group(function () {
         ->name('profile.locale.preference');
 
     Route::group(['middleware' => ['can:edit profile']], function () {
+        Route::get('/account', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
         Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     });

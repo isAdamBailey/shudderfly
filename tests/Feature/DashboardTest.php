@@ -13,32 +13,55 @@ class DashboardTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_profile_page_loads_successfully()
+    public function test_dashboard_loads_successfully()
     {
         $user = User::factory()->create();
         $user->givePermissionTo('edit pages');
 
-        $response = $this->actingAs($user)->get(route('profile.edit'));
+        $response = $this->actingAs($user)->get(route('welcome'));
 
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
-            ->component('Profile/Edit')
+            ->component('Users/Show')
+            ->where('isOwner', true)
+            ->has('adminSettings')
+            ->has('categories')
         );
     }
 
-    public function test_non_admin_users_can_access_profile()
+    public function test_non_admin_users_can_access_dashboard()
     {
         $user = User::factory()->create();
 
-        $response = $this->actingAs($user)->get(route('profile.edit'));
+        $response = $this->actingAs($user)->get(route('welcome'));
 
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
-            ->component('Profile/Edit')
+            ->component('Users/Show')
+            ->where('isOwner', true)
         );
     }
 
-    public function test_profile_queries_work_with_data()
+    public function test_visiting_another_users_page_does_not_receive_owner_props()
+    {
+        $owner = User::factory()->create();
+        $visitor = User::factory()->create();
+
+        $response = $this->actingAs($visitor)->get(route('users.show', ['user' => $owner->email]));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Users/Show')
+            ->where('isOwner', false)
+            ->missing('adminSettings')
+            ->missing('adminUsers')
+            ->missing('recentActivity')
+            ->missing('newBooksThisWeek')
+            ->missing('recentUploads')
+        );
+    }
+
+    public function test_dashboard_queries_work_with_data()
     {
         $user = User::factory()->create();
         $user->givePermissionTo('edit pages');
@@ -52,7 +75,7 @@ class DashboardTest extends TestCase
         Page::factory()->count(5)->create(['book_id' => $book->id]);
         Song::factory()->count(4)->create();
 
-        $response = $this->actingAs($user)->get(route('profile.edit'));
+        $response = $this->actingAs($user)->get(route('welcome'));
 
         $response->assertStatus(200);
 
@@ -61,7 +84,7 @@ class DashboardTest extends TestCase
         $this->assertEquals(4, Song::count());
     }
 
-    public function test_profile_handles_books_with_different_page_counts()
+    public function test_dashboard_handles_books_with_different_page_counts()
     {
         $user = User::factory()->create();
         $user->givePermissionTo('edit pages');
@@ -72,7 +95,7 @@ class DashboardTest extends TestCase
         $bookWithLeastPages = Book::factory()->create(['title' => 'Small Book']);
         Page::factory()->count(1)->create(['book_id' => $bookWithLeastPages->id]);
 
-        $response = $this->actingAs($user)->get(route('profile.edit'));
+        $response = $this->actingAs($user)->get(route('welcome'));
 
         $response->assertStatus(200);
 
@@ -85,7 +108,7 @@ class DashboardTest extends TestCase
         $this->assertEquals(1, $leastPages->pages_count);
     }
 
-    public function test_profile_top_5_most_read_books_query()
+    public function test_dashboard_top_5_most_read_books_query()
     {
         $user = User::factory()->create();
         $user->givePermissionTo('edit pages');
@@ -94,7 +117,7 @@ class DashboardTest extends TestCase
             $book->update(['read_count' => 100 - ($index * 10)]);
         });
 
-        $response = $this->actingAs($user)->get(route('profile.edit'));
+        $response = $this->actingAs($user)->get(route('welcome'));
 
         $response->assertStatus(200);
 
@@ -109,7 +132,7 @@ class DashboardTest extends TestCase
         $this->assertEquals(60, $mostReadBooks->last()->read_count);
     }
 
-    public function test_profile_top_5_most_read_songs_query()
+    public function test_dashboard_top_5_most_read_songs_query()
     {
         $user = User::factory()->create();
         $user->givePermissionTo('edit pages');
@@ -118,7 +141,7 @@ class DashboardTest extends TestCase
             $song->update(['read_count' => 200 - ($index * 20)]);
         });
 
-        $response = $this->actingAs($user)->get(route('profile.edit'));
+        $response = $this->actingAs($user)->get(route('welcome'));
 
         $response->assertStatus(200);
 
@@ -132,7 +155,7 @@ class DashboardTest extends TestCase
         $this->assertEquals(120, $mostReadSongs->last()->read_count);
     }
 
-    public function test_profile_counts_different_page_types()
+    public function test_dashboard_counts_different_page_types()
     {
         $user = User::factory()->create();
         $user->givePermissionTo('edit pages');
@@ -144,7 +167,7 @@ class DashboardTest extends TestCase
         Page::factory()->create(['book_id' => $book->id, 'media_path' => 'images/snapshot.webp']);
         Page::factory()->create(['book_id' => $book->id, 'video_link' => 'https://youtube.com/watch?v=123']);
 
-        $response = $this->actingAs($user)->get(route('profile.edit'));
+        $response = $this->actingAs($user)->get(route('welcome'));
 
         $response->assertStatus(200);
 
@@ -156,9 +179,9 @@ class DashboardTest extends TestCase
         $this->assertEquals(1, Page::whereNotNull('video_link')->count());
     }
 
-    public function test_profile_requires_authentication()
+    public function test_dashboard_requires_authentication()
     {
-        $response = $this->get(route('profile.edit'));
+        $response = $this->get(route('welcome'));
 
         $response->assertRedirect(route('login'));
     }
@@ -176,5 +199,27 @@ class DashboardTest extends TestCase
 
         $response->assertRedirect();
         $this->assertEquals(0, Page::where('blocked', true)->count());
+    }
+
+    public function test_account_page_requires_edit_profile_permission()
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('profile.edit'));
+
+        $response->assertForbidden();
+    }
+
+    public function test_account_page_loads_for_users_with_edit_profile_permission()
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo('edit profile');
+
+        $response = $this->actingAs($user)->get(route('profile.edit'));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Profile/Account')
+        );
     }
 }

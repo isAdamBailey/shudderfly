@@ -61,7 +61,6 @@ class BookController extends Controller
                 ->get();
         }
 
-        $authors = auth()->user()->can('edit pages') ? User::all() : [];
         $categories = Category::all()->map->only(['id', 'name'])->sortBy('name')->values()->toArray();
 
         // Get theme label if a theme is active
@@ -72,7 +71,6 @@ class BookController extends Controller
         }
 
         return Inertia::render('Books/Index', [
-            'authors' => $authors,
             'categories' => $categories,
             'searchCategories' => $searchCategories ?? null,
             'search' => $search,

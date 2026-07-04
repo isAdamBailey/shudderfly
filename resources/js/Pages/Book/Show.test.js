@@ -221,8 +221,13 @@ describe("Book/Show.vue", () => {
     expect(wrapper.findComponent({ name: "ScrollTop" }).exists()).toBe(true);
   });
 
-  it("opens pages tab when book has no pages", async () => {
+  it("opens and scrolls to the pages tab when book has no pages", async () => {
+    const scrollIntoViewMock = vi.fn();
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = scrollIntoViewMock;
+
     const wrapperWithNoPages = mount(Show, {
+      attachTo: document.body,
       props: {
         book,
         pages: { data: [], total: 0 },
@@ -242,7 +247,16 @@ describe("Book/Show.vue", () => {
       }
     });
 
+    await wrapperWithNoPages.vm.$nextTick();
+    await wrapperWithNoPages.vm.$nextTick();
+
     expect(wrapperWithNoPages.vm.activeTab).toBe("pages");
+    expect(scrollIntoViewMock).toHaveBeenCalledWith(
+      expect.objectContaining({ behavior: "smooth", block: "start" })
+    );
+
+    wrapperWithNoPages.unmount();
+    HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
   });
 
   it("shows empty state when book has no pages for non-editors", async () => {

@@ -12,28 +12,6 @@
 
         <!-- Search moved to global layout -->
       </div>
-      <div v-if="canEditPages" class="mb-3 w-full md:w-1/2 mx-auto">
-        <Button
-          v-if="!showNewBookForm"
-          class="w-full"
-          @click="showNewBookForm = true"
-        >
-          <span class="text-center">Add a new book</span>
-        </Button>
-        <Button
-          v-else
-          class="w-full !bg-red-700"
-          @click="showNewBookForm = false"
-        >
-          Close book form
-        </Button>
-        <NewBookForm
-          v-if="showNewBookForm"
-          :authors="props.authors"
-          :categories="props.categories"
-          @close-page-form="showNewBookForm = false"
-        />
-      </div>
     </template>
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 sm:space-y-10">
       <!-- Themed Books Section -->
@@ -72,19 +50,15 @@
 </template>
 
 <script setup>
-import Button from "@/Components/Button.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
-import { usePermissions } from "@/composables/permissions";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import BooksGrid from "@/Pages/Books/BooksGrid.vue";
-import NewBookForm from "@/Pages/Books/NewBookForm.vue";
 import { Head, Link, usePage } from "@inertiajs/vue3";
-import { computed, ref, watch } from "vue";
+import { computed, watch } from "vue";
 
-const { canEditPages } = usePermissions();
 const { speak } = useSpeechSynthesis();
 const { t } = useTranslations();
 const notFoundContent = computed(() => t("search.not_found_books"));
@@ -98,17 +72,12 @@ const props = defineProps({
     type: Array,
     default: null
   },
-  authors: {
-    type: Array,
-    required: true
-  },
   themeLabel: {
     type: String,
     default: "Themed Books"
   }
 });
 
-const showNewBookForm = ref(false);
 const workingCategories = computed(() => {
   return props.searchCategories || props.categories;
 });

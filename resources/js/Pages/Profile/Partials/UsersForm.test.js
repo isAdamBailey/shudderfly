@@ -106,7 +106,8 @@ describe("UsersForm", () => {
         );
     });
 
-    it("shows permission badges for each user", () => {
+    it("shows permission badges for each user when viewer is admin", () => {
+        mockCanAdmin = true;
         const wrapper = mount(UsersForm, {
             props: { users },
             global: {
@@ -121,6 +122,26 @@ describe("UsersForm", () => {
         expect(wrapper.text()).toContain("Admin");
         expect(wrapper.text()).toContain("Edit Pages");
         expect(wrapper.text()).toContain("Edit Profile");
+    });
+
+    it("hides permission badges when viewer is not admin", () => {
+        mockCanAdmin = false;
+        const wrapper = mount(UsersForm, {
+            props: { users },
+            global: {
+                stubs: {
+                    Avatar: true,
+                    Dropdown: true,
+                    Link: { template: "<a><slot /></a>" },
+                },
+            },
+        });
+
+        expect(wrapper.find(".bg-purple-100").exists()).toBe(false);
+        expect(wrapper.find(".bg-blue-100").exists()).toBe(false);
+        expect(wrapper.find(".bg-green-100").exists()).toBe(false);
+        expect(wrapper.text()).not.toContain("Edit Pages");
+        expect(wrapper.text()).not.toContain("Edit Profile");
     });
 
     it("shows dropdown actions menu when user is admin", () => {

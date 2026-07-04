@@ -14,6 +14,7 @@ global.route = (name, params) => {
 
 const mockRouterPost = vi.hoisted(() => vi.fn());
 const mockCanAdmin = vi.hoisted(() => vi.fn(() => false));
+const mockCanEditPages = vi.hoisted(() => vi.fn(() => false));
 
 vi.mock("@inertiajs/vue3", () => ({
     Head: { name: "Head", template: "<head><slot /></head>", props: ["title"] },
@@ -26,7 +27,25 @@ vi.mock("@/composables/permissions", () => ({
         get canAdmin() {
             return mockCanAdmin();
         },
+        get canEditPages() {
+            return mockCanEditPages();
+        },
     }),
+}));
+
+vi.mock("@/Pages/Users/Partials/OwnerPanel.vue", () => ({
+    default: {
+        name: "OwnerPanel",
+        template: '<div class="owner-panel-stub" />',
+    },
+}));
+
+vi.mock("@/Pages/Books/NewBookForm.vue", () => ({
+    default: {
+        name: "NewBookForm",
+        template: '<form class="new-book-form-stub" />',
+        props: ["authors", "categories"],
+    },
 }));
 
 vi.mock("@/composables/useSpeechSynthesis", () => ({
@@ -204,7 +223,7 @@ describe("UserShow", () => {
             },
         });
 
-        expect(wrapper.text()).toContain("Top Books by");
+        expect(wrapper.text()).toContain("profile.user_top_books");
         expect(wrapper.text()).toContain("Test Book 1");
         expect(wrapper.text()).toContain("Test Book 2");
         expect(wrapper.text()).toContain("popularity 50%");
@@ -216,7 +235,7 @@ describe("UserShow", () => {
             props: {
                 profileUser,
                 stats,
-                recentMessages: [],
+                recentMessages,
                 recentReplies: [],
             },
             global: {
@@ -232,7 +251,7 @@ describe("UserShow", () => {
         });
 
         expect(wrapper.text()).toContain("12 total");
-        expect(wrapper.text()).toContain("Messages");
+        expect(wrapper.text()).toContain("profile.user_latest_messages");
     });
 
     it("shows recent messages when available", () => {
@@ -259,11 +278,11 @@ describe("UserShow", () => {
             },
         });
 
-        expect(wrapper.text()).toContain("Recent Messages");
+        expect(wrapper.text()).toContain("profile.user_latest_messages");
         expect(wrapper.find(".message-timeline-stub").exists()).toBe(true);
     });
 
-    it("shows no messages text when user has no messages", () => {
+    it("hides the messages tile entirely when user has no messages", () => {
         const wrapper = mount(UserShow, {
             props: {
                 profileUser,
@@ -283,7 +302,7 @@ describe("UserShow", () => {
             },
         });
 
-        expect(wrapper.text()).toContain("No messages yet");
+        expect(wrapper.text()).not.toContain("profile.user_latest_messages");
     });
 
     it("shows recent replies when available", () => {
@@ -310,12 +329,12 @@ describe("UserShow", () => {
             },
         });
 
-        expect(wrapper.text()).toContain("Recent Replies");
+        expect(wrapper.text()).toContain("profile.user_latest_replies");
         expect(wrapper.text()).toContain("This is a reply to a message.");
         expect(wrapper.text()).toContain("View message");
     });
 
-    it("shows no replies text when user has no replies", () => {
+    it("hides the replies tile entirely when user has no replies", () => {
         const wrapper = mount(UserShow, {
             props: {
                 profileUser,
@@ -339,7 +358,7 @@ describe("UserShow", () => {
             },
         });
 
-        expect(wrapper.text()).toContain("No replies yet");
+        expect(wrapper.text()).not.toContain("profile.user_latest_replies");
     });
 
     it("hides the regenerate overview button for non-admins", () => {
@@ -404,5 +423,155 @@ describe("UserShow", () => {
             {},
             expect.objectContaining({ onFinish: expect.any(Function) })
         );
+    });
+
+    describe("owner dashboard view", () => {
+        const ownerStubs = {
+            BreezeAuthenticatedLayout: {
+                template: "<div><slot name='header' /><slot /></div>",
+            },
+            Avatar: true,
+            MessageTimeline: true,
+            Head: true,
+            Link: {
+                template: '<a :href="href"><slot /></a>',
+                props: ["href"],
+            },
+        };
+
+        it("shows the welcome greeting and hides visitor-only sections when isOwner", () => {
+            const wrapper = mount(UserShow, {
+                props: {
+                    profileUser,
+                    isOwner: true,
+                    stats,
+                    recentMessages: [],
+                    recentReplies: [],
+                },
+                global: { stubs: ownerStubs },
+            });
+
+            expect(wrapper.text()).toContain("profile.welcome_header");
+            expect(wrapper.text()).toContain("profile.welcome_with_name");
+            expect(wrapper.text()).not.toContain("profile.user_top_books");
+            expect(wrapper.text()).not.toContain("profile.user_recently_created");
+            expect(wrapper.text()).not.toContain("profile.user_latest_messages");
+            expect(wrapper.text()).not.toContain("profile.user_latest_replies");
+        });
+
+        it("renders owner-only activity, new books, uploads, and OwnerPanel sections", () => {
+            const wrapper = mount(UserShow, {
+                props: {
+                    profileUser,
+                    isOwner: true,
+                    stats,
+                    recentMessages: [],
+                    recentReplies: [],
+                    recentActivity: {
+                        replies: [
+                            {
+                                id: 1,
+                                message_id: 5,
+                                comment: "Nice page!",
+                                created_at: "2024-12-30T10:00:00.000000Z",
+                                user: { name: "Other User" },
+                            },
+                        ],
+                        mentions: [
+                            {
+                                id: 2,
+                                created_at: "2024-12-30T11:00:00.000000Z",
+                                data: {
+                                    tagger_name: "Tagger Person",
+                                    message: "Check this out!",
+                                    url: "/messages#message-9",
+                                },
+                            },
+                        ],
+                    },
+                    newBooksThisWeek: [
+                        {
+                            id: 10,
+                            title: "Brand New Book",
+                            slug: "brand-new-book",
+                            created_at: "2024-12-29T10:00:00.000000Z",
+                        },
+                    ],
+                    recentUploads: [
+                        {
+                            id: 20,
+                            created_at: "2024-12-28T10:00:00.000000Z",
+                            book: { title: "Some Book" },
+                            media_path: "/path/to/image.jpg",
+                        },
+                    ],
+                },
+                global: { stubs: ownerStubs },
+            });
+
+            expect(wrapper.text()).toContain("profile.replies_to_you");
+            expect(wrapper.text()).toContain("profile.messages_to_you");
+            expect(wrapper.text()).toContain("Other User");
+            expect(wrapper.text()).toContain("Nice page!");
+            expect(wrapper.text()).toContain("profile.new_books_this_week");
+            expect(wrapper.text()).toContain("Brand New Book");
+            expect(wrapper.text()).toContain("profile.recent_uploads");
+            expect(wrapper.text()).toContain("Some Book");
+            expect(wrapper.findComponent({ name: "OwnerPanel" }).exists()).toBe(true);
+        });
+
+        it("does not render OwnerPanel or owner-only sections for visitors", () => {
+            const wrapper = mount(UserShow, {
+                props: {
+                    profileUser,
+                    isOwner: false,
+                    stats,
+                    recentMessages: [],
+                    recentReplies: [],
+                },
+                global: { stubs: ownerStubs },
+            });
+
+            expect(wrapper.findComponent({ name: "OwnerPanel" }).exists()).toBe(false);
+            expect(wrapper.text()).not.toContain("profile.replies_to_you");
+            expect(wrapper.text()).not.toContain("profile.messages_to_you");
+            expect(wrapper.text()).not.toContain("profile.new_books_this_week");
+            expect(wrapper.text()).not.toContain("profile.recent_uploads");
+        });
+
+        it("shows the new-book CTA only when isOwner and canEditPages", () => {
+            mockCanEditPages.mockReturnValueOnce(true);
+
+            const wrapper = mount(UserShow, {
+                props: {
+                    profileUser,
+                    isOwner: true,
+                    stats,
+                    recentMessages: [],
+                    recentReplies: [],
+                },
+                global: { stubs: ownerStubs },
+            });
+
+            expect(wrapper.text()).toContain("dashboard.new_book");
+            expect(wrapper.findComponent({ name: "NewBookForm" }).exists()).toBe(false);
+        });
+
+        it("hides the new-book CTA when the owner cannot edit pages", () => {
+            mockCanEditPages.mockReturnValueOnce(false);
+
+            const wrapper = mount(UserShow, {
+                props: {
+                    profileUser,
+                    isOwner: true,
+                    stats,
+                    recentMessages: [],
+                    recentReplies: [],
+                },
+                global: { stubs: ownerStubs },
+            });
+
+            expect(wrapper.text()).not.toContain("dashboard.add_new_book");
+        });
     });
 });

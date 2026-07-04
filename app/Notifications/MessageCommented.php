@@ -64,7 +64,7 @@ class MessageCommented extends Notification implements ShouldBroadcast
             ->line('"'.$quotedMessage.'"')
             ->line(__('messages.commented.comment_line', ['comment' => $this->comment->comment]))
             ->action(__('messages.commented.action'), $url)
-            ->line(__('messages.notifications.email.opt_out_markdown', ['url' => route('profile.edit')]))
+            ->line(__('messages.notifications.email.opt_out_markdown', ['url' => route('welcome')]))
             ->line(__('messages.commented.thank_you'));
     }
 

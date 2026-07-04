@@ -448,6 +448,12 @@ function mediaPath(page) {
 onMounted(() => {
   if (props.pages.total === 0) {
     activeTab.value = "pages";
+    nextTick(() => {
+      document.getElementById("admin-form")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
   }
 });
 </script>
