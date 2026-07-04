@@ -100,13 +100,6 @@ vi.mock("@/Pages/Books/BooksGrid.vue", () => ({
         props: ["category", "label"],
     },
 }));
-vi.mock("@/Pages/Books/NewBookForm.vue", () => ({
-    default: {
-        name: "NewBookForm",
-        template: '<form class="new-book-form" />',
-        props: ["authors", "categories"],
-    },
-}));
 
 describe("Books/Index.vue", () => {
     let wrapper;
@@ -114,7 +107,6 @@ describe("Books/Index.vue", () => {
         { name: "Fiction", books: [{ id: 1, title: "Book 1" }] },
         { name: "Nonfiction", books: [] },
     ];
-    const authors = [{ id: 1, name: "Author 1" }];
 
     beforeEach(() => {
         // Reset mockPageData before each test
@@ -124,7 +116,6 @@ describe("Books/Index.vue", () => {
         wrapper = mount(Index, {
             props: {
                 categories,
-                authors,
                 searchCategories: null,
             },
         });
@@ -151,7 +142,6 @@ describe("Books/Index.vue", () => {
                     { name: "Fiction", books: [] },
                     { name: "Nonfiction", books: [] },
                 ],
-                authors,
                 searchCategories: null,
             },
         });
@@ -161,24 +151,11 @@ describe("Books/Index.vue", () => {
         );
     });
 
-    it("toggles new book form when button is clicked", async () => {
-        // Simulate canEditPages true
-        wrapper.vm.showNewBookForm = false;
-        await wrapper.vm.$nextTick();
-        const addButton = wrapper
-            .findAll("button")
-            .find((btn) => btn.text().includes("Add a new book"));
-        if (addButton) {
-            await addButton.trigger("click");
-            expect(wrapper.vm.showNewBookForm).toBe(true);
-        }
-    });
-
     it("shows correct title when search is present", async () => {
         mockPageData.props.search = "foo";
 
         wrapper = mount(Index, {
-            props: { categories, authors, searchCategories: null },
+            props: { categories, searchCategories: null },
         });
 
         expect(wrapper.text()).toContain("Books");
@@ -190,7 +167,6 @@ describe("Books/Index.vue", () => {
         wrapper = mount(Index, {
             props: {
                 categories,
-                authors,
                 searchCategories: null,
                 themeLabel: "Halloween Books",
             },
@@ -212,7 +188,6 @@ describe("Books/Index.vue", () => {
         wrapper = mount(Index, {
             props: {
                 categories,
-                authors,
                 searchCategories: null,
                 themeLabel: null,
             },
@@ -235,7 +210,6 @@ describe("Books/Index.vue", () => {
         wrapper = mount(Index, {
             props: {
                 categories,
-                authors,
                 searchCategories: null,
                 themeLabel: "Halloween Books",
             },
@@ -254,7 +228,6 @@ describe("Books/Index.vue", () => {
         wrapper = mount(Index, {
             props: {
                 categories,
-                authors,
                 searchCategories: null,
                 themeLabel: "Christmas Books",
             },
@@ -275,7 +248,6 @@ describe("Books/Index.vue", () => {
         wrapper = mount(Index, {
             props: {
                 categories,
-                authors,
                 searchCategories: [
                     {
                         name: "Fiction",

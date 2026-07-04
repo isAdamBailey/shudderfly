@@ -31,6 +31,12 @@ const soundsEnabled = computed(() => {
 const topNavItems = computed(() => {
   const items = [
     {
+      label: "Books",
+      href: route("books.index"),
+      active: route().current("books.*"),
+      icon: "ri-book-open-line"
+    },
+    {
       label: "ALL",
       href: route("pictures.index"),
       active: route().current("pictures.*")
@@ -76,14 +82,20 @@ const topNavItems = computed(() => {
   return items;
 });
 
-const desktopPrimaryItems = computed(() => topNavItems.value.slice(0, 1));
-const desktopOverflowItems = computed(() => topNavItems.value.slice(1));
+const desktopPrimaryItems = computed(() => topNavItems.value.slice(0, 2));
+const desktopOverflowItems = computed(() => topNavItems.value.slice(2));
 const desktopMoreActive = computed(() =>
   desktopOverflowItems.value.some((item) => item.active)
 );
 
 const secondaryMobilePageItems = computed(() => {
   const items = [
+    {
+      label: "Books",
+      href: route("books.index"),
+      active: route().current("books.*"),
+      icon: "ri-book-open-line"
+    },
     {
       label: "Collages",
       href: route("collages.index"),
@@ -126,15 +138,17 @@ const secondaryMobilePageItems = computed(() => {
 });
 
 const utilityMobileItems = computed(() => {
-  const items = [
-    {
+  const items = [];
+
+  if (canEditProfile.value) {
+    items.push({
       label: "Account",
       href: route("profile.edit"),
       icon: "ri-user-settings-line"
-    }
-  ];
+    });
+  }
 
-  if (canEditPages.value) {
+  if (canEditProfile.value) {
     items.push({
       label: "Log Out",
       href: route("logout"),
@@ -266,6 +280,7 @@ const mobileMoreActive = computed(() => {
             </div>
             <div class="ml-3 relative">
               <Dropdown
+                v-if="canEditProfile"
                 align="right"
                 width="56"
                 :content-classes="['p-2 bg-white dark:bg-gray-900']"
@@ -288,22 +303,6 @@ const mobileMoreActive = computed(() => {
                 </template>
 
                 <template #content>
-                  <Link
-                    :href="route('users.show', $page.props.auth.user.email)"
-                    class="mb-2 block rounded-xl border border-gray-200 bg-gray-100 px-4 py-3 transition-colors hover:bg-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
-                  >
-                    <div class="flex items-center gap-3">
-                      <Avatar :user="$page.props.auth.user" size="md" />
-                      <div>
-                        <div class="text-sm font-semibold text-gray-900 dark:text-white">
-                          {{ $page.props.auth.user.name }}
-                        </div>
-                        <div class="text-xs text-gray-500 dark:text-gray-300">
-                          {{ $page.props.auth.user.email }}
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
                   <div class="space-y-2">
                     <NavMenuItem
                       :href="route('profile.edit')"
@@ -314,7 +313,6 @@ const mobileMoreActive = computed(() => {
                   </div>
                   <div class="mt-2">
                     <NavMenuItem
-                      v-if="canEditProfile"
                       :href="route('logout')"
                       label="Log Out"
                       icon="ri-logout-box-line"
@@ -325,6 +323,13 @@ const mobileMoreActive = computed(() => {
                   </div>
                 </template>
               </Dropdown>
+              <div
+                v-else
+                class="relative inline-flex min-h-12 items-center gap-2 rounded-xl px-2 py-1"
+                aria-hidden="true"
+              >
+                <Avatar :user="$page.props.auth.user" size="md" />
+              </div>
             </div>
           </div>
 
@@ -379,21 +384,6 @@ const mobileMoreActive = computed(() => {
 
               <template #content>
                 <div class="max-h-[70vh] overflow-y-auto space-y-2">
-                  <Link
-                    :href="route('users.show', $page.props.auth.user.email)"
-                    class="mb-2 flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-100 px-4 py-3 transition-colors hover:bg-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
-                  >
-                    <Avatar :user="$page.props.auth.user" size="md" />
-                    <div>
-                      <div class="text-sm font-semibold text-gray-900 dark:text-white">
-                        {{ $page.props.auth.user.name }}
-                      </div>
-                      <div class="text-xs text-gray-500 dark:text-gray-300">
-                        {{ $page.props.auth.user.email }}
-                      </div>
-                    </div>
-                  </Link>
-
                   <NavMenuItem
                     v-for="item in secondaryMobilePageItems"
                     :key="item.label"

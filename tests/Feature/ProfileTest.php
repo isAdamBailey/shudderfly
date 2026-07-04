@@ -13,10 +13,11 @@ class ProfileTest extends TestCase
     public function test_profile_page_is_displayed()
     {
         $user = User::factory()->create();
+        $user->givePermissionTo('edit profile');
 
         $response = $this
             ->actingAs($user)
-            ->get('/profile');
+            ->get(route('profile.edit'));
 
         $response->assertOk();
     }
@@ -35,7 +36,7 @@ class ProfileTest extends TestCase
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect('/profile');
+            ->assertRedirect(route('profile.edit'));
 
         $user->refresh();
 
@@ -58,7 +59,7 @@ class ProfileTest extends TestCase
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect('/profile');
+            ->assertRedirect(route('profile.edit'));
 
         $this->assertNotNull($user->refresh()->email_verified_at);
     }
@@ -89,14 +90,14 @@ class ProfileTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->from('/profile')
+            ->from(route('profile.edit'))
             ->delete('/profile', [
                 'password' => 'wrong-password',
             ]);
 
         $response
             ->assertSessionHasErrors('password')
-            ->assertRedirect('/profile');
+            ->assertRedirect(route('profile.edit'));
 
         $this->assertNotNull($user->fresh());
     }
@@ -107,13 +108,14 @@ class ProfileTest extends TestCase
 
         $response = $this
             ->actingAs($user)
+            ->from(route('welcome'))
             ->patch('/profile/avatar', [
                 'avatar' => 'avatar-1',
             ]);
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect('/profile');
+            ->assertRedirect(route('welcome'));
 
         $user->refresh();
 
@@ -127,13 +129,14 @@ class ProfileTest extends TestCase
         foreach (['bigears-1', 'avataaars-6', 'adventurer-12'] as $avatarId) {
             $response = $this
                 ->actingAs($user)
+                ->from(route('welcome'))
                 ->patch('/profile/avatar', [
                     'avatar' => $avatarId,
                 ]);
 
             $response
                 ->assertSessionHasNoErrors()
-                ->assertRedirect('/profile');
+                ->assertRedirect(route('welcome'));
 
             $user->refresh();
 
@@ -148,13 +151,14 @@ class ProfileTest extends TestCase
 
         $response = $this
             ->actingAs($user)
+            ->from(route('welcome'))
             ->patch('/profile/avatar', [
                 'avatar' => 'avatar-2',
             ]);
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect('/profile');
+            ->assertRedirect(route('welcome'));
 
         $user->refresh();
 
@@ -167,13 +171,14 @@ class ProfileTest extends TestCase
 
         $response = $this
             ->actingAs($user)
+            ->from(route('welcome'))
             ->patch('/profile/avatar', [
                 'avatar' => null,
             ]);
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect('/profile');
+            ->assertRedirect(route('welcome'));
 
         $user->refresh();
 
@@ -186,14 +191,14 @@ class ProfileTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->from('/profile')
+            ->from(route('profile.edit'))
             ->patch('/profile/avatar', [
                 'avatar' => 'invalid-avatar',
             ]);
 
         $response
             ->assertSessionHasErrors('avatar')
-            ->assertRedirect('/profile');
+            ->assertRedirect(route('profile.edit'));
 
         $user->refresh();
 
@@ -217,6 +222,7 @@ class ProfileTest extends TestCase
 
         $response = $this
             ->actingAs($user)
+            ->from(route('welcome'))
             ->patch('/profile/notifications/preferences', [
                 'email_notifications_enabled' => false,
             ]);
@@ -224,7 +230,7 @@ class ProfileTest extends TestCase
         $response
             ->assertSessionHasNoErrors()
             ->assertSessionHas('success', __('messages.notifications.email.updated'))
-            ->assertRedirect('/profile');
+            ->assertRedirect(route('welcome'));
 
         $this->assertFalse($user->refresh()->email_notifications_enabled);
     }
@@ -235,14 +241,14 @@ class ProfileTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->from('/profile')
+            ->from(route('profile.edit'))
             ->patch('/profile/notifications/preferences', [
                 'email_notifications_enabled' => 'nope',
             ]);
 
         $response
             ->assertSessionHasErrors('email_notifications_enabled')
-            ->assertRedirect('/profile');
+            ->assertRedirect(route('profile.edit'));
     }
 
     public function test_locale_preference_can_be_updated()
@@ -253,6 +259,7 @@ class ProfileTest extends TestCase
 
         $response = $this
             ->actingAs($user)
+            ->from(route('welcome'))
             ->patch('/profile/locale/preference', [
                 'locale' => 'es',
             ]);
@@ -260,7 +267,7 @@ class ProfileTest extends TestCase
         $response
             ->assertSessionHasNoErrors()
             ->assertSessionHas('success', __('messages.locale.updated'))
-            ->assertRedirect('/profile');
+            ->assertRedirect(route('welcome'));
 
         $this->assertSame('es', $user->refresh()->locale);
     }
@@ -288,13 +295,13 @@ class ProfileTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->from('/profile')
+            ->from(route('profile.edit'))
             ->patch('/profile/locale/preference', [
                 'locale' => 'fr',
             ]);
 
         $response
             ->assertSessionHasErrors('locale')
-            ->assertRedirect('/profile');
+            ->assertRedirect(route('profile.edit'));
     }
 }

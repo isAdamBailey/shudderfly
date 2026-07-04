@@ -73,7 +73,7 @@ class UserTagged extends Notification implements ShouldBroadcast
             ->line(__('messages.tagged.line', ['name' => $this->tagger->name]))
             ->line('"'.$mailQuote.'"')
             ->action(__('messages.tagged.action'), $url)
-            ->line(__('messages.notifications.email.opt_out_markdown', ['url' => route('profile.edit')]))
+            ->line(__('messages.notifications.email.opt_out_markdown', ['url' => route('welcome')]))
             ->line(__('messages.tagged.thank_you'));
     }
 
