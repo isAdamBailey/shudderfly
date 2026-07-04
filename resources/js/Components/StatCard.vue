@@ -35,8 +35,15 @@ defineProps({
 </script>
 
 <template>
-    <div
+    <component
+        :is="href ? Link : 'div'"
+        :href="href"
         class="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-3 flex items-center justify-between shadow-sm"
+        :class="
+            href
+                ? 'hover:border-teal-500 dark:hover:border-teal-400 hover:shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1'
+                : ''
+        "
     >
         <div class="flex items-center flex-1 min-w-0">
             <div v-if="coverImage" class="flex-shrink-0 mr-3">
@@ -57,18 +64,14 @@ defineProps({
             ></i>
 
             <div class="flex-1 min-w-0">
-                <Link
-                    v-if="href"
-                    :href="href"
-                    :title="label"
-                    class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate hover:text-teal-700 dark:hover:text-teal-400 transition-colors block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 rounded"
-                >
-                    {{ label }}
-                </Link>
                 <div
-                    v-else
                     :title="label"
-                    class="text-sm text-gray-600 dark:text-gray-400 truncate"
+                    :class="[
+                        'text-sm truncate',
+                        href
+                            ? 'font-medium text-gray-900 dark:text-gray-100'
+                            : 'text-gray-600 dark:text-gray-400',
+                    ]"
                 >
                     {{ label }}
                 </div>
@@ -92,5 +95,5 @@ defineProps({
             </div>
         </div>
         <slot name="action" />
-    </div>
+    </component>
 </template>

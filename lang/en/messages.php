@@ -389,8 +389,6 @@ return [
     'stats.book_least_pages' => 'Book with least pages: :title. :count pages.',
 
     // User profile (spoken)
-    'profile.top_books_by_popularity' => 'Top books by popularity. :list.',
-    'profile.recent_books_created' => 'Recent books created. :list.',
     'profile.member_since' => 'Member since :date.',
     'profile.books_created' => ':count :word created.',
     'profile.messages_posted' => ':count :word posted.',
@@ -414,8 +412,6 @@ return [
     'profile.user_latest_messages' => ":name's Latest Messages",
     'profile.user_latest_replies' => ":name's Latest Replies",
     'profile.untitled_book' => 'Untitled',
-    'profile.speak_new_books_this_week' => 'New books this week. :list',
-    'profile.speak_recent_uploads' => 'Recent uploads. :list',
     'profile.speak_replies_to_you' => 'Replies to you. :list',
     'profile.speak_messages_to_you' => 'Messages for you. :list',
     'general.book' => 'book',

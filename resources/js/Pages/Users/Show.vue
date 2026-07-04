@@ -189,17 +189,11 @@ const speakActivityStat = (key, count) => {
 };
 
 const speakTopBooks = () => {
-    const bookTexts = props.stats.topBooks.map((book, index) => {
-        return `${index + 1}. ${book.title}`;
-    });
-    speak(t("profile.top_books_by_popularity", { list: bookTexts.join(". ") }));
+    speak(t("profile.user_top_books", { name: props.profileUser.name }));
 };
 
 const speakRecentBooks = () => {
-    const bookTexts = props.stats.recentBooks.map((book, index) => {
-        return `${index + 1}. ${book.title}`;
-    });
-    speak(t("profile.recent_books_created", { list: bookTexts.join(". ") }));
+    speak(t("profile.user_recently_created", { name: props.profileUser.name }));
 };
 
 const repliesToYou = computed(() => {
@@ -244,17 +238,11 @@ const speakMessagesToYou = () => {
 };
 
 const speakNewBooksThisWeek = () => {
-    const bookTexts = props.newBooksThisWeek.map((book, index) => {
-        return `${index + 1}. ${book.title}`;
-    });
-    speak(t("profile.speak_new_books_this_week", { list: bookTexts.join(". ") }));
+    speak(t("profile.new_books_this_week"));
 };
 
 const speakRecentUploads = () => {
-    const uploadTexts = props.recentUploads.map((page, index) => {
-        return `${index + 1}. ${page.book?.title ?? t("profile.untitled_book")}`;
-    });
-    speak(t("profile.speak_recent_uploads", { list: uploadTexts.join(". ") }));
+    speak(t("profile.recent_uploads"));
 };
 
 const speakUserSummary = () => {
@@ -476,7 +464,7 @@ const speakUserSummary = () => {
                                 />
                             </div>
 
-                            <div class="space-y-3">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <StatCard
                                     v-for="book in stats.topBooks"
                                     :key="book.id"
@@ -516,7 +504,7 @@ const speakUserSummary = () => {
                                 />
                             </div>
 
-                            <div class="space-y-3">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <StatCard
                                     v-for="book in stats.recentBooks"
                                     :key="book.id"
@@ -810,7 +798,7 @@ const speakUserSummary = () => {
                                         @click="speakNewBooksThisWeek"
                                     />
                                 </div>
-                                <div class="space-y-3">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <StatCard
                                         v-for="book in newBooksThisWeek"
                                         :key="book.id"
@@ -842,7 +830,7 @@ const speakUserSummary = () => {
                                         @click="speakRecentUploads"
                                     />
                                 </div>
-                                <div class="space-y-3">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <StatCard
                                         v-for="page in recentUploads"
                                         :key="page.id"
