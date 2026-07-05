@@ -24,7 +24,8 @@ class DashboardTest extends TestCase
         $response->assertInertia(fn ($page) => $page
             ->component('Users/Show')
             ->where('isOwner', true)
-            ->reloadOnly(['adminSettings', 'categories'])
+            ->has('adminSettings')
+            ->has('categories')
         );
     }
 
