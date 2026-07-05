@@ -13,13 +13,14 @@ global.route = (name, params) => {
 };
 
 const mockRouterPost = vi.hoisted(() => vi.fn());
+const mockRouterReload = vi.hoisted(() => vi.fn());
 const mockCanAdmin = vi.hoisted(() => vi.fn(() => false));
 const mockCanEditPages = vi.hoisted(() => vi.fn(() => false));
 
 vi.mock("@inertiajs/vue3", () => ({
     Head: { name: "Head", template: "<head><slot /></head>", props: ["title"] },
     Link: { name: "Link", template: "<a><slot /></a>", props: ["href"] },
-    router: { post: mockRouterPost },
+    router: { post: mockRouterPost, reload: mockRouterReload },
 }));
 
 vi.mock("@/composables/permissions", () => ({
@@ -454,8 +455,12 @@ describe("UserShow", () => {
             expect(wrapper.text()).toContain("profile.welcome_header");
             expect(wrapper.text()).toContain("profile.welcome_with_name");
             expect(wrapper.text()).not.toContain("profile.user_top_books");
-            expect(wrapper.text()).not.toContain("profile.user_recently_created");
-            expect(wrapper.text()).not.toContain("profile.user_latest_messages");
+            expect(wrapper.text()).not.toContain(
+                "profile.user_recently_created"
+            );
+            expect(wrapper.text()).not.toContain(
+                "profile.user_latest_messages"
+            );
             expect(wrapper.text()).not.toContain("profile.user_latest_replies");
         });
 
@@ -517,7 +522,9 @@ describe("UserShow", () => {
             expect(wrapper.text()).toContain("Brand New Book");
             expect(wrapper.text()).toContain("profile.recent_uploads");
             expect(wrapper.text()).toContain("Some Book");
-            expect(wrapper.findComponent({ name: "OwnerPanel" }).exists()).toBe(true);
+            expect(wrapper.findComponent({ name: "OwnerPanel" }).exists()).toBe(
+                true
+            );
         });
 
         it("does not render OwnerPanel or owner-only sections for visitors", () => {
@@ -532,7 +539,9 @@ describe("UserShow", () => {
                 global: { stubs: ownerStubs },
             });
 
-            expect(wrapper.findComponent({ name: "OwnerPanel" }).exists()).toBe(false);
+            expect(wrapper.findComponent({ name: "OwnerPanel" }).exists()).toBe(
+                false
+            );
             expect(wrapper.text()).not.toContain("profile.replies_to_you");
             expect(wrapper.text()).not.toContain("profile.messages_to_you");
             expect(wrapper.text()).not.toContain("profile.new_books_this_week");
@@ -554,7 +563,9 @@ describe("UserShow", () => {
             });
 
             expect(wrapper.text()).toContain("dashboard.new_book");
-            expect(wrapper.findComponent({ name: "NewBookForm" }).exists()).toBe(false);
+            expect(
+                wrapper.findComponent({ name: "NewBookForm" }).exists()
+            ).toBe(false);
         });
 
         it("hides the new-book CTA when the owner cannot edit pages", () => {

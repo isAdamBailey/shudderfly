@@ -12,6 +12,7 @@ use App\Support\ThemeBooks;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Redirector;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -96,12 +97,16 @@ class CategoryController extends Controller
     {
         Category::create($request->validated());
 
+        $this->forgetDashboardCategoryCaches();
+
         return redirect(route('welcome'));
     }
 
     public function update(UpdateCategoryRequest $request, Category $category): Application|RedirectResponse|Redirector
     {
         $category->update($request->validated());
+
+        $this->forgetDashboardCategoryCaches();
 
         return redirect(route('welcome'));
     }
@@ -116,6 +121,18 @@ class CategoryController extends Controller
 
         $category->delete();
 
+        $this->forgetDashboardCategoryCaches();
+
         return redirect(route('welcome'));
+    }
+
+    /**
+     * Invalidate the dashboard's cached category lists (UserController::ownerProps)
+     * so category changes show up immediately instead of after the cache TTL.
+     */
+    private function forgetDashboardCategoryCaches(): void
+    {
+        Cache::forget('dashboard-categories');
+        Cache::forget('dashboard-book-categories');
     }
 }

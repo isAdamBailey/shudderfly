@@ -596,6 +596,9 @@ class PageController extends Controller
         }
         $page->delete();
 
+        Cache::forget('dashboard-blocked-count');
+        Cache::forget('dashboard-recent-uploads');
+
         return redirect(route('books.show', $page->book))->with('success', __('messages.page.deleted'));
     }
 
@@ -644,6 +647,8 @@ class PageController extends Controller
                     }
                     $page->delete();
                 }
+                Cache::forget('dashboard-blocked-count');
+                Cache::forget('dashboard-recent-uploads');
                 $message = __('messages.page.bulk_deleted', ['count' => count($pages)]);
                 break;
 
@@ -678,6 +683,8 @@ class PageController extends Controller
 
         $page->update(['blocked' => true]);
 
+        Cache::forget('dashboard-blocked-count');
+
         return redirect(route('books.show', $page->book))->with('success', __('messages.page.blocked'));
     }
 
@@ -687,6 +694,8 @@ class PageController extends Controller
         $soundCount = Sound::where('blocked', true)->update(['blocked' => false]);
         $total = $pageCount + $soundCount;
         $message = __('messages.unblocked_all', ['count' => $total]);
+
+        Cache::forget('dashboard-blocked-count');
 
         if ($request->header('X-Inertia')) {
             return redirect()->back()->with('success', $message);

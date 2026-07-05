@@ -124,6 +124,9 @@ class BookController extends Controller
     {
         $book = Book::create($request->validated());
 
+        // Invalidate UserController::ownerProps()'s cached "new books this week" list.
+        Cache::forget('dashboard-new-books-this-week');
+
         return redirect(route('books.show', $book))->with('success', __('messages.book.created', ['title' => $book->title]));
     }
 
@@ -235,6 +238,11 @@ class BookController extends Controller
 
         $book->pages()->delete();
         $book->delete();
+
+        // Invalidate dashboard caches that may include this book's pages
+        // (some of which could have been blocked, or shown as recent uploads).
+        Cache::forget('dashboard-blocked-count');
+        Cache::forget('dashboard-recent-uploads');
 
         return redirect(route('books.index'))->with('success', __('messages.book.deleted', ['title' => $book->title]));
     }

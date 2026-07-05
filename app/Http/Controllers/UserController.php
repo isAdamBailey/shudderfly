@@ -17,11 +17,20 @@ use App\Services\PopularityService;
 use App\Services\UserWeeklyOverviewService;
 use App\Support\WorldClockState;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class UserController extends Controller
 {
+    /**
+     * How long the heavy dashboard/profile queries stay cached. The frontend
+     * re-requests this data on every page visit (see resources/js/Pages/Users/Show.vue
+     * and OwnerPanel.vue), so caching keeps repeat visits cheap without the
+     * data going stale for long.
+     */
+    private const CACHE_TTL_SECONDS = 300;
+
     public function __construct(
         private PopularityService $popularityService,
         private UserWeeklyOverviewService $userWeeklyOverviewService,
@@ -54,19 +63,37 @@ class UserController extends Controller
                 'text' => $user->weekly_profile_overview,
                 'generatedAt' => $user->weekly_profile_overview_generated_at,
             ],
-            'stats' => Inertia::defer(fn () => $this->profileStats($user, $isOwner)),
+            // These are fetched on-demand by the frontend (via router.reload)
+            // rather than Inertia's automatic deferred-prop fetch, so we use
+            // optional() here: excluded from the initial load like defer(),
+            // but never auto-fetched, which avoids double-fetching.
+            'stats' => Inertia::optional(fn () => Cache::remember(
+                "profile-stats:{$user->id}:".($isOwner ? 'owner' : 'visitor'),
+                self::CACHE_TTL_SECONDS,
+                fn () => $this->profileStats($user, $isOwner)
+            )),
             // The "authored by this user" message/reply lists are only shown to
             // visitors (the owner already knows their own content).
-            'recentMessages' => Inertia::defer(fn () => $isOwner ? collect() : Message::where('user_id', $user->id)
-                ->with(['page', 'user'])
-                ->orderBy('created_at', 'desc')
-                ->take(10)
-                ->get()),
-            'recentReplies' => Inertia::defer(fn () => $isOwner ? collect() : MessageComment::where('user_id', $user->id)
-                ->with(['message.user'])
-                ->orderBy('created_at', 'desc')
-                ->take(10)
-                ->get()),
+            'recentMessages' => Inertia::optional(fn () => $isOwner ? collect() : Cache::remember(
+                "profile-recent-messages:{$user->id}",
+                self::CACHE_TTL_SECONDS,
+                fn () => Message::where('user_id', $user->id)
+                    ->with(['page', 'user'])
+                    ->orderBy('created_at', 'desc')
+                    ->take(10)
+                    ->get()
+                    ->toArray()
+            )),
+            'recentReplies' => Inertia::optional(fn () => $isOwner ? collect() : Cache::remember(
+                "profile-recent-replies:{$user->id}",
+                self::CACHE_TTL_SECONDS,
+                fn () => MessageComment::where('user_id', $user->id)
+                    ->with(['message.user'])
+                    ->orderBy('created_at', 'desc')
+                    ->take(10)
+                    ->get()
+                    ->toArray()
+            )),
         ];
 
         if ($isOwner) {
@@ -120,8 +147,8 @@ class UserController extends Controller
 
         return [
             'totalBooksCount' => Book::where('author', $user->name)->count(),
-            'topBooks' => $topBooks,
-            'recentBooks' => $recentBooks,
+            'topBooks' => $topBooks->toArray(),
+            'recentBooks' => $recentBooks->toArray(),
             'messagesCount' => Message::where('user_id', $user->id)->count(),
             'commentsCount' => MessageComment::where('user_id', $user->id)->count(),
             'reactionsGiven' => $reactionsGiven,
@@ -139,86 +166,135 @@ class UserController extends Controller
         $canAdmin = $user->can('admin');
 
         return [
-            'recentActivity' => Inertia::defer(fn () => [
-                'replies' => MessageComment::query()
-                    ->whereIn('message_id', Message::where('user_id', $user->id)->select('id'))
-                    ->where('user_id', '!=', $user->id)
-                    ->where('created_at', '>=', now()->subDays(7))
-                    ->with(['user', 'message'])
+            'recentActivity' => Inertia::optional(fn () => Cache::remember(
+                "dashboard-recent-activity:{$user->id}",
+                self::CACHE_TTL_SECONDS,
+                fn () => [
+                    'replies' => MessageComment::query()
+                        ->whereIn('message_id', Message::where('user_id', $user->id)->select('id'))
+                        ->where('user_id', '!=', $user->id)
+                        ->where('created_at', '>=', now()->subDays(7))
+                        ->with(['user', 'message'])
+                        ->latest()
+                        ->take(10)
+                        ->get()
+                        ->toArray(),
+                    'mentions' => $user->notifications()
+                        ->where('type', UserTagged::class)
+                        ->where('created_at', '>=', now()->subDays(7))
+                        ->latest()
+                        ->take(10)
+                        ->get()
+                        ->toArray(),
+                ]
+            )),
+            'newBooksThisWeek' => Inertia::optional(fn () => Cache::remember(
+                'dashboard-new-books-this-week',
+                self::CACHE_TTL_SECONDS,
+                fn () => Book::with('coverImage')
+                    ->where('created_at', '>=', now()->subWeek())
                     ->latest()
-                    ->take(10)
-                    ->get(),
-                'mentions' => $user->notifications()
-                    ->where('type', UserTagged::class)
-                    ->where('created_at', '>=', now()->subDays(7))
+                    ->take(8)
+                    ->get()
+                    ->toArray()
+            )),
+            'recentUploads' => Inertia::optional(fn () => Cache::remember(
+                'dashboard-recent-uploads',
+                self::CACHE_TTL_SECONDS,
+                fn () => Page::notBlocked()
+                    ->hasImage()
+                    ->with('book')
                     ->latest()
-                    ->take(10)
-                    ->get(),
-            ], 'dashboard'),
-            'newBooksThisWeek' => Inertia::defer(fn () => Book::with('coverImage')
-                ->where('created_at', '>=', now()->subWeek())
-                ->latest()
-                ->take(8)
-                ->get(), 'dashboard'),
-            'recentUploads' => Inertia::defer(fn () => Page::notBlocked()
-                ->hasImage()
-                ->with('book')
-                ->latest()
-                ->take(12)
-                ->get(), 'dashboard'),
-            'authors' => $canEditPages ? User::all() : [],
+                    ->take(12)
+                    ->get()
+                    ->toArray()
+            )),
+            // Shares the "dashboard-users" cache key with the `users` prop below —
+            // both are just User::all(), so whichever resolves first (this one,
+            // eagerly, since the New Book form needs it immediately) fills the
+            // cache for the other instead of querying twice.
+            'authors' => $canEditPages ? Cache::remember(
+                'dashboard-users',
+                self::CACHE_TTL_SECONDS,
+                fn () => User::all()->toArray()
+            ) : [],
             'newBookCategories' => $canEditPages
-                ? Category::all()->map->only(['id', 'name'])->sortBy('name')->values()->toArray()
+                ? Cache::remember(
+                    'dashboard-book-categories',
+                    self::CACHE_TTL_SECONDS,
+                    fn () => Category::all()->map->only(['id', 'name'])->sortBy('name')->values()->toArray()
+                )
                 : [],
-            'adminUsers' => Inertia::defer(fn () => User::permission('admin')->get(['name']), 'dashboard'),
-            'users' => Inertia::defer(fn () => User::all(), 'dashboard'),
-            'categories' => Inertia::defer(fn () => $canAdmin ? Category::withCount('books')->get() : collect(), 'dashboard'),
-            'blockedCount' => Inertia::defer(fn () => $canEditPages
-                ? Page::where('blocked', true)->count() + Sound::where('blocked', true)->count()
-                : 0, 'dashboard'),
-            'adminSettings' => Inertia::defer(fn () => $canAdmin ? $this->settingsController->index() : [], 'dashboard'),
-            'siteStats' => Inertia::defer(fn () => [
-                'numberOfBooks' => Book::count(),
-                'numberOfPages' => Page::count(),
-                'numberOfSongs' => Song::count(),
-                'numberOfYouTubeVideos' => Page::whereNotNull('video_link')->count(),
-                'numberOfVideos' => Page::where('media_path', 'like', '%.mp4')->count(),
-                'numberOfImages' => Page::where('media_path', 'like', '%.webp')
-                    ->where('media_path', 'not like', '%snapshot%')
-                    ->count(),
-                'numberOfScreenshots' => Page::where('media_path', 'like', '%snapshot%')->count(),
-                'mostReadBooks' => $this->popularityService->addPopularityToCollection(
-                    Book::query()
-                        ->with('coverImage')
-                        ->orderBy('read_count', 'desc')
+            'users' => Inertia::optional(fn () => Cache::remember(
+                'dashboard-users',
+                self::CACHE_TTL_SECONDS,
+                fn () => User::all()->toArray()
+            )),
+            'categories' => Inertia::optional(fn () => $canAdmin ? Cache::remember(
+                'dashboard-categories',
+                self::CACHE_TTL_SECONDS,
+                fn () => Category::withCount('books')->get()->toArray()
+            ) : collect()),
+            'blockedCount' => Inertia::optional(fn () => $canEditPages ? Cache::remember(
+                'dashboard-blocked-count',
+                self::CACHE_TTL_SECONDS,
+                fn () => Page::where('blocked', true)->count() + Sound::where('blocked', true)->count()
+            ) : 0),
+            'adminSettings' => Inertia::optional(fn () => $canAdmin ? $this->settingsController->index() : []),
+            'siteStats' => Inertia::optional(fn () => Cache::remember(
+                'dashboard-site-stats',
+                self::CACHE_TTL_SECONDS,
+                fn () => [
+                    // totalCount() reuses the same warmed read-count list that
+                    // addPopularityToCollection() below needs, avoiding a
+                    // redundant COUNT(*) query for the same table.
+                    'numberOfBooks' => $this->popularityService->totalCount(Book::class),
+                    'numberOfPages' => Page::count(),
+                    'numberOfSongs' => $this->popularityService->totalCount(Song::class),
+                    'numberOfYouTubeVideos' => Page::whereNotNull('video_link')->count(),
+                    'numberOfVideos' => Page::where('media_path', 'like', '%.mp4')->count(),
+                    'numberOfImages' => Page::where('media_path', 'like', '%.webp')
+                        ->where('media_path', 'not like', '%snapshot%')
+                        ->count(),
+                    'numberOfScreenshots' => Page::where('media_path', 'like', '%snapshot%')->count(),
+                    'mostReadBooks' => $this->popularityService->addPopularityToCollection(
+                        Book::query()
+                            ->with('coverImage')
+                            ->orderBy('read_count', 'desc')
+                            ->orderBy('created_at')
+                            ->take(5)
+                            ->get(),
+                        Book::class
+                    )->toArray(),
+                    'mostReadSongs' => $this->popularityService->addPopularityToCollection(
+                        Song::query()
+                            ->orderBy('read_count', 'desc')
+                            ->take(5)
+                            ->get(),
+                        Song::class
+                    )->toArray(),
+                    'leastPages' => Book::with('coverImage')
+                        ->withCount('pages')
+                        ->orderBy('pages_count')
                         ->orderBy('created_at')
-                        ->take(5)
-                        ->get(),
-                    Book::class
-                )->toArray(),
-                'mostReadSongs' => $this->popularityService->addPopularityToCollection(
-                    Song::query()
-                        ->orderBy('read_count', 'desc')
-                        ->take(5)
-                        ->get(),
-                    Song::class
-                )->toArray(),
-                'leastPages' => Book::with('coverImage')
-                    ->withCount('pages')
-                    ->orderBy('pages_count')
-                    ->orderBy('created_at')
-                    ->first()
-                    ?->toArray(),
-                'mostPages' => Book::with('coverImage')
-                    ->withCount('pages')
-                    ->orderBy('pages_count', 'desc')
-                    ->orderBy('created_at')
-                    ->first()
-                    ?->toArray(),
-            ], 'dashboard'),
+                        ->first()
+                        ?->toArray(),
+                    'mostPages' => Book::with('coverImage')
+                        ->withCount('pages')
+                        ->orderBy('pages_count', 'desc')
+                        ->orderBy('created_at')
+                        ->first()
+                        ?->toArray(),
+                ]
+            )),
             'defaultCities' => config('world_clock.default_cities'),
             'maxCities' => config('world_clock.max_cities'),
-            'timezoneLabels' => TimezoneLabel::pluck('label', 'timezone'),
+            'timezoneLabels' => Cache::remember(
+                'dashboard-timezone-labels',
+                self::CACHE_TTL_SECONDS,
+                fn () => TimezoneLabel::pluck('label', 'timezone')->toArray()
+            ),
+            // Not cached: includes server_now/timer state that must stay fresh on every request.
             'worldClock' => WorldClockState::payload(WorldClockSetting::instance()),
         ];
     }

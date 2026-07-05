@@ -19,6 +19,15 @@ class PopularityService
             ->all();
     }
 
+    /**
+     * Total row count for a model, reusing the warmed/memoized read-count
+     * list when available instead of issuing a separate COUNT(*) query.
+     */
+    public function totalCount(string $modelClass): int
+    {
+        return count($this->sortedReadCountsFor($modelClass));
+    }
+
     public function calculatePopularity(Model $model): int
     {
         $modelClass = get_class($model);
@@ -45,7 +54,8 @@ class PopularityService
             return $collection;
         }
 
-        $totalCount = $modelClass::count();
+        $allReadCounts = $this->sortedReadCountsFor($modelClass);
+        $totalCount = count($allReadCounts);
 
         if ($totalCount === 0) {
             return $collection->map(function ($item) {
@@ -62,8 +72,6 @@ class PopularityService
                 return $item;
             });
         }
-
-        $allReadCounts = $this->sortedReadCountsFor($modelClass);
 
         return $collection->map(function ($item) use ($allReadCounts, $totalCount) {
             $readCount = (float) ($item->read_count ?? 0);
@@ -94,14 +102,10 @@ class PopularityService
      */
     private function sortedReadCountsFor(string $modelClass): array
     {
-        if (isset($this->sortedReadCountCache[$modelClass])) {
-            return $this->sortedReadCountCache[$modelClass];
+        if (! isset($this->sortedReadCountCache[$modelClass])) {
+            $this->warmReadCountCache($modelClass);
         }
 
-        return $modelClass::query()
-            ->pluck('read_count')
-            ->sort()
-            ->values()
-            ->all();
+        return $this->sortedReadCountCache[$modelClass];
     }
 }

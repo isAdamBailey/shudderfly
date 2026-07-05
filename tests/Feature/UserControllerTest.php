@@ -41,11 +41,7 @@ class UserControllerTest extends TestCase
             ->missing('profileUser.weekly_profile_overview_generated_at')
             ->has('weeklyOverview')
             ->where('weeklyOverview.text', null)
-            ->loadDeferredProps(function ($page) {
-                $page->has('stats')
-                    ->has('recentMessages')
-                    ->has('recentReplies');
-            })
+            ->reloadOnly(['stats', 'recentMessages', 'recentReplies'])
         );
     }
 
@@ -89,7 +85,7 @@ class UserControllerTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
-            ->loadDeferredProps(function ($page) {
+            ->reloadOnly(['stats'], function ($page) {
                 $page->where('stats.totalBooksCount', 3)
                     ->has('stats.topBooks', 3)
                     ->has('stats.recentBooks', 3);
@@ -110,7 +106,7 @@ class UserControllerTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
-            ->loadDeferredProps(function ($page) {
+            ->reloadOnly(['stats'], function ($page) {
                 $page->where('stats.messagesCount', 5);
             })
         );
@@ -128,7 +124,7 @@ class UserControllerTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
-            ->loadDeferredProps(function ($page) {
+            ->reloadOnly(['recentMessages'], function ($page) {
                 $page->has('recentMessages', 10); // Should only show 10 most recent
             })
         );
@@ -155,7 +151,7 @@ class UserControllerTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
-            ->loadDeferredProps(function ($page) {
+            ->reloadOnly(['stats', 'recentReplies'], function ($page) {
                 $page->where('stats.commentsCount', 12)
                     ->has('recentReplies', 10);
             })

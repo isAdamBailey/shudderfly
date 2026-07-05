@@ -9,6 +9,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Encoders\WebpEncoder;
@@ -107,6 +108,9 @@ class StoreImage implements ShouldQueue
                     $this->book->update(['cover_page' => $page->id]);
                 }
             }
+
+            // Invalidate UserController::ownerProps()'s cached "recent uploads" list.
+            Cache::forget('dashboard-recent-uploads');
 
             // Delete old media/poster if provided (post-success)
             try {

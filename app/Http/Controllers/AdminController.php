@@ -7,6 +7,7 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 
 class AdminController extends Controller
@@ -43,6 +44,10 @@ class AdminController extends Controller
         $user = User::where('email', $request->email)->first();
         $user->syncPermissions();
         $user->delete();
+
+        // Invalidate UserController::ownerProps()'s cached User::all() list
+        // (shared by the `authors` and `users` dashboard props).
+        Cache::forget('dashboard-users');
 
         return redirect(route('welcome'));
     }

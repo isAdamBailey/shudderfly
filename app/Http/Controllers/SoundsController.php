@@ -10,6 +10,7 @@ use App\Models\Sound;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -77,6 +78,8 @@ class SoundsController extends Controller
     {
         $sound->update(['blocked' => true]);
 
+        Cache::forget('dashboard-blocked-count');
+
         return redirect(route('sounds.index'))->with('success', __('messages.sound.blocked'));
     }
 
@@ -89,6 +92,8 @@ class SoundsController extends Controller
         }
 
         $sound->delete();
+
+        Cache::forget('dashboard-blocked-count');
 
         return back()->with('success', __('messages.sound.deleted'));
     }

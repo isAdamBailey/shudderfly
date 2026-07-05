@@ -9,6 +9,7 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
@@ -56,6 +57,10 @@ class RegisteredUserController extends Controller
         ]);
 
         event(new Registered($user));
+
+        // Invalidate UserController::ownerProps()'s cached User::all() list
+        // (shared by the `authors` and `users` dashboard props).
+        Cache::forget('dashboard-users');
 
         Auth::login($user);
 
