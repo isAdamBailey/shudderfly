@@ -171,6 +171,9 @@ const confirmPrefix = computed(() => {
   if (props.kind === "movie") {
     return "movie";
   }
+  if (props.kind === "game") {
+    return "game";
+  }
   return "page";
 });
 
@@ -184,6 +187,9 @@ const shareIconTitle = computed(() => {
   if (props.kind === "movie") {
     return t("movie.share_icon_title");
   }
+  if (props.kind === "game") {
+    return t("game.share_icon_title");
+  }
   return t("page.share_icon_title");
 });
 
@@ -196,6 +202,9 @@ const shareAriaLabel = computed(() => {
   }
   if (props.kind === "movie") {
     return t("movie.share_aria");
+  }
+  if (props.kind === "game") {
+    return t("game.share_aria");
   }
   return t("page.share_aria");
 });
