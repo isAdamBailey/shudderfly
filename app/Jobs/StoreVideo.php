@@ -12,7 +12,6 @@ use Illuminate\Http\File;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -407,9 +406,6 @@ class StoreVideo implements ShouldQueue
                         }
                     }
                 });
-
-                // Invalidate UserController::ownerProps()'s cached "recent uploads" list.
-                Cache::forget('dashboard-recent-uploads');
 
                 // After successful DB update, delete any old media/poster
                 try {
