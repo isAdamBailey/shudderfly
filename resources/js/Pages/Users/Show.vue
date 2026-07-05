@@ -95,7 +95,7 @@ const props = defineProps({
         default: 0,
     },
     siteStats: {
-        type: [Object, Function],
+        type: Object,
         default: () => ({}),
     },
     adminSettings: {

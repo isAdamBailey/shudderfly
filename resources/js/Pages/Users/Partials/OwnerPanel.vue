@@ -14,7 +14,7 @@ import SettingsForm from "@/Pages/Profile/Partials/SettingsForm.vue";
 import StatsCard from "@/Pages/Profile/Partials/StatsCard.vue";
 import UsersForm from "@/Pages/Profile/Partials/UsersForm.vue";
 import VoiceSettingsForm from "@/Pages/Profile/Partials/VoiceSettingsForm.vue";
-import { Deferred, router } from "@inertiajs/vue3";
+import { router } from "@inertiajs/vue3";
 import axios from "axios";
 import { ref } from "vue";
 
@@ -29,7 +29,7 @@ const settingsAccordionOpen = ref(false);
 const props = defineProps({
   adminUsers: { type: Array, default: () => [] },
   users: { type: Array, default: () => [] },
-  siteStats: { type: [Object, Function], default: () => ({}) },
+  siteStats: { type: Object, default: () => ({}) },
   categories: { type: Array, default: () => [] },
   adminSettings: { type: Array, default: () => [] },
   blockedCount: { type: Number, default: 0 },
@@ -84,22 +84,7 @@ const unblockAllPages = async () => {
         <UsersForm :users="users" />
       </Accordion>
       <Accordion title="Site Statistics">
-        <Deferred data="siteStats">
-          <template #fallback>
-            <div class="space-y-4 py-2" role="status" aria-live="polite" aria-label="Loading statistics">
-              <div class="flex items-center gap-3 text-gray-900 dark:text-gray-100">
-                <i class="ri-loader-4-line text-2xl animate-spin"></i>
-                <span class="font-medium">Loading statistics...</span>
-              </div>
-              <div class="space-y-2">
-                <div class="h-3 w-3/4 rounded bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
-                <div class="h-3 w-2/3 rounded bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
-                <div class="h-3 w-1/2 rounded bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
-              </div>
-            </div>
-          </template>
-          <StatsCard :stats="siteStats" />
-        </Deferred>
+        <StatsCard :stats="siteStats" />
       </Accordion>
     </div>
 

@@ -7,7 +7,7 @@ use App\Models\Category;
 use App\Models\Message;
 use App\Models\MessageComment;
 use App\Models\Page;
-use App\Models\Song;
+use App\Models\SiteStatistic;
 use App\Models\Sound;
 use App\Models\TimezoneLabel;
 use App\Models\User;
@@ -178,51 +178,44 @@ class UserController extends Controller
             'blockedCount' => $canEditPages
                 ? Page::where('blocked', true)->count() + Sound::where('blocked', true)->count()
                 : 0,
-            'siteStats' => Inertia::defer(fn () => [
-                'numberOfBooks' => Book::count(),
-                'numberOfPages' => Page::count(),
-                'numberOfSongs' => Song::count(),
-                'numberOfYouTubeVideos' => Page::whereNotNull('video_link')->count(),
-                'numberOfVideos' => Page::where('media_path', 'like', '%.mp4')->count(),
-                'numberOfImages' => Page::where('media_path', 'like', '%.webp')
-                    ->where('media_path', 'not like', '%snapshot%')
-                    ->count(),
-                'numberOfScreenshots' => Page::where('media_path', 'like', '%snapshot%')->count(),
-                'mostReadBooks' => $this->popularityService->addPopularityToCollection(
-                    Book::query()
-                        ->with('coverImage')
-                        ->orderBy('read_count', 'desc')
-                        ->orderBy('created_at')
-                        ->take(5)
-                        ->get(),
-                    Book::class
-                )->toArray(),
-                'mostReadSongs' => $this->popularityService->addPopularityToCollection(
-                    Song::query()
-                        ->orderBy('read_count', 'desc')
-                        ->take(5)
-                        ->get(),
-                    Song::class
-                )->toArray(),
-                'leastPages' => Book::with('coverImage')
-                    ->withCount('pages')
-                    ->orderBy('pages_count')
-                    ->orderBy('created_at')
-                    ->first()
-                    ?->toArray(),
-                'mostPages' => Book::with('coverImage')
-                    ->withCount('pages')
-                    ->orderBy('pages_count', 'desc')
-                    ->orderBy('created_at')
-                    ->first()
-                    ?->toArray(),
-            ]),
+            'siteStats' => $this->siteStats(),
             'adminSettings' => $canAdmin ? $this->settingsController->index() : [],
             'defaultCities' => config('world_clock.default_cities'),
             'maxCities' => config('world_clock.max_cities'),
             'timezoneLabels' => TimezoneLabel::pluck('label', 'timezone'),
             'worldClock' => WorldClockState::payload(WorldClockSetting::instance()),
         ];
+    }
+
+    /**
+     * Read the most recent nightly site-statistics snapshot (computed by the
+     * `stats:aggregate-site-statistics` scheduled command) plus a short history
+     * of daily counts for trend display. Avoids running the heavy aggregation
+     * queries (full-table LIKE scans, popularity percentile ranking) on every
+     * dashboard load.
+     *
+     * @return array<string, mixed>
+     */
+    private function siteStats(): array
+    {
+        $rows = SiteStatistic::history(30);
+        $latest = $rows->last();
+
+        if (! $latest) {
+            return [];
+        }
+
+        $history = $rows->map(fn (SiteStatistic $row) => [
+            'date' => $row->date,
+            'numberOfBooks' => $row->payload['numberOfBooks'] ?? null,
+            'numberOfPages' => $row->payload['numberOfPages'] ?? null,
+            'numberOfSongs' => $row->payload['numberOfSongs'] ?? null,
+        ])->values()->all();
+
+        return array_merge($latest->payload, [
+            'generatedAt' => $latest->date,
+            'history' => $history,
+        ]);
     }
 
     /**

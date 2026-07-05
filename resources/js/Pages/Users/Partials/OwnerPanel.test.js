@@ -15,7 +15,6 @@ vi.mock("axios", () => ({
 }));
 
 vi.mock("@inertiajs/vue3", () => ({
-    Deferred: { name: "Deferred", template: "<div><slot /></div>" },
     router: { reload: mockRouterReload },
 }));
 

@@ -1,5 +1,15 @@
 <template>
     <div class="text-gray-900 dark:text-white">
+        <div
+            v-if="statsData.generatedAt"
+            class="text-xs text-gray-500 dark:text-gray-400 mb-3"
+        >
+            Updated {{ statsData.generatedAt }} &middot;
+            {{ countAddS(statsData.booksAddedToday || 0, "book") }},
+            {{ countAddS(statsData.pagesAddedToday || 0, "page") }},
+            {{ countAddS(statsData.songsAddedToday || 0, "song") }} added today
+        </div>
+
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <!-- Books -->
             <div
@@ -186,7 +196,12 @@
                         class="mr-2"
                         icon-class="ri-speak-fill text-lg"
                         aria-label="Speak YouTube videos"
-                        @click="speakStat('youtube_videos', statsData.numberOfYouTubeVideos)"
+                        @click="
+                            speakStat(
+                                'youtube_videos',
+                                statsData.numberOfYouTubeVideos
+                            )
+                        "
                     />
                 </div>
             </div>
@@ -218,7 +233,12 @@
                         class="mr-2"
                         icon-class="ri-speak-fill text-lg"
                         aria-label="Speak screenshots"
-                        @click="speakStat('screenshots', statsData.numberOfScreenshots)"
+                        @click="
+                            speakStat(
+                                'screenshots',
+                                statsData.numberOfScreenshots
+                            )
+                        "
                     />
                 </div>
             </div>
@@ -290,7 +310,12 @@
                                     :disabled="speaking"
                                     icon-class="ri-speak-fill text-lg"
                                     aria-label="Speak book with most pages"
-                                    @click="speakBookPageStat('book_most_pages', statsData.mostPages)"
+                                    @click="
+                                        speakBookPageStat(
+                                            'book_most_pages',
+                                            statsData.mostPages
+                                        )
+                                    "
                                 />
                             </div>
                         </div>
@@ -362,7 +387,12 @@
                                     :disabled="speaking"
                                     icon-class="ri-speak-fill text-lg"
                                     aria-label="Speak book with least pages"
-                                    @click="speakBookPageStat('book_least_pages', statsData.leastPages)"
+                                    @click="
+                                        speakBookPageStat(
+                                            'book_least_pages',
+                                            statsData.leastPages
+                                        )
+                                    "
                                 />
                             </div>
                         </div>
@@ -519,6 +549,144 @@
                 </div>
             </div>
         </div>
+
+        <!-- Engagement -->
+        <div
+            v-if="hasEngagementStats"
+            class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4"
+        >
+            <div
+                v-if="statsData.mostReactedMessage"
+                class="bg-white dark:bg-gray-800 border rounded-lg p-4 shadow-sm"
+            >
+                <div class="text-sm text-gray-500">Most reacted message</div>
+                <div class="font-medium truncate mt-1">
+                    "{{ statsData.mostReactedMessage.text }}"
+                </div>
+                <div class="text-sm text-gray-500 mt-1">
+                    {{
+                        countAddS(
+                            statsData.mostReactedMessage.reactions_count,
+                            "reaction"
+                        )
+                    }}
+                    <span v-if="statsData.mostReactedMessage.user">
+                        &middot; by
+                        {{ statsData.mostReactedMessage.user.name }}</span
+                    >
+                    <span v-if="statsData.mostReactedMessage.created_at">
+                        &middot;
+                        {{
+                            formatDate(statsData.mostReactedMessage.created_at)
+                        }}</span
+                    >
+                </div>
+            </div>
+
+            <div
+                v-if="statsData.mostReactedComment"
+                class="bg-white dark:bg-gray-800 border rounded-lg p-4 shadow-sm"
+            >
+                <div class="text-sm text-gray-500">Most reacted comment</div>
+                <div class="font-medium truncate mt-1">
+                    "{{ statsData.mostReactedComment.text }}"
+                </div>
+                <div class="text-sm text-gray-500 mt-1">
+                    {{
+                        countAddS(
+                            statsData.mostReactedComment.reactions_count,
+                            "reaction"
+                        )
+                    }}
+                    <span v-if="statsData.mostReactedComment.user">
+                        &middot; by
+                        {{ statsData.mostReactedComment.user.name }}</span
+                    >
+                    <span v-if="statsData.mostReactedComment.created_at">
+                        &middot;
+                        {{
+                            formatDate(statsData.mostReactedComment.created_at)
+                        }}</span
+                    >
+                </div>
+            </div>
+
+            <div
+                v-if="statsData.mostActiveCommenterLast30Days"
+                class="bg-white dark:bg-gray-800 border rounded-lg p-4 shadow-sm"
+            >
+                <div class="text-sm text-gray-500">
+                    Most active commenter (30 days)
+                </div>
+                <div class="font-medium mt-1">
+                    {{ statsData.mostActiveCommenterLast30Days.user.name }}
+                </div>
+                <div class="text-sm text-gray-500 mt-1">
+                    {{
+                        countAddS(
+                            statsData.mostActiveCommenterLast30Days.count,
+                            "comment"
+                        )
+                    }}
+                </div>
+            </div>
+
+            <div
+                v-if="statsData.mostActiveMessengerLast30Days"
+                class="bg-white dark:bg-gray-800 border rounded-lg p-4 shadow-sm"
+            >
+                <div class="text-sm text-gray-500">
+                    Most active poster (30 days)
+                </div>
+                <div class="font-medium mt-1">
+                    {{ statsData.mostActiveMessengerLast30Days.user.name }}
+                </div>
+                <div class="text-sm text-gray-500 mt-1">
+                    {{
+                        countAddS(
+                            statsData.mostActiveMessengerLast30Days.count,
+                            "message"
+                        )
+                    }}
+                </div>
+            </div>
+
+            <div
+                v-if="statsData.busiestUploadDayOfWeek"
+                class="bg-white dark:bg-gray-800 border rounded-lg p-4 shadow-sm"
+            >
+                <div class="text-sm text-gray-500">Busiest upload day</div>
+                <div class="font-medium mt-1">
+                    {{ statsData.busiestUploadDayOfWeek.day }}
+                </div>
+                <div class="text-sm text-gray-500 mt-1">
+                    {{
+                        countAddS(
+                            statsData.busiestUploadDayOfWeek.count,
+                            "upload"
+                        )
+                    }}
+                </div>
+            </div>
+
+            <div
+                v-if="statsData.busiestMessageDayOfWeek"
+                class="bg-white dark:bg-gray-800 border rounded-lg p-4 shadow-sm"
+            >
+                <div class="text-sm text-gray-500">Busiest message day</div>
+                <div class="font-medium mt-1">
+                    {{ statsData.busiestMessageDayOfWeek.day }}
+                </div>
+                <div class="text-sm text-gray-500 mt-1">
+                    {{
+                        countAddS(
+                            statsData.busiestMessageDayOfWeek.count,
+                            "message"
+                        )
+                    }}
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -528,7 +696,7 @@ import { useMusicPlayer } from "@/composables/useMusicPlayer";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import { Link } from "@inertiajs/vue3";
-import { ref, watch } from "vue";
+import { computed } from "vue";
 
 const props = defineProps({
     stats: {
@@ -539,43 +707,29 @@ const props = defineProps({
 
 const { playSong, openFlyout } = useMusicPlayer();
 
-// Resolve deferred Inertia props: support functions that return a Promise or an object.
-const statsData = ref({});
+const statsData = computed(() => props.stats || {});
 
-const resolveStats = () => {
-    try {
-        if (typeof props.stats === "function") {
-            const result = props.stats();
-            if (result && typeof result.then === "function") {
-                // It's a Promise (deferred) — resolve it into the ref.
-                result
-                    .then((data) => {
-                        statsData.value = data || {};
-                    })
-                    .catch(() => {
-                        statsData.value = {};
-                    });
-            } else {
-                // Synchronous result
-                statsData.value = result || {};
-            }
-        } else {
-            statsData.value = props.stats || {};
-        }
-    } catch (e) {
-        statsData.value = props.stats || {};
-    }
-};
-
-// Resolve immediately and whenever the prop changes (Inertia may pass a deferred function).
-resolveStats();
-watch(() => props.stats, resolveStats);
+const hasEngagementStats = computed(
+    () =>
+        !!(
+            statsData.value.mostReactedMessage ||
+            statsData.value.mostReactedComment ||
+            statsData.value.mostActiveCommenterLast30Days ||
+            statsData.value.mostActiveMessengerLast30Days ||
+            statsData.value.busiestUploadDayOfWeek ||
+            statsData.value.busiestMessageDayOfWeek
+        )
+);
 
 const { speak, speaking } = useSpeechSynthesis();
 const { t } = useTranslations();
 
 function formatCount(count) {
     return count?.toLocaleString?.() ?? 0;
+}
+
+function formatDate(isoString) {
+    return new Date(isoString).toLocaleDateString();
 }
 
 function speakStat(key, count) {
@@ -622,4 +776,3 @@ function speakTopSongs() {
     speak(phrase);
 }
 </script>
-
