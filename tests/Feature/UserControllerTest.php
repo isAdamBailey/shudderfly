@@ -41,9 +41,11 @@ class UserControllerTest extends TestCase
             ->missing('profileUser.weekly_profile_overview_generated_at')
             ->has('weeklyOverview')
             ->where('weeklyOverview.text', null)
-            ->has('stats')
-            ->has('recentMessages')
-            ->has('recentReplies')
+            ->loadDeferredProps(function ($page) {
+                $page->has('stats')
+                    ->has('recentMessages')
+                    ->has('recentReplies');
+            })
         );
     }
 
@@ -87,9 +89,11 @@ class UserControllerTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
-            ->where('stats.totalBooksCount', 3)
-            ->has('stats.topBooks', 3)
-            ->has('stats.recentBooks', 3)
+            ->loadDeferredProps(function ($page) {
+                $page->where('stats.totalBooksCount', 3)
+                    ->has('stats.topBooks', 3)
+                    ->has('stats.recentBooks', 3);
+            })
         );
     }
 
@@ -106,7 +110,9 @@ class UserControllerTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
-            ->where('stats.messagesCount', 5)
+            ->loadDeferredProps(function ($page) {
+                $page->where('stats.messagesCount', 5);
+            })
         );
     }
 
@@ -122,7 +128,9 @@ class UserControllerTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
-            ->has('recentMessages', 10) // Should only show 10 most recent
+            ->loadDeferredProps(function ($page) {
+                $page->has('recentMessages', 10); // Should only show 10 most recent
+            })
         );
     }
 
@@ -147,8 +155,10 @@ class UserControllerTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
-            ->where('stats.commentsCount', 12)
-            ->has('recentReplies', 10)
+            ->loadDeferredProps(function ($page) {
+                $page->where('stats.commentsCount', 12)
+                    ->has('recentReplies', 10);
+            })
         );
     }
 

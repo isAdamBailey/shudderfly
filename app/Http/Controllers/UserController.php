@@ -43,29 +43,47 @@ class UserController extends Controller
     {
         $isOwner = auth()->id() === $user->id;
 
-        $totalBooksCount = Book::where('author', $user->name)->count();
-        $messagesCount = Message::where('user_id', $user->id)->count();
-        $commentsCount = MessageComment::where('user_id', $user->id)->count();
+        // Make created_at visible for the profile user
+        $user->makeVisible('created_at');
 
-        // Optimize reactions count with a single query using UNION
-        $reactionsGiven = \DB::table('message_reactions')
-            ->where('user_id', $user->id)
-            ->selectRaw('COUNT(*) as count')
-            ->union(
-                \DB::table('comment_reactions')
-                    ->where('user_id', $user->id)
-                    ->selectRaw('COUNT(*) as count')
-            )
-            ->get()
-            ->sum('count');
+        $props = [
+            'profileUser' => $user,
+            'isOwner' => $isOwner,
+            'appName' => config('app.name'),
+            'weeklyOverview' => [
+                'text' => $user->weekly_profile_overview,
+                'generatedAt' => $user->weekly_profile_overview_generated_at,
+            ],
+            'stats' => Inertia::defer(fn () => $this->profileStats($user, $isOwner)),
+            // The "authored by this user" message/reply lists are only shown to
+            // visitors (the owner already knows their own content).
+            'recentMessages' => Inertia::defer(fn () => $isOwner ? collect() : Message::where('user_id', $user->id)
+                ->with(['page', 'user'])
+                ->orderBy('created_at', 'desc')
+                ->take(10)
+                ->get()),
+            'recentReplies' => Inertia::defer(fn () => $isOwner ? collect() : MessageComment::where('user_id', $user->id)
+                ->with(['message.user'])
+                ->orderBy('created_at', 'desc')
+                ->take(10)
+                ->get()),
+        ];
 
-        // The "authored by this user" book/message/reply lists are only shown to
-        // visitors (the owner already knows their own content) — skip fetching
-        // them for the owner's own dashboard to keep the page light.
+        if ($isOwner) {
+            $props = array_merge($props, $this->ownerProps($user));
+        }
+
+        return Inertia::render('Users/Show', $props);
+    }
+
+    /**
+     * Stats shown on the profile: cheap counts for the user, plus (visitors only)
+     * their top/recent books, which require the heavier popularity queries.
+     */
+    private function profileStats(User $user, bool $isOwner): array
+    {
         $topBooks = collect();
         $recentBooks = collect();
-        $recentMessages = collect();
-        $recentReplies = collect();
 
         if (! $isOwner) {
             $topBooks = $this->popularityService->addPopularityToCollection(
@@ -86,48 +104,28 @@ class UserController extends Controller
                     ->get(),
                 Book::class
             );
-
-            $recentMessages = Message::where('user_id', $user->id)
-                ->with(['page', 'user'])
-                ->orderBy('created_at', 'desc')
-                ->take(10)
-                ->get();
-
-            $recentReplies = MessageComment::where('user_id', $user->id)
-                ->with(['message.user'])
-                ->orderBy('created_at', 'desc')
-                ->take(10)
-                ->get();
         }
 
-        // Make created_at visible for the profile user
-        $user->makeVisible('created_at');
+        // Optimize reactions count with a single query using UNION
+        $reactionsGiven = \DB::table('message_reactions')
+            ->where('user_id', $user->id)
+            ->selectRaw('COUNT(*) as count')
+            ->union(
+                \DB::table('comment_reactions')
+                    ->where('user_id', $user->id)
+                    ->selectRaw('COUNT(*) as count')
+            )
+            ->get()
+            ->sum('count');
 
-        $props = [
-            'profileUser' => $user,
-            'isOwner' => $isOwner,
-            'appName' => config('app.name'),
-            'weeklyOverview' => [
-                'text' => $user->weekly_profile_overview,
-                'generatedAt' => $user->weekly_profile_overview_generated_at,
-            ],
-            'stats' => [
-                'totalBooksCount' => $totalBooksCount,
-                'topBooks' => $topBooks,
-                'recentBooks' => $recentBooks,
-                'messagesCount' => $messagesCount,
-                'commentsCount' => $commentsCount,
-                'reactionsGiven' => $reactionsGiven,
-            ],
-            'recentMessages' => $recentMessages,
-            'recentReplies' => $recentReplies,
+        return [
+            'totalBooksCount' => Book::where('author', $user->name)->count(),
+            'topBooks' => $topBooks,
+            'recentBooks' => $recentBooks,
+            'messagesCount' => Message::where('user_id', $user->id)->count(),
+            'commentsCount' => MessageComment::where('user_id', $user->id)->count(),
+            'reactionsGiven' => $reactionsGiven,
         ];
-
-        if ($isOwner) {
-            $props = array_merge($props, $this->ownerProps($user));
-        }
-
-        return Inertia::render('Users/Show', $props);
     }
 
     /**
@@ -141,7 +139,7 @@ class UserController extends Controller
         $canAdmin = $user->can('admin');
 
         return [
-            'recentActivity' => [
+            'recentActivity' => Inertia::defer(fn () => [
                 'replies' => MessageComment::query()
                     ->whereIn('message_id', Message::where('user_id', $user->id)->select('id'))
                     ->where('user_id', '!=', $user->id)
@@ -156,28 +154,29 @@ class UserController extends Controller
                     ->latest()
                     ->take(10)
                     ->get(),
-            ],
-            'newBooksThisWeek' => Book::with('coverImage')
+            ], 'dashboard'),
+            'newBooksThisWeek' => Inertia::defer(fn () => Book::with('coverImage')
                 ->where('created_at', '>=', now()->subWeek())
                 ->latest()
                 ->take(8)
-                ->get(),
-            'recentUploads' => Page::notBlocked()
+                ->get(), 'dashboard'),
+            'recentUploads' => Inertia::defer(fn () => Page::notBlocked()
                 ->hasImage()
                 ->with('book')
                 ->latest()
                 ->take(12)
-                ->get(),
+                ->get(), 'dashboard'),
             'authors' => $canEditPages ? User::all() : [],
             'newBookCategories' => $canEditPages
                 ? Category::all()->map->only(['id', 'name'])->sortBy('name')->values()->toArray()
                 : [],
-            'adminUsers' => User::permission('admin')->get(['name']),
-            'users' => User::all(),
-            'categories' => $canAdmin ? Category::withCount('books')->get() : [],
-            'blockedCount' => $canEditPages
+            'adminUsers' => Inertia::defer(fn () => User::permission('admin')->get(['name']), 'dashboard'),
+            'users' => Inertia::defer(fn () => User::all(), 'dashboard'),
+            'categories' => Inertia::defer(fn () => $canAdmin ? Category::withCount('books')->get() : collect(), 'dashboard'),
+            'blockedCount' => Inertia::defer(fn () => $canEditPages
                 ? Page::where('blocked', true)->count() + Sound::where('blocked', true)->count()
-                : 0,
+                : 0, 'dashboard'),
+            'adminSettings' => Inertia::defer(fn () => $canAdmin ? $this->settingsController->index() : [], 'dashboard'),
             'siteStats' => Inertia::defer(fn () => [
                 'numberOfBooks' => Book::count(),
                 'numberOfPages' => Page::count(),
@@ -216,8 +215,7 @@ class UserController extends Controller
                     ->orderBy('created_at')
                     ->first()
                     ?->toArray(),
-            ]),
-            'adminSettings' => $canAdmin ? $this->settingsController->index() : [],
+            ], 'dashboard'),
             'defaultCities' => config('world_clock.default_cities'),
             'maxCities' => config('world_clock.max_cities'),
             'timezoneLabels' => TimezoneLabel::pluck('label', 'timezone'),

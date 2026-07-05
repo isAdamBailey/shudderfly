@@ -48,7 +48,14 @@ const props = defineProps({
     },
     stats: {
         type: Object,
-        required: true,
+        default: () => ({
+            totalBooksCount: 0,
+            topBooks: [],
+            recentBooks: [],
+            messagesCount: 0,
+            commentsCount: 0,
+            reactionsGiven: 0,
+        }),
     },
     recentMessages: {
         type: Array,
