@@ -270,7 +270,6 @@ const { speak } = useSpeechSynthesis();
 const {
     getActiveAddWord,
     getActiveAddPhrase,
-    getActiveGetPreview,
     setActiveCommentInput,
     setActiveMessageInput,
 } = useMessageBuilder();
@@ -378,15 +377,9 @@ function handleAddPhrase(phrase) {
     const addPhraseFn = getActiveAddPhrase();
     if (addPhraseFn) {
         addPhraseFn(phrase);
-        setTimeout(() => {
-            const getPreviewFn = getActiveGetPreview();
-            if (getPreviewFn) {
-                const fullMessage = getPreviewFn();
-                if (fullMessage) {
-                    speak(fullMessage);
-                }
-            }
-        }, 50);
+        if (phrase) {
+            speak(phrase);
+        }
     }
 }
 </script>
