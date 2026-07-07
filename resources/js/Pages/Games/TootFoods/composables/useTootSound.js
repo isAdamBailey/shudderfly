@@ -121,7 +121,10 @@ export function useTootSound(fartSoundUrl = "/fart.m4a") {
                 osc.type = "sine";
                 osc.frequency.value = freq;
                 gain.gain.setValueAtTime(0.2, c.currentTime + i * 0.15);
-                gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + i * 0.15 + 0.4);
+                gain.gain.exponentialRampToValueAtTime(
+                    0.001,
+                    c.currentTime + i * 0.15 + 0.4
+                );
                 osc.connect(gain);
                 gain.connect(c.destination);
                 osc.start(c.currentTime + i * 0.15);

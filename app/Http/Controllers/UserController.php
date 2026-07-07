@@ -12,6 +12,7 @@ use App\Models\Sound;
 use App\Models\TimezoneLabel;
 use App\Models\User;
 use App\Models\WorldClockSetting;
+use App\Notifications\MessageCommented;
 use App\Notifications\UserTagged;
 use App\Services\PopularityService;
 use App\Services\UserWeeklyOverviewService;
@@ -142,17 +143,19 @@ class UserController extends Controller
 
         return [
             'recentActivity' => [
-                'replies' => MessageComment::query()
-                    ->whereIn('message_id', Message::where('user_id', $user->id)->select('id'))
-                    ->where('user_id', '!=', $user->id)
-                    ->where('created_at', '>=', now()->subDays(7))
-                    ->with(['user', 'message'])
+                // Only unread items are shown on the dashboard to keep it compact;
+                // read state is shared with the notifications dropdown via the
+                // same `notifications` table, so marking one read anywhere hides
+                // it here too on next load.
+                'replies' => $user->notifications()
+                    ->where('type', MessageCommented::class)
+                    ->whereNull('read_at')
                     ->latest()
                     ->take(10)
                     ->get(),
                 'mentions' => $user->notifications()
                     ->where('type', UserTagged::class)
-                    ->where('created_at', '>=', now()->subDays(7))
+                    ->whereNull('read_at')
                     ->latest()
                     ->take(10)
                     ->get(),
@@ -160,13 +163,13 @@ class UserController extends Controller
             'newBooksThisWeek' => Book::with('coverImage')
                 ->where('created_at', '>=', now()->subWeek())
                 ->latest()
-                ->take(8)
+                ->take(4)
                 ->get(),
             'recentUploads' => Page::notBlocked()
                 ->hasImage()
                 ->with('book')
                 ->latest()
-                ->take(12)
+                ->take(6)
                 ->get(),
             'authors' => $canEditPages ? User::all() : [],
             'newBookCategories' => $canEditPages

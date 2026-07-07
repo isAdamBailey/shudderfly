@@ -17,18 +17,48 @@ const enabled = computed(() => {
 
 const headerRoaches = [
     { top: "18%", size: "1.65rem", duration: "16s", delay: "-2s" },
-    { top: "52%", size: "1.25rem", duration: "20s", delay: "-12s", reverse: true },
+    {
+        top: "52%",
+        size: "1.25rem",
+        duration: "20s",
+        delay: "-12s",
+        reverse: true,
+    },
     { top: "72%", size: "1.45rem", duration: "18s", delay: "-7s" },
-    { top: "34%", size: "1.1rem", duration: "23s", delay: "-17s", reverse: true },
+    {
+        top: "34%",
+        size: "1.1rem",
+        duration: "23s",
+        delay: "-17s",
+        reverse: true,
+    },
 ];
 
 const footerRoaches = [
     { top: "14%", size: "1.8rem", duration: "22s", delay: "-5s" },
-    { top: "28%", size: "1.3rem", duration: "18s", delay: "-14s", reverse: true },
+    {
+        top: "28%",
+        size: "1.3rem",
+        duration: "18s",
+        delay: "-14s",
+        reverse: true,
+    },
     { top: "48%", size: "1.55rem", duration: "25s", delay: "-9s" },
-    { top: "64%", size: "1.2rem", duration: "20s", delay: "-2s", reverse: true },
+    {
+        top: "64%",
+        size: "1.2rem",
+        duration: "20s",
+        delay: "-2s",
+        reverse: true,
+    },
     { top: "78%", size: "1.45rem", duration: "24s", delay: "-19s" },
-    { top: "38%", size: "1.05rem", duration: "17s", delay: "-11s", reverse: true },
+    {
+        top: "38%",
+        size: "1.05rem",
+        duration: "17s",
+        delay: "-11s",
+        reverse: true,
+    },
 ];
 
 const roaches = computed(() =>
@@ -44,11 +74,7 @@ const roachStyle = (roach) => ({
 </script>
 
 <template>
-    <div
-        v-if="enabled"
-        class="cockroach-crawl"
-        aria-hidden="true"
-    >
+    <div v-if="enabled" class="cockroach-crawl" aria-hidden="true">
         <span
             v-for="(roach, index) in roaches"
             :key="`${area}-${index}`"

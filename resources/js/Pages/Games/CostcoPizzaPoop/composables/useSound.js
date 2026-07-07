@@ -6,18 +6,25 @@ export function useSound(fartSoundUrl = "/fart.m4a") {
     const fartSound = new Audio(fartSoundUrl);
     fartSound.preload = "auto";
     fartSound.volume = 0.9;
-    fartSound.addEventListener("canplaythrough", () => { audioReady.value = true; });
-    fartSound.addEventListener("error", () => { audioReady.value = false; });
+    fartSound.addEventListener("canplaythrough", () => {
+        audioReady.value = true;
+    });
+    fartSound.addEventListener("error", () => {
+        audioReady.value = false;
+    });
 
     function initAudio() {
         // Unlock the WebAudio context during the Play gesture so later
         // synth sounds (chomp, etc.) aren't silenced by autoplay policy.
         getChompCtx();
-        return fartSound.play().then(() => {
-            fartSound.pause();
-            fartSound.currentTime = 0;
-            audioReady.value = true;
-        }).catch(() => {});
+        return fartSound
+            .play()
+            .then(() => {
+                fartSound.pause();
+                fartSound.currentTime = 0;
+                audioReady.value = true;
+            })
+            .catch(() => {});
     }
 
     function playFart() {
@@ -32,7 +39,8 @@ export function useSound(fartSoundUrl = "/fart.m4a") {
 
     function playSynthFart() {
         try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const ctx = new (window.AudioContext ||
+                window.webkitAudioContext)();
             const now = ctx.currentTime;
 
             const osc = ctx.createOscillator();
@@ -170,7 +178,8 @@ export function useSound(fartSoundUrl = "/fart.m4a") {
 
     function playVictory() {
         try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const ctx = new (window.AudioContext ||
+                window.webkitAudioContext)();
             const notes = [523.25, 659.25, 783.99, 1046.5];
 
             notes.forEach((freq, i) => {
@@ -179,7 +188,10 @@ export function useSound(fartSoundUrl = "/fart.m4a") {
                 osc.type = "sine";
                 osc.frequency.value = freq;
                 gain.gain.setValueAtTime(0.2, ctx.currentTime + i * 0.15);
-                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 0.4);
+                gain.gain.exponentialRampToValueAtTime(
+                    0.001,
+                    ctx.currentTime + i * 0.15 + 0.4
+                );
                 osc.connect(gain);
                 gain.connect(ctx.destination);
                 osc.start(ctx.currentTime + i * 0.15);
@@ -196,14 +208,21 @@ export function useSound(fartSoundUrl = "/fart.m4a") {
 
     function playMissSound() {
         try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const ctx = new (window.AudioContext ||
+                window.webkitAudioContext)();
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.type = "sawtooth";
             osc.frequency.setValueAtTime(280, ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.35);
+            osc.frequency.exponentialRampToValueAtTime(
+                80,
+                ctx.currentTime + 0.35
+            );
             gain.gain.setValueAtTime(0.35, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+            gain.gain.exponentialRampToValueAtTime(
+                0.001,
+                ctx.currentTime + 0.35
+            );
             osc.connect(gain);
             gain.connect(ctx.destination);
             osc.start();

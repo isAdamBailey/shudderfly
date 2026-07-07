@@ -480,9 +480,7 @@ describe("MessageTimeline", () => {
                 user: { id: 2, name: "Bob" },
             });
 
-            expect(mockSpeak).toHaveBeenCalledWith(
-                "Bob says Thanks John Doe!"
-            );
+            expect(mockSpeak).toHaveBeenCalledWith("Bob says Thanks John Doe!");
         });
 
         it("displays messages with full usernames", () => {
@@ -1316,7 +1314,8 @@ describe("MessageTimeline", () => {
                     song: {
                         id: 42,
                         title: "Test Song",
-                        thumbnail_default: "https://example.com/song-default.jpg",
+                        thumbnail_default:
+                            "https://example.com/song-default.jpg",
                     },
                 },
             ];
@@ -1330,9 +1329,9 @@ describe("MessageTimeline", () => {
 
             await nextTick();
 
-            const songButton = wrapper.findAll("button").find((btn) =>
-                btn.find('img[alt="Test Song"]').exists()
-            );
+            const songButton = wrapper
+                .findAll("button")
+                .find((btn) => btn.find('img[alt="Test Song"]').exists());
             expect(songButton).toBeDefined();
             songButton.element.dispatchEvent(
                 new Event("click", { bubbles: true })

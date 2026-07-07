@@ -109,7 +109,8 @@ export const ROUTE_MAPPINGS = {
     "movie-cast.credits": (params) => `/api/movie-cast/${params}/credits`,
     "movie-cast.details": (params) => `/api/movie-cast/${params}/details`,
     "movie-cast.favorites.store": "/movie-cast/favorites",
-    "movie-cast.favorites.destroy": (params) => `/movie-cast/favorites/${params}`,
+    "movie-cast.favorites.destroy": (params) =>
+        `/movie-cast/favorites/${params}`,
     "movie-cast.share": "/movie-cast/share",
     "world-clock.index": "/world-clock",
     "world-clock.cities.search": "/api/world-clock/cities/search",

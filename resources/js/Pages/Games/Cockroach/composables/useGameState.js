@@ -1,12 +1,12 @@
 import { reactive, computed, ref } from "vue";
 
-const POINTS_PER_HISS  = 10;
-const COMBO_BONUS      = 5;
-const COMBO_WINDOW_MS  = 1000;
-const MOVE_X_MIN       = 4;
-const MOVE_X_MAX       = 10;
-const STEER_Y_MIN      = 2;
-const STEER_Y_MAX      = 6;
+const POINTS_PER_HISS = 10;
+const COMBO_BONUS = 5;
+const COMBO_WINDOW_MS = 1000;
+const MOVE_X_MIN = 4;
+const MOVE_X_MAX = 10;
+const STEER_Y_MIN = 2;
+const STEER_Y_MAX = 6;
 const WIN_THRESHOLD_PERCENT = 75;
 
 const FACTS = [
@@ -24,7 +24,10 @@ const FACTS = [
 
 function getHighScore() {
     try {
-        return parseInt(localStorage.getItem("cockroach_high_score") || "0", 10);
+        return parseInt(
+            localStorage.getItem("cockroach_high_score") || "0",
+            10
+        );
     } catch {
         return 0;
     }
@@ -58,24 +61,24 @@ export function useGameState() {
     }
 
     function startGame() {
-        state.phase            = "playing";
-        state.score            = 0;
-        state.hissCount        = 0;
-        state.comboCount       = 0;
-        state.lastHissTime     = 0;
-        state.cockroachX       = 15;
-        state.cockroachY       = 45;
+        state.phase = "playing";
+        state.score = 0;
+        state.hissCount = 0;
+        state.comboCount = 0;
+        state.lastHissTime = 0;
+        state.cockroachX = 15;
+        state.cockroachY = 45;
         state.cockroachRotation = 0;
-        state.isHissing        = false;
-        state.showFart         = false;
-        currentFact.value      = randomFact();
+        state.isHissing = false;
+        state.showFart = false;
+        currentFact.value = randomFact();
     }
 
     function hiss(direction) {
         if (state.phase !== "playing") return false;
 
-        const now    = Date.now();
-        let   bonus  = 0;
+        const now = Date.now();
+        let bonus = 0;
 
         if (now - state.lastHissTime < COMBO_WINDOW_MS) {
             state.comboCount++;
@@ -88,11 +91,12 @@ export function useGameState() {
         state.hissCount++;
         state.score += POINTS_PER_HISS + bonus;
 
-        const dx          = MOVE_X_MIN + Math.random() * (MOVE_X_MAX - MOVE_X_MIN);
-        const steerAmount = STEER_Y_MIN + Math.random() * (STEER_Y_MAX - STEER_Y_MIN);
-        const dy          = direction === "up" ? -steerAmount : steerAmount;
-        state.cockroachX  = Math.min(state.cockroachX + dx, 85);
-        state.cockroachY  = Math.max(15, Math.min(80, state.cockroachY + dy));
+        const dx = MOVE_X_MIN + Math.random() * (MOVE_X_MAX - MOVE_X_MIN);
+        const steerAmount =
+            STEER_Y_MIN + Math.random() * (STEER_Y_MAX - STEER_Y_MIN);
+        const dy = direction === "up" ? -steerAmount : steerAmount;
+        state.cockroachX = Math.min(state.cockroachX + dx, 85);
+        state.cockroachY = Math.max(15, Math.min(80, state.cockroachY + dy));
         state.cockroachRotation = direction === "up" ? -15 : 15;
 
         state.isHissing = true;
@@ -115,7 +119,10 @@ export function useGameState() {
             if (state.score > state.highScore) {
                 state.highScore = state.score;
                 try {
-                    localStorage.setItem("cockroach_high_score", String(state.score));
+                    localStorage.setItem(
+                        "cockroach_high_score",
+                        String(state.score)
+                    );
                 } catch {
                     // Ignore storage errors so the win screen still renders
                 }

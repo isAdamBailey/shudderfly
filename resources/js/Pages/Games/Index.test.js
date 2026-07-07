@@ -3,10 +3,34 @@ import { mount } from "@vue/test-utils";
 import Index from "./Index.vue";
 
 const games = [
-    { slug: "cockroach-fight", name: "Cockroach Fight", emoji: "🪳", description: "Tap a cockroach head to bring them together for an epic battle!" },
-    { slug: "costco-pizza-poop", name: "Costco Pizza Poop", emoji: "🍕", description: "Drag every slice into the mouth, then celebrate the inevitable." },
-    { slug: "boom", name: "Poop Boom", emoji: "💩", description: "Drag the poop into the toilet. 5 misses and it's game over!" },
-    { slug: "cockroach", name: "Cockroach Fart", emoji: "🪳", description: "Tap the cockroach's head to make it hiss its way to the toilet." },
+    {
+        slug: "cockroach-fight",
+        name: "Cockroach Fight",
+        emoji: "🪳",
+        description:
+            "Tap a cockroach head to bring them together for an epic battle!",
+    },
+    {
+        slug: "costco-pizza-poop",
+        name: "Costco Pizza Poop",
+        emoji: "🍕",
+        description:
+            "Drag every slice into the mouth, then celebrate the inevitable.",
+    },
+    {
+        slug: "boom",
+        name: "Poop Boom",
+        emoji: "💩",
+        description:
+            "Drag the poop into the toilet. 5 misses and it's game over!",
+    },
+    {
+        slug: "cockroach",
+        name: "Cockroach Fart",
+        emoji: "🪳",
+        description:
+            "Tap the cockroach's head to make it hiss its way to the toilet.",
+    },
 ];
 
 function mountIndex(props = {}) {

@@ -4,6 +4,7 @@ namespace Tests\Feature\Console;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -274,7 +275,7 @@ class GenerateWeeklyUserOverviewsTest extends TestCase
             $callCount++;
 
             if ($callCount === 1) {
-                throw new \Illuminate\Http\Client\ConnectionException('Connection timed out.');
+                throw new ConnectionException('Connection timed out.');
             }
 
             return Http::response([

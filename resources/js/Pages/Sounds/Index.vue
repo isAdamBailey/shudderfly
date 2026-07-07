@@ -57,7 +57,11 @@ const isAlphabetical = computed(() => props.sort === "alphabetical");
 
 function filter(sort) {
     sortLoading.value = true;
-    speak(sort === "alphabetical" ? t("sound.sort_alphabetical") : t("sound.sort_date_added"));
+    speak(
+        sort === "alphabetical"
+            ? t("sound.sort_alphabetical")
+            : t("sound.sort_date_added")
+    );
     router.get(route("sounds.index", { sort }));
 }
 
@@ -167,7 +171,9 @@ const {
 async function deleteSound(sound) {
     if (playingId.value === sound.id) stopAudio();
 
-    const ok = await askConfirm(`Delete "${sound.title}"? This cannot be undone.`);
+    const ok = await askConfirm(
+        `Delete "${sound.title}"? This cannot be undone.`
+    );
     if (!ok) return;
 
     router.delete(route("sounds.destroy", sound.id), {
@@ -178,7 +184,9 @@ async function deleteSound(sound) {
 async function blockSound(sound) {
     if (playingId.value === sound.id) stopAudio();
 
-    const okPromise = askConfirm(t("sound.block_confirm_dialog", { title: sound.title }));
+    const okPromise = askConfirm(
+        t("sound.block_confirm_dialog", { title: sound.title })
+    );
     speak(t("sound.block_confirm_speak", { title: sound.title }));
     const ok = await okPromise;
     if (!ok) return;
@@ -212,7 +220,9 @@ onBeforeUnmount(() => {
     <AuthenticatedLayout>
         <template #header>
             <button type="button" @click="refreshPage">
-                <h2 class="font-heading text-2xl text-theme-title leading-tight">
+                <h2
+                    class="font-heading text-2xl text-theme-title leading-tight"
+                >
                     Sounds
                 </h2>
             </button>
@@ -269,14 +279,18 @@ onBeforeUnmount(() => {
                                 ? 'border-theme-primary bg-theme-primary/20 text-theme-primary shadow-lg scale-105'
                                 : 'border-gray-600 bg-gray-800 hover:border-gray-400 hover:bg-gray-700 text-gray-100'
                         "
-                        :aria-label="`${playingId === sound.id ? 'Stop' : 'Play'} ${sound.title}`"
+                        :aria-label="`${
+                            playingId === sound.id ? 'Stop' : 'Play'
+                        } ${sound.title}`"
                         :aria-pressed="playingId === sound.id"
                         @click="toggleSound(sound)"
                     >
                         <span class="text-4xl leading-none">
                             {{ sound.emoji || "🔊" }}
                         </span>
-                        <span class="text-sm font-medium text-center leading-tight break-words w-full">
+                        <span
+                            class="text-sm font-medium text-center leading-tight break-words w-full"
+                        >
                             {{ sound.title }}
                         </span>
                     </button>
@@ -286,7 +300,9 @@ onBeforeUnmount(() => {
                             align="right"
                             width="48"
                             :content-classes="soundDropdownContentClasses"
-                            @open-change="(open) => onSoundMenuOpenChange(sound.id, open)"
+                            @open-change="
+                                (open) => onSoundMenuOpenChange(sound.id, open)
+                            "
                         >
                             <template #trigger>
                                 <button
@@ -295,7 +311,10 @@ onBeforeUnmount(() => {
                                     aria-haspopup="menu"
                                     :aria-label="`More actions for ${sound.title}`"
                                 >
-                                    <i class="ri-more-2-fill text-2xl leading-none" aria-hidden="true"></i>
+                                    <i
+                                        class="ri-more-2-fill text-2xl leading-none"
+                                        aria-hidden="true"
+                                    ></i>
                                 </button>
                             </template>
                             <template #content>
@@ -305,36 +324,57 @@ onBeforeUnmount(() => {
                                     :class="soundMenuItemClass"
                                     @click="speakSoundTitle(sound)"
                                 >
-                                    <i class="ri-speak-fill text-lg text-sky-400" aria-hidden="true"></i>
+                                    <i
+                                        class="ri-speak-fill text-lg text-sky-400"
+                                        aria-hidden="true"
+                                    ></i>
                                     Speak title
                                 </button>
                                 <button
                                     type="button"
                                     role="menuitem"
-                                    :class="[soundMenuItemClass, 'border-t border-gray-600/80 text-orange-300']"
+                                    :class="[
+                                        soundMenuItemClass,
+                                        'border-t border-gray-600/80 text-orange-300',
+                                    ]"
                                     @click="blockSound(sound)"
                                 >
-                                    <i class="ri-forbid-line text-lg" aria-hidden="true"></i>
+                                    <i
+                                        class="ri-forbid-line text-lg"
+                                        aria-hidden="true"
+                                    ></i>
                                     Block sound
                                 </button>
                                 <button
                                     v-if="canEditPages"
                                     type="button"
                                     role="menuitem"
-                                    :class="[soundMenuItemClass, 'border-t border-gray-600/80']"
+                                    :class="[
+                                        soundMenuItemClass,
+                                        'border-t border-gray-600/80',
+                                    ]"
                                     @click="openEdit(sound)"
                                 >
-                                    <i class="ri-pencil-line text-lg text-emerald-400" aria-hidden="true"></i>
+                                    <i
+                                        class="ri-pencil-line text-lg text-emerald-400"
+                                        aria-hidden="true"
+                                    ></i>
                                     Edit
                                 </button>
                                 <button
                                     v-if="canEditPages"
                                     type="button"
                                     role="menuitem"
-                                    :class="[soundMenuItemClass, 'border-t border-gray-600/80 text-red-300']"
+                                    :class="[
+                                        soundMenuItemClass,
+                                        'border-t border-gray-600/80 text-red-300',
+                                    ]"
                                     @click="deleteSound(sound)"
                                 >
-                                    <i class="ri-delete-bin-line text-lg" aria-hidden="true"></i>
+                                    <i
+                                        class="ri-delete-bin-line text-lg"
+                                        aria-hidden="true"
+                                    ></i>
                                     Delete
                                 </button>
                             </template>
@@ -350,7 +390,9 @@ onBeforeUnmount(() => {
                 class="flex min-h-[48px] w-full items-center border-b border-gray-200 px-5 py-4 text-left text-base text-gray-700 transition first:border-t-0 hover:bg-gray-200 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
                 @click="openUploadModal"
             >
-                <i class="ri-upload-2-line mr-3 shrink-0 text-lg text-emerald-600 dark:text-emerald-400"></i>
+                <i
+                    class="ri-upload-2-line mr-3 shrink-0 text-lg text-emerald-600 dark:text-emerald-400"
+                ></i>
                 Upload Sound
             </button>
         </FloatingActionMenu>
@@ -364,19 +406,27 @@ onBeforeUnmount(() => {
                 @click.self="closeUploadModal"
             >
                 <div :class="soundModalPanelClass">
-                    <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+                    <h3
+                        class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4"
+                    >
                         Upload Sound
                     </h3>
 
-                    <div class="mb-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-sm text-blue-700 dark:text-blue-300">
+                    <div
+                        class="mb-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-sm text-blue-700 dark:text-blue-300"
+                    >
                         <i class="ri-information-line mr-1"></i>
-                        <strong>M4A (AAC)</strong> files are stored without re-encoding.
-                        MP3, WAV, OGG, and AAC (non-M4A) uploads are converted to M4A (AAC) for consistent playback (including Safari/iOS).
+                        <strong>M4A (AAC)</strong> files are stored without
+                        re-encoding. MP3, WAV, OGG, and AAC (non-M4A) uploads
+                        are converted to M4A (AAC) for consistent playback
+                        (including Safari/iOS).
                     </div>
 
                     <form class="space-y-4" @submit.prevent="submitUpload">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            <label
+                                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                            >
                                 Title <span class="text-red-500">*</span>
                             </label>
                             <TextInput
@@ -386,13 +436,18 @@ onBeforeUnmount(() => {
                                 class="w-full"
                                 required
                             />
-                            <p v-if="uploadForm.errors.title" class="mt-1 text-sm text-red-500">
+                            <p
+                                v-if="uploadForm.errors.title"
+                                class="mt-1 text-sm text-red-500"
+                            >
                                 {{ uploadForm.errors.title }}
                             </p>
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            <label
+                                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                            >
                                 Emoji (optional)
                             </label>
                             <TextInput
@@ -405,9 +460,13 @@ onBeforeUnmount(() => {
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            <label
+                                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                            >
                                 Audio File <span class="text-red-500">*</span>
-                                <span class="text-xs text-gray-500 ml-1">(MP3, WAV, OGG, M4A)</span>
+                                <span class="text-xs text-gray-500 ml-1"
+                                    >(MP3, WAV, OGG, M4A)</span
+                                >
                             </label>
                             <input
                                 ref="audioFileInput"
@@ -417,7 +476,10 @@ onBeforeUnmount(() => {
                                 required
                                 @change="onAudioFileChange"
                             />
-                            <p v-if="uploadForm.errors.audio" class="mt-1 text-sm text-red-500">
+                            <p
+                                v-if="uploadForm.errors.audio"
+                                class="mt-1 text-sm text-red-500"
+                            >
                                 {{ uploadForm.errors.audio }}
                             </p>
                         </div>
@@ -429,7 +491,11 @@ onBeforeUnmount(() => {
                                 class="flex-1"
                             >
                                 <i class="ri-upload-2-line mr-2"></i>
-                                {{ uploadForm.processing ? "Uploading…" : "Upload" }}
+                                {{
+                                    uploadForm.processing
+                                        ? "Uploading…"
+                                        : "Upload"
+                                }}
                             </Button>
                             <Button
                                 type="button"
@@ -451,13 +517,17 @@ onBeforeUnmount(() => {
                 @click.self="closeEdit"
             >
                 <div :class="soundModalPanelClass">
-                    <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+                    <h3
+                        class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4"
+                    >
                         Edit Sound
                     </h3>
 
                     <form class="space-y-4" @submit.prevent="submitEdit">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            <label
+                                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                            >
                                 Title <span class="text-red-500">*</span>
                             </label>
                             <TextInput
@@ -466,13 +536,18 @@ onBeforeUnmount(() => {
                                 class="w-full"
                                 required
                             />
-                            <p v-if="editForm.errors.title" class="mt-1 text-sm text-red-500">
+                            <p
+                                v-if="editForm.errors.title"
+                                class="mt-1 text-sm text-red-500"
+                            >
                                 {{ editForm.errors.title }}
                             </p>
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            <label
+                                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                            >
                                 Emoji (optional)
                             </label>
                             <TextInput

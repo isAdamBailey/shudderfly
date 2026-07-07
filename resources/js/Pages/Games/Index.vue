@@ -28,10 +28,16 @@ defineProps({
                     :href="route('games.show', game.slug)"
                     class="flex flex-col items-center gap-4 p-8 rounded-2xl bg-gray-800 hover:bg-gray-700 transition-colors cursor-pointer text-center"
                 >
-                    <span class="text-8xl leading-none select-none">{{ game.emoji }}</span>
+                    <span class="text-8xl leading-none select-none">{{
+                        game.emoji
+                    }}</span>
                     <div>
-                        <h3 class="text-2xl font-bold text-gray-100">{{ game.name }}</h3>
-                        <p class="mt-1 text-sm text-gray-400">{{ game.description }}</p>
+                        <h3 class="text-2xl font-bold text-gray-100">
+                            {{ game.name }}
+                        </h3>
+                        <p class="mt-1 text-sm text-gray-400">
+                            {{ game.description }}
+                        </p>
                     </div>
                 </Link>
             </div>

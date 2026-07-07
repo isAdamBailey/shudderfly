@@ -9,15 +9,12 @@
         <template #media>🍕</template>
         <p>
             Drag each slice from the pizza into the mouth.<br />
-            After all slices are eaten, steer the poop through the intestine to finish.
+            After all slices are eaten, steer the poop through the intestine to
+            finish.
         </p>
     </GameStartScreen>
 
-    <div
-        v-else-if="phase === 'pizza'"
-        ref="gameEl"
-        class="game-container"
-    >
+    <div v-else-if="phase === 'pizza'" ref="gameEl" class="game-container">
         <div class="hud">
             <span class="hud-label">Slices left</span>
             <span class="hud-value">{{ slicesLeft }}</span>
@@ -27,7 +24,8 @@
             :href="route('games.index')"
             class="game-quit"
             aria-label="Quit to games"
-        >✕</Link>
+            >✕</Link
+        >
 
         <transition name="pizza-hint-fade">
             <div v-if="showPizzaHint" class="pizza-hint" aria-hidden="true">
@@ -43,7 +41,9 @@
             class="slice"
             :class="{ dragging: draggingId === s.id }"
             :style="sliceStyle(s)"
-            :aria-label="`Pizza slice ${s.id + 1} — drag into the mouth, or press Enter to eat`"
+            :aria-label="`Pizza slice ${
+                s.id + 1
+            } — drag into the mouth, or press Enter to eat`"
             @pointerdown.prevent="startDrag(s.id, $event)"
             @keydown.enter.prevent="feedSlice(s.id)"
             @keydown.space.prevent="feedSlice(s.id)"
@@ -60,18 +60,36 @@
                 <div
                     ref="faceRef"
                     class="person-face"
-                    :style="{ '--gaze-x': `${gazeX}px`, '--gaze-y': `${gazeY}px` }"
+                    :style="{
+                        '--gaze-x': `${gazeX}px`,
+                        '--gaze-y': `${gazeY}px`,
+                    }"
                 >
-                    <span class="person-brow person-brow-left" aria-hidden="true"></span>
-                    <span class="person-brow person-brow-right" aria-hidden="true"></span>
+                    <span
+                        class="person-brow person-brow-left"
+                        aria-hidden="true"
+                    ></span>
+                    <span
+                        class="person-brow person-brow-right"
+                        aria-hidden="true"
+                    ></span>
                     <span class="person-eye person-eye-left" aria-hidden="true">
                         <span class="person-pupil"></span>
                     </span>
-                    <span class="person-eye person-eye-right" aria-hidden="true">
+                    <span
+                        class="person-eye person-eye-right"
+                        aria-hidden="true"
+                    >
                         <span class="person-pupil"></span>
                     </span>
-                    <span class="person-cheek person-cheek-left" aria-hidden="true"></span>
-                    <span class="person-cheek person-cheek-right" aria-hidden="true"></span>
+                    <span
+                        class="person-cheek person-cheek-left"
+                        aria-hidden="true"
+                    ></span>
+                    <span
+                        class="person-cheek person-cheek-right"
+                        aria-hidden="true"
+                    ></span>
                     <div class="person-mouth" aria-hidden="true">
                         <span class="person-teeth"></span>
                         <span class="person-tongue"></span>
@@ -83,7 +101,8 @@
                         class="chomp-burst"
                         aria-hidden="true"
                     >
-                        <span></span><span></span><span></span><span></span><span></span>
+                        <span></span><span></span><span></span><span></span
+                        ><span></span>
                     </div>
                 </div>
             </div>
@@ -160,7 +179,7 @@ const sliceList = ref(
         y: 0,
         startX: 0,
         startY: 0,
-    })),
+    }))
 );
 const draggingId = ref(null);
 const showPizzaHint = ref(false);
@@ -177,7 +196,8 @@ let intestineIntroTimer = null;
 let victoryTuneTimer = null;
 
 const fartSoundUrl = usePage().props.fartSoundUrl ?? "/fart.m4a";
-const { initAudio, playFart, playChomp, playVictory, playMissSound } = useSound(fartSoundUrl);
+const { initAudio, playFart, playChomp, playVictory, playMissSound } =
+    useSound(fartSoundUrl);
 const {
     state: intestineState,
     segments,
@@ -191,7 +211,7 @@ const {
 } = useGameState();
 
 const slicesLeft = computed(
-    () => sliceList.value.filter((s) => !s.eaten).length,
+    () => sliceList.value.filter((s) => !s.eaten).length
 );
 
 watch(
@@ -210,7 +230,7 @@ watch(
         winElapsed.value = intestineElapsedSeconds.value;
         winCollisions.value = intestineState.collisions;
         phase.value = "win";
-    },
+    }
 );
 
 watch(
@@ -222,7 +242,7 @@ watch(
         if (newCollisions > oldCollisions) {
             playMissSound();
         }
-    },
+    }
 );
 
 function sliceStyle(s) {
@@ -275,10 +295,10 @@ function pointInMouth(px, py) {
     const cx = game.left + px;
     const cy = game.top + py;
     return (
-        cx >= mouth.left
-        && cx <= mouth.right
-        && cy >= mouth.top
-        && cy <= mouth.bottom
+        cx >= mouth.left &&
+        cx <= mouth.right &&
+        cy >= mouth.top &&
+        cy <= mouth.bottom
     );
 }
 
@@ -286,14 +306,20 @@ function mouthCenterLocal() {
     if (!mouthRef.value || !gameEl.value) return null;
     const m = mouthRef.value.getBoundingClientRect();
     const g = gameEl.value.getBoundingClientRect();
-    return { x: m.left + m.width / 2 - g.left, y: m.top + m.height / 2 - g.top };
+    return {
+        x: m.left + m.width / 2 - g.left,
+        y: m.top + m.height / 2 - g.top,
+    };
 }
 
 function faceCenterLocal() {
     if (!faceRef.value || !gameEl.value) return null;
     const f = faceRef.value.getBoundingClientRect();
     const g = gameEl.value.getBoundingClientRect();
-    return { x: f.left + f.width / 2 - g.left, y: f.top + f.height / 2 - g.top };
+    return {
+        x: f.left + f.width / 2 - g.left,
+        y: f.top + f.height / 2 - g.top,
+    };
 }
 
 function updateFaceFocus(px, py) {
@@ -367,11 +393,11 @@ function startDrag(id, e) {
         const p = getLocalPos(ev);
         s.x = Math.max(
             SLICE_SIZE / 2,
-            Math.min(gameW.value - SLICE_SIZE / 2, p.x - dragOffsetX),
+            Math.min(gameW.value - SLICE_SIZE / 2, p.x - dragOffsetX)
         );
         s.y = Math.max(
             SLICE_SIZE / 2,
-            Math.min(gameH.value - SLICE_SIZE / 2, p.y - dragOffsetY),
+            Math.min(gameH.value - SLICE_SIZE / 2, p.y - dragOffsetY)
         );
         updateFaceFocus(s.x, s.y);
     };
@@ -466,9 +492,16 @@ onUnmounted(() => {
     margin: 0 auto;
     overflow: hidden;
     border-radius: 16px;
-    background:
-        radial-gradient(circle at 20% 15%, rgba(255, 220, 180, 0.35), transparent 40%),
-        radial-gradient(circle at 80% 90%, rgba(80, 60, 40, 0.2), transparent 45%),
+    background: radial-gradient(
+            circle at 20% 15%,
+            rgba(255, 220, 180, 0.35),
+            transparent 40%
+        ),
+        radial-gradient(
+            circle at 80% 90%,
+            rgba(80, 60, 40, 0.2),
+            transparent 45%
+        ),
         linear-gradient(165deg, #2a2218, #1a1510);
     box-shadow: 0 0 48px rgba(0, 0, 0, 0.45);
     border: 3px solid #6b5344;
@@ -569,11 +602,13 @@ onUnmounted(() => {
     height: min(230px, 52vw);
     border-radius: 45% 45% 50% 50%;
     border: 4px solid #f2c7a6;
-    background:
-        radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.3), transparent 36%),
+    background: radial-gradient(
+            circle at 30% 26%,
+            rgba(255, 255, 255, 0.3),
+            transparent 36%
+        ),
         linear-gradient(180deg, #ffd9bd 0%, #f4be95 100%);
-    box-shadow:
-        inset 0 -8px 16px rgba(138, 72, 35, 0.22),
+    box-shadow: inset 0 -8px 16px rgba(138, 72, 35, 0.22),
         0 10px 20px rgba(0, 0, 0, 0.34);
 }
 
@@ -658,11 +693,13 @@ onUnmounted(() => {
     width: 17%;
     height: 12%;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(255, 138, 116, 0.6) 0%, transparent 70%);
+    background: radial-gradient(
+        circle,
+        rgba(255, 138, 116, 0.6) 0%,
+        transparent 70%
+    );
     opacity: 0.45;
-    transition:
-        opacity 0.2s ease,
-        transform 0.2s ease;
+    transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .person-cheek-left {
@@ -832,7 +869,8 @@ onUnmounted(() => {
     }
     100% {
         opacity: 0;
-        transform: translate(var(--tx, 0), var(--ty, 0)) scale(0.4) rotate(140deg);
+        transform: translate(var(--tx, 0), var(--ty, 0)) scale(0.4)
+            rotate(140deg);
     }
 }
 

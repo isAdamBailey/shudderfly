@@ -9,7 +9,8 @@
     >
         <template #extra>
             <div class="game-start-aside">
-                <span class="game-start-aside-label">Fun fact: </span>{{ currentFact }}
+                <span class="game-start-aside-label">Fun fact: </span
+                >{{ currentFact }}
             </div>
         </template>
     </GameStartScreen>

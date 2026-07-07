@@ -72,7 +72,8 @@ const open = ref(false);
 
 const updateDropdownWidth = () => {
     if (props.width === "full" && triggerRef.value) {
-        const triggerElement = triggerRef.value.querySelector("button, a, span");
+        const triggerElement =
+            triggerRef.value.querySelector("button, a, span");
         if (triggerElement) {
             dropdownWidth.value = triggerElement.offsetWidth;
         }
@@ -89,7 +90,12 @@ watch(open, async (newValue) => {
 </script>
 
 <template>
-    <div :class="['relative', connected && !dropUp ? 'h-full flex items-center' : '']">
+    <div
+        :class="[
+            'relative',
+            connected && !dropUp ? 'h-full flex items-center' : '',
+        ]"
+    >
         <div ref="triggerRef" @click="open = !open">
             <slot name="trigger" />
         </div>
@@ -112,13 +118,24 @@ watch(open, async (newValue) => {
             <div
                 v-show="open"
                 class="absolute z-[9999] shadow-lg"
-                :class="[widthClass, alignmentClasses, dropUp ? 'mb-2 bottom-full rounded-md' : connected ? 'top-full rounded-b-md' : 'mt-2 rounded-md']"
+                :class="[
+                    widthClass,
+                    alignmentClasses,
+                    dropUp
+                        ? 'mb-2 bottom-full rounded-md'
+                        : connected
+                        ? 'top-full rounded-b-md'
+                        : 'mt-2 rounded-md',
+                ]"
                 :style="widthStyle"
                 @click="open = false"
             >
                 <div
                     class="ring-1 ring-black ring-opacity-5"
-                    :class="[connected && !dropUp ? 'rounded-b-md' : 'rounded-md', ...contentClasses]"
+                    :class="[
+                        connected && !dropUp ? 'rounded-b-md' : 'rounded-md',
+                        ...contentClasses,
+                    ]"
                 >
                     <slot name="content" />
                 </div>

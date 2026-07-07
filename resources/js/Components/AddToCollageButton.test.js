@@ -32,7 +32,8 @@ vi.mock("@/composables/useTranslations", () => ({
                 "page.collage_add_button": "Add to Collage",
                 "page.collage_add_success":
                     "Page successfully added to collage!",
-                "page.collage_replace_modal_title": "Choose a picture to replace",
+                "page.collage_replace_modal_title":
+                    "Choose a picture to replace",
                 "page.collage_replace_pick_speak":
                     "What picture do you want to remove?",
                 "page.collage_replace_confirm_speak":
@@ -109,7 +110,12 @@ describe("AddToCollageButton", () => {
     describe("Page already in collage", () => {
         it("shows message without number when only one collage exists", () => {
             const collages = [
-                { id: 1, pages: [{ id: 1 }], is_archived: false, is_locked: false },
+                {
+                    id: 1,
+                    pages: [{ id: 1 }],
+                    is_archived: false,
+                    is_locked: false,
+                },
             ];
 
             wrapper = mount(AddToCollageButton, {

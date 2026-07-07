@@ -30,9 +30,14 @@
             </div>
             <p v-if="canAdmin" class="mt-3 text-sm text-gray-500">
                 Archived collages are preserved but cannot be edited.
-                <strong class="text-gray-400 font-medium">View PDF</strong> anytime.
-                <strong class="text-gray-400 font-medium">Restore</strong> to make editable again.
-                <strong class="text-gray-400 font-medium">Delete Permanently</strong> removes all data forever — this cannot be undone.
+                <strong class="text-gray-400 font-medium">View PDF</strong>
+                anytime.
+                <strong class="text-gray-400 font-medium">Restore</strong> to
+                make editable again.
+                <strong class="text-gray-400 font-medium"
+                    >Delete Permanently</strong
+                >
+                removes all data forever — this cannot be undone.
             </p>
         </template>
 
@@ -63,12 +68,22 @@
                         View PDF
                     </a>
 
-                    <div v-if="canAdmin" class="flex items-center gap-4 ml-auto">
+                    <div
+                        v-if="canAdmin"
+                        class="flex items-center gap-4 ml-auto"
+                    >
                         <button
                             class="flex items-center gap-1.5 text-sm text-teal-400 hover:text-teal-300 transition-colors"
-                            :class="{ 'opacity-50 cursor-not-allowed': restoreForm.processing }"
+                            :class="{
+                                'opacity-50 cursor-not-allowed':
+                                    restoreForm.processing,
+                            }"
                             :disabled="restoreForm.processing"
-                            @click="restoreForm.patch(route('collages.restore', collage.id))"
+                            @click="
+                                restoreForm.patch(
+                                    route('collages.restore', collage.id)
+                                )
+                            "
                         >
                             <i class="ri-arrow-go-back-line"></i>
                             Restore
@@ -76,7 +91,10 @@
 
                         <button
                             class="flex items-center gap-1.5 text-sm text-red-400 hover:text-red-300 transition-colors"
-                            :class="{ 'opacity-50 cursor-not-allowed': deleteForm.processing }"
+                            :class="{
+                                'opacity-50 cursor-not-allowed':
+                                    deleteForm.processing,
+                            }"
                             :disabled="deleteForm.processing"
                             @click="confirmDelete(collage.id)"
                         >

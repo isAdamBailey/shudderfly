@@ -5,15 +5,15 @@ import { computed } from "vue";
 import LiteYouTubeEmbed from "vue-lite-youtube-embed";
 import "vue-lite-youtube-embed/style.css";
 const props = defineProps({
-  url: { type: String, default: null },
-  iframe: { type: Boolean, default: false },
-  title: { type: String, default: "" },
-  controls: { type: Boolean, default: true },
-  fillContainer: { type: Boolean, default: false }
+    url: { type: String, default: null },
+    iframe: { type: Boolean, default: false },
+    title: { type: String, default: "" },
+    controls: { type: Boolean, default: true },
+    fillContainer: { type: Boolean, default: false },
 });
 
 const { embedUrl, videoId, isPlaylist } = useGetYouTubeVideo(() => props.url, {
-  noControls: !props.controls
+    noControls: !props.controls,
 });
 
 // Always use iframe for playlists
@@ -21,94 +21,94 @@ const useIframe = computed(() => isPlaylist.value || props.iframe);
 </script>
 
 <template>
-  <div
-    v-if="useIframe"
-    :class="[
-      !controls ? 'pointer-events-none' : '',
-      fillContainer ? 'video-container-fill' : 'video-container'
-    ]"
-    class="rounded-lg"
-  >
-    <iframe
-      :title="title"
-      :src="embedUrl"
-      frameborder="0"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-      allowfullscreen
-      playsinline
-      webkit-playsinline
-    ></iframe>
-    <TypePill v-if="isPlaylist && !controls" type="Playlist" />
-  </div>
-  <div
-    v-else
-    :class="fillContainer ? 'video-container-fill' : 'video-container'"
-    style="pointer-events: auto; touch-action: manipulation"
-  >
-    <LiteYouTubeEmbed
-      :id="videoId"
-      :title="title"
-      :cookie="false"
-      :params="`modestbranding=1&rel=0&playsinline=1${
-        !controls ? '&controls=0' : ''
-      }`"
-    />
-  </div>
+    <div
+        v-if="useIframe"
+        :class="[
+            !controls ? 'pointer-events-none' : '',
+            fillContainer ? 'video-container-fill' : 'video-container',
+        ]"
+        class="rounded-lg"
+    >
+        <iframe
+            :title="title"
+            :src="embedUrl"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+            allowfullscreen
+            playsinline
+            webkit-playsinline
+        ></iframe>
+        <TypePill v-if="isPlaylist && !controls" type="Playlist" />
+    </div>
+    <div
+        v-else
+        :class="fillContainer ? 'video-container-fill' : 'video-container'"
+        style="pointer-events: auto; touch-action: manipulation"
+    >
+        <LiteYouTubeEmbed
+            :id="videoId"
+            :title="title"
+            :cookie="false"
+            :params="`modestbranding=1&rel=0&playsinline=1${
+                !controls ? '&controls=0' : ''
+            }`"
+        />
+    </div>
 </template>
 
 <style>
 .video-container {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  overflow: hidden;
-  -webkit-tap-highlight-color: transparent;
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
 }
 
 /* Fallback for browsers that don't support aspect-ratio */
 @supports not (aspect-ratio: 16 / 9) {
-  .video-container {
-    height: 0;
-    padding-bottom: 56.25%; /* For a 16:9 aspect ratio */
-  }
+    .video-container {
+        height: 0;
+        padding-bottom: 56.25%; /* For a 16:9 aspect ratio */
+    }
 }
 
 .video-container-fill {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  -webkit-tap-highlight-color: transparent;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .video-container iframe,
 .video-container-fill iframe {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .video-container .yt-lite,
 .video-container-fill .yt-lite {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 /* Ensure the play button and overlay are clickable on iOS */
 .video-container .yt-lite > .lty-playbtn,
 .video-container-fill .yt-lite > .lty-playbtn {
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  z-index: 1;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    z-index: 1;
 }
 </style>

@@ -74,11 +74,8 @@ defineEmits(["close", "speak-all"]);
 const { t } = useTranslations();
 
 const groupedReactionsRef = toRef(props, "groupedReactions");
-const {
-    getReactionCount,
-    getReactionUsers,
-    getSelectedReactions,
-} = useGroupedReactions(groupedReactionsRef);
+const { getReactionCount, getReactionUsers, getSelectedReactions } =
+    useGroupedReactions(groupedReactionsRef);
 
 const selectedReactions = computed(() => getSelectedReactions());
 const hasReactions = computed(() => selectedReactions.value.length > 0);

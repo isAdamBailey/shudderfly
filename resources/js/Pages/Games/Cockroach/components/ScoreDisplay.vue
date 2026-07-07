@@ -13,7 +13,11 @@
 
         <div class="hud-center">
             <Transition name="combo-pop">
-                <div v-if="comboCount > 1" :key="comboCount" class="combo-badge">
+                <div
+                    v-if="comboCount > 1"
+                    :key="comboCount"
+                    class="combo-badge"
+                >
                     {{ comboCount }}x Combo!
                 </div>
             </Transition>
@@ -33,9 +37,9 @@ import GameStartSpeechButton from "@/Components/Games/GameStartSpeechButton.vue"
 import { COCKROACH_INTRO_SCRIPT } from "@/Pages/Games/shared/introScripts.js";
 
 defineProps({
-    score:      { type: Number, default: 0 },
+    score: { type: Number, default: 0 },
     comboCount: { type: Number, default: 0 },
-    hissCount:  { type: Number, default: 0 },
+    hissCount: { type: Number, default: 0 },
 });
 </script>
 
@@ -52,7 +56,12 @@ defineProps({
     z-index: 50;
     user-select: none;
     -webkit-user-select: none;
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.25) 70%, transparent 100%);
+    background: linear-gradient(
+        180deg,
+        rgba(0, 0, 0, 0.55) 0%,
+        rgba(0, 0, 0, 0.25) 70%,
+        transparent 100%
+    );
 }
 
 .hud-left {
@@ -86,7 +95,9 @@ defineProps({
     line-height: 1.2;
 }
 
-.score-value { color: #ffd54f; }
+.score-value {
+    color: #ffd54f;
+}
 
 .hud-center {
     flex: 1;
@@ -99,14 +110,16 @@ defineProps({
     font-size: 3vmin;
     font-weight: 900;
     color: #ff6d00;
-    text-shadow:
-        0 0 8px rgba(255, 109, 0, 0.5),
-        0 1px 3px rgba(0, 0, 0, 0.6);
+    text-shadow: 0 0 8px rgba(255, 109, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.6);
     white-space: nowrap;
 }
 
-.combo-pop-enter-active { animation: comboIn 0.3s ease-out; }
-.combo-pop-leave-active { animation: comboOut 0.2s ease-in; }
+.combo-pop-enter-active {
+    animation: comboIn 0.3s ease-out;
+}
+.combo-pop-leave-active {
+    animation: comboOut 0.2s ease-in;
+}
 
 .hud-right {
     display: flex;
@@ -114,13 +127,27 @@ defineProps({
 }
 
 @keyframes comboIn {
-    0%   { transform: scale(0.3) translateY(8px); opacity: 0; }
-    60%  { transform: scale(1.25) translateY(-2px); opacity: 1; }
-    100% { transform: scale(1) translateY(0); }
+    0% {
+        transform: scale(0.3) translateY(8px);
+        opacity: 0;
+    }
+    60% {
+        transform: scale(1.25) translateY(-2px);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1) translateY(0);
+    }
 }
 
 @keyframes comboOut {
-    0%   { opacity: 1; transform: scale(1); }
-    100% { opacity: 0; transform: scale(0.6) translateY(-6px); }
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.6) translateY(-6px);
+    }
 }
 </style>

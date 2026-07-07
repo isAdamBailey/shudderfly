@@ -1,5 +1,8 @@
 <script setup>
-import { speakGameIntro, stopGameIntroSpeech } from "@/composables/useGameIntroSpeech";
+import {
+    speakGameIntro,
+    stopGameIntroSpeech,
+} from "@/composables/useGameIntroSpeech";
 import { computed, onUnmounted, ref } from "vue";
 
 const props = defineProps({
@@ -27,7 +30,7 @@ const variantClass = computed(() => {
 });
 
 const activeClass = computed(() =>
-    isSpeaking.value ? "border-yellow-300 text-yellow-200" : "",
+    isSpeaking.value ? "border-yellow-300 text-yellow-200" : ""
 );
 
 function toggle() {

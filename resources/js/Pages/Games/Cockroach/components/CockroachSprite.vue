@@ -26,20 +26,20 @@ import { computed } from "vue";
 import HissEffect from "./HissEffect.vue";
 
 const props = defineProps({
-    x:         { type: Number,  required: true },
-    y:         { type: Number,  required: true },
-    rotation:  { type: Number,  default: 0 },
+    x: { type: Number, required: true },
+    y: { type: Number, required: true },
+    rotation: { type: Number, default: 0 },
     isHissing: { type: Boolean, default: false },
-    flipped:   { type: Boolean, default: false },
-    fighting:  { type: Boolean, default: false },
-    disabled:  { type: Boolean, default: false },
+    flipped: { type: Boolean, default: false },
+    fighting: { type: Boolean, default: false },
+    disabled: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(["head-tap"]);
 
 const wrapperStyle = computed(() => ({
-    left:      `${props.x}%`,
-    top:       `${props.y}%`,
+    left: `${props.x}%`,
+    top: `${props.y}%`,
     transform: `translate(-50%, -50%) rotate(${props.rotation}deg)`,
 }));
 
@@ -48,8 +48,8 @@ function onHeadTap(event) {
     if (navigator.vibrate) {
         navigator.vibrate(30);
     }
-    const rect      = event.currentTarget.getBoundingClientRect();
-    const tapY      = event.clientY - rect.top;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const tapY = event.clientY - rect.top;
     const direction = tapY < rect.height / 2 ? "up" : "down";
     emit("head-tap", direction);
 }
@@ -60,7 +60,8 @@ function onHeadTap(event) {
     position: absolute;
     width: 28vmin;
     height: auto;
-    transition: left 0.35s ease-out, top 0.35s ease-out, transform 0.35s ease-out;
+    transition: left 0.35s ease-out, top 0.35s ease-out,
+        transform 0.35s ease-out;
     z-index: 10;
     user-select: none;
     -webkit-user-select: none;
@@ -110,19 +111,34 @@ function onHeadTap(event) {
 }
 
 @keyframes wiggle {
-    0%, 100% { transform: rotate(0deg); }
-    25%       { transform: rotate(-4deg) scale(1.03); }
-    75%       { transform: rotate(4deg)  scale(1.03); }
+    0%,
+    100% {
+        transform: rotate(0deg);
+    }
+    25% {
+        transform: rotate(-4deg) scale(1.03);
+    }
+    75% {
+        transform: rotate(4deg) scale(1.03);
+    }
 }
 
 @keyframes fightOscillate {
-    0%   { margin-left: -1.5%; }
-    100% { margin-left:  1.5%; }
+    0% {
+        margin-left: -1.5%;
+    }
+    100% {
+        margin-left: 1.5%;
+    }
 }
 
 @keyframes fightShake {
-    0%   { transform: rotate(-6deg) scale(1.05); }
-    100% { transform: rotate( 6deg) scale(1.05); }
+    0% {
+        transform: rotate(-6deg) scale(1.05);
+    }
+    100% {
+        transform: rotate(6deg) scale(1.05);
+    }
 }
 
 .cockroach-wrapper.fighting .cockroach-img.flipped {
@@ -130,7 +146,11 @@ function onHeadTap(event) {
 }
 
 @keyframes fightShakeFlipped {
-    0%   { transform: scaleX(-1) rotate(-6deg) scale(1.05); }
-    100% { transform: scaleX(-1) rotate( 6deg) scale(1.05); }
+    0% {
+        transform: scaleX(-1) rotate(-6deg) scale(1.05);
+    }
+    100% {
+        transform: scaleX(-1) rotate(6deg) scale(1.05);
+    }
 }
 </style>

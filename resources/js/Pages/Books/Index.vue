@@ -1,52 +1,58 @@
 <template>
-  <Head title="Books" />
+    <Head title="Books" />
 
-  <BreezeAuthenticatedLayout>
-    <template #header>
-      <div class="flex justify-between items-center mb-10">
-        <Link class="w-1/2" :href="route('books.index')">
-          <h2 class="font-heading text-3xl text-theme-title leading-tight">
-            {{ title }}
-          </h2>
-        </Link>
+    <BreezeAuthenticatedLayout>
+        <template #header>
+            <div class="flex justify-between items-center mb-10">
+                <Link class="w-1/2" :href="route('books.index')">
+                    <h2
+                        class="font-heading text-3xl text-theme-title leading-tight"
+                    >
+                        {{ title }}
+                    </h2>
+                </Link>
 
-        <!-- Search moved to global layout -->
-      </div>
-    </template>
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 sm:space-y-10">
-      <!-- Themed Books Section -->
-      <div v-if="currentTheme && !searchCategories">
-        <BooksGrid :category="{ name: 'themed' }" :label="themeLabel" />
-      </div>
+                <!-- Search moved to global layout -->
+            </div>
+        </template>
+        <div
+            class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 sm:space-y-10"
+        >
+            <!-- Themed Books Section -->
+            <div v-if="currentTheme && !searchCategories">
+                <BooksGrid :category="{ name: 'themed' }" :label="themeLabel" />
+            </div>
 
-      <template v-if="!areAllBooksEmpty">
-        <BooksGrid
-          v-if="!searchCategories"
-          :category="{ name: 'forgotten' }"
-          label="Remember these books?"
-        />
+            <template v-if="!areAllBooksEmpty">
+                <BooksGrid
+                    v-if="!searchCategories"
+                    :category="{ name: 'forgotten' }"
+                    label="Remember these books?"
+                />
 
-        <BooksGrid
-          v-for="(category, index) in workingCategories"
-          :key="index"
-          :category="category"
-        />
+                <BooksGrid
+                    v-for="(category, index) in workingCategories"
+                    :key="index"
+                    :category="category"
+                />
 
-        <BooksGrid
-          v-if="!searchCategories"
-          :category="{ name: 'popular' }"
-          label="Your favorite books!"
-        />
-      </template>
-      <div v-else class="flex flex-col items-center py-8">
-        <h2 class="mb-8 font-semibold text-2xl text-gray-100 leading-tight">
-          {{ notFoundContent }}
-        </h2>
-        <ManEmptyCircle />
-      </div>
-    </div>
-    <ScrollTop />
-  </BreezeAuthenticatedLayout>
+                <BooksGrid
+                    v-if="!searchCategories"
+                    :category="{ name: 'popular' }"
+                    label="Your favorite books!"
+                />
+            </template>
+            <div v-else class="flex flex-col items-center py-8">
+                <h2
+                    class="mb-8 font-semibold text-2xl text-gray-100 leading-tight"
+                >
+                    {{ notFoundContent }}
+                </h2>
+                <ManEmptyCircle />
+            </div>
+        </div>
+        <ScrollTop />
+    </BreezeAuthenticatedLayout>
 </template>
 
 <script setup>
@@ -64,47 +70,47 @@ const { t } = useTranslations();
 const notFoundContent = computed(() => t("search.not_found_books"));
 
 const props = defineProps({
-  categories: {
-    type: Array,
-    required: true
-  },
-  searchCategories: {
-    type: Array,
-    default: null
-  },
-  themeLabel: {
-    type: String,
-    default: "Themed Books"
-  }
+    categories: {
+        type: Array,
+        required: true,
+    },
+    searchCategories: {
+        type: Array,
+        default: null,
+    },
+    themeLabel: {
+        type: String,
+        default: "Themed Books",
+    },
 });
 
 const workingCategories = computed(() => {
-  return props.searchCategories || props.categories;
+    return props.searchCategories || props.categories;
 });
 const currentTheme = computed(() => {
-  return usePage().props.theme;
+    return usePage().props.theme;
 });
 const areAllBooksEmpty = computed(() => {
-  return workingCategories.value.every(
-    (category) => category.books?.length === 0
-  );
+    return workingCategories.value.every(
+        (category) => category.books?.length === 0
+    );
 });
 
 const title = computed(() => {
-  const search = usePage().props.search;
-  if (search) {
-    return `Books with "${search}"`;
-  }
-  return "Books";
+    const search = usePage().props.search;
+    if (search) {
+        return `Books with "${search}"`;
+    }
+    return "Books";
 });
 
 watch(
-  () => usePage().props.search,
-  (newSearch) => {
-    if (newSearch && areAllBooksEmpty.value) {
-      speak(notFoundContent.value);
-    }
-  },
-  { immediate: true }
+    () => usePage().props.search,
+    (newSearch) => {
+        if (newSearch && areAllBooksEmpty.value) {
+            speak(notFoundContent.value);
+        }
+    },
+    { immediate: true }
 );
 </script>

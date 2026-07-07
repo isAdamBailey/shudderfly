@@ -8,6 +8,7 @@ import StatCard from "@/Components/StatCard.vue";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import NewBookForm from "@/Pages/Books/NewBookForm.vue";
 import OwnerPanel from "@/Pages/Users/Partials/OwnerPanel.vue";
+import { useNotificationSync } from "@/composables/useNotificationSync";
 import { usePermissions } from "@/composables/permissions";
 import { FOOD_EMOJI_POOL, useEmojiRise } from "@/composables/useEmojiRise";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
@@ -23,6 +24,7 @@ const { speak, speaking } = useSpeechSynthesis();
 const { t } = useTranslations();
 const { canAdmin, canEditPages } = usePermissions();
 const { spawnEmojiRise } = useEmojiRise();
+const { isRead, markAsRead: markNotificationAsRead } = useNotificationSync();
 const regenerating = ref(false);
 const showNewBookForm = ref(false);
 
@@ -167,7 +169,7 @@ const regenerateWeeklyOverview = () => {
             onFinish: () => {
                 regenerating.value = false;
             },
-        },
+        }
     );
 };
 
@@ -225,18 +227,22 @@ const speakRecentBooks = () => {
 
 const repliesToYou = computed(() => {
     return (props.recentActivity?.replies ?? [])
+        .filter((reply) => !isRead(reply.id))
         .map((reply) => ({
             id: reply.id,
             created_at: reply.created_at,
-            actorName: reply.user?.name ?? "Someone",
-            preview: replyPreview(reply.comment),
-            href: replyMessageLink(reply),
+            actorName: reply.data?.commenter_name ?? "Someone",
+            preview: replyPreview(
+                reply.data?.comment ?? reply.data?.message ?? ""
+            ),
+            href: reply.data?.url ?? route("messages.index"),
         }))
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 });
 
 const messagesToYou = computed(() => {
     return (props.recentActivity?.mentions ?? [])
+        .filter((mention) => !isRead(mention.id))
         .map((mention) => ({
             id: mention.id,
             created_at: mention.created_at,
@@ -252,14 +258,18 @@ const hasMessagesToYou = computed(() => messagesToYou.value.length > 0);
 
 const speakRepliesToYou = () => {
     const texts = repliesToYou.value.map(
-        (item) => `${item.actorName} ${t("profile.activity_reply")}: ${item.preview}`,
+        (item) =>
+            `${item.actorName} ${t("profile.activity_reply")}: ${item.preview}`
     );
     speak(t("profile.speak_replies_to_you", { list: texts.join(". ") }));
 };
 
 const speakMessagesToYou = () => {
     const texts = messagesToYou.value.map(
-        (item) => `${item.actorName} ${t("profile.activity_mention")}: ${item.preview}`,
+        (item) =>
+            `${item.actorName} ${t("profile.activity_mention")}: ${
+                item.preview
+            }`
     );
     speak(t("profile.speak_messages_to_you", { list: texts.join(". ") }));
 };
@@ -274,7 +284,10 @@ const speakRecentUploads = () => {
 
 const speakUserSummary = () => {
     const greeting = props.isOwner
-        ? t("profile.welcome_with_name", { app_name: props.appName, name: props.profileUser.name })
+        ? t("profile.welcome_with_name", {
+              app_name: props.appName,
+              name: props.profileUser.name,
+          })
         : `${props.profileUser.name}.`;
 
     if (props.weeklyOverview?.text) {
@@ -283,13 +296,21 @@ const speakUserSummary = () => {
     }
 
     const booksWord =
-        props.stats.totalBooksCount === 1 ? t("general.book") : t("general.books");
+        props.stats.totalBooksCount === 1
+            ? t("general.book")
+            : t("general.books");
     const messagesWord =
-        props.stats.messagesCount === 1 ? t("general.message") : t("general.messages");
+        props.stats.messagesCount === 1
+            ? t("general.message")
+            : t("general.messages");
     const commentsWord =
-        props.stats.commentsCount === 1 ? t("general.comment") : t("general.comments");
+        props.stats.commentsCount === 1
+            ? t("general.comment")
+            : t("general.comments");
     const reactionsWord =
-        props.stats.reactionsGiven === 1 ? t("general.reaction") : t("general.reactions");
+        props.stats.reactionsGiven === 1
+            ? t("general.reaction")
+            : t("general.reactions");
 
     const summary = [
         greeting,
@@ -330,8 +351,14 @@ const speakUserSummary = () => {
                 >
                     <i class="ri-arrow-left-line text-xl"></i>
                 </Link>
-                <h2 class="font-heading text-2xl text-theme-title leading-tight">
-                    {{ isOwner ? t("profile.welcome_header", { app_name: appName }) : profileUser.name }}
+                <h2
+                    class="font-heading text-2xl text-theme-title leading-tight"
+                >
+                    {{
+                        isOwner
+                            ? t("profile.welcome_header", { app_name: appName })
+                            : profileUser.name
+                    }}
                 </h2>
             </div>
         </template>
@@ -343,7 +370,9 @@ const speakUserSummary = () => {
                     v-if="isOwner && canEditPages"
                     class="bg-teal-700 dark:bg-teal-800 overflow-hidden shadow-sm rounded-lg mb-6 p-6"
                 >
-                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div
+                        class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+                    >
                         <div>
                             <h3 class="font-heading text-xl text-amber-400">
                                 {{ t("dashboard.new_book") }}
@@ -383,17 +412,31 @@ const speakUserSummary = () => {
                     class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg mb-6"
                 >
                     <div class="p-6">
-                        <div class="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6">
-                            <Avatar :user="profileUser" size="xl" class="flex-shrink-0" />
+                        <div
+                            class="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6"
+                        >
+                            <Avatar
+                                :user="profileUser"
+                                size="xl"
+                                class="flex-shrink-0"
+                            />
                             <div class="flex-1 min-w-0">
-                                <div class="flex items-start justify-between gap-3">
+                                <div
+                                    class="flex items-start justify-between gap-3"
+                                >
                                     <div class="min-w-0">
                                         <h1
                                             class="font-heading text-3xl text-gray-900 dark:text-theme-title mb-1 truncate"
                                         >
                                             {{
                                                 isOwner
-                                                    ? t("profile.welcome_with_name", { app_name: appName, name: profileUser.name })
+                                                    ? t(
+                                                          "profile.welcome_with_name",
+                                                          {
+                                                              app_name: appName,
+                                                              name: profileUser.name,
+                                                          }
+                                                      )
                                                     : profileUser.name
                                             }}
                                         </h1>
@@ -405,8 +448,13 @@ const speakUserSummary = () => {
                                         <div
                                             class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400"
                                         >
-                                            <i class="ri-calendar-line flex-shrink-0"></i>
-                                            <span>Member since {{ memberSince }}</span>
+                                            <i
+                                                class="ri-calendar-line flex-shrink-0"
+                                            ></i>
+                                            <span
+                                                >Member since
+                                                {{ memberSince }}</span
+                                            >
                                         </div>
                                     </div>
                                     <SpeakButton
@@ -422,7 +470,9 @@ const speakUserSummary = () => {
                                     class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700"
                                 >
                                     <div v-if="weeklyOverview?.text">
-                                        <p class="text-xs text-gray-600 dark:text-gray-400 mb-1.5">
+                                        <p
+                                            class="text-xs text-gray-600 dark:text-gray-400 mb-1.5"
+                                        >
                                             Weekly AI story
                                         </p>
                                         <p
@@ -431,14 +481,13 @@ const speakUserSummary = () => {
                                             {{ weeklyOverview.text }}
                                         </p>
                                     </div>
-                                    <div
-                                        class="flex items-center gap-3 mt-2"
-                                    >
+                                    <div class="flex items-center gap-3 mt-2">
                                         <p
                                             v-if="weeklyOverviewGeneratedAt"
                                             class="text-xs text-gray-600 dark:text-gray-400"
                                         >
-                                            Updated {{ weeklyOverviewGeneratedAt }}
+                                            Updated
+                                            {{ weeklyOverviewGeneratedAt }}
                                         </p>
                                         <button
                                             v-if="canAdmin"
@@ -450,7 +499,10 @@ const speakUserSummary = () => {
                                         >
                                             <i
                                                 class="ri-refresh-line"
-                                                :class="{ 'animate-spin': regenerating }"
+                                                :class="{
+                                                    'animate-spin':
+                                                        regenerating,
+                                                }"
                                             ></i>
                                             {{
                                                 regenerating
@@ -466,7 +518,10 @@ const speakUserSummary = () => {
                 </div>
 
                 <!-- Book Stats (books authored by this user - visitors only) -->
-                <div v-if="!isOwner" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div
+                    v-if="!isOwner"
+                    class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6"
+                >
                     <!-- Top Books by Popularity -->
                     <div
                         v-if="stats.topBooks.length > 0"
@@ -478,9 +533,18 @@ const speakUserSummary = () => {
                                     <h3
                                         class="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2"
                                     >
-                                        <i class="ri-fire-line text-teal-700 dark:text-teal-400"></i>
-                                        {{ t("profile.user_top_books", { name: profileUser.name }) }}
-                                        <span class="font-normal text-gray-600 dark:text-gray-400">by popularity</span>
+                                        <i
+                                            class="ri-fire-line text-teal-700 dark:text-teal-400"
+                                        ></i>
+                                        {{
+                                            t("profile.user_top_books", {
+                                                name: profileUser.name,
+                                            })
+                                        }}
+                                        <span
+                                            class="font-normal text-gray-600 dark:text-gray-400"
+                                            >by popularity</span
+                                        >
                                     </h3>
                                 </div>
                                 <SpeakButton
@@ -498,7 +562,11 @@ const speakUserSummary = () => {
                                     icon="ri-book-line"
                                     icon-color="text-teal-700 dark:text-teal-400"
                                     :label="book.title"
-                                    :href="route('books.show', { book: book?.slug })"
+                                    :href="
+                                        route('books.show', {
+                                            book: book?.slug,
+                                        })
+                                    "
                                     :cover-image="book.cover_image?.media_path"
                                 />
                             </div>
@@ -516,10 +584,18 @@ const speakUserSummary = () => {
                                     <h3
                                         class="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2"
                                     >
-                                        <i class="ri-book-2-line text-amber-500 dark:text-amber-400"></i>
-                                        {{ t("profile.user_recently_created", { name: profileUser.name }) }}
+                                        <i
+                                            class="ri-book-2-line text-amber-500 dark:text-amber-400"
+                                        ></i>
+                                        {{
+                                            t("profile.user_recently_created", {
+                                                name: profileUser.name,
+                                            })
+                                        }}
                                     </h3>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                                    <p
+                                        class="text-sm text-gray-600 dark:text-gray-400 mt-0.5"
+                                    >
                                         {{ stats.totalBooksCount }} books total
                                     </p>
                                 </div>
@@ -542,7 +618,11 @@ const speakUserSummary = () => {
                                         book.popularity_percentage ?? 0
                                     }%`"
                                     :subtitle="`${formatDate(book.created_at)}`"
-                                    :href="route('books.show', { book: book?.slug })"
+                                    :href="
+                                        route('books.show', {
+                                            book: book?.slug,
+                                        })
+                                    "
                                     :cover-image="book.cover_image?.media_path"
                                 />
                             </div>
@@ -557,7 +637,9 @@ const speakUserSummary = () => {
                             <h3
                                 class="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2 mb-4"
                             >
-                                <i class="ri-bar-chart-line text-teal-700 dark:text-teal-400"></i>
+                                <i
+                                    class="ri-bar-chart-line text-teal-700 dark:text-teal-400"
+                                ></i>
                                 Activity
                             </h3>
                             <div class="space-y-3">
@@ -572,7 +654,12 @@ const speakUserSummary = () => {
                                             :disabled="speaking"
                                             aria-label="Speak total books"
                                             icon-class="ri-speak-fill text-lg"
-                                            @click="speakActivityStat('profile.stat_total_books', stats.totalBooksCount)"
+                                            @click="
+                                                speakActivityStat(
+                                                    'profile.stat_total_books',
+                                                    stats.totalBooksCount
+                                                )
+                                            "
                                         />
                                     </template>
                                 </StatCard>
@@ -587,7 +674,12 @@ const speakUserSummary = () => {
                                             :disabled="speaking"
                                             aria-label="Speak comments posted"
                                             icon-class="ri-speak-fill text-lg"
-                                            @click="speakActivityStat('profile.stat_comments', stats.commentsCount)"
+                                            @click="
+                                                speakActivityStat(
+                                                    'profile.stat_comments',
+                                                    stats.commentsCount
+                                                )
+                                            "
                                         />
                                     </template>
                                 </StatCard>
@@ -602,7 +694,12 @@ const speakUserSummary = () => {
                                             :disabled="speaking"
                                             aria-label="Speak reactions given"
                                             icon-class="ri-speak-fill text-lg"
-                                            @click="speakActivityStat('profile.stat_reactions', stats.reactionsGiven)"
+                                            @click="
+                                                speakActivityStat(
+                                                    'profile.stat_reactions',
+                                                    stats.reactionsGiven
+                                                )
+                                            "
                                         />
                                     </template>
                                 </StatCard>
@@ -613,7 +710,10 @@ const speakUserSummary = () => {
 
                 <!-- Recent Messages / Recent Replies posted by this user (visitors only) -->
                 <div
-                    v-if="!isOwner && (recentMessages.length > 0 || recentReplies.length > 0)"
+                    v-if="
+                        !isOwner &&
+                        (recentMessages.length > 0 || recentReplies.length > 0)
+                    "
                     class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6"
                 >
                     <div
@@ -625,22 +725,38 @@ const speakUserSummary = () => {
                                 <h3
                                     class="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2"
                                 >
-                                    <i class="ri-message-3-line text-teal-700 dark:text-teal-400"></i>
-                                    {{ t("profile.user_latest_messages", { name: profileUser.name }) }}
+                                    <i
+                                        class="ri-message-3-line text-teal-700 dark:text-teal-400"
+                                    ></i>
+                                    {{
+                                        t("profile.user_latest_messages", {
+                                            name: profileUser.name,
+                                        })
+                                    }}
                                 </h3>
                                 <div class="flex items-center gap-2">
-                                    <span class="text-sm text-gray-600 dark:text-gray-400">
+                                    <span
+                                        class="text-sm text-gray-600 dark:text-gray-400"
+                                    >
                                         {{ stats.messagesCount }} total
                                     </span>
                                     <SpeakButton
                                         :disabled="speaking"
                                         aria-label="Speak messages count"
                                         icon-class="ri-speak-fill text-lg"
-                                        @click="speakActivityStat('profile.stat_messages', stats.messagesCount)"
+                                        @click="
+                                            speakActivityStat(
+                                                'profile.stat_messages',
+                                                stats.messagesCount
+                                            )
+                                        "
                                     />
                                 </div>
                             </div>
-                            <MessageTimeline :messages="recentMessages" read-only />
+                            <MessageTimeline
+                                :messages="recentMessages"
+                                read-only
+                            />
                         </div>
                     </div>
 
@@ -653,18 +769,31 @@ const speakUserSummary = () => {
                                 <h3
                                     class="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2"
                                 >
-                                    <i class="ri-reply-line text-teal-700 dark:text-teal-400"></i>
-                                    {{ t("profile.user_latest_replies", { name: profileUser.name }) }}
+                                    <i
+                                        class="ri-reply-line text-teal-700 dark:text-teal-400"
+                                    ></i>
+                                    {{
+                                        t("profile.user_latest_replies", {
+                                            name: profileUser.name,
+                                        })
+                                    }}
                                 </h3>
                                 <div class="flex items-center gap-2">
-                                    <span class="text-sm text-gray-600 dark:text-gray-400">
+                                    <span
+                                        class="text-sm text-gray-600 dark:text-gray-400"
+                                    >
                                         {{ stats.commentsCount }} total
                                     </span>
                                     <SpeakButton
                                         :disabled="speaking"
                                         aria-label="Speak comments count"
                                         icon-class="ri-speak-fill text-lg"
-                                        @click="speakActivityStat('profile.stat_comments', stats.commentsCount)"
+                                        @click="
+                                            speakActivityStat(
+                                                'profile.stat_comments',
+                                                stats.commentsCount
+                                            )
+                                        "
                                     />
                                 </div>
                             </div>
@@ -687,7 +816,9 @@ const speakUserSummary = () => {
                                             :href="replyMessageLink(reply)"
                                             class="inline-flex items-center gap-1 text-sm font-medium text-teal-700 dark:text-teal-400 hover:text-teal-900 dark:hover:text-teal-300 py-1 px-2 -mr-2 rounded transition-colors"
                                         >
-                                            <i class="ri-external-link-line text-xs"></i>
+                                            <i
+                                                class="ri-external-link-line text-xs"
+                                            ></i>
                                             View message
                                         </Link>
                                     </div>
@@ -713,11 +844,15 @@ const speakUserSummary = () => {
                             class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg"
                         >
                             <div class="p-6">
-                                <div class="flex items-center justify-between mb-4">
+                                <div
+                                    class="flex items-center justify-between mb-4"
+                                >
                                     <h3
                                         class="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2"
                                     >
-                                        <i class="ri-reply-line text-teal-700 dark:text-teal-400"></i>
+                                        <i
+                                            class="ri-reply-line text-teal-700 dark:text-teal-400"
+                                        ></i>
                                         {{ t("profile.replies_to_you") }}
                                     </h3>
                                     <SpeakButton
@@ -734,21 +869,55 @@ const speakUserSummary = () => {
                                         :key="item.id"
                                         class="rounded-lg border border-gray-200 dark:border-gray-700 p-4"
                                     >
-                                        <div class="flex items-center justify-between gap-3 mb-2">
-                                            <span class="text-xs text-gray-600 dark:text-gray-400">
-                                                {{ formatDate(item.created_at) }}
-                                            </span>
-                                            <Link
-                                                :href="item.href"
-                                                class="inline-flex items-center gap-1 text-sm font-medium text-teal-700 dark:text-teal-400 hover:text-teal-900 dark:hover:text-teal-300 py-1 px-2 -mr-2 rounded transition-colors"
+                                        <div
+                                            class="flex items-center justify-between gap-3 mb-2"
+                                        >
+                                            <span
+                                                class="text-xs text-gray-600 dark:text-gray-400"
                                             >
-                                                <i class="ri-external-link-line text-xs"></i>
-                                                View message
-                                            </Link>
+                                                {{
+                                                    formatDate(item.created_at)
+                                                }}
+                                            </span>
+                                            <div
+                                                class="flex items-center gap-1"
+                                            >
+                                                <button
+                                                    type="button"
+                                                    title="Mark as read"
+                                                    class="px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800 rounded transition-colors"
+                                                    @click="
+                                                        markNotificationAsRead(
+                                                            item.id
+                                                        )
+                                                    "
+                                                >
+                                                    Mark read
+                                                </button>
+                                                <Link
+                                                    :href="item.href"
+                                                    class="inline-flex items-center gap-1 text-sm font-medium text-teal-700 dark:text-teal-400 hover:text-teal-900 dark:hover:text-teal-300 py-1 px-2 -mr-2 rounded transition-colors"
+                                                    @click="
+                                                        markNotificationAsRead(
+                                                            item.id
+                                                        )
+                                                    "
+                                                >
+                                                    <i
+                                                        class="ri-external-link-line text-xs"
+                                                    ></i>
+                                                    View message
+                                                </Link>
+                                            </div>
                                         </div>
-                                        <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">
-                                            <span class="font-medium">{{ item.actorName }}</span>
-                                            {{ t("profile.activity_reply") }}: {{ item.preview }}
+                                        <p
+                                            class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words"
+                                        >
+                                            <span class="font-medium">{{
+                                                item.actorName
+                                            }}</span>
+                                            {{ t("profile.activity_reply") }}:
+                                            {{ item.preview }}
                                         </p>
                                     </div>
                                 </div>
@@ -760,11 +929,15 @@ const speakUserSummary = () => {
                             class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg"
                         >
                             <div class="p-6">
-                                <div class="flex items-center justify-between mb-4">
+                                <div
+                                    class="flex items-center justify-between mb-4"
+                                >
                                     <h3
                                         class="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2"
                                     >
-                                        <i class="ri-notification-3-line text-teal-700 dark:text-teal-400"></i>
+                                        <i
+                                            class="ri-notification-3-line text-teal-700 dark:text-teal-400"
+                                        ></i>
                                         {{ t("profile.messages_to_you") }}
                                     </h3>
                                     <SpeakButton
@@ -781,21 +954,55 @@ const speakUserSummary = () => {
                                         :key="item.id"
                                         class="rounded-lg border border-gray-200 dark:border-gray-700 p-4"
                                     >
-                                        <div class="flex items-center justify-between gap-3 mb-2">
-                                            <span class="text-xs text-gray-600 dark:text-gray-400">
-                                                {{ formatDate(item.created_at) }}
-                                            </span>
-                                            <Link
-                                                :href="item.href"
-                                                class="inline-flex items-center gap-1 text-sm font-medium text-teal-700 dark:text-teal-400 hover:text-teal-900 dark:hover:text-teal-300 py-1 px-2 -mr-2 rounded transition-colors"
+                                        <div
+                                            class="flex items-center justify-between gap-3 mb-2"
+                                        >
+                                            <span
+                                                class="text-xs text-gray-600 dark:text-gray-400"
                                             >
-                                                <i class="ri-external-link-line text-xs"></i>
-                                                View message
-                                            </Link>
+                                                {{
+                                                    formatDate(item.created_at)
+                                                }}
+                                            </span>
+                                            <div
+                                                class="flex items-center gap-1"
+                                            >
+                                                <button
+                                                    type="button"
+                                                    title="Mark as read"
+                                                    class="px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800 rounded transition-colors"
+                                                    @click="
+                                                        markNotificationAsRead(
+                                                            item.id
+                                                        )
+                                                    "
+                                                >
+                                                    Mark read
+                                                </button>
+                                                <Link
+                                                    :href="item.href"
+                                                    class="inline-flex items-center gap-1 text-sm font-medium text-teal-700 dark:text-teal-400 hover:text-teal-900 dark:hover:text-teal-300 py-1 px-2 -mr-2 rounded transition-colors"
+                                                    @click="
+                                                        markNotificationAsRead(
+                                                            item.id
+                                                        )
+                                                    "
+                                                >
+                                                    <i
+                                                        class="ri-external-link-line text-xs"
+                                                    ></i>
+                                                    View message
+                                                </Link>
+                                            </div>
                                         </div>
-                                        <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">
-                                            <span class="font-medium">{{ item.actorName }}</span>
-                                            {{ t("profile.activity_mention") }}: {{ item.preview }}
+                                        <p
+                                            class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words"
+                                        >
+                                            <span class="font-medium">{{
+                                                item.actorName
+                                            }}</span>
+                                            {{ t("profile.activity_mention") }}:
+                                            {{ item.preview }}
                                         </p>
                                     </div>
                                 </div>
@@ -805,7 +1012,10 @@ const speakUserSummary = () => {
 
                     <!-- New Books This Week / Recent Uploads -->
                     <div
-                        v-if="newBooksThisWeek.length > 0 || recentUploads.length > 0"
+                        v-if="
+                            newBooksThisWeek.length > 0 ||
+                            recentUploads.length > 0
+                        "
                         class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6"
                     >
                         <div
@@ -813,9 +1023,15 @@ const speakUserSummary = () => {
                             class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg"
                         >
                             <div class="p-6">
-                                <div class="flex items-center justify-between mb-4">
-                                    <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                                        <i class="ri-book-3-line text-teal-700 dark:text-teal-400"></i>
+                                <div
+                                    class="flex items-center justify-between mb-4"
+                                >
+                                    <h3
+                                        class="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2"
+                                    >
+                                        <i
+                                            class="ri-book-3-line text-teal-700 dark:text-teal-400"
+                                        ></i>
                                         {{ t("profile.new_books_this_week") }}
                                     </h3>
                                     <SpeakButton
@@ -825,7 +1041,9 @@ const speakUserSummary = () => {
                                         @click="speakNewBooksThisWeek"
                                     />
                                 </div>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div
+                                    class="grid grid-cols-1 sm:grid-cols-2 gap-3"
+                                >
                                     <StatCard
                                         v-for="book in newBooksThisWeek"
                                         :key="book.id"
@@ -833,8 +1051,14 @@ const speakUserSummary = () => {
                                         icon-color="text-teal-700 dark:text-teal-400"
                                         :label="book.title"
                                         :subtitle="formatDate(book.created_at)"
-                                        :href="route('books.show', { book: book?.slug })"
-                                        :cover-image="book.cover_image?.media_path"
+                                        :href="
+                                            route('books.show', {
+                                                book: book?.slug,
+                                            })
+                                        "
+                                        :cover-image="
+                                            book.cover_image?.media_path
+                                        "
                                     />
                                 </div>
                             </div>
@@ -845,9 +1069,15 @@ const speakUserSummary = () => {
                             class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg"
                         >
                             <div class="p-6">
-                                <div class="flex items-center justify-between mb-4">
-                                    <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                                        <i class="ri-image-line text-amber-500 dark:text-amber-400"></i>
+                                <div
+                                    class="flex items-center justify-between mb-4"
+                                >
+                                    <h3
+                                        class="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2"
+                                    >
+                                        <i
+                                            class="ri-image-line text-amber-500 dark:text-amber-400"
+                                        ></i>
                                         {{ t("profile.recent_uploads") }}
                                     </h3>
                                     <SpeakButton
@@ -857,15 +1087,24 @@ const speakUserSummary = () => {
                                         @click="speakRecentUploads"
                                     />
                                 </div>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div
+                                    class="grid grid-cols-1 sm:grid-cols-2 gap-3"
+                                >
                                     <StatCard
                                         v-for="page in recentUploads"
                                         :key="page.id"
                                         icon="ri-image-line"
                                         icon-color="text-amber-500 dark:text-amber-400"
-                                        :label="page.book?.title ?? t('profile.untitled_book')"
+                                        :label="
+                                            page.book?.title ??
+                                            t('profile.untitled_book')
+                                        "
                                         :subtitle="formatDate(page.created_at)"
-                                        :href="route('pages.show', { page: page.id })"
+                                        :href="
+                                            route('pages.show', {
+                                                page: page.id,
+                                            })
+                                        "
                                         :cover-image="page.media_path"
                                     />
                                 </div>

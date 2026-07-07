@@ -1,23 +1,23 @@
 <template>
-  <div v-if="latitude != null && longitude != null" class="w-full mt-6 mb-4">
-    <h3 class="text-lg font-semibold text-white mb-2">{{ heading }}</h3>
-    <div class="w-full px-4">
-      <Map
-        :latitude="latitude"
-        :longitude="longitude"
-        :title="title"
-        :book-title="bookTitle"
-        :show-street-view="effectiveShowStreetView"
-        :rotate-view="rotateView"
-        :default-map-type="defaultMapType"
-        :initial-tilt="initialTilt"
-        :initial-heading="initialHeading"
-        :show-map-type-control="showMapTypeControl"
-        :show-camera-control="showCameraControl"
-        container-class="w-full aspect-video rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden shadow-lg"
-      />
+    <div v-if="latitude != null && longitude != null" class="w-full mt-6 mb-4">
+        <h3 class="text-lg font-semibold text-white mb-2">{{ heading }}</h3>
+        <div class="w-full px-4">
+            <Map
+                :latitude="latitude"
+                :longitude="longitude"
+                :title="title"
+                :book-title="bookTitle"
+                :show-street-view="effectiveShowStreetView"
+                :rotate-view="rotateView"
+                :default-map-type="defaultMapType"
+                :initial-tilt="initialTilt"
+                :initial-heading="initialHeading"
+                :show-map-type-control="showMapTypeControl"
+                :show-camera-control="showCameraControl"
+                container-class="w-full aspect-video rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden shadow-lg"
+            />
+        </div>
     </div>
-  </div>
 </template>
 
 <script setup>
@@ -26,76 +26,76 @@ import { usePage } from "@inertiajs/vue3";
 import Map from "./Map.vue";
 
 const props = defineProps({
-  latitude: {
-    type: [Number, String],
-    default: null
-  },
-  longitude: {
-    type: [Number, String],
-    default: null
-  },
-  title: {
-    type: String,
-    default: ""
-  },
-  bookTitle: {
-    type: String,
-    default: ""
-  },
-  heading: {
-    type: String,
-    default: "Location"
-  },
-  showStreetView: {
-    type: Boolean,
-    default: false
-  },
-  rotateView: {
-    type: Boolean,
-    default: true
-  },
-  defaultMapType: {
-    type: String,
-    default: "hybrid"
-  },
-  initialTilt: {
-    type: Number,
-    default: null
-  },
-  initialHeading: {
-    type: Number,
-    default: 0
-  },
-  showMapTypeControl: {
-    type: Boolean,
-    default: true
-  },
-  showCameraControl: {
-    type: [Boolean, null],
-    default: null
-  }
+    latitude: {
+        type: [Number, String],
+        default: null,
+    },
+    longitude: {
+        type: [Number, String],
+        default: null,
+    },
+    title: {
+        type: String,
+        default: "",
+    },
+    bookTitle: {
+        type: String,
+        default: "",
+    },
+    heading: {
+        type: String,
+        default: "Location",
+    },
+    showStreetView: {
+        type: Boolean,
+        default: false,
+    },
+    rotateView: {
+        type: Boolean,
+        default: true,
+    },
+    defaultMapType: {
+        type: String,
+        default: "hybrid",
+    },
+    initialTilt: {
+        type: Number,
+        default: null,
+    },
+    initialHeading: {
+        type: Number,
+        default: 0,
+    },
+    showMapTypeControl: {
+        type: Boolean,
+        default: true,
+    },
+    showCameraControl: {
+        type: [Boolean, null],
+        default: null,
+    },
 });
 
 const latitude = computed(() => {
-  if (props.latitude === null || props.latitude === undefined) return null;
-  return typeof props.latitude === "string"
-    ? parseFloat(props.latitude)
-    : props.latitude;
+    if (props.latitude === null || props.latitude === undefined) return null;
+    return typeof props.latitude === "string"
+        ? parseFloat(props.latitude)
+        : props.latitude;
 });
 
 const longitude = computed(() => {
-  if (props.longitude === null || props.longitude === undefined) return null;
-  return typeof props.longitude === "string"
-    ? parseFloat(props.longitude)
-    : props.longitude;
+    if (props.longitude === null || props.longitude === undefined) return null;
+    return typeof props.longitude === "string"
+        ? parseFloat(props.longitude)
+        : props.longitude;
 });
 
 const streetViewEnabled = computed(() => {
-  const value = usePage().props.settings?.street_view_enabled;
-  return value === "1" || value === 1 || value === true;
+    const value = usePage().props.settings?.street_view_enabled;
+    return value === "1" || value === 1 || value === true;
 });
 
 const effectiveShowStreetView = computed(() => {
-  return props.showStreetView && streetViewEnabled.value;
+    return props.showStreetView && streetViewEnabled.value;
 });
 </script>

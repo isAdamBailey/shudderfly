@@ -41,7 +41,9 @@ describe("CockroachCrawl", () => {
         });
 
         expect(wrapper.findAll(".cockroach-track")).toHaveLength(4);
-        expect(wrapper.findAll("img[src='/img/cockroach.png']")).toHaveLength(4);
+        expect(wrapper.findAll("img[src='/img/cockroach.png']")).toHaveLength(
+            4
+        );
     });
 
     it("renders more cockroaches in the footer", () => {

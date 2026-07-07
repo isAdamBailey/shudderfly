@@ -49,7 +49,8 @@ function getSpeechVolumeDescription(value) {
     const third = range / 3;
 
     if (value <= SPEECH_VOLUME_MIN + third) return t("speech.volume_quiet");
-    if (value <= SPEECH_VOLUME_MIN + 2 * third) return t("speech.volume_normal");
+    if (value <= SPEECH_VOLUME_MIN + 2 * third)
+        return t("speech.volume_normal");
     return t("speech.volume_loud");
 }
 
@@ -317,7 +318,9 @@ const debouncedSpeechPitchUpdate = debounce((value) => {
 
 const debouncedSpeechVolumeUpdate = debounce((value) => {
     setSpeechVolumeSilent(value);
-    speak(t("speech.volume_set", { volume: getSpeechVolumeDescription(value) }));
+    speak(
+        t("speech.volume_set", { volume: getSpeechVolumeDescription(value) })
+    );
 }, 500);
 
 function handleSpeechRateChange(value) {

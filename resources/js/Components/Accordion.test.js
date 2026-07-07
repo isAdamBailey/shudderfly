@@ -220,4 +220,3 @@ describe("Accordion", () => {
         });
     });
 });
-

@@ -11,75 +11,75 @@ Shudderfly is a private media app for sharing family-friendly content without ad
 
 ## Core Features
 
-- Private, authenticated media experience
-- Books and pages for photo and video collections
-- Movie cast lookup (TMDB search, trailers, favorites, share to chat)
-- Song library with YouTube-based playback
-- PDF collage generation
-- Shared world clock with a synchronized timer (cities, appearance, and timer are global and update live for everyone)
-- Internal messaging and notifications
-- Role/permission-based access control
-- Fast full-text search with Meilisearch
-- Responsive Vue + Inertia interface
+-   Private, authenticated media experience
+-   Books and pages for photo and video collections
+-   Movie cast lookup (TMDB search, trailers, favorites, share to chat)
+-   Song library with YouTube-based playback
+-   PDF collage generation
+-   Shared world clock with a synchronized timer (cities, appearance, and timer are global and update live for everyone)
+-   Internal messaging and notifications
+-   Role/permission-based access control
+-   Fast full-text search with Meilisearch
+-   Responsive Vue + Inertia interface
 
 ## AI Functionality
 
 Shudderfly includes AI-powered user overview support via Hugging Face.
 
-- `HUGGINGFACE_API_TOKEN`
-- `HUGGINGFACE_USER_OVERVIEW_MODEL` (`Qwen/Qwen2.5-1.5B-Instruct` by default)
-- `HUGGINGFACE_USER_OVERVIEW_ENDPOINT`
+-   `HUGGINGFACE_API_TOKEN`
+-   `HUGGINGFACE_USER_OVERVIEW_MODEL` (`Qwen/Qwen2.5-1.5B-Instruct` by default)
+-   `HUGGINGFACE_USER_OVERVIEW_ENDPOINT`
 
 ## Package / Runtime Versions
 
 ### Backend
 
-- PHP `^8.3`
-- Laravel Framework `^13.0`
-- Laravel Sanctum `^4.0`
-- Laravel Scout `^10.22`
-- Inertia Laravel `^3.0`
-- Spatie Laravel Permission `^6.0`
-- Laravel Nightwatch `^1.7`
-- DomPDF `^3.1`
-- Meilisearch PHP `^1.16`
-- Laravel FFMpeg `^8.5`
-- Web Push `^9.0`
+-   PHP `^8.3`
+-   Laravel Framework `^13.0`
+-   Laravel Sanctum `^4.0`
+-   Laravel Scout `^10.22`
+-   Inertia Laravel `^3.0`
+-   Spatie Laravel Permission `^6.0`
+-   Laravel Nightwatch `^1.7`
+-   DomPDF `^3.1`
+-   Meilisearch PHP `^1.16`
+-   Laravel FFMpeg `^8.5`
+-   Web Push `^9.0`
 
 ### Frontend
 
-- Node `>=20.0.0`
-- npm `>=10.0.0`
-- Vue `^3.2.41`
-- Vite `^6.3.5`
-- Vitest `^3.2.4`
-- Tailwind CSS `^3.2.1`
-- Inertia Vue `^3.1.1`
-- Laravel Echo `^2.2.6`
-- Pusher JS `^8.4.0`
-- TipTap `^2.x`
+-   Node `>=20.0.0`
+-   npm `>=10.0.0`
+-   Vue `^3.2.41`
+-   Vite `^6.3.5`
+-   Vitest `^3.2.4`
+-   Tailwind CSS `^3.2.1`
+-   Inertia Vue `^3.1.1`
+-   Laravel Echo `^2.2.6`
+-   Pusher JS `^8.4.0`
+-   TipTap `^2.x`
 
 ## Services and Integrations
 
-- **MySQL 8.0** for application data
-- **Meilisearch** for search indexing
-- **AWS S3** for media storage
-- **CloudFront** for CDN delivery
-- **Amazon SQS** for background jobs
-- **AWS SES** for mail delivery
-- **Pusher / Laravel Echo** for realtime notifications
-- **Web Push (VAPID)** for browser notifications
-- **FFmpeg** for video processing
-- **YouTube API** for song content
-- **TMDB API** for movie cast lookup
+-   **MySQL 8.0** for application data
+-   **Meilisearch** for search indexing
+-   **AWS S3** for media storage
+-   **CloudFront** for CDN delivery
+-   **Amazon SQS** for background jobs
+-   **AWS SES** for mail delivery
+-   **Pusher / Laravel Echo** for realtime notifications
+-   **Web Push (VAPID)** for browser notifications
+-   **FFmpeg** for video processing
+-   **YouTube API** for song content
+-   **TMDB API** for movie cast lookup
 
 ## Local Development
 
 ### Requirements
 
-- Docker / Laravel Sail
-- Node 20+
-- npm 10+
+-   Docker / Laravel Sail
+-   Node 20+
+-   npm 10+
 
 ### Start locally
 
@@ -117,25 +117,25 @@ TMDB_API_KEY=
 
 `DatabaseSeeder` runs:
 
-- `RolesAndPermissionsSeeder`
-- `SiteSeeder`
-- `BookSeeder`
-- `SongSeeder`
+-   `RolesAndPermissionsSeeder`
+-   `SiteSeeder`
+-   `BookSeeder`
+-   `SongSeeder`
 
 This gives you roles/permissions plus sample users, books, pages, and songs for local development.
 
 ### Local URLs
 
-- App: `http://localhost`
-- Meilisearch: `http://localhost:7700`
-- MySQL: `127.0.0.1:3306`
+-   App: `http://localhost`
+-   Meilisearch: `http://localhost:7700`
+-   MySQL: `127.0.0.1:3306`
 
 ## Development Notes
 
-- Docker services include `laravel.test`, `mysql`, and `meilisearch`
-- PHP commands are expected to run through Sail
-- Local queue processing defaults to `sync`
-- Production media and jobs are designed around S3 + SQS
+-   Docker services include `laravel.test`, `mysql`, and `meilisearch`
+-   PHP commands are expected to run through Sail
+-   Local queue processing defaults to `sync`
+-   Production media and jobs are designed around S3 + SQS
 
 ## License
 

@@ -1,219 +1,240 @@
 <template>
-  <Head :title="page.book.title" />
+    <Head :title="page.book.title" />
 
-  <BreezeAuthenticatedLayout>
-    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
-      <div class="relative text-center">
-        <div
-          ref="bookCoverRef"
-          class="absolute top-0 left-0 z-[5] pointer-events-auto"
-          style="width: fit-content; height: fit-content"
-        >
-          <BookCoverCard
-            :book="page.book"
-            :disabled="buttonDisabled"
-            container-class="w-20 sm:w-24 md:w-28 lg:w-32 aspect-[3/4] opacity-70 hover:opacity-100 transition-opacity"
-            title-size="text-xs sm:text-sm md:text-base"
-            @click="buttonDisabled = true"
-          />
-        </div>
-        <div
-          class="relative flex flex-col items-center min-h-[40vh] pt-6"
-          style="touch-action: pan-y pinch-zoom"
-          @touchstart.passive="onTouchStart"
-          @touchmove.passive="onTouchMove"
-          @touchend="onTouchEnd"
-        >
-          <div class="relative w-full flex justify-center px-12 sm:px-14 md:px-16">
-            <Link
-              v-if="previousPage"
-              prefetch="hover"
-              :href="route('pages.show', { page: previousPage?.id })"
-              as="button"
-              class="absolute left-0 top-1/2 -translate-y-1/2 z-30 inline-flex items-center text-white hover:text-blue-600 hover:dark:text-gray-800 hover:christmas:text-christmas-gold disabled:opacity-25 transition ease-in-out duration-150 pointer-events-auto"
-              aria-label="previous page"
-              :disabled="buttonDisabled"
-              @click="buttonDisabled = true"
-            >
-              <i
-                class="ri-arrow-left-circle-fill text-4xl sm:text-5xl rounded-full bg-blue-600 hover:bg-white dark:bg-gray-800 christmas:bg-christmas-red hover:dark:bg-white"
-              ></i>
-            </Link>
-            <Link
-              v-if="nextPage"
-              prefetch="hover"
-              :href="route('pages.show', { page: nextPage?.id })"
-              as="button"
-              class="absolute right-0 top-1/2 -translate-y-1/2 z-30 inline-flex items-center text-white hover:text-blue-600 hover:dark:text-gray-800 hover:christmas:text-christmas-gold disabled:opacity-25 transition ease-in-out duration-150 pointer-events-auto"
-              aria-label="next page"
-              :disabled="buttonDisabled"
-              @click="buttonDisabled = true"
-            >
-              <i
-                class="ri-arrow-right-circle-fill text-4xl sm:text-5xl rounded-full bg-blue-600 hover:bg-white dark:bg-gray-800 christmas:bg-christmas-red hover:dark:bg-white"
-              ></i>
-            </Link>
-            <div
-              v-if="page.media_path"
-              class="w-full max-w-4xl flex justify-center rounded-lg overflow-hidden z-20 pointer-events-auto"
-            >
-              <LazyLoader
-                :src="page.media_path"
-                :poster="page.media_poster"
-                :alt="page.description"
-                :book-id="page.book.id"
-                :page-id="page.id"
-                :object-fit="'contain'"
-              />
+    <BreezeAuthenticatedLayout>
+        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
+            <div class="relative text-center">
+                <div
+                    ref="bookCoverRef"
+                    class="absolute top-0 left-0 z-[5] pointer-events-auto"
+                    style="width: fit-content; height: fit-content"
+                >
+                    <BookCoverCard
+                        :book="page.book"
+                        :disabled="buttonDisabled"
+                        container-class="w-20 sm:w-24 md:w-28 lg:w-32 aspect-[3/4] opacity-70 hover:opacity-100 transition-opacity"
+                        title-size="text-xs sm:text-sm md:text-base"
+                        @click="buttonDisabled = true"
+                    />
+                </div>
+                <div
+                    class="relative flex flex-col items-center min-h-[40vh] pt-6"
+                    style="touch-action: pan-y pinch-zoom"
+                    @touchstart.passive="onTouchStart"
+                    @touchmove.passive="onTouchMove"
+                    @touchend="onTouchEnd"
+                >
+                    <div
+                        class="relative w-full flex justify-center px-12 sm:px-14 md:px-16"
+                    >
+                        <Link
+                            v-if="previousPage"
+                            prefetch="hover"
+                            :href="
+                                route('pages.show', { page: previousPage?.id })
+                            "
+                            as="button"
+                            class="absolute left-0 top-1/2 -translate-y-1/2 z-30 inline-flex items-center text-white hover:text-blue-600 hover:dark:text-gray-800 hover:christmas:text-christmas-gold disabled:opacity-25 transition ease-in-out duration-150 pointer-events-auto"
+                            aria-label="previous page"
+                            :disabled="buttonDisabled"
+                            @click="buttonDisabled = true"
+                        >
+                            <i
+                                class="ri-arrow-left-circle-fill text-4xl sm:text-5xl rounded-full bg-blue-600 hover:bg-white dark:bg-gray-800 christmas:bg-christmas-red hover:dark:bg-white"
+                            ></i>
+                        </Link>
+                        <Link
+                            v-if="nextPage"
+                            prefetch="hover"
+                            :href="route('pages.show', { page: nextPage?.id })"
+                            as="button"
+                            class="absolute right-0 top-1/2 -translate-y-1/2 z-30 inline-flex items-center text-white hover:text-blue-600 hover:dark:text-gray-800 hover:christmas:text-christmas-gold disabled:opacity-25 transition ease-in-out duration-150 pointer-events-auto"
+                            aria-label="next page"
+                            :disabled="buttonDisabled"
+                            @click="buttonDisabled = true"
+                        >
+                            <i
+                                class="ri-arrow-right-circle-fill text-4xl sm:text-5xl rounded-full bg-blue-600 hover:bg-white dark:bg-gray-800 christmas:bg-christmas-red hover:dark:bg-white"
+                            ></i>
+                        </Link>
+                        <div
+                            v-if="page.media_path"
+                            class="w-full max-w-4xl flex justify-center rounded-lg overflow-hidden z-20 pointer-events-auto"
+                        >
+                            <LazyLoader
+                                :src="page.media_path"
+                                :poster="page.media_poster"
+                                :alt="page.description"
+                                :book-id="page.book.id"
+                                :page-id="page.id"
+                                :object-fit="'contain'"
+                            />
+                        </div>
+                        <div
+                            v-else-if="page.video_link"
+                            class="w-full max-w-4xl z-20 pointer-events-auto rounded-lg overflow-hidden"
+                        >
+                            <VideoWrapper
+                                :url="page.video_link"
+                                :title="page.description"
+                            />
+                        </div>
+                    </div>
+                    <p
+                        v-if="canEditPages"
+                        class="w-full mt-4 mb-3 text-sm italic text-gray-400 dark:text-gray-500"
+                    >
+                        Uploaded on {{ short(page.created_at) }}, popularity
+                        {{ page.popularity_percentage ?? 0 }}%
+                    </p>
+                </div>
+            </div>
+            <div v-if="hasContent" class="mt-8 mb-5 relative z-20">
+                <div class="text-container">
+                    <div
+                        class="font-content page-content max-w-5xl mx-auto text-lg text-left relative"
+                        v-html="page.content"
+                    ></div>
+                    <div class="flex justify-end mt-6">
+                        <SpeakButton
+                            :disabled="speaking"
+                            aria-label="Speak page content"
+                            @click="speak(stripHtml(page.content))"
+                        />
+                    </div>
+                </div>
+            </div>
+            <div>
+                <MapEmbed
+                    :latitude="props.page.latitude ?? props.page.book.latitude"
+                    :longitude="
+                        props.page.longitude ?? props.page.book.longitude
+                    "
+                    :title="
+                        props.page.content
+                            ? stripHtml(props.page.content).substring(0, 50)
+                            : ''
+                    "
+                    :book-title="props.page.book.title"
+                    :show-street-view="true"
+                />
             </div>
             <div
-              v-else-if="page.video_link"
-              class="w-full max-w-4xl z-20 pointer-events-auto rounded-lg overflow-hidden"
+                v-if="canEditPages && showPageSettings"
+                id="page-edit-form"
+                class="mb-3 scroll-mt-4 w-full md:w-1/2 mx-auto"
             >
-              <VideoWrapper :url="page.video_link" :title="page.description" />
+                <EditPageForm
+                    :page="page"
+                    :book="page.book"
+                    :books="books"
+                    @close-page-form="showPageSettings = false"
+                />
             </div>
-          </div>
-          <p
-            v-if="canEditPages"
-            class="w-full mt-4 mb-3 text-sm italic text-gray-400 dark:text-gray-500"
-          >
-            Uploaded on {{ short(page.created_at) }}, popularity
-            {{ page.popularity_percentage ?? 0 }}%
-          </p>
-        </div>
-      </div>
-      <div v-if="hasContent" class="mt-8 mb-5 relative z-20">
-          <div class="text-container">
             <div
-              class="font-content page-content max-w-5xl mx-auto text-lg text-left relative"
-              v-html="page.content"
-            ></div>
-            <div class="flex justify-end mt-6">
-              <SpeakButton
-                :disabled="speaking"
-                aria-label="Speak page content"
-                @click="speak(stripHtml(page.content))"
-              />
+                class="my-4 flex flex-wrap items-center justify-between gap-2 sm:gap-3"
+            >
+                <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <div
+                        v-if="canAddToCollage"
+                        class="flex shrink-0 items-center gap-2"
+                    >
+                        <AddToCollageButton
+                            :page-id="props.page.id"
+                            :collages="collages"
+                        />
+                    </div>
+
+                    <ShareToChatButton
+                        v-if="canSharePage"
+                        kind="page"
+                        :page-id="page.id"
+                        wrapper-class="flex shrink-0 items-center gap-2"
+                    />
+
+                    <Link
+                        v-if="isMoviesCategory"
+                        :href="
+                            route('movie-cast.index', {
+                                title: page.book.title,
+                            })
+                        "
+                        class="flex shrink-0 items-center gap-2"
+                    >
+                        <Button
+                            type="button"
+                            class="h-10 w-10 flex items-center justify-center"
+                            :title="`Search cast for ${page.book.title}`"
+                            :aria-label="`Search cast for ${page.book.title}`"
+                        >
+                            <i
+                                class="ri-film-line text-xl"
+                                aria-hidden="true"
+                            ></i>
+                        </Button>
+                    </Link>
+                </div>
+
+                <div
+                    v-if="$page.props.auth.user"
+                    class="flex shrink-0 items-center gap-2"
+                >
+                    <Button
+                        type="button"
+                        :disabled="blocking || blockConfirmPending"
+                        class="h-10 w-10 flex items-center justify-center"
+                        :title="t('page.block_icon_title')"
+                        :aria-label="t('page.block_aria')"
+                        @click="blockPage"
+                    >
+                        <i
+                            v-if="blocking"
+                            class="ri-loader-line text-xl animate-spin"
+                        ></i>
+                        <i v-else class="ri-forbid-2-line text-xl"></i>
+                    </Button>
+                </div>
             </div>
-          </div>
         </div>
-      <div>
-        <MapEmbed
-          :latitude="props.page.latitude ?? props.page.book.latitude"
-          :longitude="props.page.longitude ?? props.page.book.longitude"
-          :title="
-            props.page.content
-              ? stripHtml(props.page.content).substring(0, 50)
-              : ''
-          "
-          :book-title="props.page.book.title"
-          :show-street-view="true"
+
+        <ScrollTop />
+        <ConfirmDialog
+            v-model:show="confirmShow"
+            :title="confirmTitle"
+            :message="confirmMessage"
+            :confirm-label="confirmOkLabel || t('common.ok')"
+            :cancel-label="confirmCancelLabel || t('common.cancel')"
+            :confirm-variant="confirmVariant"
+            @confirm="confirmOnOk"
+            @cancel="confirmOnCancel"
         />
-      </div>
-      <div
-        v-if="canEditPages && showPageSettings"
-        id="page-edit-form"
-        class="mb-3 scroll-mt-4 w-full md:w-1/2 mx-auto"
-      >
-        <EditPageForm
-          :page="page"
-          :book="page.book"
-          :books="books"
-          @close-page-form="showPageSettings = false"
-        />
-      </div>
-      <div class="my-4 flex flex-wrap items-center justify-between gap-2 sm:gap-3">
-        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-          <div
-            v-if="canAddToCollage"
-            class="flex shrink-0 items-center gap-2"
-          >
-            <AddToCollageButton
-              :page-id="props.page.id"
-              :collages="collages"
-            />
-          </div>
-
-          <ShareToChatButton
-            v-if="canSharePage"
-            kind="page"
-            :page-id="page.id"
-            wrapper-class="flex shrink-0 items-center gap-2"
-          />
-
-          <Link
-            v-if="isMoviesCategory"
-            :href="route('movie-cast.index', { title: page.book.title })"
-            class="flex shrink-0 items-center gap-2"
-          >
-            <Button
-              type="button"
-              class="h-10 w-10 flex items-center justify-center"
-              :title="`Search cast for ${page.book.title}`"
-              :aria-label="`Search cast for ${page.book.title}`"
+        <FloatingActionMenu v-if="canEditPages">
+            <button
+                v-if="!showPageSettings"
+                type="button"
+                class="flex min-h-[48px] w-full items-center border-b border-gray-200 px-5 py-4 text-left text-base text-gray-700 transition hover:bg-gray-200 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                @click="openPageSettings"
             >
-              <i class="ri-film-line text-xl" aria-hidden="true"></i>
-            </Button>
-          </Link>
-        </div>
-
-        <div
-          v-if="$page.props.auth.user"
-          class="flex shrink-0 items-center gap-2"
-        >
-          <Button
-            type="button"
-            :disabled="blocking || blockConfirmPending"
-            class="h-10 w-10 flex items-center justify-center"
-            :title="t('page.block_icon_title')"
-            :aria-label="t('page.block_aria')"
-            @click="blockPage"
-          >
-            <i v-if="blocking" class="ri-loader-line text-xl animate-spin"></i>
-            <i v-else class="ri-forbid-2-line text-xl"></i>
-          </Button>
-        </div>
-      </div>
-    </div>
-
-    <ScrollTop />
-    <ConfirmDialog
-      v-model:show="confirmShow"
-      :title="confirmTitle"
-      :message="confirmMessage"
-      :confirm-label="confirmOkLabel || t('common.ok')"
-      :cancel-label="confirmCancelLabel || t('common.cancel')"
-      :confirm-variant="confirmVariant"
-      @confirm="confirmOnOk"
-      @cancel="confirmOnCancel"
-    />
-    <FloatingActionMenu v-if="canEditPages">
-      <button
-        v-if="!showPageSettings"
-        type="button"
-        class="flex min-h-[48px] w-full items-center border-b border-gray-200 px-5 py-4 text-left text-base text-gray-700 transition hover:bg-gray-200 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-        @click="openPageSettings"
-      >
-        <i
-          class="ri-edit-line mr-3 shrink-0 text-lg text-blue-600 dark:text-blue-400"
-          aria-hidden="true"
-        ></i>
-        Edit Page
-      </button>
-      <button
-        v-else
-        type="button"
-        class="flex min-h-[48px] w-full items-center border-b-0 px-5 py-4 text-left text-base text-gray-700 transition hover:bg-gray-200 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-        @click="showPageSettings = false"
-      >
-        <i
-          class="ri-close-line mr-3 shrink-0 text-lg text-gray-600 dark:text-gray-400"
-          aria-hidden="true"
-        ></i>
-        Close page settings
-      </button>
-    </FloatingActionMenu>
-  </BreezeAuthenticatedLayout>
+                <i
+                    class="ri-edit-line mr-3 shrink-0 text-lg text-blue-600 dark:text-blue-400"
+                    aria-hidden="true"
+                ></i>
+                Edit Page
+            </button>
+            <button
+                v-else
+                type="button"
+                class="flex min-h-[48px] w-full items-center border-b-0 px-5 py-4 text-left text-base text-gray-700 transition hover:bg-gray-200 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                @click="showPageSettings = false"
+            >
+                <i
+                    class="ri-close-line mr-3 shrink-0 text-lg text-gray-600 dark:text-gray-400"
+                    aria-hidden="true"
+                ></i>
+                Close page settings
+            </button>
+        </FloatingActionMenu>
+    </BreezeAuthenticatedLayout>
 </template>
 
 <script setup>
@@ -246,41 +267,41 @@ const { speak, speaking } = useSpeechSynthesis();
 const { isVideo } = useMedia();
 const { t } = useTranslations();
 const {
-  show: confirmShow,
-  message: confirmMessage,
-  title: confirmTitle,
-  confirmLabel: confirmOkLabel,
-  cancelLabel: confirmCancelLabel,
-  confirmVariant,
-  ask: askConfirm,
-  onConfirmed: confirmOnOk,
-  onCancelled: confirmOnCancel,
+    show: confirmShow,
+    message: confirmMessage,
+    title: confirmTitle,
+    confirmLabel: confirmOkLabel,
+    cancelLabel: confirmCancelLabel,
+    confirmVariant,
+    ask: askConfirm,
+    onConfirmed: confirmOnOk,
+    onCancelled: confirmOnCancel,
 } = useConfirmDialog();
 
 const props = defineProps({
-  page: { type: Object, required: true },
-  previousPage: { type: Object, required: true },
-  nextPage: { type: Object, required: true },
-  books: { type: Array, required: true },
-  collages: { type: Array, required: true },
-  users: { type: Array, default: () => [] }
+    page: { type: Object, required: true },
+    previousPage: { type: Object, required: true },
+    nextPage: { type: Object, required: true },
+    books: { type: Array, required: true },
+    collages: { type: Array, required: true },
+    users: { type: Array, default: () => [] },
 });
 
 const messagingEnabled = computed(() => {
-  const value = usePage().props.settings?.messaging_enabled;
-  return value === "1" || value === 1 || value === true;
+    const value = usePage().props.settings?.messaging_enabled;
+    return value === "1" || value === 1 || value === true;
 });
 
 const showPageSettings = ref(false);
 
 function openPageSettings() {
-  showPageSettings.value = true;
-  nextTick(() => {
-    document.getElementById("page-edit-form")?.scrollIntoView({
-      behavior: "smooth",
-      block: "start"
+    showPageSettings.value = true;
+    nextTick(() => {
+        document.getElementById("page-edit-form")?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+        });
     });
-  });
 }
 
 const buttonDisabled = ref(false);
@@ -292,58 +313,62 @@ const blockConfirmPending = ref(false);
 const hasContent = computed(() => stripHtml(props.page.content));
 
 const stripHtml = (html) => {
-  if (!html) {
-    return "";
-  }
-  return html.replace(/<\/?[^>]+(>|$)/g, "");
+    if (!html) {
+        return "";
+    }
+    return html.replace(/<\/?[^>]+(>|$)/g, "");
 };
 
 const canAddToCollage = computed(() => {
-  return (
-    props.page.media_path &&
-    !isVideo(props.page.media_path) &&
-    !props.page.video_link &&
-    props.collages.length > 0
-  );
+    return (
+        props.page.media_path &&
+        !isVideo(props.page.media_path) &&
+        !props.page.video_link &&
+        props.collages.length > 0
+    );
 });
 
 const canSharePage = computed(() => {
-  return (
-    messagingEnabled.value &&
-    Boolean(props.page.media_path || props.page.video_link || props.page.media_poster) &&
-    Boolean(usePage().props.auth?.user)
-  );
+    return (
+        messagingEnabled.value &&
+        Boolean(
+            props.page.media_path ||
+                props.page.video_link ||
+                props.page.media_poster
+        ) &&
+        Boolean(usePage().props.auth?.user)
+    );
 });
 
 const isMoviesCategory = computed(() => {
-  return props.page.book?.category?.name === "movies";
+    return props.page.book?.category?.name === "movies";
 });
 
 const blockPage = async () => {
-  if (blocking.value || blockConfirmPending.value) return;
+    if (blocking.value || blockConfirmPending.value) return;
 
-  blockConfirmPending.value = true;
-  try {
-    const okPromise = askConfirm(t("page.block_confirm_dialog"));
-    speak(t("page.block_confirm_speak"));
-    const ok = await okPromise;
-    if (!ok) {
-      return;
-    }
-    blocking.value = true;
-    router.patch(
-      route("pages.block", props.page.id),
-      {},
-      {
-        preserveScroll: true,
-        onFinish: () => {
-          blocking.value = false;
+    blockConfirmPending.value = true;
+    try {
+        const okPromise = askConfirm(t("page.block_confirm_dialog"));
+        speak(t("page.block_confirm_speak"));
+        const ok = await okPromise;
+        if (!ok) {
+            return;
         }
-      }
-    );
-  } finally {
-    blockConfirmPending.value = false;
-  }
+        blocking.value = true;
+        router.patch(
+            route("pages.block", props.page.id),
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => {
+                    blocking.value = false;
+                },
+            }
+        );
+    } finally {
+        blockConfirmPending.value = false;
+    }
 };
 
 // Swipe navigation (left/right) to go to previous/next page
@@ -357,81 +382,81 @@ const SWIPE_MAX_DURATION = 800; // ms
 const SWIPE_MAX_VERTICAL = 40; // px
 
 function onTouchStart(event) {
-  // Only handle single-finger touches to allow pinch-to-zoom
-  if (event.touches.length > 1) {
-    isSwiping.value = false;
-    return;
-  }
+    // Only handle single-finger touches to allow pinch-to-zoom
+    if (event.touches.length > 1) {
+        isSwiping.value = false;
+        return;
+    }
 
-  const t =
-    (event.changedTouches && event.changedTouches[0]) || event.touches[0];
-  if (!t) return;
-  touchStartX.value = t.clientX;
-  touchStartY.value = t.clientY;
-  touchStartTime.value = Date.now();
-  isSwiping.value = true;
+    const t =
+        (event.changedTouches && event.changedTouches[0]) || event.touches[0];
+    if (!t) return;
+    touchStartX.value = t.clientX;
+    touchStartY.value = t.clientY;
+    touchStartTime.value = Date.now();
+    isSwiping.value = true;
 }
 
 function onTouchMove() {
-  // Intentionally empty to keep the handler lightweight and passive for smooth scrolling.
+    // Intentionally empty to keep the handler lightweight and passive for smooth scrolling.
 }
 
 function onTouchEnd(event) {
-  if (!isSwiping.value) return;
-  isSwiping.value = false;
+    if (!isSwiping.value) return;
+    isSwiping.value = false;
 
-  // Don't handle multi-touch gestures (allow pinch-to-zoom)
-  if (event.touches.length > 1) return;
+    // Don't handle multi-touch gestures (allow pinch-to-zoom)
+    if (event.touches.length > 1) return;
 
-  const t = (event.changedTouches && event.changedTouches[0]) || event;
-  if (!t) return;
-  const dx = t.clientX - touchStartX.value;
-  const dy = t.clientY - touchStartY.value;
-  const dt = Date.now() - touchStartTime.value;
+    const t = (event.changedTouches && event.changedTouches[0]) || event;
+    if (!t) return;
+    const dx = t.clientX - touchStartX.value;
+    const dy = t.clientY - touchStartY.value;
+    const dt = Date.now() - touchStartTime.value;
 
-  // Validate swipe intent: fast, mostly horizontal, and long enough
-  if (dt > SWIPE_MAX_DURATION) return;
-  if (Math.abs(dx) < SWIPE_MIN_DISTANCE) return;
-  if (Math.abs(dy) > SWIPE_MAX_VERTICAL) return;
-  if (buttonDisabled.value) return;
+    // Validate swipe intent: fast, mostly horizontal, and long enough
+    if (dt > SWIPE_MAX_DURATION) return;
+    if (Math.abs(dx) < SWIPE_MIN_DISTANCE) return;
+    if (Math.abs(dy) > SWIPE_MAX_VERTICAL) return;
+    if (buttonDisabled.value) return;
 
-  // Navigate: left swipe -> next page, right swipe -> previous page
-  if (dx < 0 && props.nextPage) {
-    buttonDisabled.value = true;
-    router.get(route("pages.show", { page: props.nextPage?.id }));
-  } else if (dx > 0 && props.previousPage) {
-    buttonDisabled.value = true;
-    router.get(route("pages.show", { page: props.previousPage?.id }));
-  }
+    // Navigate: left swipe -> next page, right swipe -> previous page
+    if (dx < 0 && props.nextPage) {
+        buttonDisabled.value = true;
+        router.get(route("pages.show", { page: props.nextPage?.id }));
+    } else if (dx > 0 && props.previousPage) {
+        buttonDisabled.value = true;
+        router.get(route("pages.show", { page: props.previousPage?.id }));
+    }
 }
 
 onMounted(() => {
-  if (!bookCoverRef.value) return;
+    if (!bookCoverRef.value) return;
 
-  const container = bookCoverRef.value.parentElement;
-  if (!container) return;
+    const container = bookCoverRef.value.parentElement;
+    if (!container) return;
 
-  scrollHandler.value = () => {
-    if (!bookCoverRef.value || !container) return;
+    scrollHandler.value = () => {
+        if (!bookCoverRef.value || !container) return;
 
-    const containerRect = container.getBoundingClientRect();
-    const shouldStick = containerRect.top <= 0;
+        const containerRect = container.getBoundingClientRect();
+        const shouldStick = containerRect.top <= 0;
 
-    if (shouldStick) {
-      bookCoverRef.value.style.position = "fixed";
-      bookCoverRef.value.style.top = "0";
-    } else {
-      bookCoverRef.value.style.position = "absolute";
-      bookCoverRef.value.style.top = "0";
-    }
-  };
+        if (shouldStick) {
+            bookCoverRef.value.style.position = "fixed";
+            bookCoverRef.value.style.top = "0";
+        } else {
+            bookCoverRef.value.style.position = "absolute";
+            bookCoverRef.value.style.top = "0";
+        }
+    };
 
-  window.addEventListener("scroll", scrollHandler.value, { passive: true });
+    window.addEventListener("scroll", scrollHandler.value, { passive: true });
 });
 
 onUnmounted(() => {
-  if (scrollHandler.value) {
-    window.removeEventListener("scroll", scrollHandler.value);
-  }
+    if (scrollHandler.value) {
+        window.removeEventListener("scroll", scrollHandler.value);
+    }
 });
 </script>

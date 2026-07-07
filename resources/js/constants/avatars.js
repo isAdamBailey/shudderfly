@@ -9,41 +9,45 @@ const avatarCountPerStyle = 12;
 // Each style keeps its own id prefix so existing saved avatars (avatar-N)
 // stay valid, and new styles get their own stable ids.
 const styles = [
-  { key: "avatar", label: "Avatar", collection: funEmoji },
-  { key: "bigears", label: "Big Ears", collection: bigEarsNeutral },
-  { key: "avataaars", label: "Avataaars", collection: avataaarsNeutral },
-  { key: "adventurer", label: "Adventurer", collection: adventurerNeutral }
+    { key: "avatar", label: "Avatar", collection: funEmoji },
+    { key: "bigears", label: "Big Ears", collection: bigEarsNeutral },
+    { key: "avataaars", label: "Avataaars", collection: avataaarsNeutral },
+    { key: "adventurer", label: "Adventurer", collection: adventurerNeutral },
 ];
 
 function generateAvatarSvg(collection, seed, size = 100) {
-  const avatar = createAvatar(collection, {
-    seed: seed,
-    size: size
-  });
+    const avatar = createAvatar(collection, {
+        seed: seed,
+        size: size,
+    });
 
-  let svg = avatar.toString();
+    let svg = avatar.toString();
 
-  if (svg.includes("viewBox") && !svg.includes("width=")) {
-    svg = svg.replace(
-      /<svg([^>]*)>/,
-      `<svg$1 width="${size}" height="${size}">`
-    );
-  }
+    if (svg.includes("viewBox") && !svg.includes("width=")) {
+        svg = svg.replace(
+            /<svg([^>]*)>/,
+            `<svg$1 width="${size}" height="${size}">`
+        );
+    }
 
-  return svg;
+    return svg;
 }
 
 export const avatars = styles.flatMap((style) =>
-  Array.from({ length: avatarCountPerStyle }, (_, i) => {
-    const n = i + 1;
-    return {
-      id: `${style.key}-${n}`,
-      name: `${style.label} ${n}`,
-      svg: generateAvatarSvg(style.collection, `${style.key}-seed-${n}`, 100)
-    };
-  })
+    Array.from({ length: avatarCountPerStyle }, (_, i) => {
+        const n = i + 1;
+        return {
+            id: `${style.key}-${n}`,
+            name: `${style.label} ${n}`,
+            svg: generateAvatarSvg(
+                style.collection,
+                `${style.key}-seed-${n}`,
+                100
+            ),
+        };
+    })
 );
 
 export function getAvatarById(id) {
-  return avatars.find((avatar) => avatar.id === id);
+    return avatars.find((avatar) => avatar.id === id);
 }

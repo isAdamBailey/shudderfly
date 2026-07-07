@@ -18,9 +18,9 @@ Warm and playful. A family home for memories: seasonal delight (Christmas, Hallo
 
 ## Anti-references
 
-- Public social feeds (Instagram, TikTok, infinite-scroll performance culture)
-- Corporate SaaS dashboards (gray, sterile, generic admin chrome)
-- Generic AI-generated UI (cream/sand backgrounds, gradient text, tracked eyebrow labels, numbered section scaffolds)
+-   Public social feeds (Instagram, TikTok, infinite-scroll performance culture)
+-   Corporate SaaS dashboards (gray, sterile, generic admin chrome)
+-   Generic AI-generated UI (cream/sand backgrounds, gradient text, tracked eyebrow labels, numbered section scaffolds)
 
 ## Design Principles
 

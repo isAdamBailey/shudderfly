@@ -12,8 +12,12 @@
                 @click="speakAddress"
             />
         </div>
-        <div v-if="apiKeyMissing" class="p-4 text-center text-red-600 bg-red-50 rounded-lg">
-            Google Maps API key is not configured. Please add VITE_GOOGLE_MAPS_API_KEY to your .env file.
+        <div
+            v-if="apiKeyMissing"
+            class="p-4 text-center text-red-600 bg-red-50 rounded-lg"
+        >
+            Google Maps API key is not configured. Please add
+            VITE_GOOGLE_MAPS_API_KEY to your .env file.
         </div>
         <div v-else ref="mapContainer" :class="containerClass"></div>
         <Accordion
@@ -24,10 +28,7 @@
             :compact="true"
             class="mt-2 rounded-lg overflow-hidden"
         >
-            <div
-                ref="streetViewContainer"
-                :class="containerClass"
-            ></div>
+            <div ref="streetViewContainer" :class="containerClass"></div>
         </Accordion>
     </div>
 </template>
@@ -147,7 +148,11 @@ let apiOptionsSet = false;
 let mapListeners = [];
 
 const isGoogleLoaded = () => {
-    return typeof window !== "undefined" && typeof window.google !== "undefined" && window.google.maps;
+    return (
+        typeof window !== "undefined" &&
+        typeof window.google !== "undefined" &&
+        window.google.maps
+    );
 };
 
 const resolveMapTypeId = (id) => {
@@ -183,7 +188,10 @@ const recenterOnMarker = () => {
         map.setCenter(position);
         map.setZoom(17);
     } else if (map && props.latitude != null && props.longitude != null) {
-        map.setCenter({ lat: Number(props.latitude), lng: Number(props.longitude) });
+        map.setCenter({
+            lat: Number(props.latitude),
+            lng: Number(props.longitude),
+        });
         map.setZoom(17);
     }
 };
@@ -254,19 +262,26 @@ const getGeocodeSuggestions = async (query) => {
     }
 
     if (!autocompleteService) {
-        autocompleteService = new window.google.maps.places.AutocompleteService();
+        autocompleteService =
+            new window.google.maps.places.AutocompleteService();
     }
 
     return new Promise((resolve) => {
         autocompleteService.getPlacePredictions(
             { input: query },
             async (predictions, status) => {
-                if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+                if (
+                    status ===
+                        window.google.maps.places.PlacesServiceStatus.OK &&
+                    predictions
+                ) {
                     const results = await Promise.all(
                         predictions.map(async (prediction) => {
                             let center = null;
                             try {
-                                center = await geocodeByPlaceId(prediction.place_id);
+                                center = await geocodeByPlaceId(
+                                    prediction.place_id
+                                );
                             } catch (e) {
                                 // If geocoding fails, leave center null
                             }
@@ -292,17 +307,14 @@ const reverseGeocode = async (lat, lng) => {
         throw new Error("Invalid coordinates");
     }
 
-    const response = await fetch(
-        `/api/geocode/reverse?lat=${lat}&lng=${lng}`,
-        {
-            method: "GET",
-            headers: {
-                Accept: "application/json",
-                "X-Requested-With": "XMLHttpRequest",
-            },
-            credentials: "same-origin",
-        }
-    );
+    const response = await fetch(`/api/geocode/reverse?lat=${lat}&lng=${lng}`, {
+        method: "GET",
+        headers: {
+            Accept: "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+        },
+        credentials: "same-origin",
+    });
 
     if (!response.ok) {
         throw new Error(`Reverse geocode request failed: ${response.status}`);
@@ -457,7 +469,9 @@ const initializeMap = async () => {
 
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     if (!apiKey) {
-        console.error("Google Maps API key is missing. Please set VITE_GOOGLE_MAPS_API_KEY in your .env file.");
+        console.error(
+            "Google Maps API key is missing. Please set VITE_GOOGLE_MAPS_API_KEY in your .env file."
+        );
         apiKeyMissing.value = true;
         return;
     }
@@ -586,7 +600,8 @@ const initializeMap = async () => {
 
         const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
         const initialHeading =
-            typeof props.initialHeading === "number" && !Number.isNaN(props.initialHeading)
+            typeof props.initialHeading === "number" &&
+            !Number.isNaN(props.initialHeading)
                 ? props.initialHeading
                 : 0;
         const cameraOn = useCameraControl();
@@ -639,7 +654,9 @@ const initializeMap = async () => {
                     if (el) {
                         e.preventDefault();
                         e.stopPropagation();
-                        const href = el.getAttribute("href") || el.getAttribute("data-href");
+                        const href =
+                            el.getAttribute("href") ||
+                            el.getAttribute("data-href");
                         if (href && href !== "#") {
                             window.location.href = href;
                         }
@@ -674,7 +691,9 @@ const initializeMap = async () => {
 
                         const safeUrl = String(url).replace(/"/g, "&quot;");
                         const popupContent = location.page_title
-                            ? `<span role="link" tabindex="0" class="shudderfly-map-link text-blue-600 hover:text-blue-800 underline cursor-pointer" data-href="${safeUrl}"><strong>${location.page_title}</strong></span>${
+                            ? `<span role="link" tabindex="0" class="shudderfly-map-link text-blue-600 hover:text-blue-800 underline cursor-pointer" data-href="${safeUrl}"><strong>${
+                                  location.page_title
+                              }</strong></span>${
                                   location.book_title
                                       ? `<br><em>${location.book_title}</em>`
                                       : ""
@@ -692,29 +711,40 @@ const initializeMap = async () => {
                             content: popupContent,
                         });
 
-                        window.google.maps.event.addListener(infoWindow, "domready", () => {
-                            document
-                                .querySelectorAll(".shudderfly-map-link")
-                                .forEach((el) => {
-                                    const href = el.getAttribute("data-href");
-                                    if (!href || href === "#") return;
-                                    const nav = () => {
-                                        window.location.href = href;
-                                    };
-                                    el.addEventListener("click", nav);
-                                    el.addEventListener("keydown", (e) => {
-                                        if (e.key === "Enter" || e.key === " ") {
-                                            e.preventDefault();
-                                            nav();
-                                        }
+                        window.google.maps.event.addListener(
+                            infoWindow,
+                            "domready",
+                            () => {
+                                document
+                                    .querySelectorAll(".shudderfly-map-link")
+                                    .forEach((el) => {
+                                        const href =
+                                            el.getAttribute("data-href");
+                                        if (!href || href === "#") return;
+                                        const nav = () => {
+                                            window.location.href = href;
+                                        };
+                                        el.addEventListener("click", nav);
+                                        el.addEventListener("keydown", (e) => {
+                                            if (
+                                                e.key === "Enter" ||
+                                                e.key === " "
+                                            ) {
+                                                e.preventDefault();
+                                                nav();
+                                            }
+                                        });
                                     });
-                                });
-                        });
+                            }
+                        );
 
-                        const clickListener = marker.addListener("click", () => {
-                            infoWindows.forEach((iw) => iw.close());
-                            infoWindow.open(map, marker);
-                        });
+                        const clickListener = marker.addListener(
+                            "click",
+                            () => {
+                                infoWindows.forEach((iw) => iw.close());
+                                infoWindow.open(map, marker);
+                            }
+                        );
                         mapListeners.push(clickListener);
 
                         markers.push(marker);
@@ -816,7 +846,9 @@ const initializeMap = async () => {
                 }
             });
 
-            map.controls[window.google.maps.ControlPosition.RIGHT_BOTTOM].push(recenterDiv);
+            map.controls[window.google.maps.ControlPosition.RIGHT_BOTTOM].push(
+                recenterDiv
+            );
         }
 
         if (props.interactive) {
@@ -879,7 +911,8 @@ watch(
         map.setMapTypeId(resolveMapTypeId(props.defaultMapType));
         map.setTilt(resolveInitialTilt());
         const h =
-            typeof props.initialHeading === "number" && !Number.isNaN(props.initialHeading)
+            typeof props.initialHeading === "number" &&
+            !Number.isNaN(props.initialHeading)
                 ? props.initialHeading
                 : 0;
         map.setHeading(h);

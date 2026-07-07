@@ -55,9 +55,7 @@ const hasDefaultSlot = computed(() => !!slots.default);
 const hasFooterSlot = computed(() => !!slots.footer);
 
 const showTitleRegion = computed(() => props.title || hasTitleSlot.value);
-const showBodyRegion = computed(
-    () => props.message || hasDefaultSlot.value
-);
+const showBodyRegion = computed(() => props.message || hasDefaultSlot.value);
 
 function onDismiss() {
     emit("update:show", false);
@@ -98,7 +96,9 @@ function onConfirm() {
                 class="text-sm text-gray-600 dark:text-gray-400"
             >
                 <slot>
-                    <p v-if="message" class="whitespace-pre-wrap">{{ message }}</p>
+                    <p v-if="message" class="whitespace-pre-wrap">
+                        {{ message }}
+                    </p>
                 </slot>
             </div>
             <div v-if="hasFooterSlot" class="mt-6">
@@ -115,11 +115,7 @@ function onConfirm() {
                 >
                     <slot name="confirmButton">{{ confirmLabel }}</slot>
                 </DangerButton>
-                <Button
-                    v-else
-                    type="button"
-                    @click="onConfirm"
-                >
+                <Button v-else type="button" @click="onConfirm">
                     <slot name="confirmButton">{{ confirmLabel }}</slot>
                 </Button>
             </div>

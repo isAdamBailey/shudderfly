@@ -11,23 +11,23 @@ import { router, usePage } from "@inertiajs/vue3";
 import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 
 const props = defineProps({
-  kind: {
-    type: String,
-    default: "game",
-    validator: (v) =>
-      v === "game" || v === "page" || v === "song" || v === "movie",
-  },
-  gameSlug: { type: String, default: undefined },
-  score: { type: Number, default: undefined },
-  pageId: { type: [Number, String], default: undefined },
-  songId: { type: [Number, String], default: undefined },
-  movieTmdbId: { type: [Number, String], default: undefined },
-  movieTitle: { type: String, default: undefined },
-  movieImagePath: { type: String, default: undefined },
-  wrapperClass: {
-    type: String,
-    default: "inline-flex items-center justify-center gap-2",
-  },
+    kind: {
+        type: String,
+        default: "game",
+        validator: (v) =>
+            v === "game" || v === "page" || v === "song" || v === "movie",
+    },
+    gameSlug: { type: String, default: undefined },
+    score: { type: Number, default: undefined },
+    pageId: { type: [Number, String], default: undefined },
+    songId: { type: [Number, String], default: undefined },
+    movieTmdbId: { type: [Number, String], default: undefined },
+    movieTitle: { type: String, default: undefined },
+    movieImagePath: { type: String, default: undefined },
+    wrapperClass: {
+        type: String,
+        default: "inline-flex items-center justify-center gap-2",
+    },
 });
 
 const page = usePage();
@@ -37,15 +37,15 @@ const { closeFlyout } = useMusicPlayer();
 const { speak } = useSpeechSynthesis();
 const { t } = useTranslations();
 const {
-  show: confirmShow,
-  message: confirmMessage,
-  title: confirmTitle,
-  confirmLabel: confirmOkLabel,
-  cancelLabel: confirmCancelLabel,
-  confirmVariant,
-  ask: askConfirm,
-  onConfirmed: confirmOnOk,
-  onCancelled: confirmOnCancel,
+    show: confirmShow,
+    message: confirmMessage,
+    title: confirmTitle,
+    confirmLabel: confirmOkLabel,
+    cancelLabel: confirmCancelLabel,
+    confirmVariant,
+    ask: askConfirm,
+    onConfirmed: confirmOnOk,
+    onCancelled: confirmOnCancel,
 } = useConfirmDialog();
 
 const sharing = ref(false);
@@ -59,287 +59,301 @@ const shareMenuRef = ref(null);
 const shareMenuStyles = ref({});
 
 const messagingEnabled = computed(() => {
-  const value = page.props.settings?.messaging_enabled;
-  return value === "1" || value === 1 || value === true;
+    const value = page.props.settings?.messaging_enabled;
+    return value === "1" || value === 1 || value === true;
 });
 
 const canShare = computed(() => {
-  return messagingEnabled.value && Boolean(page.props.auth?.user);
+    return messagingEnabled.value && Boolean(page.props.auth?.user);
 });
 
 const hasDailyShareLimit = computed(() => {
-  return props.kind === "page" || props.kind === "song";
+    return props.kind === "page" || props.kind === "song";
 });
 
 const isShareDisabled = computed(() => {
-  if (hasDailyShareLimit.value) {
-    return hasSharedToday.value || sharing.value;
-  }
-  return sharing.value;
+    if (hasDailyShareLimit.value) {
+        return hasSharedToday.value || sharing.value;
+    }
+    return sharing.value;
 });
 
 const storageKey = () => {
-  const today = new Date().toISOString().split("T")[0];
-  if (props.kind === "song") {
-    return `song_share_${props.songId}_${today}`;
-  }
-  return `page_share_${props.pageId}_${today}`;
+    const today = new Date().toISOString().split("T")[0];
+    if (props.kind === "song") {
+        return `song_share_${props.songId}_${today}`;
+    }
+    return `page_share_${props.pageId}_${today}`;
 };
 
 const checkIfSharedToday = () => {
-  if (!hasDailyShareLimit.value) {
-    hasSharedToday.value = false;
-    return;
-  }
-  hasSharedToday.value = localStorage.getItem(storageKey()) !== null;
+    if (!hasDailyShareLimit.value) {
+        hasSharedToday.value = false;
+        return;
+    }
+    hasSharedToday.value = localStorage.getItem(storageKey()) !== null;
 };
 
 const shareToChat = (taggedUserId = null) => {
-  if (isShareDisabled.value) return;
+    if (isShareDisabled.value) return;
 
-  sharing.value = true;
-  shareMenuOpen.value = false;
-  selectedShareUserId.value = null;
+    sharing.value = true;
+    shareMenuOpen.value = false;
+    selectedShareUserId.value = null;
 
-  const tagged = taggedUserId ? [taggedUserId] : [];
-  const options = {
-    preserveScroll: true,
-    onSuccess: () => {
-      if (hasDailyShareLimit.value) {
-        localStorage.setItem(storageKey(), Date.now().toString());
-        hasSharedToday.value = true;
-      }
-      if (props.kind === "song") {
-        closeFlyout();
-      }
-      sharing.value = false;
-    },
-    onError: () => {
-      sharing.value = false;
-    },
-  };
+    const tagged = taggedUserId ? [taggedUserId] : [];
+    const options = {
+        preserveScroll: true,
+        onSuccess: () => {
+            if (hasDailyShareLimit.value) {
+                localStorage.setItem(storageKey(), Date.now().toString());
+                hasSharedToday.value = true;
+            }
+            if (props.kind === "song") {
+                closeFlyout();
+            }
+            sharing.value = false;
+        },
+        onError: () => {
+            sharing.value = false;
+        },
+    };
 
-  if (props.kind === "page") {
-    router.post(
-      route("pages.share", props.pageId),
-      { tagged_user_ids: tagged },
-      options
-    );
-  } else if (props.kind === "song") {
-    router.post(
-      route("music.share", props.songId),
-      { tagged_user_ids: tagged },
-      options
-    );
-  } else if (props.kind === "movie") {
-    router.post(
-      route("movie-cast.share"),
-      {
-        tmdb_id: props.movieTmdbId,
-        title: props.movieTitle,
-        image_path: props.movieImagePath,
-        tagged_user_ids: tagged,
-      },
-      options
-    );
-  } else {
-    router.post(
-      route("games.share-score", props.gameSlug),
-      {
-        score: props.score,
-        tagged_user_ids: tagged,
-      },
-      options
-    );
-  }
+    if (props.kind === "page") {
+        router.post(
+            route("pages.share", props.pageId),
+            { tagged_user_ids: tagged },
+            options
+        );
+    } else if (props.kind === "song") {
+        router.post(
+            route("music.share", props.songId),
+            { tagged_user_ids: tagged },
+            options
+        );
+    } else if (props.kind === "movie") {
+        router.post(
+            route("movie-cast.share"),
+            {
+                tmdb_id: props.movieTmdbId,
+                title: props.movieTitle,
+                image_path: props.movieImagePath,
+                tagged_user_ids: tagged,
+            },
+            options
+        );
+    } else {
+        router.post(
+            route("games.share-score", props.gameSlug),
+            {
+                score: props.score,
+                tagged_user_ids: tagged,
+            },
+            options
+        );
+    }
 };
 
 const toggleShareMenu = () => {
-  if (isShareDisabled.value) return;
-  shareMenuOpen.value = !shareMenuOpen.value;
-  if (shareMenuOpen.value) {
-    nextTick(() => {
-      updateShareMenuPosition();
-    });
-  }
+    if (isShareDisabled.value) return;
+    shareMenuOpen.value = !shareMenuOpen.value;
+    if (shareMenuOpen.value) {
+        nextTick(() => {
+            updateShareMenuPosition();
+        });
+    }
 };
 
 const confirmPrefix = computed(() => {
-  if (props.kind === "song") {
-    return "song";
-  }
-  if (props.kind === "movie") {
-    return "movie";
-  }
-  if (props.kind === "game") {
-    return "game";
-  }
-  return "page";
+    if (props.kind === "song") {
+        return "song";
+    }
+    if (props.kind === "movie") {
+        return "movie";
+    }
+    if (props.kind === "game") {
+        return "game";
+    }
+    return "page";
 });
 
 const shareIconTitle = computed(() => {
-  if (hasDailyShareLimit.value && hasSharedToday.value) {
-    return t("already_shared_today");
-  }
-  if (props.kind === "song") {
-    return t("song.share_icon_title");
-  }
-  if (props.kind === "movie") {
-    return t("movie.share_icon_title");
-  }
-  if (props.kind === "game") {
-    return t("game.share_icon_title");
-  }
-  return t("page.share_icon_title");
+    if (hasDailyShareLimit.value && hasSharedToday.value) {
+        return t("already_shared_today");
+    }
+    if (props.kind === "song") {
+        return t("song.share_icon_title");
+    }
+    if (props.kind === "movie") {
+        return t("movie.share_icon_title");
+    }
+    if (props.kind === "game") {
+        return t("game.share_icon_title");
+    }
+    return t("page.share_icon_title");
 });
 
 const shareAriaLabel = computed(() => {
-  if (hasDailyShareLimit.value && hasSharedToday.value) {
-    return t("already_shared_today");
-  }
-  if (props.kind === "song") {
-    return t("song.share_aria");
-  }
-  if (props.kind === "movie") {
-    return t("movie.share_aria");
-  }
-  if (props.kind === "game") {
-    return t("game.share_aria");
-  }
-  return t("page.share_aria");
+    if (hasDailyShareLimit.value && hasSharedToday.value) {
+        return t("already_shared_today");
+    }
+    if (props.kind === "song") {
+        return t("song.share_aria");
+    }
+    if (props.kind === "movie") {
+        return t("movie.share_aria");
+    }
+    if (props.kind === "game") {
+        return t("game.share_aria");
+    }
+    return t("page.share_aria");
 });
 
 const confirmThenShare = async (taggedUser, postAction) => {
-  if (confirmPending.value) return;
-  confirmPending.value = true;
-  try {
-    const prefix = confirmPrefix.value;
-    const speakPhrase = taggedUser
-      ? t(`${prefix}.share_confirm_speak_tagged`, { username: taggedUser.name })
-      : t(`${prefix}.share_confirm_speak`);
-    const dialogMessage = taggedUser
-      ? t(`${prefix}.share_confirm_dialog_tagged`, { username: taggedUser.name })
-      : t(`${prefix}.share_confirm_dialog`);
-    const okPromise = askConfirm(dialogMessage);
-    speak(speakPhrase);
-    const ok = await okPromise;
-    if (!ok) {
-      return;
+    if (confirmPending.value) return;
+    confirmPending.value = true;
+    try {
+        const prefix = confirmPrefix.value;
+        const speakPhrase = taggedUser
+            ? t(`${prefix}.share_confirm_speak_tagged`, {
+                  username: taggedUser.name,
+              })
+            : t(`${prefix}.share_confirm_speak`);
+        const dialogMessage = taggedUser
+            ? t(`${prefix}.share_confirm_dialog_tagged`, {
+                  username: taggedUser.name,
+              })
+            : t(`${prefix}.share_confirm_dialog`);
+        const okPromise = askConfirm(dialogMessage);
+        speak(speakPhrase);
+        const ok = await okPromise;
+        if (!ok) {
+            return;
+        }
+        postAction();
+    } finally {
+        confirmPending.value = false;
     }
-    postAction();
-  } finally {
-    confirmPending.value = false;
-  }
 };
 
 const handleShareSelect = (user) => {
-  if (!user) return;
-  selectedShareUserId.value = user.id;
-  confirmThenShare(user, () => shareToChat(user.id));
+    if (!user) return;
+    selectedShareUserId.value = user.id;
+    confirmThenShare(user, () => shareToChat(user.id));
 };
 
 const handleShareSelectNone = () => {
-  selectedShareUserId.value = null;
-  confirmThenShare(null, () => shareToChat(null));
+    selectedShareUserId.value = null;
+    confirmThenShare(null, () => shareToChat(null));
 };
 
 const handleShareMenuClickOutside = (event) => {
-  if (!shareMenuOpen.value) return;
-  const container = shareMenuContainerRef.value;
-  const menu = shareMenuRef.value;
-  if (container?.contains(event.target) || menu?.contains(event.target)) {
-    return;
-  }
-  shareMenuOpen.value = false;
+    if (!shareMenuOpen.value) return;
+    const container = shareMenuContainerRef.value;
+    const menu = shareMenuRef.value;
+    if (container?.contains(event.target) || menu?.contains(event.target)) {
+        return;
+    }
+    shareMenuOpen.value = false;
 };
 
 const updateShareMenuPosition = () => {
-  if (!shareMenuOpen.value) return;
-  const buttonEl = shareButtonRef.value?.$el || shareButtonRef.value;
-  const menuEl = shareMenuRef.value;
-  if (!buttonEl || !menuEl) return;
+    if (!shareMenuOpen.value) return;
+    const buttonEl = shareButtonRef.value?.$el || shareButtonRef.value;
+    const menuEl = shareMenuRef.value;
+    if (!buttonEl || !menuEl) return;
 
-  const rect = buttonEl.getBoundingClientRect();
-  const padding = 12;
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
-  const menuWidth = Math.min(menuEl.offsetWidth || 256, viewportWidth - padding * 2);
-  const menuHeight = menuEl.offsetHeight || 0;
-  const left = Math.min(
-    Math.max(rect.left, padding),
-    viewportWidth - menuWidth - padding
-  );
-  const top = Math.min(
-    rect.bottom + 8,
-    Math.max(padding, viewportHeight - menuHeight - padding)
-  );
+    const rect = buttonEl.getBoundingClientRect();
+    const padding = 12;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const menuWidth = Math.min(
+        menuEl.offsetWidth || 256,
+        viewportWidth - padding * 2
+    );
+    const menuHeight = menuEl.offsetHeight || 0;
+    const left = Math.min(
+        Math.max(rect.left, padding),
+        viewportWidth - menuWidth - padding
+    );
+    const top = Math.min(
+        rect.bottom + 8,
+        Math.max(padding, viewportHeight - menuHeight - padding)
+    );
 
-  shareMenuStyles.value = {
-    position: "fixed",
-    left: `${left}px`,
-    top: `${top}px`,
-    width: `${menuWidth}px`,
-  };
+    shareMenuStyles.value = {
+        position: "fixed",
+        left: `${left}px`,
+        top: `${top}px`,
+        width: `${menuWidth}px`,
+    };
 };
 
 onMounted(() => {
-  checkIfSharedToday();
-  document.addEventListener("click", handleShareMenuClickOutside);
-  window.addEventListener("resize", updateShareMenuPosition, { passive: true });
-  window.addEventListener("scroll", updateShareMenuPosition, { passive: true });
+    checkIfSharedToday();
+    document.addEventListener("click", handleShareMenuClickOutside);
+    window.addEventListener("resize", updateShareMenuPosition, {
+        passive: true,
+    });
+    window.addEventListener("scroll", updateShareMenuPosition, {
+        passive: true,
+    });
 });
 
 onUnmounted(() => {
-  document.removeEventListener("click", handleShareMenuClickOutside);
-  window.removeEventListener("resize", updateShareMenuPosition);
-  window.removeEventListener("scroll", updateShareMenuPosition);
+    document.removeEventListener("click", handleShareMenuClickOutside);
+    window.removeEventListener("resize", updateShareMenuPosition);
+    window.removeEventListener("scroll", updateShareMenuPosition);
 });
 </script>
 
 <template>
-  <div v-if="canShare" :class="wrapperClass">
-    <div ref="shareMenuContainerRef" class="relative flex items-center">
-      <Button
-        ref="shareButtonRef"
-        type="button"
-        :disabled="isShareDisabled || sharing || confirmPending"
-        class="h-10 w-10 flex items-center justify-center"
-        :title="shareIconTitle"
-        :aria-label="shareAriaLabel"
-        @click.stop="toggleShareMenu"
-      >
-        <i v-if="sharing" class="ri-loader-line text-xl animate-spin"></i>
-        <i v-else class="ri-share-line text-xl"></i>
-      </Button>
-      <Teleport to="body">
-        <div
-          v-if="shareMenuOpen"
-          ref="shareMenuRef"
-          class="fixed w-64 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-[200] max-h-72 overflow-y-auto"
-          :style="shareMenuStyles"
-          @click.stop
-        >
-          <UserTagList
-            :users="users"
-            :selected-user-id="selectedShareUserId"
-            :show-none="true"
-            none-label="Share without tag"
-            :none-selected="selectedShareUserId === null"
-            @select="handleShareSelect"
-            @select-none="handleShareSelectNone"
-          />
+    <div v-if="canShare" :class="wrapperClass">
+        <div ref="shareMenuContainerRef" class="relative flex items-center">
+            <Button
+                ref="shareButtonRef"
+                type="button"
+                :disabled="isShareDisabled || sharing || confirmPending"
+                class="h-10 w-10 flex items-center justify-center"
+                :title="shareIconTitle"
+                :aria-label="shareAriaLabel"
+                @click.stop="toggleShareMenu"
+            >
+                <i
+                    v-if="sharing"
+                    class="ri-loader-line text-xl animate-spin"
+                ></i>
+                <i v-else class="ri-share-line text-xl"></i>
+            </Button>
+            <Teleport to="body">
+                <div
+                    v-if="shareMenuOpen"
+                    ref="shareMenuRef"
+                    class="fixed w-64 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-[200] max-h-72 overflow-y-auto"
+                    :style="shareMenuStyles"
+                    @click.stop
+                >
+                    <UserTagList
+                        :users="users"
+                        :selected-user-id="selectedShareUserId"
+                        :show-none="true"
+                        none-label="Share without tag"
+                        :none-selected="selectedShareUserId === null"
+                        @select="handleShareSelect"
+                        @select-none="handleShareSelectNone"
+                    />
+                </div>
+            </Teleport>
         </div>
-      </Teleport>
+        <ConfirmDialog
+            v-model:show="confirmShow"
+            :title="confirmTitle"
+            :message="confirmMessage"
+            :confirm-label="confirmOkLabel || t('common.ok')"
+            :cancel-label="confirmCancelLabel || t('common.cancel')"
+            :confirm-variant="confirmVariant"
+            @confirm="confirmOnOk"
+            @cancel="confirmOnCancel"
+        />
     </div>
-    <ConfirmDialog
-      v-model:show="confirmShow"
-      :title="confirmTitle"
-      :message="confirmMessage"
-      :confirm-label="confirmOkLabel || t('common.ok')"
-      :cancel-label="confirmCancelLabel || t('common.cancel')"
-      :confirm-variant="confirmVariant"
-      @confirm="confirmOnOk"
-      @cancel="confirmOnCancel"
-    />
-  </div>
 </template>

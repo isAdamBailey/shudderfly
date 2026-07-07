@@ -16,7 +16,9 @@
                         :key="existingCollage.id"
                     >
                         #{{ getCollageDisplayNumber(existingCollage.id)
-                        }}<span v-if="index < pageExistingCollages.length - 1">, </span>
+                        }}<span v-if="index < pageExistingCollages.length - 1"
+                            >,
+                        </span>
                     </span>
                 </template>
             </span>
@@ -25,39 +27,41 @@
         <div v-else>
             <div class="flex flex-col gap-2">
                 <div class="flex flex-nowrap items-center gap-2">
-                <select
-                    v-if="availableCollages.length > 1"
-                    v-model="selectedCollageId"
-                    class="rounded bg-gray-700 border border-gray-600 text-white text-sm px-2 py-1.5 focus:border-teal-500 focus:outline-none"
-                    :disabled="!hasSelectableCollages"
-                >
-                    <option :value="null" disabled>
-                        {{ t("page.collage_select_placeholder") }}
-                    </option>
-                    <option
-                        v-for="collage in availableCollages"
-                        :key="collage.id"
-                        :value="collage.id"
+                    <select
+                        v-if="availableCollages.length > 1"
+                        v-model="selectedCollageId"
+                        class="rounded bg-gray-700 border border-gray-600 text-white text-sm px-2 py-1.5 focus:border-teal-500 focus:outline-none"
+                        :disabled="!hasSelectableCollages"
                     >
-                        {{ t("page.collage_option_label", {
-                            number: getCollageDisplayNumber(collage.id),
-                        }) }}
-                        <span v-if="isCollageFull(collage)">
-                            {{ t("page.collage_full_suffix") }}
-                        </span>
-                        <span v-if="collage.is_locked">
-                            {{ t("page.collage_locked_suffix") }}
-                        </span>
-                    </option>
-                </select>
-                <Button
-                    :disabled="isAddButtonDisabled"
-                    class="h-10"
-                    @click="addToCollage"
-                >
-                    <i class="ri-add-line text-xl mr-1"></i>
-                    {{ t("page.collage_add_button") }}
-                </Button>
+                        <option :value="null" disabled>
+                            {{ t("page.collage_select_placeholder") }}
+                        </option>
+                        <option
+                            v-for="collage in availableCollages"
+                            :key="collage.id"
+                            :value="collage.id"
+                        >
+                            {{
+                                t("page.collage_option_label", {
+                                    number: getCollageDisplayNumber(collage.id),
+                                })
+                            }}
+                            <span v-if="isCollageFull(collage)">
+                                {{ t("page.collage_full_suffix") }}
+                            </span>
+                            <span v-if="collage.is_locked">
+                                {{ t("page.collage_locked_suffix") }}
+                            </span>
+                        </option>
+                    </select>
+                    <Button
+                        :disabled="isAddButtonDisabled"
+                        class="h-10"
+                        @click="addToCollage"
+                    >
+                        <i class="ri-add-line text-xl mr-1"></i>
+                        {{ t("page.collage_add_button") }}
+                    </Button>
                 </div>
                 <InputError :message="form.errors.collage" />
                 <InputError :message="form.errors.replace_page_id" />

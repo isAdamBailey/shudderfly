@@ -25,14 +25,17 @@ function generateIntestinePath() {
         const t = i / (NUM_SEGMENTS - 1); // 0 at the top, 1 at the exit
         // Winding is sharper and the bends swing wider the deeper you go.
         const wave = Math.sin(i * 0.45) * 0.35 + 0.72;
-        const amplitude = (usableWidth * 0.2) * wave * (0.72 + 0.28 * t);
+        const amplitude = usableWidth * 0.2 * wave * (0.72 + 0.28 * t);
         const centerX = midX + direction * amplitude;
         // Forgiving, wide entrance that tightens toward the exit.
         const wallGap = 92 - t * 26 + Math.max(0, 8 - i) * 3.0;
 
         segments.push({
             y,
-            centerX: Math.max(PADDING + wallGap, Math.min(SVG_WIDTH - PADDING - wallGap, centerX)),
+            centerX: Math.max(
+                PADDING + wallGap,
+                Math.min(SVG_WIDTH - PADDING - wallGap, centerX)
+            ),
             leftWall: Math.max(PADDING, centerX - wallGap),
             rightWall: Math.min(SVG_WIDTH - PADDING, centerX + wallGap),
         });
@@ -47,7 +50,8 @@ function generateIntestinePath() {
 
 function getPassageAt(y) {
     if (y <= SEGMENTS[0].y) return SEGMENTS[0];
-    if (y >= SEGMENTS[SEGMENTS.length - 1].y) return SEGMENTS[SEGMENTS.length - 1];
+    if (y >= SEGMENTS[SEGMENTS.length - 1].y)
+        return SEGMENTS[SEGMENTS.length - 1];
 
     let lo = 0;
     let hi = SEGMENTS.length - 1;
@@ -97,7 +101,10 @@ export function useGameState() {
     });
 
     const progress = computed(() => {
-        return Math.min(1, Math.max(0, state.poopY / (TOTAL_PATH_HEIGHT - 140)));
+        return Math.min(
+            1,
+            Math.max(0, state.poopY / (TOTAL_PATH_HEIGHT - 140))
+        );
     });
 
     function startGame() {
@@ -111,7 +118,9 @@ export function useGameState() {
         state.score = 0;
         lastCollisionTime = 0;
         clearInterval(tickInterval);
-        tickInterval = setInterval(() => { tick.value++; }, 1000);
+        tickInterval = setInterval(() => {
+            tick.value++;
+        }, 1000);
     }
 
     let lastCollisionTime = 0;
@@ -134,7 +143,10 @@ export function useGameState() {
             newX = passage.rightWall - POOP_RADIUS;
         }
 
-        if ((hitLeft || hitRight) && Date.now() - lastCollisionTime > COLLISION_COOLDOWN_MS) {
+        if (
+            (hitLeft || hitRight) &&
+            Date.now() - lastCollisionTime > COLLISION_COOLDOWN_MS
+        ) {
             state.collisions++;
             lastCollisionTime = Date.now();
         }
@@ -150,7 +162,10 @@ export function useGameState() {
     function win() {
         clearInterval(tickInterval);
         state.endTime = Date.now();
-        state.score = Math.max(MIN_SCORE, MAX_SCORE - state.collisions * WALL_PENALTY);
+        state.score = Math.max(
+            MIN_SCORE,
+            MAX_SCORE - state.collisions * WALL_PENALTY
+        );
         state.phase = "win";
     }
 

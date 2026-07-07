@@ -5,10 +5,10 @@ import { computed, nextTick, ref } from "vue";
 
 // Mock route function like other tests
 global.route = vi.fn((name, params) => {
-  if (name === "music.increment-read-count" && params) {
-    return `/music/${params}/increment-read-count`;
-  }
-  return `/${name}`;
+    if (name === "music.increment-read-count" && params) {
+        return `/music/${params}/increment-read-count`;
+    }
+    return `/${name}`;
 });
 
 // Mock useMusicPlayer composable
@@ -22,413 +22,413 @@ const mockPlayNextSong = vi.fn();
 const mockPlayPreviousSong = vi.fn();
 
 vi.mock("@/Components/ShareToChatButton.vue", () => ({
-  default: {
-    name: "ShareToChatButton",
-    template: '<div class="share-stub" />',
-    props: ["kind", "songId", "wrapperClass"],
-  },
+    default: {
+        name: "ShareToChatButton",
+        template: '<div class="share-stub" />',
+        props: ["kind", "songId", "wrapperClass"],
+    },
 }));
 
 vi.mock("@/composables/useMusicPlayer", () => ({
-  useMusicPlayer: () => ({
-    currentSong: computed(() => mockCurrentSong.value),
-    isPlaying: computed(() => mockIsPlaying.value),
-    songsList: computed(() => mockSongsList.value),
-    isAnnouncing: computed(() => mockIsAnnouncing.value),
-    setPlaying: mockSetPlaying,
-    playNextSong: mockPlayNextSong,
-    playPreviousSong: mockPlayPreviousSong,
-    getSavedPlaybackState: mockGetSavedPlaybackState
-  })
+    useMusicPlayer: () => ({
+        currentSong: computed(() => mockCurrentSong.value),
+        isPlaying: computed(() => mockIsPlaying.value),
+        songsList: computed(() => mockSongsList.value),
+        isAnnouncing: computed(() => mockIsAnnouncing.value),
+        setPlaying: mockSetPlaying,
+        playNextSong: mockPlayNextSong,
+        playPreviousSong: mockPlayPreviousSong,
+        getSavedPlaybackState: mockGetSavedPlaybackState,
+    }),
 }));
 
 describe("MusicPlayer", () => {
-  let wrapper;
-  let mockPlayer;
-  const mockSong = {
-    id: 1,
-    title: "Test Song Title",
-    description: "Test song description",
-    youtube_video_id: "dQw4w9WgXcQ",
-    thumbnail_maxres: "https://example.com/thumbnail.jpg",
-    thumbnail_default: "https://example.com/thumbnail-default.jpg"
-  };
+    let wrapper;
+    let mockPlayer;
+    const mockSong = {
+        id: 1,
+        title: "Test Song Title",
+        description: "Test song description",
+        youtube_video_id: "dQw4w9WgXcQ",
+        thumbnail_maxres: "https://example.com/thumbnail.jpg",
+        thumbnail_default: "https://example.com/thumbnail-default.jpg",
+    };
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockCurrentSong.value = null;
-    mockIsPlaying.value = false;
-    mockSongsList.value = [];
-    mockIsAnnouncing.value = false;
-    mockSetPlaying.mockClear();
-    mockPlayNextSong.mockClear();
-    mockPlayPreviousSong.mockClear();
-    mockGetSavedPlaybackState.mockReturnValue(null);
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockCurrentSong.value = null;
+        mockIsPlaying.value = false;
+        mockSongsList.value = [];
+        mockIsAnnouncing.value = false;
+        mockSetPlaying.mockClear();
+        mockPlayNextSong.mockClear();
+        mockPlayPreviousSong.mockClear();
+        mockGetSavedPlaybackState.mockReturnValue(null);
 
-    // Initialize global player variables
-    if (!window.__globalMusicPlayer) {
-      window.__globalMusicPlayer = null;
-    }
-    if (!window.__globalMusicUpdateInterval) {
-      window.__globalMusicUpdateInterval = null;
-    }
-    if (!window.__lastPlayedSongId) {
-      window.__lastPlayedSongId = null;
-    }
-
-    // Ensure global.YT exists before setting properties
-    if (!global.YT) {
-      global.YT = {
-        PlayerState: {
-          PLAYING: 1,
-          PAUSED: 2,
-          BUFFERING: 3,
-          ENDED: 0,
-          CUED: 5
+        // Initialize global player variables
+        if (!window.__globalMusicPlayer) {
+            window.__globalMusicPlayer = null;
         }
-      };
-    }
+        if (!window.__globalMusicUpdateInterval) {
+            window.__globalMusicUpdateInterval = null;
+        }
+        if (!window.__lastPlayedSongId) {
+            window.__lastPlayedSongId = null;
+        }
 
-    // Mock YouTube Player
-    mockPlayer = {
-      playVideo: vi.fn(),
-      pauseVideo: vi.fn(),
-      seekTo: vi.fn(),
-      getCurrentTime: vi.fn(() => 45),
-      getDuration: vi.fn(() => 180),
-      getPlayerState: vi.fn(() => global.YT.PlayerState.PAUSED),
-      getVideoData: vi.fn(() => ({ video_id: "dQw4w9WgXcQ" })),
-      destroy: vi.fn()
-    };
+        // Ensure global.YT exists before setting properties
+        if (!global.YT) {
+            global.YT = {
+                PlayerState: {
+                    PLAYING: 1,
+                    PAUSED: 2,
+                    BUFFERING: 3,
+                    ENDED: 0,
+                    CUED: 5,
+                },
+            };
+        }
 
-    global.YT.Player = vi.fn().mockImplementation(() => mockPlayer);
+        // Mock YouTube Player
+        mockPlayer = {
+            playVideo: vi.fn(),
+            pauseVideo: vi.fn(),
+            seekTo: vi.fn(),
+            getCurrentTime: vi.fn(() => 45),
+            getDuration: vi.fn(() => 180),
+            getPlayerState: vi.fn(() => global.YT.PlayerState.PAUSED),
+            getVideoData: vi.fn(() => ({ video_id: "dQw4w9WgXcQ" })),
+            destroy: vi.fn(),
+        };
 
-    // Mock fetch for increment read count
-    global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ success: true })
-      })
-    );
+        global.YT.Player = vi.fn().mockImplementation(() => mockPlayer);
 
-    // Mock CSRF token
-    document.querySelector = vi.fn(() => ({
-      getAttribute: vi.fn(() => "test-csrf-token")
-    }));
-  });
+        // Mock fetch for increment read count
+        global.fetch = vi.fn(() =>
+            Promise.resolve({
+                ok: true,
+                json: () => Promise.resolve({ success: true }),
+            })
+        );
 
-  afterEach(() => {
-    if (wrapper) {
-      wrapper.unmount();
-    }
-    // Clean up global state
-    window.__globalMusicPlayer = null;
-    window.__globalMusicUpdateInterval = null;
-    window.__lastPlayedSongId = null;
-    vi.restoreAllMocks();
-  });
-
-  it("renders when currentSong is provided", async () => {
-    mockCurrentSong.value = mockSong;
-    wrapper = mount(MusicPlayer);
-    await nextTick();
-
-    expect(wrapper.find("h3").text()).toBe("Test Song Title");
-    // MusicPlayer uses thumbnail_high first, falls back to thumbnail_default
-    expect(wrapper.find("img").attributes("src")).toBe(
-      "https://example.com/thumbnail-default.jpg"
-    );
-  });
-
-  it("does not render when currentSong is null", () => {
-    mockCurrentSong.value = null;
-    wrapper = mount(MusicPlayer);
-
-    expect(wrapper.html()).toBe("<!--v-if-->");
-  });
-
-  it("shows fallback thumbnail when image fails", async () => {
-    mockCurrentSong.value = {
-      ...mockSong,
-      thumbnail_high: null,
-      thumbnail_default: null
-    };
-    wrapper = mount(MusicPlayer);
-    await nextTick();
-    // When both thumbnail properties are null, component doesn't render an img
-    expect(wrapper.find("img").exists()).toBe(false);
-  });
-
-  it("handles image error correctly", async () => {
-    mockCurrentSong.value = mockSong;
-    wrapper = mount(MusicPlayer);
-    await nextTick();
-
-    const img = wrapper.find("img");
-    await img.trigger("error");
-    await nextTick();
-
-    expect(wrapper.find(".ri-music-2-line").exists()).toBe(true);
-  });
-
-  it("displays play button when not playing", async () => {
-    mockCurrentSong.value = mockSong;
-    mockIsPlaying.value = false;
-    wrapper = mount(MusicPlayer);
-    await nextTick();
-
-    expect(wrapper.find(".ri-play-fill").exists()).toBe(true);
-    expect(wrapper.find(".ri-pause-fill").exists()).toBe(false);
-  });
-
-  it("calls playVideo when play button is clicked", async () => {
-    mockCurrentSong.value = mockSong;
-    mockIsPlaying.value = false;
-    mockPlayer.getPlayerState.mockReturnValue(global.YT.PlayerState.PAUSED);
-    wrapper = mount(MusicPlayer);
-    await nextTick();
-
-    // Set up global player before triggering
-    window.__globalMusicPlayer = mockPlayer;
-    wrapper.vm.isLoading = false;
-    wrapper.vm.createPlayer = vi.fn();
-
-    // Wait for component to be ready
-    await nextTick();
-
-    // Call togglePlayPause directly since it handles player creation
-    await wrapper.vm.togglePlayPause();
-    await nextTick();
-
-    // Player should be called via the global player
-    expect(mockPlayer.playVideo).toHaveBeenCalled();
-  });
-
-  it("calls pauseVideo when pause button is clicked", async () => {
-    mockCurrentSong.value = mockSong;
-    mockIsPlaying.value = true;
-    wrapper = mount(MusicPlayer);
-    await nextTick();
-
-    // Set up global player
-    window.__globalMusicPlayer = mockPlayer;
-    wrapper.vm.isLoading = false;
-    wrapper.vm.createPlayer = vi.fn();
-
-    // Mock getPlayerState to return PLAYING
-    mockPlayer.getPlayerState = vi.fn(() => global.YT.PlayerState.PLAYING);
-
-    await nextTick();
-
-    // Call togglePlayPause directly
-    await wrapper.vm.togglePlayPause();
-    await nextTick();
-
-    expect(mockPlayer.pauseVideo).toHaveBeenCalled();
-  });
-
-  it("seeks backward 10 seconds when skip back button is clicked", async () => {
-    mockCurrentSong.value = mockSong;
-    wrapper = mount(MusicPlayer);
-    await nextTick();
-
-    wrapper.vm.createPlayer = vi.fn();
-    window.__globalMusicPlayer = mockPlayer;
-    wrapper.vm.currentTime = 45;
-    wrapper.vm.isLoading = false;
-
-    wrapper.vm.seekBackward();
-    expect(mockPlayer.seekTo).toHaveBeenCalledWith(35, true); // 45 - 10
-  });
-
-  it("seeks forward 10 seconds when skip forward button is clicked", async () => {
-    mockCurrentSong.value = mockSong;
-    wrapper = mount(MusicPlayer);
-    await nextTick();
-
-    wrapper.vm.createPlayer = vi.fn();
-    window.__globalMusicPlayer = mockPlayer;
-    wrapper.vm.currentTime = 45;
-    wrapper.vm.duration = 180;
-    wrapper.vm.isLoading = false;
-
-    wrapper.vm.seekForward();
-    expect(mockPlayer.seekTo).toHaveBeenCalledWith(55, true); // 45 + 10
-  });
-
-  it("does not seek past end of song when skipping forward", async () => {
-    mockCurrentSong.value = mockSong;
-    wrapper = mount(MusicPlayer);
-    await nextTick();
-
-    wrapper.vm.createPlayer = vi.fn();
-    window.__globalMusicPlayer = mockPlayer;
-    wrapper.vm.currentTime = 175;
-    wrapper.vm.duration = 180;
-    wrapper.vm.isLoading = false;
-
-    wrapper.vm.seekForward();
-    expect(mockPlayer.seekTo).toHaveBeenCalledWith(180, true); // Duration limit
-  });
-
-  it("does not seek before start when skipping backward", async () => {
-    mockCurrentSong.value = mockSong;
-    wrapper = mount(MusicPlayer);
-    await nextTick();
-
-    wrapper.vm.createPlayer = vi.fn();
-    window.__globalMusicPlayer = mockPlayer;
-    wrapper.vm.currentTime = 5;
-    wrapper.vm.isLoading = false;
-
-    wrapper.vm.seekBackward();
-    expect(mockPlayer.seekTo).toHaveBeenCalledWith(0, true); // Cannot go below 0
-  });
-
-  it("closePlayer is handled by composable", async () => {
-    mockCurrentSong.value = mockSong;
-    wrapper = mount(MusicPlayer);
-    await nextTick();
-
-    // closePlayer is from the composable, not exposed on component
-    // The component doesn't expose it, which is fine since it's a no-op
-    // Just verify the component renders correctly
-    expect(wrapper.find("h3").exists()).toBe(true);
-  });
-
-  it("formats time correctly", async () => {
-    mockCurrentSong.value = mockSong;
-    wrapper = mount(MusicPlayer);
-    await nextTick();
-
-    expect(wrapper.vm.formatTime(65)).toBe("1:05");
-    expect(wrapper.vm.formatTime(125)).toBe("2:05");
-    expect(wrapper.vm.formatTime(5)).toBe("0:05");
-  });
-
-  it("calculates progress percentage correctly", async () => {
-    mockCurrentSong.value = mockSong;
-    wrapper = mount(MusicPlayer);
-    await nextTick();
-
-    wrapper.vm.currentTime = 45;
-    wrapper.vm.duration = 180;
-
-    await nextTick();
-    expect(wrapper.vm.progressPercentage).toBe(25); // 45/180 * 100
-  });
-
-  it("seeks via pointer scrub on the progress bar", async () => {
-    mockCurrentSong.value = mockSong;
-    wrapper = mount(MusicPlayer);
-    await nextTick();
-
-    window.__globalMusicPlayer = mockPlayer;
-    wrapper.vm.duration = 180;
-
-    const progressBar = wrapper.find(".bg-gray-200");
-    if (!progressBar.exists()) {
-      return;
-    }
-
-    progressBar.element.getBoundingClientRect = vi.fn(() => ({
-      left: 0,
-      width: 200,
-      top: 0,
-      right: 200,
-      bottom: 10,
-      height: 10
-    }));
-    progressBar.element.setPointerCapture = vi.fn();
-    progressBar.element.releasePointerCapture = vi.fn();
-
-    wrapper.vm.onProgressPointerDown({
-      currentTarget: progressBar.element,
-      clientX: 50,
-      pointerId: 1
+        // Mock CSRF token
+        document.querySelector = vi.fn(() => ({
+            getAttribute: vi.fn(() => "test-csrf-token"),
+        }));
     });
 
-    expect(mockPlayer.seekTo).not.toHaveBeenCalled();
-
-    wrapper.vm.onProgressPointerUp({
-      currentTarget: progressBar.element,
-      clientX: 100,
-      pointerId: 1
+    afterEach(() => {
+        if (wrapper) {
+            wrapper.unmount();
+        }
+        // Clean up global state
+        window.__globalMusicPlayer = null;
+        window.__globalMusicUpdateInterval = null;
+        window.__lastPlayedSongId = null;
+        vi.restoreAllMocks();
     });
 
-    expect(mockPlayer.seekTo).toHaveBeenCalledWith(90, true);
-  });
+    it("renders when currentSong is provided", async () => {
+        mockCurrentSong.value = mockSong;
+        wrapper = mount(MusicPlayer);
+        await nextTick();
 
-  it("uses fallback YouTube thumbnail URL when thumbnail_url is not provided", async () => {
-    const songWithoutThumbnail = {
-      ...mockSong,
-      thumbnail_high: null,
-      thumbnail_default: null
-    };
-    mockCurrentSong.value = songWithoutThumbnail;
-    wrapper = mount(MusicPlayer);
-    await nextTick();
+        expect(wrapper.find("h3").text()).toBe("Test Song Title");
+        // MusicPlayer uses thumbnail_high first, falls back to thumbnail_default
+        expect(wrapper.find("img").attributes("src")).toBe(
+            "https://example.com/thumbnail-default.jpg"
+        );
+    });
 
-    // When both thumbnail_high and thumbnail_default are null, thumbnailUrl returns null
-    expect(wrapper.vm.thumbnailUrl).toBe(null);
-  });
+    it("does not render when currentSong is null", () => {
+        mockCurrentSong.value = null;
+        wrapper = mount(MusicPlayer);
 
-  it("applies dark mode classes correctly", async () => {
-    mockCurrentSong.value = mockSong;
-    wrapper = mount(MusicPlayer);
-    await nextTick();
+        expect(wrapper.html()).toBe("<!--v-if-->");
+    });
 
-    const container = wrapper.find("div");
-    if (container.exists()) {
-      expect(container.classes()).toContain("dark:bg-gray-800");
-      expect(container.classes()).toContain("dark:border-gray-700");
-    }
-  });
+    it("shows fallback thumbnail when image fails", async () => {
+        mockCurrentSong.value = {
+            ...mockSong,
+            thumbnail_high: null,
+            thumbnail_default: null,
+        };
+        wrapper = mount(MusicPlayer);
+        await nextTick();
+        // When both thumbnail properties are null, component doesn't render an img
+        expect(wrapper.find("img").exists()).toBe(false);
+    });
 
-  it("stacks the player vertically", async () => {
-    mockCurrentSong.value = mockSong;
-    wrapper = mount(MusicPlayer);
-    await nextTick();
+    it("handles image error correctly", async () => {
+        mockCurrentSong.value = mockSong;
+        wrapper = mount(MusicPlayer);
+        await nextTick();
 
-    const container = wrapper.find(".flex");
-    if (container.exists()) {
-      expect(container.classes()).toContain("flex-col");
-    }
-  });
+        const img = wrapper.find("img");
+        await img.trigger("error");
+        await nextTick();
 
-  it("displays artwork as a full-width square", async () => {
-    mockCurrentSong.value = mockSong;
-    wrapper = mount(MusicPlayer);
-    await nextTick();
+        expect(wrapper.find(".ri-music-2-line").exists()).toBe(true);
+    });
 
-    const img = wrapper.find("img");
-    if (img.exists()) {
-      expect(img.classes()).toContain("w-full");
-      expect(img.classes()).toContain("max-w-xs");
-      expect(img.classes()).toContain("aspect-square");
-    }
-  });
+    it("displays play button when not playing", async () => {
+        mockCurrentSong.value = mockSong;
+        mockIsPlaying.value = false;
+        wrapper = mount(MusicPlayer);
+        await nextTick();
 
-  it("centers song info and controls", async () => {
-    mockCurrentSong.value = mockSong;
-    wrapper = mount(MusicPlayer);
-    await nextTick();
+        expect(wrapper.find(".ri-play-fill").exists()).toBe(true);
+        expect(wrapper.find(".ri-pause-fill").exists()).toBe(false);
+    });
 
-    const songInfo = wrapper.find(".text-center");
-    expect(songInfo.exists()).toBe(true);
+    it("calls playVideo when play button is clicked", async () => {
+        mockCurrentSong.value = mockSong;
+        mockIsPlaying.value = false;
+        mockPlayer.getPlayerState.mockReturnValue(global.YT.PlayerState.PAUSED);
+        wrapper = mount(MusicPlayer);
+        await nextTick();
 
-    const controls = wrapper.find(".justify-center");
-    expect(controls.exists()).toBe(true);
-  });
+        // Set up global player before triggering
+        window.__globalMusicPlayer = mockPlayer;
+        wrapper.vm.isLoading = false;
+        wrapper.vm.createPlayer = vi.fn();
 
-  it("renders ShareToChatButton for current song", async () => {
-    mockCurrentSong.value = mockSong;
-    wrapper = mount(MusicPlayer);
-    await nextTick();
+        // Wait for component to be ready
+        await nextTick();
 
-    const share = wrapper.findComponent({ name: "ShareToChatButton" });
-    expect(share.exists()).toBe(true);
-    expect(share.props("kind")).toBe("song");
-    expect(share.props("songId")).toBe(mockSong.id);
-  });
+        // Call togglePlayPause directly since it handles player creation
+        await wrapper.vm.togglePlayPause();
+        await nextTick();
+
+        // Player should be called via the global player
+        expect(mockPlayer.playVideo).toHaveBeenCalled();
+    });
+
+    it("calls pauseVideo when pause button is clicked", async () => {
+        mockCurrentSong.value = mockSong;
+        mockIsPlaying.value = true;
+        wrapper = mount(MusicPlayer);
+        await nextTick();
+
+        // Set up global player
+        window.__globalMusicPlayer = mockPlayer;
+        wrapper.vm.isLoading = false;
+        wrapper.vm.createPlayer = vi.fn();
+
+        // Mock getPlayerState to return PLAYING
+        mockPlayer.getPlayerState = vi.fn(() => global.YT.PlayerState.PLAYING);
+
+        await nextTick();
+
+        // Call togglePlayPause directly
+        await wrapper.vm.togglePlayPause();
+        await nextTick();
+
+        expect(mockPlayer.pauseVideo).toHaveBeenCalled();
+    });
+
+    it("seeks backward 10 seconds when skip back button is clicked", async () => {
+        mockCurrentSong.value = mockSong;
+        wrapper = mount(MusicPlayer);
+        await nextTick();
+
+        wrapper.vm.createPlayer = vi.fn();
+        window.__globalMusicPlayer = mockPlayer;
+        wrapper.vm.currentTime = 45;
+        wrapper.vm.isLoading = false;
+
+        wrapper.vm.seekBackward();
+        expect(mockPlayer.seekTo).toHaveBeenCalledWith(35, true); // 45 - 10
+    });
+
+    it("seeks forward 10 seconds when skip forward button is clicked", async () => {
+        mockCurrentSong.value = mockSong;
+        wrapper = mount(MusicPlayer);
+        await nextTick();
+
+        wrapper.vm.createPlayer = vi.fn();
+        window.__globalMusicPlayer = mockPlayer;
+        wrapper.vm.currentTime = 45;
+        wrapper.vm.duration = 180;
+        wrapper.vm.isLoading = false;
+
+        wrapper.vm.seekForward();
+        expect(mockPlayer.seekTo).toHaveBeenCalledWith(55, true); // 45 + 10
+    });
+
+    it("does not seek past end of song when skipping forward", async () => {
+        mockCurrentSong.value = mockSong;
+        wrapper = mount(MusicPlayer);
+        await nextTick();
+
+        wrapper.vm.createPlayer = vi.fn();
+        window.__globalMusicPlayer = mockPlayer;
+        wrapper.vm.currentTime = 175;
+        wrapper.vm.duration = 180;
+        wrapper.vm.isLoading = false;
+
+        wrapper.vm.seekForward();
+        expect(mockPlayer.seekTo).toHaveBeenCalledWith(180, true); // Duration limit
+    });
+
+    it("does not seek before start when skipping backward", async () => {
+        mockCurrentSong.value = mockSong;
+        wrapper = mount(MusicPlayer);
+        await nextTick();
+
+        wrapper.vm.createPlayer = vi.fn();
+        window.__globalMusicPlayer = mockPlayer;
+        wrapper.vm.currentTime = 5;
+        wrapper.vm.isLoading = false;
+
+        wrapper.vm.seekBackward();
+        expect(mockPlayer.seekTo).toHaveBeenCalledWith(0, true); // Cannot go below 0
+    });
+
+    it("closePlayer is handled by composable", async () => {
+        mockCurrentSong.value = mockSong;
+        wrapper = mount(MusicPlayer);
+        await nextTick();
+
+        // closePlayer is from the composable, not exposed on component
+        // The component doesn't expose it, which is fine since it's a no-op
+        // Just verify the component renders correctly
+        expect(wrapper.find("h3").exists()).toBe(true);
+    });
+
+    it("formats time correctly", async () => {
+        mockCurrentSong.value = mockSong;
+        wrapper = mount(MusicPlayer);
+        await nextTick();
+
+        expect(wrapper.vm.formatTime(65)).toBe("1:05");
+        expect(wrapper.vm.formatTime(125)).toBe("2:05");
+        expect(wrapper.vm.formatTime(5)).toBe("0:05");
+    });
+
+    it("calculates progress percentage correctly", async () => {
+        mockCurrentSong.value = mockSong;
+        wrapper = mount(MusicPlayer);
+        await nextTick();
+
+        wrapper.vm.currentTime = 45;
+        wrapper.vm.duration = 180;
+
+        await nextTick();
+        expect(wrapper.vm.progressPercentage).toBe(25); // 45/180 * 100
+    });
+
+    it("seeks via pointer scrub on the progress bar", async () => {
+        mockCurrentSong.value = mockSong;
+        wrapper = mount(MusicPlayer);
+        await nextTick();
+
+        window.__globalMusicPlayer = mockPlayer;
+        wrapper.vm.duration = 180;
+
+        const progressBar = wrapper.find(".bg-gray-200");
+        if (!progressBar.exists()) {
+            return;
+        }
+
+        progressBar.element.getBoundingClientRect = vi.fn(() => ({
+            left: 0,
+            width: 200,
+            top: 0,
+            right: 200,
+            bottom: 10,
+            height: 10,
+        }));
+        progressBar.element.setPointerCapture = vi.fn();
+        progressBar.element.releasePointerCapture = vi.fn();
+
+        wrapper.vm.onProgressPointerDown({
+            currentTarget: progressBar.element,
+            clientX: 50,
+            pointerId: 1,
+        });
+
+        expect(mockPlayer.seekTo).not.toHaveBeenCalled();
+
+        wrapper.vm.onProgressPointerUp({
+            currentTarget: progressBar.element,
+            clientX: 100,
+            pointerId: 1,
+        });
+
+        expect(mockPlayer.seekTo).toHaveBeenCalledWith(90, true);
+    });
+
+    it("uses fallback YouTube thumbnail URL when thumbnail_url is not provided", async () => {
+        const songWithoutThumbnail = {
+            ...mockSong,
+            thumbnail_high: null,
+            thumbnail_default: null,
+        };
+        mockCurrentSong.value = songWithoutThumbnail;
+        wrapper = mount(MusicPlayer);
+        await nextTick();
+
+        // When both thumbnail_high and thumbnail_default are null, thumbnailUrl returns null
+        expect(wrapper.vm.thumbnailUrl).toBe(null);
+    });
+
+    it("applies dark mode classes correctly", async () => {
+        mockCurrentSong.value = mockSong;
+        wrapper = mount(MusicPlayer);
+        await nextTick();
+
+        const container = wrapper.find("div");
+        if (container.exists()) {
+            expect(container.classes()).toContain("dark:bg-gray-800");
+            expect(container.classes()).toContain("dark:border-gray-700");
+        }
+    });
+
+    it("stacks the player vertically", async () => {
+        mockCurrentSong.value = mockSong;
+        wrapper = mount(MusicPlayer);
+        await nextTick();
+
+        const container = wrapper.find(".flex");
+        if (container.exists()) {
+            expect(container.classes()).toContain("flex-col");
+        }
+    });
+
+    it("displays artwork as a full-width square", async () => {
+        mockCurrentSong.value = mockSong;
+        wrapper = mount(MusicPlayer);
+        await nextTick();
+
+        const img = wrapper.find("img");
+        if (img.exists()) {
+            expect(img.classes()).toContain("w-full");
+            expect(img.classes()).toContain("max-w-xs");
+            expect(img.classes()).toContain("aspect-square");
+        }
+    });
+
+    it("centers song info and controls", async () => {
+        mockCurrentSong.value = mockSong;
+        wrapper = mount(MusicPlayer);
+        await nextTick();
+
+        const songInfo = wrapper.find(".text-center");
+        expect(songInfo.exists()).toBe(true);
+
+        const controls = wrapper.find(".justify-center");
+        expect(controls.exists()).toBe(true);
+    });
+
+    it("renders ShareToChatButton for current song", async () => {
+        mockCurrentSong.value = mockSong;
+        wrapper = mount(MusicPlayer);
+        await nextTick();
+
+        const share = wrapper.findComponent({ name: "ShareToChatButton" });
+        expect(share.exists()).toBe(true);
+        expect(share.props("kind")).toBe("song");
+        expect(share.props("songId")).toBe(mockSong.id);
+    });
 });

@@ -78,9 +78,7 @@ watch(
         <h3 class="text-2xl dark:text-gray-100 w-full border-b mb-7">
             Bulk Actions
             <span v-if="selectedCount > 0" class="text-sm text-gray-500">
-                ({{ selectedCount }} page{{
-                    selectedCount === 1 ? "" : "s"
-                }}
+                ({{ selectedCount }} page{{ selectedCount === 1 ? "" : "s" }}
                 selected)
             </span>
         </h3>

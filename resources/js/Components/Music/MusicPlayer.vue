@@ -83,8 +83,7 @@
                             <div
                                 class="bg-teal-600 dark:bg-teal-500 h-3 rounded-full"
                                 :class="{
-                                    'transition-all duration-100':
-                                        !isScrubbing,
+                                    'transition-all duration-100': !isScrubbing,
                                 }"
                                 :style="{
                                     width: progressPercentage + '%',
@@ -93,8 +92,7 @@
                             <div
                                 class="absolute top-1/2 w-5 h-5 -ml-2.5 -translate-y-1/2 rounded-full bg-white dark:bg-gray-100 border-2 border-teal-600 dark:border-teal-500 shadow pointer-events-none"
                                 :class="{
-                                    'transition-all duration-100':
-                                        !isScrubbing,
+                                    'transition-all duration-100': !isScrubbing,
                                     'scale-125': isScrubbing,
                                 }"
                                 :style="{ left: progressPercentage + '%' }"
@@ -144,7 +142,9 @@
                                 title="Forward 10s"
                                 @click="seekForward"
                             >
-                                <i class="ri-skip-forward-mini-fill text-2xl"></i>
+                                <i
+                                    class="ri-skip-forward-mini-fill text-2xl"
+                                ></i>
                             </button>
 
                             <button
@@ -254,17 +254,13 @@ const isPlaying = computed(() => globalIsPlaying.value);
 
 const hasNextSong = computed(() => {
     if (!currentSong.value || songsList.value.length === 0) return false;
-    const idx = songsList.value.findIndex(
-        (s) => s.id === currentSong.value.id
-    );
+    const idx = songsList.value.findIndex((s) => s.id === currentSong.value.id);
     return idx !== -1 && idx < songsList.value.length - 1;
 });
 
 const hasPreviousSong = computed(() => {
     if (!currentSong.value || songsList.value.length === 0) return false;
-    const idx = songsList.value.findIndex(
-        (s) => s.id === currentSong.value.id
-    );
+    const idx = songsList.value.findIndex((s) => s.id === currentSong.value.id);
     return idx > 0;
 });
 
@@ -338,10 +334,7 @@ let scrubPointerId = null;
 const computeTimeFromPointer = (clientX) => {
     if (!scrubBarEl.value || duration.value === 0) return 0;
     const rect = scrubBarEl.value.getBoundingClientRect();
-    const ratio = Math.min(
-        1,
-        Math.max(0, (clientX - rect.left) / rect.width)
-    );
+    const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
     return ratio * duration.value;
 };
 
@@ -589,10 +582,7 @@ const onPlayerReady = (event) => {
 const startPlaybackWhenAnnouncementEnds = () => {
     const tryPlay = () => {
         const currentPlayer = globalPlayer();
-        if (
-            currentPlayer &&
-            typeof currentPlayer.playVideo === "function"
-        ) {
+        if (currentPlayer && typeof currentPlayer.playVideo === "function") {
             try {
                 currentPlayer.playVideo();
                 setPlaying(true);

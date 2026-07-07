@@ -1,88 +1,93 @@
 <template>
-  <div class="w-full">
-    <div class="mb-2 flex items-center justify-between">
-      <InputLabel :for="addressInputId" :value="addressLabel" />
-      <button
-        v-if="hasLocation"
-        type="button"
-        class="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-600"
-        @click="clearLocation"
-      >
-        Clear location
-      </button>
-    </div>
-    <div class="mb-3 relative">
-      <div class="relative">
-        <input
-          :id="addressInputId"
-          v-model="searchQuery"
-          type="text"
-          :placeholder="addressPlaceholder"
-          :disabled="isSearching"
-          class="w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          :class="{ 'pr-9': isSearching }"
-          @keyup.enter="searchLocation"
-          @input="handleInput"
-          @focus="handleFocus"
-          @blur="handleBlur"
-        />
-        <span
-          v-if="isSearching"
-          class="pointer-events-none absolute inset-y-0 right-2 flex items-center"
-          aria-hidden="true"
-        >
-          <i class="ri-loader-line animate-spin text-lg text-gray-500"></i>
-        </span>
-        <!-- Autocomplete dropdown -->
-        <div
-          v-if="showSuggestions && suggestions.length > 0"
-          class="absolute z-[9999] w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto"
-          style="z-index: 9999"
-        >
-          <button
-            v-for="(suggestion, index) in suggestions"
-            :key="index"
-            type="button"
-            class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700 last:border-b-0"
-            @mousedown.prevent="selectSuggestion(suggestion)"
-          >
-            <span
-              v-html="
-                suggestion.displayName ||
-                suggestion.name ||
-                suggestion.html ||
-                suggestion.formatted ||
-                suggestion.place_name ||
-                'Location'
-              "
-            ></span>
-          </button>
+    <div class="w-full">
+        <div class="mb-2 flex items-center justify-between">
+            <InputLabel :for="addressInputId" :value="addressLabel" />
+            <button
+                v-if="hasLocation"
+                type="button"
+                class="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-600"
+                @click="clearLocation"
+            >
+                Clear location
+            </button>
         </div>
-      </div>
-      <p v-if="searchError" class="mt-1 text-xs text-red-600 dark:text-red-400">
-        {{ searchError }}
-      </p>
-    </div>
+        <div class="mb-3 relative">
+            <div class="relative">
+                <input
+                    :id="addressInputId"
+                    v-model="searchQuery"
+                    type="text"
+                    :placeholder="addressPlaceholder"
+                    :disabled="isSearching"
+                    class="w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    :class="{ 'pr-9': isSearching }"
+                    @keyup.enter="searchLocation"
+                    @input="handleInput"
+                    @focus="handleFocus"
+                    @blur="handleBlur"
+                />
+                <span
+                    v-if="isSearching"
+                    class="pointer-events-none absolute inset-y-0 right-2 flex items-center"
+                    aria-hidden="true"
+                >
+                    <i
+                        class="ri-loader-line animate-spin text-lg text-gray-500"
+                    ></i>
+                </span>
+                <!-- Autocomplete dropdown -->
+                <div
+                    v-if="showSuggestions && suggestions.length > 0"
+                    class="absolute z-[9999] w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto"
+                    style="z-index: 9999"
+                >
+                    <button
+                        v-for="(suggestion, index) in suggestions"
+                        :key="index"
+                        type="button"
+                        class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700 last:border-b-0"
+                        @mousedown.prevent="selectSuggestion(suggestion)"
+                    >
+                        <span
+                            v-html="
+                                suggestion.displayName ||
+                                suggestion.name ||
+                                suggestion.html ||
+                                suggestion.formatted ||
+                                suggestion.place_name ||
+                                'Location'
+                            "
+                        ></span>
+                    </button>
+                </div>
+            </div>
+            <p
+                v-if="searchError"
+                class="mt-1 text-xs text-red-600 dark:text-red-400"
+            >
+                {{ searchError }}
+            </p>
+        </div>
 
-    <div v-if="showMap" class="mt-4">
-      <div class="mb-3 text-sm text-gray-500 dark:text-gray-400">
-        <p>
-          Pick a suggestion from the list as you type, press Enter to search
-          what you typed, or click the map to drop a pin.
-        </p>
-      </div>
-      <Map
-        ref="mapRef"
-        :latitude="latitude"
-        :longitude="longitude"
-        :interactive="true"
-        :hide-geocoder="true"
-        container-class="w-full aspect-square rounded-lg border border-gray-300 dark:border-gray-600"
-        @update:latitude="(val) => $emit('update:latitude', val)"
-        @update:longitude="(val) => $emit('update:longitude', val)"
-      />
+        <div v-if="showMap" class="mt-4">
+            <div class="mb-3 text-sm text-gray-500 dark:text-gray-400">
+                <p>
+                    Pick a suggestion from the list as you type, press Enter to
+                    search what you typed, or click the map to drop a pin.
+                </p>
+            </div>
+            <Map
+                ref="mapRef"
+                :latitude="latitude"
+                :longitude="longitude"
+                :interactive="true"
+                :hide-geocoder="true"
+                container-class="w-full aspect-square rounded-lg border border-gray-300 dark:border-gray-600"
+                @update:latitude="(val) => $emit('update:latitude', val)"
+                @update:longitude="(val) => $emit('update:longitude', val)"
+            />
+        </div>
     </div>
-  </div>
 </template>
 
 <script setup>
@@ -93,47 +98,47 @@ import Map from "./Map.vue";
 const addressInputId = useId();
 
 const props = defineProps({
-  latitude: {
-    type: [Number, String],
-    default: null
-  },
-  longitude: {
-    type: [Number, String],
-    default: null
-  },
-  openMap: {
-    type: Boolean,
-    default: false
-  },
-  addressLabel: {
-    type: String,
-    default: "Address"
-  },
-  addressPlaceholder: {
-    type: String,
-    default: "Search for an address..."
-  }
+    latitude: {
+        type: [Number, String],
+        default: null,
+    },
+    longitude: {
+        type: [Number, String],
+        default: null,
+    },
+    openMap: {
+        type: Boolean,
+        default: false,
+    },
+    addressLabel: {
+        type: String,
+        default: "Address",
+    },
+    addressPlaceholder: {
+        type: String,
+        default: "Search for an address...",
+    },
 });
 
 // Convert string props to numbers
 const latitude = computed(() => {
-  if (props.latitude === null || props.latitude === undefined) return null;
-  return typeof props.latitude === "string"
-    ? parseFloat(props.latitude)
-    : props.latitude;
+    if (props.latitude === null || props.latitude === undefined) return null;
+    return typeof props.latitude === "string"
+        ? parseFloat(props.latitude)
+        : props.latitude;
 });
 
 const longitude = computed(() => {
-  if (props.longitude === null || props.longitude === undefined) return null;
-  return typeof props.longitude === "string"
-    ? parseFloat(props.longitude)
-    : props.longitude;
+    if (props.longitude === null || props.longitude === undefined) return null;
+    return typeof props.longitude === "string"
+        ? parseFloat(props.longitude)
+        : props.longitude;
 });
 
 const emit = defineEmits([
-  "update:latitude",
-  "update:longitude",
-  "address-focus"
+    "update:latitude",
+    "update:longitude",
+    "address-focus",
 ]);
 
 const mapRef = ref(null);
@@ -147,139 +152,139 @@ let searchTimeout = null;
 
 // Watch for openMap prop changes
 watch(
-  () => props.openMap,
-  (newVal) => {
-    if (newVal) {
-      showMap.value = true;
+    () => props.openMap,
+    (newVal) => {
+        if (newVal) {
+            showMap.value = true;
+        }
     }
-  }
 );
 
 const hasLocation = computed(() => {
-  return latitude.value !== null && longitude.value !== null;
+    return latitude.value !== null && longitude.value !== null;
 });
 
 const recenterMap = () => {
-  if (mapRef.value && mapRef.value.recenterOnMarker) {
-    mapRef.value.recenterOnMarker();
-  }
+    if (mapRef.value && mapRef.value.recenterOnMarker) {
+        mapRef.value.recenterOnMarker();
+    }
 };
 
 const clearLocation = () => {
-  emit("update:latitude", null);
-  emit("update:longitude", null);
-  searchQuery.value = "";
-  searchError.value = "";
-  showMap.value = false;
+    emit("update:latitude", null);
+    emit("update:longitude", null);
+    searchQuery.value = "";
+    searchError.value = "";
+    showMap.value = false;
 };
 
 const handleFocus = () => {
-  showMap.value = true;
-  showSuggestions.value = true;
-  emit("address-focus");
+    showMap.value = true;
+    showSuggestions.value = true;
+    emit("address-focus");
 };
 
 const handleInput = async () => {
-  showMap.value = true;
-  showSuggestions.value = true;
-  searchError.value = "";
+    showMap.value = true;
+    showSuggestions.value = true;
+    searchError.value = "";
 
-  // Clear previous timeout
-  if (searchTimeout) {
-    clearTimeout(searchTimeout);
-  }
-
-  // Debounce the search
-  searchTimeout = setTimeout(async () => {
-    if (searchQuery.value.trim().length >= 3) {
-      try {
-        if (mapRef.value && mapRef.value.getGeocodeSuggestions) {
-          const results = await mapRef.value.getGeocodeSuggestions(
-            searchQuery.value
-          );
-          suggestions.value = results || [];
-          // Keep suggestions visible if we have results
-          if (suggestions.value.length > 0) {
-            showSuggestions.value = true;
-          }
-        }
-      } catch (error) {
-        console.error("Error getting suggestions:", error);
-        suggestions.value = [];
-      }
-    } else {
-      suggestions.value = [];
+    // Clear previous timeout
+    if (searchTimeout) {
+        clearTimeout(searchTimeout);
     }
-  }, 300);
+
+    // Debounce the search
+    searchTimeout = setTimeout(async () => {
+        if (searchQuery.value.trim().length >= 3) {
+            try {
+                if (mapRef.value && mapRef.value.getGeocodeSuggestions) {
+                    const results = await mapRef.value.getGeocodeSuggestions(
+                        searchQuery.value
+                    );
+                    suggestions.value = results || [];
+                    // Keep suggestions visible if we have results
+                    if (suggestions.value.length > 0) {
+                        showSuggestions.value = true;
+                    }
+                }
+            } catch (error) {
+                console.error("Error getting suggestions:", error);
+                suggestions.value = [];
+            }
+        } else {
+            suggestions.value = [];
+        }
+    }, 300);
 };
 
 const handleBlur = () => {
-  // Delay hiding suggestions to allow click events (mousedown prevents blur)
-  setTimeout(() => {
-    showSuggestions.value = false;
-  }, 300);
+    // Delay hiding suggestions to allow click events (mousedown prevents blur)
+    setTimeout(() => {
+        showSuggestions.value = false;
+    }, 300);
 };
 
 const selectSuggestion = async (suggestion) => {
-  const suggestionName =
-    suggestion.name ||
-    suggestion.html ||
-    suggestion.formatted ||
-    searchQuery.value;
-  searchQuery.value = suggestionName;
-  showSuggestions.value = false;
-  suggestions.value = [];
+    const suggestionName =
+        suggestion.name ||
+        suggestion.html ||
+        suggestion.formatted ||
+        searchQuery.value;
+    searchQuery.value = suggestionName;
+    showSuggestions.value = false;
+    suggestions.value = [];
 
-  // If the suggestion has coordinates, use them directly
-  if (suggestion.center && suggestion.center.lat && suggestion.center.lng) {
-    emit("update:latitude", suggestion.center.lat);
-    emit("update:longitude", suggestion.center.lng);
-    searchQuery.value = "";
-    return;
-  }
-
-  // Otherwise, geocode the selected suggestion
-  isSearching.value = true;
-  searchError.value = "";
-
-  try {
-    if (mapRef.value && mapRef.value.geocodeAddress) {
-      // Use the suggestion's name or the query
-      await mapRef.value.geocodeAddress(suggestionName);
-      searchQuery.value = "";
-    } else {
-      throw new Error("Map not ready");
+    // If the suggestion has coordinates, use them directly
+    if (suggestion.center && suggestion.center.lat && suggestion.center.lng) {
+        emit("update:latitude", suggestion.center.lat);
+        emit("update:longitude", suggestion.center.lng);
+        searchQuery.value = "";
+        return;
     }
-  } catch (error) {
-    searchError.value =
-      error.message ||
-      "Location not found. Please try a different search term.";
-  } finally {
-    isSearching.value = false;
-  }
+
+    // Otherwise, geocode the selected suggestion
+    isSearching.value = true;
+    searchError.value = "";
+
+    try {
+        if (mapRef.value && mapRef.value.geocodeAddress) {
+            // Use the suggestion's name or the query
+            await mapRef.value.geocodeAddress(suggestionName);
+            searchQuery.value = "";
+        } else {
+            throw new Error("Map not ready");
+        }
+    } catch (error) {
+        searchError.value =
+            error.message ||
+            "Location not found. Please try a different search term.";
+    } finally {
+        isSearching.value = false;
+    }
 };
 
 const searchLocation = async () => {
-  if (!searchQuery.value.trim()) return;
+    if (!searchQuery.value.trim()) return;
 
-  showSuggestions.value = false;
-  isSearching.value = true;
-  searchError.value = "";
+    showSuggestions.value = false;
+    isSearching.value = true;
+    searchError.value = "";
 
-  try {
-    if (mapRef.value && mapRef.value.geocodeAddress) {
-      await mapRef.value.geocodeAddress(searchQuery.value);
-      searchQuery.value = "";
-      suggestions.value = [];
-    } else {
-      throw new Error("Map not ready");
+    try {
+        if (mapRef.value && mapRef.value.geocodeAddress) {
+            await mapRef.value.geocodeAddress(searchQuery.value);
+            searchQuery.value = "";
+            suggestions.value = [];
+        } else {
+            throw new Error("Map not ready");
+        }
+    } catch (error) {
+        searchError.value =
+            error.message ||
+            "Location not found. Please try a different search term.";
+    } finally {
+        isSearching.value = false;
     }
-  } catch (error) {
-    searchError.value =
-      error.message ||
-      "Location not found. Please try a different search term.";
-  } finally {
-    isSearching.value = false;
-  }
 };
 </script>

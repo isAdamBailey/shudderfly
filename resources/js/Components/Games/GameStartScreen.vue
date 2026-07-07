@@ -61,7 +61,10 @@ function play() {
                 <div
                     class="mt-5 flex flex-wrap items-center justify-center gap-[clamp(0.625rem,2.5vmin,0.875rem)]"
                 >
-                    <GameStartSpeechButton variant="panel" :script="introScript" />
+                    <GameStartSpeechButton
+                        variant="panel"
+                        :script="introScript"
+                    />
                     <Button
                         type="button"
                         class="game-start-play active:scale-95 !rounded-full !px-6 !py-2.5 !text-sm !font-extrabold !normal-case !tracking-normal transition-transform sm:!px-8 sm:!py-3 sm:!text-base"

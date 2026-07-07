@@ -53,7 +53,13 @@ function handleTap(side) {
 .game-board {
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, #3e2723 0%, #5d4037 30%, #6d4c41 60%, #8d6e63 100%);
+    background: linear-gradient(
+        180deg,
+        #3e2723 0%,
+        #5d4037 30%,
+        #6d4c41 60%,
+        #8d6e63 100%
+    );
     overflow: hidden;
     user-select: none;
     -webkit-user-select: none;
@@ -105,7 +111,8 @@ function handleTap(side) {
     font-size: clamp(2rem, 8vmin, 4rem);
     font-weight: 900;
     color: #fde68a;
-    text-shadow: 0 0 20px rgba(253, 230, 138, 0.6), 0 4px 12px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 0 20px rgba(253, 230, 138, 0.6),
+        0 4px 12px rgba(0, 0, 0, 0.5);
     animation: fightPulse 0.4s ease-in-out infinite alternate;
     pointer-events: none;
     z-index: 40;
@@ -117,17 +124,31 @@ function handleTap(side) {
 }
 
 @keyframes hintBounce {
-    0%, 100% { opacity: 0.6; }
-    50%       { opacity: 1; }
+    0%,
+    100% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 1;
+    }
 }
 
 @keyframes hintBob {
-    0%, 100% { transform: translateY(0); }
-    50%       { transform: translateY(6px); }
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(6px);
+    }
 }
 
 @keyframes fightPulse {
-    0%   { transform: translateX(-50%) scale(1); }
-    100% { transform: translateX(-50%) scale(1.08); }
+    0% {
+        transform: translateX(-50%) scale(1);
+    }
+    100% {
+        transform: translateX(-50%) scale(1.08);
+    }
 }
 </style>

@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 const mockCanAdmin = vi.hoisted(() => vi.fn(() => false));
 const mockCanEditPages = vi.hoisted(() => vi.fn(() => false));
 const mockAxiosPost = vi.hoisted(() =>
-    vi.fn(() => Promise.resolve({ data: { message: "Unblocked!" } })),
+    vi.fn(() => Promise.resolve({ data: { message: "Unblocked!" } }))
 );
 const mockSetFlashMessage = vi.hoisted(() => vi.fn());
 const mockRouterReload = vi.hoisted(() => vi.fn());
@@ -47,7 +47,7 @@ vi.mock("@/composables/useTranslations", () => ({
             Object.keys(replacements).forEach((placeholder) => {
                 translation = translation.replace(
                     new RegExp(`:${placeholder}`, "g"),
-                    replacements[placeholder],
+                    replacements[placeholder]
                 );
             });
             return translation;
@@ -56,13 +56,22 @@ vi.mock("@/composables/useTranslations", () => ({
 }));
 
 vi.mock("@/Pages/Profile/Partials/AvatarSelectionForm.vue", () => ({
-    default: { name: "AvatarSelectionForm", template: "<div class='avatar-form' />" },
+    default: {
+        name: "AvatarSelectionForm",
+        template: "<div class='avatar-form' />",
+    },
 }));
 vi.mock("@/Pages/Profile/Partials/VoiceSettingsForm.vue", () => ({
-    default: { name: "VoiceSettingsForm", template: "<div class='voice-form' />" },
+    default: {
+        name: "VoiceSettingsForm",
+        template: "<div class='voice-form' />",
+    },
 }));
 vi.mock("@/Components/NotificationToggle.vue", () => ({
-    default: { name: "NotificationToggle", template: "<div class='notification-toggle' />" },
+    default: {
+        name: "NotificationToggle",
+        template: "<div class='notification-toggle' />",
+    },
 }));
 vi.mock("@/Pages/Profile/Partials/ClocksSection.vue", () => ({
     default: {
@@ -72,10 +81,18 @@ vi.mock("@/Pages/Profile/Partials/ClocksSection.vue", () => ({
     },
 }));
 vi.mock("@/Pages/Profile/Partials/UsersForm.vue", () => ({
-    default: { name: "UsersForm", template: "<div class='users-form' />", props: ["users"] },
+    default: {
+        name: "UsersForm",
+        template: "<div class='users-form' />",
+        props: ["users"],
+    },
 }));
 vi.mock("@/Pages/Profile/Partials/StatsCard.vue", () => ({
-    default: { name: "StatsCard", template: "<div class='stats-card' />", props: ["stats"] },
+    default: {
+        name: "StatsCard",
+        template: "<div class='stats-card' />",
+        props: ["stats"],
+    },
 }));
 vi.mock("@/Pages/Profile/Partials/CategoriesForm.vue", () => ({
     default: {
@@ -132,8 +149,12 @@ describe("OwnerPanel", () => {
         expect(wrapper.text()).toContain("dashboard.unblock");
         expect(wrapper.text()).toContain("dashboard.blocked_pages_count");
         expect(wrapper.text()).not.toContain("Categories");
-        expect(wrapper.findComponent({ name: "CategoriesForm" }).exists()).toBe(false);
-        expect(wrapper.findComponent({ name: "SettingsForm" }).exists()).toBe(false);
+        expect(wrapper.findComponent({ name: "CategoriesForm" }).exists()).toBe(
+            false
+        );
+        expect(wrapper.findComponent({ name: "SettingsForm" }).exists()).toBe(
+            false
+        );
     });
 
     it("shows Categories and Site Settings accordions for admins", () => {
@@ -141,12 +162,19 @@ describe("OwnerPanel", () => {
         mockCanEditPages.mockReturnValueOnce(false);
 
         const wrapper = mount(OwnerPanel, {
-            props: { blockedCount: 0, categories: [{ id: 1, name: "Fiction" }] },
+            props: {
+                blockedCount: 0,
+                categories: [{ id: 1, name: "Fiction" }],
+            },
         });
 
         expect(wrapper.text()).not.toContain("dashboard.unblock");
-        expect(wrapper.findComponent({ name: "CategoriesForm" }).exists()).toBe(true);
-        expect(wrapper.findComponent({ name: "SettingsForm" }).exists()).toBe(true);
+        expect(wrapper.findComponent({ name: "CategoriesForm" }).exists()).toBe(
+            true
+        );
+        expect(wrapper.findComponent({ name: "SettingsForm" }).exists()).toBe(
+            true
+        );
     });
 
     it("does not render a New Book accordion (the CTA lives on the dashboard instead)", () => {
@@ -157,7 +185,9 @@ describe("OwnerPanel", () => {
             props: { blockedCount: 0 },
         });
 
-        expect(wrapper.findComponent({ name: "NewBookForm" }).exists()).toBe(false);
+        expect(wrapper.findComponent({ name: "NewBookForm" }).exists()).toBe(
+            false
+        );
         expect(wrapper.text()).not.toContain("dashboard.new_book");
     });
 
@@ -170,7 +200,9 @@ describe("OwnerPanel", () => {
 
         const button = wrapper
             .findAll("button")
-            .find((b) => b.text().includes("dashboard.unlock_all_blocked_pages"));
+            .find((b) =>
+                b.text().includes("dashboard.unlock_all_blocked_pages")
+            );
         expect(button).toBeTruthy();
 
         await button.trigger("click");
@@ -179,11 +211,14 @@ describe("OwnerPanel", () => {
         expect(mockAxiosPost).toHaveBeenCalledWith(
             "pages.unblock-all",
             {},
-            { headers: { Accept: "application/json" } },
+            { headers: { Accept: "application/json" } }
         );
-        expect(mockSetFlashMessage).toHaveBeenCalledWith("success", "Unblocked!");
+        expect(mockSetFlashMessage).toHaveBeenCalledWith(
+            "success",
+            "Unblocked!"
+        );
         expect(mockRouterReload).toHaveBeenCalledWith(
-            expect.objectContaining({ only: ["blockedCount"] }),
+            expect.objectContaining({ only: ["blockedCount"] })
         );
     });
 });

@@ -140,9 +140,17 @@ export function useTootGame(callbacks = {}) {
 
         // Butt wanders toward its target. It starts slow and eases up to full
         // speed as the round elapses, but never exceeds the top speed.
-        const maxSpeed = Math.max(120, Math.min(290, Math.min(bounds.w, bounds.h) * 0.78));
-        const elapsedFrac = Math.min(1, Math.max(0, 1 - remaining / ROUND_SECONDS));
-        const speed = maxSpeed * (START_SPEED_FACTOR + (1 - START_SPEED_FACTOR) * elapsedFrac);
+        const maxSpeed = Math.max(
+            120,
+            Math.min(290, Math.min(bounds.w, bounds.h) * 0.78)
+        );
+        const elapsedFrac = Math.min(
+            1,
+            Math.max(0, 1 - remaining / ROUND_SECONDS)
+        );
+        const speed =
+            maxSpeed *
+            (START_SPEED_FACTOR + (1 - START_SPEED_FACTOR) * elapsedFrac);
         const dx = target.x - butt.x;
         const dy = target.y - butt.y;
         const dist = Math.hypot(dx, dy);
@@ -245,7 +253,10 @@ export function useTootGame(callbacks = {}) {
             id: popId,
             x: butt.x,
             y: butt.y - buttSize.value * 0.5,
-            text: state.combo >= 2 ? `+${points} · x${state.combo}` : `+${points}`,
+            text:
+                state.combo >= 2
+                    ? `+${points} · x${state.combo}`
+                    : `+${points}`,
             big: state.combo >= 2,
         });
         setTimeout(() => {

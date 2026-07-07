@@ -7,7 +7,7 @@ import { Link, useForm, usePage } from "@inertiajs/vue3";
 
 const props = defineProps({
     mustVerifyEmail: { type: Boolean, default: false },
-    status: { type: String, default: '' },
+    status: { type: String, default: "" },
 });
 
 const user = usePage().props.auth.user;

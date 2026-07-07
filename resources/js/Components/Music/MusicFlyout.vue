@@ -75,10 +75,7 @@
                 </div>
 
                 <!-- Scrollable body: player + song list scroll together -->
-                <div
-                    ref="scrollRootEl"
-                    class="flex-1 overflow-y-auto min-h-0"
-                >
+                <div ref="scrollRootEl" class="flex-1 overflow-y-auto min-h-0">
                     <MusicPlayer />
 
                     <div

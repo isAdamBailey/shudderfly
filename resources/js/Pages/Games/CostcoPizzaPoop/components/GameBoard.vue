@@ -27,10 +27,13 @@ const svgAspect = computed(() => SVG_WIDTH / pixelW.value);
 const svgH = computed(() => pixelH.value * svgAspect.value);
 
 const cameraY = computed(() => {
-    return Math.max(0, Math.min(
-        props.state.poopY - svgH.value / 2,
-        props.totalHeight - svgH.value,
-    ));
+    return Math.max(
+        0,
+        Math.min(
+            props.state.poopY - svgH.value / 2,
+            props.totalHeight - svgH.value
+        )
+    );
 });
 
 const svgViewBox = computed(() => {
@@ -50,15 +53,25 @@ const intestinePaths = computed(() => {
 
     let fill = `M ${leftPts[0].x} ${leftPts[0].y - TOP_EXTEND}`;
     fill += ` L ${leftPts[0].x} ${leftPts[0].y}`;
-    fill += ` Q ${leftPts[0].x} ${leftPts[0].y}, ${(leftPts[0].x + leftPts[1].x) / 2} ${(leftPts[0].y + leftPts[1].y) / 2}`;
+    fill += ` Q ${leftPts[0].x} ${leftPts[0].y}, ${
+        (leftPts[0].x + leftPts[1].x) / 2
+    } ${(leftPts[0].y + leftPts[1].y) / 2}`;
     for (let i = 1; i < leftPts.length - 1; i++) {
         const cx = (leftPts[i].x + leftPts[i + 1].x) / 2;
         const cy = (leftPts[i].y + leftPts[i + 1].y) / 2;
         fill += ` Q ${leftPts[i].x} ${leftPts[i].y}, ${cx} ${cy}`;
     }
-    fill += ` Q ${leftPts[leftPts.length - 1].x} ${leftPts[leftPts.length - 1].y}, ${leftPts[leftPts.length - 1].x} ${exitY}`;
+    fill += ` Q ${leftPts[leftPts.length - 1].x} ${
+        leftPts[leftPts.length - 1].y
+    }, ${leftPts[leftPts.length - 1].x} ${exitY}`;
     fill += ` L ${rightPts[rightPts.length - 1].x} ${exitY}`;
-    fill += ` Q ${rightPts[rightPts.length - 1].x} ${rightPts[rightPts.length - 1].y}, ${(rightPts[rightPts.length - 1].x + rightPts[rightPts.length - 2].x) / 2} ${(rightPts[rightPts.length - 1].y + rightPts[rightPts.length - 2].y) / 2}`;
+    fill += ` Q ${rightPts[rightPts.length - 1].x} ${
+        rightPts[rightPts.length - 1].y
+    }, ${
+        (rightPts[rightPts.length - 1].x + rightPts[rightPts.length - 2].x) / 2
+    } ${
+        (rightPts[rightPts.length - 1].y + rightPts[rightPts.length - 2].y) / 2
+    }`;
     for (let i = rightPts.length - 2; i > 0; i--) {
         const cx = (rightPts[i].x + rightPts[i - 1].x) / 2;
         const cy = (rightPts[i].y + rightPts[i - 1].y) / 2;
@@ -88,7 +101,7 @@ watch(
             showSteerHint.value = false;
             steerHintTimer = null;
         }, 2600);
-    },
+    }
 );
 
 const digestIntro = computed(() => {
@@ -287,10 +300,7 @@ onUnmounted(() => {
                 stroke-linejoin="round"
             />
 
-            <path
-                :d="intestinePaths.fill"
-                fill="url(#mucosaGrad)"
-            />
+            <path :d="intestinePaths.fill" fill="url(#mucosaGrad)" />
 
             <ellipse
                 :cx="anusCenter.x"
@@ -324,9 +334,15 @@ onUnmounted(() => {
                 dominant-baseline="central"
                 :font-size="poopRadius * 2.2"
                 class="poop-sprite"
-            >💩</text>
+            >
+                💩
+            </text>
 
-            <g v-if="showDigestIntro" class="digest-intro-overlay" aria-hidden="true">
+            <g
+                v-if="showDigestIntro"
+                class="digest-intro-overlay"
+                aria-hidden="true"
+            >
                 <ellipse
                     :cx="digestIntro.stomachCx"
                     :cy="digestIntro.stomachCy"
@@ -347,29 +363,41 @@ onUnmounted(() => {
                     text-anchor="middle"
                     dominant-baseline="central"
                     class="digest-slice digest-slice-a"
-                >🍕</text>
+                >
+                    🍕
+                </text>
                 <text
                     :x="digestIntro.stomachCx"
                     :y="digestIntro.stomachCy"
                     text-anchor="middle"
                     dominant-baseline="central"
                     class="digest-slice digest-slice-b"
-                >🍕</text>
+                >
+                    🍕
+                </text>
                 <text
                     :x="digestIntro.stomachCx"
                     :y="digestIntro.stomachCy"
                     text-anchor="middle"
                     dominant-baseline="central"
                     class="digest-slice digest-slice-c"
-                >🍕</text>
+                >
+                    🍕
+                </text>
                 <text
                     :x="digestIntro.stomachCx"
                     :y="digestIntro.stomachCy"
                     text-anchor="middle"
                     dominant-baseline="central"
                     class="digest-intro-poop"
-                    :style="{ '--digest-drop': `${digestIntro.targetY - digestIntro.stomachCy}px` }"
-                >💩</text>
+                    :style="{
+                        '--digest-drop': `${
+                            digestIntro.targetY - digestIntro.stomachCy
+                        }px`,
+                    }"
+                >
+                    💩
+                </text>
             </g>
         </svg>
 
@@ -397,7 +425,8 @@ onUnmounted(() => {
             :href="route('games.index')"
             class="game-quit"
             aria-label="Quit to games"
-        >✕</Link>
+            >✕</Link
+        >
 
         <transition name="steer-hint-fade">
             <div v-if="showSteerHint" class="steer-hint" aria-hidden="true">
@@ -486,7 +515,8 @@ onUnmounted(() => {
 .digest-intro-poop {
     opacity: 0;
     filter: drop-shadow(0 0 0 rgba(78, 37, 23, 0));
-    animation: digestPoopForm 1.25s cubic-bezier(0.22, 0.78, 0.3, 1) 1.15s forwards;
+    animation: digestPoopForm 1.25s cubic-bezier(0.22, 0.78, 0.3, 1) 1.15s
+        forwards;
 }
 
 .hud {
@@ -707,12 +737,14 @@ onUnmounted(() => {
     }
     40% {
         opacity: 1;
-        transform: translateY(calc(var(--digest-drop) * 0.18)) scale(0.88, 1.14) rotate(-4deg);
+        transform: translateY(calc(var(--digest-drop) * 0.18)) scale(0.88, 1.14)
+            rotate(-4deg);
         filter: drop-shadow(0 0 10px rgba(120, 60, 30, 0.4));
     }
     74% {
         opacity: 1;
-        transform: translateY(calc(var(--digest-drop) * 0.84)) scale(1.08, 0.92) rotate(3deg);
+        transform: translateY(calc(var(--digest-drop) * 0.84)) scale(1.08, 0.92)
+            rotate(3deg);
         filter: drop-shadow(0 0 6px rgba(78, 37, 23, 0.3));
     }
     100% {

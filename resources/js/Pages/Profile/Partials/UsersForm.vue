@@ -43,7 +43,10 @@
                             >
                                 {{ user.email }}
                             </p>
-                            <div v-if="canAdmin" class="flex flex-wrap gap-1 mt-2">
+                            <div
+                                v-if="canAdmin"
+                                class="flex flex-wrap gap-1 mt-2"
+                            >
                                 <span
                                     v-if="userIsAdmin(user)"
                                     class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"

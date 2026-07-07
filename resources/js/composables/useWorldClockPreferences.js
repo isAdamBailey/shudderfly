@@ -8,59 +8,59 @@ import { useWorldClockSync } from "@/composables/useWorldClockSync";
 
 // Cities are seeded server-side now, so this no longer takes default cities.
 export function useWorldClockPreferences(maxCities = 6) {
-  const sync = useWorldClockSync();
-  const prefs = sync.state;
+    const sync = useWorldClockSync();
+    const prefs = sync.state;
 
-  let timer = null;
-  watch(
-    () => [
-      prefs.cities,
-      prefs.facePreset,
-      prefs.handPreset,
-      prefs.numerals,
-      prefs.secondHandMode
-    ],
-    () => {
-      // Skip saves triggered by an incoming server payload — otherwise the
-      // remote update would echo straight back as a new write (feedback loop).
-      if (sync.isApplyingRemote()) return;
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        sync.push("world-clock.settings.update", "put", {
-          // Cap defensively so a stale, over-limit city list can't fail
-          // validation and silently drop the appearance change.
-          cities: prefs.cities.slice(0, maxCities),
-          face_preset: prefs.facePreset,
-          hand_preset: prefs.handPreset,
-          numerals: prefs.numerals,
-          second_hand_mode: prefs.secondHandMode
+    let timer = null;
+    watch(
+        () => [
+            prefs.cities,
+            prefs.facePreset,
+            prefs.handPreset,
+            prefs.numerals,
+            prefs.secondHandMode,
+        ],
+        () => {
+            // Skip saves triggered by an incoming server payload — otherwise the
+            // remote update would echo straight back as a new write (feedback loop).
+            if (sync.isApplyingRemote()) return;
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                sync.push("world-clock.settings.update", "put", {
+                    // Cap defensively so a stale, over-limit city list can't fail
+                    // validation and silently drop the appearance change.
+                    cities: prefs.cities.slice(0, maxCities),
+                    face_preset: prefs.facePreset,
+                    hand_preset: prefs.handPreset,
+                    numerals: prefs.numerals,
+                    second_hand_mode: prefs.secondHandMode,
+                });
+            }, 300);
+        },
+        { deep: true }
+    );
+
+    const hasCity = (city) =>
+        prefs.cities.some(
+            (c) => c.timezone === city.timezone && c.name === city.name
+        );
+
+    function addCity(city) {
+        if (prefs.cities.length >= maxCities) return false;
+        if (hasCity(city)) return false;
+        prefs.cities.push({
+            name: city.name,
+            timezone: city.timezone,
+            country: city.country || "",
         });
-      }, 300);
-    },
-    { deep: true }
-  );
+        return true;
+    }
 
-  const hasCity = (city) =>
-    prefs.cities.some(
-      (c) => c.timezone === city.timezone && c.name === city.name
-    );
+    function removeCity(city) {
+        prefs.cities = prefs.cities.filter(
+            (c) => !(c.timezone === city.timezone && c.name === city.name)
+        );
+    }
 
-  function addCity(city) {
-    if (prefs.cities.length >= maxCities) return false;
-    if (hasCity(city)) return false;
-    prefs.cities.push({
-      name: city.name,
-      timezone: city.timezone,
-      country: city.country || ""
-    });
-    return true;
-  }
-
-  function removeCity(city) {
-    prefs.cities = prefs.cities.filter(
-      (c) => !(c.timezone === city.timezone && c.name === city.name)
-    );
-  }
-
-  return { prefs, addCity, removeCity, hasCity, maxCities };
+    return { prefs, addCity, removeCity, hasCity, maxCities };
 }

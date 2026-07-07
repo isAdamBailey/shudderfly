@@ -5,7 +5,12 @@
             :combo-count="state.comboCount"
             :hiss-count="state.hissCount"
         />
-        <img src="/img/toilet.png" alt="Toilet" class="toilet-img" draggable="false" />
+        <img
+            src="/img/toilet.png"
+            alt="Toilet"
+            class="toilet-img"
+            draggable="false"
+        />
         <CockroachSprite
             :x="state.cockroachX"
             :y="state.cockroachY"
@@ -17,7 +22,10 @@
         <div
             v-if="state.hissCount === 0"
             class="tap-hint"
-            :style="{ left: state.cockroachX + '%', top: (state.cockroachY - 12) + '%' }"
+            :style="{
+                left: state.cockroachX + '%',
+                top: state.cockroachY - 12 + '%',
+            }"
         >
             Tap the head! <span class="hint-arrow">&#x1F447;</span>
         </div>
@@ -26,9 +34,9 @@
 
 <script setup>
 import CockroachSprite from "./CockroachSprite.vue";
-import FartCloud       from "./FartCloud.vue";
-import ScoreDisplay    from "./ScoreDisplay.vue";
-import { useSound }    from "../composables/useSound.js";
+import FartCloud from "./FartCloud.vue";
+import ScoreDisplay from "./ScoreDisplay.vue";
+import { useSound } from "../composables/useSound.js";
 
 defineProps({
     state: { type: Object, required: true },
@@ -62,7 +70,13 @@ function handleHiss(direction) {
 .game-board {
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, #3e2723 0%, #5d4037 30%, #6d4c41 60%, #8d6e63 100%);
+    background: linear-gradient(
+        180deg,
+        #3e2723 0%,
+        #5d4037 30%,
+        #6d4c41 60%,
+        #8d6e63 100%
+    );
     overflow: hidden;
     user-select: none;
     -webkit-user-select: none;
@@ -87,12 +101,22 @@ function handleHiss(direction) {
 }
 
 @keyframes hintBounce {
-    0%, 100% { opacity: 0.6; }
-    50%       { opacity: 1; }
+    0%,
+    100% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 1;
+    }
 }
 
 @keyframes hintBob {
-    0%, 100% { transform: translateY(0); }
-    50%       { transform: translateY(6px); }
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(6px);
+    }
 }
 </style>

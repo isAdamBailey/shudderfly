@@ -7,121 +7,121 @@ import { useForm, usePage } from "@inertiajs/vue3";
 const user = usePage().props.auth.user;
 
 const form = useForm({
-  avatar: user.avatar || null
+    avatar: user.avatar || null,
 });
 
 const submit = () => {
-  // eslint-disable-next-line no-undef
-  form.patch(route("profile.avatar.update"), {
-    preserveScroll: true
-  });
+    // eslint-disable-next-line no-undef
+    form.patch(route("profile.avatar.update"), {
+        preserveScroll: true,
+    });
 };
 
 const selectAvatar = (avatarId) => {
-  form.avatar = avatarId;
-  submit();
+    form.avatar = avatarId;
+    submit();
 };
 
 const clearAvatar = () => {
-  form.avatar = null;
-  submit();
+    form.avatar = null;
+    submit();
 };
 
 const getSvgWithDimensions = (svg) => {
-  if (!svg) return null;
-  const size = 100;
-  if (svg.includes("viewBox") && !svg.includes("width=")) {
-    return svg.replace(
-      /<svg([^>]*)>/,
-      `<svg$1 width="${size}" height="${size}">`
-    );
-  }
-  if (svg.includes("width=") && svg.includes("height=")) {
-    return svg.replace(
-      /width="(\d+)"/,
-      `width="${size}"`
-    ).replace(
-      /height="(\d+)"/,
-      `height="${size}"`
-    );
-  }
-  return svg;
+    if (!svg) return null;
+    const size = 100;
+    if (svg.includes("viewBox") && !svg.includes("width=")) {
+        return svg.replace(
+            /<svg([^>]*)>/,
+            `<svg$1 width="${size}" height="${size}">`
+        );
+    }
+    if (svg.includes("width=") && svg.includes("height=")) {
+        return svg
+            .replace(/width="(\d+)"/, `width="${size}"`)
+            .replace(/height="(\d+)"/, `height="${size}"`);
+    }
+    return svg;
 };
 </script>
 
 <template>
-  <section>
-    <header>
-      <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-        Avatar
-      </h2>
-      <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-        Choose an avatar to represent yourself, or use your initials.
-      </p>
-    </header>
+    <section>
+        <header>
+            <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
+                Avatar
+            </h2>
+            <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                Choose an avatar to represent yourself, or use your initials.
+            </p>
+        </header>
 
-    <div class="mt-6">
-      <div class="mb-6 flex items-center gap-4">
-        <div class="flex-shrink-0">
-          <Avatar :user="user" :avatar="form.avatar" size="lg" />
-        </div>
-        <div>
-          <p class="text-sm text-gray-600 dark:text-gray-400">Current avatar</p>
-          <button
-            v-if="form.avatar"
-            type="button"
-            class="mt-2 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
-            @click="clearAvatar"
-          >
-            Clear avatar (use initials)
-          </button>
-        </div>
-      </div>
+        <div class="mt-6">
+            <div class="mb-6 flex items-center gap-4">
+                <div class="flex-shrink-0">
+                    <Avatar :user="user" :avatar="form.avatar" size="lg" />
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                        Current avatar
+                    </p>
+                    <button
+                        v-if="form.avatar"
+                        type="button"
+                        class="mt-2 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+                        @click="clearAvatar"
+                    >
+                        Clear avatar (use initials)
+                    </button>
+                </div>
+            </div>
 
-      <div
-        class="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-9 lg:grid-cols-10 gap-2"
-      >
-        <button
-          v-for="avatar in avatars"
-          :key="avatar.id"
-          type="button"
-          :title="avatar.name"
-          :class="[
-            'relative p-1 rounded-md border-2 transition-all hover:scale-105',
-            form.avatar === avatar.id
-              ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
-              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',
-            form.processing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-          ]"
-          :disabled="form.processing"
-          @click="selectAvatar(avatar.id)"
-        >
-          <div
-            class="w-full aspect-square flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
-            v-html="getSvgWithDimensions(avatar.svg)"
-          ></div>
-          <div
-            v-if="form.avatar === avatar.id"
-            class="absolute top-0.5 right-0.5 w-4 h-4 bg-blue-500 dark:bg-blue-400 rounded-full flex items-center justify-center"
-          >
-            <svg
-              class="w-2.5 h-2.5 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+            <div
+                class="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-9 lg:grid-cols-10 gap-2"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          </div>
-        </button>
-      </div>
+                <button
+                    v-for="avatar in avatars"
+                    :key="avatar.id"
+                    type="button"
+                    :title="avatar.name"
+                    :class="[
+                        'relative p-1 rounded-md border-2 transition-all hover:scale-105',
+                        form.avatar === avatar.id
+                            ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',
+                        form.processing
+                            ? 'opacity-50 cursor-not-allowed'
+                            : 'cursor-pointer',
+                    ]"
+                    :disabled="form.processing"
+                    @click="selectAvatar(avatar.id)"
+                >
+                    <div
+                        class="w-full aspect-square flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
+                        v-html="getSvgWithDimensions(avatar.svg)"
+                    ></div>
+                    <div
+                        v-if="form.avatar === avatar.id"
+                        class="absolute top-0.5 right-0.5 w-4 h-4 bg-blue-500 dark:bg-blue-400 rounded-full flex items-center justify-center"
+                    >
+                        <svg
+                            class="w-2.5 h-2.5 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M5 13l4 4L19 7"
+                            />
+                        </svg>
+                    </div>
+                </button>
+            </div>
 
-      <InputError class="mt-2" :message="form.errors.avatar" />
-    </div>
-  </section>
+            <InputError class="mt-2" :message="form.errors.avatar" />
+        </div>
+    </section>
 </template>

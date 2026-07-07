@@ -38,7 +38,8 @@ const particleStyle = (particle) => ({
     bottom: -5%;
     left: var(--emoji-left);
     font-size: var(--emoji-size);
-    animation: emoji-rise var(--emoji-duration) ease-in var(--emoji-delay) forwards;
+    animation: emoji-rise var(--emoji-duration) ease-in var(--emoji-delay)
+        forwards;
 }
 
 @keyframes emoji-rise {

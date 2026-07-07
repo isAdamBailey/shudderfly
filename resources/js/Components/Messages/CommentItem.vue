@@ -110,7 +110,13 @@ const props = defineProps({
     },
 });
 
-defineEmits(["speak", "delete", "toggle-reaction", "add-reaction", "view-reactions"]);
+defineEmits([
+    "speak",
+    "delete",
+    "toggle-reaction",
+    "add-reaction",
+    "view-reactions",
+]);
 
 const { canAdmin } = usePermissions();
 const { t } = useTranslations();

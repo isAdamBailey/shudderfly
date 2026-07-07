@@ -5,122 +5,122 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 
 global.route = vi.fn((name, params) => {
-  if (name === "music.share" && params != null) {
-    return `/music/${params}/share`;
-  }
-  if (name === "pages.share" && params != null) {
-    return `/pages/${params}/share`;
-  }
-  return `/${name}`;
+    if (name === "music.share" && params != null) {
+        return `/music/${params}/share`;
+    }
+    if (name === "pages.share" && params != null) {
+        return `/pages/${params}/share`;
+    }
+    return `/${name}`;
 });
 
 const mockPost = vi.fn();
 const mockCloseFlyout = vi.fn();
 
 vi.mock("@/composables/useMusicPlayer", () => ({
-  useMusicPlayer: () => ({
-    closeFlyout: mockCloseFlyout,
-  }),
+    useMusicPlayer: () => ({
+        closeFlyout: mockCloseFlyout,
+    }),
 }));
 
 vi.mock("@inertiajs/vue3", () => ({
-  router: {
-    post: (...args) => mockPost(...args),
-  },
-  usePage: () => ({
-    props: {
-      auth: { user: { id: 1, name: "Alice" } },
-      users: [{ id: 2, name: "Bob" }],
-      settings: { messaging_enabled: "1" },
+    router: {
+        post: (...args) => mockPost(...args),
     },
-  }),
+    usePage: () => ({
+        props: {
+            auth: { user: { id: 1, name: "Alice" } },
+            users: [{ id: 2, name: "Bob" }],
+            settings: { messaging_enabled: "1" },
+        },
+    }),
 }));
 
 vi.mock("@/composables/useConfirmDialog", () => ({
-  useConfirmDialog: () => ({
-    show: { value: false },
-    message: { value: "" },
-    title: { value: "" },
-    confirmLabel: { value: "" },
-    cancelLabel: { value: "" },
-    confirmVariant: { value: "primary" },
-    ask: () => Promise.resolve(true),
-    onConfirmed: () => {},
-    onCancelled: () => {},
-  }),
+    useConfirmDialog: () => ({
+        show: { value: false },
+        message: { value: "" },
+        title: { value: "" },
+        confirmLabel: { value: "" },
+        cancelLabel: { value: "" },
+        confirmVariant: { value: "primary" },
+        ask: () => Promise.resolve(true),
+        onConfirmed: () => {},
+        onCancelled: () => {},
+    }),
 }));
 
 vi.mock("@/composables/useSpeechSynthesis", () => ({
-  useSpeechSynthesis: () => ({
-    speak: vi.fn(),
-  }),
+    useSpeechSynthesis: () => ({
+        speak: vi.fn(),
+    }),
 }));
 
 vi.mock("@/composables/useTranslations", () => ({
-  useTranslations: () => ({
-    t: (key) => key,
-  }),
+    useTranslations: () => ({
+        t: (key) => key,
+    }),
 }));
 
 describe("ShareToChatButton song kind", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    localStorage.clear();
-    mockPost.mockImplementation((_url, _data, options) => {
-      options?.onSuccess?.();
-    });
-  });
-
-  const mountSongShareButton = () =>
-    mount(ShareToChatButton, {
-      props: { kind: "song", songId: 5 },
-      global: {
-        stubs: {
-          Teleport: { template: "<div><slot /></div>" },
-        },
-      },
+    beforeEach(() => {
+        vi.clearAllMocks();
+        localStorage.clear();
+        mockPost.mockImplementation((_url, _data, options) => {
+            options?.onSuccess?.();
+        });
     });
 
-  it("posts to music.share when share without tag is selected", async () => {
-    const wrapper = mountSongShareButton();
+    const mountSongShareButton = () =>
+        mount(ShareToChatButton, {
+            props: { kind: "song", songId: 5 },
+            global: {
+                stubs: {
+                    Teleport: { template: "<div><slot /></div>" },
+                },
+            },
+        });
 
-    await wrapper.find("button").trigger("click");
-    await nextTick();
+    it("posts to music.share when share without tag is selected", async () => {
+        const wrapper = mountSongShareButton();
 
-    const userTagList = wrapper.findComponent(UserTagList);
-    expect(userTagList.exists()).toBe(true);
-    userTagList.vm.$emit("select-none");
-    await nextTick();
+        await wrapper.find("button").trigger("click");
+        await nextTick();
 
-    expect(mockPost).toHaveBeenCalledWith(
-      "/music/5/share",
-      { tagged_user_ids: [] },
-      expect.objectContaining({ preserveScroll: true })
-    );
-  });
+        const userTagList = wrapper.findComponent(UserTagList);
+        expect(userTagList.exists()).toBe(true);
+        userTagList.vm.$emit("select-none");
+        await nextTick();
 
-  it("stores once-per-day localStorage key after sharing song", async () => {
-    const wrapper = mountSongShareButton();
+        expect(mockPost).toHaveBeenCalledWith(
+            "/music/5/share",
+            { tagged_user_ids: [] },
+            expect.objectContaining({ preserveScroll: true })
+        );
+    });
 
-    await wrapper.find("button").trigger("click");
-    await nextTick();
+    it("stores once-per-day localStorage key after sharing song", async () => {
+        const wrapper = mountSongShareButton();
 
-    wrapper.findComponent(UserTagList).vm.$emit("select-none");
-    await nextTick();
+        await wrapper.find("button").trigger("click");
+        await nextTick();
 
-    const today = new Date().toISOString().split("T")[0];
-    expect(localStorage.getItem(`song_share_5_${today}`)).not.toBeNull();
-  });
+        wrapper.findComponent(UserTagList).vm.$emit("select-none");
+        await nextTick();
 
-  it("closes the music flyout after sharing a song", async () => {
-    const wrapper = mountSongShareButton();
+        const today = new Date().toISOString().split("T")[0];
+        expect(localStorage.getItem(`song_share_5_${today}`)).not.toBeNull();
+    });
 
-    await wrapper.find("button").trigger("click");
-    await nextTick();
+    it("closes the music flyout after sharing a song", async () => {
+        const wrapper = mountSongShareButton();
 
-    wrapper.findComponent(UserTagList).vm.$emit("select-none");
-    await nextTick();
+        await wrapper.find("button").trigger("click");
+        await nextTick();
 
-    expect(mockCloseFlyout).toHaveBeenCalled();
-  });
+        wrapper.findComponent(UserTagList).vm.$emit("select-none");
+        await nextTick();
+
+        expect(mockCloseFlyout).toHaveBeenCalled();
+    });
 });

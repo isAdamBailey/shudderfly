@@ -74,9 +74,9 @@ Three Spatie permissions gate functionality: `edit pages`, `edit profile`, `admi
 
 ### Media storage
 
-- Local: `FILESYSTEM_DISK=local`, media served via S3 URL
-- Production: S3 for upload, CloudFront for delivery
-- `Page::getMediaPathAttribute` and `Page::getMediaPosterAttribute` automatically return the correct URL based on environment
+-   Local: `FILESYSTEM_DISK=local`, media served via S3 URL
+-   Production: S3 for upload, CloudFront for delivery
+-   `Page::getMediaPathAttribute` and `Page::getMediaPosterAttribute` automatically return the correct URL based on environment
 
 ### Background jobs
 
@@ -85,11 +85,12 @@ Queued jobs in `app/Jobs/` handle media processing: `StoreImage`, `StoreVideo`, 
 ### Scheduled commands
 
 Defined in `app/Console/Kernel.php`, all run weekly on Sunday (America/Los_Angeles):
-- `pages:cleanup-stale` — removes stale page records
-- `users:generate-weekly-overviews` — AI summaries via Hugging Face
-- `send:weekly-stats-mail` — weekly digest email
-- `music:sync-youtube` — daily sync if `music_enabled` setting is on
-- `messages:cleanup` — daily cleanup if `messaging_enabled` is on
+
+-   `pages:cleanup-stale` — removes stale page records
+-   `users:generate-weekly-overviews` — AI summaries via Hugging Face
+-   `send:weekly-stats-mail` — weekly digest email
+-   `music:sync-youtube` — daily sync if `music_enabled` setting is on
+-   `messages:cleanup` — daily cleanup if `messaging_enabled` is on
 
 ### Search
 
@@ -101,10 +102,10 @@ Pusher + Laravel Echo for broadcasting events (`MessageCreated`, `CommentCreated
 
 ### Frontend structure
 
-- `resources/js/Pages/` — Inertia page components (one per route, organized by feature)
-- `resources/js/Components/` — reusable Vue components; feature subfolders for `Messages/`, `Music/`, `Map/`, `Games/`
-- `resources/js/composables/` — Vue composables for shared logic (`useMusicPlayer`, `usePermissions`, `useSpeechSynthesis`, `useInfiniteScroll`, etc.)
-- `.test.js` files colocate with their component/composable
+-   `resources/js/Pages/` — Inertia page components (one per route, organized by feature)
+-   `resources/js/Components/` — reusable Vue components; feature subfolders for `Messages/`, `Music/`, `Map/`, `Games/`
+-   `resources/js/composables/` — Vue composables for shared logic (`useMusicPlayer`, `usePermissions`, `useSpeechSynthesis`, `useInfiniteScroll`, etc.)
+-   `.test.js` files colocate with their component/composable
 
 ### Feature flags via SiteSettings
 
@@ -116,5 +117,5 @@ Many features are toggled via `SiteSetting` records (checked in `Kernel.php` and
 
 ### Tests
 
-- PHP: Feature tests use SQLite in-memory with `RefreshDatabase`; AWS credentials stubbed in `phpunit.xml`
-- JS: Vitest with jsdom; setup file at `resources/js/vitest.setup.js`
+-   PHP: Feature tests use SQLite in-memory with `RefreshDatabase`; AWS credentials stubbed in `phpunit.xml`
+-   JS: Vitest with jsdom; setup file at `resources/js/vitest.setup.js`

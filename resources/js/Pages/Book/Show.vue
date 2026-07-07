@@ -1,311 +1,380 @@
 <template>
-  <Head :title="book.title" />
+    <Head :title="book.title" />
 
-  <BreezeAuthenticatedLayout>
-    <template #header>
-      <div class="relative overflow-hidden">
-        <div
-          v-if="book.category"
-          class="absolute left-2 sm:left-4 lg:left-8 top-2 z-30"
-        >
-          <Link
-            :href="route('categories.show', { categoryName: book.category?.name })"
-            class="inline-flex min-h-11 items-center gap-2 px-4 py-2 rounded-full border font-semibold text-xs uppercase tracking-widest transition ease-in-out duration-150 bg-theme-primary text-theme-button border-theme-primary hover:text-theme-button-hover hover:bg-theme-button active:bg-theme-button focus:border-theme-button focus:shadow-theme-button"
-          >
-            <i class="ri-folder-fill text-sm" aria-hidden="true"></i>
-            <span>{{ book.category.name }}</span>
-          </Link>
-        </div>
-        <BookCover :book="book" :pages="pages" />
-      </div>
-    </template>
-
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 sm:space-y-10">
-      <div v-if="book.latitude != null && book.longitude != null">
-        <Accordion title="Map" :dark-background="true">
-          <MapEmbed
-            :latitude="book.latitude"
-            :longitude="book.longitude"
-            :title="book.title"
-            :book-title="book.title"
-            heading=""
-            :show-street-view="true"
-          />
-        </Accordion>
-      </div>
-
-      <div
-        id="pages"
-        class="flex items-center justify-between gap-3 scroll-mt-16"
-      >
-        <div class="flex flex-wrap items-center gap-3">
-          <div
-            role="group"
-            :aria-label="t('book.sort_group')"
-            class="flex flex-wrap gap-2"
-          >
-            <Button
-              type="button"
-              :is-active="isNewest"
-              :disabled="sortLoading"
-              class="rounded-full !px-3 !py-3 min-h-11 min-w-11 justify-center"
-              :aria-label="`${t('book.sort_group')}: ${t('book.sort_newest')}`"
-              @click="sortPages('newest')"
-            >
-              <i class="ri-time-line text-2xl" aria-hidden="true"></i>
-            </Button>
-            <Button
-              type="button"
-              :is-active="isOldest"
-              :disabled="sortLoading"
-              class="rounded-full !px-3 !py-3 min-h-11 min-w-11 justify-center"
-              :aria-label="`${t('book.sort_group')}: ${t('book.sort_oldest')}`"
-              @click="sortPages('oldest')"
-            >
-              <i class="ri-history-line text-2xl" aria-hidden="true"></i>
-            </Button>
-            <Button
-              type="button"
-              :is-active="isPopular"
-              :disabled="sortLoading"
-              class="rounded-full !px-3 !py-3 min-h-11 min-w-11 justify-center"
-              :aria-label="`${t('book.sort_group')}: ${t('book.sort_favorites')}`"
-              @click="sortPages('popular')"
-            >
-              <i class="ri-star-line text-2xl" aria-hidden="true"></i>
-            </Button>
-          </div>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-2 shrink-0">
-          <Link
-            v-if="isMoviesCategory"
-            :href="route('movie-cast.index', { title: book.title })"
-          >
-            <Button
-              type="button"
-              class="h-11 w-11 flex items-center justify-center"
-              :title="`Search cast for ${book.title}`"
-              :aria-label="`Search cast for ${book.title}`"
-            >
-              <i class="ri-film-line text-xl" aria-hidden="true"></i>
-            </Button>
-          </Link>
-
-          <SpeakButton
-            :disabled="speaking"
-            aria-label="Speak book title and excerpt"
-            icon-class="ri-speak-fill text-lg"
-            @click="readTitleAndExcerpt"
-          />
-        </div>
-      </div>
-
-      <div v-if="canEditPages && activeTab" id="admin-form">
-        <div class="flex justify-end mb-2">
-          <Button
-            type="button"
-            class="font-bold px-6 py-2 bg-red-600 hover:bg-red-700 text-white"
-            @click="closeAllTabs"
-          >
-            <i class="ri-close-line mr-1" aria-hidden="true"></i>
-            Close
-          </Button>
-        </div>
-        <div>
-          <BreezeValidationErrors class="mb-4" />
-        </div>
-        <div class="flex flex-col md:flex-row justify-around">
-          <div v-if="activeTab === 'pages'" class="w-full md:w-1/2 mx-auto">
-            <NewPageForm :book="book" @close-form="closeAllTabs" />
-          </div>
-
-          <div v-if="activeTab === 'book'" class="w-full md:w-1/2 mx-auto">
-            <EditBookForm
-              :book="book"
-              :authors="authors"
-              :categories="categories"
-              @close-form="closeAllTabs"
-            />
-          </div>
-
-          <div v-if="activeTab === 'bulk'" class="w-full md:w-1/2 mx-auto">
-            <BulkActionsForm
-              :book="book"
-              :books="books"
-              :selected-pages="selectedPages"
-              @close-form="closeAllTabs"
-              @selection-changed="handleSelectionChanged"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div
-        v-if="items.length > 0"
-        class="grid gap-3 grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] md:grid-cols-[repeat(auto-fit,minmax(18rem,1fr))]"
-      >
-        <div
-          v-for="page in items"
-          :key="page.id"
-          class="group rounded-lg bg-gray-800 shadow-sm relative overflow-hidden h-80 ring-1 ring-white/10 transition-shadow duration-200 hover:shadow-md hover:ring-white/20"
-          :class="{
-            'ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-900':
-              selectedPages.includes(page.id),
-            'cursor-pointer': activeTab === 'bulk',
-          }"
-          @click="activeTab === 'bulk' ? togglePageSelection(page.id) : null"
-        >
-          <div v-if="activeTab === 'bulk'" class="absolute top-2 left-2 z-10">
-            <input
-              type="checkbox"
-              :checked="selectedPages.includes(page.id)"
-              class="w-5 h-5 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 pointer-events-none"
-              :aria-label="`Select page ${page.id}`"
-              readonly
-            />
-          </div>
-
-          <component
-            :is="activeTab === 'bulk' ? 'div' : Link"
-            :prefetch="activeTab !== 'bulk' || undefined"
-            :href="
-              activeTab !== 'bulk'
-                ? route('pages.show', { page: page?.id })
-                : undefined
-            "
-            as="button"
-            replace
-            class="relative w-full h-full block focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-inset"
-            @click="activeTab !== 'bulk' ? setItemLoading(page) : undefined"
-          >
-            <div
-              v-if="page.loading"
-              class="absolute inset-0 flex items-center justify-center bg-black/50 z-20"
-            >
-              <span class="animate-spin text-yellow-200">
-                <i class="ri-loader-line text-3xl" aria-hidden="true"></i>
-              </span>
+    <BreezeAuthenticatedLayout>
+        <template #header>
+            <div class="relative overflow-hidden">
+                <div
+                    v-if="book.category"
+                    class="absolute left-2 sm:left-4 lg:left-8 top-2 z-30"
+                >
+                    <Link
+                        :href="
+                            route('categories.show', {
+                                categoryName: book.category?.name,
+                            })
+                        "
+                        class="inline-flex min-h-11 items-center gap-2 px-4 py-2 rounded-full border font-semibold text-xs uppercase tracking-widest transition ease-in-out duration-150 bg-theme-primary text-theme-button border-theme-primary hover:text-theme-button-hover hover:bg-theme-button active:bg-theme-button focus:border-theme-button focus:shadow-theme-button"
+                    >
+                        <i
+                            class="ri-folder-fill text-sm"
+                            aria-hidden="true"
+                        ></i>
+                        <span>{{ book.category.name }}</span>
+                    </Link>
+                </div>
+                <BookCover :book="book" :pages="pages" />
             </div>
-            <LazyLoader
-              v-if="mediaPath(page)"
-              :src="mediaPath(page)"
-              :object-fit="'cover'"
-              :fill-container="true"
-            />
-            <VideoWrapper
-              v-if="page.video_link"
-              :url="page.video_link"
-              :controls="false"
-              :fill-container="true"
-            />
-            <div
-              v-if="page.content"
-              class="absolute inset-x-0 top-0 rounded-t-lg w-full truncate bg-black/60 py-2.5 text-left px-2 text-sm leading-4 text-gray-100 backdrop-blur-sm line-clamp-1 z-10"
-              v-html="page.content"
-            ></div>
-          </component>
-        </div>
-      </div>
-      <div
-        v-else-if="!(canEditPages && activeTab === 'pages')"
-        class="flex flex-col items-center py-8"
-      >
-        <h2 class="mb-8 text-center font-semibold text-2xl text-gray-100 leading-tight text-balance">
-          {{ t("book.no_pages") }}
-        </h2>
-        <ManEmptyCircle />
-      </div>
-      <div ref="infiniteScrollRef"></div>
-
-      <Deferred data="similarBooks">
-        <template #fallback>
-          <div
-            class="space-y-3"
-            role="status"
-            aria-live="polite"
-            aria-label="Loading similar books"
-          >
-            <div class="h-8 w-72 max-w-full rounded bg-gray-700 animate-pulse"></div>
-            <div class="horizontal-scroll-strip flex gap-3 overflow-hidden pb-2">
-              <div
-                v-for="n in 4"
-                :key="n"
-                class="h-64 w-48 shrink-0 rounded-lg bg-gray-700 animate-pulse"
-              ></div>
-            </div>
-          </div>
         </template>
-        <SimilarBooks
-          v-if="similarBooks"
-          :books="similarBooks"
-          label="You might also like these books"
-        />
-      </Deferred>
-      <Deferred data="relatedSongs">
-        <template #fallback>
-          <div
-            class="space-y-3"
-            role="status"
-            aria-live="polite"
-            aria-label="Loading related songs"
-          >
-            <div class="h-8 w-48 max-w-full rounded bg-gray-700 animate-pulse"></div>
-            <div class="horizontal-scroll-strip flex gap-3 overflow-hidden pb-2">
-              <div
-                v-for="n in 4"
-                :key="n"
-                class="h-28 w-48 shrink-0 rounded-lg bg-gray-700 animate-pulse"
-              ></div>
+
+        <div
+            class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 sm:space-y-10"
+        >
+            <div v-if="book.latitude != null && book.longitude != null">
+                <Accordion title="Map" :dark-background="true">
+                    <MapEmbed
+                        :latitude="book.latitude"
+                        :longitude="book.longitude"
+                        :title="book.title"
+                        :book-title="book.title"
+                        heading=""
+                        :show-street-view="true"
+                    />
+                </Accordion>
             </div>
-          </div>
-        </template>
-        <RelatedSongs v-if="relatedSongs" :songs="relatedSongs" />
-      </Deferred>
-    </div>
-    <ScrollTop />
-    <FloatingActionMenu v-if="canEditPages">
-      <button
-        type="button"
-        class="flex min-h-[48px] w-full items-center border-b border-gray-200 px-5 py-4 text-left text-base text-gray-700 transition first:border-t-0 hover:bg-gray-200 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-        :class="{ 'border-transparent bg-blue-600 text-white hover:bg-blue-700': activeTab === 'pages' }"
-        @click="setActiveTab('pages')"
-      >
-        <i
-          class="ri-add-line mr-3 shrink-0 text-lg text-emerald-600 dark:text-emerald-400"
-          :class="{ 'text-white': activeTab === 'pages' }"
-          aria-hidden="true"
-        ></i>
-        Add Pages
-      </button>
-      <button
-        type="button"
-        class="flex min-h-[48px] w-full items-center border-b border-gray-200 px-5 py-4 text-left text-base text-gray-700 transition hover:bg-gray-200 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-        :class="{ 'border-transparent bg-blue-600 text-white hover:bg-blue-700': activeTab === 'book' }"
-        @click="setActiveTab('book')"
-      >
-        <i
-          class="ri-edit-line mr-3 shrink-0 text-lg text-blue-600 dark:text-blue-400"
-          :class="{ 'text-white': activeTab === 'book' }"
-          aria-hidden="true"
-        ></i>
-        Edit Book
-      </button>
-      <button
-        type="button"
-        class="flex min-h-[48px] w-full items-center border-b-0 px-5 py-4 text-left text-base text-gray-700 transition hover:bg-gray-200 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-        :class="{ 'bg-blue-600 text-white hover:bg-blue-700': activeTab === 'bulk' }"
-        @click="setActiveTab('bulk')"
-      >
-        <i
-          class="ri-checkbox-multiple-line mr-3 shrink-0 text-lg text-amber-600 dark:text-amber-400"
-          :class="{ 'text-white': activeTab === 'bulk' }"
-          aria-hidden="true"
-        ></i>
-        Bulk Actions
-      </button>
-    </FloatingActionMenu>
-  </BreezeAuthenticatedLayout>
+
+            <div
+                id="pages"
+                class="flex items-center justify-between gap-3 scroll-mt-16"
+            >
+                <div class="flex flex-wrap items-center gap-3">
+                    <div
+                        role="group"
+                        :aria-label="t('book.sort_group')"
+                        class="flex flex-wrap gap-2"
+                    >
+                        <Button
+                            type="button"
+                            :is-active="isNewest"
+                            :disabled="sortLoading"
+                            class="rounded-full !px-3 !py-3 min-h-11 min-w-11 justify-center"
+                            :aria-label="`${t('book.sort_group')}: ${t(
+                                'book.sort_newest'
+                            )}`"
+                            @click="sortPages('newest')"
+                        >
+                            <i
+                                class="ri-time-line text-2xl"
+                                aria-hidden="true"
+                            ></i>
+                        </Button>
+                        <Button
+                            type="button"
+                            :is-active="isOldest"
+                            :disabled="sortLoading"
+                            class="rounded-full !px-3 !py-3 min-h-11 min-w-11 justify-center"
+                            :aria-label="`${t('book.sort_group')}: ${t(
+                                'book.sort_oldest'
+                            )}`"
+                            @click="sortPages('oldest')"
+                        >
+                            <i
+                                class="ri-history-line text-2xl"
+                                aria-hidden="true"
+                            ></i>
+                        </Button>
+                        <Button
+                            type="button"
+                            :is-active="isPopular"
+                            :disabled="sortLoading"
+                            class="rounded-full !px-3 !py-3 min-h-11 min-w-11 justify-center"
+                            :aria-label="`${t('book.sort_group')}: ${t(
+                                'book.sort_favorites'
+                            )}`"
+                            @click="sortPages('popular')"
+                        >
+                            <i
+                                class="ri-star-line text-2xl"
+                                aria-hidden="true"
+                            ></i>
+                        </Button>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2 shrink-0">
+                    <Link
+                        v-if="isMoviesCategory"
+                        :href="route('movie-cast.index', { title: book.title })"
+                    >
+                        <Button
+                            type="button"
+                            class="h-11 w-11 flex items-center justify-center"
+                            :title="`Search cast for ${book.title}`"
+                            :aria-label="`Search cast for ${book.title}`"
+                        >
+                            <i
+                                class="ri-film-line text-xl"
+                                aria-hidden="true"
+                            ></i>
+                        </Button>
+                    </Link>
+
+                    <SpeakButton
+                        :disabled="speaking"
+                        aria-label="Speak book title and excerpt"
+                        icon-class="ri-speak-fill text-lg"
+                        @click="readTitleAndExcerpt"
+                    />
+                </div>
+            </div>
+
+            <div v-if="canEditPages && activeTab" id="admin-form">
+                <div class="flex justify-end mb-2">
+                    <Button
+                        type="button"
+                        class="font-bold px-6 py-2 bg-red-600 hover:bg-red-700 text-white"
+                        @click="closeAllTabs"
+                    >
+                        <i class="ri-close-line mr-1" aria-hidden="true"></i>
+                        Close
+                    </Button>
+                </div>
+                <div>
+                    <BreezeValidationErrors class="mb-4" />
+                </div>
+                <div class="flex flex-col md:flex-row justify-around">
+                    <div
+                        v-if="activeTab === 'pages'"
+                        class="w-full md:w-1/2 mx-auto"
+                    >
+                        <NewPageForm :book="book" @close-form="closeAllTabs" />
+                    </div>
+
+                    <div
+                        v-if="activeTab === 'book'"
+                        class="w-full md:w-1/2 mx-auto"
+                    >
+                        <EditBookForm
+                            :book="book"
+                            :authors="authors"
+                            :categories="categories"
+                            @close-form="closeAllTabs"
+                        />
+                    </div>
+
+                    <div
+                        v-if="activeTab === 'bulk'"
+                        class="w-full md:w-1/2 mx-auto"
+                    >
+                        <BulkActionsForm
+                            :book="book"
+                            :books="books"
+                            :selected-pages="selectedPages"
+                            @close-form="closeAllTabs"
+                            @selection-changed="handleSelectionChanged"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            <div
+                v-if="items.length > 0"
+                class="grid gap-3 grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] md:grid-cols-[repeat(auto-fit,minmax(18rem,1fr))]"
+            >
+                <div
+                    v-for="page in items"
+                    :key="page.id"
+                    class="group rounded-lg bg-gray-800 shadow-sm relative overflow-hidden h-80 ring-1 ring-white/10 transition-shadow duration-200 hover:shadow-md hover:ring-white/20"
+                    :class="{
+                        'ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-900':
+                            selectedPages.includes(page.id),
+                        'cursor-pointer': activeTab === 'bulk',
+                    }"
+                    @click="
+                        activeTab === 'bulk'
+                            ? togglePageSelection(page.id)
+                            : null
+                    "
+                >
+                    <div
+                        v-if="activeTab === 'bulk'"
+                        class="absolute top-2 left-2 z-10"
+                    >
+                        <input
+                            type="checkbox"
+                            :checked="selectedPages.includes(page.id)"
+                            class="w-5 h-5 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 pointer-events-none"
+                            :aria-label="`Select page ${page.id}`"
+                            readonly
+                        />
+                    </div>
+
+                    <component
+                        :is="activeTab === 'bulk' ? 'div' : Link"
+                        :prefetch="activeTab !== 'bulk' || undefined"
+                        :href="
+                            activeTab !== 'bulk'
+                                ? route('pages.show', { page: page?.id })
+                                : undefined
+                        "
+                        as="button"
+                        replace
+                        class="relative w-full h-full block focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-inset"
+                        @click="
+                            activeTab !== 'bulk'
+                                ? setItemLoading(page)
+                                : undefined
+                        "
+                    >
+                        <div
+                            v-if="page.loading"
+                            class="absolute inset-0 flex items-center justify-center bg-black/50 z-20"
+                        >
+                            <span class="animate-spin text-yellow-200">
+                                <i
+                                    class="ri-loader-line text-3xl"
+                                    aria-hidden="true"
+                                ></i>
+                            </span>
+                        </div>
+                        <LazyLoader
+                            v-if="mediaPath(page)"
+                            :src="mediaPath(page)"
+                            :object-fit="'cover'"
+                            :fill-container="true"
+                        />
+                        <VideoWrapper
+                            v-if="page.video_link"
+                            :url="page.video_link"
+                            :controls="false"
+                            :fill-container="true"
+                        />
+                        <div
+                            v-if="page.content"
+                            class="absolute inset-x-0 top-0 rounded-t-lg w-full truncate bg-black/60 py-2.5 text-left px-2 text-sm leading-4 text-gray-100 backdrop-blur-sm line-clamp-1 z-10"
+                            v-html="page.content"
+                        ></div>
+                    </component>
+                </div>
+            </div>
+            <div
+                v-else-if="!(canEditPages && activeTab === 'pages')"
+                class="flex flex-col items-center py-8"
+            >
+                <h2
+                    class="mb-8 text-center font-semibold text-2xl text-gray-100 leading-tight text-balance"
+                >
+                    {{ t("book.no_pages") }}
+                </h2>
+                <ManEmptyCircle />
+            </div>
+            <div ref="infiniteScrollRef"></div>
+
+            <Deferred data="similarBooks">
+                <template #fallback>
+                    <div
+                        class="space-y-3"
+                        role="status"
+                        aria-live="polite"
+                        aria-label="Loading similar books"
+                    >
+                        <div
+                            class="h-8 w-72 max-w-full rounded bg-gray-700 animate-pulse"
+                        ></div>
+                        <div
+                            class="horizontal-scroll-strip flex gap-3 overflow-hidden pb-2"
+                        >
+                            <div
+                                v-for="n in 4"
+                                :key="n"
+                                class="h-64 w-48 shrink-0 rounded-lg bg-gray-700 animate-pulse"
+                            ></div>
+                        </div>
+                    </div>
+                </template>
+                <SimilarBooks
+                    v-if="similarBooks"
+                    :books="similarBooks"
+                    label="You might also like these books"
+                />
+            </Deferred>
+            <Deferred data="relatedSongs">
+                <template #fallback>
+                    <div
+                        class="space-y-3"
+                        role="status"
+                        aria-live="polite"
+                        aria-label="Loading related songs"
+                    >
+                        <div
+                            class="h-8 w-48 max-w-full rounded bg-gray-700 animate-pulse"
+                        ></div>
+                        <div
+                            class="horizontal-scroll-strip flex gap-3 overflow-hidden pb-2"
+                        >
+                            <div
+                                v-for="n in 4"
+                                :key="n"
+                                class="h-28 w-48 shrink-0 rounded-lg bg-gray-700 animate-pulse"
+                            ></div>
+                        </div>
+                    </div>
+                </template>
+                <RelatedSongs v-if="relatedSongs" :songs="relatedSongs" />
+            </Deferred>
+        </div>
+        <ScrollTop />
+        <FloatingActionMenu v-if="canEditPages">
+            <button
+                type="button"
+                class="flex min-h-[48px] w-full items-center border-b border-gray-200 px-5 py-4 text-left text-base text-gray-700 transition first:border-t-0 hover:bg-gray-200 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                :class="{
+                    'border-transparent bg-blue-600 text-white hover:bg-blue-700':
+                        activeTab === 'pages',
+                }"
+                @click="setActiveTab('pages')"
+            >
+                <i
+                    class="ri-add-line mr-3 shrink-0 text-lg text-emerald-600 dark:text-emerald-400"
+                    :class="{ 'text-white': activeTab === 'pages' }"
+                    aria-hidden="true"
+                ></i>
+                Add Pages
+            </button>
+            <button
+                type="button"
+                class="flex min-h-[48px] w-full items-center border-b border-gray-200 px-5 py-4 text-left text-base text-gray-700 transition hover:bg-gray-200 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                :class="{
+                    'border-transparent bg-blue-600 text-white hover:bg-blue-700':
+                        activeTab === 'book',
+                }"
+                @click="setActiveTab('book')"
+            >
+                <i
+                    class="ri-edit-line mr-3 shrink-0 text-lg text-blue-600 dark:text-blue-400"
+                    :class="{ 'text-white': activeTab === 'book' }"
+                    aria-hidden="true"
+                ></i>
+                Edit Book
+            </button>
+            <button
+                type="button"
+                class="flex min-h-[48px] w-full items-center border-b-0 px-5 py-4 text-left text-base text-gray-700 transition hover:bg-gray-200 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                :class="{
+                    'bg-blue-600 text-white hover:bg-blue-700':
+                        activeTab === 'bulk',
+                }"
+                @click="setActiveTab('bulk')"
+            >
+                <i
+                    class="ri-checkbox-multiple-line mr-3 shrink-0 text-lg text-amber-600 dark:text-amber-400"
+                    :class="{ 'text-white': activeTab === 'bulk' }"
+                    aria-hidden="true"
+                ></i>
+                Bulk Actions
+            </button>
+        </FloatingActionMenu>
+    </BreezeAuthenticatedLayout>
 </template>
 
 <script setup>
@@ -336,7 +405,7 @@ import { computed, nextTick, onMounted, ref } from "vue";
 /* global route */
 
 defineOptions({
-  name: "BookShowPage",
+    name: "BookShowPage",
 });
 
 const { canEditPages } = usePermissions();
@@ -344,19 +413,19 @@ const { speak, speaking } = useSpeechSynthesis();
 const { t } = useTranslations();
 
 const props = defineProps({
-  book: { type: Object, required: true },
-  pages: { type: Object, required: true },
-  sort: { type: String, default: "newest" },
-  authors: { type: Array, required: true },
-  categories: { type: Array, default: null },
-  similarBooks: { type: Array, default: null },
-  relatedSongs: { type: Array, default: null },
-  books: { type: Array, default: null },
+    book: { type: Object, required: true },
+    pages: { type: Object, required: true },
+    sort: { type: String, default: "newest" },
+    authors: { type: Array, required: true },
+    categories: { type: Array, default: null },
+    similarBooks: { type: Array, default: null },
+    relatedSongs: { type: Array, default: null },
+    books: { type: Array, default: null },
 });
 
 const { items, infiniteScrollRef, setItemLoading } = useInfiniteScroll(
-  props.pages.data,
-  computed(() => props.pages)
+    props.pages.data,
+    computed(() => props.pages)
 );
 
 const sortLoading = ref(false);
@@ -367,93 +436,94 @@ const isPopular = computed(() => props.sort === "popular");
 const isMoviesCategory = computed(() => props.book.category?.name === "movies");
 
 function sortPages(sortValue) {
-  sortLoading.value = true;
-  const sortKeys = {
-    oldest: "book.sort_oldest",
-    popular: "book.sort_favorites",
-  };
-  speak(t(sortKeys[sortValue] || "book.sort_newest"));
-  router.get(
-    route("books.show", { book: props.book.slug, sort: sortValue }) + "#pages",
-    {},
-    {
-      preserveScroll: false,
-      onFinish: () => {
-        sortLoading.value = false;
-      },
-    }
-  );
+    sortLoading.value = true;
+    const sortKeys = {
+        oldest: "book.sort_oldest",
+        popular: "book.sort_favorites",
+    };
+    speak(t(sortKeys[sortValue] || "book.sort_newest"));
+    router.get(
+        route("books.show", { book: props.book.slug, sort: sortValue }) +
+            "#pages",
+        {},
+        {
+            preserveScroll: false,
+            onFinish: () => {
+                sortLoading.value = false;
+            },
+        }
+    );
 }
 
 let activeTab = ref(null);
 let selectedPages = ref([]);
 
 const setActiveTab = (tab) => {
-  if (activeTab.value === tab) {
-    activeTab.value = null;
-  } else {
-    activeTab.value = tab;
-    nextTick(() => {
-      document.getElementById("admin-form")?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    });
-  }
+    if (activeTab.value === tab) {
+        activeTab.value = null;
+    } else {
+        activeTab.value = tab;
+        nextTick(() => {
+            document.getElementById("admin-form")?.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+            });
+        });
+    }
 
-  if (activeTab.value !== "bulk") {
-    selectedPages.value = [];
-  }
+    if (activeTab.value !== "bulk") {
+        selectedPages.value = [];
+    }
 };
 
 const closeAllTabs = () => {
-  activeTab.value = null;
-  selectedPages.value = [];
+    activeTab.value = null;
+    selectedPages.value = [];
 };
 
 const togglePageSelection = (pageId) => {
-  const index = selectedPages.value.indexOf(pageId);
-  if (index > -1) {
-    selectedPages.value.splice(index, 1);
-  } else {
-    selectedPages.value.push(pageId);
-  }
+    const index = selectedPages.value.indexOf(pageId);
+    if (index > -1) {
+        selectedPages.value.splice(index, 1);
+    } else {
+        selectedPages.value.push(pageId);
+    }
 };
 
 const handleSelectionChanged = (newSelection) => {
-  selectedPages.value = newSelection;
+    selectedPages.value = newSelection;
 };
 
 const stripHtml = (html) => {
-  if (!html) {
-    return "";
-  }
-  return html.replace(/<\/?[^>]+(>|$)/g, "");
+    if (!html) {
+        return "";
+    }
+    return html.replace(/<\/?[^>]+(>|$)/g, "");
 };
 
 const readTitleAndExcerpt = () => {
-  speak(stripHtml(props.book.title));
-  if (props.book.excerpt) {
-    speak(stripHtml(props.book.excerpt));
-  }
+    speak(stripHtml(props.book.title));
+    if (props.book.excerpt) {
+        speak(stripHtml(props.book.excerpt));
+    }
 };
 
 function mediaPath(page) {
-  if (page.media_poster) {
-    return page.media_poster;
-  }
-  return page.media_path;
+    if (page.media_poster) {
+        return page.media_poster;
+    }
+    return page.media_path;
 }
 
 onMounted(() => {
-  if (props.pages.total === 0) {
-    activeTab.value = "pages";
-    nextTick(() => {
-      document.getElementById("admin-form")?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    });
-  }
+    if (props.pages.total === 0) {
+        activeTab.value = "pages";
+        nextTick(() => {
+            document.getElementById("admin-form")?.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+            });
+        });
+    }
 });
 </script>

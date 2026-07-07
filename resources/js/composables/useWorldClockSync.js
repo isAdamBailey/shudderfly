@@ -8,19 +8,19 @@ import { nextTick, reactive, ref } from "vue";
 // chosen cities, appearance, timer, and logo clock are identical for everyone.
 
 const DEFAULT_LOGO = {
-  enabled: false,
-  cityName: "",
-  timezone: ""
+    enabled: false,
+    cityName: "",
+    timezone: "",
 };
 
 const state = reactive({
-  cities: [],
-  facePreset: "theme",
-  handPreset: "classic",
-  numerals: "arabic",
-  secondHandMode: "smooth",
-  logo: { ...DEFAULT_LOGO },
-  timerEndsAt: null
+    cities: [],
+    facePreset: "theme",
+    handPreset: "classic",
+    numerals: "arabic",
+    secondHandMode: "smooth",
+    logo: { ...DEFAULT_LOGO },
+    timerEndsAt: null,
 });
 
 // Difference between the server clock and this client's clock, recomputed from
@@ -41,35 +41,35 @@ let hydrated = false;
 const isApplyingRemote = () => applyingRemote;
 
 function assignPayload(payload) {
-  if (!payload || typeof payload !== "object") return;
-  if (Array.isArray(payload.cities)) state.cities = payload.cities;
-  if (typeof payload.face_preset === "string")
-    state.facePreset = payload.face_preset;
-  if (typeof payload.hand_preset === "string")
-    state.handPreset = payload.hand_preset;
-  if (typeof payload.numerals === "string") state.numerals = payload.numerals;
-  if (typeof payload.second_hand_mode === "string")
-    state.secondHandMode = payload.second_hand_mode;
-  if (payload.logo && typeof payload.logo === "object") {
-    // Mutate in place so references held by components (the nav logo) stay live.
-    Object.assign(state.logo, DEFAULT_LOGO, payload.logo);
-  }
-  state.timerEndsAt = payload.timer_ends_at || null;
+    if (!payload || typeof payload !== "object") return;
+    if (Array.isArray(payload.cities)) state.cities = payload.cities;
+    if (typeof payload.face_preset === "string")
+        state.facePreset = payload.face_preset;
+    if (typeof payload.hand_preset === "string")
+        state.handPreset = payload.hand_preset;
+    if (typeof payload.numerals === "string") state.numerals = payload.numerals;
+    if (typeof payload.second_hand_mode === "string")
+        state.secondHandMode = payload.second_hand_mode;
+    if (payload.logo && typeof payload.logo === "object") {
+        // Mutate in place so references held by components (the nav logo) stay live.
+        Object.assign(state.logo, DEFAULT_LOGO, payload.logo);
+    }
+    state.timerEndsAt = payload.timer_ends_at || null;
 
-  if (payload.server_now) {
-    const parsed = Date.parse(payload.server_now);
-    if (!Number.isNaN(parsed)) serverOffsetMs.value = parsed - Date.now();
-  }
+    if (payload.server_now) {
+        const parsed = Date.parse(payload.server_now);
+        if (!Number.isNaN(parsed)) serverOffsetMs.value = parsed - Date.now();
+    }
 }
 
 // Apply full state that originated from the server (initial hydration or a live
 // broadcast from another client) without triggering the local save watchers.
 function applyRemote(payload) {
-  applyingRemote = true;
-  assignPayload(payload);
-  nextTick(() => {
-    applyingRemote = false;
-  });
+    applyingRemote = true;
+    assignPayload(payload);
+    nextTick(() => {
+        applyingRemote = false;
+    });
 }
 
 // Apply only the timer fields from a server response. Used by the originating
@@ -77,21 +77,21 @@ function applyRemote(payload) {
 // end time + clock offset, WITHOUT touching cities/appearance/logo (which would
 // clobber any local edit that hasn't been saved yet).
 function reconcileTimer(payload) {
-  if (!payload || typeof payload !== "object") return;
-  state.timerEndsAt = payload.timer_ends_at || null;
-  if (payload.server_now) {
-    const parsed = Date.parse(payload.server_now);
-    if (!Number.isNaN(parsed)) serverOffsetMs.value = parsed - Date.now();
-  }
+    if (!payload || typeof payload !== "object") return;
+    state.timerEndsAt = payload.timer_ends_at || null;
+    if (payload.server_now) {
+        const parsed = Date.parse(payload.server_now);
+        if (!Number.isNaN(parsed)) serverOffsetMs.value = parsed - Date.now();
+    }
 }
 
 // Seed the shared state from server props. Runs only the first time (per page
 // load) — both the layout and the World Clock page call it, and later prop
 // refreshes must not overwrite local edits or live broadcast state.
 function hydrate(initial) {
-  if (hydrated) return;
-  hydrated = true;
-  applyRemote(initial);
+    if (hydrated) return;
+    hydrated = true;
+    applyRemote(initial);
 }
 
 // Persist a change to the server and return the fresh state. The originating
@@ -100,54 +100,55 @@ function hydrate(initial) {
 // still editing. Other clients receive the change via the Echo broadcast; the
 // X-Socket-ID header excludes this client from it, preventing a feedback loop.
 async function push(routeName, method, body = {}) {
-  try {
-    const headers = {};
-    const socketId = window.Echo?.socketId?.();
-    if (socketId) headers["X-Socket-ID"] = socketId;
+    try {
+        const headers = {};
+        const socketId = window.Echo?.socketId?.();
+        if (socketId) headers["X-Socket-ID"] = socketId;
 
-    const response = await window.axios.request({
-      url: route(routeName),
-      method,
-      data: body,
-      headers
-    });
-    return response.data;
-  } catch (e) {
-    console.error(`Error syncing world clock (${routeName}):`, e);
-    return null;
-  }
+        const response = await window.axios.request({
+            url: route(routeName),
+            method,
+            data: body,
+            headers,
+        });
+        return response.data;
+    } catch (e) {
+        console.error(`Error syncing world clock (${routeName}):`, e);
+        return null;
+    }
 }
 
 // Subscribe once to the broadcast channel. Mirrors the retry/guard pattern used
 // for the messages channel; degrades silently when Echo/Pusher is unavailable.
 function setupEcho() {
-  if (echoReady) return;
-  if (!window.Echo) {
-    // Give up after ~10s: Pusher may be unconfigured, in which case the app
-    // still works via server reconcile + fresh props on each navigation.
-    if (echoAttempts++ >= 20) return;
-    setTimeout(setupEcho, 500);
-    return;
-  }
-  try {
-    window.Echo.private("world-clock").listen(".WorldClockUpdated", (payload) =>
-      applyRemote(payload)
-    );
-    echoReady = true;
-  } catch (e) {
-    console.error("Error setting up world clock Echo listener:", e);
-  }
+    if (echoReady) return;
+    if (!window.Echo) {
+        // Give up after ~10s: Pusher may be unconfigured, in which case the app
+        // still works via server reconcile + fresh props on each navigation.
+        if (echoAttempts++ >= 20) return;
+        setTimeout(setupEcho, 500);
+        return;
+    }
+    try {
+        window.Echo.private("world-clock").listen(
+            ".WorldClockUpdated",
+            (payload) => applyRemote(payload)
+        );
+        echoReady = true;
+    } catch (e) {
+        console.error("Error setting up world clock Echo listener:", e);
+    }
 }
 
 export function useWorldClockSync() {
-  setupEcho();
-  return {
-    state,
-    serverOffsetMs,
-    hydrate,
-    applyRemote,
-    reconcileTimer,
-    push,
-    isApplyingRemote
-  };
+    setupEcho();
+    return {
+        state,
+        serverOffsetMs,
+        hydrate,
+        applyRemote,
+        reconcileTimer,
+        push,
+        isApplyingRemote,
+    };
 }

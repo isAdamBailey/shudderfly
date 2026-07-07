@@ -17,49 +17,49 @@ const isAnnouncing = ref(false);
 
 // Load initial state from localStorage
 const loadState = () => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const state = JSON.parse(stored);
-      if (state.currentSong) {
-        currentSong.value = state.currentSong;
-      }
+    try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            const state = JSON.parse(stored);
+            if (state.currentSong) {
+                currentSong.value = state.currentSong;
+            }
+        }
+    } catch (e) {
+        console.error("Error loading music state:", e);
     }
-  } catch (e) {
-    console.error("Error loading music state:", e);
-  }
 
-  try {
-    const flyoutOpen = localStorage.getItem(FLYOUT_STORAGE_KEY);
-    if (flyoutOpen !== null) {
-      isFlyoutOpen.value = flyoutOpen === "true";
+    try {
+        const flyoutOpen = localStorage.getItem(FLYOUT_STORAGE_KEY);
+        if (flyoutOpen !== null) {
+            isFlyoutOpen.value = flyoutOpen === "true";
+        }
+    } catch (e) {
+        console.error("Error loading flyout state:", e);
     }
-  } catch (e) {
-    console.error("Error loading flyout state:", e);
-  }
 };
 
 // Save state to localStorage
 const saveState = () => {
-  try {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        currentSong: currentSong.value
-      })
-    );
-  } catch (e) {
-    console.error("Error saving music state:", e);
-  }
+    try {
+        localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify({
+                currentSong: currentSong.value,
+            })
+        );
+    } catch (e) {
+        console.error("Error saving music state:", e);
+    }
 };
 
 // Save flyout state
 const saveFlyoutState = () => {
-  try {
-    localStorage.setItem(FLYOUT_STORAGE_KEY, isFlyoutOpen.value.toString());
-  } catch (e) {
-    console.error("Error saving flyout state:", e);
-  }
+    try {
+        localStorage.setItem(FLYOUT_STORAGE_KEY, isFlyoutOpen.value.toString());
+    } catch (e) {
+        console.error("Error saving flyout state:", e);
+    }
 };
 
 // Watch for changes and save
@@ -70,159 +70,159 @@ watch(isFlyoutOpen, saveFlyoutState);
 loadState();
 
 export function useMusicPlayer() {
-  const { speak } = useSpeechSynthesis();
-  const { t } = useTranslations();
+    const { speak } = useSpeechSynthesis();
+    const { t } = useTranslations();
 
-  const announceSong = (song) => {
-    if (!song?.title) return;
-    try {
-      window.speechSynthesis?.cancel();
-    } catch (e) {
-      // Cancel may fail if speechSynthesis isn't available
-    }
-    isAnnouncing.value = true;
-    speak(t("music.now_playing", { title: song.title }), () => {
-      isAnnouncing.value = false;
-    });
-  };
+    const announceSong = (song) => {
+        if (!song?.title) return;
+        try {
+            window.speechSynthesis?.cancel();
+        } catch (e) {
+            // Cancel may fail if speechSynthesis isn't available
+        }
+        isAnnouncing.value = true;
+        speak(t("music.now_playing", { title: song.title }), () => {
+            isAnnouncing.value = false;
+        });
+    };
 
-  const playSong = (song) => {
-    const isNewSong =
-      !currentSong.value || currentSong.value.id !== song.id;
-    currentSong.value = song;
-    if (!isFlyoutOpen.value) {
-      isFlyoutOpen.value = true;
-    }
-    if (isNewSong) {
-      announceSong(song);
-    }
-  };
+    const playSong = (song) => {
+        const isNewSong =
+            !currentSong.value || currentSong.value.id !== song.id;
+        currentSong.value = song;
+        if (!isFlyoutOpen.value) {
+            isFlyoutOpen.value = true;
+        }
+        if (isNewSong) {
+            announceSong(song);
+        }
+    };
 
-  const toggleCurrentSongPlayback = () => {
-    const player = window.__globalMusicPlayer;
-    if (!player) return;
-    try {
-      const state = player.getPlayerState();
-      if (state === window.YT.PlayerState.PLAYING) {
-        player.pauseVideo();
-        setPlaying(false);
-      } else {
-        player.playVideo();
-        setPlaying(true);
-      }
-    } catch (e) {
-      // Player may not be ready
-    }
-  };
+    const toggleCurrentSongPlayback = () => {
+        const player = window.__globalMusicPlayer;
+        if (!player) return;
+        try {
+            const state = player.getPlayerState();
+            if (state === window.YT.PlayerState.PLAYING) {
+                player.pauseVideo();
+                setPlaying(false);
+            } else {
+                player.playVideo();
+                setPlaying(true);
+            }
+        } catch (e) {
+            // Player may not be ready
+        }
+    };
 
-  const setSongsList = (songs) => {
-    songsList.value = songs;
-  };
+    const setSongsList = (songs) => {
+        songsList.value = songs;
+    };
 
-  const playNextSong = () => {
-    if (!currentSong.value || songsList.value.length === 0) return false;
-    const currentIndex = songsList.value.findIndex(
-      (s) => s.id === currentSong.value.id
-    );
-    if (currentIndex === -1 || currentIndex >= songsList.value.length - 1)
-      return false;
-    playSong(songsList.value[currentIndex + 1]);
-    return true;
-  };
+    const playNextSong = () => {
+        if (!currentSong.value || songsList.value.length === 0) return false;
+        const currentIndex = songsList.value.findIndex(
+            (s) => s.id === currentSong.value.id
+        );
+        if (currentIndex === -1 || currentIndex >= songsList.value.length - 1)
+            return false;
+        playSong(songsList.value[currentIndex + 1]);
+        return true;
+    };
 
-  const playPreviousSong = () => {
-    if (!currentSong.value || songsList.value.length === 0) return false;
-    const currentIndex = songsList.value.findIndex(
-      (s) => s.id === currentSong.value.id
-    );
-    if (currentIndex <= 0) return false;
-    playSong(songsList.value[currentIndex - 1]);
-    return true;
-  };
+    const playPreviousSong = () => {
+        if (!currentSong.value || songsList.value.length === 0) return false;
+        const currentIndex = songsList.value.findIndex(
+            (s) => s.id === currentSong.value.id
+        );
+        if (currentIndex <= 0) return false;
+        playSong(songsList.value[currentIndex - 1]);
+        return true;
+    };
 
-  const removeSongFromList = (songId) => {
-    songsList.value = songsList.value.filter((s) => s.id !== songId);
-    if (currentSong.value && currentSong.value.id === songId) {
-      currentSong.value = null;
-      isPlaying.value = false;
-    }
-  };
+    const removeSongFromList = (songId) => {
+        songsList.value = songsList.value.filter((s) => s.id !== songId);
+        if (currentSong.value && currentSong.value.id === songId) {
+            currentSong.value = null;
+            isPlaying.value = false;
+        }
+    };
 
-  const closePlayer = () => {};
+    const closePlayer = () => {};
 
-  const stopPlayer = () => {
-    currentSong.value = null;
-    isPlaying.value = false;
-  };
+    const stopPlayer = () => {
+        currentSong.value = null;
+        isPlaying.value = false;
+    };
 
-  const toggleFlyout = () => {
-    isFlyoutOpen.value = !isFlyoutOpen.value;
-  };
+    const toggleFlyout = () => {
+        isFlyoutOpen.value = !isFlyoutOpen.value;
+    };
 
-  const openFlyout = () => {
-    isFlyoutOpen.value = true;
-  };
+    const openFlyout = () => {
+        isFlyoutOpen.value = true;
+    };
 
-  const closeFlyout = () => {
-    isFlyoutOpen.value = false;
-  };
+    const closeFlyout = () => {
+        isFlyoutOpen.value = false;
+    };
 
-  const setPlaying = (playing) => {
-    isPlaying.value = playing;
-    try {
-      localStorage.setItem(
-        PLAYBACK_STATE_KEY,
-        JSON.stringify({
-          isPlaying: playing,
-          timestamp: Date.now()
-        })
-      );
-    } catch (e) {}
-  };
+    const setPlaying = (playing) => {
+        isPlaying.value = playing;
+        try {
+            localStorage.setItem(
+                PLAYBACK_STATE_KEY,
+                JSON.stringify({
+                    isPlaying: playing,
+                    timestamp: Date.now(),
+                })
+            );
+        } catch (e) {}
+    };
 
-  const getSavedPlaybackState = () => {
-    try {
-      const stored = localStorage.getItem(PLAYBACK_STATE_KEY);
-      if (stored) {
-        return JSON.parse(stored);
-      }
-    } catch (e) {}
-    return null;
-  };
+    const getSavedPlaybackState = () => {
+        try {
+            const stored = localStorage.getItem(PLAYBACK_STATE_KEY);
+            if (stored) {
+                return JSON.parse(stored);
+            }
+        } catch (e) {}
+        return null;
+    };
 
-  const setSearch = (searchValue) => {
-    search.value = searchValue || "";
-  };
+    const setSearch = (searchValue) => {
+        search.value = searchValue || "";
+    };
 
-  const setFilter = (filterValue) => {
-    filter.value = filterValue || "";
-  };
+    const setFilter = (filterValue) => {
+        filter.value = filterValue || "";
+    };
 
-  return {
-    // State
-    currentSong: computed(() => currentSong.value),
-    isPlaying: computed(() => isPlaying.value),
-    isFlyoutOpen: computed(() => isFlyoutOpen.value),
-    search: computed(() => search.value),
-    filter: computed(() => filter.value),
-    songsList: computed(() => songsList.value),
-    isAnnouncing: computed(() => isAnnouncing.value),
+    return {
+        // State
+        currentSong: computed(() => currentSong.value),
+        isPlaying: computed(() => isPlaying.value),
+        isFlyoutOpen: computed(() => isFlyoutOpen.value),
+        search: computed(() => search.value),
+        filter: computed(() => filter.value),
+        songsList: computed(() => songsList.value),
+        isAnnouncing: computed(() => isAnnouncing.value),
 
-    // Methods
-    playSong,
-    toggleCurrentSongPlayback,
-    setSongsList,
-    playNextSong,
-    playPreviousSong,
-    removeSongFromList,
-    closePlayer,
-    stopPlayer,
-    toggleFlyout,
-    openFlyout,
-    closeFlyout,
-    setPlaying,
-    setSearch,
-    setFilter,
-    getSavedPlaybackState
-  };
+        // Methods
+        playSong,
+        toggleCurrentSongPlayback,
+        setSongsList,
+        playNextSong,
+        playPreviousSong,
+        removeSongFromList,
+        closePlayer,
+        stopPlayer,
+        toggleFlyout,
+        openFlyout,
+        closeFlyout,
+        setPlaying,
+        setSearch,
+        setFilter,
+        getSavedPlaybackState,
+    };
 }

@@ -8,49 +8,121 @@
                 "role": "primary",
                 "displayName": "Marquee Yellow",
                 "canonical": "oklch(94% 0.13 99)",
-                "tonalRamp": ["#713f12", "#854d0e", "#a16207", "#ca8a04", "#eab308", "#facc15", "#fde047", "#fef08a"]
+                "tonalRamp": [
+                    "#713f12",
+                    "#854d0e",
+                    "#a16207",
+                    "#ca8a04",
+                    "#eab308",
+                    "#facc15",
+                    "#fde047",
+                    "#fef08a"
+                ]
             },
             "storybook-blue": {
                 "role": "secondary",
                 "displayName": "Storybook Blue",
                 "canonical": "oklch(54% 0.21 264)",
-                "tonalRamp": ["#1e3a8a", "#1e40af", "#1d4ed8", "#2563eb", "#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe"]
+                "tonalRamp": [
+                    "#1e3a8a",
+                    "#1e40af",
+                    "#1d4ed8",
+                    "#2563eb",
+                    "#3b82f6",
+                    "#60a5fa",
+                    "#93c5fd",
+                    "#bfdbfe"
+                ]
             },
             "curtain-red": {
                 "role": "tertiary",
                 "displayName": "Curtain Red",
                 "canonical": "oklch(45% 0.19 27)",
-                "tonalRamp": ["#7f1d1d", "#991b1b", "#b91c1c", "#dc2626", "#ef4444", "#f87171", "#fca5a5", "#fecaca"]
+                "tonalRamp": [
+                    "#7f1d1d",
+                    "#991b1b",
+                    "#b91c1c",
+                    "#dc2626",
+                    "#ef4444",
+                    "#f87171",
+                    "#fca5a5",
+                    "#fecaca"
+                ]
             },
             "marquee-bulb": {
                 "role": "accent",
                 "displayName": "Marquee Bulb",
                 "canonical": "oklch(85% 0.17 96)",
-                "tonalRamp": ["#713f12", "#854d0e", "#a16207", "#ca8a04", "#eab308", "#facc15", "#fde047", "#fef08a"]
+                "tonalRamp": [
+                    "#713f12",
+                    "#854d0e",
+                    "#a16207",
+                    "#ca8a04",
+                    "#eab308",
+                    "#facc15",
+                    "#fde047",
+                    "#fef08a"
+                ]
             },
             "stage-night": {
                 "role": "neutral",
                 "displayName": "Stage Night",
                 "canonical": "oklch(21% 0.02 265)",
-                "tonalRamp": ["#111827", "#1f2937", "#374151", "#4b5563", "#6b7280", "#9ca3af", "#d1d5db", "#e5e7eb"]
+                "tonalRamp": [
+                    "#111827",
+                    "#1f2937",
+                    "#374151",
+                    "#4b5563",
+                    "#6b7280",
+                    "#9ca3af",
+                    "#d1d5db",
+                    "#e5e7eb"
+                ]
             },
             "backstage-charcoal": {
                 "role": "neutral",
                 "displayName": "Backstage Charcoal",
                 "canonical": "oklch(28% 0.02 260)",
-                "tonalRamp": ["#111827", "#1f2937", "#374151", "#4b5563", "#6b7280", "#9ca3af", "#d1d5db", "#e5e7eb"]
+                "tonalRamp": [
+                    "#111827",
+                    "#1f2937",
+                    "#374151",
+                    "#4b5563",
+                    "#6b7280",
+                    "#9ca3af",
+                    "#d1d5db",
+                    "#e5e7eb"
+                ]
             },
             "paper-white": {
                 "role": "neutral",
                 "displayName": "Paper White",
                 "canonical": "oklch(100% 0 0)",
-                "tonalRamp": ["#111827", "#1f2937", "#374151", "#4b5563", "#6b7280", "#9ca3af", "#d1d5db", "#ffffff"]
+                "tonalRamp": [
+                    "#111827",
+                    "#1f2937",
+                    "#374151",
+                    "#4b5563",
+                    "#6b7280",
+                    "#9ca3af",
+                    "#d1d5db",
+                    "#ffffff"
+                ]
             },
             "mist-gray": {
                 "role": "neutral",
                 "displayName": "Mist Gray",
                 "canonical": "oklch(96% 0.003 248)",
-                "tonalRamp": ["#111827", "#1f2937", "#374151", "#4b5563", "#6b7280", "#9ca3af", "#d1d5db", "#f3f4f6"]
+                "tonalRamp": [
+                    "#111827",
+                    "#1f2937",
+                    "#374151",
+                    "#4b5563",
+                    "#6b7280",
+                    "#9ca3af",
+                    "#d1d5db",
+                    "#f3f4f6"
+                ]
             }
         },
         "typographyMeta": {

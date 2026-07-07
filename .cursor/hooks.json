@@ -1,13 +1,13 @@
 {
-  "version": 1,
-  "hooks": {
-    "beforeShellExecution": [
-      {
-        "command": ".cursor/hooks/pre-push-require-tests.py",
-        "matcher": "\\bgit\\b[\\s\\S]*\\bpush\\b[\\s\\S]*\\borigin\\b",
-        "timeout": 900,
-        "failClosed": false
-      }
-    ]
-  }
+    "version": 1,
+    "hooks": {
+        "beforeShellExecution": [
+            {
+                "command": ".cursor/hooks/pre-push-require-tests.py",
+                "matcher": "\\bgit\\b[\\s\\S]*\\bpush\\b[\\s\\S]*\\borigin\\b",
+                "timeout": 900,
+                "failClosed": false
+            }
+        ]
+    }
 }

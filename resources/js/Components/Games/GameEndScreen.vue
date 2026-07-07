@@ -37,10 +37,13 @@ function playAgain() {
                 {{ title }}
             </h1>
             <slot name="above-score" />
-            <div class="mb-2 flex items-baseline justify-center gap-[0.35em] text-gray-100">
-                <span class="text-[clamp(2rem,7vmin,3.2rem)] font-extrabold tabular-nums">{{
-                    score
-                }}</span>
+            <div
+                class="mb-2 flex items-baseline justify-center gap-[0.35em] text-gray-100"
+            >
+                <span
+                    class="text-[clamp(2rem,7vmin,3.2rem)] font-extrabold tabular-nums"
+                    >{{ score }}</span
+                >
                 <span
                     class="game-end-score-label text-[clamp(0.9rem,2.5vmin,1.1rem)] text-gray-400"
                     >point{{ score !== 1 ? "s" : "" }}</span

@@ -17,7 +17,8 @@ const game = useTootGame({
     onToot: (food) => playToot(food.pitch),
     onEnd: () => playVictory(),
 });
-const { state, timeLeft, highScore, butt, buttSize, foods, bursts, popups } = game;
+const { state, timeLeft, highScore, butt, buttSize, foods, bursts, popups } =
+    game;
 
 const stageEl = ref(null);
 let resizeObserver = null;
@@ -127,7 +128,9 @@ function buttStyle() {
         top: `${butt.y}px`,
         width: `${buttSize.value}px`,
         height: `${buttSize.value}px`,
-        transform: `translate(-50%, -50%) scaleX(${butt.facing * (1 + squash * 0.18)}) scaleY(${1 - squash * 0.16})`,
+        transform: `translate(-50%, -50%) scaleX(${
+            butt.facing * (1 + squash * 0.18)
+        }) scaleY(${1 - squash * 0.16})`,
     };
 }
 </script>
@@ -143,8 +146,10 @@ function buttStyle() {
     >
         <template #media>{{ BUTT }}</template>
         <p>
-            Drag the snacks 🍓🍇🍎🫐🥦 into the wandering butt to make it toot.<br />
-            Stack quick hits for a combo bonus. How many in {{ ROUND_SECONDS }} seconds?
+            Drag the snacks 🍓🍇🍎🫐🥦 into the wandering butt to make it
+            toot.<br />
+            Stack quick hits for a combo bonus. How many in
+            {{ ROUND_SECONDS }} seconds?
         </p>
     </GameStartScreen>
 
@@ -155,7 +160,11 @@ function buttStyle() {
                 <span class="hud-value tabular-nums">{{ state.score }}</span>
             </div>
             <transition name="combo-pop">
-                <div v-if="state.combo >= 2" class="hud-combo" aria-hidden="true">
+                <div
+                    v-if="state.combo >= 2"
+                    class="hud-combo"
+                    aria-hidden="true"
+                >
                     🔥 x{{ state.combo }}
                 </div>
             </transition>
@@ -243,8 +252,11 @@ function buttStyle() {
     inset: 0;
     overflow: hidden;
     touch-action: none;
-    background:
-        radial-gradient(120% 80% at 50% -10%, rgba(251, 191, 36, 0.12), transparent 60%),
+    background: radial-gradient(
+            120% 80% at 50% -10%,
+            rgba(251, 191, 36, 0.12),
+            transparent 60%
+        ),
         #111827;
 }
 
@@ -313,8 +325,7 @@ function buttStyle() {
 
 .combo-pop-enter-active,
 .combo-pop-leave-active {
-    transition:
-        transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
         opacity 0.18s ease-out;
 }
 .combo-pop-enter-from,
@@ -390,9 +401,7 @@ function buttStyle() {
     user-select: none;
     touch-action: none;
     filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.4));
-    transition:
-        transform 0.12s ease-out,
-        opacity 0.18s ease-out;
+    transition: transform 0.12s ease-out, opacity 0.18s ease-out;
     animation: foodBob 2.4s ease-in-out infinite;
 }
 

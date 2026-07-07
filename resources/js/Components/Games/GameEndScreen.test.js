@@ -77,7 +77,10 @@ describe("GameEndScreen", () => {
     });
 
     it("renders above-score slot content", () => {
-        const wrapper = mountScreen({}, { "above-score": "<div>Stars here</div>" });
+        const wrapper = mountScreen(
+            {},
+            { "above-score": "<div>Stars here</div>" }
+        );
         expect(wrapper.text()).toContain("Stars here");
     });
 

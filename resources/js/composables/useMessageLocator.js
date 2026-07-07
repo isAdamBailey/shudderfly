@@ -64,7 +64,8 @@ export function useMessageLocator({
             );
             if (element) {
                 const currentAbsoluteOffset = getAbsoluteOffsetTop(element);
-                const offsetDiff = currentAbsoluteOffset - state.savedAbsoluteOffset;
+                const offsetDiff =
+                    currentAbsoluteOffset - state.savedAbsoluteOffset;
                 if (Math.abs(offsetDiff) > 1) {
                     window.scrollBy(0, offsetDiff);
                 }

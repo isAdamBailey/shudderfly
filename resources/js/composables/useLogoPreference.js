@@ -8,30 +8,30 @@ import { useWorldClockSync } from "@/composables/useWorldClockSync";
 // live shared object, mutated in place so the nav logo updates app-wide.
 
 export function useLogoPreference() {
-  const sync = useWorldClockSync();
-  const logo = sync.state.logo;
+    const sync = useWorldClockSync();
+    const logo = sync.state.logo;
 
-  function logoPayload() {
-    return {
-      enabled: logo.enabled,
-      cityName: logo.cityName,
-      timezone: logo.timezone
-    };
-  }
+    function logoPayload() {
+        return {
+            enabled: logo.enabled,
+            cityName: logo.cityName,
+            timezone: logo.timezone,
+        };
+    }
 
-  function setLogoClock(config) {
-    Object.assign(logo, {
-      enabled: true,
-      cityName: config.cityName || "",
-      timezone: config.timezone || ""
-    });
-    sync.push("world-clock.logo.update", "put", logoPayload());
-  }
+    function setLogoClock(config) {
+        Object.assign(logo, {
+            enabled: true,
+            cityName: config.cityName || "",
+            timezone: config.timezone || "",
+        });
+        sync.push("world-clock.logo.update", "put", logoPayload());
+    }
 
-  function clearLogoClock() {
-    Object.assign(logo, { enabled: false, cityName: "", timezone: "" });
-    sync.push("world-clock.logo.update", "put", logoPayload());
-  }
+    function clearLogoClock() {
+        Object.assign(logo, { enabled: false, cityName: "", timezone: "" });
+        sync.push("world-clock.logo.update", "put", logoPayload());
+    }
 
-  return { logo, setLogoClock, clearLogoClock };
+    return { logo, setLogoClock, clearLogoClock };
 }

@@ -8,7 +8,7 @@ import { useFlashMessage } from "@/composables/useFlashMessage";
 import { useTranslations } from "@/composables/useTranslations";
 import { router } from "@inertiajs/vue3";
 import axios from "axios";
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch } from "vue";
 
 const { t } = useTranslations();
 const {
@@ -30,7 +30,7 @@ const props = defineProps({
     },
 });
 
-const emit = defineEmits(['submitted']);
+const emit = defineEmits(["submitted"]);
 
 const { setFlashMessage } = useFlashMessage();
 
@@ -40,9 +40,12 @@ const submitting = ref(false);
 const buildFormSettings = (settings) => {
     return settings.reduce((acc, setting) => {
         acc[setting.key] = {
-            value: setting.type === "boolean" ? Boolean(Number(setting.value)) : (setting.value || ''),
-            description: setting.description || '',
-            type: setting.type
+            value:
+                setting.type === "boolean"
+                    ? Boolean(Number(setting.value))
+                    : setting.value || "",
+            description: setting.description || "",
+            type: setting.type,
         };
         return acc;
     }, {});
@@ -53,15 +56,22 @@ const initialSettings = computed(() => buildFormSettings(props.settings));
 const formSettings = ref(buildFormSettings(props.settings));
 
 // Watch for settings changes and update form data
-watch(() => props.settings, (newSettings) => {
-    formSettings.value = buildFormSettings(newSettings);
-}, { deep: true });
+watch(
+    () => props.settings,
+    (newSettings) => {
+        formSettings.value = buildFormSettings(newSettings);
+    },
+    { deep: true }
+);
 
 const hasChanges = computed(() => {
-    return Object.keys(formSettings.value).some(key => {
+    return Object.keys(formSettings.value).some((key) => {
         const current = formSettings.value[key];
         const initial = initialSettings.value[key];
-        return current.value !== initial.value || current.description !== initial.description;
+        return (
+            current.value !== initial.value ||
+            current.description !== initial.description
+        );
     });
 });
 
@@ -75,7 +85,7 @@ const stopEditing = () => {
 
 const submit = async () => {
     const ok = await askConfirm(
-        'Are you sure you want to update these settings?'
+        "Are you sure you want to update these settings?"
     );
     if (!ok) {
         return;
@@ -86,19 +96,22 @@ const submit = async () => {
     submitting.value = true;
     try {
         const { data } = await axios.put(
-            '/settings',
+            "/settings",
             { settings: formSettings.value },
-            { headers: { Accept: 'application/json' } }
+            { headers: { Accept: "application/json" } }
         );
-        setFlashMessage('success', data.message);
+        setFlashMessage("success", data.message);
         router.reload({
-            only: ['adminSettings'],
+            only: ["adminSettings"],
             preserveScroll: true,
             async: true,
         });
-        emit('submitted');
+        emit("submitted");
     } catch (error) {
-        setFlashMessage('error', error.response?.data?.message || 'Failed to update settings.');
+        setFlashMessage(
+            "error",
+            error.response?.data?.message || "Failed to update settings."
+        );
     } finally {
         submitting.value = false;
     }
@@ -121,12 +134,19 @@ const submit = async () => {
                             class="block font-medium text-sm text-gray-700 dark:text-gray-300"
                         >
                             {{ setting.key }}
-                            <span class="text-xs text-gray-500 ml-2">({{ setting.type }})</span>
+                            <span class="text-xs text-gray-500 ml-2"
+                                >({{ setting.type }})</span
+                            >
                         </label>
                     </div>
 
                     <div class="mt-2">
-                        <div v-if="editingDescription === setting.key && formSettings[setting.key]">
+                        <div
+                            v-if="
+                                editingDescription === setting.key &&
+                                formSettings[setting.key]
+                            "
+                        >
                             <Input
                                 ref="descriptionInput"
                                 v-model="formSettings[setting.key].description"
@@ -137,21 +157,25 @@ const submit = async () => {
                                 @keyup.enter="stopEditing"
                             />
                         </div>
-                        <div 
+                        <div
                             v-else
                             class="text-xl font-bold text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-200"
                             @click="startEditing(setting.key)"
                         >
-                            {{ formSettings[setting.key]?.description || '' }}
+                            {{ formSettings[setting.key]?.description || "" }}
                         </div>
                     </div>
 
                     <div class="mt-2">
-                        <template v-if="formSettings[setting.key]?.type === 'boolean'">
+                        <template
+                            v-if="formSettings[setting.key]?.type === 'boolean'"
+                        >
                             <Checkbox
                                 class="p-3"
                                 :checked="formSettings[setting.key].value"
-                                @update:checked="v => formSettings[setting.key].value = v"
+                                @update:checked="
+                                    (v) => (formSettings[setting.key].value = v)
+                                "
                             />
                         </template>
                         <template v-else-if="formSettings[setting.key]">
@@ -194,9 +218,9 @@ export default {
     directives: {
         focus: {
             mounted(el) {
-                el.focus()
-            }
-        }
-    }
-}
+                el.focus();
+            },
+        },
+    },
+};
 </script>

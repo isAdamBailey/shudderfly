@@ -6,564 +6,582 @@ import { nextTick } from "vue";
 
 // Mock route function
 global.route = vi.fn((name, params) => {
-  if (name === "pages.share" && params != null) {
-    return `/pages/${params}/share`;
-  }
-  if (name === "games.share-score" && params != null) {
-    return `/games/${params}/share-score`;
-  }
-  if (name === "pages.show" && params?.page != null) {
-    return `/pages/${params.page}`;
-  }
-  if (name === "movie-cast.index") {
-    const title = params?.title ? `?title=${encodeURIComponent(params.title)}` : "";
-    return `/movie-cast${title}`;
-  }
-  return `/${name}`;
+    if (name === "pages.share" && params != null) {
+        return `/pages/${params}/share`;
+    }
+    if (name === "games.share-score" && params != null) {
+        return `/games/${params}/share-score`;
+    }
+    if (name === "pages.show" && params?.page != null) {
+        return `/pages/${params.page}`;
+    }
+    if (name === "movie-cast.index") {
+        const title = params?.title
+            ? `?title=${encodeURIComponent(params.title)}`
+            : "";
+        return `/movie-cast${title}`;
+    }
+    return `/${name}`;
 });
 
 // Mock composables
 vi.mock("@/composables/permissions", () => ({
-  usePermissions: () => ({
-    canEditPages: true
-  })
+    usePermissions: () => ({
+        canEditPages: true,
+    }),
 }));
 
 vi.mock("@/composables/useSpeechSynthesis", () => ({
-  useSpeechSynthesis: () => ({
-    speak: vi.fn((phrase, onComplete) => {
-      onComplete?.();
+    useSpeechSynthesis: () => ({
+        speak: vi.fn((phrase, onComplete) => {
+            onComplete?.();
+        }),
+        speaking: false,
     }),
-    speaking: false
-  })
 }));
 
 vi.mock("@/composables/useFlashMessage", () => ({
-  useFlashMessage: () => ({
-    flashMessage: { value: null },
-    setFlashMessage: vi.fn(),
-    clearFlashMessage: vi.fn()
-  })
+    useFlashMessage: () => ({
+        flashMessage: { value: null },
+        setFlashMessage: vi.fn(),
+        clearFlashMessage: vi.fn(),
+    }),
 }));
 
 vi.mock("@/composables/useConfirmDialog", () => {
-  const { ref } = require("vue");
-  return {
-    useConfirmDialog: () => ({
-      show: ref(false),
-      message: ref(""),
-      title: ref(""),
-      confirmLabel: ref(""),
-      cancelLabel: ref(""),
-      confirmVariant: ref("primary"),
-      ask: () => Promise.resolve(true),
-      onConfirmed: () => {},
-      onCancelled: () => {}
-    })
-  };
+    const { ref } = require("vue");
+    return {
+        useConfirmDialog: () => ({
+            show: ref(false),
+            message: ref(""),
+            title: ref(""),
+            confirmLabel: ref(""),
+            cancelLabel: ref(""),
+            confirmVariant: ref("primary"),
+            ask: () => Promise.resolve(true),
+            onConfirmed: () => {},
+            onCancelled: () => {},
+        }),
+    };
 });
 
 vi.mock("@/dateHelpers", () => ({
-  useDate: () => ({
-    short: vi.fn(() => "Jan 1, 2023")
-  })
+    useDate: () => ({
+        short: vi.fn(() => "Jan 1, 2023"),
+    }),
 }));
 
 vi.mock("@/mediaHelpers", () => ({
-  useMedia: () => ({
-    isVideo: vi.fn(() => false)
-  })
+    useMedia: () => ({
+        isVideo: vi.fn(() => false),
+    }),
 }));
 
 vi.mock("@/composables/useTranslations", () => ({
-  useTranslations: () => ({
-    t: (key) => {
-      const translations = {
-        share_to_timeline: "Share to Timeline",
-        already_shared_today: "Already shared today",
-        "page.speak_share_action": "Hear share action",
-        "page.speak_share_action_aria": "Hear share aria",
-        "page.share_icon_title": "Share",
-        "page.share_aria": "Share to chat",
-        "page.share_confirm_speak": "Are you sure you want to share this page:",
-        "page.share_confirm_speak_tagged":
-          "Are you sure you want to share this page with :username:",
-        "page.share_confirm_dialog": "Are you sure you want to share this page?",
-        "page.share_confirm_dialog_tagged":
-          "Are you sure you want to share this page with :username?",
-        "common.ok": "OK",
-        "common.cancel": "Cancel"
-      };
-      return translations[key] || key;
-    },
-    translations: {
-      value: {
-        share_to_timeline: "Share to Timeline",
-        already_shared_today: "Already shared today"
-      }
-    }
-  })
+    useTranslations: () => ({
+        t: (key) => {
+            const translations = {
+                share_to_timeline: "Share to Timeline",
+                already_shared_today: "Already shared today",
+                "page.speak_share_action": "Hear share action",
+                "page.speak_share_action_aria": "Hear share aria",
+                "page.share_icon_title": "Share",
+                "page.share_aria": "Share to chat",
+                "page.share_confirm_speak":
+                    "Are you sure you want to share this page:",
+                "page.share_confirm_speak_tagged":
+                    "Are you sure you want to share this page with :username:",
+                "page.share_confirm_dialog":
+                    "Are you sure you want to share this page?",
+                "page.share_confirm_dialog_tagged":
+                    "Are you sure you want to share this page with :username?",
+                "common.ok": "OK",
+                "common.cancel": "Cancel",
+            };
+            return translations[key] || key;
+        },
+        translations: {
+            value: {
+                share_to_timeline: "Share to Timeline",
+                already_shared_today: "Already shared today",
+            },
+        },
+    }),
 }));
 
 // Mock child components
 vi.mock("@/Components/Button.vue", () => ({
-  default: { name: "Button", template: "<button><slot /></button>" }
+    default: { name: "Button", template: "<button><slot /></button>" },
 }));
 
 vi.mock("@/Components/LazyLoader.vue", () => ({
-  default: {
-    name: "LazyLoader",
-    template: '<div class="lazy-loader" />',
-    props: [
-      "src",
-      "poster",
-      "alt",
-      "book-id",
-      "page-id",
-      "object-fit",
-      "bookId",
-      "pageId",
-      "objectFit"
-    ]
-  }
+    default: {
+        name: "LazyLoader",
+        template: '<div class="lazy-loader" />',
+        props: [
+            "src",
+            "poster",
+            "alt",
+            "book-id",
+            "page-id",
+            "object-fit",
+            "bookId",
+            "pageId",
+            "objectFit",
+        ],
+    },
 }));
 
 vi.mock("@/Components/VideoWrapper.vue", () => ({
-  default: {
-    name: "VideoWrapper",
-    template: '<div class="video-wrapper" />',
-    props: ["url", "title"]
-  }
+    default: {
+        name: "VideoWrapper",
+        template: '<div class="video-wrapper" />',
+        props: ["url", "title"],
+    },
 }));
 
 vi.mock("@/Components/AddToCollageButton.vue", () => ({
-  default: {
-    name: "AddToCollageButton",
-    template: '<div class="add-to-collage-button" />',
-    props: ["page-id", "collages"]
-  }
+    default: {
+        name: "AddToCollageButton",
+        template: '<div class="add-to-collage-button" />',
+        props: ["page-id", "collages"],
+    },
 }));
 
 vi.mock("@/Pages/Page/EditPageForm.vue", () => ({
-  default: {
-    name: "EditPageForm",
-    template: '<form class="edit-page-form" />',
-    props: ["page", "book", "books"]
-  }
+    default: {
+        name: "EditPageForm",
+        template: '<form class="edit-page-form" />',
+        props: ["page", "book", "books"],
+    },
 }));
 
 vi.mock("@/Layouts/AuthenticatedLayout.vue", () => ({
-  default: {
-    name: "BreezeAuthenticatedLayout",
-    template: '<div class="authenticated-layout"><slot /></div>'
-  }
+    default: {
+        name: "BreezeAuthenticatedLayout",
+        template: '<div class="authenticated-layout"><slot /></div>',
+    },
 }));
 
 vi.mock("@inertiajs/vue3", () => {
-  const mockRouter = {
-    post: vi.fn(),
-    get: vi.fn()
-  };
-  return {
-    router: mockRouter,
-    usePage: () => ({
-      props: {
-        flash: {},
-        auth: {
-          user: { permissions_list: [] }
+    const mockRouter = {
+        post: vi.fn(),
+        get: vi.fn(),
+    };
+    return {
+        router: mockRouter,
+        usePage: () => ({
+            props: {
+                flash: {},
+                auth: {
+                    user: { permissions_list: [] },
+                },
+                search: null,
+                users: [],
+                settings: {
+                    messaging_enabled: "1",
+                },
+            },
+        }),
+        Head: { name: "Head", template: "<div />" },
+        Link: {
+            name: "Link",
+            template: "<a><slot /></a>",
+            props: [
+                "href",
+                "as",
+                "prefetch",
+                "class",
+                "disabled",
+                "aria-label",
+            ],
         },
-        search: null,
-        users: [],
-        settings: {
-          messaging_enabled: "1"
-        }
-      }
-    }),
-    Head: { name: "Head", template: "<div />" },
-    Link: {
-      name: "Link",
-      template: "<a><slot /></a>",
-      props: ["href", "as", "prefetch", "class", "disabled", "aria-label"]
-    }
-  };
+    };
 });
 
 describe("Page/Show.vue", () => {
-  let wrapper;
-  const page = {
-    id: 1,
-    title: "Test Page",
-    content: "Test content",
-    media_path: "/path/to/media.mp4",
-    youtube_link: "https://youtube.com/watch?v=test",
-    created_at: "2023-01-01T00:00:00.000000Z",
-    updated_at: "2023-01-01T00:00:00.000000Z",
-    read_count: 10,
-    book: {
-      id: 1,
-      title: "Test Book"
-    }
-  };
-  const previousPage = { id: 0, title: "Previous Page" };
-  const nextPage = { id: 2, title: "Next Page" };
-  const books = [];
-  const collages = [];
-  const users = [];
-
-  beforeEach(() => {
-    localStorage.clear();
-    if (wrapper) {
-      wrapper.unmount();
-    }
-    wrapper = mount(Show, {
-      props: {
-        page,
-        previousPage,
-        nextPage,
-        books,
-        collages,
-        users
-      },
-      global: {
-        stubs: {
-          Teleport: { template: "<div><slot /></div>" }
-        },
-        mocks: {
-          $page: {
-            props: {
-              auth: { user: { permissions_list: [] } },
-              search: null,
-              settings: {
-                messaging_enabled: "1"
-              }
-            }
-          }
-        }
-      }
-    });
-  });
-
-  it("renders the page content", () => {
-    expect(wrapper.text()).toContain("Test content");
-  });
-
-  it("renders LazyLoader when media_path is present", () => {
-    const lazyLoaders = wrapper.findAllComponents({ name: "LazyLoader" });
-    // Find the LazyLoader with page-id prop (the page's media)
-    // Vue converts kebab-case to camelCase, so check both
-    const pageLazyLoader = lazyLoaders.find(
-      (loader) =>
-        loader.props("page-id") === page.id ||
-        loader.props("pageId") === page.id
-    );
-    expect(pageLazyLoader).toBeDefined();
-  });
-
-  it("passes media_path to LazyLoader", () => {
-    const lazyLoaders = wrapper.findAllComponents({ name: "LazyLoader" });
-    // Find the LazyLoader with page-id prop (the page's media, not the book cover)
-    // Vue converts kebab-case to camelCase, so check both
-    const pageLazyLoader = lazyLoaders.find(
-      (loader) =>
-        loader.props("page-id") === page.id ||
-        loader.props("pageId") === page.id
-    );
-    expect(pageLazyLoader).toBeDefined();
-    expect(pageLazyLoader.props("src")).toBe("/path/to/media.mp4");
-  });
-
-  it("renders edit page form when showPageSettings is true", async () => {
-    wrapper.vm.showPageSettings = true;
-    await wrapper.vm.$nextTick();
-
-    expect(wrapper.findComponent({ name: "EditPageForm" }).exists()).toBe(true);
-  });
-
-  it("toggles edit page form visibility", async () => {
-    expect(wrapper.vm.showPageSettings).toBe(false);
-
-    // Simulate clicking edit button
-    wrapper.vm.showPageSettings = true;
-    await wrapper.vm.$nextTick();
-    expect(wrapper.vm.showPageSettings).toBe(true);
-
-    // Simulate closing form
-    wrapper.vm.showPageSettings = false;
-    await wrapper.vm.$nextTick();
-    expect(wrapper.vm.showPageSettings).toBe(false);
-  });
-
-  it("passes page prop to EditPageForm", async () => {
-    wrapper.vm.showPageSettings = true;
-    await wrapper.vm.$nextTick();
-
-    const editForm = wrapper.findComponent({ name: "EditPageForm" });
-    expect(editForm.props("page")).toEqual(page);
-    expect(editForm.props("book")).toEqual(page.book);
-    expect(editForm.props("books")).toEqual(books);
-  });
-
-  it("handles page without media", () => {
-    const pageWithoutMedia = { ...page, media_path: null };
-    wrapper.unmount();
-    wrapper = mount(Show, {
-      props: {
-        page: pageWithoutMedia,
-        previousPage,
-        nextPage,
-        books,
-        collages
-      },
-      global: {
-        stubs: {
-          Teleport: { template: "<div><slot /></div>" }
-        },
-        mocks: {
-          $page: {
-            props: {
-              auth: { user: { permissions_list: [] } },
-              search: null,
-              settings: {
-                messaging_enabled: "1"
-              }
-            }
-          }
-        }
-      }
-    });
-
-    // Check that there's no LazyLoader with page-id prop (the page's media)
-    const lazyLoaders = wrapper.findAllComponents({ name: "LazyLoader" });
-    const pageLazyLoader = lazyLoaders.find(
-      (loader) => loader.props("page-id") === pageWithoutMedia.id
-    );
-    expect(pageLazyLoader).toBeUndefined();
-    expect(
-      wrapper.findComponent({ name: "ShareToChatButton" }).exists()
-    ).toBe(false);
-  });
-
-  describe("Share to chat", () => {
-    it("renders ShareToChatButton for shareable page", () => {
-      const share = wrapper.findComponent({ name: "ShareToChatButton" });
-      expect(share.exists()).toBe(true);
-      expect(share.props("kind")).toBe("page");
-      expect(share.props("pageId")).toBe(page.id);
-    });
-
-    it("disables share button when page was already shared today", async () => {
-      const today = new Date().toISOString().split("T")[0];
-      const key = `page_share_${page.id}_${today}`;
-      localStorage.setItem(key, Date.now().toString());
-
-      wrapper.unmount();
-      wrapper = mount(Show, {
-        props: {
-          page,
-          previousPage,
-          nextPage,
-          books,
-          collages,
-          users
-        },
-        global: {
-          stubs: {
-            Teleport: { template: "<div><slot /></div>" }
-          },
-          mocks: {
-            $page: {
-              props: {
-                auth: { user: { permissions_list: [] } },
-                search: null,
-                settings: { messaging_enabled: "1" }
-              }
-            }
-          }
-        }
-      });
-
-      await nextTick();
-
-      const share = wrapper.findComponent({ name: "ShareToChatButton" });
-      const buttons = share.findAllComponents({ name: "Button" });
-      const shareButton = buttons.find((btn) => {
-        const html = btn.html();
-        return (
-          html.includes("ri-share-line") || html.includes("ri-loader-line")
-        );
-      });
-      expect(shareButton).toBeDefined();
-      const isDisabled =
-        shareButton.props("disabled") !== false ||
-        shareButton.attributes("disabled") !== undefined;
-      expect(isDisabled).toBe(true);
-    });
-
-    it("posts to pages.share when share without tag is selected", async () => {
-      const share = wrapper.findComponent({ name: "ShareToChatButton" });
-      const buttons = share.findAllComponents({ name: "Button" });
-      const shareButton = buttons.find((btn) => {
-        const html = btn.html();
-        return (
-          html.includes("ri-share-line") || html.includes("ri-loader-line")
-        );
-      });
-      expect(shareButton).toBeDefined();
-      await shareButton.trigger("click");
-      await nextTick();
-
-      const userTagList = share.findComponent(UserTagList);
-      expect(userTagList.exists()).toBe(true);
-      userTagList.vm.$emit("select-none");
-      await nextTick();
-
-      const { router } = await import("@inertiajs/vue3");
-      expect(router.post).toHaveBeenCalledWith(
-        expect.stringContaining("/pages/1/share"),
-        {
-          tagged_user_ids: []
-        },
-        expect.any(Object)
-      );
-    });
-
-    it("updates localStorage after successful share", async () => {
-      const { router } = await import("@inertiajs/vue3");
-      router.post.mockImplementation((url, data, options) => {
-        if (options.onSuccess) {
-          options.onSuccess();
-        }
-      });
-
-      const share = wrapper.findComponent({ name: "ShareToChatButton" });
-      const buttons = share.findAllComponents({ name: "Button" });
-      const shareButton = buttons.find((btn) => {
-        const html = btn.html();
-        return (
-          html.includes("ri-share-line") || html.includes("ri-loader-line")
-        );
-      });
-      expect(shareButton).toBeDefined();
-      await shareButton.trigger("click");
-      await nextTick();
-
-      const userTagList = share.findComponent(UserTagList);
-      userTagList.vm.$emit("select-none");
-      await nextTick();
-
-      const today = new Date().toISOString().split("T")[0];
-      const key = `page_share_${page.id}_${today}`;
-      expect(localStorage.getItem(key)).not.toBeNull();
-    });
-
-    it("shows loading state while sharing", async () => {
-      const { router } = await import("@inertiajs/vue3");
-      let resolveShare;
-      const sharePromise = new Promise((resolve) => {
-        resolveShare = resolve;
-      });
-      router.post.mockReturnValue(sharePromise);
-
-      const share = wrapper.findComponent({ name: "ShareToChatButton" });
-      const buttons = share.findAllComponents({ name: "Button" });
-      const shareButton = buttons.find((btn) => {
-        const html = btn.html();
-        return (
-          html.includes("ri-share-line") || html.includes("ri-loader-line")
-        );
-      });
-      expect(shareButton).toBeDefined();
-      await shareButton.trigger("click");
-      await nextTick();
-
-      const userTagList = share.findComponent(UserTagList);
-      userTagList.vm.$emit("select-none");
-      await nextTick();
-
-      expect(router.post).toHaveBeenCalled();
-
-      resolveShare();
-      await nextTick();
-    });
-
-    it("handles share error gracefully", async () => {
-      const { router } = await import("@inertiajs/vue3");
-      router.post.mockImplementation((url, data, options) => {
-        if (options.onError) {
-          options.onError();
-        }
-      });
-
-      const share = wrapper.findComponent({ name: "ShareToChatButton" });
-      const buttons = share.findAllComponents({ name: "Button" });
-      const shareButton = buttons.find((btn) => {
-        const html = btn.html();
-        return (
-          html.includes("ri-share-line") || html.includes("ri-loader-line")
-        );
-      });
-      expect(shareButton).toBeDefined();
-      await shareButton.trigger("click");
-      await nextTick();
-
-      const userTagList = share.findComponent(UserTagList);
-      userTagList.vm.$emit("select-none");
-      await nextTick();
-
-      expect(router.post).toHaveBeenCalled();
-    });
-  });
-
-  it("shows movie cast link when category is movies", async () => {
-    wrapper.unmount();
-    wrapper = mount(Show, {
-      props: {
-        page: {
-          ...page,
-          book: {
+    let wrapper;
+    const page = {
+        id: 1,
+        title: "Test Page",
+        content: "Test content",
+        media_path: "/path/to/media.mp4",
+        youtube_link: "https://youtube.com/watch?v=test",
+        created_at: "2023-01-01T00:00:00.000000Z",
+        updated_at: "2023-01-01T00:00:00.000000Z",
+        read_count: 10,
+        book: {
             id: 1,
-            title: "Toy Story",
-            slug: "toy-story",
-            category: { name: "movies" }
-          }
+            title: "Test Book",
         },
-        previousPage,
-        nextPage,
-        books,
-        collages,
-        users
-      },
-      global: {
-        stubs: {
-          Teleport: { template: "<div><slot /></div>" }
-        },
-        mocks: {
-          $page: {
-            props: {
-              auth: { user: { permissions_list: [] } },
-              search: null,
-              settings: {
-                messaging_enabled: "1"
-              }
-            }
-          }
+    };
+    const previousPage = { id: 0, title: "Previous Page" };
+    const nextPage = { id: 2, title: "Next Page" };
+    const books = [];
+    const collages = [];
+    const users = [];
+
+    beforeEach(() => {
+        localStorage.clear();
+        if (wrapper) {
+            wrapper.unmount();
         }
-      }
+        wrapper = mount(Show, {
+            props: {
+                page,
+                previousPage,
+                nextPage,
+                books,
+                collages,
+                users,
+            },
+            global: {
+                stubs: {
+                    Teleport: { template: "<div><slot /></div>" },
+                },
+                mocks: {
+                    $page: {
+                        props: {
+                            auth: { user: { permissions_list: [] } },
+                            search: null,
+                            settings: {
+                                messaging_enabled: "1",
+                            },
+                        },
+                    },
+                },
+            },
+        });
     });
 
-    const movieLink = wrapper
-      .findAllComponents({ name: "Link" })
-      .find((item) => item.props("href")?.includes("movie-cast"));
+    it("renders the page content", () => {
+        expect(wrapper.text()).toContain("Test content");
+    });
 
-    expect(movieLink).toBeDefined();
-    expect(movieLink.props("href")).toBe("/movie-cast?title=Toy+Story");
-  });
+    it("renders LazyLoader when media_path is present", () => {
+        const lazyLoaders = wrapper.findAllComponents({ name: "LazyLoader" });
+        // Find the LazyLoader with page-id prop (the page's media)
+        // Vue converts kebab-case to camelCase, so check both
+        const pageLazyLoader = lazyLoaders.find(
+            (loader) =>
+                loader.props("page-id") === page.id ||
+                loader.props("pageId") === page.id
+        );
+        expect(pageLazyLoader).toBeDefined();
+    });
 
-  it("does not show movie cast link for non-movies categories", () => {
-    const movieLinks = wrapper
-      .findAllComponents({ name: "Link" })
-      .filter((item) => item.props("href")?.includes("movie-cast"));
+    it("passes media_path to LazyLoader", () => {
+        const lazyLoaders = wrapper.findAllComponents({ name: "LazyLoader" });
+        // Find the LazyLoader with page-id prop (the page's media, not the book cover)
+        // Vue converts kebab-case to camelCase, so check both
+        const pageLazyLoader = lazyLoaders.find(
+            (loader) =>
+                loader.props("page-id") === page.id ||
+                loader.props("pageId") === page.id
+        );
+        expect(pageLazyLoader).toBeDefined();
+        expect(pageLazyLoader.props("src")).toBe("/path/to/media.mp4");
+    });
 
-    expect(movieLinks).toHaveLength(0);
-  });
+    it("renders edit page form when showPageSettings is true", async () => {
+        wrapper.vm.showPageSettings = true;
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.findComponent({ name: "EditPageForm" }).exists()).toBe(
+            true
+        );
+    });
+
+    it("toggles edit page form visibility", async () => {
+        expect(wrapper.vm.showPageSettings).toBe(false);
+
+        // Simulate clicking edit button
+        wrapper.vm.showPageSettings = true;
+        await wrapper.vm.$nextTick();
+        expect(wrapper.vm.showPageSettings).toBe(true);
+
+        // Simulate closing form
+        wrapper.vm.showPageSettings = false;
+        await wrapper.vm.$nextTick();
+        expect(wrapper.vm.showPageSettings).toBe(false);
+    });
+
+    it("passes page prop to EditPageForm", async () => {
+        wrapper.vm.showPageSettings = true;
+        await wrapper.vm.$nextTick();
+
+        const editForm = wrapper.findComponent({ name: "EditPageForm" });
+        expect(editForm.props("page")).toEqual(page);
+        expect(editForm.props("book")).toEqual(page.book);
+        expect(editForm.props("books")).toEqual(books);
+    });
+
+    it("handles page without media", () => {
+        const pageWithoutMedia = { ...page, media_path: null };
+        wrapper.unmount();
+        wrapper = mount(Show, {
+            props: {
+                page: pageWithoutMedia,
+                previousPage,
+                nextPage,
+                books,
+                collages,
+            },
+            global: {
+                stubs: {
+                    Teleport: { template: "<div><slot /></div>" },
+                },
+                mocks: {
+                    $page: {
+                        props: {
+                            auth: { user: { permissions_list: [] } },
+                            search: null,
+                            settings: {
+                                messaging_enabled: "1",
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        // Check that there's no LazyLoader with page-id prop (the page's media)
+        const lazyLoaders = wrapper.findAllComponents({ name: "LazyLoader" });
+        const pageLazyLoader = lazyLoaders.find(
+            (loader) => loader.props("page-id") === pageWithoutMedia.id
+        );
+        expect(pageLazyLoader).toBeUndefined();
+        expect(
+            wrapper.findComponent({ name: "ShareToChatButton" }).exists()
+        ).toBe(false);
+    });
+
+    describe("Share to chat", () => {
+        it("renders ShareToChatButton for shareable page", () => {
+            const share = wrapper.findComponent({ name: "ShareToChatButton" });
+            expect(share.exists()).toBe(true);
+            expect(share.props("kind")).toBe("page");
+            expect(share.props("pageId")).toBe(page.id);
+        });
+
+        it("disables share button when page was already shared today", async () => {
+            const today = new Date().toISOString().split("T")[0];
+            const key = `page_share_${page.id}_${today}`;
+            localStorage.setItem(key, Date.now().toString());
+
+            wrapper.unmount();
+            wrapper = mount(Show, {
+                props: {
+                    page,
+                    previousPage,
+                    nextPage,
+                    books,
+                    collages,
+                    users,
+                },
+                global: {
+                    stubs: {
+                        Teleport: { template: "<div><slot /></div>" },
+                    },
+                    mocks: {
+                        $page: {
+                            props: {
+                                auth: { user: { permissions_list: [] } },
+                                search: null,
+                                settings: { messaging_enabled: "1" },
+                            },
+                        },
+                    },
+                },
+            });
+
+            await nextTick();
+
+            const share = wrapper.findComponent({ name: "ShareToChatButton" });
+            const buttons = share.findAllComponents({ name: "Button" });
+            const shareButton = buttons.find((btn) => {
+                const html = btn.html();
+                return (
+                    html.includes("ri-share-line") ||
+                    html.includes("ri-loader-line")
+                );
+            });
+            expect(shareButton).toBeDefined();
+            const isDisabled =
+                shareButton.props("disabled") !== false ||
+                shareButton.attributes("disabled") !== undefined;
+            expect(isDisabled).toBe(true);
+        });
+
+        it("posts to pages.share when share without tag is selected", async () => {
+            const share = wrapper.findComponent({ name: "ShareToChatButton" });
+            const buttons = share.findAllComponents({ name: "Button" });
+            const shareButton = buttons.find((btn) => {
+                const html = btn.html();
+                return (
+                    html.includes("ri-share-line") ||
+                    html.includes("ri-loader-line")
+                );
+            });
+            expect(shareButton).toBeDefined();
+            await shareButton.trigger("click");
+            await nextTick();
+
+            const userTagList = share.findComponent(UserTagList);
+            expect(userTagList.exists()).toBe(true);
+            userTagList.vm.$emit("select-none");
+            await nextTick();
+
+            const { router } = await import("@inertiajs/vue3");
+            expect(router.post).toHaveBeenCalledWith(
+                expect.stringContaining("/pages/1/share"),
+                {
+                    tagged_user_ids: [],
+                },
+                expect.any(Object)
+            );
+        });
+
+        it("updates localStorage after successful share", async () => {
+            const { router } = await import("@inertiajs/vue3");
+            router.post.mockImplementation((url, data, options) => {
+                if (options.onSuccess) {
+                    options.onSuccess();
+                }
+            });
+
+            const share = wrapper.findComponent({ name: "ShareToChatButton" });
+            const buttons = share.findAllComponents({ name: "Button" });
+            const shareButton = buttons.find((btn) => {
+                const html = btn.html();
+                return (
+                    html.includes("ri-share-line") ||
+                    html.includes("ri-loader-line")
+                );
+            });
+            expect(shareButton).toBeDefined();
+            await shareButton.trigger("click");
+            await nextTick();
+
+            const userTagList = share.findComponent(UserTagList);
+            userTagList.vm.$emit("select-none");
+            await nextTick();
+
+            const today = new Date().toISOString().split("T")[0];
+            const key = `page_share_${page.id}_${today}`;
+            expect(localStorage.getItem(key)).not.toBeNull();
+        });
+
+        it("shows loading state while sharing", async () => {
+            const { router } = await import("@inertiajs/vue3");
+            let resolveShare;
+            const sharePromise = new Promise((resolve) => {
+                resolveShare = resolve;
+            });
+            router.post.mockReturnValue(sharePromise);
+
+            const share = wrapper.findComponent({ name: "ShareToChatButton" });
+            const buttons = share.findAllComponents({ name: "Button" });
+            const shareButton = buttons.find((btn) => {
+                const html = btn.html();
+                return (
+                    html.includes("ri-share-line") ||
+                    html.includes("ri-loader-line")
+                );
+            });
+            expect(shareButton).toBeDefined();
+            await shareButton.trigger("click");
+            await nextTick();
+
+            const userTagList = share.findComponent(UserTagList);
+            userTagList.vm.$emit("select-none");
+            await nextTick();
+
+            expect(router.post).toHaveBeenCalled();
+
+            resolveShare();
+            await nextTick();
+        });
+
+        it("handles share error gracefully", async () => {
+            const { router } = await import("@inertiajs/vue3");
+            router.post.mockImplementation((url, data, options) => {
+                if (options.onError) {
+                    options.onError();
+                }
+            });
+
+            const share = wrapper.findComponent({ name: "ShareToChatButton" });
+            const buttons = share.findAllComponents({ name: "Button" });
+            const shareButton = buttons.find((btn) => {
+                const html = btn.html();
+                return (
+                    html.includes("ri-share-line") ||
+                    html.includes("ri-loader-line")
+                );
+            });
+            expect(shareButton).toBeDefined();
+            await shareButton.trigger("click");
+            await nextTick();
+
+            const userTagList = share.findComponent(UserTagList);
+            userTagList.vm.$emit("select-none");
+            await nextTick();
+
+            expect(router.post).toHaveBeenCalled();
+        });
+    });
+
+    it("shows movie cast link when category is movies", async () => {
+        wrapper.unmount();
+        wrapper = mount(Show, {
+            props: {
+                page: {
+                    ...page,
+                    book: {
+                        id: 1,
+                        title: "Toy Story",
+                        slug: "toy-story",
+                        category: { name: "movies" },
+                    },
+                },
+                previousPage,
+                nextPage,
+                books,
+                collages,
+                users,
+            },
+            global: {
+                stubs: {
+                    Teleport: { template: "<div><slot /></div>" },
+                },
+                mocks: {
+                    $page: {
+                        props: {
+                            auth: { user: { permissions_list: [] } },
+                            search: null,
+                            settings: {
+                                messaging_enabled: "1",
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        const movieLink = wrapper
+            .findAllComponents({ name: "Link" })
+            .find((item) => item.props("href")?.includes("movie-cast"));
+
+        expect(movieLink).toBeDefined();
+        expect(movieLink.props("href")).toBe("/movie-cast?title=Toy+Story");
+    });
+
+    it("does not show movie cast link for non-movies categories", () => {
+        const movieLinks = wrapper
+            .findAllComponents({ name: "Link" })
+            .filter((item) => item.props("href")?.includes("movie-cast"));
+
+        expect(movieLinks).toHaveLength(0);
+    });
 });
