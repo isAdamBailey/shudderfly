@@ -11,6 +11,7 @@ use App\Models\Page;
 use App\Support\ThemeBooks;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,8 +21,11 @@ class CategoryController extends Controller
     /**
      * Display all books for a specific category.
      */
-    public function show(string $categoryName): Response
+    public function show(Request $request, string $categoryName): Response
     {
+        $sort = $request->query('sort', 'newest');
+        $isSpecialCategory = in_array($categoryName, ['popular', 'forgotten', 'themed'], true);
+
         // For special categories, don't query the database
         $books = match ($categoryName) {
             'popular' => Book::query()
@@ -39,7 +43,10 @@ class CategoryController extends Controller
                 ->firstOrFail()
                 ->books()
                 ->with('coverImage')
+                ->when($sort === 'popular', fn ($query) => $query->reorder()->orderBy('read_count', 'desc'))
+                ->when($sort === 'oldest', fn ($query) => $query->reorder()->orderBy('created_at', 'asc'))
                 ->paginate()
+                ->withQueryString()
         };
 
         // Get all pages with locations for ALL books in this category (not just current page)
@@ -89,6 +96,8 @@ class CategoryController extends Controller
             'categoryName' => $categoryName,
             'books' => $books,
             'locations' => $locations,
+            'sort' => $sort,
+            'isSpecialCategory' => $isSpecialCategory,
         ]);
     }
 

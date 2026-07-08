@@ -375,6 +375,11 @@ return [
     'book.pages_count' => ':count páginas',
     'book.no_pages' => 'Este libro aún no tiene páginas.',
 
+    // Category sort (spoken)
+    'category.sort_oldest' => ':category más antiguos',
+    'category.sort_favorites' => ':category favoritos',
+    'category.sort_group' => 'Ordenar libros',
+
     // Collages
     'collage.none_created' => 'Aún no se han creado collages.',
     'collage.single_for_month' => '¡Este es el collage de :month!',

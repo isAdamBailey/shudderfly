@@ -102,6 +102,65 @@ class CategoriesTest extends TestCase
         );
     }
 
+    public function test_category_show_sorts_books_by_popularity()
+    {
+        $this->actingAs(User::factory()->create());
+
+        $category = Category::factory()->create(['name' => 'fiction']);
+        Book::factory()->create(['category_id' => $category->id, 'read_count' => 100]);
+        Book::factory()->create(['category_id' => $category->id, 'read_count' => 50]);
+        Book::factory()->create(['category_id' => $category->id, 'read_count' => 200]);
+
+        $response = $this->get(route('categories.show', ['categoryName' => 'fiction', 'sort' => 'popular']));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Category/Index')
+            ->where('sort', 'popular')
+            ->has('books.data', 3)
+            ->where('books.data.0.read_count', 200)
+            ->where('books.data.1.read_count', 100)
+            ->where('books.data.2.read_count', 50)
+        );
+    }
+
+    public function test_category_show_preserves_sort_across_pagination()
+    {
+        $this->actingAs(User::factory()->create());
+
+        $category = Category::factory()->create(['name' => 'fiction']);
+        Book::factory()->count(20)->create(['category_id' => $category->id]);
+
+        $response = $this->get(route('categories.show', ['categoryName' => 'fiction', 'sort' => 'popular']));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Category/Index')
+            ->where('books.next_page_url', route('categories.show', ['categoryName' => 'fiction']).'?sort=popular&page=2')
+        );
+    }
+
+    public function test_category_show_sorts_books_oldest_first()
+    {
+        $this->actingAs(User::factory()->create());
+
+        $category = Category::factory()->create(['name' => 'fiction']);
+        $oldest = Book::factory()->create(['category_id' => $category->id, 'created_at' => now()->subDays(3)]);
+        $newest = Book::factory()->create(['category_id' => $category->id, 'created_at' => now()]);
+        $middle = Book::factory()->create(['category_id' => $category->id, 'created_at' => now()->subDay()]);
+
+        $response = $this->get(route('categories.show', ['categoryName' => 'fiction', 'sort' => 'oldest']));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Category/Index')
+            ->where('sort', 'oldest')
+            ->where('books.data.0.id', $oldest->id)
+            ->where('books.data.1.id', $middle->id)
+            ->where('books.data.2.id', $newest->id)
+        );
+    }
+
     public function test_category_show_displays_popular_books()
     {
         $this->actingAs(User::factory()->create());
