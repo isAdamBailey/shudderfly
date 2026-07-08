@@ -1,6 +1,13 @@
 <template>
-    <form class="text-center" @submit.prevent="submit">
-        <DangerButton>Delete Page</DangerButton>
+    <form @submit.prevent="submit">
+        <button
+            type="submit"
+            class="inline-flex items-center justify-center w-9 h-9 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 dark:text-gray-500 dark:hover:text-red-400 dark:hover:bg-red-900/20 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors ease-in-out duration-150"
+            aria-label="Delete page"
+            title="Delete page"
+        >
+            <i class="ri-delete-bin-line text-lg" aria-hidden="true"></i>
+        </button>
     </form>
     <ConfirmDialog
         v-model:show="confirmShow"
@@ -17,7 +24,6 @@
 <script setup>
 /* global route */
 import ConfirmDialog from "@/Components/ConfirmDialog.vue";
-import DangerButton from "@/Components/DangerButton.vue";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useTranslations } from "@/composables/useTranslations";
 import { useForm } from "@inertiajs/vue3";

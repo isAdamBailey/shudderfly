@@ -60,9 +60,10 @@ const submit = () => {
 
 <template>
     <div class="bg-white dark:bg-gray-800 rounded p-5 w-full">
-        <h3 class="text-2xl dark:text-gray-100 w-full border-b mb-7">
-            Edit Book
-        </h3>
+        <div class="flex items-center justify-between border-b mb-7 pb-1">
+            <h3 class="text-2xl dark:text-gray-100">Edit Book</h3>
+            <DeleteForm :book="book" />
+        </div>
         <form @submit.prevent="submit">
             <div class="flex flex-col">
                 <div class="mr-3">
@@ -128,7 +129,6 @@ const submit = () => {
                 </BreezeButton>
             </div>
         </form>
-        <DeleteForm :book="book" />
     </div>
 </template>
 

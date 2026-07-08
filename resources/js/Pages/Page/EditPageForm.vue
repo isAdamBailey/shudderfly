@@ -324,11 +324,17 @@ const handleAddressFocus = () => {
 
         <!-- Page Actions Section -->
         <div class="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
-            <h3
-                class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4"
-            >
-                Page Actions
-            </h3>
+            <div class="flex items-center justify-between mb-4">
+                <h3
+                    class="text-base font-semibold text-gray-900 dark:text-gray-100"
+                >
+                    Page Actions
+                </h3>
+                <DeletePageForm
+                    :page="page"
+                    @close-page-form="$emit('close-page-form')"
+                />
+            </div>
 
             <div class="space-y-4">
                 <!-- Cover Image Actions -->
@@ -390,37 +396,25 @@ const handleAddressFocus = () => {
                     "
                 >
                     <div
-                        class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+                        class="flex flex-col gap-3 sm:flex-row sm:items-center"
                     >
-                        <div
-                            class="flex flex-col gap-3 sm:flex-row sm:items-center"
+                        <SecondaryButton type="button" @click="toggleMoveToTop">
+                            <i
+                                class="ri-arrow-up-line mr-2"
+                                aria-hidden="true"
+                            ></i>
+                            {{
+                                pendingMoveToTop
+                                    ? "Cancel Move to Top"
+                                    : "Move to Top"
+                            }}
+                        </SecondaryButton>
+                        <p
+                            v-if="!pendingMoveToTop"
+                            class="text-sm text-gray-600 dark:text-gray-400"
                         >
-                            <SecondaryButton
-                                type="button"
-                                @click="toggleMoveToTop"
-                            >
-                                <i
-                                    class="ri-arrow-up-line mr-2"
-                                    aria-hidden="true"
-                                ></i>
-                                {{
-                                    pendingMoveToTop
-                                        ? "Cancel Move to Top"
-                                        : "Move to Top"
-                                }}
-                            </SecondaryButton>
-                            <p
-                                v-if="!pendingMoveToTop"
-                                class="text-sm text-gray-600 dark:text-gray-400"
-                            >
-                                Update timestamp to now
-                            </p>
-                        </div>
-
-                        <DeletePageForm
-                            :page="page"
-                            @close-page-form="$emit('close-page-form')"
-                        />
+                            Update timestamp to now
+                        </p>
                     </div>
 
                     <div
