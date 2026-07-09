@@ -40,6 +40,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/books-category', [BookController::class, 'category'])->name('books.category');
     Route::get('/categories/{categoryName}', [CategoryController::class, 'show'])->name('categories.show');
     Route::get('/book/{book}', [BookController::class, 'show'])->name('books.show');
+    Route::post('/book/{book}/share', [BookController::class, 'share'])->name('books.share');
     Route::get('/rules', function () {
         return Inertia::render('Rules', [
             'appName' => config('app.name'),

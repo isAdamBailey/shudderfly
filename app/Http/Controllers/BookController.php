@@ -2,16 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\MessageCreated;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Requests\StoreBookRequest;
 use App\Http\Requests\UpdateBookRequest;
 use App\Jobs\IncrementBookReadCount;
 use App\Models\Book;
 use App\Models\Category;
+use App\Models\Message;
 use App\Models\SiteSetting;
 use App\Models\Song;
 use App\Models\User;
 use App\Services\PopularityService;
+use App\Services\UserTaggingService;
 use App\Services\VoiceSearchService;
 use App\Support\ReadThrottle;
 use App\Support\ThemeBooks;
@@ -30,7 +33,8 @@ class BookController extends Controller
 {
     public function __construct(
         private PopularityService $popularityService,
-        private VoiceSearchService $voiceSearchService
+        private VoiceSearchService $voiceSearchService,
+        private UserTaggingService $userTaggingService
     ) {}
 
     /**
@@ -294,5 +298,57 @@ class BookController extends Controller
             ->get();
 
         return $songs->isEmpty() ? null : $songs;
+    }
+
+    public function share(Book $book, Request $request): RedirectResponse
+    {
+        $setting = SiteSetting::where('key', 'messaging_enabled')->first();
+        $messagingEnabled = $setting && ($setting->getAttributes()['value'] ?? $setting->value) === '1';
+
+        if (! $messagingEnabled) {
+            return back()->withErrors(['message' => __('messages.messaging.disabled')]);
+        }
+
+        $validated = $request->validate([
+            'tagged_user_ids' => ['sometimes', 'array'],
+            'tagged_user_ids.*' => ['integer', 'exists:users,id'],
+        ]);
+
+        $taggedUserIds = $validated['tagged_user_ids'] ?? [];
+        if (! is_array($taggedUserIds)) {
+            $taggedUserIds = [];
+        }
+
+        $taggedUser = null;
+        if ($taggedUserIds !== []) {
+            $taggedUser = User::select('id', 'name')->find($taggedUserIds[0]);
+        }
+
+        $shareMessage = __('messages.book_shared', ['title' => $book->title]);
+        if ($taggedUser) {
+            $shareMessage = $shareMessage.' @'.$taggedUser->name;
+        }
+
+        $message = Message::create([
+            'user_id' => $request->user()->id,
+            'message' => $shareMessage,
+            'book_id' => $book->id,
+        ]);
+
+        $message->load(['book.coverImage', 'user']);
+
+        if ($taggedUserIds !== []) {
+            $this->userTaggingService->notifyTaggedUsers(
+                $taggedUserIds,
+                $request->user(),
+                $message,
+                'message'
+            );
+        }
+        event(new MessageCreated($message));
+
+        return redirect()
+            ->to(route('messages.index').'#message-'.$message->id)
+            ->with('success', __('messages.book.shared'));
     }
 }

@@ -178,6 +178,35 @@
                         </div>
                     </Link>
                 </div>
+                <div
+                    v-if="message.book_id && message.book"
+                    class="mt-2 md:mt-3"
+                >
+                    <Link
+                        :href="route('books.show', { book: message.book.slug })"
+                        class="block rounded-lg overflow-hidden w-full max-w-[200px] sm:max-w-[250px] mt-2"
+                        @click.stop
+                    >
+                        <img
+                            v-if="message.book.cover_image?.media_path"
+                            :src="message.book.cover_image.media_path"
+                            :alt="
+                                message.book.title || t('message.shared_book')
+                            "
+                            class="w-full h-auto max-h-[200px] sm:max-h-[250px] object-contain rounded-lg"
+                            loading="lazy"
+                        />
+                        <div
+                            v-else
+                            class="flex items-center justify-center w-full max-w-[200px] aspect-[2/3] rounded-lg bg-gray-200 dark:bg-gray-700"
+                        >
+                            <i
+                                class="ri-book-2-line text-4xl text-gray-500 dark:text-gray-400"
+                                aria-hidden="true"
+                            ></i>
+                        </div>
+                    </Link>
+                </div>
                 <MessageReactions
                     v-if="!readOnly"
                     :grouped-reactions="message.grouped_reactions || {}"

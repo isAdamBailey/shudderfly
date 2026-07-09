@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Events\MessageCreated;
 use App\Jobs\IncrementBookReadCount;
 use App\Models\Book;
 use App\Models\Category;
@@ -14,6 +15,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Testing\Fluent\AssertableJson;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -815,5 +817,41 @@ class BooksTest extends TestCase
                     $page->where('relatedSongs.0.id', $song->id);
                 })
         );
+    }
+
+    public function test_guest_cannot_share_book(): void
+    {
+        $book = Book::factory()->create();
+
+        $this->post(route('books.share', $book), [])
+            ->assertRedirect(route('login'));
+    }
+
+    public function test_authenticated_user_can_share_book_to_chat(): void
+    {
+        SiteSetting::updateOrCreate(
+            ['key' => 'messaging_enabled'],
+            ['value' => '1', 'type' => 'boolean', 'description' => 'x']
+        );
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $book = Book::factory()->create(['title' => 'The Great Adventure']);
+
+        Event::fake(MessageCreated::class);
+
+        $response = $this->post(route('books.share', $book));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('messages', [
+            'user_id' => $user->id,
+            'book_id' => $book->id,
+            'message' => __('messages.book_shared', ['title' => 'The Great Adventure']),
+        ]);
+
+        Event::assertDispatched(MessageCreated::class);
     }
 }

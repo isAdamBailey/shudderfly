@@ -125,6 +125,12 @@
                         icon-class="ri-speak-fill text-lg"
                         @click="readTitleAndExcerpt"
                     />
+
+                    <ShareToChatButton
+                        kind="book"
+                        :book-id="book.slug"
+                        wrapper-class="flex shrink-0 items-center gap-2"
+                    />
                 </div>
             </div>
 
@@ -382,6 +388,7 @@ import Accordion from "@/Components/Accordion.vue";
 import BookCover from "@/Components/BookCover.vue";
 import Button from "@/Components/Button.vue";
 import SpeakButton from "@/Components/SpeakButton.vue";
+import ShareToChatButton from "@/Components/ShareToChatButton.vue";
 import FloatingActionMenu from "@/Components/FloatingActionMenu.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import MapEmbed from "@/Components/Map/MapEmbed.vue";

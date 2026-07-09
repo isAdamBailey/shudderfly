@@ -21,7 +21,7 @@ class MessageCreated implements ShouldBroadcastNow
     public function __construct(Message $message)
     {
         $this->message = $message;
-        $this->message->loadMissing(['user', 'page', 'song']);
+        $this->message->loadMissing(['user', 'page', 'song', 'book.coverImage']);
     }
 
     /**
@@ -60,6 +60,7 @@ class MessageCreated implements ShouldBroadcastNow
             'movie_tmdb_id' => $this->message->movie_tmdb_id,
             'movie_title' => $this->message->movie_title,
             'movie_image_path' => $this->message->movie_image_path,
+            'book_id' => $this->message->book_id,
             'created_at' => $this->message->created_at->toIso8601String(),
             'user' => [
                 'id' => $this->message->user->id,
@@ -77,6 +78,14 @@ class MessageCreated implements ShouldBroadcastNow
                 'title' => $this->message->song->title,
                 'thumbnail_high' => $this->message->song->thumbnail_high,
                 'thumbnail_default' => $this->message->song->thumbnail_default,
+            ] : null,
+            'book' => $this->message->book ? [
+                'id' => $this->message->book->id,
+                'slug' => $this->message->book->slug,
+                'title' => $this->message->book->title,
+                'cover_image' => $this->message->book->coverImage ? [
+                    'media_path' => $this->message->book->coverImage->media_path,
+                ] : null,
             ] : null,
             'grouped_reactions' => [],
         ];

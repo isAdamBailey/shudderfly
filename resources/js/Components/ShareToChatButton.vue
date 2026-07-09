@@ -15,7 +15,11 @@ const props = defineProps({
         type: String,
         default: "game",
         validator: (v) =>
-            v === "game" || v === "page" || v === "song" || v === "movie",
+            v === "game" ||
+            v === "page" ||
+            v === "song" ||
+            v === "movie" ||
+            v === "book",
     },
     gameSlug: { type: String, default: undefined },
     score: { type: Number, default: undefined },
@@ -24,6 +28,7 @@ const props = defineProps({
     movieTmdbId: { type: [Number, String], default: undefined },
     movieTitle: { type: String, default: undefined },
     movieImagePath: { type: String, default: undefined },
+    bookId: { type: [Number, String], default: undefined },
     wrapperClass: {
         type: String,
         default: "inline-flex items-center justify-center gap-2",
@@ -142,6 +147,12 @@ const shareToChat = (taggedUserId = null) => {
             },
             options
         );
+    } else if (props.kind === "book") {
+        router.post(
+            route("books.share", props.bookId),
+            { tagged_user_ids: tagged },
+            options
+        );
     } else {
         router.post(
             route("games.share-score", props.gameSlug),
@@ -174,6 +185,9 @@ const confirmPrefix = computed(() => {
     if (props.kind === "game") {
         return "game";
     }
+    if (props.kind === "book") {
+        return "book";
+    }
     return "page";
 });
 
@@ -190,6 +204,9 @@ const shareIconTitle = computed(() => {
     if (props.kind === "game") {
         return t("game.share_icon_title");
     }
+    if (props.kind === "book") {
+        return t("book.share_icon_title");
+    }
     return t("page.share_icon_title");
 });
 
@@ -205,6 +222,9 @@ const shareAriaLabel = computed(() => {
     }
     if (props.kind === "game") {
         return t("game.share_aria");
+    }
+    if (props.kind === "book") {
+        return t("book.share_aria");
     }
     return t("page.share_aria");
 });

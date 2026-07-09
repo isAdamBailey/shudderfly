@@ -21,6 +21,7 @@ class Message extends Model
         'movie_tmdb_id',
         'movie_title',
         'movie_image_path',
+        'book_id',
     ];
 
     protected $casts = [
@@ -89,6 +90,14 @@ class Message extends Model
     public function song(): BelongsTo
     {
         return $this->belongsTo(Song::class);
+    }
+
+    /**
+     * Get the book that this message shares (if any).
+     */
+    public function book(): BelongsTo
+    {
+        return $this->belongsTo(Book::class);
     }
 
     /**
