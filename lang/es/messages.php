@@ -11,6 +11,7 @@ return [
     'song_shared' => 'Escucha esta canción: :title',
     'movie_shared' => 'Mira esta película: :title',
     'book_shared' => 'Mira este libro: :title',
+    'sound_shared' => 'Escucha este sonido: :title',
     'unknown_book' => 'Libro misterioso',
     'share_to_timeline' => 'Compartir en el chat',
     'already_shared_today' => '¡Ya compartiste algo hoy!',
@@ -43,6 +44,7 @@ return [
     'sound.deleted' => 'Ese sonido ya no está.',
     'sound.blocked' => 'Sonido bloqueado.',
     'sound.disabled' => 'Los sonidos están apagados ahora mismo.',
+    'sound.shared' => '¡Compartido! Tus amigos pueden escucharlo.',
     'avatar.updated' => '¡Foto nueva! Te ves genial.',
     'user.weekly_overview_regenerated' => '¡Se hizo una nueva historia semanal para :name!',
 
@@ -124,6 +126,7 @@ return [
     'message.shared_song' => 'Canción compartida',
     'message.shared_movie' => 'Película compartida',
     'message.shared_book' => 'Libro compartido',
+    'message.shared_sound' => 'Sonido compartido',
 
     // UI Labels - Comments
     'comment.actions' => 'Cosas que puedes hacer',
@@ -234,6 +237,12 @@ return [
     'book.share_confirm_speak_tagged' => '¿Seguro que quieres compartir este libro con :username:',
     'book.share_confirm_dialog' => '¿Seguro que quieres compartir este libro?',
     'book.share_confirm_dialog_tagged' => '¿Seguro que quieres compartir este libro con :username?',
+    'sound.share_icon_title' => 'Compartir',
+    'sound.share_aria' => 'Compartir en el chat',
+    'sound.share_confirm_speak' => '¿Seguro que quieres compartir este sonido:',
+    'sound.share_confirm_speak_tagged' => '¿Seguro que quieres compartir este sonido con :username:',
+    'sound.share_confirm_dialog' => '¿Seguro que quieres compartir este sonido?',
+    'sound.share_confirm_dialog_tagged' => '¿Seguro que quieres compartir este sonido con :username?',
     'game.share_icon_title' => 'Compartir',
     'game.share_aria' => 'Compartir en el chat',
     'game.share_confirm_speak' => '¿Seguro que quieres compartir tu puntuación:',

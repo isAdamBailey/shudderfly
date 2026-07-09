@@ -19,7 +19,8 @@ const props = defineProps({
             v === "page" ||
             v === "song" ||
             v === "movie" ||
-            v === "book",
+            v === "book" ||
+            v === "sound",
     },
     gameSlug: { type: String, default: undefined },
     score: { type: Number, default: undefined },
@@ -29,9 +30,18 @@ const props = defineProps({
     movieTitle: { type: String, default: undefined },
     movieImagePath: { type: String, default: undefined },
     bookId: { type: [Number, String], default: undefined },
+    soundId: { type: [Number, String], default: undefined },
     wrapperClass: {
         type: String,
         default: "inline-flex items-center justify-center gap-2",
+    },
+    menuItem: {
+        type: Boolean,
+        default: false,
+    },
+    menuItemClass: {
+        type: [String, Array],
+        default: "",
     },
 });
 
@@ -73,7 +83,9 @@ const canShare = computed(() => {
 });
 
 const hasDailyShareLimit = computed(() => {
-    return props.kind === "page" || props.kind === "song";
+    return (
+        props.kind === "page" || props.kind === "song" || props.kind === "sound"
+    );
 });
 
 const isShareDisabled = computed(() => {
@@ -87,6 +99,9 @@ const storageKey = () => {
     const today = new Date().toISOString().split("T")[0];
     if (props.kind === "song") {
         return `song_share_${props.songId}_${today}`;
+    }
+    if (props.kind === "sound") {
+        return `sound_share_${props.soundId}_${today}`;
     }
     return `page_share_${props.pageId}_${today}`;
 };
@@ -153,6 +168,12 @@ const shareToChat = (taggedUserId = null) => {
             { tagged_user_ids: tagged },
             options
         );
+    } else if (props.kind === "sound") {
+        router.post(
+            route("sounds.share", props.soundId),
+            { tagged_user_ids: tagged },
+            options
+        );
     } else {
         router.post(
             route("games.share-score", props.gameSlug),
@@ -175,6 +196,13 @@ const toggleShareMenu = () => {
     }
 };
 
+const handleTriggerClick = (event) => {
+    if (!props.menuItem) {
+        event.stopPropagation();
+    }
+    toggleShareMenu();
+};
+
 const confirmPrefix = computed(() => {
     if (props.kind === "song") {
         return "song";
@@ -187,6 +215,9 @@ const confirmPrefix = computed(() => {
     }
     if (props.kind === "book") {
         return "book";
+    }
+    if (props.kind === "sound") {
+        return "sound";
     }
     return "page";
 });
@@ -207,6 +238,9 @@ const shareIconTitle = computed(() => {
     if (props.kind === "book") {
         return t("book.share_icon_title");
     }
+    if (props.kind === "sound") {
+        return t("sound.share_icon_title");
+    }
     return t("page.share_icon_title");
 });
 
@@ -226,8 +260,13 @@ const shareAriaLabel = computed(() => {
     if (props.kind === "book") {
         return t("book.share_aria");
     }
+    if (props.kind === "sound") {
+        return t("sound.share_aria");
+    }
     return t("page.share_aria");
 });
+
+const shareMenuItemLabel = computed(() => t("share_to_timeline"));
 
 const confirmThenShare = async (taggedUser, postAction) => {
     if (confirmPending.value) return;
@@ -330,14 +369,34 @@ onUnmounted(() => {
 <template>
     <div v-if="canShare" :class="wrapperClass">
         <div ref="shareMenuContainerRef" class="relative flex items-center">
+            <button
+                v-if="menuItem"
+                ref="shareButtonRef"
+                type="button"
+                role="menuitem"
+                :class="menuItemClass"
+                :disabled="isShareDisabled || sharing || confirmPending"
+                :title="shareIconTitle"
+                :aria-label="shareAriaLabel"
+                @click="handleTriggerClick"
+            >
+                <i
+                    v-if="sharing"
+                    class="ri-loader-line text-lg animate-spin"
+                    aria-hidden="true"
+                ></i>
+                <i v-else class="ri-share-line text-lg" aria-hidden="true"></i>
+                {{ shareMenuItemLabel }}
+            </button>
             <Button
+                v-else
                 ref="shareButtonRef"
                 type="button"
                 :disabled="isShareDisabled || sharing || confirmPending"
                 class="h-10 w-10 flex items-center justify-center"
                 :title="shareIconTitle"
                 :aria-label="shareAriaLabel"
-                @click.stop="toggleShareMenu"
+                @click="handleTriggerClick"
             >
                 <i
                     v-if="sharing"

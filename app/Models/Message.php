@@ -22,6 +22,7 @@ class Message extends Model
         'movie_title',
         'movie_image_path',
         'book_id',
+        'sound_id',
     ];
 
     protected $casts = [
@@ -98,6 +99,14 @@ class Message extends Model
     public function book(): BelongsTo
     {
         return $this->belongsTo(Book::class);
+    }
+
+    /**
+     * Get the sound that this message shares (if any).
+     */
+    public function sound(): BelongsTo
+    {
+        return $this->belongsTo(Sound::class);
     }
 
     /**

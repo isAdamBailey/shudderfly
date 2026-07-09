@@ -179,6 +179,36 @@
                     </Link>
                 </div>
                 <div
+                    v-if="message.sound_id && message.sound"
+                    class="mt-2 md:mt-3"
+                >
+                    <button
+                        type="button"
+                        class="flex items-center gap-3 rounded-lg overflow-hidden w-full max-w-[200px] sm:max-w-[250px] mt-2 px-3 py-2 bg-gray-100 dark:bg-gray-700"
+                        @click.stop="playSharedSound(message.sound)"
+                    >
+                        <span class="text-2xl leading-none">{{
+                            message.sound.emoji || "🔊"
+                        }}</span>
+                        <span
+                            class="text-sm font-medium truncate text-gray-700 dark:text-gray-300"
+                        >
+                            {{
+                                message.sound.title || t("message.shared_sound")
+                            }}
+                        </span>
+                        <i
+                            :class="
+                                playingSharedSoundId === message.sound.id
+                                    ? 'ri-stop-circle-line'
+                                    : 'ri-play-circle-line'
+                            "
+                            class="ml-auto text-xl text-gray-500 dark:text-gray-400"
+                            aria-hidden="true"
+                        ></i>
+                    </button>
+                </div>
+                <div
                     v-if="message.book_id && message.book"
                     class="mt-2 md:mt-3"
                 >
@@ -728,6 +758,32 @@ const playSharedSong = async (song) => {
     }
 };
 
+const playingSharedSoundId = ref(null);
+let sharedSoundAudio = null;
+
+const stopSharedSound = () => {
+    if (sharedSoundAudio) {
+        sharedSoundAudio.removeEventListener("ended", stopSharedSound);
+        sharedSoundAudio.pause();
+        sharedSoundAudio.src = "";
+        sharedSoundAudio = null;
+    }
+    playingSharedSoundId.value = null;
+};
+
+const playSharedSound = (sound) => {
+    if (!sound?.audio_path) return;
+    if (playingSharedSoundId.value === sound.id) {
+        stopSharedSound();
+        return;
+    }
+    stopSharedSound();
+    sharedSoundAudio = new Audio(sound.audio_path);
+    sharedSoundAudio.play().catch(() => {});
+    sharedSoundAudio.addEventListener("ended", stopSharedSound);
+    playingSharedSoundId.value = sound.id;
+};
+
 const formatDate = (dateString) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -1073,6 +1129,7 @@ onMounted(() => {
 
 onUnmounted(() => {
     cleanup();
+    stopSharedSound();
 });
 
 const getSelectedReactions = (message) => {

@@ -11,6 +11,7 @@ return [
     'song_shared' => 'Listen to this song: :title',
     'movie_shared' => 'Check out this movie: :title',
     'book_shared' => 'Check out this book: :title',
+    'sound_shared' => 'Listen to this sound: :title',
     'unknown_book' => 'Mystery book',
     'share_to_timeline' => 'Share to chat',
     'already_shared_today' => 'You already shared something today!',
@@ -43,6 +44,7 @@ return [
     'sound.deleted' => 'That sound is gone.',
     'sound.blocked' => 'Sound blocked.',
     'sound.disabled' => 'Sounds are turned off right now.',
+    'sound.shared' => 'Shared! Your friends can hear it.',
     'avatar.updated' => 'New picture! Looking good.',
     'user.weekly_overview_regenerated' => 'Made a new weekly story for :name!',
 
@@ -124,6 +126,7 @@ return [
     'message.shared_song' => 'Shared song',
     'message.shared_movie' => 'Shared movie',
     'message.shared_book' => 'Shared book',
+    'message.shared_sound' => 'Shared sound',
 
     // UI Labels - Comments
     'comment.actions' => 'Stuff you can do',
@@ -234,6 +237,12 @@ return [
     'book.share_confirm_speak_tagged' => 'Are you sure you want to share this book with :username:',
     'book.share_confirm_dialog' => 'Are you sure you want to share this book?',
     'book.share_confirm_dialog_tagged' => 'Are you sure you want to share this book with :username?',
+    'sound.share_icon_title' => 'Share',
+    'sound.share_aria' => 'Share to chat',
+    'sound.share_confirm_speak' => 'Are you sure you want to share this sound:',
+    'sound.share_confirm_speak_tagged' => 'Are you sure you want to share this sound with :username:',
+    'sound.share_confirm_dialog' => 'Are you sure you want to share this sound?',
+    'sound.share_confirm_dialog_tagged' => 'Are you sure you want to share this sound with :username?',
     'game.share_icon_title' => 'Share',
     'game.share_aria' => 'Share to chat',
     'game.share_confirm_speak' => 'Are you sure you want to share your score:',

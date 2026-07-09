@@ -4,6 +4,7 @@ import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import Dropdown from "@/Components/Dropdown.vue";
 import FloatingActionMenu from "@/Components/FloatingActionMenu.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
+import ShareToChatButton from "@/Components/ShareToChatButton.vue";
 import TextInput from "@/Components/TextInput.vue";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { usePermissions } from "@/composables/permissions";
@@ -330,6 +331,16 @@ onBeforeUnmount(() => {
                                     ></i>
                                     Speak title
                                 </button>
+                                <ShareToChatButton
+                                    kind="sound"
+                                    :sound-id="sound.id"
+                                    :menu-item="true"
+                                    :menu-item-class="[
+                                        soundMenuItemClass,
+                                        'border-t border-gray-600/80 text-violet-300',
+                                    ]"
+                                    wrapper-class="w-full"
+                                />
                                 <button
                                     type="button"
                                     role="menuitem"

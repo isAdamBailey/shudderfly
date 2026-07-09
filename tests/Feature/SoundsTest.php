@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Events\MessageCreated;
 use App\Jobs\StoreSoundAudio;
 use App\Models\SiteSetting;
 use App\Models\Sound;
@@ -10,6 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
 use ReflectionObject;
 use Tests\TestCase;
@@ -416,5 +418,58 @@ class SoundsTest extends TestCase
                 ->has('sounds')
                 ->where('settings.sounds_enabled', '1')
         );
+    }
+
+    // ── Sharing ───────────────────────────────────────────────────────────────
+
+    public function test_guest_cannot_share_sound(): void
+    {
+        $sound = Sound::factory()->create();
+
+        $this->post(route('sounds.share', $sound))
+            ->assertRedirect(route('login'));
+    }
+
+    public function test_authenticated_user_can_share_sound_to_chat(): void
+    {
+        SiteSetting::updateOrCreate(
+            ['key' => 'messaging_enabled'],
+            ['value' => '1', 'type' => 'boolean', 'description' => 'x']
+        );
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $sound = Sound::factory()->create(['title' => 'Squeaky Fart']);
+
+        Event::fake(MessageCreated::class);
+
+        $response = $this->post(route('sounds.share', $sound));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('messages', [
+            'user_id' => $user->id,
+            'sound_id' => $sound->id,
+            'message' => __('messages.sound_shared', ['title' => 'Squeaky Fart']),
+        ]);
+
+        Event::assertDispatched(MessageCreated::class);
+    }
+
+    public function test_cannot_share_blocked_sound(): void
+    {
+        SiteSetting::updateOrCreate(
+            ['key' => 'messaging_enabled'],
+            ['value' => '1', 'type' => 'boolean', 'description' => 'x']
+        );
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $sound = Sound::factory()->create(['blocked' => true]);
+
+        $this->post(route('sounds.share', $sound))->assertNotFound();
     }
 }

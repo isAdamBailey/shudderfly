@@ -105,6 +105,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/sounds', [SoundsController::class, 'index'])->name('sounds.index');
     Route::patch('/sounds/{sound}/block', [SoundsController::class, 'block'])->name('sounds.block');
+    Route::post('/sounds/{sound}/share', [SoundsController::class, 'share'])->name('sounds.share');
 
     Route::get('/api/youtube-iframe-api', [YouTubeProxyController::class, 'iframeApi'])->name('youtube.iframe-api');
 

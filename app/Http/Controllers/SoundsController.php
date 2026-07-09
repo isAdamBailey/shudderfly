@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\MessageCreated;
 use App\Http\Requests\StoreSoundRequest;
 use App\Http\Requests\UpdateSoundRequest;
 use App\Jobs\StoreSoundAudio;
+use App\Models\Message;
 use App\Models\SiteSetting;
 use App\Models\Sound;
+use App\Models\User;
+use App\Services\UserTaggingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
@@ -16,8 +20,9 @@ use Inertia\Response;
 
 class SoundsController extends Controller
 {
-    public function __construct()
-    {
+    public function __construct(
+        private UserTaggingService $userTaggingService
+    ) {
         $this->middleware(function ($request, $next) {
             $soundsEnabled = SiteSetting::where('key', 'sounds_enabled')->first()?->value ?? false;
 
@@ -91,5 +96,61 @@ class SoundsController extends Controller
         $sound->delete();
 
         return back()->with('success', __('messages.sound.deleted'));
+    }
+
+    public function share(Sound $sound, Request $request): RedirectResponse
+    {
+        if ($sound->blocked) {
+            abort(404);
+        }
+
+        $setting = SiteSetting::where('key', 'messaging_enabled')->first();
+        $messagingEnabled = $setting && ($setting->getAttributes()['value'] ?? $setting->value) === '1';
+
+        if (! $messagingEnabled) {
+            return back()->withErrors(['message' => __('messages.messaging.disabled')]);
+        }
+
+        $validated = $request->validate([
+            'tagged_user_ids' => ['sometimes', 'array'],
+            'tagged_user_ids.*' => ['integer', 'exists:users,id'],
+        ]);
+
+        $taggedUserIds = $validated['tagged_user_ids'] ?? [];
+        if (! is_array($taggedUserIds)) {
+            $taggedUserIds = [];
+        }
+
+        $taggedUser = null;
+        if ($taggedUserIds !== []) {
+            $taggedUser = User::select('id', 'name')->find($taggedUserIds[0]);
+        }
+
+        $shareMessage = __('messages.sound_shared', ['title' => $sound->title]);
+        if ($taggedUser) {
+            $shareMessage = $shareMessage.' @'.$taggedUser->name;
+        }
+
+        $message = Message::create([
+            'user_id' => $request->user()->id,
+            'message' => $shareMessage,
+            'sound_id' => $sound->id,
+        ]);
+
+        $message->load(['sound', 'user']);
+
+        if ($taggedUserIds !== []) {
+            $this->userTaggingService->notifyTaggedUsers(
+                $taggedUserIds,
+                $request->user(),
+                $message,
+                'message'
+            );
+        }
+        event(new MessageCreated($message));
+
+        return redirect()
+            ->to(route('messages.index').'#message-'.$message->id)
+            ->with('success', __('messages.sound.shared'));
     }
 }
