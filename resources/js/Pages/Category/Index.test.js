@@ -46,6 +46,15 @@ describe("Category Index", () => {
     beforeEach(() => {
         vi.clearAllMocks();
 
+        // CategoryIndex renders the real ApplicationLogo, which pulls in
+        // useWorldClockSync. That polls for window.Echo via a real setTimeout
+        // when it's missing, leaking timers that fire after this test file's
+        // jsdom environment is torn down. Stub it so setup resolves synchronously.
+        window.Echo = {
+            socketId: () => "socket-123",
+            private: () => ({ listen: () => {} }),
+        };
+
         // Create proper reactive mock that matches the real useInfiniteScroll behavior
         const mockItems = ref(
             mockBooks.data.map((book) => ({ ...book, loading: false }))

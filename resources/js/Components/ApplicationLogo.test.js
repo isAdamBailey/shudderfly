@@ -16,6 +16,15 @@ describe("ApplicationLogo", () => {
     beforeEach(() => {
         // Reset any previous wrapper
         wrapper = null;
+
+        // ApplicationLogo pulls in useWorldClockSync, which polls for
+        // window.Echo via a real setTimeout when it's missing. Stub it so
+        // setupEcho() resolves synchronously instead of leaking timers that
+        // fire after this test file's jsdom environment is torn down.
+        window.Echo = {
+            socketId: () => "socket-123",
+            private: () => ({ listen: () => {} }),
+        };
     });
 
     describe("Theme Switching", () => {
