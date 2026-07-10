@@ -259,7 +259,14 @@ const mobileMoreActive = computed(() => {
 
                     <div class="hidden md:flex md:items-stretch md:ml-6">
                         <div v-if="messagingEnabled" class="ml-3 relative">
-                            <Dropdown align="right" width="80" connected>
+                            <Dropdown
+                                align="right"
+                                width="80"
+                                connected
+                                :content-classes="[
+                                    'bg-white dark:bg-gray-800',
+                                ]"
+                            >
                                 <template #trigger>
                                     <button
                                         type="button"
@@ -359,7 +366,14 @@ const mobileMoreActive = computed(() => {
 
                     <div class="-mr-2 flex items-stretch gap-2 md:hidden">
                         <div v-if="messagingEnabled" class="relative">
-                            <Dropdown align="right" width="80" connected>
+                            <Dropdown
+                                align="right"
+                                width="80"
+                                connected
+                                :content-classes="[
+                                    'bg-white dark:bg-gray-800',
+                                ]"
+                            >
                                 <template #trigger>
                                     <button
                                         type="button"

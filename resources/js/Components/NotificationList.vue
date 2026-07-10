@@ -1,20 +1,22 @@
 <template>
-    <div class="max-h-96 overflow-y-auto">
-        <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+    <div class="max-h-96 overflow-y-auto bg-white dark:bg-gray-800">
+        <div
+            class="px-4 py-3 border-b border-teal-100 dark:border-gray-700 bg-gradient-to-b from-teal-50/70 to-transparent dark:from-gray-900/40"
+        >
             <h2
-                class="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2"
+                class="font-heading text-xl tracking-wide text-teal-700 dark:text-amber-400 flex items-center gap-2"
             >
                 Notifications
                 <span
                     v-if="unreadCount > 0"
-                    class="px-2 py-0.5 text-sm bg-red-600 text-white rounded-full"
+                    class="px-2 py-0.5 text-xs font-bold text-amber-100 bg-orange-700 rounded-full shadow-sm"
                 >
                     {{ unreadCount }}
                 </span>
             </h2>
         </div>
         <div
-            class="px-4 py-2 flex items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50"
+            class="px-4 py-2.5 flex items-center justify-between border-b border-teal-100 dark:border-gray-700 bg-teal-50/50 dark:bg-gray-900/30"
         >
             <SpeakButton
                 v-if="notifications.length > 0"
@@ -26,10 +28,10 @@
             <button
                 v-if="unreadCount > 0"
                 type="button"
-                class="px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800 rounded transition-colors"
+                class="btn-bulge px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-amber-100 bg-teal-700 hover:bg-orange-700 active:bg-amber-400 active:text-gray-800 rounded-md shadow-sm transition-colors"
                 @click.stop="markAllAsRead"
             >
-                Mark all read
+                Clear all
             </button>
         </div>
         <div class="p-3 space-y-2">
@@ -54,8 +56,8 @@
                     :class="[
                         'p-2.5 rounded-lg border cursor-pointer transition-colors',
                         notification.read_at
-                            ? 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
-                            : 'bg-blue-50 dark:bg-blue-900 border-blue-200 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-800',
+                            ? 'bg-white dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/60'
+                            : 'bg-amber-50 dark:bg-teal-900/30 border-amber-200 dark:border-teal-700/60 shadow-sm hover:bg-amber-100 dark:hover:bg-teal-900/50',
                     ]"
                     @click="handleNotificationClick(notification)"
                 >
@@ -70,6 +72,7 @@
                             >
                                 <div class="flex items-center gap-2 mb-1">
                                     <Avatar
+                                        class="ring-2 ring-white dark:ring-gray-800"
                                         :avatar="
                                             notification.data.tagger_avatar
                                         "
@@ -88,7 +91,7 @@
                                         <span class="text-sm">tagged you:</span>
                                         <span
                                             v-if="!notification.read_at"
-                                            class="inline-block w-1.5 h-1.5 bg-blue-600 rounded-full"
+                                            class="inline-block w-2 h-2 bg-amber-500 rounded-full shadow-[0_0_4px_1px_rgba(245,158,11,0.55)]"
                                         ></span>
                                     </div>
                                 </div>
@@ -111,6 +114,7 @@
                             >
                                 <div class="flex items-center gap-2 mb-1">
                                     <Avatar
+                                        class="ring-2 ring-white dark:ring-gray-800"
                                         :avatar="
                                             notification.data.commenter_avatar
                                         "
@@ -132,7 +136,7 @@
                                         >
                                         <span
                                             v-if="!notification.read_at"
-                                            class="inline-block w-1.5 h-1.5 bg-blue-600 rounded-full"
+                                            class="inline-block w-2 h-2 bg-amber-500 rounded-full shadow-[0_0_4px_1px_rgba(245,158,11,0.55)]"
                                         ></span>
                                     </div>
                                 </div>
@@ -162,7 +166,8 @@
                                 <span>{{
                                     formatDate(notification.created_at)
                                 }}</span>
-                                <span class="text-blue-600 dark:text-blue-400"
+                                <span
+                                    class="font-semibold text-teal-700 dark:text-amber-400"
                                     >View message →</span
                                 >
                             </div>
@@ -173,16 +178,16 @@
                             <button
                                 v-if="!notification.read_at"
                                 type="button"
-                                title="Mark as read"
-                                class="px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800 rounded transition-colors"
+                                title="Clear"
+                                class="px-2 py-1 text-xs font-bold uppercase tracking-wide text-teal-700 dark:text-amber-400 hover:bg-teal-50 dark:hover:bg-gray-700 rounded-md transition-colors"
                                 @click.stop="markAsRead(notification.id)"
                             >
-                                Mark read
+                                Clear
                             </button>
                             <button
                                 type="button"
                                 title="Delete notification"
-                                class="px-2 py-1 text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-100 dark:hover:bg-red-800 rounded transition-colors"
+                                class="px-2 py-1 text-xs font-bold uppercase tracking-wide text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/40 rounded-md transition-colors"
                                 @click.stop="
                                     deleteNotification(notification.id)
                                 "
@@ -333,34 +338,67 @@ const deleteNotification = async (notificationId) => {
     }
 };
 
+const SPEECH_SENDER_LIMIT = 5;
+
+const senderNameForNotification = (notification) => {
+    if (notification.type === "App\\Notifications\\UserTagged") {
+        return notification.data.tagger_name;
+    }
+    if (notification.type === "App\\Notifications\\MessageCommented") {
+        return notification.data.commenter_name;
+    }
+    return null;
+};
+
+const joinWithAnd = (items) => {
+    if (items.length <= 1) return items.join("");
+    const and = t("notifications.summary_and");
+    if (items.length === 2) return `${items[0]} ${and} ${items[1]}`;
+    return `${items.slice(0, -1).join(", ")}, ${and} ${items[items.length - 1]}`;
+};
+
 const getSummaryForSpeech = () => {
     const unread = notifications.value.filter((n) => !n.read_at);
     if (unread.length === 0) return t("notifications.summary_none");
-    const countText =
-        unread.length === 1
-            ? t("notifications.summary_count_one") + " "
-            : t("notifications.summary_count", { count: unread.length }) + " ";
-    const parts = unread.slice(0, 5).map((n) => {
-        if (n.type === "App\\Notifications\\UserTagged") {
-            return t("notifications.summary_tagged", {
-                name: n.data.tagger_name,
-            });
-        }
-        if (n.type === "App\\Notifications\\MessageCommented") {
-            return t("notifications.summary_commented", {
-                name: n.data.commenter_name,
-            });
-        }
-        return t("notifications.summary_new");
+
+    const countsBySender = new Map();
+    unread.forEach((notification) => {
+        const name =
+            senderNameForNotification(notification) ||
+            t("notifications.summary_someone");
+        countsBySender.set(name, (countsBySender.get(name) || 0) + 1);
     });
-    const summary = parts.join(" ");
+    const senderNames = Array.from(countsBySender.keys());
+    const tap = t("notifications.summary_tap");
+
+    if (unread.length === 1) {
+        return `${t("notifications.summary_single", { name: senderNames[0] })} ${tap}`;
+    }
+
+    if (senderNames.length === 1) {
+        return `${t("notifications.summary_all_from_one", {
+            count: unread.length,
+            name: senderNames[0],
+        })} ${tap}`;
+    }
+
+    const shownNames = senderNames.slice(0, SPEECH_SENDER_LIMIT);
+    const senderParts = shownNames.map((name) =>
+        t("notifications.summary_from", {
+            count: countsBySender.get(name),
+            name,
+        })
+    );
+    const extraSenders = senderNames.length - shownNames.length;
     const more =
-        unread.length > 5
-            ? " " +
-              t("notifications.summary_more", { count: unread.length - 5 })
+        extraSenders > 0
+            ? " " + t("notifications.summary_more", { count: extraSenders })
             : "";
-    const tap = " " + t("notifications.summary_tap");
-    return countText + summary + more + tap;
+    const countText = t("notifications.summary_count", {
+        count: unread.length,
+    });
+
+    return `${countText} ${joinWithAnd(senderParts)}.${more} ${tap}`;
 };
 
 const speakSummary = () => {

@@ -186,9 +186,9 @@ describe("NotificationList", () => {
             await nextTick();
             await new Promise((resolve) => setTimeout(resolve, 100));
 
-            // Check for unread indicator (blue dot)
+            // Check for unread indicator (amber/teal highlight)
             const html = wrapper.html();
-            expect(html).toContain("bg-blue-50");
+            expect(html).toContain("bg-amber-50");
         });
 
         it("shows read styling for read notifications", async () => {
@@ -240,7 +240,7 @@ describe("NotificationList", () => {
             await new Promise((resolve) => setTimeout(resolve, 100));
 
             const markAsReadButton = wrapper.find(
-                'button[title="Mark as read"]'
+                'button[title="Clear"]'
             );
             expect(markAsReadButton.exists()).toBe(true);
         });
@@ -333,7 +333,7 @@ describe("NotificationList", () => {
             await new Promise((resolve) => setTimeout(resolve, 100));
 
             const markAsReadButton = wrapper.find(
-                'button[title="Mark as read"]'
+                'button[title="Clear"]'
             );
             expect(markAsReadButton.exists()).toBe(false);
         });
