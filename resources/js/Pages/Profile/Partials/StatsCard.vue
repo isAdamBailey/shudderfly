@@ -7,7 +7,9 @@
             Updated {{ statsData.generatedAt }} &middot;
             {{ countAddS(statsData.booksAddedToday || 0, "book") }},
             {{ countAddS(statsData.pagesAddedToday || 0, "page") }},
-            {{ countAddS(statsData.songsAddedToday || 0, "song") }} added today
+            {{ countAddS(statsData.songsAddedToday || 0, "song") }},
+            {{ countAddS(statsData.soundsAddedToday || 0, "sound") }} added
+            today
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -100,6 +102,39 @@
                         icon-class="ri-speak-fill text-lg"
                         aria-label="Speak songs"
                         @click="speakStat('songs', statsData.numberOfSongs)"
+                    />
+                </div>
+            </div>
+
+            <!-- Sounds -->
+            <div
+                class="bg-white dark:bg-gray-800 border rounded-lg p-3 flex items-center justify-between shadow-sm"
+            >
+                <Link
+                    class="flex items-center"
+                    :href="route('sounds.index')"
+                    aria-label="View sounds"
+                >
+                    <i
+                        class="ri-volume-up-line text-2xl text-gray-400 mr-3"
+                    ></i>
+                    <div>
+                        <div class="text-base text-gray-500">Sounds</div>
+                        <div class="font-bold text-2xl">
+                            {{
+                                statsData.numberOfSounds?.toLocaleString?.() ??
+                                0
+                            }}
+                        </div>
+                    </div>
+                </Link>
+                <div class="flex items-center">
+                    <SpeakButton
+                        :disabled="speaking"
+                        class="mr-2"
+                        icon-class="ri-speak-fill text-lg"
+                        aria-label="Speak sounds"
+                        @click="speakStat('sounds', statsData.numberOfSounds)"
                     />
                 </div>
             </div>

@@ -409,6 +409,7 @@ return [
     'stats.all_books' => 'all books: :count',
     'stats.all_pages' => 'all pages: :count',
     'stats.songs' => 'songs: :count',
+    'stats.sounds' => 'sounds: :count',
     'stats.images' => 'images: :count',
     'stats.videos' => 'videos: :count',
     'stats.youtube_videos' => 'YouTube videos: :count',

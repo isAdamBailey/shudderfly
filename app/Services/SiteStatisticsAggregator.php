@@ -72,6 +72,7 @@ class SiteStatisticsAggregator
             'booksAddedToday' => Book::whereDate('created_at', today())->count(),
             'pagesAddedToday' => Page::whereDate('created_at', today())->count(),
             'songsAddedToday' => Song::whereDate('created_at', today())->count(),
+            'soundsAddedToday' => Sound::whereDate('created_at', today())->count(),
         ];
     }
 
