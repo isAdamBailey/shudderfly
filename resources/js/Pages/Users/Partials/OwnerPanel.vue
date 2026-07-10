@@ -92,7 +92,11 @@ const unblockAllPages = async () => {
             </Accordion>
         </div>
 
-        <div v-if="canEditPages || canAdmin" class="space-y-6">
+        <div
+            v-if="canEditPages || canAdmin"
+            id="administration"
+            class="space-y-6"
+        >
             <h3 class="font-heading text-2xl text-theme-title px-1">
                 Administration
             </h3>

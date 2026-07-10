@@ -432,6 +432,7 @@ return [
     'profile.welcome_with_name' => 'Welcome to :app_name, :name!',
     'profile.welcome_header' => 'Welcome to :app_name!',
     'profile.back_to_dashboard' => 'Back to your dashboard',
+    'profile.jump_to_administration' => 'Jump to administration',
     'profile.messages_to_you' => 'Messages for You',
     'profile.replies_to_you' => 'Replies to You',
     'profile.activity_reply' => 'replied to your message',

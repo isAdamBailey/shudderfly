@@ -28,6 +28,12 @@ const { isRead, markAsRead: markNotificationAsRead } = useNotificationSync();
 const regenerating = ref(false);
 const showNewBookForm = ref(false);
 
+function scrollToAdministration() {
+    document
+        .getElementById("administration")
+        ?.scrollIntoView({ behavior: "smooth" });
+}
+
 const props = defineProps({
     profileUser: {
         type: Object,
@@ -360,6 +366,15 @@ const speakUserSummary = () => {
                             : profileUser.name
                     }}
                 </h2>
+                <button
+                    v-if="isOwner && (canEditPages || canAdmin)"
+                    type="button"
+                    class="inline-flex items-center justify-center min-h-11 min-w-11 text-theme-title opacity-70 hover:opacity-100 transition-opacity ml-auto"
+                    :aria-label="t('profile.jump_to_administration')"
+                    @click="scrollToAdministration"
+                >
+                    <i class="ri-settings-3-line text-xl"></i>
+                </button>
             </div>
         </template>
 
