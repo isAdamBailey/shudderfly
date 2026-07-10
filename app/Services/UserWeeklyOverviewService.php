@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Log;
 
 class UserWeeklyOverviewService
 {
-    private const MAX_NEW_TOKENS = 110;
+    private const MAX_NEW_TOKENS = 160;
 
     private const CONNECT_TIMEOUT_SECONDS = 10;
 
@@ -140,7 +140,31 @@ class UserWeeklyOverviewService
             $text = $user->name.substr($text, strlen($quotedNamePrefix));
         }
 
-        return $this->trimToCompleteSentence(trim($text));
+        $text = $this->trimToNamePrefix(trim($text), $user);
+
+        return $this->trimToCompleteSentence($text);
+    }
+
+    /**
+     * The model sometimes adds a preamble before the required "{name} is"
+     * opening; drop anything before that phrase instead of rejecting the
+     * whole response.
+     */
+    private function trimToNamePrefix(string $text, User $user): string
+    {
+        $namePrefix = $user->name.' is';
+
+        if (str_starts_with($text, $namePrefix)) {
+            return $text;
+        }
+
+        $position = mb_strpos($text, $namePrefix);
+
+        if ($position === false || $position === 0) {
+            return $text;
+        }
+
+        return mb_substr($text, $position);
     }
 
     /**
