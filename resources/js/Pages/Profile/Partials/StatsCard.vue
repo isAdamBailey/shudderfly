@@ -457,7 +457,7 @@
 
                     <Link
                         class="text-sm font-medium text-blue-500 hover:underline"
-                        :href="route('books.index')"
+                        :href="route('categories.show', { categoryName: 'popular' })"
                         >View all</Link
                     >
                 </div>
@@ -539,7 +539,7 @@
                     <button
                         type="button"
                         class="text-sm font-medium text-blue-500 hover:underline"
-                        @click="openFlyout"
+                        @click="openPopularSongs"
                     >
                         View all
                     </button>
@@ -740,7 +740,12 @@ const props = defineProps({
     },
 });
 
-const { playSong, openFlyout } = useMusicPlayer();
+const { playSong, openFlyout, setFilter } = useMusicPlayer();
+
+const openPopularSongs = () => {
+    setFilter("favorites");
+    openFlyout();
+};
 
 const statsData = computed(() => props.stats || {});
 
