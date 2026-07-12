@@ -1,24 +1,14 @@
-const isAudioSupported =
-    typeof window !== "undefined" &&
-    !!(window.AudioContext || window.webkitAudioContext);
+import { getAudioContext, unlockAudio } from "@/composables/useAudioContext";
 
-let audioCtx = null;
 let fartBuffer = null;
 
 function getContext() {
-    if (!isAudioSupported) return null;
-    if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (audioCtx.state === "suspended") {
-        audioCtx.resume().catch(() => {});
-    }
-    return audioCtx;
+    return getAudioContext();
 }
 
 export function useSound(fartSoundUrl = "/fart.m4a") {
     async function initAudio() {
-        const ctx = getContext();
+        const ctx = await unlockAudio();
         if (!ctx) return;
         if (!fartSoundUrl || fartBuffer) return;
         try {
@@ -26,7 +16,9 @@ export function useSound(fartSoundUrl = "/fart.m4a") {
             if (!res.ok) return;
             const buf = await res.arrayBuffer();
             fartBuffer = await ctx.decodeAudioData(buf);
-        } catch {}
+        } catch {
+            /* ignore — playFart falls back to silence when no buffer */
+        }
     }
 
     function playHiss() {

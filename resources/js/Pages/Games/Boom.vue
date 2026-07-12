@@ -4,6 +4,7 @@ import GameStartScreen from "@/Components/Games/GameStartScreen.vue";
 import { POOP_BOOM_INTRO_SCRIPT } from "@/Pages/Games/shared/introScripts.js";
 import { TOILET } from "@/constants/characters.js";
 import { useGameViewportLock } from "@/composables/useGameViewportLock";
+import { getAudioContext, unlockAudio } from "@/composables/useAudioContext";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, usePage } from "@inertiajs/vue3";
 import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
@@ -236,8 +237,9 @@ function startDrag(e) {
 }
 
 // ─── sounds (Web Audio API) ───────────────────────────────────────────────────
+// Shared session-wide context (see useAudioContext); returns null if unsupported.
 function makeCtx() {
-    return new (window.AudioContext || window.webkitAudioContext)();
+    return getAudioContext();
 }
 
 const fartSoundUrl = usePage().props.fartSoundUrl ?? "/fart.m4a";
@@ -265,6 +267,7 @@ function playHitSound() {
 function playSynthFartSound() {
     try {
         const ctx = makeCtx();
+        if (!ctx) return;
         const now = ctx.currentTime;
 
         const osc = ctx.createOscillator();
@@ -309,8 +312,6 @@ function playSynthFartSound() {
         osc.stop(now + 0.28);
         noise.start(now);
         noise.stop(now + 0.22);
-
-        setTimeout(() => ctx.close(), 1000);
     } catch (_) {
         /* silently ignore */
     }
@@ -319,6 +320,7 @@ function playSynthFartSound() {
 function playMissSound() {
     try {
         const ctx = makeCtx();
+        if (!ctx) return;
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = "sawtooth";
@@ -330,7 +332,6 @@ function playMissSound() {
         gain.connect(ctx.destination);
         osc.start();
         osc.stop(ctx.currentTime + 0.35);
-        setTimeout(() => ctx.close(), 1000);
     } catch (_) {
         /* silently ignore */
     }
@@ -339,6 +340,7 @@ function playMissSound() {
 function playGameOverSound() {
     try {
         const ctx = makeCtx();
+        if (!ctx) return;
         const notes = [400, 350, 300, 250, 200];
         notes.forEach((freq, i) => {
             const osc = ctx.createOscillator();
@@ -353,7 +355,6 @@ function playGameOverSound() {
             osc.start(t);
             osc.stop(t + 0.14);
         });
-        setTimeout(() => ctx.close(), 2000);
     } catch (_) {
         /* silently ignore */
     }
@@ -370,6 +371,16 @@ function updateSize() {
 }
 
 async function startGame() {
+    // Unlock the WebAudio context + HTMLAudio sample during the Play tap so
+    // later hit/miss sounds aren't silenced by Safari's autoplay policy.
+    unlockAudio();
+    fartSound
+        .play()
+        .then(() => {
+            fartSound.pause();
+            fartSound.currentTime = 0;
+        })
+        .catch(() => {});
     gameStarted.value = true;
     await nextTick();
     updateSize();

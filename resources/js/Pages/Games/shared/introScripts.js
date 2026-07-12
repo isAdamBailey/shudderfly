@@ -1,31 +1,20 @@
 export const TOOT_FOODS_INTRO_SCRIPT =
-    "Welcome to Toot Foods! Here is how to play. Five snacks are scattered around the screen: a strawberry, grapes, " +
-    "an apple, blueberries, and a brussels sprout. A wiggly butt wanders around. Press or click any food, drag it onto " +
-    "the moving butt, and let go. When the food lands on the butt it makes a big toot and you score a point! Feed foods " +
-    "quickly one after another to build a combo for bonus points. You have thirty seconds, so toot as many as you can. " +
-    "Good luck!";
+    "Toot Foods! Grab a snack and drag it onto the wiggly butt. When it lands, the butt goes toot! " +
+    "Every food makes a fart. More farts, more points. Toot toot!";
 
 export const COCKROACH_FIGHT_INTRO_SCRIPT =
-    "Welcome to Cockroach Fight! Two Madagascar hissing cockroaches face off on opposite sides of the screen. " +
-    "Tap either cockroach's head to make both of them scuttle toward each other. Each tap moves them a little closer " +
-    "with a random wobble. Keep tapping until they collide and start fighting! When they meet, they will shake and " +
-    "jostle in an epic battle. Fewer taps means a higher score and more stars. Good luck!";
+    "Cockroach Fight! Tap a bug to make the two cockroaches walk toward each other. " +
+    "Keep tapping until they bonk and wrestle. They are so mad they might even fart. Go bugs, go!";
 
 export const COCKROACH_INTRO_SCRIPT =
-    "Welcome to Cockroach Fart! Here is how to play. You see a big Madagascar hissing cockroach on the screen. " +
-    "Tap the cockroach's head to make it hiss. Each hiss moves the cockroach a little bit toward the toilet on " +
-    "the other side of the screen. Every hiss earns you 10 points. If you tap quickly, you get combo bonus points! " +
-    "Keep tapping the head until the cockroach reaches the toilet. When it gets there, it will let out a big fart " +
-    "and you win the game! Try to win with as few taps as possible to get 3 stars. Good luck!";
+    "Cockroach Fart! Tap the cockroach on the head to make it scoot toward the toilet. " +
+    "Tap, tap, tap until it gets there and lets out a giant fart. The biggest fart wins!";
 
 export const POOP_BOOM_INTRO_SCRIPT =
-    "Welcome to Poop Boom! Here is how to play. A toilet moves left and right along the bottom of the screen, " +
-    "and a poop sits near the top. Press or click the poop, drag it over the toilet bowl, then let go to drop it. " +
-    "If the poop lands in the toilet you score one point. If you miss, you lose a miss. You get five misses before " +
-    "game over. Score as many points as you can. Good luck!";
+    "Poop Boom! Grab the poop and drop it into the toilet as it slides around. " +
+    "Plop it in for a point, and every plop is a squeaky fart. Don't miss, stinky!";
 
 export const COSTCO_PIZZA_POOP_INTRO_SCRIPT =
-    "Welcome to Costco Pizza Poop! Here is how to play. There is a pizza at the top of the screen and a hungry person " +
-    "below. Drag each pizza slice from the pizza down to the person's mouth and release it there to eat it. When every " +
-    "slice has been eaten, digestion starts in the intestine. Drag to guide the poop through the winding tunnel to the " +
-    "exit. Fewer wall hits means a better score. Good luck!";
+    "Costco Pizza Poop! Drag the pizza slices into the hungry mouth, nom nom nom. " +
+    "All that pizza turns into poop, so steer the poop through the tunnel without bonking. " +
+    "Farts the whole way! Let's go!";

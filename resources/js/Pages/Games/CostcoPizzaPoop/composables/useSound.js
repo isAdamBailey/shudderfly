@@ -1,4 +1,5 @@
 import { ref } from "vue";
+import { getAudioContext, unlockAudio } from "@/composables/useAudioContext";
 
 export function useSound(fartSoundUrl = "/fart.m4a") {
     const audioReady = ref(false);
@@ -16,7 +17,7 @@ export function useSound(fartSoundUrl = "/fart.m4a") {
     function initAudio() {
         // Unlock the WebAudio context during the Play gesture so later
         // synth sounds (chomp, etc.) aren't silenced by autoplay policy.
-        getChompCtx();
+        unlockAudio();
         return fartSound
             .play()
             .then(() => {
@@ -39,8 +40,8 @@ export function useSound(fartSoundUrl = "/fart.m4a") {
 
     function playSynthFart() {
         try {
-            const ctx = new (window.AudioContext ||
-                window.webkitAudioContext)();
+            const ctx = getAudioContext();
+            if (!ctx) return;
             const now = ctx.currentTime;
 
             const osc = ctx.createOscillator();
@@ -84,23 +85,13 @@ export function useSound(fartSoundUrl = "/fart.m4a") {
             osc.stop(now + 0.28);
             noise.start(now);
             noise.stop(now + 0.22);
-
-            setTimeout(() => ctx.close(), 1000);
         } catch {
             /* ignore */
         }
     }
 
-    let chompCtx = null;
-
     function getChompCtx() {
-        if (!chompCtx) {
-            chompCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (chompCtx.state === "suspended") {
-            chompCtx.resume().catch(() => {});
-        }
-        return chompCtx;
+        return getAudioContext();
     }
 
     // A short burst of shaped noise — the wet "crunch" of a bite.
@@ -178,8 +169,8 @@ export function useSound(fartSoundUrl = "/fart.m4a") {
 
     function playVictory() {
         try {
-            const ctx = new (window.AudioContext ||
-                window.webkitAudioContext)();
+            const ctx = getAudioContext();
+            if (!ctx) return;
             const notes = [523.25, 659.25, 783.99, 1046.5];
 
             notes.forEach((freq, i) => {
@@ -197,10 +188,6 @@ export function useSound(fartSoundUrl = "/fart.m4a") {
                 osc.start(ctx.currentTime + i * 0.15);
                 osc.stop(ctx.currentTime + i * 0.15 + 0.4);
             });
-
-            setTimeout(() => {
-                ctx.close().catch(() => {});
-            }, 2000);
         } catch {
             /* ignore */
         }
@@ -208,8 +195,8 @@ export function useSound(fartSoundUrl = "/fart.m4a") {
 
     function playMissSound() {
         try {
-            const ctx = new (window.AudioContext ||
-                window.webkitAudioContext)();
+            const ctx = getAudioContext();
+            if (!ctx) return;
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.type = "sawtooth";
@@ -227,7 +214,6 @@ export function useSound(fartSoundUrl = "/fart.m4a") {
             gain.connect(ctx.destination);
             osc.start();
             osc.stop(ctx.currentTime + 0.35);
-            setTimeout(() => ctx.close(), 1000);
         } catch {
             /* ignore */
         }

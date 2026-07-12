@@ -1,4 +1,5 @@
 import { ref } from "vue";
+import { getAudioContext, unlockAudio } from "@/composables/useAudioContext";
 
 /**
  * Audio for Toot Foods. Reuses the shared /fart.m4a sample but plays it back
@@ -19,21 +20,14 @@ export function useTootSound(fartSoundUrl = "/fart.m4a") {
         audioReady.value = false;
     });
 
-    let ctx = null;
     function getCtx() {
-        if (!ctx) {
-            ctx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (ctx.state === "suspended") {
-            ctx.resume().catch(() => {});
-        }
-        return ctx;
+        return getAudioContext();
     }
 
     // Unlock both the HTMLAudio element and the WebAudio context during the
     // Play tap, so later toots aren't silenced by autoplay policy.
     function initAudio() {
-        getCtx();
+        unlockAudio();
         return fartSound
             .play()
             .then(() => {
