@@ -312,9 +312,12 @@ return [
     'dashboard.unblock' => 'Desbloquear',
     'dashboard.blocked_pages_count' => ':count elementos bloqueados',
     'dashboard.new_book' => 'Nuevo libro',
-    'dashboard.new_book_cta_subtitle' => 'Empieza un nuevo libro y dale un título, categoría y autor.',
     'dashboard.add_new_book' => 'Añadir un nuevo libro',
     'dashboard.close_book_form' => 'Cerrar formulario de libro',
+    'dashboard.hero_default_summary' => 'Explora tus libros o mira todo lo que has compartido. Vuelve después de una semana ajetreada para ver un resumen personalizado con IA de tus últimas historias.',
+    'dashboard.hero_summary_updated' => 'Resumen de IA · actualizado :date',
+    'dashboard.browse_books' => 'Ver libros',
+    'dashboard.browse_uploads' => 'Fotos y videos',
 
     // World Clock - Timer
     'world_clock.timer_done' => '¡Se acabó el tiempo!',
@@ -430,7 +433,6 @@ return [
     'profile.stat_comments' => 'Comentarios publicados: :count.',
     'profile.stat_reactions' => 'Reacciones dadas: :count.',
     'profile.welcome_with_name' => '¡Bienvenido a :app_name, :name!',
-    'profile.welcome_header' => '¡Bienvenido a :app_name!',
     'profile.back_to_dashboard' => 'Volver a tu panel',
     'profile.jump_to_administration' => 'Ir a administración',
     'profile.messages_to_you' => 'Mensajes para ti',

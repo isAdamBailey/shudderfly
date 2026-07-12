@@ -459,7 +459,9 @@ describe("UserShow", () => {
                 global: { stubs: ownerStubs },
             });
 
-            expect(wrapper.text()).toContain("profile.welcome_header");
+            // Header title is intentionally omitted; the greeting lives in the
+            // profile card (welcome_with_name).
+            expect(wrapper.text()).not.toContain("profile.welcome_header");
             expect(wrapper.text()).toContain("profile.welcome_with_name");
             expect(wrapper.text()).not.toContain("profile.user_top_books");
             expect(wrapper.text()).not.toContain(
@@ -557,7 +559,52 @@ describe("UserShow", () => {
             expect(wrapper.text()).not.toContain("profile.recent_uploads");
         });
 
-        it("shows the new-book CTA only when isOwner and canEditPages", () => {
+        it("shows the hero summary and browse CTAs to every owner regardless of permissions", () => {
+            mockCanEditPages.mockReturnValueOnce(false);
+            mockCanAdmin.mockReturnValueOnce(false);
+
+            const wrapper = mount(UserShow, {
+                props: {
+                    profileUser,
+                    isOwner: true,
+                    stats,
+                    recentMessages: [],
+                    recentReplies: [],
+                },
+                global: { stubs: ownerStubs },
+            });
+
+            // Personalized welcome + navigation CTAs exposed to all users
+            expect(wrapper.text()).toContain("profile.welcome_with_name");
+            expect(wrapper.text()).toContain("dashboard.browse_books");
+            expect(wrapper.text()).toContain("dashboard.browse_uploads");
+            // Edit/admin-only actions hidden for a plain user
+            expect(wrapper.text()).not.toContain("dashboard.add_new_book");
+            expect(wrapper.text()).not.toContain("Regenerate AI overview");
+        });
+
+        it("renders the AI weekly overview inside the hero for owners", () => {
+            const wrapper = mount(UserShow, {
+                props: {
+                    profileUser,
+                    isOwner: true,
+                    stats,
+                    recentMessages: [],
+                    recentReplies: [],
+                    weeklyOverview: {
+                        text: "You had a wonderful week of stories!",
+                        generatedAt: "2024-12-30T10:00:00.000000Z",
+                    },
+                },
+                global: { stubs: ownerStubs },
+            });
+
+            expect(wrapper.text()).toContain(
+                "You had a wonderful week of stories!"
+            );
+        });
+
+        it("shows the new-book CTA and Add button only when isOwner and canEditPages", () => {
             mockCanEditPages.mockReturnValueOnce(true);
 
             const wrapper = mount(UserShow, {
@@ -571,13 +618,13 @@ describe("UserShow", () => {
                 global: { stubs: ownerStubs },
             });
 
-            expect(wrapper.text()).toContain("dashboard.new_book");
+            expect(wrapper.text()).toContain("dashboard.add_new_book");
             expect(
                 wrapper.findComponent({ name: "NewBookForm" }).exists()
             ).toBe(false);
         });
 
-        it("hides the new-book CTA when the owner cannot edit pages", () => {
+        it("hides the add-new-book button when the owner cannot edit pages", () => {
             mockCanEditPages.mockReturnValueOnce(false);
 
             const wrapper = mount(UserShow, {

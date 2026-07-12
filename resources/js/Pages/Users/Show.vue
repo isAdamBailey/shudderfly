@@ -357,15 +357,8 @@ const speakUserSummary = () => {
                 >
                     <i class="ri-arrow-left-line text-xl"></i>
                 </Link>
-                <h2
-                    class="font-heading text-2xl text-theme-title leading-tight"
-                >
-                    {{
-                        isOwner
-                            ? t("profile.welcome_header", { app_name: appName })
-                            : profileUser.name
-                    }}
-                </h2>
+                <!-- Title intentionally omitted: the name/greeting is already
+                     shown in the profile card (and hero) below. -->
                 <button
                     v-if="isOwner && (canEditPages || canAdmin)"
                     type="button"
@@ -380,41 +373,144 @@ const speakUserSummary = () => {
 
         <div class="pb-12">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <!-- Primary CTA: create a new book -->
+                <!-- Hero: welcome summary + quick actions (all owners) -->
                 <div
-                    v-if="isOwner && canEditPages"
+                    v-if="isOwner"
                     class="bg-teal-700 dark:bg-teal-800 overflow-hidden shadow-sm rounded-lg mb-6 p-6"
                 >
-                    <div
-                        class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-                    >
-                        <div>
-                            <h3 class="font-heading text-xl text-amber-400">
-                                {{ t("dashboard.new_book") }}
-                            </h3>
-                            <p class="text-teal-50 text-sm mt-1">
-                                {{ t("dashboard.new_book_cta_subtitle") }}
-                            </p>
+                    <div class="flex items-start justify-between gap-3 min-w-0">
+                        <div class="flex items-start gap-4 min-w-0">
+                            <Avatar
+                                :user="profileUser"
+                                size="xl"
+                                class="flex-shrink-0"
+                            />
+                            <div class="min-w-0">
+                                <h3
+                                    class="font-heading text-2xl text-amber-400 leading-tight [text-wrap:balance] break-words"
+                                >
+                                    {{
+                                        t("profile.welcome_with_name", {
+                                            app_name: appName,
+                                            name: profileUser.name,
+                                        })
+                                    }}
+                                </h3>
+                                <p
+                                    class="text-teal-100 text-xs mt-1.5 truncate"
+                                >
+                                    {{ profileUser.email }}
+                                </p>
+                                <div
+                                    class="flex items-center gap-1.5 text-teal-200 text-xs mt-1"
+                                >
+                                    <i
+                                        class="ri-calendar-line flex-shrink-0"
+                                    ></i>
+                                    <span>Member since {{ memberSince }}</span>
+                                </div>
+                            </div>
                         </div>
-                        <Button
-                            v-if="!showNewBookForm"
-                            type="button"
-                            class="shrink-0"
-                            @click="showNewBookForm = true"
-                        >
-                            {{ t("dashboard.add_new_book") }}
-                        </Button>
-                        <Button
-                            v-else
-                            type="button"
-                            class="shrink-0 !bg-red-700"
-                            @click="showNewBookForm = false"
-                        >
-                            {{ t("dashboard.close_book_form") }}
-                        </Button>
+                        <SpeakButton
+                            :disabled="speaking"
+                            aria-label="Speak user summary"
+                            icon-class="ri-speak-fill text-lg"
+                            class="flex-shrink-0"
+                            @click="speakUserSummary"
+                        />
                     </div>
+
+                    <!-- AI weekly summary -->
+                    <div
+                        class="mt-4 pt-4 border-t border-teal-500/40 dark:border-teal-600/40"
+                    >
+                        <p
+                            class="text-teal-50 text-sm whitespace-pre-wrap max-w-prose"
+                        >
+                            {{
+                                weeklyOverview?.text ||
+                                t("dashboard.hero_default_summary")
+                            }}
+                        </p>
+                        <p
+                            v-if="
+                                weeklyOverview?.text &&
+                                weeklyOverviewGeneratedAt
+                            "
+                            class="text-teal-200 text-xs mt-1"
+                        >
+                            {{
+                                t("dashboard.hero_summary_updated", {
+                                    date: weeklyOverviewGeneratedAt,
+                                })
+                            }}
+                        </p>
+                    </div>
+
+                    <!-- Quick actions -->
+                    <div class="mt-4 flex flex-col gap-3">
+                        <!-- Primary CTA: create a new book (edit-pages only) -->
+                        <template v-if="canEditPages">
+                            <Button
+                                v-if="!showNewBookForm"
+                                type="button"
+                                class="mb-3 w-full justify-center ring-2 ring-amber-400/70 shadow-lg sm:mb-0 sm:w-auto sm:justify-start"
+                                @click="showNewBookForm = true"
+                            >
+                                <i class="ri-add-line mr-1.5 text-base"></i>
+                                {{ t("dashboard.add_new_book") }}
+                            </Button>
+                            <Button
+                                v-else
+                                type="button"
+                                class="mb-3 w-full justify-center !bg-red-700 sm:mb-0 sm:w-auto sm:justify-start"
+                                @click="showNewBookForm = false"
+                            >
+                                {{ t("dashboard.close_book_form") }}
+                            </Button>
+                        </template>
+
+                        <!-- Secondary CTAs: browse books / uploads (all users) -->
+                        <div class="flex w-full items-stretch gap-3">
+                            <Link
+                                :href="route('books.index')"
+                                class="btn-bulge inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-md border border-teal-300/40 px-3 py-2.5 text-center text-sm font-semibold leading-tight text-teal-50 transition-colors hover:bg-teal-600"
+                            >
+                                <i class="ri-book-open-line flex-shrink-0"></i>
+                                {{ t("dashboard.browse_books") }}
+                            </Link>
+                            <Link
+                                :href="route('pictures.index')"
+                                class="btn-bulge inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-md border border-teal-300/40 px-3 py-2.5 text-center text-sm font-semibold leading-tight text-teal-50 transition-colors hover:bg-teal-600"
+                            >
+                                <i class="ri-image-line flex-shrink-0"></i>
+                                {{ t("dashboard.browse_uploads") }}
+                            </Link>
+                        </div>
+
+                        <!-- Regenerate AI summary (admins only, low-emphasis) -->
+                        <button
+                            v-if="canAdmin"
+                            type="button"
+                            :disabled="regenerating"
+                            title="Generate a new AI story for this profile"
+                            class="inline-flex items-center gap-1.5 self-start text-xs font-medium text-teal-200 transition-colors hover:text-teal-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            @click="regenerateWeeklyOverview"
+                        >
+                            <i
+                                class="ri-refresh-line"
+                                :class="{ 'animate-spin': regenerating }"
+                            ></i>
+                            {{
+                                regenerating
+                                    ? "Regenerating..."
+                                    : "Regenerate AI overview"
+                            }}
+                        </button>
+                    </div>
+
                     <NewBookForm
-                        v-if="showNewBookForm"
+                        v-if="canEditPages && showNewBookForm"
                         class="mt-4"
                         :authors="authors"
                         :categories="newBookCategories"
@@ -422,8 +518,9 @@ const speakUserSummary = () => {
                     />
                 </div>
 
-                <!-- Profile Header -->
+                <!-- Profile Header (visitors only; owners see this in the hero) -->
                 <div
+                    v-if="!isOwner"
                     class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg mb-6"
                 >
                     <div class="p-6">
@@ -532,10 +629,12 @@ const speakUserSummary = () => {
                     </div>
                 </div>
 
-                <!-- Book Stats (books authored by this user - visitors only) -->
+                <!-- Visitor sections: books, activity, and posts flow into one
+                     responsive grid that wraps and fills, so missing cards never
+                     leave a fixed-column gap. -->
                 <div
                     v-if="!isOwner"
-                    class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6"
+                    class="grid items-start gap-6 mb-6 [grid-template-columns:repeat(auto-fit,minmax(320px,1fr))]"
                 >
                     <!-- Top Books by Popularity -->
                     <div
@@ -721,16 +820,8 @@ const speakUserSummary = () => {
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Recent Messages / Recent Replies posted by this user (visitors only) -->
-                <div
-                    v-if="
-                        !isOwner &&
-                        (recentMessages.length > 0 || recentReplies.length > 0)
-                    "
-                    class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6"
-                >
+                    <!-- Latest messages posted by this user -->
                     <div
                         v-if="recentMessages.length > 0"
                         class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg"
@@ -849,10 +940,17 @@ const speakUserSummary = () => {
                 </div>
 
                 <template v-if="isOwner">
-                    <!-- Replies to You / Messages for You (mentions) -->
+                    <!-- Your dashboard: replies/mentions to you plus your recent
+                         books and uploads flow into one responsive grid that
+                         wraps and fills, so missing cards never leave a gap. -->
                     <div
-                        v-if="hasRepliesToYou || hasMessagesToYou"
-                        class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6"
+                        v-if="
+                            hasRepliesToYou ||
+                            hasMessagesToYou ||
+                            newBooksThisWeek.length > 0 ||
+                            recentUploads.length > 0
+                        "
+                        class="grid items-start gap-6 mt-6 [grid-template-columns:repeat(auto-fit,minmax(320px,1fr))]"
                     >
                         <div
                             v-if="hasRepliesToYou"
@@ -1023,16 +1121,8 @@ const speakUserSummary = () => {
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- New Books This Week / Recent Uploads -->
-                    <div
-                        v-if="
-                            newBooksThisWeek.length > 0 ||
-                            recentUploads.length > 0
-                        "
-                        class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6"
-                    >
+                        <!-- New books this week posted by you -->
                         <div
                             v-if="newBooksThisWeek.length > 0"
                             class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg"

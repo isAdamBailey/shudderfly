@@ -312,9 +312,12 @@ return [
     'dashboard.unblock' => 'Unblock',
     'dashboard.blocked_pages_count' => ':count blocked items',
     'dashboard.new_book' => 'New Book',
-    'dashboard.new_book_cta_subtitle' => 'Start a new book and give it a title, category, and author.',
     'dashboard.add_new_book' => 'Add a new book',
     'dashboard.close_book_form' => 'Close book form',
+    'dashboard.hero_default_summary' => 'Dive into your books or browse everything you have shared. Check back after a busy week for a personalized AI recap of your latest stories.',
+    'dashboard.hero_summary_updated' => 'AI recap · updated :date',
+    'dashboard.browse_books' => 'Browse books',
+    'dashboard.browse_uploads' => 'Photos & videos',
 
     // World Clock - Timer
     'world_clock.timer_done' => "Time's up!",
@@ -430,7 +433,6 @@ return [
     'profile.stat_comments' => 'Comments posted: :count.',
     'profile.stat_reactions' => 'Reactions given: :count.',
     'profile.welcome_with_name' => 'Welcome to :app_name, :name!',
-    'profile.welcome_header' => 'Welcome to :app_name!',
     'profile.back_to_dashboard' => 'Back to your dashboard',
     'profile.jump_to_administration' => 'Jump to administration',
     'profile.messages_to_you' => 'Messages for You',
