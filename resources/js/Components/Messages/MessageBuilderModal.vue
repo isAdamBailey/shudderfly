@@ -1,6 +1,6 @@
 <template>
     <Modal :show="show" max-width="2xl" @close="$emit('close')">
-        <div class="flex flex-col" style="max-height: 85vh; max-height: 85dvh">
+        <div class="flex flex-col message-builder-sheet">
             <!-- Message Builder: input, category toolbar and the shared content
                  pane. Fills the available height and scrolls internally so the
                  toolbar stays reachable above the on-screen keyboard. -->
@@ -92,3 +92,21 @@ watch(
     { immediate: true }
 );
 </script>
+
+<style scoped>
+/* Desktop: card shrinks to fit its content, capped at 85% of the viewport. */
+.message-builder-sheet {
+    max-height: 85vh;
+    max-height: 85dvh;
+}
+
+/* Mobile: pin the sheet to a fixed height so the input stays stuck to the
+   top, the send button stays stuck to the bottom, and only the category
+   toolbar + word pane in between scrolls. */
+@media (max-width: 639px) {
+    .message-builder-sheet {
+        height: 85vh;
+        height: 85dvh;
+    }
+}
+</style>
