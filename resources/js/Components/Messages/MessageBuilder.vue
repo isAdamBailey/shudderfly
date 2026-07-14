@@ -11,7 +11,17 @@ import { router, useForm } from "@inertiajs/vue3";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 // Organized by semantic/functional categories for AAC
-const people = ["I", "you", "and", "me", "Mom", "Dad", "we", "friend"];
+// "people" holds only person words (pronouns live in commonStarters instead)
+const people = [
+    "Mom",
+    "Dad",
+    "sister",
+    "brother",
+    "grandma",
+    "grandpa",
+    "friend",
+    "teacher",
+];
 const bodyParts = [
     "my tummy",
     "my head",
@@ -19,11 +29,12 @@ const bodyParts = [
     "my back",
     "my throat",
     "my ear",
-    "my head",
+    "my nose",
     "my feet",
+    "my belly button",
 ];
+// "actions" holds action verbs only (am/is moved out as state-of-being, not actions)
 const actions = [
-    "am",
     "hurt",
     "hurts",
     "need",
@@ -31,8 +42,12 @@ const actions = [
     "love",
     "like",
     "feel",
-    "is",
-    "help me",
+    "go",
+    "stop",
+    "play",
+    "dance",
+    "wiggle",
+    "giggle",
 ];
 const feelings = [
     "happy",
@@ -45,6 +60,7 @@ const feelings = [
     "excited",
     "hungry",
     "thirsty",
+    "silly",
 ];
 const descriptors = ["very", "really", "a little", "so much", "not"];
 const commonStarters = [
@@ -61,7 +77,6 @@ const commonStarters = [
 const things = [
     "a hug",
     "a snack",
-    "a copy",
     "a drink",
     "a break",
     "a toy",
@@ -78,6 +93,7 @@ const things = [
     "help",
     "the bathroom",
     "my bed",
+    "a silly joke",
 ];
 const quickPhrases = [
     "I love you",
@@ -86,6 +102,8 @@ const quickPhrases = [
     "I'm okay",
     "yes",
     "no",
+    "let's play!",
+    "I'm silly!",
 ];
 
 const selection = ref([]);

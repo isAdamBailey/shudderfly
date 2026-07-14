@@ -288,19 +288,19 @@ describe("MessageBuilder", () => {
 
             await nextTick();
 
-            // Find a quick message button (e.g., "I")
+            // The "Quick messages" pane is open by default, so its phrases
+            // (e.g. "yes") are visible without switching tabs.
             const quickButton = wrapper
                 .findAll("button")
-                .find((btn) => btn.text().trim() === "I");
+                .find((btn) => btn.text().trim() === "yes");
 
-            if (quickButton) {
-                await quickButton.trigger("click");
-                await nextTick();
+            expect(quickButton).toBeTruthy();
+            await quickButton.trigger("click");
+            await nextTick();
 
-                // Input should contain both "Hello " and "I"
-                expect(input.element.value).toContain("Hello");
-                expect(input.element.value).toContain("I");
-            }
+            // Input should contain both "Hello " and "yes"
+            expect(input.element.value).toContain("Hello");
+            expect(input.element.value).toContain("yes");
         });
     });
 
