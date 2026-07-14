@@ -1,6 +1,5 @@
 <script setup>
 /* global route */
-import Accordion from "@/Components/Accordion.vue";
 import SpeakButton from "@/Components/SpeakButton.vue";
 import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import UserTagList from "@/Components/UserTagList.vue";
@@ -96,10 +95,119 @@ const preview = computed(() => {
     return inputValue.value.trim() || selection.value.join(" ").trim();
 });
 const keyboardInputRef = ref(null);
-const actionsAccordionOpen = ref(false);
 
 const { speak, speaking } = useSpeechSynthesis();
 const { t } = useTranslations();
+
+// Compact category toolbar: each entry is one icon that opens the shared pane
+// below the keyboard. "tools" is the actions pane ("Things you can do"); the
+// rest are AAC word/phrase groups. Category colors are kept (Fitzgerald-style
+// coding aids AAC users) but darkened to -700 so white chip text clears WCAG
+// large-text contrast (>=3:1).
+const wordCategories = [
+    {
+        key: "quick",
+        icon: "ri-chat-quote-fill",
+        label: t("flyout.quick_messages"),
+        chip: "bg-blue-700 hover:bg-blue-800",
+        tint: "text-blue-600 dark:text-blue-300",
+        type: "phrase",
+        items: quickPhrases,
+    },
+    {
+        key: "starters",
+        icon: "ri-play-circle-fill",
+        label: t("flyout.common_starters"),
+        chip: "bg-teal-700 hover:bg-teal-800",
+        tint: "text-teal-600 dark:text-teal-300",
+        type: "phrase",
+        items: commonStarters,
+    },
+    {
+        key: "things",
+        icon: "ri-gift-fill",
+        label: t("flyout.things_i_need"),
+        chip: "bg-orange-700 hover:bg-orange-800",
+        tint: "text-orange-600 dark:text-orange-300",
+        type: "phrase",
+        items: things,
+    },
+    {
+        key: "people",
+        icon: "ri-user-fill",
+        label: t("flyout.people"),
+        chip: "bg-purple-700 hover:bg-purple-800",
+        tint: "text-purple-600 dark:text-purple-300",
+        type: "word",
+        items: people,
+    },
+    {
+        key: "body",
+        icon: "ri-body-scan-fill",
+        label: t("flyout.body_parts"),
+        chip: "bg-red-700 hover:bg-red-800",
+        tint: "text-red-600 dark:text-red-300",
+        type: "phrase",
+        items: bodyParts,
+    },
+    {
+        key: "actions",
+        icon: "ri-run-fill",
+        label: t("flyout.actions"),
+        chip: "bg-green-700 hover:bg-green-800",
+        tint: "text-green-600 dark:text-green-300",
+        type: "word",
+        items: actions,
+    },
+    {
+        key: "feelings",
+        icon: "ri-emotion-happy-fill",
+        label: t("flyout.feelings"),
+        chip: "bg-yellow-700 hover:bg-yellow-800",
+        tint: "text-yellow-600 dark:text-yellow-300",
+        type: "word",
+        items: feelings,
+    },
+    {
+        key: "howmuch",
+        icon: "ri-contrast-fill",
+        label: t("flyout.how_much"),
+        chip: "bg-indigo-700 hover:bg-indigo-800",
+        tint: "text-indigo-600 dark:text-indigo-300",
+        type: "word",
+        items: descriptors,
+    },
+];
+
+const toolbar = [
+    {
+        key: "tools",
+        icon: "ri-tools-fill",
+        label: t("builder.actions"),
+        tint: "text-slate-700 dark:text-slate-200",
+    },
+    ...wordCategories,
+];
+
+// Which pane is expanded. Default to Quick messages so content is visible the
+// moment the keyboard opens; clicking the active icon collapses the pane.
+const activeCategory = ref("quick");
+const activePane = computed(() =>
+    wordCategories.find((c) => c.key === activeCategory.value)
+);
+
+function selectCategory(key) {
+    activeCategory.value = activeCategory.value === key ? null : key;
+}
+
+function handleChip(category, item) {
+    if (category.type === "phrase") {
+        addPhrase(item);
+        if (item) speak(item);
+    } else {
+        addWord(item);
+    }
+}
 const {
     show: confirmShow,
     message: confirmMessage,
@@ -441,6 +549,14 @@ onMounted(() => {
         setActiveMessageInput();
     }
 
+    // Focus the input immediately so the on-screen keyboard opens first and the
+    // user can start typing right away. Kept close to the mount (no long delay)
+    // to stay within the tap gesture that mobile browsers require to raise the
+    // keyboard.
+    if (keyboardInputRef.value) {
+        keyboardInputRef.value.focus({ preventScroll: true });
+    }
+
     mountTimeoutId = setTimeout(() => {
         if (keyboardInputRef.value && typeof document !== "undefined") {
             autoGrowTextarea(keyboardInputRef.value);
@@ -717,7 +833,6 @@ function clearAfterSubmit() {
     inputValue.value = "";
     selection.value = [];
     mentionUserIds.value.clear();
-    actionsAccordionOpen.value = false;
 }
 
 function postMessage() {
@@ -803,13 +918,9 @@ defineExpose({
 </script>
 
 <template>
-    <div
-        class="p-4 rounded-md bg-white dark:bg-slate-800 border shadow-sm w-full"
-    >
-        <!-- Message Input: sticky so it stays visible while accordions below expand -->
-        <div
-            class="sticky top-0 z-10 -mt-4 mb-3 border-b border-gray-100 bg-white pt-4 pb-3 dark:border-gray-700 dark:bg-slate-800"
-        >
+    <div class="flex h-full min-h-0 w-full flex-col bg-white dark:bg-slate-800">
+        <!-- Message Input: stays at the top, above the toolbar + keyboard -->
+        <div class="shrink-0 px-3 pt-3 pb-2">
             <div
                 :class="[
                     'min-h-11 flex items-start px-3 py-2 rounded-md border-2 bg-blue-50 dark:bg-slate-700 text-sm font-medium transition-shadow',
@@ -822,6 +933,7 @@ defineExpose({
                     <textarea
                         ref="keyboardInputRef"
                         v-model="inputValue"
+                        autofocus
                         class="message-input flex-1 text-gray-700 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-300 break-words text-base md:text-lg font-bold leading-tight bg-transparent border-none outline-none focus:outline-none resize-none overflow-hidden min-h-[3.5rem] max-h-[200px]"
                         :placeholder="t('builder.placeholder')"
                         rows="2"
@@ -853,142 +965,195 @@ defineExpose({
             </div>
         </div>
 
-        <!-- Actions Accordion -->
-        <Accordion
-            ref="actionsAccordionRef"
-            v-model="actionsAccordionOpen"
-            :title="t('builder.actions')"
-            :default-open="false"
-            :compact="true"
+        <!-- Category toolbar: compact icons; each opens the shared pane below.
+             Horizontally scrollable so it stays a single row above the keyboard. -->
+        <div
+            class="shrink-0 border-y border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900/50"
+            role="tablist"
+            :aria-label="t('flyout.prebuilt_messages')"
         >
-            <div class="flex items-center gap-2 flex-wrap">
+            <div class="flex gap-1 overflow-x-auto px-2 py-2">
                 <button
-                    class="px-4 py-3 rounded-md bg-blue-600 dark:bg-blue-500 text-white shadow-md hover:bg-blue-700 dark:hover:bg-blue-600 font-bold text-2xl"
+                    v-for="tab in toolbar"
+                    :key="tab.key"
                     type="button"
-                    :title="t('builder.tag_user')"
-                    :aria-label="t('builder.tag_user_aria')"
-                    @click="addWord('@')"
+                    role="tab"
+                    :aria-selected="activeCategory === tab.key"
+                    :title="tab.label"
+                    :class="[
+                        'flex w-16 shrink-0 flex-col items-center gap-1 rounded-lg px-1 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
+                        activeCategory === tab.key
+                            ? 'bg-white shadow-sm ring-1 ring-gray-200 dark:bg-slate-700 dark:ring-slate-600'
+                            : 'hover:bg-white/70 dark:hover:bg-slate-700/60',
+                    ]"
+                    @click="selectCategory(tab.key)"
                 >
-                    @
-                </button>
-                <button
-                    class="p-3 rounded-md bg-slate-700 dark:bg-slate-600 text-white shadow-md hover:bg-slate-600 dark:hover:bg-slate-500"
-                    type="button"
-                    :title="t('builder.remove_last_word')"
-                    :aria-label="t('builder.remove_last_word_aria')"
-                    @click="removeLast"
-                >
-                    <i class="ri-delete-back-2-line text-2xl"></i>
-                </button>
-
-                <button
-                    class="px-4 py-3 rounded-md bg-red-600 dark:bg-red-700 hover:bg-red-700 dark:hover:bg-red-600 text-white shadow-md font-semibold flex items-center gap-2"
-                    type="button"
-                    :title="t('builder.clear_all')"
-                    :aria-label="t('builder.clear_all_aria')"
-                    @click="reset"
-                >
-                    <i class="ri-delete-bin-line text-2xl"></i>
-                </button>
-
-                <button
-                    class="p-3 rounded-md bg-slate-700 dark:bg-slate-600 text-white shadow-md hover:bg-slate-600 dark:hover:bg-slate-500"
-                    type="button"
-                    :title="t('builder.surprise')"
-                    :aria-label="t('builder.surprise_aria')"
-                    @click="suggestRandom"
-                >
-                    <i class="ri-shuffle-line text-2xl"></i>
-                </button>
-
-                <button
-                    class="ml-2 p-3 rounded-md shadow-md flex items-center"
-                    :class="
-                        canSaveFavorite
-                            ? 'bg-rose-600 text-white hover:bg-rose-700 dark:hover:bg-rose-500'
-                            : 'bg-gray-400 dark:bg-gray-600 text-white opacity-60 cursor-not-allowed'
-                    "
-                    type="button"
-                    :title="
-                        canSaveFavorite
-                            ? t('builder.save_favorite')
-                            : isAtMax
-                            ? t('builder.max_favorites', {
-                                  count: MAX_FAVORITES,
-                              })
-                            : t('builder.build_to_save')
-                    "
-                    :aria-label="
-                        canSaveFavorite
-                            ? t('builder.save_favorite')
-                            : t('builder.save_favorite_disabled')
-                    "
-                    :aria-disabled="!canSaveFavorite"
-                    :disabled="!canSaveFavorite"
-                    @click="addFavorite"
-                >
-                    <i class="ri-heart-add-fill text-2xl mr-2"></i>
-                    <span class="sr-only">Save favorite</span>
-                </button>
-
-                <div
-                    v-if="addFeedback"
-                    class="inline-flex items-center gap-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-3 py-1 rounded-md"
-                >
-                    <i class="ri-check-line"></i>
-                    <span class="text-sm">{{ t("builder.saved") }}</span>
-                </div>
-            </div>
-
-            <!-- Saved Favorites -->
-            <div
-                v-if="favorites.length"
-                class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700"
-            >
-                <div
-                    class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2"
-                >
-                    {{ t("builder.saved_favorites") }}
-                </div>
-                <div class="flex gap-2 flex-wrap">
-                    <div
-                        v-for="(f, i) in favorites"
-                        :key="`fav-${i}`"
-                        class="flex items-center max-w-full bg-rose-600 rounded-md overflow-hidden"
-                        :class="{ 'ring-2 ring-green-400': justAdded === f }"
+                    <i :class="[tab.icon, 'text-2xl leading-none', tab.tint]"></i>
+                    <span
+                        class="text-[10px] font-semibold leading-tight text-center text-gray-700 dark:text-gray-200"
                     >
-                        <button
-                            type="button"
-                            class="flex items-center gap-2 min-w-0 min-h-11 px-3 py-2 text-white text-sm font-semibold text-left hover:bg-rose-700 transition-colors"
-                            :title="f"
-                            :aria-label="
-                                t('builder.apply_favorite', { favorite: f })
-                            "
-                            @click="applyFavorite(f)"
+                        {{ tab.label }}
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Shared expandable pane: shows the selected category's content -->
+        <div
+            v-show="activeCategory"
+            class="min-h-0 flex-1 overflow-y-auto px-3 py-3"
+        >
+            <!-- "Things you can do" tools pane -->
+            <div v-if="activeCategory === 'tools'">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button
+                        class="px-4 py-3 rounded-md bg-blue-600 dark:bg-blue-500 text-white shadow-md hover:bg-blue-700 dark:hover:bg-blue-600 font-bold text-2xl"
+                        type="button"
+                        :title="t('builder.tag_user')"
+                        :aria-label="t('builder.tag_user_aria')"
+                        @click="addWord('@')"
+                    >
+                        @
+                    </button>
+                    <button
+                        class="p-3 rounded-md bg-slate-700 dark:bg-slate-600 text-white shadow-md hover:bg-slate-600 dark:hover:bg-slate-500"
+                        type="button"
+                        :title="t('builder.remove_last_word')"
+                        :aria-label="t('builder.remove_last_word_aria')"
+                        @click="removeLast"
+                    >
+                        <i class="ri-delete-back-2-line text-2xl"></i>
+                    </button>
+
+                    <button
+                        class="px-4 py-3 rounded-md bg-red-600 dark:bg-red-700 hover:bg-red-700 dark:hover:bg-red-600 text-white shadow-md font-semibold flex items-center gap-2"
+                        type="button"
+                        :title="t('builder.clear_all')"
+                        :aria-label="t('builder.clear_all_aria')"
+                        @click="reset"
+                    >
+                        <i class="ri-delete-bin-line text-2xl"></i>
+                    </button>
+
+                    <button
+                        class="p-3 rounded-md bg-slate-700 dark:bg-slate-600 text-white shadow-md hover:bg-slate-600 dark:hover:bg-slate-500"
+                        type="button"
+                        :title="t('builder.surprise')"
+                        :aria-label="t('builder.surprise_aria')"
+                        @click="suggestRandom"
+                    >
+                        <i class="ri-shuffle-line text-2xl"></i>
+                    </button>
+
+                    <button
+                        class="ml-2 p-3 rounded-md shadow-md flex items-center"
+                        :class="
+                            canSaveFavorite
+                                ? 'bg-rose-600 text-white hover:bg-rose-700 dark:hover:bg-rose-500'
+                                : 'bg-gray-400 dark:bg-gray-600 text-white opacity-60 cursor-not-allowed'
+                        "
+                        type="button"
+                        :title="
+                            canSaveFavorite
+                                ? t('builder.save_favorite')
+                                : isAtMax
+                                ? t('builder.max_favorites', {
+                                      count: MAX_FAVORITES,
+                                  })
+                                : t('builder.build_to_save')
+                        "
+                        :aria-label="
+                            canSaveFavorite
+                                ? t('builder.save_favorite')
+                                : t('builder.save_favorite_disabled')
+                        "
+                        :aria-disabled="!canSaveFavorite"
+                        :disabled="!canSaveFavorite"
+                        @click="addFavorite"
+                    >
+                        <i class="ri-heart-add-fill text-2xl mr-2"></i>
+                        <span class="sr-only">Save favorite</span>
+                    </button>
+
+                    <div
+                        v-if="addFeedback"
+                        class="inline-flex items-center gap-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-3 py-1 rounded-md"
+                    >
+                        <i class="ri-check-line"></i>
+                        <span class="text-sm">{{ t("builder.saved") }}</span>
+                    </div>
+                </div>
+
+                <!-- Saved Favorites -->
+                <div
+                    v-if="favorites.length"
+                    class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700"
+                >
+                    <div
+                        class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2"
+                    >
+                        {{ t("builder.saved_favorites") }}
+                    </div>
+                    <div class="flex gap-2 flex-wrap">
+                        <div
+                            v-for="(f, i) in favorites"
+                            :key="`fav-${i}`"
+                            class="flex items-center max-w-full bg-rose-600 rounded-md overflow-hidden"
+                            :class="{ 'ring-2 ring-green-400': justAdded === f }"
                         >
-                            <i
-                                class="ri-heart-fill text-base shrink-0"
-                                aria-hidden="true"
-                            ></i>
-                            <span class="break-words">{{ f }}</span>
-                        </button>
-                        <button
-                            type="button"
-                            class="shrink-0 min-h-11 min-w-11 flex items-center justify-center text-white bg-rose-700 hover:bg-red-700"
-                            :title="
-                                t('builder.remove_favorite', { favorite: f })
-                            "
-                            :aria-label="
-                                t('builder.remove_favorite', { favorite: f })
-                            "
-                            @click="removeFavorite(i)"
-                        >
-                            <i class="ri-close-line"></i>
-                        </button>
+                            <button
+                                type="button"
+                                class="flex items-center gap-2 min-w-0 min-h-11 px-3 py-2 text-white text-sm font-semibold text-left hover:bg-rose-700 transition-colors"
+                                :title="f"
+                                :aria-label="
+                                    t('builder.apply_favorite', { favorite: f })
+                                "
+                                @click="applyFavorite(f)"
+                            >
+                                <i
+                                    class="ri-heart-fill text-base shrink-0"
+                                    aria-hidden="true"
+                                ></i>
+                                <span class="break-words">{{ f }}</span>
+                            </button>
+                            <button
+                                type="button"
+                                class="shrink-0 min-h-11 min-w-11 flex items-center justify-center text-white bg-rose-700 hover:bg-red-700"
+                                :title="
+                                    t('builder.remove_favorite', {
+                                        favorite: f,
+                                    })
+                                "
+                                :aria-label="
+                                    t('builder.remove_favorite', {
+                                        favorite: f,
+                                    })
+                                "
+                                @click="removeFavorite(i)"
+                            >
+                                <i class="ri-close-line"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </Accordion>
+
+            <!-- Word / phrase category pane -->
+            <div v-else-if="activePane" class="flex flex-wrap gap-2">
+                <button
+                    v-for="(item, i) in activePane.items"
+                    :key="`${activePane.key}-${i}`"
+                    type="button"
+                    :class="[
+                        'px-4 py-2 rounded-full text-white text-xl font-semibold shadow-md transition-colors',
+                        activePane.chip,
+                    ]"
+                    @click="handleChip(activePane, item)"
+                >
+                    {{ item }}
+                </button>
+            </div>
+        </div>
 
         <ConfirmDialog
             v-model:show="confirmShow"

@@ -71,25 +71,21 @@ describe("MessageBuilder", () => {
             expect(wrapper.find("textarea").exists()).toBe(true);
         });
 
-        it("renders the @ button for mentions", () => {
+        it("renders the @ button for mentions", async () => {
             const wrapper = mount(MessageBuilder, {
                 props: { users: defaultUsers },
                 global: {
                     stubs: {
-                        Accordion: {
-                            template: "<div><slot/></div>",
-                            props: [
-                                "title",
-                                "defaultOpen",
-                                "compact",
-                                "modelValue",
-                            ],
-                            emits: ["update:modelValue"],
-                        },
                         Button: { template: "<button><slot/></button>" },
                     },
                 },
             });
+
+            // The @ button lives in the "Things you can do" tools pane, which is
+            // opened from the category toolbar (the first tab).
+            const toolsTab = wrapper.find('[role="tab"]');
+            await toolsTab.trigger("click");
+            await nextTick();
 
             const atButton = wrapper
                 .findAll("button")
@@ -209,6 +205,10 @@ describe("MessageBuilder", () => {
             await input.setValue("Test message");
             await input.trigger("input");
 
+            await nextTick();
+
+            // Open the "Things you can do" tools pane where the save button lives
+            await wrapper.find('[role="tab"]').trigger("click");
             await nextTick();
 
             // Find and click save favorite button
