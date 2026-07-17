@@ -997,21 +997,19 @@ defineExpose({
                     type="button"
                     role="tab"
                     :aria-selected="activeCategory === tab.key"
+                    :aria-label="tab.label"
                     :title="tab.label"
                     :class="[
-                        'flex w-16 shrink-0 flex-col items-center gap-1 rounded-lg px-1 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
+                        'flex h-12 w-12 shrink-0 items-center justify-center rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
                         activeCategory === tab.key
                             ? 'bg-white shadow-sm ring-1 ring-gray-200 dark:bg-slate-700 dark:ring-slate-600'
                             : 'hover:bg-white/70 dark:hover:bg-slate-700/60',
                     ]"
                     @click="selectCategory(tab.key)"
                 >
-                    <i :class="[tab.icon, 'text-2xl leading-none', tab.tint]"></i>
-                    <span
-                        class="text-[10px] font-semibold leading-tight text-center text-gray-700 dark:text-gray-200"
-                    >
-                        {{ tab.label }}
-                    </span>
+                    <i
+                        :class="[tab.icon, 'text-2xl leading-none', tab.tint]"
+                    ></i>
                 </button>
             </div>
         </div>
@@ -1025,13 +1023,13 @@ defineExpose({
             <div v-if="activeCategory === 'tools'">
                 <div class="flex items-center gap-2 flex-wrap">
                     <button
-                        class="px-4 py-3 rounded-md bg-blue-600 dark:bg-blue-500 text-white shadow-md hover:bg-blue-700 dark:hover:bg-blue-600 font-bold text-2xl"
+                        class="p-3 rounded-md bg-blue-600 dark:bg-blue-500 text-white shadow-md hover:bg-blue-700 dark:hover:bg-blue-600"
                         type="button"
                         :title="t('builder.tag_user')"
                         :aria-label="t('builder.tag_user_aria')"
                         @click="addWord('@')"
                     >
-                        @
+                        <i class="ri-at-line text-2xl"></i>
                     </button>
                     <button
                         class="p-3 rounded-md bg-slate-700 dark:bg-slate-600 text-white shadow-md hover:bg-slate-600 dark:hover:bg-slate-500"
@@ -1117,7 +1115,9 @@ defineExpose({
                             v-for="(f, i) in favorites"
                             :key="`fav-${i}`"
                             class="flex items-center max-w-full bg-rose-600 rounded-md overflow-hidden"
-                            :class="{ 'ring-2 ring-green-400': justAdded === f }"
+                            :class="{
+                                'ring-2 ring-green-400': justAdded === f,
+                            }"
                         >
                             <button
                                 type="button"

@@ -89,7 +89,7 @@ describe("MessageBuilder", () => {
 
             const atButton = wrapper
                 .findAll("button")
-                .find((btn) => btn.text().includes("@"));
+                .find((btn) => btn.find("i.ri-at-line").exists());
             expect(atButton).toBeTruthy();
         });
     });
