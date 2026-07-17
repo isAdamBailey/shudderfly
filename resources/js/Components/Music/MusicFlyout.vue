@@ -18,8 +18,8 @@
         >
             <!-- Music Indicator Button (attached to left edge of flyout) -->
             <div
-                class="absolute left-0 top-1/2 -translate-x-full -translate-y-1/2 z-50"
-                style="margin-top: -60px"
+                class="absolute left-0 -translate-x-full -translate-y-1/2 z-50"
+                style="top: max(7rem, calc(50% - 60px))"
             >
                 <button
                     type="button"
