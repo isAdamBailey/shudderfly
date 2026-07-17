@@ -8,7 +8,7 @@ useGameViewportLock();
 </script>
 
 <template>
-    <Head title="Costco Pizza Poop" />
+    <Head title="Costco Food Poop" />
 
     <AuthenticatedLayout>
         <div class="costco-pizza-poop-page">

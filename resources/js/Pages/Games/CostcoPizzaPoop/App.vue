@@ -1,22 +1,24 @@
 <template>
     <GameStartScreen
         v-if="phase === 'start'"
-        title="Costco Pizza Poop"
-        subtitle="Feed the slices, then watch digestion begin."
+        title="Costco Food Poop"
+        subtitle="Feed the slices and sticks, then watch digestion begin."
         :intro-script="COSTCO_PIZZA_POOP_INTRO_SCRIPT"
         @play="handlePlayFromStart"
     >
-        <template #media>🍕</template>
+        <template #media
+            >🍕<PepperoniStick class="start-media-pepperoni"
+        /></template>
         <p>
-            Drag each slice from the pizza into the mouth.<br />
-            After all slices are eaten, steer the poop through the intestine to
-            finish.
+            Drag each slice and pepperoni stick into the mouth.<br />
+            After all the food is eaten, steer the poop through the intestine
+            to finish.
         </p>
     </GameStartScreen>
 
     <div v-else-if="phase === 'pizza'" ref="gameEl" class="game-container">
         <div class="hud">
-            <span class="hud-label">Slices left</span>
+            <span class="hud-label">Food left</span>
             <span class="hud-value">{{ slicesLeft }}</span>
         </div>
 
@@ -29,7 +31,7 @@
 
         <transition name="pizza-hint-fade">
             <div v-if="showPizzaHint" class="pizza-hint" aria-hidden="true">
-                Drag a slice into the mouth 👇
+                Drag food into the mouth 👇
             </div>
         </transition>
 
@@ -41,14 +43,18 @@
             class="slice"
             :class="{ dragging: draggingId === s.id }"
             :style="sliceStyle(s)"
-            :aria-label="`Pizza slice ${
-                s.id + 1
+            :aria-label="`${
+                s.kind === 'pepperoni' ? 'Pepperoni stick' : 'Pizza slice'
             } — drag into the mouth, or press Enter to eat`"
             @pointerdown.prevent="startDrag(s.id, $event)"
             @keydown.enter.prevent="feedSlice(s.id)"
             @keydown.space.prevent="feedSlice(s.id)"
         >
-            🍕
+            <PepperoniStick
+                v-if="s.kind === 'pepperoni'"
+                class="food-svg"
+            />
+            <template v-else>🍕</template>
         </button>
 
         <div class="person-wrap">
@@ -146,6 +152,7 @@
 import GameStartScreen from "@/Components/Games/GameStartScreen.vue";
 import GameEndScreen from "@/Components/Games/GameEndScreen.vue";
 import GameBoard from "@/Pages/Games/CostcoPizzaPoop/components/GameBoard.vue";
+import PepperoniStick from "@/Pages/Games/CostcoPizzaPoop/components/PepperoniStick.vue";
 import { COSTCO_PIZZA_POOP_INTRO_SCRIPT } from "@/Pages/Games/shared/introScripts.js";
 import { POOP } from "@/constants/characters.js";
 import { useGameState } from "@/Pages/Games/CostcoPizzaPoop/composables/useGameState.js";
@@ -153,7 +160,8 @@ import { useSound } from "@/Pages/Games/CostcoPizzaPoop/composables/useSound.js"
 import { Link, usePage } from "@inertiajs/vue3";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
-const SLICE_COUNT = 3;
+const PIZZA_COUNT = 3;
+const PEPPERONI_COUNT = 2;
 const SLICE_SIZE = 96;
 const INTESTINE_INTRO_MS = 2600;
 const VICTORY_TUNE_DELAY_MS = 300;
@@ -171,16 +179,26 @@ const anticipating = ref(false);
 const gulping = ref(false);
 const chompCount = ref(0);
 let gulpTimer = null;
-const sliceList = ref(
-    Array.from({ length: SLICE_COUNT }, (_, id) => ({
-        id,
+function createFoodList() {
+    const pizza = Array.from({ length: PIZZA_COUNT }, (_, i) => ({
+        kind: "pizza",
+        id: i,
+    }));
+    const pepperoni = Array.from({ length: PEPPERONI_COUNT }, (_, i) => ({
+        kind: "pepperoni",
+        id: PIZZA_COUNT + i,
+    }));
+    return [...pizza, ...pepperoni].map((f) => ({
+        ...f,
         eaten: false,
         x: 0,
         y: 0,
         startX: 0,
         startY: 0,
-    }))
-);
+    }));
+}
+
+const sliceList = ref(createFoodList());
 const draggingId = ref(null);
 const showPizzaHint = ref(false);
 let dragOffsetX = 0;
@@ -268,7 +286,7 @@ function layoutSlices() {
     const baseY = Math.min(220, Math.max(150, w * 0.34));
     const margin = 24;
     const usable = w - margin * 2;
-    const step = usable / (SLICE_COUNT + 1);
+    const step = usable / (sliceList.value.length + 1);
     sliceList.value.forEach((s, i) => {
         s.startX = margin + step * (i + 1);
         s.startY = baseY;
@@ -555,6 +573,19 @@ onUnmounted(() => {
     touch-action: none;
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
     transition: transform 0.12s ease;
+}
+
+.food-svg {
+    width: 100%;
+    height: 100%;
+}
+
+.start-media-pepperoni {
+    display: inline-block;
+    width: 0.85em;
+    height: 0.85em;
+    vertical-align: middle;
+    margin-left: 0.15em;
 }
 
 .slice:focus-visible {

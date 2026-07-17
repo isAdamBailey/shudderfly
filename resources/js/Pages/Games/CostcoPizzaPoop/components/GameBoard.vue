@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { Link } from "@inertiajs/vue3";
 import { SVG_WIDTH } from "../composables/useGameState.js";
+import PepperoniGlyph from "./PepperoniGlyph.vue";
 
 const props = defineProps({
     state: { type: Object, required: true },
@@ -384,6 +385,24 @@ onUnmounted(() => {
                 >
                     🍕
                 </text>
+                <g
+                    :transform="`translate(${digestIntro.stomachCx}, ${digestIntro.stomachCy})`"
+                >
+                    <g class="digest-pepp digest-pepp-a">
+                        <g transform="translate(-24, -24) scale(0.5)">
+                            <PepperoniGlyph />
+                        </g>
+                    </g>
+                </g>
+                <g
+                    :transform="`translate(${digestIntro.stomachCx}, ${digestIntro.stomachCy})`"
+                >
+                    <g class="digest-pepp digest-pepp-b">
+                        <g transform="translate(-24, -24) scale(0.5)">
+                            <PepperoniGlyph />
+                        </g>
+                    </g>
+                </g>
                 <text
                     :x="digestIntro.stomachCx"
                     :y="digestIntro.stomachCy"
@@ -510,6 +529,19 @@ onUnmounted(() => {
 
 .digest-slice-c {
     animation: digestSliceC 1.4s cubic-bezier(0.5, 0, 0.4, 1) forwards;
+}
+
+.digest-pepp {
+    transform-box: fill-box;
+    transform-origin: center;
+}
+
+.digest-pepp-a {
+    animation: digestPeppA 1.4s cubic-bezier(0.5, 0, 0.4, 1) forwards;
+}
+
+.digest-pepp-b {
+    animation: digestPeppB 1.4s cubic-bezier(0.5, 0, 0.4, 1) forwards;
 }
 
 .digest-intro-poop {
@@ -723,6 +755,45 @@ onUnmounted(() => {
     }
 }
 
+/* Pepperoni sticks join the slices, spiraling inward from the opposite side. */
+@keyframes digestPeppA {
+    0% {
+        opacity: 1;
+        transform: translate(-40px, 18px) rotate(24deg) scale(1);
+    }
+    55% {
+        opacity: 1;
+        transform: translate(-8px, 4px) rotate(-160deg) scale(0.72);
+    }
+    82% {
+        opacity: 0.85;
+        transform: translate(0, 13px) rotate(-290deg) scale(0.36, 0.26);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(0, 16px) rotate(-360deg) scale(0.06);
+    }
+}
+
+@keyframes digestPeppB {
+    0% {
+        opacity: 1;
+        transform: translate(38px, 22px) rotate(-18deg) scale(1);
+    }
+    55% {
+        opacity: 1;
+        transform: translate(7px, 5px) rotate(190deg) scale(0.7);
+    }
+    82% {
+        opacity: 0.85;
+        transform: translate(0, 13px) rotate(310deg) scale(0.36, 0.26);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(0, 16px) rotate(380deg) scale(0.06);
+    }
+}
+
 /* Poop forms in the belly with a squash-pop, then oozes down to its start. */
 @keyframes digestPoopForm {
     0% {
@@ -770,7 +841,9 @@ onUnmounted(() => {
 
     .digest-slice-a,
     .digest-slice-b,
-    .digest-slice-c {
+    .digest-slice-c,
+    .digest-pepp-a,
+    .digest-pepp-b {
         animation: digestSliceFade 0.7s ease forwards;
     }
 

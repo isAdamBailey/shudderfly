@@ -29,9 +29,9 @@ class GameController extends Controller
             'component' => 'CockroachFight',
         ],
         'costco-pizza-poop' => [
-            'name' => 'Costco Pizza Poop',
+            'name' => 'Costco Food Poop',
             'emoji' => '🍕',
-            'description' => 'Feed every slice, then guide it through the intestine to the grand finale.',
+            'description' => 'Feed every slice and stick, then guide it through the intestine to the grand finale.',
             'component' => 'CostcoPizzaPoop',
         ],
         'boom' => [

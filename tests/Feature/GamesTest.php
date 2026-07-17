@@ -32,7 +32,7 @@ class GamesTest extends TestCase
                 ->where('games.1.slug', 'cockroach-fight')
                 ->where('games.1.name', 'Cockroach Fight')
                 ->where('games.2.slug', 'costco-pizza-poop')
-                ->where('games.2.name', 'Costco Pizza Poop')
+                ->where('games.2.name', 'Costco Food Poop')
                 ->where('games.3.slug', 'boom')
                 ->where('games.3.name', 'Poop Boom')
                 ->where('games.4.slug', 'cockroach')

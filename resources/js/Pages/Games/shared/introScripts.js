@@ -15,6 +15,6 @@ export const POOP_BOOM_INTRO_SCRIPT =
     "Plop it in for a point, and every plop is a squeaky fart. Don't miss, stinky!";
 
 export const COSTCO_PIZZA_POOP_INTRO_SCRIPT =
-    "Costco Pizza Poop! Drag the pizza slices into the hungry mouth, nom nom nom. " +
-    "All that pizza turns into poop, so steer the poop through the tunnel without bonking. " +
+    "Costco Food Poop! Drag the pizza slices and pepperoni sticks into the hungry mouth, nom nom nom. " +
+    "All that food turns into poop, so steer the poop through the tunnel without bonking. " +
     "Farts the whole way! Let's go!";
