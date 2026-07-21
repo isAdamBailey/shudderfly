@@ -14,7 +14,7 @@ import { FOOD_EMOJI_POOL, useEmojiRise } from "@/composables/useEmojiRise";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import { Head, Link, router, usePage } from "@inertiajs/vue3";
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 
 defineOptions({
     name: "UserShow",
@@ -27,6 +27,16 @@ const { spawnEmojiRise } = useEmojiRise();
 const { isRead, markAsRead: markNotificationAsRead } = useNotificationSync();
 const regenerating = ref(false);
 const showNewBookForm = ref(false);
+
+const openNewBookForm = () => {
+    showNewBookForm.value = true;
+    nextTick(() => {
+        document.getElementById("new-book-form")?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+        });
+    });
+};
 
 const messagingEnabled = computed(() => {
     const value = usePage().props.settings?.messaging_enabled;
@@ -460,7 +470,7 @@ const speakUserSummary = () => {
                                 v-if="!showNewBookForm"
                                 type="button"
                                 class="mb-3 w-full justify-center ring-2 ring-amber-400/70 shadow-lg sm:mb-0 sm:w-auto sm:justify-start"
-                                @click="showNewBookForm = true"
+                                @click="openNewBookForm"
                             >
                                 <i class="ri-add-line mr-1.5 text-base"></i>
                                 {{ t("dashboard.add_new_book") }}
@@ -526,7 +536,8 @@ const speakUserSummary = () => {
 
                     <NewBookForm
                         v-if="canEditPages && showNewBookForm"
-                        class="mt-4"
+                        id="new-book-form"
+                        class="mt-4 scroll-mt-16"
                         :authors="authors"
                         :categories="newBookCategories"
                         @close-page-form="showNewBookForm = false"
