@@ -13,7 +13,7 @@ import { usePermissions } from "@/composables/permissions";
 import { FOOD_EMOJI_POOL, useEmojiRise } from "@/composables/useEmojiRise";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
-import { Head, Link, router } from "@inertiajs/vue3";
+import { Head, Link, router, usePage } from "@inertiajs/vue3";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 
 defineOptions({
@@ -27,6 +27,11 @@ const { spawnEmojiRise } = useEmojiRise();
 const { isRead, markAsRead: markNotificationAsRead } = useNotificationSync();
 const regenerating = ref(false);
 const showNewBookForm = ref(false);
+
+const messagingEnabled = computed(() => {
+    const value = usePage().props.settings?.messaging_enabled;
+    return value === "1" || value === 1 || value === true;
+});
 
 function scrollToAdministration() {
     document
@@ -470,21 +475,31 @@ const speakUserSummary = () => {
                             </Button>
                         </template>
 
-                        <!-- Secondary CTAs: browse books / uploads (all users) -->
-                        <div class="flex w-full items-stretch gap-3">
+                        <!-- Secondary CTAs: collages / games / chat (all users) -->
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
                             <Link
-                                :href="route('books.index')"
-                                class="btn-bulge inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-md border border-teal-300/40 px-3 py-2.5 text-center text-sm font-semibold leading-tight text-teal-50 transition-colors hover:bg-teal-600"
+                                :href="route('collages.index')"
+                                class="btn-bulge inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md bg-amber-400 px-3 py-2.5 text-center text-sm font-semibold leading-tight text-gray-900 transition-colors hover:bg-amber-300"
                             >
-                                <i class="ri-book-open-line flex-shrink-0"></i>
-                                {{ t("dashboard.browse_books") }}
+                                <i
+                                    class="ri-layout-masonry-line flex-shrink-0"
+                                ></i>
+                                {{ t("dashboard.browse_collages") }}
                             </Link>
                             <Link
-                                :href="route('pictures.index')"
-                                class="btn-bulge inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-md border border-teal-300/40 px-3 py-2.5 text-center text-sm font-semibold leading-tight text-teal-50 transition-colors hover:bg-teal-600"
+                                :href="route('games.index')"
+                                class="btn-bulge inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md bg-teal-300 px-3 py-2.5 text-center text-sm font-semibold leading-tight text-gray-900 transition-colors hover:bg-teal-200"
                             >
-                                <i class="ri-image-line flex-shrink-0"></i>
-                                {{ t("dashboard.browse_uploads") }}
+                                <i class="ri-gamepad-line flex-shrink-0"></i>
+                                {{ t("dashboard.browse_games") }}
+                            </Link>
+                            <Link
+                                v-if="messagingEnabled"
+                                :href="route('messages.index')"
+                                class="btn-bulge inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md bg-orange-700 px-3 py-2.5 text-center text-sm font-semibold leading-tight text-amber-50 transition-colors hover:bg-orange-600"
+                            >
+                                <i class="ri-chat-3-line flex-shrink-0"></i>
+                                {{ t("dashboard.browse_chat") }}
                             </Link>
                         </div>
 

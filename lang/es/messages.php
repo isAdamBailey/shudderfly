@@ -325,8 +325,9 @@ return [
     'dashboard.close_book_form' => 'Cerrar formulario de libro',
     'dashboard.hero_default_summary' => 'Explora tus libros o mira todo lo que has compartido. Vuelve después de una semana ajetreada para ver un resumen personalizado con IA de tus últimas historias.',
     'dashboard.hero_summary_updated' => 'Resumen de IA · actualizado :date',
-    'dashboard.browse_books' => 'Ver libros',
-    'dashboard.browse_uploads' => 'Fotos y videos',
+    'dashboard.browse_collages' => 'Collages',
+    'dashboard.browse_games' => 'Juegos',
+    'dashboard.browse_chat' => 'Chat',
 
     // World Clock - Timer
     'world_clock.timer_done' => '¡Se acabó el tiempo!',

@@ -20,6 +20,9 @@ vi.mock("@inertiajs/vue3", () => ({
     Head: { name: "Head", template: "<head><slot /></head>", props: ["title"] },
     Link: { name: "Link", template: "<a><slot /></a>", props: ["href"] },
     router: { post: mockRouterPost },
+    usePage: () => ({
+        props: { settings: { messaging_enabled: true } },
+    }),
 }));
 
 vi.mock("@/composables/permissions", () => ({
@@ -576,8 +579,9 @@ describe("UserShow", () => {
 
             // Personalized welcome + navigation CTAs exposed to all users
             expect(wrapper.text()).toContain("profile.welcome_with_name");
-            expect(wrapper.text()).toContain("dashboard.browse_books");
-            expect(wrapper.text()).toContain("dashboard.browse_uploads");
+            expect(wrapper.text()).toContain("dashboard.browse_collages");
+            expect(wrapper.text()).toContain("dashboard.browse_games");
+            expect(wrapper.text()).toContain("dashboard.browse_chat");
             // Edit/admin-only actions hidden for a plain user
             expect(wrapper.text()).not.toContain("dashboard.add_new_book");
             expect(wrapper.text()).not.toContain("Regenerate AI overview");
