@@ -23,6 +23,7 @@ class Message extends Model
         'movie_image_path',
         'book_id',
         'sound_id',
+        'collage_id',
     ];
 
     protected $casts = [
@@ -107,6 +108,14 @@ class Message extends Model
     public function sound(): BelongsTo
     {
         return $this->belongsTo(Sound::class);
+    }
+
+    /**
+     * Get the collage that this message shares (if any).
+     */
+    public function collage(): BelongsTo
+    {
+        return $this->belongsTo(Collage::class);
     }
 
     /**

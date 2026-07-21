@@ -20,7 +20,8 @@ const props = defineProps({
             v === "song" ||
             v === "movie" ||
             v === "book" ||
-            v === "sound",
+            v === "sound" ||
+            v === "collage",
     },
     gameSlug: { type: String, default: undefined },
     score: { type: Number, default: undefined },
@@ -31,6 +32,7 @@ const props = defineProps({
     movieImagePath: { type: String, default: undefined },
     bookId: { type: [Number, String], default: undefined },
     soundId: { type: [Number, String], default: undefined },
+    collageId: { type: [Number, String], default: undefined },
     wrapperClass: {
         type: String,
         default: "inline-flex items-center justify-center gap-2",
@@ -174,6 +176,12 @@ const shareToChat = (taggedUserId = null) => {
             { tagged_user_ids: tagged },
             options
         );
+    } else if (props.kind === "collage") {
+        router.post(
+            route("collages.share", props.collageId),
+            { tagged_user_ids: tagged },
+            options
+        );
     } else {
         router.post(
             route("games.share-score", props.gameSlug),
@@ -219,6 +227,9 @@ const confirmPrefix = computed(() => {
     if (props.kind === "sound") {
         return "sound";
     }
+    if (props.kind === "collage") {
+        return "collage";
+    }
     return "page";
 });
 
@@ -241,6 +252,9 @@ const shareIconTitle = computed(() => {
     if (props.kind === "sound") {
         return t("sound.share_icon_title");
     }
+    if (props.kind === "collage") {
+        return t("collage.share_icon_title");
+    }
     return t("page.share_icon_title");
 });
 
@@ -262,6 +276,9 @@ const shareAriaLabel = computed(() => {
     }
     if (props.kind === "sound") {
         return t("sound.share_aria");
+    }
+    if (props.kind === "collage") {
+        return t("collage.share_aria");
     }
     return t("page.share_aria");
 });

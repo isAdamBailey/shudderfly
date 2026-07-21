@@ -243,7 +243,7 @@ class CollageLockingTest extends TestCase
 
         $response->assertOk();
 
-        $collages = $response->viewData('page')['props']['collages'];
+        $collages = $response->viewData('page')['props']['collages']['data'];
         $archivedCollageData = collect($collages)->firstWhere('id', $collage->id);
 
         $this->assertFalse($archivedCollageData['is_locked']);

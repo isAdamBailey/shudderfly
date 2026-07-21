@@ -78,8 +78,8 @@ class CollagesTest extends TestCase
         $response->assertInertia(
             fn (Assert $page) => $page
                 ->component('Collages/Archived')
-                ->has('collages', 3)
-                ->has('collages.0.pages')
+                ->has('collages.data', 3)
+                ->has('collages.data.0.pages')
         );
     }
 
@@ -213,7 +213,7 @@ class CollagesTest extends TestCase
         $response->assertInertia(
             fn (Assert $page) => $page
                 ->component('Collages/Archived')
-                ->has('collages', 3) // Only archived collages
+                ->has('collages.data', 3) // Only archived collages
         );
     }
 
@@ -285,7 +285,7 @@ class CollagesTest extends TestCase
         $response = $this->post(route('collages.generate-pdf', $collage));
 
         $response->assertRedirect(route('collages.archived'))
-            ->assertSessionHas('success', 'PDF generation has been queued. You will receive an email when it\'s ready.');
+            ->assertSessionHas('success', 'Collage generation has been queued. You will receive an email when it\'s ready.');
     }
 
     public function test_collage_page_removed_event_is_broadcast_on_page_removal(): void

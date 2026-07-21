@@ -12,6 +12,7 @@ return [
     'movie_shared' => 'Mira esta película: :title',
     'book_shared' => 'Mira este libro: :title',
     'sound_shared' => 'Escucha este sonido: :title',
+    'collage_shared' => '¡Mira este collage!',
     'unknown_book' => 'Libro misterioso',
     'share_to_timeline' => 'Compartir en el chat',
     'already_shared_today' => '¡Ya compartiste algo hoy!',
@@ -45,6 +46,7 @@ return [
     'sound.blocked' => 'Sonido bloqueado.',
     'sound.disabled' => 'Los sonidos están apagados ahora mismo.',
     'sound.shared' => '¡Compartido! Tus amigos pueden escucharlo.',
+    'collage.shared' => '¡Compartido! Tus amigos pueden ver el collage.',
     'avatar.updated' => '¡Foto nueva! Te ves genial.',
     'user.weekly_overview_regenerated' => '¡Se hizo una nueva historia semanal para :name!',
 
@@ -127,6 +129,7 @@ return [
     'message.shared_movie' => 'Película compartida',
     'message.shared_book' => 'Libro compartido',
     'message.shared_sound' => 'Sonido compartido',
+    'message.shared_collage' => 'Collage compartido',
 
     // UI Labels - Comments
     'comment.actions' => 'Cosas que puedes hacer',
@@ -244,6 +247,12 @@ return [
     'sound.share_confirm_speak_tagged' => '¿Seguro que quieres compartir este sonido con :username:',
     'sound.share_confirm_dialog' => '¿Seguro que quieres compartir este sonido?',
     'sound.share_confirm_dialog_tagged' => '¿Seguro que quieres compartir este sonido con :username?',
+    'collage.share_icon_title' => 'Compartir',
+    'collage.share_aria' => 'Compartir en el chat',
+    'collage.share_confirm_speak' => '¿Seguro que quieres compartir este collage:',
+    'collage.share_confirm_speak_tagged' => '¿Seguro que quieres compartir este collage con :username:',
+    'collage.share_confirm_dialog' => '¿Seguro que quieres compartir este collage?',
+    'collage.share_confirm_dialog_tagged' => '¿Seguro que quieres compartir este collage con :username?',
     'game.share_icon_title' => 'Compartir',
     'game.share_aria' => 'Compartir en el chat',
     'game.share_confirm_speak' => '¿Seguro que quieres compartir tu puntuación:',

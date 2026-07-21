@@ -72,6 +72,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/collages', [CollageController::class, 'index'])->name('collages.index');
     Route::get('/collages/archived', [CollageController::class, 'archived'])->name('collages.archived');
+    Route::post('/collages/{collage}/share', [CollageController::class, 'share'])->name('collages.share');
 
     Route::get('/games', [GameController::class, 'index'])->name('games.index');
     Route::get('/games/{game}', [GameController::class, 'show'])->name('games.show');

@@ -237,6 +237,33 @@
                         </div>
                     </Link>
                 </div>
+                <div
+                    v-if="message.collage_id && message.collage"
+                    class="mt-2 md:mt-3"
+                >
+                    <Link
+                        :href="route('collages.archived')"
+                        class="block rounded-lg overflow-hidden w-full max-w-[200px] sm:max-w-[250px] mt-2"
+                        @click.stop
+                    >
+                        <img
+                            v-if="message.collage.preview_path"
+                            :src="message.collage.preview_path"
+                            :alt="t('message.shared_collage')"
+                            class="w-full h-auto max-h-[200px] sm:max-h-[250px] object-contain rounded-lg"
+                            loading="lazy"
+                        />
+                        <div
+                            v-else
+                            class="flex items-center justify-center w-full max-w-[200px] aspect-[8.5/11] rounded-lg bg-gray-200 dark:bg-gray-700"
+                        >
+                            <i
+                                class="ri-file-pdf-line text-4xl text-gray-500 dark:text-gray-400"
+                                aria-hidden="true"
+                            ></i>
+                        </div>
+                    </Link>
+                </div>
                 <MessageReactions
                     v-if="!readOnly"
                     :grouped-reactions="message.grouped_reactions || {}"

@@ -30,7 +30,7 @@
             </div>
             <p v-if="canAdmin" class="mt-3 text-sm text-gray-500">
                 Archived collages are preserved but cannot be edited.
-                <strong class="text-gray-400 font-medium">View PDF</strong>
+                <strong class="text-gray-400 font-medium">View Collage</strong>
                 anytime.
                 <strong class="text-gray-400 font-medium">Restore</strong> to
                 make editable again.
@@ -42,7 +42,7 @@
         </template>
 
         <div
-            v-if="collages.length === 0"
+            v-if="items.length === 0"
             class="flex flex-col items-center mt-10"
         >
             <h2 class="mb-8 font-semibold text-2xl text-gray-100 leading-tight">
@@ -52,7 +52,7 @@
         </div>
 
         <CollageGrid
-            :collages="collages"
+            :collages="items"
             :show-index="false"
             :show-screenshots="true"
         >
@@ -65,8 +65,17 @@
                         class="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-200 transition-colors"
                     >
                         <i class="ri-file-pdf-line"></i>
-                        View PDF
+                        View Collage
                     </a>
+
+                    <ShareToChatButton
+                        v-if="collage.storage_path"
+                        kind="collage"
+                        :collage-id="collage.id"
+                        :menu-item="true"
+                        menu-item-class="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-200 transition-colors"
+                        wrapper-class="inline-flex"
+                    />
 
                     <div
                         v-if="canAdmin"
@@ -106,6 +115,8 @@
             </template>
         </CollageGrid>
 
+        <div ref="infiniteScrollRef"></div>
+
         <ConfirmDialog
             v-model:show="confirmShow"
             :title="confirmTitle"
@@ -126,8 +137,10 @@
 import SpeakButton from "@/Components/SpeakButton.vue";
 import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
+import ShareToChatButton from "@/Components/ShareToChatButton.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
+import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
@@ -153,9 +166,14 @@ const {
 const { canEditPages, canAdmin } = usePermissions();
 const { speak, speaking } = useSpeechSynthesis();
 
-defineProps({
-    collages: { type: Array, required: true },
+const props = defineProps({
+    collages: { type: Object, required: true },
 });
+
+const { items, infiniteScrollRef } = useInfiniteScroll(
+    props.collages.data,
+    computed(() => props.collages)
+);
 
 const restoreForm = useForm();
 const deleteForm = useForm();

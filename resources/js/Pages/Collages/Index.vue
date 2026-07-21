@@ -45,7 +45,9 @@
                 automatically arrange to fill the space.
                 <strong class="text-gray-400 font-medium">Lock</strong> to
                 prevent new additions;
-                <strong class="text-gray-400 font-medium">Generate PDF</strong>
+                <strong class="text-gray-400 font-medium"
+                    >Generate Collage</strong
+                >
                 takes a few minutes — you'll receive an email when ready;
                 <strong class="text-gray-400 font-medium">Archive</strong> to
                 preserve while preventing edits.
@@ -111,7 +113,7 @@
                         class="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-200 transition-colors"
                     >
                         <i class="ri-file-pdf-line"></i>
-                        View PDF
+                        View Collage
                     </a>
 
                     <div
@@ -150,8 +152,8 @@
                                 isGenerating(collage)
                                     ? "Generating…"
                                     : collage.storage_path
-                                    ? "Regenerate PDF"
-                                    : "Generate PDF"
+                                    ? "Regenerate Collage"
+                                    : "Generate Collage"
                             }}
                         </button>
 

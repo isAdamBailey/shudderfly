@@ -58,7 +58,7 @@
                             class="ri-file-pdf-line text-6xl text-red-500 mb-4"
                         ></i>
                         <p class="text-gray-600 mb-4">
-                            PDF preview not available
+                            Collage preview not available
                         </p>
                         <div class="text-sm text-gray-500 mb-4">
                             {{ collage.pages.length }} images in this collage

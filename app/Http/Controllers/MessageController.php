@@ -38,7 +38,7 @@ class MessageController extends Controller
             ]);
         }
 
-        $messages = Message::with(['user', 'page', 'song', 'book.coverImage', 'sound', 'reactions.user', 'comments.user', 'comments.reactions.user'])
+        $messages = Message::with(['user', 'page', 'song', 'book.coverImage', 'sound', 'collage', 'reactions.user', 'comments.user', 'comments.reactions.user'])
             ->whereDoesntHave('page', fn ($query) => $query->where('blocked', true))
             ->recent()
             ->withinRetentionPeriod()
@@ -76,7 +76,7 @@ class MessageController extends Controller
      */
     public function show(Message $message): JsonResponse
     {
-        $message->load(['user', 'page', 'song', 'book.coverImage', 'sound', 'reactions.user', 'comments.user', 'comments.reactions.user']);
+        $message->load(['user', 'page', 'song', 'book.coverImage', 'sound', 'collage', 'reactions.user', 'comments.user', 'comments.reactions.user']);
 
         if ($message->page?->blocked) {
             return response()->json(['message' => 'Not found'], 404);

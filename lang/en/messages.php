@@ -12,6 +12,7 @@ return [
     'movie_shared' => 'Check out this movie: :title',
     'book_shared' => 'Check out this book: :title',
     'sound_shared' => 'Listen to this sound: :title',
+    'collage_shared' => 'Check out this collage!',
     'unknown_book' => 'Mystery book',
     'share_to_timeline' => 'Share to chat',
     'already_shared_today' => 'You already shared something today!',
@@ -45,6 +46,7 @@ return [
     'sound.blocked' => 'Sound blocked.',
     'sound.disabled' => 'Sounds are turned off right now.',
     'sound.shared' => 'Shared! Your friends can hear it.',
+    'collage.shared' => 'Shared! Your friends can see the collage.',
     'avatar.updated' => 'New picture! Looking good.',
     'user.weekly_overview_regenerated' => 'Made a new weekly story for :name!',
 
@@ -127,6 +129,7 @@ return [
     'message.shared_movie' => 'Shared movie',
     'message.shared_book' => 'Shared book',
     'message.shared_sound' => 'Shared sound',
+    'message.shared_collage' => 'Shared collage',
 
     // UI Labels - Comments
     'comment.actions' => 'Stuff you can do',
@@ -244,6 +247,12 @@ return [
     'sound.share_confirm_speak_tagged' => 'Are you sure you want to share this sound with :username:',
     'sound.share_confirm_dialog' => 'Are you sure you want to share this sound?',
     'sound.share_confirm_dialog_tagged' => 'Are you sure you want to share this sound with :username?',
+    'collage.share_icon_title' => 'Share',
+    'collage.share_aria' => 'Share to chat',
+    'collage.share_confirm_speak' => 'Are you sure you want to share this collage:',
+    'collage.share_confirm_speak_tagged' => 'Are you sure you want to share this collage with :username:',
+    'collage.share_confirm_dialog' => 'Are you sure you want to share this collage?',
+    'collage.share_confirm_dialog_tagged' => 'Are you sure you want to share this collage with :username?',
     'game.share_icon_title' => 'Share',
     'game.share_aria' => 'Share to chat',
     'game.share_confirm_speak' => 'Are you sure you want to share your score:',
