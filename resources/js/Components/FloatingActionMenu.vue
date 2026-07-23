@@ -18,7 +18,7 @@ defineProps({
 </script>
 
 <template>
-    <div class="fixed bottom-20 right-5 z-50 inline-flex shrink-0">
+    <div class="fixed bottom-36 right-5 z-50 inline-flex shrink-0 sm:bottom-20">
         <Dropdown
             class="inline-flex shrink-0"
             align="right"

@@ -21,7 +21,7 @@ function play() {
 
 <template>
     <div
-        class="game-start-screen fixed inset-x-0 bottom-0 top-16 flex items-center justify-center touch-manipulation bg-black/75 p-3 backdrop-blur-md sm:p-6"
+        class="game-start-screen fixed inset-x-0 bottom-0 top-16 z-50 flex items-center justify-center touch-manipulation bg-black/75 p-3 backdrop-blur-md sm:p-6"
         role="dialog"
         aria-modal="true"
         aria-labelledby="game-start-title"

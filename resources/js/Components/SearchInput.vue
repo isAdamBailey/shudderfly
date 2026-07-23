@@ -20,7 +20,7 @@
                     class="flex-1 min-w-0 px-2 sm:px-3 h-6 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 christmas:focus-visible:ring-christmas-gold halloween:focus-visible:ring-halloween-orange"
                     :class="
                         isBooksTarget
-                            ? 'bg-teal-700 text-white dark:bg-white dark:text-gray-900 christmas:bg-christmas-red christmas:text-white halloween:bg-halloween-orange halloween:text-white shadow'
+                            ? 'bg-theme-selected'
                             : 'text-gray-700 dark:text-gray-300'
                     "
                     @click="setTarget('books')"
@@ -36,7 +36,7 @@
                     class="flex-1 min-w-0 px-2 sm:px-3 h-6 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 christmas:focus-visible:ring-christmas-gold halloween:focus-visible:ring-halloween-orange"
                     :class="
                         isUploadsTarget
-                            ? 'bg-teal-700 text-white dark:bg-white dark:text-gray-900 christmas:bg-christmas-red christmas:text-white halloween:bg-halloween-orange halloween:text-white shadow'
+                            ? 'bg-theme-selected'
                             : 'text-gray-700 dark:text-gray-300'
                     "
                     @click="setTarget('uploads')"

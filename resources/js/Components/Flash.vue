@@ -123,7 +123,7 @@ onBeforeUnmount(() => {
             <div
                 v-if="show && flashMessage"
                 :key="`flash-${forceRender}-${flashMessage?.type}-${flashMessage?.text}`"
-                class="fixed bottom-4 left-4 right-4 sm:right-auto sm:max-w-md z-[9999]"
+                class="fixed bottom-20 left-4 right-4 sm:bottom-4 sm:right-auto sm:max-w-md z-[9999]"
             >
                 <div
                     :class="[

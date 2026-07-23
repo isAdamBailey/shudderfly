@@ -1,7 +1,7 @@
 <template>
     <div
         ref="scrollTopButton"
-        class="hidden !fixed bottom-3 right-5 z-[60] w-fit transition"
+        class="hidden !fixed bottom-20 right-5 z-[60] w-fit transition sm:bottom-3"
     >
         <button
             type="button"

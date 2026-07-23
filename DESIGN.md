@@ -166,7 +166,7 @@ Layered, not flat — depth and shadow are part of the brand voice everywhere, f
 ### Shadow Vocabulary
 
 -   **Ambient card** (`box-shadow: 0 1px 2px rgba(0,0,0,0.05)`, Tailwind `shadow-sm`): admin stat cards, list rows
--   **Floating panel** (`shadow-lg`): dropdown menus, "More" panels attached to the nav bar
+-   **Floating panel** (`shadow-lg`): dropdown menus (notifications, profile)
 -   **Hero shadow** (`shadow-xl`): modals, book covers, game modals
 -   **Mini-book stack** (multi-layer — see `card-book` in the sidecar): spine gradient + radial highlight + diagonal shading + outer glow ring — the signature "book on a shelf" depth
 -   **Reading-panel glass** (`0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1)` + `backdrop-filter: blur(20px)`): the storybook reading panel
@@ -198,8 +198,11 @@ Layered, not flat — depth and shadow are part of the brand voice everywhere, f
 
 ### Navigation
 
--   **Style:** sticky `bg-rainbow` bar, 64px tall. Spicy Rice "ALL" link plus Nunito nav items; Marquee Yellow border/text marks the active item. Profile trigger is a `rounded-xl` avatar button opening a Paper White / Backstage Charcoal dropdown.
--   **Mobile:** condenses to a hamburger "More" dropdown sliding from the same rainbow bar; a bottom-anchored music flyout persists across route changes.
+-   **Chrome bar:** sticky `bg-rainbow` bar, 64px tall, three-column layout — logo (left), dark-mode toggle (center), notifications + profile (right). Profile trigger is a `rounded-xl` avatar button opening a Paper White / Backstage Charcoal dropdown.
+-   **Destinations bar (desktop, `sm:` and up):** a second sticky row directly below the chrome bar, on a glass surface (`bg-black/10` / `dark:bg-black/20`, `backdrop-blur-sm`) — never rainbow (see Rainbow Light-Bar Rule). Every top-level destination (Books, ALL, Collages, Games, Movies, Sounds, Chat) renders as an icon+label pill and wraps to a second line if the window is too narrow to fit them all; there is no "More" overflow — the row always shows every destination.
+-   **Bottom tab bar (mobile, below `sm`):** the same destinations render as a fixed, thumb-reach tab bar (icon over label) pinned to the viewport bottom, on a frosted `bg-gray-900/80 backdrop-blur-md` surface, scrolling horizontally with snap if it overflows. Page content gets `pb-16` (cleared at `sm:`) so the bar never covers the end of a page; `ScrollTop` shifts to `bottom-20` below `sm:` so it clears the bar too.
+-   **Selected state:** pills and tabs share one "currently here" treatment with the Search Books/ALL target toggle — Storybook Teal background with white text by default, inverting to white-on-charcoal in dark mode, and swapping to the seasonal accent (Christmas red, Halloween orange) per `data-theme`. This is the app's one active-nav convention; don't introduce a second one (e.g. underlines or a bare color change) for future nav items.
+-   A bottom-anchored music flyout persists across route changes, positioned clear of the bottom tab bar.
 
 ### Seasonal Reskins (signature)
 

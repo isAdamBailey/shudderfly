@@ -119,6 +119,16 @@
     halloween:hover:bg-halloween-spooky;
     }
 
+    /* "Currently selected" pill/tab treatment — shared by nav pills/tabs and
+       the search-target toggle so seasonal themes only need updating here. */
+    .bg-theme-selected {
+        @apply bg-teal-700 text-white
+    dark:bg-white dark:text-gray-900
+    christmas:bg-christmas-red christmas:text-white
+    halloween:bg-halloween-orange halloween:text-white
+    shadow;
+    }
+
     /* Rainbow Gradient */
     .bg-rainbow {
         @apply bg-gradient-to-r from-red-500 via-orange-500 via-amber-400 via-teal-500 via-cyan-500 to-indigo-600

@@ -115,7 +115,9 @@ watch(
 
 <template>
     <div class="flex flex-col min-h-screen">
-        <div class="flex flex-col flex-grow bg-gray-800 dark:bg-gray-900">
+        <div
+            class="flex flex-col flex-grow bg-gray-800 pb-20 dark:bg-gray-900 sm:pb-0"
+        >
             <Navigation />
 
             <FlashMessage />

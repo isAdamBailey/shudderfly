@@ -20,7 +20,7 @@ function playAgain() {
 
 <template>
     <div
-        class="game-end-screen fixed inset-x-0 bottom-0 top-16 z-40 flex touch-manipulation items-center justify-center bg-black/75 p-3 backdrop-blur-sm sm:p-6"
+        class="game-end-screen fixed inset-x-0 bottom-0 top-16 z-50 flex touch-manipulation items-center justify-center bg-black/75 p-3 backdrop-blur-sm sm:p-6"
     >
         <div
             class="game-modal-panel max-w-[min(90vw,28rem)] rounded-2xl border-2 border-theme-primary bg-game-modal px-[clamp(1.125rem,4vmin,2.75rem)] py-[clamp(1.25rem,4vmin,2.5rem)] text-center"

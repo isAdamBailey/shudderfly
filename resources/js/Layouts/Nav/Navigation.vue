@@ -5,9 +5,10 @@ import CockroachCrawl from "@/Components/CockroachCrawl.vue";
 import Dropdown from "@/Components/Dropdown.vue";
 import EmojiRiseOverlay from "@/Components/EmojiRiseOverlay.vue";
 import FireworksAnimation from "@/Components/FireworksAnimation.vue";
-import NavLink from "@/Components/NavLink.vue";
 import NotificationList from "@/Components/NotificationList.vue";
 import NavMenuItem from "@/Layouts/Nav/NavMenuItem.vue";
+import NavPill from "@/Layouts/Nav/NavPill.vue";
+import NavTab from "@/Layouts/Nav/NavTab.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useUnreadNotifications } from "@/composables/useUnreadNotifications";
 import ThemeToggle from "@/Layouts/Nav/ThemeToggle.vue";
@@ -40,6 +41,7 @@ const topNavItems = computed(() => {
             label: "ALL",
             href: route("pictures.index"),
             active: route().current("pictures.*"),
+            icon: "ri-image-2-line",
         },
         {
             label: "Collages",
@@ -81,12 +83,6 @@ const topNavItems = computed(() => {
 
     return items;
 });
-
-const primaryItems = computed(() => topNavItems.value.slice(0, 2));
-const overflowItems = computed(() => topNavItems.value.slice(2));
-const moreActive = computed(() =>
-    overflowItems.value.some((item) => item.active)
-);
 </script>
 
 <template>
@@ -99,69 +95,23 @@ const moreActive = computed(() =>
 
         <FireworksAnimation>
             <div class="px-2 sm:px-6 lg:px-8">
-                <div class="flex items-center justify-between h-16 gap-1">
-                    <div
-                        class="flex items-center min-w-0 flex-1 gap-2 sm:gap-4 md:gap-6"
-                    >
+                <div class="grid h-16 grid-cols-3 items-center gap-1">
+                    <div class="flex min-w-0 items-center justify-start">
                         <Link
                             :href="route('welcome')"
                             class="shrink-0 flex items-center max-w-10 sm:max-w-14"
                         >
                             <ApplicationLogo class="h-10 sm:h-14" />
                         </Link>
-
-                        <NavLink
-                            v-for="item in primaryItems"
-                            :key="item.label"
-                            :href="item.href"
-                            :active="item.active"
-                        >
-                            {{ item.label }}
-                        </NavLink>
-
-                        <Dropdown
-                            v-if="overflowItems.length > 0"
-                            align="left"
-                            width="48"
-                            :content-classes="['p-2 bg-white dark:bg-gray-900']"
-                            connected
-                        >
-                            <template #trigger>
-                                <button
-                                    type="button"
-                                    class="inline-flex items-center gap-1 whitespace-nowrap border-b-2 px-1 pt-1 text-base sm:text-xl font-heading leading-5 focus:outline-none transition duration-150 ease-in-out"
-                                    :class="
-                                        moreActive
-                                            ? 'border-theme-primary text-theme-primary'
-                                            : 'border-transparent text-white hover:text-theme-primary hover:border-theme-primary'
-                                    "
-                                >
-                                    <span>More</span>
-                                    <i
-                                        class="ri-arrow-down-s-line text-lg"
-                                        aria-hidden="true"
-                                    ></i>
-                                </button>
-                            </template>
-
-                            <template #content>
-                                <div class="space-y-2">
-                                    <NavMenuItem
-                                        v-for="item in overflowItems"
-                                        :key="`overflow-${item.label}`"
-                                        :href="item.href"
-                                        :label="item.label"
-                                        :icon="item.icon"
-                                        :active="item.active"
-                                    />
-                                </div>
-                            </template>
-                        </Dropdown>
                     </div>
 
-                    <div class="flex items-center gap-0.5 sm:gap-2 shrink-0">
+                    <div class="flex items-center justify-center">
                         <ThemeToggle />
+                    </div>
 
+                    <div
+                        class="flex items-center justify-end gap-0.5 sm:gap-2"
+                    >
                         <div v-if="messagingEnabled" class="relative">
                             <Dropdown
                                 align="right"
@@ -272,5 +222,35 @@ const moreActive = computed(() =>
                 </div>
             </div>
         </FireworksAnimation>
+    </nav>
+
+    <nav
+        aria-label="Primary"
+        class="sticky top-16 z-40 hidden border-b border-white/10 bg-black/10 backdrop-blur-sm dark:bg-black/20 sm:flex"
+    >
+        <div
+            class="flex w-full flex-wrap items-center gap-1 px-2 py-1.5 sm:px-6 lg:px-8"
+        >
+            <NavPill
+                v-for="item in topNavItems"
+                :key="`pill-${item.label}`"
+                v-bind="item"
+            />
+        </div>
+    </nav>
+
+    <nav
+        aria-label="Primary"
+        class="fixed inset-x-0 bottom-0 z-40 flex justify-center border-t border-white/10 bg-gray-900/80 backdrop-blur-md pb-[env(safe-area-inset-bottom)] sm:hidden"
+    >
+        <div
+            class="flex w-full snap-x snap-mandatory gap-1 overflow-x-auto px-1 py-1"
+        >
+            <NavTab
+                v-for="item in topNavItems"
+                :key="`tab-${item.label}`"
+                v-bind="item"
+            />
+        </div>
     </nav>
 </template>
