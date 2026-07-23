@@ -7,12 +7,15 @@ const START_SPEED_FACTOR = 0.25; // butt begins at 25% of top speed, ramps to 10
 const FOOD_COUNT = 5;
 const HUD_SAFE_TOP = 96; // keep foods/butt clear of the score+timer HUD
 const EDGE_MARGIN = 56;
+const BASE_POINTS = 10;
+const MAX_SPEED_BONUS_MULT = 2; // speed multiplier ramps from 1x up to 1 + this
 
-// The five fart-makers. pitch = playbackRate for the toot (bigger food = lower).
+// The six fart-makers. pitch = playbackRate for the toot (bigger food = lower).
 export const FOOD_TYPES = [
     { type: "blueberries", emoji: "🫐", pitch: 1.4 },
     { type: "grapes", emoji: "🍇", pitch: 1.22 },
     { type: "strawberry", emoji: "🍓", pitch: 1.1 },
+    { type: "taco", emoji: "🌮", pitch: 1.0 },
     { type: "apple", emoji: "🍎", pitch: 0.92 },
     { type: "sprout", emoji: "🥦", pitch: 0.78 },
 ];
@@ -69,6 +72,7 @@ export function useTootGame(callbacks = {}) {
     let lastFrame = 0;
     let startTime = 0;
     let lastHitTime = 0;
+    let speedFrac = 0; // 0 (round start) -> 1 (butt at top speed)
 
     function rand(min, max) {
         return min + Math.random() * (max - min);
@@ -148,6 +152,7 @@ export function useTootGame(callbacks = {}) {
             1,
             Math.max(0, 1 - remaining / ROUND_SECONDS)
         );
+        speedFrac = elapsedFrac;
         const speed =
             maxSpeed *
             (START_SPEED_FACTOR + (1 - START_SPEED_FACTOR) * elapsedFrac);
@@ -190,6 +195,7 @@ export function useTootGame(callbacks = {}) {
         startTime = performance.now();
         lastFrame = 0;
         lastHitTime = 0;
+        speedFrac = 0;
         cancelAnimationFrame(rafId);
         rafId = requestAnimationFrame(frame);
     }
@@ -234,8 +240,9 @@ export function useTootGame(callbacks = {}) {
         state.combo = inCombo ? state.combo + 1 : 1;
         lastHitTime = now;
 
-        const bonus = Math.min(state.combo - 1, MAX_COMBO_BONUS);
-        const points = 1 + bonus;
+        const comboBonus = Math.min(state.combo - 1, MAX_COMBO_BONUS) * BASE_POINTS;
+        const speedMultiplier = 1 + speedFrac * MAX_SPEED_BONUS_MULT;
+        const points = Math.round((BASE_POINTS + comboBonus) * speedMultiplier);
         state.score += points;
         state.foodsFed += 1;
 
