@@ -148,7 +148,9 @@ export function useSpeechSynthesis() {
                 return;
             }
 
-            const utterance = new SpeechSynthesisUtterance(phrase);
+            const utterance = new SpeechSynthesisUtterance(
+                phrase.replace(/@/g, "")
+            );
             applySpeechSettingsToUtterance(
                 utterance,
                 currentVoices,

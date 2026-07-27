@@ -31,16 +31,20 @@ export function usePusherNotifications() {
 
         if (notification.type === "App\\Notifications\\UserTagged") {
             const senderName = notification.data?.tagger_name;
-            return senderName
-                ? `${recipientName}, you received a message from ${senderName}`
-                : null;
+            const messageText = notification.data?.message;
+            if (!senderName) return null;
+            return messageText
+                ? `${recipientName}, you received a message from ${senderName}: ${messageText}`
+                : `${recipientName}, you received a message from ${senderName}`;
         }
 
         if (notification.type === "App\\Notifications\\MessageCommented") {
             const senderName = notification.data?.commenter_name;
-            return senderName
-                ? `${recipientName}, you received a reply from ${senderName}`
-                : null;
+            const commentText = notification.data?.comment;
+            if (!senderName) return null;
+            return commentText
+                ? `${recipientName}, you received a reply from ${senderName}: ${commentText}`
+                : `${recipientName}, you received a reply from ${senderName}`;
         }
 
         return null;
