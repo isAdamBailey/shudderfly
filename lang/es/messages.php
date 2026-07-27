@@ -162,6 +162,8 @@ return [
     'builder.apply_favorite' => 'Usar este: :favorite',
     'builder.remove_favorite' => 'Quitar de guardados: :favorite',
     'builder.post_to_timeline' => 'Publicarlo',
+    'builder.close_panel' => 'Cerrar',
+    'builder.close_panel_aria' => 'Cerrar panel',
 
     // UI Labels - Message Builder Flyout
     'flyout.toggle_aria' => 'Mostrar u ocultar mensajes rápidos',

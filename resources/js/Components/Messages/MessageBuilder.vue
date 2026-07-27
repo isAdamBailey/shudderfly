@@ -207,9 +207,10 @@ const toolbar = [
     ...wordCategories,
 ];
 
-// Which pane is expanded. Default to Quick messages so content is visible the
-// moment the keyboard opens; clicking the active icon collapses the pane.
-const activeCategory = ref("quick");
+// Which pane is expanded. Defaults to none so the text area and submit
+// button are visible immediately; selecting a tab opens its pane, and
+// clicking the active icon again collapses it.
+const activeCategory = ref(null);
 const activePane = computed(() =>
     wordCategories.find((c) => c.key === activeCategory.value)
 );
@@ -1019,6 +1020,18 @@ defineExpose({
             v-show="activeCategory"
             class="min-h-0 flex-1 overflow-y-auto px-3 py-3"
         >
+            <div class="flex justify-end mb-2">
+                <button
+                    type="button"
+                    class="flex h-9 w-9 items-center justify-center rounded-md text-gray-500 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-slate-700"
+                    :title="t('builder.close_panel')"
+                    :aria-label="t('builder.close_panel_aria')"
+                    @click="activeCategory = null"
+                >
+                    <i class="ri-close-line text-xl"></i>
+                </button>
+            </div>
+
             <!-- "Things you can do" tools pane -->
             <div v-if="activeCategory === 'tools'">
                 <div class="flex items-center gap-2 flex-wrap">
