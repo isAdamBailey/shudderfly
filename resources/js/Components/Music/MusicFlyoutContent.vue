@@ -12,16 +12,56 @@
                     {{ title }}
                 </h2>
             </button>
-            <Button
-                v-if="canAdmin"
-                :disabled="syncing"
-                class="text-sm"
-                @click="syncPlaylist"
-            >
-                <span v-if="syncing">Syncing...</span>
-                <span v-else>Sync</span>
-            </Button>
+            <div v-if="canAdmin" class="flex gap-2">
+                <Button
+                    :disabled="syncing"
+                    class="text-sm"
+                    @click="syncPlaylist"
+                >
+                    <span v-if="syncing">Syncing...</span>
+                    <span v-else>Sync</span>
+                </Button>
+                <Button class="text-sm" @click="showAddForm = !showAddForm">
+                    Add
+                </Button>
+            </div>
         </div>
+
+        <!-- Add song form (admin only) -->
+        <form
+            v-if="canAdmin && showAddForm"
+            class="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-col gap-2"
+            @submit.prevent="submitAddSong"
+        >
+            <input
+                v-model="addSongInput"
+                type="text"
+                placeholder="Paste a YouTube link or Share text"
+                class="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md p-2 text-sm"
+            />
+            <div class="flex items-center gap-2">
+                <Button
+                    type="submit"
+                    :disabled="addingSong || !addSongInput.trim()"
+                    class="text-sm"
+                >
+                    <span v-if="addingSong">Adding...</span>
+                    <span v-else>Add song</span>
+                </Button>
+                <span
+                    v-if="addSongError"
+                    class="text-xs text-red-600 dark:text-red-400"
+                >
+                    {{ addSongError }}
+                </span>
+                <span
+                    v-else-if="addSongWarning"
+                    class="text-xs text-amber-600 dark:text-amber-400"
+                >
+                    {{ addSongWarning }}
+                </span>
+            </div>
+        </form>
 
         <!-- Filters -->
         <div class="p-2 pb-0 flex flex-wrap justify-around">
@@ -150,6 +190,11 @@ const props = defineProps({
 
 const syncing = ref(false);
 const loading = ref(false);
+const showAddForm = ref(false);
+const addSongInput = ref("");
+const addingSong = ref(false);
+const addSongError = ref("");
+const addSongWarning = ref("");
 const infiniteScrollRef = ref(null);
 const headingRef = ref(null);
 const items = ref(
@@ -254,9 +299,10 @@ const playSong = (song) => {
 };
 
 const deleteSong = async (song) => {
-    const ok = await askConfirm(
-        `Delete "${song.title}"? This will also remove it from the YouTube playlist.`
-    );
+    const confirmText = song.is_manual
+        ? `Delete "${song.title}"?`
+        : `Delete "${song.title}"? This will also remove it from the YouTube playlist.`;
+    const ok = await askConfirm(confirmText);
     if (!ok) {
         return;
     }
@@ -306,6 +352,51 @@ const applyFilter = async (filter) => {
     }
 
     loading.value = false;
+};
+
+const submitAddSong = async () => {
+    if (addingSong.value || !addSongInput.value.trim()) return;
+
+    addingSong.value = true;
+    addSongError.value = "";
+    addSongWarning.value = "";
+
+    try {
+        const response = await fetch(route("music.store"), {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-TOKEN": document
+                    .querySelector('meta[name="csrf-token"]')
+                    .getAttribute("content"),
+                Accept: "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+            },
+            body: JSON.stringify({ youtube_video_id: addSongInput.value }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            addSongInput.value = "";
+            if (data.warning) {
+                addSongWarning.value = data.warning;
+            } else {
+                showAddForm.value = false;
+            }
+            emit("reload", {
+                filter: props.filter || null,
+                search: props.search || null,
+            });
+        } else {
+            addSongError.value = data.error || "Failed to add song.";
+        }
+    } catch (error) {
+        console.error("Error adding song:", error);
+        addSongError.value = "Failed to add song.";
+    } finally {
+        addingSong.value = false;
+    }
 };
 
 const syncPlaylist = () => {

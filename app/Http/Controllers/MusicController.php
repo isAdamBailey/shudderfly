@@ -21,7 +21,8 @@ class MusicController extends Controller
      * Create a new controller instance.
      */
     public function __construct(
-        protected UserTaggingService $userTaggingService
+        protected UserTaggingService $userTaggingService,
+        protected YouTubeService $youTubeService
     ) {
         $this->middleware(function ($request, $next) {
             $musicEnabled = SiteSetting::where('key', 'music_enabled')->first()?->value ?? true;
@@ -101,8 +102,7 @@ class MusicController extends Controller
         $this->authorize('admin');
 
         try {
-            $youTubeService = new YouTubeService;
-            $result = $youTubeService->syncPlaylist();
+            $result = $this->youTubeService->syncPlaylist();
 
             if (! $result['success']) {
                 if (isset($result['quota_exceeded']) && $result['quota_exceeded']) {
@@ -140,11 +140,12 @@ class MusicController extends Controller
         $this->authorize('admin');
 
         try {
-            $youTubeService = new YouTubeService;
-            $result = $youTubeService->removeFromPlaylist($song->youtube_video_id);
+            if (! $song->is_manual) {
+                $result = $this->youTubeService->removeFromPlaylist($song->youtube_video_id);
 
-            if (! $result['success']) {
-                \Log::warning('YouTube playlist removal failed for song '.$song->id.': '.($result['error'] ?? 'Unknown error'));
+                if (! $result['success']) {
+                    \Log::warning('YouTube playlist removal failed for song '.$song->id.': '.($result['error'] ?? 'Unknown error'));
+                }
             }
 
             $song->delete();
@@ -155,6 +156,30 @@ class MusicController extends Controller
 
             return response()->json(['error' => 'Failed to delete song'], 500);
         }
+    }
+
+    /**
+     * Add a song directly by video ID/URL, bypassing the playlist. For videos YouTube
+     * disallows from being added to a playlist but that can still be embedded.
+     */
+    public function store(Request $request): JsonResponse
+    {
+        $this->authorize('admin');
+
+        $validated = $request->validate([
+            'youtube_video_id' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $result = $this->youTubeService->addManualSong($validated['youtube_video_id']);
+
+        if (! $result['success']) {
+            return response()->json(['error' => $result['error']], 422);
+        }
+
+        return response()->json([
+            'song' => $result['song'],
+            'warning' => $result['warning'] ?? null,
+        ]);
     }
 
     /**

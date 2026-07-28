@@ -28,6 +28,13 @@
                 class="text-base font-medium text-gray-900 dark:text-gray-100 truncate mb-1"
             >
                 {{ song.title }}
+                <span
+                    v-if="song.is_manual"
+                    class="ml-1 align-middle text-[10px] font-semibold uppercase text-amber-600 dark:text-amber-400"
+                    title="Added manually; not managed by YouTube sync"
+                >
+                    manual
+                </span>
             </h3>
             <div
                 class="flex items-center text-xs text-gray-500 dark:text-gray-400 space-x-4"

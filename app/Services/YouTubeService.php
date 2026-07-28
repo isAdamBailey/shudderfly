@@ -173,8 +173,9 @@ class YouTubeService
             return 0;
         }
 
-        // Find songs whose youtube_video_id is NOT in the current playlist
-        $toDelete = Song::whereNotIn('youtube_video_id', $currentVideoIds)->get();
+        // Find songs whose youtube_video_id is NOT in the current playlist.
+        // Manually-added songs are never in the playlist by design, so they're excluded here.
+        $toDelete = Song::where('is_manual', false)->whereNotIn('youtube_video_id', $currentVideoIds)->get();
 
         $count = 0;
         foreach ($toDelete as $song) {
@@ -279,6 +280,12 @@ class YouTubeService
         }
         $videoId = $snippet['resourceId']['videoId'];
 
+        // Manually-added songs are never touched by the sync, even if the video later
+        // appears in the playlist.
+        if ($existingSong?->is_manual) {
+            return false;
+        }
+
         $songData = [
             'youtube_video_id' => $videoId,
             'title' => $snippet['title'],
@@ -291,19 +298,7 @@ class YouTubeService
             $songData = array_merge($songData, $videoDetails);
         }
 
-        // Add thumbnails with fallback URL generation
-        if (isset($snippet['thumbnails'])) {
-            foreach (['default', 'medium', 'high', 'standard', 'maxres'] as $quality) {
-                if (isset($snippet['thumbnails'][$quality])) {
-                    $songData["thumbnail_{$quality}"] = $snippet['thumbnails'][$quality]['url'];
-                }
-            }
-        }
-
-        // Fallback thumbnail URL if none provided
-        if (empty($songData['thumbnail_high'])) {
-            $songData['thumbnail_url'] = "https://img.youtube.com/vi/{$videoId}/hqdefault.jpg";
-        }
+        $songData = array_merge($songData, $this->buildThumbnails($snippet, $videoId));
 
         if ($existingSong) {
             // Build update data, only including fields that have actually changed
@@ -347,6 +342,125 @@ class YouTubeService
         Song::create($songData);
 
         return true; // New song created
+    }
+
+    /**
+     * Build the thumbnail_* fields from a video/playlist-item snippet, falling back to
+     * YouTube's static thumbnail URLs (which always exist) when the API returns none.
+     */
+    private function buildThumbnails(array $snippet, string $videoId): array
+    {
+        $thumbnails = [];
+
+        if (isset($snippet['thumbnails'])) {
+            foreach (['default', 'medium', 'high', 'standard', 'maxres'] as $quality) {
+                if (isset($snippet['thumbnails'][$quality])) {
+                    $thumbnails["thumbnail_{$quality}"] = $snippet['thumbnails'][$quality]['url'];
+                }
+            }
+        }
+
+        if (empty($thumbnails['thumbnail_high'])) {
+            $thumbnails['thumbnail_high'] = "https://img.youtube.com/vi/{$videoId}/hqdefault.jpg";
+        }
+        if (empty($thumbnails['thumbnail_default'])) {
+            $thumbnails['thumbnail_default'] = "https://img.youtube.com/vi/{$videoId}/default.jpg";
+        }
+
+        return $thumbnails;
+    }
+
+    /**
+     * Extract an 11-character YouTube video ID from a bare ID or from the kind of text
+     * YouTube's own Share feature produces (a title, a colon, a URL, trailing punctuation).
+     */
+    public static function parseVideoId(string $input): ?string
+    {
+        if (preg_match('#(?:[?&]v=|youtu\.be/|/shorts/|/embed/|/live/)([A-Za-z0-9_-]{11})#', $input, $matches)) {
+            return $matches[1];
+        }
+
+        $trimmed = trim($input);
+        if (preg_match('/^[A-Za-z0-9_-]{11}$/', $trimmed)) {
+            return $trimmed;
+        }
+
+        return null;
+    }
+
+    /**
+     * Create a Song directly from the YouTube videos API, bypassing the playlist entirely.
+     * Used for videos YouTube disallows from being added to a playlist.
+     */
+    public function addManualSong(string $input): array
+    {
+        $videoId = self::parseVideoId($input);
+
+        if (! $videoId) {
+            return [
+                'success' => false,
+                'error' => 'Not a valid YouTube video ID or URL.',
+            ];
+        }
+
+        if (Song::where('youtube_video_id', $videoId)->exists()) {
+            return [
+                'success' => false,
+                'error' => 'This video has already been added.',
+            ];
+        }
+
+        if (! $this->apiKey) {
+            return [
+                'success' => false,
+                'error' => 'YouTube API key not configured.',
+            ];
+        }
+
+        $response = $this->getWithRetry('https://www.googleapis.com/youtube/v3/videos', [
+            'part' => 'snippet,contentDetails,status',
+            'id' => $videoId,
+            'key' => $this->apiKey,
+        ]);
+
+        if (! $response->successful()) {
+            return $this->handleApiError($response);
+        }
+
+        $data = $response->json();
+        $video = $data['items'][0] ?? null;
+
+        if (! $video) {
+            return [
+                'success' => false,
+                'error' => 'Video not found or is private.',
+            ];
+        }
+
+        $snippet = $video['snippet'];
+
+        $songData = array_merge([
+            'youtube_video_id' => $videoId,
+            'is_manual' => true,
+            'title' => $snippet['title'],
+            'description' => $snippet['description'] ?? null,
+            'published_at' => $snippet['publishedAt'] ?? null,
+            'duration' => $video['contentDetails']['duration'] ?? null,
+            'tags' => isset($snippet['tags']) ? json_encode($snippet['tags']) : null,
+        ], $this->buildThumbnails($snippet, $videoId));
+
+        $song = Song::create($songData);
+
+        $result = [
+            'success' => true,
+            'song' => $song,
+        ];
+
+        if (isset($video['status']['embeddable']) && $video['status']['embeddable'] === false) {
+            $result['warning'] = 'This video has embedding disabled by its owner and may not play in the music player.';
+        }
+
+        return $result;
     }
 
     public function removeFromPlaylist(string $videoId): array

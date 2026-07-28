@@ -14,6 +14,7 @@ class Song extends Model
 
     protected $fillable = [
         'youtube_video_id',
+        'is_manual',
         'title',
         'description',
         'thumbnail_default',
@@ -30,6 +31,7 @@ class Song extends Model
     protected $casts = [
         'tags' => 'array',
         'published_at' => 'datetime',
+        'is_manual' => 'boolean',
     ];
 
     /**
