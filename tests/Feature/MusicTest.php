@@ -310,6 +310,72 @@ class MusicTest extends TestCase
         ]);
     }
 
+    public function test_regular_user_cannot_add_song(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $response = $this->post(route('music.store'), ['youtube_video_id' => 'abcdefghijk']);
+
+        $response->assertStatus(403);
+    }
+
+    public function test_admin_can_add_manual_song(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin);
+
+        $mock = $this->createMock(YouTubeService::class);
+        $mock->method('addManualSong')
+            ->with('abcdefghijk')
+            ->willReturn([
+                'success' => true,
+                'song' => Song::factory()->make(['youtube_video_id' => 'abcdefghijk', 'is_manual' => true]),
+            ]);
+        $this->app->instance(YouTubeService::class, $mock);
+
+        $response = $this->post(route('music.store'), ['youtube_video_id' => 'abcdefghijk']);
+
+        $response->assertStatus(200)
+            ->assertJsonStructure(['song']);
+    }
+
+    public function test_add_manual_song_returns_error_response_on_failure(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin);
+
+        $mock = $this->createMock(YouTubeService::class);
+        $mock->method('addManualSong')
+            ->willReturn([
+                'success' => false,
+                'error' => 'Not a valid YouTube video ID or URL.',
+            ]);
+        $this->app->instance(YouTubeService::class, $mock);
+
+        $response = $this->post(route('music.store'), ['youtube_video_id' => 'garbage']);
+
+        $response->assertStatus(422)
+            ->assertJson(['error' => 'Not a valid YouTube video ID or URL.']);
+    }
+
+    public function test_deleting_manual_song_does_not_call_playlist_removal(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin);
+
+        $song = Song::factory()->create(['is_manual' => true]);
+
+        $mock = $this->createMock(YouTubeService::class);
+        $mock->expects($this->never())->method('removeFromPlaylist');
+        $this->app->instance(YouTubeService::class, $mock);
+
+        $response = $this->delete(route('music.destroy', $song));
+
+        $response->assertStatus(200);
+        $this->assertDatabaseMissing('songs', ['id' => $song->id]);
+    }
+
     /**
      * Mock the YouTube service to avoid actual API calls during testing
      */

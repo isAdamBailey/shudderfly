@@ -14,6 +14,7 @@ class Song extends Model
 
     protected $fillable = [
         'youtube_video_id',
+        'is_manual',
         'title',
         'description',
         'thumbnail_default',
@@ -30,7 +31,17 @@ class Song extends Model
     protected $casts = [
         'tags' => 'array',
         'published_at' => 'datetime',
+        'is_manual' => 'boolean',
     ];
+
+    /**
+     * Songs owned by the YouTube playlist sync (i.e. not manually added). Used to keep
+     * the sync's create/update/delete logic from ever touching a manually-added song.
+     */
+    public function scopeSyncManaged(Builder $query): void
+    {
+        $query->where('is_manual', false);
+    }
 
     /**
      * Scope for filtering songs by title or description (database query)

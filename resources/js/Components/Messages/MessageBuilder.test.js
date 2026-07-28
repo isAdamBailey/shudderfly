@@ -288,8 +288,12 @@ describe("MessageBuilder", () => {
 
             await nextTick();
 
-            // The "Quick messages" pane is open by default, so its phrases
-            // (e.g. "yes") are visible without switching tabs.
+            // The "Quick messages" pane is opened via its category tab (the
+            // second tab, after "Things you can do") — it is not open by default.
+            const quickTab = wrapper.findAll('[role="tab"]')[1];
+            await quickTab.trigger("click");
+            await nextTick();
+
             const quickButton = wrapper
                 .findAll("button")
                 .find((btn) => btn.text().trim() === "yes");

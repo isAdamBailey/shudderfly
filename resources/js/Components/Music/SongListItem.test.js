@@ -194,6 +194,30 @@ describe("SongListItem", () => {
         expect(playButton.classes()).toContain("hover:bg-green-700");
     });
 
+    it("shows a manual badge for manually-added songs", () => {
+        wrapper = mount(SongListItem, {
+            props: {
+                song: { ...mockSong, is_manual: true },
+                currentSong: null,
+                isPlaying: false,
+            },
+        });
+
+        expect(wrapper.text()).toContain("manual");
+    });
+
+    it("does not show a manual badge for synced songs", () => {
+        wrapper = mount(SongListItem, {
+            props: {
+                song: { ...mockSong, is_manual: false },
+                currentSong: null,
+                isPlaying: false,
+            },
+        });
+
+        expect(wrapper.text()).not.toContain("manual");
+    });
+
     it("uses thumbnail_default when provided", () => {
         wrapper = mount(SongListItem, {
             props: {
