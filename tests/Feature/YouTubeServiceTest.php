@@ -54,6 +54,25 @@ class YouTubeServiceTest extends TestCase
         ];
     }
 
+    /**
+     * Single-video "videos" API response, as consumed by addManualSong().
+     */
+    private function videoResponse(string $id, array $overrides = []): array
+    {
+        return [
+            'items' => [array_replace_recursive([
+                'id' => $id,
+                'snippet' => [
+                    'title' => 'Manually Added Song',
+                    'description' => 'desc',
+                    'publishedAt' => '2024-05-01T00:00:00Z',
+                ],
+                'contentDetails' => ['duration' => 'PT2M30S'],
+                'status' => ['embeddable' => true],
+            ], $overrides)],
+        ];
+    }
+
     public function test_sync_deletes_song_missing_from_playlist(): void
     {
         $staleSong = Song::factory()->create(['youtube_video_id' => 'staleVideoId']);
@@ -113,23 +132,16 @@ class YouTubeServiceTest extends TestCase
     public function test_add_manual_song_creates_song_from_video_id(): void
     {
         Http::fake([
-            'https://www.googleapis.com/youtube/v3/videos*' => Http::response([
-                'items' => [[
-                    'id' => 'abcdefghijk',
-                    'snippet' => [
-                        'title' => 'Manually Added Song',
-                        'description' => 'A disallowed-from-playlist video',
-                        'publishedAt' => '2024-05-01T00:00:00Z',
-                        'thumbnails' => [
-                            'default' => ['url' => 'https://img.example/abcdefghijk/default.jpg'],
-                            'high' => ['url' => 'https://img.example/abcdefghijk/high.jpg'],
-                        ],
-                        'tags' => ['tag-a'],
+            'https://www.googleapis.com/youtube/v3/videos*' => Http::response($this->videoResponse('abcdefghijk', [
+                'snippet' => [
+                    'description' => 'A disallowed-from-playlist video',
+                    'thumbnails' => [
+                        'default' => ['url' => 'https://img.example/abcdefghijk/default.jpg'],
+                        'high' => ['url' => 'https://img.example/abcdefghijk/high.jpg'],
                     ],
-                    'contentDetails' => ['duration' => 'PT2M30S'],
-                    'status' => ['embeddable' => true],
-                ]],
-            ]),
+                    'tags' => ['tag-a'],
+                ],
+            ])),
         ]);
 
         $result = (new YouTubeService)->addManualSong('abcdefghijk');
@@ -147,18 +159,9 @@ class YouTubeServiceTest extends TestCase
     public function test_add_manual_song_parses_share_text(): void
     {
         Http::fake([
-            'https://www.googleapis.com/youtube/v3/videos*' => Http::response([
-                'items' => [[
-                    'id' => '86IrHVH43mQ',
-                    'snippet' => [
-                        'title' => 'Learn Animal Sounds',
-                        'description' => 'desc',
-                        'publishedAt' => '2024-05-01T00:00:00Z',
-                    ],
-                    'contentDetails' => ['duration' => 'PT1M0S'],
-                    'status' => ['embeddable' => true],
-                ]],
-            ]),
+            'https://www.googleapis.com/youtube/v3/videos*' => Http::response(
+                $this->videoResponse('86IrHVH43mQ', ['snippet' => ['title' => 'Learn Animal Sounds']])
+            ),
         ]);
 
         $shareText = 'Learn Animal Sounds | Moo Cow Song | Learn Animals: https://music.youtube.com/watch?v=86IrHVH43mQ&feature=share.';
@@ -172,18 +175,10 @@ class YouTubeServiceTest extends TestCase
     public function test_add_manual_song_flags_non_embeddable_video(): void
     {
         Http::fake([
-            'https://www.googleapis.com/youtube/v3/videos*' => Http::response([
-                'items' => [[
-                    'id' => 'abcdefghijk',
-                    'snippet' => [
-                        'title' => 'Blocked Embed Video',
-                        'description' => 'desc',
-                        'publishedAt' => '2024-05-01T00:00:00Z',
-                    ],
-                    'contentDetails' => ['duration' => 'PT1M0S'],
-                    'status' => ['embeddable' => false],
-                ]],
-            ]),
+            'https://www.googleapis.com/youtube/v3/videos*' => Http::response($this->videoResponse('abcdefghijk', [
+                'snippet' => ['title' => 'Blocked Embed Video'],
+                'status' => ['embeddable' => false],
+            ])),
         ]);
 
         $result = (new YouTubeService)->addManualSong('abcdefghijk');

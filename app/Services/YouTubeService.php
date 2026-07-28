@@ -12,7 +12,7 @@ class YouTubeService
 {
     private $apiKey;
 
-    private $playlistId;
+    private ?string $playlistId = null;
 
     private $oauthAccessToken;
 
@@ -22,10 +22,19 @@ class YouTubeService
     {
         $this->apiKey = config('services.youtube.api_key');
         $this->oauthAccessToken = config('services.youtube.oauth_access_token');
+    }
 
-        // Get playlist ID from site settings
-        $playlistIdSetting = SiteSetting::where('key', 'youtube_playlist_id')->first();
-        $this->playlistId = $playlistIdSetting?->value ?: '';
+    /**
+     * Playlist ID from site settings, fetched lazily so instantiating this service
+     * (e.g. via controller DI) doesn't cost a query on requests that never use it.
+     */
+    private function playlistId(): string
+    {
+        if ($this->playlistId === null) {
+            $this->playlistId = SiteSetting::where('key', 'youtube_playlist_id')->first()?->value ?: '';
+        }
+
+        return $this->playlistId;
     }
 
     /**
@@ -33,7 +42,7 @@ class YouTubeService
      */
     public function syncPlaylist()
     {
-        if (! $this->apiKey || ! $this->playlistId) {
+        if (! $this->apiKey || ! $this->playlistId()) {
             return [
                 'success' => false,
                 'error' => 'YouTube API key or playlist ID not configured',
@@ -175,7 +184,7 @@ class YouTubeService
 
         // Find songs whose youtube_video_id is NOT in the current playlist.
         // Manually-added songs are never in the playlist by design, so they're excluded here.
-        $toDelete = Song::where('is_manual', false)->whereNotIn('youtube_video_id', $currentVideoIds)->get();
+        $toDelete = Song::syncManaged()->whereNotIn('youtube_video_id', $currentVideoIds)->get();
 
         $count = 0;
         foreach ($toDelete as $song) {
@@ -202,6 +211,13 @@ class YouTubeService
 
         if (! $existingSong) {
             return false; // New video, don't skip
+        }
+
+        // Manually-added songs are never touched by the sync, even if the video later
+        // appears in the playlist. Checked here (before the batch details fetch) rather
+        // than at write time, so a manual song never costs API quota during sync.
+        if ($existingSong->is_manual) {
+            return true;
         }
 
         // Skip if we have complete data and video hasn't been updated recently
@@ -279,12 +295,6 @@ class YouTubeService
             return false; // Explicitly return false for skipped videos
         }
         $videoId = $snippet['resourceId']['videoId'];
-
-        // Manually-added songs are never touched by the sync, even if the video later
-        // appears in the playlist.
-        if ($existingSong?->is_manual) {
-            return false;
-        }
 
         $songData = [
             'youtube_video_id' => $videoId,
@@ -380,9 +390,8 @@ class YouTubeService
             return $matches[1];
         }
 
-        $trimmed = trim($input);
-        if (preg_match('/^[A-Za-z0-9_-]{11}$/', $trimmed)) {
-            return $trimmed;
+        if (preg_match('/^[A-Za-z0-9_-]{11}$/', trim($input), $matches)) {
+            return $matches[0];
         }
 
         return null;
@@ -465,7 +474,7 @@ class YouTubeService
 
     public function removeFromPlaylist(string $videoId): array
     {
-        if (! $this->apiKey || ! $this->playlistId) {
+        if (! $this->apiKey || ! $this->playlistId()) {
             return [
                 'success' => false,
                 'error' => 'YouTube API key or playlist ID not configured',
@@ -591,7 +600,7 @@ class YouTubeService
     {
         $params = [
             'part' => 'snippet,contentDetails',
-            'playlistId' => $this->playlistId,
+            'playlistId' => $this->playlistId(),
             'maxResults' => 50,
         ];
 

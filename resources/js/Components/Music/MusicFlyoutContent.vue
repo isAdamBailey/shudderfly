@@ -49,16 +49,15 @@
                     <span v-else>Add song</span>
                 </Button>
                 <span
-                    v-if="addSongError"
-                    class="text-xs text-red-600 dark:text-red-400"
+                    v-if="addSongFeedback"
+                    class="text-xs"
+                    :class="
+                        addSongFeedback.type === 'error'
+                            ? 'text-red-600 dark:text-red-400'
+                            : 'text-amber-600 dark:text-amber-400'
+                    "
                 >
-                    {{ addSongError }}
-                </span>
-                <span
-                    v-else-if="addSongWarning"
-                    class="text-xs text-amber-600 dark:text-amber-400"
-                >
-                    {{ addSongWarning }}
+                    {{ addSongFeedback.text }}
                 </span>
             </div>
         </form>
@@ -193,8 +192,7 @@ const loading = ref(false);
 const showAddForm = ref(false);
 const addSongInput = ref("");
 const addingSong = ref(false);
-const addSongError = ref("");
-const addSongWarning = ref("");
+const addSongFeedback = ref(null); // { type: "error"|"warning", text: string }
 const infiniteScrollRef = ref(null);
 const headingRef = ref(null);
 const items = ref(
@@ -287,6 +285,20 @@ watch(
     }
 );
 
+const fetchWithCsrf = (url, options = {}) =>
+    fetch(url, {
+        ...options,
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-TOKEN": document
+                .querySelector('meta[name="csrf-token"]')
+                .getAttribute("content"),
+            Accept: "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+            ...options.headers,
+        },
+    });
+
 const playSong = (song) => {
     if (currentSong.value && currentSong.value.id === song.id) {
         toggleCurrentSongPlayback();
@@ -308,16 +320,8 @@ const deleteSong = async (song) => {
     }
 
     try {
-        const response = await fetch(route("music.destroy", song.id), {
+        const response = await fetchWithCsrf(route("music.destroy", song.id), {
             method: "DELETE",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRF-TOKEN": document
-                    .querySelector('meta[name="csrf-token"]')
-                    .getAttribute("content"),
-                Accept: "application/json",
-                "X-Requested-With": "XMLHttpRequest",
-            },
         });
 
         if (response.ok) {
@@ -358,20 +362,11 @@ const submitAddSong = async () => {
     if (addingSong.value || !addSongInput.value.trim()) return;
 
     addingSong.value = true;
-    addSongError.value = "";
-    addSongWarning.value = "";
+    addSongFeedback.value = null;
 
     try {
-        const response = await fetch(route("music.store"), {
+        const response = await fetchWithCsrf(route("music.store"), {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRF-TOKEN": document
-                    .querySelector('meta[name="csrf-token"]')
-                    .getAttribute("content"),
-                Accept: "application/json",
-                "X-Requested-With": "XMLHttpRequest",
-            },
             body: JSON.stringify({ youtube_video_id: addSongInput.value }),
         });
 
@@ -380,7 +375,7 @@ const submitAddSong = async () => {
         if (response.ok) {
             addSongInput.value = "";
             if (data.warning) {
-                addSongWarning.value = data.warning;
+                addSongFeedback.value = { type: "warning", text: data.warning };
             } else {
                 showAddForm.value = false;
             }
@@ -389,11 +384,14 @@ const submitAddSong = async () => {
                 search: props.search || null,
             });
         } else {
-            addSongError.value = data.error || "Failed to add song.";
+            addSongFeedback.value = {
+                type: "error",
+                text: data.error || "Failed to add song.",
+            };
         }
     } catch (error) {
         console.error("Error adding song:", error);
-        addSongError.value = "Failed to add song.";
+        addSongFeedback.value = { type: "error", text: "Failed to add song." };
     } finally {
         addingSong.value = false;
     }

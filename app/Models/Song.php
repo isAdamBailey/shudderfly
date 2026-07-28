@@ -35,6 +35,15 @@ class Song extends Model
     ];
 
     /**
+     * Songs owned by the YouTube playlist sync (i.e. not manually added). Used to keep
+     * the sync's create/update/delete logic from ever touching a manually-added song.
+     */
+    public function scopeSyncManaged(Builder $query): void
+    {
+        $query->where('is_manual', false);
+    }
+
+    /**
      * Scope for filtering songs by title or description (database query)
      * Note: Use Song::search() for Meilisearch-based search via Scout
      */
