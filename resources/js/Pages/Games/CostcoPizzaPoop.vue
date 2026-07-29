@@ -1,14 +1,16 @@
 <script setup>
 import { useGameViewportLock } from "@/composables/useGameViewportLock";
+import { useTranslations } from "@/composables/useTranslations";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head } from "@inertiajs/vue3";
 import CostcoPizzaPoopApp from "./CostcoPizzaPoop/App.vue";
 
 useGameViewportLock();
+const { t } = useTranslations();
 </script>
 
 <template>
-    <Head title="Costco Food Poop" />
+    <Head :title="t('games.costco_pizza_poop.title')" />
 
     <AuthenticatedLayout>
         <div class="costco-pizza-poop-page">

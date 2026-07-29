@@ -3,6 +3,9 @@ import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { Link } from "@inertiajs/vue3";
 import { SVG_WIDTH } from "../composables/useGameState.js";
 import PepperoniGlyph from "./PepperoniGlyph.vue";
+import { useTranslations } from "@/composables/useTranslations";
+
+const { t } = useTranslations();
 
 const props = defineProps({
     state: { type: Object, required: true },
@@ -422,11 +425,15 @@ onUnmounted(() => {
 
         <div class="hud">
             <div class="hud-item">
-                <span class="hud-label">Wall hits</span>
+                <span class="hud-label">{{
+                    t("games.costco_pizza_poop.board_wall_hits_label")
+                }}</span>
                 <span class="hud-value">{{ state.collisions }}</span>
             </div>
             <div class="hud-item progress-wrap">
-                <span class="hud-label">Progress</span>
+                <span class="hud-label">{{
+                    t("games.costco_pizza_poop.board_progress_label")
+                }}</span>
                 <div class="progress-bar">
                     <div
                         class="progress-fill"
@@ -435,21 +442,27 @@ onUnmounted(() => {
                 </div>
             </div>
             <div class="hud-item">
-                <span class="hud-label">Time</span>
-                <span class="hud-value">{{ elapsedSeconds }}s</span>
+                <span class="hud-label">{{
+                    t("games.costco_pizza_poop.board_time_label")
+                }}</span>
+                <span class="hud-value">{{
+                    t("games.costco_pizza_poop.board_time_value", {
+                        seconds: elapsedSeconds,
+                    })
+                }}</span>
             </div>
         </div>
 
         <Link
             :href="route('games.index')"
             class="game-quit"
-            aria-label="Quit to games"
+            :aria-label="t('games.quit_aria')"
             >✕</Link
         >
 
         <transition name="steer-hint-fade">
             <div v-if="showSteerHint" class="steer-hint" aria-hidden="true">
-                Drag to steer 👇
+                {{ t("games.costco_pizza_poop.steer_hint") }}
             </div>
         </transition>
     </div>

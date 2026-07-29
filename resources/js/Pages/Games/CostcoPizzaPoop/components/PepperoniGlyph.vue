@@ -17,12 +17,24 @@ const casingGradId = useId();
 <template>
     <g>
         <defs>
-            <linearGradient :id="bodyGradId" x1="0%" y1="0%" x2="100%" y2="100%">
+            <linearGradient
+                :id="bodyGradId"
+                x1="0%"
+                y1="0%"
+                x2="100%"
+                y2="100%"
+            >
                 <stop offset="0%" stop-color="#8a2b1e" />
                 <stop offset="45%" stop-color="#b5432a" />
                 <stop offset="100%" stop-color="#6e2016" />
             </linearGradient>
-            <linearGradient :id="casingGradId" x1="0%" y1="0%" x2="100%" y2="0%">
+            <linearGradient
+                :id="casingGradId"
+                x1="0%"
+                y1="0%"
+                x2="100%"
+                y2="0%"
+            >
                 <stop offset="0%" stop-color="#c97a35" />
                 <stop offset="50%" stop-color="#e7a75c" />
                 <stop offset="100%" stop-color="#c97a35" />
@@ -110,7 +122,14 @@ const casingGradId = useId();
             <circle cx="45" cy="52" r="1.7" fill="#f0c9a0" opacity="0.75" />
             <circle cx="60" cy="48" r="1.9" fill="#e8b48a" opacity="0.8" />
             <circle cx="72" cy="51" r="1.5" fill="#f0c9a0" opacity="0.7" />
-            <ellipse cx="24" cy="46" rx="3.5" ry="1.3" fill="#fff" opacity="0.16" />
+            <ellipse
+                cx="24"
+                cy="46"
+                rx="3.5"
+                ry="1.3"
+                fill="#fff"
+                opacity="0.16"
+            />
         </g>
     </g>
 </template>

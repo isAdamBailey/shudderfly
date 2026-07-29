@@ -7,6 +7,9 @@ import { TOOT_FOODS_INTRO_SCRIPT } from "../shared/introScripts.js";
 import { useTootGame, ROUND_SECONDS } from "./composables/useTootGame.js";
 import { BUTT } from "@/constants/characters.js";
 import { useTootSound } from "./composables/useTootSound.js";
+import { useTranslations } from "@/composables/useTranslations";
+
+const { t } = useTranslations();
 
 const page = usePage();
 const fartSoundUrl = page.props.fartSoundUrl || "/fart.m4a";
@@ -138,25 +141,24 @@ function buttStyle() {
 <template>
     <GameStartScreen
         v-if="state.phase === 'start'"
-        title="Toot Foods"
-        subtitle="Foods That Make You Toot"
-        :intro-script="TOOT_FOODS_INTRO_SCRIPT"
+        :title="t('games.toot_foods.title')"
+        :subtitle="t('games.toot_foods.subtitle')"
+        :intro-script="t(TOOT_FOODS_INTRO_SCRIPT)"
         :high-score="highScore"
         @play="handlePlay"
     >
         <template #media>{{ BUTT }}</template>
         <p>
-            Drag the snacks 🍓🍇🍎🫐🥦 into the wandering butt to make it
-            toot.<br />
-            Stack quick hits for a combo bonus. How many in
-            {{ ROUND_SECONDS }} seconds?
+            {{ t("games.toot_foods.instructions", { seconds: ROUND_SECONDS }) }}
         </p>
     </GameStartScreen>
 
     <div v-else-if="state.phase === 'playing'" ref="stageEl" class="toot-stage">
         <div class="hud">
             <div class="hud-stat">
-                <span class="hud-label">Score</span>
+                <span class="hud-label">{{
+                    t("games.toot_foods.hud_score")
+                }}</span>
                 <span class="hud-value tabular-nums">{{ state.score }}</span>
             </div>
             <transition name="combo-pop">
@@ -165,11 +167,16 @@ function buttStyle() {
                     class="hud-combo"
                     aria-hidden="true"
                 >
-                    🔥 x{{ state.combo }}
+                    🔥
+                    {{
+                        t("games.toot_foods.hud_combo", { count: state.combo })
+                    }}
                 </div>
             </transition>
             <div class="hud-stat hud-stat-right">
-                <span class="hud-label">Time</span>
+                <span class="hud-label">{{
+                    t("games.toot_foods.hud_time")
+                }}</span>
                 <span
                     class="hud-value tabular-nums"
                     :class="{ urgent: timeLeft <= 5 }"
@@ -181,12 +188,16 @@ function buttStyle() {
         <Link
             :href="route('games.index')"
             class="game-quit"
-            aria-label="Quit to games"
+            :aria-label="t('games.quit_aria')"
             >✕</Link
         >
 
         <!-- The wandering butt -->
-        <div class="butt" :style="buttStyle()" aria-label="Wandering butt">
+        <div
+            class="butt"
+            :style="buttStyle()"
+            :aria-label="t('games.toot_foods.butt_aria')"
+        >
             {{ BUTT }}
         </div>
 
@@ -200,7 +211,7 @@ function buttStyle() {
         >
             <span class="toot-cloud">💨</span>
             <span class="toot-cloud toot-cloud-2">💨</span>
-            <span class="toot-word">toot!</span>
+            <span class="toot-word">{{ t("games.toot_foods.toot_word") }}</span>
         </div>
 
         <!-- Score popups -->
@@ -223,7 +234,7 @@ function buttStyle() {
             class="food"
             :class="{ dragging: food.dragging, leaving: food.leaving }"
             :style="foodStyle(food)"
-            :aria-label="`${food.type} — drag onto the butt, or press Enter to toss it`"
+            :aria-label="t('games.toot_foods.food_aria', { food: food.type })"
             @pointerdown.prevent="startDrag(food, $event)"
             @keydown.enter.prevent="tossToButt(food)"
             @keydown.space.prevent="tossToButt(food)"
@@ -234,14 +245,21 @@ function buttStyle() {
 
     <GameEndScreen
         v-else-if="state.phase === 'end'"
-        title="Toot Champion!"
+        :title="t('games.toot_foods.end_title')"
         :emoji="BUTT"
         :score="state.score"
         game-slug="toot-foods"
         @play-again="handlePlayAgain"
     >
         <p class="text-[clamp(0.85rem,2.4vmin,1rem)] text-gray-400">
-            {{ state.foodsFed }} food{{ state.foodsFed === 1 ? "" : "s" }} fed
+            {{
+                t(
+                    state.foodsFed === 1
+                        ? "games.toot_foods.end_foods_fed_one"
+                        : "games.toot_foods.end_foods_fed_other",
+                    { count: state.foodsFed }
+                )
+            }}
         </p>
     </GameEndScreen>
 </template>

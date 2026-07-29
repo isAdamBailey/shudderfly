@@ -1,16 +1,17 @@
 <template>
     <GameStartScreen
         v-if="state.phase === 'start'"
-        title="Cockroach Fart"
-        subtitle="Tap the cockroach's head to make it hiss!"
-        :intro-script="COCKROACH_INTRO_SCRIPT"
+        :title="t('games.cockroach.title')"
+        :subtitle="t('games.cockroach.subtitle')"
+        :intro-script="t(COCKROACH_INTRO_SCRIPT)"
         :high-score="state.highScore"
         @play="handlePlay"
     >
         <template #extra>
             <div class="game-start-aside">
-                <span class="game-start-aside-label">Fun fact: </span
-                >{{ currentFact }}
+                <span class="game-start-aside-label"
+                    >{{ t("games.fun_fact_label") }} </span
+                >{{ t(currentFact) }}
             </div>
         </template>
     </GameStartScreen>
@@ -39,7 +40,9 @@ import { COCKROACH_INTRO_SCRIPT } from "@/Pages/Games/shared/introScripts.js";
 import WinScreen from "./components/WinScreen.vue";
 import { useGameState } from "./composables/useGameState.js";
 import { useSound } from "./composables/useSound.js";
+import { useTranslations } from "@/composables/useTranslations";
 
+const { t } = useTranslations();
 const fartSoundUrl = usePage().props.fartSoundUrl ?? "/fart.m4a";
 const { state, stars, currentFact, startGame, hiss } = useGameState();
 const { initAudio, playFart, playVictory } = useSound(fartSoundUrl);

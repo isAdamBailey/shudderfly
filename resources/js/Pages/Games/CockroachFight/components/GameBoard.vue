@@ -1,7 +1,9 @@
 <template>
     <div class="game-board" @pointerdown.stop>
         <div class="hud">
-            <span class="hud-label">Taps:</span>
+            <span class="hud-label">{{
+                t("games.cockroach_fight.hud_taps_label")
+            }}</span>
             <span class="hud-value">{{ state.tapCount }}</span>
         </div>
         <CockroachSprite
@@ -25,15 +27,21 @@
             v-if="state.tapCount === 0 && state.phase === 'playing'"
             class="tap-hint"
         >
-            Tap a head! <span class="hint-arrow">&#x1F447;</span>
+            {{ t("games.cockroach_fight.tap_hint") }}
+            <span class="hint-arrow">&#x1F447;</span>
         </div>
-        <div v-if="state.phase === 'fighting'" class="fight-label">FIGHT!</div>
+        <div v-if="state.phase === 'fighting'" class="fight-label">
+            {{ t("games.cockroach_fight.fight_label") }}
+        </div>
     </div>
 </template>
 
 <script setup>
 import CockroachSprite from "../../Cockroach/components/CockroachSprite.vue";
 import { useSound } from "../../Cockroach/composables/useSound.js";
+import { useTranslations } from "@/composables/useTranslations";
+
+const { t } = useTranslations();
 
 defineProps({
     state: { type: Object, required: true },

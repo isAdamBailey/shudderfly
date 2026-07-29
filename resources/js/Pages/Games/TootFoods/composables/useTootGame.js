@@ -240,7 +240,8 @@ export function useTootGame(callbacks = {}) {
         state.combo = inCombo ? state.combo + 1 : 1;
         lastHitTime = now;
 
-        const comboBonus = Math.min(state.combo - 1, MAX_COMBO_BONUS) * BASE_POINTS;
+        const comboBonus =
+            Math.min(state.combo - 1, MAX_COMBO_BONUS) * BASE_POINTS;
         const speedMultiplier = 1 + speedFrac * MAX_SPEED_BONUS_MULT;
         const points = Math.round((BASE_POINTS + comboBonus) * speedMultiplier);
         state.score += points;

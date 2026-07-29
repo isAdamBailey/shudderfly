@@ -1,6 +1,6 @@
 <template>
     <GameEndScreen
-        title="Fight Over!"
+        :title="t('games.cockroach_fight.win_title')"
         :emoji="COCKROACH"
         :score="score"
         game-slug="cockroach-fight"
@@ -21,19 +21,28 @@
                 </span>
             </div>
             <div class="mb-2 text-sm text-gray-400">
-                {{ tapCount }} tap{{ tapCount !== 1 ? "s" : "" }} to the fight
+                {{
+                    t(
+                        tapCount === 1
+                            ? "games.cockroach_fight.taps_to_fight_one"
+                            : "games.cockroach_fight.taps_to_fight_other",
+                        { count: tapCount }
+                    )
+                }}
             </div>
         </template>
         <div
             v-if="isNewHigh"
             class="mb-2 animate-pulse text-center text-[clamp(0.9rem,3vmin,1.2rem)] font-bold text-yellow-200"
         >
-            New High Score!
+            {{ t("games.new_high_score") }}
         </div>
         <div
             class="mx-auto mb-2 max-w-lg rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-left text-sm leading-relaxed text-gray-300 sm:px-4 sm:py-3 sm:text-[0.95rem]"
         >
-            <span class="font-bold text-yellow-300">Fun Fact: </span>{{ fact }}
+            <span class="font-bold text-yellow-300"
+                >{{ t("games.fun_fact_label") }} </span
+            >{{ t(fact) }}
         </div>
     </GameEndScreen>
 </template>
@@ -41,6 +50,9 @@
 <script setup>
 import GameEndScreen from "@/Components/Games/GameEndScreen.vue";
 import { COCKROACH } from "@/constants/characters.js";
+import { useTranslations } from "@/composables/useTranslations";
+
+const { t } = useTranslations();
 
 defineProps({
     score: { type: Number, required: true },

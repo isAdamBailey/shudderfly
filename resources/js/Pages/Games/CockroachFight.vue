@@ -1,14 +1,16 @@
 <script setup>
 import { useGameViewportLock } from "@/composables/useGameViewportLock";
+import { useTranslations } from "@/composables/useTranslations";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head } from "@inertiajs/vue3";
 import CockroachFightApp from "./CockroachFight/App.vue";
 
 useGameViewportLock();
+const { t } = useTranslations();
 </script>
 
 <template>
-    <Head title="Cockroach Fight" />
+    <Head :title="t('games.cockroach_fight.title')" />
 
     <AuthenticatedLayout>
         <div class="cockroach-fight-page">

@@ -1,37 +1,35 @@
 <template>
     <GameStartScreen
         v-if="phase === 'start'"
-        title="Costco Food Poop"
-        subtitle="Feed the slices and sticks, then watch digestion begin."
-        :intro-script="COSTCO_PIZZA_POOP_INTRO_SCRIPT"
+        :title="t('games.costco_pizza_poop.title')"
+        :subtitle="t('games.costco_pizza_poop.subtitle')"
+        :intro-script="t(COSTCO_PIZZA_POOP_INTRO_SCRIPT)"
         @play="handlePlayFromStart"
     >
         <template #media
             >🍕<PepperoniStick class="start-media-pepperoni"
         /></template>
-        <p>
-            Drag each slice and pepperoni stick into the mouth.<br />
-            After all the food is eaten, steer the poop through the intestine
-            to finish.
-        </p>
+        <p>{{ t("games.costco_pizza_poop.instructions") }}</p>
     </GameStartScreen>
 
     <div v-else-if="phase === 'pizza'" ref="gameEl" class="game-container">
         <div class="hud">
-            <span class="hud-label">Food left</span>
+            <span class="hud-label">{{
+                t("games.costco_pizza_poop.hud_food_left")
+            }}</span>
             <span class="hud-value">{{ slicesLeft }}</span>
         </div>
 
         <Link
             :href="route('games.index')"
             class="game-quit"
-            aria-label="Quit to games"
+            :aria-label="t('games.quit_aria')"
             >✕</Link
         >
 
         <transition name="pizza-hint-fade">
             <div v-if="showPizzaHint" class="pizza-hint" aria-hidden="true">
-                Drag food into the mouth 👇
+                {{ t("games.costco_pizza_poop.pizza_hint") }}
             </div>
         </transition>
 
@@ -43,75 +41,32 @@
             class="slice"
             :class="{ dragging: draggingId === s.id }"
             :style="sliceStyle(s)"
-            :aria-label="`${
-                s.kind === 'pepperoni' ? 'Pepperoni stick' : 'Pizza slice'
-            } — drag into the mouth, or press Enter to eat`"
+            :aria-label="
+                t('games.costco_pizza_poop.slice_aria', {
+                    item: t(
+                        s.kind === 'pepperoni'
+                            ? 'games.costco_pizza_poop.pepperoni_stick'
+                            : 'games.costco_pizza_poop.pizza_slice'
+                    ),
+                })
+            "
             @pointerdown.prevent="startDrag(s.id, $event)"
             @keydown.enter.prevent="feedSlice(s.id)"
             @keydown.space.prevent="feedSlice(s.id)"
         >
-            <PepperoniStick
-                v-if="s.kind === 'pepperoni'"
-                class="food-svg"
-            />
+            <PepperoniStick v-if="s.kind === 'pepperoni'" class="food-svg" />
             <template v-else>🍕</template>
         </button>
 
         <div class="person-wrap">
-            <div
-                class="person"
-                :class="{ anticipating, gulping }"
-                aria-label="Hungry person"
-            >
-                <div
-                    ref="faceRef"
-                    class="person-face"
-                    :style="{
-                        '--gaze-x': `${gazeX}px`,
-                        '--gaze-y': `${gazeY}px`,
-                    }"
-                >
-                    <span
-                        class="person-brow person-brow-left"
-                        aria-hidden="true"
-                    ></span>
-                    <span
-                        class="person-brow person-brow-right"
-                        aria-hidden="true"
-                    ></span>
-                    <span class="person-eye person-eye-left" aria-hidden="true">
-                        <span class="person-pupil"></span>
-                    </span>
-                    <span
-                        class="person-eye person-eye-right"
-                        aria-hidden="true"
-                    >
-                        <span class="person-pupil"></span>
-                    </span>
-                    <span
-                        class="person-cheek person-cheek-left"
-                        aria-hidden="true"
-                    ></span>
-                    <span
-                        class="person-cheek person-cheek-right"
-                        aria-hidden="true"
-                    ></span>
-                    <div class="person-mouth" aria-hidden="true">
-                        <span class="person-teeth"></span>
-                        <span class="person-tongue"></span>
-                        <div ref="mouthRef" class="mouth-hitbox"></div>
-                    </div>
-                    <div
-                        v-if="gulping"
-                        :key="chompCount"
-                        class="chomp-burst"
-                        aria-hidden="true"
-                    >
-                        <span></span><span></span><span></span><span></span
-                        ><span></span>
-                    </div>
-                </div>
-            </div>
+            <PersonFace
+                ref="faceRef"
+                :gaze-x="gazeX"
+                :gaze-y="gazeY"
+                :anticipating="anticipating"
+                :gulping="gulping"
+                :chomp-count="chompCount"
+            />
         </div>
     </div>
 
@@ -133,17 +88,21 @@
 
     <GameEndScreen
         v-else-if="phase === 'win'"
-        title="Digestive Victory!"
+        :title="t('games.costco_pizza_poop.win_title')"
         :emoji="POOP"
         :score="winScore"
         game-slug="costco-pizza-poop"
         @play-again="handlePlayAgain"
     >
         <p class="win-sub text-[clamp(0.85rem,2.4vmin,1rem)] text-gray-400">
-            Time: {{ winElapsed }}s
+            {{ t("games.costco_pizza_poop.win_time", { seconds: winElapsed }) }}
         </p>
         <p class="win-sub text-[clamp(0.85rem,2.4vmin,1rem)] text-gray-400">
-            Wall hits: {{ winCollisions }}
+            {{
+                t("games.costco_pizza_poop.win_wall_hits", {
+                    count: winCollisions,
+                })
+            }}
         </p>
     </GameEndScreen>
 </template>
@@ -151,14 +110,18 @@
 <script setup>
 import GameStartScreen from "@/Components/Games/GameStartScreen.vue";
 import GameEndScreen from "@/Components/Games/GameEndScreen.vue";
+import PersonFace from "@/Components/Games/PersonFace.vue";
 import GameBoard from "@/Pages/Games/CostcoPizzaPoop/components/GameBoard.vue";
 import PepperoniStick from "@/Pages/Games/CostcoPizzaPoop/components/PepperoniStick.vue";
 import { COSTCO_PIZZA_POOP_INTRO_SCRIPT } from "@/Pages/Games/shared/introScripts.js";
 import { POOP } from "@/constants/characters.js";
 import { useGameState } from "@/Pages/Games/CostcoPizzaPoop/composables/useGameState.js";
 import { useSound } from "@/Pages/Games/CostcoPizzaPoop/composables/useSound.js";
+import { useTranslations } from "@/composables/useTranslations";
 import { Link, usePage } from "@inertiajs/vue3";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+
+const { t } = useTranslations();
 
 const PIZZA_COUNT = 3;
 const PEPPERONI_COUNT = 2;
@@ -168,8 +131,10 @@ const VICTORY_TUNE_DELAY_MS = 300;
 
 const phase = ref("start");
 const gameEl = ref(null);
-const mouthRef = ref(null);
+// PersonFace exposes its own element refs; these read through to them.
 const faceRef = ref(null);
+const mouthEl = computed(() => faceRef.value?.mouthEl ?? null);
+const faceEl = computed(() => faceRef.value?.faceEl ?? null);
 const gameW = ref(400);
 const gameH = ref(600);
 
@@ -307,8 +272,8 @@ function getLocalPos(e) {
 }
 
 function pointInMouth(px, py) {
-    if (!mouthRef.value || !gameEl.value) return false;
-    const mouth = mouthRef.value.getBoundingClientRect();
+    if (!mouthEl.value || !gameEl.value) return false;
+    const mouth = mouthEl.value.getBoundingClientRect();
     const game = gameEl.value.getBoundingClientRect();
     const cx = game.left + px;
     const cy = game.top + py;
@@ -321,8 +286,8 @@ function pointInMouth(px, py) {
 }
 
 function mouthCenterLocal() {
-    if (!mouthRef.value || !gameEl.value) return null;
-    const m = mouthRef.value.getBoundingClientRect();
+    if (!mouthEl.value || !gameEl.value) return null;
+    const m = mouthEl.value.getBoundingClientRect();
     const g = gameEl.value.getBoundingClientRect();
     return {
         x: m.left + m.width / 2 - g.left,
@@ -331,8 +296,8 @@ function mouthCenterLocal() {
 }
 
 function faceCenterLocal() {
-    if (!faceRef.value || !gameEl.value) return null;
-    const f = faceRef.value.getBoundingClientRect();
+    if (!faceEl.value || !gameEl.value) return null;
+    const f = faceEl.value.getBoundingClientRect();
     const g = gameEl.value.getBoundingClientRect();
     return {
         x: f.left + f.width / 2 - g.left,
@@ -613,238 +578,6 @@ onUnmounted(() => {
     pointer-events: none;
 }
 
-.person {
-    position: relative;
-    width: min(300px, 64vw);
-    height: min(320px, 64vmin);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: headBob 3.6s ease-in-out infinite;
-}
-
-.person.gulping {
-    animation: headGulp 0.46s cubic-bezier(0.3, 0.7, 0.3, 1);
-}
-
-.person-face {
-    position: relative;
-    width: min(220px, 50vw);
-    height: min(230px, 52vw);
-    border-radius: 45% 45% 50% 50%;
-    border: 4px solid #f2c7a6;
-    background: radial-gradient(
-            circle at 30% 26%,
-            rgba(255, 255, 255, 0.3),
-            transparent 36%
-        ),
-        linear-gradient(180deg, #ffd9bd 0%, #f4be95 100%);
-    box-shadow: inset 0 -8px 16px rgba(138, 72, 35, 0.22),
-        0 10px 20px rgba(0, 0, 0, 0.34);
-}
-
-.person-brow {
-    position: absolute;
-    top: 22%;
-    width: 19%;
-    height: 5.5%;
-    border-radius: 999px;
-    background: #c79b76;
-    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.person-brow-left {
-    left: 20%;
-    transform: rotate(-7deg);
-}
-
-.person-brow-right {
-    right: 20%;
-    transform: rotate(7deg);
-}
-
-.person.anticipating .person-brow-left {
-    transform: translateY(-6px) rotate(-15deg);
-}
-
-.person.anticipating .person-brow-right {
-    transform: translateY(-6px) rotate(15deg);
-}
-
-.person-eye {
-    position: absolute;
-    top: 30%;
-    width: 21%;
-    height: 18%;
-    border-radius: 50%;
-    background: radial-gradient(circle at 50% 35%, #ffffff 0%, #efe1d4 100%);
-    box-shadow: inset 0 2px 5px rgba(96, 48, 24, 0.25);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    transition: height 0.18s ease;
-}
-
-.person-eye-left {
-    left: 19%;
-}
-
-.person-eye-right {
-    right: 19%;
-}
-
-.person-pupil {
-    width: 46%;
-    height: 58%;
-    border-radius: 50%;
-    background: radial-gradient(circle at 38% 30%, #6a3d2a 0%, #1c0d08 72%);
-    transform: translate(var(--gaze-x, 0px), var(--gaze-y, 0px));
-    transition: transform 0.12s ease-out;
-}
-
-.person-pupil::after {
-    content: "";
-    position: absolute;
-    top: 22%;
-    left: 30%;
-    width: 26%;
-    height: 26%;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.9);
-}
-
-.person.anticipating .person-eye {
-    height: 21%;
-}
-
-.person-cheek {
-    position: absolute;
-    top: 55%;
-    width: 17%;
-    height: 12%;
-    border-radius: 50%;
-    background: radial-gradient(
-        circle,
-        rgba(255, 138, 116, 0.6) 0%,
-        transparent 70%
-    );
-    opacity: 0.45;
-    transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.person-cheek-left {
-    left: 11%;
-}
-
-.person-cheek-right {
-    right: 11%;
-}
-
-.person.anticipating .person-cheek,
-.person.gulping .person-cheek {
-    opacity: 0.9;
-    transform: scale(1.18);
-}
-
-.person-mouth {
-    position: absolute;
-    left: 50%;
-    top: 69%;
-    transform: translate(-50%, -50%);
-    width: min(118px, 29vw);
-    height: min(92px, 23vw);
-    border-radius: 0 0 999px 999px;
-    border: 4px solid #340f0f;
-    border-top: 0;
-    background: radial-gradient(circle at 50% 28%, #170404 0%, #080102 76%);
-    overflow: hidden;
-    animation: mouthChew 1.45s ease-in-out infinite;
-    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.person.anticipating .person-mouth {
-    animation: none;
-    transform: translate(-50%, -50%) scaleX(1.08) scaleY(1.4);
-}
-
-.person.gulping .person-mouth {
-    animation: none;
-    transform: translate(-50%, -50%) scaleX(0.94) scaleY(0.5);
-}
-
-.person-teeth {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 82%;
-    height: 17%;
-    border-radius: 0 0 45% 45%;
-    background: linear-gradient(180deg, #fffdf8 0%, #f0e2d2 100%);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-}
-
-.chomp-burst {
-    position: absolute;
-    left: 50%;
-    top: 67%;
-    width: 0;
-    height: 0;
-    pointer-events: none;
-    z-index: 5;
-}
-
-.chomp-burst span {
-    position: absolute;
-    width: 9px;
-    height: 9px;
-    border-radius: 2px;
-    background: #e8b04b;
-    box-shadow: inset 0 0 0 1px rgba(120, 70, 20, 0.45);
-    animation: crumbFly 0.5s ease-out forwards;
-}
-
-.chomp-burst span:nth-child(1) {
-    --tx: -36px;
-    --ty: -28px;
-}
-.chomp-burst span:nth-child(2) {
-    --tx: 34px;
-    --ty: -24px;
-}
-.chomp-burst span:nth-child(3) {
-    --tx: -20px;
-    --ty: -40px;
-}
-.chomp-burst span:nth-child(4) {
-    --tx: 22px;
-    --ty: -38px;
-}
-.chomp-burst span:nth-child(5) {
-    --tx: 2px;
-    --ty: -46px;
-}
-
-.person-tongue {
-    position: absolute;
-    left: 50%;
-    bottom: -8%;
-    width: 76%;
-    height: 52%;
-    border-radius: 999px 999px 40% 40%;
-    transform: translateX(-50%);
-    background: linear-gradient(180deg, #ff7c7c 0%, #e35f72 100%);
-    opacity: 0.95;
-}
-
-.mouth-hitbox {
-    position: absolute;
-    inset: 0;
-    border-radius: 999px;
-    pointer-events: none;
-}
-
 .intestine-wrap {
     position: relative;
     width: min(100%, 700px);
@@ -854,55 +587,6 @@ onUnmounted(() => {
     border-radius: 16px;
     border: 3px solid #6b5344;
     box-shadow: 0 0 48px rgba(0, 0, 0, 0.45);
-}
-
-@keyframes mouthChew {
-    0% {
-        transform: translate(-50%, -50%) scaleY(1);
-    }
-    45% {
-        transform: translate(-50%, -50%) scaleY(0.9);
-    }
-    100% {
-        transform: translate(-50%, -50%) scaleY(1);
-    }
-}
-
-@keyframes headBob {
-    0%,
-    100% {
-        transform: translateY(0);
-    }
-    50% {
-        transform: translateY(-5px);
-    }
-}
-
-@keyframes headGulp {
-    0% {
-        transform: translateY(0) scale(1, 1);
-    }
-    35% {
-        transform: translateY(7px) scale(1.05, 0.94);
-    }
-    70% {
-        transform: translateY(-2px) scale(0.98, 1.03);
-    }
-    100% {
-        transform: translateY(0) scale(1, 1);
-    }
-}
-
-@keyframes crumbFly {
-    0% {
-        opacity: 1;
-        transform: translate(0, 0) scale(1) rotate(0deg);
-    }
-    100% {
-        opacity: 0;
-        transform: translate(var(--tx, 0), var(--ty, 0)) scale(0.4)
-            rotate(140deg);
-    }
 }
 
 .win-sub {
@@ -965,24 +649,8 @@ onUnmounted(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .person,
-    .person.gulping,
-    .person-mouth {
-        animation: none;
-    }
-
-    .slice,
-    .person-mouth,
-    .person-pupil,
-    .person-brow,
-    .person-cheek,
-    .person-eye {
+    .slice {
         transition: none;
-    }
-
-    .chomp-burst span {
-        animation: none;
-        opacity: 0;
     }
 
     .pizza-hint-fade-enter-active,

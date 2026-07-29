@@ -14,39 +14,49 @@ use Inertia\Response;
 
 class GameController extends Controller
 {
-    /** Newest games first (Games index list order). */
-    private const GAMES = [
-        'toot-foods' => [
-            'name' => 'Toot Foods',
-            'emoji' => '🍑',
-            'description' => 'Drag snacks into the wandering butt to make it toot. How many in 30 seconds?',
-            'component' => 'TootFoods',
-        ],
-        'cockroach-fight' => [
-            'name' => 'Cockroach Fight',
-            'emoji' => '🪳',
-            'description' => 'Tap a cockroach head to bring them together for an epic battle!',
-            'component' => 'CockroachFight',
-        ],
-        'costco-pizza-poop' => [
-            'name' => 'Costco Food Poop',
-            'emoji' => '🍕',
-            'description' => 'Feed every slice and stick, then guide it through the intestine to the grand finale.',
-            'component' => 'CostcoPizzaPoop',
-        ],
-        'boom' => [
-            'name' => 'Poop Boom',
-            'emoji' => '💩',
-            'description' => "Drag the poop into the toilet. 5 misses and it's game over!",
-            'component' => 'Boom',
-        ],
-        'cockroach' => [
-            'name' => 'Cockroach Fart',
-            'emoji' => '🪳',
-            'description' => "Tap the cockroach's head to make it hiss its way to the toilet.",
-            'component' => 'Cockroach',
-        ],
-    ];
+    /** Newest games first (Games index list order). Name/description are
+     * translated at call time, so this can't be a compile-time const. */
+    private static function games(): array
+    {
+        return [
+            'sprout-pox' => [
+                'name' => __('messages.games.sprout_pox.name'),
+                'emoji' => '🥬',
+                'description' => __('messages.games.sprout_pox.description'),
+                'component' => 'SproutPox',
+            ],
+            'toot-foods' => [
+                'name' => __('messages.games.toot_foods.name'),
+                'emoji' => '🍑',
+                'description' => __('messages.games.toot_foods.description'),
+                'component' => 'TootFoods',
+            ],
+            'cockroach-fight' => [
+                'name' => __('messages.games.cockroach_fight.name'),
+                'emoji' => '🪳',
+                'description' => __('messages.games.cockroach_fight.description'),
+                'component' => 'CockroachFight',
+            ],
+            'costco-pizza-poop' => [
+                'name' => __('messages.games.costco_pizza_poop.name'),
+                'emoji' => '🍕',
+                'description' => __('messages.games.costco_pizza_poop.description'),
+                'component' => 'CostcoPizzaPoop',
+            ],
+            'boom' => [
+                'name' => __('messages.games.boom.name'),
+                'emoji' => '💩',
+                'description' => __('messages.games.boom.description'),
+                'component' => 'Boom',
+            ],
+            'cockroach' => [
+                'name' => __('messages.games.cockroach.name'),
+                'emoji' => '🪳',
+                'description' => __('messages.games.cockroach.description'),
+                'component' => 'Cockroach',
+            ],
+        ];
+    }
 
     public function __construct(
         private UserTaggingService $userTaggingService
@@ -54,7 +64,7 @@ class GameController extends Controller
 
     public function index(): Response
     {
-        $games = collect(self::GAMES)
+        $games = collect(self::games())
             ->map(fn ($game, $slug) => [
                 'slug' => $slug,
                 'name' => $game['name'],
@@ -69,14 +79,15 @@ class GameController extends Controller
 
     public function show(string $game): Response
     {
-        abort_if(! array_key_exists($game, self::GAMES), 404);
+        $games = self::games();
+        abort_if(! array_key_exists($game, $games), 404);
 
         $users = User::select('id', 'name')
             ->orderBy('name')
             ->get()
             ->makeVisible(['id']);
 
-        return Inertia::render('Games/'.self::GAMES[$game]['component'], [
+        return Inertia::render('Games/'.$games[$game]['component'], [
             'users' => $users,
             'fartSoundUrl' => asset('fart.m4a'),
         ]);
@@ -84,7 +95,8 @@ class GameController extends Controller
 
     public function shareScore(string $game, Request $request): RedirectResponse
     {
-        abort_if(! array_key_exists($game, self::GAMES), 404);
+        $games = self::games();
+        abort_if(! array_key_exists($game, $games), 404);
 
         $setting = SiteSetting::where('key', 'messaging_enabled')->first();
         $messagingEnabled = $setting && ($setting->getAttributes()['value'] ?? $setting->value) === '1';
@@ -99,7 +111,7 @@ class GameController extends Controller
             'tagged_user_ids.*' => ['integer', 'exists:users,id'],
         ]);
 
-        $gameName = self::GAMES[$game]['name'];
+        $gameName = $games[$game]['name'];
 
         $taggedUserIds = $validated['tagged_user_ids'] ?? [];
         if (! is_array($taggedUserIds)) {

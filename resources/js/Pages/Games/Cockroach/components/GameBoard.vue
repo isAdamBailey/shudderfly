@@ -27,7 +27,8 @@
                 top: state.cockroachY - 12 + '%',
             }"
         >
-            Tap the head! <span class="hint-arrow">&#x1F447;</span>
+            {{ t("games.cockroach.tap_hint") }}
+            <span class="hint-arrow">&#x1F447;</span>
         </div>
     </div>
 </template>
@@ -37,6 +38,9 @@ import CockroachSprite from "./CockroachSprite.vue";
 import FartCloud from "./FartCloud.vue";
 import ScoreDisplay from "./ScoreDisplay.vue";
 import { useSound } from "../composables/useSound.js";
+import { useTranslations } from "@/composables/useTranslations";
+
+const { t } = useTranslations();
 
 defineProps({
     state: { type: Object, required: true },

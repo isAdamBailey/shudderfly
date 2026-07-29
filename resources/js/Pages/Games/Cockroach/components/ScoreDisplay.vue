@@ -2,11 +2,15 @@
     <div class="hud-bar">
         <div class="hud-left">
             <div class="stat-box">
-                <span class="stat-label">SCORE</span>
+                <span class="stat-label">{{
+                    t("games.cockroach.hud_score_label")
+                }}</span>
                 <span class="stat-value score-value">{{ score }}</span>
             </div>
             <div class="stat-box">
-                <span class="stat-label">HISSES</span>
+                <span class="stat-label">{{
+                    t("games.cockroach.hud_hisses_label")
+                }}</span>
                 <span class="stat-value">{{ hissCount }}</span>
             </div>
         </div>
@@ -18,7 +22,9 @@
                     :key="comboCount"
                     class="combo-badge"
                 >
-                    {{ comboCount }}x Combo!
+                    {{
+                        t("games.cockroach.combo_label", { count: comboCount })
+                    }}
                 </div>
             </Transition>
         </div>
@@ -26,7 +32,7 @@
         <div class="hud-right">
             <GameStartSpeechButton
                 variant="icon"
-                :script="COCKROACH_INTRO_SCRIPT"
+                :script="t(COCKROACH_INTRO_SCRIPT)"
             />
         </div>
     </div>
@@ -35,6 +41,9 @@
 <script setup>
 import GameStartSpeechButton from "@/Components/Games/GameStartSpeechButton.vue";
 import { COCKROACH_INTRO_SCRIPT } from "@/Pages/Games/shared/introScripts.js";
+import { useTranslations } from "@/composables/useTranslations";
+
+const { t } = useTranslations();
 
 defineProps({
     score: { type: Number, default: 0 },

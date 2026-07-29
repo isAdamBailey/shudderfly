@@ -5,11 +5,13 @@ import { POOP_BOOM_INTRO_SCRIPT } from "@/Pages/Games/shared/introScripts.js";
 import { TOILET } from "@/constants/characters.js";
 import { useGameViewportLock } from "@/composables/useGameViewportLock";
 import { getAudioContext, unlockAudio } from "@/composables/useAudioContext";
+import { useTranslations } from "@/composables/useTranslations";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, usePage } from "@inertiajs/vue3";
 import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
 
 useGameViewportLock();
+const { t } = useTranslations();
 
 // ─── constants ────────────────────────────────────────────────────────────────
 const TOILET_W = 90; // px
@@ -415,34 +417,31 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <Head title="Poop Boom" />
+    <Head :title="t('games.boom.title')" />
 
     <AuthenticatedLayout>
         <div class="boom-wrapper">
             <Transition name="fade">
                 <GameStartScreen
                     v-if="!gameStarted"
-                    title="Poop Boom"
-                    :intro-script="POOP_BOOM_INTRO_SCRIPT"
-                    play-label="▶ Play"
+                    :title="t('games.boom.title')"
+                    :intro-script="t(POOP_BOOM_INTRO_SCRIPT)"
+                    :play-label="t('games.boom.play_label')"
                     @play="startGame"
                 >
                     <template #media>💩</template>
-                    <p>
-                        Drag the poop and drop it into the toilet.<br />
-                        5 misses and it's game over!
-                    </p>
+                    <p>{{ t("games.boom.instructions") }}</p>
                 </GameStartScreen>
             </Transition>
 
             <Transition name="fade">
                 <GameEndScreen
                     v-if="gameOver"
-                    title="Game Over!"
+                    :title="t('games.boom.end_title')"
                     emoji="😱"
                     :score="score"
                     game-slug="boom"
-                    play-again-label="🔄 Play Again"
+                    :play-again-label="t('games.boom.play_again_label')"
                     @play-again="restartGame"
                 />
             </Transition>
@@ -455,14 +454,18 @@ onUnmounted(() => {
                 <!-- ── HUD ────────────────────────────────────────── -->
                 <div class="hud">
                     <div class="hud-item">
-                        <span class="hud-label">Score</span>
+                        <span class="hud-label">{{
+                            t("games.boom.hud_score_label")
+                        }}</span>
                         <span class="hud-value">{{ score }}</span>
                     </div>
                     <div class="hud-instruction">
-                        🖱 Drag 💩 and release to drop!
+                        {{ t("games.boom.hud_instruction") }}
                     </div>
                     <div class="hud-item">
-                        <span class="hud-label">Misses</span>
+                        <span class="hud-label">{{
+                            t("games.boom.hud_misses_label")
+                        }}</span>
                         <span class="hud-value misses-value">
                             <span
                                 v-for="n in MAX_MISSES"
@@ -482,7 +485,7 @@ onUnmounted(() => {
                     :class="{ dragging: isDragging, falling: isPoopFalling }"
                     :style="poopStyle"
                     role="img"
-                    aria-label="poop"
+                    :aria-label="t('games.boom.poop_aria')"
                     @mousedown="startDrag"
                     @touchstart.prevent="startDrag"
                 >
@@ -505,13 +508,19 @@ onUnmounted(() => {
                 <Transition name="miss-anim">
                     <div v-if="showMiss" class="miss-effect" :style="missStyle">
                         <span>💢</span>
-                        <div class="miss-label">Miss!</div>
+                        <div class="miss-label">
+                            {{ t("games.boom.miss_label") }}
+                        </div>
                     </div>
                 </Transition>
 
                 <!-- ── toilet ────────────────────────────────────── -->
                 <div class="toilet-wrap" :style="toiletStyle">
-                    <div class="toilet-emoji" role="img" aria-label="toilet">
+                    <div
+                        class="toilet-emoji"
+                        role="img"
+                        :aria-label="t('games.boom.toilet_aria')"
+                    >
                         {{ TOILET }}
                     </div>
                 </div>

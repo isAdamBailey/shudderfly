@@ -26,17 +26,35 @@ class GamesTest extends TestCase
         $response->assertInertia(
             fn (Assert $page) => $page
                 ->component('Games/Index')
-                ->has('games', 5)
-                ->where('games.0.slug', 'toot-foods')
-                ->where('games.0.name', 'Toot Foods')
-                ->where('games.1.slug', 'cockroach-fight')
-                ->where('games.1.name', 'Cockroach Fight')
-                ->where('games.2.slug', 'costco-pizza-poop')
-                ->where('games.2.name', 'Costco Food Poop')
-                ->where('games.3.slug', 'boom')
-                ->where('games.3.name', 'Poop Boom')
-                ->where('games.4.slug', 'cockroach')
-                ->where('games.4.name', 'Cockroach Fart')
+                ->has('games', 6)
+                ->where('games.0.slug', 'sprout-pox')
+                ->where('games.0.name', 'Brussels Sprout Chicken Pox')
+                ->where('games.1.slug', 'toot-foods')
+                ->where('games.1.name', 'Toot Foods')
+                ->where('games.2.slug', 'cockroach-fight')
+                ->where('games.2.name', 'Cockroach Fight')
+                ->where('games.3.slug', 'costco-pizza-poop')
+                ->where('games.3.name', 'Costco Food Poop')
+                ->where('games.4.slug', 'boom')
+                ->where('games.4.name', 'Poop Boom')
+                ->where('games.5.slug', 'cockroach')
+                ->where('games.5.name', 'Cockroach Fart')
+        );
+    }
+
+    public function test_sprout_pox_game_page_is_displayed(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $response = $this->get(route('games.show', 'sprout-pox'));
+
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Games/SproutPox')
+                ->has('users')
+                ->where('fartSoundUrl', asset('fart.m4a'))
         );
     }
 
@@ -135,6 +153,7 @@ class GamesTest extends TestCase
         $this->get(route('games.show', 'costco-pizza-poop'))->assertRedirect(route('login'));
         $this->get(route('games.show', 'cockroach-fight'))->assertRedirect(route('login'));
         $this->get(route('games.show', 'toot-foods'))->assertRedirect(route('login'));
+        $this->get(route('games.show', 'sprout-pox'))->assertRedirect(route('login'));
     }
 
     public function test_share_game_score_requires_authentication(): void

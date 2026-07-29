@@ -9,17 +9,20 @@ const STEER_Y_MIN = 2;
 const STEER_Y_MAX = 6;
 const WIN_THRESHOLD_PERCENT = 75;
 
+// Translation KEYS (not literal text) — the caller passes these through
+// t() from useTranslations(). Copy lives in lang/en/messages.php under
+// games.cockroach.fact_1..fact_10.
 const FACTS = [
-    "Madagascar hissing cockroaches can live up to 5 years!",
-    "They hiss by pushing air through breathing holes called spiracles.",
-    "Males have large horns on their thorax for fighting rivals.",
-    "They are one of the largest cockroach species — up to 3 inches long!",
-    "Unlike most cockroaches, they have no wings at all.",
-    "They can climb smooth glass with special pads on their feet.",
-    'A group of hissing cockroaches is sometimes called an "intrusion."',
-    "Baby hissing cockroaches are called nymphs and are bright white at birth.",
-    "They are completely harmless to humans — no biting or stinging!",
-    "Males hiss to attract mates and scare off other males.",
+    "games.cockroach.fact_1",
+    "games.cockroach.fact_2",
+    "games.cockroach.fact_3",
+    "games.cockroach.fact_4",
+    "games.cockroach.fact_5",
+    "games.cockroach.fact_6",
+    "games.cockroach.fact_7",
+    "games.cockroach.fact_8",
+    "games.cockroach.fact_9",
+    "games.cockroach.fact_10",
 ];
 
 function getHighScore() {

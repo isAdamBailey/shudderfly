@@ -3,3 +3,4 @@ export const COCKROACH = "🪳";
 export const TOILET = "🚽";
 export const POOP = "💩";
 export const PIZZA = "🍕";
+export const SPROUT = "🥬";

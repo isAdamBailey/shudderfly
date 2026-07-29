@@ -1,6 +1,9 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import { useTranslations } from "@/composables/useTranslations";
 import { Head, Link } from "@inertiajs/vue3";
+
+const { t } = useTranslations();
 
 defineProps({
     games: {
@@ -11,12 +14,12 @@ defineProps({
 </script>
 
 <template>
-    <Head title="Games" />
+    <Head :title="t('dashboard.browse_games')" />
 
     <AuthenticatedLayout>
         <template #header>
             <h2 class="font-heading text-2xl text-theme-title leading-tight">
-                Games
+                {{ t("dashboard.browse_games") }}
             </h2>
         </template>
 
