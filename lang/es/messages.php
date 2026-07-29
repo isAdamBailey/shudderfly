@@ -371,6 +371,13 @@ return [
 
     // Music
     'music.now_playing' => 'Estás reproduciendo :title',
+    'music.filter_newest' => 'Fecha de lanzamiento más reciente',
+    'music.filter_oldest' => 'Fecha de lanzamiento más antigua',
+    'music.title_search' => 'Música con ":search"',
+    'music.title_favorites' => 'Tu música favorita',
+    'music.title_newest' => 'Los más recientes',
+    'music.title_oldest' => 'Los más antiguos',
+    'music.title_latest' => 'Música reciente',
 
     // Map
     'map.address_speak' => 'La dirección es :address',

@@ -61,7 +61,9 @@ class MusicController extends Controller
 
         // Apply filters
         $songsQuery->unless($filter, fn ($query) => $query->orderBy('created_at', 'desc'))
-            ->when($filter === 'favorites', fn ($query) => $query->orderBy('read_count', 'desc'));
+            ->when($filter === 'favorites', fn ($query) => $query->orderBy('read_count', 'desc'))
+            ->when($filter === 'newest', fn ($query) => $query->orderBy('published_at', 'desc'))
+            ->when($filter === 'oldest', fn ($query) => $query->orderBy('published_at', 'asc'));
 
         $songs = $songsQuery->paginate(15)->withQueryString();
 

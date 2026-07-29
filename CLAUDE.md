@@ -119,3 +119,7 @@ Many features are toggled via `SiteSetting` records (checked in `Kernel.php` and
 
 -   PHP: Feature tests use SQLite in-memory with `RefreshDatabase`; AWS credentials stubbed in `phpunit.xml`
 -   JS: Vitest with jsdom; setup file at `resources/js/vitest.setup.js`
+
+### Localization
+
+The app supports English and Spanish (`lang/en/messages.php`, `lang/es/messages.php`), shared to the frontend via the `translations` Inertia prop and read with the `useTranslations()` composable's `t(key, replacements)`. Any new user-facing string in a Vue component — labels, titles, alt/title attributes, and especially anything passed to `useSpeechSynthesis`'s `speak()` — must be added as a key in both language files and referenced with `t()` rather than hardcoded in English. Existing hardcoded strings encountered incidentally don't need to be retrofitted, but new code should not add more.

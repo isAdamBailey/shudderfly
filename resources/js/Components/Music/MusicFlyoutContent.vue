@@ -73,6 +73,26 @@
             >
                 <i class="ri-star-line text-2xl"></i>
             </Button>
+            <Button
+                type="button"
+                :is-active="isNewest"
+                :disabled="loading"
+                class="rounded-full my-2"
+                :title="t('music.filter_newest')"
+                @click="applyFilter('newest')"
+            >
+                <i class="ri-sort-desc text-2xl"></i>
+            </Button>
+            <Button
+                type="button"
+                :is-active="isOldest"
+                :disabled="loading"
+                class="rounded-full my-2"
+                :title="t('music.filter_oldest')"
+                @click="applyFilter('oldest')"
+            >
+                <i class="ri-sort-asc text-2xl"></i>
+            </Button>
         </div>
 
         <!-- Song List -->
@@ -207,14 +227,28 @@ const isFavorites = computed(() => {
     return props.filter === "favorites";
 });
 
+const isNewest = computed(() => {
+    return props.filter === "newest";
+});
+
+const isOldest = computed(() => {
+    return props.filter === "oldest";
+});
+
 const getTitle = (search, filter) => {
     if (search) {
-        return `Music with "${search}"`;
+        return t("music.title_search", { search });
     }
     if (filter === "favorites") {
-        return "Your favorite music";
+        return t("music.title_favorites");
     }
-    return "Latest music";
+    if (filter === "newest") {
+        return t("music.title_newest");
+    }
+    if (filter === "oldest") {
+        return t("music.title_oldest");
+    }
+    return t("music.title_latest");
 };
 
 const title = computed(() => {
