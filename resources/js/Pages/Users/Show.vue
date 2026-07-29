@@ -485,26 +485,9 @@ const speakUserSummary = () => {
                             </Button>
                         </template>
 
-                        <!-- Secondary CTAs: collages / games / chat (all users) -->
-                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        <!-- Secondary CTA: chat (all users) -->
+                        <div v-if="messagingEnabled" class="grid grid-cols-1 gap-3">
                             <Link
-                                :href="route('collages.index')"
-                                class="btn-bulge inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md bg-amber-400 px-3 py-2.5 text-center text-sm font-semibold leading-tight text-gray-900 transition-colors hover:bg-amber-300"
-                            >
-                                <i
-                                    class="ri-layout-masonry-line flex-shrink-0"
-                                ></i>
-                                {{ t("dashboard.browse_collages") }}
-                            </Link>
-                            <Link
-                                :href="route('games.index')"
-                                class="btn-bulge inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md bg-teal-300 px-3 py-2.5 text-center text-sm font-semibold leading-tight text-gray-900 transition-colors hover:bg-teal-200"
-                            >
-                                <i class="ri-gamepad-line flex-shrink-0"></i>
-                                {{ t("dashboard.browse_games") }}
-                            </Link>
-                            <Link
-                                v-if="messagingEnabled"
                                 :href="route('messages.index')"
                                 class="btn-bulge inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md bg-orange-700 px-3 py-2.5 text-center text-sm font-semibold leading-tight text-amber-50 transition-colors hover:bg-orange-600"
                             >

@@ -562,7 +562,7 @@ describe("UserShow", () => {
             expect(wrapper.text()).not.toContain("profile.recent_uploads");
         });
 
-        it("shows the hero summary and browse CTAs to every owner regardless of permissions", () => {
+        it("shows the hero summary and chat CTA to every owner regardless of permissions", () => {
             mockCanEditPages.mockReturnValueOnce(false);
             mockCanAdmin.mockReturnValueOnce(false);
 
@@ -579,8 +579,6 @@ describe("UserShow", () => {
 
             // Personalized welcome + navigation CTAs exposed to all users
             expect(wrapper.text()).toContain("profile.welcome_with_name");
-            expect(wrapper.text()).toContain("dashboard.browse_collages");
-            expect(wrapper.text()).toContain("dashboard.browse_games");
             expect(wrapper.text()).toContain("dashboard.browse_chat");
             // Edit/admin-only actions hidden for a plain user
             expect(wrapper.text()).not.toContain("dashboard.add_new_book");
