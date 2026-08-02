@@ -81,6 +81,19 @@ return [
     'commented.title' => ':name wrote back!',
     'commented.push_title' => ':name wrote back!',
 
+    // Notifications - Emoji Reaction
+    'reacted.subject' => ':name gave your message a :emoji!',
+    'reacted.comment_subject' => ':name gave your reply a :emoji!',
+    'reacted.greeting' => 'Hi :name!',
+    'reacted.line' => ':name gave your message a :emoji:',
+    'reacted.comment_line' => ':name gave your reply a :emoji:',
+    'reacted.action' => 'See message',
+    'reacted.thank_you' => 'Thanks for being here!',
+    'reacted.title' => ':name gave your message a :emoji!',
+    'reacted.comment_title' => ':name gave your reply a :emoji!',
+    'reacted.push_title' => ':name gave your message a :emoji!',
+    'reacted.comment_push_title' => ':name gave your reply a :emoji!',
+
     // Notifications - Contact Admin
     'contact_admin.push_title' => 'A message from :name',
 
@@ -196,6 +209,10 @@ return [
     'notifications.summary_someone' => 'someone',
     'notifications.summary_more' => 'and :count more people',
     'notifications.summary_tap' => 'Tap one to jump into the chat!',
+    'notifications.reaction_flash' => ':recipient, :sender gave you a :emoji!',
+    'notifications.reaction_flash_with_text' => ':recipient, :sender gave you a :emoji on: :content',
+    'notifications.reaction_label' => 'gave your message a :emoji',
+    'notifications.reaction_comment_label' => 'gave your reply a :emoji',
     'notifications.email.updated' => 'Email notification settings updated.',
     'notifications.email.description' => 'Receive email updates for activity like comments and mentions.',
     'notifications.email.saving' => 'Saving...',

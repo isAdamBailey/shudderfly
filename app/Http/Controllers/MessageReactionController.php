@@ -5,12 +5,19 @@ namespace App\Http\Controllers;
 use App\Events\MessageReactionUpdated;
 use App\Models\Message;
 use App\Models\MessageReaction;
+use App\Notifications\MessageReacted;
+use App\Services\PushNotificationService;
+use App\Support\GameShareMessage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class MessageReactionController extends Controller
 {
+    public function __construct(
+        protected PushNotificationService $pushNotificationService
+    ) {}
+
     /**
      * Store or update a reaction for a message.
      */
@@ -43,6 +50,12 @@ class MessageReactionController extends Controller
         // Load relationships
         $reaction->load('user');
         $message->load('reactions.user');
+
+        // Notify the message author when someone else reacts, but not when the
+        // same emoji is simply re-saved.
+        if ($reaction->wasRecentlyCreated || $reaction->wasChanged('emoji')) {
+            $this->notifyMessageAuthor($message, $emoji);
+        }
 
         // Broadcast the update
         event(new MessageReactionUpdated($message));
@@ -82,5 +95,45 @@ class MessageReactionController extends Controller
         return response()->json([
             'grouped_reactions' => $message->getGroupedReactions(),
         ]);
+    }
+
+    /**
+     * Send database/broadcast and push notifications to the message author.
+     */
+    protected function notifyMessageAuthor(Message $message, string $emoji): void
+    {
+        $reactor = Auth::user();
+
+        if (! $reactor || $message->user_id === $reactor->id) {
+            return;
+        }
+
+        $author = $message->user()->first();
+
+        if (! $author) {
+            return;
+        }
+
+        $author->notify(new MessageReacted($message, $reactor, $emoji));
+
+        $preview = GameShareMessage::stripSlugMarker($message->message);
+        $body = mb_strlen($preview, 'UTF-8') > 120
+            ? mb_substr($preview, 0, 117, 'UTF-8').'...'
+            : $preview;
+
+        $this->pushNotificationService->sendNotification(
+            $author->id,
+            __('messages.reacted.push_title', ['name' => $reactor->name, 'emoji' => $emoji]),
+            $body,
+            [
+                'type' => 'message_reacted',
+                'message_id' => $message->id,
+                'emoji' => $emoji,
+                'reactor_id' => $reactor->id,
+                'reactor_name' => $reactor->name,
+                'message' => $preview,
+                'url' => route('messages.index').'#message-'.$message->id,
+            ]
+        );
     }
 }

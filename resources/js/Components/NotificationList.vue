@@ -161,6 +161,51 @@
                                 </p>
                             </div>
                             <div
+                                v-else-if="
+                                    notification.type ===
+                                    'App\\Notifications\\MessageReacted'
+                                "
+                                class="text-gray-900 dark:text-gray-100"
+                            >
+                                <div class="flex items-center gap-2 mb-1">
+                                    <Avatar
+                                        class="ring-2 ring-white dark:ring-gray-800"
+                                        :avatar="
+                                            notification.data.reactor_avatar
+                                        "
+                                        :user="{
+                                            id: notification.data.reactor_id,
+                                            name: notification.data
+                                                .reactor_name,
+                                        }"
+                                        size="sm"
+                                    />
+                                    <div
+                                        class="flex items-center gap-1.5 flex-wrap"
+                                    >
+                                        <strong>{{
+                                            notification.data.reactor_name
+                                        }}</strong>
+                                        <span class="text-sm">{{
+                                            reactionLabel(notification)
+                                        }}</span>
+                                        <span
+                                            v-if="!notification.read_at"
+                                            class="inline-block w-2 h-2 bg-amber-500 rounded-full shadow-[0_0_4px_1px_rgba(245,158,11,0.55)]"
+                                        ></span>
+                                    </div>
+                                </div>
+                                <p
+                                    class="text-sm text-gray-700 dark:text-gray-300 italic ml-8 mb-1"
+                                >
+                                    "{{
+                                        stripGameShareSlugMarker(
+                                            notificationBodyText(notification)
+                                        )
+                                    }}"
+                                </p>
+                            </div>
+                            <div
                                 class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 ml-8"
                             >
                                 <span>{{
@@ -235,7 +280,18 @@ const notificationBodyText = (notification) => {
         return notification.data.comment || notification.data.message || "";
     }
 
+    if (notification.type === "App\\Notifications\\MessageReacted") {
+        return notification.data.comment || notification.data.message || "";
+    }
+
     return notification.data.message || "";
+};
+
+const reactionLabel = (notification) => {
+    const emoji = notification.data.emoji || "";
+    return notification.data.comment_id
+        ? t("notifications.reaction_comment_label", { emoji })
+        : t("notifications.reaction_label", { emoji });
 };
 
 const notifications = ref([]);
@@ -347,6 +403,9 @@ const senderNameForNotification = (notification) => {
     if (notification.type === "App\\Notifications\\MessageCommented") {
         return notification.data.commenter_name;
     }
+    if (notification.type === "App\\Notifications\\MessageReacted") {
+        return notification.data.reactor_name;
+    }
     return null;
 };
 
@@ -354,7 +413,9 @@ const joinWithAnd = (items) => {
     if (items.length <= 1) return items.join("");
     const and = t("notifications.summary_and");
     if (items.length === 2) return `${items[0]} ${and} ${items[1]}`;
-    return `${items.slice(0, -1).join(", ")}, ${and} ${items[items.length - 1]}`;
+    return `${items.slice(0, -1).join(", ")}, ${and} ${
+        items[items.length - 1]
+    }`;
 };
 
 const getSummaryForSpeech = () => {
@@ -372,7 +433,9 @@ const getSummaryForSpeech = () => {
     const tap = t("notifications.summary_tap");
 
     if (unread.length === 1) {
-        return `${t("notifications.summary_single", { name: senderNames[0] })} ${tap}`;
+        return `${t("notifications.summary_single", {
+            name: senderNames[0],
+        })} ${tap}`;
     }
 
     if (senderNames.length === 1) {

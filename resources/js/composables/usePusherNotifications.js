@@ -1,5 +1,6 @@
 import { usePage } from "@inertiajs/vue3";
 import { useFlashMessage } from "@/composables/useFlashMessage";
+import { useTranslations } from "@/composables/useTranslations";
 import { onMounted, onUnmounted, ref } from "vue";
 
 /**
@@ -19,6 +20,7 @@ import { onMounted, onUnmounted, ref } from "vue";
  */
 export function usePusherNotifications() {
     const { setFlashMessage } = useFlashMessage();
+    const { t } = useTranslations();
     const channel = ref(null);
     const retryTimeout = ref(null);
     const maxRetries = 10;
@@ -45,6 +47,26 @@ export function usePusherNotifications() {
             return commentText
                 ? `${recipientName}, you received a reply from ${senderName}: ${commentText}`
                 : `${recipientName}, you received a reply from ${senderName}`;
+        }
+
+        if (notification.type === "App\\Notifications\\MessageReacted") {
+            const senderName = notification.data?.reactor_name;
+            const emoji = notification.data?.emoji;
+            if (!senderName || !emoji) return null;
+            const contentText =
+                notification.data?.comment || notification.data?.message;
+            return contentText
+                ? t("notifications.reaction_flash_with_text", {
+                      recipient: recipientName,
+                      sender: senderName,
+                      emoji,
+                      content: contentText,
+                  })
+                : t("notifications.reaction_flash", {
+                      recipient: recipientName,
+                      sender: senderName,
+                      emoji,
+                  });
         }
 
         return null;

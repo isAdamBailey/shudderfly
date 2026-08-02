@@ -221,6 +221,75 @@ describe("NotificationList", () => {
             expect(wrapper.text()).toContain("Hello");
         });
 
+        it("displays emoji reaction notifications", async () => {
+            const axios = (await import("axios")).default;
+            axios.get.mockResolvedValue({
+                data: {
+                    data: [
+                        {
+                            id: "3",
+                            type: "App\\Notifications\\MessageReacted",
+                            data: {
+                                reactor_name: "Carol",
+                                reactor_id: 5,
+                                emoji: "👍",
+                                message: "Look at my drawing",
+                                message_id: 7,
+                                url: "/messages#message-7",
+                            },
+                            created_at: new Date().toISOString(),
+                            read_at: null,
+                        },
+                    ],
+                },
+            });
+
+            const wrapper = mount(NotificationList);
+
+            await nextTick();
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            expect(wrapper.text()).toContain("Carol");
+            expect(wrapper.text()).toContain("notifications.reaction_label");
+            expect(wrapper.text()).toContain("Look at my drawing");
+        });
+
+        it("labels reaction notifications on replies differently", async () => {
+            const axios = (await import("axios")).default;
+            axios.get.mockResolvedValue({
+                data: {
+                    data: [
+                        {
+                            id: "4",
+                            type: "App\\Notifications\\MessageReacted",
+                            data: {
+                                reactor_name: "Carol",
+                                reactor_id: 5,
+                                emoji: "😂",
+                                message: "Look at my drawing",
+                                message_id: 7,
+                                comment_id: 12,
+                                comment: "That is great",
+                                url: "/messages#message-7",
+                            },
+                            created_at: new Date().toISOString(),
+                            read_at: null,
+                        },
+                    ],
+                },
+            });
+
+            const wrapper = mount(NotificationList);
+
+            await nextTick();
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            expect(wrapper.text()).toContain(
+                "notifications.reaction_comment_label"
+            );
+            expect(wrapper.text()).toContain("That is great");
+        });
+
         it("shows view message link when message_id exists", async () => {
             const wrapper = mount(NotificationList);
 
@@ -239,9 +308,7 @@ describe("NotificationList", () => {
             await nextTick();
             await new Promise((resolve) => setTimeout(resolve, 100));
 
-            const markAsReadButton = wrapper.find(
-                'button[title="Clear"]'
-            );
+            const markAsReadButton = wrapper.find('button[title="Clear"]');
             expect(markAsReadButton.exists()).toBe(true);
         });
 
@@ -332,9 +399,7 @@ describe("NotificationList", () => {
             await nextTick();
             await new Promise((resolve) => setTimeout(resolve, 100));
 
-            const markAsReadButton = wrapper.find(
-                'button[title="Clear"]'
-            );
+            const markAsReadButton = wrapper.find('button[title="Clear"]');
             expect(markAsReadButton.exists()).toBe(false);
         });
     });

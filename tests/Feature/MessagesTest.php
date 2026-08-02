@@ -15,6 +15,7 @@ use App\Models\Page;
 use App\Models\SiteSetting;
 use App\Models\User;
 use App\Notifications\MessageCommented;
+use App\Notifications\MessageReacted;
 use App\Notifications\UserTagged;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -696,6 +697,149 @@ class MessagesTest extends TestCase
 
         $this->assertCount(1, $reactions);
         $this->assertEquals('❤️', $reactions->first()->emoji);
+    }
+
+    public function test_message_author_is_notified_when_someone_reacts(): void
+    {
+        Notification::fake();
+
+        $author = User::factory()->create();
+        $reactor = User::factory()->create();
+        $message = Message::factory()->create(['user_id' => $author->id]);
+
+        $this->actingAs($reactor);
+
+        $this->postJson(route('messages.reactions.store', $message), [
+            'emoji' => '👍',
+        ])->assertStatus(200);
+
+        Notification::assertSentTo(
+            $author,
+            MessageReacted::class,
+            function (MessageReacted $notification) use ($message, $reactor) {
+                $data = $notification->toArray($message->user);
+
+                return $notification->emoji === '👍'
+                    && $data['reactor_id'] === $reactor->id
+                    && $data['message_id'] === $message->id
+                    && ! isset($data['comment_id'])
+                    && str_contains($data['url'], '#message-'.$message->id);
+            }
+        );
+    }
+
+    public function test_no_reaction_notification_when_reacting_to_own_message(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create();
+        $message = Message::factory()->create(['user_id' => $user->id]);
+
+        $this->actingAs($user);
+
+        $this->postJson(route('messages.reactions.store', $message), [
+            'emoji' => '👍',
+        ])->assertStatus(200);
+
+        Notification::assertNothingSent();
+    }
+
+    public function test_reaction_notification_is_not_resent_for_the_same_emoji(): void
+    {
+        Notification::fake();
+
+        $author = User::factory()->create();
+        $reactor = User::factory()->create();
+        $message = Message::factory()->create(['user_id' => $author->id]);
+
+        MessageReaction::factory()->create([
+            'message_id' => $message->id,
+            'user_id' => $reactor->id,
+            'emoji' => '👍',
+        ]);
+
+        $this->actingAs($reactor);
+
+        $this->postJson(route('messages.reactions.store', $message), [
+            'emoji' => '👍',
+        ])->assertStatus(200);
+
+        Notification::assertNothingSent();
+    }
+
+    public function test_reaction_notification_is_sent_when_emoji_changes(): void
+    {
+        Notification::fake();
+
+        $author = User::factory()->create();
+        $reactor = User::factory()->create();
+        $message = Message::factory()->create(['user_id' => $author->id]);
+
+        MessageReaction::factory()->create([
+            'message_id' => $message->id,
+            'user_id' => $reactor->id,
+            'emoji' => '👍',
+        ]);
+
+        $this->actingAs($reactor);
+
+        $this->postJson(route('messages.reactions.store', $message), [
+            'emoji' => '❤️',
+        ])->assertStatus(200);
+
+        Notification::assertSentTo($author, MessageReacted::class);
+    }
+
+    public function test_comment_author_is_notified_when_someone_reacts_to_a_reply(): void
+    {
+        Notification::fake();
+
+        $commenter = User::factory()->create();
+        $reactor = User::factory()->create();
+        $message = Message::factory()->create();
+        $comment = MessageComment::factory()->create([
+            'message_id' => $message->id,
+            'user_id' => $commenter->id,
+        ]);
+
+        $this->actingAs($reactor);
+
+        $this->postJson(route('messages.comments.reactions.store', [$message, $comment]), [
+            'emoji' => '😂',
+        ])->assertStatus(200);
+
+        Notification::assertSentTo(
+            $commenter,
+            MessageReacted::class,
+            function (MessageReacted $notification) use ($message, $comment, $commenter) {
+                $data = $notification->toArray($commenter);
+
+                return $notification->emoji === '😂'
+                    && $data['comment_id'] === $comment->id
+                    && $data['message_id'] === $message->id
+                    && str_contains($data['url'], '#message-'.$message->id);
+            }
+        );
+    }
+
+    public function test_no_reaction_notification_when_reacting_to_own_reply(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create();
+        $message = Message::factory()->create();
+        $comment = MessageComment::factory()->create([
+            'message_id' => $message->id,
+            'user_id' => $user->id,
+        ]);
+
+        $this->actingAs($user);
+
+        $this->postJson(route('messages.comments.reactions.store', [$message, $comment]), [
+            'emoji' => '😂',
+        ])->assertStatus(200);
+
+        Notification::assertNothingSent();
     }
 
     public function test_invalid_emoji_is_rejected(): void

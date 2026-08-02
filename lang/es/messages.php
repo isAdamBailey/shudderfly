@@ -81,6 +81,19 @@ return [
     'commented.title' => '¡:name te respondió!',
     'commented.push_title' => '¡:name te respondió!',
 
+    // Notifications - Emoji Reaction
+    'reacted.subject' => '¡:name le puso un :emoji a tu mensaje!',
+    'reacted.comment_subject' => '¡:name le puso un :emoji a tu respuesta!',
+    'reacted.greeting' => '¡Hola :name!',
+    'reacted.line' => ':name le puso un :emoji a tu mensaje:',
+    'reacted.comment_line' => ':name le puso un :emoji a tu respuesta:',
+    'reacted.action' => 'Ver mensaje',
+    'reacted.thank_you' => '¡Gracias por estar aquí!',
+    'reacted.title' => '¡:name le puso un :emoji a tu mensaje!',
+    'reacted.comment_title' => '¡:name le puso un :emoji a tu respuesta!',
+    'reacted.push_title' => '¡:name le puso un :emoji a tu mensaje!',
+    'reacted.comment_push_title' => '¡:name le puso un :emoji a tu respuesta!',
+
     // Notifications - Contact Admin
     'contact_admin.push_title' => 'Un mensaje de :name',
 
@@ -196,6 +209,10 @@ return [
     'notifications.summary_someone' => 'alguien',
     'notifications.summary_more' => 'y :count personas más',
     'notifications.summary_tap' => '¡Toca uno para ir al chat!',
+    'notifications.reaction_flash' => ':recipient, ¡:sender te dio un :emoji!',
+    'notifications.reaction_flash_with_text' => ':recipient, :sender te dio un :emoji en: :content',
+    'notifications.reaction_label' => 'le puso un :emoji a tu mensaje',
+    'notifications.reaction_comment_label' => 'le puso un :emoji a tu respuesta',
     'notifications.email.updated' => 'Se actualizó la configuración de notificaciones por correo.',
     'notifications.email.description' => 'Recibe novedades por correo sobre actividad como comentarios y menciones.',
     'notifications.email.saving' => 'Guardando...',
