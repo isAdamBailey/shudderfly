@@ -153,7 +153,6 @@ const topNavItems = computed(() => {
 
                         <div class="relative">
                             <Dropdown
-                                v-if="canEditProfile"
                                 align="right"
                                 width="56"
                                 :content-classes="[
@@ -195,7 +194,7 @@ const topNavItems = computed(() => {
                                             "
                                         />
                                     </div>
-                                    <div class="mt-2">
+                                    <div v-if="canEditProfile" class="mt-2">
                                         <NavMenuItem
                                             :href="route('logout')"
                                             label="Log Out"
@@ -207,16 +206,6 @@ const topNavItems = computed(() => {
                                     </div>
                                 </template>
                             </Dropdown>
-                            <div
-                                v-else
-                                class="relative inline-flex min-h-12 items-center gap-2 rounded-xl px-2 py-1"
-                                aria-hidden="true"
-                            >
-                                <Avatar
-                                    :user="$page.props.auth.user"
-                                    size="sm"
-                                />
-                            </div>
                         </div>
                     </div>
                 </div>

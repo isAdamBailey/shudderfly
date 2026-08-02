@@ -64,8 +64,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile/locale/preference', [ProfileController::class, 'updateLocalePreference'])
         ->name('profile.locale.preference');
 
+    Route::get('/account', [ProfileController::class, 'edit'])->name('profile.edit');
+
     Route::group(['middleware' => ['can:edit profile']], function () {
-        Route::get('/account', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
         Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     });

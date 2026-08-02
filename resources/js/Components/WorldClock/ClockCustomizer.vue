@@ -2,7 +2,6 @@
 import SecondaryButton from "@/Components/SecondaryButton.vue";
 import SpeakButton from "@/Components/SpeakButton.vue";
 import { useGlobalTimer } from "@/composables/useGlobalTimer";
-import { useLogoPreference } from "@/composables/useLogoPreference";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import { FACE_OPTIONS } from "@/world-clock/presets/faces";
@@ -25,7 +24,6 @@ const emit = defineEmits([
 
 const { speak } = useSpeechSynthesis();
 const { t } = useTranslations();
-const { logo, clearLogoClock } = useLogoPreference();
 const {
     active: timerActive,
     remainingSeconds,
@@ -134,11 +132,6 @@ const pick = (group, option) => {
     emit(`update:${group.key}`, option.value);
     speak(option.speech || option.label);
 };
-
-const resetLogo = () => {
-    clearLogoClock();
-    speak(t("world_clock.default_logo_restored"));
-};
 </script>
 
 <template>
@@ -196,25 +189,6 @@ const resetLogo = () => {
                     {{ minutes }} min
                 </button>
             </div>
-        </div>
-
-        <div class="border-t border-gray-700 pt-4">
-            <span class="text-sm text-gray-300">App logo</span>
-            <p v-if="logo.enabled" class="mt-1 text-xs text-gray-400">
-                Logo: {{ logo.cityName || "Custom clock" }}. Use the pin button
-                on a clock to change it.
-            </p>
-            <p v-else class="mt-1 text-xs text-gray-500">
-                Use the pin button on a clock to set it as the app logo.
-            </p>
-
-            <SecondaryButton
-                v-if="logo.enabled"
-                class="mt-3"
-                @click="resetLogo"
-            >
-                Reset to default logo
-            </SecondaryButton>
         </div>
     </div>
 </template>

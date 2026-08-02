@@ -201,13 +201,16 @@ class DashboardTest extends TestCase
         $this->assertEquals(0, Page::where('blocked', true)->count());
     }
 
-    public function test_account_page_requires_edit_profile_permission()
+    public function test_account_page_loads_for_users_without_edit_profile_permission()
     {
         $user = User::factory()->create();
 
         $response = $this->actingAs($user)->get(route('profile.edit'));
 
-        $response->assertForbidden();
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Profile/Account')
+        );
     }
 
     public function test_account_page_loads_for_users_with_edit_profile_permission()

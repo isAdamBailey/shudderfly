@@ -8,12 +8,14 @@ import StatCard from "@/Components/StatCard.vue";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import NewBookForm from "@/Pages/Books/NewBookForm.vue";
 import OwnerPanel from "@/Pages/Users/Partials/OwnerPanel.vue";
+import { useFlashMessage } from "@/composables/useFlashMessage";
 import { useNotificationSync } from "@/composables/useNotificationSync";
 import { usePermissions } from "@/composables/permissions";
 import { FOOD_EMOJI_POOL, useEmojiRise } from "@/composables/useEmojiRise";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import { Head, Link, router, usePage } from "@inertiajs/vue3";
+import axios from "axios";
 import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 
 defineOptions({
@@ -25,8 +27,30 @@ const { t } = useTranslations();
 const { canAdmin, canEditPages } = usePermissions();
 const { spawnEmojiRise } = useEmojiRise();
 const { isRead, markAsRead: markNotificationAsRead } = useNotificationSync();
+const { setFlashMessage } = useFlashMessage();
 const regenerating = ref(false);
 const showNewBookForm = ref(false);
+const unlockingBlockedPages = ref(false);
+
+const unblockAllPages = async () => {
+    if (unlockingBlockedPages.value) return;
+    unlockingBlockedPages.value = true;
+    try {
+        const { data } = await axios.post(
+            route("pages.unblock-all"),
+            {},
+            { headers: { Accept: "application/json" } }
+        );
+        setFlashMessage("success", data.message);
+        router.reload({
+            only: ["blockedCount"],
+            preserveScroll: true,
+            async: true,
+        });
+    } finally {
+        unlockingBlockedPages.value = false;
+    }
+};
 
 const openNewBookForm = () => {
     showNewBookForm.value = true;
@@ -375,7 +399,7 @@ const speakUserSummary = () => {
                 <!-- Title intentionally omitted: the name/greeting is already
                      shown in the profile card (and hero) below. -->
                 <button
-                    v-if="isOwner && (canEditPages || canAdmin)"
+                    v-if="isOwner && canAdmin"
                     type="button"
                     class="inline-flex items-center justify-center min-h-11 min-w-11 text-theme-title opacity-70 hover:opacity-100 transition-opacity ml-auto"
                     :aria-label="t('profile.jump_to_administration')"
@@ -462,34 +486,63 @@ const speakUserSummary = () => {
                         </p>
                     </div>
 
-                    <!-- Quick actions -->
-                    <div class="mt-4 flex flex-col gap-3">
-                        <!-- Primary CTA: create a new book (edit-pages only) -->
-                        <template v-if="canEditPages">
-                            <Button
-                                v-if="!showNewBookForm"
-                                type="button"
-                                class="mb-3 w-full justify-center ring-2 ring-amber-400/70 shadow-lg sm:mb-0 sm:w-auto sm:justify-start"
-                                @click="openNewBookForm"
-                            >
-                                <i class="ri-add-line mr-1.5 text-base"></i>
-                                {{ t("dashboard.add_new_book") }}
-                            </Button>
-                            <Button
-                                v-else
-                                type="button"
-                                class="mb-3 w-full justify-center !bg-red-700 sm:mb-0 sm:w-auto sm:justify-start"
-                                @click="showNewBookForm = false"
-                            >
-                                {{ t("dashboard.close_book_form") }}
-                            </Button>
-                        </template>
+                    <!-- Quick actions: equal-width, inline on desktop, each
+                         stacked full-width on mobile -->
+                    <div class="mt-4 flex flex-col items-start gap-3">
+                        <div class="flex w-full flex-col gap-3 sm:flex-row">
+                            <!-- Primary CTA: create a new book (edit-pages only) -->
+                            <template v-if="canEditPages">
+                                <Button
+                                    v-if="!showNewBookForm"
+                                    type="button"
+                                    class="w-full justify-center ring-2 ring-amber-400/70 shadow-lg sm:flex-1"
+                                    @click="openNewBookForm"
+                                >
+                                    <i class="ri-add-line mr-1.5 text-base"></i>
+                                    {{ t("dashboard.add_new_book") }}
+                                </Button>
+                                <Button
+                                    v-else
+                                    type="button"
+                                    class="w-full justify-center !bg-red-700 sm:flex-1"
+                                    @click="showNewBookForm = false"
+                                >
+                                    {{ t("dashboard.close_book_form") }}
+                                </Button>
+                            </template>
 
-                        <!-- Secondary CTA: chat (all users) -->
-                        <div v-if="messagingEnabled" class="grid grid-cols-1 gap-3">
+                            <!-- Unblock all blocked pages/sounds (edit-pages only) -->
+                            <button
+                                v-if="canEditPages"
+                                type="button"
+                                :disabled="
+                                    unlockingBlockedPages || blockedCount === 0
+                                "
+                                :aria-label="
+                                    t('dashboard.unlock_all_blocked_pages_aria')
+                                "
+                                class="btn-bulge inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md bg-amber-700 px-3 py-2.5 text-center text-sm font-semibold leading-tight text-amber-50 transition-colors hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1"
+                                @click="unblockAllPages"
+                            >
+                                <i
+                                    v-if="unlockingBlockedPages"
+                                    class="ri-loader-line flex-shrink-0 animate-spin"
+                                ></i>
+                                <i
+                                    v-else
+                                    class="ri-lock-unlock-line flex-shrink-0"
+                                ></i>
+                                {{ t("dashboard.unlock_all_blocked_pages") }} ({{
+                                    blockedCount
+                                }})
+                            </button>
+
+                            <!-- Secondary CTA: chat (all users). Alone (no
+                                 edit-pages permission), it fills the row. -->
                             <Link
+                                v-if="messagingEnabled"
                                 :href="route('messages.index')"
-                                class="btn-bulge inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md bg-orange-700 px-3 py-2.5 text-center text-sm font-semibold leading-tight text-amber-50 transition-colors hover:bg-orange-600"
+                                class="btn-bulge inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md bg-orange-700 px-3 py-2.5 text-center text-sm font-semibold leading-tight text-amber-50 transition-colors hover:bg-orange-600 sm:flex-1"
                             >
                                 <i class="ri-chat-3-line flex-shrink-0"></i>
                                 {{ t("dashboard.browse_chat") }}
@@ -502,7 +555,7 @@ const speakUserSummary = () => {
                             type="button"
                             :disabled="regenerating"
                             title="Generate a new AI story for this profile"
-                            class="btn-bulge inline-flex items-center gap-1.5 self-start text-xs font-medium text-indigo-200 transition-colors hover:text-indigo-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            class="btn-bulge inline-flex items-center gap-1.5 text-xs font-medium text-indigo-200 transition-colors hover:text-indigo-50 disabled:cursor-not-allowed disabled:opacity-50"
                             @click="regenerateWeeklyOverview"
                         >
                             <i

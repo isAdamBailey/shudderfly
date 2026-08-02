@@ -8,6 +8,7 @@ vi.mock("@inertiajs/vue3", () => ({
 
 // Import the actual ApplicationLogo component to test theme-dependent SVG switching
 import ApplicationLogo from "@/Components/ApplicationLogo.vue";
+import ThemeLogoIcon from "@/Components/ThemeLogoIcon.vue";
 import { usePage } from "@inertiajs/vue3";
 
 describe("ApplicationLogo", () => {
@@ -210,6 +211,8 @@ describe("ApplicationLogo", () => {
     });
 
     describe("Computed Properties", () => {
+        // isChristmas/isJuly/isHalloween live on ThemeLogoIcon, the component
+        // ApplicationLogo renders when no clock is pinned as the logo.
         it("correctly computes isChristmas based on theme", () => {
             // Test christmas theme
             usePage.mockReturnValue({
@@ -218,7 +221,7 @@ describe("ApplicationLogo", () => {
                 },
             });
 
-            let wrapper = mount(ApplicationLogo);
+            let wrapper = mount(ThemeLogoIcon);
 
             expect(wrapper.vm.isChristmas).toBe(true);
             expect(wrapper.vm.isJuly).toBe(false);
@@ -230,7 +233,7 @@ describe("ApplicationLogo", () => {
                 },
             });
 
-            wrapper = mount(ApplicationLogo);
+            wrapper = mount(ThemeLogoIcon);
 
             expect(wrapper.vm.isChristmas).toBe(false);
             expect(wrapper.vm.isJuly).toBe(true);
@@ -244,7 +247,7 @@ describe("ApplicationLogo", () => {
                 },
             });
 
-            let wrapper = mount(ApplicationLogo);
+            let wrapper = mount(ThemeLogoIcon);
 
             expect(wrapper.vm.isJuly).toBe(true);
             expect(wrapper.vm.isChristmas).toBe(false);
@@ -256,7 +259,7 @@ describe("ApplicationLogo", () => {
                 },
             });
 
-            wrapper = mount(ApplicationLogo);
+            wrapper = mount(ThemeLogoIcon);
 
             expect(wrapper.vm.isJuly).toBe(false);
             expect(wrapper.vm.isChristmas).toBe(true);
