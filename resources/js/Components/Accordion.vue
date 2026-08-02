@@ -1,7 +1,7 @@
 <template>
     <div
         :class="[
-            'bg-white dark:bg-gray-800',
+            'rounded-md overflow-hidden bg-white dark:bg-gray-800',
             darkBackground ? 'bg-gray-800' : '',
         ]"
     >

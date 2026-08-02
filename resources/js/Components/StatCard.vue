@@ -41,7 +41,7 @@ defineProps({
         class="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-3 flex items-center justify-between shadow-sm"
         :class="
             href
-                ? 'hover:border-teal-500 dark:hover:border-teal-400 hover:shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1'
+                ? 'hover:border-indigo-500 dark:hover:border-indigo-400 hover:shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1'
                 : ''
         "
     >

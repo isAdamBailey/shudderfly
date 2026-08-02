@@ -529,7 +529,7 @@ function alertVoices() {
                 <Button
                     :class="
                         selectedEmotion === 'mysterious'
-                            ? 'bg-teal-600 hover:bg-teal-700'
+                            ? 'bg-indigo-600 hover:bg-indigo-700'
                             : 'bg-gray-600 hover:bg-gray-700'
                     "
                     :disabled="speaking"

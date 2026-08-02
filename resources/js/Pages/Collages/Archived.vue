@@ -82,7 +82,7 @@
                         class="flex items-center gap-4 ml-auto"
                     >
                         <button
-                            class="flex items-center gap-1.5 text-sm text-teal-400 hover:text-teal-300 transition-colors"
+                            class="flex items-center gap-1.5 text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
                             :class="{
                                 'opacity-50 cursor-not-allowed':
                                     restoreForm.processing,

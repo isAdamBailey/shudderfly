@@ -3,7 +3,7 @@ name: Shudderfly
 description: A private family memory app — a dark carnival marquee for storybook moments.
 colors:
     marquee-amber: "#fbbf24"
-    storybook-teal: "#0f766e"
+    storybook-indigo: "#4f46e5"
     curtain-orange: "#c2410c"
     marquee-bulb: "#f59e0b"
     stage-night: "#111827"
@@ -48,7 +48,7 @@ spacing:
     container: "80rem"
 components:
     button-primary:
-        backgroundColor: "{colors.storybook-teal}"
+        backgroundColor: "{colors.storybook-indigo}"
         textColor: "{colors.marquee-amber}"
         typography: "{typography.label}"
         rounded: "{rounded.sm}"
@@ -101,8 +101,8 @@ Four times a year the marquee changes its bulbs for the season — Christmas, Ha
 
 -   Warm dark stage by default (gray-800 #1f2937), deepening to Stage Night (gray-900 #111827) in dark mode — the stage is always dark but breathes more in the default view
 -   Amber-gold (`amber-400` #fbbf24) as the spotlight color — richer and warmer than the prior pale yellow
--   Deep ocean teal (`teal-700` #0f766e) as the primary button/action surface — a bold, unexpected anchor color
--   A rainbow gradient light bar bookends every page — nav at top, footer at bottom — and nowhere else
+-   Twilight indigo (`indigo-600` #4f46e5) as the primary button/action surface — pulled straight from the rainbow bar's own final stop, so the "memory" color and the marquee's own lights read as one family
+-   A rainbow gradient light bar bookends every page — nav at top, footer at bottom — and nowhere else; its warm-to-cool sweep now runs red → orange → amber → sky → blue → indigo, closing on the same indigo as the primary action color instead of a green/teal band
 -   Spicy Rice display type for titles and labels only — never body copy
 -   3D "mini-book" covers (spine, shelf shadow, radial highlight) as the primary content card
 -   A frosted-glass reading panel with Newsreader serif text and a classic drop cap
@@ -111,7 +111,7 @@ Four times a year the marquee changes its bulbs for the season — Christmas, Ha
 
 ## 2. Colors
 
-The marquee runs on three colors against a warm dark stage: Marquee Amber for the spotlight, Storybook Teal for memory/action, and Curtain Orange for emphasis — with the rainbow light bar as the system's one festive flourish.
+The marquee runs on three colors against a warm dark stage: Marquee Amber for the spotlight, Storybook Indigo for memory/action, and Curtain Orange for emphasis — with the rainbow light bar as the system's one festive flourish.
 
 ### Primary
 
@@ -119,7 +119,7 @@ The marquee runs on three colors against a warm dark stage: Marquee Amber for th
 
 ### Secondary
 
--   **Storybook Teal** (#0f766e / teal-700): book titles in light surfaces, links inside reading content, the default button surface (`bg-theme-primary`). The "memory" color. A bold unexpected anchor that reads warm against the dark stage.
+-   **Storybook Indigo** (#4f46e5 / indigo-600): book titles in light surfaces, links inside reading content, the default button surface (`bg-theme-primary`). The "memory" color. A cool twilight anchor pulled directly from the rainbow bar's own closing stop, replacing the prior teal (which read as green rather than the intended "ocean" tone).
 
 ### Tertiary
 
@@ -136,7 +136,7 @@ The marquee runs on three colors against a warm dark stage: Marquee Amber for th
 
 ### Named Rules
 
-**The Rainbow Light-Bar Rule.** The `bg-rainbow` gradient (red → orange → yellow → green → blue → purple, re-themed per season) is reserved for exactly two places: the top nav and the footer. It is the marquee's string lights — used as a section background, button, or card anywhere else, it flattens into decoration and breaks the "two light bars frame the stage" read.
+**The Rainbow Light-Bar Rule.** The `bg-rainbow` gradient (red → orange → amber → sky → blue → indigo by default, re-themed per season) is reserved for exactly two places: the top nav and the footer. It is the marquee's string lights — used as a section background, button, or card anywhere else, it flattens into decoration and breaks the "two light bars frame the stage" read.
 
 **The Halloween Reservation Rule.** Purple/violet (`halloween-purple` #6B2D8F, `halloween-witch` #4B0082, and Tailwind's `purple-*` scale) is reserved for the Halloween `data-theme` only. Using purple as a default-theme accent — gradients, headings, hover states — both steals Halloween's seasonal signal and is the single most recognizable AI-palette tell.
 
@@ -180,7 +180,7 @@ Layered, not flat — depth and shadow are part of the brand voice everywhere, f
 ### Buttons
 
 -   **Shape:** `rounded-md` (6px corners) on every button
--   **Primary** (theme `Button`, default theme): Storybook Teal background, Marquee Amber uppercase `tracking-widest` text, 12px/24px padding
+-   **Primary** (theme `Button`, default theme): Storybook Indigo background, Marquee Amber uppercase `tracking-widest` text, 12px/24px padding
 -   **Hover/Press:** `.btn-bulge` — on hover, scale to 105% and lift 2px; on press, scale to 95% and settle; on touch-tap, scale to 110% and brighten. Ease-out only, no bounce/elastic. `prefers-reduced-motion` strips all transform/scale to a flat color change.
 -   **Active state:** background shifts to Marquee Bulb (amber-500) with Backstage Charcoal text — the "currently selected" treatment
 -   **Form (admin/profile — `PrimaryButton` / `SecondaryButton`):** Backstage Charcoal / Paper White (inverted per dark mode), uppercase `tracking-widest text-xs`, 8px/16px padding. Quieter, Breeze-derived, scoped to profile and account-settings forms.
@@ -194,14 +194,14 @@ Layered, not flat — depth and shadow are part of the brand voice everywhere, f
 ### Inputs / Fields
 
 -   **Style:** Paper White / Backstage Charcoal background, gray-300 / gray-500 border, `rounded-md`
--   **Focus:** border + ring color shift — currently `indigo-500`, a Breeze legacy carryover. New components should prefer Marquee Yellow or Storybook Blue focus rings to stay on-brand.
+-   **Focus:** border + ring color shift, `indigo-500` — a Breeze legacy carryover that now matches Storybook Indigo, the primary action color, so it no longer needs replacing.
 
 ### Navigation
 
 -   **Chrome bar:** sticky `bg-rainbow` bar, 64px tall, three-column layout — logo (left), dark-mode toggle (center), notifications + profile (right). Profile trigger is a `rounded-xl` avatar button opening a Paper White / Backstage Charcoal dropdown.
 -   **Destinations bar (desktop, `sm:` and up):** a second sticky row directly below the chrome bar, on a glass surface (`bg-black/10` / `dark:bg-black/20`, `backdrop-blur-sm`) — never rainbow (see Rainbow Light-Bar Rule). Every top-level destination (Books, ALL, Collages, Games, Movies, Sounds, Chat) renders as an icon+label pill and wraps to a second line if the window is too narrow to fit them all; there is no "More" overflow — the row always shows every destination.
 -   **Bottom tab bar (mobile, below `sm`):** the same destinations render as a fixed, thumb-reach tab bar (icon over label) pinned to the viewport bottom, on a frosted `bg-gray-900/80 backdrop-blur-md` surface, scrolling horizontally with snap if it overflows. Page content gets `pb-16` (cleared at `sm:`) so the bar never covers the end of a page; `ScrollTop` shifts to `bottom-20` below `sm:` so it clears the bar too.
--   **Selected state:** pills and tabs share one "currently here" treatment with the Search Books/ALL target toggle — Storybook Teal background with white text by default, inverting to white-on-charcoal in dark mode, and swapping to the seasonal accent (Christmas red, Halloween orange) per `data-theme`. This is the app's one active-nav convention; don't introduce a second one (e.g. underlines or a bare color change) for future nav items.
+-   **Selected state:** pills and tabs share one "currently here" treatment with the Search Books/ALL target toggle — Storybook Indigo background with white text by default, inverting to white-on-charcoal in dark mode, and swapping to the seasonal accent (Christmas red, Halloween orange) per `data-theme`. This is the app's one active-nav convention; don't introduce a second one (e.g. underlines or a bare color change) for future nav items.
 -   A bottom-anchored music flyout persists across route changes, positioned clear of the bottom tab bar.
 
 ### Seasonal Reskins (signature)

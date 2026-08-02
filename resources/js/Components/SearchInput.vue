@@ -65,7 +65,7 @@
                             isListening,
                         'bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white christmas:bg-christmas-holly christmas:hover:bg-christmas-green halloween:bg-halloween-witch halloween:hover:bg-halloween-purple':
                             hasGoodResult && !isListening,
-                        'bg-teal-700 hover:bg-teal-600 dark:bg-gray-800 dark:hover:bg-gray-700 text-white christmas:bg-christmas-green christmas:hover:bg-christmas-holly halloween:bg-halloween-midnight halloween:hover:bg-halloween-witch':
+                        'bg-indigo-700 hover:bg-indigo-600 dark:bg-gray-800 dark:hover:bg-gray-700 text-white christmas:bg-christmas-green christmas:hover:bg-christmas-holly halloween:bg-halloween-midnight halloween:hover:bg-halloween-witch':
                             !isListening && !hasGoodResult,
                     }"
                     :disabled="isProcessing"
@@ -89,13 +89,13 @@
                         id="search"
                         ref="searchInputRef"
                         :value="displayValue"
-                        class="h-8 w-full cursor-pointer rounded-full border bg-gray-100 dark:bg-gray-800 px-4 pb-0 pt-px text-gray-700 dark:text-gray-300 outline-none transition focus:border-teal-400 christmas:focus:border-christmas-gold halloween:focus:border-halloween-orange"
+                        class="h-8 w-full cursor-pointer rounded-full border bg-gray-100 dark:bg-gray-800 px-4 pb-0 pt-px text-gray-700 dark:text-gray-300 outline-none transition focus:border-indigo-400 christmas:focus:border-christmas-gold halloween:focus:border-halloween-orange"
                         :class="{
                             'border-red-700 border-2 dark:border-red-700 christmas:border-christmas-berry halloween:border-halloween-candy':
                                 isListening,
                             'border-green-600 border-2 dark:border-green-600 christmas:border-christmas-holly halloween:border-halloween-witch':
                                 hasGoodResult && !isListening,
-                            'border-teal-700 dark:border-gray-800 christmas:border-christmas-holly halloween:border-halloween-purple':
+                            'border-indigo-700 dark:border-gray-800 christmas:border-christmas-holly halloween:border-halloween-purple':
                                 !isListening && !hasGoodResult,
                             'pr-5': isSupported,
                         }"
@@ -137,7 +137,7 @@
 
                     <div
                         v-if="isListening"
-                        class="absolute z-50 w-full mt-1 bg-gradient-to-r from-orange-700 via-amber-500 to-teal-700 dark:from-red-700 dark:via-amber-600 dark:to-gray-800 christmas:from-christmas-berry christmas:via-christmas-mint christmas:to-christmas-green halloween:from-halloween-candy halloween:via-halloween-spooky halloween:to-halloween-midnight rounded-lg shadow-lg p-3 text-white"
+                        class="absolute z-50 w-full mt-1 bg-gradient-to-r from-orange-700 via-amber-500 to-indigo-700 dark:from-red-700 dark:via-amber-600 dark:to-gray-800 christmas:from-christmas-berry christmas:via-christmas-mint christmas:to-christmas-green halloween:from-halloween-candy halloween:via-halloween-spooky halloween:to-halloween-midnight rounded-lg shadow-lg p-3 text-white"
                     >
                         <div class="flex items-center gap-2 mb-2">
                             <div class="flex gap-1">
@@ -195,7 +195,7 @@
                             :key="`${suggestion.type}-${suggestion.id}`"
                             class="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                             :class="{
-                                'bg-teal-100 dark:bg-teal-700':
+                                'bg-indigo-100 dark:bg-indigo-700':
                                     index === selectedIndex,
                             }"
                             @mousedown.prevent="selectSuggestion(suggestion)"

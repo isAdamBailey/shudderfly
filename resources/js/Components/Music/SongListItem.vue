@@ -51,7 +51,7 @@
         <!-- Play Button -->
         <div class="flex-shrink-0 ml-4">
             <div
-                class="w-10 h-10 bg-teal-600 hover:bg-teal-700 dark:bg-teal-700 dark:hover:bg-teal-600 text-white rounded-full flex items-center justify-center transition-colors duration-200"
+                class="w-10 h-10 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white rounded-full flex items-center justify-center transition-colors duration-200"
                 :class="{
                     'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600':
                         isCurrentSong && isPlaying,

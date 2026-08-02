@@ -391,7 +391,7 @@ const speakUserSummary = () => {
                 <!-- Hero: welcome summary + quick actions (all owners) -->
                 <div
                     v-if="isOwner"
-                    class="bg-teal-700 dark:bg-teal-800 overflow-hidden shadow-sm rounded-lg mb-6 p-6"
+                    class="bg-indigo-700 dark:bg-indigo-800 overflow-hidden shadow-sm rounded-lg mb-6 p-6"
                 >
                     <div class="flex items-start justify-between gap-3 min-w-0">
                         <div class="flex items-start gap-4 min-w-0">
@@ -412,12 +412,12 @@ const speakUserSummary = () => {
                                     }}
                                 </h3>
                                 <p
-                                    class="text-teal-100 text-xs mt-1.5 truncate"
+                                    class="text-indigo-100 text-xs mt-1.5 truncate"
                                 >
                                     {{ profileUser.email }}
                                 </p>
                                 <div
-                                    class="flex items-center gap-1.5 text-teal-200 text-xs mt-1"
+                                    class="flex items-center gap-1.5 text-indigo-200 text-xs mt-1"
                                 >
                                     <i
                                         class="ri-calendar-line flex-shrink-0"
@@ -437,10 +437,10 @@ const speakUserSummary = () => {
 
                     <!-- AI weekly summary -->
                     <div
-                        class="mt-4 pt-4 border-t border-teal-500/40 dark:border-teal-600/40"
+                        class="mt-4 pt-4 border-t border-indigo-500/40 dark:border-indigo-600/40"
                     >
                         <p
-                            class="text-teal-50 text-sm whitespace-pre-wrap max-w-prose"
+                            class="text-indigo-50 text-sm whitespace-pre-wrap max-w-prose"
                         >
                             {{
                                 weeklyOverview?.text ||
@@ -452,7 +452,7 @@ const speakUserSummary = () => {
                                 weeklyOverview?.text &&
                                 weeklyOverviewGeneratedAt
                             "
-                            class="text-teal-200 text-xs mt-1"
+                            class="text-indigo-200 text-xs mt-1"
                         >
                             {{
                                 t("dashboard.hero_summary_updated", {
@@ -502,7 +502,7 @@ const speakUserSummary = () => {
                             type="button"
                             :disabled="regenerating"
                             title="Generate a new AI story for this profile"
-                            class="inline-flex items-center gap-1.5 self-start text-xs font-medium text-teal-200 transition-colors hover:text-teal-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            class="btn-bulge inline-flex items-center gap-1.5 self-start text-xs font-medium text-indigo-200 transition-colors hover:text-indigo-50 disabled:cursor-not-allowed disabled:opacity-50"
                             @click="regenerateWeeklyOverview"
                         >
                             <i
@@ -615,7 +615,7 @@ const speakUserSummary = () => {
                                             type="button"
                                             :disabled="regenerating"
                                             title="Generate a new AI story for this profile"
-                                            class="btn-bulge inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-teal-700 text-amber-400 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            class="btn-bulge inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-theme-primary text-amber-400 hover:bg-theme-button disabled:opacity-50 disabled:cursor-not-allowed"
                                             @click="regenerateWeeklyOverview"
                                         >
                                             <i
@@ -657,7 +657,7 @@ const speakUserSummary = () => {
                                         class="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2"
                                     >
                                         <i
-                                            class="ri-fire-line text-teal-700 dark:text-teal-400"
+                                            class="ri-fire-line text-indigo-700 dark:text-indigo-400"
                                         ></i>
                                         {{
                                             t("profile.user_top_books", {
@@ -683,7 +683,7 @@ const speakUserSummary = () => {
                                     v-for="book in stats.topBooks"
                                     :key="book.id"
                                     icon="ri-book-line"
-                                    icon-color="text-teal-700 dark:text-teal-400"
+                                    icon-color="text-indigo-700 dark:text-indigo-400"
                                     :label="book.title"
                                     :href="
                                         route('books.show', {
@@ -761,14 +761,14 @@ const speakUserSummary = () => {
                                 class="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2 mb-4"
                             >
                                 <i
-                                    class="ri-bar-chart-line text-teal-700 dark:text-teal-400"
+                                    class="ri-bar-chart-line text-indigo-700 dark:text-indigo-400"
                                 ></i>
                                 Activity
                             </h3>
                             <div class="space-y-3">
                                 <StatCard
                                     icon="ri-book-line"
-                                    icon-color="text-teal-700 dark:text-teal-400"
+                                    icon-color="text-indigo-700 dark:text-indigo-400"
                                     label="Total Books"
                                     :value="stats.totalBooksCount"
                                 >
@@ -841,7 +841,7 @@ const speakUserSummary = () => {
                                     class="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2"
                                 >
                                     <i
-                                        class="ri-message-3-line text-teal-700 dark:text-teal-400"
+                                        class="ri-message-3-line text-indigo-700 dark:text-indigo-400"
                                     ></i>
                                     {{
                                         t("profile.user_latest_messages", {
@@ -885,7 +885,7 @@ const speakUserSummary = () => {
                                     class="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2"
                                 >
                                     <i
-                                        class="ri-reply-line text-teal-700 dark:text-teal-400"
+                                        class="ri-reply-line text-indigo-700 dark:text-indigo-400"
                                     ></i>
                                     {{
                                         t("profile.user_latest_replies", {
@@ -929,7 +929,7 @@ const speakUserSummary = () => {
                                         </span>
                                         <Link
                                             :href="replyMessageLink(reply)"
-                                            class="inline-flex items-center gap-1 text-sm font-medium text-teal-700 dark:text-teal-400 hover:text-teal-900 dark:hover:text-teal-300 py-1 px-2 -mr-2 rounded transition-colors"
+                                            class="inline-flex items-center gap-1 text-sm font-medium text-indigo-700 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 py-1 px-2 -mr-2 rounded transition-colors"
                                         >
                                             <i
                                                 class="ri-external-link-line text-xs"
@@ -973,7 +973,7 @@ const speakUserSummary = () => {
                                         class="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2"
                                     >
                                         <i
-                                            class="ri-reply-line text-teal-700 dark:text-teal-400"
+                                            class="ri-reply-line text-indigo-700 dark:text-indigo-400"
                                         ></i>
                                         {{ t("profile.replies_to_you") }}
                                     </h3>
@@ -1018,7 +1018,7 @@ const speakUserSummary = () => {
                                                 </button>
                                                 <Link
                                                     :href="item.href"
-                                                    class="inline-flex items-center gap-1 text-sm font-medium text-teal-700 dark:text-teal-400 hover:text-teal-900 dark:hover:text-teal-300 py-1 px-2 -mr-2 rounded transition-colors"
+                                                    class="inline-flex items-center gap-1 text-sm font-medium text-indigo-700 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 py-1 px-2 -mr-2 rounded transition-colors"
                                                     @click="
                                                         markNotificationAsRead(
                                                             item.id
@@ -1058,7 +1058,7 @@ const speakUserSummary = () => {
                                         class="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2"
                                     >
                                         <i
-                                            class="ri-notification-3-line text-teal-700 dark:text-teal-400"
+                                            class="ri-notification-3-line text-indigo-700 dark:text-indigo-400"
                                         ></i>
                                         {{ t("profile.messages_to_you") }}
                                     </h3>
@@ -1103,7 +1103,7 @@ const speakUserSummary = () => {
                                                 </button>
                                                 <Link
                                                     :href="item.href"
-                                                    class="inline-flex items-center gap-1 text-sm font-medium text-teal-700 dark:text-teal-400 hover:text-teal-900 dark:hover:text-teal-300 py-1 px-2 -mr-2 rounded transition-colors"
+                                                    class="inline-flex items-center gap-1 text-sm font-medium text-indigo-700 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 py-1 px-2 -mr-2 rounded transition-colors"
                                                     @click="
                                                         markNotificationAsRead(
                                                             item.id
@@ -1144,7 +1144,7 @@ const speakUserSummary = () => {
                                         class="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2"
                                     >
                                         <i
-                                            class="ri-book-3-line text-teal-700 dark:text-teal-400"
+                                            class="ri-book-3-line text-indigo-700 dark:text-indigo-400"
                                         ></i>
                                         {{ t("profile.new_books_this_week") }}
                                     </h3>
@@ -1162,7 +1162,7 @@ const speakUserSummary = () => {
                                         v-for="book in newBooksThisWeek"
                                         :key="book.id"
                                         icon="ri-book-line"
-                                        icon-color="text-teal-700 dark:text-teal-400"
+                                        icon-color="text-indigo-700 dark:text-indigo-400"
                                         :label="book.title"
                                         :subtitle="formatDate(book.created_at)"
                                         :href="

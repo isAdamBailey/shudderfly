@@ -127,7 +127,7 @@
                                     ? 'text-amber-400'
                                     : !hasPages(collage)
                                     ? 'text-gray-600 cursor-not-allowed'
-                                    : 'text-teal-400 hover:text-teal-300',
+                                    : 'text-indigo-400 hover:text-indigo-300',
                                 printForm.processing ||
                                 !hasPages(collage) ||
                                 isGenerating(collage)

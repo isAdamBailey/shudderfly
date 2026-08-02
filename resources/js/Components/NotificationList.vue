@@ -1,10 +1,10 @@
 <template>
     <div class="max-h-96 overflow-y-auto bg-white dark:bg-gray-800">
         <div
-            class="px-4 py-3 border-b border-teal-100 dark:border-gray-700 bg-gradient-to-b from-teal-50/70 to-transparent dark:from-gray-900/40"
+            class="px-4 py-3 border-b border-indigo-100 dark:border-gray-700 bg-gradient-to-b from-indigo-50/70 to-transparent dark:from-gray-900/40"
         >
             <h2
-                class="font-heading text-xl tracking-wide text-teal-700 dark:text-amber-400 flex items-center gap-2"
+                class="font-heading text-xl tracking-wide text-indigo-700 dark:text-amber-400 flex items-center gap-2"
             >
                 Notifications
                 <span
@@ -16,7 +16,7 @@
             </h2>
         </div>
         <div
-            class="px-4 py-2.5 flex items-center justify-between border-b border-teal-100 dark:border-gray-700 bg-teal-50/50 dark:bg-gray-900/30"
+            class="px-4 py-2.5 flex items-center justify-between border-b border-indigo-100 dark:border-gray-700 bg-indigo-50/50 dark:bg-gray-900/30"
         >
             <SpeakButton
                 v-if="notifications.length > 0"
@@ -28,7 +28,7 @@
             <button
                 v-if="unreadCount > 0"
                 type="button"
-                class="btn-bulge px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-amber-100 bg-teal-700 hover:bg-orange-700 active:bg-amber-400 active:text-gray-800 rounded-md shadow-sm transition-colors"
+                class="btn-bulge px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-theme-button bg-theme-primary hover:bg-theme-button active:bg-theme-button-active active:text-theme-button-active rounded-md shadow-sm transition-colors"
                 @click.stop="markAllAsRead"
             >
                 Clear all
@@ -57,7 +57,7 @@
                         'p-2.5 rounded-lg border cursor-pointer transition-colors',
                         notification.read_at
                             ? 'bg-white dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/60'
-                            : 'bg-amber-50 dark:bg-teal-900/30 border-amber-200 dark:border-teal-700/60 shadow-sm hover:bg-amber-100 dark:hover:bg-teal-900/50',
+                            : 'bg-amber-50 dark:bg-indigo-900/30 border-amber-200 dark:border-indigo-700/60 shadow-sm hover:bg-amber-100 dark:hover:bg-indigo-900/50',
                     ]"
                     @click="handleNotificationClick(notification)"
                 >
@@ -167,7 +167,7 @@
                                     formatDate(notification.created_at)
                                 }}</span>
                                 <span
-                                    class="font-semibold text-teal-700 dark:text-amber-400"
+                                    class="font-semibold text-indigo-700 dark:text-amber-400"
                                     >View message →</span
                                 >
                             </div>
@@ -179,7 +179,7 @@
                                 v-if="!notification.read_at"
                                 type="button"
                                 title="Clear"
-                                class="px-2 py-1 text-xs font-bold uppercase tracking-wide text-teal-700 dark:text-amber-400 hover:bg-teal-50 dark:hover:bg-gray-700 rounded-md transition-colors"
+                                class="px-2 py-1 text-xs font-bold uppercase tracking-wide text-indigo-700 dark:text-amber-400 hover:bg-indigo-50 dark:hover:bg-gray-700 rounded-md transition-colors"
                                 @click.stop="markAsRead(notification.id)"
                             >
                                 Clear
