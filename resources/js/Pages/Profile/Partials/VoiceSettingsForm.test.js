@@ -1,3 +1,4 @@
+import LanguageSelect from "@/Components/LanguageSelect.vue";
 import VoiceSettingsForm from "@/Pages/Profile/Partials/VoiceSettingsForm.vue";
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -56,24 +57,27 @@ describe("VoiceSettingsForm app language selector", () => {
         mockUserLocale = "";
     });
 
-    const findAppLanguageSelect = (wrapper) => {
-        const labels = wrapper.findAll("label");
-        const label = labels.find((l) => l.text() === "locale.app_language");
-        return label.element.nextElementSibling;
+    const findLanguageSelect = (wrapper) =>
+        wrapper.findComponent(LanguageSelect);
+
+    const openAndChoose = async (wrapper, label) => {
+        const select = findLanguageSelect(wrapper);
+        await select.find("button").trigger("click");
+
+        const option = select
+            .findAll('[role="option"]')
+            .find((o) => o.text().includes(label));
+        await option.trigger("click");
     };
 
-    it("renders Automatic, English, and Español options", () => {
+    it("offers Automatic, English, Español, and Français", () => {
         const wrapper = mount(VoiceSettingsForm);
 
-        const select = findAppLanguageSelect(wrapper);
-        const options = Array.from(select.querySelectorAll("option")).map(
-            (o) => ({ value: o.value, text: o.textContent })
-        );
-
-        expect(options).toEqual([
-            { value: "", text: "locale.automatic" },
-            { value: "en", text: "locale.english" },
-            { value: "es", text: "locale.spanish" },
+        expect(findLanguageSelect(wrapper).props("options")).toEqual([
+            { value: "", label: "locale.automatic", flag: "🌐" },
+            { value: "en", label: "locale.english", flag: "🇺🇸" },
+            { value: "es", label: "locale.spanish", flag: "🇪🇸" },
+            { value: "fr", label: "locale.french", flag: "🇫🇷" },
         ]);
     });
 
@@ -81,25 +85,20 @@ describe("VoiceSettingsForm app language selector", () => {
         mockUserLocale = "es";
         const wrapper = mount(VoiceSettingsForm);
 
-        const select = findAppLanguageSelect(wrapper);
-        expect(select.value).toBe("es");
+        expect(findLanguageSelect(wrapper).props("modelValue")).toBe("es");
     });
 
     it("defaults to Automatic when the user has no stored locale", () => {
         mockUserLocale = null;
         const wrapper = mount(VoiceSettingsForm);
 
-        const select = findAppLanguageSelect(wrapper);
-        expect(select.value).toBe("");
+        expect(findLanguageSelect(wrapper).props("modelValue")).toBe("");
     });
 
     it("sends the selected locale to the backend", async () => {
         const wrapper = mount(VoiceSettingsForm);
 
-        const select = findAppLanguageSelect(wrapper);
-        select.value = "es";
-        select.dispatchEvent(new Event("change"));
-        await wrapper.vm.$nextTick();
+        await openAndChoose(wrapper, "locale.spanish");
 
         expect(mockPatch).toHaveBeenCalledWith(
             "/profile/locale/preference",
@@ -108,14 +107,23 @@ describe("VoiceSettingsForm app language selector", () => {
         );
     });
 
+    it("sends French when Français is selected", async () => {
+        const wrapper = mount(VoiceSettingsForm);
+
+        await openAndChoose(wrapper, "locale.french");
+
+        expect(mockPatch).toHaveBeenCalledWith(
+            "/profile/locale/preference",
+            { locale: "fr" },
+            expect.objectContaining({ preserveScroll: true })
+        );
+    });
+
     it("sends null when Automatic is selected", async () => {
         mockUserLocale = "en";
         const wrapper = mount(VoiceSettingsForm);
 
-        const select = findAppLanguageSelect(wrapper);
-        select.value = "";
-        select.dispatchEvent(new Event("change"));
-        await wrapper.vm.$nextTick();
+        await openAndChoose(wrapper, "locale.automatic");
 
         expect(mockPatch).toHaveBeenCalledWith(
             "/profile/locale/preference",

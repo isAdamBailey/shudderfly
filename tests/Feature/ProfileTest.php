@@ -289,6 +289,23 @@ class ProfileTest extends TestCase
         $this->assertNull($user->refresh()->locale);
     }
 
+    public function test_locale_preference_can_be_set_to_french()
+    {
+        $user = User::factory()->create([
+            'locale' => null,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->patch('/profile/locale/preference', [
+                'locale' => 'fr',
+            ]);
+
+        $response->assertSessionHasNoErrors();
+
+        $this->assertSame('fr', $user->refresh()->locale);
+    }
+
     public function test_locale_preference_rejects_invalid_value()
     {
         $user = User::factory()->create();
@@ -297,7 +314,7 @@ class ProfileTest extends TestCase
             ->actingAs($user)
             ->from(route('profile.edit'))
             ->patch('/profile/locale/preference', [
-                'locale' => 'fr',
+                'locale' => 'de',
             ]);
 
         $response

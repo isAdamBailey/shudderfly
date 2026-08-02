@@ -13,7 +13,7 @@ class SetLocale
      *
      * @var array<int, string>
      */
-    public const SUPPORTED_LOCALES = ['en', 'es'];
+    public const SUPPORTED_LOCALES = ['en', 'es', 'fr'];
 
     /**
      * Handle an incoming request.

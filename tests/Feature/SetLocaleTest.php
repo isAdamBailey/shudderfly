@@ -43,7 +43,21 @@ class SetLocaleTest extends TestCase
         $this->assertSame('Buscar', $this->searchLabel($response));
     }
 
-    public function test_locale_falls_back_to_english_for_unsupported_accept_language()
+    public function test_stored_french_locale_is_applied()
+    {
+        $user = User::factory()->create([
+            'locale' => 'fr',
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->withHeaders(['Accept-Language' => 'en-US,en;q=0.9'])
+            ->get('/profile');
+
+        $this->assertSame('Rechercher', $this->searchLabel($response));
+    }
+
+    public function test_french_locale_is_auto_detected_from_accept_language()
     {
         $user = User::factory()->create([
             'locale' => null,
@@ -52,6 +66,20 @@ class SetLocaleTest extends TestCase
         $response = $this
             ->actingAs($user)
             ->withHeaders(['Accept-Language' => 'fr-FR,fr;q=0.9'])
+            ->get('/profile');
+
+        $this->assertSame('Rechercher', $this->searchLabel($response));
+    }
+
+    public function test_locale_falls_back_to_english_for_unsupported_accept_language()
+    {
+        $user = User::factory()->create([
+            'locale' => null,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->withHeaders(['Accept-Language' => 'de-DE,de;q=0.9'])
             ->get('/profile');
 
         $this->assertSame('Search', $this->searchLabel($response));

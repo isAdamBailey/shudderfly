@@ -3,9 +3,24 @@ import { usePage } from "@inertiajs/vue3";
 export const APP_LOCALE_STORAGE_KEY = "appLocale";
 export const ENGLISH_SPEECH_LANGS = ["en-US", "en-GB", "en-AU", "en-CA", "en"];
 export const SPANISH_SPEECH_LANGS = ["es-ES", "es-MX", "es-US", "es"];
+export const FRENCH_SPEECH_LANGS = ["fr-FR", "fr-CA", "fr-CH", "fr-BE", "fr"];
+
+export const DEFAULT_APP_LOCALE = "en";
+
+// Every app locale maps to the speech language it defaults to and the ordered
+// list of BCP 47 codes we hunt through when picking a matching browser voice.
+export const APP_LOCALES = {
+    en: { speechLang: "en-US", speechLangs: ENGLISH_SPEECH_LANGS },
+    es: { speechLang: "es-ES", speechLangs: SPANISH_SPEECH_LANGS },
+    fr: { speechLang: "fr-FR", speechLangs: FRENCH_SPEECH_LANGS },
+};
+
+export const SUPPORTED_APP_LOCALES = Object.keys(APP_LOCALES);
 
 export function normalizeAppLocale(locale) {
-    return locale === "es" ? "es" : "en";
+    return Object.prototype.hasOwnProperty.call(APP_LOCALES, locale)
+        ? locale
+        : DEFAULT_APP_LOCALE;
 }
 
 export function persistAppLocale(locale) {
@@ -35,13 +50,11 @@ export function syncAppLocaleFromPage(page) {
 }
 
 export function resolveSpeechLanguageForAppLocale(appLocale) {
-    return normalizeAppLocale(appLocale) === "es" ? "es-ES" : "en-US";
+    return APP_LOCALES[normalizeAppLocale(appLocale)].speechLang;
 }
 
 export function preferredSpeechLangCodes(appLocale) {
-    return normalizeAppLocale(appLocale) === "es"
-        ? SPANISH_SPEECH_LANGS
-        : ENGLISH_SPEECH_LANGS;
+    return APP_LOCALES[normalizeAppLocale(appLocale)].speechLangs;
 }
 
 export function voiceMatchesAppLocale(voice, appLocale) {
@@ -49,8 +62,7 @@ export function voiceMatchesAppLocale(voice, appLocale) {
         return false;
     }
 
-    const prefix = normalizeAppLocale(appLocale) === "es" ? "es" : "en";
-    return voice.lang.toLowerCase().startsWith(prefix);
+    return voice.lang.toLowerCase().startsWith(normalizeAppLocale(appLocale));
 }
 
 function findVoiceByLangCodes(voices, langCodes) {
@@ -92,9 +104,10 @@ export function resolveSpeechVoice(voices, appLocale) {
         return preferredMatch;
     }
 
-    const prefix = normalizedLocale === "es" ? "es" : "en";
     return (
-        voices.find((voice) => voice.lang.toLowerCase().startsWith(prefix)) ||
+        voices.find((voice) =>
+            voice.lang.toLowerCase().startsWith(normalizedLocale)
+        ) ||
         storedVoice ||
         voices[0]
     );

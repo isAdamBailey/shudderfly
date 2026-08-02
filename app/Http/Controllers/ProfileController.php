@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Middleware\SetLocale;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Mail\ContactAdmins;
 use App\Models\User;
@@ -78,7 +79,7 @@ class ProfileController extends Controller
     public function updateLocalePreference(Request $request)
     {
         $validated = $request->validate([
-            'locale' => ['nullable', Rule::in(['en', 'es'])],
+            'locale' => ['nullable', Rule::in(SetLocale::SUPPORTED_LOCALES)],
         ]);
 
         $request->user()->update($validated);

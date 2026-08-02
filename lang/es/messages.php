@@ -517,6 +517,7 @@ return [
     'locale.automatic' => 'Automático',
     'locale.english' => 'English',
     'locale.spanish' => 'Español',
+    'locale.french' => 'Français',
     'locale.updated' => '¡Idioma actualizado!',
 
     // Games - shared

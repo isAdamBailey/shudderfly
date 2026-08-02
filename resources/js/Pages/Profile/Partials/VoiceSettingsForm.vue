@@ -1,5 +1,6 @@
 <script setup>
 import Button from "@/Components/Button.vue";
+import LanguageSelect from "@/Components/LanguageSelect.vue";
 import { usePermissions } from "@/composables/permissions";
 import {
     getAppLocaleFromPage,
@@ -80,6 +81,13 @@ const selectedLanguage = ref(
 
 const appLocale = ref(usePage().props.auth.user?.locale ?? "");
 const appLocaleSaving = ref(false);
+
+const appLocaleOptions = computed(() => [
+    { value: "", label: t("locale.automatic"), flag: "🌐" },
+    { value: "en", label: t("locale.english"), flag: "🇺🇸" },
+    { value: "es", label: t("locale.spanish"), flag: "🇪🇸" },
+    { value: "fr", label: t("locale.french"), flag: "🇫🇷" },
+]);
 
 function handleAppLocaleChange(value) {
     appLocaleSaving.value = true;
@@ -397,20 +405,18 @@ function alertVoices() {
 
     <div class="mb-6">
         <label
+            id="app-language-label"
             class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
         >
             {{ t("locale.app_language") }}
         </label>
-        <select
+        <LanguageSelect
             v-model="appLocale"
+            :options="appLocaleOptions"
             :disabled="appLocaleSaving"
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-            @change="handleAppLocaleChange($event.target.value)"
-        >
-            <option value="">{{ t("locale.automatic") }}</option>
-            <option value="en">{{ t("locale.english") }}</option>
-            <option value="es">{{ t("locale.spanish") }}</option>
-        </select>
+            labelledby="app-language-label"
+            @change="handleAppLocaleChange"
+        />
     </div>
 
     <div class="mb-6">
