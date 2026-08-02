@@ -27,11 +27,8 @@ class Kernel extends ConsoleKernel
             ->timezone($weeklyTimezone)
             ->withoutOverlapping();
 
-        $schedule->command('users:generate-weekly-overviews')
-            ->weeklyOn(0, '4:00')
-            ->timezone($weeklyTimezone)
-            ->withoutOverlapping();
-
+        // Runs the site-statistics aggregation and the AI weekly overviews
+        // itself, in that order, before sending.
         $schedule->command('send:weekly-stats-mail')
             ->weeklyOn(0, '8:00')
             ->timezone($weeklyTimezone)

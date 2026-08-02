@@ -20,17 +20,21 @@ class WeeklyStatsMail extends Mailable
 
     public array $otherUserSummaryLinks;
 
+    public array $siteStats;
+
     /**
      * Create a new message instance.
      */
     public function __construct(
         User $user,
         string $recipientSummary,
-        array $otherUserSummaryLinks
+        array $otherUserSummaryLinks,
+        array $siteStats = []
     ) {
         $this->user = $user;
         $this->recipientSummary = $recipientSummary;
         $this->otherUserSummaryLinks = $otherUserSummaryLinks;
+        $this->siteStats = $siteStats;
     }
 
     /**
@@ -54,6 +58,7 @@ class WeeklyStatsMail extends Mailable
                 'user' => $this->user,
                 'recipientSummary' => $this->recipientSummary,
                 'otherUserSummaryLinks' => $this->otherUserSummaryLinks,
+                'siteStats' => $this->siteStats,
             ],
         );
     }

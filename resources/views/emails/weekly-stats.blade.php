@@ -7,6 +7,25 @@
 
 {{ $recipientSummary }}
 
+@if(! empty($siteStats))
+## Site stats
+
+<x-mail::table>
+| Stat | Total | This week |
+| :--- | ----: | --------: |
+@foreach($siteStats['totals'] as $total)
+| {{ $total['label'] }} | {{ number_format($total['value']) }} | {{ is_null($total['change']) ? '—' : ($total['change'] > 0 ? '+' : '') . number_format($total['change']) }} |
+@endforeach
+</x-mail::table>
+
+@if(count($siteStats['highlights']) > 0)
+### Highlights
+@foreach($siteStats['highlights'] as $highlight)
+- **{{ $highlight['label'] }}:** {{ $highlight['value'] }}
+@endforeach
+@endif
+@endif
+
 @if(count($otherUserSummaryLinks) > 0)
 ## Other user summaries
 @foreach($otherUserSummaryLinks as $summaryLink)
