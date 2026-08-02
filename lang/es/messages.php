@@ -320,6 +320,7 @@ return [
     'page.speak_share_action_aria' => 'Escuchar qué hace esta acción de compartir',
     'dashboard.unlock_all_blocked_pages' => 'Desbloquear todo',
     'dashboard.unlock_all_blocked_pages_aria' => 'Desbloquear todas las páginas y sonidos bloqueados',
+    'dashboard.confirm_unblock_all_pages' => '¿Seguro que quieres desbloquear todas las páginas y sonidos bloqueados?',
     'dashboard.unblock' => 'Desbloquear',
     'dashboard.blocked_pages_count' => ':count elementos bloqueados',
     'dashboard.new_book' => 'Nuevo libro',

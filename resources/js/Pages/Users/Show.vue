@@ -2,12 +2,14 @@
 /* global route */
 import Avatar from "@/Components/Avatar.vue";
 import Button from "@/Components/Button.vue";
+import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import SpeakButton from "@/Components/SpeakButton.vue";
 import MessageTimeline from "@/Components/Messages/MessageTimeline.vue";
 import StatCard from "@/Components/StatCard.vue";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import NewBookForm from "@/Pages/Books/NewBookForm.vue";
 import OwnerPanel from "@/Pages/Users/Partials/OwnerPanel.vue";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useFlashMessage } from "@/composables/useFlashMessage";
 import { useNotificationSync } from "@/composables/useNotificationSync";
 import { usePermissions } from "@/composables/permissions";
@@ -28,12 +30,23 @@ const { canAdmin, canEditPages } = usePermissions();
 const { spawnEmojiRise } = useEmojiRise();
 const { isRead, markAsRead: markNotificationAsRead } = useNotificationSync();
 const { setFlashMessage } = useFlashMessage();
+const {
+    show: confirmUnblockShow,
+    message: confirmUnblockMessage,
+    ask: askConfirmUnblock,
+    onConfirmed: onConfirmUnblockConfirmed,
+    onCancelled: onConfirmUnblockCancelled,
+} = useConfirmDialog();
 const regenerating = ref(false);
 const showNewBookForm = ref(false);
 const unlockingBlockedPages = ref(false);
 
 const unblockAllPages = async () => {
     if (unlockingBlockedPages.value) return;
+    const ok = await askConfirmUnblock(
+        t("dashboard.confirm_unblock_all_pages")
+    );
+    if (!ok) return;
     unlockingBlockedPages.value = true;
     try {
         const { data } = await axios.post(
@@ -512,6 +525,13 @@ const speakUserSummary = () => {
                             </template>
 
                             <!-- Unblock all blocked pages/sounds (edit-pages only) -->
+                            <ConfirmDialog
+                                v-model:show="confirmUnblockShow"
+                                :message="confirmUnblockMessage"
+                                confirm-variant="primary"
+                                @confirm="onConfirmUnblockConfirmed"
+                                @cancel="onConfirmUnblockCancelled"
+                            />
                             <button
                                 v-if="canEditPages"
                                 type="button"

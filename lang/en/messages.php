@@ -320,6 +320,7 @@ return [
     'page.speak_share_action_aria' => 'Hear what this share action does',
     'dashboard.unlock_all_blocked_pages' => 'Unblock all',
     'dashboard.unlock_all_blocked_pages_aria' => 'Unblock all blocked pages and sounds',
+    'dashboard.confirm_unblock_all_pages' => 'Are you sure you want to unblock all blocked pages and sounds?',
     'dashboard.unblock' => 'Unblock',
     'dashboard.blocked_pages_count' => ':count blocked items',
     'dashboard.new_book' => 'New Book',
