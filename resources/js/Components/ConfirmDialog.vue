@@ -3,7 +3,10 @@ import Button from "@/Components/Button.vue";
 import DangerButton from "@/Components/DangerButton.vue";
 import Modal from "@/Components/Modal.vue";
 import SecondaryButton from "@/Components/SecondaryButton.vue";
+import { useTranslations } from "@/composables/useTranslations";
 import { computed, getCurrentInstance, useSlots } from "vue";
+
+const { t } = useTranslations();
 
 const instance = getCurrentInstance();
 const dialogUid = instance?.uid ?? 0;
@@ -57,6 +60,14 @@ const hasFooterSlot = computed(() => !!slots.footer);
 const showTitleRegion = computed(() => props.title || hasTitleSlot.value);
 const showBodyRegion = computed(() => props.message || hasDefaultSlot.value);
 
+// Callers may omit the labels; never render an empty button.
+const resolvedConfirmLabel = computed(
+    () => props.confirmLabel || t("common.ok")
+);
+const resolvedCancelLabel = computed(
+    () => props.cancelLabel || t("common.cancel")
+);
+
 function onDismiss() {
     emit("update:show", false);
     emit("cancel");
@@ -106,17 +117,17 @@ function onConfirm() {
             </div>
             <div v-else class="mt-6 flex justify-end gap-3">
                 <SecondaryButton type="button" @click="onDismiss">
-                    <slot name="cancelButton">{{ cancelLabel }}</slot>
+                    <slot name="cancelButton">{{ resolvedCancelLabel }}</slot>
                 </SecondaryButton>
                 <DangerButton
                     v-if="confirmVariant === 'danger'"
                     type="button"
                     @click="onConfirm"
                 >
-                    <slot name="confirmButton">{{ confirmLabel }}</slot>
+                    <slot name="confirmButton">{{ resolvedConfirmLabel }}</slot>
                 </DangerButton>
                 <Button v-else type="button" @click="onConfirm">
-                    <slot name="confirmButton">{{ confirmLabel }}</slot>
+                    <slot name="confirmButton">{{ resolvedConfirmLabel }}</slot>
                 </Button>
             </div>
         </div>
