@@ -100,13 +100,16 @@ watch(
     max-height: 85dvh;
 }
 
-/* Mobile: pin the sheet to a fixed height so the input stays stuck to the
-   top, the send button stays stuck to the bottom, and only the category
-   toolbar + word pane in between scrolls. */
+/* Mobile: same shrink-to-fit behaviour, but the cap subtracts the modal
+   wrapper's vertical padding (py-8 => 2rem top + bottom) so the sheet — and
+   with it the sticky send button — always lands inside the visible viewport
+   instead of overflowing below the fold. With no category pane open the sheet
+   collapses to the input + toolbar + footer; opening a pane grows it to the
+   cap and the pane scrolls internally. */
 @media (max-width: 639px) {
     .message-builder-sheet {
-        height: 85vh;
-        height: 85dvh;
+        max-height: calc(100vh - 4rem);
+        max-height: calc(100dvh - 4rem);
     }
 }
 </style>
