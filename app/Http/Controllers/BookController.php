@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Services\PopularityService;
 use App\Services\UserTaggingService;
 use App\Services\VoiceSearchService;
+use App\Support\MonthBooks;
 use App\Support\ReadThrottle;
 use App\Support\ThemeBooks;
 use Illuminate\Contracts\Foundation\Application;
@@ -67,7 +68,7 @@ class BookController extends Controller
 
         $categories = Category::all()->map->only(['id', 'name'])->sortBy('name')->values()->toArray();
 
-        // Get theme label if a theme is active
+        // Get theme label if a theme is active, otherwise fall back to the current month
         $currentTheme = HandleInertiaRequests::getCurrentTheme();
         $themeLabel = null;
         if ($currentTheme) {
@@ -79,6 +80,7 @@ class BookController extends Controller
             'searchCategories' => $searchCategories ?? null,
             'search' => $search,
             'themeLabel' => $themeLabel,
+            'monthLabel' => MonthBooks::isActive() ? MonthBooks::getLabel() : null,
         ]);
     }
 
@@ -88,7 +90,6 @@ class BookController extends Controller
     public function category(Request $request): JsonResponse
     {
         $categoryName = $request->categoryName;
-        $category = Category::where('name', $categoryName)->first();
         $books = match ($categoryName) {
             'popular' => Book::query()
                 ->with('coverImage')
@@ -102,11 +103,12 @@ class BookController extends Controller
                 HandleInertiaRequests::getCurrentTheme() ?? '',
                 10
             ),
-            default => $category
-                ? $category->books()
-                    ->with('coverImage')
-                    ->paginate(10)
-                : Book::query()
+            'month' => MonthBooks::getBooksForMonthPaginated(10),
+            default => Category::where('name', $categoryName)->first()
+                ?->books()
+                ->with('coverImage')
+                ->paginate(10)
+                ?? Book::query()
                     ->with('coverImage')
                     ->paginate(10)
         };

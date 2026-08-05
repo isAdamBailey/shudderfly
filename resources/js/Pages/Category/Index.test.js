@@ -201,116 +201,37 @@ describe("Category Index", () => {
         expect(books.length).toBeGreaterThan(0);
     });
 
-    it("displays themed category title with Halloween theme", async () => {
-        usePage.mockReturnValue({
-            props: {
-                auth: { user: { permissions_list: [] } },
-                theme: "halloween",
-            },
-        });
-
+    it("displays the server-provided label for special categories", () => {
         const themedWrapper = mount(CategoryIndex, {
             props: {
                 categoryName: "themed",
                 books: mockBooks,
-            },
-            global: {
-                mocks: {
-                    $page: {
-                        props: {
-                            auth: { user: { permissions_list: [] } },
-                            theme: "halloween",
-                        },
-                    },
-                },
+                categoryLabel: "Halloween Books",
             },
         });
 
         expect(themedWrapper.text()).toContain("Halloween Books");
-    });
 
-    it("displays themed category title with Christmas theme", async () => {
-        usePage.mockReturnValue({
+        const monthWrapper = mount(CategoryIndex, {
             props: {
-                auth: { user: { permissions_list: [] } },
-                theme: "christmas",
+                categoryName: "month",
+                books: mockBooks,
+                categoryLabel: "August Books",
             },
         });
 
+        expect(monthWrapper.text()).toContain("August Books");
+    });
+
+    it("falls back to the capitalized category name without a label", () => {
         const themedWrapper = mount(CategoryIndex, {
             props: {
                 categoryName: "themed",
                 books: mockBooks,
             },
-            global: {
-                mocks: {
-                    $page: {
-                        props: {
-                            auth: { user: { permissions_list: [] } },
-                            theme: "christmas",
-                        },
-                    },
-                },
-            },
         });
 
-        expect(themedWrapper.text()).toContain("Christmas Books");
-    });
-
-    it("displays themed category title with fireworks theme", async () => {
-        usePage.mockReturnValue({
-            props: {
-                auth: { user: { permissions_list: [] } },
-                theme: "fireworks",
-            },
-        });
-
-        const themedWrapper = mount(CategoryIndex, {
-            props: {
-                categoryName: "themed",
-                books: mockBooks,
-            },
-            global: {
-                mocks: {
-                    $page: {
-                        props: {
-                            auth: { user: { permissions_list: [] } },
-                            theme: "fireworks",
-                        },
-                    },
-                },
-            },
-        });
-
-        expect(themedWrapper.text()).toContain("4th of July Books");
-    });
-
-    it("displays fallback title for themed category when no theme is active", async () => {
-        usePage.mockReturnValue({
-            props: {
-                auth: { user: { permissions_list: [] } },
-                theme: "",
-            },
-        });
-
-        const themedWrapper = mount(CategoryIndex, {
-            props: {
-                categoryName: "themed",
-                books: mockBooks,
-            },
-            global: {
-                mocks: {
-                    $page: {
-                        props: {
-                            auth: { user: { permissions_list: [] } },
-                            theme: "",
-                        },
-                    },
-                },
-            },
-        });
-
-        expect(themedWrapper.text()).toContain("Themed Books");
+        expect(themedWrapper.text()).toContain("Themed");
     });
 
     it("renders ApplicationLogo for themed category", async () => {

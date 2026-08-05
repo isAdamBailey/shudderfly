@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Book;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
 class ThemeBooks
 {
@@ -26,14 +27,35 @@ class ThemeBooks
      */
     public static function getBooksForThemePaginated(string $theme, int $perPage = 15): LengthAwarePaginator
     {
-        $keywords = self::getKeywords($theme);
+        $query = self::query($theme);
 
-        if (empty($keywords)) {
+        if (! $query) {
             return new LengthAwarePaginator(collect([]), 0, $perPage, 1);
         }
 
-        $query = Book::query()
-            ->with('coverImage')
+        return $query->with('coverImage')->paginate($perPage);
+    }
+
+    /**
+     * Get the ids of every book related to a specific theme.
+     */
+    public static function getBookIds(string $theme): Collection
+    {
+        return self::query($theme)?->pluck('id') ?? collect();
+    }
+
+    /**
+     * Build the query matching a theme's keywords, or null when no theme is active.
+     */
+    protected static function query(string $theme): ?Builder
+    {
+        $keywords = self::getKeywords($theme);
+
+        if (empty($keywords)) {
+            return null;
+        }
+
+        return Book::query()
             ->where(function ($q) use ($keywords) {
                 foreach ($keywords as $keyword) {
                     $q->orWhere(function ($subQuery) use ($keyword) {
@@ -42,8 +64,6 @@ class ThemeBooks
                     });
                 }
             });
-
-        return $query->paginate($perPage);
     }
 
     /**
@@ -75,6 +95,7 @@ class ThemeBooks
             'halloween' => 'Halloween Books',
             'fireworks' => '4th of July Books',
             'christmas' => 'Christmas Books',
+            '' => 'Themed Books',
             default => ucfirst($theme).' Books',
         };
     }

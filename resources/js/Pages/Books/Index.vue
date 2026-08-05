@@ -23,6 +23,11 @@
                 <BooksGrid :category="{ name: 'themed' }" :label="themeLabel" />
             </div>
 
+            <!-- Current Month Books Section (server sends no label when a theme is active) -->
+            <div v-if="monthLabel && !searchCategories">
+                <BooksGrid :category="{ name: 'month' }" :label="monthLabel" />
+            </div>
+
             <template v-if="!areAllBooksEmpty">
                 <BooksGrid
                     v-if="!searchCategories"
@@ -81,6 +86,10 @@ const props = defineProps({
     themeLabel: {
         type: String,
         default: "Themed Books",
+    },
+    monthLabel: {
+        type: String,
+        default: null,
     },
 });
 

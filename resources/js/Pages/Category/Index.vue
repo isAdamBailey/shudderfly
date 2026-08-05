@@ -25,7 +25,10 @@
                 <CategoryMap :locations="locations" />
             </div>
 
-            <div v-if="!props.isSpecialCategory" class="flex flex-wrap items-center gap-3 mb-6">
+            <div
+                v-if="!props.isSpecialCategory"
+                class="flex flex-wrap items-center gap-3 mb-6"
+            >
                 <div
                     role="group"
                     :aria-label="t('category.sort_group')"
@@ -42,7 +45,10 @@
                         )}`"
                         @click="sortBooks('oldest')"
                     >
-                        <i class="ri-history-line text-2xl" aria-hidden="true"></i>
+                        <i
+                            class="ri-history-line text-2xl"
+                            aria-hidden="true"
+                        ></i>
                     </Button>
                     <Button
                         type="button"
@@ -74,7 +80,9 @@
             </div>
 
             <div v-else class="flex flex-col items-center mt-10">
-                <h2 class="mb-8 font-semibold text-2xl text-gray-100 leading-tight">
+                <h2
+                    class="mb-8 font-semibold text-2xl text-gray-100 leading-tight"
+                >
                     No books found in this category
                 </h2>
                 <ManEmptyCircle />
@@ -97,7 +105,7 @@ import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
-import { Head, Link, router, usePage } from "@inertiajs/vue3";
+import { Head, Link, router } from "@inertiajs/vue3";
 import { computed, ref } from "vue";
 
 /* global route */
@@ -125,6 +133,10 @@ const props = defineProps({
     isSpecialCategory: {
         type: Boolean,
         default: false,
+    },
+    categoryLabel: {
+        type: String,
+        default: null,
     },
 });
 
@@ -161,14 +173,9 @@ function sortBooks(sortValue) {
 }
 
 const categoryTitle = computed(() => {
-    // Handle special themed category
-    if (props.categoryName === "themed") {
-        const page = usePage();
-        const theme = page.props.theme || "";
-        if (theme === "halloween") return "Halloween Books";
-        if (theme === "fireworks") return "4th of July Books";
-        if (theme === "christmas") return "Christmas Books";
-        return "Themed Books";
+    // Special categories (themed, month) are labelled server-side
+    if (props.categoryLabel) {
+        return props.categoryLabel;
     }
 
     // Default: capitalize the category name

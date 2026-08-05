@@ -8,6 +8,7 @@ use App\Http\Requests\UpdateCategoryRequest;
 use App\Models\Book;
 use App\Models\Category;
 use App\Models\Page;
+use App\Support\MonthBooks;
 use App\Support\ThemeBooks;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\RedirectResponse;
@@ -24,7 +25,7 @@ class CategoryController extends Controller
     public function show(Request $request, string $categoryName): Response
     {
         $sort = $request->query('sort', 'newest');
-        $isSpecialCategory = in_array($categoryName, ['popular', 'forgotten', 'themed'], true);
+        $isSpecialCategory = in_array($categoryName, ['popular', 'forgotten', 'themed', 'month'], true);
 
         // For special categories, don't query the database
         $books = match ($categoryName) {
@@ -39,6 +40,7 @@ class CategoryController extends Controller
             'themed' => ThemeBooks::getBooksForThemePaginated(
                 HandleInertiaRequests::getCurrentTheme() ?? ''
             ),
+            'month' => MonthBooks::getBooksForMonthPaginated(),
             default => Category::where('name', $categoryName)
                 ->firstOrFail()
                 ->books()
@@ -50,29 +52,15 @@ class CategoryController extends Controller
         };
 
         // Get all pages with locations for ALL books in this category (not just current page)
-        if ($categoryName === 'themed') {
-            $theme = HandleInertiaRequests::getCurrentTheme() ?? '';
-            $keywords = ThemeBooks::getKeywords($theme);
-            $allBookIds = empty($keywords) ? collect([]) : Book::query()
-                ->where(function ($q) use ($keywords) {
-                    foreach ($keywords as $keyword) {
-                        $q->orWhere(function ($subQuery) use ($keyword) {
-                            $subQuery->whereRaw('LOWER(title) LIKE ?', ['%'.strtolower($keyword).'%'])
-                                ->orWhereRaw('LOWER(excerpt) LIKE ?', ['%'.strtolower($keyword).'%']);
-                        });
-                    }
-                })
-                ->pluck('id');
-        } else {
-            $allBookIds = match ($categoryName) {
-                'popular' => Book::query()->pluck('id'),
-                'forgotten' => Book::query()->pluck('id'),
-                default => Category::where('name', $categoryName)
-                    ->firstOrFail()
-                    ->books()
-                    ->pluck('id')
-            };
-        }
+        $allBookIds = match ($categoryName) {
+            'popular', 'forgotten' => Book::query()->pluck('id'),
+            'themed' => ThemeBooks::getBookIds(HandleInertiaRequests::getCurrentTheme() ?? ''),
+            'month' => MonthBooks::getBookIds(),
+            default => Category::where('name', $categoryName)
+                ->firstOrFail()
+                ->books()
+                ->pluck('id')
+        };
 
         // Get book locations instead of page locations
         $locations = Book::whereIn('id', $allBookIds)
@@ -98,6 +86,11 @@ class CategoryController extends Controller
             'locations' => $locations,
             'sort' => $sort,
             'isSpecialCategory' => $isSpecialCategory,
+            'categoryLabel' => match ($categoryName) {
+                'themed' => ThemeBooks::getLabel(HandleInertiaRequests::getCurrentTheme() ?? ''),
+                'month' => MonthBooks::getLabel(),
+                default => null,
+            },
         ]);
     }
 

@@ -439,6 +439,21 @@ return [
     'category.sort_favorites' => ':category favoritos',
     'category.sort_group' => 'Ordenar libros',
 
+    // Month book grid
+    'books.month_books' => 'Libros de :month',
+    'month.january' => 'enero',
+    'month.february' => 'febrero',
+    'month.march' => 'marzo',
+    'month.april' => 'abril',
+    'month.may' => 'mayo',
+    'month.june' => 'junio',
+    'month.july' => 'julio',
+    'month.august' => 'agosto',
+    'month.september' => 'septiembre',
+    'month.october' => 'octubre',
+    'month.november' => 'noviembre',
+    'month.december' => 'diciembre',
+
     // Collages
     'collage.none_created' => 'Aún no se han creado collages.',
     'collage.single_for_month' => '¡Este es el collage de :month!',

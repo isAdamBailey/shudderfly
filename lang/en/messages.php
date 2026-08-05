@@ -439,6 +439,21 @@ return [
     'category.sort_favorites' => 'favorite :category',
     'category.sort_group' => 'Sort books',
 
+    // Month book grid
+    'books.month_books' => ':month Books',
+    'month.january' => 'January',
+    'month.february' => 'February',
+    'month.march' => 'March',
+    'month.april' => 'April',
+    'month.may' => 'May',
+    'month.june' => 'June',
+    'month.july' => 'July',
+    'month.august' => 'August',
+    'month.september' => 'September',
+    'month.october' => 'October',
+    'month.november' => 'November',
+    'month.december' => 'December',
+
     // Collages
     'collage.none_created' => 'No collages have been created yet.',
     'collage.single_for_month' => 'This is the collage for :month!',

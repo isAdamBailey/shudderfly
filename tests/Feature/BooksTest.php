@@ -472,6 +472,105 @@ class BooksTest extends TestCase
         $this->travelBack();
     }
 
+    public function test_month_books_are_returned_when_no_theme_is_active()
+    {
+        $this->actingAs(User::factory()->create());
+
+        DB::table('categories')->delete();
+
+        Book::factory()->create(['title' => 'March Madness']);
+        Book::factory()->create(['title' => 'A walk in march.']);
+        Book::factory()->create(['excerpt' => 'We went to the zoo in March!']);
+
+        // Should not match: not a whole word, and a different month
+        Book::factory()->create(['title' => 'Marching Band', 'excerpt' => 'Marching around']);
+        Book::factory()->create(['title' => 'April Showers']);
+
+        // March has no seasonal theme
+        $this->travelTo(now()->setMonth(3)->setDay(15));
+
+        $this->get(route('books.index'))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Books/Index')
+                ->where('themeLabel', null)
+                ->where('monthLabel', 'March Books')
+        );
+
+        $response = $this->get(route('books.category', ['categoryName' => 'month']));
+        $response->assertStatus(200);
+        $this->assertCount(3, $response->json('books.data'));
+
+        $this->travelBack();
+    }
+
+    public function test_month_books_are_not_returned_when_a_theme_is_active()
+    {
+        $this->actingAs(User::factory()->create());
+
+        DB::table('categories')->delete();
+
+        Book::factory()->create(['title' => 'October Fun']);
+
+        // October is the Halloween theme month
+        $this->travelTo(now()->setMonth(10)->setDay(15));
+
+        $this->get(route('books.index'))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Books/Index')
+                ->where('themeLabel', 'Halloween Books')
+                ->where('monthLabel', null)
+        );
+
+        $response = $this->get(route('books.category', ['categoryName' => 'month']));
+        $response->assertStatus(200);
+        $this->assertCount(0, $response->json('books.data'));
+
+        $this->travelBack();
+    }
+
+    public function test_month_books_match_the_month_abbreviation()
+    {
+        $this->actingAs(User::factory()->create());
+
+        DB::table('categories')->delete();
+
+        Book::factory()->create(['title' => 'Aug camping trip']);
+        Book::factory()->create(['title' => 'Augment the fun']);
+
+        $this->travelTo(now()->setMonth(8)->setDay(15));
+
+        $response = $this->get(route('books.category', ['categoryName' => 'month']));
+        $response->assertStatus(200);
+        $books = $response->json('books.data');
+        $this->assertCount(1, $books);
+        $this->assertSame('Aug camping trip', $books[0]['title']);
+
+        $this->travelBack();
+    }
+
+    public function test_month_category_page_shows_month_label()
+    {
+        $this->actingAs(User::factory()->create());
+
+        DB::table('categories')->delete();
+
+        Book::factory()->create(['title' => 'May Flowers']);
+        Book::factory()->create(['title' => 'Maybe Tomorrow']);
+
+        $this->travelTo(now()->setMonth(5)->setDay(15));
+
+        $this->get(route('categories.show', ['categoryName' => 'month']))->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Category/Index')
+                ->where('categoryName', 'month')
+                ->where('categoryLabel', 'May Books')
+                ->where('isSpecialCategory', true)
+                ->has('books.data', 1)
+        );
+
+        $this->travelBack();
+    }
+
     public function test_book_can_be_stored_with_location(): void
     {
         $this->actingAs($user = User::factory()->create());
