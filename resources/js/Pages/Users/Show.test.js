@@ -448,6 +448,7 @@ describe("UserShow", () => {
                 template: '<a :href="href"><slot /></a>',
                 props: ["href"],
             },
+            Teleport: { template: "<div><slot /></div>" },
         };
 
         it("shows the welcome greeting and hides visitor-only sections when isOwner", () => {
@@ -621,6 +622,38 @@ describe("UserShow", () => {
             });
 
             expect(wrapper.text()).toContain("dashboard.add_new_book");
+            expect(
+                wrapper.findComponent({ name: "NewBookForm" }).exists()
+            ).toBe(false);
+        });
+
+        it("opens the new-book modal and closes it when the form emits close-form", async () => {
+            mockCanEditPages.mockReturnValueOnce(true);
+
+            const wrapper = mount(UserShow, {
+                props: {
+                    profileUser,
+                    isOwner: true,
+                    stats,
+                    recentMessages: [],
+                    recentReplies: [],
+                },
+                global: { stubs: ownerStubs },
+            });
+
+            const addButton = wrapper
+                .findAll("button")
+                .find((button) => button.text() === "dashboard.add_new_book");
+            await addButton.trigger("click");
+
+            expect(
+                wrapper.findComponent({ name: "NewBookForm" }).exists()
+            ).toBe(true);
+
+            await wrapper
+                .findComponent({ name: "NewBookForm" })
+                .vm.$emit("close-form");
+
             expect(
                 wrapper.findComponent({ name: "NewBookForm" }).exists()
             ).toBe(false);

@@ -1,5 +1,14 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { useFocusTrap } from "@/composables/useFocusTrap";
+import { useModalStack } from "@/composables/useModalStack";
+import {
+    computed,
+    getCurrentInstance,
+    onMounted,
+    onUnmounted,
+    ref,
+    watch,
+} from "vue";
 
 const props = defineProps({
     show: {
@@ -14,24 +23,41 @@ const props = defineProps({
         type: Boolean,
         default: true,
     },
+    labelledby: {
+        type: String,
+        default: undefined,
+    },
 });
 
 const emit = defineEmits(["close"]);
 
+const instance = getCurrentInstance();
+const modalId = instance?.uid ?? 0;
+const { register, unregister, isTopmost } = useModalStack();
+
 const scrollRoot = ref(null);
+const panel = ref(null);
+const {
+    activate: activateFocusTrap,
+    deactivate: deactivateFocusTrap,
+    trapKeydown,
+} = useFocusTrap(panel);
 
 watch(
     () => props.show,
     (isShowing) => {
         if (isShowing) {
-            document.body.style.overflow = "hidden";
+            register(modalId);
+            activateFocusTrap();
             setTimeout(() => {
                 scrollRoot.value?.scrollTo?.(0, 0);
             }, 50);
         } else {
-            document.body.style.overflow = null;
+            unregister(modalId);
+            deactivateFocusTrap();
         }
-    }
+    },
+    { immediate: true }
 );
 
 const close = () => {
@@ -41,16 +67,28 @@ const close = () => {
 };
 
 const closeOnEscape = (e) => {
-    if (e.key === "Escape" && props.show) {
+    if (e.key === "Escape" && props.show && isTopmost(modalId)) {
         close();
     }
 };
 
-onMounted(() => document.addEventListener("keydown", closeOnEscape));
+const trapFocus = (e) => {
+    if (props.show && isTopmost(modalId)) {
+        trapKeydown(e);
+    }
+};
+
+onMounted(() => {
+    document.addEventListener("keydown", closeOnEscape);
+    document.addEventListener("keydown", trapFocus);
+});
 
 onUnmounted(() => {
     document.removeEventListener("keydown", closeOnEscape);
-    document.body.style.overflow = null;
+    document.removeEventListener("keydown", trapFocus);
+    if (props.show) {
+        unregister(modalId);
+    }
 });
 
 const maxWidthClass = computed(() => {
@@ -60,6 +98,8 @@ const maxWidthClass = computed(() => {
         lg: "sm:max-w-lg",
         xl: "sm:max-w-xl",
         "2xl": "sm:max-w-2xl",
+        "3xl": "sm:max-w-3xl",
+        "4xl": "sm:max-w-4xl",
     }[props.maxWidth];
 });
 </script>
@@ -102,7 +142,12 @@ const maxWidthClass = computed(() => {
                     >
                         <div
                             v-show="show"
-                            class="relative z-10 w-full max-h-[min(90vh,100%)] overflow-hidden rounded-lg bg-white shadow-xl transform transition-all dark:bg-gray-800 sm:mx-auto sm:w-full"
+                            ref="panel"
+                            role="dialog"
+                            aria-modal="true"
+                            :aria-labelledby="labelledby"
+                            tabindex="-1"
+                            class="relative z-10 w-full max-h-[min(90vh,100%)] overflow-hidden rounded-lg bg-white shadow-xl transform transition-all dark:bg-gray-800 sm:mx-auto sm:w-full outline-none"
                             :class="maxWidthClass"
                             style="min-height: fit-content"
                             @click.stop

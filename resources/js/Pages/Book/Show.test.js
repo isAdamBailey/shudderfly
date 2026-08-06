@@ -184,6 +184,9 @@ describe("Book/Show.vue", () => {
                 books,
             },
             global: {
+                stubs: {
+                    Teleport: { template: "<div><slot /></div>" },
+                },
                 mocks: {
                     $page: {
                         props: {
@@ -225,13 +228,8 @@ describe("Book/Show.vue", () => {
         );
     });
 
-    it("opens and scrolls to the pages tab when book has no pages", async () => {
-        const scrollIntoViewMock = vi.fn();
-        const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
-        HTMLElement.prototype.scrollIntoView = scrollIntoViewMock;
-
+    it("opens the add-pages modal automatically when book has no pages", async () => {
         const wrapperWithNoPages = mount(Show, {
-            attachTo: document.body,
             props: {
                 book,
                 pages: { data: [], total: 0 },
@@ -240,6 +238,9 @@ describe("Book/Show.vue", () => {
                 books,
             },
             global: {
+                stubs: {
+                    Teleport: { template: "<div><slot /></div>" },
+                },
                 mocks: {
                     $page: {
                         props: {
@@ -255,12 +256,11 @@ describe("Book/Show.vue", () => {
         await wrapperWithNoPages.vm.$nextTick();
 
         expect(wrapperWithNoPages.vm.activeTab).toBe("pages");
-        expect(scrollIntoViewMock).toHaveBeenCalledWith(
-            expect.objectContaining({ behavior: "smooth", block: "start" })
-        );
+        expect(
+            wrapperWithNoPages.findComponent({ name: "NewPageForm" }).exists()
+        ).toBe(true);
 
         wrapperWithNoPages.unmount();
-        HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
     });
 
     describe("Floating action menu", () => {
@@ -288,6 +288,9 @@ describe("Book/Show.vue", () => {
             const viewerWrapper = mount(Show, {
                 props: { book, pages, authors, categories, books },
                 global: {
+                    stubs: {
+                        Teleport: { template: "<div><slot /></div>" },
+                    },
                     mocks: {
                         $page: {
                             props: {
@@ -327,6 +330,9 @@ describe("Book/Show.vue", () => {
                 books,
             },
             global: {
+                stubs: {
+                    Teleport: { template: "<div><slot /></div>" },
+                },
                 mocks: {
                     $page: {
                         props: {
@@ -512,6 +518,9 @@ describe("Book/Show.vue", () => {
                 books,
             },
             global: {
+                stubs: {
+                    Teleport: { template: "<div><slot /></div>" },
+                },
                 mocks: {
                     $page: {
                         props: {

@@ -128,7 +128,10 @@
                 </div>
             </div>
 
-            <div v-if="canEditPages && activeTab" id="admin-form">
+            <!-- Bulk Actions stays an inline panel, unlike the Add Pages/Edit
+                 Book modals below: it needs the page grid clickable behind it
+                 to build the selection, which a modal backdrop would block. -->
+            <div v-if="canEditPages && activeTab === 'bulk'">
                 <div class="flex justify-end mb-2">
                     <Button
                         type="button"
@@ -143,29 +146,7 @@
                     <BreezeValidationErrors class="mb-4" />
                 </div>
                 <div class="flex flex-col md:flex-row justify-around">
-                    <div
-                        v-if="activeTab === 'pages'"
-                        class="w-full md:w-1/2 mx-auto"
-                    >
-                        <NewPageForm :book="book" @close-form="closeAllTabs" />
-                    </div>
-
-                    <div
-                        v-if="activeTab === 'book'"
-                        class="w-full md:w-1/2 mx-auto"
-                    >
-                        <EditBookForm
-                            :book="book"
-                            :authors="authors"
-                            :categories="categories"
-                            @close-form="closeAllTabs"
-                        />
-                    </div>
-
-                    <div
-                        v-if="activeTab === 'bulk'"
-                        class="w-full md:w-1/2 mx-auto"
-                    >
+                    <div class="w-full md:w-1/2 mx-auto">
                         <BulkActionsForm
                             :book="book"
                             :books="books"
@@ -176,6 +157,40 @@
                     </div>
                 </div>
             </div>
+
+            <FormModal
+                v-if="canEditPages"
+                :show="activeTab === 'pages'"
+                :title="t('book.add_pages_title')"
+                max-width="3xl"
+                :closeable="!newPageUploading"
+                :submit-ref="newPageFormRef"
+                @close="closeAllTabs"
+            >
+                <BreezeValidationErrors class="mb-4" />
+                <NewPageForm
+                    ref="newPageFormRef"
+                    :book="book"
+                    @close-form="closeAllTabs"
+                />
+            </FormModal>
+
+            <FormModal
+                v-if="canEditPages"
+                :show="activeTab === 'book'"
+                :title="t('book.edit_book_title')"
+                :submit-ref="editBookFormRef"
+                @close="closeAllTabs"
+            >
+                <BreezeValidationErrors class="mb-4" />
+                <EditBookForm
+                    ref="editBookFormRef"
+                    :book="book"
+                    :authors="authors"
+                    :categories="categories"
+                    @close-form="closeAllTabs"
+                />
+            </FormModal>
 
             <div
                 v-if="items.length > 0"
@@ -373,6 +388,7 @@ import ScrollTop from "@/Components/ScrollTop.vue";
 import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 import BreezeValidationErrors from "@/Components/ValidationErrors.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
+import FormModal from "@/Components/FormModal.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
@@ -384,7 +400,7 @@ import NewPageForm from "@/Pages/Book/NewPageForm.vue";
 import RelatedSongs from "@/Pages/Book/RelatedSongs.vue";
 import SimilarBooks from "@/Pages/Book/SimilarBooks.vue";
 import { Deferred, Head, Link, router } from "@inertiajs/vue3";
-import { computed, nextTick, onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 
 /* global route */
 
@@ -442,17 +458,15 @@ function sortPages(sortValue) {
 let activeTab = ref(null);
 let selectedPages = ref([]);
 
+const newPageFormRef = ref(null);
+const editBookFormRef = ref(null);
+const newPageUploading = computed(() => newPageFormRef.value?.isUploading);
+
 const setActiveTab = (tab) => {
     if (activeTab.value === tab) {
         activeTab.value = null;
     } else {
         activeTab.value = tab;
-        nextTick(() => {
-            document.getElementById("admin-form")?.scrollIntoView({
-                behavior: "smooth",
-                block: "start",
-            });
-        });
     }
 
     if (activeTab.value !== "bulk") {
@@ -502,12 +516,6 @@ function mediaPath(page) {
 onMounted(() => {
     if (props.pages.total === 0) {
         activeTab.value = "pages";
-        nextTick(() => {
-            document.getElementById("admin-form")?.scrollIntoView({
-                behavior: "smooth",
-                block: "start",
-            });
-        });
     }
 });
 </script>

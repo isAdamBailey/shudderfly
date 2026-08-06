@@ -1,9 +1,7 @@
 <script setup>
-import BreezeButton from "@/Components/Button.vue";
 import BreezeInput from "@/Components/TextInput.vue";
 import BreezeLabel from "@/Components/InputLabel.vue";
 import MapPicker from "@/Components/Map/MapPicker.vue";
-import Accordion from "@/Components/Accordion.vue";
 import { useForm, usePage } from "@inertiajs/vue3";
 import Multiselect from "@vueform/multiselect";
 import { computed, ref } from "vue";
@@ -53,13 +51,25 @@ const handleAddressFocus = () => {
     isLocationOpen.value = true;
 };
 
+const emit = defineEmits(["close-form"]);
+
 const submit = () => {
-    form.post(route("books.store"), {});
+    form.post(route("books.store"), {
+        onSuccess: () => {
+            form.reset();
+            emit("close-form");
+        },
+    });
 };
+
+const submitDisabled = computed(() => form.processing);
+const submitLabel = "Create Book!";
+
+defineExpose({ submit, submitDisabled, submitLabel });
 </script>
 
 <template>
-    <div class="bg-white dark:bg-gray-800 p-5 w-full">
+    <div>
         <form @submit.prevent="submit">
             <div>
                 <BreezeLabel for="author" value="Author Name" />
@@ -118,16 +128,6 @@ const submit = () => {
                     address-placeholder="Search for address..."
                     @address-focus="handleAddressFocus"
                 />
-            </div>
-
-            <div class="flex items-center justify-end mt-4">
-                <BreezeButton
-                    class="ml-4"
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                >
-                    Create Book!
-                </BreezeButton>
             </div>
         </form>
     </div>

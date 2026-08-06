@@ -171,13 +171,20 @@ const toggleMoveToTop = () => {
 const handleAddressFocus = () => {
     isLocationOpen.value = true;
 };
+
+const submitDisabled = computed(
+    () =>
+        pageForm.processing ||
+        bookForm.processing ||
+        (!pageForm.isDirty && !pendingCoverPage.value)
+);
+const submitLabel = "Update Page";
+
+defineExpose({ submit, submitDisabled, submitLabel });
 </script>
 
 <template>
-    <div class="bg-white dark:bg-gray-800 rounded m-5 md:w-full p-5">
-        <h3 class="text-xl dark:text-gray-100 w-full border-b mb-5">
-            Edit Page
-        </h3>
+    <div>
         <form ref="pageFormRef">
             <div
                 v-if="isYouTubeEnabled"
@@ -426,27 +433,6 @@ const handleAddressFocus = () => {
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Save Button -->
-        <div class="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
-            <Button
-                type="button"
-                class="w-full justify-center py-4 text-sm"
-                :disabled="
-                    pageForm.processing ||
-                    bookForm.processing ||
-                    (!pageForm.isDirty && !pendingCoverPage)
-                "
-                @click="submit"
-            >
-                <i
-                    v-if="pageForm.processing || bookForm.processing"
-                    class="ri-loader-line mr-2 animate-spin"
-                    aria-hidden="true"
-                ></i>
-                Update Page
-            </Button>
         </div>
     </div>
 </template>

@@ -520,6 +520,22 @@
         }
     }
 
+    /* Shared modal "sheet" sizing (used by FormModal and MessageBuilderModal):
+       shrinks to fit content, capped at 85% of the viewport on desktop; on
+       mobile the cap subtracts the Modal wrapper's vertical padding (py-8 =>
+       2rem top + bottom) so the sheet stays inside the visible viewport. */
+    .modal-sheet {
+        max-height: 85vh;
+        max-height: 85dvh;
+    }
+
+    @media (max-width: 639px) {
+        .modal-sheet {
+            max-height: calc(100vh - 4rem);
+            max-height: calc(100dvh - 4rem);
+        }
+    }
+
     /* Shared static mini book card styles (used by BooksGrid and SimilarBooks) */
     .mini-book {
         position: relative;

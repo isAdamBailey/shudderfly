@@ -306,14 +306,28 @@ onUnmounted(() => {
 const handleAddressFocus = () => {
     isLocationOpen.value = true;
 };
+
+const submit = () => {
+    if (hasQueuedFiles.value) {
+        handleUploadAll();
+    } else {
+        handleFormSubmit();
+    }
+};
+
+const submitDisabled = computed(() => isUploading.value || form.processing);
+
+const submitLabel = computed(() => {
+    if (isUploading.value) return "Uploading...";
+    if (hasQueuedFiles.value) return "Upload All Files!";
+    return "Create Page!";
+});
+
+defineExpose({ submit, submitDisabled, submitLabel, isUploading });
 </script>
 
 <template>
-    <div class="bg-white dark:bg-gray-800 rounded m-5 md:w-full p-10">
-        <h3 class="text-2xl dark:text-gray-100 w-full border-b mb-7">
-            Add New Page
-        </h3>
-
+    <div>
         <!-- Draft Status Indicators -->
         <div v-if="hasDraft || draftSaved" class="mb-4">
             <div
@@ -524,28 +538,6 @@ const handleAddressFocus = () => {
                 >
                     A link to a video is required without any text or upload.
                 </p>
-            </div>
-
-            <!-- Submit Section -->
-            <div class="flex justify-center mt-5 md:mt-20">
-                <Button
-                    type="button"
-                    class="w-3/4 flex justify-center py-3"
-                    :disabled="isUploading || form.processing"
-                    @click.prevent="
-                        hasQueuedFiles ? handleUploadAll() : handleFormSubmit()
-                    "
-                >
-                    <span class="text-xl">
-                        {{
-                            isUploading
-                                ? "Uploading..."
-                                : hasQueuedFiles
-                                ? "Upload All Files!"
-                                : "Create Page!"
-                        }}
-                    </span>
-                </Button>
             </div>
         </form>
     </div>

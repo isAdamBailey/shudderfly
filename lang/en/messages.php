@@ -3,6 +3,13 @@
 return [
     'common.cancel' => 'Cancel',
     'common.ok' => 'OK',
+    'common.close' => 'Close',
+
+    // Admin form modals
+    'book.add_pages_title' => 'Add Pages',
+    'book.edit_book_title' => 'Edit Book',
+    'book.new_book_title' => 'New Book',
+    'page.edit_page_title' => 'Edit Page',
 
     // Sharing & books
     'game_score_shared' => 'I scored :score in :game!',

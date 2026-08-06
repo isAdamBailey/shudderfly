@@ -1,7 +1,5 @@
 <script setup>
 /* eslint-disable no-undef */
-import Accordion from "@/Components/Accordion.vue";
-import BreezeButton from "@/Components/Button.vue";
 import BreezeLabel from "@/Components/InputLabel.vue";
 import MapPicker from "@/Components/Map/MapPicker.vue";
 import TextArea from "@/Components/TextArea.vue";
@@ -56,12 +54,16 @@ const submit = () => {
         },
     });
 };
+
+const submitDisabled = computed(() => form.processing);
+const submitLabel = "Update Book";
+
+defineExpose({ submit, submitDisabled, submitLabel });
 </script>
 
 <template>
-    <div class="bg-white dark:bg-gray-800 rounded p-5 w-full">
-        <div class="flex items-center justify-between border-b mb-7 pb-1">
-            <h3 class="text-2xl dark:text-gray-100">Edit Book</h3>
+    <div class="w-full">
+        <div class="flex items-center justify-end mb-4">
             <DeleteForm :book="book" />
         </div>
         <form @submit.prevent="submit">
@@ -117,16 +119,6 @@ const submit = () => {
                     :open-map="isLocationOpen"
                     @address-focus="handleAddressFocus"
                 />
-            </div>
-
-            <div class="flex justify-center mt-4">
-                <BreezeButton
-                    class="w-3/4 py-3 flex justify-center"
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                >
-                    Update Book
-                </BreezeButton>
             </div>
         </form>
     </div>

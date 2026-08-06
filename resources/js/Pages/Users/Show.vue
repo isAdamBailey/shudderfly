@@ -3,6 +3,7 @@
 import Avatar from "@/Components/Avatar.vue";
 import Button from "@/Components/Button.vue";
 import ConfirmDialog from "@/Components/ConfirmDialog.vue";
+import FormModal from "@/Components/FormModal.vue";
 import SpeakButton from "@/Components/SpeakButton.vue";
 import MessageTimeline from "@/Components/Messages/MessageTimeline.vue";
 import StatCard from "@/Components/StatCard.vue";
@@ -18,7 +19,7 @@ import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import { Head, Link, router, usePage } from "@inertiajs/vue3";
 import axios from "axios";
-import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 
 defineOptions({
     name: "UserShow",
@@ -39,6 +40,7 @@ const {
 } = useConfirmDialog();
 const regenerating = ref(false);
 const showNewBookForm = ref(false);
+const newBookFormRef = ref(null);
 const unlockingBlockedPages = ref(false);
 
 const unblockAllPages = async () => {
@@ -67,12 +69,6 @@ const unblockAllPages = async () => {
 
 const openNewBookForm = () => {
     showNewBookForm.value = true;
-    nextTick(() => {
-        document.getElementById("new-book-form")?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-        });
-    });
 };
 
 const messagingEnabled = computed(() => {
@@ -552,9 +548,8 @@ const speakUserSummary = () => {
                                     v-else
                                     class="ri-lock-unlock-line flex-shrink-0"
                                 ></i>
-                                {{ t("dashboard.unlock_all_blocked_pages") }} ({{
-                                    blockedCount
-                                }})
+                                {{ t("dashboard.unlock_all_blocked_pages") }}
+                                ({{ blockedCount }})
                             </button>
 
                             <!-- Secondary CTA: chat (all users). Alone (no
@@ -590,14 +585,20 @@ const speakUserSummary = () => {
                         </button>
                     </div>
 
-                    <NewBookForm
-                        v-if="canEditPages && showNewBookForm"
-                        id="new-book-form"
-                        class="mt-4 scroll-mt-16"
-                        :authors="authors"
-                        :categories="newBookCategories"
-                        @close-page-form="showNewBookForm = false"
-                    />
+                    <FormModal
+                        v-if="canEditPages"
+                        :show="showNewBookForm"
+                        :title="t('book.new_book_title')"
+                        :submit-ref="newBookFormRef"
+                        @close="showNewBookForm = false"
+                    >
+                        <NewBookForm
+                            ref="newBookFormRef"
+                            :authors="authors"
+                            :categories="newBookCategories"
+                            @close-form="showNewBookForm = false"
+                        />
+                    </FormModal>
                 </div>
 
                 <!-- Profile Header (visitors only; owners see this in the hero) -->

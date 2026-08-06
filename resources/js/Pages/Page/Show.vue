@@ -119,18 +119,6 @@
                     :show-street-view="true"
                 />
             </div>
-            <div
-                v-if="canEditPages && showPageSettings"
-                id="page-edit-form"
-                class="mb-3 scroll-mt-4 w-full md:w-1/2 mx-auto"
-            >
-                <EditPageForm
-                    :page="page"
-                    :book="page.book"
-                    :books="books"
-                    @close-page-form="showPageSettings = false"
-                />
-            </div>
             <div class="my-4 flex flex-wrap items-center gap-2 sm:gap-3">
                 <div
                     v-if="canAddToCollage"
@@ -174,6 +162,22 @@
             @confirm="confirmOnOk"
             @cancel="confirmOnCancel"
         />
+        <FormModal
+            v-if="canEditPages"
+            :show="showPageSettings"
+            :title="t('page.edit_page_title')"
+            max-width="3xl"
+            :submit-ref="editPageFormRef"
+            @close="showPageSettings = false"
+        >
+            <EditPageForm
+                ref="editPageFormRef"
+                :page="page"
+                :book="page.book"
+                :books="books"
+                @close-page-form="showPageSettings = false"
+            />
+        </FormModal>
         <FloatingActionMenu v-if="$page.props.auth.user">
             <ShareToChatButton
                 v-if="canSharePage"
@@ -216,6 +220,7 @@ import Button from "@/Components/Button.vue";
 import SpeakButton from "@/Components/SpeakButton.vue";
 import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import FloatingActionMenu from "@/Components/FloatingActionMenu.vue";
+import FormModal from "@/Components/FormModal.vue";
 import LazyLoader from "@/Components/LazyLoader.vue";
 import MapEmbed from "@/Components/Map/MapEmbed.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
@@ -230,7 +235,7 @@ import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { useMedia } from "@/mediaHelpers";
 import EditPageForm from "@/Pages/Page/EditPageForm.vue";
 import { Head, Link, router, usePage } from "@inertiajs/vue3";
-import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 
 const { canEditPages } = usePermissions();
 const { short } = useDate();
@@ -264,15 +269,10 @@ const messagingEnabled = computed(() => {
 });
 
 const showPageSettings = ref(false);
+const editPageFormRef = ref(null);
 
 function openPageSettings() {
     showPageSettings.value = true;
-    nextTick(() => {
-        document.getElementById("page-edit-form")?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-        });
-    });
 }
 
 const buttonDisabled = ref(false);

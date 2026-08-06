@@ -202,10 +202,6 @@ describe("NewPageForm", () => {
     });
 
     describe("Component Rendering", () => {
-        it("renders the form title", () => {
-            expect(wrapper.text()).toContain("Add New Page");
-        });
-
         it("renders media type selection buttons when YouTube is enabled", () => {
             const buttons = wrapper.findAllComponents({ name: "Button" });
             const uploadButton = buttons.find((btn) =>
@@ -264,12 +260,8 @@ describe("NewPageForm", () => {
             ).toBe(true);
         });
 
-        it("renders the create page button", () => {
-            const buttons = wrapper.findAllComponents({ name: "Button" });
-            const createButton = buttons.find((btn) =>
-                btn.text().includes("Create Page!")
-            );
-            expect(createButton.exists()).toBe(true);
+        it("exposes the create page submit label", () => {
+            expect(wrapper.vm.submitLabel).toBe("Create Page!");
         });
     });
 
@@ -452,7 +444,7 @@ describe("NewPageForm", () => {
             expect(wrapper.emitted("close-form")).toBeTruthy();
         });
 
-        it("disables submit button when form is processing", async () => {
+        it("exposes submitDisabled as true when form is processing", async () => {
             // Set form to processing state and remount to ensure reactivity
             mockForm.processing = true;
             useForm.mockReturnValue(mockForm);
@@ -473,30 +465,20 @@ describe("NewPageForm", () => {
 
             await nextTick();
 
-            const buttons = wrapper.findAllComponents({ name: "Button" });
-            const createButton = buttons.find((btn) =>
-                btn.text().includes("Create Page!")
-            );
-
-            expect(createButton.props("disabled")).toBe(true);
+            expect(wrapper.vm.submitDisabled).toBe(true);
         });
 
-        it("disables submit button when uploading", async () => {
+        it("exposes submitDisabled as true and submitLabel as Uploading when uploading", async () => {
             const component = wrapper.vm;
             component.isUploading = true;
 
             await nextTick();
 
-            const buttons = wrapper.findAllComponents({ name: "Button" });
-            const createButton = buttons.find((btn) =>
-                btn.text().includes("Uploading...")
-            );
-
-            expect(createButton).toBeDefined();
-            expect(createButton.props("disabled")).toBe(true);
+            expect(wrapper.vm.submitDisabled).toBe(true);
+            expect(wrapper.vm.submitLabel).toBe("Uploading...");
         });
 
-        it("enables submit button when not processing and not uploading", async () => {
+        it("exposes submitDisabled as false when not processing and not uploading", async () => {
             // Ensure both states are false
             mockForm.processing = false;
             const component = wrapper.vm;
@@ -504,12 +486,7 @@ describe("NewPageForm", () => {
 
             await nextTick();
 
-            const buttons = wrapper.findAllComponents({ name: "Button" });
-            const createButton = buttons.find((btn) =>
-                btn.text().includes("Create Page!")
-            );
-
-            expect(createButton.props("disabled")).toBe(false);
+            expect(wrapper.vm.submitDisabled).toBe(false);
         });
     });
 });
