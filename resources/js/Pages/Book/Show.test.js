@@ -263,6 +263,58 @@ describe("Book/Show.vue", () => {
         HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
     });
 
+    describe("Floating action menu", () => {
+        const menuLabels = (w) =>
+            w
+                .findAllComponents({ name: "ActionMenuItem" })
+                .map((item) => item.props("label"));
+
+        it("offers the editing actions and share to editors", () => {
+            expect(menuLabels(wrapper)).toEqual([
+                "Add Pages",
+                "Edit Book",
+                "Bulk Actions",
+            ]);
+
+            const share = wrapper.findComponent({ name: "ShareToChatButton" });
+            expect(share.exists()).toBe(true);
+            expect(share.props("kind")).toBe("book");
+            expect(share.props("menuItem")).toBe(true);
+        });
+
+        it("keeps the menu for non-editors but drops the editing actions", () => {
+            mockCanEditPages.mockReturnValue(false);
+
+            const viewerWrapper = mount(Show, {
+                props: { book, pages, authors, categories, books },
+                global: {
+                    mocks: {
+                        $page: {
+                            props: {
+                                auth: { user: { permissions_list: [] } },
+                                search: null,
+                            },
+                        },
+                    },
+                },
+            });
+
+            expect(
+                viewerWrapper
+                    .findComponent({ name: "FloatingActionMenu" })
+                    .exists()
+            ).toBe(true);
+            expect(menuLabels(viewerWrapper)).toEqual([]);
+            expect(
+                viewerWrapper
+                    .findComponent({ name: "ShareToChatButton" })
+                    .exists()
+            ).toBe(true);
+
+            viewerWrapper.unmount();
+        });
+    });
+
     it("shows empty state when book has no pages for non-editors", async () => {
         mockCanEditPages.mockReturnValue(false);
 

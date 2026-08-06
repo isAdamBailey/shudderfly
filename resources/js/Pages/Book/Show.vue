@@ -125,12 +125,6 @@
                         icon-class="ri-speak-fill text-lg"
                         @click="readTitleAndExcerpt"
                     />
-
-                    <ShareToChatButton
-                        kind="book"
-                        :book-id="book.slug"
-                        wrapper-class="flex shrink-0 items-center gap-2"
-                    />
                 </div>
             </div>
 
@@ -330,8 +324,15 @@
             </Deferred>
         </div>
         <ScrollTop />
-        <FloatingActionMenu v-if="canEditPages">
+        <FloatingActionMenu v-if="$page.props.auth.user">
+            <ShareToChatButton
+                kind="book"
+                :book-id="book.slug"
+                :menu-item="true"
+                wrapper-class="w-full"
+            />
             <ActionMenuItem
+                v-if="canEditPages"
                 icon="ri-add-line"
                 icon-class="text-emerald-600 dark:text-emerald-400"
                 label="Add Pages"
@@ -339,6 +340,7 @@
                 @click="setActiveTab('pages')"
             />
             <ActionMenuItem
+                v-if="canEditPages"
                 icon="ri-edit-line"
                 icon-class="text-blue-600 dark:text-blue-400"
                 label="Edit Book"
@@ -346,6 +348,7 @@
                 @click="setActiveTab('book')"
             />
             <ActionMenuItem
+                v-if="canEditPages"
                 icon="ri-checkbox-multiple-line"
                 icon-class="text-amber-600 dark:text-amber-400"
                 label="Bulk Actions"
