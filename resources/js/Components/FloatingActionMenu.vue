@@ -1,4 +1,5 @@
 <script setup>
+import { ACTION_MENU_PANEL_CLASSES } from "@/Components/actionMenuItem";
 import Dropdown from "@/Components/Dropdown.vue";
 
 defineProps({
@@ -24,6 +25,7 @@ defineProps({
             align="right"
             :width="width"
             :drop-up="true"
+            :content-classes="ACTION_MENU_PANEL_CLASSES"
         >
             <template #trigger>
                 <button

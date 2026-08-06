@@ -1,4 +1,6 @@
 <script setup>
+import ActionMenuItem from "@/Components/ActionMenuItem.vue";
+import { ACTION_MENU_PANEL_CLASSES } from "@/Components/actionMenuItem";
 import Button from "@/Components/Button.vue";
 import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import Dropdown from "@/Components/Dropdown.vue";
@@ -19,19 +21,6 @@ import { computed, onBeforeUnmount, ref } from "vue";
 defineOptions({
     name: "SoundsIndexPage",
 });
-
-const soundDropdownContentClasses = [
-    "py-1",
-    "bg-gray-800",
-    "border",
-    "border-gray-600",
-    "rounded-xl",
-    "shadow-xl",
-    "overflow-hidden",
-];
-
-const soundMenuItemClass =
-    "flex min-h-[52px] w-full touch-manipulation items-center gap-3 px-4 py-3 text-left text-base font-medium text-gray-100 active:bg-gray-700/80 hover:bg-gray-700";
 
 const soundModalOverlayClass =
     "fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4";
@@ -300,7 +289,7 @@ onBeforeUnmount(() => {
                         <Dropdown
                             align="right"
                             width="48"
-                            :content-classes="soundDropdownContentClasses"
+                            :content-classes="ACTION_MENU_PANEL_CLASSES"
                             @open-change="
                                 (open) => onSoundMenuOpenChange(sound.id, open)
                             "
@@ -319,75 +308,38 @@ onBeforeUnmount(() => {
                                 </button>
                             </template>
                             <template #content>
-                                <button
-                                    type="button"
-                                    role="menuitem"
-                                    :class="soundMenuItemClass"
+                                <ActionMenuItem
+                                    icon="ri-speak-fill"
+                                    icon-class="text-sky-600 dark:text-sky-400"
+                                    label="Speak title"
                                     @click="speakSoundTitle(sound)"
-                                >
-                                    <i
-                                        class="ri-speak-fill text-lg text-sky-400"
-                                        aria-hidden="true"
-                                    ></i>
-                                    Speak title
-                                </button>
+                                />
                                 <ShareToChatButton
                                     kind="sound"
                                     :sound-id="sound.id"
                                     :menu-item="true"
-                                    :menu-item-class="[
-                                        soundMenuItemClass,
-                                        'border-t border-gray-600/80 text-violet-300',
-                                    ]"
                                     wrapper-class="w-full"
                                 />
-                                <button
-                                    type="button"
-                                    role="menuitem"
-                                    :class="[
-                                        soundMenuItemClass,
-                                        'border-t border-gray-600/80 text-orange-300',
-                                    ]"
+                                <ActionMenuItem
+                                    icon="ri-forbid-line"
+                                    icon-class="text-orange-500 dark:text-orange-400"
+                                    label="Block sound"
                                     @click="blockSound(sound)"
-                                >
-                                    <i
-                                        class="ri-forbid-line text-lg"
-                                        aria-hidden="true"
-                                    ></i>
-                                    Block sound
-                                </button>
-                                <button
+                                />
+                                <ActionMenuItem
                                     v-if="canEditPages"
-                                    type="button"
-                                    role="menuitem"
-                                    :class="[
-                                        soundMenuItemClass,
-                                        'border-t border-gray-600/80',
-                                    ]"
+                                    icon="ri-pencil-line"
+                                    icon-class="text-emerald-600 dark:text-emerald-400"
+                                    label="Edit"
                                     @click="openEdit(sound)"
-                                >
-                                    <i
-                                        class="ri-pencil-line text-lg text-emerald-400"
-                                        aria-hidden="true"
-                                    ></i>
-                                    Edit
-                                </button>
-                                <button
+                                />
+                                <ActionMenuItem
                                     v-if="canEditPages"
-                                    type="button"
-                                    role="menuitem"
-                                    :class="[
-                                        soundMenuItemClass,
-                                        'border-t border-gray-600/80 text-red-300',
-                                    ]"
+                                    icon="ri-delete-bin-line"
+                                    icon-class="text-red-600 dark:text-red-400"
+                                    label="Delete"
                                     @click="deleteSound(sound)"
-                                >
-                                    <i
-                                        class="ri-delete-bin-line text-lg"
-                                        aria-hidden="true"
-                                    ></i>
-                                    Delete
-                                </button>
+                                />
                             </template>
                         </Dropdown>
                     </div>
@@ -396,16 +348,12 @@ onBeforeUnmount(() => {
         </div>
 
         <FloatingActionMenu v-if="canEditPages">
-            <button
-                type="button"
-                class="flex min-h-[48px] w-full items-center border-b border-gray-200 px-5 py-4 text-left text-base text-gray-700 transition first:border-t-0 hover:bg-gray-200 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+            <ActionMenuItem
+                icon="ri-upload-2-line"
+                icon-class="text-emerald-600 dark:text-emerald-400"
+                label="Upload Sound"
                 @click="openUploadModal"
-            >
-                <i
-                    class="ri-upload-2-line mr-3 shrink-0 text-lg text-emerald-600 dark:text-emerald-400"
-                ></i>
-                Upload Sound
-            </button>
+            />
         </FloatingActionMenu>
 
         <ScrollTop />

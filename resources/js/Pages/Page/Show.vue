@@ -131,69 +131,35 @@
                     @close-page-form="showPageSettings = false"
                 />
             </div>
-            <div
-                class="my-4 flex flex-wrap items-center justify-between gap-2 sm:gap-3"
-            >
-                <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-                    <div
-                        v-if="canAddToCollage"
-                        class="flex shrink-0 items-center gap-2"
-                    >
-                        <AddToCollageButton
-                            :page-id="props.page.id"
-                            :collages="collages"
-                        />
-                    </div>
-
-                    <ShareToChatButton
-                        v-if="canSharePage"
-                        kind="page"
-                        :page-id="page.id"
-                        wrapper-class="flex shrink-0 items-center gap-2"
+            <div class="my-4 flex flex-wrap items-center gap-2 sm:gap-3">
+                <div
+                    v-if="canAddToCollage"
+                    class="flex shrink-0 items-center gap-2"
+                >
+                    <AddToCollageButton
+                        :page-id="props.page.id"
+                        :collages="collages"
                     />
-
-                    <Link
-                        v-if="isMoviesCategory"
-                        :href="
-                            route('movie-cast.index', {
-                                title: page.book.title,
-                            })
-                        "
-                        class="flex shrink-0 items-center gap-2"
-                    >
-                        <Button
-                            type="button"
-                            class="h-10 w-10 flex items-center justify-center"
-                            :title="`Search cast for ${page.book.title}`"
-                            :aria-label="`Search cast for ${page.book.title}`"
-                        >
-                            <i
-                                class="ri-film-line text-xl"
-                                aria-hidden="true"
-                            ></i>
-                        </Button>
-                    </Link>
                 </div>
 
-                <div
-                    v-if="$page.props.auth.user"
+                <Link
+                    v-if="isMoviesCategory"
+                    :href="
+                        route('movie-cast.index', {
+                            title: page.book.title,
+                        })
+                    "
                     class="flex shrink-0 items-center gap-2"
                 >
                     <Button
                         type="button"
-                        :disabled="blocking || blockConfirmPending"
                         class="h-10 w-10 flex items-center justify-center"
-                        :title="t('page.block_icon_title')"
-                        :aria-label="t('page.block_aria')"
-                        @click="blockPage"
+                        :title="`Search cast for ${page.book.title}`"
+                        :aria-label="`Search cast for ${page.book.title}`"
                     >
-                        <i
-                            v-if="blocking"
-                            class="ri-loader-line text-xl animate-spin"
-                        ></i>
-                        <i v-else class="ri-forbid-2-line text-xl"></i>
+                        <i class="ri-film-line text-xl" aria-hidden="true"></i>
                     </Button>
-                </div>
+                </Link>
             </div>
         </div>
 
@@ -208,37 +174,42 @@
             @confirm="confirmOnOk"
             @cancel="confirmOnCancel"
         />
-        <FloatingActionMenu v-if="canEditPages">
-            <button
-                v-if="!showPageSettings"
-                type="button"
-                class="flex min-h-[48px] w-full items-center border-b border-gray-200 px-5 py-4 text-left text-base text-gray-700 transition hover:bg-gray-200 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+        <FloatingActionMenu v-if="$page.props.auth.user">
+            <ShareToChatButton
+                v-if="canSharePage"
+                kind="page"
+                :page-id="page.id"
+                :menu-item="true"
+                wrapper-class="w-full"
+            />
+            <ActionMenuItem
+                icon="ri-forbid-2-line"
+                icon-class="text-orange-500 dark:text-orange-400"
+                :label="t('page.block_menu_label')"
+                :disabled="blocking || blockConfirmPending"
+                @click="blockPage"
+            />
+            <ActionMenuItem
+                v-if="canEditPages && !showPageSettings"
+                icon="ri-edit-line"
+                icon-class="text-blue-600 dark:text-blue-400"
+                :label="t('page.edit_menu_label')"
                 @click="openPageSettings"
-            >
-                <i
-                    class="ri-edit-line mr-3 shrink-0 text-lg text-blue-600 dark:text-blue-400"
-                    aria-hidden="true"
-                ></i>
-                Edit Page
-            </button>
-            <button
-                v-else
-                type="button"
-                class="flex min-h-[48px] w-full items-center border-b-0 px-5 py-4 text-left text-base text-gray-700 transition hover:bg-gray-200 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+            />
+            <ActionMenuItem
+                v-else-if="canEditPages"
+                icon="ri-close-line"
+                icon-class="text-gray-600 dark:text-gray-400"
+                :label="t('page.close_settings_menu_label')"
                 @click="showPageSettings = false"
-            >
-                <i
-                    class="ri-close-line mr-3 shrink-0 text-lg text-gray-600 dark:text-gray-400"
-                    aria-hidden="true"
-                ></i>
-                Close page settings
-            </button>
+            />
         </FloatingActionMenu>
     </BreezeAuthenticatedLayout>
 </template>
 
 <script setup>
 /* global route */
+import ActionMenuItem from "@/Components/ActionMenuItem.vue";
 import AddToCollageButton from "@/Components/AddToCollageButton.vue";
 import BookCoverCard from "@/Components/BookCoverCard.vue";
 import Button from "@/Components/Button.vue";

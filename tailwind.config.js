@@ -9,6 +9,11 @@ module.exports = {
         "./storage/framework/views/*.php",
         "./resources/views/**/*.blade.php",
         "./resources/js/**/*.vue",
+        // Shared class-name constants live in plain JS modules, so Tailwind has to
+        // scan those too. Listed individually rather than globbing all of
+        // resources/js/**/*.js, which would also scan .test.js files and emit
+        // utilities for class names that only ever appear in test fixtures.
+        "./resources/js/Components/actionMenuItem.js",
     ],
 
     theme: {

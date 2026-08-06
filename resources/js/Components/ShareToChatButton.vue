@@ -1,5 +1,6 @@
 <script setup>
 /* global route */
+import { ACTION_MENU_ITEM_CLASS } from "@/Components/actionMenuItem";
 import Button from "@/Components/Button.vue";
 import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import UserTagList from "@/Components/UserTagList.vue";
@@ -41,9 +42,11 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    // Defaults to the shared action-menu row styling so menu callers don't have to
+    // restate it; pass a value only to opt out (e.g. the compact Collages listing).
     menuItemClass: {
         type: [String, Array],
-        default: "",
+        default: ACTION_MENU_ITEM_CLASS,
     },
 });
 

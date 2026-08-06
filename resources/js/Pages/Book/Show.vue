@@ -331,60 +331,34 @@
         </div>
         <ScrollTop />
         <FloatingActionMenu v-if="canEditPages">
-            <button
-                type="button"
-                class="flex min-h-[48px] w-full items-center border-b border-gray-200 px-5 py-4 text-left text-base text-gray-700 transition first:border-t-0 hover:bg-gray-200 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-                :class="{
-                    'border-transparent bg-blue-600 text-white hover:bg-blue-700':
-                        activeTab === 'pages',
-                }"
+            <ActionMenuItem
+                icon="ri-add-line"
+                icon-class="text-emerald-600 dark:text-emerald-400"
+                label="Add Pages"
+                :active="activeTab === 'pages'"
                 @click="setActiveTab('pages')"
-            >
-                <i
-                    class="ri-add-line mr-3 shrink-0 text-lg text-emerald-600 dark:text-emerald-400"
-                    :class="{ 'text-white': activeTab === 'pages' }"
-                    aria-hidden="true"
-                ></i>
-                Add Pages
-            </button>
-            <button
-                type="button"
-                class="flex min-h-[48px] w-full items-center border-b border-gray-200 px-5 py-4 text-left text-base text-gray-700 transition hover:bg-gray-200 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-                :class="{
-                    'border-transparent bg-blue-600 text-white hover:bg-blue-700':
-                        activeTab === 'book',
-                }"
+            />
+            <ActionMenuItem
+                icon="ri-edit-line"
+                icon-class="text-blue-600 dark:text-blue-400"
+                label="Edit Book"
+                :active="activeTab === 'book'"
                 @click="setActiveTab('book')"
-            >
-                <i
-                    class="ri-edit-line mr-3 shrink-0 text-lg text-blue-600 dark:text-blue-400"
-                    :class="{ 'text-white': activeTab === 'book' }"
-                    aria-hidden="true"
-                ></i>
-                Edit Book
-            </button>
-            <button
-                type="button"
-                class="flex min-h-[48px] w-full items-center border-b-0 px-5 py-4 text-left text-base text-gray-700 transition hover:bg-gray-200 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-                :class="{
-                    'bg-blue-600 text-white hover:bg-blue-700':
-                        activeTab === 'bulk',
-                }"
+            />
+            <ActionMenuItem
+                icon="ri-checkbox-multiple-line"
+                icon-class="text-amber-600 dark:text-amber-400"
+                label="Bulk Actions"
+                :active="activeTab === 'bulk'"
                 @click="setActiveTab('bulk')"
-            >
-                <i
-                    class="ri-checkbox-multiple-line mr-3 shrink-0 text-lg text-amber-600 dark:text-amber-400"
-                    :class="{ 'text-white': activeTab === 'bulk' }"
-                    aria-hidden="true"
-                ></i>
-                Bulk Actions
-            </button>
+            />
         </FloatingActionMenu>
     </BreezeAuthenticatedLayout>
 </template>
 
 <script setup>
 import Accordion from "@/Components/Accordion.vue";
+import ActionMenuItem from "@/Components/ActionMenuItem.vue";
 import BookCover from "@/Components/BookCover.vue";
 import Button from "@/Components/Button.vue";
 import SpeakButton from "@/Components/SpeakButton.vue";
