@@ -270,8 +270,8 @@ describe("MessageBuilder", () => {
         });
     });
 
-    describe("Quick message buttons", () => {
-        it("appends quick message to input when clicked", async () => {
+    describe("Feeling sentence buttons", () => {
+        it("appends feeling sentence to input when clicked", async () => {
             const wrapper = mount(MessageBuilder, {
                 props: { users: defaultUsers },
                 global: {
@@ -288,23 +288,25 @@ describe("MessageBuilder", () => {
 
             await nextTick();
 
-            // The "Quick messages" pane is opened via its category tab (the
-            // second tab, after "Things you can do") — it is not open by default.
-            const quickTab = wrapper.findAll('[role="tab"]')[1];
-            await quickTab.trigger("click");
+            // The "Happy" pane is opened via its category tab (the second
+            // tab, after "Things you can do") — it is not open by default.
+            const happyTab = wrapper.findAll('[role="tab"]')[1];
+            await happyTab.trigger("click");
             await nextTick();
 
-            const quickButton = wrapper
+            // t() falls back to the raw translation key in tests since no
+            // "translations" prop is mocked on the page.
+            const happyButton = wrapper
                 .findAll("button")
-                .find((btn) => btn.text().trim() === "yes");
+                .find((btn) => btn.text().trim() === "feelings.happy_1");
 
-            expect(quickButton).toBeTruthy();
-            await quickButton.trigger("click");
+            expect(happyButton).toBeTruthy();
+            await happyButton.trigger("click");
             await nextTick();
 
-            // Input should contain both "Hello " and "yes"
+            // Input should contain both "Hello " and the sentence key
             expect(input.element.value).toContain("Hello");
-            expect(input.element.value).toContain("yes");
+            expect(input.element.value).toContain("feelings.happy_1");
         });
     });
 

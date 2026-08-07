@@ -10,101 +10,14 @@ import { useTranslations } from "@/composables/useTranslations";
 import { router, useForm } from "@inertiajs/vue3";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
-// Organized by semantic/functional categories for AAC
-// "people" holds only person words (pronouns live in commonStarters instead)
-const people = [
-    "Mom",
-    "Dad",
-    "sister",
-    "brother",
-    "grandma",
-    "grandpa",
-    "friend",
-    "teacher",
-];
-const bodyParts = [
-    "my tummy",
-    "my head",
-    "my legs",
-    "my back",
-    "my throat",
-    "my ear",
-    "my nose",
-    "my feet",
-    "my belly button",
-];
-// "actions" holds action verbs only (am/is moved out as state-of-being, not actions)
-const actions = [
-    "hurt",
-    "hurts",
-    "need",
-    "want",
-    "love",
-    "like",
-    "feel",
-    "go",
-    "stop",
-    "play",
-    "dance",
-    "wiggle",
-    "giggle",
-];
-const feelings = [
-    "happy",
-    "sad",
-    "tired",
-    "scared",
-    "sick",
-    "good",
-    "bad",
-    "excited",
-    "hungry",
-    "thirsty",
-    "silly",
-];
-const descriptors = ["very", "really", "a little", "so much", "not"];
-const commonStarters = [
-    "I want",
-    "I need",
-    "I feel",
-    "I am",
-    "I like",
-    "I love",
-    "I have",
-    "I want to",
-    "I need to",
-];
-const things = [
-    "a hug",
-    "a snack",
-    "a drink",
-    "a break",
-    "a toy",
-    "a blanket",
-    "some food",
-    "some water",
-    "some medicine",
-    "some rest",
-    "some help",
-    "food",
-    "water",
-    "medicine",
-    "rest",
-    "help",
-    "the bathroom",
-    "my bed",
-    "a silly joke",
-];
-const quickPhrases = [
-    "I love you",
-    "thank you",
-    "please help",
-    "I'm okay",
-    "yes",
-    "no",
-    "let's play!",
-    "I'm silly!",
-];
+// Splits text into non-empty words; used to keep `selection` (the legacy
+// word-array fallback behind `preview`) in sync with free-typed or inserted text.
+function toWords(text) {
+    return text
+        .trim()
+        .split(/\s+/)
+        .filter((word) => word.length > 0);
+}
 
 const selection = ref([]);
 const inputValue = ref("");
@@ -119,83 +32,86 @@ const { t } = useTranslations();
 
 // Compact category toolbar: each entry is one icon that opens the shared pane
 // below the keyboard. "tools" is the actions pane ("Things you can do"); the
-// rest are AAC word/phrase groups. Category colors are kept (Fitzgerald-style
-// coding aids AAC users) but darkened to -700 so white chip text clears WCAG
-// large-text contrast (>=3:1).
-const wordCategories = [
+// rest are feeling tabs, each showing a handful of ready-made example
+// sentences for that feeling instead of word fragments to piece together.
+// Category colors are kept (Fitzgerald-style coding aids AAC users) but
+// darkened to -700 so white chip text clears WCAG large-text contrast
+// (>=3:1). Classes are written out in full (not composed from a color name)
+// so Tailwind's content scanner can find them.
+const FEELING_TABS = [
     {
-        key: "quick",
-        icon: "ri-chat-quote-fill",
-        label: t("flyout.quick_messages"),
-        chip: "bg-blue-700 hover:bg-blue-800",
-        tint: "text-blue-600 dark:text-blue-300",
-        type: "phrase",
-        items: quickPhrases,
-    },
-    {
-        key: "starters",
-        icon: "ri-play-circle-fill",
-        label: t("flyout.common_starters"),
-        chip: "bg-indigo-700 hover:bg-indigo-800",
-        tint: "text-indigo-600 dark:text-indigo-300",
-        type: "phrase",
-        items: commonStarters,
-    },
-    {
-        key: "things",
-        icon: "ri-gift-fill",
-        label: t("flyout.things_i_need"),
-        chip: "bg-orange-700 hover:bg-orange-800",
-        tint: "text-orange-600 dark:text-orange-300",
-        type: "phrase",
-        items: things,
-    },
-    {
-        key: "people",
-        icon: "ri-user-fill",
-        label: t("flyout.people"),
-        chip: "bg-purple-700 hover:bg-purple-800",
-        tint: "text-purple-600 dark:text-purple-300",
-        type: "word",
-        items: people,
-    },
-    {
-        key: "body",
-        icon: "ri-body-scan-fill",
-        label: t("flyout.body_parts"),
-        chip: "bg-red-700 hover:bg-red-800",
-        tint: "text-red-600 dark:text-red-300",
-        type: "phrase",
-        items: bodyParts,
-    },
-    {
-        key: "actions",
-        icon: "ri-run-fill",
-        label: t("flyout.actions"),
-        chip: "bg-green-700 hover:bg-green-800",
-        tint: "text-green-600 dark:text-green-300",
-        type: "word",
-        items: actions,
-    },
-    {
-        key: "feelings",
+        key: "happy",
         icon: "ri-emotion-happy-fill",
-        label: t("flyout.feelings"),
         chip: "bg-yellow-700 hover:bg-yellow-800",
         tint: "text-yellow-600 dark:text-yellow-300",
-        type: "word",
-        items: feelings,
+        sentenceCount: 6,
     },
     {
-        key: "howmuch",
-        icon: "ri-contrast-fill",
-        label: t("flyout.how_much"),
-        chip: "bg-indigo-700 hover:bg-indigo-800",
-        tint: "text-indigo-600 dark:text-indigo-300",
-        type: "word",
-        items: descriptors,
+        key: "sad",
+        icon: "ri-emotion-sad-fill",
+        chip: "bg-blue-700 hover:bg-blue-800",
+        tint: "text-blue-600 dark:text-blue-300",
+        sentenceCount: 4,
+    },
+    {
+        key: "mad",
+        icon: "ri-emotion-unhappy-fill",
+        chip: "bg-red-700 hover:bg-red-800",
+        tint: "text-red-600 dark:text-red-300",
+        sentenceCount: 4,
+    },
+    {
+        key: "scared",
+        icon: "ri-alarm-warning-fill",
+        chip: "bg-purple-700 hover:bg-purple-800",
+        tint: "text-purple-600 dark:text-purple-300",
+        sentenceCount: 4,
+    },
+    {
+        key: "silly",
+        icon: "ri-emotion-laugh-fill",
+        chip: "bg-orange-700 hover:bg-orange-800",
+        tint: "text-orange-600 dark:text-orange-300",
+        sentenceCount: 7,
+    },
+    {
+        key: "tired",
+        icon: "ri-zzz-fill",
+        chip: "bg-teal-700 hover:bg-teal-800",
+        tint: "text-teal-600 dark:text-teal-300",
+        sentenceCount: 4,
+    },
+    {
+        key: "hurt",
+        icon: "ri-first-aid-kit-fill",
+        chip: "bg-pink-700 hover:bg-pink-800",
+        tint: "text-pink-600 dark:text-pink-300",
+        sentenceCount: 4,
+    },
+    {
+        key: "hungry",
+        icon: "ri-restaurant-fill",
+        chip: "bg-green-700 hover:bg-green-800",
+        tint: "text-green-600 dark:text-green-300",
+        sentenceCount: 4,
     },
 ];
+
+const wordCategories = FEELING_TABS.map(
+    ({ key, icon, chip, tint, sentenceCount }) => ({
+        key,
+        icon,
+        label: t(`feelings.${key}`),
+        chip,
+        tint,
+        items: Array.from({ length: sentenceCount }, (_, i) =>
+            t(`feelings.${key}_${i + 1}`)
+        ),
+    })
+);
+
+// Flattened once for "surprise me" rather than re-flattening on every click.
+const allSentences = wordCategories.flatMap((category) => category.items);
 
 const toolbar = [
     {
@@ -219,13 +135,9 @@ function selectCategory(key) {
     activeCategory.value = activeCategory.value === key ? null : key;
 }
 
-function handleChip(category, item) {
-    if (category.type === "phrase") {
-        addPhrase(item);
-        if (item) speak(item);
-    } else {
-        addWord(item);
-    }
+function handleChip(item) {
+    addPhrase(item);
+    if (item) speak(item);
 }
 const {
     show: confirmShow,
@@ -378,11 +290,7 @@ async function removeFavorite(index) {
 
 function applyFavorite(text) {
     inputValue.value = text;
-    const words = text
-        .trim()
-        .split(/\s+/)
-        .filter((w) => w.length > 0);
-    selection.value = words;
+    selection.value = toWords(text);
 }
 
 function autoGrowTextarea(textarea) {
@@ -399,11 +307,7 @@ function handleInputChange(event) {
         currentValue,
         event?.target?.selectionStart ?? currentValue.length
     );
-    const words = inputValue.value
-        .trim()
-        .split(/\s+/)
-        .filter((word) => word.length > 0);
-    selection.value = words;
+    selection.value = toWords(inputValue.value);
 }
 
 function handleTextareaInput(event) {
@@ -562,7 +466,7 @@ onMounted(() => {
         setCommentInput(props.messageId, builderFunctions);
         setActiveCommentInput(props.messageId);
     } else {
-        setAddWord(addWord);
+        setAddWord(insertMentionTrigger);
         setAddPhrase(addPhrase);
         setGetPreview(() => preview.value);
         setActiveMessageInput();
@@ -657,52 +561,23 @@ onUnmounted(() => {
     }
 });
 
-function addWord(word) {
+// The only remaining caller passes "@" (the tag-user button, in both message
+// and comment mode) — chip/word-fragment insertion was removed along with the
+// old word-fragment categories.
+function insertMentionTrigger() {
     const inputElement = keyboardInputRef.value;
     const currentValue = inputElement?.value ?? inputValue.value;
-
-    if (word === "@") {
-        const newValue = currentValue + "@";
-        inputValue.value = newValue;
-        if (inputElement) {
-            inputElement.value = newValue;
-            inputElement.dispatchEvent(new Event("input", { bubbles: true }));
-            setTimeout(() => {
-                checkForMentions(newValue, newValue.length);
-                inputElement.focus();
-            }, 50);
-        }
-        return;
-    }
-
-    const words = currentValue
-        .trim()
-        .split(/\s+/)
-        .filter((w) => w.length > 0);
-    const lastWord = words[words.length - 1];
-
-    if (lastWord === word) {
-        return;
-    }
-
-    let newValue;
-    if (currentValue.trim() && !currentValue.endsWith(" ")) {
-        newValue = currentValue + " " + word;
-    } else {
-        newValue = currentValue + word;
-    }
+    const newValue = currentValue + "@";
 
     inputValue.value = newValue;
     if (inputElement) {
         inputElement.value = newValue;
         inputElement.dispatchEvent(new Event("input", { bubbles: true }));
+        setTimeout(() => {
+            checkForMentions(newValue, newValue.length);
+            inputElement.focus();
+        }, 50);
     }
-
-    const newWords = newValue
-        .trim()
-        .split(/\s+/)
-        .filter((w) => w.length > 0);
-    selection.value = newWords;
 }
 
 function addPhrase(phrase) {
@@ -722,11 +597,7 @@ function addPhrase(phrase) {
         inputElement.dispatchEvent(new Event("input", { bubbles: true }));
     }
 
-    const newWords = newValue
-        .trim()
-        .split(/\s+/)
-        .filter((w) => w.length > 0);
-    selection.value = newWords;
+    selection.value = toWords(newValue);
 }
 
 const {
@@ -740,7 +611,7 @@ const {
 } = useMessageBuilder();
 
 const registerBuilderFunctions = () => ({
-    addWord,
+    addWord: insertMentionTrigger,
     addPhrase,
     getPreview: () => preview.value,
 });
@@ -754,8 +625,7 @@ const handleInputFocus = () => {
 };
 
 function removeLast() {
-    const currentText = inputValue.value.trim();
-    const words = currentText.split(/\s+/).filter((w) => w.length > 0);
+    const words = toWords(inputValue.value);
 
     if (words.length > 0) {
         words.pop();
@@ -777,26 +647,10 @@ function reset() {
 }
 
 function suggestRandom() {
-    const allWords = [
-        ...people,
-        ...bodyParts,
-        ...actions,
-        ...feelings,
-        ...descriptors,
-        ...things,
-        ...commonStarters,
-        ...quickPhrases,
-    ];
-    const randomCount = 3 + Math.floor(Math.random() * 2);
-    const selected = [];
-    for (let i = 0; i < randomCount; i++) {
-        const word = allWords[Math.floor(Math.random() * allWords.length)];
-        if (!selected.includes(word)) {
-            selected.push(word);
-        }
-    }
-    inputValue.value = selected.join(" ");
-    selection.value = selected;
+    const sentence =
+        allSentences[Math.floor(Math.random() * allSentences.length)];
+    inputValue.value = sentence;
+    selection.value = toWords(sentence);
 }
 
 function sayIt() {
@@ -989,7 +843,7 @@ defineExpose({
         <div
             class="shrink-0 border-y border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900/50"
             role="tablist"
-            :aria-label="t('flyout.prebuilt_messages')"
+            :aria-label="t('flyout.feeling_tabs')"
         >
             <div class="flex gap-1 overflow-x-auto px-2 py-2">
                 <button
@@ -1040,7 +894,7 @@ defineExpose({
                         type="button"
                         :title="t('builder.tag_user')"
                         :aria-label="t('builder.tag_user_aria')"
-                        @click="addWord('@')"
+                        @click="insertMentionTrigger"
                     >
                         <i class="ri-at-line text-2xl"></i>
                     </button>
@@ -1169,7 +1023,7 @@ defineExpose({
                 </div>
             </div>
 
-            <!-- Word / phrase category pane -->
+            <!-- Feeling pane: full example sentences for the selected feeling -->
             <div v-else-if="activePane" class="flex flex-wrap gap-2">
                 <button
                     v-for="(item, i) in activePane.items"
@@ -1179,7 +1033,7 @@ defineExpose({
                         'px-4 py-2 rounded-full text-white text-xl font-semibold shadow-md transition-colors',
                         activePane.chip,
                     ]"
-                    @click="handleChip(activePane, item)"
+                    @click="handleChip(item)"
                 >
                     {{ item }}
                 </button>
