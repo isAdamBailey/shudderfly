@@ -15,8 +15,12 @@ import { onMounted, onUnmounted, ref } from "vue";
  *
  * The composable will:
  * - Subscribe to the user's private notification channel on mount
- * - Display browser notifications when notifications are received
+ * - Show (and speak) an in-app flash message when a notification is received
  * - Clean up the channel subscription on unmount
+ *
+ * It deliberately does NOT raise an OS/browser notification: Web Push owns that
+ * layer, and doing both here gave the user two banners plus the flash for a
+ * single action.
  */
 export function usePusherNotifications() {
     const { setFlashMessage } = useFlashMessage();
@@ -53,8 +57,7 @@ export function usePusherNotifications() {
 
         if (notification.type === "App\\Notifications\\MessageReacted") {
             const senderName = notification.data?.reactor_name;
-            const emoji = notification.data?.emoji;
-            if (!senderName || !emoji) return null;
+            if (!senderName) return null;
             return t("notifications.reaction_flash", {
                 recipient: recipientName,
                 sender: senderName,
@@ -113,89 +116,6 @@ export function usePusherNotifications() {
             );
             if (flashMessage) {
                 setFlashMessage("info", flashMessage, 5000);
-            }
-
-            if (
-                "Notification" in window &&
-                Notification.permission === "granted"
-            ) {
-                const notificationData = {
-                    ...(notification.data || {}),
-                    url:
-                        notification.data?.url ||
-                        notification.url ||
-                        "/messages",
-                };
-
-                if ("serviceWorker" in navigator) {
-                    navigator.serviceWorker
-                        .getRegistration()
-                        .then((registration) => {
-                            if (registration) {
-                                registration
-                                    .showNotification(
-                                        notification.title || "Notification",
-                                        {
-                                            body: notification.body || "",
-                                            icon:
-                                                notification.icon ||
-                                                "/android-chrome-192x192.png",
-                                            data: notificationData,
-                                        }
-                                    )
-                                    .catch(() => {
-                                        const fallbackNotification =
-                                            new Notification(
-                                                notification.title ||
-                                                    "Notification",
-                                                {
-                                                    body:
-                                                        notification.body || "",
-                                                    icon:
-                                                        notification.icon ||
-                                                        "/android-chrome-192x192.png",
-                                                    data: notificationData,
-                                                }
-                                            );
-                                        fallbackNotification.onclick = () => {
-                                            window.focus();
-                                            window.location.href =
-                                                notificationData.url;
-                                        };
-                                    });
-                            } else {
-                                const fallbackNotification = new Notification(
-                                    notification.title || "Notification",
-                                    {
-                                        body: notification.body || "",
-                                        icon:
-                                            notification.icon ||
-                                            "/android-chrome-192x192.png",
-                                        data: notificationData,
-                                    }
-                                );
-                                fallbackNotification.onclick = () => {
-                                    window.focus();
-                                    window.location.href = notificationData.url;
-                                };
-                            }
-                        });
-                } else {
-                    const fallbackNotification = new Notification(
-                        notification.title || "Notification",
-                        {
-                            body: notification.body || "",
-                            icon:
-                                notification.icon ||
-                                "/android-chrome-192x192.png",
-                            data: notificationData,
-                        }
-                    );
-                    fallbackNotification.onclick = () => {
-                        window.focus();
-                        window.location.href = notificationData.url;
-                    };
-                }
             }
         });
     };

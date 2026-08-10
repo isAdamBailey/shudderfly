@@ -113,6 +113,7 @@ class PushNotificationService
                         'title' => $title,
                         'body' => $body,
                         'icon' => '/android-chrome-192x192.png',
+                        'tag' => $this->buildTag($data),
                         'data' => $data,
                     ])
                 );
@@ -156,6 +157,35 @@ class PushNotificationService
             'failed' => count(array_filter($results, fn ($r) => ! $r['success'])),
             'results' => $results,
         ];
+    }
+
+    /**
+     * Build a stable notification tag from the payload data.
+     *
+     * The service worker passes this to showNotification(), so two pushes about
+     * the same event replace each other instead of stacking up as separate
+     * banners. Without it every push falls back to the shared 'default' tag.
+     *
+     * The sender is part of the tag so that distinct events do not collide:
+     * two people reacting to the same message are two notifications, not one
+     * replacing the other.
+     */
+    private function buildTag(array $data): string
+    {
+        $senderId = $data['reactor_id']
+            ?? $data['commenter_id']
+            ?? $data['tagger_id']
+            ?? $data['sender_id']
+            ?? null;
+
+        $parts = array_filter([
+            $data['type'] ?? null,
+            isset($data['message_id']) ? 'm'.$data['message_id'] : null,
+            isset($data['comment_id']) ? 'c'.$data['comment_id'] : null,
+            $senderId !== null ? 'u'.$senderId : null,
+        ], fn ($part) => $part !== null && $part !== '');
+
+        return empty($parts) ? 'default' : implode('-', $parts);
     }
 
     /**
