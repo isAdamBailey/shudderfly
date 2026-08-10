@@ -41,10 +41,7 @@
             </p>
         </template>
 
-        <div
-            v-if="items.length === 0"
-            class="flex flex-col items-center mt-10"
-        >
+        <div v-if="items.length === 0" class="flex flex-col items-center mt-10">
             <h2 class="mb-8 font-semibold text-2xl text-gray-100 leading-tight">
                 No archived collages found.
             </h2>

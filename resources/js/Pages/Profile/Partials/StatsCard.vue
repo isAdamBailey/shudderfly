@@ -457,7 +457,11 @@
 
                     <Link
                         class="text-sm font-medium text-blue-500 hover:underline"
-                        :href="route('categories.show', { categoryName: 'popular' })"
+                        :href="
+                            route('categories.show', {
+                                categoryName: 'popular',
+                            })
+                        "
                         >View all</Link
                     >
                 </div>
@@ -594,9 +598,28 @@
                 v-if="statsData.mostReactedMessage"
                 class="bg-white dark:bg-gray-800 border rounded-lg p-4 shadow-sm"
             >
-                <div class="text-sm text-gray-500">Most reacted message</div>
-                <div class="font-medium truncate mt-1">
-                    "{{ statsData.mostReactedMessage.text }}"
+                <div class="flex items-start justify-between">
+                    <div class="min-w-0">
+                        <div class="text-sm text-gray-500">
+                            Most reacted message
+                        </div>
+                        <div class="font-medium truncate mt-1">
+                            "{{ statsData.mostReactedMessage.text }}"
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <SpeakButton
+                            :disabled="speaking"
+                            icon-class="ri-speak-fill text-lg"
+                            aria-label="Speak most reacted message"
+                            @click="
+                                speakMostReacted(
+                                    'message',
+                                    statsData.mostReactedMessage
+                                )
+                            "
+                        />
+                    </div>
                 </div>
                 <div class="text-sm text-gray-500 mt-1">
                     {{
@@ -622,9 +645,28 @@
                 v-if="statsData.mostReactedComment"
                 class="bg-white dark:bg-gray-800 border rounded-lg p-4 shadow-sm"
             >
-                <div class="text-sm text-gray-500">Most reacted comment</div>
-                <div class="font-medium truncate mt-1">
-                    "{{ statsData.mostReactedComment.text }}"
+                <div class="flex items-start justify-between">
+                    <div class="min-w-0">
+                        <div class="text-sm text-gray-500">
+                            Most reacted comment
+                        </div>
+                        <div class="font-medium truncate mt-1">
+                            "{{ statsData.mostReactedComment.text }}"
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <SpeakButton
+                            :disabled="speaking"
+                            icon-class="ri-speak-fill text-lg"
+                            aria-label="Speak most reacted comment"
+                            @click="
+                                speakMostReacted(
+                                    'comment',
+                                    statsData.mostReactedComment
+                                )
+                            "
+                        />
+                    </div>
                 </div>
                 <div class="text-sm text-gray-500 mt-1">
                     {{
@@ -650,11 +692,31 @@
                 v-if="statsData.mostActiveCommenterLast30Days"
                 class="bg-white dark:bg-gray-800 border rounded-lg p-4 shadow-sm"
             >
-                <div class="text-sm text-gray-500">
-                    Most active commenter (30 days)
-                </div>
-                <div class="font-medium mt-1">
-                    {{ statsData.mostActiveCommenterLast30Days.user.name }}
+                <div class="flex items-start justify-between">
+                    <div class="min-w-0">
+                        <div class="text-sm text-gray-500">
+                            Most active commenter (30 days)
+                        </div>
+                        <div class="font-medium mt-1">
+                            {{
+                                statsData.mostActiveCommenterLast30Days.user
+                                    .name
+                            }}
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <SpeakButton
+                            :disabled="speaking"
+                            icon-class="ri-speak-fill text-lg"
+                            aria-label="Speak most active commenter"
+                            @click="
+                                speakMostActive(
+                                    'most_active_commenter',
+                                    statsData.mostActiveCommenterLast30Days
+                                )
+                            "
+                        />
+                    </div>
                 </div>
                 <div class="text-sm text-gray-500 mt-1">
                     {{
@@ -670,11 +732,31 @@
                 v-if="statsData.mostActiveMessengerLast30Days"
                 class="bg-white dark:bg-gray-800 border rounded-lg p-4 shadow-sm"
             >
-                <div class="text-sm text-gray-500">
-                    Most active poster (30 days)
-                </div>
-                <div class="font-medium mt-1">
-                    {{ statsData.mostActiveMessengerLast30Days.user.name }}
+                <div class="flex items-start justify-between">
+                    <div class="min-w-0">
+                        <div class="text-sm text-gray-500">
+                            Most active poster (30 days)
+                        </div>
+                        <div class="font-medium mt-1">
+                            {{
+                                statsData.mostActiveMessengerLast30Days.user
+                                    .name
+                            }}
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <SpeakButton
+                            :disabled="speaking"
+                            icon-class="ri-speak-fill text-lg"
+                            aria-label="Speak most active poster"
+                            @click="
+                                speakMostActive(
+                                    'most_active_poster',
+                                    statsData.mostActiveMessengerLast30Days
+                                )
+                            "
+                        />
+                    </div>
                 </div>
                 <div class="text-sm text-gray-500 mt-1">
                     {{
@@ -690,9 +772,28 @@
                 v-if="statsData.busiestUploadDayOfWeek"
                 class="bg-white dark:bg-gray-800 border rounded-lg p-4 shadow-sm"
             >
-                <div class="text-sm text-gray-500">Busiest upload day</div>
-                <div class="font-medium mt-1">
-                    {{ statsData.busiestUploadDayOfWeek.day }}
+                <div class="flex items-start justify-between">
+                    <div class="min-w-0">
+                        <div class="text-sm text-gray-500">
+                            Busiest upload day
+                        </div>
+                        <div class="font-medium mt-1">
+                            {{ statsData.busiestUploadDayOfWeek.day }}
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <SpeakButton
+                            :disabled="speaking"
+                            icon-class="ri-speak-fill text-lg"
+                            aria-label="Speak busiest upload day"
+                            @click="
+                                speakBusiestDay(
+                                    'busiest_upload_day',
+                                    statsData.busiestUploadDayOfWeek
+                                )
+                            "
+                        />
+                    </div>
                 </div>
                 <div class="text-sm text-gray-500 mt-1">
                     {{
@@ -708,9 +809,28 @@
                 v-if="statsData.busiestMessageDayOfWeek"
                 class="bg-white dark:bg-gray-800 border rounded-lg p-4 shadow-sm"
             >
-                <div class="text-sm text-gray-500">Busiest message day</div>
-                <div class="font-medium mt-1">
-                    {{ statsData.busiestMessageDayOfWeek.day }}
+                <div class="flex items-start justify-between">
+                    <div class="min-w-0">
+                        <div class="text-sm text-gray-500">
+                            Busiest message day
+                        </div>
+                        <div class="font-medium mt-1">
+                            {{ statsData.busiestMessageDayOfWeek.day }}
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <SpeakButton
+                            :disabled="speaking"
+                            icon-class="ri-speak-fill text-lg"
+                            aria-label="Speak busiest message day"
+                            @click="
+                                speakBusiestDay(
+                                    'busiest_message_day',
+                                    statsData.busiestMessageDayOfWeek
+                                )
+                            "
+                        />
+                    </div>
                 </div>
                 <div class="text-sm text-gray-500 mt-1">
                     {{
@@ -781,6 +901,52 @@ function speakBookPageStat(key, book) {
         t(`stats.${key}`, {
             title: book?.title || "",
             count: book?.pages_count || 0,
+        })
+    );
+}
+
+// Backend sends an English day name ("Sunday"); speak it in the active locale.
+function dayName(day) {
+    if (!day) return "";
+    const key = `stats.day.${String(day).toLowerCase()}`;
+    const translated = t(key);
+    return translated === key ? day : translated;
+}
+
+function speakMostReacted(kind, item) {
+    if (!item) return;
+
+    const key = item.user?.name
+        ? `stats.most_reacted_${kind}`
+        : `stats.most_reacted_${kind}_anon`;
+
+    speak(
+        t(key, {
+            text: item.text || "",
+            count: formatCount(item.reactions_count),
+            user: item.user?.name || "",
+        })
+    );
+}
+
+function speakMostActive(key, entry) {
+    if (!entry) return;
+
+    speak(
+        t(`stats.${key}`, {
+            user: entry.user?.name || "",
+            count: formatCount(entry.count),
+        })
+    );
+}
+
+function speakBusiestDay(key, entry) {
+    if (!entry) return;
+
+    speak(
+        t(`stats.${key}`, {
+            day: dayName(entry.day),
+            count: formatCount(entry.count),
         })
     );
 }

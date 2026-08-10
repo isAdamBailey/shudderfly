@@ -513,6 +513,23 @@ return [
     'stats.top_songs' => 'Top five most popular songs: :list.',
     'stats.book_most_pages' => 'Book with most pages: :title. :count pages.',
     'stats.book_least_pages' => 'Book with least pages: :title. :count pages.',
+    'stats.most_reacted_message' => 'Most reacted message: :text. :count reactions, by :user.',
+    'stats.most_reacted_message_anon' => 'Most reacted message: :text. :count reactions.',
+    'stats.most_reacted_comment' => 'Most reacted comment: :text. :count reactions, by :user.',
+    'stats.most_reacted_comment_anon' => 'Most reacted comment: :text. :count reactions.',
+    'stats.most_active_commenter' => 'Most active commenter in the last thirty days: :user, with :count comments.',
+    'stats.most_active_poster' => 'Most active poster in the last thirty days: :user, with :count messages.',
+    'stats.busiest_upload_day' => 'Busiest upload day: :day, with :count uploads.',
+    'stats.busiest_message_day' => 'Busiest message day: :day, with :count messages.',
+
+    // Day names (spoken)
+    'stats.day.sunday' => 'Sunday',
+    'stats.day.monday' => 'Monday',
+    'stats.day.tuesday' => 'Tuesday',
+    'stats.day.wednesday' => 'Wednesday',
+    'stats.day.thursday' => 'Thursday',
+    'stats.day.friday' => 'Friday',
+    'stats.day.saturday' => 'Saturday',
 
     // User profile (spoken)
     'profile.member_since' => 'Member since :date.',

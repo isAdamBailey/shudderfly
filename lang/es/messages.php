@@ -513,6 +513,23 @@ return [
     'stats.top_songs' => 'Las cinco canciones más populares: :list.',
     'stats.book_most_pages' => 'Libro con más páginas: :title. :count páginas.',
     'stats.book_least_pages' => 'Libro con menos páginas: :title. :count páginas.',
+    'stats.most_reacted_message' => 'Mensaje con más reacciones: :text. :count reacciones, de :user.',
+    'stats.most_reacted_message_anon' => 'Mensaje con más reacciones: :text. :count reacciones.',
+    'stats.most_reacted_comment' => 'Comentario con más reacciones: :text. :count reacciones, de :user.',
+    'stats.most_reacted_comment_anon' => 'Comentario con más reacciones: :text. :count reacciones.',
+    'stats.most_active_commenter' => 'Quien más comentó en los últimos treinta días: :user, con :count comentarios.',
+    'stats.most_active_poster' => 'Quien más publicó en los últimos treinta días: :user, con :count mensajes.',
+    'stats.busiest_upload_day' => 'Día con más subidas: :day, con :count subidas.',
+    'stats.busiest_message_day' => 'Día con más mensajes: :day, con :count mensajes.',
+
+    // Day names (spoken)
+    'stats.day.sunday' => 'domingo',
+    'stats.day.monday' => 'lunes',
+    'stats.day.tuesday' => 'martes',
+    'stats.day.wednesday' => 'miércoles',
+    'stats.day.thursday' => 'jueves',
+    'stats.day.friday' => 'viernes',
+    'stats.day.saturday' => 'sábado',
 
     // User profile (spoken)
     'profile.member_since' => 'Miembro desde :date.',

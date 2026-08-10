@@ -50,7 +50,10 @@ const size = computed(() => (props.compact ? 110 : 220));
             />
         </div>
     </div>
-    <p v-if="!cities.length" class="mt-4 text-center text-gray-600 dark:text-gray-400">
+    <p
+        v-if="!cities.length"
+        class="mt-4 text-center text-gray-600 dark:text-gray-400"
+    >
         Add a city to see its clock.
     </p>
 </template>

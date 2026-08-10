@@ -109,17 +109,13 @@ const topNavItems = computed(() => {
                         <ThemeToggle />
                     </div>
 
-                    <div
-                        class="flex items-center justify-end gap-0.5 sm:gap-2"
-                    >
+                    <div class="flex items-center justify-end gap-0.5 sm:gap-2">
                         <div v-if="messagingEnabled" class="relative">
                             <Dropdown
                                 align="right"
                                 width="80"
                                 connected
-                                :content-classes="[
-                                    'bg-white dark:bg-gray-800',
-                                ]"
+                                :content-classes="['bg-white dark:bg-gray-800']"
                             >
                                 <template #trigger>
                                     <button
