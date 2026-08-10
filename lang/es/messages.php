@@ -248,8 +248,9 @@ return [
     'notifications.summary_someone' => 'alguien',
     'notifications.summary_more' => 'y :count personas más',
     'notifications.summary_tap' => '¡Toca uno para ir al chat!',
-    'notifications.reaction_flash' => ':recipient, ¡:sender te dio un :emoji!',
-    'notifications.reaction_flash_with_text' => ':recipient, :sender te dio un :emoji en: :content',
+    'notifications.reaction_flash' => ':recipient, :sender dejó una reacción en uno de tus mensajes.',
+    'notifications.reply_flash' => ':recipient, :sender dejó una respuesta en uno de tus mensajes.',
+    'notifications.message_flash' => ':recipient, :sender te envió un mensaje.',
     'notifications.reaction_label' => 'le puso un :emoji a tu mensaje',
     'notifications.reaction_comment_label' => 'le puso un :emoji a tu respuesta',
     'notifications.email.updated' => 'Se actualizó la configuración de notificaciones por correo.',
@@ -571,8 +572,8 @@ return [
     'message.user_says' => ':username dice :text',
     'message.no_reactions' => 'Sin reacciones',
     'message.reaction_from' => ':emoji de :names',
-    'message.posting' => 'Publicando mensaje: :text',
-    'comment.posting' => 'Publicando comentario: :text',
+    'message.posting' => 'Publicando tu mensaje.',
+    'comment.posting' => 'Publicando tu respuesta.',
     'builder.delete_confirm_speak' => '¿Seguro que quieres eliminar :text?',
 
     // Reaction emoji names (spoken)

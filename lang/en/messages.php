@@ -248,8 +248,9 @@ return [
     'notifications.summary_someone' => 'someone',
     'notifications.summary_more' => 'and :count more people',
     'notifications.summary_tap' => 'Tap one to jump into the chat!',
-    'notifications.reaction_flash' => ':recipient, :sender gave you a :emoji!',
-    'notifications.reaction_flash_with_text' => ':recipient, :sender gave you a :emoji on: :content',
+    'notifications.reaction_flash' => ':recipient, :sender left a reaction on one of your messages.',
+    'notifications.reply_flash' => ':recipient, :sender left a reply on one of your messages.',
+    'notifications.message_flash' => ':recipient, :sender sent you a message.',
     'notifications.reaction_label' => 'gave your message a :emoji',
     'notifications.reaction_comment_label' => 'gave your reply a :emoji',
     'notifications.email.updated' => 'Email notification settings updated.',
@@ -571,8 +572,8 @@ return [
     'message.user_says' => ':username says :text',
     'message.no_reactions' => 'No reactions',
     'message.reaction_from' => ':emoji from :names',
-    'message.posting' => 'Posting message: :text',
-    'comment.posting' => 'Posting comment: :text',
+    'message.posting' => 'Posting your message.',
+    'comment.posting' => 'Posting your reply.',
     'builder.delete_confirm_speak' => 'Are you sure you want to delete :text?',
 
     // Reaction emoji names (spoken)

@@ -714,7 +714,7 @@ function postMessage() {
     }
 
     const messageText = preview.value;
-    speak(t("message.posting", { text: messageText }));
+    speak(t("message.posting"));
 
     form.message = messageText;
     form.tagged_user_ids = collectTaggedUserIds(messageText);
@@ -743,7 +743,7 @@ function postComment() {
     }
 
     const commentText = preview.value;
-    speak(t("comment.posting", { text: commentText }));
+    speak(t("comment.posting"));
     commentProcessing.value = true;
 
     router.post(

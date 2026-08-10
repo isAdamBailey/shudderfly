@@ -31,42 +31,34 @@ export function usePusherNotifications() {
             return null;
         }
 
+        // Keep these short — the flash message is read aloud, so the full
+        // message/comment text is deliberately left out.
         if (notification.type === "App\\Notifications\\UserTagged") {
             const senderName = notification.data?.tagger_name;
-            const messageText = notification.data?.message;
             if (!senderName) return null;
-            return messageText
-                ? `${recipientName}, you received a message from ${senderName}: ${messageText}`
-                : `${recipientName}, you received a message from ${senderName}`;
+            return t("notifications.message_flash", {
+                recipient: recipientName,
+                sender: senderName,
+            });
         }
 
         if (notification.type === "App\\Notifications\\MessageCommented") {
             const senderName = notification.data?.commenter_name;
-            const commentText = notification.data?.comment;
             if (!senderName) return null;
-            return commentText
-                ? `${recipientName}, you received a reply from ${senderName}: ${commentText}`
-                : `${recipientName}, you received a reply from ${senderName}`;
+            return t("notifications.reply_flash", {
+                recipient: recipientName,
+                sender: senderName,
+            });
         }
 
         if (notification.type === "App\\Notifications\\MessageReacted") {
             const senderName = notification.data?.reactor_name;
             const emoji = notification.data?.emoji;
             if (!senderName || !emoji) return null;
-            const contentText =
-                notification.data?.comment || notification.data?.message;
-            return contentText
-                ? t("notifications.reaction_flash_with_text", {
-                      recipient: recipientName,
-                      sender: senderName,
-                      emoji,
-                      content: contentText,
-                  })
-                : t("notifications.reaction_flash", {
-                      recipient: recipientName,
-                      sender: senderName,
-                      emoji,
-                  });
+            return t("notifications.reaction_flash", {
+                recipient: recipientName,
+                sender: senderName,
+            });
         }
 
         return null;
