@@ -94,6 +94,7 @@ class HandleInertiaRequests extends Middleware
             'theme' => self::getCurrentTheme(),
             'locale' => app()->getLocale(),
             'collageMaxPages' => (int) config('collage.max_pages'),
+            'broadcastChannelPrefix' => fn () => (string) config('broadcasting.channel_prefix'),
             'worldClock' => fn () => $request->user()
                 ? WorldClockState::payload(WorldClockSetting::instance())
                 : null,

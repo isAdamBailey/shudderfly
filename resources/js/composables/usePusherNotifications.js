@@ -1,3 +1,4 @@
+import { userChannelName } from "@/utils/broadcastChannel";
 import { usePage } from "@inertiajs/vue3";
 import { useFlashMessage } from "@/composables/useFlashMessage";
 import { useTranslations } from "@/composables/useTranslations";
@@ -102,7 +103,7 @@ export function usePusherNotifications() {
         }
 
         try {
-            channel.value = window.Echo.private(`App.Models.User.${user.id}`);
+            channel.value = window.Echo.private(userChannelName(user.id));
         } catch {
             return;
         }
@@ -129,7 +130,7 @@ export function usePusherNotifications() {
         if (channel.value && window.Echo) {
             try {
                 window.Echo.leave(
-                    `App.Models.User.${usePage().props.auth?.user?.id}`
+                    userChannelName(usePage().props.auth?.user?.id)
                 );
             } catch {}
             channel.value = null;

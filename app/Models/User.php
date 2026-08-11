@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Support\BroadcastChannel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -62,6 +63,17 @@ class User extends Authenticatable
         'permissions_list',
         'avatar_url',
     ];
+
+    /**
+     * The channel broadcast notifications are delivered on.
+     *
+     * Prefixed per environment so local/testing broadcasts never reach users
+     * connected to another environment sharing the same Pusher app.
+     */
+    public function receivesBroadcastNotificationsOn(): string
+    {
+        return BroadcastChannel::name('App.Models.User.'.$this->id);
+    }
 
     public function getPermissionsListAttribute(): Collection
     {

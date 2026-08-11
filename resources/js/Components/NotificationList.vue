@@ -255,6 +255,7 @@ import { useNotificationSync } from "@/composables/useNotificationSync";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import { useUnreadNotifications } from "@/composables/useUnreadNotifications";
+import { userChannelName } from "@/utils/broadcastChannel";
 import { router, usePage } from "@inertiajs/vue3";
 import axios from "axios";
 import { onMounted, onUnmounted, ref } from "vue";
@@ -477,9 +478,7 @@ const setupEchoListener = () => {
     }
 
     // Subscribe to user's private channel for notifications
-    notificationsChannel.value = window.Echo.private(
-        `App.Models.User.${user.id}`
-    );
+    notificationsChannel.value = window.Echo.private(userChannelName(user.id));
 
     // Listen for new notifications
     notificationsChannel.value.notification((notification) => {
@@ -493,7 +492,7 @@ const cleanup = () => {
     const user = usePage().props.auth?.user;
     if (notificationsChannel.value && window.Echo && user) {
         try {
-            window.Echo.leave(`App.Models.User.${user.id}`);
+            window.Echo.leave(userChannelName(user.id));
         } catch (error) {
             // Ignore errors when leaving channel
         }

@@ -1,4 +1,5 @@
 /* global route */
+import { channelName } from "@/utils/broadcastChannel";
 import { nextTick, reactive, ref } from "vue";
 
 // The single source of truth for the World Clock, shared by every user. State
@@ -130,7 +131,7 @@ function setupEcho() {
         return;
     }
     try {
-        window.Echo.private("world-clock").listen(
+        window.Echo.private(channelName("world-clock")).listen(
             ".WorldClockUpdated",
             (payload) => applyRemote(payload)
         );

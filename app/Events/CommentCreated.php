@@ -3,6 +3,7 @@
 namespace App\Events;
 
 use App\Models\MessageComment;
+use App\Support\BroadcastChannel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
@@ -31,7 +32,7 @@ class CommentCreated implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('messages'),
+            new PrivateChannel(BroadcastChannel::name('messages')),
         ];
     }
 

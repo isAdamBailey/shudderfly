@@ -549,6 +549,7 @@ import MessageReactions from "@/Components/Messages/MessageReactions.vue";
 import ViewReactionsModal from "@/Components/Messages/ViewReactionsModal.vue";
 import Modal from "@/Components/Modal.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
+import { channelName } from "@/utils/broadcastChannel";
 import { usePermissions } from "@/composables/permissions";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useEmojiRise } from "@/composables/useEmojiRise";
@@ -1057,7 +1058,7 @@ const setupEchoListener = () => {
     }
 
     try {
-        messagesChannel.value = window.Echo.private("messages");
+        messagesChannel.value = window.Echo.private(channelName("messages"));
 
         if (messagesChannel.value.error) {
             messagesChannel.value.error((error) => {
@@ -1133,7 +1134,7 @@ const handleReactionUpdate = (event) => {
 const cleanup = () => {
     if (messagesChannel.value && window.Echo) {
         try {
-            window.Echo.leave("messages");
+            window.Echo.leave(channelName("messages"));
         } catch (error) {
             // Ignore errors when leaving channel
         }

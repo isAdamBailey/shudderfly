@@ -7,6 +7,7 @@ use App\Models\Book;
 use App\Models\Collage;
 use App\Models\Page;
 use App\Models\User;
+use App\Support\BroadcastChannel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -318,7 +319,7 @@ class CollagesTest extends TestCase
             // Assert broadcast channel
             $channels = $event->broadcastOn();
             $this->assertCount(1, $channels);
-            $this->assertEquals('private-collages', $channels[0]->name);
+            $this->assertEquals('private-'.BroadcastChannel::name('collages'), $channels[0]->name);
 
             // Assert broadcast name
             $this->assertEquals('CollagePageRemoved', $event->broadcastAs());

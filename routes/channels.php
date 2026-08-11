@@ -1,21 +1,22 @@
 <?php
 
 use App\Models\SiteSetting;
+use App\Support\BroadcastChannel;
 use Illuminate\Support\Facades\Broadcast;
 
-Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
+Broadcast::channel(BroadcastChannel::name('App.Models.User.{id}'), function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
 
-Broadcast::channel('collages', function ($user) {
+Broadcast::channel(BroadcastChannel::name('collages'), function ($user) {
     return true;
 });
 
-Broadcast::channel('world-clock', function ($user) {
+Broadcast::channel(BroadcastChannel::name('world-clock'), function ($user) {
     return true;
 });
 
-Broadcast::channel('messages', function ($user) {
+Broadcast::channel(BroadcastChannel::name('messages'), function ($user) {
     // For private channels, Laravel automatically ensures $user is authenticated
     // Check if messaging is enabled
     $setting = SiteSetting::where('key', 'messaging_enabled')->first();

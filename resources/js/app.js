@@ -6,6 +6,7 @@ import { createInertiaApp } from "@inertiajs/vue3";
 import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
 import { ZiggyVue } from "../../vendor/tightenco/ziggy/dist/vue.m";
 import "remixicon/fonts/remixicon.css";
+import { setBroadcastChannelPrefix } from "./utils/broadcastChannel";
 
 const appName =
     window.document.getElementsByTagName("title")[0]?.innerText || "Laravel";
@@ -22,6 +23,10 @@ createInertiaApp({
             import.meta.glob("./Pages/**/*.vue")
         ),
     setup({ el, App, props, plugin }) {
+        setBroadcastChannelPrefix(
+            props.initialPage?.props?.broadcastChannelPrefix
+        );
+
         return createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(ZiggyVue, Ziggy)

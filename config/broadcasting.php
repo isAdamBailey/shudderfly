@@ -15,7 +15,23 @@ return [
     |
     */
 
-    'default' => env('BROADCAST_DRIVER', 'null'),
+    // `?:` rather than a default argument: env() casts the literal string
+    // "null" to PHP null, which would leave no driver name to resolve at all.
+    'default' => env('BROADCAST_DRIVER') ?: 'null',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Channel Prefix
+    |--------------------------------------------------------------------------
+    |
+    | Every channel name is prefixed with this value so that environments
+    | sharing a single Pusher app (local, testing, production) never receive
+    | each other's events. Defaults to the application environment; set
+    | BROADCAST_CHANNEL_PREFIX to override, or to an empty string to disable.
+    |
+    */
+
+    'channel_prefix' => env('BROADCAST_CHANNEL_PREFIX', config('app.env')),
 
     /*
     |--------------------------------------------------------------------------

@@ -3,6 +3,7 @@
 namespace App\Events;
 
 use App\Models\WorldClockSetting;
+use App\Support\BroadcastChannel;
 use App\Support\WorldClockState;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
@@ -27,7 +28,7 @@ class WorldClockUpdated implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('world-clock'),
+            new PrivateChannel(BroadcastChannel::name('world-clock')),
         ];
     }
 

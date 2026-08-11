@@ -12,6 +12,14 @@
   <php>
     <env name="APP_ENV" value="testing"/>
     <env name="BCRYPT_ROUNDS" value="4"/>
+    <!-- Never talk to a real websocket/push service from the test suite -->
+    <env name="BROADCAST_DRIVER" value="null"/>
+    <env name="BROADCAST_CHANNEL_PREFIX" value="testing"/>
+    <env name="PUSHER_APP_ID" value="testing"/>
+    <env name="PUSHER_APP_KEY" value="testing"/>
+    <env name="PUSHER_APP_SECRET" value="testing"/>
+    <env name="VAPID_PUBLIC_KEY" value=""/>
+    <env name="VAPID_PRIVATE_KEY" value=""/>
     <env name="CACHE_DRIVER" value="array"/>
     <env name="DB_CONNECTION" value="sqlite"/>
     <env name="DB_DATABASE" value=":memory:"/>

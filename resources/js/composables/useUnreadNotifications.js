@@ -1,3 +1,4 @@
+import { userChannelName } from "@/utils/broadcastChannel";
 import { usePage } from "@inertiajs/vue3";
 import { onMounted, onUnmounted, ref, watch } from "vue";
 
@@ -32,7 +33,7 @@ export function useUnreadNotifications() {
         retryCount.value = 0;
 
         notificationsChannel.value = window.Echo.private(
-            `App.Models.User.${user.id}`
+            userChannelName(user.id)
         );
 
         notificationsChannel.value.notification(() => {
@@ -58,7 +59,7 @@ export function useUnreadNotifications() {
         const user = page.props.auth?.user;
         if (notificationsChannel.value && window.Echo && user) {
             try {
-                window.Echo.leave(`App.Models.User.${user.id}`);
+                window.Echo.leave(userChannelName(user.id));
             } catch {}
             notificationsChannel.value = null;
         }
