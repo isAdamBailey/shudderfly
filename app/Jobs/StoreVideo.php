@@ -24,6 +24,12 @@ class StoreVideo implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    /**
+     * Minimum free space required before transcoding, independent of source size.
+     * Output runs at a fixed ~664kbps, so this covers ~25 minutes of video.
+     */
+    private const MIN_REQUIRED_SPACE = 128 * 1024 * 1024;
+
     protected string $filePath;
 
     protected string $path;
@@ -108,7 +114,14 @@ class StoreVideo implements ShouldQueue
         }
 
         $fileSize = Storage::disk('local')->size($this->filePath);
-        $requiredSpace = $fileSize * 4; // Increased buffer for processing
+
+        // FFmpeg reads the original in place and writes a single transcoded file,
+        // which is normally much smaller than the source. 2x the source size is
+        // ample headroom for the output plus the poster frame. The output is a
+        // fixed bitrate though, so its size tracks duration rather than source
+        // size: a small, efficiently-encoded source can still transcode to far
+        // more than 2x. The floor covers roughly 25 minutes of output.
+        $requiredSpace = max($fileSize * 2, self::MIN_REQUIRED_SPACE);
 
         if ($freeSpace < $requiredSpace) {
             Log::error('Insufficient disk space for video processing', [
@@ -145,26 +158,11 @@ class StoreVideo implements ShouldQueue
         $tempFile = $tempDir.uniqid('video_', true).'.mp4';
 
         try {
-            // Use streaming to avoid loading entire file into memory
+            // FFmpeg reads the source in place and writes to $tempFile, so there is
+            // no need to stage a copy of the original on disk first.
             $sourcePath = storage_path('app/'.$this->filePath);
             if (! file_exists($sourcePath)) {
                 throw new \RuntimeException('Source video file not found: '.$sourcePath);
-            }
-
-            // Copy file using streams to avoid memory issues
-            $sourceStream = fopen($sourcePath, 'r');
-            $destStream = fopen($tempFile, 'w');
-
-            if (! $sourceStream || ! $destStream) {
-                throw new \RuntimeException('Failed to open file streams for copying');
-            }
-
-            $copied = stream_copy_to_stream($sourceStream, $destStream);
-            fclose($sourceStream);
-            fclose($destStream);
-
-            if ($copied === false) {
-                throw new \RuntimeException('Failed to copy video file to temp location');
             }
 
             try {
@@ -219,6 +217,11 @@ class StoreVideo implements ShouldQueue
             $videoBitrate = 600;
             $audioBitrate = 64;
 
+            // Use the configured binary rather than relying on the queue worker's
+            // PATH, so transcode and screenshot both run the same ffmpeg. Fall back
+            // to the bare name when the env var is present but empty.
+            $ffmpegBinary = config('laravel-ffmpeg.ffmpeg.binaries') ?: 'ffmpeg';
+
             $ffmpegParams = [
                 '-i', storage_path('app/'.$this->filePath),
                 '-c:v', 'libx264',
@@ -257,7 +260,7 @@ class StoreVideo implements ShouldQueue
                 return $value !== null;
             });
 
-            $process = new Process(['ffmpeg', ...$ffmpegParams]);
+            $process = new Process([$ffmpegBinary, ...$ffmpegParams]);
             $process->setTimeout(1800);
             $process->setIdleTimeout(1800);
             $process->setOptions([
@@ -308,7 +311,6 @@ class StoreVideo implements ShouldQueue
                 // Generate screenshot using direct FFmpeg command (more reliable than Laravel FFmpeg library)
                 $tempScreenshotPath = $tempDir.uniqid('screenshot_', true).'.jpg';
 
-                $ffmpegBinary = config('laravel-ffmpeg.ffmpeg.binaries');
                 $fullVideoPath = storage_path('app/'.$this->filePath);
                 $fullImagePath = $tempScreenshotPath;
 
@@ -579,7 +581,11 @@ class StoreVideo implements ShouldQueue
         // Clean up any temporary files that might have been created
         $tempDir = storage_path('app/temp/');
         if (is_dir($tempDir)) {
-            $tempFiles = glob($tempDir.'video_*.mp4');
+            $tempFiles = array_merge(
+                glob($tempDir.'video_*.mp4') ?: [],
+                glob($tempDir.'screenshot_*.jpg') ?: [],
+            );
+
             foreach ($tempFiles as $tempFile) {
                 if (file_exists($tempFile) && (time() - filemtime($tempFile)) > 3600) { // Older than 1 hour
                     @unlink($tempFile);

@@ -22,6 +22,11 @@ class Kernel extends ConsoleKernel
             ->timezone($weeklyTimezone)
             ->withoutOverlapping();
 
+        $schedule->command('storage:cleanup-temp')
+            ->dailyAt('1:00')
+            ->timezone($weeklyTimezone)
+            ->withoutOverlapping();
+
         $schedule->command('stats:aggregate-site-statistics')
             ->dailyAt('3:00')
             ->timezone($weeklyTimezone)
