@@ -58,6 +58,7 @@ class MovieCastController extends Controller
         $response = Http::get("{$baseUrl}/search/movie", [
             'api_key' => $apiKey,
             'query' => trim($query),
+            'include_adult' => false,
         ]);
 
         if (! $response->successful()) {
@@ -65,6 +66,7 @@ class MovieCastController extends Controller
         }
 
         $mappedResults = collect($response->json('results', []))
+            ->reject(fn (array $movie) => $movie['adult'] ?? false)
             ->take(15)
             ->map(fn (array $movie) => [
                 'id' => $movie['id'],
@@ -102,6 +104,10 @@ class MovieCastController extends Controller
 
         $baseUrl = config('services.tmdb.base_api_url');
 
+        if (! $this->isMovieAllowed($id, $baseUrl, $apiKey)) {
+            return response()->json(['message' => 'This movie is not available.'], 403);
+        }
+
         $response = Http::get("{$baseUrl}/movie/{$id}/credits", [
             'api_key' => $apiKey,
         ]);
@@ -135,6 +141,10 @@ class MovieCastController extends Controller
         }
 
         $baseUrl = config('services.tmdb.base_api_url');
+
+        if (! $this->isMovieAllowed($id, $baseUrl, $apiKey)) {
+            return response()->json(['message' => 'This movie is not available.'], 403);
+        }
 
         $response = Http::get("{$baseUrl}/movie/{$id}", [
             'api_key' => $apiKey,
@@ -269,14 +279,14 @@ class MovieCastController extends Controller
             ]);
 
             if (! $response->successful()) {
-                return true;
+                return false;
             }
 
             $usReleaseInfo = collect($response->json('results', []))
                 ->first(fn (array $entry) => ($entry['iso_3166_1'] ?? '') === 'US');
 
             if (! $usReleaseInfo) {
-                return true;
+                return false;
             }
 
             $certifications = collect($usReleaseInfo['release_dates'] ?? [])
@@ -286,7 +296,7 @@ class MovieCastController extends Controller
                 ->all();
 
             if ($certifications === []) {
-                return true;
+                return false;
             }
 
             foreach ($certifications as $certification) {
@@ -297,7 +307,7 @@ class MovieCastController extends Controller
 
             return true;
         } catch (\Throwable) {
-            return true;
+            return false;
         }
     }
 }

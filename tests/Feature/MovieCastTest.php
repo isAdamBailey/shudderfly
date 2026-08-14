@@ -139,6 +139,134 @@ class MovieCastTest extends TestCase
         $response->assertOk()->assertExactJson([]);
     }
 
+    public function test_movie_cast_search_excludes_movies_with_no_us_certification_data(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        Http::fake([
+            'api.themoviedb.org/3/search/movie*' => Http::response([
+                'results' => [
+                    [
+                        'id' => 123,
+                        'title' => 'Unrated Movie',
+                        'release_date' => '2001-01-01',
+                        'poster_path' => '/unrated.jpg',
+                    ],
+                ],
+            ]),
+            'api.themoviedb.org/3/movie/123/release_dates*' => Http::response([
+                'results' => [],
+            ]),
+        ]);
+
+        $response = $this->getJson(route('movie-cast.search', ['query' => 'Unrated Movie']));
+
+        $response->assertOk()->assertExactJson([]);
+    }
+
+    public function test_movie_cast_search_excludes_adult_results(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        Http::fake([
+            'api.themoviedb.org/3/search/movie*' => Http::response([
+                'results' => [
+                    [
+                        'id' => 999,
+                        'title' => 'Adult Movie',
+                        'release_date' => '2001-01-01',
+                        'poster_path' => '/adult.jpg',
+                        'adult' => true,
+                    ],
+                ],
+            ]),
+        ]);
+
+        $response = $this->getJson(route('movie-cast.search', ['query' => 'Adult Movie']));
+
+        $response->assertOk()->assertExactJson([]);
+    }
+
+    public function test_movie_cast_details_rejects_restricted_movie(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        Http::fake([
+            'api.themoviedb.org/3/movie/550/release_dates*' => Http::response([
+                'results' => [
+                    [
+                        'iso_3166_1' => 'US',
+                        'release_dates' => [
+                            ['certification' => 'R'],
+                        ],
+                    ],
+                ],
+            ]),
+        ]);
+
+        $response = $this->getJson(route('movie-cast.details', 550));
+
+        $response->assertForbidden();
+    }
+
+    public function test_movie_cast_credits_rejects_restricted_movie(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        Http::fake([
+            'api.themoviedb.org/3/movie/550/release_dates*' => Http::response([
+                'results' => [
+                    [
+                        'iso_3166_1' => 'US',
+                        'release_dates' => [
+                            ['certification' => 'R'],
+                        ],
+                    ],
+                ],
+            ]),
+        ]);
+
+        $response = $this->getJson(route('movie-cast.credits', 550));
+
+        $response->assertForbidden();
+    }
+
+    public function test_movie_cast_details_allows_approved_movie(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        Http::fake([
+            'api.themoviedb.org/3/movie/862/release_dates*' => Http::response([
+                'results' => [
+                    [
+                        'iso_3166_1' => 'US',
+                        'release_dates' => [
+                            ['certification' => 'G'],
+                        ],
+                    ],
+                ],
+            ]),
+            'api.themoviedb.org/3/movie/862*' => Http::response([
+                'id' => 862,
+                'title' => 'Toy Story',
+                'overview' => 'A story of toys.',
+                'release_date' => '1995-11-22',
+                'poster_path' => '/toy.jpg',
+                'backdrop_path' => null,
+                'videos' => ['results' => []],
+            ]),
+        ]);
+
+        $response = $this->getJson(route('movie-cast.details', 862));
+
+        $response->assertOk()->assertJson(['id' => 862, 'title' => 'Toy Story']);
+    }
+
     public function test_authenticated_user_can_add_and_remove_shared_favorite(): void
     {
         $user = User::factory()->create();
