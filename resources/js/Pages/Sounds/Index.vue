@@ -174,10 +174,9 @@ async function deleteSound(sound) {
 async function blockSound(sound) {
     if (playingId.value === sound.id) stopAudio();
 
-    const okPromise = askConfirm(
-        t("sound.block_confirm_dialog", { title: sound.title })
-    );
-    speak(t("sound.block_confirm_speak", { title: sound.title }));
+    const confirmMessage = t("sound.block_confirm_dialog");
+    const okPromise = askConfirm(confirmMessage);
+    speak(confirmMessage);
     const ok = await okPromise;
     if (!ok) return;
 

@@ -320,8 +320,9 @@ const blockPage = async () => {
 
     blockConfirmPending.value = true;
     try {
-        const okPromise = askConfirm(t("page.block_confirm_dialog"));
-        speak(t("page.block_confirm_speak"));
+        const confirmMessage = t("page.block_confirm_dialog");
+        const okPromise = askConfirm(confirmMessage);
+        speak(confirmMessage);
         const ok = await okPromise;
         if (!ok) {
             return;
