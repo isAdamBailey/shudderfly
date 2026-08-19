@@ -1,3 +1,10 @@
+<script>
+// Module-scoped (shared across every Flash instance) rather than local to
+// one component instance — see the dedupe comment in <script setup> below.
+let lastSpokenId = null;
+let lastSpokenAt = 0;
+</script>
+
 <script setup>
 import { useFlashMessage } from "@/composables/useFlashMessage";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
@@ -62,8 +69,10 @@ const messageStyles = computed(() => {
     }
 });
 
-let lastSpokenId = null;
-let lastSpokenAt = 0;
+// Module-scoped (not per-instance) because AuthenticatedLayout mounts a
+// fresh Flash instance on every page navigation, and the outgoing page's
+// instance can still react to the same shared page.props.flash change
+// before it unmounts, speaking the same message a second time.
 const SPEAK_DEDUPE_MS = 750;
 
 watch(
