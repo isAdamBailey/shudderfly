@@ -19,6 +19,14 @@ const { canEditPages, canEditProfile } = usePermissions();
 const isDesktopProfileOpen = ref(false);
 const { unreadCount, isNewNotification } = useUnreadNotifications();
 
+const isLogoSpinning = ref(false);
+const spinLogo = () => {
+    isLogoSpinning.value = false;
+    requestAnimationFrame(() => {
+        isLogoSpinning.value = true;
+    });
+};
+
 const messagingEnabled = computed(() => {
     const value = usePage().props.settings?.messaging_enabled;
     return value === "1" || value === 1 || value === true;
@@ -100,8 +108,13 @@ const topNavItems = computed(() => {
                         <Link
                             :href="route('welcome')"
                             class="shrink-0 flex items-center max-w-10 sm:max-w-14"
+                            @click="spinLogo"
                         >
-                            <ApplicationLogo class="h-10 sm:h-14" />
+                            <ApplicationLogo
+                                class="h-10 sm:h-14"
+                                :class="{ 'animate-playful-spin': isLogoSpinning }"
+                                @animationend="isLogoSpinning = false"
+                            />
                         </Link>
                     </div>
 
