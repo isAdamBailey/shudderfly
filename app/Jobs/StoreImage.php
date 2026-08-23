@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Book;
 use App\Models\Page;
+use App\Services\MediaDescriptionService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -17,6 +18,13 @@ use Intervention\Image\Laravel\Facades\Image;
 class StoreImage implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    /**
+     * Generating a description calls an external model, so allow more than the
+     * 60s queue default -- but stay under the queues' retry_after of 90s, or a
+     * still-running job gets re-reserved and the upload is written twice.
+     */
+    public int $timeout = 85;
 
     protected string $filePath;
 
@@ -58,7 +66,7 @@ class StoreImage implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle(MediaDescriptionService $descriptions): void
     {
         $disk = str_starts_with($this->filePath, 's3://') ? 's3' : 'local';
         $filePath = str_replace('s3://', '', $this->filePath);
@@ -80,11 +88,14 @@ class StoreImage implements ShouldQueue
         try {
             $imageData = Storage::disk($disk)->get($filePath);
             file_put_contents($tempFile, $imageData);
+            unset($imageData);
 
             $image = Image::decode($tempFile);
             $encoded = $image->encode(new WebpEncoder(30, true));
             Storage::disk('s3')->put($this->path, (string) $encoded);
             Storage::disk('s3')->setVisibility($this->path, 'public');
+
+            $page = null;
 
             if ($this->page) {
                 $this->page->update([
@@ -94,6 +105,8 @@ class StoreImage implements ShouldQueue
                     'latitude' => $this->latitude,
                     'longitude' => $this->longitude,
                 ]);
+
+                $page = $this->page;
             } elseif ($this->book) {
                 $page = $this->book->pages()->create([
                     'content' => $this->content,
@@ -105,6 +118,27 @@ class StoreImage implements ShouldQueue
 
                 if (! $this->book->cover_page) {
                     $this->book->update(['cover_page' => $page->id]);
+                }
+            }
+
+            // Caption last, so the page and its media are already visible while
+            // the model runs. This never throws, so a slow or failing model
+            // costs nothing. $image is safe to downscale here: the stored webp
+            // was encoded above and nothing reads $image after this point.
+            if ($page) {
+                try {
+                    $caption = $descriptions->resolveCaption($this->content, $image);
+
+                    if ($caption !== $this->content) {
+                        $page->update(['content' => $caption]);
+                    }
+                } catch (\Throwable $captionError) {
+                    // The media and the page are already stored, so a caption
+                    // problem must not fail an upload that otherwise succeeded.
+                    Log::warning('Failed to caption image after StoreImage', [
+                        'page_id' => $page->id,
+                        'exception' => $captionError->getMessage(),
+                    ]);
                 }
             }
 

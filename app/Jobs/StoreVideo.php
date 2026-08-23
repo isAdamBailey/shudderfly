@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Book;
 use App\Models\Page;
+use App\Services\MediaDescriptionService;
 use Aws\S3\Exception\S3Exception;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -74,7 +75,7 @@ class StoreVideo implements ShouldQueue
         $this->longitude = $longitude;
     }
 
-    public function handle(): void
+    public function handle(MediaDescriptionService $descriptions): void
     {
         $shouldDeleteSourceFile = false;
 
@@ -382,7 +383,7 @@ class StoreVideo implements ShouldQueue
                 }
 
                 // Use database transaction for data consistency
-                DB::transaction(function () use ($processedFilePath, $posterPath) {
+                $page = DB::transaction(function () use ($processedFilePath, $posterPath) {
                     if ($this->page) {
                         $this->page->update([
                             'content' => $this->content,
@@ -392,7 +393,11 @@ class StoreVideo implements ShouldQueue
                             'latitude' => $this->latitude,
                             'longitude' => $this->longitude,
                         ]);
-                    } elseif ($this->book) {
+
+                        return $this->page;
+                    }
+
+                    if ($this->book) {
                         $page = $this->book->pages()->create([
                             'content' => $this->content,
                             'media_path' => $processedFilePath,
@@ -406,8 +411,33 @@ class StoreVideo implements ShouldQueue
                         if (! $this->book->cover_page) {
                             $this->book->update(['cover_page' => $page->id]);
                         }
+
+                        return $page;
                     }
+
+                    return null;
                 });
+
+                // Describe the poster frame that becomes the page's cover, once
+                // the page is already saved and visible. This never throws, so a
+                // slow or failing model costs nothing.
+                // $screenshotContents is false when file_get_contents failed.
+                if ($page && $screenshotContents) {
+                    try {
+                        $caption = $descriptions->resolveCaption($this->content, $screenshotContents);
+
+                        if ($caption !== $this->content) {
+                            $page->update(['content' => $caption]);
+                        }
+                    } catch (Throwable $captionError) {
+                        // The video and the page are already stored, so a caption
+                        // problem must not retry a 30-minute job and duplicate them.
+                        Log::warning('Failed to caption video poster after StoreVideo', [
+                            'page_id' => $page->id,
+                            'exception' => $captionError->getMessage(),
+                        ]);
+                    }
+                }
 
                 // After successful DB update, delete any old media/poster
                 try {
