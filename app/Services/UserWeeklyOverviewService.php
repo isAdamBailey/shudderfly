@@ -8,6 +8,7 @@ use App\Models\Message;
 use App\Models\MessageComment;
 use App\Models\MessageReaction;
 use App\Models\User;
+use App\Support\AiFeature;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
@@ -27,6 +28,8 @@ class UserWeeklyOverviewService
 
     private const GENERATION_ATTEMPTS = 3;
 
+    private ?bool $aiEnabled = null;
+
     public function __construct(
         private PopularityService $popularityService
     ) {}
@@ -40,6 +43,11 @@ class UserWeeklyOverviewService
     {
         $metrics = $this->buildMetrics($user);
         $fallbackOverview = $this->buildFallbackOverview($user, $metrics);
+
+        if (! $this->aiEnabled()) {
+            return $fallbackOverview;
+        }
+
         $token = config('services.huggingface.api_token');
 
         if (! is_string($token) || trim($token) === '') {
@@ -63,6 +71,15 @@ class UserWeeklyOverviewService
         }
 
         return $fallbackOverview;
+    }
+
+    /**
+     * Every third-party AI call sits behind the same site setting, so the
+     * overview falls back to the locally built summary when it is off.
+     */
+    private function aiEnabled(): bool
+    {
+        return $this->aiEnabled ??= AiFeature::enabled();
     }
 
     private function attemptGeneration(User $user, string $token, string $endpoint, string $model, string $prompt, int $attempt): ?string

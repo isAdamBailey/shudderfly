@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\SiteSetting;
+use App\Support\AiFeature;
 use App\Support\Content;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
@@ -184,7 +184,7 @@ class MediaDescriptionService
 
     private function isEnabled(): bool
     {
-        return $this->enabled ??= (bool) SiteSetting::where('key', 'ai_descriptions_enabled')->first()?->value;
+        return $this->enabled ??= AiFeature::enabled();
     }
 
     /**

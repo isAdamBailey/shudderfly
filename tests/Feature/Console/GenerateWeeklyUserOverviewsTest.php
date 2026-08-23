@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Console;
 
+use App\Models\SiteSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
@@ -24,6 +25,16 @@ class GenerateWeeklyUserOverviewsTest extends TestCase
             'services.huggingface.user_overview_endpoint' => self::ENDPOINT,
             'services.huggingface.user_overview_model' => self::MODEL,
         ]);
+
+        $this->setAiDescriptionsEnabled(true);
+    }
+
+    private function setAiDescriptionsEnabled(bool $enabled): void
+    {
+        SiteSetting::updateOrCreate(
+            ['key' => 'ai_descriptions_enabled'],
+            ['value' => $enabled ? '1' : '0', 'type' => 'boolean']
+        );
     }
 
     public function test_command_saves_generated_overview_on_success(): void
@@ -140,6 +151,7 @@ class GenerateWeeklyUserOverviewsTest extends TestCase
             'services.huggingface.user_overview_endpoint' => self::ENDPOINT,
             'services.huggingface.user_overview_model' => self::MODEL,
         ]);
+        $this->setAiDescriptionsEnabled(true);
 
         $user = User::factory()->create(['name' => 'Tokenless Reader']);
 
@@ -295,5 +307,24 @@ class GenerateWeeklyUserOverviewsTest extends TestCase
             $user->weekly_profile_overview
         );
         $this->assertGreaterThanOrEqual(2, $callCount);
+    }
+
+    public function test_command_saves_fallback_overview_without_calling_ai_when_setting_is_disabled(): void
+    {
+        $this->configureService();
+        $this->setAiDescriptionsEnabled(false);
+
+        $user = User::factory()->create(['name' => 'Quiet Reader']);
+
+        Http::fake();
+
+        $this->artisan('users:generate-weekly-overviews')
+            ->assertExitCode(0);
+
+        $user->refresh();
+
+        $this->assertStringContainsString('Quiet Reader is', $user->weekly_profile_overview);
+        $this->assertNotNull($user->weekly_profile_overview_generated_at);
+        Http::assertNothingSent();
     }
 }
