@@ -222,4 +222,50 @@ class MediaDescriptionServiceTest extends TestCase
 
         Http::assertNothingSent();
     }
+
+    public function test_prepend_description_keeps_the_existing_content_underneath(): void
+    {
+        $this->configureService();
+        $this->fakeResponse('A small dog sleeping on a blue couch.');
+
+        $this->assertSame(
+            '<p>A small dog sleeping on a blue couch.</p><p>Alex took this screenshot.</p>',
+            $this->service()->prependDescription('<p>Alex took this screenshot.</p>', $this->imageBytes())
+        );
+    }
+
+    public function test_prepend_description_keeps_the_existing_content_when_generation_fails(): void
+    {
+        $this->configureService();
+        Http::fake(['router.huggingface.co/*' => Http::response([], 500)]);
+
+        $this->assertSame(
+            '<p>Alex took this screenshot.</p>',
+            $this->service()->prependDescription('<p>Alex took this screenshot.</p>', $this->imageBytes())
+        );
+    }
+
+    public function test_prepend_description_is_skipped_when_disabled(): void
+    {
+        $this->configureService(enabled: false);
+        Http::fake();
+
+        $this->assertSame(
+            '<p>Alex took this screenshot.</p>',
+            $this->service()->prependDescription('<p>Alex took this screenshot.</p>', $this->imageBytes())
+        );
+
+        Http::assertNothingSent();
+    }
+
+    public function test_prepend_description_replaces_blank_existing_content(): void
+    {
+        $this->configureService();
+        $this->fakeResponse('A small dog sleeping on a blue couch.');
+
+        $this->assertSame(
+            '<p>A small dog sleeping on a blue couch.</p>',
+            $this->service()->prependDescription('<p><br></p>', $this->imageBytes())
+        );
+    }
 }
