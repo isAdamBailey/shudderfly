@@ -99,4 +99,133 @@ class AdminPermissionsTest extends TestCase
         $response->assertStatus(403); // Forbidden
         $this->assertTrue(User::where('id', $deleteUser->id)->exists());
     }
+
+    public function test_super_admin_can_grant_super_admin()
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo(['admin', 'super admin']);
+
+        $editUser = User::factory()->create();
+
+        $payload = [
+            'user' => $editUser->toArray(),
+            'permissions' => ['super admin'],
+        ];
+        $response = $this->put(route('admin.permissions'), $payload);
+
+        $response->assertRedirect(route('welcome'));
+        $this->assertTrue($editUser->fresh()->hasPermissionTo('super admin'));
+    }
+
+    public function test_admin_without_super_admin_cannot_grant_super_admin()
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('admin');
+
+        $editUser = User::factory()->create();
+
+        $payload = [
+            'user' => $editUser->toArray(),
+            'permissions' => ['super admin'],
+        ];
+        $response = $this->put(route('admin.permissions'), $payload);
+
+        $response->assertStatus(403);
+        $this->assertFalse($editUser->fresh()->hasPermissionTo('super admin'));
+    }
+
+    public function test_admin_without_super_admin_cannot_revoke_super_admin()
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('admin');
+
+        $editUser = User::factory()->create();
+        $editUser->givePermissionTo('super admin');
+
+        $payload = [
+            'user' => $editUser->toArray(),
+            'permissions' => [],
+        ];
+        $response = $this->put(route('admin.permissions'), $payload);
+
+        $response->assertStatus(403);
+        $this->assertTrue($editUser->fresh()->hasPermissionTo('super admin'));
+    }
+
+    public function test_admin_can_change_other_permissions_of_a_super_admin()
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('admin');
+
+        $editUser = User::factory()->create();
+        $editUser->givePermissionTo('super admin');
+
+        $payload = [
+            'user' => $editUser->toArray(),
+            'permissions' => ['super admin', 'edit pages'],
+        ];
+        $response = $this->put(route('admin.permissions'), $payload);
+
+        $response->assertRedirect(route('welcome'));
+        $this->assertTrue($editUser->fresh()->hasPermissionTo('edit pages'));
+        $this->assertTrue($editUser->fresh()->hasPermissionTo('super admin'));
+    }
+
+    public function test_last_super_admin_cannot_be_demoted()
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo(['admin', 'super admin']);
+
+        $payload = [
+            'user' => $user->toArray(),
+            'permissions' => ['admin'],
+        ];
+        $response = $this->put(route('admin.permissions'), $payload);
+
+        $response->assertSessionHasErrors('permissions');
+        $this->assertTrue($user->fresh()->can('super admin'));
+    }
+
+    public function test_super_admin_can_be_demoted_when_another_one_remains()
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo(['admin', 'super admin']);
+
+        $otherSuperAdmin = User::factory()->create();
+        $otherSuperAdmin->givePermissionTo('super admin');
+
+        $payload = [
+            'user' => $otherSuperAdmin->toArray(),
+            'permissions' => [],
+        ];
+        $response = $this->put(route('admin.permissions'), $payload);
+
+        $response->assertRedirect(route('welcome'));
+        $this->assertFalse($otherSuperAdmin->fresh()->can('super admin'));
+    }
+
+    public function test_admin_without_super_admin_cannot_delete_a_super_admin()
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('admin');
+
+        $superAdmin = User::factory()->create();
+        $superAdmin->givePermissionTo('super admin');
+
+        $response = $this->delete(route('admin.destroy'), ['email' => $superAdmin->email]);
+
+        $response->assertStatus(403);
+        $this->assertTrue(User::whereKey($superAdmin->getKey())->exists());
+    }
+
+    public function test_last_super_admin_cannot_be_deleted()
+    {
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo(['admin', 'super admin']);
+
+        $response = $this->delete(route('admin.destroy'), ['email' => $user->email]);
+
+        $response->assertSessionHasErrors('email');
+        $this->assertTrue(User::whereKey($user->getKey())->exists());
+    }
 }

@@ -19,5 +19,9 @@ export function usePermissions() {
 
     const canAdmin = computed(() => permissionNames(page).includes("admin"));
 
-    return { canEditPages, canEditProfile, canAdmin };
+    const canSuperAdmin = computed(() =>
+        permissionNames(page).includes("super admin")
+    );
+
+    return { canEditPages, canEditProfile, canAdmin, canSuperAdmin };
 }

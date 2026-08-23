@@ -22,6 +22,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'edit pages',
             'edit profile',
             'admin',
+            'super admin',
         ];
 
         foreach ($permissions as $permission) {

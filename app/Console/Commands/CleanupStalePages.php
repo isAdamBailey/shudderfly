@@ -2,28 +2,42 @@
 
 namespace App\Console\Commands;
 
+use App\Mail\StalePagesCleanupMail;
 use App\Models\Book;
 use App\Models\Page;
+use App\Models\User;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Spatie\Permission\Models\Permission;
+use Throwable;
 
 class CleanupStalePages extends Command
 {
     private const MAX_URL_DECODE_ATTEMPTS = 3;
 
+    /**
+     * Pages scoring below this are considered stale. `read_count` is a weighted
+     * popularity score, not a view tally — IncrementPageReadCount adds at least
+     * 1.0 per view (more for newer pages), so for the 30-day-old pages this
+     * command looks at, a score under 2 means the page was viewed at most once.
+     */
+    private const READ_SCORE_THRESHOLD = 2;
+
     protected $signature = 'pages:cleanup-stale';
 
-    protected $description = 'Delete unread pages older than 30 days and remove empty books';
+    protected $description = 'Delete barely read pages older than 30 days, remove empty books, and email a report';
 
     public function handle(): int
     {
+        $startedAt = microtime(true);
         $cutoffDate = now()->subDays(30);
         $bookIds = [];
         $deletedPages = 0;
         $deletedAssets = 0;
 
         Page::query()
-            ->where('read_count', 0)
+            ->where('read_count', '<', self::READ_SCORE_THRESHOLD)
             ->where('created_at', '<', $cutoffDate)
             ->whereNotIn('id', Book::query()->whereNotNull('cover_page')->select('cover_page'))
             ->select(['id', 'book_id', 'media_path', 'media_poster'])
@@ -54,11 +68,62 @@ class CleanupStalePages extends Command
                 });
         }
 
+        $duration = round(microtime(true) - $startedAt, 2);
+
         $this->info("Deleted {$deletedPages} stale page(s).");
         $this->info("Deleted {$deletedAssets} page asset(s) from s3.");
         $this->info("Deleted {$deletedBooks} empty book(s).");
+        $this->info("Completed in {$duration} second(s).");
+
+        $this->mailReport([
+            'readScoreThreshold' => self::READ_SCORE_THRESHOLD,
+            'cutoffDate' => $cutoffDate->toDayDateTimeString(),
+            'deletedPages' => $deletedPages,
+            'deletedAssets' => $deletedAssets,
+            'deletedBooks' => $deletedBooks,
+            'duration' => $duration,
+        ]);
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * @param  array<string, mixed>  $report
+     */
+    private function mailReport(array $report): void
+    {
+        // Maintenance reports go to super admins only.
+        if (! Permission::where('name', 'super admin')->exists()) {
+            $this->warn('No super admin users found; skipping report email.');
+
+            return;
+        }
+
+        $recipients = User::query()
+            ->permission('super admin')
+            ->select(['id', 'name', 'email'])
+            ->orderBy('id')
+            ->get();
+
+        if ($recipients->isEmpty()) {
+            $this->warn('No super admin users found; skipping report email.');
+
+            return;
+        }
+
+        // The deletions have already happened by now, so a mail failure must
+        // not abort the command or skip the remaining recipients.
+        foreach ($recipients as $recipient) {
+            try {
+                Mail::to($recipient->email)->send(new StalePagesCleanupMail($report));
+
+                $this->info("Report emailed to {$recipient->email}.");
+            } catch (Throwable $e) {
+                report($e);
+
+                $this->error("Failed to email report to {$recipient->email}: {$e->getMessage()}");
+            }
+        }
     }
 
     private function deletePageAsset(?string $storedValue): int

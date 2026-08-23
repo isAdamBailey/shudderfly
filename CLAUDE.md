@@ -70,7 +70,7 @@ Laravel 13 backend + Vue 3 frontend connected via **Inertia.js** (no separate AP
 
 ### Permissions
 
-Three Spatie permissions gate functionality: `edit pages`, `edit profile`, `admin`. Route groups in `routes/web.php` enforce these server-side; the `usePermissions()` composable checks them client-side for UI visibility.
+Four Spatie permissions gate functionality: `edit pages`, `edit profile`, `admin`, and `super admin` (maintenance-report recipients; only an existing super admin can grant or revoke it, enforced in `AdminController::update`). Route groups in `routes/web.php` enforce these server-side; the `usePermissions()` composable checks them client-side for UI visibility.
 
 ### Media storage
 
@@ -86,7 +86,7 @@ Queued jobs in `app/Jobs/` handle media processing: `StoreImage`, `StoreVideo`, 
 
 Defined in `app/Console/Kernel.php`, all run weekly on Sunday (America/Los_Angeles):
 
--   `pages:cleanup-stale` — removes stale page records
+-   `pages:cleanup-stale` — deletes pages older than 30 days whose `read_count` (a weighted popularity score, not a view tally — see `IncrementPageReadCount`) is below 2, removes emptied books, and emails a report to `super admin` users
 -   `users:generate-weekly-overviews` — AI summaries via Hugging Face
 -   `send:weekly-stats-mail` — weekly digest email
 -   `music:sync-youtube` — daily sync if `music_enabled` setting is on

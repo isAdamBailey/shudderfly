@@ -19,6 +19,11 @@
                     access to edit and delete their own profile and the ability
                     to log out of the application.
                 </li>
+                <li v-if="canSuperAdmin">
+                    A <strong>super admin</strong> receives maintenance reports,
+                    such as the weekly stale page cleanup summary. Only a super
+                    admin can grant or revoke this.
+                </li>
             </ul>
         </div>
 
@@ -47,6 +52,12 @@
                                 v-if="canAdmin"
                                 class="flex flex-wrap gap-1 mt-2"
                             >
+                                <span
+                                    v-if="userIsSuperAdmin(user)"
+                                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200"
+                                >
+                                    Super Admin
+                                </span>
                                 <span
                                     v-if="userIsAdmin(user)"
                                     class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
@@ -206,6 +217,48 @@
                                             </div>
                                         </button>
                                     </div>
+                                    <template v-if="canSuperAdmin">
+                                        <div
+                                            class="border-t border-gray-200 dark:border-gray-600 my-1"
+                                        ></div>
+                                        <button
+                                            v-if="userIsSuperAdmin(user)"
+                                            type="button"
+                                            :disabled="isCurrentUser(user)"
+                                            class="block w-full px-4 py-2 text-left text-sm leading-5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+                                            @click="
+                                                removePermission(
+                                                    user,
+                                                    'super admin'
+                                                )
+                                            "
+                                        >
+                                            <div
+                                                class="flex items-center gap-2"
+                                            >
+                                                <i class="ri-tools-line"></i>
+                                                <span>Revoke Super Admin</span>
+                                            </div>
+                                        </button>
+                                        <button
+                                            v-else
+                                            type="button"
+                                            class="block w-full px-4 py-2 text-left text-sm leading-5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none transition duration-150 ease-in-out"
+                                            @click="
+                                                addPermission(
+                                                    user,
+                                                    'super admin'
+                                                )
+                                            "
+                                        >
+                                            <div
+                                                class="flex items-center gap-2"
+                                            >
+                                                <i class="ri-tools-line"></i>
+                                                <span>Make Super Admin</span>
+                                            </div>
+                                        </button>
+                                    </template>
                                     <div
                                         class="border-t border-gray-200 dark:border-gray-600 my-1"
                                     ></div>
@@ -251,7 +304,7 @@ import { useTranslations } from "@/composables/useTranslations";
 import { Link, useForm, usePage } from "@inertiajs/vue3";
 
 const { t } = useTranslations();
-const { canAdmin } = usePermissions();
+const { canAdmin, canSuperAdmin } = usePermissions();
 
 const {
     show: confirmShow,
@@ -302,6 +355,10 @@ const deleteUser = async (user) => {
 
 const userIsAdmin = (user) => {
     return user.permissions_list.includes("admin");
+};
+
+const userIsSuperAdmin = (user) => {
+    return user.permissions_list.includes("super admin");
 };
 
 const userCanEditPages = (user) => {

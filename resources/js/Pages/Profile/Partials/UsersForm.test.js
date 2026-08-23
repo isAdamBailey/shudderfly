@@ -1,6 +1,6 @@
 import UsersForm from "@/Pages/Profile/Partials/UsersForm.vue";
 import { mount } from "@vue/test-utils";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 global.route = (name, params) => {
     if (params) {
@@ -33,18 +33,30 @@ vi.mock("@inertiajs/vue3", () => ({
 
 // Mock permissions composable - will be overridden in specific tests
 let mockCanAdmin = true;
+let mockCanSuperAdmin = false;
 vi.mock("@/composables/permissions", () => ({
     usePermissions: () => ({
         canAdmin: mockCanAdmin,
+        canSuperAdmin: mockCanSuperAdmin,
     }),
 }));
 
 describe("UsersForm", () => {
+    beforeEach(() => {
+        mockCanAdmin = true;
+        mockCanSuperAdmin = false;
+    });
+
     const users = [
         {
             name: "Admin User",
             email: "admin@example.com",
-            permissions_list: ["admin", "edit pages", "edit profile"],
+            permissions_list: [
+                "admin",
+                "edit pages",
+                "edit profile",
+                "super admin",
+            ],
         },
         {
             name: "Regular User",
@@ -206,5 +218,65 @@ describe("UsersForm", () => {
         );
 
         expect(userLinks.length).toBeGreaterThan(0);
+    });
+
+    it("shows the super admin badge for super admins", () => {
+        mockCanAdmin = true;
+        mockCanSuperAdmin = false;
+        const wrapper = mount(UsersForm, {
+            props: { users },
+            global: {
+                stubs: {
+                    Avatar: true,
+                    Dropdown: true,
+                    Link: { template: "<a><slot /></a>" },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain("Super Admin");
+        expect(wrapper.findAll(".bg-amber-100").length).toBe(1);
+    });
+
+    it("hides super admin actions from admins who are not super admins", () => {
+        mockCanAdmin = true;
+        mockCanSuperAdmin = false;
+        const wrapper = mount(UsersForm, {
+            props: { users },
+            global: {
+                stubs: {
+                    Avatar: true,
+                    Dropdown: {
+                        template:
+                            '<div class="dropdown-stub"><slot name="trigger" /><slot name="content" /></div>',
+                    },
+                    Link: { template: "<a><slot /></a>" },
+                },
+            },
+        });
+
+        expect(wrapper.text()).not.toContain("Make Super Admin");
+        expect(wrapper.text()).not.toContain("Revoke Super Admin");
+    });
+
+    it("lets a super admin grant and revoke super admin", () => {
+        mockCanAdmin = true;
+        mockCanSuperAdmin = true;
+        const wrapper = mount(UsersForm, {
+            props: { users },
+            global: {
+                stubs: {
+                    Avatar: true,
+                    Dropdown: {
+                        template:
+                            '<div class="dropdown-stub"><slot name="trigger" /><slot name="content" /></div>',
+                    },
+                    Link: { template: "<a><slot /></a>" },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain("Revoke Super Admin");
+        expect(wrapper.text()).toContain("Make Super Admin");
     });
 });
