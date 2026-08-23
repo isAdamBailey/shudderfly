@@ -13,9 +13,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class PagesTest extends TestCase
@@ -293,6 +296,118 @@ class PagesTest extends TestCase
         $this->assertSame($page->content, $payload['content']);
 
         $response->assertRedirect(route('books.show', $book));
+    }
+
+    private function enableAiDescriptions(): void
+    {
+        config([
+            'services.huggingface.api_token' => 'test-token',
+            'services.huggingface.vision_endpoint' => 'https://router.huggingface.co/v1/chat/completions',
+            'services.huggingface.vision_model' => 'Qwen/Qwen2.5-VL-72B-Instruct',
+        ]);
+
+        SiteSetting::updateOrCreate(
+            ['key' => 'ai_descriptions_enabled'],
+            ['value' => '1', 'type' => 'boolean']
+        );
+    }
+
+    private function bookAsEditor(): Book
+    {
+        Storage::fake('s3');
+
+        $this->actingAs($user = User::factory()->create());
+        $user->givePermissionTo('edit pages');
+
+        return Book::factory()->create();
+    }
+
+    private function fakeDescription(string $description): void
+    {
+        Http::fake([
+            'router.huggingface.co/*' => Http::response([
+                'choices' => [['message' => ['content' => $description]]],
+            ], 200),
+        ]);
+    }
+
+    private function storeImagePage(Book $book, ?string $content, ?UploadedFile $image = null): TestResponse
+    {
+        $payload = [
+            'book_id' => $book->id,
+            'image' => $image ?? UploadedFile::fake()->image('photo1.jpg'),
+        ];
+
+        if ($content !== null) {
+            $payload['content'] = $content;
+        }
+
+        return $this->post(route('pages.store'), $payload);
+    }
+
+    /**
+     * @return array<string, array{0: string|null}>
+     */
+    public static function blankContentProvider(): array
+    {
+        return [
+            'no content field' => [null],
+            'only empty markup' => ['<p><br></p>'],
+        ];
+    }
+
+    #[DataProvider('blankContentProvider')]
+    public function test_blank_content_is_replaced_with_an_ai_description(?string $content): void
+    {
+        $book = $this->bookAsEditor();
+        $this->enableAiDescriptions();
+        $this->fakeDescription('A small dog sleeping on a blue couch.');
+
+        $this->storeImagePage($book, $content);
+
+        $this->assertSame(
+            '<p>A small dog sleeping on a blue couch.</p>',
+            Book::find($book->id)->pages->first()->content
+        );
+    }
+
+    public function test_content_the_user_typed_is_never_replaced(): void
+    {
+        $book = $this->bookAsEditor();
+        $this->enableAiDescriptions();
+        Http::fake();
+
+        $this->storeImagePage($book, '<p>My own caption</p>');
+
+        $this->assertSame('<p>My own caption</p>', Book::find($book->id)->pages->first()->content);
+        Http::assertNothingSent();
+    }
+
+    public function test_upload_still_succeeds_when_description_generation_fails(): void
+    {
+        $book = $this->bookAsEditor();
+        $this->enableAiDescriptions();
+        Http::fake(['router.huggingface.co/*' => Http::response([], 500)]);
+
+        $image = UploadedFile::fake()->image('photo1.jpg');
+
+        $this->storeImagePage($book, null, $image)
+            ->assertRedirect(route('books.show', $book));
+
+        Storage::disk('s3')->assertExists(
+            'books/'.$book->slug.'/'.pathinfo($image->hashName(), PATHINFO_FILENAME).'.webp'
+        );
+        $this->assertNotNull(Book::find($book->id)->pages->first());
+    }
+
+    public function test_no_description_is_requested_when_the_setting_is_off(): void
+    {
+        $book = $this->bookAsEditor();
+        Http::fake();
+
+        $this->storeImagePage($book, null);
+
+        Http::assertNothingSent();
     }
 
     public function test_page_cannot_be_updated_without_permissions()

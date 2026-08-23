@@ -44,6 +44,8 @@ return [
         'api_token' => env('HUGGINGFACE_API_TOKEN'),
         'user_overview_model' => env('HUGGINGFACE_USER_OVERVIEW_MODEL', 'Qwen/Qwen2.5-1.5B-Instruct'),
         'user_overview_endpoint' => env('HUGGINGFACE_USER_OVERVIEW_ENDPOINT', 'https://router.huggingface.co/featherless-ai/v1/chat/completions'),
+        'vision_model' => env('HUGGINGFACE_VISION_MODEL', 'Qwen/Qwen2.5-VL-72B-Instruct'),
+        'vision_endpoint' => env('HUGGINGFACE_VISION_ENDPOINT', 'https://router.huggingface.co/v1/chat/completions'),
     ],
 
     'tmdb' => [
