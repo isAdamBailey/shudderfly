@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Book;
 use App\Models\User;
+use App\Services\MediaDescriptionService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -92,7 +93,7 @@ class CreateVideoSnapshot implements ShouldQueue
         return [60, 120, 240];
     }
 
-    public function handle(): void
+    public function handle(MediaDescriptionService $descriptions): void
     {
         // Validate that models still exist
         if (! $this->book->exists || ! $this->user->exists) {
@@ -334,6 +335,20 @@ class CreateVideoSnapshot implements ShouldQueue
                     }
                 }
 
+                // Describe the frame before the local copy goes away. The
+                // attribution line below is kept underneath the description,
+                // and a failing model just leaves the attribution on its own.
+                $content = "<p><strong>{$this->user->name}</strong> took this screenshot from <strong><a href='/pages/{$this->pageId}'>this video</a></strong>.</p>";
+
+                try {
+                    $content = $descriptions->prependDescription($content, file_get_contents($fullImagePath) ?: null);
+                } catch (\Throwable $captionError) {
+                    Log::warning('Failed to describe video snapshot', [
+                        'page_id' => $this->pageId,
+                        'exception' => $captionError->getMessage(),
+                    ]);
+                }
+
                 // Dispatch StoreImage job (StoreImage will remove its S3 source on success)
                 try {
                     StoreImage::dispatch('s3://'.$tempS3Path, $mediaPath);
@@ -380,10 +395,10 @@ class CreateVideoSnapshot implements ShouldQueue
                 }
 
                 // Only create database entry after successful S3 upload and job dispatch
-                DB::transaction(function () use ($mediaPath) {
+                DB::transaction(function () use ($mediaPath, $content) {
                     // Create the page first
                     $page = $this->book->pages()->create([
-                        'content' => "<p><strong>{$this->user->name}</strong> took this screenshot from <strong><a href='/pages/{$this->pageId}'>this video</a></strong>.</p>",
+                        'content' => $content,
                         'media_path' => $mediaPath,
                     ]);
 

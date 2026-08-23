@@ -65,19 +65,53 @@ class MediaDescriptionService
      */
     public function resolveCaption(?string $existingContent, string|ImageInterface|null $source): ?string
     {
-        if (! Content::isBlank($existingContent) || $source === null || $source === '') {
+        if (! Content::isBlank($existingContent)) {
             return $existingContent;
         }
 
-        if (! $this->isEnabled()) {
-            return $existingContent;
+        return $this->describeAsParagraph($source) ?? $existingContent;
+    }
+
+    /**
+     * The caption for media the app itself already captioned, such as the
+     * attribution line on a video snapshot.
+     *
+     * The generated sentence goes first and $existingContent is kept after it,
+     * so the description reads as the caption and the existing text as a note
+     * under it. Never throws: a failed description leaves the content as-is.
+     *
+     * @param  string|ImageInterface|null  $source  Image bytes, or an image the
+     *                                              caller already decoded. It is
+     *                                              downscaled in place, so pass a
+     *                                              decoded image only once you are
+     *                                              done with it.
+     */
+    public function prependDescription(?string $existingContent, string|ImageInterface|null $source): ?string
+    {
+        if (Content::isBlank($existingContent)) {
+            return $this->resolveCaption($existingContent, $source);
+        }
+
+        $paragraph = $this->describeAsParagraph($source);
+
+        return $paragraph === null ? $existingContent : $paragraph.$existingContent;
+    }
+
+    /**
+     * The description of $source as a single HTML paragraph, or null whenever
+     * one could not be produced.
+     */
+    private function describeAsParagraph(string|ImageInterface|null $source): ?string
+    {
+        if ($source === null || $source === '' || ! $this->isEnabled()) {
+            return null;
         }
 
         $prepared = $this->toJpeg($source);
         $description = $prepared === null ? null : $this->describe($prepared);
 
         if ($description === null) {
-            return $existingContent;
+            return null;
         }
 
         // ENT_NOQUOTES, not e(): this is text content, not an attribute value,
