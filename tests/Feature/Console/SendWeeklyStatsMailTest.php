@@ -4,6 +4,7 @@ namespace Tests\Feature\Console;
 
 use App\Mail\WeeklyStatsMail;
 use App\Models\Book;
+use App\Models\SiteSetting;
 use App\Models\SiteStatistic;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -158,6 +159,11 @@ class SendWeeklyStatsMailTest extends TestCase
             'services.huggingface.user_overview_endpoint' => 'https://router.huggingface.co/featherless-ai/v1/chat/completions',
             'services.huggingface.user_overview_model' => 'Qwen/Qwen2.5-1.5B-Instruct',
         ]);
+
+        SiteSetting::updateOrCreate(
+            ['key' => 'ai_descriptions_enabled'],
+            ['value' => '1', 'type' => 'boolean']
+        );
 
         Http::fake([
             'router.huggingface.co/*' => function (Request $request) use ($overviewsByName) {
