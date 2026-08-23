@@ -470,6 +470,8 @@ const speakSummary = () => {
 };
 
 const setupEchoListener = () => {
+    // A pending retry can outlive the page, leaving no window to look at.
+    if (typeof window === "undefined") return;
     const user = usePage().props.auth?.user;
     if (!user || !user.id || !window.Echo) {
         // Retry after a short delay

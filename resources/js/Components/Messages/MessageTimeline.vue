@@ -1048,6 +1048,8 @@ const handleMessageRowClick = (event, messageId) => {
 };
 
 const setupEchoListener = () => {
+    // A pending retry can outlive the page, leaving no window to look at.
+    if (typeof window === "undefined") return;
     if (!window.Echo) {
         setTimeout(setupEchoListener, 500);
         return;

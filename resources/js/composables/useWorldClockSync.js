@@ -123,6 +123,9 @@ async function push(routeName, method, body = {}) {
 // for the messages channel; degrades silently when Echo/Pusher is unavailable.
 function setupEcho() {
     if (echoReady) return;
+    // A pending retry can outlive the page (or a test environment teardown),
+    // by which point there is no window left to look at.
+    if (typeof window === "undefined") return;
     if (!window.Echo) {
         // Give up after ~10s: Pusher may be unconfigured, in which case the app
         // still works via server reconcile + fresh props on each navigation.
