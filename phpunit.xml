@@ -31,6 +31,8 @@
     <env name="AWS_SECRET_ACCESS_KEY" value="testing"/>
     <env name="AWS_DEFAULT_REGION" value="us-east-1"/>
     <env name="AWS_BUCKET" value="testing"/>
+    <!-- Never let a developer's local AI_PROVIDER=anthropic make real, billed API calls from the test suite -->
+    <env name="AI_PROVIDER" value="huggingface"/>
   </php>
   <source>
     <include>

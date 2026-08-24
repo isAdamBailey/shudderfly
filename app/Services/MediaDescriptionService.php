@@ -5,7 +5,9 @@ namespace App\Services;
 use App\Support\AiFeature;
 use App\Support\Content;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Intervention\Image\Encoders\JpegEncoder;
@@ -14,7 +16,8 @@ use Intervention\Image\Laravel\Facades\Image;
 
 /**
  * Describes an uploaded image in one short sentence using a vision-language
- * model on the Hugging Face Inference Providers router.
+ * model, via either the Hugging Face Inference Providers router or the
+ * Anthropic API (config('services.ai_provider')).
  *
  * Every failure mode returns null: callers use the description only when the
  * uploader left the caption blank, so a missing one is never an error.
@@ -134,6 +137,13 @@ class MediaDescriptionService
             return null;
         }
 
+        return config('services.ai_provider') === 'anthropic'
+            ? $this->describeViaAnthropic($imageBytes)
+            : $this->describeViaHuggingFace($imageBytes);
+    }
+
+    private function describeViaHuggingFace(string $imageBytes): ?string
+    {
         $token = config('services.huggingface.api_token');
 
         if (! is_string($token) || trim($token) === '') {
@@ -143,19 +153,8 @@ class MediaDescriptionService
         }
 
         try {
-            $response = Http::withToken($token)
-                ->connectTimeout(self::CONNECT_TIMEOUT_SECONDS)
-                ->timeout(self::REQUEST_TIMEOUT_SECONDS)
-                ->retry(self::RETRY_TIMES, self::RETRY_SLEEP_MS, function ($exception): bool {
-                    if ($exception instanceof ConnectionException) {
-                        return true;
-                    }
-                    if ($exception instanceof RequestException && $exception->response) {
-                        return $exception->response->serverError() || $exception->response->status() === 429;
-                    }
-
-                    return false;
-                }, false)
+            $response = $this->httpClient()
+                ->withToken($token)
                 ->post((string) config('services.huggingface.vision_endpoint'), [
                     'model' => (string) config('services.huggingface.vision_model'),
                     'max_tokens' => self::MAX_TOKENS,
@@ -171,26 +170,7 @@ class MediaDescriptionService
                     ],
                 ]);
 
-            if (! $response->successful()) {
-                Log::warning('Media description generation failed', [
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                ]);
-
-                return null;
-            }
-
-            $description = $this->normalize(
-                (string) data_get($response->json(), 'choices.0.message.content', '')
-            );
-
-            if ($description === null) {
-                Log::warning('Media description generation returned unusable content', [
-                    'body' => $response->body(),
-                ]);
-            }
-
-            return $description;
+            return $this->handleResponse($response, fn ($body) => (string) data_get($body, 'choices.0.message.content', ''));
         } catch (\Throwable $exception) {
             Log::warning('Media description generation exception', [
                 'error' => $exception->getMessage(),
@@ -198,6 +178,88 @@ class MediaDescriptionService
 
             return null;
         }
+    }
+
+    private function describeViaAnthropic(string $imageBytes): ?string
+    {
+        $apiKey = config('services.anthropic.api_key');
+
+        if (! is_string($apiKey) || trim($apiKey) === '') {
+            Log::warning('Media description skipped: missing Anthropic API key');
+
+            return null;
+        }
+
+        try {
+            $response = $this->httpClient()
+                ->withHeaders([
+                    'x-api-key' => $apiKey,
+                    'anthropic-version' => (string) config('services.anthropic.api_version'),
+                ])
+                ->post((string) config('services.anthropic.endpoint'), [
+                    'model' => (string) config('services.anthropic.vision_model'),
+                    'max_tokens' => self::MAX_TOKENS,
+                    // No `temperature`: sampling params are rejected with a 400
+                    // on newer Claude tiers (e.g. Sonnet 5, Opus 5).
+                    'system' => self::SYSTEM_PROMPT,
+                    'messages' => [
+                        ['role' => 'user', 'content' => [
+                            ['type' => 'image', 'source' => [
+                                'type' => 'base64',
+                                'media_type' => 'image/jpeg',
+                                'data' => base64_encode($imageBytes),
+                            ]],
+                            ['type' => 'text', 'text' => 'Describe this image.'],
+                        ]],
+                    ],
+                ]);
+
+            return $this->handleResponse($response, fn ($body) => (string) data_get($body, 'content.0.text', ''));
+        } catch (\Throwable $exception) {
+            Log::warning('Media description generation exception', [
+                'error' => $exception->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    private function httpClient(): PendingRequest
+    {
+        return Http::connectTimeout(self::CONNECT_TIMEOUT_SECONDS)
+            ->timeout(self::REQUEST_TIMEOUT_SECONDS)
+            ->retry(self::RETRY_TIMES, self::RETRY_SLEEP_MS, function ($exception): bool {
+                if ($exception instanceof ConnectionException) {
+                    return true;
+                }
+                if ($exception instanceof RequestException && $exception->response) {
+                    return $exception->response->serverError() || $exception->response->status() === 429;
+                }
+
+                return false;
+            }, false);
+    }
+
+    private function handleResponse(Response $response, \Closure $extractText): ?string
+    {
+        if (! $response->successful()) {
+            Log::warning('Media description generation failed', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            return null;
+        }
+
+        $description = $this->normalize($extractText($response->json()));
+
+        if ($description === null) {
+            Log::warning('Media description generation returned unusable content', [
+                'body' => $response->body(),
+            ]);
+        }
+
+        return $description;
     }
 
     /**

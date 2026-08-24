@@ -23,6 +23,7 @@ class MediaDescriptionServiceTest extends TestCase
     private function configureService(bool $enabled = true, ?string $token = 'test-token'): void
     {
         config([
+            'services.ai_provider' => 'huggingface',
             'services.huggingface.api_token' => $token,
             'services.huggingface.vision_endpoint' => self::ENDPOINT,
             'services.huggingface.vision_model' => self::MODEL,

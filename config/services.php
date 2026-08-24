@@ -48,6 +48,21 @@ return [
         'vision_endpoint' => env('HUGGINGFACE_VISION_ENDPOINT', 'https://router.huggingface.co/v1/chat/completions'),
     ],
 
+    /*
+     * Which provider MediaDescriptionService and UserWeeklyOverviewService
+     * call: 'huggingface' or 'anthropic'. Swapping this back to
+     * 'huggingface' fully reverts both services with no code changes.
+     */
+    'ai_provider' => env('AI_PROVIDER', 'huggingface'),
+
+    'anthropic' => [
+        'api_key' => env('ANTHROPIC_API_KEY'),
+        'api_version' => '2023-06-01',
+        'endpoint' => env('ANTHROPIC_ENDPOINT', 'https://api.anthropic.com/v1/messages'),
+        'vision_model' => env('ANTHROPIC_VISION_MODEL', 'claude-haiku-4-5'),
+        'text_model' => env('ANTHROPIC_TEXT_MODEL', 'claude-haiku-4-5'),
+    ],
+
     'tmdb' => [
         'api_key' => env('TMDB_API_KEY'),
         'base_api_url' => env('TMDB_BASE_API_URL', 'https://api.themoviedb.org/3'),

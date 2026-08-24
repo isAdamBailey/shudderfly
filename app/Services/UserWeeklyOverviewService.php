@@ -48,22 +48,26 @@ class UserWeeklyOverviewService
             return $fallbackOverview;
         }
 
-        $token = config('services.huggingface.api_token');
+        $provider = config('services.ai_provider') === 'anthropic' ? 'anthropic' : 'huggingface';
+        [$token, $endpoint, $model] = $provider === 'anthropic'
+            ? [config('services.anthropic.api_key'), config('services.anthropic.endpoint'), config('services.anthropic.text_model')]
+            : [config('services.huggingface.api_token'), config('services.huggingface.user_overview_endpoint'), config('services.huggingface.user_overview_model')];
 
         if (! is_string($token) || trim($token) === '') {
-            Log::warning('Weekly profile overview skipped: missing Hugging Face token', [
+            Log::warning('Weekly profile overview skipped: missing provider credentials', [
                 'user_id' => $user->id,
+                'provider' => $provider,
             ]);
 
             return $fallbackOverview;
         }
 
-        $endpoint = (string) config('services.huggingface.user_overview_endpoint');
-        $model = (string) config('services.huggingface.user_overview_model');
+        $endpoint = (string) $endpoint;
+        $model = (string) $model;
         $prompt = $this->buildPrompt($user, $metrics);
 
         for ($attempt = 1; $attempt <= self::GENERATION_ATTEMPTS; $attempt++) {
-            $text = $this->attemptGeneration($user, $token, $endpoint, $model, $prompt, $attempt);
+            $text = $this->attemptGeneration($user, $provider, $token, $endpoint, $model, $prompt, $attempt);
 
             if ($text !== null) {
                 return $text;
@@ -82,11 +86,10 @@ class UserWeeklyOverviewService
         return $this->aiEnabled ??= AiFeature::enabled();
     }
 
-    private function attemptGeneration(User $user, string $token, string $endpoint, string $model, string $prompt, int $attempt): ?string
+    private function attemptGeneration(User $user, string $provider, string $token, string $endpoint, string $model, string $prompt, int $attempt): ?string
     {
         try {
-            $response = Http::withToken($token)
-                ->connectTimeout(self::CONNECT_TIMEOUT_SECONDS)
+            $request = Http::connectTimeout(self::CONNECT_TIMEOUT_SECONDS)
                 ->timeout(self::REQUEST_TIMEOUT_SECONDS)
                 ->retry(self::RETRY_TIMES, self::RETRY_SLEEP_MS, function ($exception): bool {
                     if ($exception instanceof ConnectionException) {
@@ -97,14 +100,24 @@ class UserWeeklyOverviewService
                     }
 
                     return false;
-                }, false)
-                ->post($endpoint, [
-                    'model' => $model,
-                    'messages' => [
-                        ['role' => 'user', 'content' => $prompt],
-                    ],
-                    'max_tokens' => self::MAX_NEW_TOKENS,
-                ]);
+                }, false);
+
+            $request = $provider === 'anthropic'
+                ? $request->withHeaders([
+                    'x-api-key' => $token,
+                    'anthropic-version' => (string) config('services.anthropic.api_version'),
+                ])
+                : $request->withToken($token);
+
+            $response = $request->post($endpoint, [
+                'model' => $model,
+                'messages' => [
+                    ['role' => 'user', 'content' => $prompt],
+                ],
+                'max_tokens' => self::MAX_NEW_TOKENS,
+            ]);
+
+            $textPath = $provider === 'anthropic' ? 'content.0.text' : 'choices.0.message.content';
 
             if (! $response->successful()) {
                 Log::warning('Weekly profile overview generation failed', [
@@ -117,7 +130,7 @@ class UserWeeklyOverviewService
                 return null;
             }
 
-            $generatedText = trim((string) data_get($response->json(), 'choices.0.message.content', ''));
+            $generatedText = trim((string) data_get($response->json(), $textPath, ''));
             $normalizedText = $this->normalizeGeneratedOverview($generatedText, $user);
 
             if ($normalizedText === '' || ! $this->isValidGeneratedOverview($normalizedText, $user)) {
