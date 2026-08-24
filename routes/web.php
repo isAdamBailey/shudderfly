@@ -16,6 +16,7 @@ use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SoundsController;
+use App\Http\Controllers\UnblockRequestController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorldClockController;
 use App\Http\Controllers\YouTubeProxyController;
@@ -57,6 +58,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/pages/snapshot', [PageController::class, 'snapshot'])->name('pages.snapshot');
     Route::post('/contact-admins-email', [ProfileController::class, 'contactAdminsEmail'])
         ->name('profile.contact-admins-email');
+
+    // The one-hour cooldown lives in the client; this throttle is the backstop
+    // for a cleared localStorage, so admins can't be spammed.
+    Route::post('/unblock-requests', [UnblockRequestController::class, 'store'])
+        ->middleware('throttle:3,60')
+        ->name('unblock-requests.store');
 
     Route::patch('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
     Route::patch('/profile/notifications/preferences', [ProfileController::class, 'updateNotificationPreferences'])
@@ -175,6 +182,18 @@ Route::middleware('auth')->group(function () {
         Route::post('/users/{user:email}/regenerate-weekly-overview', [UserController::class, 'regenerateWeeklyOverview'])
             ->name('users.regenerate-weekly-overview');
     });
+});
+
+/*
+ * Reached from the admin alert email, so these must work for a logged-out
+ * admin. The GET only renders a page that immediately POSTs, which keeps mail
+ * scanners and link prefetchers from unblocking anything.
+ */
+Route::middleware(['signed.guest', 'throttle:20,1'])->group(function () {
+    Route::get('/unblock-requests/{user}/approve', [UnblockRequestController::class, 'approve'])
+        ->name('unblock-requests.approve');
+    Route::post('/unblock-requests/{user}/approve', [UnblockRequestController::class, 'perform'])
+        ->name('unblock-requests.perform');
 });
 
 Route::fallback(function () {

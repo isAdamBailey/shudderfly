@@ -7,6 +7,7 @@ use App\Models\MessageComment;
 use App\Models\Song;
 use App\Models\User;
 use App\Notifications\MessageCommented;
+use App\Notifications\UnblockRequested;
 use App\Notifications\UserTagged;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -83,5 +84,30 @@ class NotificationChannelPreferenceTest extends TestCase
 
         $this->assertSame($message->id, $restored->content->id);
         $this->assertFalse($restored->content->relationLoaded('song'));
+    }
+
+    public function test_unblock_requested_includes_mail_when_email_notifications_are_enabled()
+    {
+        $notifiable = User::factory()->create([
+            'email_notifications_enabled' => true,
+        ]);
+        $requester = User::factory()->create();
+
+        $channels = (new UnblockRequested($requester, 3))->via($notifiable);
+
+        $this->assertContains('mail', $channels);
+    }
+
+    public function test_unblock_requested_excludes_mail_when_email_notifications_are_disabled()
+    {
+        $notifiable = User::factory()->create([
+            'email_notifications_enabled' => false,
+        ]);
+        $requester = User::factory()->create();
+
+        $channels = (new UnblockRequested($requester, 3))->via($notifiable);
+
+        $this->assertNotContains('mail', $channels);
+        $this->assertContains('database', $channels);
     }
 }

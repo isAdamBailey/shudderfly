@@ -156,7 +156,7 @@ class ProfileController extends Controller
         $validated = $request->validate([
             'message' => 'required|string|max:1000',
         ]);
-        $users = User::permission('admin')->get();
+        $users = User::admins()->get();
         $sender = $request->user();
         $message = $validated['message'];
 

@@ -2,23 +2,20 @@
 /* global route */
 import Avatar from "@/Components/Avatar.vue";
 import Button from "@/Components/Button.vue";
-import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import FormModal from "@/Components/FormModal.vue";
 import SpeakButton from "@/Components/SpeakButton.vue";
 import MessageTimeline from "@/Components/Messages/MessageTimeline.vue";
 import StatCard from "@/Components/StatCard.vue";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import NewBookForm from "@/Pages/Books/NewBookForm.vue";
+import BlockedContentPanel from "@/Pages/Users/Partials/BlockedContentPanel.vue";
 import OwnerPanel from "@/Pages/Users/Partials/OwnerPanel.vue";
-import { useConfirmDialog } from "@/composables/useConfirmDialog";
-import { useFlashMessage } from "@/composables/useFlashMessage";
 import { useNotificationSync } from "@/composables/useNotificationSync";
 import { usePermissions } from "@/composables/permissions";
 import { FOOD_EMOJI_POOL, useEmojiRise } from "@/composables/useEmojiRise";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import { Head, Link, router, usePage } from "@inertiajs/vue3";
-import axios from "axios";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 
 defineOptions({
@@ -30,42 +27,9 @@ const { t } = useTranslations();
 const { canAdmin, canEditPages } = usePermissions();
 const { spawnEmojiRise } = useEmojiRise();
 const { isRead, markAsRead: markNotificationAsRead } = useNotificationSync();
-const { setFlashMessage } = useFlashMessage();
-const {
-    show: confirmUnblockShow,
-    message: confirmUnblockMessage,
-    ask: askConfirmUnblock,
-    onConfirmed: onConfirmUnblockConfirmed,
-    onCancelled: onConfirmUnblockCancelled,
-} = useConfirmDialog();
 const regenerating = ref(false);
 const showNewBookForm = ref(false);
 const newBookFormRef = ref(null);
-const unlockingBlockedPages = ref(false);
-
-const unblockAllPages = async () => {
-    if (unlockingBlockedPages.value) return;
-    const ok = await askConfirmUnblock(
-        t("dashboard.confirm_unblock_all_pages")
-    );
-    if (!ok) return;
-    unlockingBlockedPages.value = true;
-    try {
-        const { data } = await axios.post(
-            route("pages.unblock-all"),
-            {},
-            { headers: { Accept: "application/json" } }
-        );
-        setFlashMessage("success", data.message);
-        router.reload({
-            only: ["blockedCount"],
-            preserveScroll: true,
-            async: true,
-        });
-    } finally {
-        unlockingBlockedPages.value = false;
-    }
-};
 
 const openNewBookForm = () => {
     showNewBookForm.value = true;
@@ -520,37 +484,11 @@ const speakUserSummary = () => {
                                 </Button>
                             </template>
 
-                            <!-- Unblock all blocked pages/sounds (edit-pages only) -->
-                            <ConfirmDialog
-                                v-model:show="confirmUnblockShow"
-                                :message="confirmUnblockMessage"
-                                confirm-variant="primary"
-                                @confirm="onConfirmUnblockConfirmed"
-                                @cancel="onConfirmUnblockCancelled"
+                            <!-- Unblock content: admins act directly, everyone
+                                 else asks an admin to. -->
+                            <BlockedContentPanel
+                                :blocked-count="blockedCount"
                             />
-                            <button
-                                v-if="canEditPages"
-                                type="button"
-                                :disabled="
-                                    unlockingBlockedPages || blockedCount === 0
-                                "
-                                :aria-label="
-                                    t('dashboard.unlock_all_blocked_pages_aria')
-                                "
-                                class="btn-bulge inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md bg-amber-700 px-3 py-2.5 text-center text-sm font-semibold leading-tight text-amber-50 transition-colors hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1"
-                                @click="unblockAllPages"
-                            >
-                                <i
-                                    v-if="unlockingBlockedPages"
-                                    class="ri-loader-line flex-shrink-0 animate-spin"
-                                ></i>
-                                <i
-                                    v-else
-                                    class="ri-lock-unlock-line flex-shrink-0"
-                                ></i>
-                                {{ t("dashboard.unlock_all_blocked_pages") }}
-                                ({{ blockedCount }})
-                            </button>
 
                             <!-- Secondary CTA: chat (all users). Alone (no
                                  edit-pages permission), it fills the row. -->
@@ -1308,7 +1246,6 @@ const speakUserSummary = () => {
                             :site-stats="siteStats"
                             :categories="categories"
                             :admin-settings="adminSettings"
-                            :blocked-count="blockedCount"
                             :default-cities="defaultCities"
                             :max-cities="maxCities"
                             :timezone-labels="timezoneLabels"

@@ -22,6 +22,11 @@ class Sound extends Model
         'blocked' => 'boolean',
     ];
 
+    public function scopeBlocked($query)
+    {
+        return $query->where('blocked', true);
+    }
+
     public function scopeNotBlocked($query)
     {
         return $query->where('blocked', false);

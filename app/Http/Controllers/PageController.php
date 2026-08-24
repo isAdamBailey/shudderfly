@@ -15,8 +15,8 @@ use App\Models\Message;
 use App\Models\Page;
 use App\Models\SiteSetting;
 use App\Models\Song;
-use App\Models\Sound;
 use App\Models\User;
+use App\Services\ContentBlockService;
 use App\Services\PopularityService;
 use App\Services\UserTaggingService;
 use App\Services\VoiceSearchService;
@@ -39,7 +39,8 @@ class PageController extends Controller
     public function __construct(
         private PopularityService $popularityService,
         private UserTaggingService $userTaggingService,
-        private VoiceSearchService $voiceSearchService
+        private VoiceSearchService $voiceSearchService,
+        private ContentBlockService $contentBlockService
     ) {}
 
     /**
@@ -683,9 +684,7 @@ class PageController extends Controller
 
     public function unblockAll(Request $request): Redirector|RedirectResponse|JsonResponse
     {
-        $pageCount = Page::where('blocked', true)->update(['blocked' => false]);
-        $soundCount = Sound::where('blocked', true)->update(['blocked' => false]);
-        $total = $pageCount + $soundCount;
+        $total = $this->contentBlockService->unblockAll($request->user());
         $message = __('messages.unblocked_all', ['count' => $total]);
 
         if ($request->header('X-Inertia')) {
