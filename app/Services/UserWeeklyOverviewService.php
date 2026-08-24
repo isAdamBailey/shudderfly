@@ -120,8 +120,11 @@ class UserWeeklyOverviewService
             $textPath = $provider === 'anthropic' ? 'content.0.text' : 'choices.0.message.content';
 
             if (! $response->successful()) {
+                app(AiProviderAlertService::class)->alertIfQuotaExceeded($provider, $response);
+
                 Log::warning('Weekly profile overview generation failed', [
                     'user_id' => $user->id,
+                    'provider' => $provider,
                     'attempt' => $attempt,
                     'status' => $response->status(),
                     'body' => $response->body(),

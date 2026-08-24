@@ -170,7 +170,7 @@ class MediaDescriptionService
                     ],
                 ]);
 
-            return $this->handleResponse($response, fn ($body) => (string) data_get($body, 'choices.0.message.content', ''));
+            return $this->handleResponse('huggingface', $response, fn ($body) => (string) data_get($body, 'choices.0.message.content', ''));
         } catch (\Throwable $exception) {
             Log::warning('Media description generation exception', [
                 'error' => $exception->getMessage(),
@@ -214,7 +214,7 @@ class MediaDescriptionService
                     ],
                 ]);
 
-            return $this->handleResponse($response, fn ($body) => (string) data_get($body, 'content.0.text', ''));
+            return $this->handleResponse('anthropic', $response, fn ($body) => (string) data_get($body, 'content.0.text', ''));
         } catch (\Throwable $exception) {
             Log::warning('Media description generation exception', [
                 'error' => $exception->getMessage(),
@@ -240,10 +240,13 @@ class MediaDescriptionService
             }, false);
     }
 
-    private function handleResponse(Response $response, \Closure $extractText): ?string
+    private function handleResponse(string $provider, Response $response, \Closure $extractText): ?string
     {
         if (! $response->successful()) {
+            app(AiProviderAlertService::class)->alertIfQuotaExceeded($provider, $response);
+
             Log::warning('Media description generation failed', [
+                'provider' => $provider,
                 'status' => $response->status(),
                 'body' => $response->body(),
             ]);

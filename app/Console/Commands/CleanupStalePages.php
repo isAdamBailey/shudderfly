@@ -5,11 +5,10 @@ namespace App\Console\Commands;
 use App\Mail\StalePagesCleanupMail;
 use App\Models\Book;
 use App\Models\Page;
-use App\Models\User;
+use App\Support\SuperAdmins;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
-use Spatie\Permission\Models\Permission;
 use Throwable;
 
 class CleanupStalePages extends Command
@@ -93,17 +92,7 @@ class CleanupStalePages extends Command
     private function mailReport(array $report): void
     {
         // Maintenance reports go to super admins only.
-        if (! Permission::where('name', 'super admin')->exists()) {
-            $this->warn('No super admin users found; skipping report email.');
-
-            return;
-        }
-
-        $recipients = User::query()
-            ->permission('super admin')
-            ->select(['id', 'name', 'email'])
-            ->orderBy('id')
-            ->get();
+        $recipients = SuperAdmins::recipients();
 
         if ($recipients->isEmpty()) {
             $this->warn('No super admin users found; skipping report email.');

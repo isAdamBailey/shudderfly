@@ -2,14 +2,18 @@
 
 namespace Tests\Feature;
 
+use App\Mail\AiProviderQuotaAlertMail;
 use App\Models\SiteSetting;
+use App\Models\User;
 use App\Services\MediaDescriptionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Intervention\Image\Encoders\JpegEncoder;
 use Intervention\Image\Laravel\Facades\Image;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class MediaDescriptionServiceTest extends TestCase
@@ -123,6 +127,22 @@ class MediaDescriptionServiceTest extends TestCase
         Http::fake(['router.huggingface.co/*' => Http::response(['error' => 'bad request'], 400)]);
 
         $this->assertNull($this->service()->describe($this->imageBytes()));
+    }
+
+    public function test_it_alerts_super_admins_when_the_provider_looks_out_of_credits(): void
+    {
+        Mail::fake();
+        $this->configureService();
+        $superAdmin = User::factory()->create(['email' => 'reports@example.com']);
+        $superAdmin->givePermissionTo(Permission::findOrCreate('super admin'));
+        Http::fake(['router.huggingface.co/*' => Http::response(['error' => 'quota exceeded'], 429)]);
+
+        $this->assertNull($this->service()->describe($this->imageBytes()));
+
+        Mail::assertSent(
+            AiProviderQuotaAlertMail::class,
+            fn (AiProviderQuotaAlertMail $mail) => $mail->hasTo('reports@example.com') && $mail->provider === 'huggingface'
+        );
     }
 
     public function test_it_returns_null_on_a_connection_exception(): void
