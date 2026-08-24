@@ -21,7 +21,7 @@ use Intervention\Image\Laravel\Facades\Image;
  */
 class MediaDescriptionService
 {
-    private const MAX_TOKENS = 60;
+    private const MAX_TOKENS = 40;
 
     private const TEMPERATURE = 0.2;
 
@@ -40,8 +40,13 @@ class MediaDescriptionService
 
     private const MIN_DESCRIPTION_LENGTH = 10;
 
-    /** Longest edge sent to the model; keeps the base64 payload small. */
-    private const MAX_EDGE_PIXELS = 1024;
+    /**
+     * Longest edge sent to the model. Vision-language models tokenize images
+     * by pixel area (fixed-size patches), so this is the main lever on input
+     * token cost, not just payload size — 640px is plenty for a one-sentence
+     * caption.
+     */
+    private const MAX_EDGE_PIXELS = 640;
 
     private const JPEG_QUALITY = 85;
 
