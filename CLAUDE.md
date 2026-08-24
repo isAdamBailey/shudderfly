@@ -122,4 +122,12 @@ Many features are toggled via `SiteSetting` records (checked in `Kernel.php` and
 
 ### Localization
 
-The app supports English and Spanish (`lang/en/messages.php`, `lang/es/messages.php`), shared to the frontend via the `translations` Inertia prop and read with the `useTranslations()` composable's `t(key, replacements)`. Any new user-facing string in a Vue component — labels, titles, alt/title attributes, and especially anything passed to `useSpeechSynthesis`'s `speak()` — must be added as a key in both language files and referenced with `t()` rather than hardcoded in English. Existing hardcoded strings encountered incidentally don't need to be retrofitted, but new code should not add more.
+The app supports English, Spanish, and French (`lang/en/messages.php`, `lang/es/messages.php`, `lang/fr/messages.php`), shared to the frontend via the `translations` Inertia prop and read with the `useTranslations()` composable's `t(key, replacements)`. The authoritative list is `SetLocale::SUPPORTED_LOCALES` — check it rather than assuming, since it has grown before.
+
+Any new user-facing string in a Vue component — labels, titles, alt/title attributes, and especially anything passed to `useSpeechSynthesis`'s `speak()` — must be added to **all three** language files and referenced with `t()` rather than hardcoded in English. The same applies to `__()` in PHP (notifications, mailables, Blade views). The three files are kept key-aligned and in the same order; after adding keys, verify none are missing:
+
+```bash
+php -r '$k = fn($p) => array_keys(require $p); $en = $k("lang/en/messages.php"); foreach (["es", "fr"] as $l) { $d = array_diff($en, $k("lang/$l/messages.php")); echo $l, ": ", $d ? implode(", ", $d) : "ok", PHP_EOL; }'
+```
+
+Existing hardcoded strings encountered incidentally don't need to be retrofitted, but new code should not add more.

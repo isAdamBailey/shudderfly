@@ -65,6 +65,14 @@ class User extends Authenticatable
     ];
 
     /**
+     * Users who can administer the site.
+     */
+    public function scopeAdmins($query)
+    {
+        return $query->permission('admin');
+    }
+
+    /**
      * The channel broadcast notifications are delivered on.
      *
      * Prefixed per environment so local/testing broadcasts never reach users

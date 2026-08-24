@@ -206,6 +206,47 @@
                                 </p>
                             </div>
                             <div
+                                v-else-if="
+                                    notification.type ===
+                                    'App\\Notifications\\UnblockRequested'
+                                "
+                                class="text-gray-900 dark:text-gray-100"
+                            >
+                                <div class="flex items-center gap-2 mb-1">
+                                    <Avatar
+                                        class="ring-2 ring-white dark:ring-gray-800"
+                                        :avatar="
+                                            notification.data.requester_avatar
+                                        "
+                                        :user="{
+                                            id: notification.data.requester_id,
+                                            name: notification.data
+                                                .requester_name,
+                                        }"
+                                        size="sm"
+                                    />
+                                    <div
+                                        class="flex items-center gap-1.5 flex-wrap"
+                                    >
+                                        <strong>{{
+                                            notification.data.requester_name
+                                        }}</strong>
+                                        <span class="text-sm">{{
+                                            t("unblock_request.asked_label")
+                                        }}</span>
+                                        <span
+                                            v-if="!notification.read_at"
+                                            class="inline-block w-2 h-2 bg-amber-500 rounded-full shadow-[0_0_4px_1px_rgba(245,158,11,0.55)]"
+                                        ></span>
+                                    </div>
+                                </div>
+                                <p
+                                    class="text-sm text-gray-700 dark:text-gray-300 ml-8 mb-1"
+                                >
+                                    {{ notificationBodyText(notification) }}
+                                </p>
+                            </div>
+                            <div
                                 class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 ml-8"
                             >
                                 <span>{{
@@ -213,7 +254,7 @@
                                 }}</span>
                                 <span
                                     class="font-semibold text-indigo-700 dark:text-amber-400"
-                                    >View message →</span
+                                    >{{ notificationCta(notification) }} →</span
                                 >
                             </div>
                         </div>
@@ -254,6 +295,7 @@ import SpeakButton from "@/Components/SpeakButton.vue";
 import { useNotificationSync } from "@/composables/useNotificationSync";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
+import { useUnblockAll } from "@/composables/useUnblockAll";
 import { useUnreadNotifications } from "@/composables/useUnreadNotifications";
 import { userChannelName } from "@/utils/broadcastChannel";
 import { router, usePage } from "@inertiajs/vue3";
@@ -285,8 +327,20 @@ const notificationBodyText = (notification) => {
         return notification.data.comment || notification.data.message || "";
     }
 
+    if (notification.type === "App\\Notifications\\UnblockRequested") {
+        return t("unblock_request.body", {
+            count: notification.data.blocked_count ?? 0,
+        });
+    }
+
     return notification.data.message || "";
 };
+
+// The default footer says "view message"; unblock requests go somewhere else.
+const notificationCta = (notification) =>
+    notification.type === "App\\Notifications\\UnblockRequested"
+        ? t("unblock_request.action")
+        : t("general.view_message");
 
 const reactionLabel = (notification) => {
     const emoji = notification.data.emoji || "";
@@ -298,6 +352,7 @@ const reactionLabel = (notification) => {
 const notifications = ref([]);
 const { speak, speaking } = useSpeechSynthesis();
 const { t } = useTranslations();
+const { unblockAll } = useUnblockAll();
 const loading = ref(true);
 const notificationsChannel = ref(null);
 const { unreadCount } = useUnreadNotifications();
@@ -335,10 +390,24 @@ const loadNotifications = async () => {
 };
 
 const handleNotificationClick = async (notification) => {
+    // Unblock requests act in place rather than navigating: admins unblock
+    // directly, the same as the emailed link, with no confirm step. Marking
+    // read is independent of unblocking, so the two run together.
+    if (notification.type === "App\\Notifications\\UnblockRequested") {
+        await Promise.all([
+            notification.read_at
+                ? Promise.resolve()
+                : markAsRead(notification.id),
+            unblockAll(),
+        ]);
+        return;
+    }
+
     // Mark as read if not already read
     if (!notification.read_at) {
         await markAsRead(notification.id);
     }
+
     // Navigate to messages timeline with message ID hash if available
     // If URL already exists in notification data, use it (it may already include hash)
     // Otherwise, construct URL with hash if message_id is available
@@ -406,6 +475,9 @@ const senderNameForNotification = (notification) => {
     }
     if (notification.type === "App\\Notifications\\MessageReacted") {
         return notification.data.reactor_name;
+    }
+    if (notification.type === "App\\Notifications\\UnblockRequested") {
+        return notification.data.requester_name;
     }
     return null;
 };

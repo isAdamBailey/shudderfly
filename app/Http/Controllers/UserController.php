@@ -8,12 +8,12 @@ use App\Models\Message;
 use App\Models\MessageComment;
 use App\Models\Page;
 use App\Models\SiteStatistic;
-use App\Models\Sound;
 use App\Models\TimezoneLabel;
 use App\Models\User;
 use App\Models\WorldClockSetting;
 use App\Notifications\MessageCommented;
 use App\Notifications\UserTagged;
+use App\Services\ContentBlockService;
 use App\Services\PopularityService;
 use App\Services\UserWeeklyOverviewService;
 use App\Support\WorldClockState;
@@ -26,7 +26,8 @@ class UserController extends Controller
     public function __construct(
         private PopularityService $popularityService,
         private UserWeeklyOverviewService $userWeeklyOverviewService,
-        private SettingsController $settingsController
+        private SettingsController $settingsController,
+        private ContentBlockService $contentBlockService
     ) {}
 
     /**
@@ -175,12 +176,12 @@ class UserController extends Controller
             'newBookCategories' => $canEditPages
                 ? Category::all()->map->only(['id', 'name'])->sortBy('name')->values()->toArray()
                 : [],
-            'adminUsers' => User::permission('admin')->get(['name']),
+            'adminUsers' => User::admins()->get(['name']),
             'users' => User::all(),
             'categories' => $canAdmin ? Category::withCount('books')->get() : [],
-            'blockedCount' => $canEditPages
-                ? Page::where('blocked', true)->count() + Sound::where('blocked', true)->count()
-                : 0,
+            // Visible to everyone: it is half the enable condition for the
+            // "ask to unblock" CTA. An aggregate count only, no titles or media.
+            'blockedCount' => $this->contentBlockService->blockedCount(),
             'siteStats' => $this->siteStats(),
             'adminSettings' => $canAdmin ? $this->settingsController->index() : [],
             'defaultCities' => config('world_clock.default_cities'),

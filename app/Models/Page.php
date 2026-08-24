@@ -72,6 +72,11 @@ class Page extends Model
             ->orWhere('media_path', 'like', '%.webp%');
     }
 
+    public function scopeBlocked($query)
+    {
+        return $query->where('blocked', true);
+    }
+
     public function scopeNotBlocked($query)
     {
         return $query->where('blocked', false);

@@ -41,22 +41,25 @@ const mockPage = {
     },
 };
 
+// vi.mock is hoisted, so the spies must be created inside the factory.
 vi.mock("@inertiajs/vue3", () => ({
     router: {
         reload: vi.fn(),
+        visit: vi.fn(),
     },
     usePage: () => mockPage,
 }));
 
+vi.mock("@/composables/useFlashMessage", () => ({
+    useFlashMessage: () => ({ setFlashMessage: vi.fn() }),
+}));
+
 // Mock window.Echo
-global.window = {
-    ...global.window,
-    Echo: {
-        private: vi.fn(() => ({
-            notification: vi.fn(),
-        })),
-        leave: vi.fn(),
-    },
+global.window.Echo = {
+    private: vi.fn(() => ({
+        notification: vi.fn(),
+    })),
+    leave: vi.fn(),
 };
 
 // Mock useUnreadNotifications
@@ -126,14 +129,11 @@ describe("NotificationList", () => {
         mockUnreadCount.value = 1;
 
         // Mock window.Echo
-        global.window = {
-            ...global.window,
-            Echo: {
-                private: vi.fn(() => ({
-                    notification: vi.fn(),
-                })),
-                leave: vi.fn(),
-            },
+        global.window.Echo = {
+            private: vi.fn(() => ({
+                notification: vi.fn(),
+            })),
+            leave: vi.fn(),
         };
     });
 
@@ -297,7 +297,7 @@ describe("NotificationList", () => {
             await new Promise((resolve) => setTimeout(resolve, 100));
 
             // The entire notification card is now clickable, check for the "View message" text
-            expect(wrapper.text()).toContain("View message");
+            expect(wrapper.text()).toContain("general.view_message");
         });
     });
 
@@ -493,6 +493,47 @@ describe("NotificationList", () => {
             expect(consoleErrorSpy).toHaveBeenCalled();
 
             consoleErrorSpy.mockRestore();
+        });
+    });
+
+    describe("Unblock requests", () => {
+        const unblockNotification = {
+            id: "9",
+            type: "App\\Notifications\\UnblockRequested",
+            data: {
+                requester_name: "Dana",
+                requester_id: 9,
+                blocked_count: 4,
+            },
+            created_at: new Date().toISOString(),
+            read_at: null,
+        };
+
+        it("unblocks in place instead of navigating", async () => {
+            const axios = (await import("axios")).default;
+            axios.get.mockResolvedValue({
+                data: { data: [unblockNotification] },
+            });
+            axios.post.mockResolvedValue({
+                data: { message: "Unblocked 4 things." },
+            });
+
+            const wrapper = mount(NotificationList);
+            await nextTick();
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            await wrapper.find(".cursor-pointer").trigger("click");
+            await new Promise((resolve) => setTimeout(resolve, 50));
+
+            // Admins unblock directly from the bell, with no confirm and no
+            // trip to the dashboard.
+            expect(axios.post).toHaveBeenCalledWith(
+                "/pages.unblock-all",
+                {},
+                expect.anything()
+            );
+            const { router } = await import("@inertiajs/vue3");
+            expect(router.visit).not.toHaveBeenCalled();
         });
     });
 });
