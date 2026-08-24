@@ -59,10 +59,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/contact-admins-email', [ProfileController::class, 'contactAdminsEmail'])
         ->name('profile.contact-admins-email');
 
-    // The one-hour cooldown lives in the client; this throttle is the backstop
-    // for a cleared localStorage, so admins can't be spammed.
+    // The once-per-calendar-day limit lives in the client; this throttle is
+    // the backstop for a cleared localStorage, so admins can't be spammed.
     Route::post('/unblock-requests', [UnblockRequestController::class, 'store'])
-        ->middleware('throttle:3,60')
+        ->middleware('throttle:1,1440')
         ->name('unblock-requests.store');
 
     Route::patch('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');

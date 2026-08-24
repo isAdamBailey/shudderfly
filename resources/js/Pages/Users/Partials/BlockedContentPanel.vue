@@ -12,11 +12,11 @@ import { usePage } from "@inertiajs/vue3";
 import axios from "axios";
 import { computed, onUnmounted, ref, watch } from "vue";
 
-// After asking, the CTA stays disabled for an hour. If nobody has unblocked by
-// then it re-enables so an ignored request doesn't strand the user. The
-// "request was honored" case needs no rule of its own: once an admin unblocks,
-// blockedCount is 0 and the CTA is disabled because there is nothing to ask about.
-const COOLDOWN_MS = 60 * 60 * 1000;
+// After asking, the whole request section is hidden for the rest of the
+// calendar day so a normal user can't spam admins; it reappears at local
+// midnight. The "request was honored" case needs no rule of its own: once an
+// admin unblocks, blockedCount is 0 and the section shows the "nothing
+// blocked" state instead.
 const TICK_MS = 30 * 1000;
 const STORAGE_KEY_PREFIX = "unblockRequestedAt";
 
@@ -69,24 +69,37 @@ const { submitting: unblocking, unblockAll } = useUnblockAll();
 const submitting = ref(false);
 let ticker = null;
 
-const cooldownRemaining = computed(() =>
-    Math.max(0, requestedAt.value + COOLDOWN_MS - now.value)
+const isSameLocalDay = (a, b) => {
+    const da = new Date(a);
+    const db = new Date(b);
+    return (
+        da.getFullYear() === db.getFullYear() &&
+        da.getMonth() === db.getMonth() &&
+        da.getDate() === db.getDate()
+    );
+};
+
+const requestedToday = computed(
+    () => requestedAt.value > 0 && isSameLocalDay(requestedAt.value, now.value)
 );
+
+// Only used to keep the ticker running until local midnight passes, so a tab
+// left open overnight re-shows the section without a reload.
+const cooldownRemaining = computed(() => {
+    if (!requestedToday.value) return 0;
+    const midnight = new Date(now.value);
+    midnight.setHours(24, 0, 0, 0);
+    return Math.max(0, midnight.getTime() - now.value);
+});
 
 const nothingBlocked = computed(() => props.blockedCount === 0);
 
 const canRequest = computed(
-    () => !nothingBlocked.value && cooldownRemaining.value === 0
+    () => !nothingBlocked.value && !requestedToday.value
 );
 
 const statusText = computed(() => {
     if (nothingBlocked.value) return t("dashboard.blocked_none");
-    if (cooldownRemaining.value > 0) {
-        const minutes = Math.ceil(cooldownRemaining.value / 60000);
-        return minutes > 1
-            ? t("dashboard.request_unblock_already", { count: minutes })
-            : t("dashboard.request_unblock_already_one");
-    }
     return t("dashboard.request_unblock_limit");
 });
 
@@ -130,11 +143,11 @@ watch(
 
 onUnmounted(stopTicker);
 
-const startCooldown = () => {
+const recordRequest = () => {
     const stamp = Date.now();
     requestedAt.value = stamp;
     // The ticker is idle when nothing is counting down, so `now` can be hours
-    // stale; refresh it here or the first countdown reading is nonsense.
+    // stale; refresh it here or the first check against midnight is nonsense.
     now.value = stamp;
     writeStoredTimestamp(stamp);
 };
@@ -154,7 +167,7 @@ const requestUnblock = async () => {
         // Only start the cooldown once the request actually went out, so a
         // failed send doesn't lock the user out for an hour.
         if (data.sent) {
-            startCooldown();
+            recordRequest();
         }
         setFlashMessage(data.sent ? "success" : "info", data.message);
         speak(data.message);
@@ -163,7 +176,7 @@ const requestUnblock = async () => {
         // who cleared storage can still be refused. Start the cooldown locally
         // so the UI stops disagreeing with the server, and say what happened.
         if (error?.response?.status === 429) {
-            startCooldown();
+            recordRequest();
             setFlashMessage("error", statusText.value);
         } else {
             setFlashMessage("error", t("dashboard.request_unblock_error"));
@@ -202,7 +215,7 @@ const speakStatus = () => speak(statusText.value);
             {{ t("dashboard.unlock_all_blocked_pages") }} ({{ blockedCount }})
         </button>
 
-        <template v-else>
+        <template v-else-if="!requestedToday">
             <button
                 type="button"
                 :disabled="submitting || !canRequest"

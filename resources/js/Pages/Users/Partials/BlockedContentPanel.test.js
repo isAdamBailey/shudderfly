@@ -5,7 +5,7 @@ import { computed, nextTick } from "vue";
 
 global.route = (name) => `/${name}`;
 
-const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 let mockCanEditPages = false;
 vi.mock("@/composables/permissions", () => ({
@@ -128,7 +128,7 @@ describe("BlockedContentPanel", () => {
             );
         });
 
-        it("starts the cooldown only after a successful send", async () => {
+        it("records the request and hides the section only after a successful send", async () => {
             const wrapper = mountPanel();
 
             await clickAndConfirm(wrapper);
@@ -136,10 +136,10 @@ describe("BlockedContentPanel", () => {
             expect(Number(localStorage.getItem(STORAGE_KEY))).toBeGreaterThan(
                 0
             );
-            expect(wrapper.find("button").attributes("disabled")).toBeDefined();
+            expect(wrapper.find("button").exists()).toBe(false);
         });
 
-        it("does not start the cooldown when nothing was sent", async () => {
+        it("does not record the request when nothing was sent", async () => {
             mockPost.mockResolvedValue({
                 data: { message: "nothing blocked", sent: false },
             });
@@ -150,7 +150,7 @@ describe("BlockedContentPanel", () => {
             expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
         });
 
-        it("starts the cooldown and reports a sane countdown on a 429", async () => {
+        it("records the request and hides the section on a 429", async () => {
             const err = new Error("throttled");
             err.response = { status: 429 };
             mockPost.mockRejectedValue(err);
@@ -161,12 +161,7 @@ describe("BlockedContentPanel", () => {
             expect(Number(localStorage.getItem(STORAGE_KEY))).toBeGreaterThan(
                 0
             );
-            // `now` must be refreshed alongside `requestedAt`; otherwise the
-            // countdown is measured from mount time and reports nonsense.
-            expect(wrapper.text()).toContain(
-                "dashboard.request_unblock_already"
-            );
-            expect(wrapper.text()).toMatch(/\b60\b/);
+            expect(wrapper.find("button").exists()).toBe(false);
         });
 
         it("does not start the cooldown when the request fails", async () => {
@@ -213,26 +208,21 @@ describe("BlockedContentPanel", () => {
     });
 
     describe("cooldown state", () => {
-        it("disables the CTA when the last request was under an hour ago", () => {
+        it("hides the section when the last request was earlier today", () => {
             localStorage.setItem(
                 STORAGE_KEY,
                 String(Date.now() - 10 * 60 * 1000)
             );
             const wrapper = mountPanel();
 
-            expect(wrapper.find("button").attributes("disabled")).toBeDefined();
-            expect(wrapper.text()).toContain(
-                "dashboard.request_unblock_already"
-            );
+            expect(wrapper.find("button").exists()).toBe(false);
         });
 
-        it("re-enables the CTA once the hour has passed", () => {
-            localStorage.setItem(
-                STORAGE_KEY,
-                String(Date.now() - HOUR_MS - 1000)
-            );
+        it("shows the CTA again once it's a new calendar day", () => {
+            localStorage.setItem(STORAGE_KEY, String(Date.now() - DAY_MS));
             const wrapper = mountPanel();
 
+            expect(wrapper.find("button").exists()).toBe(true);
             expect(
                 wrapper.find("button").attributes("disabled")
             ).toBeUndefined();

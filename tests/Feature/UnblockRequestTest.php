@@ -101,11 +101,9 @@ class UnblockRequestTest extends TestCase
         $this->blockedPage();
         $requester = User::factory()->create();
 
-        for ($i = 0; $i < 3; $i++) {
-            $this->actingAs($requester)
-                ->postJson(route('unblock-requests.store'))
-                ->assertOk();
-        }
+        $this->actingAs($requester)
+            ->postJson(route('unblock-requests.store'))
+            ->assertOk();
 
         $this->actingAs($requester)
             ->postJson(route('unblock-requests.store'))
