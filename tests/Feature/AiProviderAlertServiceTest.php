@@ -60,6 +60,24 @@ class AiProviderAlertServiceTest extends TestCase
         Mail::assertSent(AiProviderQuotaAlertMail::class);
     }
 
+    public function test_it_emails_super_admins_on_hugging_faces_real_depleted_credits_response(): void
+    {
+        // Captured verbatim from a production log line.
+        $superAdmin = User::factory()->create(['email' => 'reports@example.com']);
+        $superAdmin->givePermissionTo(Permission::findOrCreate('super admin'));
+
+        $response = $this->fakeResponse(402, [
+            'error' => 'You have depleted your monthly included credits. Purchase pre-paid credits to continue using Inference Providers. Alternatively, subscribe to PRO to get 20x more included usage.',
+        ]);
+
+        $this->service()->alertIfQuotaExceeded('huggingface', $response);
+
+        Mail::assertSent(
+            AiProviderQuotaAlertMail::class,
+            fn (AiProviderQuotaAlertMail $mail) => $mail->hasTo('reports@example.com') && $mail->provider === 'huggingface'
+        );
+    }
+
     public function test_it_does_not_email_on_an_unrelated_error(): void
     {
         $superAdmin = User::factory()->create(['email' => 'reports@example.com']);
