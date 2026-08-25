@@ -95,13 +95,22 @@ describe("BlockedContentPanel", () => {
             expect(wrapper.text()).not.toContain("dashboard.request_unblock");
         });
 
-        it("unblocks without a confirm dialog for an edit-pages user", async () => {
+        it("asks for confirmation before unblocking for an edit-pages user", async () => {
             mockCanEditPages = true;
             mockPost.mockResolvedValue({ data: { message: "done" } });
             const wrapper = mountPanel();
 
-            // Admins never get a confirm step: the click alone unblocks.
+            // A click alone must not unblock; only confirming the dialog does.
             await wrapper.find("button").trigger("click");
+            await nextTick();
+            expect(mockPost).not.toHaveBeenCalled();
+
+            const dialog = wrapper.findComponent({ name: "ConfirmDialog" });
+            expect(dialog.props("message")).toBe(
+                "dashboard.unlock_all_confirm"
+            );
+            dialog.vm.$emit("confirm");
+            await nextTick();
             await nextTick();
 
             expect(mockPost).toHaveBeenCalledWith(
@@ -113,13 +122,13 @@ describe("BlockedContentPanel", () => {
     });
 
     describe("requesting an unblock", () => {
-        it("speaks the prompt and posts on confirm", async () => {
+        it("speaks the dialog's message and posts on confirm", async () => {
             const wrapper = mountPanel();
 
             await clickAndConfirm(wrapper);
 
             expect(mockSpeak).toHaveBeenCalledWith(
-                "dashboard.request_unblock_speak 3"
+                "dashboard.request_unblock_confirm"
             );
             expect(mockPost).toHaveBeenCalledWith(
                 "/unblock-requests.store",
@@ -128,7 +137,7 @@ describe("BlockedContentPanel", () => {
             );
         });
 
-        it("records the request and hides the section only after a successful send", async () => {
+        it("records the request only after a successful send, without hiding the CTA", async () => {
             const wrapper = mountPanel();
 
             await clickAndConfirm(wrapper);
@@ -136,7 +145,7 @@ describe("BlockedContentPanel", () => {
             expect(Number(localStorage.getItem(STORAGE_KEY))).toBeGreaterThan(
                 0
             );
-            expect(wrapper.find("button").exists()).toBe(false);
+            expect(wrapper.find("button").exists()).toBe(true);
         });
 
         it("does not record the request when nothing was sent", async () => {
@@ -150,7 +159,7 @@ describe("BlockedContentPanel", () => {
             expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
         });
 
-        it("records the request and hides the section on a 429", async () => {
+        it("records the request on a 429, without hiding the CTA", async () => {
             const err = new Error("throttled");
             err.response = { status: 429 };
             mockPost.mockRejectedValue(err);
@@ -161,7 +170,7 @@ describe("BlockedContentPanel", () => {
             expect(Number(localStorage.getItem(STORAGE_KEY))).toBeGreaterThan(
                 0
             );
-            expect(wrapper.find("button").exists()).toBe(false);
+            expect(wrapper.find("button").exists()).toBe(true);
         });
 
         it("does not start the cooldown when the request fails", async () => {
@@ -208,14 +217,38 @@ describe("BlockedContentPanel", () => {
     });
 
     describe("cooldown state", () => {
-        it("hides the section when the last request was earlier today", () => {
+        it("keeps the CTA enabled when the last request was earlier today", () => {
             localStorage.setItem(
                 STORAGE_KEY,
                 String(Date.now() - 10 * 60 * 1000)
             );
             const wrapper = mountPanel();
 
-            expect(wrapper.find("button").exists()).toBe(false);
+            expect(wrapper.find("button").exists()).toBe(true);
+            expect(
+                wrapper.find("button").attributes("disabled")
+            ).toBeUndefined();
+        });
+
+        it("tells the user they already asked and disables the dialog's confirm button, without posting again", async () => {
+            localStorage.setItem(
+                STORAGE_KEY,
+                String(Date.now() - 10 * 60 * 1000)
+            );
+            const wrapper = mountPanel();
+
+            await wrapper.find("button").trigger("click");
+            await nextTick();
+
+            const dialog = wrapper.findComponent({ name: "ConfirmDialog" });
+            expect(dialog.props("message")).toBe(
+                "dashboard.request_unblock_already_asked"
+            );
+            expect(dialog.props("confirmDisabled")).toBe(true);
+            expect(mockSpeak).toHaveBeenCalledWith(
+                "dashboard.request_unblock_already_asked"
+            );
+            expect(mockPost).not.toHaveBeenCalled();
         });
 
         it("shows the CTA again once it's a new calendar day", () => {
@@ -226,7 +259,9 @@ describe("BlockedContentPanel", () => {
             expect(
                 wrapper.find("button").attributes("disabled")
             ).toBeUndefined();
-            expect(wrapper.text()).toContain("dashboard.request_unblock_limit");
+            expect(wrapper.find("button").attributes("title")).toBe(
+                "dashboard.request_unblock_limit"
+            );
         });
 
         it("disables the CTA and clears storage when nothing is blocked", () => {
@@ -234,7 +269,9 @@ describe("BlockedContentPanel", () => {
             const wrapper = mountPanel(0);
 
             expect(wrapper.find("button").attributes("disabled")).toBeDefined();
-            expect(wrapper.text()).toContain("dashboard.blocked_none");
+            expect(wrapper.find("button").attributes("title")).toBe(
+                "dashboard.blocked_none"
+            );
             expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
         });
 

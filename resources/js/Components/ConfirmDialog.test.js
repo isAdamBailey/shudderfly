@@ -43,4 +43,11 @@ describe("ConfirmDialog", () => {
 
         expect(buttons[1].text().trim()).not.toBe("");
     });
+
+    it("disables the confirm button when confirmDisabled is set", () => {
+        const wrapper = mountDialog({ confirmDisabled: true });
+        const buttons = wrapper.findAll("button");
+
+        expect(buttons[1].attributes("disabled")).toBeDefined();
+    });
 });

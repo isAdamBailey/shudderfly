@@ -43,6 +43,10 @@ const props = defineProps({
         default: "primary",
         validator: (v) => ["primary", "danger"].includes(v),
     },
+    confirmDisabled: {
+        type: Boolean,
+        default: false,
+    },
     closeable: {
         type: Boolean,
         default: true,
@@ -122,11 +126,17 @@ function onConfirm() {
                 <DangerButton
                     v-if="confirmVariant === 'danger'"
                     type="button"
+                    :disabled="confirmDisabled"
                     @click="onConfirm"
                 >
                     <slot name="confirmButton">{{ resolvedConfirmLabel }}</slot>
                 </DangerButton>
-                <Button v-else type="button" @click="onConfirm">
+                <Button
+                    v-else
+                    type="button"
+                    :disabled="confirmDisabled"
+                    @click="onConfirm"
+                >
                     <slot name="confirmButton">{{ resolvedConfirmLabel }}</slot>
                 </Button>
             </div>

@@ -371,15 +371,18 @@ const speakUserSummary = () => {
                 </Link>
                 <!-- Title intentionally omitted: the name/greeting is already
                      shown in the profile card (and hero) below. -->
-                <button
-                    v-if="isOwner && canAdmin"
-                    type="button"
-                    class="inline-flex items-center justify-center min-h-11 min-w-11 text-theme-title opacity-70 hover:opacity-100 transition-opacity ml-auto"
-                    :aria-label="t('profile.jump_to_administration')"
-                    @click="scrollToAdministration"
-                >
-                    <i class="ri-settings-3-line text-xl"></i>
-                </button>
+                <div v-if="isOwner" class="ml-auto flex items-center gap-3">
+                    <BlockedContentPanel :blocked-count="blockedCount" />
+                    <button
+                        v-if="canAdmin"
+                        type="button"
+                        class="inline-flex items-center justify-center min-h-11 min-w-11 text-theme-title opacity-70 hover:opacity-100 transition-opacity"
+                        :aria-label="t('profile.jump_to_administration')"
+                        @click="scrollToAdministration"
+                    >
+                        <i class="ri-settings-3-line text-xl"></i>
+                    </button>
+                </div>
             </div>
         </template>
 
@@ -483,12 +486,6 @@ const speakUserSummary = () => {
                                     {{ t("dashboard.close_book_form") }}
                                 </Button>
                             </template>
-
-                            <!-- Unblock content: admins act directly, everyone
-                                 else asks an admin to. -->
-                            <BlockedContentPanel
-                                :blocked-count="blockedCount"
-                            />
 
                             <!-- Secondary CTA: chat (all users). Alone (no
                                  edit-pages permission), it fills the row. -->

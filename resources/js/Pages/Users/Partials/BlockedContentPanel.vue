@@ -1,7 +1,6 @@
 <script setup>
 /* global route */
 import ConfirmDialog from "@/Components/ConfirmDialog.vue";
-import SpeakButton from "@/Components/SpeakButton.vue";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useFlashMessage } from "@/composables/useFlashMessage";
 import { usePermissions } from "@/composables/permissions";
@@ -10,25 +9,24 @@ import { useTranslations } from "@/composables/useTranslations";
 import { useUnblockAll } from "@/composables/useUnblockAll";
 import { usePage } from "@inertiajs/vue3";
 import axios from "axios";
-import { computed, onUnmounted, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 
-// After asking, the whole request section is hidden for the rest of the
-// calendar day so a normal user can't spam admins; it reappears at local
+// After asking, the dialog refuses to re-submit for the rest of the calendar
+// day so a normal user can't spam admins; it's allowed again at local
 // midnight. The "request was honored" case needs no rule of its own: once an
 // admin unblocks, blockedCount is 0 and the section shows the "nothing
 // blocked" state instead.
-const TICK_MS = 30 * 1000;
 const STORAGE_KEY_PREFIX = "unblockRequestedAt";
 
 const CTA_CLASS =
-    "btn-bulge inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md bg-amber-700 px-3 py-2.5 text-center text-sm font-semibold leading-tight text-amber-50 transition-colors hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50";
+    "inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-theme-title opacity-70 transition-opacity hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30";
 
 const props = defineProps({
     blockedCount: { type: Number, default: 0 },
 });
 
 const { t } = useTranslations();
-const { speak, speaking } = useSpeechSynthesis();
+const { speak } = useSpeechSynthesis();
 const { canEditPages } = usePermissions();
 const { setFlashMessage } = useFlashMessage();
 const {
@@ -50,24 +48,21 @@ const safely = (fn, fallback = undefined) => {
 };
 
 // Per-user key: the server throttles per account, and this device may be shared.
-const storageKey = () =>
-    `${STORAGE_KEY_PREFIX}:${usePage().props.auth?.user?.id ?? "anon"}`;
+const userId = usePage().props.auth?.user?.id ?? "anon";
+const storageKey = `${STORAGE_KEY_PREFIX}:${userId}`;
 
 const readStoredTimestamp = () =>
-    safely(() => Number(localStorage.getItem(storageKey())) || 0, 0);
+    safely(() => Number(localStorage.getItem(storageKey)) || 0, 0);
 
 const writeStoredTimestamp = (value) =>
-    safely(() => localStorage.setItem(storageKey(), String(value)));
+    safely(() => localStorage.setItem(storageKey, String(value)));
 
 const clearStoredTimestamp = () =>
-    safely(() => localStorage.removeItem(storageKey()));
+    safely(() => localStorage.removeItem(storageKey));
 
 const requestedAt = ref(readStoredTimestamp());
-const now = ref(Date.now());
-// Admins never confirm: clicking unblocks straight away.
 const { submitting: unblocking, unblockAll } = useUnblockAll();
 const submitting = ref(false);
-let ticker = null;
 
 const isSameLocalDay = (a, b) => {
     const da = new Date(a);
@@ -79,24 +74,14 @@ const isSameLocalDay = (a, b) => {
     );
 };
 
-const requestedToday = computed(
-    () => requestedAt.value > 0 && isSameLocalDay(requestedAt.value, now.value)
-);
-
-// Only used to keep the ticker running until local midnight passes, so a tab
-// left open overnight re-shows the section without a reload.
-const cooldownRemaining = computed(() => {
-    if (!requestedToday.value) return 0;
-    const midnight = new Date(now.value);
-    midnight.setHours(24, 0, 0, 0);
-    return Math.max(0, midnight.getTime() - now.value);
-});
+// A plain function, not a computed: it must re-check the wall clock on every
+// call (a tab left open past midnight should stop being "already asked"),
+// and a computed would cache the first Date.now() forever since nothing else
+// it reads is reactive.
+const requestedToday = () =>
+    requestedAt.value > 0 && isSameLocalDay(requestedAt.value, Date.now());
 
 const nothingBlocked = computed(() => props.blockedCount === 0);
-
-const canRequest = computed(
-    () => !nothingBlocked.value && !requestedToday.value
-);
 
 const statusText = computed(() => {
     if (nothingBlocked.value) return t("dashboard.blocked_none");
@@ -116,46 +101,35 @@ watch(
     { immediate: true }
 );
 
-// Tick only while a cooldown is actually counting down: admins never read the
-// countdown, and with no pending request there is nothing to advance.
-const stopTicker = () => {
-    if (ticker) {
-        clearInterval(ticker);
-        ticker = null;
-    }
-};
-
-watch(
-    () => !canEditPages.value && cooldownRemaining.value > 0,
-    (counting) => {
-        if (!counting) {
-            stopTicker();
-            return;
-        }
-        if (!ticker) {
-            ticker = setInterval(() => {
-                now.value = Date.now();
-            }, TICK_MS);
-        }
-    },
-    { immediate: true }
-);
-
-onUnmounted(stopTicker);
-
 const recordRequest = () => {
     const stamp = Date.now();
     requestedAt.value = stamp;
-    // The ticker is idle when nothing is counting down, so `now` can be hours
-    // stale; refresh it here or the first check against midnight is nonsense.
-    now.value = stamp;
     writeStoredTimestamp(stamp);
 };
 
+// Speaks whatever the dialog is about to show, so a non-reader hears the same
+// thing that's on screen rather than a separately-worded prompt.
+const confirmAndSpeak = (message) => {
+    speak(message);
+    return askConfirm(message);
+};
+
+const confirmUnblockAll = async () => {
+    if (unblocking.value || props.blockedCount === 0) return;
+    const ok = await confirmAndSpeak(t("dashboard.unlock_all_confirm"));
+    if (!ok) return;
+    await unblockAll();
+};
+
 const requestUnblock = async () => {
-    if (submitting.value || !canRequest.value) return;
-    speak(t("dashboard.request_unblock_speak", { count: props.blockedCount }));
-    const ok = await askConfirm(t("dashboard.request_unblock_confirm"));
+    if (submitting.value || nothingBlocked.value) return;
+    // Already asked today: say so and let the dialog's confirm button stay
+    // disabled rather than silently hiding the whole panel until midnight.
+    if (requestedToday()) {
+        await confirmAndSpeak(t("dashboard.request_unblock_already_asked"));
+        return;
+    }
+    const ok = await confirmAndSpeak(t("dashboard.request_unblock_confirm"));
     if (!ok) return;
     submitting.value = true;
     try {
@@ -185,16 +159,15 @@ const requestUnblock = async () => {
         submitting.value = false;
     }
 };
-
-const speakStatus = () => speak(statusText.value);
 </script>
 
 <template>
-    <div class="w-full sm:flex-1">
+    <div class="inline-flex items-center">
         <ConfirmDialog
             v-model:show="confirmShow"
             :message="confirmMessage"
             confirm-variant="primary"
+            :confirm-disabled="requestedToday()"
             @confirm="onConfirmed"
             @cancel="onCancelled"
         />
@@ -205,7 +178,7 @@ const speakStatus = () => speak(statusText.value);
             :disabled="unblocking || blockedCount === 0"
             :aria-label="t('dashboard.unlock_all_blocked_pages_aria')"
             :class="CTA_CLASS"
-            @click="unblockAll"
+            @click="confirmUnblockAll"
         >
             <i
                 v-if="unblocking"
@@ -215,33 +188,21 @@ const speakStatus = () => speak(statusText.value);
             {{ t("dashboard.unlock_all_blocked_pages") }} ({{ blockedCount }})
         </button>
 
-        <template v-else-if="!requestedToday">
-            <button
-                type="button"
-                :disabled="submitting || !canRequest"
-                :aria-label="t('dashboard.request_unblock_aria')"
-                :class="CTA_CLASS"
-                @click="requestUnblock"
-            >
-                <i
-                    v-if="submitting"
-                    class="ri-loader-line flex-shrink-0 animate-spin"
-                ></i>
-                <i v-else class="ri-hand-heart-line flex-shrink-0"></i>
-                {{ t("dashboard.request_unblock") }} ({{ blockedCount }})
-            </button>
-
-            <div class="mt-1.5 flex items-center gap-1.5">
-                <SpeakButton
-                    :disabled="speaking"
-                    :aria-label="t('dashboard.request_unblock_speak_status')"
-                    icon-class="ri-speak-fill text-base"
-                    @click.stop="speakStatus"
-                />
-                <p class="text-xs leading-tight text-amber-100/80">
-                    {{ statusText }}
-                </p>
-            </div>
-        </template>
+        <button
+            v-else
+            type="button"
+            :disabled="submitting || nothingBlocked"
+            :title="statusText"
+            :aria-label="t('dashboard.request_unblock_aria')"
+            :class="CTA_CLASS"
+            @click="requestUnblock"
+        >
+            <i
+                v-if="submitting"
+                class="ri-loader-line flex-shrink-0 animate-spin"
+            ></i>
+            <i v-else class="ri-hand-heart-line flex-shrink-0"></i>
+            {{ t("dashboard.request_unblock") }} ({{ blockedCount }})
+        </button>
     </div>
 </template>
