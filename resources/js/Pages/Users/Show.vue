@@ -114,6 +114,10 @@ const props = defineProps({
         type: Number,
         default: 0,
     },
+    unblockAskedToday: {
+        type: Boolean,
+        default: false,
+    },
     siteStats: {
         type: Object,
         default: () => ({}),
@@ -372,7 +376,10 @@ const speakUserSummary = () => {
                 <!-- Title intentionally omitted: the name/greeting is already
                      shown in the profile card (and hero) below. -->
                 <div v-if="isOwner" class="ml-auto flex items-center gap-3">
-                    <BlockedContentPanel :blocked-count="blockedCount" />
+                    <BlockedContentPanel
+                        :blocked-count="blockedCount"
+                        :unblock-asked-today="unblockAskedToday"
+                    />
                     <button
                         v-if="canAdmin"
                         type="button"

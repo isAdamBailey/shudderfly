@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Models\UnblockRequest;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -22,19 +23,21 @@ class UnblockRequested extends Notification implements ShouldBroadcast
     /**
      * How long the emailed link stays valid.
      *
-     * Note this bounds but does not eliminate replay: the link is reusable
-     * within the window and unblocks whatever is blocked when it is opened,
-     * not the set that was blocked when the request was made. Making it
-     * single-use would require persisting the request.
+     * This is an outer bound only. The link is tied to an UnblockRequest and
+     * dies the moment that request is resolved, so it cannot be replayed
+     * against content blocked after the ask.
      */
     public const LINK_LIFETIME_DAYS = 1;
+
+    public UnblockRequest $unblockRequest;
 
     public User $requester;
 
     public int $blockedCount;
 
-    public function __construct(User $requester, int $blockedCount)
+    public function __construct(UnblockRequest $unblockRequest, User $requester, int $blockedCount)
     {
+        $this->unblockRequest = $unblockRequest->withoutRelations();
         $this->requester = $requester->withoutRelations();
         $this->blockedCount = $blockedCount;
     }
@@ -60,7 +63,7 @@ class UnblockRequested extends Notification implements ShouldBroadcast
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $url = self::unblockUrl($notifiable);
+        $url = self::unblockUrl($this->unblockRequest, $notifiable);
 
         return (new MailMessage)
             ->subject(__('messages.unblock_request.subject', ['name' => $this->requester->name]))
@@ -98,6 +101,7 @@ class UnblockRequested extends Notification implements ShouldBroadcast
     public function toArray(object $notifiable): array
     {
         return [
+            'unblock_request_id' => $this->unblockRequest->id,
             'requester_id' => $this->requester->id,
             'requester_name' => $this->requester->name,
             'requester_avatar' => $this->requester->avatar,
@@ -107,14 +111,14 @@ class UnblockRequested extends Notification implements ShouldBroadcast
     }
 
     /**
-     * Signed per recipient: opening it unblocks everything straight away.
+     * Signed per recipient and scoped to the request, so it works once.
      */
-    public static function unblockUrl(object $notifiable): string
+    public static function unblockUrl(UnblockRequest $unblockRequest, object $notifiable): string
     {
         return URL::temporarySignedRoute(
             'unblock-requests.approve',
             now()->addDays(self::LINK_LIFETIME_DAYS),
-            ['user' => $notifiable->id]
+            ['unblockRequest' => $unblockRequest->id, 'user' => $notifiable->id]
         );
     }
 }

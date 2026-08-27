@@ -5,6 +5,7 @@ namespace Tests\Unit\Notifications;
 use App\Models\Message;
 use App\Models\MessageComment;
 use App\Models\Song;
+use App\Models\UnblockRequest;
 use App\Models\User;
 use App\Notifications\MessageCommented;
 use App\Notifications\UnblockRequested;
@@ -92,8 +93,9 @@ class NotificationChannelPreferenceTest extends TestCase
             'email_notifications_enabled' => true,
         ]);
         $requester = User::factory()->create();
+        $unblockRequest = UnblockRequest::factory()->for($requester, 'requester')->create();
 
-        $channels = (new UnblockRequested($requester, 3))->via($notifiable);
+        $channels = (new UnblockRequested($unblockRequest, $requester, 3))->via($notifiable);
 
         $this->assertContains('mail', $channels);
     }
@@ -104,8 +106,9 @@ class NotificationChannelPreferenceTest extends TestCase
             'email_notifications_enabled' => false,
         ]);
         $requester = User::factory()->create();
+        $unblockRequest = UnblockRequest::factory()->for($requester, 'requester')->create();
 
-        $channels = (new UnblockRequested($requester, 3))->via($notifiable);
+        $channels = (new UnblockRequested($unblockRequest, $requester, 3))->via($notifiable);
 
         $this->assertNotContains('mail', $channels);
         $this->assertContains('database', $channels);

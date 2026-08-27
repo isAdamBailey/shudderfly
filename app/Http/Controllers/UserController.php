@@ -9,6 +9,7 @@ use App\Models\MessageComment;
 use App\Models\Page;
 use App\Models\SiteStatistic;
 use App\Models\TimezoneLabel;
+use App\Models\UnblockRequest;
 use App\Models\User;
 use App\Models\WorldClockSetting;
 use App\Notifications\MessageCommented;
@@ -182,6 +183,9 @@ class UserController extends Controller
             // Visible to everyone: it is half the enable condition for the
             // "ask to unblock" CTA. An aggregate count only, no titles or media.
             'blockedCount' => $this->contentBlockService->blockedCount(),
+            // The other half of the CTA's enable condition, so the button
+            // can't offer an ask the server would refuse.
+            'unblockAskedToday' => UnblockRequest::askedToday($user),
             'siteStats' => $this->siteStats(),
             'adminSettings' => $canAdmin ? $this->settingsController->index() : [],
             'defaultCities' => config('world_clock.default_cities'),

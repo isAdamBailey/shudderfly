@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Book;
 use App\Models\Page;
 use App\Models\Sound;
+use App\Models\UnblockRequest;
 use App\Models\User;
 use App\Notifications\UnblockRequested;
 use App\Services\ContentBlockService;
@@ -31,18 +32,38 @@ class UnblockRequestTest extends TestCase
         return Page::factory()->for(Book::factory()->create())->create(['blocked' => true]);
     }
 
-    private function approveUrl(User $admin): string
+    /**
+     * The real emailed link, built the way the notification builds it.
+     */
+    private function approveUrl(User $admin, ?UnblockRequest $unblockRequest = null): string
     {
-        return URL::temporarySignedRoute('unblock-requests.approve', now()->addDay(), [
+        return UnblockRequested::unblockUrl(
+            $unblockRequest ?? UnblockRequest::factory()->create(),
+            $admin
+        );
+    }
+
+    private function performUrl(User $admin, ?UnblockRequest $unblockRequest = null): string
+    {
+        return URL::temporarySignedRoute('unblock-requests.perform', now()->addMinutes(30), [
+            'unblockRequest' => ($unblockRequest ?? UnblockRequest::factory()->create())->id,
             'user' => $admin->id,
         ]);
     }
 
-    private function performUrl(User $admin): string
+    /**
+     * Opening the link again must refuse, and must leave newly blocked
+     * content alone — that is the whole point of the change.
+     */
+    private function assertLinkIsDead(User $admin, UnblockRequest $unblockRequest): void
     {
-        return URL::temporarySignedRoute('unblock-requests.perform', now()->addMinutes(30), [
-            'user' => $admin->id,
-        ]);
+        $page = $this->blockedPage();
+
+        $this->post($this->performUrl($admin, $unblockRequest))
+            ->assertOk()
+            ->assertSee('unblock-already-handled-page', false);
+
+        $this->assertTrue($page->fresh()->blocked);
     }
 
     public function test_normal_user_request_notifies_every_admin(): void
@@ -93,7 +114,7 @@ class UnblockRequestTest extends TestCase
         Notification::assertNothingSent();
     }
 
-    public function test_request_is_throttled_after_repeated_attempts(): void
+    public function test_a_second_request_on_the_same_day_is_refused(): void
     {
         Notification::fake();
 
@@ -107,7 +128,51 @@ class UnblockRequestTest extends TestCase
 
         $this->actingAs($requester)
             ->postJson(route('unblock-requests.store'))
-            ->assertStatus(429);
+            ->assertStatus(429)
+            ->assertJson(['sent' => false]);
+
+        $this->assertSame(1, UnblockRequest::where('user_id', $requester->id)->count());
+    }
+
+    public function test_a_request_is_allowed_again_the_next_day(): void
+    {
+        Notification::fake();
+
+        $this->admin();
+        $this->blockedPage();
+        $requester = User::factory()->create();
+
+        $this->actingAs($requester)
+            ->postJson(route('unblock-requests.store'))
+            ->assertOk();
+
+        $this->travel(25)->hours();
+        $this->blockedPage();
+
+        $this->actingAs($requester)
+            ->postJson(route('unblock-requests.store'))
+            ->assertOk()
+            ->assertJson(['sent' => true]);
+
+        $this->assertSame(2, UnblockRequest::where('user_id', $requester->id)->count());
+    }
+
+    public function test_a_new_request_supersedes_the_previous_one(): void
+    {
+        Notification::fake();
+
+        $this->admin();
+        $this->blockedPage();
+        $requester = User::factory()->create();
+
+        $this->actingAs($requester)->postJson(route('unblock-requests.store'))->assertOk();
+        $first = UnblockRequest::where('user_id', $requester->id)->sole();
+
+        $this->travel(25)->hours();
+        $this->actingAs($requester)->postJson(route('unblock-requests.store'))->assertOk();
+
+        $this->assertNotNull($first->fresh()->resolved_at);
+        $this->assertLinkIsDead($this->admin(), $first);
     }
 
     public function test_unattended_get_renders_the_form_without_unblocking(): void
@@ -227,6 +292,60 @@ class UnblockRequestTest extends TestCase
         $this->assertTrue($page->fresh()->blocked);
     }
 
+    public function test_the_link_only_works_once(): void
+    {
+        $admin = $this->admin();
+        $request = UnblockRequest::factory()->create();
+        $this->blockedPage();
+
+        $this->post($this->performUrl($admin, $request))
+            ->assertOk()
+            ->assertSee(__('messages.unblock_request.done_heading'));
+
+        $this->assertLinkIsDead($admin, $request);
+    }
+
+    public function test_the_landing_page_refuses_an_already_resolved_request(): void
+    {
+        $admin = $this->admin();
+        $request = UnblockRequest::factory()->create(['resolved_at' => now()]);
+        $page = $this->blockedPage();
+
+        $this->get($this->approveUrl($admin, $request))
+            ->assertOk()
+            ->assertSee('unblock-already-handled-page', false)
+            ->assertDontSee('unblock-form', false);
+
+        $this->assertTrue($page->fresh()->blocked);
+    }
+
+    public function test_unblocking_from_the_dashboard_kills_the_emailed_link(): void
+    {
+        $admin = $this->admin();
+        $request = UnblockRequest::factory()->create();
+        $this->blockedPage();
+
+        $this->actingAs($admin)->post(route('pages.unblock-all'))->assertRedirect();
+
+        $this->assertNotNull($request->fresh()->resolved_at);
+        $this->assertLinkIsDead($admin, $request);
+    }
+
+    public function test_a_failed_unblock_leaves_the_request_usable(): void
+    {
+        $admin = $this->admin();
+        $request = UnblockRequest::factory()->create();
+        $this->blockedPage();
+
+        $this->mock(ContentBlockService::class, function ($mock) {
+            $mock->shouldReceive('unblockAll')->andThrow(new \RuntimeException('db down'));
+        });
+
+        $this->post($this->performUrl($admin, $request))->assertStatus(500);
+
+        $this->assertNull($request->fresh()->resolved_at);
+    }
+
     public function test_blocked_count_is_visible_to_a_normal_user(): void
     {
         $user = User::factory()->create();
@@ -236,5 +355,63 @@ class UnblockRequestTest extends TestCase
         $this->actingAs($user)
             ->get(route('users.show', ['user' => $user->email]))
             ->assertInertia(fn ($page) => $page->where('blockedCount', 2));
+    }
+
+    public function test_an_honored_request_frees_the_user_to_ask_again(): void
+    {
+        Notification::fake();
+
+        $this->admin();
+        $this->blockedPage();
+        $requester = User::factory()->create();
+
+        $this->actingAs($requester)->postJson(route('unblock-requests.store'))->assertOk();
+
+        // The admin acts on it, then something new gets blocked. The child
+        // must not stay locked out for the rest of the day.
+        $this->actingAs($this->admin())->post(route('pages.unblock-all'))->assertRedirect();
+        $this->blockedPage();
+
+        $this->actingAs($requester)
+            ->postJson(route('unblock-requests.store'))
+            ->assertOk()
+            ->assertJson(['sent' => true]);
+    }
+
+    public function test_a_request_nobody_received_does_not_use_up_the_day(): void
+    {
+        $admin = $this->admin();
+        $this->blockedPage();
+        $requester = User::factory()->create();
+
+        // Every send fails: no admin heard the ask.
+        Notification::shouldReceive('send')->andThrow(new \RuntimeException('mail down'));
+
+        $this->actingAs($requester)
+            ->postJson(route('unblock-requests.store'))
+            ->assertStatus(500)
+            ->assertJson(['sent' => false]);
+
+        $this->assertSame(0, UnblockRequest::count());
+        $this->assertFalse(UnblockRequest::askedToday($requester));
+    }
+
+    public function test_the_dashboard_reports_whether_the_user_asked_today(): void
+    {
+        Notification::fake();
+
+        $this->admin();
+        $this->blockedPage();
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('users.show', ['user' => $user->email]))
+            ->assertInertia(fn ($page) => $page->where('unblockAskedToday', false));
+
+        $this->actingAs($user)->postJson(route('unblock-requests.store'))->assertOk();
+
+        $this->actingAs($user)
+            ->get(route('users.show', ['user' => $user->email]))
+            ->assertInertia(fn ($page) => $page->where('unblockAskedToday', true));
     }
 }

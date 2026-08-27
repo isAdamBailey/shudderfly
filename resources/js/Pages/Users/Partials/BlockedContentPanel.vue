@@ -7,22 +7,18 @@ import { usePermissions } from "@/composables/permissions";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import { useUnblockAll } from "@/composables/useUnblockAll";
-import { usePage } from "@inertiajs/vue3";
 import axios from "axios";
-import { computed, ref, watch } from "vue";
-
-// After asking, the dialog refuses to re-submit for the rest of the calendar
-// day so a normal user can't spam admins; it's allowed again at local
-// midnight. The "request was honored" case needs no rule of its own: once an
-// admin unblocks, blockedCount is 0 and the section shows the "nothing
-// blocked" state instead.
-const STORAGE_KEY_PREFIX = "unblockRequestedAt";
+import { computed, ref } from "vue";
 
 const CTA_CLASS =
     "inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-theme-title opacity-70 transition-opacity hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30";
 
 const props = defineProps({
     blockedCount: { type: Number, default: 0 },
+    // Whether the server has already logged an ask from this user today. It
+    // owns the once-a-day rule, so the panel reads its answer rather than
+    // keeping its own copy in a different clock.
+    unblockAskedToday: { type: Boolean, default: false },
 });
 
 const { t } = useTranslations();
@@ -37,49 +33,14 @@ const {
     onCancelled,
 } = useConfirmDialog();
 
-// localStorage throws outright in some privacy modes, and the cooldown is only
-// a courtesy — losing it must never break the panel.
-const safely = (fn, fallback = undefined) => {
-    try {
-        return fn();
-    } catch {
-        return fallback;
-    }
-};
-
-// Per-user key: the server throttles per account, and this device may be shared.
-const userId = usePage().props.auth?.user?.id ?? "anon";
-const storageKey = `${STORAGE_KEY_PREFIX}:${userId}`;
-
-const readStoredTimestamp = () =>
-    safely(() => Number(localStorage.getItem(storageKey)) || 0, 0);
-
-const writeStoredTimestamp = (value) =>
-    safely(() => localStorage.setItem(storageKey, String(value)));
-
-const clearStoredTimestamp = () =>
-    safely(() => localStorage.removeItem(storageKey));
-
-const requestedAt = ref(readStoredTimestamp());
 const { submitting: unblocking, unblockAll } = useUnblockAll();
 const submitting = ref(false);
 
-const isSameLocalDay = (a, b) => {
-    const da = new Date(a);
-    const db = new Date(b);
-    return (
-        da.getFullYear() === db.getFullYear() &&
-        da.getMonth() === db.getMonth() &&
-        da.getDate() === db.getDate()
-    );
-};
+// Covers the gap between a successful post and the prop catching up, and the
+// 429 a stale page can still earn.
+const justAsked = ref(false);
 
-// A plain function, not a computed: it must re-check the wall clock on every
-// call (a tab left open past midnight should stop being "already asked"),
-// and a computed would cache the first Date.now() forever since nothing else
-// it reads is reactive.
-const requestedToday = () =>
-    requestedAt.value > 0 && isSameLocalDay(requestedAt.value, Date.now());
+const askedToday = computed(() => props.unblockAskedToday || justAsked.value);
 
 const nothingBlocked = computed(() => props.blockedCount === 0);
 
@@ -87,25 +48,6 @@ const statusText = computed(() => {
     if (nothingBlocked.value) return t("dashboard.blocked_none");
     return t("dashboard.request_unblock_limit");
 });
-
-// Once the content is unblocked the request has been honored, so a later block
-// should start from a clean slate rather than inherit a stale cooldown.
-watch(
-    () => props.blockedCount,
-    (count) => {
-        if (count === 0) {
-            requestedAt.value = 0;
-            clearStoredTimestamp();
-        }
-    },
-    { immediate: true }
-);
-
-const recordRequest = () => {
-    const stamp = Date.now();
-    requestedAt.value = stamp;
-    writeStoredTimestamp(stamp);
-};
 
 // Speaks whatever the dialog is about to show, so a non-reader hears the same
 // thing that's on screen rather than a separately-worded prompt.
@@ -125,7 +67,7 @@ const requestUnblock = async () => {
     if (submitting.value || nothingBlocked.value) return;
     // Already asked today: say so and let the dialog's confirm button stay
     // disabled rather than silently hiding the whole panel until midnight.
-    if (requestedToday()) {
+    if (askedToday.value) {
         await confirmAndSpeak(t("dashboard.request_unblock_already_asked"));
         return;
     }
@@ -139,18 +81,19 @@ const requestUnblock = async () => {
             { headers: { Accept: "application/json" } }
         );
         // Only start the cooldown once the request actually went out, so a
-        // failed send doesn't lock the user out for an hour.
+        // failed send doesn't lock the user out for the day.
         if (data.sent) {
-            recordRequest();
+            justAsked.value = true;
         }
         setFlashMessage(data.sent ? "success" : "info", data.message);
         speak(data.message);
     } catch (error) {
-        // The server's throttle is looser than the client cooldown, so a user
-        // who cleared storage can still be refused. Start the cooldown locally
-        // so the UI stops disagreeing with the server, and say what happened.
-        if (error?.response?.status === 429) {
-            recordRequest();
+        // Two different things return 429: the controller refusing a second
+        // ask today, and the route's per-minute abuse cap. Only the former
+        // carries `sent`, and only it means the day is used up — treating a
+        // rate-limited retry as "already asked" would be a lie.
+        if (error?.response?.data?.sent === false) {
+            justAsked.value = true;
             setFlashMessage("error", statusText.value);
         } else {
             setFlashMessage("error", t("dashboard.request_unblock_error"));
@@ -167,7 +110,7 @@ const requestUnblock = async () => {
             v-model:show="confirmShow"
             :message="confirmMessage"
             confirm-variant="primary"
-            :confirm-disabled="requestedToday()"
+            :confirm-disabled="askedToday"
             @confirm="onConfirmed"
             @cancel="onCancelled"
         />

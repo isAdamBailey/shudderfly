@@ -59,10 +59,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/contact-admins-email', [ProfileController::class, 'contactAdminsEmail'])
         ->name('profile.contact-admins-email');
 
-    // The once-per-calendar-day limit lives in the client; this throttle is
-    // the backstop for a cleared localStorage, so admins can't be spammed.
+    // The once-a-day rule lives in the controller, which owns the friendly
+    // 429. This is a per-minute abuse cap only, deliberately a different
+    // shape so the two can't be mistaken for each other.
     Route::post('/unblock-requests', [UnblockRequestController::class, 'store'])
-        ->middleware('throttle:1,1440')
+        ->middleware('throttle:10,1')
         ->name('unblock-requests.store');
 
     Route::patch('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
@@ -190,9 +191,9 @@ Route::middleware('auth')->group(function () {
  * scanners and link prefetchers from unblocking anything.
  */
 Route::middleware(['signed.guest', 'throttle:20,1'])->group(function () {
-    Route::get('/unblock-requests/{user}/approve', [UnblockRequestController::class, 'approve'])
+    Route::get('/unblock-requests/{unblockRequest}/approve/{user}', [UnblockRequestController::class, 'approve'])
         ->name('unblock-requests.approve');
-    Route::post('/unblock-requests/{user}/approve', [UnblockRequestController::class, 'perform'])
+    Route::post('/unblock-requests/{unblockRequest}/approve/{user}', [UnblockRequestController::class, 'perform'])
         ->name('unblock-requests.perform');
 });
 

@@ -99,6 +99,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Local Timezone
+    |--------------------------------------------------------------------------
+    |
+    | Where the people using this app actually are. Storage stays in UTC, but
+    | anything a user perceives as "today" — the weekly schedule, the
+    | once-a-day unblock ask — has to use this instead.
+    |
+    */
+
+    'local_timezone' => env('APP_LOCAL_TIMEZONE', 'America/Los_Angeles'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |

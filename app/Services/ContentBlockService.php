@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Page;
 use App\Models\Sound;
+use App\Models\UnblockRequest;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -46,6 +47,11 @@ class ContentBlockService
         $pageCount = Page::blocked()->update(['blocked' => false]);
         $soundCount = Sound::blocked()->update(['blocked' => false]);
         $total = $pageCount + $soundCount;
+
+        // Every outstanding ask has just been answered, whichever path got
+        // here. Leaving one live would let its emailed link unblock whatever
+        // gets blocked next.
+        UnblockRequest::resolveAll();
 
         if ($pageIds->isNotEmpty()) {
             // Re-indexing is best-effort: a Meilisearch outage must not undo an

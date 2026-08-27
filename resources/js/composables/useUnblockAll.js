@@ -33,7 +33,7 @@ export function useUnblockAll() {
             // page controller for nothing.
             if (usePage().props.blockedCount !== undefined) {
                 router.reload({
-                    only: ["blockedCount"],
+                    only: ["blockedCount", "unblockAskedToday"],
                     preserveScroll: true,
                     async: true,
                 });

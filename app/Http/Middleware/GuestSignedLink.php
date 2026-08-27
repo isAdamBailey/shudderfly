@@ -25,7 +25,7 @@ class GuestSignedLink extends ValidateSignature
         try {
             return parent::handle($request, $next, ...$args);
         } catch (InvalidSignatureException) {
-            return response()->view('unblock.expired', [], 403);
+            return response()->view('unblock.status', ['status' => 'expired'], 403);
         }
     }
 }

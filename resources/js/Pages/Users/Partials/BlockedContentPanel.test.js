@@ -5,8 +5,6 @@ import { computed, nextTick } from "vue";
 
 global.route = (name) => `/${name}`;
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 let mockCanEditPages = false;
 vi.mock("@/composables/permissions", () => ({
     usePermissions: () => ({
@@ -40,9 +38,6 @@ vi.mock("@inertiajs/vue3", () => ({
     usePage: () => ({ props: { auth: { user: { id: 7 } } } }),
 }));
 
-// Cooldown is scoped per user so a shared device doesn't lock out the next login.
-const STORAGE_KEY = "unblockRequestedAt:7";
-
 const mockPost = vi.fn();
 vi.mock("axios", () => ({
     default: {
@@ -50,8 +45,17 @@ vi.mock("axios", () => ({
     },
 }));
 
-const mountPanel = (blockedCount = 3) =>
-    mount(BlockedContentPanel, { props: { blockedCount } });
+const mountPanel = (blockedCount = 3, unblockAskedToday = false) =>
+    mount(BlockedContentPanel, { props: { blockedCount, unblockAskedToday } });
+
+// The dialog's confirm button is the observable cooldown: it goes disabled
+// once the user has asked today.
+const confirmDisabledAfterClick = async (wrapper) => {
+    await wrapper.find("button").trigger("click");
+    await nextTick();
+
+    return wrapper.findComponent({ name: "ConfirmDialog" });
+};
 
 // The requesting user confirms in a dialog; admins act immediately.
 const clickAndConfirm = async (wrapper) => {
@@ -68,7 +72,6 @@ const clickAndConfirm = async (wrapper) => {
 describe("BlockedContentPanel", () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        localStorage.clear();
         mockCanEditPages = false;
         mockPost.mockResolvedValue({
             data: { message: "sent", sent: true },
@@ -137,18 +140,20 @@ describe("BlockedContentPanel", () => {
             );
         });
 
-        it("records the request only after a successful send, without hiding the CTA", async () => {
+        it("starts the cooldown after a successful send, without hiding the CTA", async () => {
             const wrapper = mountPanel();
 
             await clickAndConfirm(wrapper);
 
-            expect(Number(localStorage.getItem(STORAGE_KEY))).toBeGreaterThan(
-                0
-            );
+            expect(
+                (await confirmDisabledAfterClick(wrapper)).props(
+                    "confirmDisabled"
+                )
+            ).toBe(true);
             expect(wrapper.find("button").exists()).toBe(true);
         });
 
-        it("does not record the request when nothing was sent", async () => {
+        it("does not start the cooldown when nothing was sent", async () => {
             mockPost.mockResolvedValue({
                 data: { message: "nothing blocked", sent: false },
             });
@@ -156,30 +161,56 @@ describe("BlockedContentPanel", () => {
 
             await clickAndConfirm(wrapper);
 
-            expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+            expect(
+                (await confirmDisabledAfterClick(wrapper)).props(
+                    "confirmDisabled"
+                )
+            ).toBe(false);
         });
 
-        it("records the request on a 429, without hiding the CTA", async () => {
-            const err = new Error("throttled");
-            err.response = { status: 429 };
+        it("starts the cooldown when the server says the day is used up", async () => {
+            const err = new Error("already asked");
+            err.response = { status: 429, data: { sent: false } };
             mockPost.mockRejectedValue(err);
             const wrapper = mountPanel();
 
             await clickAndConfirm(wrapper);
 
-            expect(Number(localStorage.getItem(STORAGE_KEY))).toBeGreaterThan(
-                0
-            );
+            expect(
+                (await confirmDisabledAfterClick(wrapper)).props(
+                    "confirmDisabled"
+                )
+            ).toBe(true);
             expect(wrapper.find("button").exists()).toBe(true);
         });
 
-        it("does not start the cooldown when the request fails", async () => {
-            mockPost.mockRejectedValue(new Error("429"));
+        it("does not start the cooldown for the route's rate-limit 429", async () => {
+            // The abuse cap never created a request, so the day is untouched.
+            const err = new Error("throttled");
+            err.response = { status: 429, data: { message: "Too Many" } };
+            mockPost.mockRejectedValue(err);
             const wrapper = mountPanel();
 
             await clickAndConfirm(wrapper);
 
-            expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+            expect(
+                (await confirmDisabledAfterClick(wrapper)).props(
+                    "confirmDisabled"
+                )
+            ).toBe(false);
+        });
+
+        it("does not start the cooldown when the request fails", async () => {
+            mockPost.mockRejectedValue(new Error("boom"));
+            const wrapper = mountPanel();
+
+            await clickAndConfirm(wrapper);
+
+            expect(
+                (await confirmDisabledAfterClick(wrapper)).props(
+                    "confirmDisabled"
+                )
+            ).toBe(false);
             expect(mockSetFlashMessage).toHaveBeenCalledWith(
                 "error",
                 "dashboard.request_unblock_error"
@@ -217,12 +248,8 @@ describe("BlockedContentPanel", () => {
     });
 
     describe("cooldown state", () => {
-        it("keeps the CTA enabled when the last request was earlier today", () => {
-            localStorage.setItem(
-                STORAGE_KEY,
-                String(Date.now() - 10 * 60 * 1000)
-            );
-            const wrapper = mountPanel();
+        it("keeps the CTA enabled when the server says the user has asked today", () => {
+            const wrapper = mountPanel(3, true);
 
             expect(wrapper.find("button").exists()).toBe(true);
             expect(
@@ -231,16 +258,10 @@ describe("BlockedContentPanel", () => {
         });
 
         it("tells the user they already asked and disables the dialog's confirm button, without posting again", async () => {
-            localStorage.setItem(
-                STORAGE_KEY,
-                String(Date.now() - 10 * 60 * 1000)
-            );
-            const wrapper = mountPanel();
+            const wrapper = mountPanel(3, true);
 
-            await wrapper.find("button").trigger("click");
-            await nextTick();
+            const dialog = await confirmDisabledAfterClick(wrapper);
 
-            const dialog = wrapper.findComponent({ name: "ConfirmDialog" });
             expect(dialog.props("message")).toBe(
                 "dashboard.request_unblock_already_asked"
             );
@@ -251,8 +272,7 @@ describe("BlockedContentPanel", () => {
             expect(mockPost).not.toHaveBeenCalled();
         });
 
-        it("shows the CTA again once it's a new calendar day", () => {
-            localStorage.setItem(STORAGE_KEY, String(Date.now() - DAY_MS));
+        it("offers the CTA when the server says the user has not asked today", () => {
             const wrapper = mountPanel();
 
             expect(wrapper.find("button").exists()).toBe(true);
@@ -264,27 +284,13 @@ describe("BlockedContentPanel", () => {
             );
         });
 
-        it("disables the CTA and clears storage when nothing is blocked", () => {
-            localStorage.setItem(STORAGE_KEY, String(Date.now()));
-            const wrapper = mountPanel(0);
+        it("disables the CTA when nothing is blocked", () => {
+            const wrapper = mountPanel(0, true);
 
             expect(wrapper.find("button").attributes("disabled")).toBeDefined();
             expect(wrapper.find("button").attributes("title")).toBe(
                 "dashboard.blocked_none"
             );
-            expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
-        });
-
-        it("still renders when localStorage throws", () => {
-            const spy = vi
-                .spyOn(Storage.prototype, "getItem")
-                .mockImplementation(() => {
-                    throw new Error("denied");
-                });
-
-            expect(() => mountPanel()).not.toThrow();
-
-            spy.mockRestore();
         });
     });
 });

@@ -15,7 +15,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        $weeklyTimezone = 'America/Los_Angeles';
+        $weeklyTimezone = config('app.local_timezone');
 
         $schedule->command('pages:cleanup-stale')
             ->weeklyOn(0, '2:00')
