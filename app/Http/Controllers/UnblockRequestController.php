@@ -26,6 +26,14 @@ class UnblockRequestController extends Controller
      */
     private const PERFORM_LINK_MINUTES = 30;
 
+    /**
+     * honour() outcomes that aren't a count. Negative because a real count
+     * never is, which keeps the callers to a plain comparison.
+     */
+    private const CLAIM_LOST = -1;
+
+    private const UNBLOCK_FAILED = -2;
+
     public function __construct(
         private ContentBlockService $contentBlockService,
         private PushNotificationService $pushNotificationService,
@@ -108,7 +116,9 @@ class UnblockRequestController extends Controller
         if ($reached === 0) {
             // Nobody heard the ask, so it must not count against the day's
             // limit — otherwise a mail outage silently locks the child out
-            // behind a success message.
+            // behind a success message. Any bell entry a part-failed send
+            // already wrote goes with it, or it would outlive its row.
+            UnblockRequested::forget($unblockRequest);
             $unblockRequest->delete();
 
             return response()->json([
@@ -148,34 +158,93 @@ class UnblockRequestController extends Controller
     }
 
     /**
+     * The same approval, taken from the in-app notification bell.
+     *
+     * It claims the very same row the emailed link claims, or an admin could
+     * honour one ask twice: once from the device notification, then again
+     * from the bell, unblocking whatever got blocked in between.
+     */
+    public function unblock(Request $request, UnblockRequest $unblockRequest): JsonResponse
+    {
+        $count = $this->honour($unblockRequest, $request->user(), 'bell');
+
+        if ($count === self::CLAIM_LOST) {
+            // Spent, but the sweep that normally clears these ran before this
+            // entry existed or missed it, so retire this one on its own — any
+            // other ask may still be live and must stay clickable.
+            UnblockRequested::forget($unblockRequest);
+
+            // 409 rather than an error: nothing is wrong, the ask is just
+            // spent. The bell renders it as a notice, not a failure.
+            return response()->json([
+                'message' => __('messages.unblock_request.already_handled_body'),
+            ], 409);
+        }
+
+        if ($count === self::UNBLOCK_FAILED) {
+            return response()->json([
+                'message' => __('messages.dashboard.request_unblock_error'),
+            ], 500);
+        }
+
+        return response()->json([
+            'message' => __('messages.unblocked_all', ['count' => $count]),
+        ]);
+    }
+
+    /**
      * Auto-submitted from the landing page. Performs the unblock.
      */
     public function perform(Request $request, UnblockRequest $unblockRequest, User $user): Response
     {
         $this->assertStillAdmin($user);
 
-        // The claim is the guard against a re-opened link; unblockAll() below
-        // separately retires every live ask. Both are needed — don't fold them.
-        if (! $unblockRequest->claim()) {
+        $count = $this->honour($unblockRequest, $user, 'link');
+
+        if ($count === self::CLAIM_LOST) {
             return $this->statusView('already-handled');
         }
 
         // The viewer has no other feedback channel here, so a failure must
         // render as a failure rather than a generic 500.
-        try {
-            $count = $this->contentBlockService->unblockAll($user);
-        } catch (Throwable $e) {
-            Log::error('unblock_request perform failed', [
-                'admin_id' => $user->id,
-                'exception' => $e->getMessage(),
-            ]);
-
-            $unblockRequest->release();
-
+        if ($count === self::UNBLOCK_FAILED) {
             return $this->statusView('failed', 500);
         }
 
         return $this->statusView('done', 200, ['count' => $count]);
+    }
+
+    /**
+     * Honour one ask, exactly once, whichever door the admin came through.
+     *
+     * This is the whole single-use guarantee, so it lives in one place: the
+     * emailed link and the notification bell must not drift apart. The claim
+     * is what makes it single-use; unblockAll() separately retires every live
+     * ask. Both are needed — don't fold them.
+     *
+     * @param  string  $via  Which door, for the log line.
+     * @return int The number unblocked, or CLAIM_LOST / UNBLOCK_FAILED.
+     */
+    private function honour(UnblockRequest $unblockRequest, User $actor, string $via): int
+    {
+        if (! $unblockRequest->claim()) {
+            return self::CLAIM_LOST;
+        }
+
+        try {
+            return $this->contentBlockService->unblockAll($actor);
+        } catch (Throwable $e) {
+            Log::error('unblock_request honour failed', [
+                'via' => $via,
+                'admin_id' => $actor->id,
+                'exception' => $e->getMessage(),
+            ]);
+
+            // Hand the ask back, so a failure part-way through doesn't burn it.
+            $unblockRequest->release();
+
+            return self::UNBLOCK_FAILED;
+        }
     }
 
     /**

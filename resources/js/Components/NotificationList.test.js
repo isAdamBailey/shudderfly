@@ -504,6 +504,7 @@ describe("NotificationList", () => {
                 requester_name: "Dana",
                 requester_id: 9,
                 blocked_count: 4,
+                unblock_request_id: 77,
             },
             created_at: new Date().toISOString(),
             read_at: null,
@@ -526,14 +527,84 @@ describe("NotificationList", () => {
             await new Promise((resolve) => setTimeout(resolve, 50));
 
             // Admins unblock directly from the bell, with no confirm and no
-            // trip to the dashboard.
+            // trip to the dashboard — and scoped to the ask, so honouring it
+            // here also kills the emailed link.
             expect(axios.post).toHaveBeenCalledWith(
-                "/pages.unblock-all",
+                "/unblock-requests.unblock/77",
                 {},
                 expect.anything()
             );
             const { router } = await import("@inertiajs/vue3");
             expect(router.visit).not.toHaveBeenCalled();
+        });
+
+        it("keeps other live asks when one is already handled", async () => {
+            const axios = (await import("axios")).default;
+            axios.get.mockResolvedValue({
+                data: {
+                    data: [
+                        { ...unblockNotification },
+                        {
+                            ...unblockNotification,
+                            id: "10",
+                            data: {
+                                ...unblockNotification.data,
+                                requester_name: "Sam",
+                                unblock_request_id: 78,
+                            },
+                        },
+                    ],
+                },
+            });
+            axios.post.mockRejectedValue({
+                response: { status: 409, data: { message: "Already done." } },
+            });
+
+            const wrapper = mount(NotificationList);
+            await nextTick();
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            await wrapper.findAll(".cursor-pointer")[0].trigger("click");
+            await new Promise((resolve) => setTimeout(resolve, 50));
+            await nextTick();
+
+            // A 409 unblocked nothing, so the other child's ask must survive.
+            expect(wrapper.text()).toContain("Sam");
+            expect(wrapper.text()).not.toContain("Dana");
+        });
+
+        it("clears every ask from the list once one unblock succeeds", async () => {
+            const axios = (await import("axios")).default;
+            axios.get.mockResolvedValue({
+                data: {
+                    data: [
+                        { ...unblockNotification },
+                        {
+                            ...unblockNotification,
+                            id: "10",
+                            data: {
+                                ...unblockNotification.data,
+                                unblock_request_id: 78,
+                            },
+                        },
+                    ],
+                },
+            });
+            axios.post.mockResolvedValue({
+                data: { message: "Unblocked 4 things." },
+            });
+
+            const wrapper = mount(NotificationList);
+            await nextTick();
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            await wrapper.findAll(".cursor-pointer")[0].trigger("click");
+            await new Promise((resolve) => setTimeout(resolve, 50));
+            await nextTick();
+
+            // The server deletes every outstanding ask, so the sibling entry
+            // must go too rather than sit there offering a dead unblock.
+            expect(wrapper.text()).not.toContain("unblock_request.asked_label");
         });
     });
 });

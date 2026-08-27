@@ -6,6 +6,7 @@ use App\Models\Page;
 use App\Models\Sound;
 use App\Models\UnblockRequest;
 use App\Models\User;
+use App\Notifications\UnblockRequested;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -52,6 +53,19 @@ class ContentBlockService
         // here. Leaving one live would let its emailed link unblock whatever
         // gets blocked next.
         UnblockRequest::resolveAll();
+
+        // Every ask is now answered, so every bell entry is stale. Best-effort
+        // like the re-index below: this is tidying, and a failure here must not
+        // bubble up to a caller that would then release an ask whose unblock
+        // has already committed — that would put the emailed link back in play.
+        try {
+            UnblockRequested::forget();
+        } catch (Throwable $e) {
+            Log::error('content.unblock_all notification cleanup failed', [
+                'actor_id' => $actor->id,
+                'exception' => $e->getMessage(),
+            ]);
+        }
 
         if ($pageIds->isNotEmpty()) {
             // Re-indexing is best-effort: a Meilisearch outage must not undo an

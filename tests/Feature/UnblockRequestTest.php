@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Notifications\UnblockRequested;
 use App\Services\ContentBlockService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
@@ -329,6 +330,128 @@ class UnblockRequestTest extends TestCase
 
         $this->assertNotNull($request->fresh()->resolved_at);
         $this->assertLinkIsDead($admin, $request);
+    }
+
+    public function test_the_bell_unblocks_and_kills_the_emailed_link(): void
+    {
+        $admin = $this->admin();
+        $request = UnblockRequest::factory()->create();
+        $page = $this->blockedPage();
+
+        $this->actingAs($admin)
+            ->postJson(route('unblock-requests.unblock', $request))
+            ->assertOk();
+
+        $this->assertFalse($page->fresh()->blocked);
+        $this->assertNotNull($request->fresh()->resolved_at);
+        $this->assertLinkIsDead($admin, $request);
+    }
+
+    /**
+     * The bug this guards: unblock from the device notification, then again
+     * from the bell entry for the same ask.
+     */
+    public function test_the_bell_refuses_an_ask_already_honored_from_the_email(): void
+    {
+        $admin = $this->admin();
+        $request = UnblockRequest::factory()->create();
+        $this->blockedPage();
+
+        $this->post($this->performUrl($admin, $request))->assertOk();
+
+        $laterBlock = $this->blockedPage();
+
+        $this->actingAs($admin)
+            ->postJson(route('unblock-requests.unblock', $request))
+            ->assertStatus(409);
+
+        $this->assertTrue($laterBlock->fresh()->blocked);
+    }
+
+    public function test_a_failed_bell_unblock_leaves_the_request_usable(): void
+    {
+        $admin = $this->admin();
+        $request = UnblockRequest::factory()->create();
+        $this->blockedPage();
+
+        $this->mock(ContentBlockService::class, function ($mock) {
+            $mock->shouldReceive('unblockAll')->andThrow(new \RuntimeException('db down'));
+        });
+
+        $this->actingAs($admin)
+            ->postJson(route('unblock-requests.unblock', $request))
+            ->assertStatus(500);
+
+        $this->assertNull($request->fresh()->resolved_at);
+    }
+
+    public function test_a_user_without_edit_pages_cannot_use_the_bell_endpoint(): void
+    {
+        $request = UnblockRequest::factory()->create();
+
+        $this->actingAs(User::factory()->create())
+            ->postJson(route('unblock-requests.unblock', $request))
+            ->assertForbidden();
+
+        $this->assertNull($request->fresh()->resolved_at);
+    }
+
+    public function test_honoring_an_ask_clears_the_bell_entries(): void
+    {
+        $admin = $this->admin();
+        $other = $this->admin();
+        $request = UnblockRequest::factory()->create();
+        $this->blockedPage();
+
+        $admin->notify(new UnblockRequested($request, User::factory()->create(), 1));
+        $other->notify(new UnblockRequested($request, User::factory()->create(), 1));
+
+        $this->actingAs($admin)
+            ->postJson(route('unblock-requests.unblock', $request))
+            ->assertOk();
+
+        // Every admin's copy goes, not just the one who acted: the ask is
+        // answered for all of them.
+        $this->assertSame(0, DatabaseNotification::where('type', UnblockRequested::class)->count());
+
+        $this->actingAs($admin)
+            ->getJson(route('profile.notifications'))
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+    }
+
+    public function test_a_spent_ask_clears_only_its_own_bell_entry(): void
+    {
+        $admin = $this->admin();
+        $spent = UnblockRequest::factory()->create(['resolved_at' => now()]);
+        $live = UnblockRequest::factory()->create();
+        $this->blockedPage();
+
+        $admin->notify(new UnblockRequested($spent, User::factory()->create(), 1));
+        $admin->notify(new UnblockRequested($live, User::factory()->create(), 1));
+
+        $this->actingAs($admin)
+            ->postJson(route('unblock-requests.unblock', $spent))
+            ->assertStatus(409);
+
+        // The live ask is another child's and still needs answering.
+        $remaining = DatabaseNotification::where('type', UnblockRequested::class)->get();
+        $this->assertCount(1, $remaining);
+        $this->assertSame($live->id, $remaining->first()->data['unblock_request_id']);
+        $this->assertNull($live->fresh()->resolved_at);
+    }
+
+    public function test_unblocking_from_the_dashboard_clears_the_bell_entries(): void
+    {
+        $admin = $this->admin();
+        $request = UnblockRequest::factory()->create();
+        $this->blockedPage();
+
+        $admin->notify(new UnblockRequested($request, User::factory()->create(), 1));
+
+        $this->actingAs($admin)->post(route('pages.unblock-all'))->assertRedirect();
+
+        $this->assertSame(0, DatabaseNotification::where('type', UnblockRequested::class)->count());
     }
 
     public function test_a_failed_unblock_leaves_the_request_usable(): void

@@ -140,6 +140,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/pages', [PageController::class, 'store'])->name('pages.store');
         Route::post('/pages/bulk-action', [PageController::class, 'bulkAction'])->name('pages.bulk-action');
         Route::post('/pages/unblock-all', [PageController::class, 'unblockAll'])->name('pages.unblock-all');
+        // Bell-notification twin of the emailed link: scoped to the ask so it
+        // cannot be honoured twice.
+        Route::post('/unblock-requests/{unblockRequest}/unblock', [UnblockRequestController::class, 'unblock'])
+            ->name('unblock-requests.unblock');
         Route::post('/pages/{page}', [PageController::class, 'update'])->name('pages.update');
         Route::delete('/pages/{page}', [PageController::class, 'destroy'])->name('pages.destroy');
 
@@ -189,6 +193,9 @@ Route::middleware('auth')->group(function () {
  * Reached from the admin alert email, so these must work for a logged-out
  * admin. The GET only renders a page that immediately POSTs, which keeps mail
  * scanners and link prefetchers from unblocking anything.
+ *
+ * Not the only way to consume an ask: the bell does it too, via the
+ * authenticated `unblock-requests.unblock` route in the `edit pages` group.
  */
 Route::middleware(['signed.guest', 'throttle:20,1'])->group(function () {
     Route::get('/unblock-requests/{unblockRequest}/approve/{user}', [UnblockRequestController::class, 'approve'])

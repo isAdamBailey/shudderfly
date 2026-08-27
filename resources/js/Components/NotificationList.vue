@@ -391,15 +391,29 @@ const loadNotifications = async () => {
 
 const handleNotificationClick = async (notification) => {
     // Unblock requests act in place rather than navigating: admins unblock
-    // directly, the same as the emailed link, with no confirm step. Marking
-    // read is independent of unblocking, so the two run together.
+    // directly, the same as the emailed link, with no confirm step.
     if (notification.type === "App\\Notifications\\UnblockRequested") {
-        await Promise.all([
-            notification.read_at
-                ? Promise.resolve()
-                : markAsRead(notification.id),
-            unblockAll(),
-        ]);
+        // Not marked read: the server deletes these outright once the ask is
+        // answered, so it would be a write to a row about to disappear.
+        // An entry predating the scoped route carries no id and falls back to
+        // the unscoped unblock, which resolves every ask anyway — safe, just
+        // not single-use.
+        const outcome = await unblockAll(notification.data.unblock_request_id);
+
+        if (outcome === "unblocked") {
+            // One unblock answers every outstanding ask, so the server clears
+            // the lot. Drop them here too, rather than leave entries that
+            // could only 409 on the next click.
+            notifications.value = notifications.value.filter(
+                (entry) => entry.type !== "App\\Notifications\\UnblockRequested"
+            );
+        } else if (outcome === "already-handled") {
+            // Only this ask was spent. Another child's may still be live, and
+            // the bell is the only place left to act on it.
+            notifications.value = notifications.value.filter(
+                (entry) => entry.id !== notification.id
+            );
+        }
         return;
     }
 

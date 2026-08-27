@@ -6,6 +6,7 @@ use App\Models\UnblockRequest;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -108,6 +109,24 @@ class UnblockRequested extends Notification implements ShouldBroadcast
             'blocked_count' => $this->blockedCount,
             'created_at' => now()->toIso8601String(),
         ];
+    }
+
+    /**
+     * Drop the bell entries for one ask, or for every ask when none is named.
+     *
+     * The entry *is* the ask: once it can no longer be acted on, leaving it in
+     * the dropdown only invites a click that the server refuses. This lives
+     * here because this class writes `unblock_request_id` in the first place.
+     */
+    public static function forget(?UnblockRequest $unblockRequest = null): void
+    {
+        $query = DatabaseNotification::where('type', static::class);
+
+        if ($unblockRequest !== null) {
+            $query->where('data->unblock_request_id', $unblockRequest->id);
+        }
+
+        $query->delete();
     }
 
     /**
