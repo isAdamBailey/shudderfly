@@ -384,7 +384,6 @@ return [
     'dashboard.request_unblock_aria' => 'Demander à débloquer toutes les pages et tous les sons bloqués',
     'dashboard.request_unblock_confirm' => 'Veux-tu demander à tout débloquer ?',
     'dashboard.request_unblock_limit' => 'Tu peux demander une fois par jour.',
-    'dashboard.request_unblock_already_asked' => 'Tu l’as déjà demandé aujourd’hui ! Réessaie demain.',
     'dashboard.request_unblock_sent' => 'Ta demande a été envoyée !',
     'dashboard.request_unblock_error' => 'Une erreur est survenue. Réessaie plus tard.',
     'unblock_request.subject' => ':name a demandé un déblocage',

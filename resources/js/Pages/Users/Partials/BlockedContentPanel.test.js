@@ -48,14 +48,9 @@ vi.mock("axios", () => ({
 const mountPanel = (blockedCount = 3, unblockAskedToday = false) =>
     mount(BlockedContentPanel, { props: { blockedCount, unblockAskedToday } });
 
-// The dialog's confirm button is the observable cooldown: it goes disabled
-// once the user has asked today.
-const confirmDisabledAfterClick = async (wrapper) => {
-    await wrapper.find("button").trigger("click");
-    await nextTick();
-
-    return wrapper.findComponent({ name: "ConfirmDialog" });
-};
+// The CTA's presence is the observable cooldown: the button is gone once the
+// user has asked today, so no unusable control is left on screen.
+const ctaExists = (wrapper) => wrapper.find("button").exists();
 
 // The requesting user confirms in a dialog; admins act immediately.
 const clickAndConfirm = async (wrapper) => {
@@ -140,20 +135,15 @@ describe("BlockedContentPanel", () => {
             );
         });
 
-        it("starts the cooldown after a successful send, without hiding the CTA", async () => {
+        it("hides the CTA after a successful send", async () => {
             const wrapper = mountPanel();
 
             await clickAndConfirm(wrapper);
 
-            expect(
-                (await confirmDisabledAfterClick(wrapper)).props(
-                    "confirmDisabled"
-                )
-            ).toBe(true);
-            expect(wrapper.find("button").exists()).toBe(true);
+            expect(ctaExists(wrapper)).toBe(false);
         });
 
-        it("does not start the cooldown when nothing was sent", async () => {
+        it("keeps the CTA when nothing was sent", async () => {
             mockPost.mockResolvedValue({
                 data: { message: "nothing blocked", sent: false },
             });
@@ -161,14 +151,10 @@ describe("BlockedContentPanel", () => {
 
             await clickAndConfirm(wrapper);
 
-            expect(
-                (await confirmDisabledAfterClick(wrapper)).props(
-                    "confirmDisabled"
-                )
-            ).toBe(false);
+            expect(ctaExists(wrapper)).toBe(true);
         });
 
-        it("starts the cooldown when the server says the day is used up", async () => {
+        it("hides the CTA when the server says the day is used up", async () => {
             const err = new Error("already asked");
             err.response = { status: 429, data: { sent: false } };
             mockPost.mockRejectedValue(err);
@@ -176,15 +162,14 @@ describe("BlockedContentPanel", () => {
 
             await clickAndConfirm(wrapper);
 
-            expect(
-                (await confirmDisabledAfterClick(wrapper)).props(
-                    "confirmDisabled"
-                )
-            ).toBe(true);
-            expect(wrapper.find("button").exists()).toBe(true);
+            expect(ctaExists(wrapper)).toBe(false);
+            expect(mockSetFlashMessage).toHaveBeenCalledWith(
+                "error",
+                "dashboard.request_unblock_limit"
+            );
         });
 
-        it("does not start the cooldown for the route's rate-limit 429", async () => {
+        it("keeps the CTA for the route's rate-limit 429", async () => {
             // The abuse cap never created a request, so the day is untouched.
             const err = new Error("throttled");
             err.response = { status: 429, data: { message: "Too Many" } };
@@ -193,24 +178,16 @@ describe("BlockedContentPanel", () => {
 
             await clickAndConfirm(wrapper);
 
-            expect(
-                (await confirmDisabledAfterClick(wrapper)).props(
-                    "confirmDisabled"
-                )
-            ).toBe(false);
+            expect(ctaExists(wrapper)).toBe(true);
         });
 
-        it("does not start the cooldown when the request fails", async () => {
+        it("keeps the CTA when the request fails", async () => {
             mockPost.mockRejectedValue(new Error("boom"));
             const wrapper = mountPanel();
 
             await clickAndConfirm(wrapper);
 
-            expect(
-                (await confirmDisabledAfterClick(wrapper)).props(
-                    "confirmDisabled"
-                )
-            ).toBe(false);
+            expect(ctaExists(wrapper)).toBe(true);
             expect(mockSetFlashMessage).toHaveBeenCalledWith(
                 "error",
                 "dashboard.request_unblock_error"
@@ -248,49 +225,39 @@ describe("BlockedContentPanel", () => {
     });
 
     describe("cooldown state", () => {
-        it("keeps the CTA enabled when the server says the user has asked today", () => {
+        it("hides the CTA when the server says the user has asked today", () => {
             const wrapper = mountPanel(3, true);
 
-            expect(wrapper.find("button").exists()).toBe(true);
-            expect(
-                wrapper.find("button").attributes("disabled")
-            ).toBeUndefined();
-        });
-
-        it("tells the user they already asked and disables the dialog's confirm button, without posting again", async () => {
-            const wrapper = mountPanel(3, true);
-
-            const dialog = await confirmDisabledAfterClick(wrapper);
-
-            expect(dialog.props("message")).toBe(
-                "dashboard.request_unblock_already_asked"
-            );
-            expect(dialog.props("confirmDisabled")).toBe(true);
-            expect(mockSpeak).toHaveBeenCalledWith(
-                "dashboard.request_unblock_already_asked"
-            );
-            expect(mockPost).not.toHaveBeenCalled();
+            expect(ctaExists(wrapper)).toBe(false);
         });
 
         it("offers the CTA when the server says the user has not asked today", () => {
             const wrapper = mountPanel();
 
-            expect(wrapper.find("button").exists()).toBe(true);
+            expect(ctaExists(wrapper)).toBe(true);
             expect(
                 wrapper.find("button").attributes("disabled")
             ).toBeUndefined();
-            expect(wrapper.find("button").attributes("title")).toBe(
-                "dashboard.request_unblock_limit"
-            );
         });
 
-        it("disables the CTA when nothing is blocked", () => {
-            const wrapper = mountPanel(0, true);
+        it("hides the CTA when nothing is blocked", () => {
+            const wrapper = mountPanel(0, false);
 
-            expect(wrapper.find("button").attributes("disabled")).toBeDefined();
-            expect(wrapper.find("button").attributes("title")).toBe(
-                "dashboard.blocked_none"
+            expect(ctaExists(wrapper)).toBe(false);
+        });
+
+        it("still shows the unblock-all button to an edit-pages user who has asked today", () => {
+            // The daily limit is the requester's alone; privileged users act
+            // whenever they like.
+            mockCanEditPages = true;
+            const wrapper = mountPanel(3, true);
+
+            expect(wrapper.text()).toContain(
+                "dashboard.unlock_all_blocked_pages"
             );
+            expect(
+                wrapper.find("button").attributes("disabled")
+            ).toBeUndefined();
         });
     });
 });

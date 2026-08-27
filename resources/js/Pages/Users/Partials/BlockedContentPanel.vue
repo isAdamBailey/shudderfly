@@ -42,12 +42,10 @@ const justAsked = ref(false);
 
 const askedToday = computed(() => props.unblockAskedToday || justAsked.value);
 
-const nothingBlocked = computed(() => props.blockedCount === 0);
-
-const statusText = computed(() => {
-    if (nothingBlocked.value) return t("dashboard.blocked_none");
-    return t("dashboard.request_unblock_limit");
-});
+// The CTA is rendered only when the ask would actually go through, so a child
+// never sees a button that can't do anything: nothing to unblock, or today's
+// ask already spent. Privileged users have no such limit.
+const canRequest = computed(() => props.blockedCount > 0 && !askedToday.value);
 
 // Speaks whatever the dialog is about to show, so a non-reader hears the same
 // thing that's on screen rather than a separately-worded prompt.
@@ -64,13 +62,7 @@ const confirmUnblockAll = async () => {
 };
 
 const requestUnblock = async () => {
-    if (submitting.value || nothingBlocked.value) return;
-    // Already asked today: say so and let the dialog's confirm button stay
-    // disabled rather than silently hiding the whole panel until midnight.
-    if (askedToday.value) {
-        await confirmAndSpeak(t("dashboard.request_unblock_already_asked"));
-        return;
-    }
+    if (submitting.value || !canRequest.value) return;
     const ok = await confirmAndSpeak(t("dashboard.request_unblock_confirm"));
     if (!ok) return;
     submitting.value = true;
@@ -94,7 +86,7 @@ const requestUnblock = async () => {
         // rate-limited retry as "already asked" would be a lie.
         if (error?.response?.data?.sent === false) {
             justAsked.value = true;
-            setFlashMessage("error", statusText.value);
+            setFlashMessage("error", t("dashboard.request_unblock_limit"));
         } else {
             setFlashMessage("error", t("dashboard.request_unblock_error"));
         }
@@ -110,7 +102,6 @@ const requestUnblock = async () => {
             v-model:show="confirmShow"
             :message="confirmMessage"
             confirm-variant="primary"
-            :confirm-disabled="askedToday"
             @confirm="onConfirmed"
             @cancel="onCancelled"
         />
@@ -132,10 +123,9 @@ const requestUnblock = async () => {
         </button>
 
         <button
-            v-else
+            v-else-if="canRequest"
             type="button"
-            :disabled="submitting || nothingBlocked"
-            :title="statusText"
+            :disabled="submitting"
             :aria-label="t('dashboard.request_unblock_aria')"
             :class="CTA_CLASS"
             @click="requestUnblock"

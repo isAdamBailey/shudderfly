@@ -384,7 +384,6 @@ return [
     'dashboard.request_unblock_aria' => 'Ask to unblock all blocked pages and sounds',
     'dashboard.request_unblock_confirm' => 'Ask to unblock everything?',
     'dashboard.request_unblock_limit' => 'You can ask once a day.',
-    'dashboard.request_unblock_already_asked' => 'You already asked today! Try again tomorrow.',
     'dashboard.request_unblock_sent' => 'Your request was sent!',
     'dashboard.request_unblock_error' => 'Something went wrong. Please try again later.',
     'unblock_request.subject' => ':name asked to unblock things',
