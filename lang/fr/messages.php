@@ -623,6 +623,17 @@ return [
     'games.fun_fact_label' => 'Le savais-tu :',
     'games.person_face.default_aria' => 'Personne qui a faim',
 
+    // Games - World
+    'games.world.stage_aria' => 'Monde des jeux : fais glisser la pêche le long de la route, ou utilise les flèches gauche et droite pour marcher',
+    'games.world.peach_aria' => 'Pêche',
+    'games.world.landmark_aria' => ':game — appuie sur Entrée pour visiter',
+    'games.world.hint' => 'Fais glisser la pêche 🍑 le long de la route jusqu\'à un jeu !',
+    'games.world.near_hint' => 'Dépose la pêche ici pour jouer à :game',
+    'games.world.confirm_title' => 'Jouer à :game ?',
+    'games.world.play' => '▶ Jouer',
+    'games.world.cancel' => 'Pas encore',
+    'games.world.confirm_close_aria' => 'Fermer',
+
     // Games - Toot Foods
     'games.toot_foods.name' => 'Aliments à Prouts',
     'games.toot_foods.description' => 'Fais glisser les collations dans les fesses baladeuses pour les faire prouter. Combien en 30 secondes ?',

@@ -623,6 +623,17 @@ return [
     'games.fun_fact_label' => 'Fun Fact:',
     'games.person_face.default_aria' => 'Hungry person',
 
+    // Games - World
+    'games.world.stage_aria' => 'Games world — drag the peach along the road, or use the left and right arrow keys to walk',
+    'games.world.peach_aria' => 'Peach',
+    'games.world.landmark_aria' => ':game — press Enter to visit',
+    'games.world.hint' => 'Drag the peach 🍑 down the road to a game!',
+    'games.world.near_hint' => 'Drop the peach here to play :game',
+    'games.world.confirm_title' => 'Play :game?',
+    'games.world.play' => '▶ Play',
+    'games.world.cancel' => 'Not yet',
+    'games.world.confirm_close_aria' => 'Close',
+
     // Games - Toot Foods
     'games.toot_foods.name' => 'Toot Foods',
     'games.toot_foods.description' => 'Drag snacks into the wandering butt to make it toot. How many in 30 seconds?',
