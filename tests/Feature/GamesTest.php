@@ -39,7 +39,32 @@ class GamesTest extends TestCase
                 ->where('games.4.name', 'Poop Boom')
                 ->where('games.5.slug', 'cockroach')
                 ->where('games.5.name', 'Cockroach Fart')
+                // Every game needs a landmark and a road position, or it would
+                // be unreachable in the Games World.
+                ->has('games.0', fn (Assert $game) => $game->hasAll([
+                    'slug', 'name', 'emoji', 'description', 'landmark', 'distance',
+                ]))
+                ->where('games.0.landmark', '🏥')
+                ->where('games.0.distance', 600)
+                ->where('games.5.landmark', '🏚️')
+                ->where('games.5.distance', 5100)
         );
+    }
+
+    public function test_games_index_gives_every_game_a_distinct_road_position(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $response = $this->get(route('games.index'));
+
+        $games = $response->viewData('page')['props']['games'];
+        $distances = array_column($games, 'distance');
+
+        $this->assertCount(count($games), array_unique($distances));
+        $this->assertSame($distances, array_values(collect($distances)->sort()->all()));
+        $this->assertNotContains('', array_column($games, 'landmark'));
     }
 
     public function test_sprout_pox_game_page_is_displayed(): void
