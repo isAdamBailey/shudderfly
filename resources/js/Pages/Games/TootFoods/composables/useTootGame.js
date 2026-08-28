@@ -1,4 +1,5 @@
 import { reactive, ref, computed, onUnmounted } from "vue";
+import { TOOT_FOODS } from "@/constants/characters.js";
 
 export const ROUND_SECONDS = 30;
 const COMBO_WINDOW_MS = 1200;
@@ -9,16 +10,6 @@ const HUD_SAFE_TOP = 96; // keep foods/butt clear of the score+timer HUD
 const EDGE_MARGIN = 56;
 const BASE_POINTS = 10;
 const MAX_SPEED_BONUS_MULT = 2; // speed multiplier ramps from 1x up to 1 + this
-
-// The six fart-makers. pitch = playbackRate for the toot (bigger food = lower).
-export const FOOD_TYPES = [
-    { type: "blueberries", emoji: "🫐", pitch: 1.4 },
-    { type: "grapes", emoji: "🍇", pitch: 1.22 },
-    { type: "strawberry", emoji: "🍓", pitch: 1.1 },
-    { type: "taco", emoji: "🌮", pitch: 1.0 },
-    { type: "apple", emoji: "🍎", pitch: 0.92 },
-    { type: "sprout", emoji: "🥦", pitch: 0.78 },
-];
 
 const HIGH_SCORE_KEY = "tootFoodsHighScore";
 
@@ -96,7 +87,7 @@ export function useTootGame(callbacks = {}) {
     }
 
     function spawnFood() {
-        const def = FOOD_TYPES[Math.floor(Math.random() * FOOD_TYPES.length)];
+        const def = TOOT_FOODS[Math.floor(Math.random() * TOOT_FOODS.length)];
         const pos = randomPoint(butt, buttSize.value * 1.3);
         foods.push({
             id: nextId++,
