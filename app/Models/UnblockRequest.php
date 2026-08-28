@@ -40,26 +40,23 @@ class UnblockRequest extends Model
     }
 
     /**
-     * Whether this user has an ask outstanding from today.
+     * Whether this user has asked at all today.
      *
-     * Two subtleties, both deliberate:
+     * One ask per calendar day, answered or not: an admin approving the
+     * request must not hand the child a fresh ask for the same day, or the
+     * limit is only ever as long as an admin's response time. `resolved_at`
+     * governs whether the *links* still work, not whether the day is spent.
      *
-     * - The day boundary is local midnight, not UTC's. `today()` would roll
-     *   over mid-afternoon for the people actually using this.
-     * - Only unresolved asks count. Once an admin has acted, the child is
-     *   free to ask again if something new gets blocked — which is what the
-     *   old client-side cooldown did when it cleared on blockedCount hitting
-     *   zero. Asking again still needs an admin to have answered first, so
-     *   it can't be used to spam.
+     * The day boundary is local midnight, not UTC's — `today()` would roll
+     * over mid-afternoon for the people actually using this.
      *
-     * Both the panel that disables the button and the endpoint that refuses
-     * the post read this, so the UI can never promise something the server
-     * will reject.
+     * Both the panel that hides the button and the endpoint that refuses the
+     * post read this, so the UI can never promise something the server will
+     * reject.
      */
     public static function askedToday(User $user): bool
     {
         return static::where('user_id', $user->id)
-            ->unresolved()
             ->where('created_at', '>=', Carbon::today(config('app.local_timezone'))->utc())
             ->exists();
     }

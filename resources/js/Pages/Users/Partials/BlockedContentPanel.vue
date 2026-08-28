@@ -77,8 +77,9 @@ const requestUnblock = async () => {
         if (data.sent) {
             justAsked.value = true;
         }
+        // No speak() here: Flash.vue reads every flash message aloud, so
+        // saying it here too has the child hear the same sentence twice.
         setFlashMessage(data.sent ? "success" : "info", data.message);
-        speak(data.message);
     } catch (error) {
         // Two different things return 429: the controller refusing a second
         // ask today, and the route's per-minute abuse cap. Only the former

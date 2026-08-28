@@ -480,7 +480,7 @@ class UnblockRequestTest extends TestCase
             ->assertInertia(fn ($page) => $page->where('blockedCount', 2));
     }
 
-    public function test_an_honored_request_frees_the_user_to_ask_again(): void
+    public function test_an_honored_request_still_uses_up_the_day(): void
     {
         Notification::fake();
 
@@ -490,15 +490,35 @@ class UnblockRequestTest extends TestCase
 
         $this->actingAs($requester)->postJson(route('unblock-requests.store'))->assertOk();
 
-        // The admin acts on it, then something new gets blocked. The child
-        // must not stay locked out for the rest of the day.
+        // The admin acts on it, then something new gets blocked. Being
+        // answered does not hand back the day's ask, or the limit would only
+        // ever be as long as an admin's response time.
         $this->actingAs($this->admin())->post(route('pages.unblock-all'))->assertRedirect();
         $this->blockedPage();
 
         $this->actingAs($requester)
             ->postJson(route('unblock-requests.store'))
-            ->assertOk()
-            ->assertJson(['sent' => true]);
+            ->assertStatus(429)
+            ->assertJson(['sent' => false]);
+
+        $this->assertSame(1, UnblockRequest::where('user_id', $requester->id)->count());
+    }
+
+    public function test_the_dashboard_still_reports_asked_today_after_the_request_is_honored(): void
+    {
+        Notification::fake();
+
+        $this->admin();
+        $this->blockedPage();
+        $requester = User::factory()->create();
+
+        $this->actingAs($requester)->postJson(route('unblock-requests.store'))->assertOk();
+        $this->actingAs($this->admin())->post(route('pages.unblock-all'))->assertRedirect();
+        $this->blockedPage();
+
+        $this->actingAs($requester)
+            ->get(route('users.show', ['user' => $requester->email]))
+            ->assertInertia(fn ($page) => $page->where('unblockAskedToday', true));
     }
 
     public function test_a_request_nobody_received_does_not_use_up_the_day(): void

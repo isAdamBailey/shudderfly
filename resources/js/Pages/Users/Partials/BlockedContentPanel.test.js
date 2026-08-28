@@ -135,6 +135,19 @@ describe("BlockedContentPanel", () => {
             );
         });
 
+        it("leaves the response to Flash rather than speaking it twice", async () => {
+            const wrapper = mountPanel();
+
+            await clickAndConfirm(wrapper);
+
+            // Flash.vue speaks every flash message, so the panel must speak
+            // the confirm prompt only.
+            expect(mockSpeak).toHaveBeenCalledTimes(1);
+            expect(mockSpeak).toHaveBeenCalledWith(
+                "dashboard.request_unblock_confirm"
+            );
+        });
+
         it("hides the CTA after a successful send", async () => {
             const wrapper = mountPanel();
 
