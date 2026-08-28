@@ -623,6 +623,17 @@ return [
     'games.fun_fact_label' => 'Dato curioso:',
     'games.person_face.default_aria' => 'Persona con hambre',
 
+    // Games - World
+    'games.world.stage_aria' => 'Mundo de juegos: arrastra el durazno por el camino o usa las flechas izquierda y derecha para caminar',
+    'games.world.peach_aria' => 'Durazno',
+    'games.world.landmark_aria' => ':game: pulsa Intro para visitar',
+    'games.world.hint' => '¡Arrastra el durazno 🍑 por el camino hasta un juego!',
+    'games.world.near_hint' => 'Suelta el durazno aquí para jugar a :game',
+    'games.world.confirm_title' => '¿Jugar a :game?',
+    'games.world.play' => '▶ Jugar',
+    'games.world.cancel' => 'Todavía no',
+    'games.world.confirm_close_aria' => 'Cerrar',
+
     // Games - Toot Foods
     'games.toot_foods.name' => 'Comida Pedorra',
     'games.toot_foods.description' => 'Arrastra bocadillos al trasero andante para hacerlo tirarse pedos. ¿Cuántos en 30 segundos?',
