@@ -12,8 +12,8 @@ const { t } = useTranslations();
 <template>
     <Head :title="t('games.costco_pizza_poop.title')" />
 
-    <AuthenticatedLayout>
-        <div class="costco-pizza-poop-page">
+    <AuthenticatedLayout hide-search>
+        <div class="costco-pizza-poop-page game-page">
             <CostcoPizzaPoopApp />
         </div>
     </AuthenticatedLayout>
@@ -23,7 +23,6 @@ const { t } = useTranslations();
 .costco-pizza-poop-page {
     position: relative;
     width: 100%;
-    min-height: calc(100dvh - 4rem);
     overflow: hidden;
 }
 </style>

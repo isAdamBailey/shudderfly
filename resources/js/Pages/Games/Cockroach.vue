@@ -12,8 +12,8 @@ const { t } = useTranslations();
 <template>
     <Head :title="t('games.cockroach.title')" />
 
-    <AuthenticatedLayout>
-        <div class="cockroach-page">
+    <AuthenticatedLayout hide-search>
+        <div class="cockroach-page game-page">
             <CockroachApp />
         </div>
     </AuthenticatedLayout>
@@ -23,7 +23,6 @@ const { t } = useTranslations();
 .cockroach-page {
     position: relative;
     width: 100%;
-    min-height: calc(100dvh - 4rem);
     overflow: hidden;
 }
 </style>

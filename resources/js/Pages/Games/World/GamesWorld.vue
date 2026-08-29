@@ -1,15 +1,25 @@
 <script setup>
-import { BUTT } from "@/constants/characters.js";
+import { usePage } from "@inertiajs/vue3";
+import { BUTT, TOOT_FOODS } from "@/constants/characters.js";
 import { useTranslations } from "@/composables/useTranslations";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import GameConfirmCard from "./components/GameConfirmCard.vue";
-import { useGamesWorld } from "./composables/useGamesWorld.js";
+import { clamp, useGamesWorld } from "./composables/useGamesWorld.js";
+import { useIdlerPhysics } from "./composables/useIdlerPhysics.js";
 
 const props = defineProps({
     games: { type: Array, required: true },
 });
 
 const { t } = useTranslations();
+const page = usePage();
+
+// The stage keeps its own sky/grass identity rather than the app's bg-theme-*
+// tokens, so seasonal theming is a local class swap of custom properties
+// rather than hooking into the global theme system.
+const themeClass = computed(() =>
+    page.props.theme ? `theme-${page.props.theme}` : null
+);
 
 const HILL_TILE = 1500; // px; must match the .hills-far background-size
 const CLOUD_COUNT = 4;
@@ -26,6 +36,51 @@ const confirmGame = computed(() =>
     state.confirmSlug
         ? landmarks.value.find((lm) => lm.slug === state.confirmSlug) ?? null
         : null
+);
+
+// --- Roadside cast ---------------------------------------------------------
+
+const IDLER_SETBACK = 260; // px before its neighbouring landmark
+const IDLER_EXCITE_RADIUS = 180;
+const IDLER_DEPTHS = [2, 6, 10]; // % below the horizon, varied for a layered feel
+const IDLER_REST_STYLE = Object.freeze({
+    transform: "translate(-50%, -50%) translate(0px, 0px) rotate(0deg)",
+});
+
+const idlerPhysicsCtl = useIdlerPhysics({
+    isBlocked: () => Boolean(state.confirmSlug),
+});
+const { idlerPhysics } = idlerPhysicsCtl;
+
+const idlers = computed(() =>
+    landmarks.value.map((landmark, i) => {
+        const x = landmark.x - IDLER_SETBACK;
+        const p = idlerPhysics[landmark.slug];
+        // Most idlers are at rest most of the time; skip building a new
+        // style object (and string) for them every peach.x tick.
+        const offsetStyle =
+            p && (p.dx || p.dy || p.airborne)
+                ? {
+                      transform: `translate(-50%, -50%) translate(${
+                          p.dx
+                      }px, ${p.dy}px) rotate(${
+                          // A little spin while airborne, driven by whatever
+                          // horizontal speed the toss carried.
+                          p.airborne ? clamp(p.vx / 15, -35, 35) : 0
+                      }deg)`,
+                  }
+                : IDLER_REST_STYLE;
+        return {
+            slug: landmark.slug,
+            emoji: TOOT_FOODS[i % TOOT_FOODS.length].emoji,
+            x,
+            top: `calc(var(--horizon) + ${
+                IDLER_DEPTHS[i % IDLER_DEPTHS.length]
+            }%)`,
+            excited: Math.abs(peach.x - x) < IDLER_EXCITE_RADIUS,
+            offsetStyle,
+        };
+    })
 );
 
 // --- Layout ---------------------------------------------------------------
@@ -73,6 +128,7 @@ function onVisibilityChange() {
     if (document.hidden) {
         world.setWalk(0);
         world.stop();
+        idlerPhysicsCtl.cancelActiveDrag();
     } else {
         world.start();
     }
@@ -82,6 +138,10 @@ function onWindowBlur() {
     // The keyup for a held arrow goes to whatever took focus, so without this
     // the peach keeps walking to the end of the road while we're away.
     world.setWalk(0);
+    // Same reasoning as onVisibilityChange: a blur without a full
+    // visibilitychange (e.g. devtools stealing focus) shouldn't leave a
+    // toss's listeners attached or its rAF loop running unattended.
+    idlerPhysicsCtl.cancelActiveDrag();
 }
 
 // --- Pointer --------------------------------------------------------------
@@ -220,6 +280,7 @@ const peachStyle = computed(() => ({
     <div
         ref="stageEl"
         class="stage"
+        :class="themeClass"
         :style="stageHeight ? { height: `${stageHeight}px` } : null"
         tabindex="0"
         :aria-label="t('games.world.stage_aria')"
@@ -238,12 +299,33 @@ const peachStyle = computed(() => ({
                 :key="i"
                 class="cloud"
                 :style="{ '--i': i }"
-                >☁️</span
-            >
+            ></span>
         </div>
 
         <div class="world" :style="worldStyle">
             <div class="road" aria-hidden="true"></div>
+
+            <span
+                v-for="(idler, i) in idlers"
+                :key="idler.slug"
+                class="idler"
+                :style="{
+                    left: `${idler.x}px`,
+                    top: idler.top,
+                    ...idler.offsetStyle,
+                }"
+                aria-hidden="true"
+                @pointerdown.prevent="
+                    idlerPhysicsCtl.onPointerDown(idler.slug, $event)
+                "
+            >
+                <span
+                    class="idler-emoji"
+                    :class="{ excited: idler.excited }"
+                    :style="{ '--i': i }"
+                    >{{ idler.emoji }}</span
+                >
+            </span>
 
             <button
                 v-for="landmark in landmarks"
@@ -302,6 +384,7 @@ const peachStyle = computed(() => ({
     --hill: #34a06a;
     --grass: #4ade80;
     --road: #a8a29e;
+    --drifter: "☁️";
 
     position: relative;
     width: 100%;
@@ -312,6 +395,25 @@ const peachStyle = computed(() => ({
     touch-action: none;
     user-select: none;
     outline: none;
+}
+
+/* Three custom-property overrides per season, nothing else — the stage keeps
+   its own identity, it doesn't reach into the app's bg-theme-* tokens. */
+.stage.theme-christmas {
+    --sky-top: #bfe6ff;
+    --hill: #f8fbff;
+    --drifter: "❄️";
+}
+
+.stage.theme-halloween {
+    --sky-top: #4c1d6b;
+    --hill: #3a1854;
+}
+
+.stage.theme-fireworks {
+    --sky-top: #0b1230;
+    --hill: #1c2b52;
+    --drifter: "✨";
 }
 
 .sky {
@@ -346,6 +448,32 @@ const peachStyle = computed(() => ({
     background-position: 0 bottom, 420px bottom;
 }
 
+/* Invisible by default (background: transparent) — a theme turns this into a
+   flat --hill tint masked to the same ridge silhouette, so recoloring the
+   hills for a season never has to touch the baked SVG fills above. */
+.hills-far::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: transparent;
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1500 240%22 preserveAspectRatio=%22none%22%3E%3Cpath d=%22M0%2C240 L0%2C180 C160%2C120 300%2C205 460%2C180 C620%2C155 720%2C105 880%2C150 C1050%2C198 1280%2C160 1500%2C180 L1500%2C240 Z%22 fill=%22%23000%22/%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1500 240%22 preserveAspectRatio=%22none%22%3E%3Cpath d=%22M0%2C240 L0%2C130 C180%2C50 330%2C180 500%2C150 C660%2C122 760%2C40 920%2C80 C1080%2C120 1250%2C180 1500%2C130 L1500%2C240 Z%22 fill=%22%23000%22/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1500 240%22 preserveAspectRatio=%22none%22%3E%3Cpath d=%22M0%2C240 L0%2C180 C160%2C120 300%2C205 460%2C180 C620%2C155 720%2C105 880%2C150 C1050%2C198 1280%2C160 1500%2C180 L1500%2C240 Z%22 fill=%22%23000%22/%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1500 240%22 preserveAspectRatio=%22none%22%3E%3Cpath d=%22M0%2C240 L0%2C130 C180%2C50 330%2C180 500%2C150 C660%2C122 760%2C40 920%2C80 C1080%2C120 1250%2C180 1500%2C130 L1500%2C240 Z%22 fill=%22%23000%22/%3E%3C/svg%3E");
+    -webkit-mask-repeat: repeat-x, repeat-x;
+    mask-repeat: repeat-x, repeat-x;
+    -webkit-mask-size: 1500px 190px, 1500px 140px;
+    mask-size: 1500px 190px, 1500px 140px;
+    -webkit-mask-position: 0 bottom, 420px bottom;
+    mask-position: 0 bottom, 420px bottom;
+}
+
+.stage.theme-christmas .hills-far::after,
+.stage.theme-halloween .hills-far::after,
+.stage.theme-fireworks .hills-far::after {
+    background: var(--hill);
+}
+
 .cloud {
     position: absolute;
     top: calc(3% + var(--i) * 7%);
@@ -353,6 +481,10 @@ const peachStyle = computed(() => ({
     font-size: 2.4rem;
     animation: cloud-drift 18s ease-in-out infinite alternate;
     animation-delay: calc(var(--i) * -4s);
+}
+
+.cloud::before {
+    content: var(--drifter);
 }
 
 @keyframes cloud-drift {
@@ -394,6 +526,52 @@ const peachStyle = computed(() => ({
         #fef9c3 0 46px,
         transparent 46px 96px
     );
+}
+
+.idler {
+    position: absolute;
+    /* Draggable and throwable for fun; dropping one has no effect on the
+       game, hence aria-hidden despite being interactive. */
+    pointer-events: auto;
+    cursor: grab;
+    touch-action: none;
+}
+
+.idler:active {
+    cursor: grabbing;
+}
+
+.idler-emoji {
+    display: inline-block;
+    font-size: clamp(2rem, 7vmin, 3.25rem);
+    line-height: 1;
+    animation: idle-bob 2.4s ease-in-out infinite;
+    animation-delay: calc(var(--i) * -0.37s);
+}
+
+.idler-emoji.excited {
+    animation: idler-hop 0.6s ease-in-out infinite;
+    animation-delay: calc(var(--i) * -0.37s);
+}
+
+@keyframes idle-bob {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-6px);
+    }
+}
+
+@keyframes idler-hop {
+    0%,
+    100% {
+        transform: scale(1.15) translateY(0);
+    }
+    50% {
+        transform: scale(1.15) translateY(-10px);
+    }
 }
 
 .landmark {
@@ -475,6 +653,10 @@ const peachStyle = computed(() => ({
 
     .landmark-emoji {
         transition: none;
+    }
+
+    .idler-emoji {
+        animation: none;
     }
 }
 </style>

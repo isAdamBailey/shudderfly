@@ -1,6 +1,7 @@
 import { mount } from "@vue/test-utils";
 import { describe, expect, it } from "vitest";
 import { nextTick } from "vue";
+import { TOOT_FOODS } from "@/constants/characters.js";
 import Index from "./Index.vue";
 
 const games = [
@@ -85,6 +86,45 @@ describe("Games Index", () => {
                 `left: ${game.distance}px`
             );
         });
+    });
+
+    it("renders one roadside idler per landmark, set back and aria-hidden", () => {
+        const wrapper = mountIndex();
+        const idlers = wrapper.findAll(".idler");
+        expect(idlers).toHaveLength(games.length);
+        idlers.forEach((idler, i) => {
+            expect(idler.attributes("aria-hidden")).toBe("true");
+            expect(idler.attributes("style")).toContain(
+                `left: ${games[i].distance - 260}px`
+            );
+            expect(idler.text()).toBe(TOOT_FOODS[i].emoji);
+        });
+    });
+
+    it("lets an idler be dragged, then thrown when released", async () => {
+        const wrapper = mountIndex();
+        const idler = wrapper.findAll(".idler")[0];
+
+        await idler.trigger("pointerdown", { clientX: 100, clientY: 100 });
+        window.dispatchEvent(
+            new MouseEvent("pointermove", {
+                clientX: 130,
+                clientY: 40,
+                bubbles: true,
+            })
+        );
+        await nextTick();
+
+        expect(idler.attributes("style")).toContain(
+            "translate(30px, -60px)"
+        );
+
+        window.dispatchEvent(new MouseEvent("pointerup", { bubbles: true }));
+        await nextTick();
+
+        // Released with upward velocity: still offset from its resting spot,
+        // and no longer following the (now-gone) pointer.
+        expect(idler.attributes("style")).toContain("translate(30px, -60px)");
     });
 
     it("renders no game links until a landmark is chosen", () => {

@@ -12,8 +12,8 @@ const { t } = useTranslations();
 <template>
     <Head :title="t('games.toot_foods.title')" />
 
-    <AuthenticatedLayout>
-        <div class="toot-foods-page">
+    <AuthenticatedLayout hide-search>
+        <div class="toot-foods-page game-page">
             <TootFoodsApp />
         </div>
     </AuthenticatedLayout>
@@ -23,7 +23,6 @@ const { t } = useTranslations();
 .toot-foods-page {
     position: relative;
     width: 100%;
-    min-height: calc(100dvh - 4rem);
     overflow: hidden;
 }
 </style>
