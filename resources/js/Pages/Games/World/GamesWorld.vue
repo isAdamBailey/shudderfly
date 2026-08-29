@@ -1,5 +1,5 @@
 <script setup>
-import { BUTT } from "@/constants/characters.js";
+import { BUTT, TOOT_FOODS } from "@/constants/characters.js";
 import { useTranslations } from "@/composables/useTranslations";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import GameConfirmCard from "./components/GameConfirmCard.vue";
@@ -26,6 +26,27 @@ const confirmGame = computed(() =>
     state.confirmSlug
         ? landmarks.value.find((lm) => lm.slug === state.confirmSlug) ?? null
         : null
+);
+
+// --- Roadside cast ---------------------------------------------------------
+
+const IDLER_SETBACK = 260; // px before its neighbouring landmark
+const IDLER_EXCITE_RADIUS = 180;
+const IDLER_DEPTHS = [2, 6, 10]; // % below the horizon, varied for a layered feel
+
+const idlers = computed(() =>
+    landmarks.value.map((landmark, i) => {
+        const x = landmark.x - IDLER_SETBACK;
+        return {
+            slug: landmark.slug,
+            emoji: TOOT_FOODS[i % TOOT_FOODS.length].emoji,
+            x,
+            top: `calc(var(--horizon) + ${
+                IDLER_DEPTHS[i % IDLER_DEPTHS.length]
+            }%)`,
+            excited: Math.abs(peach.x - x) < IDLER_EXCITE_RADIUS,
+        };
+    })
 );
 
 // --- Layout ---------------------------------------------------------------
@@ -245,6 +266,21 @@ const peachStyle = computed(() => ({
         <div class="world" :style="worldStyle">
             <div class="road" aria-hidden="true"></div>
 
+            <span
+                v-for="(idler, i) in idlers"
+                :key="idler.slug"
+                class="idler"
+                :style="{ left: `${idler.x}px`, top: idler.top }"
+                aria-hidden="true"
+            >
+                <span
+                    class="idler-emoji"
+                    :class="{ excited: idler.excited }"
+                    :style="{ '--i': i }"
+                    >{{ idler.emoji }}</span
+                >
+            </span>
+
             <button
                 v-for="landmark in landmarks"
                 :key="landmark.slug"
@@ -396,6 +432,45 @@ const peachStyle = computed(() => ({
     );
 }
 
+.idler {
+    position: absolute;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+}
+
+.idler-emoji {
+    display: inline-block;
+    font-size: clamp(2rem, 7vmin, 3.25rem);
+    line-height: 1;
+    animation: idle-bob 2.4s ease-in-out infinite;
+    animation-delay: calc(var(--i) * -0.37s);
+}
+
+.idler-emoji.excited {
+    animation: idler-hop 0.6s ease-in-out infinite;
+    animation-delay: calc(var(--i) * -0.37s);
+}
+
+@keyframes idle-bob {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-6px);
+    }
+}
+
+@keyframes idler-hop {
+    0%,
+    100% {
+        transform: scale(1.15) translateY(0);
+    }
+    50% {
+        transform: scale(1.15) translateY(-10px);
+    }
+}
+
 .landmark {
     position: absolute;
     pointer-events: auto;
@@ -475,6 +550,10 @@ const peachStyle = computed(() => ({
 
     .landmark-emoji {
         transition: none;
+    }
+
+    .idler-emoji {
+        animation: none;
     }
 }
 </style>

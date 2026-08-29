@@ -1,6 +1,7 @@
 import { mount } from "@vue/test-utils";
 import { describe, expect, it } from "vitest";
 import { nextTick } from "vue";
+import { TOOT_FOODS } from "@/constants/characters.js";
 import Index from "./Index.vue";
 
 const games = [
@@ -84,6 +85,19 @@ describe("Games Index", () => {
             expect(buttons[i].attributes("style")).toContain(
                 `left: ${game.distance}px`
             );
+        });
+    });
+
+    it("renders one roadside idler per landmark, set back and aria-hidden", () => {
+        const wrapper = mountIndex();
+        const idlers = wrapper.findAll(".idler");
+        expect(idlers).toHaveLength(games.length);
+        idlers.forEach((idler, i) => {
+            expect(idler.attributes("aria-hidden")).toBe("true");
+            expect(idler.attributes("style")).toContain(
+                `left: ${games[i].distance - 260}px`
+            );
+            expect(idler.text()).toBe(TOOT_FOODS[i].emoji);
         });
     });
 
