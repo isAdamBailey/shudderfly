@@ -1,22 +1,6 @@
 <template>
-    <GameStartScreen
-        v-if="state.phase === 'start'"
-        :title="t('games.cockroach_fight.title')"
-        :subtitle="t('games.cockroach_fight.subtitle')"
-        :intro-script="t(COCKROACH_FIGHT_INTRO_SCRIPT)"
-        :high-score="state.highScore"
-        @play="handlePlay"
-    >
-        <template #extra>
-            <div class="game-start-aside">
-                <span class="game-start-aside-label"
-                    >{{ t("games.fun_fact_label") }} </span
-                >{{ t(currentFact) }}
-            </div>
-        </template>
-    </GameStartScreen>
     <GameBoard
-        v-else-if="state.phase === 'playing' || state.phase === 'fighting'"
+        v-if="state.phase === 'playing' || state.phase === 'fighting'"
         :state="state"
         @tap="tap"
     />
@@ -32,14 +16,13 @@
 </template>
 
 <script setup>
-import { watch, onUnmounted } from "vue";
+import { onUnmounted, watch } from "vue";
 
-import GameStartScreen from "@/Components/Games/GameStartScreen.vue";
 import GameBoard from "./components/GameBoard.vue";
 import WinScreen from "./components/WinScreen.vue";
-import { COCKROACH_FIGHT_INTRO_SCRIPT } from "@/Pages/Games/shared/introScripts.js";
 import { useGameState } from "./composables/useGameState.js";
 import { useSound } from "../Cockroach/composables/useSound.js";
+import { useAutoStartGame } from "@/composables/useAutoStartGame";
 import { useTranslations } from "@/composables/useTranslations";
 
 const { t } = useTranslations();
@@ -80,4 +63,6 @@ async function handlePlay() {
     await initAudio();
     startGame();
 }
+
+useAutoStartGame(handlePlay);
 </script>

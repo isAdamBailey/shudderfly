@@ -1,8 +1,7 @@
 <script setup>
 import GameEndScreen from "@/Components/Games/GameEndScreen.vue";
-import GameStartScreen from "@/Components/Games/GameStartScreen.vue";
-import { POOP_BOOM_INTRO_SCRIPT } from "@/Pages/Games/shared/introScripts.js";
 import { TOILET } from "@/constants/characters.js";
+import { useAutoStartGame } from "@/composables/useAutoStartGame";
 import { useGameViewportLock } from "@/composables/useGameViewportLock";
 import { getAudioContext, unlockAudio } from "@/composables/useAudioContext";
 import { useTranslations } from "@/composables/useTranslations";
@@ -414,6 +413,8 @@ onUnmounted(() => {
     window.removeEventListener("resize", updateSize);
     removeDragListeners();
 });
+
+useAutoStartGame(startGame);
 </script>
 
 <template>
@@ -421,19 +422,6 @@ onUnmounted(() => {
 
     <AuthenticatedLayout>
         <div class="boom-wrapper">
-            <Transition name="fade">
-                <GameStartScreen
-                    v-if="!gameStarted"
-                    :title="t('games.boom.title')"
-                    :intro-script="t(POOP_BOOM_INTRO_SCRIPT)"
-                    :play-label="t('games.boom.play_label')"
-                    @play="startGame"
-                >
-                    <template #media>💩</template>
-                    <p>{{ t("games.boom.instructions") }}</p>
-                </GameStartScreen>
-            </Transition>
-
             <Transition name="fade">
                 <GameEndScreen
                     v-if="gameOver"

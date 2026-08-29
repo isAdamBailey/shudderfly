@@ -1,18 +1,5 @@
 <template>
-    <GameStartScreen
-        v-if="phase === 'start'"
-        :title="t('games.costco_pizza_poop.title')"
-        :subtitle="t('games.costco_pizza_poop.subtitle')"
-        :intro-script="t(COSTCO_PIZZA_POOP_INTRO_SCRIPT)"
-        @play="handlePlayFromStart"
-    >
-        <template #media
-            >🍕<PepperoniStick class="start-media-pepperoni"
-        /></template>
-        <p>{{ t("games.costco_pizza_poop.instructions") }}</p>
-    </GameStartScreen>
-
-    <div v-else-if="phase === 'pizza'" ref="gameEl" class="game-container">
+    <div v-if="phase === 'pizza'" ref="gameEl" class="game-container">
         <div class="hud">
             <span class="hud-label">{{
                 t("games.costco_pizza_poop.hud_food_left")
@@ -108,15 +95,14 @@
 </template>
 
 <script setup>
-import GameStartScreen from "@/Components/Games/GameStartScreen.vue";
 import GameEndScreen from "@/Components/Games/GameEndScreen.vue";
 import PersonFace from "@/Components/Games/PersonFace.vue";
 import GameBoard from "@/Pages/Games/CostcoPizzaPoop/components/GameBoard.vue";
 import PepperoniStick from "@/Pages/Games/CostcoPizzaPoop/components/PepperoniStick.vue";
-import { COSTCO_PIZZA_POOP_INTRO_SCRIPT } from "@/Pages/Games/shared/introScripts.js";
 import { POOP } from "@/constants/characters.js";
 import { useGameState } from "@/Pages/Games/CostcoPizzaPoop/composables/useGameState.js";
 import { useSound } from "@/Pages/Games/CostcoPizzaPoop/composables/useSound.js";
+import { useAutoStartGame } from "@/composables/useAutoStartGame";
 import { useTranslations } from "@/composables/useTranslations";
 import { Link, usePage } from "@inertiajs/vue3";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
@@ -465,6 +451,8 @@ onUnmounted(() => {
     removeDragListeners();
     clearTimers();
 });
+
+useAutoStartGame(handlePlayFromStart);
 </script>
 
 <style scoped>

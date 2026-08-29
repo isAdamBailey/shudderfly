@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
     useGamesWorld,
     WALK_SPEED,
+    DRAG_SPEED,
     END_PAD,
     SNAP_RADIUS,
     SOFT_LEFT,
@@ -46,6 +47,19 @@ const GAMES = [
     },
 ];
 
+/** Drags the peach to `x` and lets it stroll the whole way there — a drag
+ * steers the peach at DRAG_SPEED rather than teleporting it. */
+function dragTo(world, x) {
+    world.startDrag();
+    world.updateDrag(x);
+    advance(world, (Math.abs(x - world.peach.x) / DRAG_SPEED) * 1000 + 100);
+}
+
+/** How long the peach needs to stroll `distance` px after a release. */
+function travelMs(distance) {
+    return (distance / DRAG_SPEED) * 1000 + 100;
+}
+
 function makeWorld(callbacks) {
     const world = useGamesWorld(GAMES, callbacks);
     world.setBounds(STAGE_W, STAGE_H);
@@ -82,8 +96,7 @@ describe("useGamesWorld camera", () => {
     it("holds at zero while the peach is inside the deadzone", () => {
         const world = makeWorld();
 
-        world.startDrag();
-        world.updateDrag(STAGE_W * 0.5);
+        dragTo(world, STAGE_W * 0.5);
 
         expect(world.peach.x).toBe(STAGE_W * 0.5);
         expect(world.camera.x).toBe(0);
@@ -92,8 +105,7 @@ describe("useGamesWorld camera", () => {
     it("follows the peach past the right soft margin", () => {
         const world = makeWorld();
 
-        world.startDrag();
-        world.updateDrag(1000);
+        dragTo(world, 1000);
 
         expect(world.camera.x).toBe(1000 - STAGE_W * SOFT_RIGHT);
     });
@@ -101,9 +113,8 @@ describe("useGamesWorld camera", () => {
     it("pushes back when the peach crosses the left soft margin", () => {
         const world = makeWorld();
 
-        world.startDrag();
-        world.updateDrag(1500);
-        world.updateDrag(1000);
+        dragTo(world, 1500);
+        dragTo(world, 1000);
 
         expect(world.camera.x).toBe(1000 - STAGE_W * SOFT_LEFT);
     });
@@ -111,11 +122,10 @@ describe("useGamesWorld camera", () => {
     it("clamps at the end of the road and never goes negative", () => {
         const world = makeWorld();
 
-        world.startDrag();
-        world.updateDrag(99999);
+        dragTo(world, world.worldWidth.value - 60);
         expect(world.camera.x).toBe(world.worldWidth.value - STAGE_W);
 
-        world.updateDrag(0);
+        dragTo(world, 40);
         expect(world.camera.x).toBe(0);
     });
 });
@@ -172,16 +182,24 @@ describe("useGamesWorld walking", () => {
         expect(world.state.walkDir).toBe(0);
     });
 
-    it("clamps the peach at both ends of the road", () => {
+    it("loops back to the start when it walks off the end of the road", () => {
+        const world = makeWorld();
+        const end = world.worldWidth.value - 40;
+
+        world.setWalk(1);
+        advance(world, ((end - world.peach.x) / WALK_SPEED) * 1000 + 500);
+
+        expect(world.peach.x).toBeLessThan(400);
+        expect(world.peach.x).toBeGreaterThanOrEqual(40);
+    });
+
+    it("loops round to the end when it walks back past the start", () => {
         const world = makeWorld();
 
         world.setWalk(-1);
         advance(world, 3000);
-        expect(world.peach.x).toBe(40);
 
-        world.setWalk(1);
-        advance(world, 20000);
-        expect(world.peach.x).toBe(world.worldWidth.value - 40);
+        expect(world.peach.x).toBeGreaterThan(world.worldWidth.value - 800);
     });
 });
 
@@ -189,8 +207,7 @@ describe("useGamesWorld dropping the peach", () => {
     it("opens the confirm card when dropped within SNAP_RADIUS of a landmark", () => {
         const world = makeWorld();
 
-        world.startDrag();
-        world.updateDrag(1500 - (SNAP_RADIUS - 10));
+        dragTo(world, 1500 - (SNAP_RADIUS - 10));
         world.endDrag();
 
         expect(world.state.confirmSlug).toBe("toot-foods");
@@ -200,11 +217,68 @@ describe("useGamesWorld dropping the peach", () => {
     it("opens nothing when dropped on open road", () => {
         const world = makeWorld();
 
-        world.startDrag();
-        world.updateDrag(1500 - (SNAP_RADIUS + 10));
+        dragTo(world, 1500 - (SNAP_RADIUS + 10));
         world.endDrag();
 
         expect(world.nearestLandmark.value).toBeNull();
+        expect(world.state.confirmSlug).toBeNull();
+    });
+
+    it("opens nothing when the drag is cancelled on a landmark", () => {
+        const world = makeWorld();
+
+        dragTo(world, 1500);
+        world.cancelDrag();
+
+        expect(world.state.mode).toBe("idle");
+        expect(world.peach.x).toBe(1500);
+        expect(world.state.confirmSlug).toBeNull();
+    });
+
+    it("finishes the journey after the release, then opens the card", () => {
+        const world = makeWorld();
+
+        world.startDrag();
+        world.updateDrag(600);
+        advance(world, 200); // let go long before the peach gets there
+        world.endDrag();
+
+        expect(world.state.confirmSlug).toBeNull();
+        advance(world, travelMs(600));
+
+        expect(world.peach.x).toBe(600);
+        expect(world.state.confirmSlug).toBe("sprout-pox");
+    });
+
+    it("arrives when the drag target is past the wrap boundary", () => {
+        const world = makeWorld();
+        world.walkToLandmark("boom");
+
+        // Finger past the end of the road — without wrapping the target, the
+        // peach would chase an unreachable coordinate forever and never arrive.
+        const pastEnd = world.worldWidth.value + 40;
+        const startX = world.peach.x;
+        world.startDrag();
+        world.updateDrag(pastEnd);
+        world.endDrag();
+
+        // Shortest wrapped path from boom (2400) to wrapX(pastEnd) (120).
+        advance(world, travelMs(800));
+
+        expect(world.peach.x).toBe(120);
+        expect(world.peach.x).not.toBe(startX);
+        expect(world.state.confirmSlug).toBeNull();
+    });
+
+    it("abandons an unfinished journey when the player walks instead", () => {
+        const world = makeWorld();
+
+        world.startDrag();
+        world.updateDrag(600);
+        world.endDrag();
+        world.setWalk(-1);
+        advance(world, travelMs(600));
+
         expect(world.state.confirmSlug).toBeNull();
     });
 
@@ -212,8 +286,7 @@ describe("useGamesWorld dropping the peach", () => {
         const arrivals = [];
         const world = makeWorld({ onArrive: (lm) => arrivals.push(lm.slug) });
 
-        world.startDrag();
-        world.updateDrag(610);
+        dragTo(world, 610);
         expect(world.nearestLandmark.value.slug).toBe("sprout-pox");
         world.endDrag();
 

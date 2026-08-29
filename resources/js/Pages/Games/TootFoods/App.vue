@@ -1,12 +1,11 @@
 <script setup>
 import { onMounted, onBeforeUnmount, nextTick, ref } from "vue";
 import { Link, usePage } from "@inertiajs/vue3";
-import GameStartScreen from "@/Components/Games/GameStartScreen.vue";
 import GameEndScreen from "@/Components/Games/GameEndScreen.vue";
-import { TOOT_FOODS_INTRO_SCRIPT } from "../shared/introScripts.js";
 import { useTootGame, ROUND_SECONDS } from "./composables/useTootGame.js";
 import { BUTT } from "@/constants/characters.js";
 import { useTootSound } from "./composables/useTootSound.js";
+import { useAutoStartGame } from "@/composables/useAutoStartGame";
 import { useTranslations } from "@/composables/useTranslations";
 
 const { t } = useTranslations();
@@ -54,9 +53,9 @@ async function startRound() {
     game.start();
 }
 
-function handlePlay() {
-    initAudio();
-    startRound();
+async function handlePlay() {
+    await initAudio();
+    await startRound();
 }
 
 function handlePlayAgain() {
@@ -136,24 +135,12 @@ function buttStyle() {
         }) scaleY(${1 - squash * 0.16})`,
     };
 }
+
+useAutoStartGame(handlePlay);
 </script>
 
 <template>
-    <GameStartScreen
-        v-if="state.phase === 'start'"
-        :title="t('games.toot_foods.title')"
-        :subtitle="t('games.toot_foods.subtitle')"
-        :intro-script="t(TOOT_FOODS_INTRO_SCRIPT)"
-        :high-score="highScore"
-        @play="handlePlay"
-    >
-        <template #media>{{ BUTT }}</template>
-        <p>
-            {{ t("games.toot_foods.instructions", { seconds: ROUND_SECONDS }) }}
-        </p>
-    </GameStartScreen>
-
-    <div v-else-if="state.phase === 'playing'" ref="stageEl" class="toot-stage">
+    <div v-if="state.phase === 'playing'" ref="stageEl" class="toot-stage">
         <div class="hud">
             <div class="hud-stat">
                 <span class="hud-label">{{
