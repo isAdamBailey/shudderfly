@@ -1,81 +1,124 @@
-import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
+import { describe, expect, it } from "vitest";
+import { nextTick } from "vue";
 import Index from "./Index.vue";
 
 const games = [
     {
+        slug: "sprout-pox",
+        name: "Sprout Pox",
+        emoji: "🥬",
+        landmark: "🏥",
+        distance: 600,
+        description: "Launch sprouts at the spotty face.",
+    },
+    {
+        slug: "toot-foods",
+        name: "Toot Foods",
+        emoji: "🍔",
+        landmark: "🍔",
+        distance: 1500,
+        description: "Feed the foods and listen to them toot.",
+    },
+    {
         slug: "cockroach-fight",
         name: "Cockroach Fight",
         emoji: "🪳",
-        description:
-            "Tap a cockroach head to bring them together for an epic battle!",
+        landmark: "🏟️",
+        distance: 2400,
+        description: "Tap a cockroach head to bring them together.",
     },
     {
         slug: "costco-pizza-poop",
         name: "Costco Pizza Poop",
         emoji: "🍕",
-        description:
-            "Drag every slice into the mouth, then celebrate the inevitable.",
+        landmark: "🏪",
+        distance: 3300,
+        description: "Drag every slice into the mouth.",
     },
     {
         slug: "boom",
         name: "Poop Boom",
         emoji: "💩",
-        description:
-            "Drag the poop into the toilet. 5 misses and it's game over!",
+        landmark: "🚽",
+        distance: 4200,
+        description: "Drag the poop into the toilet.",
     },
     {
         slug: "cockroach",
         name: "Cockroach Fart",
         emoji: "🪳",
-        description:
-            "Tap the cockroach's head to make it hiss its way to the toilet.",
+        landmark: "🏚️",
+        distance: 5100,
+        description: "Tap the cockroach's head to make it hiss.",
     },
 ];
 
-function mountIndex(props = {}) {
+function mountIndex() {
     return mount(Index, {
-        props: { games, ...props },
+        props: { games },
+        attachTo: document.body,
         global: {
             provide: { route: global.route },
+            // The shared Inertia Link stub renders a bare <a>; give it a real
+            // href so the confirm card's Play link can be asserted.
+            stubs: {
+                Link: {
+                    name: "Link",
+                    props: ["href"],
+                    template: '<a :href="href"><slot /></a>',
+                },
+            },
         },
     });
 }
 
 describe("Games Index", () => {
-    it("renders all game cards", () => {
+    it("renders one landmark button per game, in road order", () => {
         const wrapper = mountIndex();
-        const links = wrapper.findAll("a");
-        expect(links).toHaveLength(4);
+        const buttons = wrapper.findAll("button.landmark");
+        expect(buttons).toHaveLength(games.length);
+        games.forEach((game, i) => {
+            expect(buttons[i].text()).toContain(game.landmark);
+            expect(buttons[i].text()).toContain(game.name);
+            expect(buttons[i].attributes("style")).toContain(
+                `left: ${game.distance}px`
+            );
+        });
     });
 
-    it("displays each game name", () => {
+    it("renders no game links until a landmark is chosen", () => {
         const wrapper = mountIndex();
-        for (const game of games) {
-            expect(wrapper.text()).toContain(game.name);
-        }
+        expect(wrapper.findAll("a")).toHaveLength(0);
     });
 
-    it("displays each game emoji", () => {
+    it("opens the confirm card for a focused landmark on Enter", async () => {
         const wrapper = mountIndex();
-        for (const game of games) {
-            expect(wrapper.text()).toContain(game.emoji);
-        }
+        const button = wrapper.findAll("button.landmark")[1];
+        await button.trigger("focus");
+        await button.trigger("click");
+
+        const dialog = wrapper.get('[role="dialog"]');
+        expect(dialog.text()).toContain("Toot Foods");
+        expect(dialog.text()).toContain(
+            "Feed the foods and listen to them toot."
+        );
+        expect(wrapper.findComponent({ name: "Link" }).props("href")).toBe(
+            "/games/toot-foods"
+        );
     });
 
-    it("displays each game description", () => {
+    it("closes the confirm card on cancel and returns focus to the landmark", async () => {
         const wrapper = mountIndex();
-        for (const game of games) {
-            expect(wrapper.text()).toContain(game.description);
-        }
-    });
+        const button = wrapper.findAll("button.landmark")[0];
+        await button.trigger("focus");
+        await button.trigger("click");
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(true);
 
-    it("links to the correct game routes", () => {
-        const wrapper = mountIndex();
-        const links = wrapper.findAllComponents({ name: "Link" });
-        expect(links[0].props("href")).toBe("/games/cockroach-fight");
-        expect(links[1].props("href")).toBe("/games/costco-pizza-poop");
-        expect(links[2].props("href")).toBe("/games/boom");
-        expect(links[3].props("href")).toBe("/games/cockroach");
+        await wrapper.get(".confirm-cancel").trigger("click");
+        await nextTick();
+
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+        expect(document.activeElement).toBe(button.element);
     });
 });

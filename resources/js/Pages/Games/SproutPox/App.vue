@@ -8,11 +8,9 @@ import {
     watch,
 } from "vue";
 import { Link, usePage } from "@inertiajs/vue3";
-import GameStartScreen from "@/Components/Games/GameStartScreen.vue";
 import GameEndScreen from "@/Components/Games/GameEndScreen.vue";
 import PersonFace from "@/Components/Games/PersonFace.vue";
 import AimGuide from "./components/AimGuide.vue";
-import { SPROUT_POX_INTRO_SCRIPT } from "../shared/introScripts.js";
 import {
     useSproutGame,
     MAX_DRAG,
@@ -21,6 +19,7 @@ import {
 } from "./composables/useSproutGame.js";
 import { useSound } from "./composables/useSound.js";
 import { SPROUT } from "@/constants/characters.js";
+import { useAutoStartGame } from "@/composables/useAutoStartGame";
 import { useTranslations } from "@/composables/useTranslations";
 
 const { t } = useTranslations();
@@ -132,9 +131,9 @@ async function startRound() {
     game.start();
 }
 
-function handlePlay() {
-    initAudio();
-    startRound();
+async function handlePlay() {
+    await initAudio();
+    await startRound();
 }
 
 function handlePlayAgain() {
@@ -245,26 +244,12 @@ const mouthScale = computed(
 const sproutPips = computed(() =>
     Array.from({ length: state.sproutsLeft }, (_, i) => i)
 );
+
+useAutoStartGame(handlePlay);
 </script>
 
 <template>
-    <GameStartScreen
-        v-if="state.phase === 'start'"
-        :title="t('games.sprout_pox.title')"
-        :subtitle="t('games.sprout_pox.subtitle')"
-        :intro-script="t(SPROUT_POX_INTRO_SCRIPT)"
-        :high-score="highScore"
-        @play="handlePlay"
-    >
-        <template #media>{{ SPROUT }}🤒</template>
-        <p>{{ t("games.sprout_pox.instructions") }}</p>
-    </GameStartScreen>
-
-    <div
-        v-else-if="state.phase === 'playing'"
-        ref="stageEl"
-        class="sprout-stage"
-    >
+    <div v-if="state.phase === 'playing'" ref="stageEl" class="sprout-stage">
         <div class="hud">
             <div class="hud-stat">
                 <span class="hud-label">{{

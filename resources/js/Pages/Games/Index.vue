@@ -1,7 +1,8 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { useTranslations } from "@/composables/useTranslations";
-import { Head, Link } from "@inertiajs/vue3";
+import { Head } from "@inertiajs/vue3";
+import GamesWorld from "./World/GamesWorld.vue";
 
 const { t } = useTranslations();
 
@@ -14,36 +15,27 @@ defineProps({
 </script>
 
 <template>
-    <Head :title="t('dashboard.browse_games')" />
+    <Head :title="t('games.world.title')" />
 
     <AuthenticatedLayout>
         <template #header>
             <h2 class="font-heading text-2xl text-theme-title leading-tight">
-                {{ t("dashboard.browse_games") }}
+                {{ t("games.world.title") }}
             </h2>
         </template>
 
-        <div class="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <Link
-                    v-for="game in games"
-                    :key="game.slug"
-                    :href="route('games.show', game.slug)"
-                    class="flex flex-col items-center gap-4 p-8 rounded-2xl bg-gray-800 hover:bg-gray-700 transition-colors cursor-pointer text-center"
-                >
-                    <span class="text-8xl leading-none select-none">{{
-                        game.emoji
-                    }}</span>
-                    <div>
-                        <h3 class="text-2xl font-bold text-gray-100">
-                            {{ game.name }}
-                        </h3>
-                        <p class="mt-1 text-sm text-gray-400">
-                            {{ game.description }}
-                        </p>
-                    </div>
-                </Link>
-            </div>
+        <div class="world-page">
+            <GamesWorld :games="games" />
         </div>
     </AuthenticatedLayout>
 </template>
+
+<style scoped>
+/* The stage measures itself and sets its own height, so the page wrapper just
+   has to stop the world from spilling sideways. */
+.world-page {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+}
+</style>
