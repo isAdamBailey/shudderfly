@@ -420,8 +420,8 @@ useAutoStartGame(startGame);
 <template>
     <Head :title="t('games.boom.title')" />
 
-    <AuthenticatedLayout>
-        <div class="boom-wrapper">
+    <AuthenticatedLayout hide-search>
+        <div class="boom-wrapper game-page">
             <Transition name="fade">
                 <GameEndScreen
                     v-if="gameOver"
@@ -541,7 +541,6 @@ useAutoStartGame(startGame);
             transparent 45%
         ),
         linear-gradient(145deg, #2f2318, #1e160f);
-    min-height: calc(100dvh - 4rem);
 }
 
 /* ── game container ─────────────────────────────────────── */

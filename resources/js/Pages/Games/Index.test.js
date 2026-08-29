@@ -101,6 +101,32 @@ describe("Games Index", () => {
         });
     });
 
+    it("lets an idler be dragged, then thrown when released", async () => {
+        const wrapper = mountIndex();
+        const idler = wrapper.findAll(".idler")[0];
+
+        await idler.trigger("pointerdown", { clientX: 100, clientY: 100 });
+        window.dispatchEvent(
+            new MouseEvent("pointermove", {
+                clientX: 130,
+                clientY: 40,
+                bubbles: true,
+            })
+        );
+        await nextTick();
+
+        expect(idler.attributes("style")).toContain(
+            "translate(30px, -60px)"
+        );
+
+        window.dispatchEvent(new MouseEvent("pointerup", { bubbles: true }));
+        await nextTick();
+
+        // Released with upward velocity: still offset from its resting spot,
+        // and no longer following the (now-gone) pointer.
+        expect(idler.attributes("style")).toContain("translate(30px, -60px)");
+    });
+
     it("renders no game links until a landmark is chosen", () => {
         const wrapper = mountIndex();
         expect(wrapper.findAll("a")).toHaveLength(0);

@@ -68,6 +68,21 @@ Laravel 13 backend + Vue 3 frontend connected via **Inertia.js** (no separate AP
 2. `HandleInertiaRequests` middleware shares global props to every page: `auth.user` (with `permissions_list` and `avatar_url` appended), `settings` (from `SiteSetting` model), `theme` (month-based: christmas/fireworks/halloween), `flash` messages, `translations`, `collageMaxPages`, and `unread_notifications_count`.
 3. Frontend uses `usePage()` from Inertia to read shared props; `usePermissions()` composable (`resources/js/composables/permissions.js`) checks `auth.user.permissions_list`.
 
+### Seasonal theme
+
+`HandleInertiaRequests::getCurrentTheme()` maps the current month to one of three theme strings — `christmas` (December), `fireworks` (July), `halloween` (October) — or `''` the rest of the year. That value is shared as the `theme` Inertia prop (`HandleInertiaRequests::share()`) and also stamped as `data-theme="{{ $page['props']['theme'] }}"` on `<html>` in `resources/views/app.blade.php`, so it's readable both from Vue (`usePage().props.theme` / `$page.props.theme`) and from plain CSS attribute selectors. There is no admin override — the only way to preview a theme outside its month is to force `getCurrentTheme()`'s return value or toggle the `theme-*`/`data-theme` class in devtools.
+
+Adding a new theme, or changing what an existing one looks like, touches several independent places — there is no single registry:
+
+-   `app/Http/Middleware/HandleInertiaRequests.php::getCurrentTheme()` — the month → theme string mapping.
+-   `resources/css/app.css` — global `[data-theme="..."]` overrides (body/main background and image treatment around line 656+) and the `text-theme-*` / `bg-theme-*` / `border-theme-*` / `ring-theme-*` Tailwind utility classes (~line 28 onward), each of which lists a Tailwind variant per theme (`christmas:`, `halloween:`, `fireworks:`) plus a default. A new theme name needs a variant added to every one of these utilities, not just a new block.
+-   `resources/js/Components/ThemeLogoIcon.vue` — `isChristmas` / `isJuly` / `isHalloween` computeds swap the header logo SVG.
+-   `resources/js/Components/FireworksAnimation.vue` and `resources/js/Layouts/Nav/Navigation.vue` — both branch on `$page.props.theme === 'fireworks'` specifically (sparks overlay, nav styling), not on a generic "is themed" check.
+-   `resources/js/Pages/Books/Index.vue` — reads `usePage().props.theme` to decide the "themed books" section's label.
+-   `resources/js/Pages/Games/World/GamesWorld.vue` — the Games World stage keeps its own local palette rather than the `bg-theme-*` tokens above; it binds a `theme-christmas` / `theme-halloween` / `theme-fireworks` class on `.stage` (computed from `usePage().props.theme`, not `data-theme`) and overrides three custom properties (`--sky-top`, `--hill`, `--drifter`) scoped to that component only. Adding a theme here means adding both the mapping-string case above *and* a `.stage.theme-<name>` rule in this file — it will not pick up anything from `app.css`.
+
+None of this list is exhaustive by construction — grep for `props.theme` and `data-theme` before assuming a change is complete.
+
 ### Permissions
 
 Four Spatie permissions gate functionality: `edit pages`, `edit profile`, `admin`, and `super admin` (maintenance-report recipients; only an existing super admin can grant or revoke it, enforced in `AdminController::update`). Route groups in `routes/web.php` enforce these server-side; the `usePermissions()` composable checks them client-side for UI visibility.

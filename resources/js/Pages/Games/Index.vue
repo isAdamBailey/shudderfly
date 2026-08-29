@@ -17,7 +17,7 @@ defineProps({
 <template>
     <Head :title="t('games.world.title')" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout hide-search>
         <template #header>
             <h2 class="font-heading text-2xl text-theme-title leading-tight">
                 {{ t("games.world.title") }}

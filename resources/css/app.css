@@ -455,6 +455,28 @@
 @tailwind utilities;
 
 @layer components {
+    /*
+     * Shared by every full-screen game page (Boom, Cockroach*, CostcoPizzaPoop,
+     * TootFoods, SproutPox — all rendered with `<AuthenticatedLayout
+     * hide-search>`). AuthenticatedLayout's content column adds `pb-20`
+     * (5rem) below sm for the mobile bottom nav, and Navigation's second tab
+     * row only shows at sm+ (`hidden sm:flex` in Navigation.vue) alongside
+     * its always-visible top bar (h-16 / 4rem) — so each breakpoint has to
+     * clear whatever nav chrome is actually on screen, or the game box runs
+     * taller than the viewport and pushes controls like a close button out
+     * of view. One shared class keeps that arithmetic in one place instead
+     * of six near-identical copies.
+     */
+    .game-page {
+        min-height: calc(100dvh - 4rem - 5rem);
+    }
+
+    @media (min-width: 640px) {
+        .game-page {
+            min-height: calc(100dvh - 4rem - 3.75rem);
+        }
+    }
+
     .btn-bulge {
         @apply transform-gpu transition-[transform,box-shadow,filter] duration-150 ease-out;
         touch-action: manipulation;

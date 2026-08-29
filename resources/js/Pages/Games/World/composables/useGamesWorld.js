@@ -14,7 +14,7 @@ export const SOFT_RIGHT = 0.65;
 const PEACH_START_X = 260;
 const ROAD_MARGIN = 40; // the peach never stands closer than this to either end
 
-function clamp(value, min, max) {
+export function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
 }
 
