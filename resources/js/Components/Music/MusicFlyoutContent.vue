@@ -27,6 +27,15 @@
             </div>
         </div>
 
+        <!-- Queued sync status (admin only) -->
+        <div
+            v-if="canAdmin && syncStatus"
+            class="px-4 py-2 text-xs border-b border-gray-200 dark:border-gray-700"
+            :class="syncStatusClass"
+        >
+            {{ syncStatus.message }}
+        </div>
+
         <!-- Add song form (admin only) -->
         <form
             v-if="canAdmin && showAddForm"
@@ -156,7 +165,6 @@ import { usePermissions } from "@/composables/permissions";
 import { useMusicPlayer } from "@/composables/useMusicPlayer";
 import { useTranslations } from "@/composables/useTranslations";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
-import { router } from "@inertiajs/vue3";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
 const { speak } = useSpeechSynthesis();
@@ -182,6 +190,7 @@ const {
     removeSongFromList,
     setSearch,
     setFilter,
+    isFlyoutOpen,
 } = useMusicPlayer();
 
 const emit = defineEmits(["play", "reload"]);
@@ -207,7 +216,23 @@ const props = defineProps({
     },
 });
 
-const syncing = ref(false);
+// { state: "queued"|"running"|"success"|"warning"|"error", message: string, done: bool }
+const syncStatus = ref(null);
+const syncing = computed(() => !!syncStatus.value && !syncStatus.value.done);
+let syncPollTimer = null;
+let syncPollDeadline = 0;
+const syncStatusClass = computed(() => {
+    switch (syncStatus.value?.state) {
+        case "error":
+            return "text-red-600 dark:text-red-400";
+        case "warning":
+            return "text-amber-600 dark:text-amber-400";
+        case "success":
+            return "text-green-600 dark:text-green-400";
+        default:
+            return "text-gray-600 dark:text-gray-400";
+    }
+});
 const loading = ref(false);
 const showAddForm = ref(false);
 const addSongInput = ref("");
@@ -431,21 +456,109 @@ const submitAddSong = async () => {
     }
 };
 
-const syncPlaylist = () => {
+// The sync now runs on the queue, so the POST returns before any work is done.
+// Poll for the outcome instead of clearing the button in onFinish. Whether a
+// state is terminal is decided server-side and arrives as `done`, so the state
+// vocabulary is not duplicated here.
+const SYNC_POLL_INTERVAL_MS = 4000;
+const SYNC_POLL_TIMEOUT_MS = 5 * 60 * 1000;
+
+const stopSyncPolling = () => {
+    if (syncPollTimer) {
+        clearTimeout(syncPollTimer);
+        syncPollTimer = null;
+    }
+};
+
+const schedulePoll = () => {
+    syncPollTimer = setTimeout(pollSyncStatus, SYNC_POLL_INTERVAL_MS);
+};
+
+async function pollSyncStatus() {
+    // The flyout is hidden by transform, not unmounted, so an admin who closes
+    // it mid-sync would otherwise keep polling at nobody. Skip the request but
+    // keep the timer, so reopening picks the status back up.
+    const visible = isFlyoutOpen.value && !document.hidden;
+
+    if (!visible) {
+        // Nobody is watching, so this tick doesn't count: pause the deadline
+        // rather than letting it expire on a sync the admin never saw.
+        syncPollDeadline += SYNC_POLL_INTERVAL_MS;
+    } else {
+        try {
+            const response = await fetchWithCsrf(
+                // eslint-disable-next-line no-undef
+                route("music.sync-status")
+            );
+            if (response.ok) {
+                const { status } = await response.json();
+                if (status) {
+                    syncStatus.value = status;
+                    if (status.done) {
+                        stopSyncPolling();
+                        // Only a sync that ran can have changed the song list;
+                        // an error leaves it exactly as it was.
+                        if (["success", "warning"].includes(status.state)) {
+                            emit("reload", {
+                                filter: props.filter || null,
+                                search: props.search || null,
+                            });
+                        }
+                        return;
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("Error polling sync status:", error);
+        }
+    }
+
+    if (Date.now() >= syncPollDeadline) {
+        // Give up watching, but say so — clearing the banner would re-enable the
+        // button as though the sync had never run.
+        stopSyncPolling();
+        syncStatus.value = {
+            state: "error",
+            message: t("music.sync_timed_out"),
+            done: true,
+        };
+
+        return;
+    }
+
+    schedulePoll();
+}
+
+const syncPlaylist = async () => {
     if (syncing.value) return;
 
-    syncing.value = true;
-    // eslint-disable-next-line no-undef
-    router.post(
-        // eslint-disable-next-line no-undef
-        route("music.sync"),
-        {},
-        {
-            onFinish: () => {
-                syncing.value = false;
-            },
+    syncStatus.value = {
+        state: "queued",
+        message: t("music.sync_queued"),
+        done: false,
+    };
+    syncPollDeadline = Date.now() + SYNC_POLL_TIMEOUT_MS;
+
+    try {
+        const response = await fetchWithCsrf(
+            // eslint-disable-next-line no-undef
+            route("music.sync"),
+            { method: "POST" }
+        );
+
+        if (!response.ok) {
+            throw new Error(`Sync request failed: ${response.status}`);
         }
-    );
+
+        schedulePoll();
+    } catch (error) {
+        console.error("Error queueing sync:", error);
+        syncStatus.value = {
+            state: "error",
+            message: t("music.sync_failed"),
+            done: true,
+        };
+    }
 };
 
 const setupObserver = () => {
@@ -493,5 +606,6 @@ onUnmounted(() => {
     if (observer) {
         observer.disconnect();
     }
+    stopSyncPolling();
 });
 </script>

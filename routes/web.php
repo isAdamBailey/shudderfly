@@ -109,7 +109,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/collage-page', [CollagePageController::class, 'store'])->name('collage-page.store');
 
     Route::get('/music', [MusicController::class, 'index'])->name('music.index');
-    Route::get('/music/{song}', [MusicController::class, 'show'])->name('music.show');
+    // Constrained so this wildcard cannot swallow literal /music/<verb> routes
+    // registered later, such as music.sync-status below.
+    Route::get('/music/{song}', [MusicController::class, 'show'])->whereNumber('song')->name('music.show');
     Route::post('/music/{song}/increment-read-count', [MusicController::class, 'incrementReadCount'])->name('music.increment-read-count');
     Route::post('/music/{song}/share', [MusicController::class, 'share'])->name('music.share');
 
@@ -173,6 +175,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/collages/{collage}/generate-pdf', [CollageController::class, 'generatePdf'])->name('collages.generate-pdf');
 
         Route::post('/music/sync', [MusicController::class, 'sync'])->name('music.sync');
+        Route::get('/music/sync-status', [MusicController::class, 'syncStatus'])->name('music.sync-status');
         Route::post('/music', [MusicController::class, 'store'])->name('music.store');
         Route::delete('/music/{song}', [MusicController::class, 'destroy'])->name('music.destroy');
 

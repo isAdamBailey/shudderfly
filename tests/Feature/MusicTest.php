@@ -4,10 +4,12 @@ namespace Tests\Feature;
 
 use App\Events\MessageCreated;
 use App\Jobs\IncrementSongReadCount;
+use App\Jobs\SyncYouTubePlaylist;
 use App\Models\SiteSetting;
 use App\Models\Song;
 use App\Models\User;
 use App\Services\YouTubeService;
+use App\Support\MusicJobStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Cache;
@@ -109,18 +111,76 @@ class MusicTest extends TestCase
         $response->assertStatus(403); // Forbidden
     }
 
-    public function test_admin_can_access_sync_endpoint(): void
+    public function test_admin_sync_endpoint_queues_the_job(): void
+    {
+        Queue::fake();
+
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin);
+
+        $response = $this->post(route('music.sync'));
+
+        // Accepted without doing the work inline
+        $response->assertStatus(202);
+        $response->assertJsonPath('status.state', 'queued');
+        Queue::assertPushed(SyncYouTubePlaylist::class);
+        $this->assertSame('queued', MusicJobStatus::get()['state']);
+    }
+
+    public function test_sync_status_route_is_not_swallowed_by_the_song_wildcard(): void
     {
         $admin = User::factory()->admin()->create();
         $this->actingAs($admin);
 
-        // Mock the YouTube service to avoid actual API calls
-        $this->mockYouTubeService();
+        // GET /music/{song} is registered first; without a numeric constraint it
+        // would match /music/sync-status and 404 on model binding.
+        $this->get('/music/sync-status')->assertStatus(200);
+    }
 
-        $response = $this->post(route('music.sync'));
+    public function test_admin_can_read_sync_status(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin);
 
-        // Should redirect back (not 403 forbidden)
-        $response->assertRedirect();
+        MusicJobStatus::put('success', 'All done');
+
+        $response = $this->get(route('music.sync-status'));
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('status.state', 'success');
+        $response->assertJsonPath('status.message', 'All done');
+        $response->assertJsonPath('status.done', true);
+    }
+
+    public function test_sync_status_marks_a_running_sync_as_not_done(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin);
+
+        MusicJobStatus::put('running', 'Syncing…');
+
+        $this->get(route('music.sync-status'))->assertJsonPath('status.done', false);
+    }
+
+    public function test_sync_status_is_null_when_no_sync_has_run(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin);
+
+        $response = $this->get(route('music.sync-status'));
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('status', null);
+    }
+
+    public function test_regular_user_cannot_read_sync_status(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $response = $this->get(route('music.sync-status'));
+
+        $response->assertStatus(403);
     }
 
     public function test_increment_read_count_dispatches_job(): void
@@ -374,21 +434,5 @@ class MusicTest extends TestCase
 
         $response->assertStatus(200);
         $this->assertDatabaseMissing('songs', ['id' => $song->id]);
-    }
-
-    /**
-     * Mock the YouTube service to avoid actual API calls during testing
-     */
-    private function mockYouTubeService(): void
-    {
-        $mock = $this->createMock(YouTubeService::class);
-        $mock->method('syncPlaylist')
-            ->willReturn([
-                'success' => true,
-                'message' => 'Test sync completed successfully',
-                'synced' => 5,
-            ]);
-
-        $this->app->instance(YouTubeService::class, $mock);
     }
 }

@@ -4,12 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Events\MessageCreated;
 use App\Jobs\IncrementSongReadCount;
+use App\Jobs\SyncYouTubePlaylist;
 use App\Models\Message;
 use App\Models\SiteSetting;
 use App\Models\Song;
 use App\Models\User;
 use App\Services\UserTaggingService;
 use App\Services\YouTubeService;
+use App\Support\MusicJobStatus;
 use App\Support\ReadThrottle;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -97,44 +99,31 @@ class MusicController extends Controller
     }
 
     /**
-     * Sync YouTube playlist
+     * Queue a YouTube playlist sync. The work itself is long enough to time out
+     * a web request, so the outcome is reported through syncStatus() instead.
      */
-    public function sync()
+    public function sync(): JsonResponse
     {
         $this->authorize('admin');
 
-        try {
-            $result = $this->youTubeService->syncPlaylist();
+        SyncYouTubePlaylist::enqueue();
 
-            if (! $result['success']) {
-                if (isset($result['quota_exceeded']) && $result['quota_exceeded']) {
-                    return back()->with('error', $result['error'])->with('quota_exceeded', true);
-                }
+        // JSON rather than back(): the flyout already renders the status it
+        // polls for, so a redirect would only re-resolve every shared prop to
+        // deliver a message that is on screen before the request is sent.
+        return response()->json(['status' => MusicJobStatus::get()], 202);
+    }
 
-                return back()->with('error', $result['error']);
-            }
+    /**
+     * Current state of the queued playlist sync, polled by the music flyout.
+     */
+    public function syncStatus(): JsonResponse
+    {
+        $this->authorize('admin');
 
-            // Handle successful sync with different message types
-            $message = $result['message'];
-
-            // Check if quota was exceeded during sync (partial success)
-            if (isset($result['quota_exceeded']) && $result['quota_exceeded']) {
-                return back()->with('warning', $message.' YouTube API quota limit was reached, but sync will continue tomorrow.')->with('quota_exceeded', true);
-            }
-
-            // Check if sync was skipped due to recent sync
-            if (isset($result['synced']) && $result['synced'] === 0 && strpos($message, 'recently') !== false) {
-                return back()->with('info', $message);
-            }
-
-            // Normal successful sync
-            return back()->with('success', $message);
-
-        } catch (\Exception $e) {
-            \Log::error('Sync error: '.$e->getMessage());
-
-            return back()->with('error', 'An unexpected error occurred during sync. Please try again later.');
-        }
+        return response()->json([
+            'status' => MusicJobStatus::get(),
+        ]);
     }
 
     public function destroy(Song $song)

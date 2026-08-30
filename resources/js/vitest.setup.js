@@ -80,6 +80,7 @@ export const ROUTE_MAPPINGS = {
         return "/music";
     },
     "music.sync": "/music/sync",
+    "music.sync-status": "/music/sync-status",
     "music.increment-read-count": (params) =>
         `/music/${params}/increment-read-count`,
     "pictures.index": "/pictures",

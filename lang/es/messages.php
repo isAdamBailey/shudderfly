@@ -460,6 +460,11 @@ return [
     'music.title_newest' => 'Los más recientes',
     'music.title_oldest' => 'Los más antiguos',
     'music.title_latest' => 'Música reciente',
+    'music.sync_queued' => 'Sincronización de la lista en cola.',
+    'music.sync_running' => 'Sincronizando la lista de reproducción…',
+    'music.sync_quota_exceeded' => 'Se alcanzó el límite de la cuota de la API de YouTube, pero la sincronización continuará mañana.',
+    'music.sync_failed' => 'Ocurrió un error inesperado durante la sincronización. Inténtalo de nuevo más tarde.',
+    'music.sync_timed_out' => 'La sincronización está tardando más de lo esperado. Vuelve a abrir la lista más tarde para comprobarla.',
 
     // Map
     'map.address_speak' => 'La dirección es :address',

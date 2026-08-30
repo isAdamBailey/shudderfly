@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Services\YouTubeService;
+use App\Jobs\SyncYouTubePlaylist;
 use Illuminate\Console\Command;
 
 class SyncYouTubePlaylistCommand extends Command
@@ -19,44 +19,21 @@ class SyncYouTubePlaylistCommand extends Command
      *
      * @var string
      */
-    protected $description = 'Sync songs from YouTube playlist to the database';
+    protected $description = 'Queue a sync of songs from the YouTube playlist to the database';
 
     /**
      * Execute the console command.
+     *
+     * The sync runs on the queue so the scheduled run and the admin Sync button
+     * share one code path; the outcome is recorded in MusicJobStatus rather than
+     * in this command's exit code.
      */
-    public function handle(YouTubeService $youTubeService)
+    public function handle()
     {
-        $this->info('Starting YouTube playlist sync...');
+        SyncYouTubePlaylist::enqueue();
 
-        try {
-            $result = $youTubeService->syncPlaylist();
+        $this->info('YouTube playlist sync queued.');
 
-            // Handle the result array from the service
-            if (! isset($result['success']) || ! $result['success']) {
-                $errorMessage = $result['error'] ?? 'Unknown error occurred';
-                $this->error('Failed to sync YouTube playlist: '.$errorMessage);
-
-                return Command::FAILURE;
-            }
-
-            $totalSynced = $result['synced'] ?? 0;
-            $message = $result['message'] ?? "Successfully synced {$totalSynced} songs from YouTube playlist";
-
-            if (isset($result['quota_exceeded']) && $result['quota_exceeded']) {
-                $this->warn($message);
-            } else {
-                $this->info($message);
-            }
-
-            return Command::SUCCESS;
-        } catch (\Exception $e) {
-            $this->error('Failed to sync YouTube playlist: '.$e->getMessage());
-            \Log::error('YouTube sync command failed: '.$e->getMessage(), [
-                'exception' => $e,
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            return Command::FAILURE;
-        }
+        return Command::SUCCESS;
     }
 }

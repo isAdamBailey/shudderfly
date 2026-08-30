@@ -460,6 +460,11 @@ return [
     'music.title_newest' => 'Newest releases',
     'music.title_oldest' => 'Oldest releases',
     'music.title_latest' => 'Latest music',
+    'music.sync_queued' => 'Playlist sync queued.',
+    'music.sync_running' => 'Syncing the playlist…',
+    'music.sync_quota_exceeded' => 'The YouTube API quota limit was reached, but the sync will continue tomorrow.',
+    'music.sync_failed' => 'An unexpected error occurred during sync. Please try again later.',
+    'music.sync_timed_out' => 'The sync is taking longer than expected. Reopen the playlist later to check on it.',
 
     // Map
     'map.address_speak' => 'The address is :address',
