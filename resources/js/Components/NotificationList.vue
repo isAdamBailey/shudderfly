@@ -304,7 +304,7 @@ import {
 import { userChannelName } from "@/utils/broadcastChannel";
 import { router, usePage } from "@inertiajs/vue3";
 import axios from "axios";
-import { onMounted, onUnmounted, ref } from "vue";
+import { onMounted, onUnmounted, ref, watch } from "vue";
 
 const GAME_SHARE_SLUG_MARKER = /\uE000g:[a-z0-9-]+\uE000/g;
 
@@ -353,6 +353,12 @@ const reactionLabel = (notification) => {
         : t("notifications.reaction_label", { emoji });
 };
 
+const props = defineProps({
+    // Whether the bell dropdown is showing this list. Only used to decide
+    // whether a background refresh is worth a request right now.
+    open: { type: Boolean, default: false },
+});
+
 const notifications = ref([]);
 const { speak, speaking } = useSpeechSynthesis();
 const { t } = useTranslations();
@@ -383,34 +389,66 @@ const formatDate = (dateString) => {
 
 // `loading` starts true and is never set back, so a background refresh leaves
 // the rendered list up instead of replacing it with "Loading notifications...".
-// Concurrent calls share one request: a push and the tab regaining focus
-// routinely arrive together.
 let inFlight = null;
+// A refresh asked for while a fetch was already running. It cannot share that
+// fetch — the request may have been sent before the notification it is meant to
+// pick up existed — so it runs again after, rather than being dropped.
+let refetchWhenDone = false;
 
 const loadNotifications = async () => {
-    if (inFlight) return inFlight;
+    if (inFlight) {
+        refetchWhenDone = true;
+        return inFlight;
+    }
 
-    inFlight = axios
-        .get(route("profile.notifications"))
-        .then((response) => {
+    const request = (async () => {
+        try {
+            const response = await axios.get(route("profile.notifications"));
             notifications.value = response.data.data || [];
-        })
-        .catch((error) => {
+        } catch (error) {
             console.error("Failed to load notifications:", error);
-        })
-        .finally(() => {
+        } finally {
             loading.value = false;
             inFlight = null;
-        });
+        }
+    })();
+    inFlight = request;
+    await request;
 
-    return inFlight;
+    if (refetchWhenDone) {
+        refetchWhenDone = false;
+        await loadNotifications();
+    }
 };
 
 // A Web Push means the server has a notification this list has not seen. Echo
 // would normally have pushed it in already, but the tab may have been asleep
 // with its websocket dropped, which is why the push exists at all — so re-fetch
 // rather than trust the in-memory list.
-useNotificationRefresh(loadNotifications);
+//
+// The dropdown renders with v-show, so this list stays mounted on every page.
+// Fetching 20 notifications nobody is looking at — on every tab focus — is not
+// worth it, so a refresh that lands while the bell is closed is remembered and
+// spent when it next opens.
+let staleWhileClosed = false;
+
+useNotificationRefresh(() => {
+    if (props.open) {
+        loadNotifications();
+    } else {
+        staleWhileClosed = true;
+    }
+});
+
+watch(
+    () => props.open,
+    (open) => {
+        if (open && staleWhileClosed) {
+            staleWhileClosed = false;
+            loadNotifications();
+        }
+    }
+);
 
 const handleNotificationClick = async (notification) => {
     // Unblock requests act in place rather than navigating: admins unblock

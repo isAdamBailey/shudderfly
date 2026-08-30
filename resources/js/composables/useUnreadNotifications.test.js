@@ -41,6 +41,7 @@ const mountConsumer = () => {
 beforeEach(() => {
     vi.useFakeTimers();
     wrappers = [];
+    mockPage.props.auth = { user: { id: 1, name: "Test User" } };
     mockPage.props.unread_notifications_count = 0;
     router.reload.mockClear();
 

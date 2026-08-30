@@ -45,7 +45,21 @@ const flagNewNotification = () => {
     }, NEW_NOTIFICATION_ANIMATION_MS);
 };
 
-const leaveChannel = (userId) => {
+/**
+ * Drop the channel and any retry still trying to open one.
+ *
+ * Echo is loaded by a dynamic import in bootstrap.js, so on a cold page
+ * listenToEcho is usually still mid-retry. Without cancelling that, a user
+ * change during the window leaves the old retry chain running alongside the new
+ * one and the count ends up incremented twice per notification.
+ */
+const stopListeningToEcho = (userId) => {
+    if (echoRetryTimer) {
+        clearTimeout(echoRetryTimer);
+        echoRetryTimer = null;
+    }
+    echoRetries = 0;
+
     if (!notificationsChannel || !window.Echo || !userId) return;
     try {
         window.Echo.leave(userChannelName(userId));
@@ -92,7 +106,7 @@ const start = (page) => {
             ],
             ([newUser, newCount], [oldUser, oldCount] = []) => {
                 if (newUser?.id !== oldUser?.id) {
-                    leaveChannel(oldUser?.id ?? newUser?.id);
+                    stopListeningToEcho(oldUser?.id ?? newUser?.id);
                     unreadCount.value = newUser?.id ? newCount || 0 : 0;
                     if (newUser?.id) listenToEcho(page);
                 } else if (newCount !== oldCount) {
@@ -127,12 +141,9 @@ const stop = () => {
     refreshUnreadCount.cancel();
 
     clearTimeout(animationTimer);
-    clearTimeout(echoRetryTimer);
     animationTimer = null;
-    echoRetryTimer = null;
-    echoRetries = 0;
 
-    leaveChannel(sharedPage?.props.auth?.user?.id);
+    stopListeningToEcho(sharedPage?.props.auth?.user?.id);
     sharedPage = null;
     isNewNotification.value = false;
 };
