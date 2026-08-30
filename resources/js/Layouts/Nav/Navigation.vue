@@ -17,6 +17,7 @@ import { computed, ref } from "vue";
 
 const { canEditPages, canEditProfile } = usePermissions();
 const isDesktopProfileOpen = ref(false);
+const isNotificationsOpen = ref(false);
 const { unreadCount, isNewNotification } = useUnreadNotifications();
 
 const isLogoSpinning = ref(false);
@@ -129,6 +130,7 @@ const topNavItems = computed(() => {
                                 width="80"
                                 connected
                                 :content-classes="['bg-white dark:bg-gray-800']"
+                                @open-change="isNotificationsOpen = $event"
                             >
                                 <template #trigger>
                                     <button
@@ -155,7 +157,9 @@ const topNavItems = computed(() => {
                                 </template>
 
                                 <template #content>
-                                    <NotificationList />
+                                    <NotificationList
+                                        :open="isNotificationsOpen"
+                                    />
                                 </template>
                             </Dropdown>
                         </div>

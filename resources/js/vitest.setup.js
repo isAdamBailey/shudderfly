@@ -42,6 +42,7 @@ vi.mock("@inertiajs/vue3", () => ({
     })),
     router: {
         get: vi.fn(),
+        reload: vi.fn(),
         post: vi.fn(),
         put: vi.fn(),
         patch: vi.fn(),
@@ -185,6 +186,49 @@ if (typeof window !== "undefined") {
         removeEventListener: vi.fn(),
     };
 }
+
+/**
+ * Install a fake `navigator.serviceWorker` and return a dispatcher that
+ * delivers a message to whatever listened, plus the teardown for it.
+ *
+ * Used by every test that exercises the notification-refresh path.
+ */
+export const installServiceWorkerMock = () => {
+    let listeners = [];
+
+    Object.defineProperty(navigator, "serviceWorker", {
+        configurable: true,
+        value: {
+            addEventListener: vi.fn((type, handler) => {
+                if (type === "message") listeners.push(handler);
+            }),
+            removeEventListener: vi.fn((type, handler) => {
+                listeners = listeners.filter((entry) => entry !== handler);
+            }),
+        },
+    });
+
+    return {
+        dispatch: (type) =>
+            listeners.forEach((listener) => listener({ data: { type } })),
+        listenerCount: () => listeners.length,
+        uninstall: () => {
+            listeners = [];
+            delete navigator.serviceWorker;
+        },
+    };
+};
+
+/**
+ * Flip document.visibilityState and fire the matching event.
+ */
+export const setDocumentVisibility = (state) => {
+    Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        get: () => state,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+};
 
 // Mock IntersectionObserver
 global.IntersectionObserver = vi.fn().mockImplementation(() => ({

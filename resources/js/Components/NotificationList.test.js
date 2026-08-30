@@ -1,6 +1,7 @@
 import NotificationList from "@/Components/NotificationList.vue";
-import { mount } from "@vue/test-utils";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { installServiceWorkerMock } from "@/vitest.setup";
+import { enableAutoUnmount, mount } from "@vue/test-utils";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 
 global.route = (name, params) => {
@@ -68,6 +69,7 @@ vi.mock("@/composables/useUnreadNotifications", () => ({
     useUnreadNotifications: () => ({
         unreadCount: mockUnreadCount,
     }),
+    refreshUnreadCount: vi.fn(),
 }));
 
 vi.mock("@/composables/useSpeechSynthesis", () => ({
@@ -89,7 +91,17 @@ vi.mock("@/composables/useTranslations", () => ({
     }),
 }));
 
+// The component subscribes to the page-level notification-refresh signal, which
+// detaches only when its last subscriber goes away — so every wrapper has to be
+// torn down, not just the ones a test unmounts itself.
+enableAutoUnmount(afterEach);
+
 describe("NotificationList", () => {
+    let serviceWorker;
+
+    const pushNotificationArrives = () =>
+        serviceWorker.dispatch("push-notification");
+
     const mockNotifications = [
         {
             id: "1",
@@ -135,6 +147,12 @@ describe("NotificationList", () => {
             })),
             leave: vi.fn(),
         };
+
+        serviceWorker = installServiceWorkerMock();
+    });
+
+    afterEach(() => {
+        serviceWorker.uninstall();
     });
 
     describe("Rendering", () => {
@@ -605,6 +623,116 @@ describe("NotificationList", () => {
             // The server deletes every outstanding ask, so the sibling entry
             // must go too rather than sit there offering a dead unblock.
             expect(wrapper.text()).not.toContain("unblock_request.asked_label");
+        });
+    });
+
+    describe("Push notification refresh", () => {
+        it("re-fetches the list when a push notification arrives", async () => {
+            const axios = (await import("axios")).default;
+            axios.get.mockResolvedValue({ data: { data: [] } });
+
+            const wrapper = mount(NotificationList, { props: { open: true } });
+            await nextTick();
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            expect(wrapper.text()).toContain("No notifications yet");
+
+            axios.get.mockResolvedValue({
+                data: { data: [mockNotifications[0]] },
+            });
+            pushNotificationArrives();
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            await nextTick();
+
+            // The push is the only signal an open-but-asleep tab gets, so the
+            // new notification has to appear without a page reload.
+            expect(wrapper.text()).toContain("Alice");
+        });
+
+        it("keeps the current list on screen while refreshing", async () => {
+            const axios = (await import("axios")).default;
+
+            const wrapper = mount(NotificationList, { props: { open: true } });
+            await nextTick();
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            axios.get.mockImplementation(
+                () =>
+                    new Promise((resolve) => {
+                        setTimeout(
+                            () =>
+                                resolve({ data: { data: mockNotifications } }),
+                            100
+                        );
+                    })
+            );
+            pushNotificationArrives();
+            await nextTick();
+
+            expect(wrapper.text()).not.toContain("Loading notifications");
+            expect(wrapper.text()).toContain("Alice");
+        });
+
+        it("refetches when a second push lands mid-request", async () => {
+            const axios = (await import("axios")).default;
+            mount(NotificationList, { props: { open: true } });
+            await nextTick();
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            let release;
+            axios.get.mockImplementationOnce(
+                () =>
+                    new Promise((resolve) => {
+                        release = () =>
+                            resolve({ data: { data: mockNotifications } });
+                    })
+            );
+            axios.get.mockResolvedValue({
+                data: { data: [mockNotifications[0]] },
+            });
+
+            pushNotificationArrives();
+            await nextTick();
+            // The in-flight request may predate the second notification, so it
+            // cannot stand in for it.
+            pushNotificationArrives();
+            release();
+            await new Promise((resolve) => setTimeout(resolve, 50));
+
+            expect(axios.get).toHaveBeenCalledTimes(3);
+        });
+
+        it("waits until the bell opens to refresh while it is closed", async () => {
+            const axios = (await import("axios")).default;
+            const wrapper = mount(NotificationList, { props: { open: false } });
+            await nextTick();
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            axios.get.mockClear();
+
+            // Mounted-but-hidden on every page, so fetching 20 notifications
+            // nobody can see is pure waste.
+            pushNotificationArrives();
+            await new Promise((resolve) => setTimeout(resolve, 50));
+            expect(axios.get).not.toHaveBeenCalled();
+
+            await wrapper.setProps({ open: true });
+            await new Promise((resolve) => setTimeout(resolve, 50));
+            expect(axios.get).toHaveBeenCalledTimes(1);
+        });
+
+        it("stops refreshing once unmounted", async () => {
+            const axios = (await import("axios")).default;
+
+            const wrapper = mount(NotificationList, { props: { open: true } });
+            await nextTick();
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            wrapper.unmount();
+            axios.get.mockClear();
+            pushNotificationArrives();
+            await new Promise((resolve) => setTimeout(resolve, 50));
+
+            expect(axios.get).not.toHaveBeenCalled();
         });
     });
 });
