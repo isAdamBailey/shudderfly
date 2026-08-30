@@ -1,6 +1,7 @@
 import NotificationList from "@/Components/NotificationList.vue";
+import { resetPushNotificationBridge } from "@/utils/pushNotificationBridge";
 import { mount } from "@vue/test-utils";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 
 global.route = (name, params) => {
@@ -90,6 +91,14 @@ vi.mock("@/composables/useTranslations", () => ({
 }));
 
 describe("NotificationList", () => {
+    let serviceWorkerListeners = [];
+
+    const pushNotificationArrives = () => {
+        serviceWorkerListeners.forEach((listener) =>
+            listener({ data: { type: "push-notification" } })
+        );
+    };
+
     const mockNotifications = [
         {
             id: "1",
@@ -135,6 +144,27 @@ describe("NotificationList", () => {
             })),
             leave: vi.fn(),
         };
+
+        serviceWorkerListeners = [];
+        Object.defineProperty(navigator, "serviceWorker", {
+            configurable: true,
+            value: {
+                addEventListener: vi.fn((type, handler) => {
+                    if (type === "message")
+                        serviceWorkerListeners.push(handler);
+                }),
+                removeEventListener: vi.fn((type, handler) => {
+                    serviceWorkerListeners = serviceWorkerListeners.filter(
+                        (entry) => entry !== handler
+                    );
+                }),
+            },
+        });
+    });
+
+    afterEach(() => {
+        resetPushNotificationBridge();
+        delete navigator.serviceWorker;
     });
 
     describe("Rendering", () => {
@@ -605,6 +635,69 @@ describe("NotificationList", () => {
             // The server deletes every outstanding ask, so the sibling entry
             // must go too rather than sit there offering a dead unblock.
             expect(wrapper.text()).not.toContain("unblock_request.asked_label");
+        });
+    });
+
+    describe("Push notification refresh", () => {
+        it("re-fetches the list when a push notification arrives", async () => {
+            const axios = (await import("axios")).default;
+            axios.get.mockResolvedValue({ data: { data: [] } });
+
+            const wrapper = mount(NotificationList);
+            await nextTick();
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            expect(wrapper.text()).toContain("No notifications yet");
+
+            axios.get.mockResolvedValue({
+                data: { data: [mockNotifications[0]] },
+            });
+            pushNotificationArrives();
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            await nextTick();
+
+            // The push is the only signal an open-but-asleep tab gets, so the
+            // new notification has to appear without a page reload.
+            expect(wrapper.text()).toContain("Alice");
+        });
+
+        it("keeps the current list on screen while refreshing", async () => {
+            const axios = (await import("axios")).default;
+
+            const wrapper = mount(NotificationList);
+            await nextTick();
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            axios.get.mockImplementation(
+                () =>
+                    new Promise((resolve) => {
+                        setTimeout(
+                            () =>
+                                resolve({ data: { data: mockNotifications } }),
+                            100
+                        );
+                    })
+            );
+            pushNotificationArrives();
+            await nextTick();
+
+            expect(wrapper.text()).not.toContain("Loading notifications");
+            expect(wrapper.text()).toContain("Alice");
+        });
+
+        it("stops refreshing once unmounted", async () => {
+            const axios = (await import("axios")).default;
+
+            const wrapper = mount(NotificationList);
+            await nextTick();
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            wrapper.unmount();
+            axios.get.mockClear();
+            pushNotificationArrives();
+            await new Promise((resolve) => setTimeout(resolve, 50));
+
+            expect(axios.get).not.toHaveBeenCalled();
         });
     });
 });

@@ -1,6 +1,23 @@
+import { usePushNotificationRefresh } from "@/composables/usePushNotificationRefresh";
 import { userChannelName } from "@/utils/broadcastChannel";
-import { usePage } from "@inertiajs/vue3";
+import { router, usePage } from "@inertiajs/vue3";
 import { onMounted, onUnmounted, ref, watch } from "vue";
+
+// Several components read the unread count, so a single push has to cost a
+// single partial reload rather than one per component. The debounce also
+// collapses the burst you get when a push and its Echo event land together.
+const REFRESH_DEBOUNCE_MS = 150;
+
+let refreshTimer = null;
+
+const refreshUnreadCount = () => {
+    if (refreshTimer) return;
+
+    refreshTimer = setTimeout(() => {
+        refreshTimer = null;
+        router.reload({ only: ["unread_notifications_count"] });
+    }, REFRESH_DEBOUNCE_MS);
+};
 
 export function useUnreadNotifications() {
     const unreadCount = ref(0);
@@ -13,6 +30,14 @@ export function useUnreadNotifications() {
     const page = usePage();
 
     unreadCount.value = page.props.unread_notifications_count || 0;
+
+    const flagNewNotification = () => {
+        isNewNotification.value = true;
+        if (animationTimer.value) clearTimeout(animationTimer.value);
+        animationTimer.value = setTimeout(() => {
+            isNewNotification.value = false;
+        }, 4000);
+    };
 
     const setupEchoListener = () => {
         const user = page.props.auth?.user;
@@ -38,11 +63,7 @@ export function useUnreadNotifications() {
 
         notificationsChannel.value.notification(() => {
             unreadCount.value++;
-            isNewNotification.value = true;
-            if (animationTimer.value) clearTimeout(animationTimer.value);
-            animationTimer.value = setTimeout(() => {
-                isNewNotification.value = false;
-            }, 4000);
+            flagNewNotification();
         });
     };
 
@@ -83,6 +104,17 @@ export function useUnreadNotifications() {
         },
         { immediate: true }
     );
+
+    // A push notification is the only signal an open-but-asleep tab gets: its
+    // Echo websocket is exactly what the browser drops while the tab is
+    // backgrounded. Pull the authoritative count from the server so the bell's
+    // unread dot appears without a manual refresh.
+    usePushNotificationRefresh((payload) => {
+        if (payload?.type === "push-notification") {
+            flagNewNotification();
+        }
+        refreshUnreadCount();
+    });
 
     onMounted(() => {
         // Only setup if not already set up by the watch (which runs with immediate: true)

@@ -42,6 +42,7 @@ vi.mock("@inertiajs/vue3", () => ({
     })),
     router: {
         get: vi.fn(),
+        reload: vi.fn(),
         post: vi.fn(),
         put: vi.fn(),
         patch: vi.fn(),

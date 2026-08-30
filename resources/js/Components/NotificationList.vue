@@ -293,6 +293,7 @@
 import Avatar from "@/Components/Avatar.vue";
 import SpeakButton from "@/Components/SpeakButton.vue";
 import { useNotificationSync } from "@/composables/useNotificationSync";
+import { usePushNotificationRefresh } from "@/composables/usePushNotificationRefresh";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import { useUnblockAll } from "@/composables/useUnblockAll";
@@ -377,17 +378,32 @@ const formatDate = (dateString) => {
     return date.toLocaleDateString();
 };
 
-const loadNotifications = async () => {
+// `showLoading` is off for background refreshes: swapping an already-rendered
+// list for "Loading notifications..." is a worse answer than briefly showing
+// the previous list.
+const loadNotifications = async (showLoading = true) => {
     try {
-        loading.value = true;
+        if (showLoading) {
+            loading.value = true;
+        }
         const response = await axios.get(route("profile.notifications"));
         notifications.value = response.data.data || [];
     } catch (error) {
         console.error("Failed to load notifications:", error);
     } finally {
-        loading.value = false;
+        if (showLoading) {
+            loading.value = false;
+        }
     }
 };
+
+// A Web Push means the server has a notification this list has not seen. Echo
+// would normally have pushed it in already, but the tab may have been asleep
+// with its websocket dropped, which is why the push exists at all — so re-fetch
+// rather than trust the in-memory list.
+usePushNotificationRefresh(() => {
+    loadNotifications(false);
+});
 
 const handleNotificationClick = async (notification) => {
     // Unblock requests act in place rather than navigating: admins unblock
