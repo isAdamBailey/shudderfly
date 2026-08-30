@@ -1,132 +1,155 @@
-import { usePushNotificationRefresh } from "@/composables/usePushNotificationRefresh";
 import { userChannelName } from "@/utils/broadcastChannel";
+import { onNotificationRefresh } from "@/utils/notificationRefresh";
 import { router, usePage } from "@inertiajs/vue3";
-import { onMounted, onUnmounted, ref, watch } from "vue";
+import throttle from "lodash/throttle";
+import { effectScope, onScopeDispose, ref, watch } from "vue";
 
-// Several components read the unread count, so a single push has to cost a
-// single partial reload rather than one per component. The debounce also
-// collapses the burst you get when a push and its Echo event land together.
-const REFRESH_DEBOUNCE_MS = 150;
+// The bell is one thing on the page, so this is one piece of state shared by
+// every consumer rather than a copy each. Navigation renders it, NotificationList
+// reads it, and useNotificationSync decrements it optimistically — with a copy
+// each, that decrement was invisible until a server round-trip caught the others
+// up, and each copy also opened its own subscription to the same Echo channel.
+const unreadCount = ref(0);
+const isNewNotification = ref(false);
 
-let refreshTimer = null;
+const NEW_NOTIFICATION_ANIMATION_MS = 4000;
+const ECHO_RETRY_MS = 500;
+const ECHO_MAX_RETRIES = 10;
+const REFRESH_THROTTLE_MS = 150;
 
-const refreshUnreadCount = () => {
-    if (refreshTimer) return;
+let consumers = 0;
+let sharedPage = null;
+let scope = null;
+let animationTimer = null;
+let echoRetryTimer = null;
+let echoRetries = 0;
+let notificationsChannel = null;
+let unsubscribeRefresh = null;
 
-    refreshTimer = setTimeout(() => {
-        refreshTimer = null;
-        router.reload({ only: ["unread_notifications_count"] });
-    }, REFRESH_DEBOUNCE_MS);
+/**
+ * Re-read the count from the server. Trailing-edge throttled because a push and
+ * the tab regaining focus routinely land together, and each partial reload
+ * re-runs the whole route server-side.
+ */
+export const refreshUnreadCount = throttle(
+    () => router.reload({ only: ["unread_notifications_count"] }),
+    REFRESH_THROTTLE_MS,
+    { leading: false }
+);
+
+const flagNewNotification = () => {
+    isNewNotification.value = true;
+    if (animationTimer) clearTimeout(animationTimer);
+    animationTimer = setTimeout(() => {
+        isNewNotification.value = false;
+    }, NEW_NOTIFICATION_ANIMATION_MS);
 };
 
-export function useUnreadNotifications() {
-    const unreadCount = ref(0);
-    const isNewNotification = ref(false);
-    const animationTimer = ref(null);
-    const notificationsChannel = ref(null);
-    const retryTimeout = ref(null);
-    const maxRetries = 10;
-    const retryCount = ref(0);
-    const page = usePage();
+const leaveChannel = (userId) => {
+    if (!notificationsChannel || !window.Echo || !userId) return;
+    try {
+        window.Echo.leave(userChannelName(userId));
+    } catch {
+        // Already gone; nothing to do.
+    }
+    notificationsChannel = null;
+};
 
-    unreadCount.value = page.props.unread_notifications_count || 0;
-
-    const flagNewNotification = () => {
-        isNewNotification.value = true;
-        if (animationTimer.value) clearTimeout(animationTimer.value);
-        animationTimer.value = setTimeout(() => {
-            isNewNotification.value = false;
-        }, 4000);
-    };
-
-    const setupEchoListener = () => {
-        const user = page.props.auth?.user;
-        if (!user || !user.id || !window.Echo) {
-            if (retryCount.value < maxRetries) {
-                retryCount.value++;
-                retryTimeout.value = setTimeout(() => {
-                    setupEchoListener();
-                }, 500);
-            }
-            return;
+const listenToEcho = (page) => {
+    const user = page.props.auth?.user;
+    if (!user?.id || !window.Echo) {
+        if (echoRetries < ECHO_MAX_RETRIES) {
+            echoRetries++;
+            echoRetryTimer = setTimeout(
+                () => listenToEcho(page),
+                ECHO_RETRY_MS
+            );
         }
+        return;
+    }
 
-        if (retryTimeout.value) {
-            clearTimeout(retryTimeout.value);
-            retryTimeout.value = null;
-        }
-        retryCount.value = 0;
+    if (echoRetryTimer) {
+        clearTimeout(echoRetryTimer);
+        echoRetryTimer = null;
+    }
+    echoRetries = 0;
 
-        notificationsChannel.value = window.Echo.private(
-            userChannelName(user.id)
-        );
+    notificationsChannel = window.Echo.private(userChannelName(user.id));
+    notificationsChannel.notification(() => {
+        unreadCount.value++;
+        flagNewNotification();
+    });
+};
 
-        notificationsChannel.value.notification(() => {
-            unreadCount.value++;
-            flagNewNotification();
-        });
-    };
-
-    const cleanup = () => {
-        if (retryTimeout.value) {
-            clearTimeout(retryTimeout.value);
-            retryTimeout.value = null;
-        }
-        if (animationTimer.value) {
-            clearTimeout(animationTimer.value);
-            animationTimer.value = null;
-        }
-
-        const user = page.props.auth?.user;
-        if (notificationsChannel.value && window.Echo && user) {
-            try {
-                window.Echo.leave(userChannelName(user.id));
-            } catch {}
-            notificationsChannel.value = null;
-        }
-        retryCount.value = 0;
-    };
-
-    watch(
-        () => [page.props.auth?.user, page.props.unread_notifications_count],
-        ([newUser, newCount], [oldUser, oldCount] = []) => {
-            if (newUser?.id !== oldUser?.id) {
-                cleanup();
-                if (newUser?.id) {
+const start = (page) => {
+    sharedPage = page;
+    scope = effectScope(true);
+    scope.run(() => {
+        watch(
+            () => [
+                page.props.auth?.user,
+                page.props.unread_notifications_count,
+            ],
+            ([newUser, newCount], [oldUser, oldCount] = []) => {
+                if (newUser?.id !== oldUser?.id) {
+                    leaveChannel(oldUser?.id ?? newUser?.id);
+                    unreadCount.value = newUser?.id ? newCount || 0 : 0;
+                    if (newUser?.id) listenToEcho(page);
+                } else if (newCount !== oldCount) {
                     unreadCount.value = newCount || 0;
-                    setupEchoListener();
-                } else {
-                    unreadCount.value = 0;
                 }
-            } else if (newCount !== oldCount) {
-                unreadCount.value = newCount || 0;
-            }
-        },
-        { immediate: true }
-    );
+            },
+            { immediate: true }
+        );
+    });
 
     // A push notification is the only signal an open-but-asleep tab gets: its
     // Echo websocket is exactly what the browser drops while the tab is
     // backgrounded. Pull the authoritative count from the server so the bell's
     // unread dot appears without a manual refresh.
-    usePushNotificationRefresh((payload) => {
-        if (payload?.type === "push-notification") {
+    unsubscribeRefresh = onNotificationRefresh((reason) => {
+        if (reason === "push") {
             flagNewNotification();
         }
         refreshUnreadCount();
     });
+};
 
-    onMounted(() => {
-        // Only setup if not already set up by the watch (which runs with immediate: true)
-        // This prevents duplicate listeners when user is already authenticated on mount
-        const user = page.props.auth?.user;
-        if (user?.id && !notificationsChannel.value && window.Echo) {
-            setupEchoListener();
+const stop = () => {
+    scope?.stop();
+    scope = null;
+
+    if (unsubscribeRefresh) {
+        unsubscribeRefresh();
+        unsubscribeRefresh = null;
+    }
+
+    refreshUnreadCount.cancel();
+
+    clearTimeout(animationTimer);
+    clearTimeout(echoRetryTimer);
+    animationTimer = null;
+    echoRetryTimer = null;
+    echoRetries = 0;
+
+    leaveChannel(sharedPage?.props.auth?.user?.id);
+    sharedPage = null;
+    isNewNotification.value = false;
+};
+
+export function useUnreadNotifications() {
+    const page = usePage();
+
+    if (consumers === 0) {
+        start(page);
+    }
+    consumers++;
+
+    onScopeDispose(() => {
+        consumers--;
+        if (consumers === 0) {
+            stop();
         }
-    });
-
-    onUnmounted(() => {
-        cleanup();
     });
 
     return {

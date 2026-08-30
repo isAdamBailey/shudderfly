@@ -1,6 +1,6 @@
 import NotificationList from "@/Components/NotificationList.vue";
-import { resetPushNotificationBridge } from "@/utils/pushNotificationBridge";
-import { mount } from "@vue/test-utils";
+import { installServiceWorkerMock } from "@/vitest.setup";
+import { enableAutoUnmount, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 
@@ -69,6 +69,7 @@ vi.mock("@/composables/useUnreadNotifications", () => ({
     useUnreadNotifications: () => ({
         unreadCount: mockUnreadCount,
     }),
+    refreshUnreadCount: vi.fn(),
 }));
 
 vi.mock("@/composables/useSpeechSynthesis", () => ({
@@ -90,14 +91,16 @@ vi.mock("@/composables/useTranslations", () => ({
     }),
 }));
 
-describe("NotificationList", () => {
-    let serviceWorkerListeners = [];
+// The component subscribes to the page-level notification-refresh signal, which
+// detaches only when its last subscriber goes away — so every wrapper has to be
+// torn down, not just the ones a test unmounts itself.
+enableAutoUnmount(afterEach);
 
-    const pushNotificationArrives = () => {
-        serviceWorkerListeners.forEach((listener) =>
-            listener({ data: { type: "push-notification" } })
-        );
-    };
+describe("NotificationList", () => {
+    let serviceWorker;
+
+    const pushNotificationArrives = () =>
+        serviceWorker.dispatch("push-notification");
 
     const mockNotifications = [
         {
@@ -145,26 +148,11 @@ describe("NotificationList", () => {
             leave: vi.fn(),
         };
 
-        serviceWorkerListeners = [];
-        Object.defineProperty(navigator, "serviceWorker", {
-            configurable: true,
-            value: {
-                addEventListener: vi.fn((type, handler) => {
-                    if (type === "message")
-                        serviceWorkerListeners.push(handler);
-                }),
-                removeEventListener: vi.fn((type, handler) => {
-                    serviceWorkerListeners = serviceWorkerListeners.filter(
-                        (entry) => entry !== handler
-                    );
-                }),
-            },
-        });
+        serviceWorker = installServiceWorkerMock();
     });
 
     afterEach(() => {
-        resetPushNotificationBridge();
-        delete navigator.serviceWorker;
+        serviceWorker.uninstall();
     });
 
     describe("Rendering", () => {

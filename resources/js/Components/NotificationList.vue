@@ -292,12 +292,15 @@
 /* global route */
 import Avatar from "@/Components/Avatar.vue";
 import SpeakButton from "@/Components/SpeakButton.vue";
+import { useNotificationRefresh } from "@/composables/useNotificationRefresh";
 import { useNotificationSync } from "@/composables/useNotificationSync";
-import { usePushNotificationRefresh } from "@/composables/usePushNotificationRefresh";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import { useUnblockAll } from "@/composables/useUnblockAll";
-import { useUnreadNotifications } from "@/composables/useUnreadNotifications";
+import {
+    refreshUnreadCount,
+    useUnreadNotifications,
+} from "@/composables/useUnreadNotifications";
 import { userChannelName } from "@/utils/broadcastChannel";
 import { router, usePage } from "@inertiajs/vue3";
 import axios from "axios";
@@ -378,32 +381,36 @@ const formatDate = (dateString) => {
     return date.toLocaleDateString();
 };
 
-// `showLoading` is off for background refreshes: swapping an already-rendered
-// list for "Loading notifications..." is a worse answer than briefly showing
-// the previous list.
-const loadNotifications = async (showLoading = true) => {
-    try {
-        if (showLoading) {
-            loading.value = true;
-        }
-        const response = await axios.get(route("profile.notifications"));
-        notifications.value = response.data.data || [];
-    } catch (error) {
-        console.error("Failed to load notifications:", error);
-    } finally {
-        if (showLoading) {
+// `loading` starts true and is never set back, so a background refresh leaves
+// the rendered list up instead of replacing it with "Loading notifications...".
+// Concurrent calls share one request: a push and the tab regaining focus
+// routinely arrive together.
+let inFlight = null;
+
+const loadNotifications = async () => {
+    if (inFlight) return inFlight;
+
+    inFlight = axios
+        .get(route("profile.notifications"))
+        .then((response) => {
+            notifications.value = response.data.data || [];
+        })
+        .catch((error) => {
+            console.error("Failed to load notifications:", error);
+        })
+        .finally(() => {
             loading.value = false;
-        }
-    }
+            inFlight = null;
+        });
+
+    return inFlight;
 };
 
 // A Web Push means the server has a notification this list has not seen. Echo
 // would normally have pushed it in already, but the tab may have been asleep
 // with its websocket dropped, which is why the push exists at all — so re-fetch
 // rather than trust the in-memory list.
-usePushNotificationRefresh(() => {
-    loadNotifications(false);
-});
+useNotificationRefresh(loadNotifications);
 
 const handleNotificationClick = async (notification) => {
     // Unblock requests act in place rather than navigating: admins unblock
@@ -488,7 +495,7 @@ const deleteNotification = async (notificationId) => {
             }
             notifications.value.splice(index, 1);
         }
-        router.reload({ only: ["unread_notifications_count"] });
+        refreshUnreadCount();
     } catch (error) {
         console.error("Failed to delete notification:", error);
     }

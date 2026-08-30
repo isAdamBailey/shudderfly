@@ -11,12 +11,15 @@ self.addEventListener('activate', function(event) {
     event.waitUntil(self.clients.claim());
 });
 
-// Tell every open page about a push so the notification bell and the
+// Tell every open page that its notifications changed, so the bell and the
 // notifications list refresh themselves. Without this an already-open tab only
 // learns about the notification through Echo, which is exactly the channel that
 // is unavailable when the tab has been backgrounded long enough for the browser
 // to drop the websocket -- the case a push notification exists to cover.
-async function postToClients(payload) {
+//
+// Only the type is sent: pages re-fetch from the server, so a copy of the
+// notification here would just be a second, staler source of the same truth.
+async function postToClients(type) {
     try {
         const clientList = await self.clients.matchAll({
             type: 'window',
@@ -24,15 +27,10 @@ async function postToClients(payload) {
         });
 
         clientList.forEach(function (client) {
-            try {
-                client.postMessage(payload);
-            } catch (error) {
-                // A client that went away between matchAll() and postMessage()
-                // is not something we can do anything about.
-            }
+            client.postMessage({ type: type });
         });
     } catch (error) {
-        // Reaching open pages is a bonus; never let it fail the push handler.
+        // Reaching open pages is a bonus; never let it fail the caller.
     }
 }
 
@@ -67,19 +65,10 @@ self.addEventListener('push', function(event) {
                 vibrate: data.vibrate || [200, 100, 200],
             };
 
-            // The banner comes first: telling open pages is what makes the
-            // bell update, but it must never cost the notification itself.
-            await self.registration.showNotification(title, options);
-
-            await postToClients({
-                type: 'push-notification',
-                notification: {
-                    title: title,
-                    body: options.body,
-                    tag: options.tag,
-                    data: options.data,
-                },
-            });
+            await Promise.all([
+                self.registration.showNotification(title, options),
+                postToClients('push-notification'),
+            ]);
         })()
     );
 });
@@ -115,16 +104,10 @@ self.addEventListener('notificationclick', function(event) {
                 if (clientUrl.origin === targetUrl.origin && 
                     clientUrl.pathname === targetUrl.pathname && 
                     'focus' in client) {
-                    // Focusing an already-open page does not navigate, so
-                    // nothing would otherwise refresh what it is showing.
-                    try {
-                        client.postMessage({
-                            type: 'notification-click',
-                            notification: { data: notificationData },
-                        });
-                    } catch (error) {
-                        // Ignore: focusing still works.
-                    }
+                    // Focusing an already-visible page does not navigate and
+                    // fires no visibilitychange, so nothing else would tell it
+                    // to refresh.
+                    client.postMessage({ type: 'notification-click' });
                     return client.focus();
                 }
             }

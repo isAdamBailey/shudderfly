@@ -1,6 +1,8 @@
 /* global route */
-import { useUnreadNotifications } from "@/composables/useUnreadNotifications";
-import { router } from "@inertiajs/vue3";
+import {
+    refreshUnreadCount,
+    useUnreadNotifications,
+} from "@/composables/useUnreadNotifications";
 import axios from "axios";
 import { reactive } from "vue";
 
@@ -25,7 +27,7 @@ export function useNotificationSync() {
 
         try {
             await axios.post(route("notifications.read", id));
-            router.reload({ only: ["unread_notifications_count"] });
+            refreshUnreadCount();
         } catch (error) {
             delete readAt[id];
             unreadCount.value++;
@@ -42,7 +44,7 @@ export function useNotificationSync() {
 
         try {
             await axios.post(route("notifications.read-all"));
-            router.reload({ only: ["unread_notifications_count"] });
+            refreshUnreadCount();
         } catch (error) {
             console.error("Failed to mark all notifications as read:", error);
         }

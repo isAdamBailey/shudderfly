@@ -1,12 +1,15 @@
 import { useUnreadNotifications } from "@/composables/useUnreadNotifications";
-import { resetPushNotificationBridge } from "@/utils/pushNotificationBridge";
+import {
+    installServiceWorkerMock,
+    setDocumentVisibility,
+} from "@/vitest.setup";
 import { router } from "@inertiajs/vue3";
 import { mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { reactive } from "vue";
 
 // Reactive because the composable watches these props: a partial reload is how
-// the refreshed count reaches it.
+// a refreshed count reaches it.
 const mockPage = {
     props: reactive({
         auth: { user: { id: 1, name: "Test User" } },
@@ -19,13 +22,10 @@ vi.mock("@inertiajs/vue3", () => ({
     router: { reload: vi.fn() },
 }));
 
-let listeners;
+let serviceWorker;
+let wrappers;
 
-const dispatchServiceWorkerMessage = (data) => {
-    listeners.forEach((listener) => listener({ data }));
-};
-
-const mountComposable = () => {
+const mountConsumer = () => {
     const state = {};
     const wrapper = mount({
         template: "<div />",
@@ -33,13 +33,14 @@ const mountComposable = () => {
             Object.assign(state, useUnreadNotifications());
         },
     });
+    wrappers.push(wrapper);
 
     return { wrapper, state };
 };
 
 beforeEach(() => {
     vi.useFakeTimers();
-    listeners = [];
+    wrappers = [];
     mockPage.props.unread_notifications_count = 0;
     router.reload.mockClear();
 
@@ -48,32 +49,22 @@ beforeEach(() => {
         leave: vi.fn(),
     };
 
-    Object.defineProperty(navigator, "serviceWorker", {
-        configurable: true,
-        value: {
-            addEventListener: vi.fn((type, handler) => {
-                if (type === "message") listeners.push(handler);
-            }),
-            removeEventListener: vi.fn((type, handler) => {
-                listeners = listeners.filter((entry) => entry !== handler);
-            }),
-        },
-    });
+    serviceWorker = installServiceWorkerMock();
 });
 
 afterEach(() => {
+    wrappers.forEach((wrapper) => wrapper.unmount());
     vi.runOnlyPendingTimers();
     vi.useRealTimers();
-    resetPushNotificationBridge();
-    delete navigator.serviceWorker;
+    serviceWorker.uninstall();
     delete window.Echo;
 });
 
 describe("useUnreadNotifications", () => {
     it("re-reads the unread count from the server when a push arrives", () => {
-        mountComposable();
+        mountConsumer();
 
-        dispatchServiceWorkerMessage({ type: "push-notification" });
+        serviceWorker.dispatch("push-notification");
         vi.runOnlyPendingTimers();
 
         expect(router.reload).toHaveBeenCalledWith({
@@ -82,19 +73,19 @@ describe("useUnreadNotifications", () => {
     });
 
     it("flags a new notification so the bell dot animates", () => {
-        const { state } = mountComposable();
+        const { state } = mountConsumer();
 
         expect(state.isNewNotification.value).toBe(false);
 
-        dispatchServiceWorkerMessage({ type: "push-notification" });
+        serviceWorker.dispatch("push-notification");
 
         expect(state.isNewNotification.value).toBe(true);
     });
 
     it("shows the unread dot once the refreshed count arrives", async () => {
-        const { wrapper, state } = mountComposable();
+        const { wrapper, state } = mountConsumer();
 
-        dispatchServiceWorkerMessage({ type: "push-notification" });
+        serviceWorker.dispatch("push-notification");
         mockPage.props.unread_notifications_count = 3;
         await wrapper.vm.$nextTick();
 
@@ -102,13 +93,9 @@ describe("useUnreadNotifications", () => {
     });
 
     it("refreshes without the animation when the page becomes visible", () => {
-        const { state } = mountComposable();
+        const { state } = mountConsumer();
 
-        Object.defineProperty(document, "visibilityState", {
-            configurable: true,
-            get: () => "visible",
-        });
-        document.dispatchEvent(new Event("visibilitychange"));
+        setDocumentVisibility("visible");
         vi.runOnlyPendingTimers();
 
         expect(router.reload).toHaveBeenCalledWith({
@@ -117,14 +104,50 @@ describe("useUnreadNotifications", () => {
         expect(state.isNewNotification.value).toBe(false);
     });
 
-    it("collapses a burst of pushes into a single reload", () => {
-        mountComposable();
+    it("collapses a burst of signals into a single reload", () => {
+        mountConsumer();
 
-        dispatchServiceWorkerMessage({ type: "push-notification" });
-        dispatchServiceWorkerMessage({ type: "push-notification" });
-        dispatchServiceWorkerMessage({ type: "notification-click" });
+        serviceWorker.dispatch("push-notification");
+        serviceWorker.dispatch("notification-click");
+        setDocumentVisibility("visible");
         vi.runOnlyPendingTimers();
 
         expect(router.reload).toHaveBeenCalledTimes(1);
+    });
+
+    it("shares one count, one Echo subscription and one listener across consumers", () => {
+        const first = mountConsumer();
+        const second = mountConsumer();
+
+        expect(second.state.unreadCount).toBe(first.state.unreadCount);
+        expect(window.Echo.private).toHaveBeenCalledTimes(1);
+        expect(serviceWorker.listenerCount()).toBe(1);
+    });
+
+    it("keeps working for the remaining consumers when one unmounts", () => {
+        const { wrapper } = mountConsumer();
+        const survivor = mountConsumer();
+
+        wrapper.unmount();
+        serviceWorker.dispatch("push-notification");
+
+        expect(window.Echo.leave).not.toHaveBeenCalled();
+        expect(survivor.state.isNewNotification.value).toBe(true);
+
+        vi.runOnlyPendingTimers();
+        expect(router.reload).toHaveBeenCalledTimes(1);
+    });
+
+    it("tears down once the last consumer unmounts", () => {
+        const { wrapper } = mountConsumer();
+
+        wrapper.unmount();
+
+        expect(window.Echo.leave).toHaveBeenCalled();
+        expect(serviceWorker.listenerCount()).toBe(0);
+
+        serviceWorker.dispatch("push-notification");
+        vi.runOnlyPendingTimers();
+        expect(router.reload).not.toHaveBeenCalled();
     });
 });
