@@ -330,6 +330,36 @@ function peekTranslate({ x, y }) {
 
 const skyStyle = computed(() => ({ transform: peekTranslate(PEEK.sky) }));
 
+// Centered independently of the peek shift: the sky itself is a full-bleed
+// layer that doesn't need centering, but the logo has an intrinsic width and
+// has to stay anchored to the horizontal middle regardless of tilt.
+const skyLogoStyle = computed(() => ({
+    transform: `translateX(-50%) ${peekTranslate(PEEK.sky)}`,
+}));
+
+// Per-landmark arc geometry for the title, keyed by slug. The viewBox widens
+// with name length and the <svg> is left unsized in CSS, so it renders at its
+// intrinsic viewBox-to-px size (1 user unit = 1px) — every name gets the same
+// font size, and a long one simply produces a wider arc that overflows past
+// the icon rather than being squeezed to fit a fixed-width box.
+const TITLE_CHAR_WIDTH = 17;
+const TITLE_MIN_WIDTH = 150;
+const TITLE_HEIGHT = 70;
+const landmarkTitleGeom = computed(() =>
+    Object.fromEntries(
+        landmarks.value.map((landmark) => {
+            const width = Math.max(
+                TITLE_MIN_WIDTH,
+                Math.round(landmark.name.length * TITLE_CHAR_WIDTH + 40)
+            );
+            const path = `M 12 ${TITLE_HEIGHT - 8} Q ${width / 2} 4 ${
+                width - 12
+            } ${TITLE_HEIGHT - 8}`;
+            return [landmark.slug, { width, path }];
+        })
+    )
+);
+
 const cloudsStyle = computed(() => ({ transform: peekTranslate(PEEK.clouds) }));
 
 const worldStyle = computed(() => ({
@@ -372,6 +402,50 @@ const peachStyle = computed(() => ({
         @keydown.enter="onStageEnter($event)"
     >
         <div class="sky" :style="skyStyle" aria-hidden="true"></div>
+
+        <div class="sky-logo" :style="skyLogoStyle" aria-hidden="true">
+            <svg
+                class="sky-logo-svg"
+                viewBox="0 0 400 120"
+                preserveAspectRatio="xMidYMid meet"
+            >
+                <defs>
+                    <path
+                        id="skyLogoArc"
+                        d="M 24 100 Q 200 4 376 100"
+                        fill="none"
+                    />
+                    <linearGradient
+                        id="skyLogoFill"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                    >
+                        <stop offset="0" stop-color="#fff7c2" />
+                        <stop offset="0.45" stop-color="#ffd23f" />
+                        <stop offset="1" stop-color="#f7931e" />
+                    </linearGradient>
+                </defs>
+                <text
+                    v-for="depth in 6"
+                    :key="depth"
+                    class="sky-logo-depth"
+                    :dx="depth"
+                    :dy="depth"
+                >
+                    <textPath href="#skyLogoArc" startOffset="50%">
+                        {{ t("games.world.title") }}
+                    </textPath>
+                </text>
+                <text class="sky-logo-face">
+                    <textPath href="#skyLogoArc" startOffset="50%">
+                        {{ t("games.world.title") }}
+                    </textPath>
+                </text>
+            </svg>
+        </div>
+
         <div class="hills-far" :style="hillStyle" aria-hidden="true"></div>
         <div class="clouds" :style="cloudsStyle" aria-hidden="true">
             <span
@@ -421,11 +495,60 @@ const peachStyle = computed(() => ({
                 @focus="onLandmarkFocus(landmark.slug)"
                 @click="world.openConfirm(landmark.slug)"
             >
+                <div class="landmark-title" aria-hidden="true">
+                    <svg
+                        :width="landmarkTitleGeom[landmark.slug].width"
+                        :height="TITLE_HEIGHT"
+                        :viewBox="`0 0 ${landmarkTitleGeom[landmark.slug].width} ${TITLE_HEIGHT}`"
+                        preserveAspectRatio="xMidYMid meet"
+                    >
+                        <defs>
+                            <path
+                                :id="`titleArc-${landmark.slug}`"
+                                :d="landmarkTitleGeom[landmark.slug].path"
+                                fill="none"
+                            />
+                            <linearGradient
+                                :id="`titleFill-${landmark.slug}`"
+                                x1="0"
+                                y1="0"
+                                x2="0"
+                                y2="1"
+                            >
+                                <stop offset="0" stop-color="#fff7c2" />
+                                <stop offset="0.45" stop-color="#ffd23f" />
+                                <stop offset="1" stop-color="#f7931e" />
+                            </linearGradient>
+                        </defs>
+                        <text
+                            v-for="depth in 4"
+                            :key="depth"
+                            class="landmark-title-depth"
+                            :dx="depth"
+                            :dy="depth"
+                        >
+                            <textPath
+                                :href="`#titleArc-${landmark.slug}`"
+                                startOffset="50%"
+                                >{{ landmark.name }}</textPath
+                            >
+                        </text>
+                        <text
+                            class="landmark-title-face"
+                            :style="{
+                                fill: `url(#titleFill-${landmark.slug})`,
+                            }"
+                        >
+                            <textPath
+                                :href="`#titleArc-${landmark.slug}`"
+                                startOffset="50%"
+                                >{{ landmark.name }}</textPath
+                            >
+                        </text>
+                    </svg>
+                </div>
                 <span class="landmark-emoji" aria-hidden="true">{{
                     landmark.landmark
-                }}</span>
-                <span class="signpost" aria-hidden="true">{{
-                    landmark.name
                 }}</span>
             </button>
 
@@ -505,6 +628,49 @@ const peachStyle = computed(() => ({
         var(--grass) var(--horizon),
         var(--grass) 100%
     );
+}
+
+.sky-logo {
+    /* Anchored to the top edge and clear of the tallest landmark (translated
+       up from the horizon by its own emoji height plus its signpost), so a
+       landmark spawning early in the world can never render over the logo —
+       both live in normal document order with no z-index between them. */
+    position: absolute;
+    top: 2%;
+    left: 50%;
+    width: min(60%, 380px);
+    pointer-events: none;
+    will-change: transform;
+}
+
+.sky-logo-svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.18));
+}
+
+/* Same glyphs stamped repeatedly, each nudged a pixel further down-right and
+   darkened — the classic layered-text trick for a solid extruded edge under
+   the curve, since SVG has no real 3D text primitive. */
+.sky-logo-depth {
+    font-family: "Spicy Rice", ui-rounded, system-ui, sans-serif;
+    font-weight: 800;
+    font-size: 40px;
+    text-anchor: middle;
+    fill: #b5590f;
+}
+
+.sky-logo-face {
+    font-family: "Spicy Rice", ui-rounded, system-ui, sans-serif;
+    font-weight: 800;
+    font-size: 40px;
+    text-anchor: middle;
+    fill: url(#skyLogoFill);
+    stroke: #7a3b00;
+    stroke-width: 3px;
+    stroke-linejoin: round;
+    paint-order: stroke fill;
 }
 
 .hills-far,
@@ -663,7 +829,6 @@ const peachStyle = computed(() => ({
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.25rem;
     background: none;
     border: 0;
     padding: 0.25rem;
@@ -681,17 +846,45 @@ const peachStyle = computed(() => ({
     transform: scale(1.12) translateY(-4px);
 }
 
-.signpost {
-    max-width: 12rem;
-    border-radius: 0.5rem;
-    background: #78350f;
-    padding: 0.25rem 0.7rem;
-    font-size: 0.95rem;
-    font-weight: 800;
-    color: #fef3c7;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+/* Same gilded-extrusion look as the sky logo (SVG textPath on an arc, layered
+   depth copies, gradient face) rather than a straight line of CSS text — the
+   arc bows over the icon's shoulders so a long game name has room to fit
+   without truncating. Positioned absolutely and centered so it can freely
+   overflow past the icon's own width on either side instead of being
+   confined (and shrunk) to it; .landmark's own position:absolute is what
+   this is positioned against. */
+.landmark-title {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: -0.5rem;
+    pointer-events: none;
+}
+
+/* No width/height here: left at its intrinsic size, the <svg> renders its
+   viewBox 1 user unit = 1px, so every title gets the same font size — a
+   longer name widens the arc instead of shrinking to fit a fixed box. */
+.landmark-title svg {
+    display: block;
+    overflow: visible;
+}
+
+.landmark-title-depth {
+    font-family: "Spicy Rice", ui-rounded, system-ui, sans-serif;
+    font-size: 28px;
+    text-anchor: middle;
+    fill: #b5590f;
+}
+
+.landmark-title-face {
+    font-family: "Spicy Rice", ui-rounded, system-ui, sans-serif;
+    font-size: 28px;
+    text-anchor: middle;
+    stroke: #7a3b00;
+    stroke-width: 2px;
+    stroke-linejoin: round;
+    paint-order: stroke fill;
 }
 
 .landmark:focus-visible {
