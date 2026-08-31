@@ -135,7 +135,7 @@ const topNavItems = computed(() => {
                                 <template #trigger>
                                     <button
                                         type="button"
-                                        class="relative inline-flex min-h-12 min-w-12 items-center justify-center rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition-opacity hover:opacity-80"
+                                        class="relative inline-flex min-h-14 min-w-14 items-center justify-center rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition-opacity hover:opacity-80 sm:min-h-12 sm:min-w-12"
                                     >
                                         <i
                                             class="ri-notification-fill text-2xl text-white"
@@ -177,7 +177,7 @@ const topNavItems = computed(() => {
                                 <template #trigger>
                                     <button
                                         type="button"
-                                        class="relative inline-flex min-h-12 items-center gap-1 rounded-xl border border-transparent bg-transparent px-1 sm:px-2 py-1 text-white transition focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-primary"
+                                        class="relative inline-flex min-h-14 min-w-14 items-center justify-center gap-1 rounded-xl border border-transparent bg-transparent px-2 py-2 text-white transition focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-primary sm:min-h-12 sm:min-w-0 sm:justify-start sm:px-2 sm:py-1"
                                         :class="
                                             isDesktopProfileOpen
                                                 ? 'border-theme-primary text-theme-primary'
@@ -231,7 +231,7 @@ const topNavItems = computed(() => {
         class="sticky top-16 z-40 hidden border-b border-white/10 bg-black/10 backdrop-blur-sm dark:bg-black/20 sm:flex"
     >
         <div
-            class="flex w-full flex-wrap items-center gap-1 px-2 py-1.5 sm:px-6 lg:px-8"
+            class="horizontal-scroll-strip flex w-full flex-nowrap items-center gap-1 overflow-x-auto overscroll-x-contain px-2 py-1.5 sm:px-6 lg:px-8"
         >
             <NavPill
                 v-for="item in topNavItems"

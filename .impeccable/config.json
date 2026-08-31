@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font-size",
+        "value": "0.65rem",
+        "files": [
+          "resources/js/Layouts/Nav/NavTab.vue"
+        ],
+        "createdAt": "2026-08-31T23:43:51.213Z",
+        "reason": "pre-existing mobile nav label size; touch-target change only"
+      }
+    ]
+  }
+}

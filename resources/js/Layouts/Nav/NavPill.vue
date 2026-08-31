@@ -12,7 +12,7 @@ defineProps({
 <template>
     <Link
         :href="href"
-        class="btn-bulge inline-flex min-h-11 items-center gap-2 rounded-full border border-transparent px-3 py-1.5 text-sm font-body font-semibold transition-colors duration-150 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 lg:text-base"
+        class="btn-bulge inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-transparent px-3 py-1.5 text-sm font-body font-semibold transition-colors duration-150 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 lg:text-base"
         :class="
             active
                 ? 'bg-theme-selected'
