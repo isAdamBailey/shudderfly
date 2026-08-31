@@ -1,5 +1,8 @@
 <template>
     <div class="book-cover-container">
+        <!-- Outside .book-cover, whose own click reloads the book — a tap meant
+             for the permission sheet must not navigate. -->
+        <TiltPermissionButton />
         <div
             class="relative mx-auto book-wrapper"
             :class="hasCoverImage ? 'h-full' : ''"
@@ -174,6 +177,8 @@
 
 <script setup>
 import LazyLoader from "@/Components/LazyLoader.vue";
+import TiltPermissionButton from "@/Components/TiltPermissionButton.vue";
+import { deadband } from "@/utils/math";
 import { usePermissions } from "@/composables/permissions";
 import { useDate } from "@/dateHelpers";
 import { useParallax } from "@vueuse/core";
@@ -268,16 +273,20 @@ onMounted(() => {
 
 import { useTransition } from "@vueuse/core";
 
+// Shared with the Games World stage, which needs the same settling — and the
+// same NaN screen, since useParallax emits NaN until the element is measured.
+const TILT_DEADBAND = 0.005;
+
 const effectiveTilt = computed(() => {
     if (prefersReducedMotion.value === "reduce" || !hasUserInteracted.value)
         return 0;
-    return Math.abs(tilt.value) > 0.005 ? tilt.value : 0;
+    return deadband(tilt.value, TILT_DEADBAND);
 });
 
 const effectiveRoll = computed(() => {
     if (prefersReducedMotion.value === "reduce" || !hasUserInteracted.value)
         return 0;
-    return Math.abs(roll.value) > 0.005 ? roll.value : 0;
+    return deadband(roll.value, TILT_DEADBAND);
 });
 
 const smoothTilt = useTransition(effectiveTilt, { duration: 150 });
@@ -291,8 +300,12 @@ const hoverScale = computed(() => {
     return isHovered.value ? 1.02 : 1;
 });
 
-const finalTilt = computed(() => (hasUserInteracted.value ? smoothTilt : 0));
-const finalRoll = computed(() => (hasUserInteracted.value ? smoothRoll : 0));
+const finalTilt = computed(() =>
+    hasUserInteracted.value ? smoothTilt.value : 0
+);
+const finalRoll = computed(() =>
+    hasUserInteracted.value ? smoothRoll.value : 0
+);
 
 const finalTransform = computed(() => {
     if (!hasUserInteracted.value) {
@@ -316,6 +329,8 @@ const finalTransform = computed(() => {
 
 <style scoped>
 .book-cover-container {
+    /* Above the cover's own stacking context so the chip stays reachable. */
+    --tilt-chip-z: 20;
     padding: 0.75rem;
     margin-top: 0;
     position: relative;

@@ -363,3 +363,34 @@ describe("useGamesWorld confirm card", () => {
         expect(world.state.confirmSlug).toBeNull();
     });
 });
+
+describe("useGamesWorld reduced motion", () => {
+    it("advances the bob while walking by default", () => {
+        const world = makeWorld();
+
+        world.setWalk(1);
+        advance(world, 200);
+
+        expect(world.peach.bob).toBeGreaterThan(0);
+    });
+
+    it("holds the bob at rest but still walks the peach", () => {
+        const world = makeWorld({ isReducedMotion: () => true });
+        const startX = world.peach.x;
+
+        world.setWalk(1);
+        advance(world, 200);
+
+        expect(world.peach.bob).toBe(0);
+        expect(world.peach.x).toBeGreaterThan(startX);
+    });
+
+    it("still arrives at a landmark and opens its card", () => {
+        const world = makeWorld({ isReducedMotion: () => true });
+
+        dragTo(world, 1500);
+        world.endDrag();
+
+        expect(world.state.confirmSlug).toBe("toot-foods");
+    });
+});

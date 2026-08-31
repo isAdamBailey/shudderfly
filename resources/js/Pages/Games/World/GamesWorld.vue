@@ -2,9 +2,16 @@
 import { usePage } from "@inertiajs/vue3";
 import { BUTT, TOOT_FOODS } from "@/constants/characters.js";
 import { useTranslations } from "@/composables/useTranslations";
+import {
+    useParallax,
+    usePreferredReducedMotion,
+    useTransition,
+} from "@vueuse/core";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import GameConfirmCard from "./components/GameConfirmCard.vue";
+import TiltPermissionButton from "@/Components/TiltPermissionButton.vue";
 import { clamp, useGamesWorld } from "./composables/useGamesWorld.js";
+import { deadband } from "@/utils/math";
 import { useIdlerPhysics } from "./composables/useIdlerPhysics.js";
 
 const props = defineProps({
@@ -29,7 +36,15 @@ const stageHeight = ref(null);
 const landmarkEls = ref({});
 let resizeObserver = null;
 
-const world = useGamesWorld(computed(() => props.games));
+const prefersReducedMotion = usePreferredReducedMotion();
+const reduced = computed(() => prefersReducedMotion.value === "reduce");
+
+const world = useGamesWorld(
+    computed(() => props.games),
+    {
+        isReducedMotion: () => reduced.value,
+    }
+);
 const { landmarks, worldWidth, peach, camera, state, nearestLandmark } = world;
 
 const confirmGame = computed(() =>
@@ -49,6 +64,7 @@ const IDLER_REST_STYLE = Object.freeze({
 
 const idlerPhysicsCtl = useIdlerPhysics({
     isBlocked: () => Boolean(state.confirmSlug),
+    isReducedMotion: () => reduced.value,
 });
 const { idlerPhysics } = idlerPhysicsCtl;
 
@@ -61,9 +77,9 @@ const idlers = computed(() =>
         const offsetStyle =
             p && (p.dx || p.dy || p.airborne)
                 ? {
-                      transform: `translate(-50%, -50%) translate(${
-                          p.dx
-                      }px, ${p.dy}px) rotate(${
+                      transform: `translate(-50%, -50%) translate(${p.dx}px, ${
+                          p.dy
+                      }px) rotate(${
                           // A little spin while airborne, driven by whatever
                           // horizontal speed the toss carried.
                           p.airborne ? clamp(p.vx / 15, -35, 35) : 0
@@ -254,7 +270,67 @@ function setLandmarkEl(slug, el) {
     else delete landmarkEls.value[slug];
 }
 
+// --- Peek -----------------------------------------------------------------
+
+// The same useParallax the book cover uses, but pointed only at the scenery.
+// The pointer here already belongs to gameplay — dragging the peach, panning
+// the stage, throwing the idlers — and pointerToWorld() derives world
+// coordinates from clientX, so anything inside .world must stay untransformed
+// or drags and SNAP_RADIUS arrivals desync. Only the three pointer-events:none
+// backdrop layers move.
+const PEEK = {
+    // px of travel at full deflection. Graded by depth: the ridge sits far
+    // away and barely shifts, the clouds are overhead and shift most.
+    sky: { x: 4, y: 3 },
+    hills: { x: 8, y: 4 },
+    clouds: { x: 22, y: 14 },
+};
+
+const { tilt, roll } = useParallax(stageEl, {
+    // Doubled so tilt/roll span [-1, 1] and the PEEK numbers above are the
+    // actual px maxima rather than half of them.
+    mouseTiltAdjust: (i) => i * 2,
+    mouseRollAdjust: (i) => i * 2,
+    deviceOrientationTiltAdjust: (i) => i * 2,
+    deviceOrientationRollAdjust: (i) => i * 2,
+});
+
+// Deadband first: raw deviceorientation jitters by fractions of a degree even
+// on a stationary table, and without this the backdrop never fully settles.
+// It also screens out the NaN useParallax emits before the stage has been
+// measured, which would otherwise latch inside useTransition — see deadband().
+const PEEK_DEADBAND = 0.005;
+// Clamped because the device-orientation path is unbounded in a way the mouse
+// path is not: gamma runs to 90deg, which the doubling above turns into 2, and
+// a phone held sideways would otherwise swing the clouds twice as far as the
+// PEEK maxima promise.
+// useParallax names its outputs for a device's axes, not the screen's: `tilt`
+// is the horizontal source ((x - w/2)/w) and `roll` the vertical one. Mapping
+// them the other way round makes the backdrop peek 90deg off-axis. `roll` is
+// negated so both axes carry the backdrop the same way the pointer moves.
+//
+// Kept as two scalar tweens rather than one array source: a computed returning
+// a fresh array is never Object.is-equal to the last, so useTransition's watch
+// would refire on every jittering deviceorientation event and restart a 150ms
+// rAF chain forever — exactly the settling the deadband exists to produce.
+const rawPeekX = computed(() =>
+    reduced.value ? 0 : clamp(deadband(tilt.value, PEEK_DEADBAND), -1, 1)
+);
+const rawPeekY = computed(() =>
+    reduced.value ? 0 : clamp(deadband(-roll.value, PEEK_DEADBAND), -1, 1)
+);
+const peekX = useTransition(rawPeekX, { duration: 150 });
+const peekY = useTransition(rawPeekY, { duration: 150 });
+
+function peekTranslate({ x, y }) {
+    return `translate3d(${peekX.value * x}px, ${peekY.value * y}px, 0)`;
+}
+
 // --- Styles ---------------------------------------------------------------
+
+const skyStyle = computed(() => ({ transform: peekTranslate(PEEK.sky) }));
+
+const cloudsStyle = computed(() => ({ transform: peekTranslate(PEEK.clouds) }));
 
 const worldStyle = computed(() => ({
     width: `${worldWidth.value}px`,
@@ -262,9 +338,13 @@ const worldStyle = computed(() => ({
 }));
 
 // The ridge is a repeating tile, so shifting it by the parallax offset modulo
-// one tile width scrolls forever without ever exposing a bare edge.
+// one tile width scrolls forever without ever exposing a bare edge. The peek
+// rides in the same transform string — it's one element, so the two offsets
+// can't be declared separately.
 const hillStyle = computed(() => ({
-    transform: `translate3d(${-((camera.x * 0.25) % HILL_TILE)}px, 0, 0)`,
+    transform: `translate3d(${
+        -((camera.x * 0.25) % HILL_TILE) + peekX.value * PEEK.hills.x
+    }px, ${peekY.value * PEEK.hills.y}px, 0)`,
 }));
 
 const peachStyle = computed(() => ({
@@ -291,9 +371,9 @@ const peachStyle = computed(() => ({
         @keyup.right="world.stopWalk(1)"
         @keydown.enter="onStageEnter($event)"
     >
-        <div class="sky" aria-hidden="true"></div>
+        <div class="sky" :style="skyStyle" aria-hidden="true"></div>
         <div class="hills-far" :style="hillStyle" aria-hidden="true"></div>
-        <div class="clouds" aria-hidden="true">
+        <div class="clouds" :style="cloudsStyle" aria-hidden="true">
             <span
                 v-for="i in CLOUD_COUNT"
                 :key="i"
@@ -360,13 +440,8 @@ const peachStyle = computed(() => ({
             </div>
         </div>
 
-        <p class="hint" aria-hidden="true">
-            {{
-                nearestLandmark
-                    ? t("games.world.near_hint", { game: nearestLandmark.name })
-                    : t("games.world.hint")
-            }}
-        </p>
+        <!-- Outside .world so the camera never carries it off-screen. -->
+        <TiltPermissionButton />
 
         <GameConfirmCard
             v-if="confirmGame"
@@ -418,8 +493,11 @@ const peachStyle = computed(() => ({
 
 .sky {
     position: absolute;
-    inset: 0;
+    /* Overscanned: the peek shifts this layer, and a flush inset would bare an
+       edge of the page behind it at full deflection. */
+    inset: -12px;
     pointer-events: none;
+    will-change: transform;
     background: linear-gradient(
         to bottom,
         var(--sky-top) 0%,
@@ -439,8 +517,11 @@ const peachStyle = computed(() => ({
 
 .hills-far {
     /* Only as tall as the sky and overhanging a tile on each side, so the
-       ridges rest ON the horizon and the parallax shift never bares an edge. */
-    inset: 0 -1500px calc(100% - var(--horizon)) -1500px;
+       ridges rest ON the horizon and the parallax shift never bares an edge.
+       The 8px skirt past the horizon does the same for the peek's vertical
+       travel: flush against the horizon, an upward peek would open a sliver
+       of sky beneath the ridge. */
+    inset: 0 -1500px calc(100% - var(--horizon) - 8px) -1500px;
     background-image: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1500 240%22 preserveAspectRatio=%22none%22%3E%3Cpath d=%22M0%2C240 L0%2C180 C160%2C120 300%2C205 460%2C180 C620%2C155 720%2C105 880%2C150 C1050%2C198 1280%2C160 1500%2C180 L1500%2C240 Z%22 fill=%22%233f9a68%22/%3E%3C/svg%3E"),
         url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1500 240%22 preserveAspectRatio=%22none%22%3E%3Cpath d=%22M0%2C240 L0%2C130 C180%2C50 330%2C180 500%2C150 C660%2C122 760%2C40 920%2C80 C1080%2C120 1250%2C180 1500%2C130 L1500%2C240 Z%22 fill=%22%23b3e3ca%22/%3E%3C/svg%3E");
     background-repeat: repeat-x, repeat-x;
@@ -628,22 +709,6 @@ const peachStyle = computed(() => ({
     cursor: grab;
     touch-action: none;
     will-change: transform;
-}
-
-.hint {
-    position: absolute;
-    pointer-events: none;
-    top: 0.75rem;
-    left: 50%;
-    transform: translateX(-50%);
-    margin: 0;
-    border-radius: 9999px;
-    background: rgb(0 0 0 / 0.55);
-    padding: 0.35rem 0.9rem;
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #fff;
-    text-align: center;
 }
 
 @media (prefers-reduced-motion: reduce) {

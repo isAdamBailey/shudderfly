@@ -12,9 +12,10 @@ const SETTLE_SPEED = 60; // px/s; below this after a bounce, the food just stops
  * Per-idler drag-and-throw physics for the roadside cast: a finger lifts one,
  * releasing it tosses it with the finger's own velocity, and a small
  * gravity/bounce integrator settles it back onto the verge. `isBlocked`
- * lets the caller freeze dragging while the world is frozen behind a card.
+ * lets the caller freeze dragging while the world is frozen behind a card,
+ * and `isReducedMotion` keeps the lift but drops the thrown arc.
  */
-export function useIdlerPhysics({ isBlocked } = {}) {
+export function useIdlerPhysics({ isBlocked, isReducedMotion } = {}) {
     const idlerPhysics = reactive({});
 
     function physicsFor(slug) {
@@ -120,8 +121,26 @@ export function useIdlerPhysics({ isBlocked } = {}) {
         dragLastT = now;
     }
 
+    /** Zeroes an idler back onto the verge with no velocity left to integrate. */
+    function settleToRest(p) {
+        p.dx = 0;
+        p.dy = 0;
+        p.vx = 0;
+        p.vy = 0;
+        p.airborne = false;
+    }
+
     function release(vx, vy) {
         const p = physicsFor(dragSlug);
+        // Under reduced motion the idler still follows the finger, but letting
+        // go returns it to the verge instead of launching an arc across the
+        // scene — the drag is the interaction, the flight is the decoration.
+        if (isReducedMotion && isReducedMotion()) {
+            settleToRest(p);
+            dragSlug = null;
+            detachListeners();
+            return;
+        }
         p.vx = vx;
         p.vy = vy;
         p.airborne = true;
@@ -155,12 +174,7 @@ export function useIdlerPhysics({ isBlocked } = {}) {
      * instead. */
     function cancelActiveDrag() {
         if (dragSlug) {
-            const p = physicsFor(dragSlug);
-            p.dx = 0;
-            p.dy = 0;
-            p.vx = 0;
-            p.vy = 0;
-            p.airborne = false;
+            settleToRest(physicsFor(dragSlug));
             dragSlug = null;
             detachListeners();
         }

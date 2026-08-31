@@ -264,6 +264,7 @@ return [
 
     // UI Labels - General
     'general.close' => 'Fermer',
+    'general.enable_tilt' => 'Incline pour regarder autour',
     'general.scroll_to_top' => 'Revenir en haut',
     'general.add_reaction' => 'Ajouter une réaction',
     'general.reactions' => 'Réactions',
@@ -632,8 +633,6 @@ return [
     'games.world.stage_aria' => 'Monde des jeux : fais glisser la pêche le long de la route, ou utilise les flèches gauche et droite pour marcher',
     'games.world.peach_aria' => 'Pêche',
     'games.world.landmark_aria' => ':game — appuie sur Entrée pour visiter',
-    'games.world.hint' => 'Fais glisser la pêche 🍑 le long de la route jusqu\'à un jeu !',
-    'games.world.near_hint' => 'Dépose la pêche ici pour jouer à :game',
     'games.world.play' => '▶ Jouer',
     'games.world.cancel' => 'Pas encore',
     'games.world.listen' => '🔊 Écouter',

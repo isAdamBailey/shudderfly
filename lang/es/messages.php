@@ -264,6 +264,7 @@ return [
 
     // UI Labels - General
     'general.close' => 'Cerrar',
+    'general.enable_tilt' => 'Inclina para mirar alrededor',
     'general.scroll_to_top' => 'Volver arriba',
     'general.add_reaction' => 'Agregar una reacción',
     'general.reactions' => 'Reacciones',
@@ -632,8 +633,6 @@ return [
     'games.world.stage_aria' => 'Mundo de juegos: arrastra el durazno por el camino o usa las flechas izquierda y derecha para caminar',
     'games.world.peach_aria' => 'Durazno',
     'games.world.landmark_aria' => ':game: pulsa Intro para visitar',
-    'games.world.hint' => '¡Arrastra el durazno 🍑 por el camino hasta un juego!',
-    'games.world.near_hint' => 'Suelta el durazno aquí para jugar a :game',
     'games.world.play' => '▶ Jugar',
     'games.world.cancel' => 'Todavía no',
     'games.world.listen' => '🔊 Escuchar',

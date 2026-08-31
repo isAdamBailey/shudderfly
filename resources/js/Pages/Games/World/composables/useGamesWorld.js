@@ -24,7 +24,10 @@ export function clamp(value, min, max) {
  * DOM-free — the component feeds it world coordinates and reads back numbers.
  */
 export function useGamesWorld(games, callbacks = {}) {
-    const { onArrive } = callbacks;
+    // `isReducedMotion` suppresses the decorative bob only — the peach still
+    // walks and the camera still follows, because this stage is how you reach
+    // the games, not an animation to sit and watch.
+    const { onArrive, isReducedMotion = () => false } = callbacks;
 
     const bounds = reactive({ w: 0, h: 0 });
 
@@ -157,6 +160,12 @@ export function useGamesWorld(games, callbacks = {}) {
             setPeachX(peach.x + peach.vx * dt);
         } else {
             // Nothing is moving, so an idle frame has no work to do.
+            return;
+        }
+        if (isReducedMotion()) {
+            // Held at zero rather than frozen wherever it happened to be, so
+            // the peach sits level instead of stuck mid-bounce.
+            peach.bob = 0;
             return;
         }
         // Wrapped, so a long session can't drift the bob phase into float mush.

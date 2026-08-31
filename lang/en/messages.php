@@ -264,6 +264,7 @@ return [
 
     // UI Labels - General
     'general.close' => 'Close',
+    'general.enable_tilt' => 'Tilt to look around',
     'general.scroll_to_top' => 'Go back to top',
     'general.add_reaction' => 'Add a reaction',
     'general.reactions' => 'Reactions',
@@ -632,8 +633,6 @@ return [
     'games.world.stage_aria' => 'Games world — drag the peach along the road, or use the left and right arrow keys to walk',
     'games.world.peach_aria' => 'Peach',
     'games.world.landmark_aria' => ':game — press Enter to visit',
-    'games.world.hint' => 'Drag the peach 🍑 down the road to a game!',
-    'games.world.near_hint' => 'Drop the peach here to play :game',
     'games.world.play' => '▶ Play',
     'games.world.cancel' => 'Not yet',
     'games.world.listen' => '🔊 Listen',
