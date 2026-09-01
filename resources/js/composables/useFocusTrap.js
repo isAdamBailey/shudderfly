@@ -15,7 +15,13 @@ export function useFocusTrap(panelRef) {
 
     function activate() {
         lastFocusedElement = document.activeElement;
-        nextTick(() => panelRef.value?.focus());
+        nextTick(() => {
+            // Don't steal focus if content mounted inside the panel (e.g. an
+            // autofocused input) already claimed it during this same tick.
+            if (panelRef.value && !panelRef.value.contains(document.activeElement)) {
+                panelRef.value.focus();
+            }
+        });
     }
 
     function deactivate() {

@@ -453,6 +453,16 @@ watch(
     }
 );
 
+function focusInputWhenVisible(attempt = 0) {
+    const el = keyboardInputRef.value;
+    if (!el) return;
+    if (el.offsetParent !== null) {
+        el.focus({ preventScroll: true });
+    } else if (attempt < 20) {
+        requestAnimationFrame(() => focusInputWhenVisible(attempt + 1));
+    }
+}
+
 let inputHandlers = null;
 let mountTimeoutId = null;
 let cursorTimeoutId = null;
@@ -476,9 +486,14 @@ onMounted(() => {
     // user can start typing right away. Kept close to the mount (no long delay)
     // to stay within the tap gesture that mobile browsers require to raise the
     // keyboard.
-    if (keyboardInputRef.value) {
-        keyboardInputRef.value.focus({ preventScroll: true });
-    }
+    // Focus the input so the on-screen keyboard opens first and the user can
+    // start typing right away. The parent Modal is still mid-transition at
+    // this point (its leave transition from a previous close can still be
+    // settling ancestor `display: none` when this reopens quickly), so a
+    // single synchronous focus() can silently no-op on a not-yet-visible
+    // element. Retry across a few animation frames until it's actually
+    // focusable.
+    focusInputWhenVisible();
 
     mountTimeoutId = setTimeout(() => {
         if (keyboardInputRef.value && typeof document !== "undefined") {
