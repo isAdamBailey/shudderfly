@@ -67,6 +67,7 @@
 <script setup>
 import Button from "@/Components/Button.vue";
 import TypePill from "@/Components/TypePill.vue";
+import { useSiteSetting } from "@/composables/useSiteSetting";
 import { useSnapshotCooldown } from "@/composables/useSnapshotCooldown";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
@@ -186,13 +187,11 @@ const optimizedFetchPriority = computed(() => {
     return props.fetchPriority;
 });
 
-const isButtonVisible = computed(() => {
-    return (
-        !props.isCover &&
-        props.bookId &&
-        usePage().props.settings?.snapshot_enabled
-    );
-});
+const snapshotEnabled = useSiteSetting("snapshot_enabled");
+
+const isButtonVisible = computed(
+    () => !props.isCover && props.bookId && snapshotEnabled.value
+);
 
 const handleMediaError = () => {
     imageSrc.value = placeholder;

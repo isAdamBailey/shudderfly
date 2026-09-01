@@ -12,10 +12,11 @@ import BlockedContentPanel from "@/Pages/Users/Partials/BlockedContentPanel.vue"
 import OwnerPanel from "@/Pages/Users/Partials/OwnerPanel.vue";
 import { useNotificationSync } from "@/composables/useNotificationSync";
 import { usePermissions } from "@/composables/permissions";
+import { useSiteSetting } from "@/composables/useSiteSetting";
 import { FOOD_EMOJI_POOL, useEmojiRise } from "@/composables/useEmojiRise";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
-import { Head, Link, router, usePage } from "@inertiajs/vue3";
+import { Head, Link, router } from "@inertiajs/vue3";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 
 defineOptions({
@@ -35,10 +36,7 @@ const openNewBookForm = () => {
     showNewBookForm.value = true;
 };
 
-const messagingEnabled = computed(() => {
-    const value = usePage().props.settings?.messaging_enabled;
-    return value === "1" || value === 1 || value === true;
-});
+const messagingEnabled = useSiteSetting("messaging_enabled");
 
 function scrollToAdministration() {
     document

@@ -1,5 +1,5 @@
 <script setup>
-import { usePage } from "@inertiajs/vue3";
+import { useSiteSetting } from "@/composables/useSiteSetting";
 import { computed } from "vue";
 
 const props = defineProps({
@@ -10,10 +10,7 @@ const props = defineProps({
     },
 });
 
-const enabled = computed(() => {
-    const value = usePage().props.settings?.cockroaches_enabled;
-    return value === "1" || value === 1 || value === true;
-});
+const enabled = useSiteSetting("cockroaches_enabled");
 
 const headerRoaches = [
     { top: "18%", size: "1.65rem", duration: "16s", delay: "-2s" },

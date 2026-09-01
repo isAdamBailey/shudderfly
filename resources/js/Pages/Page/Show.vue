@@ -228,6 +228,7 @@ import ShareToChatButton from "@/Components/ShareToChatButton.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { usePermissions } from "@/composables/permissions";
+import { useSiteSetting } from "@/composables/useSiteSetting";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import { useDate } from "@/dateHelpers";
@@ -263,10 +264,7 @@ const props = defineProps({
     users: { type: Array, default: () => [] },
 });
 
-const messagingEnabled = computed(() => {
-    const value = usePage().props.settings?.messaging_enabled;
-    return value === "1" || value === 1 || value === true;
-});
+const messagingEnabled = useSiteSetting("messaging_enabled");
 
 const showPageSettings = ref(false);
 const editPageFormRef = ref(null);

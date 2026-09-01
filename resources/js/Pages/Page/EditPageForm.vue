@@ -12,7 +12,8 @@ import TextInput from "@/Components/TextInput.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
 import DeletePageForm from "@/Pages/Book/DeletePageForm.vue";
-import { useForm, usePage } from "@inertiajs/vue3";
+import { useSiteSetting } from "@/composables/useSiteSetting";
+import { useForm } from "@inertiajs/vue3";
 import Multiselect from "@vueform/multiselect";
 import { computed, onMounted, ref } from "vue";
 
@@ -27,9 +28,7 @@ const props = defineProps({
     books: { type: Array, required: true },
 });
 
-const isYouTubeEnabled = computed(
-    () => usePage().props.settings["youtube_enabled"]
-);
+const isYouTubeEnabled = useSiteSetting("youtube_enabled");
 
 const pageForm = useForm({
     content: props.page.content,

@@ -12,9 +12,10 @@ import MapPicker from "@/Components/Map/MapPicker.vue";
 import TextInput from "@/Components/TextInput.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import Wysiwyg from "@/Components/Wysiwyg.vue";
+import { useSiteSetting } from "@/composables/useSiteSetting";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
-import { useForm, usePage } from "@inertiajs/vue3";
+import { useForm } from "@inertiajs/vue3";
 import { useVuelidate } from "@vuelidate/core";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
@@ -28,9 +29,7 @@ const props = defineProps({
     book: { type: Object, required: true },
 });
 
-const isYouTubeEnabled = computed(
-    () => usePage().props.settings["youtube_enabled"]
-);
+const isYouTubeEnabled = useSiteSetting("youtube_enabled");
 
 const form = useForm({
     book_id: props.book.id,

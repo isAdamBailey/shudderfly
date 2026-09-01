@@ -33,9 +33,19 @@ vi.mock("@/composables/useTranslations", () => ({
     }),
 }));
 
+let mockUnblockRequestsEnabled = "1";
 vi.mock("@inertiajs/vue3", () => ({
     router: { reload: vi.fn() },
-    usePage: () => ({ props: { auth: { user: { id: 7 } } } }),
+    usePage: () => ({
+        props: {
+            auth: { user: { id: 7 } },
+            settings: {
+                get unblock_requests_enabled() {
+                    return mockUnblockRequestsEnabled;
+                },
+            },
+        },
+    }),
 }));
 
 const mockPost = vi.fn();
@@ -68,6 +78,7 @@ describe("BlockedContentPanel", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockCanEditPages = false;
+        mockUnblockRequestsEnabled = "1";
         mockPost.mockResolvedValue({
             data: { message: "sent", sent: true },
         });
@@ -271,6 +282,25 @@ describe("BlockedContentPanel", () => {
             expect(
                 wrapper.find("button").attributes("disabled")
             ).toBeUndefined();
+        });
+    });
+
+    describe("unblock_requests_enabled setting", () => {
+        it("hides the ask-to-unblock CTA when the site setting is off", () => {
+            mockUnblockRequestsEnabled = "0";
+            const wrapper = mountPanel();
+
+            expect(ctaExists(wrapper)).toBe(false);
+        });
+
+        it("still shows the unblock-all button to an edit-pages user when the setting is off", () => {
+            mockUnblockRequestsEnabled = "0";
+            mockCanEditPages = true;
+            const wrapper = mountPanel();
+
+            expect(wrapper.text()).toContain(
+                "dashboard.unlock_all_blocked_pages"
+            );
         });
     });
 });

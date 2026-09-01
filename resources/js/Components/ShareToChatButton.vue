@@ -6,6 +6,7 @@ import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import UserTagList from "@/Components/UserTagList.vue";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useMusicPlayer } from "@/composables/useMusicPlayer";
+import { useSiteSetting } from "@/composables/useSiteSetting";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import { router, usePage } from "@inertiajs/vue3";
@@ -78,10 +79,7 @@ const shareButtonRef = ref(null);
 const shareMenuRef = ref(null);
 const shareMenuStyles = ref({});
 
-const messagingEnabled = computed(() => {
-    const value = page.props.settings?.messaging_enabled;
-    return value === "1" || value === 1 || value === true;
-});
+const messagingEnabled = useSiteSetting("messaging_enabled");
 
 const canShare = computed(() => {
     return messagingEnabled.value && Boolean(page.props.auth?.user);

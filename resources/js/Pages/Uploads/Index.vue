@@ -81,6 +81,7 @@
 <script setup>
 import Button from "@/Components/Button.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
+import { useSiteSetting } from "@/composables/useSiteSetting";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
@@ -97,15 +98,9 @@ defineProps({
     photos: { type: Object, required: true },
 });
 
-const isYouTubeEnabled = computed(
-    () => usePage().props.settings?.["youtube_enabled"]
-);
-const isSnapshotEnabled = computed(
-    () => usePage().props.settings?.["snapshot_enabled"]
-);
-const isMusicEnabled = computed(
-    () => usePage().props.settings?.["music_enabled"]
-);
+const isYouTubeEnabled = useSiteSetting("youtube_enabled");
+const isSnapshotEnabled = useSiteSetting("snapshot_enabled");
+const isMusicEnabled = useSiteSetting("music_enabled");
 
 const loading = ref(false);
 

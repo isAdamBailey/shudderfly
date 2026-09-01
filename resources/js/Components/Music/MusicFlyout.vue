@@ -106,8 +106,8 @@
 import MusicFlyoutContent from "@/Components/Music/MusicFlyoutContent.vue";
 import MusicPlayer from "@/Components/Music/MusicPlayer.vue";
 import { useMusicPlayer } from "@/composables/useMusicPlayer";
-import { usePage } from "@inertiajs/vue3";
-import { computed, ref, watch } from "vue";
+import { useSiteSetting } from "@/composables/useSiteSetting";
+import { ref, watch } from "vue";
 
 const {
     isFlyoutOpen,
@@ -119,8 +119,7 @@ const {
     isPlaying,
 } = useMusicPlayer();
 
-const page = usePage();
-const musicEnabled = computed(() => page.props.settings?.music_enabled ?? true);
+const musicEnabled = useSiteSetting("music_enabled");
 
 // Songs data - will be loaded when flyout opens
 const songsData = ref(null);

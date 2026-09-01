@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Book;
 use App\Models\Page;
+use App\Models\SiteSetting;
 use App\Models\Sound;
 use App\Models\UnblockRequest;
 use App\Models\User;
@@ -95,6 +96,23 @@ class UnblockRequestTest extends TestCase
         $this->blockedPage();
 
         $this->actingAs($editor)
+            ->postJson(route('unblock-requests.store'))
+            ->assertForbidden();
+
+        Notification::assertNothingSent();
+    }
+
+    public function test_request_is_refused_when_the_site_setting_is_off(): void
+    {
+        Notification::fake();
+
+        $this->admin();
+        $requester = User::factory()->create();
+        $this->blockedPage();
+
+        SiteSetting::where('key', 'unblock_requests_enabled')->update(['value' => '0']);
+
+        $this->actingAs($requester)
             ->postJson(route('unblock-requests.store'))
             ->assertForbidden();
 

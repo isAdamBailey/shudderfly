@@ -10,9 +10,10 @@ import NavMenuItem from "@/Layouts/Nav/NavMenuItem.vue";
 import NavPill from "@/Layouts/Nav/NavPill.vue";
 import NavTab from "@/Layouts/Nav/NavTab.vue";
 import { usePermissions } from "@/composables/permissions";
+import { useSiteSetting } from "@/composables/useSiteSetting";
 import { useUnreadNotifications } from "@/composables/useUnreadNotifications";
 import ThemeToggle from "@/Layouts/Nav/ThemeToggle.vue";
-import { Link, usePage } from "@inertiajs/vue3";
+import { Link } from "@inertiajs/vue3";
 import { computed, ref } from "vue";
 
 const { canEditPages, canEditProfile } = usePermissions();
@@ -28,15 +29,8 @@ const spinLogo = () => {
     });
 };
 
-const messagingEnabled = computed(() => {
-    const value = usePage().props.settings?.messaging_enabled;
-    return value === "1" || value === 1 || value === true;
-});
-
-const soundsEnabled = computed(() => {
-    const value = usePage().props.settings?.sounds_enabled;
-    return value === "1" || value === 1 || value === true;
-});
+const messagingEnabled = useSiteSetting("messaging_enabled");
+const soundsEnabled = useSiteSetting("sounds_enabled");
 
 const topNavItems = computed(() => {
     const items = [
@@ -113,7 +107,9 @@ const topNavItems = computed(() => {
                         >
                             <ApplicationLogo
                                 class="h-10 sm:h-14"
-                                :class="{ 'animate-playful-spin': isLogoSpinning }"
+                                :class="{
+                                    'animate-playful-spin': isLogoSpinning,
+                                }"
                                 @animationend="isLogoSpinning = false"
                             />
                         </Link>

@@ -4,6 +4,7 @@ import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useFlashMessage } from "@/composables/useFlashMessage";
 import { usePermissions } from "@/composables/permissions";
+import { useSiteSetting } from "@/composables/useSiteSetting";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import { useUnblockAll } from "@/composables/useUnblockAll";
@@ -42,10 +43,19 @@ const justAsked = ref(false);
 
 const askedToday = computed(() => props.unblockAskedToday || justAsked.value);
 
+// Gates only the "ask an admin" flow for non-privileged users; `edit pages`
+// users keep the unblock-now button regardless of this setting.
+const unblockRequestsEnabled = useSiteSetting("unblock_requests_enabled");
+
 // The CTA is rendered only when the ask would actually go through, so a child
 // never sees a button that can't do anything: nothing to unblock, or today's
 // ask already spent. Privileged users have no such limit.
-const canRequest = computed(() => props.blockedCount > 0 && !askedToday.value);
+const canRequest = computed(
+    () =>
+        unblockRequestsEnabled.value &&
+        props.blockedCount > 0 &&
+        !askedToday.value
+);
 
 // Speaks whatever the dialog is about to show, so a non-reader hears the same
 // thing that's on screen rather than a separately-worded prompt.

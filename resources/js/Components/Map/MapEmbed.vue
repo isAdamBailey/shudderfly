@@ -21,8 +21,8 @@
 </template>
 
 <script setup>
+import { useSiteSetting } from "@/composables/useSiteSetting";
 import { computed } from "vue";
-import { usePage } from "@inertiajs/vue3";
 import Map from "./Map.vue";
 
 const props = defineProps({
@@ -90,10 +90,7 @@ const longitude = computed(() => {
         : props.longitude;
 });
 
-const streetViewEnabled = computed(() => {
-    const value = usePage().props.settings?.street_view_enabled;
-    return value === "1" || value === 1 || value === true;
-});
+const streetViewEnabled = useSiteSetting("street_view_enabled");
 
 const effectiveShowStreetView = computed(() => {
     return props.showStreetView && streetViewEnabled.value;
