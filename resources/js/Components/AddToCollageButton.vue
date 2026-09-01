@@ -30,7 +30,12 @@
                     <select
                         v-if="availableCollages.length > 1"
                         v-model="selectedCollageId"
-                        class="rounded bg-gray-700 border border-gray-600 text-white text-sm px-2 py-1.5 focus:border-indigo-500 focus:outline-none"
+                        class="rounded bg-gray-700 border text-sm px-2 py-1.5 focus:outline-none"
+                        :class="
+                            selectedCollageNeedsReplace
+                                ? 'border-amber-500 text-amber-400 focus:border-amber-400'
+                                : 'border-gray-600 text-white focus:border-indigo-500'
+                        "
                         :disabled="!hasSelectableCollages"
                     >
                         <option :value="null" disabled>
@@ -41,17 +46,7 @@
                             :key="collage.id"
                             :value="collage.id"
                         >
-                            {{
-                                t("page.collage_option_label", {
-                                    number: getCollageDisplayNumber(collage.id),
-                                })
-                            }}
-                            <span v-if="isCollageFull(collage)">
-                                {{ t("page.collage_full_suffix") }}
-                            </span>
-                            <span v-if="collage.is_locked">
-                                {{ t("page.collage_locked_suffix") }}
-                            </span>
+                            {{ optionLabel(collage) }}
                         </option>
                     </select>
                     <Button
@@ -59,8 +54,19 @@
                         class="h-10"
                         @click="addToCollage"
                     >
-                        <i class="ri-add-line text-xl mr-1"></i>
-                        {{ t("page.collage_add_button") }}
+                        <i
+                            :class="
+                                selectedCollageNeedsReplace
+                                    ? 'ri-repeat-line'
+                                    : 'ri-add-line'
+                            "
+                            class="text-xl mr-1"
+                        ></i>
+                        {{
+                            selectedCollageNeedsReplace
+                                ? t("page.collage_replace_button")
+                                : t("page.collage_add_button")
+                        }}
                     </Button>
                 </div>
                 <InputError :message="form.errors.collage" />
@@ -123,6 +129,19 @@ const form = useForm({
 
 watch(selectedCollageId, (newCollageId) => {
     form.collage_id = newCollageId;
+
+    if (newCollageId == null) return;
+    const collage = availableCollages.value.find((c) =>
+        sameId(c.id, newCollageId)
+    );
+    if (!collage) return;
+
+    const number = getCollageDisplayNumber(collage.id);
+    if (isCollageFull(collage)) {
+        speak(t("page.collage_full_speak", { number }));
+    } else if (collage.is_locked) {
+        speak(t("page.collage_locked_speak", { number }));
+    }
 });
 
 watch(
@@ -293,6 +312,26 @@ const availableCollages = computed(() => {
 const hasSelectableCollages = computed(() => {
     return availableCollages.value.length > 0;
 });
+
+const selectedCollageNeedsReplace = computed(() => {
+    const collage = availableCollages.value.find((c) =>
+        sameId(c.id, selectedCollageId.value)
+    );
+    return collage ? mustUseReplaceFlow(collage) : false;
+});
+
+const optionLabel = (collage) => {
+    let label = t("page.collage_option_label", {
+        number: getCollageDisplayNumber(collage.id),
+    });
+    if (isCollageFull(collage)) {
+        label += t("page.collage_full_suffix");
+    }
+    if (collage.is_locked) {
+        label += t("page.collage_locked_suffix");
+    }
+    return label;
+};
 
 const isAddButtonDisabled = computed(() => form.processing);
 </script>

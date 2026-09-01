@@ -29,7 +29,10 @@ vi.mock("@/composables/useTranslations", () => ({
                 "page.collage_option_label": "Collage #:number:",
                 "page.collage_full_suffix": " (Full)",
                 "page.collage_locked_suffix": " (Locked)",
+                "page.collage_full_speak": "Collage :number is full.",
+                "page.collage_locked_speak": "Collage :number is locked.",
                 "page.collage_add_button": "Add to Collage",
+                "page.collage_replace_button": "Replace in Collage",
                 "page.collage_add_success":
                     "Page successfully added to collage!",
                 "page.collage_replace_modal_title":
@@ -505,7 +508,7 @@ describe("AddToCollageButton", () => {
 
             const addButton = wrapper
                 .findAll("button")
-                .find((btn) => btn.text().includes("Add to Collage"));
+                .find((btn) => btn.text().includes("Replace in Collage"));
             expect(addButton.attributes("disabled")).toBeUndefined();
         });
 
@@ -541,7 +544,7 @@ describe("AddToCollageButton", () => {
 
             const addButton = wrapper
                 .findAll("button")
-                .find((btn) => btn.text().includes("Add to Collage"));
+                .find((btn) => btn.text().includes("Replace in Collage"));
             expect(addButton.attributes("disabled")).toBeUndefined();
         });
 
@@ -714,6 +717,40 @@ describe("AddToCollageButton", () => {
             expect(mockForm.post).not.toHaveBeenCalled();
             await clickConfirmDialogOk();
             expect(mockForm.post).toHaveBeenCalled();
+        });
+
+        it("speaks full/locked state as soon as such a collage is selected", async () => {
+            const collages = [
+                { id: 1, pages: [], is_archived: false, is_locked: false },
+                {
+                    id: 2,
+                    pages: Array(10)
+                        .fill(null)
+                        .map((_, i) => ({ id: 100 + i })),
+                    is_archived: false,
+                    is_locked: false,
+                },
+                { id: 3, pages: [], is_archived: false, is_locked: true },
+            ];
+
+            wrapper = mount(AddToCollageButton, {
+                props: {
+                    pageId: 1,
+                    collages,
+                },
+            });
+
+            const select = wrapper.find("select");
+
+            await select.setValue(2);
+            expect(mockSpeak).toHaveBeenCalledWith("Collage 2 is full.");
+
+            await select.setValue(3);
+            expect(mockSpeak).toHaveBeenCalledWith("Collage 3 is locked.");
+
+            mockSpeak.mockClear();
+            await select.setValue(1);
+            expect(mockSpeak).not.toHaveBeenCalled();
         });
     });
 
