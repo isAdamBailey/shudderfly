@@ -163,7 +163,10 @@ class SnapshotLinkTest extends TestCase
                 'video_time' => 2.5,
                 'video_url' => 'https://example.com/clip.mp4',
             ])
-            ->assertSessionHasNoErrors();
+            ->assertSessionHasNoErrors()
+            // A bodyless 200 here is not an Inertia response: the client
+            // opens an empty error dialog and skips the form's onSuccess.
+            ->assertRedirect();
 
         Queue::assertPushed(CreateVideoSnapshot::class, function (CreateVideoSnapshot $job) use ($source) {
             $pageId = new \ReflectionProperty($job, 'pageId');

@@ -252,6 +252,10 @@ const takeSnapshot = () => {
     // eslint-disable-next-line no-undef
     form.post(route("pages.snapshot"), {
         preserveScroll: true,
+        // The response redirects back to this same page; keep the component
+        // alive across it so the video the snapshot came from is not
+        // remounted back to its first frame.
+        preserveState: true,
         onSuccess: () => {
             speak(t("snapshot.got_screenshot", { name: user.name }));
         },

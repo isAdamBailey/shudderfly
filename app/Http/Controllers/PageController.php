@@ -606,7 +606,7 @@ class PageController extends Controller
         return redirect(route('books.show', $page->book))->with('success', __('messages.page.deleted'));
     }
 
-    public function snapshot(Request $request)
+    public function snapshot(Request $request): RedirectResponse
     {
         // page_id ends up as the link in the snapshot's attribution line, so
         // an id that is missing or points at nothing would bake a 404 into
@@ -626,6 +626,13 @@ class PageController extends Controller
             user: $request->user(),
             pageId: (int) $validated['page_id']
         );
+
+        // Returning nothing here left Inertia with a bodyless, non-Inertia
+        // 200: it opened an empty error dialog and never ran the form's
+        // onSuccess, so the "got a screenshot" line was never spoken. The
+        // caller keeps its state across this redirect, so the video the
+        // snapshot came from carries on playing.
+        return back();
     }
 
     /**
