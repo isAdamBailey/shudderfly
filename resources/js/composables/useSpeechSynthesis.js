@@ -5,6 +5,7 @@ import {
     getAppLocaleFromPage,
     getStoredAppLocale,
     resolveSpeechVoice,
+    speakUtterance,
     syncStoredSpeechLanguage,
 } from "@/composables/speechVoice";
 import { useTranslations } from "@/composables/useTranslations";
@@ -143,11 +144,6 @@ export function useSpeechSynthesis() {
         }
         try {
             const currentVoices = window.speechSynthesis.getVoices();
-            if (currentVoices.length === 0) {
-                done();
-                return;
-            }
-
             const utterance = new SpeechSynthesisUtterance(
                 phrase.replace(/@/g, "")
             );
@@ -178,7 +174,7 @@ export function useSpeechSynthesis() {
                 done();
             };
 
-            window.speechSynthesis.speak(utterance);
+            speakUtterance(utterance);
         } catch (error) {
             speaking.value = false;
             done();

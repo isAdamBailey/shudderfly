@@ -1,6 +1,7 @@
 import {
     applySpeechSettingsToUtterance,
     getStoredAppLocale,
+    speakUtterance,
 } from "@/composables/speechVoice";
 
 const isSpeechSupported =
@@ -66,7 +67,7 @@ export function speakGameIntro(text, onEnd) {
         // Safari can drop an utterance spoken in the same tick as a cancel();
         // defer to the next tick so the queue has cleared.
         setTimeout(() => {
-            window.speechSynthesis.speak(utterance);
+            speakUtterance(utterance);
         }, 0);
     });
 }

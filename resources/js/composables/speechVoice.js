@@ -141,5 +141,23 @@ export function applySpeechSettingsToUtterance(utterance, voices, appLocale) {
     if (voice) {
         utterance.voice = voice;
         utterance.lang = voice.lang;
+        return;
+    }
+
+    utterance.lang = resolveSpeechLanguageForAppLocale(appLocale);
+}
+
+export function speakUtterance(utterance) {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+        return;
+    }
+
+    const synth = window.speechSynthesis;
+    if (synth.paused) {
+        synth.resume();
+    }
+    synth.speak(utterance);
+    if (synth.paused) {
+        synth.resume();
     }
 }

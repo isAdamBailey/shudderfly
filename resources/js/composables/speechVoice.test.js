@@ -1,9 +1,11 @@
 import {
+    applySpeechSettingsToUtterance,
     getStoredAppLocale,
     normalizeAppLocale,
     persistAppLocale,
     resolveSpeechLanguageForAppLocale,
     resolveSpeechVoice,
+    speakUtterance,
     syncStoredSpeechLanguage,
     voiceMatchesAppLocale,
 } from "@/composables/speechVoice";
@@ -93,5 +95,36 @@ describe("speechVoice", () => {
     it("persists and reads the app locale from localStorage", () => {
         persistAppLocale("es");
         expect(getStoredAppLocale()).toBe("es");
+    });
+
+    it("sets utterance lang from the app locale when no voices are loaded", () => {
+        const utterance = {};
+
+        applySpeechSettingsToUtterance(utterance, [], "es");
+
+        expect(utterance.lang).toBe("es-ES");
+        expect(utterance.voice).toBeUndefined();
+    });
+
+    it("assigns a matching voice when the list is populated", () => {
+        const utterance = {};
+
+        applySpeechSettingsToUtterance(utterance, voices, "fr");
+
+        expect(utterance.voice).toEqual(voices[4]);
+        expect(utterance.lang).toBe("fr-FR");
+    });
+
+    it("speaks after resuming a paused synthesis engine", () => {
+        window.speechSynthesis.paused = true;
+        window.speechSynthesis.resume.mockClear();
+        window.speechSynthesis.speak.mockClear();
+        const utterance = { lang: "en-US" };
+
+        speakUtterance(utterance);
+
+        expect(window.speechSynthesis.resume).toHaveBeenCalled();
+        expect(window.speechSynthesis.speak).toHaveBeenCalledWith(utterance);
+        window.speechSynthesis.paused = false;
     });
 });

@@ -1,6 +1,7 @@
 import {
     applySpeechSettingsToUtterance,
     getStoredAppLocale,
+    speakUtterance,
 } from "@/composables/speechVoice";
 import { useWorldClockSync } from "@/composables/useWorldClockSync";
 import { useTranslations } from "@/composables/useTranslations";
@@ -44,7 +45,7 @@ const announce = (text, appLocale) => {
         const utterance = new SpeechSynthesisUtterance(text);
         const voices = window.speechSynthesis.getVoices();
         applySpeechSettingsToUtterance(utterance, voices, appLocale);
-        window.speechSynthesis.speak(utterance);
+        speakUtterance(utterance);
     } catch (e) {
         console.error("Error announcing timer:", e);
     }
