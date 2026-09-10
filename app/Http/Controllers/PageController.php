@@ -20,6 +20,7 @@ use App\Services\ContentBlockService;
 use App\Services\PopularityService;
 use App\Services\UserTaggingService;
 use App\Services\VoiceSearchService;
+use App\Support\PageContentLinks;
 use App\Support\ReadThrottle;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -369,6 +370,11 @@ class PageController extends Controller
             ->get()
             ->makeVisible(['id']);
 
+        // Snapshot attributions carry a link to the page their frame came
+        // from, and that page can have been deleted or blocked since. Drop
+        // the anchor rather than send the reader to a 404.
+        $page->content = PageContentLinks::unlinkUnviewable($page->content, (bool) $youtubeEnabled);
+
         $page->popularity_percentage = $this->popularityService->calculatePopularity($page);
 
         return Inertia::render('Page/Show', [
@@ -600,17 +606,33 @@ class PageController extends Controller
         return redirect(route('books.show', $page->book))->with('success', __('messages.page.deleted'));
     }
 
-    public function snapshot(Request $request)
+    public function snapshot(Request $request): RedirectResponse
     {
-        $book = Book::find($request->book_id);
+        // page_id ends up as the link in the snapshot's attribution line, so
+        // an id that is missing or points at nothing would bake a 404 into
+        // the new page's content (and, untyped, blow up the job's
+        // constructor before the snapshot is ever taken).
+        $validated = $request->validate([
+            'book_id' => ['required', 'integer', 'exists:books,id'],
+            'page_id' => ['required', 'integer', 'exists:pages,id'],
+            'video_time' => ['required', 'numeric', 'min:0'],
+            'video_url' => ['required', 'url'],
+        ]);
 
         CreateVideoSnapshot::dispatch(
-            videoUrl: $request->video_url,
-            timeInSeconds: $request->video_time,
-            book: $book,
+            videoUrl: $validated['video_url'],
+            timeInSeconds: (float) $validated['video_time'],
+            book: Book::findOrFail($validated['book_id']),
             user: $request->user(),
-            pageId: $request->page_id
+            pageId: (int) $validated['page_id']
         );
+
+        // Returning nothing here left Inertia with a bodyless, non-Inertia
+        // 200: it opened an empty error dialog and never ran the form's
+        // onSuccess, so the "got a screenshot" line was never spoken. The
+        // caller keeps its state across this redirect, so the video the
+        // snapshot came from carries on playing.
+        return back();
     }
 
     /**

@@ -189,8 +189,12 @@ const optimizedFetchPriority = computed(() => {
 
 const snapshotEnabled = useSiteSetting("snapshot_enabled");
 
+// pageId is what links the snapshot back to the video it came from, and the
+// server now requires it, so a loader that wasn't given one gets no button
+// rather than a button that fails.
 const isButtonVisible = computed(
-    () => !props.isCover && props.bookId && snapshotEnabled.value
+    () =>
+        !props.isCover && props.bookId && props.pageId && snapshotEnabled.value
 );
 
 const handleMediaError = () => {
@@ -248,6 +252,10 @@ const takeSnapshot = () => {
     // eslint-disable-next-line no-undef
     form.post(route("pages.snapshot"), {
         preserveScroll: true,
+        // The response redirects back to this same page; keep the component
+        // alive across it so the video the snapshot came from is not
+        // remounted back to its first frame.
+        preserveState: true,
         onSuccess: () => {
             speak(t("snapshot.got_screenshot", { name: user.name }));
         },

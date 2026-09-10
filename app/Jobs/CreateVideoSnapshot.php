@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Book;
 use App\Models\User;
 use App\Services\MediaDescriptionService;
+use App\Support\PageContentLinks;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -338,7 +339,7 @@ class CreateVideoSnapshot implements ShouldQueue
                 // Describe the frame before the local copy goes away. The
                 // attribution line below is kept underneath the description,
                 // and a failing model just leaves the attribution on its own.
-                $content = "<p><strong>{$this->user->name}</strong> took this screenshot from <strong><a href='/pages/{$this->pageId}'>this video</a></strong>.</p>";
+                $content = PageContentLinks::snapshotAttribution($this->user->name, $this->pageId);
 
                 try {
                     $content = $descriptions->prependDescription($content, file_get_contents($fullImagePath) ?: null);
