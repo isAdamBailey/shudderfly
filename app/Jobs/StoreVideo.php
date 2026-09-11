@@ -236,6 +236,7 @@ class StoreVideo implements ShouldQueue
                 '-threads', '1',
                 '-vf',
                 $videoFilter,
+                '-pix_fmt', 'yuv420p',
                 '-metadata', 'location=',
                 '-metadata', 'location-eng=',
                 '-metadata', 'GPS_COORDINATES=',
