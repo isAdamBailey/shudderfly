@@ -1,5 +1,6 @@
 <script setup>
 import FlashMessage from "@/Components/Flash.vue";
+import GhostDrift from "@/Components/GhostDrift.vue";
 import MusicFlyout from "@/Components/Music/MusicFlyout.vue";
 import { useMusicPlayer } from "@/composables/useMusicPlayer";
 import { usePusherNotifications } from "@/composables/usePusherNotifications";
@@ -135,5 +136,7 @@ watch(
         </div>
 
         <MusicFlyout />
+
+        <GhostDrift />
     </div>
 </template>
