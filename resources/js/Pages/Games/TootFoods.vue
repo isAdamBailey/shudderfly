@@ -12,7 +12,7 @@ const { t } = useTranslations();
 <template>
     <Head :title="t('games.toot_foods.title')" />
 
-    <AuthenticatedLayout hide-search>
+    <AuthenticatedLayout>
         <div class="toot-foods-page game-page">
             <TootFoodsApp />
         </div>

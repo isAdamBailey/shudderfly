@@ -37,16 +37,16 @@ describe("Components/SearchInput.vue", () => {
         router.get.mockClear();
     });
 
-    it("shows target toggle and keeps input hidden initially", async () => {
+    it("shows the target toggle and the input together", async () => {
         const wrapper = mount(SearchInput);
         const radios = wrapper.findAll('[role="radio"]');
         expect(radios.length).toBe(2);
-        expect(radios[0].text()).toContain("Search Books");
-        expect(radios[1].text()).toContain("Search ALL");
-        expect(wrapper.find('input[type="search"]').exists()).toBe(false);
+        expect(radios[0].text()).toBe("Books");
+        expect(radios[1].text()).toBe("ALL");
+        expect(wrapper.find('input[type="search"]').exists()).toBe(true);
     });
 
-    it("expands search input after selecting a target", async () => {
+    it("updates the placeholder when switching target", async () => {
         Object.defineProperty(window, "location", {
             value: { pathname: "/" },
             writable: true,

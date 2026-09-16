@@ -7,7 +7,7 @@
             alt="placeholder image"
             loading="lazy"
         />
-        <div v-else-if="isVideo(imageSrc)" :class="containerClasses">
+        <div v-else-if="isVideo(imageSrc)" :class="videoWrapperClasses">
             <video
                 ref="videoRef"
                 :controls="!isCover"
@@ -125,6 +125,12 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    // Fill the container's box but keep the media at its own aspect ratio,
+    // so a video's controls stay the width of the video.
+    fitContainer: {
+        type: Boolean,
+        default: false,
+    },
     loading: {
         type: String,
         default: "lazy",
@@ -160,6 +166,10 @@ const canTakeSnapshot = ref(false);
 const isPaused = ref(true);
 
 const imageClasses = computed(() => {
+    if (props.fitContainer) {
+        return `max-w-full max-h-full object-${props.objectFit}`;
+    }
+
     if (props.fillContainer) {
         return `w-full h-full object-${props.objectFit}`;
     }
@@ -172,8 +182,16 @@ const imageClasses = computed(() => {
     return `w-auto h-[70vh] object-${props.objectFit}`;
 });
 
+// In fit mode the wrapper hugs the video, so the snapshot button sits on the
+// video's corner rather than the far edge of the container.
+const videoWrapperClasses = computed(() =>
+    props.fitContainer
+        ? "relative flex h-full max-w-full items-center"
+        : containerClasses.value
+);
+
 const containerClasses = computed(() => {
-    if (props.fillContainer) {
+    if (props.fillContainer || props.fitContainer) {
         return "relative w-full h-full flex items-center justify-center";
     }
     return "relative flex items-center justify-center";

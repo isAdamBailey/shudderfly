@@ -12,7 +12,7 @@ const { t } = useTranslations();
 <template>
     <Head :title="t('games.cockroach.title')" />
 
-    <AuthenticatedLayout hide-search>
+    <AuthenticatedLayout>
         <div class="cockroach-page game-page">
             <CockroachApp />
         </div>

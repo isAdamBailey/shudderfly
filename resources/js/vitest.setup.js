@@ -47,6 +47,7 @@ vi.mock("@inertiajs/vue3", () => ({
         put: vi.fn(),
         patch: vi.fn(),
         delete: vi.fn(),
+        on: vi.fn(() => () => {}),
     },
 }));
 
@@ -59,7 +60,7 @@ vi.mock("@/Components/SearchInput.vue", () => ({
     default: {
         name: "SearchInput",
         template: "<div class='search-input' />",
-        props: ["label", "initialTarget"],
+        methods: { focus() {}, toggleVoiceRecognition() {} },
     },
 }));
 

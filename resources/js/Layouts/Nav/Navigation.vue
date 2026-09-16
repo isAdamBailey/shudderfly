@@ -6,6 +6,8 @@ import Dropdown from "@/Components/Dropdown.vue";
 import EmojiRiseOverlay from "@/Components/EmojiRiseOverlay.vue";
 import FireworksAnimation from "@/Components/FireworksAnimation.vue";
 import NotificationList from "@/Components/NotificationList.vue";
+import HeaderSearchButton from "@/Layouts/Nav/HeaderSearchButton.vue";
+import HeaderSearchPanel from "@/Layouts/Nav/HeaderSearchPanel.vue";
 import NavMenuItem from "@/Layouts/Nav/NavMenuItem.vue";
 import NavPill from "@/Layouts/Nav/NavPill.vue";
 import NavTab from "@/Layouts/Nav/NavTab.vue";
@@ -99,7 +101,7 @@ const topNavItems = computed(() => {
         <FireworksAnimation>
             <div class="px-2 sm:px-6 lg:px-8">
                 <div class="grid h-16 grid-cols-3 items-center gap-1">
-                    <div class="flex min-w-0 items-center justify-start">
+                    <div class="flex min-w-0 items-center justify-start gap-1">
                         <Link
                             :href="route('welcome')"
                             class="shrink-0 flex items-center max-w-10 sm:max-w-14"
@@ -113,6 +115,7 @@ const topNavItems = computed(() => {
                                 @animationend="isLogoSpinning = false"
                             />
                         </Link>
+                        <HeaderSearchButton variant="icon" class="sm:hidden" />
                     </div>
 
                     <div class="flex items-center justify-center">
@@ -227,15 +230,22 @@ const topNavItems = computed(() => {
         class="sticky top-16 z-40 hidden border-b border-white/10 bg-black/10 backdrop-blur-sm dark:bg-black/20 sm:flex"
     >
         <div
-            class="horizontal-scroll-strip flex w-full flex-nowrap items-center gap-1 overflow-x-auto overscroll-x-contain px-2 py-1.5 sm:px-6 lg:px-8"
+            class="flex w-full min-w-0 items-center gap-2 pr-2 sm:pr-6 lg:pr-8"
         >
-            <NavPill
-                v-for="item in topNavItems"
-                :key="`pill-${item.label}`"
-                v-bind="item"
-            />
+            <div
+                class="horizontal-scroll-strip flex min-w-0 flex-1 flex-nowrap items-center gap-1 overflow-x-auto overscroll-x-contain py-1.5 pl-2 sm:pl-6 lg:pl-8"
+            >
+                <NavPill
+                    v-for="item in topNavItems"
+                    :key="`pill-${item.label}`"
+                    v-bind="item"
+                />
+            </div>
+            <HeaderSearchButton class="border-l border-white/10 pl-2" />
         </div>
     </nav>
+
+    <HeaderSearchPanel />
 
     <nav
         aria-label="Primary"

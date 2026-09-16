@@ -122,6 +122,13 @@ return [
     'search.voice_network_error' => 'Erreur de réseau pendant la connexion à la reconnaissance vocale.',
     'search.voice_no_speech' => 'Aucune parole détectée. Réessaie.',
     'search.voice_aborted' => 'La reconnaissance vocale s\'est arrêtée avant la fin.',
+    'search.open' => 'Rechercher',
+    'search.close_aria' => 'Fermer la recherche',
+    'search.voice_aria' => 'Rechercher avec ta voix',
+    'search.active' => 'Recherche : :query',
+    'page.back_to_book' => 'Retour à :title',
+    'page.previous' => 'Page précédente',
+    'page.next' => 'Page suivante',
 
     // UI Labels - Messages
     'message.whats_on_your_mind' => 'Qu\'est-ce que tu veux dire ?',

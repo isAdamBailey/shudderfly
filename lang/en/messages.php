@@ -122,6 +122,13 @@ return [
     'search.voice_network_error' => 'Network error while connecting to speech recognition.',
     'search.voice_no_speech' => 'No speech was detected. Please try again.',
     'search.voice_aborted' => 'Speech recognition was stopped before completion.',
+    'search.open' => 'Search',
+    'search.close_aria' => 'Close search',
+    'search.voice_aria' => 'Search with your voice',
+    'search.active' => 'Searching: :query',
+    'page.back_to_book' => 'Back to :title',
+    'page.previous' => 'Previous page',
+    'page.next' => 'Next page',
 
     // UI Labels - Messages
     'message.whats_on_your_mind' => 'What do you want to say?',

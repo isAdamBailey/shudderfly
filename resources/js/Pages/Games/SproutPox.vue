@@ -12,7 +12,7 @@ const { t } = useTranslations();
 <template>
     <Head :title="t('games.sprout_pox.title')" />
 
-    <AuthenticatedLayout hide-search>
+    <AuthenticatedLayout>
         <div class="sprout-pox-page game-page">
             <SproutPoxApp />
         </div>

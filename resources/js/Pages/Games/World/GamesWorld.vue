@@ -106,7 +106,7 @@ const MOBILE_NAV_HEIGHT = 80; // AuthenticatedLayout's pb-20 bottom nav
 function measure() {
     if (!stageEl.value) return;
     const rect = stageEl.value.getBoundingClientRect();
-    // The page header above the stage is not a fixed height (search bar, title,
+    // The page header above the stage is not a fixed height (flash messages, title,
     // seasonal chrome), so the stage takes exactly what is left of the viewport
     // rather than guessing in CSS — otherwise the road hangs below the fold.
     const reserved = window.innerWidth < 640 ? MOBILE_NAV_HEIGHT : 0;

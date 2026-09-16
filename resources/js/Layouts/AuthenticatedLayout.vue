@@ -1,7 +1,6 @@
 <script setup>
 import FlashMessage from "@/Components/Flash.vue";
 import MusicFlyout from "@/Components/Music/MusicFlyout.vue";
-import SearchInput from "@/Components/SearchInput.vue";
 import { useMusicPlayer } from "@/composables/useMusicPlayer";
 import { usePusherNotifications } from "@/composables/usePusherNotifications";
 import { usePushNotifications } from "@/composables/usePushNotifications";
@@ -14,12 +13,6 @@ import {
 } from "@/composables/speechVoice";
 import { usePage } from "@inertiajs/vue3";
 import { onMounted, ref, watch } from "vue";
-
-defineProps({
-    // Lets a page reclaim the search bar's vertical space — e.g. the Games
-    // World stage, which measures and fills whatever height is left.
-    hideSearch: { type: Boolean, default: false },
-});
 
 usePusherNotifications();
 
@@ -127,8 +120,6 @@ watch(
             <Navigation />
 
             <FlashMessage />
-
-            <SearchInput v-if="!hideSearch" />
 
             <header v-if="$slots.header" class="border-gray-900">
                 <div class="max-w-7xl mx-auto py-2 px-4 sm:px-6 lg:px-8 mt-3">

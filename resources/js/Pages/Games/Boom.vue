@@ -420,7 +420,7 @@ useAutoStartGame(startGame);
 <template>
     <Head :title="t('games.boom.title')" />
 
-    <AuthenticatedLayout hide-search>
+    <AuthenticatedLayout>
         <div class="boom-wrapper game-page">
             <Transition name="fade">
                 <GameEndScreen

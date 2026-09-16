@@ -12,7 +12,7 @@ const { t } = useTranslations();
 <template>
     <Head :title="t('games.costco_pizza_poop.title')" />
 
-    <AuthenticatedLayout hide-search>
+    <AuthenticatedLayout>
         <div class="costco-pizza-poop-page game-page">
             <CostcoPizzaPoopApp />
         </div>

@@ -122,6 +122,13 @@ return [
     'search.voice_network_error' => 'Error de red al conectar con el reconocimiento de voz.',
     'search.voice_no_speech' => 'No se detectó voz. Inténtalo otra vez.',
     'search.voice_aborted' => 'El reconocimiento de voz se detuvo antes de terminar.',
+    'search.open' => 'Buscar',
+    'search.close_aria' => 'Cerrar búsqueda',
+    'search.voice_aria' => 'Buscar con tu voz',
+    'search.active' => 'Buscando: :query',
+    'page.back_to_book' => 'Volver a :title',
+    'page.previous' => 'Página anterior',
+    'page.next' => 'Página siguiente',
 
     // UI Labels - Messages
     'message.whats_on_your_mind' => '¿Qué quieres decir?',

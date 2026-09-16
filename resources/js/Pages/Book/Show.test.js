@@ -354,7 +354,7 @@ describe("Book/Show.vue", () => {
         ).toBe(true);
     });
 
-    // SearchInput is now in the global layout header, not inside Book/Show
+    // SearchInput lives in the header search panel, not inside Book/Show
 
     it("renders edit book form when activeTab is 'book'", async () => {
         wrapper.vm.activeTab = "book";
