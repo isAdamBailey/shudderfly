@@ -289,6 +289,10 @@ const shareMenuItemLabel = computed(() => t("share_to_timeline"));
 const confirmThenShare = async (taggedUser, postAction) => {
     if (confirmPending.value) return;
     confirmPending.value = true;
+    // The tag menu is teleported to the body at a higher z-index than the
+    // confirm dialog's modal, so it would sit on top of the confirm/cancel
+    // buttons. Close it as soon as a selection is made.
+    shareMenuOpen.value = false;
     try {
         const prefix = confirmPrefix.value;
         const speakPhrase = taggedUser
@@ -305,6 +309,7 @@ const confirmThenShare = async (taggedUser, postAction) => {
         speak(speakPhrase);
         const ok = await okPromise;
         if (!ok) {
+            selectedShareUserId.value = null;
             return;
         }
         postAction();

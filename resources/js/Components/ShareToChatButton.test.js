@@ -36,6 +36,16 @@ vi.mock("@inertiajs/vue3", () => ({
     }),
 }));
 
+// Resolved by the test once it has asserted on the state while the confirm
+// dialog is open, so the tag menu can be inspected mid-flight.
+let resolveConfirm = null;
+const confirmAsk = vi.fn(
+    () =>
+        new Promise((resolve) => {
+            resolveConfirm = resolve;
+        })
+);
+
 vi.mock("@/composables/useConfirmDialog", () => ({
     useConfirmDialog: () => ({
         show: { value: false },
@@ -44,7 +54,7 @@ vi.mock("@/composables/useConfirmDialog", () => ({
         confirmLabel: { value: "" },
         cancelLabel: { value: "" },
         confirmVariant: { value: "primary" },
-        ask: () => Promise.resolve(true),
+        ask: (...args) => confirmAsk(...args),
         onConfirmed: () => {},
         onCancelled: () => {},
     }),
@@ -66,6 +76,13 @@ describe("ShareToChatButton song kind", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         localStorage.clear();
+        resolveConfirm = null;
+        confirmAsk.mockImplementation(
+            () =>
+                new Promise((resolve) => {
+                    resolveConfirm = resolve;
+                })
+        );
         mockPost.mockImplementation((_url, _data, options) => {
             options?.onSuccess?.();
         });
@@ -81,6 +98,14 @@ describe("ShareToChatButton song kind", () => {
             },
         });
 
+    // The component awaits the confirm dialog before posting; settle both the
+    // confirmation and the render that follows it.
+    const confirmShare = async (ok = true) => {
+        resolveConfirm?.(ok);
+        await nextTick();
+        await nextTick();
+    };
+
     it("posts to music.share when share without tag is selected", async () => {
         const wrapper = mountSongShareButton();
 
@@ -90,7 +115,7 @@ describe("ShareToChatButton song kind", () => {
         const userTagList = wrapper.findComponent(UserTagList);
         expect(userTagList.exists()).toBe(true);
         userTagList.vm.$emit("select-none");
-        await nextTick();
+        await confirmShare();
 
         expect(mockPost).toHaveBeenCalledWith(
             "/music/5/share",
@@ -106,7 +131,7 @@ describe("ShareToChatButton song kind", () => {
         await nextTick();
 
         wrapper.findComponent(UserTagList).vm.$emit("select-none");
-        await nextTick();
+        await confirmShare();
 
         const today = new Date().toISOString().split("T")[0];
         expect(localStorage.getItem(`song_share_5_${today}`)).not.toBeNull();
@@ -119,8 +144,52 @@ describe("ShareToChatButton song kind", () => {
         await nextTick();
 
         wrapper.findComponent(UserTagList).vm.$emit("select-none");
-        await nextTick();
+        await confirmShare();
 
         expect(mockCloseFlyout).toHaveBeenCalled();
+    });
+
+    it("closes the tag menu before the confirm dialog opens", async () => {
+        const wrapper = mountSongShareButton();
+
+        await wrapper.find("button").trigger("click");
+        await nextTick();
+        expect(wrapper.findComponent(UserTagList).exists()).toBe(true);
+
+        wrapper.findComponent(UserTagList).vm.$emit("select", {
+            id: 2,
+            name: "Bob",
+        });
+        await nextTick();
+
+        // Confirm dialog is still awaiting an answer, and the menu is already
+        // gone so it can't cover the dialog's buttons.
+        expect(confirmAsk).toHaveBeenCalled();
+        expect(wrapper.findComponent(UserTagList).exists()).toBe(false);
+        expect(mockPost).not.toHaveBeenCalled();
+
+        await confirmShare();
+
+        expect(mockPost).toHaveBeenCalledWith(
+            "/music/5/share",
+            { tagged_user_ids: [2] },
+            expect.objectContaining({ preserveScroll: true })
+        );
+    });
+
+    it("leaves the tag menu closed and posts nothing when the share is cancelled", async () => {
+        const wrapper = mountSongShareButton();
+
+        await wrapper.find("button").trigger("click");
+        await nextTick();
+
+        wrapper.findComponent(UserTagList).vm.$emit("select", {
+            id: 2,
+            name: "Bob",
+        });
+        await confirmShare(false);
+
+        expect(mockPost).not.toHaveBeenCalled();
+        expect(wrapper.findComponent(UserTagList).exists()).toBe(false);
     });
 });
