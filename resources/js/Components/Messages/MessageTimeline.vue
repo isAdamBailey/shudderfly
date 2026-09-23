@@ -99,35 +99,52 @@
                     "
                     class="mt-2 md:mt-3"
                 >
-                    <div v-if="message.page.video_link" class="mt-2">
+                    <!-- VideoWrapper renders a lazy facade (thumbnail + play
+                         button) and only creates the iframe once tapped, so a
+                         timeline full of shared videos costs one image each. -->
+                    <div
+                        v-if="playsInline(message)"
+                        :class="`mt-2 ${SHARED_MEDIA_WIDTH_CLASS}`"
+                        @click.stop
+                    >
+                        <VideoWrapper
+                            :url="message.page.video_link"
+                            :title="getPageMediaAlt(message.page)"
+                            lazy-poster
+                        />
+                        <!-- The player swallows the tap, so the way back to the
+                             page it came from needs its own link. -->
                         <Link
                             :href="route('pages.show', message.page_id)"
-                            class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors inline-flex items-center gap-1"
-                            @click.stop
+                            class="mt-1 inline-flex items-center gap-1 text-sm text-blue-600 transition-colors hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                         >
-                            <i class="ri-play-circle-line text-base"></i>
-                            <span>Watch video</span>
+                            <i class="ri-external-link-line text-base"></i>
+                            <span>{{ t("message.open_page") }}</span>
                         </Link>
                     </div>
                     <Link
-                        v-if="!message.page.video_link"
+                        v-else
                         :href="route('pages.show', message.page_id)"
-                        class="block rounded-lg overflow-hidden w-full max-w-[200px] sm:max-w-[250px] mt-2"
+                        :class="`relative block rounded-lg overflow-hidden ${SHARED_MEDIA_WIDTH_CLASS} mt-2`"
                         @click.stop
                     >
                         <img
                             :src="getPageImageSrc(message.page)"
-                            :alt="
-                                message.page.content
-                                    ? stripHtml(message.page.content).substring(
-                                          0,
-                                          50
-                                      )
-                                    : t('message.shared_page')
-                            "
-                            class="w-full h-auto max-h-[200px] sm:max-h-[250px] object-contain rounded-lg"
+                            :alt="getPageMediaAlt(message.page)"
+                            :class="`w-full h-auto ${SHARED_MEDIA_HEIGHT_CLASS} object-contain rounded-lg`"
                             loading="lazy"
                         />
+                        <!-- Uploaded videos only have a poster here, so mark
+                             them as playable rather than leaving a still. -->
+                        <span
+                            v-if="isVideoPage(message.page)"
+                            class="absolute inset-0 flex items-center justify-center"
+                            aria-hidden="true"
+                        >
+                            <i
+                                class="ri-play-circle-fill text-5xl text-white drop-shadow-lg"
+                            ></i>
+                        </span>
                     </Link>
                 </div>
                 <div
@@ -136,7 +153,7 @@
                 >
                     <button
                         type="button"
-                        class="block rounded-lg overflow-hidden w-full max-w-[200px] sm:max-w-[250px] mt-2"
+                        :class="`block rounded-lg overflow-hidden ${SHARED_MEDIA_WIDTH_CLASS} mt-2`"
                         @click.stop="playSharedSong(message.song)"
                     >
                         <img
@@ -144,7 +161,7 @@
                             :alt="
                                 message.song.title || t('message.shared_song')
                             "
-                            class="w-full h-auto max-h-[200px] sm:max-h-[250px] object-cover rounded-lg"
+                            :class="`w-full h-auto ${SHARED_MEDIA_HEIGHT_CLASS} object-cover rounded-lg`"
                             loading="lazy"
                         />
                     </button>
@@ -155,7 +172,7 @@
                 >
                     <Link
                         :href="getMovieCastHref(message)"
-                        class="block rounded-lg overflow-hidden w-full max-w-[200px] sm:max-w-[250px] mt-2"
+                        :class="`block rounded-lg overflow-hidden ${SHARED_MEDIA_WIDTH_CLASS} mt-2`"
                         @click.stop
                     >
                         <img
@@ -164,12 +181,12 @@
                             :alt="
                                 message.movie_title || t('message.shared_movie')
                             "
-                            class="w-full h-auto max-h-[200px] sm:max-h-[250px] object-cover rounded-lg"
+                            :class="`w-full h-auto ${SHARED_MEDIA_HEIGHT_CLASS} object-cover rounded-lg`"
                             loading="lazy"
                         />
                         <div
                             v-else
-                            class="flex items-center justify-center w-full max-w-[200px] aspect-[2/3] rounded-lg bg-gray-200 dark:bg-gray-700"
+                            :class="`flex items-center justify-center ${SHARED_MEDIA_FIXED_HEIGHT_CLASS} aspect-[2/3] rounded-lg bg-gray-200 dark:bg-gray-700`"
                         >
                             <i
                                 class="ri-film-line text-4xl text-gray-500 dark:text-gray-400"
@@ -184,7 +201,7 @@
                 >
                     <button
                         type="button"
-                        class="flex items-center gap-3 rounded-lg overflow-hidden w-full max-w-[200px] sm:max-w-[250px] mt-2 px-3 py-2 bg-gray-100 dark:bg-gray-700"
+                        :class="`flex items-center gap-3 rounded-lg overflow-hidden ${SHARED_SOUND_WIDTH_CLASS} mt-2 px-3 py-2 bg-gray-100 dark:bg-gray-700`"
                         @click.stop="playSharedSound(message.sound)"
                     >
                         <span class="text-2xl leading-none">{{
@@ -214,7 +231,7 @@
                 >
                     <Link
                         :href="route('books.show', { book: message.book.slug })"
-                        class="block rounded-lg overflow-hidden w-full max-w-[200px] sm:max-w-[250px] mt-2"
+                        :class="`block rounded-lg overflow-hidden ${SHARED_MEDIA_WIDTH_CLASS} mt-2`"
                         @click.stop
                     >
                         <img
@@ -223,12 +240,12 @@
                             :alt="
                                 message.book.title || t('message.shared_book')
                             "
-                            class="w-full h-auto max-h-[200px] sm:max-h-[250px] object-contain rounded-lg"
+                            :class="`w-full h-auto ${SHARED_MEDIA_HEIGHT_CLASS} object-contain rounded-lg`"
                             loading="lazy"
                         />
                         <div
                             v-else
-                            class="flex items-center justify-center w-full max-w-[200px] aspect-[2/3] rounded-lg bg-gray-200 dark:bg-gray-700"
+                            :class="`flex items-center justify-center ${SHARED_MEDIA_FIXED_HEIGHT_CLASS} aspect-[2/3] rounded-lg bg-gray-200 dark:bg-gray-700`"
                         >
                             <i
                                 class="ri-book-2-line text-4xl text-gray-500 dark:text-gray-400"
@@ -243,19 +260,19 @@
                 >
                     <Link
                         :href="route('collages.archived')"
-                        class="block rounded-lg overflow-hidden w-full max-w-[200px] sm:max-w-[250px] mt-2"
+                        :class="`block rounded-lg overflow-hidden ${SHARED_MEDIA_WIDTH_CLASS} mt-2`"
                         @click.stop
                     >
                         <img
                             v-if="message.collage.preview_path"
                             :src="message.collage.preview_path"
                             :alt="t('message.shared_collage')"
-                            class="w-full h-auto max-h-[200px] sm:max-h-[250px] object-contain rounded-lg"
+                            :class="`w-full h-auto ${SHARED_MEDIA_HEIGHT_CLASS} object-contain rounded-lg`"
                             loading="lazy"
                         />
                         <div
                             v-else
-                            class="flex items-center justify-center w-full max-w-[200px] aspect-[8.5/11] rounded-lg bg-gray-200 dark:bg-gray-700"
+                            :class="`flex items-center justify-center ${SHARED_MEDIA_FIXED_HEIGHT_CLASS} aspect-[8.5/11] rounded-lg bg-gray-200 dark:bg-gray-700`"
                         >
                             <i
                                 class="ri-file-pdf-line text-4xl text-gray-500 dark:text-gray-400"
@@ -264,6 +281,7 @@
                         </div>
                     </Link>
                 </div>
+                <SharedExcerpt :text="getSharedDescription(message)" />
                 <MessageReactions
                     v-if="!readOnly"
                     :grouped-reactions="message.grouped_reactions || {}"
@@ -546,10 +564,20 @@ import CommentItem from "@/Components/Messages/CommentItem.vue";
 import MessageBuilderModal from "@/Components/Messages/MessageBuilderModal.vue";
 import MessageCTA from "@/Components/Messages/MessageCTA.vue";
 import MessageReactions from "@/Components/Messages/MessageReactions.vue";
+import SharedExcerpt from "@/Components/Messages/SharedExcerpt.vue";
+import truncate from "lodash/truncate";
+import {
+    SHARED_MEDIA_FIXED_HEIGHT_CLASS,
+    SHARED_MEDIA_HEIGHT_CLASS,
+    SHARED_MEDIA_WIDTH_CLASS,
+    SHARED_SOUND_WIDTH_CLASS,
+} from "@/Components/Messages/sharedMedia";
 import ViewReactionsModal from "@/Components/Messages/ViewReactionsModal.vue";
 import Modal from "@/Components/Modal.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
+import VideoWrapper from "@/Components/VideoWrapper.vue";
 import { channelName } from "@/utils/broadcastChannel";
+import { stripHtml } from "@/utils/text";
 import { usePermissions } from "@/composables/permissions";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useEmojiRise } from "@/composables/useEmojiRise";
@@ -564,6 +592,7 @@ import { useMessageBuilder } from "@/composables/useMessageBuilder";
 import { useMessageLocator } from "@/composables/useMessageLocator";
 import { useMusicPlayer } from "@/composables/useMusicPlayer";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { isEmbeddableYouTubeVideo } from "@/composables/useGetYouTubeVideo";
 import { useTranslations } from "@/composables/useTranslations";
 import { useMedia } from "@/mediaHelpers";
 import { Link, router, usePage } from "@inertiajs/vue3";
@@ -749,11 +778,23 @@ watch(
     { immediate: false }
 );
 
-const getPageImageSrc = (page) => {
-    const isVideoPage =
-        page.video_link || (page.media_path && isVideo(page.media_path));
+const isVideoPage = (page) =>
+    Boolean(page.video_link || (page.media_path && isVideo(page.media_path)));
 
-    if (isVideoPage) {
+// Only links we can turn into a YouTube embed play inline; anything else falls
+// back to the poster thumbnail that links through to the page. Read-only
+// timelines are previews where a tap should open the message, so they keep the
+// thumbnail too.
+const playsInline = (message) =>
+    !props.readOnly && isEmbeddableYouTubeVideo(message.page?.video_link);
+
+const getPageMediaAlt = (page) =>
+    page.content
+        ? truncate(stripHtml(page.content), { length: 50, separator: " " })
+        : t("message.shared_page");
+
+const getPageImageSrc = (page) => {
+    if (isVideoPage(page)) {
         return page.media_poster || "/img/video-placeholder.png";
     }
 
@@ -969,13 +1010,6 @@ const formatMessage = (text) => {
     return formatted;
 };
 
-const stripHtml = (html) => {
-    if (!html) return "";
-    const tmp = document.createElement("div");
-    tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || "";
-};
-
 const formatMentionsForSpeech = (text) => {
     if (!text) return "";
 
@@ -1002,10 +1036,30 @@ const formatMentionsForSpeech = (text) => {
     return formatted.replace(/@([a-zA-Z0-9_]+)(?!\w)/g, "$1");
 };
 
+// The description the timeline captions shared content with, read in full
+// after the message itself. The caption truncates to fit its box; speech has
+// no such constraint, so it gets the whole thing.
+const getSharedDescription = (message) =>
+    message.page?.content || message.book?.excerpt || "";
+
+// Speech runs the parts together without a pause unless each one ends in
+// sentence punctuation.
+const joinForSpeech = (...parts) =>
+    parts
+        .filter(Boolean)
+        .map((part) => {
+            const trimmed = part.trim();
+            return /[.!?…]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+        })
+        .join(" ");
+
 const speakMessage = (message) => {
-    const messageText = formatMentionsForSpeech(message.message);
-    const username = message.user?.name || t("general.someone");
-    speak(t("message.user_says", { username, text: messageText }));
+    speak(
+        joinForSpeech(
+            formatMentionsForSpeech(message.message),
+            stripHtml(getSharedDescription(message))
+        )
+    );
 };
 
 const deleteMessage = async (messageId) => {
@@ -1339,9 +1393,7 @@ const openCommentForm = (messageId) => {
 };
 
 const speakComment = (comment) => {
-    const commentText = formatMentionsForSpeech(comment.comment || "");
-    const username = comment.user?.name || t("general.someone");
-    speak(t("message.user_says", { username, text: commentText }));
+    speak(formatMentionsForSpeech(comment.comment || ""));
 };
 
 const speakViewReactions = () => {

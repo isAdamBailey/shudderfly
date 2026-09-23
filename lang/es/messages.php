@@ -157,6 +157,7 @@ return [
     'message.shared_book' => 'Libro compartido',
     'message.shared_sound' => 'Sonido compartido',
     'message.shared_collage' => 'Collage compartido',
+    'message.open_page' => 'Ver la página',
 
     // UI Labels - Comments
     'comment.actions' => 'Cosas que puedes hacer',
@@ -605,10 +606,8 @@ return [
     'general.comments' => 'comentarios',
     'general.reaction' => 'reacción',
     'general.reactions' => 'reacciones',
-    'general.someone' => 'Alguien',
 
     // Message speech
-    'message.user_says' => ':username dice :text',
     'message.no_reactions' => 'Sin reacciones',
     'message.reaction_from' => ':emoji de :names',
     'message.posting' => 'Publicando tu mensaje.',

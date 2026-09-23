@@ -153,7 +153,6 @@ vi.mock("@/composables/useTranslations", () => ({
                 "message.start_conversation": "Be the first to reply!",
                 "message.show_more_comments": "Show :count more",
                 "message.show_less_comments": "Show less",
-                "message.user_says": ":username says :text",
                 "message.no_reactions": "No reactions",
                 "message.reaction_from": ":emoji from :names",
                 "comment.add_reaction": "Add reaction",
@@ -168,7 +167,6 @@ vi.mock("@/composables/useTranslations", () => ({
                 "general.speak_all_reactions": "Speak all reactions",
                 "general.speak_all_reactions_aria": "Speak all reactions",
                 "general.view_message": "View Message",
-                "general.someone": "Someone",
                 "reaction.thumbs_up": "thumbs up",
                 "reaction.heart": "heart",
                 "reaction.laughing": "laughing",
@@ -462,8 +460,91 @@ describe("MessageTimeline", () => {
 
             wrapper.vm.speakMessage(messageWithMention[0]);
 
+            expect(mockSpeak).toHaveBeenCalledWith("Hello John Doe!");
+        });
+
+        it("speaks the shared description after the message", () => {
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: [
+                        {
+                            id: 1,
+                            message: "Look at this",
+                            created_at: new Date().toISOString(),
+                            user: { id: 1, name: "Alice" },
+                            page_id: 123,
+                            page: {
+                                id: 123,
+                                media_path: "https://example.com/image.jpg",
+                                content: "<p>A dog on a skateboard</p>",
+                            },
+                        },
+                    ],
+                    users: mockUsers,
+                },
+            });
+
+            wrapper.vm.speakMessage(wrapper.vm.localMessages[0]);
+
             expect(mockSpeak).toHaveBeenCalledWith(
-                "Alice says Hello John Doe!"
+                "Look at this. A dog on a skateboard."
+            );
+        });
+
+        it("speaks the whole description, not the truncated caption", () => {
+            const longContent = "word ".repeat(60).trim();
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: [
+                        {
+                            id: 1,
+                            message: "Look",
+                            created_at: new Date().toISOString(),
+                            user: { id: 1, name: "Alice" },
+                            page_id: 123,
+                            page: {
+                                id: 123,
+                                media_path: "https://example.com/image.jpg",
+                                content: `<p>${longContent}</p>`,
+                            },
+                        },
+                    ],
+                    users: mockUsers,
+                },
+            });
+
+            wrapper.vm.speakMessage(wrapper.vm.localMessages[0]);
+
+            const spoken = mockSpeak.mock.calls.at(-1)[0];
+            expect(spoken).toContain(longContent);
+            expect(spoken).not.toContain("…");
+        });
+
+        it("speaks a book excerpt as the shared description", () => {
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: [
+                        {
+                            id: 1,
+                            message: "Read this!",
+                            created_at: new Date().toISOString(),
+                            user: { id: 1, name: "Alice" },
+                            book_id: 7,
+                            book: {
+                                id: 7,
+                                slug: "a-book",
+                                excerpt: "All about trains",
+                            },
+                        },
+                    ],
+                    users: mockUsers,
+                },
+            });
+
+            wrapper.vm.speakMessage(wrapper.vm.localMessages[0]);
+
+            expect(mockSpeak).toHaveBeenCalledWith(
+                "Read this! All about trains."
             );
         });
 
@@ -480,7 +561,7 @@ describe("MessageTimeline", () => {
                 user: { id: 2, name: "Bob" },
             });
 
-            expect(mockSpeak).toHaveBeenCalledWith("Bob says Thanks John Doe!");
+            expect(mockSpeak).toHaveBeenCalledWith("Thanks John Doe!");
         });
 
         it("displays messages with full usernames", () => {
@@ -1183,6 +1264,106 @@ describe("MessageTimeline", () => {
             expect(wrapper.text()).toContain("shared this page from Test Book");
             const lazyLoader = wrapper.findComponent({ name: "LazyLoader" });
             expect(lazyLoader.exists()).toBe(false);
+        });
+
+        it("shows a truncated excerpt of the page content", async () => {
+            const mockMessages = [
+                {
+                    id: 1,
+                    message: "check out this page from Test Book",
+                    created_at: new Date().toISOString(),
+                    user: { id: 1, name: "Alice" },
+                    page_id: 123,
+                    page: {
+                        id: 123,
+                        media_path: "https://example.com/image.jpg",
+                        content: `<p>${"word ".repeat(60)}</p>`,
+                    },
+                },
+            ];
+
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: mockMessages,
+                    users: mockUsers,
+                },
+            });
+
+            await nextTick();
+
+            const excerpt = wrapper.findComponent({ name: "SharedExcerpt" });
+            expect(excerpt.exists()).toBe(true);
+            expect(excerpt.text()).toMatch(/^word word .*…$/);
+            expect(excerpt.text().length).toBeLessThanOrEqual(121);
+        });
+
+        it("plays YouTube pages inline instead of linking away", async () => {
+            const mockMessages = [
+                {
+                    id: 1,
+                    message: "check out this page from Test Book",
+                    created_at: new Date().toISOString(),
+                    user: { id: 1, name: "Alice" },
+                    page_id: 123,
+                    page: {
+                        id: 123,
+                        video_link: "https://www.youtube.com/watch?v=abc123",
+                    },
+                },
+            ];
+
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: mockMessages,
+                    users: mockUsers,
+                },
+            });
+
+            await nextTick();
+
+            expect(
+                wrapper.findComponent({ name: "VideoWrapper" }).exists()
+            ).toBe(true);
+            // The player swallows taps, so a link back to the page must remain.
+            const links = wrapper.findAllComponents({ name: "Link" });
+            expect(
+                links.some((link) => link.props("href") === "/pages/123")
+            ).toBe(true);
+        });
+
+        it("falls back to a thumbnail link for non-YouTube video links", async () => {
+            const mockMessages = [
+                {
+                    id: 1,
+                    message: "check out this page from Test Book",
+                    created_at: new Date().toISOString(),
+                    user: { id: 1, name: "Alice" },
+                    page_id: 123,
+                    page: {
+                        id: 123,
+                        video_link: "https://vimeo.com/12345",
+                        media_poster: "https://example.com/poster.jpg",
+                    },
+                },
+            ];
+
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: mockMessages,
+                    users: mockUsers,
+                },
+            });
+
+            await nextTick();
+
+            expect(
+                wrapper.findComponent({ name: "VideoWrapper" }).exists()
+            ).toBe(false);
+            const links = wrapper.findAllComponents({ name: "Link" });
+            const linkWithImg = links.find((link) => link.find("img").exists());
+            expect(linkWithImg.find("img").attributes("src")).toBe(
+                "https://example.com/poster.jpg"
+            );
         });
 
         it("displays placeholder image for video pages", async () => {

@@ -14,6 +14,7 @@ module.exports = {
         // resources/js/**/*.js, which would also scan .test.js files and emit
         // utilities for class names that only ever appear in test fixtures.
         "./resources/js/Components/actionMenuItem.js",
+        "./resources/js/Components/Messages/sharedMedia.js",
     ],
 
     theme: {

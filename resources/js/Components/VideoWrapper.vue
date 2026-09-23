@@ -10,6 +10,9 @@ const props = defineProps({
     title: { type: String, default: "" },
     controls: { type: Boolean, default: true },
     fillContainer: { type: Boolean, default: false },
+    // Off-screen embeds (a long chat timeline) shouldn't fetch their poster at
+    // preload priority; a page showing one video above the fold should.
+    lazyPoster: { type: Boolean, default: false },
 });
 
 const { embedUrl, videoId, isPlaylist } = useGetYouTubeVideo(() => props.url, {
@@ -49,6 +52,7 @@ const useIframe = computed(() => isPlaylist.value || props.iframe);
             :id="videoId"
             :title="title"
             :cookie="false"
+            :rel="lazyPoster ? 'prefetch' : 'preload'"
             :params="`modestbranding=1&rel=0&playsinline=1${
                 !controls ? '&controls=0' : ''
             }`"
