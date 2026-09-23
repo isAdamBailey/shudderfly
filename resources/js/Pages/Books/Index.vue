@@ -3,7 +3,7 @@
 
     <BreezeAuthenticatedLayout>
         <template #header>
-            <div class="flex justify-between items-center mb-10">
+            <div class="flex justify-between items-center mb-2">
                 <Link class="w-1/2" :href="route('books.index')">
                     <h2
                         class="font-heading text-3xl text-theme-title leading-tight"
@@ -19,14 +19,18 @@
             class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 sm:space-y-10"
         >
             <!-- Themed Books Section -->
-            <div v-if="currentTheme && !searchCategories">
-                <BooksGrid :category="{ name: 'themed' }" :label="themeLabel" />
-            </div>
+            <BooksGrid
+                v-if="currentTheme && !searchCategories"
+                :category="{ name: 'themed' }"
+                :label="themeLabel"
+            />
 
             <!-- Current Month Books Section (server sends no label when a theme is active) -->
-            <div v-if="monthLabel && !searchCategories">
-                <BooksGrid :category="{ name: 'month' }" :label="monthLabel" />
-            </div>
+            <BooksGrid
+                v-if="monthLabel && !searchCategories"
+                :category="{ name: 'month' }"
+                :label="monthLabel"
+            />
 
             <template v-if="!areAllBooksEmpty">
                 <BooksGrid

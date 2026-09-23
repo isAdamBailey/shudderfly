@@ -99,6 +99,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Forced Seasonal Theme
+    |--------------------------------------------------------------------------
+    |
+    | Pins the seasonal theme year-round instead of deriving it from the
+    | current month. See HandleInertiaRequests::getCurrentTheme, whose THEMES
+    | const is the list of values this accepts; anything else falls back to
+    | the month.
+    |
+    */
+
+    'force_theme' => env('FORCE_THEME'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Local Timezone
     |--------------------------------------------------------------------------
     |

@@ -57,9 +57,13 @@ module.exports = {
         require("@tailwindcss/forms"),
         require("@tailwindcss/typography"),
         plugin(function ({ addVariant }) {
-            addVariant("christmas", '[data-theme="christmas"] &');
-            addVariant("fireworks", '[data-theme="fireworks"] &');
-            addVariant("halloween", '[data-theme="halloween"] &');
+            // The `html` prefix is deliberate: without it these tie with
+            // Tailwind's `dark:` variant (both 0,2,0) and lose on source
+            // order, so every seasonal utility was a no-op while <html> has
+            // the permanent `dark` class. See resources/css/app.css.
+            addVariant("christmas", 'html[data-theme="christmas"] &');
+            addVariant("fireworks", 'html[data-theme="fireworks"] &');
+            addVariant("halloween", 'html[data-theme="halloween"] &');
         }),
     ],
 };

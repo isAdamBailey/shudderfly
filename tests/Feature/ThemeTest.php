@@ -264,4 +264,43 @@ class ThemeTest extends TestCase
 
         $this->travelBack();
     }
+
+    public function test_force_theme_config_overrides_the_month(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        $user->givePermissionTo('edit pages');
+        $this->actingAs($user);
+
+        config(['app.force_theme' => 'halloween']);
+
+        // March would normally be themeless.
+        $this->travelTo('2024-03-15');
+
+        $response = $this->get(route('welcome'));
+
+        $response->assertInertia(fn ($page) => $page->where('theme', 'halloween'));
+        $this->assertStringContainsString('data-theme="halloween"', $response->getContent());
+
+        $this->travelBack();
+    }
+
+    public function test_unknown_force_theme_falls_back_to_the_month(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        $user->givePermissionTo('edit pages');
+        $this->actingAs($user);
+
+        // A typo must not ship a theme name that nothing styles.
+        config(['app.force_theme' => 'hallowen']);
+
+        $this->travelTo('2024-12-15');
+
+        $response = $this->get(route('welcome'));
+
+        $response->assertInertia(fn ($page) => $page->where('theme', 'christmas'));
+
+        $this->travelBack();
+    }
 }

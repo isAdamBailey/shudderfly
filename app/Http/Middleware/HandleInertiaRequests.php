@@ -39,10 +39,23 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * Get the current theme based on the date.
+     * The seasonal themes the CSS, the Tailwind variants and ThemeBooks know
+     * about. FORCE_THEME is checked against this so a typo falls back to the
+     * month instead of shipping a theme name nothing styles.
+     */
+    public const THEMES = ['christmas', 'fireworks', 'halloween'];
+
+    /**
+     * Get the current theme based on the date, unless FORCE_THEME pins it.
      */
     public static function getCurrentTheme(): string
     {
+        $forced = (string) config('app.force_theme');
+
+        if (in_array($forced, self::THEMES, true)) {
+            return $forced;
+        }
+
         return match (now()->month) {
             12 => 'christmas',
             7 => 'fireworks',

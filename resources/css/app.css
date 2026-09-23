@@ -146,13 +146,21 @@
     shadow;
     }
 
-    /* Rainbow Gradient */
+    /* Rainbow Gradient.
+
+       Three stops per theme, not more: a Tailwind gradient has a single
+       `--tw-gradient-via-position`, so every `via-` but the LAST is
+       overwritten and paints nothing. These lists used to run 10-13 classes
+       long and rendered exactly the three stops below.
+
+       Halloween keeps deep purple at both ends because the pumpkin logo sits
+       at the far left and vanished against an orange stop. */
     .bg-rainbow {
-        @apply bg-gradient-to-r from-red-500 via-orange-500 via-amber-400 via-sky-500 via-blue-500 to-indigo-600
-        dark:from-red-950 dark:via-orange-900 dark:via-amber-900 dark:via-sky-900 dark:via-blue-900 dark:to-indigo-900
-        christmas:from-christmas-green christmas:via-christmas-green christmas:via-christmas-green christmas:via-christmas-holly christmas:via-christmas-holly christmas:via-christmas-holly christmas:via-christmas-pine christmas:via-christmas-pine christmas:via-christmas-pine christmas:to-christmas-berry
-        fireworks:from-red-500 fireworks:via-red-500 fireworks:via-blue-500 fireworks:via-blue-500 fireworks:via-red-500 fireworks:via-red-500 fireworks:via-blue-500 fireworks:via-blue-500 fireworks:via-red-500 fireworks:via-red-500 fireworks:via-blue-500 fireworks:via-blue-500 fireworks:to-red-500
-        halloween:from-halloween-orange halloween:via-halloween-orange halloween:via-halloween-pumpkin halloween:via-halloween-pumpkin halloween:via-halloween-purple halloween:via-halloween-purple halloween:via-halloween-witch halloween:via-halloween-witch halloween:via-halloween-midnight halloween:via-halloween-midnight halloween:via-halloween-black halloween:via-halloween-black halloween:to-halloween-orange;
+        @apply bg-gradient-to-r from-red-500 via-blue-500 to-indigo-600
+        dark:from-red-950 dark:via-blue-900 dark:to-indigo-900
+        christmas:from-christmas-green christmas:via-christmas-pine christmas:to-christmas-berry
+        fireworks:from-red-500 fireworks:via-blue-500 fireworks:to-red-500
+        halloween:from-halloween-midnight halloween:via-halloween-orange halloween:to-halloween-witch;
     }
 
     /* Border Colors */
@@ -733,6 +741,84 @@
 [data-theme="christmas"] .book-table {
     position: relative;
     z-index: 1;
+}
+
+/* ---------------------------------------------------------------------------
+   Halloween night sky. Both layers are fixed pseudo-elements at negative
+   z-index, so they paint above <body>'s own background but below the app
+   shell's in-flow background — which is why both layouts carry
+   `halloween:bg-transparent`. Neither layer re-rasterizes on scroll, unlike
+   `background-attachment: fixed` on <body> itself. GhostDrift.vue owns
+   z-index 40 and floats above all of it.
+   --------------------------------------------------------------------------- */
+@keyframes halloween-fog-drift {
+    from {
+        transform: translate3d(-12%, 0, 0);
+    }
+    to {
+        transform: translate3d(12%, 0, 0);
+    }
+}
+
+[data-theme="halloween"] body {
+    overflow-x: hidden;
+    /* Propagates to the canvas, so overscroll past either end stays night. */
+    background-color: #1a1030;
+}
+
+/* Starfield + deep sky. */
+/* prettier-ignore */
+[data-theme="halloween"] body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -2;
+    background-image:
+        /* moonglow — a soft wash rather than a disc, so it never collides
+           with the controls that sit in the top-right corner */
+        radial-gradient(circle at 88% 6%, rgba(255, 249, 219, 0.22) 0, rgba(255, 237, 186, 0.1) 22%, transparent 45%),
+        /* stars */
+        radial-gradient(circle at 12% 18%, rgba(230, 230, 250, 0.9) 1.5px, transparent 2px),
+        radial-gradient(circle at 28% 9%, rgba(230, 230, 250, 0.7) 1px, transparent 1.5px),
+        radial-gradient(circle at 44% 24%, rgba(255, 117, 24, 0.75) 1.5px, transparent 2px),
+        radial-gradient(circle at 62% 6%, rgba(230, 230, 250, 0.8) 1px, transparent 1.5px),
+        radial-gradient(circle at 7% 41%, rgba(230, 230, 250, 0.6) 1px, transparent 1.5px),
+        radial-gradient(circle at 34% 52%, rgba(255, 140, 66, 0.55) 1.5px, transparent 2px),
+        radial-gradient(circle at 71% 38%, rgba(230, 230, 250, 0.75) 1.5px, transparent 2px),
+        radial-gradient(circle at 93% 57%, rgba(230, 230, 250, 0.55) 1px, transparent 1.5px),
+        radial-gradient(circle at 19% 68%, rgba(230, 230, 250, 0.45) 1px, transparent 1.5px),
+        /* deep sky */
+        linear-gradient(180deg, #1a1030 0%, #2b1b3d 45%, #3b1f3a 78%, #1a1a1a 100%);
+}
+
+/* Low fog bank — above the sky, below every bit of app chrome. The overhang
+   matches the drift range so the edges never enter the viewport. The
+   gradients fade out on their own; a blur filter here only bought a
+   permanently promoted texture. */
+/* prettier-ignore */
+[data-theme="halloween"] body::after {
+    content: "";
+    position: fixed;
+    left: -12%;
+    right: -12%;
+    bottom: 0;
+    height: 45vh;
+    pointer-events: none;
+    z-index: -1;
+    background-image:
+        radial-gradient(ellipse 60% 70% at 20% 100%, rgba(107, 45, 143, 0.5), transparent 85%),
+        radial-gradient(ellipse 70% 60% at 55% 100%, rgba(230, 230, 250, 0.14), transparent 85%),
+        radial-gradient(ellipse 55% 75% at 85% 100%, rgba(139, 71, 137, 0.45), transparent 85%);
+    animation: halloween-fog-drift 28s ease-in-out infinite alternate;
+    will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-theme="halloween"] body::after {
+        animation: none;
+        will-change: auto;
+    }
 }
 
 /* Ensure Google Map containers render correctly */

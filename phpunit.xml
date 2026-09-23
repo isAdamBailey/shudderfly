@@ -11,6 +11,8 @@
   <coverage/>
   <php>
     <env name="APP_ENV" value="testing"/>
+    <!-- Keep the seasonal theme month-based in tests, whatever .env pins it to. -->
+    <env name="FORCE_THEME" value=""/>
     <env name="BCRYPT_ROUNDS" value="4"/>
     <!-- Never talk to a real websocket/push service from the test suite -->
     <env name="BROADCAST_DRIVER" value="null"/>
