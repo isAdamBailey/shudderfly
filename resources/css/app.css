@@ -753,10 +753,10 @@
    --------------------------------------------------------------------------- */
 @keyframes halloween-fog-drift {
     from {
-        transform: translate3d(-12%, 0, 0);
+        transform: translate3d(-12vw, 0, 0);
     }
     to {
-        transform: translate3d(12%, 0, 0);
+        transform: translate3d(12vw, 0, 0);
     }
 }
 
@@ -792,8 +792,10 @@
         linear-gradient(180deg, #1a1030 0%, #2b1b3d 45%, #3b1f3a 78%, #1a1a1a 100%);
 }
 
-/* Low fog bank — above the sky, below every bit of app chrome. The overhang
-   matches the drift range so the edges never enter the viewport. The
+/* Low fog bank — above the sky, below every bit of app chrome. The -12%
+   overhang resolves against the viewport, so the drift is expressed in vw to
+   match it exactly (a % there would be of the layer's own 124vw width) and the
+   edges never enter the viewport. The
    gradients fade out on their own; a blur filter here only bought a
    permanently promoted texture. */
 /* prettier-ignore */

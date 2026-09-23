@@ -11,8 +11,12 @@
   <coverage/>
   <php>
     <env name="APP_ENV" value="testing"/>
-    <!-- Keep the seasonal theme month-based in tests, whatever .env pins it to. -->
-    <env name="FORCE_THEME" value=""/>
+    <!-- Keep the seasonal theme month-based in tests, whatever .env pins it to.
+         Both lines are needed: <env> is skipped when the variable already
+         exists in the environment, and a real exported FORCE_THEME lands in
+         $_SERVER, which Laravel's Env repository reads before $_ENV. -->
+    <env name="FORCE_THEME" value="" force="true"/>
+    <server name="FORCE_THEME" value=""/>
     <env name="BCRYPT_ROUNDS" value="4"/>
     <!-- Never talk to a real websocket/push service from the test suite -->
     <env name="BROADCAST_DRIVER" value="null"/>
