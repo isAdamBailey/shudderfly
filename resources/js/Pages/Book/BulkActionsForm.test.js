@@ -1,180 +1,206 @@
 import BulkActionsForm from "@/Pages/Book/BulkActionsForm.vue";
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { reactive } from "vue";
 
-// Mock Inertia
+const mockPost = vi.fn();
+
 vi.mock("@inertiajs/vue3", () => ({
-    useForm: (initialData) => {
-        const formData = { ...initialData };
-        return {
-            ...formData,
+    useForm: (initialData) =>
+        reactive({
+            ...initialData,
             processing: false,
-            post: vi.fn(),
+            hasErrors: false,
+            post: mockPost,
             reset: vi.fn(),
-        };
+            clearErrors: vi.fn(),
+        }),
+}));
+
+vi.mock("@/composables/useTranslations", () => ({
+    useTranslations: () => ({
+        t: (key, params = {}) =>
+            Object.keys(params).length
+                ? `${key}|${JSON.stringify(params)}`
+                : key,
+    }),
+}));
+
+// Render the dialog body inline (no teleport) so it can be asserted on.
+vi.mock("@/Components/ConfirmDialog.vue", () => ({
+    default: {
+        name: "ConfirmDialog",
+        props: [
+            "show",
+            "title",
+            "confirmLabel",
+            "confirmVariant",
+            "confirmDisabled",
+        ],
+        emits: ["confirm", "cancel"],
+        template: `<div v-if="show" class="confirm-dialog">
+            <h2>{{ title }}</h2>
+            <slot />
+            <button class="confirm" :disabled="confirmDisabled" @click="$emit('confirm')">{{ confirmLabel }}</button>
+            <button class="cancel" @click="$emit('cancel')">cancel</button>
+        </div>`,
     },
 }));
 
-// Mock child components
-vi.mock("@/Components/Button.vue", () => ({
-    default: {
-        name: "Button",
-        template: "<button><slot /></button>",
-    },
-}));
-
-vi.mock("@/Components/InputLabel.vue", () => ({
-    default: {
-        name: "BreezeLabel",
-        template: "<label><slot /></label>",
-    },
-}));
-
-vi.mock("@vueform/multiselect", () => ({
-    default: {
-        name: "Multiselect",
-        template: '<div class="multiselect"></div>',
-    },
-}));
+global.route = vi.fn((name) => `/${name}`);
 
 describe("BulkActionsForm.vue", () => {
-    let wrapper;
-    const book = {
-        id: 1,
-        title: "Test Book",
-    };
+    const book = { id: 1, title: "Test Book" };
     const books = [
         { id: 1, title: "Test Book" },
         { id: 2, title: "Another Book" },
         { id: 3, title: "Third Book" },
     ];
 
-    beforeEach(() => {
-        wrapper = mount(BulkActionsForm, {
+    const mountBar = (props = {}) =>
+        mount(BulkActionsForm, {
             props: {
                 book,
                 books,
                 selectedPages: [1, 2, 3],
+                pageIds: [1, 2, 3, 4],
+                ...props,
             },
         });
+
+    let wrapper;
+
+    beforeEach(() => {
+        mockPost.mockReset();
+        wrapper = mountBar();
     });
 
     describe("rendering", () => {
-        it("renders the component title with selected count", () => {
-            expect(wrapper.text()).toContain("Bulk Actions");
-            expect(wrapper.text()).toContain("(3 pages selected)");
-        });
-
-        it("shows empty state when no pages are selected", async () => {
-            await wrapper.setProps({ selectedPages: [] });
-
-            expect(wrapper.text()).toContain("No pages selected");
-            expect(wrapper.text()).toContain(
-                "Select pages from the grid above"
+        it("renders as a fixed toolbar pinned to the bottom of the screen", () => {
+            const bar = wrapper.get('[data-test="bulk-actions-bar"]');
+            expect(bar.attributes("role")).toBe("toolbar");
+            expect(bar.classes()).toEqual(
+                expect.arrayContaining(["fixed", "bottom-0"])
             );
         });
 
-        it("renders action selection dropdown", () => {
-            expect(
-                wrapper.findComponent({ name: "Multiselect" }).exists()
-            ).toBe(true);
-        });
-    });
-
-    describe("computed properties", () => {
-        it("calculates selected count correctly", () => {
-            expect(wrapper.vm.selectedCount).toBe(3);
+        it("shows the selected count", () => {
+            expect(wrapper.get('[data-test="bulk-count"]').text()).toBe(
+                'book.bulk.selected_count|{"count":3}'
+            );
         });
 
-        it("provides correct action options", () => {
-            const actionOptions = wrapper.vm.actionOptions;
-            expect(actionOptions).toEqual([
-                { value: "delete", label: "Delete Selected Pages" },
-                { value: "move_to_top", label: "Move All to Top" },
-                { value: "move_to_book", label: "Move to Different Book" },
-            ]);
-        });
+        it("shows a hint and disables actions when nothing is selected", async () => {
+            await wrapper.setProps({ selectedPages: [] });
 
-        it("filters out current book from books options", () => {
-            const booksOptions = wrapper.vm.booksOptions;
-            expect(booksOptions).toEqual([
-                { value: 2, label: "Another Book" },
-                { value: 3, label: "Third Book" },
-            ]);
-        });
-
-        it("determines canSubmit correctly based on logic", () => {
-            // Test the canSubmit logic directly since our mock isn't fully reactive
-
-            // With no selected pages, should be false
-            const emptyWrapper = mount(BulkActionsForm, {
-                props: { book, books, selectedPages: [] },
-            });
-            expect(emptyWrapper.vm.canSubmit).toBe(false);
-
-            // With pages but no action, should be false
-            expect(wrapper.vm.canSubmit).toBe(false);
-
-            // Test that we can access the form and it has the expected initial state
-            expect(wrapper.vm.form.action).toBe("");
-            expect(wrapper.vm.form.target_book_id).toBe(null);
-            expect(wrapper.vm.selectedCount).toBe(3);
-        });
-    });
-
-    describe("form submission", () => {
-        it("tests submit logic behavior", () => {
-            const mockPost = vi.spyOn(wrapper.vm.form, "post");
-
-            // Test that submit returns early when canSubmit is false
-            wrapper.vm.form.action = "";
-            wrapper.vm.submit();
-            expect(mockPost).not.toHaveBeenCalled();
-
-            // Test the submit method exists and is callable
-            expect(typeof wrapper.vm.submit).toBe("function");
-        });
-
-        it("does not submit when action is empty", () => {
-            const mockPost = vi.spyOn(wrapper.vm.form, "post");
-            wrapper.vm.form.action = "";
-
-            wrapper.vm.submit();
-
-            expect(mockPost).not.toHaveBeenCalled();
-        });
-    });
-
-    describe("watchers", () => {
-        it("resets target_book_id when action changes away from move_to_book", async () => {
-            // Set the action to move_to_book and give it a target
-            wrapper.vm.form.action = "move_to_book";
-            wrapper.vm.form.target_book_id = 2;
-            await wrapper.vm.$nextTick();
-
-            // Change action to delete - this should trigger the watcher
-            wrapper.vm.form.action = "delete";
-
-            // Manually trigger the watcher logic since Vue Test Utils doesn't trigger watchers automatically
-            if (wrapper.vm.form.action !== "move_to_book") {
-                wrapper.vm.form.target_book_id = null;
+            expect(wrapper.text()).toContain("book.bulk.hint");
+            for (const action of ["move-top", "move-book", "delete"]) {
+                expect(
+                    wrapper
+                        .get(`[data-test="bulk-${action}"]`)
+                        .attributes("disabled")
+                ).toBeDefined();
             }
+        });
 
-            await wrapper.vm.$nextTick();
-
-            expect(wrapper.vm.form.target_book_id).toBe(null);
+        it("enables actions when pages are selected", () => {
+            expect(
+                wrapper.get('[data-test="bulk-delete"]').attributes("disabled")
+            ).toBeUndefined();
         });
     });
 
-    describe("singular/plural handling", () => {
-        it("handles singular page selection correctly", async () => {
-            await wrapper.setProps({ selectedPages: [1] });
-
-            expect(wrapper.text()).toContain("(1 page selected)");
+    describe("selection controls", () => {
+        it("selects every loaded page", async () => {
+            await wrapper.get('[data-test="bulk-select-all"]').trigger("click");
+            expect(wrapper.emitted("selection-changed")[0]).toEqual([
+                [1, 2, 3, 4],
+            ]);
         });
 
-        it("handles plural page selection correctly", () => {
-            expect(wrapper.text()).toContain("(3 pages selected)");
+        it("clears the selection when everything is already selected", async () => {
+            await wrapper.setProps({ selectedPages: [1, 2, 3, 4] });
+            const toggle = wrapper.get('[data-test="bulk-select-all"]');
+            expect(toggle.text()).toBe("book.bulk.clear");
+
+            await toggle.trigger("click");
+            expect(wrapper.emitted("selection-changed")[0]).toEqual([[]]);
+        });
+
+        it("emits close-form from the close button", async () => {
+            await wrapper.get('[data-test="bulk-close"]').trigger("click");
+            expect(wrapper.emitted("close-form")).toHaveLength(1);
+        });
+    });
+
+    describe("actions", () => {
+        it("asks for confirmation before deleting", async () => {
+            await wrapper.get('[data-test="bulk-delete"]').trigger("click");
+
+            expect(mockPost).not.toHaveBeenCalled();
+            const dialog = wrapper.get(".confirm-dialog");
+            expect(dialog.text()).toContain("book.bulk.confirm_delete_title");
+
+            await dialog.get("button.confirm").trigger("click");
+
+            expect(mockPost).toHaveBeenCalledWith(
+                "/pages.bulk-action",
+                expect.objectContaining({ preserveState: "errors" })
+            );
+            expect(wrapper.vm.form.action).toBe("delete");
+            expect(wrapper.vm.form.page_ids).toEqual([1, 2, 3]);
+        });
+
+        it("does nothing when the confirmation is cancelled", async () => {
+            await wrapper.get('[data-test="bulk-move-top"]').trigger("click");
+            await wrapper.get(".confirm-dialog button.cancel").trigger("click");
+
+            expect(mockPost).not.toHaveBeenCalled();
+            expect(wrapper.find(".confirm-dialog").exists()).toBe(false);
+        });
+
+        it("moves pages to the top", async () => {
+            await wrapper.get('[data-test="bulk-move-top"]').trigger("click");
+            await wrapper
+                .get(".confirm-dialog button.confirm")
+                .trigger("click");
+
+            expect(mockPost).toHaveBeenCalledTimes(1);
+            expect(wrapper.vm.form.action).toBe("move_to_top");
+            expect(wrapper.vm.form.target_book_id).toBe(null);
+        });
+
+        it("requires a target book and excludes the current one", async () => {
+            await wrapper.get('[data-test="bulk-move-book"]').trigger("click");
+
+            const radios = wrapper.findAll('input[type="radio"]');
+            expect(radios.map((r) => r.element.value)).toEqual(["2", "3"]);
+            expect(
+                wrapper
+                    .get(".confirm-dialog button.confirm")
+                    .attributes("disabled")
+            ).toBeDefined();
+
+            await radios[1].setValue(true);
+            await wrapper
+                .get(".confirm-dialog button.confirm")
+                .trigger("click");
+
+            expect(mockPost).toHaveBeenCalledTimes(1);
+            expect(wrapper.vm.form.action).toBe("move_to_book");
+            expect(wrapper.vm.form.target_book_id).toBe(3);
+        });
+
+        it("filters target books by search text", async () => {
+            await wrapper.get('[data-test="bulk-move-book"]').trigger("click");
+            await wrapper
+                .get('[data-test="bulk-book-search"]')
+                .setValue("third");
+
+            const labels = wrapper
+                .findAll(".confirm-dialog label")
+                .map((l) => l.text());
+            expect(labels).toEqual(["Third Book"]);
         });
     });
 });

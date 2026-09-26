@@ -29,6 +29,7 @@
 
         <div
             class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 sm:space-y-10"
+            :class="{ 'pb-48': isBulkMode }"
         >
             <div v-if="book.latitude != null && book.longitude != null">
                 <Accordion title="Map" :dark-background="true">
@@ -128,36 +129,6 @@
                 </div>
             </div>
 
-            <!-- Bulk Actions stays an inline panel, unlike the Add Pages/Edit
-                 Book modals below: it needs the page grid clickable behind it
-                 to build the selection, which a modal backdrop would block. -->
-            <div v-if="canEditPages && activeTab === 'bulk'">
-                <div class="flex justify-end mb-2">
-                    <Button
-                        type="button"
-                        class="font-bold px-6 py-2 bg-red-600 hover:bg-red-700 text-white"
-                        @click="closeAllTabs"
-                    >
-                        <i class="ri-close-line mr-1" aria-hidden="true"></i>
-                        Close
-                    </Button>
-                </div>
-                <div>
-                    <BreezeValidationErrors class="mb-4" />
-                </div>
-                <div class="flex flex-col md:flex-row justify-around">
-                    <div class="w-full md:w-1/2 mx-auto">
-                        <BulkActionsForm
-                            :book="book"
-                            :books="books"
-                            :selected-pages="selectedPages"
-                            @close-form="closeAllTabs"
-                            @selection-changed="handleSelectionChanged"
-                        />
-                    </div>
-                </div>
-            </div>
-
             <FormModal
                 v-if="canEditPages"
                 :show="activeTab === 'pages'"
@@ -197,49 +168,75 @@
                 class="grid gap-3 grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] md:grid-cols-[repeat(auto-fit,minmax(18rem,1fr))]"
             >
                 <div
-                    v-for="page in items"
+                    v-for="(page, index) in items"
                     :key="page.id"
-                    class="group rounded-lg bg-gray-800 shadow-sm relative overflow-hidden h-80 ring-1 ring-white/10 transition-shadow duration-200 hover:shadow-md hover:ring-white/20"
-                    :class="{
-                        'ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-900':
-                            selectedPages.includes(page.id),
-                        'cursor-pointer': activeTab === 'bulk',
-                    }"
-                    @click="
-                        activeTab === 'bulk'
-                            ? togglePageSelection(page.id)
-                            : null
+                    class="group rounded-lg bg-gray-800 shadow-sm relative overflow-hidden h-80 transition-shadow duration-200"
+                    :class="
+                        isBulkMode
+                            ? [
+                                  'cursor-pointer select-none focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-400',
+                                  isSelected(page.id)
+                                      ? 'ring-4 ring-blue-500 shadow-lg shadow-blue-500/30'
+                                      : 'ring-1 ring-white/10',
+                              ]
+                            : 'ring-1 ring-white/10 hover:shadow-md hover:ring-white/20'
+                    "
+                    :role="isBulkMode ? 'checkbox' : undefined"
+                    :aria-checked="isBulkMode ? isSelected(page.id) : undefined"
+                    :aria-label="
+                        isBulkMode
+                            ? t('book.bulk.select_page_aria', {
+                                  number: index + 1,
+                              })
+                            : undefined
+                    "
+                    :tabindex="isBulkMode ? 0 : undefined"
+                    :data-test="isBulkMode ? 'bulk-select-tile' : undefined"
+                    @click="isBulkMode ? togglePageSelection(page.id) : null"
+                    @keydown.space.prevent="
+                        isBulkMode ? togglePageSelection(page.id) : null
+                    "
+                    @keydown.enter.prevent="
+                        isBulkMode ? togglePageSelection(page.id) : null
                     "
                 >
-                    <div
-                        v-if="activeTab === 'bulk'"
-                        class="absolute top-2 left-2 z-10"
-                    >
-                        <input
-                            type="checkbox"
-                            :checked="selectedPages.includes(page.id)"
-                            class="w-5 h-5 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 pointer-events-none"
-                            :aria-label="`Select page ${page.id}`"
-                            readonly
-                        />
-                    </div>
+                    <!-- Selection chrome sits above the title bar, media and
+                         type pills (z-10/z-20) so it is never hidden. -->
+                    <template v-if="isBulkMode">
+                        <div
+                            class="pointer-events-none absolute inset-0 z-30 rounded-lg transition-colors duration-150"
+                            :class="
+                                isSelected(page.id)
+                                    ? 'bg-blue-600/35 ring-4 ring-inset ring-blue-500'
+                                    : 'bg-black/10'
+                            "
+                            aria-hidden="true"
+                        ></div>
+                        <div
+                            class="pointer-events-none absolute bottom-3 right-3 z-30 flex h-10 w-10 items-center justify-center rounded-full border-2 shadow-lg transition-colors duration-150"
+                            :class="
+                                isSelected(page.id)
+                                    ? 'border-white bg-blue-600 text-white'
+                                    : 'border-white/90 bg-black/40 text-transparent'
+                            "
+                            aria-hidden="true"
+                        >
+                            <i class="ri-check-line text-2xl font-bold"></i>
+                        </div>
+                    </template>
 
                     <component
-                        :is="activeTab === 'bulk' ? 'div' : Link"
-                        :prefetch="activeTab !== 'bulk' || undefined"
+                        :is="isBulkMode ? 'div' : Link"
+                        :prefetch="!isBulkMode || undefined"
                         :href="
-                            activeTab !== 'bulk'
+                            !isBulkMode
                                 ? route('pages.show', { page: page?.id })
                                 : undefined
                         "
                         as="button"
                         replace
                         class="relative w-full h-full block focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-inset"
-                        @click="
-                            activeTab !== 'bulk'
-                                ? setItemLoading(page)
-                                : undefined
-                        "
+                        @click="!isBulkMode ? setItemLoading(page) : undefined"
                     >
                         <div
                             v-if="page.loading"
@@ -338,8 +335,19 @@
                 <RelatedSongs v-if="relatedSongs" :songs="relatedSongs" />
             </Deferred>
         </div>
-        <ScrollTop />
-        <FloatingActionMenu v-if="$page.props.auth.user">
+        <!-- In selection mode the action bar owns the bottom of the screen,
+             so the floating buttons step aside instead of overlapping it. -->
+        <BulkActionsForm
+            v-if="isBulkMode"
+            :book="book"
+            :books="books"
+            :selected-pages="selectedPages"
+            :page-ids="items.map((page) => page.id)"
+            @close-form="closeAllTabs"
+            @selection-changed="handleSelectionChanged"
+        />
+        <ScrollTop v-if="!isBulkMode" />
+        <FloatingActionMenu v-if="$page.props.auth.user && !isBulkMode">
             <ShareToChatButton
                 kind="book"
                 :book-id="book.slug"
@@ -400,7 +408,7 @@ import NewPageForm from "@/Pages/Book/NewPageForm.vue";
 import RelatedSongs from "@/Pages/Book/RelatedSongs.vue";
 import SimilarBooks from "@/Pages/Book/SimilarBooks.vue";
 import { Deferred, Head, Link, router } from "@inertiajs/vue3";
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, unref } from "vue";
 
 /* global route */
 
@@ -462,6 +470,12 @@ const newPageFormRef = ref(null);
 const editBookFormRef = ref(null);
 const newPageUploading = computed(() => newPageFormRef.value?.isUploading);
 
+const isBulkMode = computed(
+    () => unref(canEditPages) && activeTab.value === "bulk"
+);
+
+const isSelected = (pageId) => selectedPages.value.includes(pageId);
+
 const setActiveTab = (tab) => {
     if (activeTab.value === tab) {
         activeTab.value = null;
@@ -471,6 +485,11 @@ const setActiveTab = (tab) => {
 
     if (activeTab.value !== "bulk") {
         selectedPages.value = [];
+    } else {
+        // The grid is what you select from, so bring it into view.
+        document
+            .getElementById("pages")
+            ?.scrollIntoView?.({ behavior: "smooth", block: "start" });
     }
 };
 
