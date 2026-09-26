@@ -135,7 +135,7 @@ vi.mock("@/Pages/Book/BulkActionsForm.vue", () => ({
     default: {
         name: "BulkActionsForm",
         template: '<form class="bulk-actions-form" />',
-        props: ["book", "books", "selectedPages"],
+        props: ["book", "books", "selectedPages", "pageIds"],
         emits: ["close-form", "selection-changed"],
     },
 }));
@@ -478,12 +478,48 @@ describe("Book/Show.vue", () => {
             expect(wrapper.vm.selectedPages).toEqual([2]);
         });
 
-        it("shows checkboxes when in bulk actions mode", async () => {
+        it("renders page tiles as checkboxes in bulk actions mode", async () => {
             wrapper.vm.activeTab = "bulk";
             await wrapper.vm.$nextTick();
 
-            const checkboxes = wrapper.findAll('input[type="checkbox"]');
-            expect(checkboxes.length).toBeGreaterThan(0);
+            const tiles = wrapper.findAll('[data-test="bulk-select-tile"]');
+            expect(tiles.length).toBeGreaterThan(0);
+            expect(tiles[0].attributes("role")).toBe("checkbox");
+            expect(tiles[0].attributes("aria-checked")).toBe("false");
+        });
+
+        it("marks a tile as selected when clicked", async () => {
+            wrapper.vm.activeTab = "bulk";
+            await wrapper.vm.$nextTick();
+
+            const tile = wrapper.find('[data-test="bulk-select-tile"]');
+            await tile.trigger("click");
+
+            expect(tile.attributes("aria-checked")).toBe("true");
+            expect(tile.classes()).toContain("ring-blue-500");
+        });
+
+        it("toggles a tile with the keyboard", async () => {
+            wrapper.vm.activeTab = "bulk";
+            await wrapper.vm.$nextTick();
+
+            const tile = wrapper.find('[data-test="bulk-select-tile"]');
+            await tile.trigger("keydown", { key: " " });
+            expect(tile.attributes("aria-checked")).toBe("true");
+        });
+
+        it("hides the floating menu and scroll button while selecting", async () => {
+            expect(wrapper.find(".scroll-top").exists()).toBe(true);
+
+            wrapper.vm.activeTab = "bulk";
+            await wrapper.vm.$nextTick();
+
+            expect(wrapper.find(".scroll-top").exists()).toBe(false);
+            expect(
+                wrapper
+                    .findComponent({ name: "BulkActionsForm" })
+                    .props("pageIds")
+            ).toEqual(wrapper.vm.items.map((page) => page.id));
         });
 
         it("makes page containers clickable in bulk actions mode", async () => {
