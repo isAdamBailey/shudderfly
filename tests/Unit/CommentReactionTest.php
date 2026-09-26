@@ -52,7 +52,7 @@ class CommentReactionTest extends TestCase
 
     public function test_allowed_emojis_constant_contains_expected_values(): void
     {
-        $expectedEmojis = ['👍', '❤️', '😂', '😮', '😢', '💩'];
+        $expectedEmojis = ['👍', '👎', '❤️', '😂', '😊', '😮', '😢', '💩', '🤮', '🪳'];
 
         $this->assertEquals($expectedEmojis, CommentReaction::ALLOWED_EMOJIS);
     }

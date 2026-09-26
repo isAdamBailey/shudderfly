@@ -168,11 +168,15 @@ vi.mock("@/composables/useTranslations", () => ({
                 "general.speak_all_reactions_aria": "Speak all reactions",
                 "general.view_message": "View Message",
                 "reaction.thumbs_up": "thumbs up",
+                "reaction.thumbs_down": "thumbs down",
                 "reaction.heart": "heart",
                 "reaction.laughing": "laughing",
+                "reaction.smiley": "smiley face",
                 "reaction.surprised": "surprised",
                 "reaction.sad": "sad",
                 "reaction.poop": "poop",
+                "reaction.vomit": "vomit",
+                "reaction.cockroach": "cockroach",
                 "reaction.generic": "reaction",
             };
             let translation = translations[key] || key;

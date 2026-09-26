@@ -1549,7 +1549,7 @@ class MessagesTest extends TestCase
 
         $this->actingAs($user);
 
-        $allowedEmojis = ['👍', '❤️', '😂', '😮', '😢', '💩'];
+        $allowedEmojis = ['👍', '👎', '❤️', '😂', '😊', '😮', '😢', '💩', '🤮', '🪳'];
 
         foreach ($allowedEmojis as $emoji) {
             $response = $this->postJson(route('messages.comments.reactions.store', [$message, $comment]), [

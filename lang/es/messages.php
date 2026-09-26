@@ -616,11 +616,15 @@ return [
 
     // Reaction emoji names (spoken)
     'reaction.thumbs_up' => 'pulgar arriba',
+    'reaction.thumbs_down' => 'pulgar abajo',
     'reaction.heart' => 'corazón',
     'reaction.laughing' => 'risa',
+    'reaction.smiley' => 'carita sonriente',
     'reaction.surprised' => 'sorprendido',
     'reaction.sad' => 'triste',
     'reaction.poop' => 'caca',
+    'reaction.vomit' => 'vómito',
+    'reaction.cockroach' => 'cucaracha',
     'reaction.generic' => 'reacción',
 
     // UI Labels - App Language

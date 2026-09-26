@@ -1,12 +1,27 @@
-export const ALLOWED_REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "💩"];
+export const ALLOWED_REACTION_EMOJIS = [
+    "👍",
+    "👎",
+    "❤️",
+    "😂",
+    "😊",
+    "😮",
+    "😢",
+    "💩",
+    "🤮",
+    "🪳",
+];
 
 export const REACTION_EMOJI_NAMES = {
     "👍": "reaction.thumbs_up",
+    "👎": "reaction.thumbs_down",
     "❤️": "reaction.heart",
     "😂": "reaction.laughing",
+    "😊": "reaction.smiley",
     "😮": "reaction.surprised",
     "😢": "reaction.sad",
     "💩": "reaction.poop",
+    "🤮": "reaction.vomit",
+    "🪳": "reaction.cockroach",
 };
 
 export function getReactionEmojiName(emoji, t) {

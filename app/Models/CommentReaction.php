@@ -24,7 +24,7 @@ class CommentReaction extends Model
     /**
      * Allowed emoji reactions.
      */
-    public const ALLOWED_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '💩'];
+    public const ALLOWED_EMOJIS = ['👍', '👎', '❤️', '😂', '😊', '😮', '😢', '💩', '🤮', '🪳'];
 
     /**
      * Get the comment that this reaction belongs to.
