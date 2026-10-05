@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Page;
+use App\Models\SiteSetting;
 use App\Models\Sound;
 use App\Models\UnblockRequest;
 use App\Models\User;
@@ -26,6 +27,23 @@ class ContentBlockService
     private const REINDEX_CHUNK = 500;
 
     /**
+     * The site setting that switches blocking on as a whole. Off, nothing can
+     * be blocked and already-blocked items show everywhere again — but their
+     * `blocked` flag is kept, so turning it back on restores them as hidden
+     * and the admin "unblock all" button can still clear them.
+     */
+    public const SETTING = 'unblock_requests_enabled';
+
+    /**
+     * Whether blocking is switched on. A missing row counts as on, so a
+     * moderation feature fails closed rather than unhiding everything.
+     */
+    public static function enabled(): bool
+    {
+        return (bool) (SiteSetting::where('key', self::SETTING)->first()?->value ?? true);
+    }
+
+    /**
      * Total number of blocked pages and sounds.
      */
     public function blockedCount(): int
@@ -42,7 +60,7 @@ class ContentBlockService
     public function unblockAll(User $actor): int
     {
         // Capture ids first: a mass update fires no model events, so Scout would
-        // otherwise never re-index pages that blocking removed from the index.
+        // otherwise keep these pages indexed with their stale `blocked` flag.
         $pageIds = Page::blocked()->pluck('id');
 
         $pageCount = Page::blocked()->update(['blocked' => false]);

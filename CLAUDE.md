@@ -111,7 +111,7 @@ Defined in `app/Console/Kernel.php`, all run weekly on Sunday (America/Los_Angel
 
 ### Search
 
-Laravel Scout + Meilisearch indexes `Book`, `Page`, and `Song` models. `Page::shouldBeSearchable()` excludes blocked pages. Scout driver is set to `null` in tests (`phpunit.xml`).
+Laravel Scout + Meilisearch indexes `Book`, `Page`, and `Song` models. Blocked pages stay indexed with a `blocked` field and are filtered out in `SearchController` only while blocking is on (`ContentBlockService::enabled()`, the `unblock_requests_enabled` setting). Scout driver is set to `null` in tests (`phpunit.xml`).
 
 ### Real-time
 

@@ -10,6 +10,7 @@ use App\Models\Message;
 use App\Models\SiteSetting;
 use App\Models\Sound;
 use App\Models\User;
+use App\Services\ContentBlockService;
 use App\Services\UserTaggingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -80,6 +81,8 @@ class SoundsController extends Controller
 
     public function block(Sound $sound): Redirector|RedirectResponse
     {
+        abort_unless(ContentBlockService::enabled(), 403);
+
         $sound->update(['blocked' => true]);
 
         return redirect(route('sounds.index'))->with('success', __('messages.sound.blocked'));
@@ -100,7 +103,7 @@ class SoundsController extends Controller
 
     public function share(Sound $sound, Request $request): RedirectResponse
     {
-        if ($sound->blocked) {
+        if ($sound->isHidden()) {
             abort(404);
         }
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Book;
 use App\Models\Page;
 use App\Models\Song;
+use App\Services\ContentBlockService;
 use App\Services\VoiceSearchService;
 use GuzzleHttp\Client;
 use Illuminate\Http\JsonResponse;
@@ -111,6 +112,8 @@ class SearchController extends Controller
         $seenPageIds = [];
         $seenSongIds = [];
 
+        $blockingEnabled = ContentBlockService::enabled();
+
         // Search with all query variations and merge results
         foreach ($queries as $searchQuery) {
             // Stop if we've reached limits for both types
@@ -120,11 +123,15 @@ class SearchController extends Controller
 
             // Search pages
             if ($allPages->count() < $maxPages) {
+                // Blocked pages stay indexed with their flag, so they can be
+                // filtered here and come back when blocking is turned off.
+                // Filtered after the fetch rather than in Meilisearch so the
+                // query can't fail on unsynced filterableAttributes.
                 $pages = Page::search($searchQuery)
                     ->take($pageVariationLimit)
                     ->get()
                     ->load('book')
-                    ->where('blocked', false);
+                    ->when($blockingEnabled, fn ($pages) => $pages->where('blocked', false));
 
                 foreach ($pages as $page) {
                     if ($allPages->count() >= $maxPages) {

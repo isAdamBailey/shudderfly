@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\Blockable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,6 +12,7 @@ use Laravel\Scout\Searchable;
 
 class Page extends Model
 {
+    use Blockable;
     use HasFactory;
     use Searchable;
 
@@ -72,16 +74,6 @@ class Page extends Model
             ->orWhere('media_path', 'like', '%.webp%');
     }
 
-    public function scopeBlocked($query)
-    {
-        return $query->where('blocked', true);
-    }
-
-    public function scopeNotBlocked($query)
-    {
-        return $query->where('blocked', false);
-    }
-
     public function book(): BelongsTo
     {
         return $this->belongsTo(Book::class);
@@ -112,11 +104,6 @@ class Page extends Model
             'book_id' => $this->book_id,
             'blocked' => $this->blocked,
         ];
-    }
-
-    public function shouldBeSearchable(): bool
-    {
-        return ! $this->blocked;
     }
 
     /**

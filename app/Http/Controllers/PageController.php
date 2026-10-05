@@ -305,7 +305,7 @@ class PageController extends Controller
 
     public function show(Page $page, Request $request): Response
     {
-        if ($page->blocked) {
+        if ($page->isHidden()) {
             abort(404);
         }
 
@@ -691,6 +691,8 @@ class PageController extends Controller
 
     public function block(Page $page): Redirector|RedirectResponse
     {
+        abort_unless(ContentBlockService::enabled(), 403);
+
         $messageIds = Message::where('page_id', $page->id)->pluck('id');
 
         if ($messageIds->isNotEmpty()) {
@@ -760,7 +762,7 @@ class PageController extends Controller
 
     public function share(Page $page, Request $request): RedirectResponse
     {
-        if ($page->blocked) {
+        if ($page->isHidden()) {
             abort(404);
         }
 

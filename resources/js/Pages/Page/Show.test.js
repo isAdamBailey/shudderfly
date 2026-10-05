@@ -163,6 +163,12 @@ vi.mock("@/Layouts/AuthenticatedLayout.vue", () => ({
     },
 }));
 
+// Shared so a test can flip a setting that usePage() reads.
+const mockSettings = vi.hoisted(() => ({
+    messaging_enabled: "1",
+    unblock_requests_enabled: "1",
+}));
+
 vi.mock("@inertiajs/vue3", () => {
     const mockRouter = {
         post: vi.fn(),
@@ -179,9 +185,7 @@ vi.mock("@inertiajs/vue3", () => {
                 },
                 search: null,
                 users: [],
-                settings: {
-                    messaging_enabled: "1",
-                },
+                settings: mockSettings,
             },
         }),
         Head: { name: "Head", template: "<div />" },
@@ -226,12 +230,8 @@ describe("Page/Show.vue", () => {
     const collages = [];
     const users = [];
 
-    beforeEach(() => {
-        localStorage.clear();
-        if (wrapper) {
-            wrapper.unmount();
-        }
-        wrapper = mount(Show, {
+    const mountShow = () =>
+        mount(Show, {
             props: {
                 page,
                 previousPage,
@@ -257,6 +257,13 @@ describe("Page/Show.vue", () => {
                 },
             },
         });
+
+    beforeEach(() => {
+        localStorage.clear();
+        if (wrapper) {
+            wrapper.unmount();
+        }
+        wrapper = mountShow();
     });
 
     it("renders the page content", () => {
@@ -381,6 +388,18 @@ describe("Page/Show.vue", () => {
                 {},
                 expect.any(Object)
             );
+        });
+
+        it("hides the block item when blocking is switched off", async () => {
+            mockSettings.unblock_requests_enabled = "0";
+            try {
+                wrapper.unmount();
+                wrapper = mountShow();
+                await nextTick();
+                expect(findMenuItem("page.block_menu_label")).toBeUndefined();
+            } finally {
+                mockSettings.unblock_requests_enabled = "1";
+            }
         });
 
         it("renders the edit item when the user can edit pages", () => {

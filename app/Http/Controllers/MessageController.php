@@ -39,7 +39,7 @@ class MessageController extends Controller
         }
 
         $messages = Message::with(['user', 'page', 'song', 'book.coverImage', 'sound', 'collage', 'reactions.user', 'comments.user', 'comments.reactions.user'])
-            ->whereDoesntHave('page', fn ($query) => $query->where('blocked', true))
+            ->whereDoesntHave('page', fn ($query) => $query->hidden())
             ->recent()
             ->withinRetentionPeriod()
             ->paginate(20);
@@ -78,7 +78,7 @@ class MessageController extends Controller
     {
         $message->load(['user', 'page', 'song', 'book.coverImage', 'sound', 'collage', 'reactions.user', 'comments.user', 'comments.reactions.user']);
 
-        if ($message->page?->blocked) {
+        if ($message->page?->isHidden()) {
             return response()->json(['message' => 'Not found'], 404);
         }
 

@@ -203,6 +203,7 @@
                 wrapper-class="w-full"
             />
             <ActionMenuItem
+                v-if="blockingEnabled"
                 icon="ri-forbid-2-line"
                 icon-class="text-orange-500 dark:text-orange-400"
                 :label="t('page.block_menu_label')"
@@ -280,6 +281,8 @@ const props = defineProps({
 });
 
 const messagingEnabled = useSiteSetting("messaging_enabled");
+// Off, nothing can be blocked; the server refuses the request too.
+const blockingEnabled = useSiteSetting("unblock_requests_enabled");
 
 const showPageSettings = ref(false);
 const editPageFormRef = ref(null);

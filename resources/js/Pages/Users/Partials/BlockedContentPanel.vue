@@ -43,7 +43,7 @@ const justAsked = ref(false);
 
 const askedToday = computed(() => props.unblockAskedToday || justAsked.value);
 
-// Gates only the "ask an admin" flow for non-privileged users; `edit pages`
+// Gates the "ask an admin" flow (and blocking as a whole); `edit pages`
 // users keep the unblock-now button regardless of this setting.
 const unblockRequestsEnabled = useSiteSetting("unblock_requests_enabled");
 

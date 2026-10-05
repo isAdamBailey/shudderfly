@@ -10,6 +10,7 @@ import ShareToChatButton from "@/Components/ShareToChatButton.vue";
 import TextInput from "@/Components/TextInput.vue";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { usePermissions } from "@/composables/permissions";
+import { useSiteSetting } from "@/composables/useSiteSetting";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
@@ -28,6 +29,8 @@ const soundModalPanelClass =
     "bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6";
 
 const { canEditPages } = usePermissions();
+// Off, nothing can be blocked; the server refuses the request too.
+const blockingEnabled = useSiteSetting("unblock_requests_enabled");
 const { speak, stopSpeech } = useSpeechSynthesis();
 const { t } = useTranslations();
 const props = defineProps({
@@ -320,6 +323,7 @@ onBeforeUnmount(() => {
                                     wrapper-class="w-full"
                                 />
                                 <ActionMenuItem
+                                    v-if="blockingEnabled"
                                     icon="ri-forbid-line"
                                     icon-class="text-orange-500 dark:text-orange-400"
                                     label="Block sound"

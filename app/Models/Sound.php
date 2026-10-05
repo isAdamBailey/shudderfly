@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\Blockable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
@@ -9,6 +10,7 @@ use Illuminate\Support\Str;
 
 class Sound extends Model
 {
+    use Blockable;
     use HasFactory;
 
     protected $fillable = [
@@ -21,16 +23,6 @@ class Sound extends Model
     protected $casts = [
         'blocked' => 'boolean',
     ];
-
-    public function scopeBlocked($query)
-    {
-        return $query->where('blocked', true);
-    }
-
-    public function scopeNotBlocked($query)
-    {
-        return $query->where('blocked', false);
-    }
 
     public static function urlForPath(string $path): string
     {

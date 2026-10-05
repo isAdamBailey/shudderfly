@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\SiteSetting;
 use App\Models\UnblockRequest;
 use App\Models\User;
 use App\Notifications\UnblockRequested;
@@ -50,9 +49,10 @@ class UnblockRequestController extends Controller
         // Users who can unblock have the button; they should not be asking.
         abort_if($requester->can('edit pages'), 403);
 
-        // The site can turn off the ask-an-admin flow entirely while leaving
-        // `edit pages` users free to unblock directly at any time.
-        abort_if(! SiteSetting::where('key', 'unblock_requests_enabled')->first()?->value, 403);
+        // The same setting switches blocking off as a whole; with nothing
+        // hidden there is nothing to ask for. `edit pages` users can still
+        // unblock directly at any time.
+        abort_unless(ContentBlockService::enabled(), 403);
 
         $count = $this->contentBlockService->blockedCount();
 
