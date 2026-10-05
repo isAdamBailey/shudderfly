@@ -175,7 +175,9 @@ class PagesTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        $searchTerm = 'Adam';
+        // Not 'Adam' etc.: book titles are faker names, and a title match
+        // pulls in every page of that book.
+        $searchTerm = 'Zxqvbj';
 
         Book::factory()->has(Page::factory(10))->count(3)->create();
         Page::first()->update(['content' => 'lorem '.$searchTerm.' ipsum dolor sit amet']);
@@ -183,7 +185,7 @@ class PagesTest extends TestCase
         $this->get(route('pictures.index', ['search' => $searchTerm]))->assertInertia(
             fn (Assert $page) => $page
                 ->component('Uploads/Index')
-                ->url('/photos?search=Adam')
+                ->url('/photos?search=Zxqvbj')
                 ->has('photos.data', 1)
 
         );
