@@ -26,7 +26,11 @@ class AiProviderAlertService
 
     private const QUOTA_KEYWORDS = ['credit', 'quota', 'insufficient', 'balance'];
 
-    public function alertIfQuotaExceeded(string $provider, Response $response): void
+    /**
+     * @param  string|null  $feature  'ai_voice' for a TTS failure; null for the
+     *                                media description / weekly overview calls.
+     */
+    public function alertIfQuotaExceeded(string $provider, Response $response, ?string $feature = null): void
     {
         if (! $this->looksLikeQuotaExceeded($response)) {
             return;
@@ -48,7 +52,7 @@ class AiProviderAlertService
         foreach ($recipients as $recipient) {
             try {
                 Mail::to($recipient->email)->send(
-                    new AiProviderQuotaAlertMail($provider, $response->status(), $response->body())
+                    new AiProviderQuotaAlertMail($provider, $response->status(), $response->body(), $feature)
                 );
             } catch (\Throwable $exception) {
                 report($exception);

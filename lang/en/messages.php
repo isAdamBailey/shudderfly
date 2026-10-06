@@ -462,6 +462,7 @@ return [
     'speech.volume_quiet' => 'quiet',
     'speech.volume_normal' => 'normal',
     'speech.volume_loud' => 'loud',
+    'ai_voice.provider_alert' => 'This happened while generating an AI voice clip. Add funds to :provider, or turn off ai_voice_enabled in the admin settings until then. Speech falls back to the device voice in the meantime.',
 
     // Music
     'music.now_playing' => 'You are playing :title',

@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\SiteSetting;
 use App\Models\User;
 use App\Models\WorldClockSetting;
+use App\Support\AiVoice;
 use App\Support\WorldClockState;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -79,6 +80,12 @@ class HandleInertiaRequests extends Middleware
             $userArray = $user;
         }
 
+        $settings = SiteSetting::all()->mapWithKeys(function ($setting) {
+            $rawValue = $setting->getAttributes()['value'] ?? $setting->value;
+
+            return [$setting->key => $rawValue];
+        });
+
         return array_merge(parent::share($request), [
             'auth' => [
                 'user' => $userArray,
@@ -99,13 +106,14 @@ class HandleInertiaRequests extends Middleware
                     'location' => $request->url(),
                 ]);
             },
-            'settings' => SiteSetting::all()->mapWithKeys(function ($setting) {
-                $rawValue = $setting->getAttributes()['value'] ?? $setting->value;
-
-                return [$setting->key => $rawValue];
-            }),
+            'settings' => $settings,
             'theme' => self::getCurrentTheme(),
             'locale' => app()->getLocale(),
+            // Same gate as AiVoice::enabled(), read from the settings above
+            // rather than querying the flag a second time.
+            'aiVoice' => $settings->get(AiVoice::SETTING_KEY) === '1' && AiVoice::configured()
+                ? ['voices' => config('services.ai_voice.voices')]
+                : null,
             'collageMaxPages' => (int) config('collage.max_pages'),
             'broadcastChannelPrefix' => fn () => (string) config('broadcasting.channel_prefix'),
             'worldClock' => fn () => $request->user()

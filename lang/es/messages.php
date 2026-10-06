@@ -462,6 +462,7 @@ return [
     'speech.volume_quiet' => 'bajo',
     'speech.volume_normal' => 'normal',
     'speech.volume_loud' => 'alto',
+    'ai_voice.provider_alert' => 'Esto ocurrió al generar un clip de voz con IA. Añade fondos a :provider o desactiva ai_voice_enabled en los ajustes de administración mientras tanto. Mientras, la voz usa la del dispositivo.',
 
     // Music
     'music.now_playing' => 'Estás reproduciendo :title',
