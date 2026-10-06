@@ -3,9 +3,12 @@
 namespace Tests\Feature\Console;
 
 use App\Mail\StalePagesCleanupMail;
+use App\Models\AiVoiceClip;
 use App\Models\Book;
 use App\Models\Page;
+use App\Models\SiteSetting;
 use App\Models\User;
+use App\Support\AiVoice;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
@@ -21,6 +24,14 @@ class CleanupStalePagesTest extends TestCase
         parent::setUp();
 
         Mail::fake();
+    }
+
+    private function createSuperAdmin(): User
+    {
+        $superAdmin = User::factory()->create(['email' => 'reports@example.com']);
+        $superAdmin->givePermissionTo(Permission::findOrCreate('super admin'));
+
+        return $superAdmin;
     }
 
     public function test_command_deletes_only_barely_read_pages_older_than_thirty_days(): void
@@ -97,8 +108,7 @@ class CleanupStalePagesTest extends TestCase
     public function test_command_emails_a_report_to_super_admins(): void
     {
         Storage::fake('s3');
-        $superAdmin = User::factory()->create(['email' => 'reports@example.com']);
-        $superAdmin->givePermissionTo(Permission::findOrCreate('super admin'));
+        $this->createSuperAdmin();
         User::factory()->create(['email' => 'nobody@example.com']);
 
         $book = Book::factory()->create();
@@ -145,8 +155,7 @@ class CleanupStalePagesTest extends TestCase
     public function test_command_still_succeeds_when_the_report_email_fails(): void
     {
         Storage::fake('s3');
-        $superAdmin = User::factory()->create(['email' => 'reports@example.com']);
-        $superAdmin->givePermissionTo(Permission::findOrCreate('super admin'));
+        $this->createSuperAdmin();
 
         $book = Book::factory()->create();
         $stalePage = Page::factory()->for($book)->create([
@@ -161,5 +170,50 @@ class CleanupStalePagesTest extends TestCase
         $this->artisan('pages:cleanup-stale')->assertExitCode(0);
 
         $this->assertDatabaseMissing('pages', ['id' => $stalePage->id]);
+    }
+
+    public function test_report_includes_this_weeks_ai_voice_usage(): void
+    {
+        Storage::fake('s3');
+        $this->createSuperAdmin();
+        SiteSetting::where('key', AiVoice::SETTING_KEY)->update(['value' => '1']);
+
+        AiVoiceClip::factory()->create(['characters' => 300000, 'hits' => 1]);
+        AiVoiceClip::factory()->create(['characters' => 200000, 'hits' => 3]);
+        // Older than a week: counts toward the all-time hit rate only.
+        AiVoiceClip::factory()->create(['characters' => 999, 'hits' => 5, 'created_at' => now()->subDays(10)]);
+
+        $this->artisan('pages:cleanup-stale')->assertExitCode(0);
+
+        Mail::assertSent(StalePagesCleanupMail::class, function (StalePagesCleanupMail $mail) {
+            $usage = $mail->report['aiVoice'];
+            $this->assertSame(2, $usage['clips']);
+            $this->assertSame(500000, $usage['characters']);
+            $this->assertEqualsWithDelta(0.31, $usage['cost'], 0.0001);
+            // 9 plays across 3 clips: 6 of them came from the cache.
+            $this->assertEqualsWithDelta(6 / 9, $usage['hitRate'], 0.0001);
+
+            $mail->assertSeeInHtml(__('messages.ai_voice.usage_heading'));
+            $mail->assertSeeInHtml('500,000');
+            $mail->assertSeeInHtml('$0.31');
+            $mail->assertSeeInHtml('66.7%');
+
+            return true;
+        });
+    }
+
+    public function test_report_omits_ai_voice_when_it_is_off_and_unused(): void
+    {
+        Storage::fake('s3');
+        $this->createSuperAdmin();
+
+        $this->artisan('pages:cleanup-stale')->assertExitCode(0);
+
+        Mail::assertSent(StalePagesCleanupMail::class, function (StalePagesCleanupMail $mail) {
+            $this->assertNull($mail->report['aiVoice']);
+            $mail->assertDontSeeInHtml(__('messages.ai_voice.usage_heading'));
+
+            return true;
+        });
     }
 }

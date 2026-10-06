@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Mail\StalePagesCleanupMail;
 use App\Models\Book;
 use App\Models\Page;
+use App\Support\AiVoice;
 use App\Support\SuperAdmins;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
@@ -81,6 +82,7 @@ class CleanupStalePages extends Command
             'deletedAssets' => $deletedAssets,
             'deletedBooks' => $deletedBooks,
             'duration' => $duration,
+            'aiVoice' => $this->aiVoiceUsage(),
         ]);
 
         return Command::SUCCESS;
@@ -113,6 +115,19 @@ class CleanupStalePages extends Command
                 $this->error("Failed to email report to {$recipient->email}: {$e->getMessage()}");
             }
         }
+    }
+
+    /**
+     * This week's AI voice spend, or null when the voice is off and made no
+     * clips this week, so the report only grows the section when it matters.
+     *
+     * @return array{clips: int, characters: int, cost: float, hitRate: float|null}|null
+     */
+    private function aiVoiceUsage(): ?array
+    {
+        $usage = AiVoice::usageSince(now()->subWeek());
+
+        return AiVoice::enabled() || $usage['clips'] > 0 ? $usage : null;
     }
 
     private function deletePageAsset(?string $storedValue): int

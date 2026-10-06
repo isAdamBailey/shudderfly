@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\AiVoiceBudgetExceeded;
 use App\Exceptions\AiVoiceUnavailable;
 use App\Http\Middleware\SetLocale;
 use App\Services\AiVoiceService;
@@ -14,8 +15,8 @@ class AiVoiceController extends Controller
 {
     /**
      * The URL of the AI voice clip for the given text, generating it on the
-     * first request. Any failure is a 503 so the client falls back to the
-     * device voice.
+     * first request. A spent daily budget is a 429 and any other failure a
+     * 503; either way the client falls back to the device voice.
      */
     public function speak(Request $request, AiVoiceService $service): JsonResponse
     {
@@ -41,6 +42,8 @@ class AiVoiceController extends Controller
                 $validated['voice'] ?? null,
                 (float) ($validated['speed'] ?? 1),
             );
+        } catch (AiVoiceBudgetExceeded) {
+            return response()->json(['message' => 'AI voice daily limit reached.'], 429);
         } catch (AiVoiceUnavailable) {
             // Already logged by the service with the provider's response.
             return response()->json(['message' => 'AI voice unavailable.'], 503);

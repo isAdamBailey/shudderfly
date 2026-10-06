@@ -463,6 +463,13 @@ return [
     'speech.volume_normal' => 'normal',
     'speech.volume_loud' => 'loud',
     'ai_voice.provider_alert' => 'This happened while generating an AI voice clip. Add funds to :provider, or turn off ai_voice_enabled in the admin settings until then. Speech falls back to the device voice in the meantime.',
+    'ai_voice.usage_heading' => 'AI voice this week',
+    'ai_voice.usage_metric' => 'Metric',
+    'ai_voice.usage_value' => 'Value',
+    'ai_voice.usage_clips' => 'New clips',
+    'ai_voice.usage_characters' => 'Characters generated',
+    'ai_voice.usage_cost' => 'Estimated cost',
+    'ai_voice.usage_hit_rate' => 'Plays served from cache (all clips)',
 
     // Music
     'music.now_playing' => 'You are playing :title',
