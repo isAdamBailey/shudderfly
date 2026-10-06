@@ -16,7 +16,7 @@ class AiProviderQuotaAlertMail extends Mailable
         public string $provider,
         public int $status,
         public string $body,
-        public ?string $feature = null
+        public ?string $context = null
     ) {}
 
     public function envelope(): Envelope
@@ -34,7 +34,7 @@ class AiProviderQuotaAlertMail extends Mailable
                 'provider' => $this->provider,
                 'status' => $this->status,
                 'body' => $this->body,
-                'feature' => $this->feature,
+                'context' => $this->context,
             ],
         );
     }

@@ -4,8 +4,8 @@
 The **{{ ucfirst($provider) }}** AI provider just returned a response that looks
 like the account is out of credits or quota (HTTP {{ $status }}).
 
-@if ($feature === 'ai_voice')
-{{ __('messages.ai_voice.provider_alert', ['provider' => ucfirst($provider)]) }}
+@if ($context)
+{{ $context }}
 @else
 This happened while generating a media description or weekly profile overview.
 You'll need to either add funds to {{ ucfirst($provider) }}, or switch

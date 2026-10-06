@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -104,23 +105,24 @@ class AiVoiceTest extends TestCase
         $this->assertSame(2, AiVoiceClip::count());
     }
 
-    public function test_an_unknown_voice_falls_back_to_the_locale_default(): void
+    public static function voiceFallbacks(): array
     {
-        $this->fakeProvider();
-
-        $this->speak(['locale' => 'es', 'voice' => 'am_puck'])->assertOk();
-
-        Http::assertSent(fn (ClientRequest $request) => $request['voice'] === 'ef_dora');
-        $this->assertSame('ef_dora', AiVoiceClip::sole()->voice);
+        return [
+            'voice from another locale' => ['es', 'am_puck', 'ef_dora'],
+            'no voice' => ['fr', null, 'ff_siwis'],
+            'unknown voice' => ['en', 'nope', 'af_heart'],
+        ];
     }
 
-    public function test_a_missing_voice_uses_the_locale_default(): void
+    #[DataProvider('voiceFallbacks')]
+    public function test_a_voice_not_allowed_for_the_locale_falls_back_to_its_default(string $locale, ?string $voice, string $expected): void
     {
         $this->fakeProvider();
 
-        $this->speak(['locale' => 'fr', 'voice' => null])->assertOk();
+        $this->speak(['locale' => $locale, 'voice' => $voice])->assertOk();
 
-        $this->assertSame('ff_siwis', AiVoiceClip::sole()->voice);
+        Http::assertSent(fn (ClientRequest $request) => $request['voice'] === $expected);
+        $this->assertSame($expected, AiVoiceClip::sole()->voice);
     }
 
     public function test_the_native_json_response_shape_is_accepted(): void
@@ -159,6 +161,16 @@ class AiVoiceTest extends TestCase
         $this->assertSame([], Storage::disk('s3')->allFiles());
     }
 
+    public function test_a_timeout_is_not_retried(): void
+    {
+        // A retry here could bill the same clip twice.
+        Http::fake(['ai-voice.test/*' => Http::failedConnection()]);
+
+        $this->speak()->assertStatus(503);
+
+        Http::assertSentCount(1);
+    }
+
     public function test_is_off_when_no_api_key_is_configured(): void
     {
         config(['services.ai_voice.api_key' => null]);
@@ -180,13 +192,13 @@ class AiVoiceTest extends TestCase
         $this->speak()->assertStatus(503);
 
         Mail::assertSent(AiProviderQuotaAlertMail::class, fn (AiProviderQuotaAlertMail $mail) => $mail->provider === 'deepinfra'
-            && $mail->feature === 'ai_voice'
-            && str_contains($mail->render(), 'AI voice'));
+            && str_contains($mail->context, 'AI voice')
+            && str_contains($mail->render(), $mail->context));
     }
 
     public function test_a_row_stored_by_a_racing_request_is_reused_instead_of_failing(): void
     {
-        $hash = hash('sha256', 'deepinfra|hexgrad/Kokoro-82M|am_puck|1.00|Hello there friend');
+        $hash = AiVoiceService::hashFor('Hello there friend', 'am_puck', 1);
 
         // Another host (no shared lock) finishes the same clip while this
         // request is still waiting on the provider.

@@ -80,7 +80,8 @@ class HandleInertiaRequests extends Middleware
             $userArray = $user;
         }
 
-        $settings = SiteSetting::all()->mapWithKeys(function ($setting) {
+        $siteSettings = SiteSetting::all();
+        $settings = $siteSettings->mapWithKeys(function ($setting) {
             $rawValue = $setting->getAttributes()['value'] ?? $setting->value;
 
             return [$setting->key => $rawValue];
@@ -109,9 +110,7 @@ class HandleInertiaRequests extends Middleware
             'settings' => $settings,
             'theme' => self::getCurrentTheme(),
             'locale' => app()->getLocale(),
-            // Same gate as AiVoice::enabled(), read from the settings above
-            // rather than querying the flag a second time.
-            'aiVoice' => $settings->get(AiVoice::SETTING_KEY) === '1' && AiVoice::configured()
+            'aiVoice' => AiVoice::enabled($siteSettings)
                 ? ['voices' => config('services.ai_voice.voices')]
                 : null,
             'collageMaxPages' => (int) config('collage.max_pages'),

@@ -4,8 +4,8 @@ namespace App\Services;
 
 use App\Exceptions\AiVoiceUnavailable;
 use App\Models\AiVoiceClip;
+use App\Support\AiVoice;
 use Illuminate\Contracts\Cache\LockTimeoutException;
-use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
@@ -32,9 +32,10 @@ class AiVoiceService
 
     private const CONNECT_TIMEOUT_SECONDS = 3;
 
-    // Total attempts, not retries (Laravel's retry() counts tries). A user
-    // is waiting, so retry only a dropped connection or a server error,
-    // once and quickly.
+    // Total attempts, not retries (Laravel's retry() counts tries). Only a
+    // server error is retried, once and quickly: a timeout surfaces as a
+    // ConnectionException too, and retrying a slow but working provider
+    // would bill the same clip twice while the user has long since given up.
     private const ATTEMPTS = 2;
 
     private const RETRY_SLEEP_MS = 200;
@@ -63,11 +64,7 @@ class AiVoiceService
         $voice = $this->resolveVoice($locale, $voice);
         $speed = round($speed, 2);
         $model = (string) config('services.ai_voice.model');
-        // Provider and model are both in the hash, so switching either one
-        // invalidates the cache instead of serving the old voice's clips.
-        $hash = hash('sha256', implode('|', [
-            config('services.ai_voice.provider'), $model, $voice, number_format($speed, 2, '.', ''), $text,
-        ]));
+        $hash = self::hashFor($text, $voice, $speed);
 
         if ($clip = $this->recordHit($hash)) {
             return $clip;
@@ -85,6 +82,22 @@ class AiVoiceService
 
             throw new AiVoiceUnavailable('Timed out waiting for another request to generate the same clip');
         }
+    }
+
+    /**
+     * The cache key for an already-normalized text. Provider and model are
+     * both in it, so switching either invalidates the cache instead of
+     * serving the old voice's clips.
+     */
+    public static function hashFor(string $text, string $voice, float $speed): string
+    {
+        return hash('sha256', implode('|', [
+            config('services.ai_voice.provider'),
+            config('services.ai_voice.model'),
+            $voice,
+            number_format($speed, 2, '.', ''),
+            $text,
+        ]));
     }
 
     /**
@@ -145,9 +158,7 @@ class AiVoiceService
      */
     private function synthesize(string $text, string $voice, float $speed, string $model): string
     {
-        $apiKey = config('services.ai_voice.api_key');
-
-        if (! is_string($apiKey) || trim($apiKey) === '') {
+        if (! AiVoice::configured()) {
             Log::warning('AI voice skipped: missing AI_VOICE_API_KEY');
 
             throw new AiVoiceUnavailable('AI voice provider is not configured');
@@ -155,7 +166,7 @@ class AiVoiceService
 
         try {
             $response = $this->httpClient()
-                ->withToken($apiKey)
+                ->withToken((string) config('services.ai_voice.api_key'))
                 ->post((string) config('services.ai_voice.endpoint'), [
                     'model' => $model,
                     'input' => $text,
@@ -170,7 +181,12 @@ class AiVoiceService
         }
 
         if (! $response->successful()) {
-            app(AiProviderAlertService::class)->alertIfQuotaExceeded((string) config('services.ai_voice.provider'), $response, 'ai_voice');
+            $provider = (string) config('services.ai_voice.provider');
+            app(AiProviderAlertService::class)->alertIfQuotaExceeded(
+                $provider,
+                $response,
+                __('messages.ai_voice.provider_alert', ['provider' => ucfirst($provider)]),
+            );
 
             Log::warning('AI voice generation failed', [
                 'status' => $response->status(),
@@ -221,20 +237,18 @@ class AiVoiceService
 
     private function timeoutSeconds(): int
     {
-        return max(1, (int) config('services.ai_voice.timeout'));
+        return (int) config('services.ai_voice.timeout');
     }
 
     private function httpClient(): PendingRequest
     {
         return Http::connectTimeout(self::CONNECT_TIMEOUT_SECONDS)
             ->timeout($this->timeoutSeconds())
-            ->retry(self::ATTEMPTS, self::RETRY_SLEEP_MS, function ($exception): bool {
-                if ($exception instanceof ConnectionException) {
-                    return true;
-                }
-
-                return $exception instanceof RequestException
-                    && $exception->response?->serverError();
-            }, false);
+            ->retry(
+                self::ATTEMPTS,
+                self::RETRY_SLEEP_MS,
+                fn ($exception): bool => $exception instanceof RequestException && $exception->response->serverError(),
+                false,
+            );
     }
 }
