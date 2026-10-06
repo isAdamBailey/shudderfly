@@ -463,6 +463,13 @@ return [
     'speech.volume_normal' => 'normal',
     'speech.volume_loud' => 'alto',
     'ai_voice.provider_alert' => 'Esto ocurrió al generar un clip de voz con IA. Añade fondos a :provider o desactiva ai_voice_enabled en los ajustes de administración mientras tanto. Mientras, la voz usa la del dispositivo.',
+    'ai_voice.usage_heading' => 'Voz con IA esta semana',
+    'ai_voice.usage_metric' => 'Métrica',
+    'ai_voice.usage_value' => 'Valor',
+    'ai_voice.usage_clips' => 'Clips nuevos',
+    'ai_voice.usage_characters' => 'Caracteres generados',
+    'ai_voice.usage_cost' => 'Costo estimado',
+    'ai_voice.usage_hit_rate' => 'Reproducciones desde la caché (todos los clips)',
 
     // Music
     'music.now_playing' => 'Estás reproduciendo :title',

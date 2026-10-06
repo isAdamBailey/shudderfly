@@ -10,6 +10,7 @@ use App\Services\AiVoiceService;
 use App\Support\AiVoice;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as ClientRequest;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
@@ -169,6 +170,117 @@ class AiVoiceTest extends TestCase
         $this->speak()->assertStatus(503);
 
         Http::assertSentCount(1);
+    }
+
+    private function setDailyLimit(string $value): void
+    {
+        SiteSetting::where('key', AiVoice::LIMIT_SETTING_KEY)->update(['value' => $value]);
+    }
+
+    public function test_returns_429_without_calling_the_provider_once_the_daily_limit_is_spent(): void
+    {
+        $this->fakeProvider();
+        $this->setDailyLimit('100');
+        AiVoiceClip::factory()->create(['characters' => 90]);
+
+        // "Hello there friend" is 18 characters: 90 + 18 > 100.
+        $this->speak()->assertStatus(429);
+
+        Http::assertNothingSent();
+        $this->assertSame(1, AiVoiceClip::count());
+    }
+
+    public function test_a_clip_that_fits_the_remaining_budget_is_generated(): void
+    {
+        $this->fakeProvider();
+        $this->setDailyLimit('100');
+        AiVoiceClip::factory()->create(['characters' => 82]);
+
+        $this->speak()->assertOk();
+
+        Http::assertSentCount(1);
+    }
+
+    public function test_cached_clips_still_play_once_the_daily_limit_is_spent(): void
+    {
+        $this->fakeProvider();
+        $url = $this->speak()->assertOk()->json('url');
+        $this->setDailyLimit('0');
+
+        $this->speak()->assertOk()->assertJson(['url' => $url]);
+
+        Http::assertSentCount(1);
+        $this->assertSame(2, AiVoiceClip::sole()->hits);
+    }
+
+    public function test_the_budget_day_starts_at_local_midnight_not_utc(): void
+    {
+        // 06:00 UTC on Oct 7 is still 23:00 on Oct 6 in Los Angeles.
+        $this->travelTo(Carbon::parse('2026-10-07 06:00:00', 'UTC'));
+        $this->fakeProvider();
+        $this->setDailyLimit('100');
+        // 01:00 Oct 6 in Los Angeles: the same local day, a different UTC day.
+        AiVoiceClip::factory()->create(['characters' => 90, 'created_at' => Carbon::parse('2026-10-06 08:00:00', 'UTC')]);
+
+        $this->speak()->assertStatus(429);
+    }
+
+    public function test_clips_made_before_the_local_day_do_not_count_against_the_limit(): void
+    {
+        $this->travelTo(Carbon::parse('2026-10-07 06:00:00', 'UTC'));
+        $this->fakeProvider();
+        $this->setDailyLimit('100');
+        // 23:00 Oct 5 in Los Angeles.
+        AiVoiceClip::factory()->create(['characters' => 100, 'created_at' => Carbon::parse('2026-10-06 06:00:00', 'UTC')]);
+
+        $this->speak()->assertOk();
+    }
+
+    public function test_a_provider_error_gives_the_reserved_characters_back(): void
+    {
+        $this->setDailyLimit('100');
+        AiVoiceClip::factory()->create(['characters' => 82]);
+        Http::fake(['ai-voice.test/*' => Http::sequence()
+            ->push(['error' => 'boom'], 500)
+            ->push(['error' => 'boom'], 500)
+            ->push(self::AUDIO, 200, ['Content-Type' => 'audio/mpeg'])]);
+
+        $this->speak()->assertStatus(503);
+        // 82 + 18 still fits, so the failed attempt was not charged.
+        $this->speak()->assertOk();
+    }
+
+    public function test_a_timed_out_request_stays_charged_because_it_may_have_been_billed(): void
+    {
+        $this->setDailyLimit('100');
+        AiVoiceClip::factory()->create(['characters' => 64]);
+        Http::fake(['ai-voice.test/*' => Http::sequence()
+            ->pushFailedConnection()
+            ->push(self::AUDIO, 200, ['Content-Type' => 'audio/mpeg'])]);
+
+        $this->speak()->assertStatus(503);
+        // 64 + 18 charged for the timeout, + 18 more = 100: still fits.
+        $this->speak()->assertOk();
+        // Now 118 of 100 would be needed.
+        $this->speak(['text' => 'Something new to say'])->assertStatus(429);
+
+        Http::assertSentCount(2);
+    }
+
+    #[DataProvider('invalidLimits')]
+    public function test_a_blank_or_non_numeric_limit_falls_back_to_the_default(string $value): void
+    {
+        $this->setDailyLimit($value);
+
+        $this->assertSame(AiVoice::DEFAULT_DAILY_CHARACTER_LIMIT, AiVoice::dailyCharacterLimit());
+    }
+
+    public static function invalidLimits(): array
+    {
+        return [
+            'blank' => [''],
+            'words' => ['lots'],
+        ];
     }
 
     public function test_is_off_when_no_api_key_is_configured(): void

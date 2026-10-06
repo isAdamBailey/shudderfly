@@ -76,6 +76,8 @@ return [
         'endpoint' => env('AI_VOICE_ENDPOINT', 'https://api.deepinfra.com/v1/audio/speech'),
         'model' => env('AI_VOICE_MODEL', 'hexgrad/Kokoro-82M'),
         'timeout' => (int) env('AI_VOICE_TIMEOUT') ?: 10,
+        // Dollars per 1M input characters; only used to estimate cost in reports.
+        'price_per_million' => (float) env('AI_VOICE_PRICE_PER_MILLION') ?: 0.62,
         'voices' => [
             'en' => ['af_heart', 'af_bella', 'af_nova', 'am_puck', 'am_michael', 'bf_emma', 'bm_george', 'am_santa'],
             'es' => ['ef_dora', 'em_alex', 'em_santa'],

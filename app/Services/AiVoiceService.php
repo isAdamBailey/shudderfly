@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
+use App\Exceptions\AiVoiceBudgetExceeded;
 use App\Exceptions\AiVoiceUnavailable;
 use App\Models\AiVoiceClip;
 use App\Support\AiVoice;
 use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
@@ -49,8 +51,15 @@ class AiVoiceService
     // anyway, so holding a worker longer helps no one.
     private const LOCK_WAIT_SECONDS = 2;
 
+    // The budget lock only guards a cache read and write.
+    private const BUDGET_LOCK_SECONDS = 5;
+
     /**
+     * A cached clip is always returned, even once today's budget is spent;
+     * only generating a new one is refused.
+     *
      * @throws \InvalidArgumentException when $text is empty or too long once normalized
+     * @throws AiVoiceBudgetExceeded
      * @throws AiVoiceUnavailable
      */
     public function clipFor(string $text, string $locale, ?string $voice, float $speed): AiVoiceClip
@@ -131,7 +140,20 @@ class AiVoiceService
 
     private function generate(string $hash, string $text, string $locale, string $voice, float $speed, string $model): AiVoiceClip
     {
-        $audio = $this->synthesize($text, $voice, $speed, $model);
+        $characters = mb_strlen($text);
+        $this->reserveBudget($characters);
+
+        try {
+            $audio = $this->synthesize($text, $voice, $speed, $model);
+        } catch (AiVoiceUnavailable $exception) {
+            // A timeout or dropped connection may still have been billed,
+            // so it stays charged; anything else produced no audio.
+            if (! $exception->getPrevious() instanceof ConnectionException) {
+                $this->adjustBudget(fn (int $used) => $used - $characters);
+            }
+
+            throw $exception;
+        }
         $path = "ai-voice/{$locale}/{$hash}.mp3";
 
         if (! Storage::disk('s3')->put($path, $audio, 'public')) {
@@ -146,11 +168,66 @@ class AiVoiceService
             'voice' => $voice,
             'model' => $model,
             'speed' => $speed,
-            'characters' => mb_strlen($text),
+            'characters' => $characters,
             'path' => $path,
             'hits' => 1,
             'last_played_at' => now(),
         ]);
+    }
+
+    /**
+     * Charges $characters to today's budget before the provider is called,
+     * or refuses the clip if that would pass the daily limit. Reserving up
+     * front, under one lock for every text, means a burst of different
+     * misses cannot all pass the check before any of them is recorded.
+     */
+    private function reserveBudget(int $characters): void
+    {
+        $limit = AiVoice::dailyCharacterLimit();
+        $used = null;
+
+        $this->adjustBudget(function (int $current) use ($characters, $limit, &$used) {
+            $used = $current;
+
+            return $current + $characters <= $limit ? $current + $characters : $current;
+        });
+
+        if ($used + $characters <= $limit) {
+            return;
+        }
+
+        // Once per day is enough to explain the fallback in the logs.
+        if (Cache::add('ai-voice:budget-logged:'.AiVoice::budgetDay()->toDateString(), true, now()->addDay())) {
+            Log::warning('AI voice daily character limit reached; new clips fall back to the device voice', [
+                'limit' => $limit,
+                'used' => $used,
+            ]);
+        }
+
+        throw new AiVoiceBudgetExceeded("AI voice daily character limit of {$limit} reached");
+    }
+
+    /**
+     * Applies $change to the characters charged today. The running total
+     * starts from the clips stored today, and also holds characters spent
+     * on requests that timed out, which never produce a row.
+     *
+     * @param  callable(int): int  $change
+     */
+    private function adjustBudget(callable $change): void
+    {
+        $day = AiVoice::budgetDay();
+        $key = 'ai-voice:characters:'.$day->toDateString();
+
+        try {
+            Cache::lock('ai-voice:budget', self::BUDGET_LOCK_SECONDS)->block(self::LOCK_WAIT_SECONDS, function () use ($change, $day, $key) {
+                $used = Cache::get($key) ?? AiVoiceClip::charactersSince($day->startOfDay());
+
+                Cache::put($key, max(0, $change((int) $used)), $day->endOfDay()->addHour());
+            });
+        } catch (LockTimeoutException) {
+            throw new AiVoiceUnavailable('Timed out waiting for the AI voice budget');
+        }
     }
 
     /**

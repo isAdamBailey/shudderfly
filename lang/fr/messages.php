@@ -463,6 +463,13 @@ return [
     'speech.volume_normal' => 'normal',
     'speech.volume_loud' => 'fort',
     'ai_voice.provider_alert' => 'Cela s’est produit lors de la génération d’un extrait de voix IA. Ajoutez des fonds à :provider, ou désactivez ai_voice_enabled dans les paramètres d’administration en attendant. La voix de l’appareil est utilisée entre-temps.',
+    'ai_voice.usage_heading' => 'Voix IA cette semaine',
+    'ai_voice.usage_metric' => 'Indicateur',
+    'ai_voice.usage_value' => 'Valeur',
+    'ai_voice.usage_clips' => 'Nouveaux clips',
+    'ai_voice.usage_characters' => 'Caractères générés',
+    'ai_voice.usage_cost' => 'Coût estimé',
+    'ai_voice.usage_hit_rate' => 'Lectures servies depuis le cache (tous les clips)',
 
     // Music
     'music.now_playing' => 'Tu écoutes :title',

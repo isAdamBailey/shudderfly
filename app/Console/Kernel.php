@@ -39,6 +39,13 @@ class Kernel extends ConsoleKernel
             ->timezone($weeklyTimezone)
             ->withoutOverlapping();
 
+        // Runs whether or not the AI voice is on: pruning never calls the
+        // provider, and clips stored while it was on still need clearing.
+        $schedule->command('ai-voice:prune')
+            ->weeklyOn(0, '4:00')
+            ->timezone($weeklyTimezone)
+            ->withoutOverlapping();
+
         // Only schedule music sync if music is enabled
         $musicEnabled = SiteSetting::where('key', 'music_enabled')->first()?->value ?? false;
 
