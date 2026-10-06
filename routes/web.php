@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AiVoiceController;
 use App\Http\Controllers\BookController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CollageController;
@@ -65,6 +66,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/unblock-requests', [UnblockRequestController::class, 'store'])
         ->middleware('throttle:10,1')
         ->name('unblock-requests.store');
+
+    Route::post('/ai-voice', [AiVoiceController::class, 'speak'])
+        ->middleware('throttle:60,1')
+        ->name('ai-voice.speak');
 
     Route::patch('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
     Route::patch('/profile/notifications/preferences', [ProfileController::class, 'updateNotificationPreferences'])

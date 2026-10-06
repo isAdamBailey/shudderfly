@@ -5,8 +5,8 @@ namespace App\Support;
 use App\Models\SiteSetting;
 
 /**
- * Single gate for every third-party AI call the app makes: media
- * descriptions and the weekly profile overviews.
+ * Gate for the third-party AI text calls: media descriptions and the weekly
+ * profile overviews. The AI voice has its own gate, App\Support\AiVoice.
  */
 class AiFeature
 {

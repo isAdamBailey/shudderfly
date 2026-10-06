@@ -26,7 +26,12 @@ class AiProviderAlertService
 
     private const QUOTA_KEYWORDS = ['credit', 'quota', 'insufficient', 'balance'];
 
-    public function alertIfQuotaExceeded(string $provider, Response $response): void
+    /**
+     * @param  string|null  $context  What failed and what to do about it, for
+     *                                the email body; null keeps the default
+     *                                media description / weekly overview text.
+     */
+    public function alertIfQuotaExceeded(string $provider, Response $response, ?string $context = null): void
     {
         if (! $this->looksLikeQuotaExceeded($response)) {
             return;
@@ -48,7 +53,7 @@ class AiProviderAlertService
         foreach ($recipients as $recipient) {
             try {
                 Mail::to($recipient->email)->send(
-                    new AiProviderQuotaAlertMail($provider, $response->status(), $response->body())
+                    new AiProviderQuotaAlertMail($provider, $response->status(), $response->body(), $context)
                 );
             } catch (\Throwable $exception) {
                 report($exception);

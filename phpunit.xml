@@ -39,6 +39,9 @@
     <env name="AWS_BUCKET" value="testing"/>
     <!-- Never let a developer's local AI_PROVIDER=anthropic make real, billed API calls from the test suite -->
     <env name="AI_PROVIDER" value="huggingface"/>
+    <!-- Tests fake the TTS provider with Http::fake(); never send a real key -->
+    <env name="AI_VOICE_API_KEY" value="testing" force="true"/>
+    <env name="AI_VOICE_ENDPOINT" value="https://ai-voice.test/v1/audio/speech" force="true"/>
   </php>
   <source>
     <include>

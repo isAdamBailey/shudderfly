@@ -462,6 +462,7 @@ return [
     'speech.volume_quiet' => 'faible',
     'speech.volume_normal' => 'normal',
     'speech.volume_loud' => 'fort',
+    'ai_voice.provider_alert' => 'Cela s’est produit lors de la génération d’un extrait de voix IA. Ajoutez des fonds à :provider, ou désactivez ai_voice_enabled dans les paramètres d’administration en attendant. La voix de l’appareil est utilisée entre-temps.',
 
     // Music
     'music.now_playing' => 'Tu écoutes :title',

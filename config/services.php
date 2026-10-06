@@ -63,6 +63,26 @@ return [
         'text_model' => env('ANTHROPIC_TEXT_MODEL', 'claude-haiku-4-5'),
     ],
 
+    /*
+     * Text-to-speech for the AI voice (AiVoiceService). Names stay
+     * model-agnostic: a different model is a config change here, and since
+     * the model is part of each clip's hash, the cache refills itself.
+     *
+     * voices: per-locale allow-list; the first entry is that locale's default.
+     */
+    'ai_voice' => [
+        'provider' => env('AI_VOICE_PROVIDER', 'deepinfra'),
+        'api_key' => env('AI_VOICE_API_KEY'),
+        'endpoint' => env('AI_VOICE_ENDPOINT', 'https://api.deepinfra.com/v1/audio/speech'),
+        'model' => env('AI_VOICE_MODEL', 'hexgrad/Kokoro-82M'),
+        'timeout' => (int) env('AI_VOICE_TIMEOUT') ?: 10,
+        'voices' => [
+            'en' => ['af_heart', 'af_bella', 'af_nova', 'am_puck', 'am_michael', 'bf_emma', 'bm_george', 'am_santa'],
+            'es' => ['ef_dora', 'em_alex', 'em_santa'],
+            'fr' => ['ff_siwis'],
+        ],
+    ],
+
     'tmdb' => [
         'api_key' => env('TMDB_API_KEY'),
         'base_api_url' => env('TMDB_BASE_API_URL', 'https://api.themoviedb.org/3'),
