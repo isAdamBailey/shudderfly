@@ -1,20 +1,15 @@
 import { onMounted, ref } from "vue";
 import { usePage } from "@inertiajs/vue3";
 import {
-    aiVoiceEnabled,
-    pauseAiVoice,
-    playAiVoice,
-    primeAiVoice,
-    resumeAiVoice,
-    stopAiVoice,
-} from "@/composables/aiVoice";
+    pauseAllSpeech,
+    resumeAllSpeech,
+    speakPhrase,
+    stopAllSpeech,
+} from "@/composables/speechPlayback";
 import {
-    applySpeechSettingsToUtterance,
     getAppLocaleFromPage,
-    getStoredAppLocale,
     readStoredSpeechSettings,
     resolveSpeechVoice,
-    speakUtterance,
     syncStoredSpeechLanguage,
 } from "@/composables/speechVoice";
 import { useTranslations } from "@/composables/useTranslations";
@@ -22,36 +17,6 @@ import { useTranslations } from "@/composables/useTranslations";
 const INITIAL_VOICE_RETRY_DELAY = 100;
 const VOICE_RETRY_INTERVAL = 200;
 const MAX_VOICE_LOADING_ATTEMPTS = 5;
-
-// With the AI voice on, phrases from every component play one after another,
-// the way speechSynthesis queues utterances: a page that speaks a title and
-// then an excerpt must say both. Each entry is { run, cancel }; run resolves
-// when its phrase has finished, by either voice.
-const aiSpeechQueue = [];
-let aiSpeechDraining = false;
-
-// If a phrase's end event never arrives (a stalled clip, or Chrome dropping
-// an utterance's onend), the queue moves on after this long rather than
-// silencing every later phrase. Generous: ~8 characters a second at the
-// slowest rate, plus time to fetch.
-const PHRASE_WATCHDOG_BASE_MS = 10000;
-const PHRASE_WATCHDOG_MS_PER_CHARACTER = 250;
-
-async function drainAiSpeechQueue() {
-    if (aiSpeechDraining) {
-        return;
-    }
-    aiSpeechDraining = true;
-    while (aiSpeechQueue.length) {
-        await aiSpeechQueue.shift().run();
-    }
-    aiSpeechDraining = false;
-}
-
-// Dropped phrases still complete, as cancelled utterances do.
-function clearAiSpeechQueue() {
-    aiSpeechQueue.splice(0).forEach((entry) => entry.cancel());
-}
 
 export function useSpeechSynthesis() {
     const { t } = useTranslations();
@@ -66,14 +31,7 @@ export function useSpeechSynthesis() {
     const selectedEmotion = ref(localStorage.getItem("selectedEmotion") || "");
     const isPaused = ref(false);
 
-    const getAppLocale = () => {
-        const fromPage = page.props.locale;
-        if (fromPage) {
-            return getAppLocaleFromPage(page);
-        }
-
-        return getStoredAppLocale();
-    };
+    const getAppLocale = () => getAppLocaleFromPage(page);
 
     const getVoices = () => {
         if ("speechSynthesis" in window) {
@@ -147,138 +105,42 @@ export function useSpeechSynthesis() {
     };
 
     const pauseSpeech = () => {
-        pauseAiVoice();
-        if ("speechSynthesis" in window) {
-            window.speechSynthesis.pause();
-            isPaused.value = true;
-        }
+        pauseAllSpeech();
+        isPaused.value = true;
     };
 
     const resumeSpeech = () => {
-        resumeAiVoice();
-        if ("speechSynthesis" in window) {
-            window.speechSynthesis.resume();
-            isPaused.value = false;
-        }
+        resumeAllSpeech();
+        isPaused.value = false;
     };
 
     const stopSpeech = () => {
-        clearAiSpeechQueue();
-        stopAiVoice();
+        stopAllSpeech();
         speaking.value = false;
         isPaused.value = false;
-        if ("speechSynthesis" in window) {
-            window.speechSynthesis.cancel();
-        }
     };
 
     const speak = (phrase, onComplete) => {
-        let completed = false;
-        const done = () => {
-            if (completed) {
-                return;
-            }
-            completed = true;
-            onComplete?.();
-        };
-
-        if (phrase && aiVoiceEnabled()) {
-            primeAiVoice();
-            // Set now, not when the clip starts after the request, so the
-            // buttons that disable while speaking can't queue repeats.
-            speaking.value = true;
-            aiSpeechQueue.push({
-                cancel: done,
-                run: () => speakInTurn(phrase, done),
-            });
-            drainAiSpeechQueue();
-            return;
-        }
-
-        speakWithDeviceVoice(phrase, done);
-    };
-
-    // The AI voice, or the device voice if it can't, resolving when the
-    // phrase is over so the next one in the queue can start.
-    const speakInTurn = (phrase, done) =>
-        new Promise((resolve) => {
-            let watchdog;
-            const finish = () => {
-                clearTimeout(watchdog);
-                speaking.value = false;
-                isPaused.value = false;
-                done();
-                resolve();
-            };
-            watchdog = setTimeout(
-                finish,
-                PHRASE_WATCHDOG_BASE_MS +
-                    phrase.length * PHRASE_WATCHDOG_MS_PER_CHARACTER
-            );
-
-            // Settings and locale are read now, not when queued, so a
-            // change made meanwhile applies.
-            playAiVoice(phrase, {
-                ...readStoredSpeechSettings(),
-                locale: getAppLocale(),
-                onStart: () => {
-                    speaking.value = true;
-                },
-                onEnd: finish,
-            }).then((handled) => {
-                if (handled) {
-                    return;
-                }
-                speakWithDeviceVoice(phrase, finish);
-                // speakUtterance resumes a paused synth; a pause pressed
-                // while the AI voice was loading must still hold.
-                if (isPaused.value) {
-                    window.speechSynthesis?.pause();
-                }
-            });
-        });
-
-    const speakWithDeviceVoice = (phrase, done) => {
-        if (!("speechSynthesis" in window) || !phrase) {
-            done();
-            return;
-        }
-        try {
-            const currentVoices = window.speechSynthesis.getVoices();
-            const utterance = new SpeechSynthesisUtterance(
-                phrase.replace(/@/g, "")
-            );
-            applySpeechSettingsToUtterance(
-                utterance,
-                currentVoices,
-                getAppLocale()
-            );
-
-            utterance.onstart = () => {
+        const queued = speakPhrase(phrase, {
+            onStart: () => {
                 speaking.value = true;
-            };
-            utterance.onend = () => {
-                speaking.value = false;
-                done();
-            };
-            utterance.onpause = () => {
+            },
+            onPause: () => {
                 isPaused.value = true;
-            };
-            utterance.onresume = () => {
+            },
+            onResume: () => {
                 isPaused.value = false;
-            };
-
-            utterance.onerror = (event) => {
-                console.error("Speech error:", event.error);
+            },
+            onEnd: () => {
                 speaking.value = false;
                 isPaused.value = false;
-                done();
-            };
-
-            speakUtterance(utterance);
-        } catch (error) {
-            speaking.value = false;
-            done();
+                onComplete?.();
+            },
+        });
+        // Set now, not when the clip starts after the request, so the
+        // buttons that disable while speaking can't queue repeats.
+        if (queued) {
+            speaking.value = true;
         }
     };
 

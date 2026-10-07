@@ -70,16 +70,13 @@ watch(isFlyoutOpen, saveFlyoutState);
 loadState();
 
 export function useMusicPlayer() {
-    const { speak } = useSpeechSynthesis();
+    const { speak, stopSpeech } = useSpeechSynthesis();
     const { t } = useTranslations();
 
     const announceSong = (song) => {
         if (!song?.title) return;
-        try {
-            window.speechSynthesis?.cancel();
-        } catch (e) {
-            // Cancel may fail if speechSynthesis isn't available
-        }
+        // A quick skip replaces the last announcement rather than queueing.
+        stopSpeech();
         isAnnouncing.value = true;
         speak(t("music.now_playing", { title: song.title }), () => {
             isAnnouncing.value = false;

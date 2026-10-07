@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
     AI_VOICE_BACKOFF_MS,
     AI_VOICE_MAX_CHARACTERS,
-    AI_VOICE_REQUEST_TIMEOUT_MS,
+    AI_VOICE_MAX_REQUEST_TIMEOUT_MS,
+    aiVoiceRequestTimeout,
     AI_VOICE_TIMEOUTS_BEFORE_BACKOFF,
     pauseAiVoice,
     playAiVoice,
@@ -67,13 +68,21 @@ describe("aiVoice", () => {
             "ai-voice.speak",
             { text: "Hello there", locale: "es", voice: null },
             expect.objectContaining({
-                timeout: AI_VOICE_REQUEST_TIMEOUT_MS,
+                timeout: aiVoiceRequestTimeout("Hello there"),
                 signal: expect.any(AbortSignal),
             })
         );
         expect(lastAudio.src).toBe(CLIP_URL);
         expect(lastAudio.volume).toBe(0.5);
         expect(onStart).toHaveBeenCalledOnce();
+    });
+
+    it("waits longer for a longer phrase, up to a cap", () => {
+        // A new 165-character clip takes about 2.1 s to generate.
+        expect(aiVoiceRequestTimeout("x".repeat(165))).toBeGreaterThan(2100);
+        expect(aiVoiceRequestTimeout("x".repeat(2000))).toBe(
+            AI_VOICE_MAX_REQUEST_TIMEOUT_MS
+        );
     });
 
     it("keeps the natural pitch when only the rate changes", async () => {

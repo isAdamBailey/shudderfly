@@ -1,53 +1,54 @@
+import { aiVoiceEnabled } from "@/composables/aiVoice";
+import {
+    speakPhrase,
+    speechStopCount,
+    stopAllSpeech,
+} from "@/composables/speechPlayback";
 import {
     applySpeechSettingsToUtterance,
     getStoredAppLocale,
+    isSpeechSynthesisAvailable,
     speakUtterance,
+    waitForSpeechVoices,
 } from "@/composables/speechVoice";
 
 const isSpeechSupported =
-    typeof window !== "undefined" &&
-    "speechSynthesis" in window &&
+    isSpeechSynthesisAvailable() &&
     typeof SpeechSynthesisUtterance !== "undefined";
 
+// The utterance being spoken: without a reference Chrome can collect it
+// mid-speech, and its onend never fires.
 let currentUtterance = null;
 
-// Safari populates the voice list asynchronously; getVoices() is usually empty
-// on first call. Resolve once voices are available (or a short timeout elapses)
-// so the intro speech doesn't silently no-op with no configured voice.
-function ensureVoicesLoaded(timeoutMs = 1000) {
-    return new Promise((resolve) => {
-        if (!isSpeechSupported) {
-            resolve([]);
-            return;
-        }
-        const existing = window.speechSynthesis.getVoices();
-        if (existing.length > 0) {
-            resolve(existing);
-            return;
-        }
-
-        let settled = false;
-        const finish = () => {
-            if (settled) return;
-            settled = true;
-            window.speechSynthesis.onvoiceschanged = null;
-            resolve(window.speechSynthesis.getVoices());
-        };
-
-        window.speechSynthesis.onvoiceschanged = finish;
-        setTimeout(finish, timeoutMs);
-    });
-}
-
 export function speakGameIntro(text, onEnd) {
+    stopGameIntroSpeech();
+
+    // With the AI voice on, the intro takes the shared queue's AI voice and
+    // device fallback like every other phrase; that fallback has the same
+    // Safari workarounds as below.
+    if (aiVoiceEnabled()) {
+        speakPhrase(text, { onEnd });
+        return;
+    }
+
     if (!isSpeechSupported) {
         if (onEnd) onEnd();
         return;
     }
 
-    stopGameIntroSpeech();
+    // Any stop while the intro waits below, from here or anywhere else in
+    // the app, drops it rather than speaking it afterwards.
+    const stopsAtStart = speechStopCount();
+    const stoppedMeanwhile = () => {
+        if (speechStopCount() === stopsAtStart) {
+            return false;
+        }
+        if (onEnd) onEnd();
+        return true;
+    };
 
-    ensureVoicesLoaded().then((voices) => {
+    waitForSpeechVoices().then((voices) => {
+        if (stoppedMeanwhile()) return;
         const utterance = new SpeechSynthesisUtterance(text);
         // Use the app-wide voice/rate/pitch/volume the user has chosen and
         // persisted in localStorage, exactly like the rest of the app.
@@ -64,17 +65,19 @@ export function speakGameIntro(text, onEnd) {
         };
 
         currentUtterance = utterance;
+
         // Safari can drop an utterance spoken in the same tick as a cancel();
         // defer to the next tick so the queue has cleared.
         setTimeout(() => {
+            if (stoppedMeanwhile()) return;
             speakUtterance(utterance);
         }, 0);
     });
 }
 
+// Stops all speech, not only the intro, as speechSynthesis.cancel() always
+// did; that includes an AI voice clip and anything queued behind it.
 export function stopGameIntroSpeech() {
-    if (isSpeechSupported) {
-        window.speechSynthesis.cancel();
-    }
+    stopAllSpeech();
     currentUtterance = null;
 }

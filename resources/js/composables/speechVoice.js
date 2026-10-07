@@ -155,8 +155,39 @@ export function applySpeechSettingsToUtterance(utterance, voices, appLocale) {
     utterance.lang = resolveSpeechLanguageForAppLocale(appLocale);
 }
 
+// Safari fills the voice list asynchronously, so getVoices() is usually
+// empty at first, and an utterance spoken then can be dropped. Resolves with
+// the voices once there are some, or after timeoutMs regardless.
+export function waitForSpeechVoices(timeoutMs = 1000) {
+    return new Promise((resolve) => {
+        if (!isSpeechSynthesisAvailable()) {
+            resolve([]);
+            return;
+        }
+        const synth = window.speechSynthesis;
+        if (synth.getVoices().length > 0) {
+            resolve(synth.getVoices());
+            return;
+        }
+
+        let timer;
+        const finish = () => {
+            clearTimeout(timer);
+            // A listener, not onvoiceschanged, which useSpeechSynthesis owns.
+            synth.removeEventListener?.("voiceschanged", finish);
+            resolve(synth.getVoices());
+        };
+        synth.addEventListener?.("voiceschanged", finish);
+        timer = setTimeout(finish, timeoutMs);
+    });
+}
+
+export function isSpeechSynthesisAvailable() {
+    return typeof window !== "undefined" && "speechSynthesis" in window;
+}
+
 export function speakUtterance(utterance) {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+    if (!isSpeechSynthesisAvailable()) {
         return;
     }
 

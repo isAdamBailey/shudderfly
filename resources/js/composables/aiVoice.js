@@ -11,8 +11,24 @@ import axios from "axios";
 // preservesPitch off and multiplies into playbackRate, the only pitch
 // control an <audio> element has.
 
-// After this the device voice is quicker than waiting any longer.
-export const AI_VOICE_REQUEST_TIMEOUT_MS = 1500;
+// How long to wait for a clip before using the device voice. A new clip
+// takes about 0.6 s plus 9 ms a character to generate (measured on
+// DeepInfra, October 2026: 18 characters in 0.74 s, 110 in 1.6 s), so a
+// fixed wait sent every longer phrase, such as a game intro, to the device
+// voice on its first play. The wait grows with the phrase, up to a cap past
+// which the device voice is quicker; the server still caches the clip.
+const AI_VOICE_BASE_REQUEST_TIMEOUT_MS = 1500;
+const AI_VOICE_TIMEOUT_MS_PER_CHARACTER = 15;
+export const AI_VOICE_MAX_REQUEST_TIMEOUT_MS = 5000;
+
+export function aiVoiceRequestTimeout(phrase) {
+    return Math.min(
+        AI_VOICE_MAX_REQUEST_TIMEOUT_MS,
+        // UTF-16 units: close enough for a wait, and no array to build.
+        AI_VOICE_BASE_REQUEST_TIMEOUT_MS +
+            phrase.length * AI_VOICE_TIMEOUT_MS_PER_CHARACTER
+    );
+}
 
 // Mirrors AiVoiceService::MAX_CHARACTERS: longer text would only get a 422.
 export const AI_VOICE_MAX_CHARACTERS = 2000;
@@ -130,7 +146,7 @@ async function fetchClipUrl(key, text, locale, voice, signal) {
     const { data } = await axios.post(
         route("ai-voice.speak"),
         { text, locale, voice },
-        { signal, timeout: AI_VOICE_REQUEST_TIMEOUT_MS }
+        { signal, timeout: aiVoiceRequestTimeout(text) }
     );
 
     if (!data?.url) {
