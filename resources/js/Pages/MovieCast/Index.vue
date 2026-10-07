@@ -33,7 +33,7 @@ const props = defineProps({
     },
 });
 
-const { speak, speaking } = useSpeechSynthesis();
+const { speak, speaking, stopSpeech } = useSpeechSynthesis();
 const { t } = useTranslations();
 
 const browserLanguage =
@@ -184,7 +184,7 @@ const openRemoveFavoriteDialog = (movie) => {
 };
 
 const resetPage = () => {
-    window.speechSynthesis?.cancel();
+    stopSpeech();
     if (isListening.value) {
         stop();
     }
@@ -292,7 +292,7 @@ const returnToSearchResults = () => {
     castMembers.value = [];
     movieTitle.value = "";
     errorMessage.value = "";
-    window.speechSynthesis?.cancel();
+    stopSpeech();
 };
 
 const onFavoriteButtonClick = async () => {
@@ -393,7 +393,7 @@ watch(error, () => {
 
 const speakCharacter = (member) => {
     if (speakingMemberId.value === member.id) {
-        window.speechSynthesis?.cancel();
+        stopSpeech();
         speakingMemberId.value = null;
         return;
     }
@@ -409,7 +409,7 @@ const speakCharacter = (member) => {
 
 const speakMovieDescription = () => {
     if (isSpeakingDescription.value) {
-        window.speechSynthesis?.cancel();
+        stopSpeech();
         isSpeakingDescription.value = false;
         return;
     }
@@ -442,7 +442,7 @@ onBeforeUnmount(() => {
     if (isListening.value) {
         stop();
     }
-    window.speechSynthesis?.cancel();
+    stopSpeech();
 });
 </script>
 

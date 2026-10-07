@@ -1,7 +1,9 @@
 import {
+    aiClip,
     pauseAiVoice,
     playAiVoice,
     primeAiVoice,
+    resetAiVoiceMock,
     resumeAiVoice,
     stopAiVoice,
 } from "@/composables/aiVoice";
@@ -20,22 +22,11 @@ vi.mock("@inertiajs/vue3", () => ({
     usePage: () => ({ props: pageProps }),
 }));
 
-// Like the real module, stopping ends the current clip; without that the
-// module-level speech queue would wait on it into the next test.
-const aiClip = { options: null };
-
-vi.mock("@/composables/aiVoice", () => ({
-    aiVoiceEnabled: () => Boolean(pageProps.aiVoice),
-    primeAiVoice: vi.fn(),
-    playAiVoice: vi.fn(),
-    stopAiVoice: vi.fn(() => {
-        const options = aiClip.options;
-        aiClip.options = null;
-        options?.onEnd?.();
-    }),
-    pauseAiVoice: vi.fn(),
-    resumeAiVoice: vi.fn(),
-}));
+vi.mock("@/composables/aiVoice", async () =>
+    (await import("@/composables/aiVoice.mock")).createAiVoiceMock(() =>
+        Boolean(pageProps.aiVoice)
+    )
+);
 
 let wrapper;
 
@@ -89,13 +80,6 @@ describe("useSpeechSynthesis", () => {
     });
 
     describe("with the AI voice", () => {
-        // A clip that starts playing and stays current until ended.
-        const playsClip = (_, options) => {
-            aiClip.options = options;
-            options.onStart?.();
-            return Promise.resolve(true);
-        };
-
         const endClip = async () => {
             const options = aiClip.options;
             aiClip.options = null;
@@ -105,8 +89,7 @@ describe("useSpeechSynthesis", () => {
 
         beforeEach(() => {
             pageProps.aiVoice = { voices: { en: ["af_heart"] } };
-            aiClip.options = null;
-            playAiVoice.mockImplementation(playsClip);
+            resetAiVoiceMock();
         });
 
         // The queue is module-level: end whatever a test left playing, and

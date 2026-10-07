@@ -1,7 +1,16 @@
+import { playAiVoice, resetAiVoiceMock } from "@/composables/aiVoice";
 import { useGlobalTimer } from "@/composables/useGlobalTimer";
 import { useWorldClockSync } from "@/composables/useWorldClockSync";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
+
+const aiVoice = { enabled: false };
+
+vi.mock("@/composables/aiVoice", async () =>
+    (await import("@/composables/aiVoice.mock")).createAiVoiceMock(
+        () => aiVoice.enabled
+    )
+);
 
 // Drive the shared end time the way the server would, so the timer derives its
 // countdown from it. server_now == current time means a zero clock-skew offset.
@@ -30,6 +39,9 @@ describe("composables/useGlobalTimer", () => {
         vi.useFakeTimers();
         vi.setSystemTime(new Date("2024-01-01T00:00:00Z"));
         window.speechSynthesis.speak.mockClear();
+        playAiVoice.mockClear();
+        resetAiVoiceMock();
+        aiVoice.enabled = false;
     });
 
     afterEach(() => {
@@ -66,6 +78,18 @@ describe("composables/useGlobalTimer", () => {
         expect(window.speechSynthesis.speak).toHaveBeenCalledTimes(1);
         vi.advanceTimersByTime(60 * 1000);
         expect(window.speechSynthesis.speak).toHaveBeenCalledTimes(1);
+    });
+
+    it("announces with the AI voice when it's on", async () => {
+        aiVoice.enabled = true;
+        useGlobalTimer();
+        setTimer(sync, 5 * 60 * 1000);
+        await nextTick();
+        await nextTick();
+        vi.advanceTimersByTime(5 * 60 * 1000);
+        await Promise.resolve();
+        expect(playAiVoice).toHaveBeenCalledOnce();
+        expect(window.speechSynthesis.speak).not.toHaveBeenCalled();
     });
 
     it("does not announce on load when the timer already elapsed before this client connected", async () => {

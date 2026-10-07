@@ -155,8 +155,12 @@ export function applySpeechSettingsToUtterance(utterance, voices, appLocale) {
     utterance.lang = resolveSpeechLanguageForAppLocale(appLocale);
 }
 
+export function isSpeechSynthesisAvailable() {
+    return typeof window !== "undefined" && "speechSynthesis" in window;
+}
+
 export function speakUtterance(utterance) {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+    if (!isSpeechSynthesisAvailable()) {
         return;
     }
 
