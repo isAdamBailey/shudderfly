@@ -24,7 +24,7 @@ class GameController extends Controller
      * `distance` is the landmark's position along that road, in CSS px. It is
      * written out rather than derived from array order so a new game can be
      * dropped in mid-road without renumbering the rest. */
-    private static function games(): array
+    public static function games(): array
     {
         return [
             'sprout-pox' => [
