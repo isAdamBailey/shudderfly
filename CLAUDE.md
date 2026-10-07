@@ -106,10 +106,10 @@ Defined in `app/Console/Kernel.php`, all run weekly on Sunday (America/Los_Angel
 -   `pages:cleanup-stale` — deletes pages older than 30 days whose `read_count` (a weighted popularity score, not a view tally — see `IncrementPageReadCount`) is below 2, removes emptied books, and emails a report to `super admin` users
 -   `users:generate-weekly-overviews` — AI summaries via Hugging Face
 -   `send:weekly-stats-mail` — weekly digest email
--   `music:sync-youtube` — daily sync if `music_enabled` setting is on
+-   `music:sync-youtube` — daily at 13:00 if `music_enabled` setting is on (before `ai-voice:prewarm`)
 -   `messages:cleanup` — daily cleanup if `messaging_enabled` is on
 -   `ai-voice:prune` — weekly, deletes AI voice clips not played in 90 days (runs even with the AI voice off)
--   `ai-voice:prewarm` — daily at 13:00 (before the music sync) while the AI voice is on; makes clips for new or changed spoken text, skipping cached ones, within 75% of the daily character budget
+-   `ai-voice:prewarm` — daily at 14:00 (an hour after the music sync) while the AI voice is on; makes clips for new or changed spoken text, skipping cached ones, within 75% of the daily character budget
 
 ### Search
 
