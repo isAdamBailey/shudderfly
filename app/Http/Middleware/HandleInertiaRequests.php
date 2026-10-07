@@ -110,7 +110,9 @@ class HandleInertiaRequests extends Middleware
             'settings' => $settings,
             'theme' => self::getCurrentTheme(),
             'locale' => app()->getLocale(),
-            'aiVoice' => AiVoice::enabled($siteSettings)
+            // POST /ai-voice is for signed-in users only, so guests get no
+            // gate and speak with the device voice.
+            'aiVoice' => $request->user() && AiVoice::enabled($siteSettings)
                 ? ['voices' => config('services.ai_voice.voices')]
                 : null,
             'collageMaxPages' => (int) config('collage.max_pages'),
