@@ -11,12 +11,15 @@ use App\Models\User;
 use App\Services\AiVoiceService;
 use App\Support\AiVoice;
 use App\Support\SpokenText;
+use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Tests\TestCase;
 
 class AiVoiceWarmingTest extends TestCase
@@ -135,6 +138,18 @@ class AiVoiceWarmingTest extends TestCase
         // The fake queue pushes at once; a real one holds the job until commit.
         $this->assertCount(1, $this->jobsFor('Video night'));
         $this->assertTrue($this->jobsFor('Video night')->sole()->afterCommit);
+    }
+
+    public function test_a_warming_failure_is_reported_without_rolling_back_the_save(): void
+    {
+        Exceptions::fake();
+        $this->mock(Dispatcher::class, fn ($mock) => $mock->shouldReceive('dispatch')->andThrow(new RuntimeException('queue down')));
+        $book = Book::factory()->createQuietly(['slug' => 'quiet']);
+
+        DB::transaction(fn () => $book->pages()->create(['content' => '<p>Video night</p>']));
+
+        $this->assertSame(1, $book->pages()->count());
+        Exceptions::assertReported(fn (RuntimeException $e) => $e->getMessage() === 'queue down');
     }
 
     public function test_a_blank_editor_page_warms_nothing(): void

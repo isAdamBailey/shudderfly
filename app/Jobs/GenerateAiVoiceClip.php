@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Exceptions\AiVoiceBudgetExceeded;
+use App\Exceptions\AiVoicePaused;
 use App\Services\AiVoiceService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -36,6 +37,9 @@ class GenerateAiVoiceClip implements ShouldQueue
 
         try {
             $service->clipFor($this->text, $this->locale, $this->voice, ahead: true);
+        } catch (AiVoicePaused) {
+            // Expected during a provider outage and logged once by the
+            // service; failing here would fill failed_jobs with one outage.
         } catch (AiVoiceBudgetExceeded) {
             Log::warning('AI voice prewarm skipped: daily character limit reached', [
                 'locale' => $this->locale,

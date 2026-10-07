@@ -256,6 +256,20 @@ class AiVoicePrewarmTest extends TestCase
         $this->assertSame(1, AiVoiceClip::count());
     }
 
+    public function test_sync_stops_once_the_provider_is_paused(): void
+    {
+        Http::fake(['ai-voice.test/*' => Http::failedConnection()]);
+        foreach (['Bingo', 'Bluey', 'Chilli', 'Bandit'] as $title) {
+            $this->book($title);
+        }
+
+        $this->artisan('ai-voice:prewarm', ['--source' => ['books'], '--sync' => true])
+            ->expectsOutputToContain('1 clip(s) left')
+            ->assertFailed();
+
+        Http::assertSentCount(3);
+    }
+
     public function test_sync_generates_the_clips_now(): void
     {
         Http::fake(['ai-voice.test/*' => Http::response('ID3-fake', 200, ['Content-Type' => 'audio/mpeg'])]);
@@ -289,6 +303,20 @@ class AiVoicePrewarmTest extends TestCase
         (new GenerateAiVoiceClip('Bluey', 'en'))->handle(app(AiVoiceService::class));
 
         Http::assertNothingSent();
+        $this->assertSame(0, AiVoiceClip::count());
+    }
+
+    public function test_the_job_skips_quietly_while_the_provider_is_paused(): void
+    {
+        Http::fake(['ai-voice.test/*' => Http::failedConnection()]);
+        $service = app(AiVoiceService::class);
+        foreach (['one', 'two', 'three'] as $text) {
+            rescue(fn () => $service->clipFor($text, 'en', null), report: false);
+        }
+
+        (new GenerateAiVoiceClip('Bluey', 'en'))->handle($service);
+
+        Http::assertSentCount(3);
         $this->assertSame(0, AiVoiceClip::count());
     }
 
