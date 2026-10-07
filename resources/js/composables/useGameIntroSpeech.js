@@ -9,47 +9,23 @@ import {
     getStoredAppLocale,
     isSpeechSynthesisAvailable,
     speakUtterance,
+    waitForSpeechVoices,
 } from "@/composables/speechVoice";
 
 const isSpeechSupported =
     isSpeechSynthesisAvailable() &&
     typeof SpeechSynthesisUtterance !== "undefined";
 
-// Safari populates the voice list asynchronously; getVoices() is usually empty
-// on first call. Resolve once voices are available (or a short timeout elapses)
-// so the intro speech doesn't silently no-op with no configured voice.
-function ensureVoicesLoaded(timeoutMs = 1000) {
-    return new Promise((resolve) => {
-        if (!isSpeechSupported) {
-            resolve([]);
-            return;
-        }
-        const existing = window.speechSynthesis.getVoices();
-        if (existing.length > 0) {
-            resolve(existing);
-            return;
-        }
-
-        let settled = false;
-        const finish = () => {
-            if (settled) return;
-            settled = true;
-            window.speechSynthesis.onvoiceschanged = null;
-            resolve(window.speechSynthesis.getVoices());
-        };
-
-        window.speechSynthesis.onvoiceschanged = finish;
-        setTimeout(finish, timeoutMs);
-    });
-}
+// The utterance being spoken: without a reference Chrome can collect it
+// mid-speech, and its onend never fires.
+let currentUtterance = null;
 
 export function speakGameIntro(text, onEnd) {
     stopGameIntroSpeech();
 
     // With the AI voice on, the intro takes the shared queue's AI voice and
-    // device fallback like every other phrase. The fallback only runs after
-    // a network round trip, so Safari's voice list and cancel have settled
-    // by then and it needs neither workaround below.
+    // device fallback like every other phrase; that fallback has the same
+    // Safari workarounds as below.
     if (aiVoiceEnabled()) {
         speakPhrase(text, { onEnd });
         return;
@@ -71,7 +47,7 @@ export function speakGameIntro(text, onEnd) {
         return true;
     };
 
-    ensureVoicesLoaded().then((voices) => {
+    waitForSpeechVoices().then((voices) => {
         if (stoppedMeanwhile()) return;
         const utterance = new SpeechSynthesisUtterance(text);
         // Use the app-wide voice/rate/pitch/volume the user has chosen and
@@ -79,12 +55,16 @@ export function speakGameIntro(text, onEnd) {
         applySpeechSettingsToUtterance(utterance, voices, getStoredAppLocale());
 
         utterance.onend = () => {
+            currentUtterance = null;
             if (onEnd) onEnd();
         };
 
         utterance.onerror = () => {
+            currentUtterance = null;
             if (onEnd) onEnd();
         };
+
+        currentUtterance = utterance;
 
         // Safari can drop an utterance spoken in the same tick as a cancel();
         // defer to the next tick so the queue has cleared.
@@ -99,4 +79,5 @@ export function speakGameIntro(text, onEnd) {
 // did; that includes an AI voice clip and anything queued behind it.
 export function stopGameIntroSpeech() {
     stopAllSpeech();
+    currentUtterance = null;
 }

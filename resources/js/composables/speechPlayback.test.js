@@ -101,7 +101,7 @@ describe("speechPlayback", () => {
             const onEnd = vi.fn();
 
             speakPhrase("fallback", { onEnd });
-            await flushPromises();
+            await vi.advanceTimersByTimeAsync(0);
             const utterance = window.speechSynthesis.speak.mock.calls[0][0];
 
             stopAllSpeech();
@@ -153,20 +153,34 @@ describe("speechPlayback", () => {
             expect(playAiVoice).toHaveBeenCalledOnce();
         });
 
-        it("keeps playing later phrases after one throws", async () => {
+        it("falls back to the device voice when the AI voice throws", async () => {
             vi.spyOn(console, "error").mockImplementation(() => {});
-            playAiVoice.mockImplementationOnce(() => {
-                throw new Error("storage blocked");
-            });
+            playAiVoice.mockRejectedValueOnce(new Error("no audio"));
             const onEnd = vi.fn();
 
             speakPhrase("broken", { onEnd });
             speakPhrase("next");
+            await vi.advanceTimersByTimeAsync(0);
+
+            expect(window.speechSynthesis.speak).toHaveBeenCalledOnce();
+            window.speechSynthesis.speak.mock.calls[0][0].onend();
             await flushPromises();
 
             expect(onEnd).toHaveBeenCalledOnce();
             expect(playAiVoice).toHaveBeenCalledTimes(2);
             expect(playAiVoice.mock.calls[1][0]).toBe("next");
+        });
+
+        it("waits a tick after a stop before the device fallback speaks", async () => {
+            playAiVoice.mockResolvedValueOnce(false);
+
+            stopAllSpeech();
+            speakPhrase("game intro");
+            await flushPromises();
+            expect(window.speechSynthesis.speak).not.toHaveBeenCalled();
+
+            await vi.advanceTimersByTimeAsync(0);
+            expect(window.speechSynthesis.speak).toHaveBeenCalledOnce();
         });
 
         it("holds the watchdog while paused", async () => {
@@ -189,7 +203,7 @@ describe("speechPlayback", () => {
             window.speechSynthesis.pause.mockClear();
 
             speakPhrase("time's up");
-            await flushPromises();
+            await vi.advanceTimersByTimeAsync(0);
 
             expect(window.speechSynthesis.speak).toHaveBeenCalledOnce();
             expect(window.speechSynthesis.pause).not.toHaveBeenCalled();

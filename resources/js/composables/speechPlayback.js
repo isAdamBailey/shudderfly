@@ -1,5 +1,6 @@
 import { usePage } from "@inertiajs/vue3";
 import {
+    AI_VOICE_MAX_REQUEST_TIMEOUT_MS,
     aiVoiceEnabled,
     pauseAiVoice,
     playAiVoice,
@@ -13,6 +14,7 @@ import {
     isSpeechSynthesisAvailable,
     readStoredSpeechSettings,
     speakUtterance,
+    waitForSpeechVoices,
 } from "@/composables/speechVoice";
 
 // Every spoken phrase in the app goes through speakPhrase, so the AI voice,
@@ -38,13 +40,17 @@ let stopping = false;
 // Counts stops, so speech held outside the queue (the game intro waiting on
 // Safari's voice list) can tell it was stopped before it began.
 let stops = 0;
+// The device utterance being spoken: without a reference Chrome can collect
+// it mid-speech, and its onend never fires.
+let currentUtterance = null;
 
 // If a phrase's end event never arrives (a stalled clip, or Chrome dropping
 // an utterance's onend), the queue moves on after this long rather than
-// silencing every later phrase. Generous: ~8 characters a second at the
-// slowest rate, plus time to fetch.
-const PHRASE_WATCHDOG_BASE_MS = 10000;
-const PHRASE_WATCHDOG_MS_PER_CHARACTER = 250;
+// silencing every later phrase. Generous: the longest a clip request may
+// take, plus a few seconds, plus 2.5 characters a second, slower than the
+// slowest playbackRate the AI voice allows (0.25).
+const PHRASE_WATCHDOG_BASE_MS = AI_VOICE_MAX_REQUEST_TIMEOUT_MS + 5000;
+const PHRASE_WATCHDOG_MS_PER_CHARACTER = 400;
 
 // Read at speak time, not when queued, so a change made meanwhile applies.
 const currentLocale = () => getAppLocaleFromPage(usePage());
@@ -85,15 +91,22 @@ function speakWithDeviceVoice(phrase, { onStart, onEnd, onPause, onResume }) {
             window.speechSynthesis.getVoices(),
             currentLocale()
         );
+        const end = () => {
+            if (currentUtterance === utterance) {
+                currentUtterance = null;
+            }
+            onEnd();
+        };
         utterance.onstart = () => onStart?.();
-        utterance.onend = () => onEnd();
+        utterance.onend = end;
         utterance.onpause = () => onPause?.();
         utterance.onresume = () => onResume?.();
         utterance.onerror = (event) => {
             console.error("Speech error:", event.error);
-            onEnd();
+            end();
         };
 
+        currentUtterance = utterance;
         speakUtterance(utterance);
     } catch (error) {
         onEnd();
@@ -116,26 +129,28 @@ function speakInTurn(phrase, callbacks, entry) {
             callbacks.onEnd();
             resolve();
         };
+        // From now on, stopping ends this phrase itself.
+        entry.cancel = finish;
         // Held while paused, so a long pause doesn't end the phrase and
-        // start the next one over it; resume starts it afresh.
+        // start the next one over it; resume starts it afresh. Firing also
+        // stops the clip, so it can't play on over the next phrase.
         entry.holdWatchdog = () => clearTimeout(watchdog);
         entry.startWatchdog = () => {
             clearTimeout(watchdog);
-            watchdog = setTimeout(
-                finish,
-                PHRASE_WATCHDOG_BASE_MS +
-                    phrase.length * PHRASE_WATCHDOG_MS_PER_CHARACTER
-            );
+            watchdog = setTimeout(() => {
+                stopAiVoice();
+                finish();
+            }, PHRASE_WATCHDOG_BASE_MS + phrase.length * PHRASE_WATCHDOG_MS_PER_CHARACTER);
         };
         entry.startWatchdog();
 
-        playAiVoice(phrase, {
-            ...readStoredSpeechSettings(),
-            locale: currentLocale(),
-            onStart: callbacks.onStart,
-            onEnd: finish,
-        }).then((handled) => {
-            if (handled || finished) {
+        const fallBack = async () => {
+            // No request was made in some cases (backoff, too long), so this
+            // can follow the stop that started the phrase in the same task,
+            // before Safari has its voices: it drops an utterance either way.
+            await waitForSpeechVoices();
+            await new Promise((next) => setTimeout(next));
+            if (finished) {
                 return;
             }
             speakWithDeviceVoice(phrase, { ...callbacks, onEnd: finish });
@@ -144,10 +159,30 @@ function speakInTurn(phrase, callbacks, entry) {
             if (paused) {
                 window.speechSynthesis?.pause();
             }
-        });
+        };
 
-        // From now on, stopping ends this phrase itself.
-        entry.cancel = finish;
+        // Settings are read now, not when queued, so a change made meanwhile
+        // applies. Any error, here or inside playAiVoice, means the device
+        // voice, not a phrase stuck until the watchdog.
+        Promise.resolve()
+            .then(() =>
+                playAiVoice(phrase, {
+                    ...readStoredSpeechSettings(),
+                    locale: currentLocale(),
+                    onStart: callbacks.onStart,
+                    onEnd: finish,
+                })
+            )
+            .catch((error) => {
+                console.error("AI voice error:", error);
+                return false;
+            })
+            .then((handled) => {
+                if (!handled && !finished) {
+                    return fallBack();
+                }
+            })
+            .catch(finish);
     });
 }
 
@@ -201,14 +236,14 @@ export function speakPhrase(
     return false;
 }
 
-/**
- * Stops whatever is speaking, by either voice, and drops every queued
- * phrase. Each dropped phrase still gets its onEnd.
- */
 export function speechStopCount() {
     return stops;
 }
 
+/**
+ * Stops whatever is speaking, by either voice, and drops every queued
+ * phrase. Each dropped phrase still gets its onEnd.
+ */
 export function stopAllSpeech() {
     stops += 1;
     stopping = true;
@@ -220,6 +255,7 @@ export function stopAllSpeech() {
         stopping = false;
     }
     paused = false;
+    currentUtterance = null;
     if (isSpeechSynthesisAvailable()) {
         window.speechSynthesis.cancel();
     }

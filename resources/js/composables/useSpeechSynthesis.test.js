@@ -171,6 +171,7 @@ describe("useSpeechSynthesis", () => {
             await flushPromises();
             playAiVoice.mockResolvedValueOnce(false);
             await endClip();
+            await vi.advanceTimersByTimeAsync(0);
 
             expect(window.speechSynthesis.speak).toHaveBeenCalledOnce();
             const utterance = window.speechSynthesis.speak.mock.calls[0][0];
@@ -237,7 +238,7 @@ describe("useSpeechSynthesis", () => {
             api.pauseSpeech();
             window.speechSynthesis.pause.mockClear();
             settle(false);
-            await flushPromises();
+            await vi.advanceTimersByTimeAsync(0);
 
             expect(window.speechSynthesis.speak).toHaveBeenCalledOnce();
             expect(window.speechSynthesis.pause).toHaveBeenCalledOnce();

@@ -1,4 +1,5 @@
 import { playAiVoice, resetAiVoiceMock } from "@/composables/aiVoice";
+import { stopAllSpeech } from "@/composables/speechPlayback";
 import { useGlobalTimer } from "@/composables/useGlobalTimer";
 import { useWorldClockSync } from "@/composables/useWorldClockSync";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -45,6 +46,8 @@ describe("composables/useGlobalTimer", () => {
     });
 
     afterEach(() => {
+        // The speech queue is module-level: end what a test left playing.
+        stopAllSpeech();
         vi.useRealTimers();
     });
 

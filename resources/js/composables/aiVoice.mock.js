@@ -24,6 +24,7 @@ export function createAiVoiceMock(isEnabled) {
     const playAiVoice = vi.fn(startsClip);
 
     return {
+        AI_VOICE_MAX_REQUEST_TIMEOUT_MS: 5000,
         aiClip,
         // Call in beforeEach: clearAllMocks keeps a test's implementation.
         resetAiVoiceMock() {
