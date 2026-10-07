@@ -149,7 +149,7 @@ class AiVoiceWarmingTest extends TestCase
         Http::fake();
         $this->actingAs(User::factory()->create());
         $clip = AiVoiceClip::factory()->create([
-            'hash' => AiVoiceService::hashFor('Bluey', 'af_heart', 1.0),
+            'hash' => AiVoiceService::hashFor('Bluey', 'af_heart'),
             'hits' => 2,
             'last_played_at' => now()->subDays(60),
         ]);

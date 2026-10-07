@@ -192,7 +192,7 @@ class AiVoicePrewarmTest extends TestCase
         $this->book('Bluey');
         $this->book('Bluey');
         $this->book('Bingo');
-        AiVoiceClip::factory()->create(['hash' => AiVoiceService::hashFor('Bingo', 'af_heart', 1.0)]);
+        AiVoiceClip::factory()->create(['hash' => AiVoiceService::hashFor('Bingo', 'af_heart')]);
 
         $this->artisan('ai-voice:prewarm', ['--source' => ['books']])
             ->expectsOutputToContain('1 clip(s) already cached.')
@@ -266,14 +266,14 @@ class AiVoicePrewarmTest extends TestCase
             ->assertSuccessful();
 
         $clip = AiVoiceClip::sole();
-        $this->assertSame(AiVoiceService::hashFor('Bluey', 'af_heart', 1.0), $clip->hash);
+        $this->assertSame(AiVoiceService::hashFor('Bluey', 'af_heart'), $clip->hash);
         Storage::disk('s3')->assertExists($clip->path);
     }
 
     public function test_the_job_skips_a_clip_made_since_it_was_queued(): void
     {
         Http::fake();
-        $clip = AiVoiceClip::factory()->create(['hash' => AiVoiceService::hashFor('Bluey', 'af_heart', 1.0), 'hits' => 3]);
+        $clip = AiVoiceClip::factory()->create(['hash' => AiVoiceService::hashFor('Bluey', 'af_heart'), 'hits' => 3]);
 
         (new GenerateAiVoiceClip('Bluey', 'en'))->handle(app(AiVoiceService::class));
 

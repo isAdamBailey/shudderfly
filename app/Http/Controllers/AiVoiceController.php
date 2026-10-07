@@ -43,11 +43,12 @@ class AiVoiceController extends Controller
             $request->merge(['text' => AiVoiceService::normalize($request->input('text'))]);
         }
 
+        // No speed: clips are made at the default one and the browser applies
+        // the listener's rate, so a stray `speed` must not split the cache.
         $validated = $request->validate([
             'text' => ['required', 'string', 'max:'.AiVoiceService::MAX_CHARACTERS],
             'locale' => ['required', Rule::in(SetLocale::SUPPORTED_LOCALES)],
             'voice' => ['nullable', 'string', 'max:64'],
-            'speed' => ['nullable', 'numeric', 'between:0.5,2'],
         ]);
 
         try {
@@ -55,7 +56,6 @@ class AiVoiceController extends Controller
                 $validated['text'],
                 $validated['locale'],
                 $validated['voice'] ?? null,
-                (float) ($validated['speed'] ?? 1),
                 $ahead,
             );
         } catch (AiVoiceBudgetExceeded) {

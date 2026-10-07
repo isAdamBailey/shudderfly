@@ -20,10 +20,14 @@ use Illuminate\Support\Facades\Storage;
 /**
  * Turns text into a cached AI voice clip on S3.
  *
- * Each unique (model, voice, speed, text) is generated once: the
+ * Each unique (model, voice, text) is generated once: the
  * ai_voice_clips table maps its hash to the stored file, so every later
  * request is a single indexed query and the browser fetches the audio
  * straight from S3/CloudFront.
+ *
+ * Every clip is made at the provider's default speed. The browser applies
+ * the listener's rate, pitch and volume when it plays the clip, so one
+ * clip serves every slider position.
  */
 class AiVoiceService
 {
@@ -32,6 +36,11 @@ class AiVoiceService
      * every caller, not just the HTTP endpoint.
      */
     public const MAX_CHARACTERS = 2000;
+
+    // The only speed clips are made at. It stays in the hash, formatted as
+    // when speed was a parameter, so clips stored before then keep their
+    // hashes: the table holds no text to hash them again from.
+    private const CLIP_SPEED = 1.0;
 
     private const CONNECT_TIMEOUT_SECONDS = 3;
 
@@ -68,11 +77,11 @@ class AiVoiceService
      * @throws AiVoiceBudgetExceeded
      * @throws AiVoiceUnavailable
      */
-    public function clipFor(string $text, string $locale, ?string $voice, float $speed, bool $ahead = false): AiVoiceClip
+    public function clipFor(string $text, string $locale, ?string $voice, bool $ahead = false): AiVoiceClip
     {
-        $key = self::keyFor($text, $locale, $voice, $speed)
+        $key = self::keyFor($text, $locale, $voice)
             ?? throw new \InvalidArgumentException('AI voice text must be 1-'.self::MAX_CHARACTERS.' characters');
-        ['text' => $text, 'voice' => $voice, 'speed' => $speed, 'hash' => $hash] = $key;
+        ['text' => $text, 'voice' => $voice, 'hash' => $hash] = $key;
         $model = (string) config('services.ai_voice.model');
 
         if ($clip = $this->findClip($hash, $ahead)) {
@@ -84,7 +93,7 @@ class AiVoiceService
             // pay the provider and race to insert the same unique hash.
             return Cache::lock("ai-voice:{$hash}", $this->lockSeconds())->block(
                 self::LOCK_WAIT_SECONDS,
-                fn () => $this->findClip($hash, $ahead) ?? $this->generate($hash, $text, $locale, $voice, $speed, $model, $ahead)
+                fn () => $this->findClip($hash, $ahead) ?? $this->generate($hash, $text, $locale, $voice, $model, $ahead)
             );
         } catch (LockTimeoutException) {
             Log::warning('AI voice timed out waiting for a concurrent generation', ['hash' => $hash]);
@@ -98,13 +107,13 @@ class AiVoiceService
      * both in it, so switching either invalidates the cache instead of
      * serving the old voice's clips.
      */
-    public static function hashFor(string $text, string $voice, float $speed): string
+    public static function hashFor(string $text, string $voice): string
     {
         return hash('sha256', implode('|', [
             config('services.ai_voice.provider'),
             config('services.ai_voice.model'),
             $voice,
-            number_format($speed, 2, '.', ''),
+            number_format(self::CLIP_SPEED, 2, '.', ''),
             $text,
         ]));
     }
@@ -120,12 +129,12 @@ class AiVoiceService
 
     /**
      * What clipFor() would speak and store for these arguments: the
-     * normalized text, the allowed voice, the rounded speed and the cache
-     * hash. Null when the text is empty or too long to make a clip of.
+     * normalized text, the allowed voice and the cache hash. Null when the
+     * text is empty or too long to make a clip of.
      *
-     * @return array{text: string, voice: string, speed: float, hash: string}|null
+     * @return array{text: string, voice: string, hash: string}|null
      */
-    public static function keyFor(string $text, string $locale, ?string $voice, float $speed): ?array
+    public static function keyFor(string $text, string $locale, ?string $voice): ?array
     {
         $text = self::normalize($text);
 
@@ -134,9 +143,8 @@ class AiVoiceService
         }
 
         $voice = self::voiceFor($locale, $voice);
-        $speed = round($speed, 2);
 
-        return ['text' => $text, 'voice' => $voice, 'speed' => $speed, 'hash' => self::hashFor($text, $voice, $speed)];
+        return ['text' => $text, 'voice' => $voice, 'hash' => self::hashFor($text, $voice)];
     }
 
     /**
@@ -172,13 +180,13 @@ class AiVoiceService
         return $clip;
     }
 
-    private function generate(string $hash, string $text, string $locale, string $voice, float $speed, string $model, bool $ahead): AiVoiceClip
+    private function generate(string $hash, string $text, string $locale, string $voice, string $model, bool $ahead): AiVoiceClip
     {
         $characters = mb_strlen($text);
         $this->reserveBudget($characters, $ahead ? AiVoice::aheadOfTimeCharacterLimit() : AiVoice::dailyCharacterLimit());
 
         try {
-            $audio = $this->synthesize($text, $voice, $speed, $model);
+            $audio = $this->synthesize($text, $voice, $model);
         } catch (AiVoiceUnavailable $exception) {
             // A timeout or dropped connection may still have been billed,
             // so it stays charged; anything else produced no audio.
@@ -201,7 +209,7 @@ class AiVoiceService
             'locale' => $locale,
             'voice' => $voice,
             'model' => $model,
-            'speed' => $speed,
+            'speed' => self::CLIP_SPEED,
             'characters' => $characters,
             'path' => $path,
             'hits' => 1,
@@ -279,7 +287,7 @@ class AiVoiceService
     /**
      * MP3 bytes for $text from the provider.
      */
-    private function synthesize(string $text, string $voice, float $speed, string $model): string
+    private function synthesize(string $text, string $voice, string $model): string
     {
         if (! AiVoice::configured()) {
             Log::warning('AI voice skipped: missing AI_VOICE_API_KEY');
@@ -294,7 +302,7 @@ class AiVoiceService
                     'model' => $model,
                     'input' => $text,
                     'voice' => $voice,
-                    'speed' => $speed,
+                    'speed' => self::CLIP_SPEED,
                     'response_format' => 'mp3',
                 ]);
         } catch (\Throwable $exception) {
