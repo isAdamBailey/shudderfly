@@ -13,8 +13,13 @@ import { vi } from "vitest";
  * through `aiClip.options.onEnd()`; `resetAiVoiceMock()` restores that. Like the real module, stopping ends
  * the current clip; without that the module-level speech queue would wait
  * on it into the next test.
+ *
+ * The voice helpers (aiVoicesForLocale, resolveAiVoice, saveAiVoice) are
+ * the real ones, reading the mocked usePage() and localStorage.
  */
-export function createAiVoiceMock(isEnabled) {
+export async function createAiVoiceMock(isEnabled) {
+    const { aiVoicesForLocale, resolveAiVoice, saveAiVoice } =
+        await vi.importActual("@/composables/aiVoice");
     const aiClip = { options: null };
     const startsClip = (_, options) => {
         aiClip.options = options;
@@ -32,6 +37,9 @@ export function createAiVoiceMock(isEnabled) {
             playAiVoice.mockImplementation(startsClip);
         },
         aiVoiceEnabled: () => isEnabled(),
+        aiVoicesForLocale,
+        resolveAiVoice,
+        saveAiVoice,
         primeAiVoice: vi.fn(),
         playAiVoice,
         stopAiVoice: vi.fn(() => {

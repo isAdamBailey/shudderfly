@@ -53,6 +53,16 @@ describe("speechPlayback", () => {
             expect(onEnd).toHaveBeenCalledOnce();
         });
 
+        it("speaks a preview in the voice it is given", () => {
+            const voice = { name: "Amelie", lang: "fr-CA" };
+
+            speakPhrase("bonjour", { deviceVoice: voice });
+
+            const utterance = window.speechSynthesis.speak.mock.calls[0][0];
+            expect(utterance.voice).toBe(voice);
+            expect(utterance.lang).toBe("fr-CA");
+        });
+
         it("stopAllSpeech cancels the device voice", () => {
             stopAllSpeech();
 
@@ -63,6 +73,16 @@ describe("speechPlayback", () => {
     describe("with the AI voice on", () => {
         beforeEach(() => {
             pageProps.aiVoice = { voices: { en: ["af_heart"] } };
+        });
+
+        it("plays a preview in the AI voice it is given", async () => {
+            speakPhrase("hello", { aiVoice: "am_puck" });
+            await flushPromises();
+
+            expect(playAiVoice).toHaveBeenCalledWith(
+                "hello",
+                expect.objectContaining({ voice: "am_puck" })
+            );
         });
 
         it("plays the phrase in the page locale", async () => {

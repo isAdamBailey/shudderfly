@@ -1,3 +1,4 @@
+import { usePage } from "@inertiajs/vue3";
 import axios from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -5,12 +6,15 @@ import {
     AI_VOICE_MAX_CHARACTERS,
     AI_VOICE_MAX_REQUEST_TIMEOUT_MS,
     aiVoiceRequestTimeout,
+    aiVoicesForLocale,
     AI_VOICE_TIMEOUTS_BEFORE_BACKOFF,
     pauseAiVoice,
     playAiVoice,
     primeAiVoice,
     resetAiVoiceForTests,
+    resolveAiVoice,
     resumeAiVoice,
+    saveAiVoice,
     stopAiVoice,
 } from "@/composables/aiVoice";
 
@@ -402,5 +406,69 @@ describe("aiVoice", () => {
 
         expect(await playAiVoice("New words", { locale: "en" })).toBe(false);
         expect(await playAiVoice("Cached words", { locale: "en" })).toBe(true);
+    });
+
+    describe("voice choice", () => {
+        let defaultPage;
+
+        beforeEach(() => {
+            localStorage.clear();
+            defaultPage = usePage.getMockImplementation();
+            usePage.mockImplementation(() => ({
+                props: {
+                    aiVoice: {
+                        voices: {
+                            en: ["af_heart", "am_puck"],
+                            fr: ["ff_siwis"],
+                        },
+                    },
+                },
+            }));
+        });
+
+        afterEach(() => {
+            usePage.mockImplementation(defaultPage);
+        });
+
+        it("lists only the voices for the locale", () => {
+            expect(aiVoicesForLocale("en")).toEqual(["af_heart", "am_puck"]);
+            expect(aiVoicesForLocale("fr")).toEqual(["ff_siwis"]);
+            expect(aiVoicesForLocale("es")).toEqual([]);
+        });
+
+        it("uses the locale's default until a voice is saved for it", () => {
+            expect(resolveAiVoice("en")).toBe("af_heart");
+
+            saveAiVoice("en", "am_puck");
+
+            expect(localStorage.getItem("aiVoice.en")).toBe("am_puck");
+            expect(resolveAiVoice("en")).toBe("am_puck");
+            expect(resolveAiVoice("fr")).toBe("ff_siwis");
+        });
+
+        it("falls back to the default when the saved voice isn't allowed", () => {
+            saveAiVoice("fr", "am_puck");
+
+            expect(resolveAiVoice("fr")).toBe("ff_siwis");
+        });
+
+        it("is null while the AI voice is off", () => {
+            usePage.mockImplementation(() => ({ props: { aiVoice: null } }));
+
+            expect(aiVoicesForLocale("en")).toEqual([]);
+            expect(resolveAiVoice("en")).toBeNull();
+        });
+
+        it("requests the saved voice unless one is passed", async () => {
+            respondWith();
+            saveAiVoice("en", "am_puck");
+
+            await playAiVoice("Hi", { locale: "en" });
+            await playAiVoice("Bye", { locale: "en", voice: "af_heart" });
+
+            expect(axios.post.mock.calls.map(([, body]) => body.voice)).toEqual(
+                ["am_puck", "af_heart"]
+            );
+        });
     });
 });

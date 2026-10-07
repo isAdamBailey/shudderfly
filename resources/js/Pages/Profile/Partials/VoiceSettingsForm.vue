@@ -1,13 +1,21 @@
 <script setup>
+/* global route */
 import Button from "@/Components/Button.vue";
 import LanguageSelect from "@/Components/LanguageSelect.vue";
+import SpeakButton from "@/Components/SpeakButton.vue";
+import {
+    aiVoiceEnabled,
+    aiVoicesForLocale,
+    resolveAiVoice,
+    saveAiVoice,
+} from "@/composables/aiVoice";
 import { usePermissions } from "@/composables/permissions";
 import {
+    filterVoicesForLocale,
     getAppLocaleFromPage,
-    normalizeAppLocale,
-    resolveSpeechLanguageForAppLocale,
     syncAppLocaleFromPage,
     syncStoredSpeechLanguage,
+    voiceMatchesAppLocale,
 } from "@/composables/speechVoice";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
@@ -24,6 +32,35 @@ const SPEECH_PITCH_MIN = 0;
 const SPEECH_PITCH_MAX = 2;
 const SPEECH_VOLUME_MIN = 0.1;
 const SPEECH_VOLUME_MAX = 1;
+
+// The emotion buttons, in order; "" is Normal, which resets the others.
+const EMOTION_BUTTONS = [
+    {
+        value: "excited",
+        icon: "ri-flashlight-line",
+        active: "bg-orange-600 hover:bg-orange-700",
+    },
+    {
+        value: "calm",
+        icon: "ri-heart-line",
+        active: "bg-blue-600 hover:bg-blue-700",
+    },
+    {
+        value: "mysterious",
+        icon: "ri-question-line",
+        active: "bg-indigo-600 hover:bg-indigo-700",
+    },
+    {
+        value: "hyper",
+        icon: "ri-fire-line",
+        active: "bg-red-600 hover:bg-red-700",
+    },
+    {
+        value: "",
+        icon: "ri-check-line",
+        active: "bg-green-600 hover:bg-green-700",
+    },
+];
 
 const { t } = useTranslations();
 
@@ -59,6 +96,7 @@ const {
     voices,
     selectedVoice,
     setVoice,
+    emotionLabel,
     speechRate,
     speechPitch,
     speechVolume,
@@ -72,14 +110,42 @@ const {
 } = useSpeechSynthesis();
 const { canEditPages } = usePermissions();
 
+const page = usePage();
+const currentLocale = computed(() => getAppLocaleFromPage(page));
+
+// With the AI voice on, only its voices for the app locale are offered, and
+// the device voices are hidden. The same gate speech itself uses.
+const aiVoiceOn = computed(() => aiVoiceEnabled());
+const aiVoices = computed(() => aiVoicesForLocale(currentLocale.value));
+
+// Re-resolved when the locale or the allowed voices change.
+const selectedAiVoice = ref(resolveAiVoice(currentLocale.value));
+watch(aiVoices, () => {
+    selectedAiVoice.value = resolveAiVoice(currentLocale.value);
+});
+
+// A voice added to the config without a label shows its id, not the key.
+function aiVoiceLabel(voice) {
+    const key = `speech.ai_voice.${voice}`;
+    const label = t(key);
+
+    return label === key ? voice : label;
+}
+
+function setAiVoice(voice) {
+    saveAiVoice(currentLocale.value, voice);
+    selectedAiVoice.value = voice;
+    speak(t("speech.voice_changed", { name: aiVoiceLabel(voice) }));
+}
+
+function previewVoice(voice) {
+    speak(t("speech.voice_sample"), null, voice);
+}
+
 const voicesLoading = ref(true);
 let voiceLoadingTimeoutId = null;
 
-const selectedLanguage = ref(
-    localStorage.getItem("selectedLanguage") || "en-US"
-);
-
-const appLocale = ref(usePage().props.auth.user?.locale ?? "");
+const appLocale = ref(page.props.auth.user?.locale ?? "");
 const appLocaleSaving = ref(false);
 
 const appLocaleOptions = computed(() => [
@@ -98,7 +164,7 @@ function handleAppLocaleChange(value) {
             preserveScroll: true,
             onSuccess: () => {
                 appLocale.value = value;
-                syncSpeechLanguageForLocale(syncAppLocaleFromPage(usePage()));
+                syncDeviceVoiceForLocale(syncAppLocaleFromPage(page));
             },
             onFinish: () => {
                 appLocaleSaving.value = false;
@@ -107,178 +173,47 @@ function handleAppLocaleChange(value) {
     );
 }
 
-function syncSpeechLanguageForLocale(appLocale) {
-    const normalizedLocale = normalizeAppLocale(appLocale);
+// Device voices only: with the AI voice on, they're unused and unseen, so
+// switching one would only announce a voice the user can't pick.
+function syncDeviceVoiceForLocale(locale) {
+    if (aiVoiceOn.value) {
+        return;
+    }
     const availableVoices =
         voices.value.length > 0
             ? voices.value
             : window.speechSynthesis?.getVoices?.() || [];
-
-    if (!availableVoices.length) {
-        selectedLanguage.value =
-            resolveSpeechLanguageForAppLocale(normalizedLocale);
-        localStorage.setItem("selectedLanguage", selectedLanguage.value);
-        return;
-    }
-
-    const { speechLang, voice } = syncStoredSpeechLanguage(
-        availableVoices,
-        normalizedLocale
-    );
-    selectedLanguage.value = speechLang;
+    const { voice } = syncStoredSpeechLanguage(availableVoices, locale);
     if (voice) {
         setVoice(voice);
     }
 }
 
-const getLanguageDisplayName = (languageCode) => {
-    // Normalize language code to handle both hyphen and underscore formats
-    const normalizedCode = languageCode.replace("_", "-");
-
-    // Fallback mapping for common language codes
-    const languageMap = {
-        "en-US": "English (United States)",
-        "en-GB": "English (United Kingdom)",
-        "en-AU": "English (Australia)",
-        "en-CA": "English (Canada)",
-        "es-ES": "Spanish (Spain)",
-        "es-MX": "Spanish (Mexico)",
-        "fr-FR": "French (France)",
-        "fr-CA": "French (Canada)",
-        "de-DE": "German (Germany)",
-        "it-IT": "Italian (Italy)",
-        "pt-BR": "Portuguese (Brazil)",
-        "pt-PT": "Portuguese (Portugal)",
-        "ru-RU": "Russian (Russia)",
-        "ja-JP": "Japanese (Japan)",
-        "ko-KR": "Korean (South Korea)",
-        "zh-CN": "Chinese (China)",
-        "zh-TW": "Chinese (Taiwan)",
-        "ar-SA": "Arabic (Saudi Arabia)",
-        "hi-IN": "Hindi (India)",
-        "nl-NL": "Dutch (Netherlands)",
-        "sv-SE": "Swedish (Sweden)",
-        "da-DK": "Danish (Denmark)",
-        "no-NO": "Norwegian (Norway)",
-        "fi-FI": "Finnish (Finland)",
-        "pl-PL": "Polish (Poland)",
-        "tr-TR": "Turkish (Turkey)",
-        "cs-CZ": "Czech (Czech Republic)",
-        "sk-SK": "Slovak (Slovakia)",
-        "hu-HU": "Hungarian (Hungary)",
-        "ro-RO": "Romanian (Romania)",
-        "bg-BG": "Bulgarian (Bulgaria)",
-        "hr-HR": "Croatian (Croatia)",
-        "sl-SI": "Slovenian (Slovenia)",
-        "et-EE": "Estonian (Estonia)",
-        "lv-LV": "Latvian (Latvia)",
-        "lt-LT": "Lithuanian (Lithuania)",
-        "el-GR": "Greek (Greece)",
-        "he-IL": "Hebrew (Israel)",
-        "th-TH": "Thai (Thailand)",
-        "vi-VN": "Vietnamese (Vietnam)",
-        "id-ID": "Indonesian (Indonesia)",
-        "ms-MY": "Malay (Malaysia)",
-        "fil-PH": "Filipino (Philippines)",
-        "uk-UA": "Ukrainian (Ukraine)",
-        "be-BY": "Belarusian (Belarus)",
-        "kk-KZ": "Kazakh (Kazakhstan)",
-        "uz-UZ": "Uzbek (Uzbekistan)",
-        "ky-KG": "Kyrgyz (Kyrgyzstan)",
-        "mn-MN": "Mongolian (Mongolia)",
-        "ka-GE": "Georgian (Georgia)",
-        "hy-AM": "Armenian (Armenia)",
-        "az-AZ": "Azerbaijani (Azerbaijan)",
-        "fa-IR": "Persian (Iran)",
-        "ur-PK": "Urdu (Pakistan)",
-        "bn-BD": "Bengali (Bangladesh)",
-        "si-LK": "Sinhala (Sri Lanka)",
-        "my-MM": "Burmese (Myanmar)",
-        "km-KH": "Khmer (Cambodia)",
-        "lo-LA": "Lao (Laos)",
-        "ne-NP": "Nepali (Nepal)",
-        "gu-IN": "Gujarati (India)",
-        "pa-IN": "Punjabi (India)",
-        "ta-IN": "Tamil (India)",
-        "te-IN": "Telugu (India)",
-        "kn-IN": "Kannada (India)",
-        "ml-IN": "Malayalam (India)",
-        "as-IN": "Assamese (India)",
-        "or-IN": "Odia (India)",
-        "mr-IN": "Marathi (India)",
-        "sa-IN": "Sanskrit (India)",
-        "bo-CN": "Tibetan (China)",
-        "ug-CN": "Uyghur (China)",
-        "ii-CN": "Yi (China)",
-        "af-ZA": "Afrikaans (South Africa)",
-        "zu-ZA": "Zulu (South Africa)",
-        "xh-ZA": "Xhosa (South Africa)",
-        "sw-KE": "Swahili (Kenya)",
-        "am-ET": "Amharic (Ethiopia)",
-        "so-SO": "Somali (Somalia)",
-        "ha-NG": "Hausa (Nigeria)",
-        "yo-NG": "Yoruba (Nigeria)",
-        "ig-NG": "Igbo (Nigeria)",
-        "rw-RW": "Kinyarwanda (Rwanda)",
-        "ak-GH": "Akan (Ghana)",
-        "lg-UG": "Ganda (Uganda)",
-        "sn-ZW": "Shona (Zimbabwe)",
-        "st-ZA": "Southern Sotho (South Africa)",
-        "tn-BW": "Tswana (Botswana)",
-        "ts-ZA": "Tsonga (South Africa)",
-        "ve-ZA": "Venda (South Africa)",
-        "nr-ZA": "Southern Ndebele (South Africa)",
-        "ss-ZA": "Swati (South Africa)",
-        "qu-PE": "Quechua (Peru)",
-        "ay-BO": "Aymara (Bolivia)",
-        "gn-PY": "Guarani (Paraguay)",
-        "eu-ES": "Basque (Spain)",
-        "ca-ES": "Catalan (Spain)",
-        "gl-ES": "Galician (Spain)",
-        "cy-GB": "Welsh (United Kingdom)",
-        "ga-IE": "Irish (Ireland)",
-        "is-IS": "Icelandic (Iceland)",
-        "mt-MT": "Maltese (Malta)",
-        "sq-AL": "Albanian (Albania)",
-        "mk-MK": "Macedonian (North Macedonia)",
-        "sr-RS": "Serbian (Serbia)",
-        "bs-BA": "Bosnian (Bosnia and Herzegovina)",
-        "me-ME": "Montenegrin (Montenegro)",
-    };
-
-    // Try Intl.DisplayNames first (modern browsers)
-    try {
-        if (typeof Intl !== "undefined" && Intl.DisplayNames) {
-            const displayName = new Intl.DisplayNames(["en"], {
-                type: "language",
-            }).of(normalizedCode);
-            if (displayName) {
-                return displayName;
-            }
-        }
-    } catch (error) {
-        // Fall through to manual mapping
-    }
-
-    return languageMap[normalizedCode] || languageCode;
-};
-
-const availableLanguages = computed(() => {
-    const languages = new Set();
-    voices.value.forEach((voice) => {
-        languages.add(voice.lang);
-    });
-    return Array.from(languages).sort();
-});
-
-const filteredVoices = computed(() =>
-    voices.value.filter((voice) => voice.lang === selectedLanguage.value)
+const localeVoices = computed(() =>
+    filterVoicesForLocale(voices.value, currentLocale.value)
 );
-const halfLength = computed(() => Math.ceil(filteredVoices.value.length / 2));
-const firstHalf = computed(() =>
-    filteredVoices.value.slice(0, halfLength.value)
+
+// The voice picker's rows: the AI voices when it's on, else the device's.
+const voiceOptions = computed(() =>
+    aiVoiceOn.value
+        ? aiVoices.value.map((voice) => ({
+              id: `ai-voice-${voice}`,
+              label: aiVoiceLabel(voice),
+              checked: selectedAiVoice.value === voice,
+              select: () => setAiVoice(voice),
+              preview: { aiVoice: voice },
+          }))
+        : localeVoices.value.map((voice, index) => ({
+              // By position: devices can repeat a name across languages.
+              id: `device-voice-${index}`,
+              label: voice.name,
+              checked:
+                  selectedVoice.value?.name === voice.name &&
+                  selectedVoice.value?.lang === voice.lang,
+              select: () => setVoice(voice),
+              preview: { deviceVoice: voice },
+          }))
 );
-const secondHalf = computed(() => filteredVoices.value.slice(halfLength.value));
 
 watch(
     voices,
@@ -361,32 +296,16 @@ watch(speechVolume, (newVolume) => {
     localSpeechVolume.value = newVolume;
 });
 
-// Watch for language changes from the composable (when Normal emotion is selected)
+// Normal resets the device voice to the app locale's.
 watch(selectedEmotion, (newEmotion) => {
     if (newEmotion === "") {
-        syncSpeechLanguageForLocale(getAppLocaleFromPage(usePage()));
+        syncDeviceVoiceForLocale(currentLocale.value);
     }
 });
 
-function handleLanguageChange(language) {
-    selectedLanguage.value = language;
-    localStorage.setItem("selectedLanguage", language);
-
-    // Reset voice selection to first available voice in new language
-    const voicesInLanguage = voices.value.filter(
-        (voice) => voice.lang === language
-    );
-    if (voicesInLanguage.length > 0) {
-        setVoice(voicesInLanguage[0]);
-    }
-}
-
 function alertVoices() {
-    const filteredVoiceNames = new Set(
-        filteredVoices.value.map((voice) => voice.name)
-    );
     const voiceDetails = voices.value
-        .filter((voice) => !filteredVoiceNames.has(voice.name))
+        .filter((voice) => !voiceMatchesAppLocale(voice, currentLocale.value))
         .map(({ name, lang }) => `Name: ${name}, Language: ${lang}`)
         .join("\n");
     alert("Here are more available voices in your browser:\n\n" + voiceDetails);
@@ -399,7 +318,9 @@ function alertVoices() {
             Voice Settings
         </h3>
         <div class="flex gap-2">
-            <Button v-if="canEditPages" @click="alertVoices">All Voices</Button>
+            <Button v-if="canEditPages && !aiVoiceOn" @click="alertVoices"
+                >All Voices</Button
+            >
         </div>
     </div>
 
@@ -420,74 +341,43 @@ function alertVoices() {
     </div>
 
     <div class="mb-6">
-        <div v-if="voicesLoading" class="text-center py-4">
+        <div v-if="!aiVoiceOn && voicesLoading" class="text-center py-4">
             <p class="text-gray-600 dark:text-gray-400">
                 Loading available voices...
             </p>
         </div>
-        <div v-else-if="voices.length > 0">
-            <!-- Language Selection -->
-            <div class="mb-4">
+        <ul v-else-if="voiceOptions.length" class="sm:columns-2 sm:gap-6">
+            <li
+                v-for="option in voiceOptions"
+                :key="option.id"
+                class="flex items-center gap-2 py-0.5 break-inside-avoid"
+            >
                 <label
-                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    :for="option.id"
+                    class="flex flex-1 items-center gap-3 min-h-11 px-2 rounded-md cursor-pointer dark:text-white font-bold text-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
                 >
-                    Language
+                    <input
+                        :id="option.id"
+                        type="radio"
+                        name="voice"
+                        :checked="option.checked"
+                        :disabled="speaking"
+                        class="h-5 w-5 accent-blue-600 dark:accent-blue-500"
+                        @change="option.select()"
+                    />
+                    {{ option.label }}
                 </label>
-                <select
-                    v-model="selectedLanguage"
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-                    @change="handleLanguageChange($event.target.value)"
-                >
-                    <option
-                        v-for="language in availableLanguages"
-                        :key="language"
-                        :value="language"
-                    >
-                        {{ getLanguageDisplayName(language) }}
-                    </option>
-                </select>
-            </div>
-
-            <!-- Voice Selection -->
-            <div class="flex flex-col sm:flex-row sm:gap-6">
-                <ul class="w-full sm:w-1/2">
-                    <li v-for="voice in firstHalf" :key="voice.name">
-                        <label
-                            :for="voice.name"
-                            class="flex items-center gap-3 min-h-11 px-2 rounded-md cursor-pointer dark:text-white font-bold text-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
-                        >
-                            <input
-                                :id="voice.name"
-                                v-model="selectedVoice"
-                                type="radio"
-                                :value="voice"
-                                class="h-5 w-5 accent-blue-600 dark:accent-blue-500"
-                                @input="setVoice(voice)"
-                            />
-                            {{ voice.name }}
-                        </label>
-                    </li>
-                </ul>
-                <ul class="w-full sm:w-1/2">
-                    <li v-for="voice in secondHalf" :key="voice.name">
-                        <label
-                            :for="voice.name"
-                            class="flex items-center gap-3 min-h-11 px-2 rounded-md cursor-pointer dark:text-white font-bold text-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
-                        >
-                            <input
-                                :id="voice.name"
-                                v-model="selectedVoice"
-                                type="radio"
-                                :value="voice"
-                                class="h-5 w-5 accent-blue-600 dark:accent-blue-500"
-                                @input="setVoice(voice)"
-                            />
-                            {{ voice.name }}
-                        </label>
-                    </li>
-                </ul>
-            </div>
-        </div>
+                <SpeakButton
+                    :aria-label="
+                        t('speech.preview_voice', { name: option.label })
+                    "
+                    icon-class="ri-play-fill text-xl"
+                    :disabled="speaking"
+                    data-test="preview-voice"
+                    @click="previewVoice(option.preview)"
+                />
+            </li>
+        </ul>
         <div v-else>
             <p class="text-red-700 dark:text-red-300">
                 Voices from speech synthesis are not available in your browser.
@@ -507,69 +397,22 @@ function alertVoices() {
             </label>
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 <Button
+                    v-for="emotion in EMOTION_BUTTONS"
+                    :key="emotion.value"
                     :class="
-                        selectedEmotion === 'excited'
-                            ? 'bg-orange-600 hover:bg-orange-700'
+                        selectedEmotion === emotion.value
+                            ? emotion.active
                             : 'bg-gray-600 hover:bg-gray-700'
                     "
                     :disabled="speaking"
+                    :data-emotion="emotion.value || 'normal'"
                     class="flex flex-col items-center justify-center py-1.5 px-1.5 min-h-[45px]"
-                    @click="setSelectedEmotion('excited')"
+                    @click="setSelectedEmotion(emotion.value)"
                 >
-                    <i class="ri-flashlight-line text-2xl mb-1"></i>
-                    <span class="text-sm font-medium">Excited</span>
-                </Button>
-                <Button
-                    :class="
-                        selectedEmotion === 'calm'
-                            ? 'bg-blue-600 hover:bg-blue-700'
-                            : 'bg-gray-600 hover:bg-gray-700'
-                    "
-                    :disabled="speaking"
-                    class="flex flex-col items-center justify-center py-1.5 px-1.5 min-h-[45px]"
-                    @click="setSelectedEmotion('calm')"
-                >
-                    <i class="ri-heart-line text-2xl mb-1"></i>
-                    <span class="text-sm font-medium">Calm</span>
-                </Button>
-                <Button
-                    :class="
-                        selectedEmotion === 'mysterious'
-                            ? 'bg-indigo-600 hover:bg-indigo-700'
-                            : 'bg-gray-600 hover:bg-gray-700'
-                    "
-                    :disabled="speaking"
-                    class="flex flex-col items-center justify-center py-1.5 px-1.5 min-h-[45px]"
-                    @click="setSelectedEmotion('mysterious')"
-                >
-                    <i class="ri-question-line text-2xl mb-1"></i>
-                    <span class="text-sm font-medium">Mysterious</span>
-                </Button>
-                <Button
-                    :class="
-                        selectedEmotion === 'hyper'
-                            ? 'bg-red-600 hover:bg-red-700'
-                            : 'bg-gray-600 hover:bg-gray-700'
-                    "
-                    :disabled="speaking"
-                    class="flex flex-col items-center justify-center py-1.5 px-1.5 min-h-[45px]"
-                    @click="setSelectedEmotion('hyper')"
-                >
-                    <i class="ri-fire-line text-2xl mb-1"></i>
-                    <span class="text-sm font-medium">Hyper</span>
-                </Button>
-                <Button
-                    :class="
-                        selectedEmotion === ''
-                            ? 'bg-green-600 hover:bg-green-700'
-                            : 'bg-gray-600 hover:bg-gray-700'
-                    "
-                    :disabled="speaking"
-                    class="flex flex-col items-center justify-center py-1.5 px-1.5 min-h-[45px]"
-                    @click="setSelectedEmotion('')"
-                >
-                    <i class="ri-check-line text-2xl mb-1"></i>
-                    <span class="text-sm font-medium">Normal</span>
+                    <i :class="[emotion.icon, 'text-2xl mb-1']"></i>
+                    <span class="text-sm font-medium">{{
+                        emotionLabel(emotion.value)
+                    }}</span>
                 </Button>
             </div>
         </div>
