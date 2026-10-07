@@ -43,9 +43,8 @@ class AiVoiceController extends Controller
             $request->merge(['text' => AiVoiceService::normalize($request->input('text'))]);
         }
 
-        // No speed: every clip is made at the default one and the browser
-        // applies the listener's rate, so a stray `speed` is ignored rather
-        // than making a second clip of the same words.
+        // No speed: clips are made at the default one and the browser applies
+        // the listener's rate, so a stray `speed` must not split the cache.
         $validated = $request->validate([
             'text' => ['required', 'string', 'max:'.AiVoiceService::MAX_CHARACTERS],
             'locale' => ['required', Rule::in(SetLocale::SUPPORTED_LOCALES)],

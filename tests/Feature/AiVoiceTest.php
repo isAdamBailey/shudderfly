@@ -99,8 +99,8 @@ class AiVoiceTest extends TestCase
     {
         $this->fakeProvider();
 
-        $first = $this->speak()->assertOk()->json('url');
-        $second = $this->speak(['speed' => 1.25])->assertOk()->json('url');
+        $first = $this->speak(['speed' => 1.25])->assertOk()->json('url');
+        $second = $this->speak()->assertOk()->json('url');
         $this->postJson(route('ai-voice.prefetch'), [
             'text' => 'Hello there friend', 'locale' => 'en', 'voice' => 'am_puck', 'speed' => 3,
         ])->assertOk()->assertJson(['url' => $first]);
