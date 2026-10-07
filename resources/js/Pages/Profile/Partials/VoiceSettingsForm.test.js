@@ -12,6 +12,7 @@ const mockPatch = vi.fn();
 const pageProps = reactive({
     locale: null,
     aiVoice: null,
+    theme: "",
     auth: { user: { id: 1, name: "Alice", locale: "" } },
 });
 
@@ -84,6 +85,7 @@ beforeEach(() => {
     speech = createSpeechApi();
     pageProps.locale = null;
     pageProps.aiVoice = null;
+    pageProps.theme = "";
     pageProps.auth.user.locale = "";
 });
 
@@ -252,6 +254,23 @@ describe("VoiceSettingsForm voices", () => {
             const wrapper = mount(VoiceSettingsForm);
 
             expect(wrapper.find("#ai-voice-af_heart").element.checked).toBe(
+                true
+            );
+        });
+
+        it("checks Santa at Christmas until a voice is saved", async () => {
+            pageProps.theme = "christmas";
+            pageProps.locale = "es";
+            const wrapper = mount(VoiceSettingsForm);
+
+            expect(wrapper.find("#ai-voice-em_santa").element.checked).toBe(
+                true
+            );
+
+            await wrapper.find("#ai-voice-ef_dora").setValue(true);
+
+            expect(localStorage.getItem("aiVoice.es")).toBe("ef_dora");
+            expect(wrapper.find("#ai-voice-ef_dora").element.checked).toBe(
                 true
             );
         });

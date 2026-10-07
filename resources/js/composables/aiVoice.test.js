@@ -472,6 +472,75 @@ describe("aiVoice", () => {
                 ["am_puck", "af_heart"]
             );
         });
+
+        describe("in a seasonal theme", () => {
+            function withTheme(theme) {
+                usePage.mockImplementation(() => ({
+                    props: {
+                        theme,
+                        aiVoice: {
+                            voices: {
+                                en: ["af_heart", "am_puck", "am_santa"],
+                                es: ["ef_dora", "em_santa"],
+                                fr: ["ff_siwis"],
+                            },
+                        },
+                    },
+                }));
+            }
+
+            it("uses Santa at Christmas until a voice is saved", () => {
+                withTheme("christmas");
+
+                expect(resolveAiVoice("en")).toBe("am_santa");
+                expect(resolveAiVoice("es")).toBe("em_santa");
+                expect(resolveAiVoice("fr")).toBe("ff_siwis");
+            });
+
+            it("keeps a saved voice at Christmas", () => {
+                withTheme("christmas");
+                saveAiVoice("en", "af_heart");
+
+                expect(resolveAiVoice("en")).toBe("af_heart");
+            });
+
+            it("uses Santa when the saved voice isn't allowed", () => {
+                withTheme("christmas");
+                saveAiVoice("es", "am_puck");
+
+                expect(resolveAiVoice("es")).toBe("em_santa");
+            });
+
+            it("keeps the default when Santa isn't in the allow-list", () => {
+                usePage.mockImplementation(() => ({
+                    props: {
+                        theme: "christmas",
+                        aiVoice: { voices: { en: ["af_heart"] } },
+                    },
+                }));
+
+                expect(resolveAiVoice("en")).toBe("af_heart");
+            });
+
+            it.each(["", "halloween", "fireworks"])(
+                "uses the default in theme '%s'",
+                (theme) => {
+                    withTheme(theme);
+
+                    expect(resolveAiVoice("en")).toBe("af_heart");
+                    expect(resolveAiVoice("es")).toBe("ef_dora");
+                }
+            );
+
+            it("requests clips in Santa's voice", async () => {
+                withTheme("christmas");
+                respondWith();
+
+                await playAiVoice("Ho ho", { locale: "en" });
+
+                expect(axios.post.mock.calls[0][1].voice).toBe("am_santa");
+            });
+        });
     });
 
     describe("prefetch", () => {
