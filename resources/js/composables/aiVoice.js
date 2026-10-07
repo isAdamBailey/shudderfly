@@ -69,6 +69,34 @@ export function aiVoiceEnabled() {
     return Boolean(usePage().props.aiVoice);
 }
 
+// The voice picked for each app locale is saved separately, so switching
+// language switches voice too: aiVoice.en, aiVoice.es, aiVoice.fr.
+export const AI_VOICE_STORAGE_PREFIX = "aiVoice.";
+
+/**
+ * The AI voices allowed for `locale`, from services.ai_voice.voices. The
+ * first is the locale's default. Empty when the AI voice is off.
+ */
+export function aiVoicesForLocale(locale) {
+    return usePage().props.aiVoice?.voices?.[locale] ?? [];
+}
+
+/**
+ * The voice to speak `locale` in: the saved choice while it is still
+ * allowed, otherwise the locale's default. Null when the AI voice is off,
+ * so the server picks.
+ */
+export function resolveAiVoice(locale) {
+    const voices = aiVoicesForLocale(locale);
+    const saved = localStorage.getItem(AI_VOICE_STORAGE_PREFIX + locale);
+
+    return voices.includes(saved) ? saved : voices[0] ?? null;
+}
+
+export function saveAiVoice(locale, voice) {
+    localStorage.setItem(AI_VOICE_STORAGE_PREFIX + locale, voice);
+}
+
 /**
  * Call synchronously inside the user's tap, before anything async. Mobile
  * Safari only lets an element play without a fresh tap once it has played
@@ -166,7 +194,7 @@ async function fetchClipUrl(key, text, locale, voice, signal) {
  * exactly once, when the clip ends, errors, or is stopped. Resolves false
  * on any failure before playback (request error, 429, timeout, playback
  * refused); in that case no callback fires and the caller should use the
- * device voice instead.
+ * device voice instead. Without a `voice`, the locale's saved voice is used.
  */
 export async function playAiVoice(
     text,
@@ -189,7 +217,8 @@ export async function playAiVoice(
     ) {
         return false;
     }
-    const key = `${locale}|${voice ?? ""}|${phrase}`;
+    const voiceId = voice ?? resolveAiVoice(locale);
+    const key = `${locale}|${voiceId ?? ""}|${phrase}`;
 
     stopAiVoice();
 
@@ -227,7 +256,13 @@ export async function playAiVoice(
 
     let url;
     try {
-        url = await fetchClipUrl(key, phrase, locale, voice, controller.signal);
+        url = await fetchClipUrl(
+            key,
+            phrase,
+            locale,
+            voiceId,
+            controller.signal
+        );
     } catch (error) {
         if (current === clip) {
             recordRequestFailure(error);

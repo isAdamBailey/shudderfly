@@ -18,6 +18,13 @@ const INITIAL_VOICE_RETRY_DELAY = 100;
 const VOICE_RETRY_INTERVAL = 200;
 const MAX_VOICE_LOADING_ATTEMPTS = 5;
 
+const EMOTION_PRESETS = {
+    excited: { rate: 1.2, pitch: 1.2, volume: 1.0 },
+    calm: { rate: 0.8, pitch: 0.9, volume: 0.8 },
+    mysterious: { rate: 0.9, pitch: 0.7, volume: 0.7 },
+    hyper: { rate: 1.5, pitch: 2.0, volume: 1.0 },
+};
+
 export function useSpeechSynthesis() {
     const { t } = useTranslations();
     const page = usePage();
@@ -32,6 +39,9 @@ export function useSpeechSynthesis() {
     const isPaused = ref(false);
 
     const getAppLocale = () => getAppLocaleFromPage(page);
+
+    const emotionLabel = (emotion) =>
+        t(`speech.emotion_${emotion || "normal"}`);
 
     const getVoices = () => {
         if ("speechSynthesis" in window) {
@@ -120,8 +130,11 @@ export function useSpeechSynthesis() {
         isPaused.value = false;
     };
 
-    const speak = (phrase, onComplete) => {
+    // `voice` ({ aiVoice } or { deviceVoice }) speaks this phrase in a voice
+    // other than the saved one, for a preview.
+    const speak = (phrase, onComplete, voice = {}) => {
         const queued = speakPhrase(phrase, {
+            ...voice,
             onStart: () => {
                 speaking.value = true;
             },
@@ -150,7 +163,7 @@ export function useSpeechSynthesis() {
 
         if (emotion) {
             applyEmotionalEffect(emotion);
-            speak(t("speech.emotion_set", { emotion }));
+            speak(t("speech.emotion_set", { emotion: emotionLabel(emotion) }));
         } else {
             // Reset to defaults when emotion is empty (Normal)
             speechRate.value = 1;
@@ -170,14 +183,7 @@ export function useSpeechSynthesis() {
     };
 
     const applyEmotionalEffect = (emotion) => {
-        const effects = {
-            excited: { rate: 1.2, pitch: 1.2, volume: 1.0 },
-            calm: { rate: 0.8, pitch: 0.9, volume: 0.8 },
-            mysterious: { rate: 0.9, pitch: 0.7, volume: 0.7 },
-            hyper: { rate: 1.5, pitch: 2.0, volume: 1.0 },
-        };
-
-        const effect = effects[emotion];
+        const effect = EMOTION_PRESETS[emotion];
         if (effect) {
             speechRate.value = effect.rate;
             speechPitch.value = effect.pitch;
@@ -233,6 +239,7 @@ export function useSpeechSynthesis() {
         voices,
         setVoice,
         selectedVoice,
+        emotionLabel,
         speechRate,
         speechPitch,
         speechVolume,

@@ -48,6 +48,7 @@ describe("useSpeechSynthesis", () => {
         vi.useFakeTimers();
         localStorage.clear();
         pageProps.locale = "en";
+        pageProps.translations = {};
         pageProps.aiVoice = null;
         vi.clearAllMocks();
         window.speechSynthesis.paused = false;
@@ -77,6 +78,21 @@ describe("useSpeechSynthesis", () => {
         api.speak("");
 
         expect(window.speechSynthesis.speak).not.toHaveBeenCalled();
+    });
+
+    it("names the preset in the app language", () => {
+        pageProps.translations = {
+            "speech.emotion_set": "Emoción: :emotion",
+            "speech.emotion_hyper": "Acelerada",
+        };
+        const api = mountSpeech();
+
+        api.setSelectedEmotion("hyper");
+
+        expect(api.speechRate.value).toBe(1.5);
+        expect(SpeechSynthesisUtterance).toHaveBeenCalledWith(
+            "Emoción: Acelerada"
+        );
     });
 
     describe("with the AI voice", () => {

@@ -1,5 +1,3 @@
-import { usePage } from "@inertiajs/vue3";
-
 export const APP_LOCALE_STORAGE_KEY = "appLocale";
 export const ENGLISH_SPEECH_LANGS = ["en-US", "en-GB", "en-AU", "en-CA", "en"];
 export const SPANISH_SPEECH_LANGS = ["es-ES", "es-MX", "es-US", "es"];
@@ -63,6 +61,16 @@ export function voiceMatchesAppLocale(voice, appLocale) {
     }
 
     return voice.lang.toLowerCase().startsWith(normalizeAppLocale(appLocale));
+}
+
+// The device voices that speak the app locale, for the voice picker. If the
+// device has none, every voice, so the picker is never empty.
+export function filterVoicesForLocale(voices, appLocale) {
+    const matching = voices.filter((voice) =>
+        voiceMatchesAppLocale(voice, appLocale)
+    );
+
+    return matching.length ? matching : voices;
 }
 
 function findVoiceByLangCodes(voices, langCodes) {

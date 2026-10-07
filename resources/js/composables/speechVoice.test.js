@@ -1,5 +1,6 @@
 import {
     applySpeechSettingsToUtterance,
+    filterVoicesForLocale,
     getStoredAppLocale,
     normalizeAppLocale,
     persistAppLocale,
@@ -126,5 +127,22 @@ describe("speechVoice", () => {
         expect(window.speechSynthesis.resume).toHaveBeenCalled();
         expect(window.speechSynthesis.speak).toHaveBeenCalledWith(utterance);
         window.speechSynthesis.paused = false;
+    });
+
+    it("offers only the voices that speak the app locale", () => {
+        expect(filterVoicesForLocale(voices, "es").map((v) => v.name)).toEqual([
+            "Monica",
+            "Paulina",
+        ]);
+        expect(filterVoicesForLocale(voices, "fr").map((v) => v.name)).toEqual([
+            "Thomas",
+            "Amelie",
+        ]);
+    });
+
+    it("offers every voice when none speaks the app locale", () => {
+        const englishOnly = voices.filter((v) => v.lang.startsWith("en"));
+
+        expect(filterVoicesForLocale(englishOnly, "fr")).toEqual(englishOnly);
     });
 });

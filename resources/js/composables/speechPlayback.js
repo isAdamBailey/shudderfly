@@ -77,7 +77,10 @@ async function drain() {
     }
 }
 
-function speakWithDeviceVoice(phrase, { onStart, onEnd, onPause, onResume }) {
+function speakWithDeviceVoice(
+    phrase,
+    { onStart, onEnd, onPause, onResume, deviceVoice }
+) {
     if (!isSpeechSynthesisAvailable() || !phrase) {
         onEnd();
         return;
@@ -91,6 +94,10 @@ function speakWithDeviceVoice(phrase, { onStart, onEnd, onPause, onResume }) {
             window.speechSynthesis.getVoices(),
             currentLocale()
         );
+        if (deviceVoice) {
+            utterance.voice = deviceVoice;
+            utterance.lang = deviceVoice.lang;
+        }
         const end = () => {
             if (currentUtterance === utterance) {
                 currentUtterance = null;
@@ -169,6 +176,7 @@ function speakInTurn(phrase, callbacks, entry) {
                 playAiVoice(phrase, {
                     ...readStoredSpeechSettings(),
                     locale: currentLocale(),
+                    voice: callbacks.aiVoice,
                     onStart: callbacks.onStart,
                     onEnd: finish,
                 })
@@ -192,19 +200,23 @@ function speakInTurn(phrase, callbacks, entry) {
  *
  * onEnd fires exactly once, when the phrase ends, errors, is stopped, or
  * can't be spoken at all. onStart, onPause and onResume are optional.
+ * `aiVoice` (a voice id) and `deviceVoice` (a SpeechSynthesisVoice) speak
+ * this one phrase in a voice other than the saved one, as a preview does.
  *
  * Returns true when the phrase was queued for the AI voice, which may take
  * a request before onStart; false when it went straight to the device.
  */
 export function speakPhrase(
     phrase,
-    { onStart, onEnd, onPause, onResume } = {}
+    { onStart, onEnd, onPause, onResume, aiVoice, deviceVoice } = {}
 ) {
     let ended = false;
     const callbacks = {
         onStart,
         onPause,
         onResume,
+        aiVoice,
+        deviceVoice,
         onEnd: () => {
             if (ended) {
                 return;
