@@ -288,7 +288,7 @@ class AiVoicePrewarmTest extends TestCase
             ->first(fn ($event) => str_contains($event->command, 'ai-voice:prewarm'));
 
         $this->assertNotNull($event);
-        $this->assertSame('0 15 * * *', $event->expression);
+        $this->assertSame('0 13 * * *', $event->expression);
         $this->assertTrue($event->filtersPass($this->app));
 
         SiteSetting::where('key', AiVoice::SETTING_KEY)->update(['value' => '0']);

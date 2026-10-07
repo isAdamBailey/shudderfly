@@ -49,10 +49,10 @@ class Kernel extends ConsoleKernel
 
         // Re-running is cheap: cached clips are skipped, so only new or
         // changed text (strings, books, songs) is generated, within the
-        // share of the day's budget prewarming may use. After the music
-        // sync so new songs are warmed the same day.
+        // share of the day's budget prewarming may use. Runs before the
+        // music sync; songs it adds are warmed on the next day's run.
         $schedule->command('ai-voice:prewarm')
-            ->dailyAt('15:00')
+            ->dailyAt('13:00')
             ->timezone($weeklyTimezone)
             ->when(fn () => AiVoice::enabled())
             ->withoutOverlapping();
