@@ -57,21 +57,25 @@ class AiVoiceService
 
     /**
      * A cached clip is always returned, even once today's budget is spent;
-     * only generating a new one is refused. $countPlay false is for making
-     * a clip ahead of time: finding it cached then records no play.
+     * only generating a new one is refused.
+     *
+     * $ahead is for a clip made before anyone asks to hear it (warming,
+     * prefetch): a cached clip records no play but is marked still wanted,
+     * so prune keeps it, and a new one may only use the ahead-of-time share
+     * of today's budget, leaving the rest for live plays.
      *
      * @throws \InvalidArgumentException when $text is empty or too long once normalized
      * @throws AiVoiceBudgetExceeded
      * @throws AiVoiceUnavailable
      */
-    public function clipFor(string $text, string $locale, ?string $voice, float $speed, bool $countPlay = true): AiVoiceClip
+    public function clipFor(string $text, string $locale, ?string $voice, float $speed, bool $ahead = false): AiVoiceClip
     {
         $key = self::keyFor($text, $locale, $voice, $speed)
             ?? throw new \InvalidArgumentException('AI voice text must be 1-'.self::MAX_CHARACTERS.' characters');
         ['text' => $text, 'voice' => $voice, 'speed' => $speed, 'hash' => $hash] = $key;
         $model = (string) config('services.ai_voice.model');
 
-        if ($clip = $this->findClip($hash, $countPlay)) {
+        if ($clip = $this->findClip($hash, $ahead)) {
             return $clip;
         }
 
@@ -80,7 +84,7 @@ class AiVoiceService
             // pay the provider and race to insert the same unique hash.
             return Cache::lock("ai-voice:{$hash}", $this->lockSeconds())->block(
                 self::LOCK_WAIT_SECONDS,
-                fn () => $this->findClip($hash, $countPlay) ?? $this->generate($hash, $text, $locale, $voice, $speed, $model)
+                fn () => $this->findClip($hash, $ahead) ?? $this->generate($hash, $text, $locale, $voice, $speed, $model, $ahead)
             );
         } catch (LockTimeoutException) {
             Log::warning('AI voice timed out waiting for a concurrent generation', ['hash' => $hash]);
@@ -125,7 +129,7 @@ class AiVoiceService
     {
         $text = self::normalize($text);
 
-        if ($text === '' || mb_strlen($text) > self::MAX_CHARACTERS) {
+        if (! self::fits($text)) {
             return null;
         }
 
@@ -146,21 +150,32 @@ class AiVoiceService
         return in_array($voice, $voices, true) ? $voice : $voices[0];
     }
 
-    private function findClip(string $hash, bool $countPlay): ?AiVoiceClip
+    /**
+     * Whether normalized text can be one clip: it has words and is not too
+     * long. Longer text plays in the device voice.
+     */
+    public static function fits(string $text): bool
+    {
+        return $text !== '' && mb_strlen($text) <= self::MAX_CHARACTERS;
+    }
+
+    private function findClip(string $hash, bool $ahead): ?AiVoiceClip
     {
         $clip = AiVoiceClip::where('hash', $hash)->first();
 
-        if ($countPlay) {
+        if ($ahead) {
+            $clip?->update(['last_played_at' => now()]);
+        } else {
             $clip?->increment('hits', 1, ['last_played_at' => now()]);
         }
 
         return $clip;
     }
 
-    private function generate(string $hash, string $text, string $locale, string $voice, float $speed, string $model): AiVoiceClip
+    private function generate(string $hash, string $text, string $locale, string $voice, float $speed, string $model, bool $ahead): AiVoiceClip
     {
         $characters = mb_strlen($text);
-        $this->reserveBudget($characters);
+        $this->reserveBudget($characters, $ahead ? AiVoice::aheadOfTimeCharacterLimit() : AiVoice::dailyCharacterLimit());
 
         try {
             $audio = $this->synthesize($text, $voice, $speed, $model);
@@ -196,13 +211,12 @@ class AiVoiceService
 
     /**
      * Charges $characters to today's budget before the provider is called,
-     * or refuses the clip if that would pass the daily limit. Reserving up
+     * or refuses the clip if that would take today's total past $limit. Reserving up
      * front, under one lock for every text, means a burst of different
      * misses cannot all pass the check before any of them is recorded.
      */
-    private function reserveBudget(int $characters): void
+    private function reserveBudget(int $characters, int $limit): void
     {
-        $limit = AiVoice::dailyCharacterLimit();
         $used = null;
 
         $this->adjustBudget(function (int $current) use ($characters, $limit, &$used) {

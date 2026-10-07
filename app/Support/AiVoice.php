@@ -2,8 +2,10 @@
 
 namespace App\Support;
 
+use App\Http\Middleware\SetLocale;
 use App\Models\AiVoiceClip;
 use App\Models\SiteSetting;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
@@ -19,6 +21,11 @@ class AiVoice
     public const LIMIT_SETTING_KEY = 'ai_voice_daily_character_limit';
 
     public const DEFAULT_DAILY_CHARACTER_LIMIT = 200000;
+
+    // Share of the daily limit kept for live plays: clips made ahead of
+    // time (prewarm, warming, prefetch) stop short of it, so a burst of
+    // them can't push everyone onto the device voice for the rest of the day.
+    public const LIVE_SHARE = 0.25;
 
     /**
      * The flag is on and the provider has a key. Without the key every
@@ -47,6 +54,19 @@ class AiVoice
     }
 
     /**
+     * The locales clips are warmed in ahead of time: English, plus every
+     * language a user has chosen.
+     *
+     * @return list<string>
+     */
+    public static function spokenLocales(): array
+    {
+        $chosen = User::whereNotNull('locale')->distinct()->pluck('locale')->all();
+
+        return array_values(array_intersect(SetLocale::SUPPORTED_LOCALES, ['en', ...$chosen]));
+    }
+
+    /**
      * Characters per day that new clips may cost. A blank or non-numeric
      * setting means the default rather than "no limit", so a mistyped value
      * can never remove the cost guard.
@@ -56,6 +76,14 @@ class AiVoice
         $value = SiteSetting::where('key', self::LIMIT_SETTING_KEY)->first()?->value;
 
         return is_numeric($value) ? max(0, (int) $value) : self::DEFAULT_DAILY_CHARACTER_LIMIT;
+    }
+
+    /**
+     * How much of today's total clips made ahead of time may reach.
+     */
+    public static function aheadOfTimeCharacterLimit(): int
+    {
+        return (int) floor(self::dailyCharacterLimit() * (1 - self::LIVE_SHARE));
     }
 
     /**

@@ -1,8 +1,11 @@
 import { usePage } from "@inertiajs/vue3";
 import axios from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { effectScope, nextTick, ref } from "vue";
 import {
     AI_VOICE_BACKOFF_MS,
+    AI_VOICE_PREFETCH_DELAY_MS,
+    AI_VOICE_PREFETCH_TIMEOUT_MS,
     AI_VOICE_MAX_CHARACTERS,
     AI_VOICE_MAX_REQUEST_TIMEOUT_MS,
     aiVoiceRequestTimeout,
@@ -10,6 +13,8 @@ import {
     AI_VOICE_TIMEOUTS_BEFORE_BACKOFF,
     pauseAiVoice,
     playAiVoice,
+    prefetchAiVoice,
+    usePrefetchAiVoice,
     primeAiVoice,
     resetAiVoiceForTests,
     resolveAiVoice,
@@ -71,10 +76,7 @@ describe("aiVoice", () => {
         expect(axios.post).toHaveBeenCalledWith(
             "ai-voice.speak",
             { text: "Hello there", locale: "es", voice: null },
-            expect.objectContaining({
-                timeout: aiVoiceRequestTimeout("Hello there"),
-                signal: expect.any(AbortSignal),
-            })
+            { timeout: aiVoiceRequestTimeout("Hello there") }
         );
         expect(lastAudio.src).toBe(CLIP_URL);
         expect(lastAudio.volume).toBe(0.5);
@@ -469,6 +471,133 @@ describe("aiVoice", () => {
             expect(axios.post.mock.calls.map(([, body]) => body.voice)).toEqual(
                 ["am_puck", "af_heart"]
             );
+        });
+    });
+
+    describe("prefetch", () => {
+        let defaultPage;
+
+        beforeEach(() => {
+            localStorage.clear();
+            defaultPage = usePage.getMockImplementation();
+            usePage.mockImplementation(() => ({
+                props: {
+                    locale: "en",
+                    aiVoice: { voices: { en: ["af_heart", "am_puck"] } },
+                },
+            }));
+        });
+
+        afterEach(() => {
+            usePage.mockImplementation(defaultPage);
+            delete navigator.connection;
+        });
+
+        it("asks for the clip in the saved voice without playing it", async () => {
+            respondWith();
+            saveAiVoice("en", "am_puck");
+
+            expect(await prefetchAiVoice("Hello  @there")).toBe(CLIP_URL);
+
+            expect(axios.post).toHaveBeenCalledWith(
+                "ai-voice.prefetch",
+                { text: "Hello there", locale: "en", voice: "am_puck" },
+                { timeout: AI_VOICE_PREFETCH_TIMEOUT_MS }
+            );
+            expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+        });
+
+        it("lets a later play use the clip with no second request", async () => {
+            respondWith();
+
+            await prefetchAiVoice("Hello there");
+            await playAiVoice("Hello there", { locale: "en" });
+
+            expect(axios.post).toHaveBeenCalledOnce();
+            expect(lastAudio.src).toBe(CLIP_URL);
+        });
+
+        it("lets a play join a prefetch still running", async () => {
+            let respond;
+            axios.post.mockReturnValueOnce(
+                new Promise((resolve) => {
+                    respond = resolve;
+                })
+            );
+
+            prefetchAiVoice("Hello there");
+            prefetchAiVoice("Hello there");
+            const played = playAiVoice("Hello there", { locale: "en" });
+            respond({ data: { url: CLIP_URL } });
+
+            expect(await played).toBe(true);
+            expect(axios.post).toHaveBeenCalledOnce();
+            expect(lastAudio.src).toBe(CLIP_URL);
+        });
+
+        it("hands a play that joined a failed prefetch to the device voice", async () => {
+            axios.post.mockRejectedValueOnce(httpError(503));
+            const prefetched = prefetchAiVoice("Hello there");
+            const played = playAiVoice("Hello there", { locale: "en" });
+
+            expect(await prefetched).toBeNull();
+            expect(await played).toBe(false);
+            expect(axios.post).toHaveBeenCalledOnce();
+        });
+
+        it("sends one request for two plays of the same text", async () => {
+            let respond;
+            axios.post.mockReturnValueOnce(
+                new Promise((resolve) => {
+                    respond = resolve;
+                })
+            );
+
+            const first = playAiVoice("Hello there", { locale: "en" });
+            const second = playAiVoice("Hello there", { locale: "en" });
+            respond({ data: { url: CLIP_URL } });
+
+            expect(await first).toBe(true);
+            expect(await second).toBe(true);
+            expect(axios.post).toHaveBeenCalledOnce();
+        });
+
+        it("makes no request while the AI voice is off", async () => {
+            usePage.mockImplementation(() => ({ props: { aiVoice: null } }));
+
+            expect(await prefetchAiVoice("Hello there")).toBeNull();
+            expect(axios.post).not.toHaveBeenCalled();
+        });
+
+        it("waits for text to stay on screen before prefetching it", async () => {
+            vi.useFakeTimers();
+            respondWith();
+            const text = ref("Page one");
+            const scope = effectScope();
+            scope.run(() => usePrefetchAiVoice(text));
+
+            text.value = "Page two";
+            await nextTick();
+            vi.advanceTimersByTime(AI_VOICE_PREFETCH_DELAY_MS - 1);
+            expect(axios.post).not.toHaveBeenCalled();
+
+            vi.advanceTimersByTime(1);
+            expect(axios.post).toHaveBeenCalledOnce();
+            expect(axios.post.mock.calls[0][1].text).toBe("Page two");
+
+            text.value = "Page three";
+            await nextTick();
+            scope.stop();
+            vi.advanceTimersByTime(AI_VOICE_PREFETCH_DELAY_MS);
+            expect(axios.post).toHaveBeenCalledOnce();
+            vi.useRealTimers();
+        });
+
+        it("makes no request on a data-saving connection", async () => {
+            navigator.connection = { saveData: true };
+
+            expect(await prefetchAiVoice("Hello there")).toBeNull();
+            expect(axios.post).not.toHaveBeenCalled();
         });
     });
 });

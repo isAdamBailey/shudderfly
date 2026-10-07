@@ -242,6 +242,7 @@ import MapEmbed from "@/Components/Map/MapEmbed.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
 import ShareToChatButton from "@/Components/ShareToChatButton.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
+import { usePrefetchAiVoice } from "@/composables/aiVoice";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { usePermissions } from "@/composables/permissions";
 import { useSiteSetting } from "@/composables/useSiteSetting";
@@ -250,6 +251,7 @@ import { useTranslations } from "@/composables/useTranslations";
 import { useDate } from "@/dateHelpers";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { useMedia } from "@/mediaHelpers";
+import { stripTags } from "@/utils/text";
 import EditPageForm from "@/Pages/Page/EditPageForm.vue";
 import { Head, Link, router, usePage } from "@inertiajs/vue3";
 import { computed, ref, unref } from "vue";
@@ -295,10 +297,11 @@ const buttonDisabled = ref(false);
 const blocking = ref(false);
 const blockConfirmPending = ref(false);
 
-const plainText = computed(() =>
-    (props.page.content || "").replace(/<\/?[^>]+(>|$)/g, "")
-);
+const plainText = computed(() => stripTags(props.page.content));
 const hasContent = computed(() => Boolean(plainText.value));
+
+// Ready the clip the speak button plays, so it starts at once.
+usePrefetchAiVoice(plainText);
 
 const canAddToCollage = computed(() => {
     return (

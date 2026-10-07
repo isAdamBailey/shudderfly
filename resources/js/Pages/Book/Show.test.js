@@ -1,7 +1,12 @@
 import Show from "@/Pages/Book/Show.vue";
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ref } from "vue";
+import { ref, toValue } from "vue";
+
+const mockUsePrefetchAiVoice = vi.fn();
+vi.mock("@/composables/aiVoice", () => ({
+    usePrefetchAiVoice: (...args) => mockUsePrefetchAiVoice(...args),
+}));
 
 // Mock composables
 vi.mock("@/composables/useInfiniteScroll", () => ({
@@ -197,6 +202,12 @@ describe("Book/Show.vue", () => {
                 },
             },
         });
+    });
+
+    it("prefetches the AI voice clip for the book title", () => {
+        expect(toValue(mockUsePrefetchAiVoice.mock.lastCall[0])).toBe(
+            "Test Book"
+        );
     });
 
     it("renders the book cover", () => {

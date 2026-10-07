@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Models\Traits\Blockable;
+use App\Observers\AiVoiceWarmingObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Scout\Searchable;
 
+#[ObservedBy(AiVoiceWarmingObserver::class)]
 class Page extends Model
 {
     use Blockable;

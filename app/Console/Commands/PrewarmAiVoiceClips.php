@@ -10,9 +10,9 @@ use App\Models\AiVoiceClip;
 use App\Models\Book;
 use App\Models\SiteSetting;
 use App\Models\Song;
-use App\Models\User;
 use App\Services\AiVoiceService;
 use App\Support\AiVoice;
+use App\Support\SpokenText;
 use App\Support\SpokenTranslationKeys;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Lang;
@@ -33,10 +33,6 @@ class PrewarmAiVoiceClips extends Command
 
     protected $description = 'Generate AI voice clips for common phrases before anyone plays them';
 
-    // Share of the daily character limit prewarming leaves for live plays,
-    // so a big warm-up can't push everyone onto the device voice for a day.
-    private const LIVE_SHARE = 0.25;
-
     /** @var array<string, mixed> locale-independent source data, loaded once */
     private array $loaded = [];
 
@@ -44,7 +40,7 @@ class PrewarmAiVoiceClips extends Command
     {
         $this->loaded = [];
         $sources = $this->option('source') ?: self::SOURCES;
-        $locales = $this->option('locale') ?: $this->defaultLocales();
+        $locales = $this->option('locale') ?: AiVoice::spokenLocales();
 
         if ($this->rejectUnknown('source', $sources, self::SOURCES)
             || $this->rejectUnknown('locale', $locales, SetLocale::SUPPORTED_LOCALES)) {
@@ -118,7 +114,7 @@ class PrewarmAiVoiceClips extends Command
      */
     private function withinBudget(array $clips): array
     {
-        $allowance = (int) floor(AiVoice::dailyCharacterLimit() * (1 - self::LIVE_SHARE)) - AiVoiceService::charactersUsedToday();
+        $allowance = AiVoice::aheadOfTimeCharacterLimit() - AiVoiceService::charactersUsedToday();
         $kept = [];
 
         foreach ($clips as $clip) {
@@ -144,19 +140,6 @@ class PrewarmAiVoiceClips extends Command
         }
 
         return (bool) $unknown;
-    }
-
-    /**
-     * English, plus every language a user has chosen: the locales the app
-     * is actually spoken in.
-     *
-     * @return list<string>
-     */
-    private function defaultLocales(): array
-    {
-        $chosen = User::whereNotNull('locale')->distinct()->pluck('locale')->all();
-
-        return array_values(array_intersect(SetLocale::SUPPORTED_LOCALES, ['en', ...$chosen]));
     }
 
     /**
@@ -228,10 +211,8 @@ class PrewarmAiVoiceClips extends Command
         return match ($source) {
             'ui' => $this->uiPhrases($locale),
             'games' => $this->gamePhrases($locale),
-            // Spoken in Book/Show.vue after its stripHtml(), which only
-            // removes tags; entities are left as they are.
             'books' => $this->loaded['books'] ??= Book::distinct()->pluck('title')
-                ->map(fn ($title) => [preg_replace('/<\/?[^>]+(>|$)/', '', (string) $title), null])
+                ->map(fn ($title) => [SpokenText::fromHtml($title), null])
                 ->all(),
             'songs' => $this->songPhrases($locale),
         };
