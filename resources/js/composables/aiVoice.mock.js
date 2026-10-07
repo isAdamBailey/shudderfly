@@ -40,6 +40,8 @@ export async function createAiVoiceMock(isEnabled) {
         aiVoicesForLocale,
         resolveAiVoice,
         saveAiVoice,
+        prefetchAiVoice: vi.fn(() => Promise.resolve(null)),
+        usePrefetchAiVoice: vi.fn(),
         primeAiVoice: vi.fn(),
         playAiVoice,
         stopAiVoice: vi.fn(() => {

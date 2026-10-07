@@ -20,6 +20,21 @@ class AiVoiceController extends Controller
      */
     public function speak(Request $request, AiVoiceService $service): JsonResponse
     {
+        return $this->clip($request, $service, ahead: false);
+    }
+
+    /**
+     * The same, for a clip the client expects to play soon. It records no
+     * play and stops short of the share of the budget kept for live plays;
+     * its own route keeps it off the live-play throttle.
+     */
+    public function prefetch(Request $request, AiVoiceService $service): JsonResponse
+    {
+        return $this->clip($request, $service, ahead: true);
+    }
+
+    private function clip(Request $request, AiVoiceService $service, bool $ahead): JsonResponse
+    {
         abort_unless(AiVoice::enabled(), 404);
 
         // Validate the words that will actually be spoken, so text that is
@@ -41,6 +56,7 @@ class AiVoiceController extends Controller
                 $validated['locale'],
                 $validated['voice'] ?? null,
                 (float) ($validated['speed'] ?? 1),
+                $ahead,
             );
         } catch (AiVoiceBudgetExceeded) {
             return response()->json(['message' => 'AI voice daily limit reached.'], 429);

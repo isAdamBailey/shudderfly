@@ -71,6 +71,10 @@ Route::middleware('auth')->group(function () {
         ->middleware('throttle:60,1')
         ->name('ai-voice.speak');
 
+    Route::post('/ai-voice/prefetch', [AiVoiceController::class, 'prefetch'])
+        ->middleware('throttle:30,1')
+        ->name('ai-voice.prefetch');
+
     Route::patch('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
     Route::patch('/profile/notifications/preferences', [ProfileController::class, 'updateNotificationPreferences'])
         ->name('profile.notifications.preferences');

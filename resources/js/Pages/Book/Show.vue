@@ -397,10 +397,12 @@ import ManEmptyCircle from "@/Components/svg/ManEmptyCircle.vue";
 import BreezeValidationErrors from "@/Components/ValidationErrors.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import FormModal from "@/Components/FormModal.vue";
+import { usePrefetchAiVoice } from "@/composables/aiVoice";
 import { usePermissions } from "@/composables/permissions";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
+import { stripTags } from "@/utils/text";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import BulkActionsForm from "@/Pages/Book/BulkActionsForm.vue";
 import EditBookForm from "@/Pages/Book/EditBookForm.vue";
@@ -511,17 +513,13 @@ const handleSelectionChanged = (newSelection) => {
     selectedPages.value = newSelection;
 };
 
-const stripHtml = (html) => {
-    if (!html) {
-        return "";
-    }
-    return html.replace(/<\/?[^>]+(>|$)/g, "");
-};
+// Ready the title clip the speak button starts with.
+usePrefetchAiVoice(() => stripTags(props.book.title));
 
 const readTitleAndExcerpt = () => {
-    speak(stripHtml(props.book.title));
+    speak(stripTags(props.book.title));
     if (props.book.excerpt) {
-        speak(stripHtml(props.book.excerpt));
+        speak(stripTags(props.book.excerpt));
     }
 };
 

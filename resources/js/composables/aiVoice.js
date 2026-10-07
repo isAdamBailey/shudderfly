@@ -1,6 +1,8 @@
 /* global route */
 import { usePage } from "@inertiajs/vue3";
 import axios from "axios";
+import { watch } from "vue";
+import { getAppLocaleFromPage } from "@/composables/speechVoice";
 
 // Plays AI voice clips from POST /ai-voice. State is module-level so only
 // one clip plays app-wide: any new clip, from any component, stops the last.
@@ -44,6 +46,14 @@ export const AI_VOICE_BACKOFF_MS = 60000;
 // Only this many in a row look like a hung provider.
 export const AI_VOICE_TIMEOUTS_BEFORE_BACKOFF = 3;
 
+// A prefetch nobody is waiting on can take as long as the server does to
+// make a long clip: two provider attempts, well inside its 10 s timeout.
+export const AI_VOICE_PREFETCH_TIMEOUT_MS = 15000;
+
+// How long text must stay on screen before its clip is prefetched, so
+// paging quickly through a book doesn't make a clip for every page passed.
+export const AI_VOICE_PREFETCH_DELAY_MS = 1500;
+
 // A silent WAV, played during the user's tap so iOS lets the shared element
 // play a clip that only arrives after the request.
 const SILENT_WAV =
@@ -51,6 +61,8 @@ const SILENT_WAV =
 
 // locale|voice|text -> clip URL, for this page session.
 const clipUrls = new Map();
+// locale|voice|text -> Promise of its URL, while that request runs.
+const requests = new Map();
 
 let audio = null;
 let unavailableUntil = 0;
@@ -166,24 +178,74 @@ function clamp(value, min, max) {
     return Number.isFinite(number) ? Math.min(max, Math.max(min, number)) : 1;
 }
 
-async function fetchClipUrl(key, text, locale, voice, signal) {
+function clipKey(locale, voice, phrase) {
+    return `${locale}|${voice ?? ""}|${phrase}`;
+}
+
+// The normalized phrase when the AI voice could take it now, else null:
+// it has words, fits in one clip, and the provider isn't in backoff.
+function speakablePhrase(text) {
+    const phrase = normalizeAiVoiceText(text);
+
+    return phrase &&
+        // Code points, like the server's mb_strlen, not UTF-16 units.
+        [...phrase].length <= AI_VOICE_MAX_CHARACTERS &&
+        Date.now() >= unavailableUntil
+        ? phrase
+        : null;
+}
+
+// The clip URL for `key`, from this session's cache or from one request
+// per key: a play and a prefetch of the same text share it. A second
+// request would only wait on the server's lock for the first, and fail
+// once that takes longer than a couple of seconds.
+function requestClipUrl(key, routeName, body, timeout) {
     if (clipUrls.has(key)) {
-        return clipUrls.get(key);
+        return Promise.resolve(clipUrls.get(key));
+    }
+    if (!requests.has(key)) {
+        requests.set(
+            key,
+            axios
+                .post(route(routeName), body, { timeout })
+                .then(({ data }) => {
+                    if (!data?.url) {
+                        throw new Error("AI voice response had no url");
+                    }
+                    clipUrls.set(key, data.url);
+
+                    return data.url;
+                })
+                .finally(() => requests.delete(key))
+        );
     }
 
-    const { data } = await axios.post(
-        route("ai-voice.speak"),
-        { text, locale, voice },
-        { signal, timeout: aiVoiceRequestTimeout(text) }
-    );
+    return requests.get(key);
+}
 
-    if (!data?.url) {
-        throw new Error("AI voice response had no url");
-    }
-
-    clipUrls.set(key, data.url);
-
-    return data.url;
+// Waits for `request` no longer than `timeoutMs` and not past `signal`.
+// The request itself carries on, so the clip is cached for the next tap.
+function waitForClip(request, signal, timeoutMs) {
+    return new Promise((resolve, reject) => {
+        const onAbort = () => fail(new Error("AI voice request stopped"));
+        const settle = (finish) => (value) => {
+            clearTimeout(timer);
+            signal.removeEventListener("abort", onAbort);
+            finish(value);
+        };
+        const fail = settle(reject);
+        const timer = setTimeout(
+            () =>
+                fail(
+                    Object.assign(new Error("AI voice request timed out"), {
+                        code: "ECONNABORTED",
+                    })
+                ),
+            timeoutMs
+        );
+        signal.addEventListener("abort", onAbort);
+        request.then(settle(resolve), fail);
+    });
 }
 
 /**
@@ -208,17 +270,12 @@ export async function playAiVoice(
         onEnd,
     } = {}
 ) {
-    const phrase = normalizeAiVoiceText(text);
-    if (
-        !phrase ||
-        // Code points, like the server's mb_strlen, not UTF-16 units.
-        [...phrase].length > AI_VOICE_MAX_CHARACTERS ||
-        Date.now() < unavailableUntil
-    ) {
+    const phrase = speakablePhrase(text);
+    if (!phrase) {
         return false;
     }
     const voiceId = voice ?? resolveAiVoice(locale);
-    const key = `${locale}|${voiceId ?? ""}|${phrase}`;
+    const key = clipKey(locale, voiceId, phrase);
 
     stopAiVoice();
 
@@ -256,12 +313,16 @@ export async function playAiVoice(
 
     let url;
     try {
-        url = await fetchClipUrl(
-            key,
-            phrase,
-            locale,
-            voiceId,
-            controller.signal
+        const timeout = aiVoiceRequestTimeout(phrase);
+        url = await waitForClip(
+            requestClipUrl(
+                key,
+                "ai-voice.speak",
+                { text: phrase, locale, voice: voiceId },
+                timeout
+            ),
+            controller.signal,
+            timeout
         );
     } catch (error) {
         if (current === clip) {
@@ -306,6 +367,49 @@ export async function playAiVoice(
     return true;
 }
 
+/**
+ * Asks for the clip `text` would play in the app locale and saved voice,
+ * without playing it, so a later speak() of the same text starts at once.
+ * Skipped while the AI voice is off, on a data-saving connection, or
+ * during the backoff; failures are silent, since nothing is waiting.
+ * Resolves the clip URL, or null.
+ */
+export function prefetchAiVoice(text) {
+    const phrase = speakablePhrase(text);
+    if (!phrase || !aiVoiceEnabled() || navigator.connection?.saveData) {
+        return Promise.resolve(null);
+    }
+    const locale = getAppLocaleFromPage(usePage());
+    const voice = resolveAiVoice(locale);
+
+    return requestClipUrl(
+        clipKey(locale, voice, phrase),
+        "ai-voice.prefetch",
+        { text: phrase, locale, voice },
+        AI_VOICE_PREFETCH_TIMEOUT_MS
+    ).catch(() => null);
+}
+
+/**
+ * Prefetches the clip for the text `source` returns once it has been on
+ * screen for AI_VOICE_PREFETCH_DELAY_MS, again whenever that text changes
+ * (Inertia reuses a page component from one record to the next), and not
+ * at all if the component goes away first.
+ */
+export function usePrefetchAiVoice(source) {
+    watch(
+        source,
+        (text, _, onCleanup) => {
+            const timer = setTimeout(
+                () => prefetchAiVoice(text),
+                AI_VOICE_PREFETCH_DELAY_MS
+            );
+            onCleanup(() => clearTimeout(timer));
+        },
+        { immediate: true }
+    );
+}
+
 export function stopAiVoice() {
     current?.stop();
 }
@@ -336,6 +440,7 @@ export function resumeAiVoice() {
 export function resetAiVoiceForTests() {
     stopAiVoice();
     clipUrls.clear();
+    requests.clear();
     audio = null;
     unavailableUntil = 0;
     consecutiveTimeouts = 0;

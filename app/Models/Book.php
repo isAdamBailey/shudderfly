@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Observers\AiVoiceWarmingObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,6 +12,7 @@ use Laravel\Scout\Searchable;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
 
+#[ObservedBy(AiVoiceWarmingObserver::class)]
 class Book extends Model
 {
     use HasFactory;

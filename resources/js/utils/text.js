@@ -14,3 +14,12 @@ export const stripHtml = (html) => {
 
     return (tmp.textContent || tmp.innerText || "").replace(/\s+/g, " ").trim();
 };
+
+/**
+ * Removes tags only, leaving entities and spacing alone: the text a page or
+ * book title is read aloud as. Must match App\Support\SpokenText::fromHtml(),
+ * which warms AI voice clips on the server; if they differ, the warmed clip
+ * is never the one played. Unlike stripHtml, it needs no DOM.
+ */
+export const stripTags = (html) =>
+    String(html ?? "").replace(/<\/?[^>]+(>|$)/g, "");

@@ -32,10 +32,14 @@ class GenerateAiVoiceClip implements ShouldQueue
 
     public function handle(AiVoiceService $service): void
     {
+        // Empty or too long for one clip (a long page): it plays in the
+        // device voice, so there is nothing to make.
+        if (AiVoiceService::keyFor($this->text, $this->locale, $this->voice, self::SPEED) === null) {
+            return;
+        }
+
         try {
-            // No play is counted if it was made since this was queued: nobody
-            // heard it, and counting one would skew the cache hit rate.
-            $service->clipFor($this->text, $this->locale, $this->voice, self::SPEED, countPlay: false);
+            $service->clipFor($this->text, $this->locale, $this->voice, self::SPEED, ahead: true);
         } catch (AiVoiceBudgetExceeded) {
             Log::warning('AI voice prewarm skipped: daily character limit reached', [
                 'locale' => $this->locale,

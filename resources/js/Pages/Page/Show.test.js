@@ -2,7 +2,12 @@ import UserTagList from "@/Components/UserTagList.vue";
 import Show from "@/Pages/Page/Show.vue";
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { nextTick } from "vue";
+import { nextTick, toValue } from "vue";
+
+const mockUsePrefetchAiVoice = vi.fn();
+vi.mock("@/composables/aiVoice", () => ({
+    usePrefetchAiVoice: (...args) => mockUsePrefetchAiVoice(...args),
+}));
 
 // Mock route function
 global.route = vi.fn((name, params) => {
@@ -230,10 +235,10 @@ describe("Page/Show.vue", () => {
     const collages = [];
     const users = [];
 
-    const mountShow = () =>
+    const mountShow = (pageOverrides = {}) =>
         mount(Show, {
             props: {
-                page,
+                page: { ...page, ...pageOverrides },
                 previousPage,
                 nextPage,
                 books,
@@ -264,6 +269,17 @@ describe("Page/Show.vue", () => {
             wrapper.unmount();
         }
         wrapper = mountShow();
+    });
+
+    it("prefetches the AI voice clip for the page's plain text", () => {
+        mockUsePrefetchAiVoice.mockClear();
+
+        mountShow({ content: "<p>Hello <b>there</b></p>" });
+
+        expect(mockUsePrefetchAiVoice).toHaveBeenCalledOnce();
+        expect(toValue(mockUsePrefetchAiVoice.mock.calls[0][0])).toBe(
+            "Hello there"
+        );
     });
 
     it("renders the page content", () => {

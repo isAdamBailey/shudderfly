@@ -17,6 +17,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class AiVoicePrewarmTest extends TestCase
@@ -29,6 +30,15 @@ class AiVoicePrewarmTest extends TestCase
 
         Storage::fake('s3');
         SiteSetting::where('key', AiVoice::SETTING_KEY)->update(['value' => '1']);
+    }
+
+    /**
+     * A book whose title the warming observer leaves alone, so only the
+     * command under test queues it. Quiet saves skip the slug generator too.
+     */
+    private function book(string $title): Book
+    {
+        return Book::factory()->createQuietly(['title' => $title, 'slug' => Str::slug($title).'-'.Str::random(6)]);
     }
 
     private function limitDailyCharacters(int $limit): void
@@ -47,7 +57,7 @@ class AiVoicePrewarmTest extends TestCase
     public function test_dry_run_reports_counts_and_dispatches_nothing(): void
     {
         Queue::fake();
-        Book::factory()->create(['title' => 'Bluey']);
+        $this->book('Bluey');
 
         $this->artisan('ai-voice:prewarm', ['--source' => ['books'], '--dry-run' => true])
             ->expectsOutputToContain('books: 1 clip(s)')
@@ -112,7 +122,7 @@ class AiVoicePrewarmTest extends TestCase
     public function test_the_voice_option_is_used_and_falls_back_where_the_locale_lacks_it(): void
     {
         Queue::fake();
-        Book::factory()->create(['title' => 'Bluey']);
+        $this->book('Bluey');
 
         $this->artisan('ai-voice:prewarm', ['--source' => ['books'], '--locale' => ['en', 'fr'], '--voice' => 'am_puck'])
             ->assertSuccessful();
@@ -140,7 +150,7 @@ class AiVoicePrewarmTest extends TestCase
     public function test_book_titles_have_their_tags_stripped(): void
     {
         Queue::fake();
-        Book::factory()->create(['title' => '<b>Big</b>  Trucks']);
+        $this->book('<b>Big</b>  Trucks');
 
         $this->artisan('ai-voice:prewarm', ['--source' => ['books']])->assertSuccessful();
 
@@ -168,7 +178,7 @@ class AiVoicePrewarmTest extends TestCase
     public function test_default_locales_are_english_plus_those_users_chose(): void
     {
         Queue::fake();
-        Book::factory()->create(['title' => 'Bluey']);
+        $this->book('Bluey');
         User::factory()->create(['locale' => 'fr']);
 
         $this->artisan('ai-voice:prewarm', ['--source' => ['books']])->assertSuccessful();
@@ -179,9 +189,9 @@ class AiVoicePrewarmTest extends TestCase
     public function test_cached_clips_and_duplicates_are_skipped(): void
     {
         Queue::fake();
-        Book::factory()->create(['title' => 'Bluey']);
-        Book::factory()->create(['title' => 'Bluey']);
-        Book::factory()->create(['title' => 'Bingo']);
+        $this->book('Bluey');
+        $this->book('Bluey');
+        $this->book('Bingo');
         AiVoiceClip::factory()->create(['hash' => AiVoiceService::hashFor('Bingo', 'af_heart', 1.0)]);
 
         $this->artisan('ai-voice:prewarm', ['--source' => ['books']])
@@ -220,8 +230,8 @@ class AiVoicePrewarmTest extends TestCase
         // 75% of 40 is 30; 10 are already spent today, so 20 are left to warm.
         $this->limitDailyCharacters(40);
         AiVoiceClip::factory()->create(['characters' => 10]);
-        Book::factory()->create(['title' => 'Bluey and Bingo']);   // 15
-        Book::factory()->create(['title' => 'Tractors']);          // 8
+        $this->book('Bluey and Bingo');   // 15
+        $this->book('Tractors');          // 8
 
         $this->artisan('ai-voice:prewarm', ['--source' => ['books']])
             ->expectsOutputToContain("1 more clip(s) would go past today's budget")
@@ -236,8 +246,8 @@ class AiVoicePrewarmTest extends TestCase
             ->push(['error' => 'boom'], 500)
             ->push(['error' => 'boom'], 500)
             ->push('ID3-fake', 200, ['Content-Type' => 'audio/mpeg']);
-        Book::factory()->create(['title' => 'Bingo']);
-        Book::factory()->create(['title' => 'Bluey']);
+        $this->book('Bingo');
+        $this->book('Bluey');
 
         $this->artisan('ai-voice:prewarm', ['--source' => ['books'], '--sync' => true])
             ->expectsOutputToContain('1 clip(s) failed')
@@ -249,7 +259,7 @@ class AiVoicePrewarmTest extends TestCase
     public function test_sync_generates_the_clips_now(): void
     {
         Http::fake(['ai-voice.test/*' => Http::response('ID3-fake', 200, ['Content-Type' => 'audio/mpeg'])]);
-        Book::factory()->create(['title' => 'Bluey']);
+        $this->book('Bluey');
 
         $this->artisan('ai-voice:prewarm', ['--source' => ['books'], '--sync' => true])
             ->expectsOutputToContain('Generated 1 clip(s)')
