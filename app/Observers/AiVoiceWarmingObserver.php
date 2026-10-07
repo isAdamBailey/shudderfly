@@ -28,8 +28,17 @@ class AiVoiceWarmingObserver
      * time it commits, getOriginal() already holds the new values and the
      * change can't be seen. The jobs wait for the commit instead, so a
      * rolled-back save warms nothing.
+     *
+     * Warming is only a head start, so a failure here is reported and the
+     * save goes ahead: thrown inside a caller's transaction, it would roll
+     * back the page or book itself.
      */
     public function saved(Model $model): void
+    {
+        rescue(fn () => $this->warm($model));
+    }
+
+    private function warm(Model $model): void
     {
         $texts = array_values(array_filter(
             array_map(fn (string $attribute) => $this->changedText($model, $attribute), self::SPOKEN[$model::class] ?? []),

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Exceptions\AiVoiceBudgetExceeded;
+use App\Exceptions\AiVoicePaused;
 use App\Exceptions\AiVoiceUnavailable;
 use App\Models\AiVoiceClip;
 use App\Support\AiVoice;
@@ -64,6 +65,22 @@ class AiVoiceService
     // The budget lock only guards a cache read and write.
     private const BUDGET_LOCK_SECONDS = 5;
 
+    // After this many connection failures in a row the provider is paused:
+    // while it hangs, every request would otherwise hold a PHP worker for
+    // the full timeout and charge the budget for audio that never came.
+    private const FAILURES_BEFORE_PAUSE = 3;
+
+    private const PAUSE_SECONDS = 300;
+
+    // Each failure keeps the count for this long again, so it outlives a
+    // pause: after one, the first request probes the provider and a single
+    // further failure pauses it again, until an answer clears the count.
+    private const FAILURE_WINDOW_SECONDS = 900;
+
+    private const PAUSED_KEY = 'ai-voice:provider-paused';
+
+    private const FAILURES_KEY = 'ai-voice:provider-failures';
+
     /**
      * A cached clip is always returned, even once today's budget is spent;
      * only generating a new one is refused.
@@ -86,6 +103,12 @@ class AiVoiceService
 
         if ($clip = $this->findClip($hash, $ahead)) {
             return $clip;
+        }
+
+        // Before the lock, so a paused miss never waits on one held by a
+        // request still stuck on the provider.
+        if (self::paused()) {
+            throw new AiVoicePaused('AI voice provider is paused after repeated connection failures');
         }
 
         try {
@@ -199,6 +222,8 @@ class AiVoiceService
         $path = "ai-voice/{$locale}/{$hash}.mp3";
 
         if (! Storage::disk('s3')->put($path, $audio, 'public')) {
+            Log::warning('AI voice could not store a clip', ['path' => $path]);
+
             throw new AiVoiceUnavailable("Could not store AI voice clip at {$path}");
         }
 
@@ -264,6 +289,8 @@ class AiVoiceService
                 Cache::put(self::budgetKey($day), max(0, $change(self::charactersUsedToday())), $day->endOfDay()->addHour());
             });
         } catch (LockTimeoutException) {
+            Log::warning('AI voice timed out waiting for the budget lock');
+
             throw new AiVoiceUnavailable('Timed out waiting for the AI voice budget');
         }
     }
@@ -308,8 +335,15 @@ class AiVoiceService
         } catch (\Throwable $exception) {
             Log::warning('AI voice request exception', ['error' => $exception->getMessage()]);
 
+            if ($exception instanceof ConnectionException) {
+                $this->recordConnectionFailure();
+            }
+
             throw new AiVoiceUnavailable('AI voice request failed', previous: $exception);
         }
+
+        // Any answer, even an error, shows the provider is reachable.
+        Cache::forget(self::FAILURES_KEY);
 
         if (! $response->successful()) {
             $provider = (string) config('services.ai_voice.provider');
@@ -338,6 +372,33 @@ class AiVoiceService
         }
 
         return $audio;
+    }
+
+    /**
+     * Whether new clips are refused after repeated connection failures. The
+     * pause is logged once, when it starts; see recordConnectionFailure().
+     */
+    public static function paused(): bool
+    {
+        return Cache::has(self::PAUSED_KEY);
+    }
+
+    /**
+     * Counts a timeout or dropped connection, and pauses the provider once
+     * there have been enough in a row. Not atomic: two failures at once may
+     * count as one, which only delays the pause by a request.
+     */
+    private function recordConnectionFailure(): void
+    {
+        $failures = (int) Cache::get(self::FAILURES_KEY, 0) + 1;
+        Cache::put(self::FAILURES_KEY, $failures, self::FAILURE_WINDOW_SECONDS);
+
+        if ($failures >= self::FAILURES_BEFORE_PAUSE && Cache::add(self::PAUSED_KEY, true, self::PAUSE_SECONDS)) {
+            Log::warning('AI voice provider paused after repeated connection failures; clips fall back to the device voice', [
+                'failures' => $failures,
+                'seconds' => self::PAUSE_SECONDS,
+            ]);
+        }
     }
 
     /**

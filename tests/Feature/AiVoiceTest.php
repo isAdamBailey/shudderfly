@@ -187,6 +187,86 @@ class AiVoiceTest extends TestCase
         Http::assertSentCount(1);
     }
 
+    /** Times out enough requests in a row to pause the provider. */
+    private function pauseProvider(): void
+    {
+        Http::fake(['ai-voice.test/*' => Http::failedConnection()]);
+        foreach (['one', 'two', 'three'] as $text) {
+            $this->speak(['text' => $text])->assertStatus(503);
+        }
+    }
+
+    public function test_repeated_timeouts_pause_the_provider(): void
+    {
+        $this->pauseProvider();
+        $charged = AiVoiceService::charactersUsedToday();
+
+        $this->speak(['text' => 'four'])->assertStatus(503);
+
+        // Refused without waiting on the provider or charging the budget.
+        Http::assertSentCount(3);
+        $this->assertSame($charged, AiVoiceService::charactersUsedToday());
+    }
+
+    public function test_cached_clips_still_play_while_the_provider_is_paused(): void
+    {
+        $this->fakeProvider();
+        $this->speak()->assertOk();
+
+        $this->pauseProvider();
+
+        $this->speak()->assertOk()->assertJsonPath('url', AiVoiceClip::sole()->url);
+    }
+
+    public function test_an_answer_from_the_provider_resets_the_failure_count(): void
+    {
+        Http::fake(['ai-voice.test/*' => Http::sequence()
+            ->pushFailedConnection()
+            ->pushFailedConnection()
+            ->push(self::AUDIO, 200, ['Content-Type' => 'audio/mpeg'])
+            ->pushFailedConnection()
+            ->pushFailedConnection()
+            ->push(self::AUDIO, 200, ['Content-Type' => 'audio/mpeg']),
+        ]);
+
+        foreach (['one', 'two', 'three', 'four', 'five'] as $text) {
+            $this->speak(['text' => $text]);
+        }
+
+        $this->speak(['text' => 'six'])->assertOk();
+        Http::assertSentCount(6);
+    }
+
+    public function test_after_a_pause_one_more_failure_pauses_again(): void
+    {
+        $this->pauseProvider();
+
+        $this->travel(301)->seconds();
+
+        $this->speak(['text' => 'four'])->assertStatus(503);
+        $this->speak(['text' => 'five'])->assertStatus(503);
+
+        // 'four' probed the provider; 'five' was refused without trying.
+        Http::assertSentCount(4);
+    }
+
+    public function test_each_failure_keeps_the_count_alive_through_a_long_outage(): void
+    {
+        Http::fake(['ai-voice.test/*' => Http::failedConnection()]);
+
+        // Sparse failures still add up, and the count outlives the pause.
+        foreach (['one' => 0, 'two' => 500, 'three' => 300] as $text => $wait) {
+            $this->travel($wait)->seconds();
+            $this->speak(['text' => $text]);
+        }
+        $this->travel(301)->seconds();
+
+        $this->speak(['text' => 'four'])->assertStatus(503);
+        $this->speak(['text' => 'five'])->assertStatus(503);
+
+        Http::assertSentCount(4);
+    }
+
     private function setDailyLimit(string $value): void
     {
         SiteSetting::where('key', AiVoice::LIMIT_SETTING_KEY)->update(['value' => $value]);
