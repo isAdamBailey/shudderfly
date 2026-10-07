@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\AiVoiceService;
 use App\Support\AiVoice;
 use App\Support\SpokenTranslationKeys;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
@@ -279,5 +280,19 @@ class AiVoicePrewarmTest extends TestCase
 
         Http::assertNothingSent();
         $this->assertSame(0, AiVoiceClip::count());
+    }
+
+    public function test_prewarm_is_scheduled_daily_only_while_the_ai_voice_is_on(): void
+    {
+        $event = collect(app(Schedule::class)->events())
+            ->first(fn ($event) => str_contains($event->command, 'ai-voice:prewarm'));
+
+        $this->assertNotNull($event);
+        $this->assertSame('0 15 * * *', $event->expression);
+        $this->assertTrue($event->filtersPass($this->app));
+
+        SiteSetting::where('key', AiVoice::SETTING_KEY)->update(['value' => '0']);
+
+        $this->assertFalse($event->filtersPass($this->app));
     }
 }

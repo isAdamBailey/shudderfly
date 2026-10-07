@@ -3,6 +3,7 @@
 namespace App\Console;
 
 use App\Models\SiteSetting;
+use App\Support\AiVoice;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -44,6 +45,16 @@ class Kernel extends ConsoleKernel
         $schedule->command('ai-voice:prune')
             ->weeklyOn(0, '4:00')
             ->timezone($weeklyTimezone)
+            ->withoutOverlapping();
+
+        // Re-running is cheap: cached clips are skipped, so only new or
+        // changed text (strings, books, songs) is generated, within the
+        // share of the day's budget prewarming may use. After the music
+        // sync so new songs are warmed the same day.
+        $schedule->command('ai-voice:prewarm')
+            ->dailyAt('15:00')
+            ->timezone($weeklyTimezone)
+            ->when(fn () => AiVoice::enabled())
             ->withoutOverlapping();
 
         // Only schedule music sync if music is enabled

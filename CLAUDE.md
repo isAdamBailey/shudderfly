@@ -108,6 +108,8 @@ Defined in `app/Console/Kernel.php`, all run weekly on Sunday (America/Los_Angel
 -   `send:weekly-stats-mail` — weekly digest email
 -   `music:sync-youtube` — daily sync if `music_enabled` setting is on
 -   `messages:cleanup` — daily cleanup if `messaging_enabled` is on
+-   `ai-voice:prune` — weekly, deletes AI voice clips not played in 90 days (runs even with the AI voice off)
+-   `ai-voice:prewarm` — daily at 15:00 while the AI voice is on; makes clips for new or changed spoken text, skipping cached ones, within 75% of the daily character budget
 
 ### Search
 
