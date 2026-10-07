@@ -52,7 +52,6 @@ class AiVoiceTest extends TestCase
             'text' => 'Hello  there @friend',
             'locale' => 'en',
             'voice' => 'am_puck',
-            'speed' => 1,
         ], $overrides));
     }
 
@@ -67,6 +66,7 @@ class AiVoiceTest extends TestCase
             && $request['voice'] === 'am_puck'
             && $request['model'] === 'hexgrad/Kokoro-82M'
             && $request['response_format'] === 'mp3'
+            && $request['speed'] == 1
             && $request->hasHeader('Authorization', 'Bearer testing'));
 
         $clip = AiVoiceClip::sole();
@@ -95,15 +95,30 @@ class AiVoiceTest extends TestCase
         $this->assertNotNull($clip->last_played_at);
     }
 
-    public function test_a_different_speed_is_a_different_clip(): void
+    public function test_a_requested_speed_is_ignored_so_one_clip_serves_every_rate(): void
     {
         $this->fakeProvider();
 
-        $this->speak()->assertOk();
-        $this->speak(['speed' => 1.25])->assertOk();
+        $first = $this->speak()->assertOk()->json('url');
+        $second = $this->speak(['speed' => 1.25])->assertOk()->json('url');
+        $this->postJson(route('ai-voice.prefetch'), [
+            'text' => 'Hello there friend', 'locale' => 'en', 'voice' => 'am_puck', 'speed' => 3,
+        ])->assertOk()->assertJson(['url' => $first]);
 
-        Http::assertSentCount(2);
-        $this->assertSame(2, AiVoiceClip::count());
+        $this->assertSame($first, $second);
+        Http::assertSentCount(1);
+        Http::assertSent(fn (ClientRequest $request) => $request['speed'] == 1);
+        $this->assertSame(2, AiVoiceClip::sole()->hits);
+    }
+
+    public function test_the_hash_is_unchanged_so_existing_clips_stay_cached(): void
+    {
+        // Pinned from before speed stopped being a parameter, when it was
+        // hashed as "1.00": changing it would orphan every stored clip.
+        $this->assertSame(
+            'a3d7d8beef35594186c34d32ed49f96dd90cdb5fb89bc89923da1a3fdd824552',
+            AiVoiceService::hashFor('Hello there friend', 'am_puck'),
+        );
     }
 
     public static function voiceFallbacks(): array
@@ -310,7 +325,7 @@ class AiVoiceTest extends TestCase
 
     public function test_a_row_stored_by_a_racing_request_is_reused_instead_of_failing(): void
     {
-        $hash = AiVoiceService::hashFor('Hello there friend', 'am_puck', 1);
+        $hash = AiVoiceService::hashFor('Hello there friend', 'am_puck');
 
         // Another host (no shared lock) finishes the same clip while this
         // request is still waiting on the provider.
@@ -341,7 +356,6 @@ class AiVoiceTest extends TestCase
         $this->speak(['text' => ''])->assertJsonValidationErrors('text');
         $this->speak(['text' => str_repeat('a', AiVoiceService::MAX_CHARACTERS + 1)])->assertJsonValidationErrors('text');
         $this->speak(['locale' => 'de'])->assertJsonValidationErrors('locale');
-        $this->speak(['speed' => 3])->assertJsonValidationErrors('speed');
         $this->speak(['text' => ' @@ '])->assertJsonValidationErrors('text');
 
         Http::assertNothingSent();
@@ -386,7 +400,7 @@ class AiVoiceTest extends TestCase
     {
         $this->expectException(\InvalidArgumentException::class);
 
-        app(AiVoiceService::class)->clipFor(' @ ', 'en', null, 1);
+        app(AiVoiceService::class)->clipFor(' @ ', 'en', null);
     }
 
     public function test_normalize_matches_the_client_cleanup(): void

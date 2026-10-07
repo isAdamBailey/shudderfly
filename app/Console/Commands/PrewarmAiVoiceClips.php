@@ -157,7 +157,7 @@ class PrewarmAiVoiceClips extends Command
         foreach ($locales as $locale) {
             foreach ($sources as $source) {
                 foreach ($this->phrases($source, $locale) as [$text, $voice]) {
-                    $key = AiVoiceService::keyFor($text, $locale, $voice ?? $this->option('voice'), GenerateAiVoiceClip::SPEED);
+                    $key = AiVoiceService::keyFor($text, $locale, $voice ?? $this->option('voice'));
 
                     if ($key === null) {
                         // Blank text is nothing to say; anything else was too long.

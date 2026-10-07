@@ -16,10 +16,6 @@ class GenerateAiVoiceClip implements ShouldQueue
 {
     use Queueable;
 
-    // The client asks for every clip at the default speed and applies the
-    // listener's rate in the browser, so that is the only speed worth making.
-    public const SPEED = 1.0;
-
     // A timed-out request may already have been billed, so a retry could
     // pay for the same clip twice. A clip that fails is made on first play.
     public int $tries = 1;
@@ -34,12 +30,12 @@ class GenerateAiVoiceClip implements ShouldQueue
     {
         // Empty or too long for one clip (a long page): it plays in the
         // device voice, so there is nothing to make.
-        if (AiVoiceService::keyFor($this->text, $this->locale, $this->voice, self::SPEED) === null) {
+        if (AiVoiceService::keyFor($this->text, $this->locale, $this->voice) === null) {
             return;
         }
 
         try {
-            $service->clipFor($this->text, $this->locale, $this->voice, self::SPEED, ahead: true);
+            $service->clipFor($this->text, $this->locale, $this->voice, ahead: true);
         } catch (AiVoiceBudgetExceeded) {
             Log::warning('AI voice prewarm skipped: daily character limit reached', [
                 'locale' => $this->locale,
