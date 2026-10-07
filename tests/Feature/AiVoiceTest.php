@@ -373,6 +373,15 @@ class AiVoiceTest extends TestCase
         );
     }
 
+    public function test_ai_voice_prop_is_not_shared_with_guests(): void
+    {
+        auth()->logout();
+
+        $this->get(route('login'))->assertInertia(fn (Assert $page) => $page
+            ->where('aiVoice', null)
+        );
+    }
+
     public function test_the_service_rejects_text_that_normalizes_to_nothing(): void
     {
         $this->expectException(\InvalidArgumentException::class);

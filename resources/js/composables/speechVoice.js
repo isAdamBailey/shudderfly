@@ -132,10 +132,18 @@ export function syncStoredSpeechLanguage(voices, appLocale) {
     return { speechLang, voice };
 }
 
+// The voice settings the form saves, read at speak time so a change made
+// in any component applies to the next phrase.
+export function readStoredSpeechSettings() {
+    return {
+        rate: parseFloat(localStorage.getItem("speechRate") || "1"),
+        pitch: parseFloat(localStorage.getItem("speechPitch") || "1"),
+        volume: parseFloat(localStorage.getItem("speechVolume") || "1"),
+    };
+}
+
 export function applySpeechSettingsToUtterance(utterance, voices, appLocale) {
-    utterance.rate = parseFloat(localStorage.getItem("speechRate") || "1");
-    utterance.pitch = parseFloat(localStorage.getItem("speechPitch") || "1");
-    utterance.volume = parseFloat(localStorage.getItem("speechVolume") || "1");
+    Object.assign(utterance, readStoredSpeechSettings());
 
     const voice = resolveSpeechVoice(voices, appLocale);
     if (voice) {
