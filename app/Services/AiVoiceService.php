@@ -6,6 +6,7 @@ use App\Exceptions\AiVoiceBudgetExceeded;
 use App\Exceptions\AiVoiceUnavailable;
 use App\Models\AiVoiceClip;
 use App\Support\AiVoice;
+use Carbon\CarbonInterface;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
@@ -56,26 +57,21 @@ class AiVoiceService
 
     /**
      * A cached clip is always returned, even once today's budget is spent;
-     * only generating a new one is refused.
+     * only generating a new one is refused. $countPlay false is for making
+     * a clip ahead of time: finding it cached then records no play.
      *
      * @throws \InvalidArgumentException when $text is empty or too long once normalized
      * @throws AiVoiceBudgetExceeded
      * @throws AiVoiceUnavailable
      */
-    public function clipFor(string $text, string $locale, ?string $voice, float $speed): AiVoiceClip
+    public function clipFor(string $text, string $locale, ?string $voice, float $speed, bool $countPlay = true): AiVoiceClip
     {
-        $text = self::normalize($text);
-
-        if ($text === '' || mb_strlen($text) > self::MAX_CHARACTERS) {
-            throw new \InvalidArgumentException('AI voice text must be 1-'.self::MAX_CHARACTERS.' characters');
-        }
-
-        $voice = $this->resolveVoice($locale, $voice);
-        $speed = round($speed, 2);
+        $key = self::keyFor($text, $locale, $voice, $speed)
+            ?? throw new \InvalidArgumentException('AI voice text must be 1-'.self::MAX_CHARACTERS.' characters');
+        ['text' => $text, 'voice' => $voice, 'speed' => $speed, 'hash' => $hash] = $key;
         $model = (string) config('services.ai_voice.model');
-        $hash = self::hashFor($text, $voice, $speed);
 
-        if ($clip = $this->recordHit($hash)) {
+        if ($clip = $this->findClip($hash, $countPlay)) {
             return $clip;
         }
 
@@ -84,7 +80,7 @@ class AiVoiceService
             // pay the provider and race to insert the same unique hash.
             return Cache::lock("ai-voice:{$hash}", $this->lockSeconds())->block(
                 self::LOCK_WAIT_SECONDS,
-                fn () => $this->recordHit($hash) ?? $this->generate($hash, $text, $locale, $voice, $speed, $model)
+                fn () => $this->findClip($hash, $countPlay) ?? $this->generate($hash, $text, $locale, $voice, $speed, $model)
             );
         } catch (LockTimeoutException) {
             Log::warning('AI voice timed out waiting for a concurrent generation', ['hash' => $hash]);
@@ -119,21 +115,44 @@ class AiVoiceService
     }
 
     /**
+     * What clipFor() would speak and store for these arguments: the
+     * normalized text, the allowed voice, the rounded speed and the cache
+     * hash. Null when the text is empty or too long to make a clip of.
+     *
+     * @return array{text: string, voice: string, speed: float, hash: string}|null
+     */
+    public static function keyFor(string $text, string $locale, ?string $voice, float $speed): ?array
+    {
+        $text = self::normalize($text);
+
+        if ($text === '' || mb_strlen($text) > self::MAX_CHARACTERS) {
+            return null;
+        }
+
+        $voice = self::voiceFor($locale, $voice);
+        $speed = round($speed, 2);
+
+        return ['text' => $text, 'voice' => $voice, 'speed' => $speed, 'hash' => self::hashFor($text, $voice, $speed)];
+    }
+
+    /**
      * $voice when it is allowed for $locale, otherwise that locale's default
      * (the first in its list, falling back to English's).
      */
-    private function resolveVoice(string $locale, ?string $voice): string
+    private static function voiceFor(string $locale, ?string $voice): string
     {
         $voices = config("services.ai_voice.voices.{$locale}") ?: config('services.ai_voice.voices.en');
 
         return in_array($voice, $voices, true) ? $voice : $voices[0];
     }
 
-    private function recordHit(string $hash): ?AiVoiceClip
+    private function findClip(string $hash, bool $countPlay): ?AiVoiceClip
     {
         $clip = AiVoiceClip::where('hash', $hash)->first();
 
-        $clip?->increment('hits', 1, ['last_played_at' => now()]);
+        if ($countPlay) {
+            $clip?->increment('hits', 1, ['last_played_at' => now()]);
+        }
 
         return $clip;
     }
@@ -217,17 +236,30 @@ class AiVoiceService
     private function adjustBudget(callable $change): void
     {
         $day = AiVoice::budgetDay();
-        $key = 'ai-voice:characters:'.$day->toDateString();
 
         try {
-            Cache::lock('ai-voice:budget', self::BUDGET_LOCK_SECONDS)->block(self::LOCK_WAIT_SECONDS, function () use ($change, $day, $key) {
-                $used = Cache::get($key) ?? AiVoiceClip::charactersSince($day->startOfDay());
-
-                Cache::put($key, max(0, $change((int) $used)), $day->endOfDay()->addHour());
+            Cache::lock('ai-voice:budget', self::BUDGET_LOCK_SECONDS)->block(self::LOCK_WAIT_SECONDS, function () use ($change, $day) {
+                Cache::put(self::budgetKey($day), max(0, $change(self::charactersUsedToday())), $day->endOfDay()->addHour());
             });
         } catch (LockTimeoutException) {
             throw new AiVoiceUnavailable('Timed out waiting for the AI voice budget');
         }
+    }
+
+    /**
+     * Characters charged to today's budget so far, including requests that
+     * timed out and so never stored a clip.
+     */
+    public static function charactersUsedToday(): int
+    {
+        $day = AiVoice::budgetDay();
+
+        return (int) (Cache::get(self::budgetKey($day)) ?? AiVoiceClip::charactersSince($day->startOfDay()));
+    }
+
+    private static function budgetKey(CarbonInterface $day): string
+    {
+        return 'ai-voice:characters:'.$day->toDateString();
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace App\Console;
 
 use App\Models\SiteSetting;
+use App\Support\AiVoice;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -46,12 +47,23 @@ class Kernel extends ConsoleKernel
             ->timezone($weeklyTimezone)
             ->withoutOverlapping();
 
+        // Re-running is cheap: cached clips are skipped, so only new or
+        // changed text (strings, books, songs) is generated, within the
+        // share of the day's budget prewarming may use. Runs an hour after
+        // the music sync, so songs it adds are warmed the same day.
+        $schedule->command('ai-voice:prewarm')
+            ->dailyAt('14:00')
+            ->timezone($weeklyTimezone)
+            ->when(fn () => AiVoice::enabled())
+            ->withoutOverlapping();
+
         // Only schedule music sync if music is enabled
         $musicEnabled = SiteSetting::where('key', 'music_enabled')->first()?->value ?? false;
 
         if ($musicEnabled) {
+            // Before ai-voice:prewarm, which warms the songs this adds.
             $schedule->command('music:sync-youtube')
-                ->dailyAt('14:00')
+                ->dailyAt('13:00')
                 ->timezone('America/Los_Angeles')
                 ->withoutOverlapping();
         }
