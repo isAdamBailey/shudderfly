@@ -690,6 +690,7 @@ return [
     // Games - World
     'games.world.title' => 'Monde des Jeux',
     'games.world.stage_aria' => 'Monde des jeux : fais glisser la pêche le long de la route, ou utilise les flèches gauche et droite pour marcher',
+    'games.world.stage_lanes_aria' => 'Monde des jeux : fais glisser la pêche le long de la rue, ou utilise les flèches gauche et droite pour marcher et haut et bas pour traverser la rue',
     'games.world.peach_aria' => 'Pêche',
     'games.world.landmark_aria' => ':game — appuie sur Entrée pour visiter',
     'games.world.play' => '▶ Jouer',

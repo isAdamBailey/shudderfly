@@ -44,7 +44,7 @@ class GamesTest extends TestCase
                 // Every game needs a landmark and a road position, or it would
                 // be unreachable in the Games World.
                 ->has('scenes.road.interactables.0', fn (Assert $item) => $item->hasAll([
-                    'id', 'type', 'x', 'game', 'emoji', 'label', 'card',
+                    'id', 'type', 'x', 'side', 'game', 'emoji', 'label', 'card',
                 ]))
                 ->where('scenes.road.interactables.0.emoji', '🏥')
                 ->where('scenes.road.interactables.0.x', 600)

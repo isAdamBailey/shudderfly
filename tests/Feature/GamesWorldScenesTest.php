@@ -33,6 +33,13 @@ class GamesWorldScenesTest extends TestCase
         }
     }
 
+    public function test_road_interactables_stand_on_a_side_of_the_street(): void
+    {
+        foreach (GamesWorld::definitions()['road']['interactables'] as $item) {
+            $this->assertContains($item['side'], GamesWorld::ROAD_SIDES, "road.{$item['id']}");
+        }
+    }
+
     public function test_every_cast_reference_is_in_the_cast(): void
     {
         foreach (GamesWorld::definitions() as $sceneId => $scene) {

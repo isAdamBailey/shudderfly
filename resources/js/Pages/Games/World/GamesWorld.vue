@@ -12,6 +12,7 @@ import {
 } from "vue";
 import Road3D from "./scenes/Road3D.vue";
 import RoadScene from "./scenes/RoadScene.vue";
+import { ROWS } from "./scenes/roadLayout.js";
 import { useSceneRouter } from "./composables/useSceneRouter.js";
 import { activate } from "./interactions/index.js";
 import { worldTheme } from "./three/themes.js";
@@ -32,7 +33,8 @@ const page = usePage();
 // The road's sky and grass behind the stage while three loads.
 const loadingBackground = computed(() => {
     const look = worldTheme(page.props.theme);
-    return `linear-gradient(${look.skyTop}, ${look.skyBottom} 60%, ${look.grass} 60%)`;
+    const horizon = `${ROWS.horizon * 100}%`;
+    return `linear-gradient(${look.skyTop}, ${look.skyBottom} ${horizon}, ${look.grass} ${horizon})`;
 });
 
 // Scene kind → its renderer, on the WebGL canvas or, where WebGL can't run,
@@ -162,12 +164,12 @@ function onWindowBlur() {
 let gesture = null;
 
 /** Called by a scene when a press starts a drag or pan: routes the rest of
- * the gesture to its handlers and returns the stage's left edge, measured
- * once here rather than as a layout read on every pointermove. */
+ * the gesture to its handlers and returns the stage's box, measured once
+ * here rather than as a layout read on every pointermove. */
 function beginGesture(handlers) {
     gesture = handlers;
     attachPointerListeners();
-    return stageEl.value.getBoundingClientRect().left;
+    return stageEl.value.getBoundingClientRect();
 }
 
 function attachPointerListeners() {
@@ -231,7 +233,13 @@ const stage = { beginGesture, resetScroll, renderer };
             background: loadingBackground,
         }"
         tabindex="0"
-        :aria-label="t('games.world.stage_aria')"
+        :aria-label="
+            t(
+                mode === 'dom'
+                    ? 'games.world.stage_aria'
+                    : 'games.world.stage_lanes_aria'
+            )
+        "
         @keydown="onKeydown"
         @keyup="onKeyup"
     >

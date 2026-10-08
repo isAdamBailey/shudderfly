@@ -50,17 +50,6 @@ export function screenToGround(camera, sx, sy) {
     };
 }
 
-/** The point on the upright plane at depth `z` under a screen point:
- * { x, y }. The road walks the Butt along such a plane, so dragging it maps
- * the finger to the same x wherever on its body the finger is. */
-export function screenToPlane(camera, sx, sy, z = 0) {
-    const depth = camera.z - z;
-    return {
-        x: camera.x + ((sx - centre(camera)) * depth) / camera.focal,
-        y: camera.y - ((sy - camera.eyeRow) * depth) / camera.focal,
-    };
-}
-
 /** The depth `z` at which the ground is drawn at screen row `row`. */
 export function groundZAtRow(camera, row) {
     return camera.z - (camera.focal * camera.y) / (row - camera.eyeRow);

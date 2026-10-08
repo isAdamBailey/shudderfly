@@ -1,4 +1,5 @@
 import { reactive, computed, onUnmounted, unref } from "vue";
+import { approach } from "@/utils/math";
 
 export const WALK_SPEED = 220; // px/s while an arrow key is held
 // A drag steers the peach rather than teleporting it: it strolls toward the
@@ -10,6 +11,12 @@ export const SNAP_RADIUS = 110; // drop this close to a landmark and its card op
 // of the stage, expressed as fractions of stage width.
 export const SOFT_LEFT = 0.35;
 export const SOFT_RIGHT = 0.65;
+// Crossing the street: how long the peach takes to get from one side to the
+// other.
+export const CROSS_TIME = 0.35; // s
+// The two sides of the street, as the peach's `lane`: 0 is the far side
+// (where landmarks stand unless they say otherwise), 1 the near side.
+export const LANES = { far: 0, near: 1 };
 
 const PEACH_START_X = 260;
 const ROAD_MARGIN = 40; // the peach never stands closer than this to either end
@@ -32,9 +39,14 @@ export function useGamesWorld(games, callbacks = {}) {
     const bounds = reactive({ w: 0, h: 0 });
 
     // Spread rather than whitelist, so a new key on the registry entry reaches
-    // the stage without another edit here.
+    // the stage without another edit here. A landmark is on the far side of
+    // the street unless it says otherwise.
     const landmarks = computed(() =>
-        (unref(games) ?? []).map((game) => ({ ...game, x: game.distance }))
+        (unref(games) ?? []).map((game) => ({
+            ...game,
+            x: game.distance,
+            side: game.side ?? "far",
+        }))
     );
 
     const worldWidth = computed(() => {
@@ -45,7 +57,16 @@ export function useGamesWorld(games, callbacks = {}) {
         return Math.max(bounds.w, furthest + END_PAD);
     });
 
-    const peach = reactive({ x: PEACH_START_X, vx: 0, facing: 1, bob: 0 });
+    // `side` is the side of the street the peach is on, or crossing to;
+    // `lane` eases toward it (LANES), for drawing.
+    const peach = reactive({
+        x: PEACH_START_X,
+        vx: 0,
+        facing: 1,
+        bob: 0,
+        side: "far",
+        lane: 0,
+    });
     // Where the peach is headed: the finger while dragging, and the spot it
     // was dropped on afterwards, so a release still completes the journey.
     // Anything that takes over from a journey (walking, a cancelled drag)
@@ -64,6 +85,7 @@ export function useGamesWorld(games, callbacks = {}) {
         let best = null;
         let bestDistance = SNAP_RADIUS;
         for (const lm of landmarks.value) {
+            if (lm.side !== peach.side) continue;
             const distance = Math.abs(lm.x - peach.x);
             if (distance <= bestDistance) {
                 best = lm;
@@ -134,6 +156,15 @@ export function useGamesWorld(games, callbacks = {}) {
     function step(dt) {
         if (state.confirmSlug) return; // the world freezes behind the card
 
+        const crossing = !settled();
+        if (crossing) {
+            peach.lane = approach(
+                peach.lane,
+                LANES[peach.side],
+                dt / CROSS_TIME
+            );
+        }
+
         peach.vx = state.walkDir * WALK_SPEED;
 
         if (targetX !== null) {
@@ -148,7 +179,9 @@ export function useGamesWorld(games, callbacks = {}) {
                     peach.facing = Math.sign(gap);
                 }
                 setPeachX(targetX);
-                if (state.mode !== "dragging") arrive();
+                // A crossing finishes before a card opens, so the peach
+                // isn't left standing in the road behind it.
+                if (state.mode !== "dragging" && settled()) arrive();
             } else {
                 const stepX = Math.sign(gap) * maxStep;
                 peach.vx = stepX / dt;
@@ -158,7 +191,7 @@ export function useGamesWorld(games, callbacks = {}) {
         } else if (peach.vx !== 0) {
             peach.facing = Math.sign(peach.vx);
             setPeachX(peach.x + peach.vx * dt);
-        } else {
+        } else if (!crossing) {
             // Nothing is moving, so an idle frame has no work to do.
             return;
         }
@@ -201,6 +234,26 @@ export function useGamesWorld(games, callbacks = {}) {
         if (landmark) openConfirm(landmark.slug);
     }
 
+    /** Whether the peach is all the way over on its side of the street. */
+    function settled() {
+        return peach.lane === LANES[peach.side];
+    }
+
+    /** Crosses the street to `side` ("far" | "near"). */
+    function crossTo(side) {
+        if (state.confirmSlug) return;
+        peach.side = side;
+    }
+
+    /** Sends the peach to road x `x` on `side`, as a tap does: it strolls
+     * there like a released drag and opens a landmark it arrives at. */
+    function walkTo(x, side) {
+        if (state.confirmSlug || state.mode !== "idle") return;
+        state.walkDir = 0;
+        crossTo(side);
+        targetX = wrapX(x);
+    }
+
     function startDrag() {
         state.mode = "dragging";
         state.walkDir = 0; // a held arrow must not fight the finger
@@ -211,9 +264,10 @@ export function useGamesWorld(games, callbacks = {}) {
      * rather than snapping, so the world scrolls at a readable pace. The
      * target is wrapped like peach.x so arrival comparisons stay valid when
      * the finger goes past either end of the looping road. */
-    function updateDrag(worldX) {
+    function updateDrag(worldX, side) {
         if (state.mode !== "dragging") return;
         targetX = wrapX(worldX);
+        if (side) crossTo(side);
     }
 
     /** Releasing doesn't stop the peach: it keeps strolling to where it was
@@ -221,7 +275,7 @@ export function useGamesWorld(games, callbacks = {}) {
     function endDrag() {
         if (state.mode !== "dragging") return;
         state.mode = "idle";
-        if (targetX === null || peach.x === targetX) arrive();
+        if (targetX === null || (peach.x === targetX && settled())) arrive();
     }
 
     /** A pointercancel (system gesture, incoming call) never delivers a
@@ -263,11 +317,13 @@ export function useGamesWorld(games, callbacks = {}) {
     }
 
     /** Teleports the peach to a landmark — used by keyboard focus, and by the
-     * confirm card's Cancel so the peach ends up where it was considering. */
+     * confirm card's Cancel so the peach ends up where it was considering. A
+     * landmark across the street has the peach cross over to it. */
     function walkToLandmark(slug) {
         const landmark = findLandmark(slug);
         if (!landmark) return;
         targetX = null;
+        crossTo(landmark.side);
         setPeachX(landmark.x);
     }
 
@@ -309,6 +365,8 @@ export function useGamesWorld(games, callbacks = {}) {
         setWalk,
         stopWalk,
         walkToLandmark,
+        walkTo,
+        crossTo,
         openConfirm,
         closeConfirm,
     };

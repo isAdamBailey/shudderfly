@@ -344,8 +344,10 @@ export function createCastKit(THREE, { createCanvas = defaultCanvas } = {}) {
 
     return {
         /** A cast member by id, drawn from CAST. `phase` (seconds) starts its
-         * looping moves part-way through, like CastMember's --cast-delay. */
-        castMesh(id, { size = 64, phase = 0 } = {}) {
+         * looping moves part-way through, like CastMember's --cast-delay.
+         * `shadows: false` for one that isn't standing on the ground (on a
+         * billboard, say). */
+        castMesh(id, { size = 64, phase = 0, shadows = true } = {}) {
             const member = CAST[id];
             if (!member) throw new Error(`Unknown cast member "${id}"`);
             return puppet({
@@ -353,6 +355,7 @@ export function createCastKit(THREE, { createCanvas = defaultCanvas } = {}) {
                 moves: member.moves,
                 size,
                 phase,
+                shadows,
                 domOverlay: !member.emoji,
             });
         },

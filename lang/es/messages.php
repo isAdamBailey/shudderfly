@@ -690,6 +690,7 @@ return [
     // Games - World
     'games.world.title' => 'Mundo de Juegos',
     'games.world.stage_aria' => 'Mundo de juegos: arrastra el durazno por el camino o usa las flechas izquierda y derecha para caminar',
+    'games.world.stage_lanes_aria' => 'Mundo de juegos: arrastra el durazno por la calle o usa las flechas izquierda y derecha para caminar y arriba y abajo para cruzar la calle',
     'games.world.peach_aria' => 'Durazno',
     'games.world.landmark_aria' => ':game: pulsa Intro para visitar',
     'games.world.play' => '▶ Jugar',

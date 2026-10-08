@@ -17,7 +17,7 @@ import { useRoad } from "../composables/useRoad.js";
 // exposed at the bottom.
 const props = defineProps({
     scene: { type: Object, required: true },
-    // { beginGesture(handlers) -> stage left px, resetScroll() }
+    // { beginGesture(handlers) -> stage rect, resetScroll() }
     stage: { type: Object, required: true },
 });
 
@@ -63,7 +63,9 @@ const {
 } = useRoad(props, emit, {
     // The world layer is only ever translated by the camera, so a road x is
     // a screen x plus the camera.
-    toWorldX: (event, left) => event.clientX - left + camera.x,
+    dragTo: (start, rect) => (event) => ({
+        x: event.clientX - rect.left + camera.x,
+    }),
     // At the middle of the Butt, as Toot Foods puts it.
     buttPuffAt: () => {
         const butt = buttEl.value;
@@ -77,7 +79,7 @@ const {
 
 // --- Peek -----------------------------------------------------------------
 
-// Pointed only at the scenery. toWorldX above derives world
+// Pointed only at the scenery. dragTo above derives world
 // coordinates from clientX, so anything inside .world must stay
 // untransformed or drags and SNAP_RADIUS arrivals desync. Only the three
 // pointer-events:none backdrop layers move.
