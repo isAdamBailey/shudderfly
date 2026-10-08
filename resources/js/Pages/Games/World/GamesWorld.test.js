@@ -160,6 +160,23 @@ const withHouse = {
                 label: "Lamp",
                 light: "lamp",
             },
+            {
+                id: "sprout-pox",
+                type: "game",
+                x: 600,
+                z: 40,
+                size: 120,
+                game: "sprout-pox",
+                cast: "face",
+                label: "Sprout Pox",
+                card: {
+                    slug: "sprout-pox",
+                    name: "Sprout Pox",
+                    emoji: "🥬",
+                    description: "Feed the face",
+                    cast: "face",
+                },
+            },
         ],
     },
 };
@@ -728,6 +745,32 @@ describe("GamesWorld rooms", () => {
             () => expect(wrapper.find(".toot-puff").exists()).toBe(true),
             { timeout: 3000 }
         );
+    });
+
+    it("launches a game from its spot in a room, and lets go on cancel", async () => {
+        wrapper = await mountWorld(withHouse);
+        await enterHouse(wrapper);
+        const game = roomButton(wrapper, "Sprout Pox");
+        // The Face has no emoji: it's drawn in the DOM, on its button.
+        expect(game.find(".room-overlay.cast-face").exists()).toBe(true);
+
+        await game.trigger("focus");
+        await game.trigger("click");
+        await nextTick();
+        expect(wrapper.get('[role="dialog"]').text()).toContain("Sprout Pox");
+        expect(wrapper.find(".confirm-speak").exists()).toBe(false);
+
+        await wrapper.get(".confirm-cancel").trigger("click");
+        await nextTick();
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+        expect(wrapper.find(".room-3d").exists()).toBe(true);
+
+        const stage = wrapper.get(".stage");
+        const at = screenX(wrapper.get(".room-3d .peach"));
+        await stage.trigger("keydown", { key: "ArrowLeft" });
+        await frames(200);
+        await stage.trigger("keyup", { key: "ArrowLeft" });
+        expect(screenX(wrapper.get(".room-3d .peach"))).toBeLessThan(at);
     });
 
     it("comes back to where the Butt was in a room", async () => {

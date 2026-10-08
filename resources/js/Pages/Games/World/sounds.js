@@ -1,12 +1,16 @@
 import { playHiss } from "@/composables/playHiss";
 import { audioRunning } from "@/composables/useAudioContext";
 import { own } from "@/utils/object";
+import { playBell, playTick } from "./clockSounds.js";
 
 /**
  * The world's named sounds (issue #130): what a cast member's `sounds` and a
  * toy's `sound` refer to. Farts aren't here: they go through useToot.
+ * The names are GamesWorld::SOUNDS.
  */
-const SOUNDS = { hiss: playHiss };
+const SOUNDS = { hiss: playHiss, tick: playTick, bell: playBell };
+
+export const SOUND_NAMES = Object.keys(SOUNDS);
 
 /** Plays sound `name` (a toy's). */
 export function playSound(name) {

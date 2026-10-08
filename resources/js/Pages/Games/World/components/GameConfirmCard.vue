@@ -21,8 +21,7 @@ const { t } = useTranslations();
 const panelRef = ref(null);
 const playRef = ref(null);
 
-// Three controls now (Listen, Play, Cancel), so the shared trap earns its keep
-// over a hand-rolled swap.
+// Play and Cancel, so the shared trap earns its keep.
 const { trapKeydown } = useFocusTrap(panelRef);
 
 const titleId = `game-confirm-title-${props.game.slug}`;
@@ -32,28 +31,17 @@ function playEl() {
     return playRef.value?.$el ?? playRef.value;
 }
 
+function script() {
+    return `${props.game.name}. ${props.game.description}`;
+}
+
 onMounted(() => {
     nextTick(() => playEl()?.focus());
+    speakGameIntro(script());
 });
 
 function cancel() {
     emit("cancel");
-}
-
-const isSpeaking = ref(false);
-
-// Reads the card aloud for players who don't read yet — the same reason every
-// game start screen has one.
-function toggleSpeech() {
-    if (isSpeaking.value) {
-        stopGameIntroSpeech();
-        isSpeaking.value = false;
-        return;
-    }
-    isSpeaking.value = true;
-    speakGameIntro(`${props.game.name}. ${props.game.description}`, () => {
-        isSpeaking.value = false;
-    });
 }
 
 onUnmounted(stopGameIntroSpeech);
@@ -99,18 +87,6 @@ onUnmounted(stopGameIntroSpeech);
                         {{ t("games.world.play") }}
                     </Button>
                 </Link>
-                <Button
-                    type="button"
-                    class="confirm-speak"
-                    :is-active="isSpeaking"
-                    @click="toggleSpeech"
-                >
-                    {{
-                        isSpeaking
-                            ? t("games.world.stop_listening")
-                            : t("games.world.listen")
-                    }}
-                </Button>
                 <button
                     type="button"
                     class="confirm-cancel rounded-md px-3 py-1 text-sm font-bold text-theme-book-title underline-offset-2 transition-opacity hover:underline hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-primary"

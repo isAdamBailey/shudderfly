@@ -234,6 +234,26 @@ describe("arrivalSpot", () => {
         });
     });
 
+    it("stands inside the room, off a door on a side wall", () => {
+        const side = {
+            id: "kitchen-door",
+            type: "door",
+            x: 0,
+            z: 220,
+            wall: "left",
+        };
+        const wide = {
+            size: { w: 3200, d: 500 },
+            spawn: { x: 1600, z: 330 },
+            interactables: [side],
+        };
+
+        expect(arrivalSpot(wide, { spot: "kitchen-door" })).toEqual({
+            x: STAND,
+            z: 220,
+        });
+    });
+
     it("puts it back where it was, over everything", () => {
         expect(
             arrivalSpot(hall, { spot: "front-door", position: { x: 1, z: 2 } })

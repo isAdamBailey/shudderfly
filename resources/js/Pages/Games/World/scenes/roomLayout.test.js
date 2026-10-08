@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { screenToGround, worldToScreen } from "../composables/projection.js";
-import { itemBox, roomLayout, ROOM_SIZES } from "./roomLayout.js";
+import {
+    itemBox,
+    itemPose,
+    roomCamera,
+    roomLayout,
+    roomLook,
+    ROOM_SIZES,
+} from "./roomLayout.js";
 
 const hall = {
     size: { w: 900, d: 500 },
@@ -14,8 +21,16 @@ const STAGES = [
     { w: 1280, h: 620 }, // a laptop
 ];
 
+function expectOnScreen(camera, point, stage) {
+    const p = worldToScreen(camera, point);
+    expect(p.x).toBeGreaterThanOrEqual(-0.5);
+    expect(p.x).toBeLessThanOrEqual(stage.w + 0.5);
+    expect(p.y).toBeGreaterThanOrEqual(-0.5);
+    expect(p.y).toBeLessThanOrEqual(stage.h + 0.5);
+}
+
 describe("roomLayout", () => {
-    it.each(STAGES)("fits the whole room on a $w × $h stage", (stage) => {
+    it.each(STAGES)("keeps the room on a $w × $h stage", (stage) => {
         const L = roomLayout(hall, stage);
         const { w, d } = hall.size;
         const corners = [
@@ -25,12 +40,11 @@ describe("roomLayout", () => {
             { x: w, y: L.wallHeight, z: 0 },
         ];
 
+        // A phone shows less of a wide room, so the camera scrolls to a
+        // corner before that corner is on screen.
         for (const corner of corners) {
-            const p = worldToScreen(L.camera, corner);
-            expect(p.x).toBeGreaterThanOrEqual(0);
-            expect(p.x).toBeLessThanOrEqual(stage.w);
-            expect(p.y).toBeGreaterThanOrEqual(0);
-            expect(p.y).toBeLessThanOrEqual(stage.h);
+            const look = Math.min(L.pan.max, Math.max(L.pan.min, corner.x));
+            expectOnScreen(roomCamera(L, look), corner, stage);
         }
     });
 
@@ -47,8 +61,85 @@ describe("roomLayout", () => {
 
         expect(back.scale).toBeLessThan(front.scale);
         expect(back.y).toBeLessThan(front.y);
-        // A door on the back wall is still something you can see.
-        expect(ROOM_SIZES.door.height * back.scale).toBeGreaterThan(48);
+        // Filling the height, not the width, so a door stays large on a phone.
+        expect(ROOM_SIZES.door.height * back.scale).toBeGreaterThan(120);
+    });
+});
+
+// The Butt's hall: long enough that the end doors start off-screen, walls
+// no taller than a room the width of `frame`.
+const longHall = {
+    size: { w: 3200, d: 500 },
+    frame: 900,
+    interactables: [
+        { id: "kitchen-door", type: "door", x: 0, z: 220, wall: "left" },
+        { id: "bedroom-door", type: "door", x: 240, z: 0 },
+        { id: "front-door", type: "door", x: 1600, z: 0 },
+        { id: "bathroom-door", type: "door", x: 3200, z: 220, wall: "right" },
+    ],
+};
+
+describe("a long hall", () => {
+    it("keeps the walls as tall as the part the camera shows", () => {
+        const framed = roomLayout(longHall, STAGES[2]);
+        const room = roomLayout({ size: { w: 900, d: 500 } }, STAGES[2]);
+
+        expect(framed.wallHeight).toBe(room.wallHeight);
+        expect(framed.camera.y).toBe(room.camera.y);
+        expect(framed.camera.z).toBeCloseTo(room.camera.z);
+    });
+
+    it.each(STAGES)(
+        "leaves the other doors off a $w × $h stage until the Butt walks there",
+        (stage) => {
+            const L = roomLayout(longHall, stage);
+            const entry = roomCamera(L, 1600);
+            const door = (id) =>
+                longHall.interactables.find((item) => item.id === id);
+
+            const front = worldToScreen(entry, itemPose(door("front-door")));
+            expect(front.x).toBeGreaterThan(0);
+            expect(front.x).toBeLessThan(stage.w);
+            // A clock hung beside the front door is in that first view.
+            const clock = worldToScreen(entry, { x: 1360, y: 270, z: 3 });
+            expect(clock.x).toBeGreaterThan(0);
+            expect(clock.x).toBeLessThan(stage.w);
+
+            for (const id of ["kitchen-door", "bedroom-door", "bathroom-door"]) {
+                const p = worldToScreen(entry, itemPose(door(id)));
+                expect(p.x < 0 || p.x > stage.w).toBe(true);
+            }
+
+            const atKitchen = roomCamera(
+                L,
+                roomLook(L.pan, 1600, 100)
+            );
+            const kitchen = worldToScreen(
+                atKitchen,
+                itemPose(door("kitchen-door"))
+            );
+            expect(kitchen.x).toBeGreaterThan(0);
+            expect(kitchen.x).toBeLessThan(stage.w);
+            expect(ROOM_SIZES.door.height * kitchen.scale).toBeGreaterThan(48);
+
+            const atBathroom = roomCamera(
+                L,
+                roomLook(L.pan, 1600, 3100)
+            );
+            const bathroom = worldToScreen(
+                atBathroom,
+                itemPose(door("bathroom-door"))
+            );
+            expect(bathroom.x).toBeGreaterThan(0);
+            expect(bathroom.x).toBeLessThan(stage.w);
+        }
+    );
+
+    it("doesn't scroll a room that fits the stage", () => {
+        const L = roomLayout(hall, STAGES[2]);
+
+        expect(roomLook(L.pan, 450, 100)).toBe(450);
+        expect(roomCamera(L, 100)).toBe(L.camera);
     });
 });
 

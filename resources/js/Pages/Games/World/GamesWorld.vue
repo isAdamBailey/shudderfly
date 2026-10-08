@@ -116,8 +116,7 @@ const ctx = {
     toot: (castId, id) => sceneRef.value?.toot?.(castId, id),
     toggleLight: (id) => sceneRef.value?.toggleLight?.(id),
     playSound,
-    // Through the same voice as the games' Listen button (the AI voice when
-    // it's on).
+    // Through the same voice as a game's intro (the AI voice when it's on).
     speak: (text) => speakGameIntro(text),
 };
 

@@ -1,10 +1,19 @@
 <script setup>
 import { usePage } from "@inertiajs/vue3";
+import CastMember from "@/Components/Games/Cast/CastMember.vue";
 import TootPuff from "@/Components/Games/Cast/TootPuff.vue";
+import { castInDom } from "@/constants/characters.js";
 import { useToot } from "@/composables/useToot";
 import { useTranslations } from "@/composables/useTranslations";
 import { usePreferredReducedMotion } from "@vueuse/core";
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive } from "vue";
+import {
+    computed,
+    nextTick,
+    onBeforeUnmount,
+    onMounted,
+    reactive,
+    ref,
+} from "vue";
 import InteractableButton from "../components/InteractableButton.vue";
 import FollowBox from "../components/FollowBox.vue";
 import { pastTap } from "../components/overlay.js";
@@ -14,7 +23,14 @@ import { bobLift } from "../composables/useGamesWorld.js";
 import { arrivalSpot, useRoom } from "../composables/useRoom.js";
 import { autoTriggers } from "../interactions/index.js";
 import { createRoomScene } from "./RoomScene.js";
-import { itemBox, ROOM_SIZES, roomLayout } from "./roomLayout.js";
+import {
+    itemBox,
+    itemPose,
+    ROOM_SIZES,
+    roomCamera,
+    roomLayout,
+    roomLook,
+} from "./roomLayout.js";
 
 // The `kind: "room"` renderer on the stage's WebGL canvas (issue #130): the
 // room's scene graph (RoomScene.js) and a DOM overlay over it with a
@@ -47,8 +63,16 @@ const layout = computed(() =>
 // The interactable last used, to put focus back on.
 let lastUsed = null;
 
+const start = arrivalSpot(props.scene, props.arrival);
+// Where the camera looks along the room. A hall longer than the frame
+// scrolls to keep the Butt in view; anything else stays put.
+const lookX = ref(start.x);
+const view = computed(() =>
+    layout.value ? roomCamera(layout.value, lookX.value) : null
+);
+
 const room = useRoom(props.scene, {
-    start: arrivalSpot(props.scene, props.arrival),
+    start,
     autoTriggers,
     isReducedMotion: () => reduced.value,
     onArrive(item) {
@@ -57,6 +81,18 @@ const room = useRoom(props.scene, {
     },
 });
 const { butt } = room;
+
+/** Follows the Butt down a long room, and leaves a short one alone. */
+function follow() {
+    if (!layout.value) return;
+    lookX.value = roomLook(layout.value.pan, lookX.value, butt.x);
+}
+
+/** The laid-out room with the camera aimed where `follow` left it. */
+function framed() {
+    follow();
+    return layout.value && { ...layout.value, camera: view.value };
+}
 
 // The walking bob, as height above the floor, as on the road.
 const buttLift = computed(() => bobLift(butt.bob));
@@ -79,12 +115,19 @@ onMounted(() => {
         butt,
         theme: page.props.theme,
     });
-    if (layout.value) graph.layout(layout.value);
+    const frame = framed();
+    if (frame) graph.layout(frame);
     renderer.show(graph.scene, graph.camera);
     stopFrames = renderer.onFrame((dt) => {
         room.step(dt);
+        follow();
         return graph.sync(
-            { butt, buttLift: buttLift.value, reduced: reduced.value },
+            {
+                butt,
+                buttLift: buttLift.value,
+                reduced: reduced.value,
+                camera: view.value,
+            },
             dt
         );
     });
@@ -100,24 +143,27 @@ onBeforeUnmount(() => {
 function setBounds(w, h) {
     bounds.w = w;
     bounds.h = h;
-    if (graph && layout.value) {
-        graph.layout(layout.value);
+    const frame = framed();
+    if (graph && frame) {
+        graph.layout(frame);
         props.stage.renderer.invalidate();
     }
 }
 
 // --- Overlay ---------------------------------------------------------------
 
-/** Screen px of world point { x, y, z }. */
-const project = (point) => worldToScreen(layout.value.camera, point);
+/** Screen px of world point { x, y, z }, through the camera that follows
+ * the Butt. */
+const project = (point) => worldToScreen(view.value, point);
 
 /** Each interactable's button, over what the canvas draws there: a door's
- * whole frame, a toy's square. The camera only moves with the stage's size,
- * so neither do these. */
+ * whole frame, a toy's square. These move when a long hall scrolls. */
 const spots = computed(() => {
-    if (!layout.value) return [];
-    return props.scene.interactables.map((item) => {
-        const p = project({ x: item.x, y: item.y ?? 0, z: item.z ?? 0 });
+    if (!view.value) return [];
+    return props.scene.interactables.flatMap((item) => {
+        const pose = itemPose(item);
+        const p = project(pose);
+        if (!p) return [];
         const box = itemBox(item);
         return {
             item,
@@ -126,6 +172,9 @@ const spots = computed(() => {
             width: box.width * p.scale,
             height: box.height * p.scale,
             titled: box.titled,
+            // A cast member with no emoji (the Face) is drawn in the DOM,
+            // over its anchor in the scene graph.
+            overlay: castInDom(item.cast),
         };
     });
 });
@@ -133,7 +182,7 @@ const spots = computed(() => {
 /** Where the Butt's hit box goes: read by FollowBox, so the overlay
  * doesn't re-render as it walks. */
 function buttSpot() {
-    if (!layout.value) return null;
+    if (!view.value) return null;
     const p = project({ x: butt.x, y: buttLift.value, z: butt.z });
     return { x: p.x, y: p.y, size: ROOM_SIZES.butt * p.scale };
 }
@@ -150,7 +199,10 @@ let pointerFocus = false;
 
 /** Keyboard focus stands the Butt at the thing, as on the road. */
 function onItemFocus(item) {
-    if (!pointerFocus) room.standBy(item);
+    if (!pointerFocus) {
+        room.standBy(item);
+        follow();
+    }
     pointerFocus = false;
     props.stage.resetScroll();
 }
@@ -203,7 +255,7 @@ function pointOf(id) {
  * above where the feet would be. */
 function floorAt(event, rect, grab = 0) {
     return screenToGround(
-        layout.value.camera,
+        view.value,
         event.clientX - rect.left,
         event.clientY - rect.top + grab
     );
@@ -326,6 +378,12 @@ defineExpose({
                 @focus="onItemFocus(s.item)"
                 @click="onItemClick(s.item)"
             >
+                <CastMember
+                    v-if="s.overlay"
+                    :id="s.item.cast"
+                    class="room-overlay"
+                    :size="`${s.height}px`"
+                />
                 <LandmarkTitle
                     v-if="s.titled"
                     :id="`room-${s.item.id}`"
@@ -362,6 +420,15 @@ defineExpose({
 
 .peach:active {
     cursor: grabbing;
+}
+
+/* Stands on the button's floor, as the canvas would draw it. */
+.room-overlay {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    pointer-events: none;
 }
 
 /* Under reduced motion, a toy that was used rings rather than moves. */

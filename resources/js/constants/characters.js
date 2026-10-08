@@ -106,3 +106,10 @@ export const CAST = {
         ])
     ),
 };
+
+/** Whether cast member `id` is drawn in the DOM even in the WebGL world: one
+ * with no emoji (the Face, drawn by PersonFace). castMesh gives it only an
+ * anchor, and a scene lays CastMember over that. */
+export function castInDom(id) {
+    return Object.prototype.hasOwnProperty.call(CAST, id) && !CAST[id].emoji;
+}

@@ -1,4 +1,4 @@
-import { CAST } from "@/constants/characters.js";
+import { CAST, castInDom } from "@/constants/characters.js";
 import {
     CAST_MOVE_DATA,
     IDENTITY_POSE,
@@ -58,6 +58,7 @@ export function createCastKit(
     { createCanvas = defaultCanvas, onSound = () => {} } = {}
 ) {
     const materials = new Map();
+    const pictures = [];
     const plane = new THREE.PlaneGeometry(1, 1);
     const ground = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
     let blobMaterial = null;
@@ -158,6 +159,7 @@ export function createCastKit(
 
     function puppet({
         glyph,
+        picture = null,
         moves,
         size,
         phase = 0,
@@ -181,8 +183,8 @@ export function createCastKit(
         const [body, bodyInner] = nested(squashInner);
 
         let glyphMesh = null;
-        if (glyph) {
-            glyphMesh = new THREE.Mesh(plane, glyphMaterial(glyph));
+        if (glyph || picture) {
+            glyphMesh = new THREE.Mesh(plane, picture ?? glyphMaterial(glyph));
             glyphMesh.castShadow = shadows;
             bodyInner.add(glyphMesh);
         }
@@ -365,7 +367,7 @@ export function createCastKit(
                 size,
                 phase,
                 shadows,
-                domOverlay: !member.emoji,
+                domOverlay: castInDom(id),
                 sounds: member.sounds,
             });
         },
@@ -377,12 +379,40 @@ export function createCastKit(
             return puppet({ glyph, moves, size, shadows });
         },
 
+        /** A prop painted onto its own texture (a clock face), with the same
+         * moves as an emoji prop. The kit frees the texture with the material. */
+        paintedMesh(
+            texture,
+            {
+                size = 64,
+                shadows = true,
+                moves = [],
+                roughness = 0.8,
+                metalness = 0,
+            } = {}
+        ) {
+            const material = new THREE.MeshStandardMaterial({
+                map: texture,
+                alphaTest: 0.2,
+                side: THREE.DoubleSide,
+                roughness,
+                metalness,
+            });
+            pictures.push(material);
+            return puppet({ picture: material, moves, size, shadows });
+        },
+
         dispose() {
             for (const material of materials.values()) {
                 material.map?.dispose();
                 material.dispose();
             }
             materials.clear();
+            for (const material of pictures) {
+                material.map?.dispose();
+                material.dispose();
+            }
+            pictures.length = 0;
             blobMaterial?.map?.dispose();
             blobMaterial?.dispose();
             blobMaterial = null;

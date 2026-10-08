@@ -6,8 +6,8 @@ import { canvasTexture } from "./useWorldRenderer.js";
  * (issue #130): `walls: { back, sides?, floor }`. The server lists the same
  * names (GamesWorld::WALLS / FLOORS) and a test keeps the two in step. Each
  * look is a base colour and a pattern drawn once into a small tiling
- * texture, so a room is a handful of materials. Seasonal room looks
- * (Phase 6) restyle rooms here.
+ * texture, so a room is a handful of materials. The seasons restyle rooms
+ * here too: their daylight (roomDaylight) and decorations (roomDecorations).
  *
  * `tile` is how many world units one repeat of the pattern covers.
  */
@@ -42,14 +42,47 @@ export const TRIM = "#78350f";
 
 // The daylight in through a room's open front: a sky and ground fill and a
 // key light, by seasonal theme (HandleInertiaRequests::THEMES), "" for the
-// rest of the year. A seasonal room light is an entry here.
+// rest of the year. `dim` scales the room's own `ambient` (Halloween dusk).
+// A seasonal room light is an entry here.
 const DAYLIGHT = {
     "": { sky: "#fff7ed", ground: "#78350f", key: "#fde68a" },
+    // Snowlight: cool and bright.
+    christmas: { sky: "#e0f2fe", ground: "#334155", key: "#f8fafc" },
+    // Dusk: dimmer and warmer.
+    halloween: { sky: "#fdba74", ground: "#431407", key: "#fb923c", dim: 0.7 },
+    // A summer night, lit by the fireworks outside.
+    fireworks: { sky: "#c7d2fe", ground: "#1e1b4b", key: "#a5b4fc", dim: 0.8 },
 };
 
 /** The daylight colours for `theme`, or the everyday ones. */
 export function roomDaylight(theme) {
     return own(DAYLIGHT, theme) ?? DAYLIGHT[""];
+}
+
+// Seasonal decorations, by theme: emoji hung on every room's back wall, at
+// `u` across it and `v` up it (shares of the wall), `size` units tall. High
+// on the wall, above the doors and anything hung there.
+const garland = (glyphs, v = 0.86, size = 40) =>
+    glyphs.map((emoji, i) => ({
+        emoji,
+        u: (i + 1) / (glyphs.length + 1),
+        v,
+        size,
+    }));
+
+const DECORATIONS = {
+    christmas: garland(["⭐", "🎀", "🔔", "🎀", "⭐"]),
+    halloween: [
+        { emoji: "🕸️", u: 0.05, v: 0.84, size: 90 },
+        { emoji: "🕸️", u: 0.95, v: 0.84, size: 90 },
+        { emoji: "🦇", u: 0.5, v: 0.84, size: 40 },
+    ],
+    fireworks: garland(["🎆", "✨", "🎇", "✨", "🎆"]),
+};
+
+/** The decorations every room wears in `theme` (none most of the year). */
+export function roomDecorations(theme) {
+    return own(DECORATIONS, theme) ?? [];
 }
 
 const PX = 64; // a pattern's texture, px square
