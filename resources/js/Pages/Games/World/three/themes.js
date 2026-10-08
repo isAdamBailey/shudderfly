@@ -35,6 +35,8 @@ export const WORLD_THEMES = {
 export function worldTheme(name) {
     return {
         ...DEFAULT,
-        ...(Object.hasOwn(WORLD_THEMES, name ?? "") ? WORLD_THEMES[name] : {}),
+        ...(Object.prototype.hasOwnProperty.call(WORLD_THEMES, name ?? "")
+            ? WORLD_THEMES[name]
+            : {}),
     };
 }

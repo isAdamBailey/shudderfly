@@ -13,7 +13,7 @@ const props = defineProps({
     id: {
         type: String,
         required: true,
-        validator: (id) => Object.hasOwn(CAST, id),
+        validator: (id) => Object.prototype.hasOwnProperty.call(CAST, id),
     },
     /** The ongoing move, from the character's list, or null to stand still.
      * One-shots (a toot, a gulp) are better played with play(). */
