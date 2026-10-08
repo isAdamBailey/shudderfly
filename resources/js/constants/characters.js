@@ -16,9 +16,10 @@ export const TOOT_FOODS = [
     { type: "sprout", emoji: SPROUT, pitch: 0.78 },
 ];
 
-// Every move a cast member can make. castMoves.css implements each one as a
-// `.cast-move-<name>` class, one-to-one (a test holds the two together), so a
-// move is drawn the same on every character that has it.
+// Every move a cast member can make. Components/Games/Cast/castMoveData.js
+// defines each one, one-to-one (a test holds the two together), and both
+// drawers play that data: CastMember as CSS, castMesh in WebGL. So a move is
+// drawn the same on every character that has it, in the DOM and in 3D.
 export const CAST_MOVES = [
     "idle",
     "excited",
@@ -43,7 +44,8 @@ const FOOD_MOVES = ["idle", "hop", "excited"];
 /**
  * The cast registry, keyed by id: who the world can show and how. Scene data
  * refers to cast members by these ids (mirrored in App\Support\GamesWorld::CAST),
- * and CastMember.vue is the one way to draw them (issue #130).
+ * and the cast kit draws them: CastMember.vue in the DOM, castMesh.js in
+ * WebGL (issue #130).
  *
  * - emoji: the glyph, the same one the games use. Absent for `face`, which is
  *   drawn by PersonFace instead.

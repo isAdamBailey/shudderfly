@@ -1,25 +1,20 @@
 <script setup>
 import { usePage } from "@inertiajs/vue3";
-import { CAST, TOOT_FOODS } from "@/constants/characters.js";
 import CastMember from "@/Components/Games/Cast/CastMember.vue";
 import TootPuff from "@/Components/Games/Cast/TootPuff.vue";
-import { useToot } from "@/composables/useToot";
 import { useTranslations } from "@/composables/useTranslations";
-import {
-    useParallax,
-    usePreferredReducedMotion,
-    useTransition,
-} from "@vueuse/core";
-import { computed, nextTick, onMounted, ref, watch } from "vue";
-import { clamp, useGamesWorld } from "../composables/useGamesWorld.js";
-import { deadband } from "@/utils/math";
+import { computed, ref } from "vue";
 import TiltPermissionButton from "@/Components/TiltPermissionButton.vue";
-import { useIdlerPhysics } from "../composables/useIdlerPhysics.js";
+import LandmarkTitle from "../components/LandmarkTitle.vue";
+import SkyLogo from "../components/SkyLogo.vue";
+import { useRoad } from "../composables/useRoad.js";
 
-// The `kind: "road"` renderer. The stage (GamesWorld.vue) owns the stage box,
-// window pointer listeners, keyboard routing and cards, and drives this
-// through the API exposed at the bottom; this owns the road itself, including
-// presses on its own background.
+// The `kind: "road"` renderer for when WebGL isn't available (Road3D.vue is
+// the WebGL one): the road drawn in the DOM, as it was before the 3D world.
+// The road's behaviour lives in useRoad, shared with Road3D; this only draws
+// it. The stage (GamesWorld.vue) owns the stage box, window pointer
+// listeners, keyboard routing and cards, and drives this through the API
+// exposed at the bottom.
 const props = defineProps({
     scene: { type: Object, required: true },
     // { beginGesture(handlers) -> stage left px, resetScroll() }
@@ -40,242 +35,52 @@ const themeClass = computed(() =>
 
 const HILL_TILE = 1500; // px; must match the .hills-far background-size
 const CLOUD_COUNT = 4;
+const IDLER_DEPTHS = [2, 6, 10]; // % below the horizon, by idler row
 
 const sceneEl = ref(null);
 const buttEl = ref(null);
-const landmarkEls = ref({});
 
-const prefersReducedMotion = usePreferredReducedMotion();
-const reduced = computed(() => prefersReducedMotion.value === "reduce");
-
-// useGamesWorld speaks in landmarks (slug, distance, name, landmark emoji);
-// the scene registry speaks in interactables. The original item rides along
-// so arrival can hand it to the stage untouched.
-const roadLandmarks = computed(() =>
-    props.scene.interactables.map((item) => ({
-        slug: item.id,
-        distance: item.x,
-        name: item.label,
-        landmark: item.emoji,
-        cast: item.cast,
-        item,
-    }))
-);
-
-// "confirmSlug" is the road's freeze: set when a landmark is activated, it
-// stops the peach until the stage calls release().
-const world = useGamesWorld(roadLandmarks, {
-    isReducedMotion: () => reduced.value,
-    onArrive: (landmark) => emit("activate", landmark.item),
-});
-const { landmarks, worldWidth, peach, camera, state, nearestLandmark } = world;
-
-// --- Roadside cast ---------------------------------------------------------
-
-const IDLER_SETBACK = 260; // px before its neighbouring landmark
-const IDLER_EXCITE_RADIUS = 180;
-const IDLER_DEPTHS = [2, 6, 10]; // % below the horizon, varied for a layered feel
-// How close to the Butt a food has to land to make it toot.
-const FEED_RADIUS = 70; // px
-
-const { puffs, toot, unlock: unlockToot } = useToot(page.props.fartSoundUrl);
-
-const idlerPhysicsCtl = useIdlerPhysics({
-    isBlocked: () => Boolean(state.confirmSlug),
-    isReducedMotion: () => reduced.value,
-    onDrop: feedIfOnButt,
-});
-const { idlerPhysics } = idlerPhysicsCtl;
-
-const idlers = computed(() =>
-    landmarks.value.map((landmark, i) => {
-        const x = landmark.x - IDLER_SETBACK;
-        const p = idlerPhysics[landmark.slug];
-        return {
-            slug: landmark.slug,
-            cast: TOOT_FOODS[i % TOOT_FOODS.length].type,
-            x,
-            top: `calc(var(--horizon) + ${
-                IDLER_DEPTHS[i % IDLER_DEPTHS.length]
-            }%)`,
-            excited: Math.abs(peach.x - x) < IDLER_EXCITE_RADIUS,
-            // Only the sideways offset moves the idler; height goes to
-            // CastMember as lift, so its shadow stays on the verge.
-            dx: p?.dx ?? 0,
-            lift: -(p?.dy ?? 0),
-            // A little spin while airborne, driven by whatever horizontal
-            // speed the toss carried.
-            tilt: p?.airborne ? clamp(p.vx / 15, -35, 35) : 0,
-        };
-    })
-);
-
-// --- The Butt ---------------------------------------------------------------
-
-const buttCast = ref(null);
-
-/** A Toot Food dropped or thrown onto the Butt makes it toot at that food's
- * pitch, the way feeding it does in Toot Foods. */
-function feedIfOnButt(slug, dx) {
-    const idler = idlers.value.find((i) => i.slug === slug);
-    if (!idler || Math.abs(idler.x + dx - peach.x) > FEED_RADIUS) return;
+const {
+    world,
+    landmarks,
+    peach,
+    camera,
+    nearestLandmark,
+    idlers,
+    puffs,
+    unlockToot,
+    buttCast,
+    peachLift,
+    peekX,
+    peekY,
+    onPeachPointerDown,
+    onBackgroundPointerDown,
+    onIdlerPointerDown,
+    onLandmarkFocus,
+    setLandmarkEl,
+    setLandmarkCast,
+    api,
+} = useRoad(props, emit, {
+    // The world layer is only ever translated by the camera, so a road x is
+    // a screen x plus the camera.
+    toWorldX: (event, left) => event.clientX - left + camera.x,
     // At the middle of the Butt, as Toot Foods puts it.
-    const butt = buttEl.value;
-    toot(idler.cast, {
-        x: peach.x,
-        y: butt ? butt.offsetTop + butt.offsetHeight / 2 : 0,
-    });
-    buttCast.value?.play("toot");
-}
-
-// --- Lifecycle ------------------------------------------------------------
-
-onMounted(() => world.start());
-
-/** Tab hidden: stop the loop. Restarting resets the frame clock, so
- * returning can't land a single giant dt and teleport the peach. */
-function pause() {
-    interrupt();
-    world.stop();
-}
-
-function resume() {
-    world.start();
-}
-
-/** Window blur: the keyup for a held arrow goes to whatever took focus, so
- * without this the peach keeps walking to the end of the road while we're
- * away. A toss's listeners and rAF loop shouldn't run unattended either. */
-function interrupt() {
-    world.setWalk(0);
-    idlerPhysicsCtl.cancelActiveDrag();
-}
-
-// --- Pointer --------------------------------------------------------------
-
-// The stage can't move while a finger is down, so its left edge is measured
-// once per gesture (by the stage) instead of on every pointermove.
-let gestureLeft = 0;
-
-function pointerToWorld(event) {
-    return event.clientX - gestureLeft + camera.x;
-}
-
-const dragGesture = {
-    move(event) {
-        event.preventDefault();
-        world.updateDrag(pointerToWorld(event));
+    buttPuffAt: () => {
+        const butt = buttEl.value;
+        return {
+            x: peach.x,
+            y: butt ? butt.offsetTop + butt.offsetHeight / 2 : 0,
+        };
     },
-    end: () => world.endDrag(),
-    // Abandoned, not dropped: the peach stays put and no card opens.
-    cancel: () => world.cancelDrag(),
-};
-
-const panGesture = {
-    move(event) {
-        event.preventDefault();
-        world.updatePan(event.clientX);
-    },
-    end: () => world.endPan(),
-    cancel: () => world.endPan(),
-};
-
-function onPeachPointerDown(event) {
-    if (state.confirmSlug || event.button > 0) return;
-    gestureLeft = props.stage.beginGesture(dragGesture);
-    world.startDrag();
-}
-
-/** Only the bare background pans; the peach drags and landmarks click. */
-function onBackgroundPointerDown(event) {
-    if (state.confirmSlug || event.button > 0) return;
-    gestureLeft = props.stage.beginGesture(panGesture);
-    world.startPan(event.clientX);
-}
-
-// --- Keyboard -------------------------------------------------------------
-
-function onLandmarkFocus(slug) {
-    // Focus walks the peach there, so the keyboard route is a real equivalent
-    // of dragging rather than a hidden list of links.
-    if (state.confirmSlug) return;
-    world.walkToLandmark(slug);
-    // Focusing an off-screen button makes the browser scroll the (hidden)
-    // overflow of the stage; the camera is the only thing allowed to move the
-    // view, and a stray scrollLeft would offset every pointer coordinate.
-    props.stage.resetScroll();
-}
-
-const WALK_KEYS = { ArrowLeft: -1, ArrowRight: 1 };
-
-function onKeydown(event) {
-    const dir = WALK_KEYS[event.key];
-    if (!dir) return;
-    event.preventDefault();
-    world.setWalk(dir);
-}
-
-function onKeyup(event) {
-    const dir = WALK_KEYS[event.key];
-    if (dir) world.stopWalk(dir);
-}
-
-/** Enter on the stage itself visits whichever landmark the peach is already
- * standing at. */
-function activateNearest() {
-    if (state.confirmSlug) return;
-    const landmark = nearestLandmark.value;
-    if (landmark) world.openConfirm(landmark.slug);
-}
-
-/** The stage is done with an activation that showed nothing: just unfreeze,
- * leaving the peach and focus where they are. */
-function unfreeze() {
-    world.closeConfirm();
-}
-
-/** The activation's card was cancelled: unfreeze and put focus back on the
- * landmark the peach was considering. */
-function release() {
-    const id = state.confirmSlug;
-    world.closeConfirm();
-    nextTick(() => {
-        landmarkEls.value[id]?.focus({ preventScroll: true });
-        props.stage.resetScroll();
-    });
-}
-
-// A landmark that is a cast member greets the Butt when it walks up (the
-// toilet flushes), with whatever `greet` move the registry gives it.
-const landmarkCasts = {};
-
-function setLandmarkCast(slug, el) {
-    if (el) landmarkCasts[slug] = el;
-    else delete landmarkCasts[slug];
-}
-
-watch(
-    () => nearestLandmark.value?.slug,
-    (slug) => {
-        const cast = nearestLandmark.value?.cast;
-        const greet = cast && CAST[cast].greet;
-        if (greet) landmarkCasts[slug]?.play(greet);
-    }
-);
-
-function setLandmarkEl(slug, el) {
-    if (el) landmarkEls.value[slug] = el;
-    else delete landmarkEls.value[slug];
-}
+    peekTarget: sceneEl,
+});
 
 // --- Peek -----------------------------------------------------------------
 
-// The same useParallax the book cover uses, but pointed only at the scenery.
-// The pointer here already belongs to gameplay — dragging the peach, panning
-// the stage, throwing the idlers — and pointerToWorld() derives world
-// coordinates from clientX, so anything inside .world must stay untransformed
-// or drags and SNAP_RADIUS arrivals desync. Only the three pointer-events:none
-// backdrop layers move.
+// Pointed only at the scenery. toWorldX above derives world
+// coordinates from clientX, so anything inside .world must stay
+// untransformed or drags and SNAP_RADIUS arrivals desync. Only the three
+// pointer-events:none backdrop layers move.
 const PEEK = {
     // px of travel at full deflection. Graded by depth: the ridge sits far
     // away and barely shifts, the clouds are overhead and shift most.
@@ -283,42 +88,6 @@ const PEEK = {
     hills: { x: 8, y: 4 },
     clouds: { x: 22, y: 14 },
 };
-
-const { tilt, roll } = useParallax(sceneEl, {
-    // Doubled so tilt/roll span [-1, 1] and the PEEK numbers above are the
-    // actual px maxima rather than half of them.
-    mouseTiltAdjust: (i) => i * 2,
-    mouseRollAdjust: (i) => i * 2,
-    deviceOrientationTiltAdjust: (i) => i * 2,
-    deviceOrientationRollAdjust: (i) => i * 2,
-});
-
-// Deadband first: raw deviceorientation jitters by fractions of a degree even
-// on a stationary table, and without this the backdrop never fully settles.
-// It also screens out the NaN useParallax emits before the stage has been
-// measured, which would otherwise latch inside useTransition — see deadband().
-const PEEK_DEADBAND = 0.005;
-// Clamped because the device-orientation path is unbounded in a way the mouse
-// path is not: gamma runs to 90deg, which the doubling above turns into 2, and
-// a phone held sideways would otherwise swing the clouds twice as far as the
-// PEEK maxima promise.
-// useParallax names its outputs for a device's axes, not the screen's: `tilt`
-// is the horizontal source ((x - w/2)/w) and `roll` the vertical one. Mapping
-// them the other way round makes the backdrop peek 90deg off-axis. `roll` is
-// negated so both axes carry the backdrop the same way the pointer moves.
-//
-// Kept as two scalar tweens rather than one array source: a computed returning
-// a fresh array is never Object.is-equal to the last, so useTransition's watch
-// would refire on every jittering deviceorientation event and restart a 150ms
-// rAF chain forever — exactly the settling the deadband exists to produce.
-const rawPeekX = computed(() =>
-    reduced.value ? 0 : clamp(deadband(tilt.value, PEEK_DEADBAND), -1, 1)
-);
-const rawPeekY = computed(() =>
-    reduced.value ? 0 : clamp(deadband(-roll.value, PEEK_DEADBAND), -1, 1)
-);
-const peekX = useTransition(rawPeekX, { duration: 150 });
-const peekY = useTransition(rawPeekY, { duration: 150 });
 
 function peekTranslate({ x, y }) {
     return `translate3d(${peekX.value * x}px, ${peekY.value * y}px, 0)`;
@@ -335,33 +104,10 @@ const skyLogoStyle = computed(() => ({
     transform: `translateX(-50%) ${peekTranslate(PEEK.sky)}`,
 }));
 
-// Per-landmark arc geometry for the title, keyed by slug. The viewBox widens
-// with name length and the <svg> is left unsized in CSS, so it renders at its
-// intrinsic viewBox-to-px size (1 user unit = 1px) — every name gets the same
-// font size, and a long one simply produces a wider arc that overflows past
-// the icon rather than being squeezed to fit a fixed-width box.
-const TITLE_CHAR_WIDTH = 17;
-const TITLE_MIN_WIDTH = 150;
-const TITLE_HEIGHT = 70;
-const landmarkTitleGeom = computed(() =>
-    Object.fromEntries(
-        landmarks.value.map((landmark) => {
-            const width = Math.max(
-                TITLE_MIN_WIDTH,
-                Math.round(landmark.name.length * TITLE_CHAR_WIDTH + 40)
-            );
-            const path = `M 12 ${TITLE_HEIGHT - 8} Q ${width / 2} 4 ${
-                width - 12
-            } ${TITLE_HEIGHT - 8}`;
-            return [landmark.slug, { width, path }];
-        })
-    )
-);
-
 const cloudsStyle = computed(() => ({ transform: peekTranslate(PEEK.clouds) }));
 
 const worldStyle = computed(() => ({
-    width: `${worldWidth.value}px`,
+    width: `${world.worldWidth.value}px`,
     transform: `translate3d(${-camera.x}px, 0, 0)`,
 }));
 
@@ -381,22 +127,7 @@ const peachStyle = computed(() => ({
     transform: `translate3d(${peach.x}px, 0, 0) translateX(-50%)`,
 }));
 
-// The walking bob, as height above the road so the shadow stays put.
-// The same 12px of travel as before, but never below 0, so the body never
-// sinks into its own shadow.
-const peachLift = computed(() => (1 - Math.cos(peach.bob * 6)) * 6);
-
-defineExpose({
-    setBounds: world.setBounds,
-    pause,
-    resume,
-    interrupt,
-    onKeydown,
-    onKeyup,
-    activateNearest,
-    unfreeze,
-    release,
-});
+defineExpose(api);
 </script>
 
 <template>
@@ -409,48 +140,7 @@ defineExpose({
     >
         <div class="sky" :style="skyStyle" aria-hidden="true"></div>
 
-        <div class="sky-logo" :style="skyLogoStyle" aria-hidden="true">
-            <svg
-                class="sky-logo-svg"
-                viewBox="0 0 400 120"
-                preserveAspectRatio="xMidYMid meet"
-            >
-                <defs>
-                    <path
-                        id="skyLogoArc"
-                        d="M 24 100 Q 200 4 376 100"
-                        fill="none"
-                    />
-                    <linearGradient
-                        id="skyLogoFill"
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                    >
-                        <stop offset="0" stop-color="#fff7c2" />
-                        <stop offset="0.45" stop-color="#ffd23f" />
-                        <stop offset="1" stop-color="#f7931e" />
-                    </linearGradient>
-                </defs>
-                <text
-                    v-for="depth in 6"
-                    :key="depth"
-                    class="sky-logo-depth"
-                    :dx="depth"
-                    :dy="depth"
-                >
-                    <textPath href="#skyLogoArc" startOffset="50%">
-                        {{ t("games.world.title") }}
-                    </textPath>
-                </text>
-                <text class="sky-logo-face">
-                    <textPath href="#skyLogoArc" startOffset="50%">
-                        {{ t("games.world.title") }}
-                    </textPath>
-                </text>
-            </svg>
-        </div>
+        <SkyLogo :style="skyLogoStyle" />
 
         <div class="hills-far" :style="hillStyle" aria-hidden="true"></div>
         <div class="clouds" :style="cloudsStyle" aria-hidden="true">
@@ -466,19 +156,17 @@ defineExpose({
             <div class="road" aria-hidden="true"></div>
 
             <span
-                v-for="(idler, i) in idlers"
+                v-for="idler in idlers"
                 :key="idler.slug"
                 class="idler"
                 :style="{
                     left: `${idler.x}px`,
-                    top: idler.top,
+                    top: `calc(var(--horizon) + ${IDLER_DEPTHS[idler.row]}%)`,
                     transform: `translate(-50%, -50%) translate(${idler.dx}px, 0px)`,
-                    '--cast-delay': `${i * -0.37}s`,
+                    '--cast-delay': `${-idler.phase}s`,
                 }"
                 aria-hidden="true"
-                @pointerdown.prevent="
-                    idlerPhysicsCtl.onPointerDown(idler.slug, $event)
-                "
+                @pointerdown.prevent="onIdlerPointerDown(idler.slug, $event)"
             >
                 <CastMember
                     :id="idler.cast"
@@ -503,62 +191,7 @@ defineExpose({
                 @focus="onLandmarkFocus(landmark.slug)"
                 @click="world.openConfirm(landmark.slug)"
             >
-                <div class="landmark-title" aria-hidden="true">
-                    <svg
-                        :width="landmarkTitleGeom[landmark.slug].width"
-                        :height="TITLE_HEIGHT"
-                        :viewBox="`0 0 ${
-                            landmarkTitleGeom[landmark.slug].width
-                        } ${TITLE_HEIGHT}`"
-                        preserveAspectRatio="xMidYMid meet"
-                    >
-                        <defs>
-                            <path
-                                :id="`titleArc-${landmark.slug}`"
-                                :d="landmarkTitleGeom[landmark.slug].path"
-                                fill="none"
-                            />
-                            <linearGradient
-                                :id="`titleFill-${landmark.slug}`"
-                                x1="0"
-                                y1="0"
-                                x2="0"
-                                y2="1"
-                            >
-                                <stop offset="0" stop-color="#fff7c2" />
-                                <stop offset="0.45" stop-color="#ffd23f" />
-                                <stop offset="1" stop-color="#f7931e" />
-                            </linearGradient>
-                        </defs>
-                        <text
-                            v-for="depth in 4"
-                            :key="depth"
-                            class="landmark-title-depth"
-                            :dx="depth"
-                            :dy="depth"
-                        >
-                            <textPath
-                                :href="`#titleArc-${landmark.slug}`"
-                                startOffset="50%"
-                            >
-                                {{ landmark.name }}
-                            </textPath>
-                        </text>
-                        <text
-                            class="landmark-title-face"
-                            :style="{
-                                fill: `url(#titleFill-${landmark.slug})`,
-                            }"
-                        >
-                            <textPath
-                                :href="`#titleArc-${landmark.slug}`"
-                                startOffset="50%"
-                            >
-                                {{ landmark.name }}
-                            </textPath>
-                        </text>
-                    </svg>
-                </div>
+                <LandmarkTitle :id="landmark.slug" :name="landmark.name" />
                 <span class="landmark-emoji" aria-hidden="true">
                     <CastMember
                         v-if="landmark.cast"
@@ -646,49 +279,6 @@ defineExpose({
         var(--grass) var(--horizon),
         var(--grass) 100%
     );
-}
-
-.sky-logo {
-    /* Anchored to the top edge and clear of the tallest landmark (translated
-       up from the horizon by its own emoji height plus its signpost), so a
-       landmark spawning early in the world can never render over the logo —
-       both live in normal document order with no z-index between them. */
-    position: absolute;
-    top: 2%;
-    left: 50%;
-    width: min(60%, 380px);
-    pointer-events: none;
-    will-change: transform;
-}
-
-.sky-logo-svg {
-    width: 100%;
-    height: auto;
-    display: block;
-    filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.18));
-}
-
-/* Same glyphs stamped repeatedly, each nudged a pixel further down-right and
-   darkened — the classic layered-text trick for a solid extruded edge under
-   the curve, since SVG has no real 3D text primitive. */
-.sky-logo-depth {
-    font-family: "Spicy Rice", ui-rounded, system-ui, sans-serif;
-    font-weight: 800;
-    font-size: 40px;
-    text-anchor: middle;
-    fill: #b5590f;
-}
-
-.sky-logo-face {
-    font-family: "Spicy Rice", ui-rounded, system-ui, sans-serif;
-    font-weight: 800;
-    font-size: 40px;
-    text-anchor: middle;
-    fill: url(#skyLogoFill);
-    stroke: #7a3b00;
-    stroke-width: 3px;
-    stroke-linejoin: round;
-    paint-order: stroke fill;
 }
 
 .hills-far,
@@ -833,47 +423,6 @@ defineExpose({
 .landmark.near .landmark-emoji,
 .landmark:hover .landmark-emoji {
     transform: scale(1.12) translateY(-4px);
-}
-
-/* Same gilded-extrusion look as the sky logo (SVG textPath on an arc, layered
-   depth copies, gradient face) rather than a straight line of CSS text — the
-   arc bows over the icon's shoulders so a long game name has room to fit
-   without truncating. Positioned absolutely and centered so it can freely
-   overflow past the icon's own width on either side instead of being
-   confined (and shrunk) to it; .landmark's own position:absolute is what
-   this is positioned against. */
-.landmark-title {
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    margin-bottom: -0.5rem;
-    pointer-events: none;
-}
-
-/* No width/height here: left at its intrinsic size, the <svg> renders its
-   viewBox 1 user unit = 1px, so every title gets the same font size — a
-   longer name widens the arc instead of shrinking to fit a fixed box. */
-.landmark-title svg {
-    display: block;
-    overflow: visible;
-}
-
-.landmark-title-depth {
-    font-family: "Spicy Rice", ui-rounded, system-ui, sans-serif;
-    font-size: 28px;
-    text-anchor: middle;
-    fill: #b5590f;
-}
-
-.landmark-title-face {
-    font-family: "Spicy Rice", ui-rounded, system-ui, sans-serif;
-    font-size: 28px;
-    text-anchor: middle;
-    stroke: #7a3b00;
-    stroke-width: 2px;
-    stroke-linejoin: round;
-    paint-order: stroke fill;
 }
 
 .landmark:focus-visible {

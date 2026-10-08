@@ -1,9 +1,9 @@
 <script setup>
-import "./castMoves.css";
 import PersonFace from "@/Components/Games/PersonFace.vue";
 import { CAST } from "@/constants/characters.js";
 import { useTranslations } from "@/composables/useTranslations";
 import { computed, ref, watch } from "vue";
+import { installCastMoves, LANDING_HEIGHT } from "./castMoveData.js";
 
 // The one way to draw a cast member (issue #130): the same glyph, depth,
 // ground shadow and moves for a character wherever it appears. Callers place
@@ -36,13 +36,16 @@ const props = defineProps({
 
 const { t } = useTranslations();
 
+// The moves are generated from the data castMesh (WebGL) also plays.
+installCastMoves();
+
 const member = computed(() => CAST[props.id]);
 const ariaLabel = computed(() =>
     props.label === true ? t(member.value.nameKey) : props.label || null
 );
 
 // Read when needed rather than watched: only play() and landing ask, and
-// castMoves.css already stills every move under reduced motion.
+// the moves stylesheet already stills every move under reduced motion.
 const reducedMotion = () =>
     window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
@@ -97,7 +100,6 @@ const liftStyle = computed(() =>
 // Squash on touching down from a real height (a throw, not a walking bob).
 // Re-keyed per landing like play(), so a bounce restarts it and a squash
 // that never finished (hidden, reduced motion turned on) can't wedge it.
-const LANDING_HEIGHT = 24; // px
 const landing = ref(false);
 const landings = ref(0);
 
