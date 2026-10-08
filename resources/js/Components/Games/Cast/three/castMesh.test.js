@@ -1,0 +1,176 @@
+import * as THREE from "three";
+import { describe, expect, it, vi } from "vitest";
+import { CAST, CAST_MOVES } from "@/constants/characters.js";
+import { CAST_MOVE_DATA } from "../castMoveData.js";
+import { createCastKit } from "./castMesh.js";
+
+// jsdom has no 2D canvas; the kit only needs something to wrap in a texture.
+const createCanvas = () => ({ width: 1, height: 1, getContext: () => null });
+const kit = () => createCastKit(THREE, { createCanvas });
+
+function glyphOf(puppet) {
+    return puppet.group.getObjectByProperty("castShadow", true);
+}
+
+/** The body's pose, as its world matrix. */
+function bodyPose(puppet) {
+    puppet.group.updateMatrixWorld(true);
+    return [...puppet.body.matrixWorld.elements];
+}
+
+describe("castMesh", () => {
+    it("draws every cast member as its emoji, lit and casting a shadow", () => {
+        const k = kit();
+        for (const [id, member] of Object.entries(CAST)) {
+            const puppet = k.castMesh(id);
+            if (member.emoji) {
+                const glyph = glyphOf(puppet);
+                expect(glyph.material).toBeInstanceOf(
+                    THREE.MeshStandardMaterial
+                );
+                expect(glyph.material.alphaTest).toBeGreaterThan(0);
+                expect(puppet.domOverlay).toBe(false);
+            } else {
+                // The Face is drawn by PersonFace in the DOM overlay.
+                expect(glyphOf(puppet)).toBeUndefined();
+                expect(puppet.domOverlay).toBe(true);
+            }
+        }
+    });
+
+    it("shares one material per glyph", () => {
+        const k = kit();
+        expect(glyphOf(k.castMesh("butt")).material).toBe(
+            glyphOf(k.castMesh("butt")).material
+        );
+        expect(glyphOf(k.emojiMesh("🏥")).material).not.toBe(
+            glyphOf(k.castMesh("butt")).material
+        );
+    });
+
+    it("refuses a character that isn't in the cast", () => {
+        expect(() => kit().castMesh("teddy")).toThrow(/teddy/);
+    });
+
+    it("can do every CAST_MOVE, from the shared move data", () => {
+        const k = kit();
+        for (const move of CAST_MOVES) {
+            const id = Object.keys(CAST).find((c) =>
+                CAST[c].moves.includes(move)
+            );
+            expect(id, `nobody does ${move}`).toBeDefined();
+
+            const puppet = k.castMesh(id);
+            const still = bodyPose(puppet);
+            const data = CAST_MOVE_DATA[move];
+            if (data.loop) puppet.setMove(move);
+            else puppet.play(move);
+
+            const poses = [0.1, 0.25, 0.2].map((share) => {
+                puppet.tick(data.duration * share);
+                return bodyPose(puppet);
+            });
+            expect(
+                poses.some((pose) => pose.join() !== still.join()),
+                `${id} ${move}`
+            ).toBe(true);
+        }
+    });
+
+    it("returns to the ongoing move after a one-shot", () => {
+        const puppet = kit().castMesh("butt");
+        const still = bodyPose(puppet);
+
+        puppet.play("toot");
+        puppet.tick(0.1);
+        expect(bodyPose(puppet)).not.toEqual(still);
+
+        puppet.tick(1);
+        puppet.tick(0);
+        expect(bodyPose(puppet)).toEqual(still);
+    });
+
+    it("ignores a move the character doesn't have", () => {
+        const puppet = kit().castMesh("toilet");
+        const still = bodyPose(puppet);
+
+        puppet.setMove("hop");
+        puppet.play("toot");
+        puppet.tick(0.2);
+
+        expect(bodyPose(puppet)).toEqual(still);
+    });
+
+    it("lifts the body and shrinks its contact shadow, which stays down", () => {
+        const puppet = kit().castMesh("apple", { size: 50 });
+        const blob = puppet.group.children[0];
+        const groundWidth = blob.scale.x;
+
+        puppet.set({ lift: 120 });
+        puppet.tick(0);
+
+        expect(blob.position.y).toBeLessThan(1);
+        expect(blob.scale.x).toBeCloseTo(groundWidth / 2);
+        expect(
+            new THREE.Vector3().setFromMatrixPosition(
+                (puppet.group.updateMatrixWorld(true),
+                glyphOf(puppet).matrixWorld)
+            ).y
+        ).toBeGreaterThan(120);
+    });
+
+    it("mirrors when facing left", () => {
+        const puppet = kit().castMesh("butt");
+        puppet.set({ facing: "left" });
+        puppet.tick(0);
+        expect(glyphOf(puppet).scale.x).toBeLessThan(0);
+    });
+
+    it("squashes on landing from a throw, but not from a walking bob", () => {
+        const puppet = kit().castMesh("apple");
+        const squash = puppet.body.parent.parent;
+
+        puppet.set({ lift: 6 });
+        puppet.set({ lift: 0 });
+        puppet.tick(0.05);
+        expect(squash.scale.y).toBe(1);
+
+        puppet.set({ lift: 80 });
+        puppet.set({ lift: 0 });
+        puppet.tick(0.07);
+        expect(squash.scale.y).toBeLessThan(1);
+    });
+
+    it("holds a still pose under reduced motion, and stops redrawing", () => {
+        const puppet = kit().castMesh("apple");
+        puppet.setReducedMotion(true);
+        puppet.setMove("excited");
+        puppet.play("toot");
+
+        expect(puppet.tick(0.1)).toBe(true);
+        expect(puppet.body.scale.x).toBeCloseTo(1.15);
+        expect(puppet.tick(0.1)).toBe(false);
+    });
+
+    it("reports nothing to draw when nothing moved", () => {
+        const puppet = kit().castMesh("butt");
+        puppet.setMove(null);
+        puppet.tick(0);
+        expect(puppet.tick(0.1)).toBe(false);
+
+        puppet.set({ lift: 3 });
+        expect(puppet.tick(0.1)).toBe(true);
+    });
+
+    it("frees its materials and textures on dispose", () => {
+        const k = kit();
+        const material = glyphOf(k.castMesh("poop")).material;
+        const spy = vi.spyOn(material, "dispose");
+        const textureSpy = vi.spyOn(material.map, "dispose");
+
+        k.dispose();
+
+        expect(spy).toHaveBeenCalled();
+        expect(textureSpy).toHaveBeenCalled();
+    });
+});

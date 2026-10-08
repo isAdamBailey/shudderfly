@@ -60,6 +60,7 @@
         "lodash": "^4.17.19",
         "pusher-js": "^8.4.0",
         "remixicon": "^4.2.0",
+        "three": "0.186.1",
         "vue-filepond": "^7.0.4",
         "vue-lite-youtube-embed": "^1.2.4"
     }

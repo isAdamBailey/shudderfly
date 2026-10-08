@@ -1,4 +1,5 @@
 <script setup>
+import { usePage } from "@inertiajs/vue3";
 import { useTranslations } from "@/composables/useTranslations";
 import {
     computed,
@@ -7,30 +8,53 @@ import {
     onMounted,
     ref,
     shallowRef,
+    watch,
 } from "vue";
+import Road3D from "./scenes/Road3D.vue";
 import RoadScene from "./scenes/RoadScene.vue";
 import { useSceneRouter } from "./composables/useSceneRouter.js";
 import { activate } from "./interactions/index.js";
+import { worldTheme } from "./three/themes.js";
+import { supportsWebGL, useWorldRenderer } from "./three/useWorldRenderer.js";
 
 // The stage: the box the world is drawn in, and everything that isn't any one
-// scene's business — sizing, window pointer listeners, keyboard routing,
-// pausing when the tab hides, and the cards interactions open. Whatever scene
-// is current is mounted inside it and driven through the API it exposes
-// (see RoadScene's defineExpose).
+// scene's business — the WebGL canvas and its renderer, sizing, window
+// pointer listeners, keyboard routing, pausing when the tab hides, and the
+// cards interactions open. Whatever scene is current is mounted over the
+// canvas and driven through the API it exposes (see useRoad's `api`).
 const props = defineProps({
     scenes: { type: Object, required: true },
 });
 
 const { t } = useTranslations();
+const page = usePage();
 
-const SCENE_RENDERERS = { road: RoadScene };
+// The road's sky and grass behind the stage while three loads.
+const loadingBackground = computed(() => {
+    const look = worldTheme(page.props.theme);
+    return `linear-gradient(${look.skyTop}, ${look.skyBottom} 60%, ${look.grass} 60%)`;
+});
+
+// Scene kind → its renderer, on the WebGL canvas or, where WebGL can't run,
+// in the DOM. Every kind needs a WebGL one; the DOM one is the fallback.
+const SCENE_RENDERERS = {
+    road: { webgl: Road3D, dom: RoadScene },
+};
+
+// "loading" while three downloads, then "webgl", or "dom" for the fallback
+// when there is no WebGL or the renderer can't be made.
+const mode = ref(supportsWebGL() ? "loading" : "dom");
+const renderer = useWorldRenderer();
 
 const router = useSceneRouter(computed(() => props.scenes));
-const sceneRenderer = computed(
-    () => SCENE_RENDERERS[router.current.value?.kind] ?? null
+const sceneRenderer = computed(() =>
+    mode.value === "loading"
+        ? null
+        : SCENE_RENDERERS[router.current.value?.kind]?.[mode.value] ?? null
 );
 
 const stageEl = ref(null);
+const canvasEl = ref(null);
 const stageHeight = ref(null);
 const sceneRef = ref(null);
 let resizeObserver = null;
@@ -75,8 +99,15 @@ function measure() {
         window.innerHeight - rect.top - reserved
     );
     stageHeight.value = visibleHeight;
+    renderer.setSize(rect.width, visibleHeight);
     sceneRef.value?.setBounds(rect.width, visibleHeight);
 }
+
+// A scene mounted after the first measure (once three has loaded, say)
+// still needs the stage's size.
+watch(sceneRef, (scene) => {
+    if (scene) measure();
+});
 
 onMounted(async () => {
     // Measure after the stage has really been laid out; measuring a stale
@@ -87,6 +118,13 @@ onMounted(async () => {
     resizeObserver.observe(stageEl.value);
     document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("blur", onWindowBlur);
+
+    if (mode.value === "loading") {
+        const ready = await renderer.init(canvasEl.value);
+        // Unmounted while three was loading: nothing left to draw on.
+        if (!stageEl.value) return renderer.dispose();
+        mode.value = ready ? "webgl" : "dom";
+    }
 });
 
 onBeforeUnmount(() => {
@@ -94,11 +132,24 @@ onBeforeUnmount(() => {
     document.removeEventListener("visibilitychange", onVisibilityChange);
     window.removeEventListener("blur", onWindowBlur);
     detachPointerListeners();
+    renderer.dispose();
 });
 
 function onVisibilityChange() {
-    if (document.hidden) sceneRef.value?.pause();
-    else sceneRef.value?.resume();
+    if (document.hidden) {
+        sceneRef.value?.pause();
+        renderer.pause();
+    } else {
+        renderer.resume();
+        sceneRef.value?.resume();
+    }
+}
+
+/** The GPU took the context back (memory pressure, a backgrounded phone).
+ * Rather than a blank canvas under live buttons, carry on in the DOM. */
+function onContextLost() {
+    renderer.dispose();
+    mode.value = "dom";
 }
 
 function onWindowBlur() {
@@ -167,19 +218,31 @@ function onKeyup(event) {
     sceneRef.value?.onKeyup(event);
 }
 
-const stage = { beginGesture, resetScroll };
+// The WebGL scenes draw with `renderer`; the DOM ones ignore it.
+const stage = { beginGesture, resetScroll, renderer };
 </script>
 
 <template>
     <div
         ref="stageEl"
         class="stage"
-        :style="stageHeight ? { height: `${stageHeight}px` } : null"
+        :style="{
+            height: stageHeight ? `${stageHeight}px` : null,
+            background: loadingBackground,
+        }"
         tabindex="0"
         :aria-label="t('games.world.stage_aria')"
         @keydown="onKeydown"
         @keyup="onKeyup"
     >
+        <canvas
+            v-if="mode !== 'dom'"
+            ref="canvasEl"
+            class="world-canvas"
+            aria-hidden="true"
+            @webglcontextlost="onContextLost"
+        ></canvas>
+
         <component
             :is="sceneRenderer"
             v-if="sceneRenderer"
@@ -209,5 +272,13 @@ const stage = { beginGesture, resetScroll };
     touch-action: none;
     user-select: none;
     outline: none;
+}
+
+.world-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
 }
 </style>
