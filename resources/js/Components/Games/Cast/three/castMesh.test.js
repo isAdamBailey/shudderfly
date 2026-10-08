@@ -162,6 +162,22 @@ describe("castMesh", () => {
         expect(puppet.tick(0.1)).toBe(true);
     });
 
+    it("paints a prop from its own texture", () => {
+        const k = kit();
+        const texture = new THREE.Texture();
+        const puppet = k.paintedMesh(texture, { size: 72, metalness: 0.5 });
+        let mesh = null;
+        puppet.group.traverse((node) => {
+            if (node.material?.map === texture) mesh = node;
+        });
+
+        expect(mesh.material.metalness).toBe(0.5);
+        expect(mesh.material.alphaTest).toBeGreaterThan(0);
+        const spy = vi.spyOn(texture, "dispose");
+        k.dispose();
+        expect(spy).toHaveBeenCalled();
+    });
+
     it("frees its materials and textures on dispose", () => {
         const k = kit();
         const material = glyphOf(k.castMesh("poop")).material;

@@ -28,33 +28,27 @@ class GamesTest extends TestCase
                 ->component('Games/Index')
                 ->missing('games')
                 ->where('scenes.road.kind', 'road')
-                ->has('scenes.road.interactables', 7)
-                ->where('scenes.road.interactables.6.id', 'house')
+                // The cockroach games, then the buildings you can go into.
+                ->has('scenes.road.interactables', 5)
+                ->where('scenes.road.interactables.2.id', 'house')
+                ->where('scenes.road.interactables.3.id', 'library')
+                ->where('scenes.road.interactables.4.id', 'poop-house')
                 // A dotted id can't be a path here.
                 ->where('scenes', fn ($scenes) => collect($scenes)->get('house.hall')['kind'] === 'room')
                 ->where('link', null)
-                ->where('scenes.road.interactables.0.id', 'sprout-pox')
-                ->where('scenes.road.interactables.0.label', 'Brussels Sprout Chicken Pox')
-                ->where('scenes.road.interactables.1.id', 'toot-foods')
-                ->where('scenes.road.interactables.1.label', 'Toot Foods')
-                ->where('scenes.road.interactables.2.id', 'cockroach-fight')
-                ->where('scenes.road.interactables.2.label', 'Cockroach Fight')
-                ->where('scenes.road.interactables.3.id', 'costco-pizza-poop')
-                ->where('scenes.road.interactables.3.label', 'Costco Food Poop')
-                ->where('scenes.road.interactables.4.id', 'boom')
-                ->where('scenes.road.interactables.4.label', 'Poop Boom')
-                ->where('scenes.road.interactables.5.id', 'cockroach')
-                ->where('scenes.road.interactables.5.label', 'Cockroach Fart')
-                // Every game needs a landmark and a road position, or it would
-                // be unreachable in the Games World.
+                ->where('scenes.road.interactables.0.id', 'cockroach-fight')
+                ->where('scenes.road.interactables.0.label', 'Cockroach Fight')
+                ->where('scenes.road.interactables.1.id', 'cockroach')
+                ->where('scenes.road.interactables.1.label', 'Cockroach Fart')
+                // A road game needs a landmark and a road position, or it
+                // would be unreachable in the Games World.
                 ->has('scenes.road.interactables.0', fn (Assert $item) => $item->hasAll([
                     'id', 'type', 'x', 'side', 'game', 'emoji', 'label', 'card',
                 ]))
-                ->where('scenes.road.interactables.0.emoji', '🏥')
-                ->where('scenes.road.interactables.0.x', 600)
-                ->where('scenes.road.interactables.5.emoji', '🏚️')
-                ->where('scenes.road.interactables.5.x', 5100)
-                ->where('scenes.road.interactables.4.cast', 'toilet')
+                ->where('scenes.road.interactables.0.emoji', '🏟️')
+                ->where('scenes.road.interactables.0.x', 2400)
+                ->where('scenes.road.interactables.1.emoji', '🏚️')
+                ->where('scenes.road.interactables.1.x', 5100)
                 ->where('fartSoundUrl', asset('fart.m4a'))
         );
     }

@@ -1,4 +1,5 @@
 import { computed, reactive } from "vue";
+import { wallFacing } from "../scenes/roomLayout.js";
 import { clamp, DRAG_SPEED, WALK_SPEED } from "./useGamesWorld.js";
 
 // Close enough to an interactable to use it, in world units.
@@ -12,9 +13,14 @@ export const TRIGGER_REACH = 60;
 // The Butt never walks closer than this to a wall.
 const MARGIN = 50;
 
-/** The spot in front of `item`, where the Butt stands to use it. */
+/** The spot in front of `item`, where the Butt stands to use it: a step
+ * into the room off whichever wall it's on. */
 function frontOf(item) {
-    return { x: item.x, z: (item.z ?? 0) + STAND };
+    const face = wallFacing(item.wall);
+    return {
+        x: item.x + face.x * STAND,
+        z: (item.z ?? 0) + face.z * STAND,
+    };
 }
 
 /** Where the Butt starts in `room`: where it was (`position`), in front of

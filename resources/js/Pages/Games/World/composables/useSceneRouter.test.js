@@ -115,6 +115,17 @@ describe("useSceneRouter", () => {
         expect(router.exitDoor().id).toBe("front-door");
     });
 
+    it("goes out room by room from an inner room, never back in", () => {
+        // A link or reload into the kitchen: no history to retrace.
+        const router = useSceneRouter(scenes, {
+            storage: saved({ scene: "house.kitchen" }),
+        });
+
+        router.goTo(router.exitDoor().to);
+        expect(router.currentId.value).toBe("house.hall");
+        expect(router.exitDoor().id).toBe("front-door");
+    });
+
     it("restores the saved scene and position", () => {
         const router = useSceneRouter(scenes, {
             storage: saved({

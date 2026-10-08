@@ -16,14 +16,24 @@ class GamesWorldScenesTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_every_game_has_a_place_on_the_road(): void
+    public function test_every_game_is_placed_exactly_once(): void
     {
-        $placed = collect(GamesWorld::definitions()['road']['interactables'])
+        $placed = collect(GamesWorld::definitions())
+            ->flatMap(fn ($scene) => $scene['interactables'])
             ->where('type', 'game')
             ->pluck('game')
             ->all();
 
         $this->assertEqualsCanonicalizing(array_keys(GameController::games()), $placed);
+    }
+
+    public function test_games_are_drawn_as_a_cast_member_or_an_emoji(): void
+    {
+        foreach (GamesWorld::definitions() as $sceneId => $scene) {
+            foreach (collect($scene['interactables'])->where('type', 'game') as $game) {
+                $this->assertTrue(isset($game['cast']) xor isset($game['emoji']), "{$sceneId}.{$game['id']}");
+            }
+        }
     }
 
     public function test_interactable_ids_are_unique_within_a_scene(): void
@@ -52,9 +62,9 @@ class GamesWorldScenesTest extends TestCase
         }
     }
 
-    public function test_a_landmark_that_is_a_cast_member_is_named_by_id(): void
+    public function test_a_game_that_is_a_cast_member_is_named_by_id(): void
     {
-        $boom = collect(GamesWorld::definitions()['road']['interactables'])->firstWhere('id', 'boom');
+        $boom = collect(GamesWorld::definitions()['house.bathroom']['interactables'])->firstWhere('id', 'boom');
 
         $this->assertSame('toilet', $boom['cast']);
         $this->assertArrayNotHasKey('emoji', $boom);
@@ -116,6 +126,22 @@ class GamesWorldScenesTest extends TestCase
             $this->assertContains($scene['walls']['floor'], GamesWorld::FLOORS, "{$sceneId} floor");
             $this->assertGreaterThanOrEqual(0, $scene['ambient'], "{$sceneId} ambient");
             $this->assertLessThanOrEqual(1, $scene['ambient'], "{$sceneId} ambient");
+            if (isset($scene['frame'])) {
+                $this->assertGreaterThan(0, $scene['frame'], "{$sceneId} frame");
+                $this->assertLessThan($scene['size']['w'], $scene['frame'], "{$sceneId} frame");
+            }
+
+            foreach (collect($scene['interactables'])->where('type', 'door') as $door) {
+                $where = "{$sceneId}.{$door['id']}";
+                $this->assertContains($door['wall'], GamesWorld::ROOM_WALLS, $where);
+                if ($door['wall'] === 'left') {
+                    $this->assertSame(0, $door['x'], $where);
+                } elseif ($door['wall'] === 'right') {
+                    $this->assertSame($scene['size']['w'], $door['x'], $where);
+                } else {
+                    $this->assertSame(0, $door['z'], $where);
+                }
+            }
 
             $lights = array_column($scene['lights'] ?? [], 'id');
             $this->assertSame(array_unique($lights), $lights, "{$sceneId} light ids");
@@ -137,13 +163,20 @@ class GamesWorldScenesTest extends TestCase
         foreach (GamesWorld::definitions() as $sceneId => $scene) {
             foreach (collect($scene['interactables'])->where('type', 'toy') as $toy) {
                 $where = "{$sceneId}.{$toy['id']}";
-                // Drawn as a character or as a prop, one or the other.
-                $this->assertTrue(isset($toy['cast']) xor isset($toy['emoji']), $where);
+                // Drawn as a character, an emoji, or a painted clock face.
+                $ways = (int) isset($toy['cast']) + (int) isset($toy['emoji']) + (int) isset($toy['face']);
+                $this->assertSame(1, $ways, $where);
+                if (isset($toy['face'])) {
+                    $this->assertContains($toy['face'], GamesWorld::CLOCKS, $where);
+                }
                 if (isset($toy['move'])) {
                     $this->assertContains($toy['move'], GamesWorld::MOVES, $where);
                 }
                 if (isset($toy['toot'])) {
                     $this->assertContains($toy['toot'], GamesWorld::CAST, $where);
+                }
+                if (isset($toy['sound'])) {
+                    $this->assertContains($toy['sound'], GamesWorld::SOUNDS, $where);
                 }
             }
         }
@@ -159,11 +192,10 @@ class GamesWorldScenesTest extends TestCase
 
     public function test_scenes_fill_in_games(): void
     {
-        $road = collect(GamesWorld::scenes()['road']['interactables']);
-        $boom = $road->firstWhere('id', 'boom');
+        $scenes = GamesWorld::scenes();
+        $boom = collect($scenes['house.bathroom']['interactables'])->firstWhere('id', 'boom');
 
         $this->assertSame('Poop Boom', $boom['label']);
-        $this->assertSame(4200, $boom['x']);
         $this->assertSame([
             'slug' => 'boom',
             'name' => 'Poop Boom',
@@ -172,6 +204,8 @@ class GamesWorldScenesTest extends TestCase
             'cast' => 'toilet',
         ], $boom['card']);
 
-        $this->assertSame('🏥', $road->firstWhere('id', 'sprout-pox')['card']['landmark']);
+        $fight = collect($scenes['road']['interactables'])->firstWhere('id', 'cockroach-fight');
+        $this->assertSame(2400, $fight['x']);
+        $this->assertSame('🏟️', $fight['card']['landmark']);
     }
 }

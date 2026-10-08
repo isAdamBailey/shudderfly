@@ -113,16 +113,15 @@ describe("GameConfirmCard focus", () => {
 });
 
 describe("GameConfirmCard speech", () => {
-    it("reads the game name and description aloud, then stops", async () => {
+    it("speaks the name and description as it opens, with no Listen button", () => {
         const wrapper = mountCard();
 
-        await wrapper.get(".confirm-speak").trigger("click");
+        expect(wrapper.find(".confirm-speak").exists()).toBe(false);
         expect(speakGameIntro).toHaveBeenCalledWith(
-            "Toot Foods. Feed the foods and listen to them toot.",
-            expect.any(Function)
+            "Toot Foods. Feed the foods and listen to them toot."
         );
 
-        await wrapper.get(".confirm-speak").trigger("click");
+        wrapper.unmount();
         expect(stopGameIntroSpeech).toHaveBeenCalled();
     });
 });

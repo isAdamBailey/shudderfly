@@ -17,17 +17,9 @@ use Inertia\Response;
 class GameController extends Controller
 {
     /** Newest games first (Games index list order). Name/description are
-     * translated at call time, so this can't be a compile-time const.
-     *
-     * `landmark` is the emoji for the game's building on the Games World road
-     * — separate from `emoji` (the game's own icon) because a destination and
-     * an icon aren't the same thing: Boom's icon is the poop, but its landmark
-     * is the toilet, and the two cockroach games share an icon. A landmark
-     * that is a cast member (the toilet) is `landmark_cast`, a cast id from
-     * GamesWorld::CAST, instead, so it's drawn as that character.
-     * `distance` is the landmark's position along that road, in CSS px. It is
-     * written out rather than derived from array order so a new game can be
-     * dropped in mid-road without renumbering the rest. */
+     * translated at call time, so this can't be a compile-time const. Where
+     * each game is in the Games World (on the road or in a room) is
+     * GamesWorld::definitions()'s business, not this list's. */
     public static function games(): array
     {
         return [
@@ -35,48 +27,36 @@ class GameController extends Controller
                 'name' => __('messages.games.sprout_pox.name'),
                 'emoji' => '🥬',
                 'description' => __('messages.games.sprout_pox.description'),
-                'landmark' => '🏥',
-                'distance' => 600,
                 'component' => 'SproutPox',
             ],
             'toot-foods' => [
                 'name' => __('messages.games.toot_foods.name'),
                 'emoji' => '🍑',
                 'description' => __('messages.games.toot_foods.description'),
-                'landmark' => '🍔',
-                'distance' => 1500,
                 'component' => 'TootFoods',
             ],
             'cockroach-fight' => [
                 'name' => __('messages.games.cockroach_fight.name'),
                 'emoji' => '🪳',
                 'description' => __('messages.games.cockroach_fight.description'),
-                'landmark' => '🏟️',
-                'distance' => 2400,
                 'component' => 'CockroachFight',
             ],
             'costco-pizza-poop' => [
                 'name' => __('messages.games.costco_pizza_poop.name'),
                 'emoji' => '🍕',
                 'description' => __('messages.games.costco_pizza_poop.description'),
-                'landmark' => '🏪',
-                'distance' => 3300,
                 'component' => 'CostcoPizzaPoop',
             ],
             'boom' => [
                 'name' => __('messages.games.boom.name'),
                 'emoji' => '💩',
                 'description' => __('messages.games.boom.description'),
-                'landmark_cast' => 'toilet',
-                'distance' => 4200,
                 'component' => 'Boom',
             ],
             'cockroach' => [
                 'name' => __('messages.games.cockroach.name'),
                 'emoji' => '🪳',
                 'description' => __('messages.games.cockroach.description'),
-                'landmark' => '🏚️',
-                'distance' => 5100,
                 'component' => 'Cockroach',
             ],
         ];

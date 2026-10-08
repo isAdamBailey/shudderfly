@@ -4,7 +4,7 @@ import {
     CAST_MOVE_DATA,
     castMovesCss,
 } from "@/Components/Games/Cast/castMoveData.js";
-import { CAST, CAST_MOVES, TOOT_FOODS } from "./characters.js";
+import { CAST, CAST_MOVES, castInDom, TOOT_FOODS } from "./characters.js";
 
 const read = (path) => readFileSync(`${process.cwd()}/${path}`, "utf8");
 
@@ -87,5 +87,12 @@ describe("the cast registry", () => {
                 );
             }
         }
+    });
+
+    it("draws only the emoji-less Face in the DOM, whatever the drawer", () => {
+        expect(castInDom("face")).toBe(true);
+        expect(castInDom("toilet")).toBe(false);
+        expect(castInDom("constructor")).toBe(false);
+        expect(castInDom(undefined)).toBe(false);
     });
 });

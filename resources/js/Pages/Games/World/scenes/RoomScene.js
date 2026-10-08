@@ -2,11 +2,13 @@ import { CAST_MOVES } from "@/constants/characters.js";
 import {
     lookMaterial,
     roomDaylight,
+    roomDecorations,
     roomLook,
     TRIM,
 } from "../three/roomLooks.js";
 import { applyCamera, disposeTree } from "../three/useWorldRenderer.js";
-import { itemBox, ROOM_SIZES, wallHeightOf } from "./roomLayout.js";
+import { clockFinish, clockTexture } from "../three/clockFaces.js";
+import { itemBox, itemPose, ROOM_SIZES, wallHeightOf } from "./roomLayout.js";
 
 // The `kind: "room"` scene graph (issue #130): a dollhouse room with its
 // front wall taken away. Walls and floor come from the room's `walls` looks
@@ -27,8 +29,8 @@ const DAYLIGHT = { fill: 2.2, key: 2 };
 // Lamps fall off with distance (decay 1): this scales an intensity so a
 // lamp has it at about this many units away.
 const LAMP_REACH = 250;
-const BULB = 12; // units across
-const BULB_OFF = "#44403c";
+// How bright a switched-on bulb's own glyph glows, apart from the light it casts.
+const BULB_ON = 2;
 
 /**
  * Builds a room from its scene data (`room`: { size, walls, ambient, lights,
@@ -48,11 +50,14 @@ export function createRoomScene(THREE, kit, { room, butt: buttAt, theme }) {
 
     const { w: width, d: depth } = room.size;
     const look = roomLook(room.walls);
+    // Walls are sized from the framed width, so a long hall isn't a tall one.
+    const height = wallHeightOf(room);
+    const span = height * 2;
 
     // --- Light ---------------------------------------------------------------
 
-    const ambient = room.ambient ?? 1;
     const daylight = roomDaylight(theme);
+    const ambient = (room.ambient ?? 1) * (daylight.dim ?? 1);
     made.add(
         new THREE.HemisphereLight(
             daylight.sky,
@@ -68,14 +73,19 @@ export function createRoomScene(THREE, kit, { room, butt: buttAt, theme }) {
     key.shadow.mapSize.set(SHADOW_MAP, SHADOW_MAP);
     key.shadow.bias = -0.0005;
     key.shadow.normalBias = 0.5;
-    key.position.set(width * 0.3, width, depth + width);
-    key.target.position.set(width / 2, 0, depth / 2);
+    // Aimed at wherever the camera is looking, from the same angle a room
+    // the size of the frame would have: a long hall isn't lit from a mile up.
+    function aimLight(x) {
+        key.position.set(x - span * 0.2, span, depth + span);
+        key.target.position.set(x, 0, depth / 2);
+    }
+    aimLight(width / 2);
     made.add(key, key.target);
 
-    // The room's lamps, each with a bulb that glows while it's on. Off is
-    // no light rather than a hidden one: the number of lights is part of
-    // every lit material's shader, so hiding one would recompile them all.
-    const bulbGeometry = new THREE.SphereGeometry(BULB / 2, 12, 8);
+    // The room's lamps. Off is no light rather than a hidden one: the
+    // number of lights is part of every lit material's shader, so hiding
+    // one would recompile them all. A toy that switches a lamp is the
+    // bulb, so the light is moved onto that glyph (below).
     const lamps = (room.lights ?? []).map((data) => {
         const intensity = data.intensity * LAMP_REACH;
         const light = new THREE.PointLight(
@@ -85,26 +95,29 @@ export function createRoomScene(THREE, kit, { room, butt: buttAt, theme }) {
             1
         );
         light.position.set(data.x, data.y, data.z);
-        // Unlit, so it shows its colour whatever the light.
-        const bulb = new THREE.Mesh(
-            bulbGeometry,
-            new THREE.MeshBasicMaterial({ color: data.color })
-        );
-        bulb.position.copy(light.position);
-        made.add(light, bulb);
+        made.add(light);
         return {
             id: data.id,
             light,
-            bulb,
             color: data.color,
             intensity,
             on: true,
+            bulb: null,
         };
     });
+    const bulbs = [];
 
     function showLamp(lamp) {
         lamp.light.intensity = lamp.on ? lamp.intensity : 0;
-        lamp.bulb.material.color.set(lamp.on ? lamp.color : BULB_OFF);
+        if (lamp.bulb) lamp.bulb.emissiveIntensity = lamp.on ? BULB_ON : 0;
+    }
+
+    function glyphOf(puppet) {
+        let mesh = null;
+        puppet.body.traverse((node) => {
+            if (node.isMesh) mesh = node;
+        });
+        return mesh;
     }
 
     // --- Box -----------------------------------------------------------------
@@ -138,8 +151,6 @@ export function createRoomScene(THREE, kit, { room, butt: buttAt, theme }) {
     floor.rotation.x = -Math.PI / 2;
     made.add(floor);
 
-    // The walls: their height is set by the room, so they're built once.
-    const height = wallHeightOf(room);
     const sides = lookMaterial(THREE, look.sides, depth, height);
     made.add(
         plane(lookMaterial(THREE, look.back, width, height), width, height, [
@@ -161,7 +172,20 @@ export function createRoomScene(THREE, kit, { room, butt: buttAt, theme }) {
         trimBox([6, CEILING_EDGE, depth], [width - 3, height, depth / 2])
     );
 
-    made.add(trimBox([width, SKIRTING, 4], [width / 2, SKIRTING / 2, 2]));
+    made.add(
+        trimBox([width, SKIRTING, 4], [width / 2, SKIRTING / 2, 2]),
+        trimBox([4, SKIRTING, depth], [2, SKIRTING / 2, depth / 2]),
+        trimBox([4, SKIRTING, depth], [width - 2, SKIRTING / 2, depth / 2])
+    );
+
+    // The season's decorations on the back wall (garlands, cobwebs), hung
+    // by their middles. They never move, so they aren't ticked.
+    const decorations = roomDecorations(theme).map((d) => {
+        const puppet = kit.emojiMesh(d.emoji, { size: d.size, shadows: false });
+        puppet.group.position.set(d.u * width, d.v * height - d.size / 2, 4);
+        scene.add(puppet.group);
+        return puppet;
+    });
 
     // --- Things in the room and the Butt -------------------------------------
 
@@ -172,11 +196,32 @@ export function createRoomScene(THREE, kit, { room, butt: buttAt, theme }) {
         const shadows = !((item.y ?? 0) > 0);
         const puppet = item.cast
             ? kit.castMesh(item.cast, { size, shadows })
-            : // A prop can play any move.
-              kit.emojiMesh(item.emoji, { size, shadows, moves: CAST_MOVES });
+            : item.face
+              ? kit.paintedMesh(clockTexture(THREE, item.face), {
+                    size,
+                    shadows,
+                    moves: CAST_MOVES,
+                    ...clockFinish(item.face),
+                })
+              : // A prop can play any move.
+                kit.emojiMesh(item.emoji, { size, shadows, moves: CAST_MOVES });
         if (item.cast) puppet.setMove("idle");
-        // Against the back wall, a hair in front of it.
-        puppet.group.position.set(item.x, item.y ?? 0, (item.z ?? 0) + 3);
+        const pose = itemPose(item);
+        puppet.group.position.set(pose.x, pose.y, pose.z);
+        puppet.group.rotation.y = pose.turn;
+        const lamp = lamps.find((entry) => entry.id === item.light);
+        if (lamp) {
+            const glyph = glyphOf(puppet);
+            const lit = glyph.material.clone();
+            lit.emissive = new THREE.Color(lamp.color);
+            lit.emissiveMap = lit.map;
+            lit.emissiveIntensity = BULB_ON;
+            glyph.material = lit;
+            glyph.name = "bulb";
+            lamp.bulb = lit;
+            bulbs.push(lit);
+            lamp.light.position.set(pose.x, pose.y + size / 2, pose.z);
+        }
         scene.add(puppet.group);
         things.set(item.id, puppet);
     }
@@ -197,8 +242,9 @@ export function createRoomScene(THREE, kit, { room, butt: buttAt, theme }) {
         camera.far = cam.z + depth;
         applyCamera(camera, cam);
 
+        aimLight(cam.x);
         const shadow = key.shadow.camera;
-        const reach = Math.max(width, depth);
+        const reach = Math.max(span, depth);
         shadow.left = -reach;
         shadow.right = reach;
         shadow.top = reach;
@@ -213,6 +259,7 @@ export function createRoomScene(THREE, kit, { room, butt: buttAt, theme }) {
      *   butt: { x, z, facing, walking },
      *   buttLift,   // units, the walking bob
      *   reduced,    // prefers reduced motion
+     *   camera,     // the view, when a long hall has scrolled
      * }
      */
     function sync(view, dt) {
@@ -221,6 +268,11 @@ export function createRoomScene(THREE, kit, { room, butt: buttAt, theme }) {
         if (view.reduced !== reduced) {
             reduced = view.reduced;
             for (const puppet of puppets) puppet.setReducedMotion(reduced);
+            changed = true;
+        }
+        if (view.camera && view.camera.x !== camera.position.x) {
+            applyCamera(camera, view.camera);
+            aimLight(view.camera.x);
             changed = true;
         }
         const at = butt.group.position;
@@ -256,7 +308,10 @@ export function createRoomScene(THREE, kit, { room, butt: buttAt, theme }) {
         },
         dispose() {
             disposeTree(made);
-            for (const puppet of puppets) puppet.dispose();
+            for (const material of bulbs) material.dispose();
+            for (const puppet of [...puppets, ...decorations]) {
+                puppet.dispose();
+            }
         },
     };
 }

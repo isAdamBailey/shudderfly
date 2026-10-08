@@ -84,9 +84,12 @@ export function useSceneRouter(scenes, { link = null, storage } = {}) {
     /** Moves to scene `id`, arriving at `spot`. False for an unknown id. */
     function goTo(id, { spot = null } = {}) {
         if (!exists(id)) return false;
-        // Going back where you came from unwinds rather than piling up.
+        // Going back where you came from unwinds rather than piling up, and
+        // going out through the exit (with nothing to unwind: a reload, a
+        // link) isn't a way back either, or the next exit would lead straight
+        // back in.
         if (history[history.length - 1] === id) history.pop();
-        else history.push(currentId.value);
+        else if (!leadsOut(id)) history.push(currentId.value);
         currentId.value = id;
         arrival.value = spot ? { spot } : {};
         remember();
@@ -98,6 +101,13 @@ export function useSceneRouter(scenes, { link = null, storage } = {}) {
      * renderer. */
     function stay(position) {
         arrival.value = position ? { position } : {};
+    }
+
+    /** Whether the current scene's `exit` door leads to scene `id`. */
+    function leadsOut(id) {
+        return (current.value?.interactables ?? []).some(
+            (item) => item.type === "door" && item.exit && item.to === id
+        );
     }
 
     /** The door that leaves the current scene: the one back to where you
