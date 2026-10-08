@@ -1,7 +1,11 @@
 import { TOOT_FOODS } from "@/constants/characters.js";
 import { approach, jitter } from "@/utils/math";
 import { worldToScreen } from "../composables/projection.js";
-import { applyCamera, disposeTree } from "../three/useWorldRenderer.js";
+import {
+    applyCamera,
+    canvasTexture,
+    disposeTree,
+} from "../three/useWorldRenderer.js";
 import {
     buildingBox,
     DRIFTER_DEPTH,
@@ -76,19 +80,6 @@ const MANHOLE = { duck: [60, 0.18, 170], time: 0.25 };
 const ROAD_TOOT = { period: 16, height: 26 };
 // Fireworks: a flash every few seconds, fading this fast.
 const FLASH = { every: 1.8, spread: 2.2, intensity: 2.2, decay: 3.5 };
-
-/** A w × h canvas drawn by `draw(ctx)` (skipped where there is no 2D
- * context, as in tests), as an sRGB texture. */
-function canvasTexture(THREE, w, h, draw) {
-    const el = document.createElement("canvas");
-    el.width = w;
-    el.height = h;
-    const ctx = el.getContext("2d");
-    if (ctx) draw(ctx);
-    const texture = new THREE.CanvasTexture(el);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    return texture;
-}
 
 /**
  * Builds the road. `landmarks` are useGamesWorld's ({ slug, x, side, cast,

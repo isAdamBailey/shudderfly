@@ -21,6 +21,12 @@ export const LANES = { far: 0, near: 1 };
 const PEACH_START_X = 260;
 const ROAD_MARGIN = 40; // the peach never stands closer than this to either end
 
+/** The walking bob as height above the ground, from its phase: 12 units
+ * of travel, never below 0, so a body never sinks into its own shadow. */
+export function bobLift(bob) {
+    return (1 - Math.cos(bob * 6)) * 6;
+}
+
 export function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
 }
@@ -201,7 +207,9 @@ export function useGamesWorld(games, callbacks = {}) {
             peach.facing = Math.sign(peach.vx);
             setPeachX(peach.x + peach.vx * dt);
         } else if (!crossing) {
-            // Nothing is moving, so an idle frame has no work to do.
+            // Nothing is moving: back down on the road, not hanging
+            // mid-bob, and nothing else to do.
+            peach.bob = 0;
             return;
         }
         if (isReducedMotion()) {

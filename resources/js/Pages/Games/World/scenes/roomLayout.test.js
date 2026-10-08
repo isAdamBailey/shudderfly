@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { worldToScreen } from "../composables/projection.js";
-import { arrivalSpot, roomLayout, ROOM_SIZES } from "./roomLayout.js";
+import { screenToGround, worldToScreen } from "../composables/projection.js";
+import { itemBox, roomLayout, ROOM_SIZES } from "./roomLayout.js";
 
 const hall = {
     size: { w: 900, d: 500 },
@@ -52,17 +52,47 @@ describe("roomLayout", () => {
     });
 });
 
-describe("arrivalSpot", () => {
-    it("stands the Butt in front of the door it came through", () => {
-        const at = arrivalSpot(hall, "front-door");
-
-        expect(at.x).toBe(450);
-        expect(at.z).toBeGreaterThan(0);
-        expect(at.z).toBeLessThanOrEqual(500);
+describe("itemBox", () => {
+    it("draws a door as a titled doorway", () => {
+        expect(itemBox({ type: "door" })).toEqual({
+            ...ROOM_SIZES.door,
+            titled: true,
+        });
     });
 
-    it("uses the spawn point otherwise", () => {
-        expect(arrivalSpot(hall, null)).toEqual({ x: 450, z: 330 });
-        expect(arrivalSpot(hall, "trapdoor")).toEqual({ x: 450, z: 330 });
+    it("draws anything else as a square, its size or the default", () => {
+        expect(itemBox({ type: "toy", size: 50 })).toEqual({
+            width: 50,
+            height: 50,
+            titled: false,
+        });
+        expect(itemBox({ type: "toy" }).height).toBe(ROOM_SIZES.toy);
     });
+
+    it("titles a game, or anything that asks", () => {
+        expect(itemBox({ type: "game" }).titled).toBe(true);
+        expect(itemBox({ type: "radio", titled: true }).titled).toBe(true);
+    });
+});
+
+describe("the room's floor and the screen", () => {
+    it.each(STAGES)(
+        "maps taps on a $w × $h stage back to the floor, corners included",
+        (stage) => {
+            const L = roomLayout(hall, stage);
+            const { w, d } = hall.size;
+            for (const point of [
+                { x: 0, z: 0 },
+                { x: w, z: 0 },
+                { x: 0, z: d },
+                { x: w, z: d },
+                { x: w / 2, z: d / 2 },
+            ]) {
+                const p = worldToScreen(L.camera, point);
+                const back = screenToGround(L.camera, p.x, p.y);
+                expect(back.x).toBeCloseTo(point.x, 6);
+                expect(back.z).toBeCloseTo(point.z, 6);
+            }
+        }
+    );
 });

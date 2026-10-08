@@ -68,6 +68,16 @@ describe("the cast registry", () => {
         expect(ids.sort()).toEqual(Object.keys(CAST).sort());
     });
 
+    it("matches the moves the server's toys may play", () => {
+        const php = read("app/Support/GamesWorld.php");
+        const moves = php
+            .match(/const MOVES = \[([^\]]*)\]/)[1]
+            .match(/'([a-z]+)'/g)
+            .map((move) => move.slice(1, -1));
+
+        expect(moves).toEqual(CAST_MOVES);
+    });
+
     it("names every character in every language", () => {
         for (const locale of ["en", "es", "fr"]) {
             const messages = read(`lang/${locale}/messages.php`);

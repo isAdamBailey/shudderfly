@@ -22,14 +22,21 @@ const FIT = { width: 0.94, floorRow: 0.95, top: 0.06 };
 export const ROOM_SIZES = {
     butt: 90,
     door: { width: 120, height: 210 },
+    toy: 80,
 };
+
+/** How tall a room's walls are, in world units: set by its width, so a
+ * room is the same shape on every stage. */
+export function wallHeightOf(room) {
+    return room.size.w * WALL_HEIGHT;
+}
 
 /** The room scene `room` ({ size: { w, d } }) on a stage `w` × `h` px:
  * { camera, wallHeight }. */
 export function roomLayout(room, { w, h }) {
     const width = room.size.w;
     const depth = room.size.d;
-    const wallHeight = width * WALL_HEIGHT;
+    const wallHeight = wallHeightOf(room);
     const eyeY = wallHeight * EYE;
     const focal = FOCAL * h;
 
@@ -54,14 +61,15 @@ export function roomLayout(room, { w, h }) {
     };
 }
 
-/** Where the Butt stands on arriving: in front of the interactable named by
- * `spot` (the door it came through), or at the room's spawn. */
-export function arrivalSpot(room, spot) {
-    const item = spot && room.interactables.find((i) => i.id === spot);
-    if (!item) return { ...room.spawn };
-    return {
-        x: item.x,
-        // Clear of the door, so it doesn't stand in front of it.
-        z: Math.min(room.size.d, (item.z ?? 0) + ROOM_SIZES.butt * 2),
-    };
+/** How an interactable is drawn and covered, in world units: { width,
+ * height } (its glyph is `height` tall) and whether its button carries an
+ * arched gold title, as the road's landmarks do. A door is a doorway, with
+ * its name over it; anything else is a `size` square (ROOM_SIZES.toy if it
+ * says nothing), titled if it leads somewhere (a game) or says `titled`. */
+export function itemBox(item) {
+    const titled =
+        item.titled ?? (item.type === "door" || item.type === "game");
+    if (item.type === "door") return { ...ROOM_SIZES.door, titled };
+    const size = item.size ?? ROOM_SIZES.toy;
+    return { width: size, height: size, titled };
 }

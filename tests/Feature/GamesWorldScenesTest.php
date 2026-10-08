@@ -92,13 +92,58 @@ class GamesWorldScenesTest extends TestCase
     {
         foreach (GamesWorld::definitions() as $sceneId => $scene) {
             // Games are named by GameController::games(), not by a key here.
+            $items = collect($scene['interactables'])->where('type', '!=', 'game');
             $keys = [
                 $scene['label'],
-                ...collect($scene['interactables'])->where('type', '!=', 'game')->pluck('label'),
+                ...collect(GamesWorld::TRANSLATED)->flatMap(fn ($field) => $items->pluck($field)->filter()),
             ];
             foreach ($keys as $key) {
                 foreach (['en', 'es', 'fr'] as $locale) {
                     $this->assertTrue(Lang::has($key, $locale, false), "{$sceneId}: {$key} missing in {$locale}");
+                }
+            }
+        }
+    }
+
+    public function test_rooms_are_built_from_known_looks_and_lights(): void
+    {
+        foreach (GamesWorld::definitions() as $sceneId => $scene) {
+            if ($scene['kind'] !== 'room') {
+                continue;
+            }
+            $this->assertContains($scene['walls']['back'], GamesWorld::WALLS, "{$sceneId} walls");
+            $this->assertContains($scene['walls']['sides'] ?? $scene['walls']['back'], GamesWorld::WALLS, "{$sceneId} sides");
+            $this->assertContains($scene['walls']['floor'], GamesWorld::FLOORS, "{$sceneId} floor");
+            $this->assertGreaterThanOrEqual(0, $scene['ambient'], "{$sceneId} ambient");
+            $this->assertLessThanOrEqual(1, $scene['ambient'], "{$sceneId} ambient");
+
+            $lights = array_column($scene['lights'] ?? [], 'id');
+            $this->assertSame(array_unique($lights), $lights, "{$sceneId} light ids");
+            foreach ($scene['interactables'] as $item) {
+                $where = "{$sceneId}.{$item['id']}";
+                $this->assertGreaterThanOrEqual(0, $item['x'], $where);
+                $this->assertLessThanOrEqual($scene['size']['w'], $item['x'], $where);
+                $this->assertGreaterThanOrEqual(0, $item['z'], $where);
+                $this->assertLessThanOrEqual($scene['size']['d'], $item['z'], $where);
+                if (isset($item['light'])) {
+                    $this->assertContains($item['light'], $lights, "{$where} switches no light");
+                }
+            }
+        }
+    }
+
+    public function test_toys_play_known_moves_and_toot_as_the_cast(): void
+    {
+        foreach (GamesWorld::definitions() as $sceneId => $scene) {
+            foreach (collect($scene['interactables'])->where('type', 'toy') as $toy) {
+                $where = "{$sceneId}.{$toy['id']}";
+                // Drawn as a character or as a prop, one or the other.
+                $this->assertTrue(isset($toy['cast']) xor isset($toy['emoji']), $where);
+                if (isset($toy['move'])) {
+                    $this->assertContains($toy['move'], GamesWorld::MOVES, $where);
+                }
+                if (isset($toy['toot'])) {
+                    $this->assertContains($toy['toot'], GamesWorld::CAST, $where);
                 }
             }
         }
