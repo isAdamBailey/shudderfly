@@ -1,4 +1,5 @@
 <script setup>
+import { usePage } from "@inertiajs/vue3";
 import { useTranslations } from "@/composables/useTranslations";
 import {
     computed,
@@ -13,6 +14,7 @@ import Road3D from "./scenes/Road3D.vue";
 import RoadScene from "./scenes/RoadScene.vue";
 import { useSceneRouter } from "./composables/useSceneRouter.js";
 import { activate } from "./interactions/index.js";
+import { worldTheme } from "./three/themes.js";
 import { supportsWebGL, useWorldRenderer } from "./three/useWorldRenderer.js";
 
 // The stage: the box the world is drawn in, and everything that isn't any one
@@ -25,6 +27,13 @@ const props = defineProps({
 });
 
 const { t } = useTranslations();
+const page = usePage();
+
+// The road's sky and grass behind the stage while three loads.
+const loadingBackground = computed(() => {
+    const look = worldTheme(page.props.theme);
+    return `linear-gradient(${look.skyTop}, ${look.skyBottom} 60%, ${look.grass} 60%)`;
+});
 
 // Scene kind → its renderer, on the WebGL canvas or, where WebGL can't run,
 // in the DOM. Every kind needs a WebGL one; the DOM one is the fallback.
@@ -210,7 +219,10 @@ const stage = { beginGesture, resetScroll, renderer };
     <div
         ref="stageEl"
         class="stage"
-        :style="stageHeight ? { height: `${stageHeight}px` } : null"
+        :style="{
+            height: stageHeight ? `${stageHeight}px` : null,
+            background: loadingBackground,
+        }"
         tabindex="0"
         :aria-label="t('games.world.stage_aria')"
         @keydown="onKeydown"
@@ -252,8 +264,6 @@ const stage = { beginGesture, resetScroll, renderer };
     touch-action: none;
     user-select: none;
     outline: none;
-    /* The flat road's sky and grass, while three loads. */
-    background: linear-gradient(#7dd3fc, #dff6ff 60%, #4ade80 60%);
 }
 
 .world-canvas {

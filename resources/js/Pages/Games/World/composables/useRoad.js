@@ -11,10 +11,12 @@ import { computed, nextTick, onMounted, shallowRef, watch } from "vue";
 import { clamp, useGamesWorld } from "./useGamesWorld.js";
 import { useIdlerPhysics } from "./useIdlerPhysics.js";
 
-export const IDLER_SETBACK = 260; // px before its neighbouring landmark
+const IDLER_SETBACK = 260; // px before its neighbouring landmark
 const IDLER_EXCITE_RADIUS = 180;
-// How many rows of roadside idlers there are, nearest the horizon first.
-export const IDLER_ROWS = 3;
+// How many rows of roadside idlers there are, nearest the horizon first
+// (each drawer has a depth per row: RoadScene.vue's IDLER_DEPTHS,
+// roadLayout's ROWS.idlers).
+const IDLER_ROWS = 3;
 // How close to the Butt a food has to land to make it toot.
 const FEED_RADIUS = 70; // px
 
@@ -341,7 +343,6 @@ export function useRoad(props, emit, options) {
         landmarks,
         peach,
         camera,
-        state,
         nearestLandmark,
         reduced,
         idlers,

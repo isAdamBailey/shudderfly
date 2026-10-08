@@ -73,7 +73,8 @@ const {
         y: (layout.value?.sizes.butt ?? 0) / 2 + peachLift.value,
     }),
     // Idlers stand further back, where a screen px is more than a unit.
-    idlerDxToWorld: (idler, dx) => dx / idlerScale(idler),
+    idlerDxToWorld: (idler, dx) =>
+        dx * (layout.value?.idlerPerPx(idler.row) ?? 1),
     ownLoop: false,
     peekTarget: sceneEl,
 });
@@ -84,11 +85,6 @@ const view = computed(() =>
         ? roadCamera(layout.value, camera.x, peekX.value, peekY.value)
         : null
 );
-
-function idlerScale(idler) {
-    const L = layout.value;
-    return L ? L.scaleAt(L.z.idlers[idler.row]) : 1;
-}
 
 // --- Scene graph -----------------------------------------------------------
 
@@ -182,7 +178,7 @@ const idlerSpots = computed(() => {
     const L = layout.value;
     if (!view.value) return [];
     return idlers.value.map((idler) => {
-        const perPx = 1 / idlerScale(idler);
+        const perPx = L.idlerPerPx(idler.row);
         return {
             idler,
             ...spot(
@@ -254,8 +250,7 @@ defineExpose({ ...api, setBounds });
                 class="landmark"
                 :x="landmarkSpots[landmark.slug].x"
                 :y="landmarkSpots[landmark.slug].y"
-                :width="landmarkSpots[landmark.slug].size"
-                :height="landmarkSpots[landmark.slug].size"
+                :size="landmarkSpots[landmark.slug].size"
                 :label="t('games.world.landmark_aria', { game: landmark.name })"
                 @focus="onLandmarkFocus(landmark.slug)"
                 @click="world.openConfirm(landmark.slug)"
@@ -302,18 +297,15 @@ defineExpose({ ...api, setBounds });
     will-change: transform;
 }
 
-.idler {
-    /* Draggable and throwable for fun; dropping one has no effect on the
-       game, hence aria-hidden despite being interactive. */
+/* The idlers are draggable and throwable for fun; dropping one has no
+   effect on the game, hence aria-hidden despite being interactive. */
+.idler,
+.peach {
     cursor: grab;
 }
 
 .idler:active,
 .peach:active {
     cursor: grabbing;
-}
-
-.peach {
-    cursor: grab;
 }
 </style>

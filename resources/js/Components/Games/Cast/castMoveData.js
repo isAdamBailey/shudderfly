@@ -204,11 +204,28 @@ export const IDENTITY_POSE = Object.freeze({
 
 // --- Sampling (castMesh) ----------------------------------------------------
 
-/** The frames flattened to [{ at, value }], sorted by offset. */
+// The frames flattened to [{ at, value }], sorted by offset, with poses'
+// identity defaults filled in: made once per frame list, since castMesh
+// samples every animating puppet every frame.
+const flattened = new WeakMap();
 function keyframes(frames) {
-    return frames
-        .flatMap(([offsets, value]) => offsets.map((at) => ({ at, value })))
-        .sort((a, b) => a.at - b.at);
+    if (!flattened.has(frames)) {
+        flattened.set(
+            frames,
+            frames
+                .flatMap(([offsets, value]) =>
+                    offsets.map((at) => ({
+                        at,
+                        value:
+                            typeof value === "number"
+                                ? value
+                                : { ...IDENTITY_POSE, ...value },
+                    }))
+                )
+                .sort((a, b) => a.at - b.at)
+        );
+    }
+    return flattened.get(frames);
 }
 
 // A CSS cubic-bezier timing function: solve x(t) = p for t, return y(t).
@@ -256,15 +273,15 @@ function interpolate(frames, p, ease, mix) {
 
 const lerp = (a, b, k) => a + (b - a) * k;
 
+// Poses here are always whole (keyframes() fills them in).
 function mixPose(a, b, k) {
-    const pa = { ...IDENTITY_POSE, ...a };
-    const pb = { ...IDENTITY_POSE, ...b };
     return {
-        tx: lerp(pa.tx, pb.tx, k),
-        ty: lerp(pa.ty, pb.ty, k),
-        rot: lerp(pa.rot, pb.rot, k),
-        sx: lerp(pa.sx, pb.sx, k),
-        sy: lerp(pa.sy, pb.sy, k),
+        tx: lerp(a.tx, b.tx, k),
+        ty: lerp(a.ty, b.ty, k),
+        rot: lerp(a.rot, b.rot, k),
+        sx: lerp(a.sx, b.sx, k),
+        sy: lerp(a.sy, b.sy, k),
+        shadow: 1,
     };
 }
 
@@ -277,10 +294,9 @@ export function sampleMove(move, seconds) {
     const raw = seconds / move.duration;
     const p = move.loop ? ((raw % 1) + 1) % 1 : Math.min(Math.max(raw, 0), 1);
     const ease = easingFn(move.easing);
-    return {
-        ...interpolate(move.body, p, ease, mixPose),
-        shadow: move.shadow ? interpolate(move.shadow, p, ease, lerp) : 1,
-    };
+    const pose = interpolate(move.body, p, ease, mixPose);
+    if (move.shadow) pose.shadow = interpolate(move.shadow, p, ease, lerp);
+    return pose;
 }
 
 /** A move's pose under reduced motion. */

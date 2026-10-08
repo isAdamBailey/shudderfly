@@ -1,6 +1,5 @@
 import { clamp } from "../composables/useGamesWorld.js";
 import { groundZAtRow } from "../composables/projection.js";
-import { IDLER_ROWS } from "../composables/useRoad.js";
 
 /**
  * Where everything on the WebGL road goes, as pure numbers (issue #130). The
@@ -60,7 +59,7 @@ export function roadLayout({ w, h, vmin }) {
     const z = {
         horizon: zAt(ROWS.horizon),
         landmark: zAt(ROWS.landmark),
-        idlers: ROWS.idlers.slice(0, IDLER_ROWS).map(zAt),
+        idlers: ROWS.idlers.map(zAt),
         butt: 0,
         roadNear: zAt(ROWS.roadNear),
         ridge: focal * (1 - RIDGE_DEPTH),
@@ -75,7 +74,11 @@ export function roadLayout({ w, h, vmin }) {
         landmark: screenSize(SIZES.landmark, vmin) / scaleAt(z.landmark),
     };
 
-    return { w, h, focal, eyeRow, cameraY, z, sizes, scaleAt };
+    /** World units per screen px for an idler in `row`: useRoad hands the
+     * idlers' toss offsets over in screen px. */
+    const idlerPerPx = (row) => 1 / scaleAt(z.idlers[row]);
+
+    return { w, h, focal, eyeRow, cameraY, z, sizes, scaleAt, idlerPerPx };
 }
 
 /** The projection.js camera for the road: following useGamesWorld's

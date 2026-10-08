@@ -1,3 +1,4 @@
+import { clamp } from "../composables/useGamesWorld.js";
 import { applyCamera, disposeTree } from "../three/useWorldRenderer.js";
 import { DRIFTER_DEPTH, DRIFTERS, ROWS, RIDGE_DEPTH } from "./roadLayout.js";
 
@@ -29,11 +30,17 @@ const NEAR_EASE = 0.18; // s, as the flat road's transition
 const SHADOW_MAP = 1024;
 const LIGHT_DIRECTION = [-0.35, 1, 0.75]; // from above, in front, a bit left
 
-function canvas(w, h) {
+/** A w × h canvas drawn by `draw(ctx)` (skipped where there is no 2D
+ * context, as in tests), as an sRGB texture. */
+function canvasTexture(THREE, w, h, draw) {
     const el = document.createElement("canvas");
     el.width = w;
     el.height = h;
-    return el;
+    const ctx = el.getContext("2d");
+    if (ctx) draw(ctx);
+    const texture = new THREE.CanvasTexture(el);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
 }
 
 /**
@@ -52,23 +59,15 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
 
     // --- Sky -----------------------------------------------------------------
 
-    function skyTexture() {
-        const el = canvas(2, 256);
-        const ctx = el.getContext("2d");
-        if (ctx) {
-            const g = ctx.createLinearGradient(0, 0, 0, 256);
-            g.addColorStop(0, theme.skyTop);
-            g.addColorStop(ROWS.horizon, theme.skyBottom);
-            g.addColorStop(ROWS.horizon, theme.grass);
-            g.addColorStop(1, theme.grass);
-            ctx.fillStyle = g;
-            ctx.fillRect(0, 0, 2, 256);
-        }
-        const texture = new THREE.CanvasTexture(el);
-        texture.colorSpace = THREE.SRGBColorSpace;
-        return texture;
-    }
-    const sky = skyTexture();
+    const sky = canvasTexture(THREE, 2, 256, (ctx) => {
+        const g = ctx.createLinearGradient(0, 0, 0, 256);
+        g.addColorStop(0, theme.skyTop);
+        g.addColorStop(ROWS.horizon, theme.skyBottom);
+        g.addColorStop(ROWS.horizon, theme.grass);
+        g.addColorStop(1, theme.grass);
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, 2, 256);
+    });
     scene.background = sky;
 
     // --- Light -------------------------------------------------------------
@@ -96,9 +95,7 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
     function ridgeTexture() {
         const { tile, front, back, skirt, viewBox } = RIDGE;
         const height = front.height + skirt;
-        const el = canvas(tile, height);
-        const ctx = el.getContext("2d");
-        if (ctx && typeof Path2D !== "undefined") {
+        const texture = canvasTexture(THREE, tile, height, (ctx) => {
             const draw = (path, layer, color) => {
                 ctx.fillStyle = color;
                 for (const shift of [layer.offset - tile, layer.offset]) {
@@ -113,9 +110,7 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
             draw(RIDGE_PATHS.front, front, theme.hill ?? theme.ridgeNear);
             ctx.fillStyle = theme.hill ?? theme.ridgeNear;
             ctx.fillRect(0, front.height, tile, skirt);
-        }
-        const texture = new THREE.CanvasTexture(el);
-        texture.colorSpace = THREE.SRGBColorSpace;
+        });
         texture.wrapS = THREE.RepeatWrapping;
         return texture;
     }
@@ -150,9 +145,7 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
     }
 
     function roadTexture(dashRow) {
-        const el = canvas(ROAD_DASH.period, 128);
-        const ctx = el.getContext("2d");
-        if (ctx) {
+        const texture = canvasTexture(THREE, ROAD_DASH.period, 128, (ctx) => {
             ctx.fillStyle = theme.road;
             ctx.fillRect(0, 0, ROAD_DASH.period, 128);
             // The far edge is the top of the texture.
@@ -160,9 +153,7 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
             ctx.fillRect(0, 0, ROAD_DASH.period, 6);
             ctx.fillStyle = theme.roadLine;
             ctx.fillRect(0, dashRow * 128 - 2, ROAD_DASH.dash, 4);
-        }
-        const texture = new THREE.CanvasTexture(el);
-        texture.colorSpace = THREE.SRGBColorSpace;
+        });
         texture.wrapS = THREE.RepeatWrapping;
         texture.anisotropy = 8;
         return texture;
@@ -217,6 +208,8 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
     // --- Layout ------------------------------------------------------------
 
     let L = null;
+    let ridgeTile = 0;
+    let reduced = false; // what the puppets were last told
     let driftTime = 0;
     let lastCamera = null;
 
@@ -251,7 +244,7 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
         ridge.scale.set(tile * tiles, height, 1);
         ridge.position.set(0, bottom + height / 2, z.ridge);
         ridge.material.map.repeat.set(tiles, 1);
-        ridge.userData.tile = tile;
+        ridgeTile = tile;
 
         landmarkPuppets.forEach(({ x, puppet }) => {
             puppet.set({ size: sizes.landmark });
@@ -273,6 +266,9 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
         shadow.far = focal * 4;
         shadow.updateProjectionMatrix();
 
+        for (const { puppet } of drifters) {
+            puppet.set({ size: DRIFTERS.size * DRIFTER_DEPTH });
+        }
         placeDrifters();
         lastCamera = null;
     }
@@ -307,13 +303,16 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
         let changed = false;
 
         if (!sameCamera(view.camera, lastCamera)) {
-            lastCamera = { ...view.camera };
+            lastCamera = Object.assign(lastCamera ?? {}, view.camera);
             applyCamera(camera, view.camera);
             placeCameraFollowers(view.camera);
             changed = true;
         }
 
-        for (const puppet of puppets) puppet.setReducedMotion(view.reduced);
+        if (view.reduced !== reduced) {
+            reduced = view.reduced;
+            for (const puppet of puppets) puppet.setReducedMotion(reduced);
+        }
 
         butt.group.position.set(view.peach.x, 0, 0);
         butt.set({
@@ -326,7 +325,7 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
             if (!entry) return;
             // The flat road's px, at this idler's depth.
             const z = L.z.idlers[entry.row];
-            const perPx = 1 / L.scaleAt(z);
+            const perPx = L.idlerPerPx(entry.row);
             entry.puppet.group.position.set(idler.x + idler.dx * perPx, 0, z);
             entry.puppet.set({ lift: idler.lift * perPx, tilt: idler.tilt });
             entry.puppet.setMove(idler.excited ? "excited" : "idle");
@@ -337,10 +336,7 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
                 entry.slug === view.near || entry.slug === view.hovered ? 1 : 0;
             if (entry.grow !== target) {
                 const step = view.reduced ? 1 : dt / NEAR_EASE;
-                entry.grow =
-                    target > entry.grow
-                        ? Math.min(target, entry.grow + step)
-                        : Math.max(target, entry.grow - step);
+                entry.grow += clamp(target - entry.grow, -step, step);
                 const s = 1 + (NEAR_SCALE - 1) * entry.grow;
                 entry.puppet.group.scale.setScalar(s);
                 entry.puppet.set({
@@ -364,15 +360,15 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
      * edge; the light and its shadow box follow, snapped to shadow texels so
      * shadows don't shimmer as the camera walks. */
     function placeCameraFollowers(cam) {
-        const tile = ridge.userData.tile;
-        ridge.position.x = Math.round(cam.x / tile) * tile;
+        ridge.position.x = Math.round(cam.x / ridgeTile) * ridgeTile;
 
         const shadow = key.shadow.camera;
         const texel = (shadow.right - shadow.left) / SHADOW_MAP;
         const x = Math.round(cam.x / texel) * texel;
-        const target = new THREE.Vector3(x, 0, L.z.idlers[1]);
-        key.target.position.copy(target);
-        key.position.copy(target).addScaledVector(lightDir, L.focal * 2);
+        key.target.position.set(x, 0, L.z.idlers[1]);
+        key.position
+            .copy(key.target.position)
+            .addScaledVector(lightDir, L.focal * 2);
     }
 
     /** The drifters hang in the sky where the flat road's clouds did,
@@ -389,7 +385,6 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
                 (DRIFTERS.drift * (1 - Math.cos(along * Math.PI))) / 2;
             const left = i * 0.23 * w - 0.06 * w + drift;
             const feetRow = (0.03 + i * 0.07) * h + DRIFTERS.size;
-            puppet.set({ size: DRIFTERS.size * perPx });
             puppet.group.position.set(
                 (left + DRIFTERS.size / 2 - w / 2) * perPx,
                 (eyeRow - feetRow) * perPx,

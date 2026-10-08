@@ -11,10 +11,9 @@ const props = defineProps({
     /** Screen px of the drawn thing's feet (bottom centre). */
     x: { type: Number, required: true },
     y: { type: Number, required: true },
-    /** The drawn thing's size, px. The button is never smaller than a tap
-     * target. */
-    width: { type: Number, required: true },
-    height: { type: Number, required: true },
+    /** The drawn thing's size (it is square), px. The button is never
+     * smaller than a tap target. */
+    size: { type: Number, required: true },
     label: { type: String, required: true },
 });
 
@@ -22,18 +21,16 @@ const MIN_TARGET = 48; // px
 
 const el = ref(null);
 
-const box = computed(() => ({
-    w: Math.max(MIN_TARGET, props.width),
-    h: Math.max(MIN_TARGET, props.height),
-}));
-
-const style = computed(() => ({
-    width: `${box.value.w}px`,
-    height: `${box.value.h}px`,
-    transform: `translate3d(${props.x - box.value.w / 2}px, ${
-        props.y - box.value.h
-    }px, 0)`,
-}));
+const style = computed(() => {
+    const size = Math.max(MIN_TARGET, props.size);
+    return {
+        width: `${size}px`,
+        height: `${size}px`,
+        transform: `translate3d(${props.x - size / 2}px, ${
+            props.y - size
+        }px, 0)`,
+    };
+});
 
 defineExpose({
     focus: (options) => el.value?.focus(options),

@@ -33,6 +33,8 @@ export const EMOJI_FONT =
 // As CastMember: the contact shadow is at 1/2 size this many px up.
 const SHADOW_FALLOFF = 120;
 const DEG = Math.PI / 180;
+const SETTABLE = ["size", "lift", "tilt", "facing"];
+const REST = Object.freeze({ ...IDENTITY_POSE, shadow: 1 });
 
 function defaultCanvas(px) {
     const canvas = document.createElement("canvas");
@@ -218,7 +220,6 @@ export function createCastKit(THREE, { createCanvas = defaultCanvas } = {}) {
             // The posed body, under the lift, tilt and squash: what a move
             // moves. A DOM overlay (the Face) can follow it.
             body,
-            size,
             domOverlay,
 
             /** The ongoing move, or null to stand still. A move the character
@@ -244,7 +245,7 @@ export function createCastKit(THREE, { createCanvas = defaultCanvas } = {}) {
              * facing ("left" | "right") }; anything left out is kept. */
             set(props) {
                 const before = state.lift;
-                for (const key of ["size", "lift", "tilt", "facing"]) {
+                for (const key of SETTABLE) {
                     if (props[key] !== undefined && props[key] !== state[key]) {
                         state[key] = props[key];
                         state.dirty = true;
@@ -298,7 +299,7 @@ export function createCastKit(THREE, { createCanvas = defaultCanvas } = {}) {
                     pose = sampleMove(ongoing, state.moveTime);
                     animating = true;
                 } else {
-                    pose = { ...IDENTITY_POSE, shadow: 1 };
+                    pose = REST;
                 }
                 const origin = (
                     state.oneShot ? CAST_MOVE_DATA[state.oneShot] : ongoing
