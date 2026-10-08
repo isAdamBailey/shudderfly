@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { Link } from "@inertiajs/vue3";
+import { PIZZA, POOP } from "@/constants/characters.js";
 import { SVG_WIDTH } from "../composables/useGameState.js";
 import PepperoniGlyph from "./PepperoniGlyph.vue";
 import { useTranslations } from "@/composables/useTranslations";
@@ -339,7 +340,7 @@ onUnmounted(() => {
                 :font-size="poopRadius * 2.2"
                 class="poop-sprite"
             >
-                💩
+                {{ POOP }}
             </text>
 
             <g
@@ -368,7 +369,7 @@ onUnmounted(() => {
                     dominant-baseline="central"
                     class="digest-slice digest-slice-a"
                 >
-                    🍕
+                    {{ PIZZA }}
                 </text>
                 <text
                     :x="digestIntro.stomachCx"
@@ -377,7 +378,7 @@ onUnmounted(() => {
                     dominant-baseline="central"
                     class="digest-slice digest-slice-b"
                 >
-                    🍕
+                    {{ PIZZA }}
                 </text>
                 <text
                     :x="digestIntro.stomachCx"
@@ -386,7 +387,7 @@ onUnmounted(() => {
                     dominant-baseline="central"
                     class="digest-slice digest-slice-c"
                 >
-                    🍕
+                    {{ PIZZA }}
                 </text>
                 <g
                     :transform="`translate(${digestIntro.stomachCx}, ${digestIntro.stomachCy})`"
@@ -418,7 +419,7 @@ onUnmounted(() => {
                         }px`,
                     }"
                 >
-                    💩
+                    {{ POOP }}
                 </text>
             </g>
         </svg>

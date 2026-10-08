@@ -13,5 +13,5 @@ export const TOOT_FOODS = [
     { type: "strawberry", emoji: "🍓", pitch: 1.1 },
     { type: "taco", emoji: "🌮", pitch: 1.0 },
     { type: "apple", emoji: "🍎", pitch: 0.92 },
-    { type: "sprout", emoji: "🥦", pitch: 0.78 },
+    { type: "sprout", emoji: SPROUT, pitch: 0.78 },
 ];

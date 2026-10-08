@@ -1,6 +1,6 @@
 <script setup>
 import GameEndScreen from "@/Components/Games/GameEndScreen.vue";
-import { TOILET } from "@/constants/characters.js";
+import { POOP, TOILET } from "@/constants/characters.js";
 import { useAutoStartGame } from "@/composables/useAutoStartGame";
 import { useGameViewportLock } from "@/composables/useGameViewportLock";
 import { getAudioContext, unlockAudio } from "@/composables/useAudioContext";
@@ -477,7 +477,7 @@ useAutoStartGame(startGame);
                     @mousedown="startDrag"
                     @touchstart.prevent="startDrag"
                 >
-                    💩
+                    {{ POOP }}
                 </div>
 
                 <!-- ── splash effect ─────────────────────────────── -->
