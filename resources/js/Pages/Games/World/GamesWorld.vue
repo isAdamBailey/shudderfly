@@ -145,6 +145,13 @@ function onVisibilityChange() {
     }
 }
 
+/** The GPU took the context back (memory pressure, a backgrounded phone).
+ * Rather than a blank canvas under live buttons, carry on in the DOM. */
+function onContextLost() {
+    renderer.dispose();
+    mode.value = "dom";
+}
+
 function onWindowBlur() {
     sceneRef.value?.interrupt();
 }
@@ -233,6 +240,7 @@ const stage = { beginGesture, resetScroll, renderer };
             ref="canvasEl"
             class="world-canvas"
             aria-hidden="true"
+            @webglcontextlost="onContextLost"
         ></canvas>
 
         <component

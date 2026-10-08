@@ -10,7 +10,13 @@ let threeModule = null;
 /** `three`, loaded on first use. Only the Games World imports it, and only
  * through here, so no other page pays for it. */
 export function loadThree() {
-    if (!threeModule) threeModule = import("three");
+    if (!threeModule) {
+        threeModule = import("three").catch((error) => {
+            // Not remembered: the next visit tries the download again.
+            threeModule = null;
+            throw error;
+        });
+    }
     return threeModule;
 }
 
@@ -113,7 +119,8 @@ export function useWorldRenderer() {
             renderer.shadowMap.type = THREE.PCFShadowMap;
             handle.three = THREE;
             handle.kit = createCastKit(THREE);
-            start();
+            // Hidden while three loaded: resume() starts it.
+            if (!paused) start();
             return true;
         },
 

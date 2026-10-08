@@ -96,6 +96,7 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
         const { tile, front, back, skirt, viewBox } = RIDGE;
         const height = front.height + skirt;
         const texture = canvasTexture(THREE, tile, height, (ctx) => {
+            if (typeof Path2D === "undefined") return;
             const draw = (path, layer, color) => {
                 ctx.fillStyle = color;
                 for (const shift of [layer.offset - tile, layer.offset]) {
@@ -298,6 +299,16 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
      *   reduced,             // prefers reduced motion
      * }
      */
+    /** Stands a puppet at (x, z); true if that moved it. Puppets only
+     * report their own moves, and under reduced motion walking is the only
+     * thing that changes a frame. */
+    function place(puppet, x, z) {
+        const at = puppet.group.position;
+        if (at.x === x && at.z === z) return false;
+        at.set(x, 0, z);
+        return true;
+    }
+
     function sync(view, dt) {
         if (!L) return false;
         let changed = false;
@@ -314,7 +325,7 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
             for (const puppet of puppets) puppet.setReducedMotion(reduced);
         }
 
-        butt.group.position.set(view.peach.x, 0, 0);
+        changed = place(butt, view.peach.x, 0) || changed;
         butt.set({
             lift: view.peachLift,
             facing: view.peach.facing < 0 ? "left" : "right",
@@ -326,7 +337,8 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
             // The flat road's px, at this idler's depth.
             const z = L.z.idlers[entry.row];
             const perPx = L.idlerPerPx(entry.row);
-            entry.puppet.group.position.set(idler.x + idler.dx * perPx, 0, z);
+            changed =
+                place(entry.puppet, idler.x + idler.dx * perPx, z) || changed;
             entry.puppet.set({ lift: idler.lift * perPx, tilt: idler.tilt });
             entry.puppet.setMove(idler.excited ? "excited" : "idle");
         });

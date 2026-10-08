@@ -194,6 +194,17 @@ describe("GamesWorld stage", () => {
         expect(wrapper.get(".peach").attributes("role")).toBe("img");
     });
 
+    it("carries on in the DOM if the WebGL context is lost", async () => {
+        wrapper = await mountWorld();
+        const gl = fake.renderers[0];
+
+        await wrapper.get("canvas").trigger("webglcontextlost");
+
+        expect(wrapper.find(".road-scene").exists()).toBe(true);
+        expect(wrapper.find("canvas").exists()).toBe(false);
+        expect(gl.dispose).toHaveBeenCalled();
+    });
+
     it("walks the Butt to a landmark focused from the keyboard, and opens its card", async () => {
         wrapper = await mountWorld();
         const peach = wrapper.get(".peach");

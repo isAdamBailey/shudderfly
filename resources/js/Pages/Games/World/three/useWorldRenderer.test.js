@@ -161,6 +161,21 @@ describe("useWorldRenderer", () => {
         expect(hook.mock.calls[1][0]).toBe(0);
     });
 
+    it("waits for the page to show if it was hidden while three loaded", async () => {
+        const renderer = useWorldRenderer();
+        const hook = vi.fn(() => false);
+        renderer.onFrame(hook);
+        renderer.pause();
+
+        await renderer.init(document.createElement("canvas"));
+        runFrame();
+        expect(hook).not.toHaveBeenCalled();
+
+        renderer.resume();
+        runFrame();
+        expect(hook).toHaveBeenCalledTimes(1);
+    });
+
     it("frees the context, the cast kit and its hooks on dispose", async () => {
         const renderer = useWorldRenderer();
         await renderer.init(document.createElement("canvas"));

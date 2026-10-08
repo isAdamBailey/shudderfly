@@ -117,6 +117,17 @@ describe("the road's scene graph", () => {
         expect(road.camera.position.x).toBe(100 + 500);
     });
 
+    it("redraws a walk under reduced motion, when only positions change", () => {
+        const { road, L } = build();
+        const still = view(L, { reduced: true });
+        road.sync(still, 0);
+        expect(road.sync(still, 0.016)).toBe(false);
+
+        const walked = { ...still, peach: { x: 280, facing: 1 } };
+        expect(road.sync(walked, 0.016)).toBe(true);
+        expect(road.butt.group.position.x).toBe(280);
+    });
+
     it("grows the landmark the Butt is at", () => {
         const { road, L } = build();
         road.sync(view(L, { near: "boom" }), 1);
