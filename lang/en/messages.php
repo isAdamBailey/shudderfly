@@ -697,6 +697,20 @@ return [
     'games.world.listen' => '🔊 Listen',
     'games.world.stop_listening' => '■ Stop',
 
+    // Games - Cast
+    'games.cast.butt' => 'The Butt',
+    'games.cast.poop' => 'The Poop',
+    'games.cast.toilet' => 'The Toilet',
+    'games.cast.cockroach' => 'The Cockroach',
+    'games.cast.pizza' => 'The Pizza',
+    'games.cast.face' => 'The Face',
+    'games.cast.blueberries' => 'Blueberries',
+    'games.cast.grapes' => 'Grapes',
+    'games.cast.strawberry' => 'Strawberry',
+    'games.cast.taco' => 'Taco',
+    'games.cast.apple' => 'Apple',
+    'games.cast.sprout' => 'Brussels Sprout',
+
     // Games - Toot Foods
     'games.toot_foods.name' => 'Toot Foods',
     'games.toot_foods.description' => 'Drag snacks into the wandering butt to make it toot. How many in 30 seconds?',

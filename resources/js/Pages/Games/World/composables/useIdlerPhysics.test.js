@@ -71,6 +71,38 @@ describe("useIdlerPhysics", () => {
         expect(ctl.idlerPhysics.a.dy).toBe(-40);
     });
 
+    it("reports where it was let go under reduced motion", () => {
+        const onDrop = vi.fn();
+        const ctl = useIdlerPhysics({ isReducedMotion: () => true, onDrop });
+
+        flick(ctl);
+
+        expect(onDrop).toHaveBeenCalledWith("a", 60);
+    });
+
+    it("reports where a toss comes to rest, once", () => {
+        let frame = null;
+        vi.stubGlobal("requestAnimationFrame", (fn) => {
+            frame = fn;
+            return 1;
+        });
+        const onDrop = vi.fn();
+        const ctl = useIdlerPhysics({ onDrop });
+
+        flick(ctl);
+        // Run the arc until nothing asks for another frame.
+        for (let t = 16; frame && t < 10000; t += 16) {
+            const next = frame;
+            frame = null;
+            next(t);
+        }
+
+        expect(ctl.idlerPhysics.a.airborne).toBe(false);
+        expect(onDrop).toHaveBeenCalledOnce();
+        expect(onDrop).toHaveBeenCalledWith("a", ctl.idlerPhysics.a.dx);
+        expect(ctl.idlerPhysics.a.dx).toBeGreaterThan(60);
+    });
+
     it("ignores a press while the world is blocked", () => {
         const ctl = useIdlerPhysics({ isBlocked: () => true });
 

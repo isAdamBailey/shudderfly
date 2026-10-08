@@ -15,3 +15,90 @@ export const TOOT_FOODS = [
     { type: "apple", emoji: "🍎", pitch: 0.92 },
     { type: "sprout", emoji: SPROUT, pitch: 0.78 },
 ];
+
+// Every move a cast member can make. castMoves.css implements each one as a
+// `.cast-move-<name>` class, one-to-one (a test holds the two together), so a
+// move is drawn the same on every character that has it.
+export const CAST_MOVES = [
+    "idle",
+    "excited",
+    "hop",
+    "walk",
+    "wiggle",
+    "toot",
+    "thrown",
+    "eat",
+    "bounce",
+    "flush",
+    "gulp",
+    "scuttle",
+    "hiss",
+    "wobble",
+    "chomp",
+];
+
+// A Toot Food's tootPitch is the pitch the Butt toots at after eating it.
+const FOOD_MOVES = ["idle", "hop", "excited"];
+
+/**
+ * The cast registry, keyed by id: who the world can show and how. Scene data
+ * refers to cast members by these ids (mirrored in App\Support\GamesWorld::CAST),
+ * and CastMember.vue is the one way to draw them (issue #130).
+ *
+ * - emoji: the glyph, the same one the games use. Absent for `face`, which is
+ *   drawn by PersonFace instead.
+ * - nameKey: translation key for the character's name.
+ * - moves: the CAST_MOVES this character does.
+ * - tootPitch: playbackRate for its toot (bigger = lower); absent if it
+ *   doesn't toot.
+ * - greet: a one-shot from its moves, played when the Butt comes up to it.
+ *
+ * The Toot Foods are generated from TOOT_FOODS, so the sprout the Butt eats
+ * and the sprout Sprout Pox flings are one character.
+ */
+export const CAST = {
+    butt: {
+        emoji: BUTT,
+        nameKey: "games.cast.butt",
+        moves: ["idle", "walk", "wiggle", "toot", "thrown", "eat"],
+        tootPitch: 1,
+    },
+    poop: {
+        emoji: POOP,
+        nameKey: "games.cast.poop",
+        moves: ["idle", "bounce", "toot"],
+        tootPitch: 0.85,
+    },
+    toilet: {
+        emoji: TOILET,
+        nameKey: "games.cast.toilet",
+        moves: ["idle", "flush", "gulp"],
+        greet: "flush",
+    },
+    cockroach: {
+        emoji: COCKROACH,
+        nameKey: "games.cast.cockroach",
+        moves: ["idle", "scuttle", "hiss", "toot"],
+        tootPitch: 1.5,
+    },
+    pizza: {
+        emoji: PIZZA,
+        nameKey: "games.cast.pizza",
+        moves: ["idle", "wobble"],
+    },
+    face: {
+        nameKey: "games.cast.face",
+        moves: ["idle", "chomp"],
+    },
+    ...Object.fromEntries(
+        TOOT_FOODS.map((food) => [
+            food.type,
+            {
+                emoji: food.emoji,
+                nameKey: `games.cast.${food.type}`,
+                moves: FOOD_MOVES,
+                tootPitch: food.pitch,
+            },
+        ])
+    ),
+};

@@ -20,9 +20,9 @@ const game = {
     description: "Feed the foods and listen to them toot.",
 };
 
-function mountCard() {
+function mountCard(props = { game }) {
     return mount(GameConfirmCard, {
-        props: { game },
+        props,
         attachTo: document.body,
         global: {
             provide: { route: global.route },
@@ -44,6 +44,14 @@ beforeEach(() => {
 });
 
 describe("GameConfirmCard", () => {
+    it("draws a landmark that is a cast member as that character", () => {
+        const wrapper = mountCard({
+            game: { ...game, landmark: undefined, cast: "toilet" },
+        });
+
+        expect(wrapper.get(".cast-toilet").text()).toBe("🚽");
+    });
+
     it("renders the game name, description and emoji", () => {
         const wrapper = mountCard();
         expect(wrapper.text()).toContain(game.name);

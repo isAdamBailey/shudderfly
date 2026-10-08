@@ -50,6 +50,8 @@ class GamesTest extends TestCase
                 ->where('scenes.road.interactables.0.x', 600)
                 ->where('scenes.road.interactables.5.emoji', '🏚️')
                 ->where('scenes.road.interactables.5.x', 5100)
+                ->where('scenes.road.interactables.4.cast', 'toilet')
+                ->where('fartSoundUrl', asset('fart.m4a'))
         );
     }
 
