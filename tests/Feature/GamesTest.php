@@ -26,28 +26,30 @@ class GamesTest extends TestCase
         $response->assertInertia(
             fn (Assert $page) => $page
                 ->component('Games/Index')
-                ->has('games', 6)
-                ->where('games.0.slug', 'sprout-pox')
-                ->where('games.0.name', 'Brussels Sprout Chicken Pox')
-                ->where('games.1.slug', 'toot-foods')
-                ->where('games.1.name', 'Toot Foods')
-                ->where('games.2.slug', 'cockroach-fight')
-                ->where('games.2.name', 'Cockroach Fight')
-                ->where('games.3.slug', 'costco-pizza-poop')
-                ->where('games.3.name', 'Costco Food Poop')
-                ->where('games.4.slug', 'boom')
-                ->where('games.4.name', 'Poop Boom')
-                ->where('games.5.slug', 'cockroach')
-                ->where('games.5.name', 'Cockroach Fart')
+                ->missing('games')
+                ->where('scenes.road.kind', 'road')
+                ->has('scenes.road.interactables', 6)
+                ->where('scenes.road.interactables.0.id', 'sprout-pox')
+                ->where('scenes.road.interactables.0.label', 'Brussels Sprout Chicken Pox')
+                ->where('scenes.road.interactables.1.id', 'toot-foods')
+                ->where('scenes.road.interactables.1.label', 'Toot Foods')
+                ->where('scenes.road.interactables.2.id', 'cockroach-fight')
+                ->where('scenes.road.interactables.2.label', 'Cockroach Fight')
+                ->where('scenes.road.interactables.3.id', 'costco-pizza-poop')
+                ->where('scenes.road.interactables.3.label', 'Costco Food Poop')
+                ->where('scenes.road.interactables.4.id', 'boom')
+                ->where('scenes.road.interactables.4.label', 'Poop Boom')
+                ->where('scenes.road.interactables.5.id', 'cockroach')
+                ->where('scenes.road.interactables.5.label', 'Cockroach Fart')
                 // Every game needs a landmark and a road position, or it would
                 // be unreachable in the Games World.
-                ->has('games.0', fn (Assert $game) => $game->hasAll([
-                    'slug', 'name', 'emoji', 'description', 'landmark', 'distance',
+                ->has('scenes.road.interactables.0', fn (Assert $item) => $item->hasAll([
+                    'id', 'type', 'x', 'game', 'emoji', 'label', 'card',
                 ]))
-                ->where('games.0.landmark', '🏥')
-                ->where('games.0.distance', 600)
-                ->where('games.5.landmark', '🏚️')
-                ->where('games.5.distance', 5100)
+                ->where('scenes.road.interactables.0.emoji', '🏥')
+                ->where('scenes.road.interactables.0.x', 600)
+                ->where('scenes.road.interactables.5.emoji', '🏚️')
+                ->where('scenes.road.interactables.5.x', 5100)
         );
     }
 
@@ -59,12 +61,12 @@ class GamesTest extends TestCase
 
         $response = $this->get(route('games.index'));
 
-        $games = $response->viewData('page')['props']['games'];
-        $distances = array_column($games, 'distance');
+        $road = $response->viewData('page')['props']['scenes']['road']['interactables'];
+        $positions = array_column($road, 'x');
 
-        $this->assertCount(count($games), array_unique($distances));
-        $this->assertSame($distances, array_values(collect($distances)->sort()->all()));
-        $this->assertNotContains('', array_column($games, 'landmark'));
+        $this->assertCount(count($road), array_unique($positions));
+        $this->assertSame($positions, array_values(collect($positions)->sort()->all()));
+        $this->assertNotContains('', array_column($road, 'emoji'));
     }
 
     public function test_sprout_pox_game_page_is_displayed(): void
