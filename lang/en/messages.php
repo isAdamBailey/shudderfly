@@ -690,6 +690,7 @@ return [
     // Games - World
     'games.world.title' => 'Game World',
     'games.world.stage_aria' => 'Games world — drag the peach along the road, or use the left and right arrow keys to walk',
+    'games.world.stage_lanes_aria' => 'Games world — drag the peach along the street, or use the left and right arrow keys to walk and up and down to cross the street',
     'games.world.peach_aria' => 'Peach',
     'games.world.landmark_aria' => ':game — press Enter to visit',
     'games.world.play' => '▶ Play',

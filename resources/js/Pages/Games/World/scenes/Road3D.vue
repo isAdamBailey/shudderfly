@@ -14,11 +14,11 @@ import {
 import InteractableButton from "../components/InteractableButton.vue";
 import LandmarkTitle from "../components/LandmarkTitle.vue";
 import SkyLogo from "../components/SkyLogo.vue";
-import { screenToPlane, worldToScreen } from "../composables/projection.js";
+import { screenToGround, worldToScreen } from "../composables/projection.js";
 import { useRoad } from "../composables/useRoad.js";
 import { worldTheme } from "../three/themes.js";
 import { createRoadScene } from "./RoadScene.js";
-import { roadCamera, roadLayout } from "./roadLayout.js";
+import { buildingBox, roadCamera, roadLayout } from "./roadLayout.js";
 
 // The `kind: "road"` renderer on the stage's WebGL canvas (issue #130): the
 // road's scene graph (RoadScene.js) on the stage's renderer, and a DOM
@@ -28,7 +28,7 @@ import { roadCamera, roadLayout } from "./roadLayout.js";
 // (RoadScene.vue); the stage drives this through the same exposed API.
 const props = defineProps({
     scene: { type: Object, required: true },
-    // { beginGesture(handlers) -> stage left px, resetScroll(), renderer }
+    // { beginGesture(handlers) -> stage rect, resetScroll(), renderer }
     stage: { type: Object, required: true },
 });
 
@@ -63,10 +63,38 @@ const {
     setLandmarkCast,
     api,
 } = useRoad(props, emit, {
-    // The Butt walks the plane z = 0, so that is where a drag lands. On that
-    // plane the camera draws 1 px per unit: the same x the flat road gave.
-    toWorldX: (event, left) =>
-        screenToPlane(view.value, event.clientX - left, 0).x,
+    lanes: true,
+    // A drag's x is the flat road's: the camera keeps the Butt at that
+    // screen x on either lane (roadCamera), so a finger anywhere on it moves
+    // it the same. Its side is where the Butt's feet would be under the
+    // finger, on the ground.
+    dragTo(start, rect) {
+        const feet = peachSpot.value;
+        const grab = feet ? feet.y - (start.clientY - rect.top) : 0;
+        return (event) => {
+            const sx = event.clientX - rect.left;
+            const ground = screenToGround(
+                view.value,
+                sx,
+                event.clientY - rect.top + grab
+            );
+            return {
+                x: camera.x + sx,
+                side: ground ? layout.value.sideAt(ground.z) : "far",
+            };
+        };
+    },
+    // A tap on the street sends the Butt to that spot, on that side; one on
+    // the sky or the scenery behind the street, nowhere. Its x is the flat
+    // road's, as a drag's, which is where the Butt will be drawn.
+    tapTo(event, rect) {
+        const sx = event.clientX - rect.left;
+        const ground =
+            view.value &&
+            screenToGround(view.value, sx, event.clientY - rect.top);
+        if (!ground || ground.z < layout.value.z.buildings) return null;
+        return { x: camera.x + sx, side: layout.value.sideAt(ground.z) };
+    },
     // At the middle of the Butt, in world units; the overlay projects it.
     buttPuffAt: () => ({
         x: peach.x,
@@ -79,10 +107,21 @@ const {
     peekTarget: sceneEl,
 });
 
+/** The depth the Butt walks at, between its lanes. */
+const buttZ = computed(() => layout.value?.laneZ(peach.lane) ?? 0);
+
 /** The projection.js camera for this frame. */
 const view = computed(() =>
     layout.value
-        ? roadCamera(layout.value, camera.x, peekX.value, peekY.value)
+        ? roadCamera(
+              layout.value,
+              camera.x,
+              peekX.value,
+              peekY.value,
+              // On the far lane the Butt needs no help, and leaving it out
+              // keeps the view (and the overlay) still while it walks.
+              peach.lane ? { x: peach.x, z: buttZ.value } : null
+          )
         : null
 );
 
@@ -163,14 +202,38 @@ function spot(x, z, size, lift = 0) {
     return { x: p.x, y: p.y, size: size * p.scale };
 }
 
+// Along the road, the far side before the near side at the same x: the
+// order Tab walks them in.
+const landmarksInOrder = computed(() =>
+    [...landmarks.value].sort(
+        (a, b) => a.x - b.x || (a.side === "near") - (b.side === "near")
+    )
+);
+
+// The landmarks' buildings, which change only with the stage's size.
+const landmarkBoxes = computed(() =>
+    layout.value
+        ? landmarks.value.map((landmark) => buildingBox(layout.value, landmark))
+        : []
+);
+
+/** Each landmark's button covers its building's front, roof and all. */
 const landmarkSpots = computed(() => {
-    const L = layout.value;
     if (!view.value) return {};
     return Object.fromEntries(
-        landmarks.value.map((landmark) => [
-            landmark.slug,
-            spot(landmark.x, L.z.landmark, L.sizes.landmark),
-        ])
+        landmarks.value.map((landmark, i) => {
+            const box = landmarkBoxes.value[i];
+            const p = worldToScreen(view.value, { x: box.x, z: box.z });
+            return [
+                landmark.slug,
+                {
+                    x: p.x,
+                    y: p.y,
+                    width: box.width * p.scale,
+                    height: (box.height + box.roof) * p.scale,
+                },
+            ];
+        })
     );
 });
 
@@ -193,7 +256,7 @@ const idlerSpots = computed(() => {
 
 const peachSpot = computed(() =>
     view.value
-        ? spot(peach.x, 0, layout.value.sizes.butt, peachLift.value)
+        ? spot(peach.x, buttZ.value, layout.value.sizes.butt, peachLift.value)
         : null
 );
 
@@ -201,7 +264,11 @@ const puffSpots = computed(() =>
     view.value
         ? puffs.value.map((puff) => ({
               id: puff.id,
-              ...worldToScreen(view.value, { x: puff.x, y: puff.y, z: 0 }),
+              ...worldToScreen(view.value, {
+                  x: puff.x,
+                  y: puff.y,
+                  z: buttZ.value,
+              }),
           }))
         : []
 );
@@ -244,13 +311,14 @@ defineExpose({ ...api, setBounds });
             ></span>
 
             <InteractableButton
-                v-for="landmark in landmarks"
+                v-for="landmark in landmarksInOrder"
                 :key="landmark.slug"
                 :ref="(el) => setLandmarkEl(landmark.slug, el)"
                 class="landmark"
                 :x="landmarkSpots[landmark.slug].x"
                 :y="landmarkSpots[landmark.slug].y"
-                :size="landmarkSpots[landmark.slug].size"
+                :size="landmarkSpots[landmark.slug].width"
+                :height="landmarkSpots[landmark.slug].height"
                 :label="t('games.world.landmark_aria', { game: landmark.name })"
                 @focus="onLandmarkFocus(landmark.slug)"
                 @click="world.openConfirm(landmark.slug)"

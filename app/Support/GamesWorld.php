@@ -15,6 +15,9 @@ use App\Http\Controllers\GameController;
  */
 final class GamesWorld
 {
+    /** The two sides of the road a road interactable can stand on. */
+    public const ROAD_SIDES = ['far', 'near'];
+
     /** Ids of the cast registry, CAST in resources/js/constants/characters.js
      * (a Vitest test keeps the two in step). Scenes name characters by these
      * ids, never by emoji. */
@@ -35,6 +38,9 @@ final class GamesWorld
                         'id' => $slug,
                         'type' => 'game',
                         'x' => $game['distance'],
+                        // Which side of the street it stands on: "far" or
+                        // "near". Every game is on the far side for now.
+                        'side' => $game['side'] ?? 'far',
                         'game' => $slug,
                         ...(isset($game['landmark_cast'])
                             ? ['cast' => $game['landmark_cast']]

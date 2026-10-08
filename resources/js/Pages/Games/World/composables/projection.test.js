@@ -1,12 +1,7 @@
 import { PerspectiveCamera, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 import { applyCamera } from "../three/useWorldRenderer.js";
-import {
-    groundZAtRow,
-    screenToGround,
-    screenToPlane,
-    worldToScreen,
-} from "./projection.js";
+import { groundZAtRow, screenToGround, worldToScreen } from "./projection.js";
 
 const camera = {
     x: 900,
@@ -47,22 +42,6 @@ describe("projection", () => {
     it("misses the ground at or above the horizon", () => {
         expect(screenToGround(camera, 500, 0)).toBeNull();
         expect(screenToGround(camera, 500, -20)).toBeNull();
-    });
-
-    it("round-trips an upright plane", () => {
-        for (const z of [0, -300]) {
-            const hit = screenToPlane(camera, 123, 456, z);
-            const back = worldToScreen(camera, { ...hit, z });
-            expect(back.x).toBeCloseTo(123, 6);
-            expect(back.y).toBeCloseTo(456, 6);
-        }
-    });
-
-    it("maps a drag on the Butt's plane exactly as the flat road did", () => {
-        // camera.x - w/2 is the old camera's left edge.
-        const left = camera.x - camera.w / 2;
-        expect(screenToPlane(camera, 321, 600).x).toBe(321 + left);
-        expect(screenToPlane(camera, 321, 100).x).toBe(321 + left);
     });
 
     it("finds the depth the ground is drawn at for a row", () => {

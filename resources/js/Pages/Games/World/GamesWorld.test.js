@@ -83,9 +83,21 @@ const STAGE = {
     bottom: 700,
 };
 
-async function mountWorld() {
+/** The same road with `slug`'s landmark across the street, at `x`. */
+function withNearSide(slug, x) {
+    return {
+        road: {
+            ...scenes.road,
+            interactables: scenes.road.interactables.map((item) =>
+                item.id === slug ? { ...item, side: "near", x } : item
+            ),
+        },
+    };
+}
+
+async function mountWorld(worldScenes = scenes) {
     const wrapper = mount(GamesWorld, {
-        props: { scenes },
+        props: { scenes: worldScenes },
         attachTo: document.body,
         global: {
             provide: { route: global.route },
@@ -118,6 +130,13 @@ function screenX(el) {
         el.attributes("style").match(/width: ([\d.]+)px/)[1]
     );
     return parseFloat(x) + width / 2;
+}
+
+/** The y px of an overlay element's feet, from its transform. */
+function screenFeet(el) {
+    const style = el.attributes("style");
+    const y = parseFloat(style.match(/translate3d\([-\d.]+px, ([-\d.]+)px/)[1]);
+    return y + parseFloat(style.match(/height: ([\d.]+)px/)[1]);
 }
 
 let wrapper;
@@ -292,5 +311,112 @@ describe("GamesWorld stage", () => {
         wrapper = null;
         expect(gl.dispose).toHaveBeenCalled();
         expect(gl.forceContextLoss).toHaveBeenCalled();
+    });
+
+    it("crosses the street with the up and down arrows", async () => {
+        wrapper = await mountWorld();
+        const far = screenFeet(wrapper.get(".peach"));
+        const x = screenX(wrapper.get(".peach"));
+
+        await wrapper.get(".stage").trigger("keydown", { key: "ArrowDown" });
+        await frames(600);
+        const near = screenFeet(wrapper.get(".peach"));
+        expect(near).toBeGreaterThan(far + 50);
+        // The camera keeps it where it was along the road.
+        expect(screenX(wrapper.get(".peach"))).toBeCloseTo(x, 0);
+
+        await wrapper.get(".stage").trigger("keydown", { key: "ArrowUp" });
+        await frames(600);
+        // Back on the far side (give or take where its walking bob stopped).
+        expect(Math.abs(screenFeet(wrapper.get(".peach")) - far)).toBeLessThan(
+            15
+        );
+    });
+
+    it("tabs along the road, the far side before the near side", async () => {
+        wrapper = await mountWorld(withNearSide("boom", 600));
+
+        const names = wrapper
+            .findAll("button.interactable")
+            .map((b) => GAMES.find((g) => b.text().includes(g.name)).name);
+        expect(names).toEqual(["Sprout Pox", "Poop Boom", "Toot Foods"]);
+    });
+
+    it("crosses over to a near-side landmark focused from the keyboard", async () => {
+        wrapper = await mountWorld(withNearSide("boom", 600));
+        const far = screenFeet(wrapper.get(".peach"));
+
+        await wrapper.findAll("button.interactable")[1].trigger("focus");
+        await frames(600);
+        expect(screenFeet(wrapper.get(".peach"))).toBeGreaterThan(far + 50);
+
+        await wrapper.get(".stage").trigger("keydown", { key: "Enter" });
+        expect(wrapper.get('[role="dialog"]').text()).toContain("Poop Boom");
+    });
+
+    it("walks the Butt to a spot tapped on the street, on that side", async () => {
+        wrapper = await mountWorld();
+        const peach = wrapper.get(".peach");
+        const start = screenX(peach);
+        const far = screenFeet(peach);
+        const background = wrapper.get(".road-3d");
+
+        // A tap on the near pavement, to the Butt's right.
+        await background.trigger("pointerdown", {
+            clientX: start + 200,
+            clientY: 768 * 0.86,
+        });
+        window.dispatchEvent(new MouseEvent("pointerup"));
+        await frames(1200);
+
+        expect(screenX(wrapper.get(".peach"))).toBeGreaterThan(start + 100);
+        expect(screenFeet(wrapper.get(".peach"))).toBeGreaterThan(far + 50);
+    });
+
+    it("pans, rather than walks, when the street is dragged", async () => {
+        wrapper = await mountWorld();
+        const start = screenX(wrapper.get(".peach"));
+        const background = wrapper.get(".road-3d");
+
+        await background.trigger("pointerdown", {
+            clientX: 500,
+            clientY: 768 * 0.86,
+        });
+        window.dispatchEvent(
+            new MouseEvent("pointermove", { clientX: 400, clientY: 660 })
+        );
+        window.dispatchEvent(new MouseEvent("pointerup"));
+        await frames(300);
+
+        expect(screenFeet(wrapper.get(".peach"))).toBeLessThan(768 * 0.7);
+        expect(screenX(wrapper.get(".peach"))).not.toBeGreaterThan(start);
+    });
+
+    it("ignores a tap on the sky", async () => {
+        wrapper = await mountWorld();
+        const start = screenX(wrapper.get(".peach"));
+
+        await wrapper.get(".road-3d").trigger("pointerdown", {
+            clientX: start + 300,
+            clientY: 768 * 0.15,
+        });
+        window.dispatchEvent(new MouseEvent("pointerup"));
+        await frames(300);
+
+        expect(screenX(wrapper.get(".peach"))).toBe(start);
+    });
+
+    it("tells screen readers about crossing only where there are two sides", async () => {
+        wrapper = await mountWorld();
+        expect(wrapper.get(".stage").attributes("aria-label")).toBe(
+            "games.world.stage_lanes_aria"
+        );
+        wrapper.unmount();
+
+        fake.webgl = false;
+        wrapper = await mountWorld();
+        expect(wrapper.get(".stage").attributes("aria-label")).toBe(
+            "games.world.stage_aria"
+        );
     });
 });

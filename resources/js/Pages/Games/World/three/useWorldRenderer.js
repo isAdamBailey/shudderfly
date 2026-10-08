@@ -62,12 +62,13 @@ export function applyCamera(threeCamera, camera) {
     threeCamera.updateProjectionMatrix();
 }
 
-/** Frees every geometry, material and texture under `root`. Keep shared
- * ones (the cast kit's) out of it. */
-export function disposeTree(root) {
+/** Frees every geometry, material and texture under `root`, except the
+ * materials in `keep`. Keep shared ones (the cast kit's) out of it. */
+export function disposeTree(root, keep = []) {
     root.traverse((object) => {
         object.geometry?.dispose();
         for (const material of [object.material ?? []].flat()) {
+            if (keep.includes(material)) continue;
             material.map?.dispose();
             material.dispose();
         }

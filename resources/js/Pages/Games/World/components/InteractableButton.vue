@@ -11,9 +11,10 @@ const props = defineProps({
     /** Screen px of the drawn thing's feet (bottom centre). */
     x: { type: Number, required: true },
     y: { type: Number, required: true },
-    /** The drawn thing's size (it is square), px. The button is never
-     * smaller than a tap target. */
+    /** The drawn thing's width, px, and its height if it isn't square. The
+     * button is never smaller than a tap target. */
     size: { type: Number, required: true },
+    height: { type: Number, default: null },
     label: { type: String, required: true },
 });
 
@@ -22,12 +23,13 @@ const MIN_TARGET = 48; // px
 const el = ref(null);
 
 const style = computed(() => {
-    const size = Math.max(MIN_TARGET, props.size);
+    const width = Math.max(MIN_TARGET, props.size);
+    const height = Math.max(MIN_TARGET, props.height ?? props.size);
     return {
-        width: `${size}px`,
-        height: `${size}px`,
-        transform: `translate3d(${props.x - size / 2}px, ${
-            props.y - size
+        width: `${width}px`,
+        height: `${height}px`,
+        transform: `translate3d(${props.x - width / 2}px, ${
+            props.y - height
         }px, 0)`,
     };
 });

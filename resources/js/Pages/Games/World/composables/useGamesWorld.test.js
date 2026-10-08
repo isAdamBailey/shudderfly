@@ -7,6 +7,7 @@ import {
     SNAP_RADIUS,
     SOFT_LEFT,
     SOFT_RIGHT,
+    CROSS_TIME,
 } from "./useGamesWorld.js";
 
 const DT = 1 / 60;
@@ -392,5 +393,117 @@ describe("useGamesWorld reduced motion", () => {
         world.endDrag();
 
         expect(world.state.confirmSlug).toBe("toot-foods");
+    });
+});
+
+describe("useGamesWorld lanes", () => {
+    // Boom stands on the near side of the street.
+    const SIDED = GAMES.map((game) =>
+        game.slug === "boom" ? { ...game, side: "near" } : game
+    );
+
+    function makeSidedWorld(callbacks) {
+        const world = useGamesWorld(SIDED, callbacks);
+        world.setBounds(STAGE_W, STAGE_H);
+        return world;
+    }
+
+    it("starts on the far side", () => {
+        const world = makeSidedWorld();
+
+        expect(world.peach.side).toBe("far");
+        expect(world.peach.lane).toBe(0);
+    });
+
+    it("eases across the street over CROSS_TIME", () => {
+        const world = makeSidedWorld();
+
+        world.crossTo("near");
+        expect(world.peach.side).toBe("near");
+        advance(world, (CROSS_TIME * 1000) / 2);
+        expect(world.peach.lane).toBeGreaterThan(0.3);
+        expect(world.peach.lane).toBeLessThan(0.7);
+        advance(world, CROSS_TIME * 1000);
+        expect(world.peach.lane).toBe(1);
+
+        world.crossTo("far");
+        advance(world, CROSS_TIME * 1000 + 50);
+        expect(world.peach.lane).toBe(0);
+    });
+
+    it("only reaches landmarks on its own side", () => {
+        const world = makeSidedWorld();
+
+        dragTo(world, 2400);
+        world.endDrag();
+        expect(world.state.confirmSlug).toBeNull();
+
+        world.startDrag();
+        world.updateDrag(2400, "near");
+        advance(world, 100);
+        world.endDrag();
+        // Once it is across.
+        advance(world, CROSS_TIME * 1000);
+        expect(world.state.confirmSlug).toBe("boom");
+    });
+
+    it("crosses over to a focused landmark on the other side", () => {
+        const world = makeSidedWorld();
+
+        world.walkToLandmark("boom");
+
+        expect(world.peach.x).toBe(2400);
+        expect(world.peach.side).toBe("near");
+        expect(world.nearestLandmark.value.slug).toBe("boom");
+    });
+
+    it("walks to a tapped spot and opens the landmark there", () => {
+        const world = makeSidedWorld();
+
+        world.walkTo(2400, "near");
+        advance(world, travelMs(2400 - 260));
+
+        expect(world.peach.side).toBe("near");
+        expect(world.state.confirmSlug).toBe("boom");
+    });
+
+    it("finishes crossing before a card opens", () => {
+        const world = makeSidedWorld();
+        world.walkToLandmark("sprout-pox");
+        world.setWalk(0);
+
+        // Tapped straight across from where it stands: Boom is there.
+        world.walkTo(world.peach.x, "near");
+        world.walkTo(2400, "near");
+        advance(world, travelMs(2400 - 600));
+
+        expect(world.state.confirmSlug).toBe("boom");
+        expect(world.peach.lane).toBe(1);
+    });
+
+    it("opens nothing until the crossing is over, when dropped across the street", () => {
+        const world = makeSidedWorld();
+        world.walkToLandmark("boom");
+        advance(world, CROSS_TIME * 1000 + 50);
+        world.crossTo("far");
+        world.crossTo("near");
+
+        world.startDrag();
+        world.updateDrag(2400, "far");
+        world.endDrag();
+        expect(world.state.confirmSlug).toBeNull();
+
+        advance(world, CROSS_TIME * 1000 + 50);
+        expect(world.peach.lane).toBe(0);
+        expect(world.state.confirmSlug).toBeNull();
+    });
+
+    it("doesn't cross while a card is open", () => {
+        const world = makeSidedWorld();
+        world.openConfirm("sprout-pox");
+
+        world.crossTo("near");
+
+        expect(world.peach.side).toBe("far");
     });
 });

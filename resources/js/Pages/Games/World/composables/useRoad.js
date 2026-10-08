@@ -8,7 +8,7 @@ import {
     useTransition,
 } from "@vueuse/core";
 import { computed, nextTick, onMounted, shallowRef, watch } from "vue";
-import { clamp, useGamesWorld } from "./useGamesWorld.js";
+import { clamp, LANES, useGamesWorld } from "./useGamesWorld.js";
 import { useIdlerPhysics } from "./useIdlerPhysics.js";
 
 const IDLER_SETBACK = 260; // px before its neighbouring landmark
@@ -21,6 +21,8 @@ const IDLER_ROWS = 3;
 const FEED_RADIUS = 70; // px
 
 const PEEK_DEADBAND = 0.005;
+// A press on the background that moves less than this is a tap, not a pan.
+const TAP_SLOP = 8; // px
 
 /**
  * Everything the road does, for whichever drawer shows it (issue #130): the
@@ -30,7 +32,14 @@ const PEEK_DEADBAND = 0.005;
  *
  * `props` are the scene's ({ scene, stage }); `emit` its emit. The drawer
  * supplies what only it knows:
- * - toWorldX(event, gestureLeft): the road x under a pointer.
+ * - dragTo(event, stageRect): called as a drag of the Butt starts; returns
+ *   a function from each pointer event of the drag to where it sends the
+ *   Butt, { x, side? } (side: "far" | "near", or left out to stay).
+ * - tapTo(event, stageRect): optional; where a tap on the background sends
+ *   the Butt ({ x, side }), or null for nowhere. Without it a tap does
+ *   nothing.
+ * - lanes: whether it draws both sides of the street (the WebGL road). The
+ *   DOM road draws one, so the Butt stays on it and reaches everything.
  * - buttPuffAt(): where a toot from the Butt shows its puff, in the
  *   drawer's coordinates for `puffs`.
  * - idlerDxToWorld(idler, dx): road px for an idler's screen offset, if the
@@ -41,7 +50,9 @@ const PEEK_DEADBAND = 0.005;
  */
 export function useRoad(props, emit, options) {
     const {
-        toWorldX,
+        dragTo,
+        tapTo,
+        lanes = false,
         buttPuffAt,
         idlerDxToWorld = (idler, dx) => dx,
         ownLoop = true,
@@ -63,6 +74,8 @@ export function useRoad(props, emit, options) {
             name: item.label,
             landmark: item.emoji,
             cast: item.cast,
+            // A drawer with one side of the street puts everything on it.
+            side: lanes ? item.side : "far",
             item,
         }))
     );
@@ -102,7 +115,11 @@ export function useRoad(props, emit, options) {
                 // layered feel.
                 row: i % IDLER_ROWS,
                 phase: i * 0.37,
-                excited: Math.abs(peach.x - x) < IDLER_EXCITE_RADIUS,
+                // Only for a Butt on their side of the street, which they
+                // can be fed to.
+                excited:
+                    peach.side === "far" &&
+                    Math.abs(peach.x - x) < IDLER_EXCITE_RADIUS,
                 // Screen px: the sideways offset moves the idler, the height
                 // goes to the drawer as lift so its shadow stays put.
                 dx: p?.dx ?? 0,
@@ -123,8 +140,10 @@ export function useRoad(props, emit, options) {
      * food's pitch, the way feeding it does in Toot Foods. */
     function feedIfOnButt(slug, dx) {
         const idler = idlers.value.find((i) => i.slug === slug);
+        // The roadside foods are on the far side of the street.
         if (
             !idler ||
+            peach.lane !== LANES.far ||
             Math.abs(idler.x + idlerDxToWorld(idler, dx) - peach.x) >
                 FEED_RADIUS
         ) {
@@ -167,39 +186,64 @@ export function useRoad(props, emit, options) {
 
     // --- Pointer ---------------------------------------------------------
 
-    // The stage can't move while a finger is down, so its left edge is
-    // measured once per gesture (by the stage) instead of on every move.
-    let gestureLeft = 0;
+    // The stage can't move while a finger is down, so its box is measured
+    // once per gesture (by the stage) instead of on every move.
+    let gestureRect = null;
+    let dragMove = null;
 
     const dragGesture = {
         move(event) {
             event.preventDefault();
-            world.updateDrag(toWorldX(event, gestureLeft));
+            const to = dragMove(event);
+            world.updateDrag(to.x, to.side);
         },
         end: () => world.endDrag(),
         // Abandoned, not dropped: the peach stays put and no card opens.
         cancel: () => world.cancelDrag(),
     };
 
+    // The press that started a pan, while it could still be a tap.
+    let tapStart = null;
+
     const panGesture = {
         move(event) {
             event.preventDefault();
+            if (
+                tapStart &&
+                Math.hypot(
+                    event.clientX - tapStart.clientX,
+                    event.clientY - tapStart.clientY
+                ) > TAP_SLOP
+            ) {
+                tapStart = null;
+            }
             world.updatePan(event.clientX);
         },
-        end: () => world.endPan(),
-        cancel: () => world.endPan(),
+        end() {
+            world.endPan();
+            const to = tapStart && tapTo?.(tapStart, gestureRect);
+            tapStart = null;
+            if (to) world.walkTo(to.x, to.side);
+        },
+        cancel() {
+            tapStart = null;
+            world.endPan();
+        },
     };
 
     function onPeachPointerDown(event) {
         if (state.confirmSlug || event.button > 0) return;
-        gestureLeft = props.stage.beginGesture(dragGesture);
+        gestureRect = props.stage.beginGesture(dragGesture);
+        dragMove = dragTo(event, gestureRect);
         world.startDrag();
     }
 
-    /** Only the bare background pans; the peach drags and landmarks click. */
+    /** Only the bare background pans (or, tapped, sends the Butt there); the
+     * peach drags and landmarks click. */
     function onBackgroundPointerDown(event) {
         if (state.confirmSlug || event.button > 0) return;
-        gestureLeft = props.stage.beginGesture(panGesture);
+        gestureRect = props.stage.beginGesture(panGesture);
+        tapStart = { clientX: event.clientX, clientY: event.clientY };
         world.startPan(event.clientX);
     }
 
@@ -229,8 +273,15 @@ export function useRoad(props, emit, options) {
     }
 
     const WALK_KEYS = { ArrowLeft: -1, ArrowRight: 1 };
+    const CROSS_KEYS = { ArrowUp: "far", ArrowDown: "near" };
 
     function onKeydown(event) {
+        const side = lanes && CROSS_KEYS[event.key];
+        if (side) {
+            event.preventDefault();
+            world.crossTo(side);
+            return;
+        }
         const dir = WALK_KEYS[event.key];
         if (!dir) return;
         event.preventDefault();
