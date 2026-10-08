@@ -49,8 +49,14 @@ function defaultCanvas(px) {
  * all of them. dispose() frees everything it made.
  *
  * `createCanvas(px)` makes a square 2D canvas; tests pass a stub.
+ * `onSound(name)` is called when a puppet plays a one-shot its character
+ * has a sound for (CAST's `sounds`), even under reduced motion, which skips
+ * only the animation.
  */
-export function createCastKit(THREE, { createCanvas = defaultCanvas } = {}) {
+export function createCastKit(
+    THREE,
+    { createCanvas = defaultCanvas, onSound = () => {} } = {}
+) {
     const materials = new Map();
     const plane = new THREE.PlaneGeometry(1, 1);
     const ground = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
@@ -157,6 +163,7 @@ export function createCastKit(THREE, { createCanvas = defaultCanvas } = {}) {
         phase = 0,
         shadows = true,
         domOverlay = false,
+        sounds = {},
     }) {
         const group = new THREE.Group();
 
@@ -235,7 +242,9 @@ export function createCastKit(THREE, { createCanvas = defaultCanvas } = {}) {
             /** Plays a one-shot over the ongoing move. Ignored for a move the
              * character doesn't have, and under reduced motion. */
             play(name) {
-                if (!moveData(name) || state.reduced) return;
+                if (!moveData(name)) return;
+                if (sounds[name]) onSound(sounds[name]);
+                if (state.reduced) return;
                 state.oneShot = name;
                 state.oneShotTime = 0;
                 state.dirty = true;
@@ -357,6 +366,7 @@ export function createCastKit(THREE, { createCanvas = defaultCanvas } = {}) {
                 phase,
                 shadows,
                 domOverlay: !member.emoji,
+                sounds: member.sounds,
             });
         },
 

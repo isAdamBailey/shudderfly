@@ -34,7 +34,13 @@ export function useGamesWorld(games, callbacks = {}) {
     // `isReducedMotion` suppresses the decorative bob only — the peach still
     // walks and the camera still follows, because this stage is how you reach
     // the games, not an animation to sit and watch.
-    const { onArrive, isReducedMotion = () => false } = callbacks;
+    // `start` ({ x, side }) is where the peach starts, e.g. where it was
+    // before a game, or the door it came out of; by default the road's start.
+    const {
+        onArrive,
+        isReducedMotion = () => false,
+        start: startAt,
+    } = callbacks;
 
     const bounds = reactive({ w: 0, h: 0 });
 
@@ -59,13 +65,16 @@ export function useGamesWorld(games, callbacks = {}) {
 
     // `side` is the side of the street the peach is on, or crossing to;
     // `lane` eases toward it (LANES), for drawing.
+    const startSide = Object.prototype.hasOwnProperty.call(LANES, startAt?.side)
+        ? startAt.side
+        : "far";
     const peach = reactive({
-        x: PEACH_START_X,
+        x: Number.isFinite(startAt?.x) ? wrapX(startAt.x) : PEACH_START_X,
         vx: 0,
         facing: 1,
         bob: 0,
-        side: "far",
-        lane: 0,
+        side: startSide,
+        lane: LANES[startSide],
     });
     // Where the peach is headed: the finger while dragging, and the spot it
     // was dropped on afterwards, so a release still completes the journey.

@@ -1,4 +1,5 @@
 import { getAudioContext, unlockAudio } from "@/composables/useAudioContext";
+import { playHiss } from "@/composables/playHiss";
 
 let fartBuffer = null;
 
@@ -19,60 +20,6 @@ export function useSound(fartSoundUrl = "/fart.m4a") {
         } catch {
             /* ignore — playFart falls back to silence when no buffer */
         }
-    }
-
-    function playHiss() {
-        const ctx = getContext();
-        if (!ctx) return;
-        const duration = 0.9;
-        const bufferSize = ctx.sampleRate * duration;
-        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-
-        const attackEnd = 0.05 * bufferSize;
-        const sustainEnd = 0.6 * bufferSize;
-
-        for (let i = 0; i < bufferSize; i++) {
-            let envelope;
-            if (i < attackEnd) {
-                envelope = i / attackEnd;
-            } else if (i < sustainEnd) {
-                envelope = 1.0;
-            } else {
-                envelope = Math.pow(
-                    1 - (i - sustainEnd) / (bufferSize - sustainEnd),
-                    1.5
-                );
-            }
-            data[i] = (Math.random() * 2 - 1) * envelope;
-        }
-
-        const source = ctx.createBufferSource();
-        source.buffer = buffer;
-
-        const bandpass = ctx.createBiquadFilter();
-        bandpass.type = "bandpass";
-        bandpass.frequency.value = 3500;
-        bandpass.Q.value = 0.4;
-
-        const highpass = ctx.createBiquadFilter();
-        highpass.type = "highpass";
-        highpass.frequency.value = 1500;
-
-        const gain = ctx.createGain();
-        gain.gain.setValueAtTime(0.35, ctx.currentTime);
-        gain.gain.setValueAtTime(0.35, ctx.currentTime + duration * 0.6);
-        gain.gain.exponentialRampToValueAtTime(
-            0.001,
-            ctx.currentTime + duration
-        );
-
-        source.connect(bandpass);
-        bandpass.connect(highpass);
-        highpass.connect(gain);
-        gain.connect(ctx.destination);
-
-        source.start(ctx.currentTime);
     }
 
     function playFart() {

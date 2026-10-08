@@ -95,9 +95,49 @@ function withNearSide(slug, x) {
     };
 }
 
-async function mountWorld(worldScenes = scenes) {
+// The House across the street, and the hall inside it.
+const HOUSE = {
+    id: "house",
+    type: "door",
+    x: 1050,
+    side: "near",
+    emoji: "🏠",
+    label: "The House",
+    to: "house.hall",
+    toSpot: "front-door",
+};
+const withHouse = {
+    road: {
+        ...scenes.road,
+        label: "The street",
+        interactables: [...scenes.road.interactables, HOUSE],
+    },
+    "house.hall": {
+        kind: "room",
+        label: "The Hall",
+        size: { w: 900, d: 500 },
+        spawn: { x: 450, z: 330 },
+        interactables: [
+            {
+                id: "front-door",
+                type: "door",
+                x: 450,
+                z: 0,
+                emoji: "🚪",
+                label: "Go outside",
+                to: "road",
+                toSpot: "house",
+                exit: true,
+            },
+        ],
+    },
+};
+
+const ROAD = ".road-scene, .road-3d";
+
+async function mountWorld(worldScenes = scenes, { link = null } = {}) {
     const wrapper = mount(GamesWorld, {
-        props: { scenes: worldScenes },
+        props: { scenes: worldScenes, link },
         attachTo: document.body,
         global: {
             provide: { route: global.route },
@@ -110,14 +150,36 @@ async function mountWorld(worldScenes = scenes) {
             },
         },
     });
-    // Until three has loaded (or failed to) and a road is up.
-    await vi.waitFor(() => {
-        if (!wrapper.find(".road-scene, .road-3d").exists()) {
-            throw new Error("still loading");
-        }
-    });
-    await flushPromises();
+    // Until three has loaded (or failed to) and a scene is up.
+    await showing(wrapper, `${ROAD}, .room-3d`);
     return wrapper;
+}
+
+/** Waits until `selector` is on the stage, e.g. after a door. */
+async function showing(wrapper, selector) {
+    await vi.waitFor(
+        () => {
+            if (!wrapper.find(selector).exists()) {
+                throw new Error(`no ${selector} yet`);
+            }
+        },
+        { timeout: 3000 }
+    );
+    await flushPromises();
+}
+
+/** The road's button for the House: Tab order is along the road, and it
+ * stands between the first two games. */
+const houseButton = (wrapper) => wrapper.findAll("button.interactable")[1];
+
+/** Goes into the House's hall from the road. */
+async function enterHouse(wrapper) {
+    await houseButton(wrapper).trigger("click");
+    await showing(wrapper, ".room-3d");
+    // The fade back in, and its announcement.
+    await vi.waitFor(() => {
+        if (wrapper.find(".veil.blocking").exists()) throw new Error("fading");
+    });
 }
 
 /** Lets the renderer's frame loop (jsdom's rAF) run for `ms`. */
@@ -151,6 +213,8 @@ function spy(object, method) {
 }
 
 beforeEach(() => {
+    // The world remembers where the Butt was; every test starts fresh.
+    sessionStorage.clear();
     fake.webgl = true;
     fake.fail = false;
     fake.renderers = [];
@@ -418,5 +482,118 @@ describe("GamesWorld stage", () => {
         expect(wrapper.get(".stage").attributes("aria-label")).toBe(
             "games.world.stage_aria"
         );
+    });
+});
+
+describe("GamesWorld doors", () => {
+    it("goes through the House's door into the hall, and says so", async () => {
+        wrapper = await mountWorld(withHouse);
+
+        await enterHouse(wrapper);
+
+        expect(wrapper.find(".road-3d").exists()).toBe(false);
+        expect(wrapper.get("[aria-live]").text()).toBe("The Hall");
+        expect(wrapper.get(".stage").attributes("aria-label")).toBe(
+            "games.world.room_aria"
+        );
+        expect(wrapper.get("button.room-item").attributes("aria-label")).toBe(
+            "Go outside"
+        );
+        // Focus lands on the door you came in by.
+        expect(document.activeElement).toBe(
+            wrapper.get("button.room-item").element
+        );
+    });
+
+    it("leaves on Escape, with focus back on the House", async () => {
+        wrapper = await mountWorld(withHouse);
+        await enterHouse(wrapper);
+
+        await wrapper.get(".stage").trigger("keydown", { key: "Escape" });
+        await showing(wrapper, ".road-3d");
+
+        await vi.waitFor(() => {
+            expect(document.activeElement).toBe(houseButton(wrapper).element);
+        });
+        expect(wrapper.get("[aria-live]").text()).toBe("The street");
+        expect(wrapper.find(".world-back").exists()).toBe(false);
+    });
+
+    it("leaves by the corner back button", async () => {
+        wrapper = await mountWorld(withHouse);
+        await enterHouse(wrapper);
+
+        const back = wrapper.get(".world-back");
+        expect(back.attributes("aria-label")).toBe("games.world.back");
+        await back.trigger("click");
+
+        await showing(wrapper, ".road-3d");
+    });
+
+    it("ignores Escape on the road", async () => {
+        wrapper = await mountWorld(withHouse);
+
+        await wrapper.get(".stage").trigger("keydown", { key: "Escape" });
+        await frames(50);
+
+        expect(wrapper.find(".road-3d").exists()).toBe(true);
+        expect(wrapper.find(".veil.blocking").exists()).toBe(false);
+    });
+
+    it("says it can't go in without WebGL, and stays on the road", async () => {
+        fake.webgl = false;
+        wrapper = await mountWorld(withHouse);
+
+        // The DOM road lists the landmarks in the registry's order.
+        await wrapper.findAll("button.landmark")[3].trigger("click");
+        await nextTick();
+
+        expect(wrapper.get("[aria-live]").text()).toBe(
+            "games.world.needs_webgl"
+        );
+        expect(wrapper.find(".road-scene").exists()).toBe(true);
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+    });
+
+    it("comes back to where the Butt was, after a game", async () => {
+        wrapper = await mountWorld(withHouse);
+        await wrapper.findAll("button.interactable")[2].trigger("focus");
+        // Off to play Toot Foods.
+        wrapper.unmount();
+
+        wrapper = await mountWorld(withHouse);
+        await wrapper.get(".stage").trigger("keydown", { key: "Enter" });
+
+        expect(wrapper.get('[role="dialog"]').text()).toContain("Toot Foods");
+    });
+
+    it("opens in the room a shared link names", async () => {
+        wrapper = await mountWorld(withHouse, {
+            link: { scene: "house.hall", visit: "a" },
+        });
+
+        expect(wrapper.find(".room-3d").exists()).toBe(true);
+    });
+
+    it("sends a link to a room out to the road without WebGL", async () => {
+        fake.webgl = false;
+        wrapper = await mountWorld(withHouse, {
+            link: { scene: "house.hall", visit: "a" },
+        });
+
+        expect(wrapper.find(".road-scene").exists()).toBe(true);
+    });
+
+    it("opens, and goes through doors, when storage throws", async () => {
+        const broken = () => {
+            throw new Error("SecurityError");
+        };
+        spy(Storage.prototype, "getItem").mockImplementation(broken);
+        spy(Storage.prototype, "setItem").mockImplementation(broken);
+        wrapper = await mountWorld(withHouse);
+
+        await enterHouse(wrapper);
+
+        expect(wrapper.find(".room-3d").exists()).toBe(true);
     });
 });

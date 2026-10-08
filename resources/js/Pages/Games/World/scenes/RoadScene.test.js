@@ -38,8 +38,8 @@ beforeEach(() => {
 });
 afterEach(() => spy.mockRestore());
 
-function build(theme = "") {
-    const kit = createCastKit(THREE, { createCanvas });
+function build(theme = "", { onSound } = {}) {
+    const kit = createCastKit(THREE, { createCanvas, onSound });
     const road = createRoadScene(THREE, kit, {
         theme: worldTheme(theme),
         landmarks,
@@ -270,6 +270,50 @@ describe("the road's scene graph", () => {
             0
         );
         expect(lift()).toBeLessThan(0);
+    });
+
+    it("brings the cockroach back up while it's still on a phone's screen", () => {
+        const { road } = build();
+        const L = roadLayout({ w: 375, h: 600, vmin: 375 });
+        road.layout(L, 2200);
+        const roach = road.scene.getObjectByName("manhole-cockroach");
+        const lift = () => roach.children[1].position.y;
+        const butt = (dx) =>
+            road.sync(
+                view(L, {
+                    reduced: true,
+                    peach: { x: roach.position.x + dx, facing: 1, lane: 0 },
+                }),
+                0
+            );
+
+        butt(30);
+        expect(lift()).toBeLessThan(0);
+        // A third of a phone's width away: both on screen, and it's up.
+        butt(120);
+        expect(lift()).toBeCloseTo(0);
+    });
+
+    it("hisses once as the cockroach pops back up behind the Butt", () => {
+        const onSound = vi.fn();
+        const { road, L } = build("", { onSound });
+        const hisses = () => onSound.mock.calls.length;
+        const roach = road.scene.getObjectByName("manhole-cockroach");
+        const butt = (dx) =>
+            road.sync(
+                view(L, {
+                    reduced: true,
+                    peach: { x: roach.position.x + dx, facing: 1, lane: 0 },
+                }),
+                0
+            );
+
+        butt(-400);
+        expect(hisses()).toBe(0);
+        butt(0); // ducks
+        butt(400); // walked past: back up
+        butt(500);
+        expect(hisses()).toBe(1);
     });
 
     it("lets off no fireworks under reduced motion", () => {

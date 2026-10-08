@@ -697,6 +697,14 @@ return [
     'games.world.cancel' => 'Not yet',
     'games.world.listen' => '🔊 Listen',
     'games.world.stop_listening' => '■ Stop',
+    'games.world.room_aria' => 'Games world, :place — press Tab to find the doors, or Escape to go back',
+    'games.world.back' => 'Go back',
+    'games.world.needs_webgl' => 'This browser can\'t show inside :place',
+    'games.world.door_failed' => 'The door to :place won\'t open — try again',
+    'games.world.places.street' => 'The street',
+    'games.world.places.house' => 'The Butt\'s House',
+    'games.world.places.house_hall' => 'The Hall',
+    'games.world.doors.outside' => 'Go outside',
 
     // Games - Cast
     'games.cast.butt' => 'The Butt',

@@ -9,6 +9,7 @@ import {
     ROWS,
     RIDGE_DEPTH,
     ROOF,
+    screenSize,
 } from "./roadLayout.js";
 import { roadScenery } from "./roadScenery.js";
 import {
@@ -66,7 +67,11 @@ const SHADOW_MAP = 1024;
 const LIGHT_DIRECTION = [-0.35, 1, 0.75]; // from above, in front, a bit left
 // The cockroach ducks into its manhole when the Butt comes this close, and
 // pops back up (hissing) when it leaves.
-const MANHOLE = { duck: 170, time: 0.25 };
+// A manhole's cockroach ducks while the Butt is within `duck` px, a share of
+// the stage's width (at most 170, at least 60): on a phone the camera keeps
+// the Butt so close to the manhole while it's on screen that a fixed 170
+// would only ever show it ducked, popping up after it scrolls away.
+const MANHOLE = { duck: [60, 0.18, 170], time: 0.25 };
 // The toot cloud drifting along the road, across the screen.
 const ROAD_TOOT = { period: 16, height: 26 };
 // Fireworks: a flash every few seconds, fading this fast.
@@ -241,6 +246,8 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
         // A cast landmark stands at its building's door; anything else is
         // the building's sign.
         sign: !landmark.cast,
+        // A building you can go into has a front door.
+        door: landmark.item?.type === "door",
         puppet: landmark.cast
             ? kit.castMesh(landmark.cast)
             : kit.emojiMesh(landmark.landmark, { shadows: false }),
@@ -292,6 +299,7 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
     let nearThings = [];
     // The manholes' cockroaches: { puppet, x, size, peek (0 hidden … 1) }.
     let cockroaches = [];
+    let duckRadius = 0; // px either side of a manhole, for this stage
 
     function mesh(geometry, material, shadows = true) {
         const m = new THREE.Mesh(geometry, material);
@@ -373,7 +381,12 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
         // a near-side one fades, so it gets its own mesh.
         landmarkPuppets.forEach((entry, palette) => {
             const box = buildingBox(L, entry);
-            const parts = building(THREE, { ...box, look: theme, palette });
+            const parts = building(THREE, {
+                ...box,
+                look: theme,
+                palette,
+                door: entry.door,
+            });
             const at = { x: box.x, z: box.z };
             if (entry.side === "near") {
                 addNearThing(
@@ -602,6 +615,7 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
         ridgeTile = tile;
 
         buildStreet(worldWidth);
+        duckRadius = screenSize(MANHOLE.duck, w);
 
         idlerPuppets.forEach(({ row, puppet }) => {
             puppet.set({ size: sizes.idlers[row] });
@@ -785,7 +799,7 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
     function peekCockroaches(buttX, dt) {
         let changed = false;
         for (const roach of cockroaches) {
-            const target = Math.abs(buttX - roach.x) < MANHOLE.duck ? 0 : 1;
+            const target = Math.abs(buttX - roach.x) < duckRadius ? 0 : 1;
             if (roach.peek === target) continue;
             roach.peek = ease(roach.peek, target, dt, MANHOLE.time);
             // Sunk below the road, which hides what's under it.

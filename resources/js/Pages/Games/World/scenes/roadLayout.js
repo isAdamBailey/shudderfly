@@ -61,7 +61,9 @@ export const ROOF = 0.38;
 // The flat road's drifter spots: rows and columns as stage shares, px size.
 export const DRIFTERS = { count: 4, size: 38, drift: 60, period: 18 };
 
-const screenSize = ([min, share, max], px) => clamp(px * share, min, max);
+/** A share of `px`, clamped: [min px, share, max px]. */
+export const screenSize = ([min, share, max], px) =>
+    clamp(px * share, min, max);
 
 /** The road's geometry for a stage `w` × `h` px, sizing characters by the
  * viewport's `vmin` px as the flat road's CSS did. */

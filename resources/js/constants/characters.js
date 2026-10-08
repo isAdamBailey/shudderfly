@@ -82,6 +82,8 @@ export const CAST = {
         nameKey: "games.cast.cockroach",
         moves: ["idle", "scuttle", "hiss", "toot"],
         tootPitch: 1.5,
+        // Moves that make a sound wherever this character plays them.
+        sounds: { hiss: "hiss" },
     },
     pizza: {
         emoji: PIZZA,

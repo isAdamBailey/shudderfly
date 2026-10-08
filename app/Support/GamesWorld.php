@@ -26,14 +26,22 @@ final class GamesWorld
         'blueberries', 'grapes', 'strawberry', 'taco', 'apple', 'sprout',
     ];
 
+    /**
+     * The raw registry. Visible text is a lang key here (`label`); scenes()
+     * translates it. A `door` leads `to` a scene and puts the Butt at
+     * `toSpot`, the id of an interactable there (the door back, usually).
+     * Every room has one door marked `exit`: its way out, which Escape takes
+     * when there's no way back to retrace (a reload, a shared link).
+     */
     public static function definitions(?array $games = null): array
     {
         return [
             'road' => [
                 'kind' => 'road',
+                'label' => 'messages.games.world.places.street',
                 // Generated, not listed: a game added to games() gets its
                 // landmark on the road without an edit here.
-                'interactables' => collect($games ?? GameController::games())
+                'interactables' => [...collect($games ?? GameController::games())
                     ->map(fn ($game, $slug) => [
                         'id' => $slug,
                         'type' => 'game',
@@ -48,6 +56,41 @@ final class GamesWorld
                     ])
                     ->values()
                     ->all(),
+                    // The House, across the street from the first games.
+                    [
+                        'id' => 'house',
+                        'type' => 'door',
+                        'x' => 1050,
+                        'side' => 'near',
+                        'emoji' => '🏠',
+                        'label' => 'messages.games.world.places.house',
+                        'to' => 'house.hall',
+                        'toSpot' => 'front-door',
+                    ],
+                ],
+            ],
+            // A placeholder until the room engine (issue #130, Phase 5):
+            // just the way back out.
+            'house.hall' => [
+                'kind' => 'room',
+                'label' => 'messages.games.world.places.house_hall',
+                // Floor size in world units: x across, z from the back wall
+                // to the open front.
+                'size' => ['w' => 900, 'd' => 500],
+                'spawn' => ['x' => 450, 'z' => 330],
+                'interactables' => [
+                    [
+                        'id' => 'front-door',
+                        'type' => 'door',
+                        'x' => 450,
+                        'z' => 0,
+                        'emoji' => '🚪',
+                        'label' => 'messages.games.world.doors.outside',
+                        'to' => 'road',
+                        'toSpot' => 'house',
+                        'exit' => true,
+                    ],
+                ],
             ],
         ];
     }
@@ -59,6 +102,7 @@ final class GamesWorld
         return collect(self::definitions($games))
             ->map(fn ($scene) => [
                 ...$scene,
+                'label' => __($scene['label']),
                 'interactables' => array_map(
                     fn ($item) => self::resolve($item, $games),
                     $scene['interactables'],
@@ -82,7 +126,11 @@ final class GamesWorld
                     ? ['cast' => $item['cast']]
                     : ['landmark' => $item['emoji']]),
             ];
+
+            return $item;
         }
+
+        $item['label'] = __($item['label']);
 
         return $item;
     }

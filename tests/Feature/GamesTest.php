@@ -28,7 +28,11 @@ class GamesTest extends TestCase
                 ->component('Games/Index')
                 ->missing('games')
                 ->where('scenes.road.kind', 'road')
-                ->has('scenes.road.interactables', 6)
+                ->has('scenes.road.interactables', 7)
+                ->where('scenes.road.interactables.6.id', 'house')
+                // A dotted id can't be a path here.
+                ->where('scenes', fn ($scenes) => collect($scenes)->get('house.hall')['kind'] === 'room')
+                ->where('link', null)
                 ->where('scenes.road.interactables.0.id', 'sprout-pox')
                 ->where('scenes.road.interactables.0.label', 'Brussels Sprout Chicken Pox')
                 ->where('scenes.road.interactables.1.id', 'toot-foods')
@@ -64,11 +68,40 @@ class GamesTest extends TestCase
         $response = $this->get(route('games.index'));
 
         $road = $response->viewData('page')['props']['scenes']['road']['interactables'];
-        $positions = array_column($road, 'x');
+        // Two things can face each other across the street, not share a side.
+        foreach (collect($road)->groupBy('side') as $side => $items) {
+            $this->assertCount($items->count(), $items->pluck('x')->unique(), "{$side} side");
+        }
 
-        $this->assertCount(count($road), array_unique($positions));
+        $games = collect($road)->where('type', 'game');
+        $positions = $games->pluck('x')->all();
         $this->assertSame($positions, array_values(collect($positions)->sort()->all()));
-        $this->assertNotContains('', array_column($road, 'emoji'));
+        $this->assertNotContains('', $games->pluck('emoji')->all());
+    }
+
+    public function test_games_index_opens_a_scene_named_in_the_link(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $visits = [];
+        foreach ([1, 2] as $_) {
+            $this->get(route('games.index', ['scene' => 'house.hall']))
+                ->assertInertia(function (Assert $page) use (&$visits) {
+                    $page->where('link.scene', 'house.hall');
+                    $visits[] = $page->toArray()['props']['link']['visit'];
+                });
+        }
+        // Each click on the link is a visit of its own.
+        $this->assertNotSame($visits[0], $visits[1]);
+
+        foreach (['nowhere', 'constructor', ''] as $unknown) {
+            $this->get(route('games.index', ['scene' => $unknown]))
+                ->assertInertia(fn (Assert $page) => $page->where('link', null));
+        }
+        $this->get(route('games.index').'?scene[]=road')
+            ->assertInertia(fn (Assert $page) => $page->where('link', null));
     }
 
     public function test_sprout_pox_game_page_is_displayed(): void

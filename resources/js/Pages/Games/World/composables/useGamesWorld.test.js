@@ -8,6 +8,7 @@ import {
     SOFT_LEFT,
     SOFT_RIGHT,
     CROSS_TIME,
+    LANES,
 } from "./useGamesWorld.js";
 
 const DT = 1 / 60;
@@ -505,5 +506,27 @@ describe("useGamesWorld lanes", () => {
         world.crossTo("near");
 
         expect(world.peach.side).toBe("far");
+    });
+});
+
+describe("useGamesWorld start", () => {
+    it("starts the peach where it is told, on that side", () => {
+        const world = makeWorld({ start: { x: 1500, side: "near" } });
+
+        expect(world.peach.x).toBe(1500);
+        expect(world.peach.side).toBe("near");
+        expect(world.peach.lane).toBe(LANES.near);
+        // The camera follows it there.
+        expect(world.peach.x - world.camera.x).toBeLessThanOrEqual(
+            STAGE_W * SOFT_RIGHT
+        );
+    });
+
+    it("starts at the road's start for a missing or junk start", () => {
+        for (const start of [undefined, { x: "far" }, { side: "middle" }]) {
+            const world = makeWorld({ start });
+            expect(world.peach.x).toBe(260);
+            expect(world.peach.side).toBe("far");
+        }
     });
 });

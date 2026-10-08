@@ -30,6 +30,8 @@ const props = defineProps({
     scene: { type: Object, required: true },
     // { beginGesture(handlers) -> stage rect, resetScroll(), renderer }
     stage: { type: Object, required: true },
+    // How the road was reached (useSceneRouter's `arrival`).
+    arrival: { type: Object, default: () => ({}) },
 });
 
 const emit = defineEmits(["activate"]);
@@ -288,7 +290,14 @@ const skyLogoStyle = computed(() => ({
     }px, 0)`,
 }));
 
-defineExpose({ ...api, setBounds });
+/** Where a landmark is on the stage (the middle of its building), for the
+ * stage to dolly toward. */
+function pointOf(id) {
+    const s = landmarkSpots.value[id];
+    return s ? { x: s.x, y: s.y - s.height / 2 } : null;
+}
+
+defineExpose({ ...api, setBounds, pointOf });
 </script>
 
 <template>
