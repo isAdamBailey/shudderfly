@@ -72,16 +72,19 @@ export function mergeParts(THREE, parts) {
     return merged;
 }
 
+// A front door's wood and its knob.
+const DOOR = { wood: "#7c2d12", knob: "#facc15" };
+
 /**
  * A building `width` wide and `height` to its eaves, with a gabled roof
  * `roof` high and a grid of windows on its front. The middle of the front is
- * left clear: the upper part for its sign, the bottom for a door (Phase 4
- * marks the buildings you can go into). Returns { body, windows } part
- * lists, so the windows can glow on their own material.
+ * left clear: the upper part for its sign, the bottom for a front door,
+ * drawn only with `door` (a building you can go into). Returns { body,
+ * windows } part lists, so the windows can glow on their own material.
  */
 export function building(
     THREE,
-    { width, height, depth, roof: roofHeight, look, palette }
+    { width, height, depth, roof: roofHeight, look, palette, door = false }
 ) {
     const wall = look.walls[palette % look.walls.length];
     const roofColor = look.roofs[palette % look.roofs.length];
@@ -103,6 +106,20 @@ export function building(
             z: -depth / 2,
         }),
     ];
+
+    if (door) {
+        const w = width * 0.22;
+        const h = height * 0.4;
+        body.push(
+            box(THREE, DOOR.wood, [w, h, 3], [0, h / 2, 1.5]),
+            box(
+                THREE,
+                DOOR.knob,
+                [w * 0.14, w * 0.14, 3],
+                [w * 0.28, h * 0.48, 3.5]
+            )
+        );
+    }
 
     const windows = [];
     const pane = Math.min(width, height) * 0.16;

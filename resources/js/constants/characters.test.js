@@ -26,6 +26,14 @@ describe("the cast registry", () => {
         }
     });
 
+    it("only gives sounds to moves the character has", () => {
+        for (const [id, member] of Object.entries(CAST)) {
+            for (const move of Object.keys(member.sounds ?? {})) {
+                expect(member.moves, id).toContain(move);
+            }
+        }
+    });
+
     it("only greets with a move the character has", () => {
         for (const [id, member] of Object.entries(CAST)) {
             if (member.greet) expect(member.moves, id).toContain(member.greet);

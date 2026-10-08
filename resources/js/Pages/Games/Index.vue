@@ -11,6 +11,12 @@ defineProps({
         type: Object,
         required: true,
     },
+    // A shared link's { scene, visit } (/games?scene=house.hall), checked
+    // against the registry by the server.
+    link: {
+        type: Object,
+        default: null,
+    },
 });
 </script>
 
@@ -21,7 +27,7 @@ defineProps({
         <h2 class="sr-only">{{ t("games.world.title") }}</h2>
 
         <div class="world-page">
-            <GamesWorld :scenes="scenes" />
+            <GamesWorld :scenes="scenes" :link="link" />
         </div>
     </AuthenticatedLayout>
 </template>

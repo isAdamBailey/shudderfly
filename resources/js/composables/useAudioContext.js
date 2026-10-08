@@ -46,6 +46,12 @@ function attachReArmListeners(ctx) {
     window.addEventListener("pointerdown", resumeIfDormant, { passive: true });
 }
 
+/** Whether the shared context exists and is playing, without making one:
+ * a sound that isn't the answer to a gesture can check this first. */
+export function audioRunning() {
+    return audioCtx?.state === "running";
+}
+
 /**
  * Returns the shared AudioContext, resuming it if Safari left it
  * suspended/interrupted. Returns null when Web Audio is unsupported.

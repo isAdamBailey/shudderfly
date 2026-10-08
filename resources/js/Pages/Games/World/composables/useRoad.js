@@ -30,7 +30,7 @@ const TAP_SLOP = 8; // px
  * (scenes/Road3D.vue) draw the same state, take the same gestures and expose
  * the same API to the stage.
  *
- * `props` are the scene's ({ scene, stage }); `emit` its emit. The drawer
+ * `props` are the scene's ({ scene, stage, arrival }); `emit` its emit. The drawer
  * supplies what only it knows:
  * - dragTo(event, stageRect): called as a drag of the Butt starts; returns
  *   a function from each pointer event of the drag to where it sends the
@@ -80,11 +80,22 @@ export function useRoad(props, emit, options) {
         }))
     );
 
+    // Where the Butt starts: at the door it came out of, or where it was
+    // (useSceneRouter's arrival), on a side this drawer has.
+    const arrival = props.arrival ?? {};
+    const spotItem =
+        arrival.spot &&
+        props.scene.interactables.find((item) => item.id === arrival.spot);
+    const at = spotItem
+        ? { x: spotItem.x, side: spotItem.side }
+        : arrival.position;
+
     // "confirmSlug" is the road's freeze: set when a landmark is activated,
     // it stops the peach until the stage calls release().
     const world = useGamesWorld(roadLandmarks, {
         isReducedMotion: () => reduced.value,
         onArrive: (landmark) => emit("activate", landmark.item),
+        start: at && { x: at.x, side: lanes ? at.side : "far" },
     });
     const { landmarks, peach, camera, state, nearestLandmark } = world;
 
@@ -312,10 +323,7 @@ export function useRoad(props, emit, options) {
     function release() {
         const id = state.confirmSlug;
         world.closeConfirm();
-        nextTick(() => {
-            landmarkEls[id]?.focus({ preventScroll: true });
-            props.stage.resetScroll();
-        });
+        nextTick(() => focusItem(id));
     }
 
     // A landmark that is a cast member greets the Butt when it walks up (the
@@ -377,8 +385,22 @@ export function useRoad(props, emit, options) {
     const peekX = useTransition(rawPeekX, { duration: 150 });
     const peekY = useTransition(rawPeekY, { duration: 150 });
 
+    /** Focus on a landmark's button, e.g. the door the Butt just came out
+     * of. */
+    function focusItem(id) {
+        landmarkEls[id]?.focus({ preventScroll: true });
+        props.stage.resetScroll();
+    }
+
+    /** What the stage saves to come back to. */
+    function position() {
+        return { x: peach.x, side: peach.side };
+    }
+
     const api = {
         setBounds: world.setBounds,
+        focusItem,
+        position,
         pause,
         resume,
         interrupt,

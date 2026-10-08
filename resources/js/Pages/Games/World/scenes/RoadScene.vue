@@ -19,6 +19,8 @@ const props = defineProps({
     scene: { type: Object, required: true },
     // { beginGesture(handlers) -> stage rect, resetScroll() }
     stage: { type: Object, required: true },
+    // How the road was reached (useSceneRouter's `arrival`).
+    arrival: { type: Object, default: () => ({}) },
 });
 
 const emit = defineEmits(["activate"]);

@@ -697,6 +697,14 @@ return [
     'games.world.cancel' => 'Todavía no',
     'games.world.listen' => '🔊 Escuchar',
     'games.world.stop_listening' => '■ Parar',
+    'games.world.room_aria' => 'Mundo de juegos, :place — pulsa Tab para encontrar las puertas, o Escape para volver',
+    'games.world.back' => 'Volver',
+    'games.world.needs_webgl' => 'Este navegador no puede mostrar el interior de :place',
+    'games.world.door_failed' => 'La puerta de :place no se abre — inténtalo otra vez',
+    'games.world.places.street' => 'La calle',
+    'games.world.places.house' => 'La Casa del Trasero',
+    'games.world.places.house_hall' => 'El recibidor',
+    'games.world.doors.outside' => 'Salir',
 
     // Games - Cast
     'games.cast.butt' => 'El Trasero',

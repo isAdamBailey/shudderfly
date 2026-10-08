@@ -10,6 +10,7 @@ use App\Services\UserTaggingService;
 use App\Support\GamesWorld;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -85,10 +86,22 @@ class GameController extends Controller
         private UserTaggingService $userTaggingService
     ) {}
 
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        // A shared link can open the world in a given place
+        // (/games?scene=house.hall); anything that isn't a scene is ignored.
+        // `visit` is new on every request but kept when the browser comes
+        // back to this page from history, so the world can tell a fresh click
+        // on the link (open there) from coming back from a game (stay put).
+        $scene = $request->query('scene');
+        $scenes = GamesWorld::scenes();
+        $link = is_string($scene) && array_key_exists($scene, $scenes)
+            ? ['scene' => $scene, 'visit' => Str::random(12)]
+            : null;
+
         return Inertia::render('Games/Index', [
-            'scenes' => GamesWorld::scenes(),
+            'scenes' => $scenes,
+            'link' => $link,
             'fartSoundUrl' => asset('fart.m4a'),
         ]);
     }

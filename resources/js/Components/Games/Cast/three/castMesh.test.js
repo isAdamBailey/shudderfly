@@ -173,4 +173,20 @@ describe("castMesh", () => {
         expect(spy).toHaveBeenCalled();
         expect(textureSpy).toHaveBeenCalled();
     });
+
+    it("sounds a character's moves, even under reduced motion", () => {
+        const onSound = vi.fn();
+        const k = createCastKit(THREE, { createCanvas, onSound });
+        const roach = k.castMesh("cockroach");
+
+        roach.play("hiss");
+        roach.setReducedMotion(true);
+        roach.play("hiss");
+        // A move the cockroach doesn't have isn't played, so isn't heard,
+        // and a move with no sound is silent.
+        roach.play("flush");
+        k.castMesh("toilet").play("flush");
+
+        expect(onSound.mock.calls).toEqual([["hiss"], ["hiss"]]);
+    });
 });

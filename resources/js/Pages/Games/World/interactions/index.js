@@ -1,3 +1,4 @@
+import door from "./door.js";
 import game from "./game.js";
 
 /**
@@ -5,7 +6,7 @@ import game from "./game.js";
  * only reach the world through `ctx`, so a new kind of interaction is one new
  * file plus a line here (issue #130).
  */
-const interactions = { game };
+const interactions = { door, game };
 
 /** Runs the handler for an interactable. An unknown type does nothing rather
  * than throwing, so a registry entry the client doesn't know yet is inert. */

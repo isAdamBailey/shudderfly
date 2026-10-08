@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Http\Controllers\GameController;
 use App\Support\GamesWorld;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Lang;
 use Tests\TestCase;
 
 /**
@@ -57,6 +58,58 @@ class GamesWorldScenesTest extends TestCase
 
         $this->assertSame('toilet', $boom['cast']);
         $this->assertArrayNotHasKey('emoji', $boom);
+    }
+
+    public function test_every_door_leads_to_a_spot_in_a_scene(): void
+    {
+        $scenes = GamesWorld::definitions();
+
+        foreach ($scenes as $sceneId => $scene) {
+            foreach (collect($scene['interactables'])->where('type', 'door') as $door) {
+                $where = "{$sceneId}.{$door['id']}";
+                $this->assertArrayHasKey($door['to'], $scenes, "{$where} leads nowhere");
+                $this->assertContains(
+                    $door['toSpot'] ?? null,
+                    array_column($scenes[$door['to']]['interactables'], 'id'),
+                    "{$where} has no spot to arrive at",
+                );
+            }
+        }
+    }
+
+    public function test_every_room_has_one_way_out(): void
+    {
+        foreach (GamesWorld::definitions() as $sceneId => $scene) {
+            $exits = collect($scene['interactables'])
+                ->where('type', 'door')
+                ->where('exit', true);
+            // The road is outside: it has nowhere to go out to.
+            $this->assertCount($scene['kind'] === 'room' ? 1 : 0, $exits, "{$sceneId} exits");
+        }
+    }
+
+    public function test_every_label_is_translated_in_every_locale(): void
+    {
+        foreach (GamesWorld::definitions() as $sceneId => $scene) {
+            // Games are named by GameController::games(), not by a key here.
+            $keys = [
+                $scene['label'],
+                ...collect($scene['interactables'])->where('type', '!=', 'game')->pluck('label'),
+            ];
+            foreach ($keys as $key) {
+                foreach (['en', 'es', 'fr'] as $locale) {
+                    $this->assertTrue(Lang::has($key, $locale, false), "{$sceneId}: {$key} missing in {$locale}");
+                }
+            }
+        }
+    }
+
+    public function test_scenes_translate_labels(): void
+    {
+        $scenes = GamesWorld::scenes();
+
+        $this->assertSame('The Hall', $scenes['house.hall']['label']);
+        $this->assertSame("The Butt's House", collect($scenes['road']['interactables'])->firstWhere('id', 'house')['label']);
     }
 
     public function test_scenes_fill_in_games(): void
