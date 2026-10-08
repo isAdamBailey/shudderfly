@@ -42,7 +42,7 @@
             @keydown.space.prevent="feedSlice(s.id)"
         >
             <PepperoniStick v-if="s.kind === 'pepperoni'" class="food-svg" />
-            <template v-else>🍕</template>
+            <template v-else>{{ PIZZA }}</template>
         </button>
 
         <div class="person-wrap">
@@ -99,7 +99,7 @@ import GameEndScreen from "@/Components/Games/GameEndScreen.vue";
 import PersonFace from "@/Components/Games/PersonFace.vue";
 import GameBoard from "@/Pages/Games/CostcoPizzaPoop/components/GameBoard.vue";
 import PepperoniStick from "@/Pages/Games/CostcoPizzaPoop/components/PepperoniStick.vue";
-import { POOP } from "@/constants/characters.js";
+import { PIZZA, POOP } from "@/constants/characters.js";
 import { useGameState } from "@/Pages/Games/CostcoPizzaPoop/composables/useGameState.js";
 import { useSound } from "@/Pages/Games/CostcoPizzaPoop/composables/useSound.js";
 import { useAutoStartGame } from "@/composables/useAutoStartGame";

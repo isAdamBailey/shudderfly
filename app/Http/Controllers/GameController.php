@@ -21,7 +21,9 @@ class GameController extends Controller
      * `landmark` is the emoji for the game's building on the Games World road
      * — separate from `emoji` (the game's own icon) because a destination and
      * an icon aren't the same thing: Boom's icon is the poop, but its landmark
-     * is the toilet, and the two cockroach games share an icon.
+     * is the toilet, and the two cockroach games share an icon. A landmark
+     * that is a cast member (the toilet) is `landmark_cast`, a cast id from
+     * GamesWorld::CAST, instead, so it's drawn as that character.
      * `distance` is the landmark's position along that road, in CSS px. It is
      * written out rather than derived from array order so a new game can be
      * dropped in mid-road without renumbering the rest. */
@@ -64,7 +66,7 @@ class GameController extends Controller
                 'name' => __('messages.games.boom.name'),
                 'emoji' => '💩',
                 'description' => __('messages.games.boom.description'),
-                'landmark' => '🚽',
+                'landmark_cast' => 'toilet',
                 'distance' => 4200,
                 'component' => 'Boom',
             ],
@@ -85,7 +87,10 @@ class GameController extends Controller
 
     public function index(): Response
     {
-        return Inertia::render('Games/Index', ['scenes' => GamesWorld::scenes()]);
+        return Inertia::render('Games/Index', [
+            'scenes' => GamesWorld::scenes(),
+            'fartSoundUrl' => asset('fart.m4a'),
+        ]);
     }
 
     public function show(string $game): Response

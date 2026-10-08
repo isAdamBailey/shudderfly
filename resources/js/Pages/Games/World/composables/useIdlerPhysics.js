@@ -1,8 +1,8 @@
 import { onUnmounted, reactive } from "vue";
 
-// Draggable and throwable, purely for fun — dropping one has no effect on the
-// game. This lives outside useGamesWorld: it's decoration with no game
-// consequence, so it doesn't belong in that composable's testable state.
+// Draggable and throwable for fun; the only consequence is onDrop (the scene
+// makes the Butt toot when one lands on it). This lives outside useGamesWorld:
+// the road doesn't depend on it, so it doesn't belong in that state.
 const GRAVITY = 2200; // px/s^2
 const AIR_DRAG = 0.995; // per-frame horizontal velocity decay while airborne
 const BOUNCE_DAMPING = 0.4;
@@ -13,9 +13,11 @@ const SETTLE_SPEED = 60; // px/s; below this after a bounce, the food just stops
  * releasing it tosses it with the finger's own velocity, and a small
  * gravity/bounce integrator settles it back onto the verge. `isBlocked`
  * lets the caller freeze dragging while the world is frozen behind a card,
- * and `isReducedMotion` keeps the lift but drops the thrown arc.
+ * and `isReducedMotion` keeps the lift but drops the thrown arc. `onDrop(slug,
+ * dx)` hears where a released idler ends up, `dx` px from its resting spot:
+ * when a toss settles, or straight away under reduced motion.
  */
-export function useIdlerPhysics({ isBlocked, isReducedMotion } = {}) {
+export function useIdlerPhysics({ isBlocked, isReducedMotion, onDrop } = {}) {
     const idlerPhysics = reactive({});
 
     function physicsFor(slug) {
@@ -58,7 +60,7 @@ export function useIdlerPhysics({ isBlocked, isReducedMotion } = {}) {
         lastFrame = now;
 
         let stillMoving = Boolean(dragSlug);
-        for (const p of Object.values(idlerPhysics)) {
+        for (const [slug, p] of Object.entries(idlerPhysics)) {
             if (!p.airborne) continue;
             p.vy += GRAVITY * dt;
             p.dx += p.vx * dt;
@@ -75,6 +77,7 @@ export function useIdlerPhysics({ isBlocked, isReducedMotion } = {}) {
                     p.vx = 0;
                     p.vy = 0;
                     p.airborne = false;
+                    onDrop?.(slug, p.dx);
                 }
             } else {
                 stillMoving = true;
@@ -136,9 +139,12 @@ export function useIdlerPhysics({ isBlocked, isReducedMotion } = {}) {
         // go returns it to the verge instead of launching an arc across the
         // scene — the drag is the interaction, the flight is the decoration.
         if (isReducedMotion && isReducedMotion()) {
+            const slug = dragSlug;
+            const dx = p.dx;
             settleToRest(p);
             dragSlug = null;
             detachListeners();
+            onDrop?.(slug, dx);
             return;
         }
         p.vx = vx;

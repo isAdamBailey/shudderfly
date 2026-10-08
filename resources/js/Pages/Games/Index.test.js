@@ -1,5 +1,5 @@
 import { flushPromises, mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 import { TOOT_FOODS } from "@/constants/characters.js";
 import Index from "./Index.vue";
@@ -59,27 +59,34 @@ const games = [
 const scenes = {
     road: {
         kind: "road",
-        interactables: games.map((game) => ({
-            id: game.slug,
-            type: "game",
-            x: game.distance,
-            game: game.slug,
-            emoji: game.landmark,
-            label: game.name,
-            card: {
-                slug: game.slug,
-                name: game.name,
-                emoji: game.emoji,
-                description: game.description,
-                landmark: game.landmark,
-            },
-        })),
+        // A landmark that is a cast member (Boom's toilet) goes by its id.
+        interactables: games.map((game) => {
+            const where =
+                game.slug === "boom"
+                    ? { cast: "toilet" }
+                    : { emoji: game.landmark };
+            return {
+                id: game.slug,
+                type: "game",
+                x: game.distance,
+                game: game.slug,
+                ...where,
+                label: game.name,
+                card: {
+                    slug: game.slug,
+                    name: game.name,
+                    emoji: game.emoji,
+                    description: game.description,
+                    ...(where.cast ? where : { landmark: game.landmark }),
+                },
+            };
+        }),
     },
 };
 
-function mountIndex() {
+function mountIndex(props = { scenes }) {
     return mount(Index, {
-        props: { scenes },
+        props,
         attachTo: document.body,
         global: {
             provide: { route: global.route },
@@ -96,11 +103,19 @@ function mountIndex() {
     });
 }
 
+// jsdom has no media playback; the toot's audio unlock would throw without it.
+beforeEach(() => {
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+    vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => {});
+});
+
 describe("Games Index", () => {
     it("renders one landmark button per game, in road order", () => {
         const wrapper = mountIndex();
         const buttons = wrapper.findAll("button.landmark");
         expect(buttons).toHaveLength(games.length);
+        // The toilet is drawn as the cast member, like everywhere else.
+        expect(buttons[4].find(".cast-toilet").exists()).toBe(true);
         games.forEach((game, i) => {
             expect(buttons[i].text()).toContain(game.landmark);
             expect(buttons[i].text()).toContain(game.name);
@@ -120,6 +135,7 @@ describe("Games Index", () => {
                 `left: ${games[i].distance - 260}px`
             );
             expect(idler.text()).toBe(TOOT_FOODS[i].emoji);
+            expect(idler.find(".cast-member").exists()).toBe(true);
         });
     });
 
@@ -137,14 +153,42 @@ describe("Games Index", () => {
         );
         await nextTick();
 
-        expect(idler.attributes("style")).toContain("translate(30px, -60px)");
+        // Sideways moves the idler; height lifts the character off its
+        // shadow.
+        const lift = () => idler.get(".cast-lift").attributes("style");
+        expect(idler.attributes("style")).toContain("translate(30px, 0px)");
+        expect(lift()).toContain("translateY(-60px)");
 
         window.dispatchEvent(new MouseEvent("pointerup", { bubbles: true }));
         await nextTick();
 
         // Released with upward velocity: still offset from its resting spot,
         // and no longer following the (now-gone) pointer.
-        expect(idler.attributes("style")).toContain("translate(30px, -60px)");
+        expect(idler.attributes("style")).toContain("translate(30px, 0px)");
+        expect(lift()).toContain("translateY(-60px)");
+    });
+
+    it("makes the Butt toot when a food is dropped on it", async () => {
+        const wrapper = mountIndex();
+        // The first idler rests 80px right of where the Butt starts.
+        const idler = wrapper.findAll(".idler")[0];
+
+        await idler.trigger("pointerdown", { clientX: 100, clientY: 100 });
+        window.dispatchEvent(
+            new MouseEvent("pointermove", { clientX: 20, clientY: 100 })
+        );
+        // Held still before letting go, so it drops rather than flies.
+        window.dispatchEvent(
+            new MouseEvent("pointermove", { clientX: 20, clientY: 100 })
+        );
+        window.dispatchEvent(new MouseEvent("pointerup", { bubbles: true }));
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        await nextTick();
+
+        expect(wrapper.find(".toot-puff").exists()).toBe(true);
+        expect(wrapper.get(".peach .cast-member").classes()).toContain(
+            "cast-move-toot"
+        );
     });
 
     it("pans the road when its bare background is dragged", async () => {
@@ -192,6 +236,25 @@ describe("Games Index", () => {
         // Only keys the road walks with are claimed from the page.
         expect(left.defaultPrevented).toBe(true);
         expect(other.defaultPrevented).toBe(false);
+    });
+
+    it("flushes the toilet when the Butt walks up to it", async () => {
+        // Just out of reach of where the Butt starts (260), so it has to walk.
+        const boom = scenes.road.interactables.find((i) => i.id === "boom");
+        const wrapper = mountIndex({
+            scenes: {
+                road: { kind: "road", interactables: [{ ...boom, x: 400 }] },
+            },
+        });
+        const toilet = wrapper.get(".landmark .cast-toilet");
+        expect(toilet.classes()).not.toContain("cast-move-flush");
+
+        await wrapper.get("button.landmark").trigger("focus");
+        await new Promise((resolve) => setTimeout(resolve, 300));
+
+        expect(wrapper.get(".landmark .cast-toilet").classes()).toContain(
+            "cast-move-flush"
+        );
     });
 
     it("renders no game links until a landmark is chosen", () => {

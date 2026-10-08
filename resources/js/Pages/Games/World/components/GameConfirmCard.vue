@@ -4,6 +4,7 @@ import {
     stopGameIntroSpeech,
 } from "@/composables/useGameIntroSpeech";
 import Button from "@/Components/Button.vue";
+import CastMember from "@/Components/Games/Cast/CastMember.vue";
 import { useFocusTrap } from "@/composables/useFocusTrap";
 import { useTranslations } from "@/composables/useTranslations";
 import { Link } from "@inertiajs/vue3";
@@ -73,7 +74,8 @@ onUnmounted(stopGameIntroSpeech);
             class="game-confirm-panel w-full max-w-sm rounded-2xl border-2 border-theme-primary bg-theme-content px-6 py-6 text-center shadow-xl"
         >
             <div class="text-[clamp(3rem,14vmin,4.5rem)] leading-none">
-                {{ game.landmark }}
+                <CastMember v-if="game.cast" :id="game.cast" :move="null" />
+                <template v-else>{{ game.landmark }}</template>
             </div>
             <h2
                 :id="titleId"

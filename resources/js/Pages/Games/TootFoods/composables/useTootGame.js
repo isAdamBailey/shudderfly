@@ -1,5 +1,6 @@
 import { reactive, ref, computed, onUnmounted } from "vue";
 import { TOOT_FOODS } from "@/constants/characters.js";
+import { PUFF_MS } from "@/composables/useToot";
 
 export const ROUND_SECONDS = 30;
 const COMBO_WINDOW_MS = 1200;
@@ -245,7 +246,7 @@ export function useTootGame(callbacks = {}) {
         setTimeout(() => {
             const idx = bursts.findIndex((b) => b.id === burstId);
             if (idx !== -1) bursts.splice(idx, 1);
-        }, 720);
+        }, PUFF_MS);
 
         const popId = nextId++;
         popups.push({

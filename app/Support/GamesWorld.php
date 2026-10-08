@@ -15,6 +15,14 @@ use App\Http\Controllers\GameController;
  */
 final class GamesWorld
 {
+    /** Ids of the cast registry, CAST in resources/js/constants/characters.js
+     * (a Vitest test keeps the two in step). Scenes name characters by these
+     * ids, never by emoji. */
+    public const CAST = [
+        'butt', 'poop', 'toilet', 'cockroach', 'pizza', 'face',
+        'blueberries', 'grapes', 'strawberry', 'taco', 'apple', 'sprout',
+    ];
+
     public static function definitions(?array $games = null): array
     {
         return [
@@ -28,7 +36,9 @@ final class GamesWorld
                         'type' => 'game',
                         'x' => $game['distance'],
                         'game' => $slug,
-                        'emoji' => $game['landmark'],
+                        ...(isset($game['landmark_cast'])
+                            ? ['cast' => $game['landmark_cast']]
+                            : ['emoji' => $game['landmark']]),
                     ])
                     ->values()
                     ->all(),
@@ -62,7 +72,9 @@ final class GamesWorld
                 'name' => $game['name'],
                 'emoji' => $game['emoji'],
                 'description' => $game['description'],
-                'landmark' => $item['emoji'],
+                ...(isset($item['cast'])
+                    ? ['cast' => $item['cast']]
+                    : ['landmark' => $item['emoji']]),
             ];
         }
 

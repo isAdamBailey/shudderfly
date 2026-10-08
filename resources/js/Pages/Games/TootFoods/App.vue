@@ -2,9 +2,10 @@
 import { onMounted, onBeforeUnmount, nextTick, ref } from "vue";
 import { Link, usePage } from "@inertiajs/vue3";
 import GameEndScreen from "@/Components/Games/GameEndScreen.vue";
+import TootPuff from "@/Components/Games/Cast/TootPuff.vue";
 import { useTootGame, ROUND_SECONDS } from "./composables/useTootGame.js";
 import { BUTT } from "@/constants/characters.js";
-import { useTootSound } from "./composables/useTootSound.js";
+import { useTootSound } from "@/composables/useTootSound";
 import { useAutoStartGame } from "@/composables/useAutoStartGame";
 import { useTranslations } from "@/composables/useTranslations";
 
@@ -189,17 +190,12 @@ useAutoStartGame(handlePlay);
         </div>
 
         <!-- Toot puffs -->
-        <div
+        <TootPuff
             v-for="b in bursts"
             :key="`burst-${b.id}`"
             class="toot-burst"
             :style="{ left: `${b.x}px`, top: `${b.y}px` }"
-            aria-hidden="true"
-        >
-            <span class="toot-cloud">💨</span>
-            <span class="toot-cloud toot-cloud-2">💨</span>
-            <span class="toot-word">{{ t("games.toot_foods.toot_word") }}</span>
-        </div>
+        />
 
         <!-- Score popups -->
         <div
@@ -443,80 +439,7 @@ useAutoStartGame(handlePlay);
 
 /* Toot burst --------------------------------------------------------------- */
 .toot-burst {
-    position: absolute;
     z-index: 16;
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-    font-size: clamp(2rem, 8vmin, 3.25rem);
-}
-
-.toot-cloud {
-    position: absolute;
-    left: 0;
-    top: 0;
-    transform: translate(-50%, -50%);
-    animation: tootCloud 0.7s ease-out forwards;
-}
-
-.toot-cloud-2 {
-    animation: tootCloud2 0.7s ease-out forwards;
-    opacity: 0.75;
-}
-
-.toot-word {
-    position: absolute;
-    left: 0;
-    top: 0;
-    transform: translate(-50%, -50%);
-    font-family: "Spicy Rice", cursive;
-    font-size: clamp(1rem, 4vmin, 1.6rem);
-    color: #fcd34d;
-    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
-    white-space: nowrap;
-    animation: tootWord 0.72s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
-@keyframes tootCloud {
-    0% {
-        transform: translate(-50%, -50%) scale(0.4);
-        opacity: 0;
-    }
-    25% {
-        opacity: 1;
-    }
-    100% {
-        transform: translate(-130%, -130%) scale(1.3);
-        opacity: 0;
-    }
-}
-
-@keyframes tootCloud2 {
-    0% {
-        transform: translate(-50%, -50%) scale(0.4);
-        opacity: 0;
-    }
-    25% {
-        opacity: 0.75;
-    }
-    100% {
-        transform: translate(10%, -150%) scale(1.4);
-        opacity: 0;
-    }
-}
-
-@keyframes tootWord {
-    0% {
-        transform: translate(-50%, -50%) scale(0.5) rotate(-6deg);
-        opacity: 0;
-    }
-    30% {
-        transform: translate(-50%, -120%) scale(1.1) rotate(-4deg);
-        opacity: 1;
-    }
-    100% {
-        transform: translate(-50%, -260%) scale(1) rotate(-2deg);
-        opacity: 0;
-    }
 }
 
 /* Score popup -------------------------------------------------------------- */
@@ -565,11 +488,6 @@ useAutoStartGame(handlePlay);
     .hud-value.urgent {
         animation: none;
     }
-    .toot-cloud,
-    .toot-cloud-2 {
-        animation: tootFade 0.6s ease-out forwards;
-    }
-    .toot-word,
     .score-popup {
         animation: tootFade 0.7s ease-out forwards;
     }

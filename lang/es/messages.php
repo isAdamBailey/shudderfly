@@ -697,6 +697,20 @@ return [
     'games.world.listen' => '🔊 Escuchar',
     'games.world.stop_listening' => '■ Parar',
 
+    // Games - Cast
+    'games.cast.butt' => 'El Trasero',
+    'games.cast.poop' => 'La Caca',
+    'games.cast.toilet' => 'El Inodoro',
+    'games.cast.cockroach' => 'La Cucaracha',
+    'games.cast.pizza' => 'La Pizza',
+    'games.cast.face' => 'La Cara',
+    'games.cast.blueberries' => 'Arándanos',
+    'games.cast.grapes' => 'Uvas',
+    'games.cast.strawberry' => 'Fresa',
+    'games.cast.taco' => 'Taco',
+    'games.cast.apple' => 'Manzana',
+    'games.cast.sprout' => 'Col de Bruselas',
+
     // Games - Toot Foods
     'games.toot_foods.name' => 'Comida Pedorra',
     'games.toot_foods.description' => 'Arrastra bocadillos al trasero andante para hacerlo tirarse pedos. ¿Cuántos en 30 segundos?',

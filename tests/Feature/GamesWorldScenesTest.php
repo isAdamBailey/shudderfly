@@ -33,19 +33,40 @@ class GamesWorldScenesTest extends TestCase
         }
     }
 
+    public function test_every_cast_reference_is_in_the_cast(): void
+    {
+        foreach (GamesWorld::definitions() as $sceneId => $scene) {
+            foreach ($scene['interactables'] as $item) {
+                if (isset($item['cast'])) {
+                    $this->assertContains($item['cast'], GamesWorld::CAST, "{$sceneId}.{$item['id']}");
+                }
+            }
+        }
+    }
+
+    public function test_a_landmark_that_is_a_cast_member_is_named_by_id(): void
+    {
+        $boom = collect(GamesWorld::definitions()['road']['interactables'])->firstWhere('id', 'boom');
+
+        $this->assertSame('toilet', $boom['cast']);
+        $this->assertArrayNotHasKey('emoji', $boom);
+    }
+
     public function test_scenes_fill_in_games(): void
     {
-        $boom = collect(GamesWorld::scenes()['road']['interactables'])->firstWhere('id', 'boom');
+        $road = collect(GamesWorld::scenes()['road']['interactables']);
+        $boom = $road->firstWhere('id', 'boom');
 
         $this->assertSame('Poop Boom', $boom['label']);
-        $this->assertSame('🚽', $boom['emoji']);
         $this->assertSame(4200, $boom['x']);
         $this->assertSame([
             'slug' => 'boom',
             'name' => 'Poop Boom',
             'emoji' => '💩',
             'description' => __('messages.games.boom.description'),
-            'landmark' => '🚽',
+            'cast' => 'toilet',
         ], $boom['card']);
+
+        $this->assertSame('🏥', $road->firstWhere('id', 'sprout-pox')['card']['landmark']);
     }
 }

@@ -1,13 +1,16 @@
 <script setup>
 import { usePage } from "@inertiajs/vue3";
-import { BUTT, TOOT_FOODS } from "@/constants/characters.js";
+import { CAST, TOOT_FOODS } from "@/constants/characters.js";
+import CastMember from "@/Components/Games/Cast/CastMember.vue";
+import TootPuff from "@/Components/Games/Cast/TootPuff.vue";
+import { useToot } from "@/composables/useToot";
 import { useTranslations } from "@/composables/useTranslations";
 import {
     useParallax,
     usePreferredReducedMotion,
     useTransition,
 } from "@vueuse/core";
-import { computed, nextTick, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { clamp, useGamesWorld } from "../composables/useGamesWorld.js";
 import { deadband } from "@/utils/math";
 import TiltPermissionButton from "@/Components/TiltPermissionButton.vue";
@@ -39,6 +42,7 @@ const HILL_TILE = 1500; // px; must match the .hills-far background-size
 const CLOUD_COUNT = 4;
 
 const sceneEl = ref(null);
+const buttEl = ref(null);
 const landmarkEls = ref({});
 
 const prefersReducedMotion = usePreferredReducedMotion();
@@ -53,6 +57,7 @@ const roadLandmarks = computed(() =>
         distance: item.x,
         name: item.label,
         landmark: item.emoji,
+        cast: item.cast,
         item,
     }))
 );
@@ -70,13 +75,15 @@ const { landmarks, worldWidth, peach, camera, state, nearestLandmark } = world;
 const IDLER_SETBACK = 260; // px before its neighbouring landmark
 const IDLER_EXCITE_RADIUS = 180;
 const IDLER_DEPTHS = [2, 6, 10]; // % below the horizon, varied for a layered feel
-const IDLER_REST_STYLE = Object.freeze({
-    transform: "translate(-50%, -50%) translate(0px, 0px) rotate(0deg)",
-});
+// How close to the Butt a food has to land to make it toot.
+const FEED_RADIUS = 70; // px
+
+const { puffs, toot, unlock: unlockToot } = useToot(page.props.fartSoundUrl);
 
 const idlerPhysicsCtl = useIdlerPhysics({
     isBlocked: () => Boolean(state.confirmSlug),
     isReducedMotion: () => reduced.value,
+    onDrop: feedIfOnButt,
 });
 const { idlerPhysics } = idlerPhysicsCtl;
 
@@ -84,32 +91,42 @@ const idlers = computed(() =>
     landmarks.value.map((landmark, i) => {
         const x = landmark.x - IDLER_SETBACK;
         const p = idlerPhysics[landmark.slug];
-        // Most idlers are at rest most of the time; skip building a new
-        // style object (and string) for them every peach.x tick.
-        const offsetStyle =
-            p && (p.dx || p.dy || p.airborne)
-                ? {
-                      transform: `translate(-50%, -50%) translate(${p.dx}px, ${
-                          p.dy
-                      }px) rotate(${
-                          // A little spin while airborne, driven by whatever
-                          // horizontal speed the toss carried.
-                          p.airborne ? clamp(p.vx / 15, -35, 35) : 0
-                      }deg)`,
-                  }
-                : IDLER_REST_STYLE;
         return {
             slug: landmark.slug,
-            emoji: TOOT_FOODS[i % TOOT_FOODS.length].emoji,
+            cast: TOOT_FOODS[i % TOOT_FOODS.length].type,
             x,
             top: `calc(var(--horizon) + ${
                 IDLER_DEPTHS[i % IDLER_DEPTHS.length]
             }%)`,
             excited: Math.abs(peach.x - x) < IDLER_EXCITE_RADIUS,
-            offsetStyle,
+            // Only the sideways offset moves the idler; height goes to
+            // CastMember as lift, so its shadow stays on the verge.
+            dx: p?.dx ?? 0,
+            lift: -(p?.dy ?? 0),
+            // A little spin while airborne, driven by whatever horizontal
+            // speed the toss carried.
+            tilt: p?.airborne ? clamp(p.vx / 15, -35, 35) : 0,
         };
     })
 );
+
+// --- The Butt ---------------------------------------------------------------
+
+const buttCast = ref(null);
+
+/** A Toot Food dropped or thrown onto the Butt makes it toot at that food's
+ * pitch, the way feeding it does in Toot Foods. */
+function feedIfOnButt(slug, dx) {
+    const idler = idlers.value.find((i) => i.slug === slug);
+    if (!idler || Math.abs(idler.x + dx - peach.x) > FEED_RADIUS) return;
+    // At the middle of the Butt, as Toot Foods puts it.
+    const butt = buttEl.value;
+    toot(idler.cast, {
+        x: peach.x,
+        y: butt ? butt.offsetTop + butt.offsetHeight / 2 : 0,
+    });
+    buttCast.value?.play("toot");
+}
 
 // --- Lifecycle ------------------------------------------------------------
 
@@ -228,6 +245,24 @@ function release() {
     });
 }
 
+// A landmark that is a cast member greets the Butt when it walks up (the
+// toilet flushes), with whatever `greet` move the registry gives it.
+const landmarkCasts = {};
+
+function setLandmarkCast(slug, el) {
+    if (el) landmarkCasts[slug] = el;
+    else delete landmarkCasts[slug];
+}
+
+watch(
+    () => nearestLandmark.value?.slug,
+    (slug) => {
+        const cast = nearestLandmark.value?.cast;
+        const greet = cast && CAST[cast].greet;
+        if (greet) landmarkCasts[slug]?.play(greet);
+    }
+);
+
 function setLandmarkEl(slug, el) {
     if (el) landmarkEls.value[slug] = el;
     else delete landmarkEls.value[slug];
@@ -343,10 +378,13 @@ const hillStyle = computed(() => ({
 const peachStyle = computed(() => ({
     // translate rather than `left`: peach.x changes every frame, and `left`
     // would relayout the box each time.
-    transform: `translate3d(${peach.x}px, 0, 0) translate(-50%, ${
-        Math.sin(peach.bob * 6) * 6
-    }px) scaleX(${peach.facing})`,
+    transform: `translate3d(${peach.x}px, 0, 0) translateX(-50%)`,
 }));
+
+// The walking bob, as height above the road so the shadow stays put.
+// The same 12px of travel as before, but never below 0, so the body never
+// sinks into its own shadow.
+const peachLift = computed(() => (1 - Math.cos(peach.bob * 6)) * 6);
 
 defineExpose({
     setBounds: world.setBounds,
@@ -367,6 +405,7 @@ defineExpose({
         class="road-scene"
         :class="themeClass"
         @pointerdown.self="onBackgroundPointerDown"
+        @pointerup="unlockToot"
     >
         <div class="sky" :style="skyStyle" aria-hidden="true"></div>
 
@@ -433,19 +472,21 @@ defineExpose({
                 :style="{
                     left: `${idler.x}px`,
                     top: idler.top,
-                    ...idler.offsetStyle,
+                    transform: `translate(-50%, -50%) translate(${idler.dx}px, 0px)`,
+                    '--cast-delay': `${i * -0.37}s`,
                 }"
                 aria-hidden="true"
                 @pointerdown.prevent="
                     idlerPhysicsCtl.onPointerDown(idler.slug, $event)
                 "
             >
-                <span
-                    class="idler-emoji"
-                    :class="{ excited: idler.excited }"
-                    :style="{ '--i': i }"
-                    >{{ idler.emoji }}</span
-                >
+                <CastMember
+                    :id="idler.cast"
+                    class="idler-cast"
+                    :move="idler.excited ? 'excited' : 'idle'"
+                    :lift="idler.lift"
+                    :tilt="idler.tilt"
+                />
             </span>
 
             <button
@@ -518,20 +559,39 @@ defineExpose({
                         </text>
                     </svg>
                 </div>
-                <span class="landmark-emoji" aria-hidden="true">{{
-                    landmark.landmark
-                }}</span>
+                <span class="landmark-emoji" aria-hidden="true">
+                    <CastMember
+                        v-if="landmark.cast"
+                        :id="landmark.cast"
+                        :ref="(el) => setLandmarkCast(landmark.slug, el)"
+                        :move="null"
+                    />
+                    <template v-else>{{ landmark.landmark }}</template>
+                </span>
             </button>
 
             <div
+                ref="buttEl"
                 class="peach"
                 role="img"
                 :aria-label="t('games.world.peach_aria')"
                 :style="peachStyle"
                 @pointerdown.prevent="onPeachPointerDown"
             >
-                {{ BUTT }}
+                <CastMember
+                    id="butt"
+                    ref="buttCast"
+                    :move="null"
+                    :facing="peach.facing < 0 ? 'left' : 'right'"
+                    :lift="peachLift"
+                />
             </div>
+
+            <TootPuff
+                v-for="puff in puffs"
+                :key="puff.id"
+                :style="{ left: `${puff.x}px`, top: `${puff.y}px` }"
+            />
         </div>
 
         <!-- Outside .world so the camera never carries it off-screen. -->
@@ -746,37 +806,8 @@ defineExpose({
     cursor: grabbing;
 }
 
-.idler-emoji {
-    display: inline-block;
+.idler-cast {
     font-size: clamp(2rem, 7vmin, 3.25rem);
-    line-height: 1;
-    animation: idle-bob 2.4s ease-in-out infinite;
-    animation-delay: calc(var(--i) * -0.37s);
-}
-
-.idler-emoji.excited {
-    animation: idler-hop 0.6s ease-in-out infinite;
-    animation-delay: calc(var(--i) * -0.37s);
-}
-
-@keyframes idle-bob {
-    0%,
-    100% {
-        transform: translateY(0);
-    }
-    50% {
-        transform: translateY(-6px);
-    }
-}
-
-@keyframes idler-hop {
-    0%,
-    100% {
-        transform: scale(1.15) translateY(0);
-    }
-    50% {
-        transform: scale(1.15) translateY(-10px);
-    }
 }
 
 .landmark {
@@ -869,10 +900,6 @@ defineExpose({
 
     .landmark-emoji {
         transition: none;
-    }
-
-    .idler-emoji {
-        animation: none;
     }
 }
 </style>

@@ -697,6 +697,20 @@ return [
     'games.world.listen' => '🔊 Écouter',
     'games.world.stop_listening' => '■ Arrêter',
 
+    // Games - Cast
+    'games.cast.butt' => 'Les Fesses',
+    'games.cast.poop' => 'Le Caca',
+    'games.cast.toilet' => 'Les Toilettes',
+    'games.cast.cockroach' => 'Le Cafard',
+    'games.cast.pizza' => 'La Pizza',
+    'games.cast.face' => 'Le Visage',
+    'games.cast.blueberries' => 'Myrtilles',
+    'games.cast.grapes' => 'Raisins',
+    'games.cast.strawberry' => 'Fraise',
+    'games.cast.taco' => 'Taco',
+    'games.cast.apple' => 'Pomme',
+    'games.cast.sprout' => 'Chou de Bruxelles',
+
     // Games - Toot Foods
     'games.toot_foods.name' => 'Aliments à Prouts',
     'games.toot_foods.description' => 'Fais glisser les collations dans les fesses baladeuses pour les faire prouter. Combien en 30 secondes ?',
