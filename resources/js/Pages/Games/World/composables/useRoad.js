@@ -8,7 +8,8 @@ import {
     useTransition,
 } from "@vueuse/core";
 import { computed, nextTick, onMounted, shallowRef, watch } from "vue";
-import { clamp, LANES, useGamesWorld } from "./useGamesWorld.js";
+import { pastTap } from "../components/overlay.js";
+import { bobLift, clamp, LANES, useGamesWorld } from "./useGamesWorld.js";
 import { useIdlerPhysics } from "./useIdlerPhysics.js";
 
 const IDLER_SETBACK = 260; // px before its neighbouring landmark
@@ -21,8 +22,6 @@ const IDLER_ROWS = 3;
 const FEED_RADIUS = 70; // px
 
 const PEEK_DEADBAND = 0.005;
-// A press on the background that moves less than this is a tap, not a pan.
-const TAP_SLOP = 8; // px
 
 /**
  * Everything the road does, for whichever drawer shows it (issue #130): the
@@ -167,7 +166,7 @@ export function useRoad(props, emit, options) {
     // The walking bob, as height above the road so the shadow stays put.
     // 12px of travel, never below 0, so the body never sinks into its own
     // shadow.
-    const peachLift = computed(() => (1 - Math.cos(peach.bob * 6)) * 6);
+    const peachLift = computed(() => bobLift(peach.bob));
 
     // --- Lifecycle ---------------------------------------------------------
 
@@ -219,15 +218,7 @@ export function useRoad(props, emit, options) {
     const panGesture = {
         move(event) {
             event.preventDefault();
-            if (
-                tapStart &&
-                Math.hypot(
-                    event.clientX - tapStart.clientX,
-                    event.clientY - tapStart.clientY
-                ) > TAP_SLOP
-            ) {
-                tapStart = null;
-            }
+            if (tapStart && pastTap(tapStart, event)) tapStart = null;
             world.updatePan(event.clientX);
         },
         end() {

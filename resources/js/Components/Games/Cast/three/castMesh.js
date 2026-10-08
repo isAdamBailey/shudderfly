@@ -371,9 +371,10 @@ export function createCastKit(
         },
 
         /** A prop that isn't a character (a sign, a landmark, a cloud): the
-         * same look, and no moves. `shadows: false` for things in the air. */
-        emojiMesh(glyph, { size = 64, shadows = true } = {}) {
-            return puppet({ glyph, moves: [], size, shadows });
+         * same look, and only the `moves` it's given (a toy's wiggle).
+         * `shadows: false` for things in the air. */
+        emojiMesh(glyph, { size = 64, shadows = true, moves = [] } = {}) {
+            return puppet({ glyph, moves, size, shadows });
         },
 
         dispose() {

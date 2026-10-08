@@ -117,6 +117,18 @@ const withHouse = {
         label: "The Hall",
         size: { w: 900, d: 500 },
         spawn: { x: 450, z: 330 },
+        walls: { back: "wallpaper-stripes", floor: "wood" },
+        ambient: 0.35,
+        lights: [
+            {
+                id: "lamp",
+                x: 760,
+                z: 140,
+                y: 200,
+                color: "#fbbf24",
+                intensity: 1.4,
+            },
+        ],
         interactables: [
             {
                 id: "front-door",
@@ -128,6 +140,25 @@ const withHouse = {
                 to: "road",
                 toSpot: "house",
                 exit: true,
+            },
+            {
+                id: "strawberry",
+                type: "toy",
+                x: 180,
+                z: 260,
+                cast: "strawberry",
+                label: "Strawberry",
+                move: "hop",
+                toot: "strawberry",
+            },
+            {
+                id: "lamp-switch",
+                type: "toy",
+                x: 760,
+                z: 140,
+                emoji: "💡",
+                label: "Lamp",
+                light: "lamp",
             },
         ],
     },
@@ -595,5 +626,121 @@ describe("GamesWorld doors", () => {
         await enterHouse(wrapper);
 
         expect(wrapper.find(".room-3d").exists()).toBe(true);
+    });
+});
+
+describe("GamesWorld rooms", () => {
+    /** The room's button for `label`. */
+    const roomButton = (wrapper, label) =>
+        wrapper
+            .findAll("button.room-item")
+            .find((b) => b.attributes("aria-label") === label);
+
+    it("walks the Butt about the room with the arrow keys", async () => {
+        wrapper = await mountWorld(withHouse);
+        await enterHouse(wrapper);
+        const before = screenX(wrapper.get(".room-3d .peach"));
+
+        const stage = wrapper.get(".stage");
+        await stage.trigger("keydown", { key: "ArrowLeft" });
+        await frames(300);
+        await stage.trigger("keyup", { key: "ArrowLeft" });
+
+        expect(screenX(wrapper.get(".room-3d .peach"))).toBeLessThan(before);
+    });
+
+    it("leaves the door's button when the arrow keys walk off", async () => {
+        wrapper = await mountWorld(withHouse);
+        await enterHouse(wrapper);
+        const door = roomButton(wrapper, "Go outside");
+        expect(document.activeElement).toBe(door.element);
+
+        await door.trigger("keydown", { key: "ArrowLeft" });
+        await frames(100);
+        await wrapper.get(".stage").trigger("keyup", { key: "ArrowLeft" });
+
+        // Enter now uses what the Butt is at, not the door it left.
+        expect(document.activeElement).toBe(wrapper.get(".stage").element);
+        await wrapper.get(".stage").trigger("keydown", { key: "Enter" });
+        await frames(50);
+        expect(wrapper.find(".room-3d").exists()).toBe(true);
+    });
+
+    it("walks the Butt to a spot tapped on the floor", async () => {
+        wrapper = await mountWorld(withHouse);
+        await enterHouse(wrapper);
+        const before = screenX(wrapper.get(".room-3d .peach"));
+
+        // Low on the stage, left of the Butt: the floor.
+        await wrapper
+            .get(".room-3d")
+            .trigger("pointerdown", { clientX: 250, clientY: 620 });
+        window.dispatchEvent(new Event("pointerup"));
+        await frames(600);
+
+        expect(screenX(wrapper.get(".room-3d .peach"))).toBeLessThan(
+            before - 100
+        );
+    });
+
+    it("stands the Butt at a toy tabbed to, and Enter plays with it", async () => {
+        wrapper = await mountWorld(withHouse);
+        await enterHouse(wrapper);
+        const berry = roomButton(wrapper, "Strawberry");
+
+        await berry.trigger("focus");
+        await nextTick();
+        // In front of the strawberry (nearer the camera, so a little
+        // further out from the middle on screen).
+        expect(
+            Math.abs(screenX(wrapper.get(".room-3d .peach")) - screenX(berry))
+        ).toBeLessThan(40);
+
+        await berry.trigger("click");
+        await nextTick();
+
+        // It toots where it is, and nothing leaves the room or opens.
+        expect(wrapper.find(".toot-puff").exists()).toBe(true);
+        expect(wrapper.find(".room-3d").exists()).toBe(true);
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+
+        // And the room isn't left frozen.
+        const stage = wrapper.get(".stage");
+        const at = screenX(wrapper.get(".room-3d .peach"));
+        await stage.trigger("keydown", { key: "ArrowRight" });
+        await frames(200);
+        await stage.trigger("keyup", { key: "ArrowRight" });
+        expect(screenX(wrapper.get(".room-3d .peach"))).toBeGreaterThan(at);
+    });
+
+    it("walks over to a toy that is clicked, then plays with it", async () => {
+        wrapper = await mountWorld(withHouse);
+        await enterHouse(wrapper);
+        const berry = roomButton(wrapper, "Strawberry");
+
+        await berry.trigger("pointerdown");
+        await berry.trigger("focus");
+        await berry.trigger("click");
+        await nextTick();
+        expect(wrapper.find(".toot-puff").exists()).toBe(false);
+
+        await vi.waitFor(
+            () => expect(wrapper.find(".toot-puff").exists()).toBe(true),
+            { timeout: 3000 }
+        );
+    });
+
+    it("comes back to where the Butt was in a room", async () => {
+        wrapper = await mountWorld(withHouse);
+        await enterHouse(wrapper);
+        await roomButton(wrapper, "Lamp").trigger("focus");
+        await nextTick();
+        const at = screenX(wrapper.get(".room-3d .peach"));
+        wrapper.unmount();
+
+        wrapper = await mountWorld(withHouse);
+
+        expect(wrapper.find(".room-3d").exists()).toBe(true);
+        expect(screenX(wrapper.get(".room-3d .peach"))).toBeCloseTo(at, 0);
     });
 });

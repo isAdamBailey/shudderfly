@@ -1,6 +1,5 @@
 import { createCastKit } from "@/Components/Games/Cast/three/castMesh.js";
-import { playHiss } from "@/composables/playHiss";
-import { audioRunning } from "@/composables/useAudioContext";
+import { playAmbientSound } from "../sounds.js";
 
 // Pixel ratio cap: past 2 a phone pays four times the fill for detail nobody
 // can see (issue #130's performance budget).
@@ -8,15 +7,6 @@ const MAX_PIXEL_RATIO = 2;
 const MAX_DT = 0.05; // s; a long frame (or a resume) can't teleport anything
 
 let threeModule = null;
-
-// The sounds cast members' moves make (CAST's `sounds`), by name. Only once
-// audio is running: they aren't answers to a gesture, and starting audio
-// without one just gets the browser's autoplay warning.
-const SOUNDS = { hiss: playHiss };
-
-function playSound(name) {
-    if (audioRunning()) SOUNDS[name]?.();
-}
 
 /** `three`, loaded on first use. Only the Games World imports it, and only
  * through here, so no other page pays for it. */
@@ -71,6 +61,19 @@ export function applyCamera(threeCamera, camera) {
     threeCamera.position.set(camera.x, camera.y, camera.z);
     threeCamera.rotation.set(0, 0, 0);
     threeCamera.updateProjectionMatrix();
+}
+
+/** A w × h canvas drawn by `draw(ctx)` (skipped where there is no 2D
+ * context, as in tests), as an sRGB texture. */
+export function canvasTexture(THREE, w, h, draw) {
+    const el = document.createElement("canvas");
+    el.width = w;
+    el.height = h;
+    const ctx = el.getContext("2d");
+    if (ctx) draw(ctx);
+    const texture = new THREE.CanvasTexture(el);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
 }
 
 /** Frees every geometry, material and texture under `root`, except the
@@ -130,7 +133,9 @@ export function useWorldRenderer() {
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFShadowMap;
             handle.three = THREE;
-            handle.kit = createCastKit(THREE, { onSound: playSound });
+            // A cast member's move makes its sound (CAST's `sounds`)
+            // wherever it's played.
+            handle.kit = createCastKit(THREE, { onSound: playAmbientSound });
             // Hidden while three loaded: resume() starts it.
             if (!paused) start();
             return true;

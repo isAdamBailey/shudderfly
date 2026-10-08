@@ -12,6 +12,7 @@ import {
     watch,
 } from "vue";
 import InteractableButton from "../components/InteractableButton.vue";
+import { boxStyle } from "../components/overlay.js";
 import LandmarkTitle from "../components/LandmarkTitle.vue";
 import SkyLogo from "../components/SkyLogo.vue";
 import { screenToGround, worldToScreen } from "../composables/projection.js";
@@ -274,14 +275,6 @@ const puffSpots = computed(() =>
           }))
         : []
 );
-
-function boxStyle({ x, y, size }) {
-    return {
-        width: `${size}px`,
-        height: `${size}px`,
-        transform: `translate3d(${x - size / 2}px, ${y - size}px, 0)`,
-    };
-}
 
 // Moves with the peek like the flat road's sky, and stays centred.
 const skyLogoStyle = computed(() => ({

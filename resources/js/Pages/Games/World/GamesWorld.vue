@@ -1,6 +1,7 @@
 <script setup>
 import { usePage } from "@inertiajs/vue3";
 import { audioRunning, unlockAudio } from "@/composables/useAudioContext";
+import { speakGameIntro } from "@/composables/useGameIntroSpeech";
 import { useTranslations } from "@/composables/useTranslations";
 import { usePreferredReducedMotion } from "@vueuse/core";
 import {
@@ -19,6 +20,7 @@ import RoadScene from "./scenes/RoadScene.vue";
 import { ROWS } from "./scenes/roadLayout.js";
 import { useSceneRouter } from "./composables/useSceneRouter.js";
 import { activate } from "./interactions/index.js";
+import { playSound } from "./sounds.js";
 import { worldTheme } from "./three/themes.js";
 import { supportsWebGL, useWorldRenderer } from "./three/useWorldRenderer.js";
 
@@ -109,6 +111,14 @@ const ctx = {
         card.value = { component, props: cardProps };
     },
     goToScene,
+    // On the scene's things, by id: whichever scene draws them does it.
+    animate: (id, move) => sceneRef.value?.animate?.(id, move),
+    toot: (castId, id) => sceneRef.value?.toot?.(castId, id),
+    toggleLight: (id) => sceneRef.value?.toggleLight?.(id),
+    playSound,
+    // Through the same voice as the games' Listen button (the AI voice when
+    // it's on).
+    speak: (text) => speakGameIntro(text),
 };
 
 function onActivate(item) {
@@ -391,7 +401,13 @@ function onKeyup(event) {
 }
 
 // The WebGL scenes draw with `renderer`; the DOM ones ignore it.
-const stage = { beginGesture, resetScroll, renderer };
+/** Focus back on the stage itself, e.g. once the arrow keys have walked
+ * the Butt away from the focused button. */
+function focusStage() {
+    stageEl.value?.focus({ preventScroll: true });
+}
+
+const stage = { beginGesture, resetScroll, focus: focusStage, renderer };
 </script>
 
 <template>

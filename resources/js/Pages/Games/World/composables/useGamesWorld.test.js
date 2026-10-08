@@ -529,4 +529,16 @@ describe("useGamesWorld start", () => {
             expect(world.peach.side).toBe("far");
         }
     });
+
+    it("comes back down to the road when it stops", () => {
+        const world = makeWorld();
+        world.setWalk(1);
+        advance(world, 150);
+        expect(world.peach.bob).toBeGreaterThan(0);
+
+        world.stopWalk(1);
+        world.step(DT);
+
+        expect(world.peach.bob).toBe(0);
+    });
 });

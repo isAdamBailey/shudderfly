@@ -697,7 +697,7 @@ return [
     'games.world.cancel' => 'Pas encore',
     'games.world.listen' => '🔊 Écouter',
     'games.world.stop_listening' => '■ Arrêter',
-    'games.world.room_aria' => 'Monde des jeux, :place — appuie sur Tab pour trouver les portes, ou Échap pour revenir',
+    'games.world.room_aria' => 'Monde des jeux, :place — touche le sol ou utilise les flèches pour marcher, Tab pour trouver des choses, Échap pour revenir',
     'games.world.back' => 'Retour',
     'games.world.needs_webgl' => 'Ce navigateur ne peut pas montrer l\'intérieur de :place',
     'games.world.door_failed' => 'La porte de :place ne s\'ouvre pas — réessaie',
@@ -705,6 +705,9 @@ return [
     'games.world.places.house' => 'La Maison des Fesses',
     'games.world.places.house_hall' => 'L\'entrée',
     'games.world.doors.outside' => 'Sortir',
+    'games.world.toys.doorbell' => 'Sonnette',
+    'games.world.toys.doorbell_line' => 'Ding dong ! Prout prout !',
+    'games.world.toys.lamp' => 'Lampe',
 
     // Games - Cast
     'games.cast.butt' => 'Les Fesses',

@@ -697,7 +697,7 @@ return [
     'games.world.cancel' => 'Not yet',
     'games.world.listen' => '🔊 Listen',
     'games.world.stop_listening' => '■ Stop',
-    'games.world.room_aria' => 'Games world, :place — press Tab to find the doors, or Escape to go back',
+    'games.world.room_aria' => 'Games world, :place — tap the floor or use the arrow keys to walk, Tab to find things, Escape to go back',
     'games.world.back' => 'Go back',
     'games.world.needs_webgl' => 'This browser can\'t show inside :place',
     'games.world.door_failed' => 'The door to :place won\'t open — try again',
@@ -705,6 +705,9 @@ return [
     'games.world.places.house' => 'The Butt\'s House',
     'games.world.places.house_hall' => 'The Hall',
     'games.world.doors.outside' => 'Go outside',
+    'games.world.toys.doorbell' => 'Doorbell',
+    'games.world.toys.doorbell_line' => 'Ding dong! Toot toot!',
+    'games.world.toys.lamp' => 'Lamp',
 
     // Games - Cast
     'games.cast.butt' => 'The Butt',
