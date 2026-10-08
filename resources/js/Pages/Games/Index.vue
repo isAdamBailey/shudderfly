@@ -7,8 +7,8 @@ import GamesWorld from "./World/GamesWorld.vue";
 const { t } = useTranslations();
 
 defineProps({
-    games: {
-        type: Array,
+    scenes: {
+        type: Object,
         required: true,
     },
 });
@@ -21,7 +21,7 @@ defineProps({
         <h2 class="sr-only">{{ t("games.world.title") }}</h2>
 
         <div class="world-page">
-            <GamesWorld :games="games" />
+            <GamesWorld :scenes="scenes" />
         </div>
     </AuthenticatedLayout>
 </template>

@@ -1,4 +1,4 @@
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { describe, expect, it } from "vitest";
 import { nextTick } from "vue";
 import { TOOT_FOODS } from "@/constants/characters.js";
@@ -55,9 +55,31 @@ const games = [
     },
 ];
 
+// Built from `games` the way GamesWorld::scenes() builds it on the server.
+const scenes = {
+    road: {
+        kind: "road",
+        interactables: games.map((game) => ({
+            id: game.slug,
+            type: "game",
+            x: game.distance,
+            game: game.slug,
+            emoji: game.landmark,
+            label: game.name,
+            card: {
+                slug: game.slug,
+                name: game.name,
+                emoji: game.emoji,
+                description: game.description,
+                landmark: game.landmark,
+            },
+        })),
+    },
+};
+
 function mountIndex() {
     return mount(Index, {
-        props: { games },
+        props: { scenes },
         attachTo: document.body,
         global: {
             provide: { route: global.route },
@@ -115,9 +137,7 @@ describe("Games Index", () => {
         );
         await nextTick();
 
-        expect(idler.attributes("style")).toContain(
-            "translate(30px, -60px)"
-        );
+        expect(idler.attributes("style")).toContain("translate(30px, -60px)");
 
         window.dispatchEvent(new MouseEvent("pointerup", { bubbles: true }));
         await nextTick();
@@ -125,6 +145,53 @@ describe("Games Index", () => {
         // Released with upward velocity: still offset from its resting spot,
         // and no longer following the (now-gone) pointer.
         expect(idler.attributes("style")).toContain("translate(30px, -60px)");
+    });
+
+    it("pans the road when its bare background is dragged", async () => {
+        const wrapper = mountIndex();
+        const cameraX = () =>
+            -Number(
+                wrapper
+                    .get(".world")
+                    .attributes("style")
+                    .match(/translate3d\((-?[\d.]+)px/)[1]
+            );
+        // The stage measures itself just after mount, which places the camera.
+        await flushPromises();
+        const before = cameraX();
+
+        await wrapper
+            .get(".road-scene")
+            .trigger("pointerdown", { clientX: 300, button: 0 });
+        window.dispatchEvent(
+            new MouseEvent("pointermove", { clientX: 100, bubbles: true })
+        );
+        window.dispatchEvent(new MouseEvent("pointerup", { bubbles: true }));
+        await nextTick();
+
+        // Dragging the background left looks further down the road.
+        expect(cameraX()).toBe(before + 200);
+    });
+
+    it("hands the arrow keys to the road", () => {
+        const wrapper = mountIndex();
+        const stage = wrapper.get(".stage").element;
+
+        const left = new KeyboardEvent("keydown", {
+            key: "ArrowLeft",
+            cancelable: true,
+        });
+        stage.dispatchEvent(left);
+        stage.dispatchEvent(new KeyboardEvent("keyup", { key: "ArrowLeft" }));
+        const other = new KeyboardEvent("keydown", {
+            key: "a",
+            cancelable: true,
+        });
+        stage.dispatchEvent(other);
+
+        // Only keys the road walks with are claimed from the page.
+        expect(left.defaultPrevented).toBe(true);
+        expect(other.defaultPrevented).toBe(false);
     });
 
     it("renders no game links until a landmark is chosen", () => {

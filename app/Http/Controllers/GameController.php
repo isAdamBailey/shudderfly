@@ -7,6 +7,7 @@ use App\Models\Message;
 use App\Models\SiteSetting;
 use App\Models\User;
 use App\Services\UserTaggingService;
+use App\Support\GamesWorld;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -84,19 +85,7 @@ class GameController extends Controller
 
     public function index(): Response
     {
-        $games = collect(self::games())
-            ->map(fn ($game, $slug) => [
-                'slug' => $slug,
-                'name' => $game['name'],
-                'emoji' => $game['emoji'],
-                'description' => $game['description'],
-                'landmark' => $game['landmark'],
-                'distance' => $game['distance'],
-            ])
-            ->values()
-            ->all();
-
-        return Inertia::render('Games/Index', ['games' => $games]);
+        return Inertia::render('Games/Index', ['scenes' => GamesWorld::scenes()]);
     }
 
     public function show(string $game): Response
