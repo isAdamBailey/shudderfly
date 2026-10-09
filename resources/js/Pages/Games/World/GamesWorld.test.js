@@ -31,6 +31,25 @@ vi.mock("./three/useWorldRenderer.js", async (importOriginal) => ({
     supportsWebGL: () => fake.webgl,
 }));
 
+const hostedStandIn = vi.hoisted(() => ({
+    component: {
+        name: "CockroachApp",
+        props: ["kit"],
+        template: '<div class="hosted-cockroach" />',
+    },
+}));
+
+vi.mock("./hostedGames.js", async (importOriginal) => {
+    const actual = await importOriginal();
+    return {
+        ...actual,
+        hostedGame(slug) {
+            if (slug !== "cockroach") return actual.hostedGame(slug);
+            return () => Promise.resolve(hostedStandIn.component);
+        },
+    };
+});
+
 const GAMES = [
     {
         slug: "sprout-pox",
@@ -882,6 +901,72 @@ describe("GamesWorld rooms", () => {
 
         expect(wrapper.find(".room-3d").exists()).toBe(true);
         expect(screenX(wrapper.get(".room-3d .butt"))).toBeCloseTo(at, 0);
+    });
+});
+
+describe("GamesWorld hosted game", () => {
+    const cockroach = {
+        id: "cockroach",
+        type: "game",
+        x: 4200,
+        side: "far",
+        game: "cockroach",
+        emoji: "🏚️",
+        label: "Cockroach Fart",
+        card: {
+            slug: "cockroach",
+            name: "Cockroach Fart",
+            emoji: "🪳",
+            description: "Hiss it to the toilet",
+            landmark: "🏚️",
+        },
+    };
+
+    const withCockroach = {
+        road: {
+            ...scenes.road,
+            interactables: [...scenes.road.interactables, cockroach],
+        },
+    };
+
+    const landmark = (label) =>
+        wrapper
+            .findAll("button.landmark")
+            .find((button) => button.text().includes(label));
+
+    it("plays one game over the road and still links the others to their pages", async () => {
+        wrapper = await mountWorld(withCockroach);
+        await landmark("Cockroach Fart").trigger("click");
+        await nextTick();
+
+        expect(wrapper.get('[role="dialog"]').text()).toContain(
+            "Cockroach Fart"
+        );
+        expect(wrapper.findComponent({ name: "Link" }).exists()).toBe(false);
+
+        await wrapper.get(".world-card-cancel").trigger("click");
+        await nextTick();
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+        expect(wrapper.find(ROAD).exists()).toBe(true);
+
+        await landmark("Cockroach Fart").trigger("click");
+        await nextTick();
+        await wrapper.get(".world-card-action").trigger("click");
+        await flushPromises();
+
+        expect(wrapper.find(".hosted-cockroach").exists()).toBe(true);
+        expect(wrapper.find(ROAD).exists()).toBe(true);
+
+        await wrapper.get(".game-host").trigger("keydown", { key: "Escape" });
+        await nextTick();
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+        expect(wrapper.find(ROAD).exists()).toBe(true);
+
+        await landmark("Toot Foods").trigger("click");
+        await nextTick();
+        expect(wrapper.findComponent({ name: "Link" }).props("href")).toBe(
+            "/games/toot-foods"
+        );
     });
 });
 

@@ -84,7 +84,7 @@ class GameController extends Controller
         $place = match (true) {
             is_string($scene) && array_key_exists($scene, $scenes) => ['scene' => $scene],
             is_string($game) && array_key_exists($game, self::games()) => GamesWorld::whereIs('game', $game),
-            is_string($minigame) && in_array($minigame, GamesWorld::MINIGAMES, true) => GamesWorld::whereIs('minigame', $minigame),
+            is_string($minigame) && (in_array($minigame, GamesWorld::MINIGAMES, true) || in_array($minigame, GamesWorld::HOSTED, true)) => GamesWorld::whereIs('minigame', $minigame),
             default => null,
         };
         $link = $place ? [...$place, 'visit' => Str::random(12)] : null;
@@ -118,15 +118,18 @@ class GameController extends Controller
             ->makeVisible(['id']);
     }
 
-    /** Shares a score to the chat: for a game (`games()`) or a world
-     * minigame (GamesWorld::MINIGAMES). The message carries a marker the
-     * chat turns into a link back into the world, in front of where the
-     * game or minigame is launched from (index()). */
+    /** Shares a score to the chat: for a game (`games()`), a world
+     * minigame (GamesWorld::MINIGAMES), or a hosted game played in the
+     * world (`in_world`, GamesWorld::HOSTED). The message carries a marker
+     * the chat turns into a link back into the world, in front of where it
+     * is launched from (index()). A hosted game's page omits `in_world`,
+     * so that share stays a game link. */
     public function shareScore(string $game, Request $request): RedirectResponse
     {
         $games = self::games();
-        $minigame = in_array($game, GamesWorld::MINIGAMES, true);
-        abort_if(! $minigame && ! array_key_exists($game, $games), 404);
+        $inMinigames = in_array($game, GamesWorld::MINIGAMES, true);
+        $hosted = in_array($game, GamesWorld::HOSTED, true);
+        abort_if(! $inMinigames && ! array_key_exists($game, $games), 404);
 
         $setting = SiteSetting::where('key', 'messaging_enabled')->first();
         $messagingEnabled = $setting && ($setting->getAttributes()['value'] ?? $setting->value) === '1';
@@ -139,9 +142,14 @@ class GameController extends Controller
             'score' => ['required', 'integer', 'min:0', 'max:99999999'],
             'tagged_user_ids' => ['sometimes', 'array'],
             'tagged_user_ids.*' => ['integer', 'exists:users,id'],
+            'in_world' => ['sometimes', 'boolean'],
         ]);
 
-        $gameName = $minigame ? GamesWorld::minigameName($game) : $games[$game]['name'];
+        $inWorld = $validated['in_world'] ?? false;
+        abort_if($inWorld && ! $hosted, 404);
+        $minigame = $inMinigames || $inWorld;
+
+        $gameName = $inMinigames ? GamesWorld::minigameName($game) : $games[$game]['name'];
 
         $taggedUserIds = $validated['tagged_user_ids'] ?? [];
         if (! is_array($taggedUserIds)) {

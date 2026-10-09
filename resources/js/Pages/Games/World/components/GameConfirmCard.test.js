@@ -65,6 +65,15 @@ describe("GameConfirmCard", () => {
         expect(link.props("href")).toBe("/games/toot-foods");
     });
 
+    it("plays a hosted game here instead of linking to its page", async () => {
+        const start = vi.fn();
+        const wrapper = mountCard({ game, start });
+
+        expect(wrapper.findComponent({ name: "Link" }).exists()).toBe(false);
+        await wrapper.get(".world-card-action").trigger("click");
+        expect(start).toHaveBeenCalledOnce();
+    });
+
     it("is a labelled modal dialog", () => {
         const wrapper = mountCard();
         const dialog = wrapper.get('[role="dialog"]');

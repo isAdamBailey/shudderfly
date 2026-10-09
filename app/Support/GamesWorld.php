@@ -83,6 +83,13 @@ final class GamesWorld
      * World/minigames/index.js (a Vitest test keeps them in step). */
     public const MINIGAMES = ['toot-catch'];
 
+    /** Page games that also play inside the world (GameHost; issue #144).
+     * Their pages still share as games. A score from the host shares as a
+     * minigame, and whereIs('minigame', slug) stands you at the launcher,
+     * which is still a `game`. World/hostedGames.js (a Vitest test keeps
+     * them in step). */
+    public const HOSTED = ['cockroach'];
+
     /** Clock faces a hall clock may wear: three/clockFaces.js (a Vitest test
      * keeps them in step). */
     public const CLOCKS = ['round', 'school', 'octagon', 'cuckoo', 'sunburst', 'arch', 'hex', 'banjo'];
@@ -729,6 +736,12 @@ final class GamesWorld
                     return ['scene' => $sceneId, 'spot' => $item['id']];
                 }
             }
+        }
+
+        // A hosted game is shared as a minigame while its launcher is still
+        // a game on the map.
+        if ($kind === 'minigame' && in_array($name, self::HOSTED, true)) {
+            return self::whereIs('game', $name);
         }
 
         return null;

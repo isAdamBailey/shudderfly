@@ -1,12 +1,15 @@
 <script setup>
 import CastMember from "@/Components/Games/Cast/CastMember.vue";
+import { unlockAudio } from "@/composables/useAudioContext";
 import { useTranslations } from "@/composables/useTranslations";
 import WorldCard from "./WorldCard.vue";
 
 // A game's card: its landmark, name and description, read aloud, with Play
-// and Cancel.
+// and Cancel. `start` plays it here instead of leaving for its page. The
+// click unlocks audio, which the game needs before it can hiss or toot.
 const props = defineProps({
     game: { type: Object, required: true },
+    start: { type: Function, default: null },
 });
 
 defineEmits(["cancel"]);
@@ -14,14 +17,20 @@ defineEmits(["cancel"]);
 const { t } = useTranslations();
 
 const titleId = `game-confirm-title-${props.game.slug}`;
+
+async function play() {
+    await unlockAudio();
+    props.start();
+}
 </script>
 
 <template>
     <WorldCard
         :title-id="titleId"
         :script="`${game.name}. ${game.description}`"
-        :href="route('games.show', game.slug)"
+        :href="start ? '' : route('games.show', game.slug)"
         :action="t('games.world.play')"
+        @play="play"
         @cancel="$emit('cancel')"
     >
         <div class="text-[clamp(3rem,14vmin,4.5rem)] leading-none">

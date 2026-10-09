@@ -307,6 +307,14 @@ class GamesTest extends TestCase
         foreach (GamesWorld::MINIGAMES as $minigame) {
             $this->assertNotNull(GamesWorld::whereIs('minigame', $minigame), $minigame);
         }
+        foreach (GamesWorld::HOSTED as $hosted) {
+            $this->assertNotNull(GamesWorld::whereIs('game', $hosted), $hosted);
+            $this->assertSame(
+                GamesWorld::whereIs('game', $hosted),
+                GamesWorld::whereIs('minigame', $hosted),
+                $hosted,
+            );
+        }
     }
 
     public function test_a_minigame_score_is_shared_with_a_link_back_to_its_room(): void
@@ -333,6 +341,76 @@ class GamesTest extends TestCase
             __('messages.game_score_shared', ['game' => 'Toot Catch', 'score' => 9]),
             GameShareMessage::stripSlugMarker(Message::first()->message),
         );
+    }
+
+    public function test_a_hosted_game_shared_from_the_world_links_back_as_a_minigame(): void
+    {
+        Event::fake();
+
+        SiteSetting::updateOrCreate(
+            ['key' => 'messaging_enabled'],
+            ['value' => '1', 'type' => 'boolean', 'description' => 'x']
+        );
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $this->post(route('games.share-score', 'cockroach'), [
+            'score' => 40,
+            'in_world' => true,
+        ])->assertRedirect()->assertSessionHas('success');
+
+        $this->assertDatabaseHas('messages', [
+            'user_id' => $user->id,
+            'message' => __('messages.game_score_shared', [
+                'game' => 'Cockroach Fart',
+                'score' => 40,
+            ])."\u{E000}m:cockroach\u{E000}",
+        ]);
+
+        $this->get(route('games.index', ['minigame' => 'cockroach']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('link.scene', 'road')
+                ->where('link.spot', 'cockroach'));
+    }
+
+    public function test_a_hosted_games_page_still_shares_as_a_game(): void
+    {
+        Event::fake();
+
+        SiteSetting::updateOrCreate(
+            ['key' => 'messaging_enabled'],
+            ['value' => '1', 'type' => 'boolean', 'description' => 'x']
+        );
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $this->post(route('games.share-score', 'cockroach'), ['score' => 40])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('messages', [
+            'message' => __('messages.game_score_shared', [
+                'game' => 'Cockroach Fart',
+                'score' => 40,
+            ])."\u{E000}g:cockroach\u{E000}",
+        ]);
+    }
+
+    public function test_in_world_share_of_a_game_that_still_leaves_the_world_is_not_found(): void
+    {
+        SiteSetting::updateOrCreate(
+            ['key' => 'messaging_enabled'],
+            ['value' => '1', 'type' => 'boolean', 'description' => 'x']
+        );
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $this->post(route('games.share-score', 'boom'), [
+            'score' => 1,
+            'in_world' => true,
+        ])->assertNotFound();
     }
 
     public function test_share_game_score_fails_when_messaging_disabled(): void
