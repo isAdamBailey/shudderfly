@@ -1,7 +1,12 @@
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import { STAIRS } from "./roomLayout.js";
-import { floorGeometry, stairsFootprint, stairsGeometry } from "./staircase.js";
+import {
+    floorGeometry,
+    stairsBounds,
+    stairsFootprint,
+    stairsGeometry,
+} from "./staircase.js";
 
 const left = { id: "downstairs", type: "door", wall: "left", x: 0, z: 220 };
 const right = { id: "upstairs", type: "door", wall: "right", x: 900, z: 220 };
@@ -79,5 +84,19 @@ describe("floorGeometry", () => {
                 x > well.x0 && x < well.x1 && z > well.z0 && z < well.z1;
             expect(inside).toBe(false);
         }
+    });
+});
+
+describe("stairsBounds", () => {
+    it("reaches up under the ceiling going up, and to the rail going down", () => {
+        const up = stairsBounds({ ...right, stairs: "up" }, 450);
+        expect(up).toMatchObject(stairsFootprint(right));
+        expect(up.y0).toBe(0);
+        expect(up.y1).toBeGreaterThan(450 * 0.8);
+
+        const down = stairsBounds({ ...left, stairs: "down" }, 450);
+        expect(down).toMatchObject({ ...stairsFootprint(left), y0: 0 });
+        expect(down.y1).toBeGreaterThan(0);
+        expect(down.y1).toBeLessThan(up.y1);
     });
 });

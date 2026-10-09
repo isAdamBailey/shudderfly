@@ -32,6 +32,9 @@ use Inertia\Response;
 
 class BookController extends Controller
 {
+    /** How many books a page of category() holds. */
+    public const PER_PAGE = 10;
+
     public function __construct(
         private PopularityService $popularityService,
         private VoiceSearchService $voiceSearchService,
@@ -94,23 +97,25 @@ class BookController extends Controller
             'popular' => Book::query()
                 ->with('coverImage')
                 ->orderBy('read_count', 'desc')
-                ->paginate(10),
+                ->orderBy('id')
+                ->paginate(self::PER_PAGE),
             'forgotten' => Book::query()
                 ->with('coverImage')
                 ->orderBy('read_count')
-                ->paginate(10),
+                ->orderBy('id')
+                ->paginate(self::PER_PAGE),
             'themed' => ThemeBooks::getBooksForThemePaginated(
                 HandleInertiaRequests::getCurrentTheme() ?? '',
-                10
+                self::PER_PAGE
             ),
-            'month' => MonthBooks::getBooksForMonthPaginated(10),
+            'month' => MonthBooks::getBooksForMonthPaginated(self::PER_PAGE),
             default => Category::where('name', $categoryName)->first()
                 ?->books()
                 ->with('coverImage')
-                ->paginate(10)
+                ->paginate(self::PER_PAGE)
                 ?? Book::query()
                     ->with('coverImage')
-                    ->paginate(10)
+                    ->paginate(self::PER_PAGE)
         };
 
         $books->appends($request->all())->links();

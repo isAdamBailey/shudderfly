@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { shallowRef } from "vue";
 import { STAIRS_CLEARANCE } from "../scenes/roomLayout.js";
 import { DRAG_SPEED, WALK_SPEED } from "./useGamesWorld.js";
 import { arrivalSpot, REACH, STAND, useRoom } from "./useRoom.js";
@@ -222,6 +223,24 @@ describe("useRoom", () => {
         run(r, 0.5);
 
         expect(r.butt.bob).toBe(0);
+    });
+});
+
+describe("useRoom extras", () => {
+    it("stands at and uses things fetched after the room was made", () => {
+        const books = shallowRef([]);
+        const { r, onArrive } = makeRoom({ extras: () => books.value });
+        const book = { id: "book-books-0", type: "book", x: 300, z: 0 };
+
+        r.standBy(BERRY);
+        r.walkTo(300, STAND);
+        run(r, 3);
+        expect(r.nearest.value).toBeNull();
+
+        books.value = [book];
+        expect(r.nearest.value).toBe(book);
+        r.goUse(book);
+        expect(onArrive).toHaveBeenCalledWith(book);
     });
 });
 

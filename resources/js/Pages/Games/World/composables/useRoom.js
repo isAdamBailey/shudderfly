@@ -11,7 +11,7 @@ export const STAND = 100;
 // mustn't send you back out.
 export const TRIGGER_REACH = 60;
 // The Butt never walks closer than this to a wall.
-const MARGIN = 50;
+export const MARGIN = 50;
 
 /** The spot in front of `item`, where the Butt stands to use it: a step
  * into the room off whichever wall it's on, or clear of a flight of stairs. */
@@ -50,10 +50,18 @@ export function arrivalSpot(room, { spot, position } = {}) {
  * - autoTriggers(item): whether walking up to `item` uses it
  *   (interactions/index.js asks its handler).
  * - isReducedMotion(): suppresses the walking bob.
+ * - extras(): interactables the scene's data doesn't list, fetched since
+ *   (the books on a Library shelf).
  */
 export function useRoom(
     room,
-    { start, onArrive, autoTriggers = () => false, isReducedMotion } = {}
+    {
+        start,
+        onArrive,
+        autoTriggers = () => false,
+        isReducedMotion,
+        extras = () => [],
+    } = {}
 ) {
     const { w, d } = room.size;
     const sideMargin = (wall) =>
@@ -109,11 +117,13 @@ export function useRoom(
     const nearest = computed(() => {
         let best = null;
         let bestDistance = REACH;
-        for (const item of room.interactables) {
-            const distance = distanceTo(item);
-            if (distance <= bestDistance) {
-                best = item;
-                bestDistance = distance;
+        for (const list of [room.interactables, extras()]) {
+            for (const item of list) {
+                const distance = distanceTo(item);
+                if (distance <= bestDistance) {
+                    best = item;
+                    bestDistance = distance;
+                }
             }
         }
         return best;
@@ -123,6 +133,7 @@ export function useRoom(
     function doorway() {
         let best = null;
         let bestDistance = TRIGGER_REACH;
+        // Only the room's own things: nothing fetched walks you anywhere.
         for (const item of room.interactables) {
             const distance = distanceTo(item);
             if (autoTriggers(item) && distance <= bestDistance) {

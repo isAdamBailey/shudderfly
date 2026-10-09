@@ -33,7 +33,16 @@ class ThemeBooks
             return new LengthAwarePaginator(collect([]), 0, $perPage, 1);
         }
 
-        return $query->with('coverImage')->paginate($perPage);
+        // By id as well, so pages don't repeat or skip books.
+        return $query->with('coverImage')->orderBy('id')->paginate($perPage);
+    }
+
+    /**
+     * How many books relate to a specific theme.
+     */
+    public static function count(string $theme): int
+    {
+        return self::query($theme)?->count() ?? 0;
     }
 
     /**

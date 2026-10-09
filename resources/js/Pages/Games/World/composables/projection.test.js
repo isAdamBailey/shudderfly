@@ -1,7 +1,12 @@
 import { PerspectiveCamera, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 import { applyCamera } from "../three/useWorldRenderer.js";
-import { groundZAtRow, screenToGround, worldToScreen } from "./projection.js";
+import {
+    groundZAtRow,
+    screenToGround,
+    spanAt,
+    worldToScreen,
+} from "./projection.js";
 
 const camera = {
     x: 900,
@@ -77,6 +82,18 @@ describe("projection", () => {
                 const ours = worldToScreen(cam, point);
                 expect(((ndc.x + 1) / 2) * cam.w).toBeCloseTo(ours.x, 4);
                 expect(((1 - ndc.y) / 2) * cam.h).toBeCloseTo(ours.y, 4);
+            }
+        }
+    });
+});
+
+describe("spanAt", () => {
+    it("reaches the stage's edges at that depth, lens shift and all", () => {
+        for (const cam of [camera, { ...camera, lensX: 120 }]) {
+            for (const z of [0, -300, 400]) {
+                const { x0, x1 } = spanAt(cam, z);
+                expect(worldToScreen(cam, { x: x0, z }).x).toBeCloseTo(0);
+                expect(worldToScreen(cam, { x: x1, z }).x).toBeCloseTo(cam.w);
             }
         }
     });

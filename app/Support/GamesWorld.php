@@ -2,7 +2,10 @@
 
 namespace App\Support;
 
+use App\Http\Controllers\BookController;
 use App\Http\Controllers\GameController;
+use App\Http\Middleware\HandleInertiaRequests;
+use App\Models\Book;
 use App\Models\Category;
 use Illuminate\Support\Str;
 
@@ -29,7 +32,12 @@ final class GamesWorld
 
     public const LIBRARY_BOOK_SPAN = 110;
 
-    public const LIBRARY_SHELVES_FROM = 240;
+    public const LIBRARY_SHELVES_FROM = 260;
+
+    /** The most books a shelf in the Library's hall holds (its Popular,
+     * Forgotten and seasonal shelves): three columns, within one page of
+     * books.category. */
+    public const LIBRARY_HALL_SHELF = 9;
 
     /** The walls of a room a door can sit on. `back` is the far wall, facing
      * the open front; `left` and `right` are the ends. */
@@ -226,22 +234,27 @@ final class GamesWorld
         // The ground floor is the first; landing $i is floor $i + 2.
         $floorId = fn (int $i) => $i < 0 ? 'library.hall' : 'library.floor-'.($i + 2);
 
-        $hallW = 800;
+        $roomW = 900;
         // A landing: a stairwell's width at each end, and a door's width
         // apart for each category door between them.
         $stairsEnd = 150;
-        $doorGap = 200;
+        $doorGap = 240;
         $landingW = 2 * $stairsEnd + self::LIBRARY_ROOMS_PER_FLOOR * $doorGap;
-        $roomW = 900;
 
+        // The hall: the front door at the left end, then the special
+        // shelves, then the stairs up at the right.
+        $shelves = self::hallShelves();
+        $hallW = max($roomW, (int) (collect($shelves)->max(fn ($shelf) => self::shelfEnd($shelf)) ?? 0) + 220);
         $scenes = [
             'library.hall' => self::room('library_hall', [
                 'size' => ['w' => $hallW, 'd' => 450],
-                'spawn' => ['x' => $hallW / 2, 'z' => 300],
+                ...($hallW > $roomW ? ['frame' => $roomW] : []),
+                'spawn' => ['x' => 300, 'z' => 300],
                 'walls' => ['back' => 'brick', 'sides' => 'plaster', 'floor' => 'wood'],
                 'ambient' => 0.55,
+                ...($shelves ? ['shelves' => $shelves] : []),
             ], [
-                self::roomDoor('front-door', $hallW / 2, 'road', 'library', exit: true),
+                self::roomDoor('front-door', 110, 'road', 'library', exit: true),
                 ...($floors->isEmpty() ? [] : [self::stairs(true, $floorId(0), $hallW)]),
             ]),
         ];
@@ -269,6 +282,9 @@ final class GamesWorld
                             'landing-door',
                             key: 'messages.games.world.doors.library_category',
                         ),
+                        // The Library's rooms open onto each other: a wide
+                        // doorway, not a door (doorway.js).
+                        'open' => true,
                         'labelArgs' => self::categoryName($category),
                     ])->all(),
                     ...($i < $floors->count() - 1 ? [self::stairs(true, $floorId($i + 1), $landingW)] : []),
@@ -277,8 +293,9 @@ final class GamesWorld
             ];
 
             foreach ($categories as $category) {
-                $columns = (int) ceil($category->books_count / self::LIBRARY_SHELF_ROWS);
-                $width = max($roomW, self::LIBRARY_SHELVES_FROM + $columns * self::LIBRARY_BOOK_SPAN + 120);
+                $shelf = self::shelf('books', $category->name, $category->books_count, self::LIBRARY_SHELVES_FROM);
+                // Past the shelves, room for a second doorway back out.
+                $width = max($roomW, self::shelfEnd($shelf) + 270);
                 $scenes["library.category-{$category->id}"] = [
                     ...self::room('library_category', [
                         'size' => ['w' => $width, 'd' => 450],
@@ -286,12 +303,21 @@ final class GamesWorld
                         'spawn' => ['x' => 300, 'z' => 300],
                         'walls' => ['back' => 'wallpaper-dots', 'sides' => 'plaster', 'floor' => 'wood'],
                         'ambient' => 0.6,
-                        // Which books its shelves hold: the Books pages'
-                        // own category (books.category), and how many.
-                        'books' => ['category' => $category->name, 'count' => $category->books_count],
+                        // An emptied category (its books cleaned up) is a bare room.
+                        ...($category->books_count > 0 ? ['shelves' => [$shelf]] : []),
                     ], [
                         [
-                            ...self::roomDoor('landing-door', 110, $landing, "category-{$category->id}", 'library_floor', exit: true),
+                            ...self::roomDoor('landing-door', 130, $landing, "category-{$category->id}", 'library_floor', exit: true),
+                            'open' => true,
+                            'labelArgs' => $floor,
+                        ],
+                        // The same way out at the far end of the shelves,
+                        // so a long room needn't be walked back.
+                        [
+                            ...self::roomDoor('far-door', $width - 130, $landing, "category-{$category->id}", 'library_floor'),
+                            'open' => true,
+                            // Its EXIT sign says it all (exitSign.js).
+                            'titled' => false,
                             'labelArgs' => $floor,
                         ],
                     ]),
@@ -301,6 +327,77 @@ final class GamesWorld
         }
 
         return $scenes;
+    }
+
+    /** The Library hall's shelves, as the Books page has them: the
+     * forgotten books, the favourites and, when one is on, the season's or
+     * the month's. Each holds up to LIBRARY_HALL_SHELF; an empty one isn't
+     * put up. */
+    private static function hallShelves(): array
+    {
+        $all = Book::count();
+        $theme = HandleInertiaRequests::getCurrentTheme();
+        $seasonal = match (true) {
+            $theme !== '' => [
+                'themed',
+                ThemeBooks::count($theme),
+                "messages.games.world.shelves.{$theme}",
+                [],
+            ],
+            MonthBooks::isActive() => [
+                'month',
+                MonthBooks::getBookIds()->count(),
+                'messages.books.month_books',
+                ['month' => MonthBooks::monthName()],
+            ],
+            default => null,
+        };
+        $lists = [
+            ['forgotten', $all, 'messages.games.world.shelves.forgotten', []],
+            ['popular', $all, 'messages.games.world.shelves.popular', []],
+            ...($seasonal ? [$seasonal] : []),
+        ];
+
+        $shelves = [];
+        $from = self::LIBRARY_SHELVES_FROM;
+        foreach ($lists as [$category, $count, $label, $args]) {
+            if ($count === 0) {
+                continue;
+            }
+            $shelf = [
+                ...self::shelf($category, $category, min($count, self::LIBRARY_HALL_SHELF), $from),
+                'label' => $label,
+                ...($args ? ['labelArgs' => $args] : []),
+            ];
+            $shelves[] = $shelf;
+            $from = self::shelfEnd($shelf) + 80;
+        }
+
+        return $shelves;
+    }
+
+    /** A bookcase on a room's back wall, from x `from`: `count` books of
+     * the Books pages' list `category` (books.category, `perPage` a page),
+     * `rows` high and a book every `span` along. The client fetches the
+     * books as they come into view; scenes/bookshelf.js lays them out the
+     * same way (shelfEnd()). */
+    private static function shelf(string $id, string $category, int $count, int $from): array
+    {
+        return [
+            'id' => $id,
+            'category' => $category,
+            'count' => $count,
+            'x' => $from,
+            'rows' => self::LIBRARY_SHELF_ROWS,
+            'span' => self::LIBRARY_BOOK_SPAN,
+            'perPage' => BookController::PER_PAGE,
+        ];
+    }
+
+    /** Where `shelf` ends along the back wall (as bookshelf.js shelfEnd()). */
+    private static function shelfEnd(array $shelf): int
+    {
+        return $shelf['x'] + (int) ceil($shelf['count'] / $shelf['rows']) * $shelf['span'];
     }
 
     /** Stairs up (`$up`) or down to `$to`, arriving at the stairs going
@@ -459,6 +556,9 @@ final class GamesWorld
         return collect(self::definitions())
             ->map(fn ($scene) => [
                 ...self::translate($scene),
+                ...(isset($scene['shelves'])
+                    ? ['shelves' => array_map(fn ($shelf) => self::translate($shelf), $scene['shelves'])]
+                    : []),
                 'interactables' => array_map(
                     fn ($item) => self::resolve($item, $games),
                     $scene['interactables'],

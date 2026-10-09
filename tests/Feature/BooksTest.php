@@ -25,6 +25,26 @@ class BooksTest extends TestCase
     use RefreshDatabase;
     use WithFaker;
 
+    public function test_category_books_page_through_every_book_once(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        // Books made in the same second, with the same read count: the
+        // Library's long shelves page through lists like these.
+        $this->freezeTime();
+        $category = Category::factory()->create(['name' => 'everything']);
+        Book::factory()->count(35)->create(['category_id' => $category->id, 'read_count' => 0]);
+
+        foreach (['everything', 'popular', 'forgotten'] as $list) {
+            $ids = collect(range(1, 4))->flatMap(fn ($page) => $this
+                ->getJson(route('books.category', ['categoryName' => $list, 'page' => $page]))
+                ->json('books.data.*.id'));
+
+            $this->assertCount(35, $ids, $list);
+            $this->assertCount(35, $ids->unique(), $list);
+        }
+    }
+
     public function test_popular_books_are_returned(): void
     {
         $this->actingAs(User::factory()->create());

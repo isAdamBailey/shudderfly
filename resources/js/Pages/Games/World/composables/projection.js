@@ -50,6 +50,16 @@ export function screenToGround(camera, sx, sy) {
     };
 }
 
+/** How much of the plane at depth `z` is across the stage: { x0, x1 },
+ * world x at its left and right edges. */
+export function spanAt(camera, z) {
+    const perPx = (camera.z - z) / camera.focal;
+    return {
+        x0: camera.x - centre(camera) * perPx,
+        x1: camera.x + (camera.w - centre(camera)) * perPx,
+    };
+}
+
 /** The depth `z` at which the ground is drawn at screen row `row`. */
 export function groundZAtRow(camera, row) {
     return camera.z - (camera.focal * camera.y) / (row - camera.eyeRow);

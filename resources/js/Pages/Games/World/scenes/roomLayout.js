@@ -52,12 +52,8 @@ const FIT = { floorRow: 0.95, top: 0.06 };
 export const ROOM_SIZES = {
     butt: 90,
     door: { width: 120, height: 210 },
-    // A flight of stairs on a side wall (staircase.js): its button covers
-    // the steps, seen end-on: up, the flight; down, the rail round the well.
-    stairs: {
-        up: { width: 160, height: 300 },
-        down: { width: 160, height: 110 },
-    },
+    // An open doorway (doorway.js): wider than a door, and framed.
+    doorway: { width: 180, height: 230 },
     toy: 80,
 };
 
@@ -138,15 +134,17 @@ const wayBack = (item) => Boolean(item.exit || item.stairs);
 
 /** How an interactable is drawn and covered, in world units: { width,
  * height } (its glyph is `height` tall) and whether its button carries an
- * arched gold title, as the road's landmarks do. A door is a doorway (or
- * a flight of stairs), with its name over it unless it's plainly the way
- * back (see wayBack()); anything else is a `size` square (ROOM_SIZES.toy if it
- * says nothing), titled if it leads somewhere (a game) or says `titled`. */
+ * arched gold title, as the road's landmarks do. A door is a doorway
+ * (wider and open with `open`), with its name over it unless it's plainly
+ * the way back (see wayBack()); anything else is a `size` square
+ * (ROOM_SIZES.toy if it says nothing), titled if it leads somewhere (a
+ * game) or says `titled`. A flight of stairs' button covers the flight
+ * (staircase.js stairsBounds()). */
 export function itemBox(item) {
     const titled =
         item.titled ??
         (item.type === "game" || (item.type === "door" && !wayBack(item)));
-    if (item.stairs) return { ...ROOM_SIZES.stairs[item.stairs], titled };
+    if (item.open) return { ...ROOM_SIZES.doorway, titled };
     if (item.type === "door") return { ...ROOM_SIZES.door, titled };
     const size = item.size ?? ROOM_SIZES.toy;
     return { width: size, height: size, titled };
