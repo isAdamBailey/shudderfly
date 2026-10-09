@@ -6,7 +6,8 @@
  *   motion: the scene handles that).
  * - toot: a cast id to toot as, the puff at the toy.
  * - sound: a named sound (sounds.js).
- * - light: the id of a room light it switches on or off.
+ * - light: the id of a room light it switches on or off, or a list of ids
+ *   it switches together.
  * - line: a translated line to say.
  * Using one needs a tap or Enter: walking past doesn't set it off.
  */

@@ -735,6 +735,7 @@ return [
     'games.world.toys.clock_hex' => 'Horloge en érable',
     'games.world.toys.clock_banjo' => 'Horloge banjo',
     'games.world.toys.lamp' => 'Lampe',
+    'games.world.toys.light_switch' => 'Interrupteur',
     'games.world.toys.sprout_pot' => 'Marmite de choux',
     'games.world.toys.sprout_pot_line' => 'Blub blub ! Soupe de choux. Alerte prout !',
     'games.world.toys.toilet_roll' => 'Papier toilette',

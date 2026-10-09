@@ -37,6 +37,12 @@ class GamesWorldScenesTest extends TestCase
         }
     }
 
+    /** Where `$shelf` ends along its wall, as GamesWorld lays it out. */
+    private function shelfEnd(array $shelf): int
+    {
+        return $shelf['x'] + (int) ceil($shelf['count'] / $shelf['rows']) * $shelf['span'];
+    }
+
     public function test_every_game_is_placed_exactly_once(): void
     {
         $placed = collect(GamesWorld::definitions())
@@ -173,11 +179,55 @@ class GamesWorldScenesTest extends TestCase
                 $this->assertLessThanOrEqual($scene['size']['w'], $item['x'], $where);
                 $this->assertGreaterThanOrEqual(0, $item['z'], $where);
                 $this->assertLessThanOrEqual($scene['size']['d'], $item['z'], $where);
-                if (isset($item['light'])) {
-                    $this->assertContains($item['light'], $lights, "{$where} switches no light");
+                foreach ((array) ($item['light'] ?? []) as $light) {
+                    $this->assertContains($light, $lights, "{$where} switches no light");
                 }
             }
         }
+    }
+
+    public function test_every_room_has_lamps_within_the_budget_and_a_switch_for_each(): void
+    {
+        foreach (GamesWorld::definitions() as $sceneId => $scene) {
+            if ($scene['kind'] !== 'room') {
+                continue;
+            }
+            $lights = array_column($scene['lights'] ?? [], 'id');
+            $this->assertNotEmpty($lights, "{$sceneId} is dark at night");
+            $this->assertLessThanOrEqual(GamesWorld::ROOM_LIGHTS_MAX, count($lights), "{$sceneId} lights");
+
+            $switched = collect($scene['interactables'])
+                ->flatMap(fn ($item) => (array) ($item['light'] ?? []))
+                ->all();
+            foreach ($lights as $light) {
+                $this->assertContains($light, $switched, "{$sceneId}.{$light} has no switch");
+            }
+        }
+    }
+
+    public function test_library_reading_lamps_hang_over_the_shelves(): void
+    {
+        $people = Category::where('name', 'people')->value('id');
+        $room = GamesWorld::definitions()["library.category-{$people}"];
+        $shelf = $room['shelves'][0];
+        $end = $this->shelfEnd($shelf);
+
+        foreach ($room['lights'] as $lamp) {
+            $this->assertGreaterThan($shelf['x'], $lamp['x']);
+            $this->assertLessThan($end, $lamp['x']);
+        }
+        $switch = collect($room['interactables'])->firstWhere('id', 'light-switch');
+        $this->assertSame(array_column($room['lights'], 'id'), $switch['light']);
+    }
+
+    public function test_a_long_shelf_gets_no_more_than_the_budget_of_reading_lamps(): void
+    {
+        $long = Category::factory()->create(['name' => 'zebras']);
+        Book::factory()->count(90)->create(['category_id' => $long->id]);
+
+        $lights = GamesWorld::definitions()["library.category-{$long->id}"]['lights'];
+
+        $this->assertCount(GamesWorld::ROOM_LIGHTS_MAX, $lights);
     }
 
     public function test_toys_play_known_moves_and_toot_as_the_cast(): void
@@ -258,7 +308,7 @@ class GamesWorldScenesTest extends TestCase
     public function test_the_library_has_a_room_per_category_over_its_floors(): void
     {
         $scenes = GamesWorld::definitions();
-        $doors = fn (string $id) => collect($scenes[$id]['interactables'])->pluck('to', 'id')->all();
+        $doors = fn (string $id) => collect($scenes[$id]['interactables'])->where('type', 'door')->pluck('to', 'id')->all();
         $id = fn (string $name) => Category::where('name', $name)->value('id');
 
         // Four rooms a landing, in name order; stairs chain the floors.
@@ -319,7 +369,7 @@ class GamesWorldScenesTest extends TestCase
     {
         foreach (GamesWorld::definitions() as $sceneId => $scene) {
             foreach ($scene['shelves'] ?? [] as $shelf) {
-                $end = $shelf['x'] + (int) ceil($shelf['count'] / $shelf['rows']) * $shelf['span'];
+                $end = $this->shelfEnd($shelf);
                 $far = collect($scene['interactables'])->firstWhere('id', 'far-door');
                 if (! $far) {
                     continue;
@@ -349,7 +399,7 @@ class GamesWorldScenesTest extends TestCase
 
         $scenes = GamesWorld::definitions();
 
-        $this->assertSame(['front-door'], array_column($scenes['library.hall']['interactables'], 'id'));
+        $this->assertSame(['front-door', 'light-switch'], array_column($scenes['library.hall']['interactables'], 'id'));
         $this->assertEmpty(preg_grep('/^library\.(floor|category)-/', array_keys($scenes)));
     }
 
@@ -370,7 +420,7 @@ class GamesWorldScenesTest extends TestCase
         // The hall reaches past its last shelf, with room for the stairs.
         $hall = GamesWorld::definitions()['library.hall'];
         $last = end($shelves);
-        $end = $last['x'] + (int) ceil($last['count'] / GamesWorld::LIBRARY_SHELF_ROWS) * GamesWorld::LIBRARY_BOOK_SPAN;
+        $end = $this->shelfEnd($last);
         $this->assertGreaterThanOrEqual($end + 200, $hall['size']['w']);
         $this->assertSame($hall['size']['w'], collect($hall['interactables'])->firstWhere('id', 'upstairs')['x']);
     }

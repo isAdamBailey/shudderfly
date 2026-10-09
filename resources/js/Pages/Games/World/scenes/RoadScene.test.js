@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createCastKit } from "@/Components/Games/Cast/three/castMesh.js";
-import { worldTheme } from "../three/themes.js";
+import { worldNight, worldTheme } from "../three/themes.js";
 import { createRoadScene } from "./RoadScene.js";
 import { buildingBox, roadCamera, roadLayout } from "./roadLayout.js";
 
@@ -314,6 +314,66 @@ describe("the road's scene graph", () => {
         butt(400); // walked past: back up
         butt(500);
         expect(hisses()).toBe(1);
+    });
+
+    it("falls to night with dark mode: lit windows under a dimmer light", () => {
+        const kit = createCastKit(THREE, { createCanvas });
+        const road = createRoadScene(THREE, kit, {
+            theme: worldTheme(""),
+            nightTheme: worldNight(""),
+            landmarks,
+            idlers,
+        });
+        const L = roadLayout({ w: 1000, h: 700, vmin: 700 });
+        road.layout(L, 2200);
+        const key = road.scene.getObjectsByProperty(
+            "isDirectionalLight",
+            true
+        )[0];
+        let glass;
+        road.scene.traverse((o) => {
+            if (
+                o.isMesh &&
+                o.material.emissive &&
+                o.material.roughness === 0.3
+            ) {
+                glass = o.material;
+            }
+        });
+        const daylight = key.intensity;
+        road.sync(view(L), 0);
+        expect(glass.emissiveIntensity).toBe(0);
+
+        road.setNight(true);
+        // Eases over about 300 ms.
+        expect(road.sync(view(L), 0.1)).toBe(true);
+        expect(key.intensity).toBeLessThan(daylight);
+        expect(key.intensity).toBeGreaterThan(worldNight("").key.intensity);
+        road.sync(view(L), 0.5);
+        expect(key.intensity).toBeCloseTo(worldNight("").key.intensity);
+        expect(glass.emissiveIntensity).toBeGreaterThan(0);
+
+        road.setNight(false);
+        road.sync(view(L, { reduced: true }), 0.01);
+        expect(key.intensity).toBeCloseTo(daylight);
+        expect(glass.emissiveIntensity).toBe(0);
+    });
+
+    it("can start at night", () => {
+        const kit = createCastKit(THREE, { createCanvas });
+        const road = createRoadScene(THREE, kit, {
+            theme: worldTheme("christmas"),
+            nightTheme: worldNight("christmas"),
+            night: true,
+            landmarks,
+            idlers,
+        });
+        const key = road.scene.getObjectsByProperty(
+            "isDirectionalLight",
+            true
+        )[0];
+
+        expect(key.intensity).toBe(worldNight("christmas").key.intensity);
     });
 
     it("lets off no fireworks under reduced motion", () => {

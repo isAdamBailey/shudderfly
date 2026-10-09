@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref } from "vue";
+import { MIN_TARGET } from "./overlay.js";
 
 // One interactable in the WebGL world's DOM overlay (issue #130). WebGL has
 // no buttons, so each thing you can visit is a real, transparent <button>
@@ -17,8 +18,6 @@ const props = defineProps({
     height: { type: Number, default: null },
     label: { type: String, required: true },
 });
-
-const MIN_TARGET = 48; // px
 
 const el = ref(null);
 

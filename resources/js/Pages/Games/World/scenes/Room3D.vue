@@ -4,6 +4,7 @@ import axios from "axios";
 import CastMember from "@/Components/Games/Cast/CastMember.vue";
 import TootPuff from "@/Components/Games/Cast/TootPuff.vue";
 import { castInDom } from "@/constants/characters.js";
+import { useDarkMode } from "@/composables/useDarkMode";
 import { useToot } from "@/composables/useToot";
 import { useTranslations } from "@/composables/useTranslations";
 import { usePreferredReducedMotion } from "@vueuse/core";
@@ -19,7 +20,7 @@ import {
 import InteractableButton from "../components/InteractableButton.vue";
 import FollowBox from "../components/FollowBox.vue";
 import TvScreen from "../components/TvScreen.vue";
-import { pastTap } from "../components/overlay.js";
+import { onButton, pastTap } from "../components/overlay.js";
 import LandmarkTitle from "../components/LandmarkTitle.vue";
 import {
     screenToGround,
@@ -31,12 +32,7 @@ import { arrivalSpot, useRoom } from "../composables/useRoom.js";
 import { useShelves } from "../composables/useShelves.js";
 import { useTvChannels } from "../composables/useTvChannels.js";
 import { autoTriggers } from "../interactions/index.js";
-import {
-    BOOKCASE,
-    bookcaseHeight,
-    shelfEnd,
-    slotsIn,
-} from "./bookshelf.js";
+import { BOOKCASE, bookcaseHeight, shelfEnd, slotsIn } from "./bookshelf.js";
 import { createRoomScene } from "./RoomScene.js";
 import { stairsBounds } from "./staircase.js";
 import {
@@ -67,6 +63,7 @@ const emit = defineEmits(["activate"]);
 
 const { t } = useTranslations();
 const page = usePage();
+const dark = useDarkMode();
 
 const prefersReducedMotion = usePreferredReducedMotion();
 const reduced = computed(() => prefersReducedMotion.value === "reduce");
@@ -142,6 +139,7 @@ onMounted(() => {
         room: props.scene,
         butt,
         theme: page.props.theme,
+        night: dark.value,
         exitWord: t("games.world.exit_sign"),
     });
     const frame = framed();
@@ -161,6 +159,8 @@ onMounted(() => {
         );
     });
 });
+
+watch(dark, (on) => graph?.setNight(on));
 
 onBeforeUnmount(() => {
     stopFrames?.();
@@ -386,16 +386,37 @@ function floorAt(event, rect, grab = 0) {
     );
 }
 
+/** A tap on the Butt where it's drawn over the button of the thing it's
+ * standing at uses that thing; anywhere else on it, it's only a grab. */
+function tapButt(point, rect) {
+    const item = room.nearest.value;
+    if (!item) return;
+    const spot = [
+        ...spots.value,
+        ...shelfSpots.value.flatMap((s) => s.books),
+    ].find((s) => s.item === item);
+    const x = point.clientX - rect.left;
+    const y = point.clientY - rect.top;
+    if (spot && onButton(spot, x, y)) room.goUse(item);
+}
+
+/** Dragging the Butt walks it along; a tap on it may use what it's at. */
 function onButtPointerDown(event) {
     if (room.state.frozen || event.button > 0 || !layout.value) return;
+    const start = { clientX: event.clientX, clientY: event.clientY };
+    let tap = true;
     let grab = 0;
     const rect = props.stage.beginGesture({
         move(e) {
             e.preventDefault();
+            if (pastTap(start, e)) tap = false;
             const floor = floorAt(e, rect, grab);
             if (floor) room.updateDrag(floor.x, floor.z);
         },
-        end: () => room.endDrag(),
+        end() {
+            room.endDrag();
+            if (tap) tapButt(start, rect);
+        },
         cancel: () => room.cancelDrag(),
     });
     // Held anywhere on the Butt, it's dragged by its feet.
@@ -480,15 +501,6 @@ defineExpose({
         @pointerup="unlockToot"
     >
         <template v-if="layout">
-            <!-- Under the buttons: a toy in front of the Butt still takes
-                 the tap. -->
-            <FollowBox
-                class="peach"
-                role="img"
-                :aria-label="t('games.world.peach_aria')"
-                :at="buttSpot"
-                @pointerdown.prevent="onButtPointerDown"
-            />
             <InteractableButton
                 v-for="s in spots"
                 :key="s.item.id"
@@ -587,6 +599,16 @@ defineExpose({
                     >
                 </InteractableButton>
             </template>
+
+            <!-- Over the buttons, so the Butt can be dragged off whatever
+                 it's standing at. -->
+            <FollowBox
+                class="peach"
+                role="img"
+                :aria-label="t('games.world.peach_aria')"
+                :at="buttSpot"
+                @pointerdown.prevent="onButtPointerDown"
+            />
 
             <TootPuff
                 v-for="puff in puffs"

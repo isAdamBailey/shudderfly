@@ -103,6 +103,7 @@ export function disposeTree(root, keep = []) {
 export function useWorldRenderer() {
     let renderer = null;
     let view = null;
+    let wanted = null;
     let rafId = null;
     let lastFrame = 0;
     let paused = false;
@@ -148,10 +149,26 @@ export function useWorldRenderer() {
             dirty = true;
         },
 
-        /** What to draw: a scene and its camera, or null for nothing. */
+        /** What to draw: a scene and its camera, or null for nothing. A
+         * scene is drawn once its shaders are compiled: a room with a new
+         * number of lamps needs every one rebuilt, which would stall the
+         * frame it first draws in. Until then the last frame stays up. */
         show(scene, camera) {
-            view = scene ? { scene, camera } : null;
-            dirty = true;
+            const next = scene ? { scene, camera } : null;
+            wanted = next;
+            if (!next || !renderer?.compileAsync) {
+                view = next;
+                dirty = true;
+                return;
+            }
+            renderer
+                .compileAsync(scene, camera)
+                .catch(() => {})
+                .then(() => {
+                    if (wanted !== next) return;
+                    view = next;
+                    dirty = true;
+                });
         },
 
         onFrame(fn) {
@@ -178,6 +195,7 @@ export function useWorldRenderer() {
             stop();
             hooks.clear();
             view = null;
+            wanted = null;
             handle.kit?.dispose();
             handle.kit = null;
             renderer?.dispose();

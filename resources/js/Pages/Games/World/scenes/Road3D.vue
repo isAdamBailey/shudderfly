@@ -2,6 +2,7 @@
 import { usePage } from "@inertiajs/vue3";
 import TootPuff from "@/Components/Games/Cast/TootPuff.vue";
 import TiltPermissionButton from "@/Components/TiltPermissionButton.vue";
+import { useDarkMode } from "@/composables/useDarkMode";
 import { useTranslations } from "@/composables/useTranslations";
 import {
     computed,
@@ -17,7 +18,7 @@ import LandmarkTitle from "../components/LandmarkTitle.vue";
 import SkyLogo from "../components/SkyLogo.vue";
 import { screenToGround, worldToScreen } from "../composables/projection.js";
 import { useRoad } from "../composables/useRoad.js";
-import { worldTheme } from "../three/themes.js";
+import { worldNight, worldTheme } from "../three/themes.js";
 import { createRoadScene } from "./RoadScene.js";
 import { buildingBox, roadCamera, roadLayout } from "./roadLayout.js";
 
@@ -39,6 +40,7 @@ const emit = defineEmits(["activate"]);
 
 const { t } = useTranslations();
 const page = usePage();
+const dark = useDarkMode();
 
 const sceneEl = shallowRef(null);
 const bounds = reactive({ w: 0, h: 0, vmin: 0 });
@@ -157,6 +159,8 @@ onMounted(() => {
     const { renderer } = props.stage;
     graph = createRoadScene(renderer.three, renderer.kit, {
         theme: worldTheme(page.props.theme),
+        nightTheme: worldNight(page.props.theme),
+        night: dark.value,
         landmarks: landmarks.value,
         idlers: idlers.value,
     });
@@ -170,6 +174,8 @@ onMounted(() => {
     renderer.show(graph.scene, graph.camera);
     stopFrames = renderer.onFrame(onFrame);
 });
+
+watch(dark, (on) => graph?.setNight(on));
 
 watch([layout, world.worldWidth], ([L, worldWidth]) => {
     if (L && graph) {

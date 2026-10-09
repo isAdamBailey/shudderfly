@@ -13,6 +13,19 @@ export function boxStyle({ x, y, size }) {
     };
 }
 
+// No button is smaller than a tap target.
+export const MIN_TARGET = 48; // px
+
+/** Whether screen point (x, y) is on the button standing at `spot` (its
+ * feet at spot.x, spot.y), as InteractableButton sizes it. */
+export function onButton(spot, x, y) {
+    const width = Math.max(MIN_TARGET, spot.width);
+    const height = Math.max(MIN_TARGET, spot.height ?? spot.width);
+    return (
+        Math.abs(x - spot.x) <= width / 2 && y <= spot.y && y >= spot.y - height
+    );
+}
+
 // A press that moves further than this is a drag or a pan, not a tap.
 const TAP_SLOP = 8; // px
 
