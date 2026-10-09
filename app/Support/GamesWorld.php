@@ -64,6 +64,10 @@ final class GamesWorld
      * them in step). */
     public const SOUNDS = ['hiss', 'tick', 'bell'];
 
+    /** The minigames a `minigame` interactable may start:
+     * World/minigames/index.js (a Vitest test keeps them in step). */
+    public const MINIGAMES = ['toot-catch'];
+
     /** Clock faces a hall clock may wear: three/clockFaces.js (a Vitest test
      * keeps them in step). */
     public const CLOCKS = ['round', 'school', 'octagon', 'cuckoo', 'sunburst', 'arch', 'hex', 'banjo'];
@@ -222,6 +226,8 @@ final class GamesWorld
             ], [
                 self::roomDoor('front-door', 400, 'road', 'poop-house', exit: true),
                 self::resident('poop', 620, 220, ['move' => 'bounce', 'toot' => 'poop']),
+                // The Poop's game, played on the spot: catch the falling foods.
+                self::minigame('toot-catch', 170, 180, '🧺'),
             ]),
         ];
     }
@@ -582,6 +588,55 @@ final class GamesWorld
             'label' => 'messages.games.world.toys.radio',
             'line' => 'messages.games.world.toys.radio_line',
         ];
+    }
+
+    /** A minigame (one of MINIGAMES) played where it stands, drawn as
+     * `emoji`, named by minigameKey() and explained by its `_line` as its
+     * card opens. Titled like a game. */
+    private static function minigame(string $minigame, int $x, int $z, string $emoji): array
+    {
+        $key = self::minigameKey($minigame);
+
+        return [
+            'id' => $minigame,
+            'type' => 'minigame',
+            'minigame' => $minigame,
+            'x' => $x,
+            'z' => $z,
+            'size' => 90,
+            'emoji' => $emoji,
+            'titled' => true,
+            'label' => $key,
+            'line' => "{$key}_line",
+        ];
+    }
+
+    /** Minigame `name`'s lang key (`minigames.toot_catch`). */
+    private static function minigameKey(string $minigame): string
+    {
+        return 'messages.games.world.minigames.'.str_replace('-', '_', $minigame);
+    }
+
+    /** Minigame `name`'s translated name, as a shared score gives it. */
+    public static function minigameName(string $minigame): string
+    {
+        return __(self::minigameKey($minigame));
+    }
+
+    /** Where the launcher of a game (`$kind` `game`, by slug) or a
+     * minigame (`minigame`, by name) stands: its scene and its id there,
+     * the spot a shared score's link arrives at. Null if it isn't placed. */
+    public static function whereIs(string $kind, string $name): ?array
+    {
+        foreach (self::definitions() as $sceneId => $scene) {
+            foreach ($scene['interactables'] as $item) {
+                if ($item['type'] === $kind && ($item[$kind] ?? null) === $name) {
+                    return ['scene' => $sceneId, 'spot' => $item['id']];
+                }
+            }
+        }
+
+        return null;
     }
 
     /** A cast member living in a room, as a toy: its id is its cast id. */

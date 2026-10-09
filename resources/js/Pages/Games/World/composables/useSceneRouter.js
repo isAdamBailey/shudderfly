@@ -23,7 +23,8 @@ function sessionStore() {
  *
  * Options:
  * - link: a shared link (`/games?scene=house.hall`) as the server sends it,
- *   { scene, visit }. `visit` is new on every click of the link but the same
+ *   { scene, spot?, visit }; `spot` is where to stand (a shared score's
+ *   link puts you in front of its game). `visit` is new on every click of the link but the same
  *   when the browser comes back to the page from history, so a fresh click
  *   opens at the link and coming back from a game to that URL puts you
  *   where you were.
@@ -43,7 +44,11 @@ export function useSceneRouter(scenes, { link = null, storage } = {}) {
 
     const currentId = ref(linked ?? restored?.scene ?? "road");
     const arrival = shallowRef(
-        restored ? { position: restored.position ?? null } : {}
+        restored
+            ? { position: restored.position ?? null }
+            : linked && link.spot
+            ? { spot: link.spot }
+            : {}
     );
     // The link visit this page was opened with, kept with the saved place.
     const visit = linked ? link.visit : saved?.visit ?? null;

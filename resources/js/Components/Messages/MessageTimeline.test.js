@@ -14,6 +14,9 @@ global.route = (name, params) => {
         }
         return `/movie-cast?${query.toString()}`;
     }
+    if (name === "games.index" && params) {
+        return `/games?${new URLSearchParams(params)}`;
+    }
     if (params) {
         return `/${name}/${params}`;
     }
@@ -328,7 +331,7 @@ describe("MessageTimeline", () => {
             });
 
             expect(wrapper.text()).not.toContain("🎮");
-            const link = wrapper.find('a[href="/games.show/boom"]');
+            const link = wrapper.find('a[href="/games?game=boom"]');
             expect(link.exists()).toBe(true);
             expect(link.text()).toBe("Poop Boom");
         });
@@ -350,8 +353,30 @@ describe("MessageTimeline", () => {
             });
 
             expect(wrapper.text()).not.toMatch(/\uE000/);
-            const link = wrapper.find('a[href="/games.show/boom"]');
+            const link = wrapper.find('a[href="/games?game=boom"]');
             expect(link.exists()).toBe(true);
+        });
+
+        it("links a minigame's score back to it in the world", () => {
+            const marked = "I scored 9 in Toot Catch!\uE000m:toot-catch\uE000";
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: [
+                        {
+                            id: 903,
+                            message: marked,
+                            created_at: new Date().toISOString(),
+                            user: { id: 1, name: "Alice" },
+                        },
+                    ],
+                    users: [],
+                },
+            });
+
+            expect(wrapper.text()).not.toMatch(/\uE000/);
+            const link = wrapper.find('a[href="/games?minigame=toot-catch"]');
+            expect(link.exists()).toBe(true);
+            expect(link.text()).toBe("Toot Catch");
         });
 
         it("does not strip controller emoji outside score-share messages", () => {

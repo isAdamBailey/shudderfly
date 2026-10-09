@@ -397,6 +397,9 @@ function onKeydown(event) {
         }
         return;
     }
+    // A card is modal: its keys (a minigame's arrows) are its own, and the
+    // scene would take focus back to walk the Butt.
+    if (card.value) return;
     sceneRef.value?.onKeydown(event);
 }
 

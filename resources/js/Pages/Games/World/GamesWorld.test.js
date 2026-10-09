@@ -774,6 +774,57 @@ describe("GamesWorld rooms", () => {
         expect(screenX(wrapper.get(".room-3d .peach"))).toBeLessThan(at);
     });
 
+    it("plays a minigame over the room, its keys its own, and goes back to the room", async () => {
+        const hall = withHouse["house.hall"];
+        wrapper = await mountWorld({
+            ...withHouse,
+            "house.hall": {
+                ...hall,
+                interactables: [
+                    ...hall.interactables,
+                    {
+                        id: "toot-catch",
+                        type: "minigame",
+                        minigame: "toot-catch",
+                        x: 320,
+                        z: 160,
+                        size: 90,
+                        emoji: "🧺",
+                        titled: true,
+                        label: "Toot Catch",
+                        line: "Catch them!",
+                    },
+                ],
+            },
+        });
+        await enterHouse(wrapper);
+        const catcher = roomButton(wrapper, "Toot Catch");
+        expect(catcher.find(".landmark-title, svg").exists()).toBe(true);
+
+        await catcher.trigger("focus");
+        await catcher.trigger("click");
+        await nextTick();
+        expect(wrapper.get('[role="dialog"] h2').text()).toBe("Toot Catch");
+
+        await wrapper.get(".minigame-play").trigger("click");
+        await showing(wrapper, ".catch-field");
+        const field = wrapper.get(".catch-field");
+        expect(document.activeElement).toBe(field.element);
+
+        // The arrows move the minigame's Butt, not the room's.
+        const at = screenX(wrapper.get(".room-3d .peach"));
+        await field.trigger("keydown", { key: "ArrowLeft" });
+        await frames(200);
+        await field.trigger("keyup", { key: "ArrowLeft" });
+        expect(screenX(wrapper.get(".room-3d .peach"))).toBe(at);
+        expect(document.activeElement).toBe(field.element);
+
+        await field.trigger("keydown", { key: "Escape" });
+        await nextTick();
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+        expect(wrapper.find(".room-3d").exists()).toBe(true);
+    });
+
     it("comes back to where the Butt was in a room", async () => {
         wrapper = await mountWorld(withHouse);
         await enterHouse(wrapper);

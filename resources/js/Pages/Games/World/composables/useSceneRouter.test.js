@@ -204,6 +204,16 @@ describe("useSceneRouter", () => {
         });
     });
 
+    it("stands at the spot a link names", () => {
+        const router = useSceneRouter(scenes, {
+            link: { scene: "house.hall", spot: "front-door", visit: "a" },
+            storage: memoryStorage(),
+        });
+
+        expect(router.currentId.value).toBe("house.hall");
+        expect(router.arrival.value).toEqual({ spot: "front-door" });
+    });
+
     it("ignores a link to a scene that doesn't exist", () => {
         const router = useSceneRouter(scenes, {
             link: { scene: "house.attic", visit: "a" },

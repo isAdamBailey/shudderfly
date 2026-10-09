@@ -3,9 +3,12 @@
 namespace Tests\Feature;
 
 use App\Events\MessageCreated;
+use App\Http\Controllers\GameController;
 use App\Models\Message;
 use App\Models\SiteSetting;
 use App\Models\User;
+use App\Support\GameShareMessage;
+use App\Support\GamesWorld;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -255,6 +258,81 @@ class GamesTest extends TestCase
         ]);
 
         Event::assertDispatched(MessageCreated::class);
+    }
+
+    public function test_games_index_opens_at_a_minigame_named_in_the_link(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $this->get(route('games.index', ['minigame' => 'toot-catch']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('link.scene', 'poop-house.hall')
+                ->where('link.spot', 'toot-catch')
+                ->has('link.visit')
+                ->has('users'));
+
+        foreach (['nope', 'constructor', ''] as $unknown) {
+            $this->get(route('games.index', ['minigame' => $unknown]))
+                ->assertInertia(fn (Assert $page) => $page->where('link', null));
+        }
+    }
+
+    public function test_games_index_opens_in_front_of_a_game_named_in_the_link(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        // In a room, and on the road.
+        foreach (['boom' => 'house.bathroom', 'cockroach' => 'road'] as $game => $scene) {
+            $this->get(route('games.index', ['game' => $game]))
+                ->assertInertia(fn (Assert $page) => $page
+                    ->where('link.scene', $scene)
+                    ->where('link.spot', $game));
+        }
+
+        foreach (['nope', 'toot-catch', ''] as $unknown) {
+            $this->get(route('games.index', ['game' => $unknown]))
+                ->assertInertia(fn (Assert $page) => $page->where('link', null));
+        }
+    }
+
+    public function test_every_game_and_minigame_can_be_linked_to(): void
+    {
+        foreach (array_keys(GameController::games()) as $game) {
+            $this->assertNotNull(GamesWorld::whereIs('game', $game), $game);
+        }
+        foreach (GamesWorld::MINIGAMES as $minigame) {
+            $this->assertNotNull(GamesWorld::whereIs('minigame', $minigame), $minigame);
+        }
+    }
+
+    public function test_a_minigame_score_is_shared_with_a_link_back_to_its_room(): void
+    {
+        Event::fake();
+
+        SiteSetting::updateOrCreate(
+            ['key' => 'messaging_enabled'],
+            ['value' => '1', 'type' => 'boolean', 'description' => 'x']
+        );
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $this->post(route('games.share-score', 'toot-catch'), ['score' => 9])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('messages', [
+            'user_id' => $user->id,
+            'message' => __('messages.game_score_shared', ['game' => 'Toot Catch', 'score' => 9])."\u{E000}m:toot-catch\u{E000}",
+        ]);
+        $this->assertSame(
+            __('messages.game_score_shared', ['game' => 'Toot Catch', 'score' => 9]),
+            GameShareMessage::stripSlugMarker(Message::first()->message),
+        );
     }
 
     public function test_share_game_score_fails_when_messaging_disabled(): void

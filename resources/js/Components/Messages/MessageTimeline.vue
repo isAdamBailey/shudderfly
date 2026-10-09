@@ -871,7 +871,9 @@ const formatDate = (dateString) => {
     return date.toLocaleDateString();
 };
 
-const GAME_SHARE_SLUG_MARKER = /\uE000g:([a-z0-9-]+)\uE000/g;
+// A shared score's marker (GameController::shareScore): `g:` a game's slug,
+// `m:` a world minigame's name.
+const GAME_SHARE_SLUG_MARKER = /\uE000([gm]):([a-z0-9-]+)\uE000/g;
 
 const LEGACY_GAME_DISPLAY_NAME_TO_SLUG = {
     "Cockroach Fight": "cockroach-fight",
@@ -889,10 +891,15 @@ const escapeHtml = (s) =>
 
 const applyGameScoreShareFormatting = (text) => {
     let slugFromMarker = null;
-    const withoutMarker = text.replace(GAME_SHARE_SLUG_MARKER, (_, slug) => {
-        slugFromMarker = slug;
-        return "";
-    });
+    let kind = "g";
+    const withoutMarker = text.replace(
+        GAME_SHARE_SLUG_MARKER,
+        (_, markerKind, slug) => {
+            kind = markerKind;
+            slugFromMarker = slug;
+            return "";
+        }
+    );
 
     return withoutMarker.replace(
         /I scored (\d+) in ([^!]+)!(\s*🎮)?/,
@@ -906,7 +913,11 @@ const applyGameScoreShareFormatting = (text) => {
                 }
                 return full;
             }
-            const href = route("games.show", slug);
+            // Back into the world, in front of where the game is launched
+            // from (on the road or in its room).
+            const href = route("games.index", {
+                [kind === "m" ? "minigame" : "game"]: slug,
+            });
             const safe = escapeHtml(gameName);
             return `I scored ${score} in <a href="${href}" class="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline">${safe}</a>!`;
         }

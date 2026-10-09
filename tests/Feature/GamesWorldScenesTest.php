@@ -204,6 +204,30 @@ class GamesWorldScenesTest extends TestCase
         }
     }
 
+    public function test_minigames_are_known_and_explained(): void
+    {
+        $found = 0;
+        foreach (GamesWorld::definitions() as $sceneId => $scene) {
+            foreach (collect($scene['interactables'])->where('type', 'minigame') as $item) {
+                $where = "{$sceneId}.{$item['id']}";
+                $this->assertSame('room', $scene['kind'], $where);
+                $this->assertContains($item['minigame'], GamesWorld::MINIGAMES, $where);
+                $this->assertArrayHasKey('line', $item, $where);
+                $found++;
+            }
+        }
+        $this->assertGreaterThan(0, $found);
+    }
+
+    public function test_the_poops_house_has_toot_catch(): void
+    {
+        $catch = collect(GamesWorld::scenes()['poop-house.hall']['interactables'])->firstWhere('type', 'minigame');
+
+        $this->assertSame('toot-catch', $catch['minigame']);
+        $this->assertSame('Toot Catch', $catch['label']);
+        $this->assertSame(__('messages.games.world.minigames.toot_catch_line'), $catch['line']);
+    }
+
     public function test_scenes_translate_labels(): void
     {
         $scenes = GamesWorld::scenes();

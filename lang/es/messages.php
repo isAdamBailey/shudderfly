@@ -750,6 +750,12 @@ return [
     'games.world.toys.tv_line' => '¡Kssshhh! Solo hay estática. Y un pedito.',
     'games.world.toys.radio' => 'Radio',
     'games.world.toys.radio_line' => '¡Kssshhh! La radio está apagada. Solo estática... y un pedito.',
+    'games.world.minigames.toot_catch' => 'Atrapa Pedos',
+    'games.world.minigames.toot_catch_line' => '¡Atrapa la Comida Pedorra que cae con el Trasero! Cada bocado que atrapa lo hace tirarse un pedo.',
+    'games.world.minigames.toot_catch_aria' => 'Atrapa Pedos: arrastra el durazno o usa las flechas izquierda y derecha para atrapar la comida que cae',
+    'games.world.minigames.score' => '¡Atrapaste :score!',
+    'games.world.minigames.play_again' => '🔄 Jugar otra vez',
+    'games.world.minigames.done' => 'Listo',
 
     // Games - Cast
     'games.cast.butt' => 'El Trasero',
