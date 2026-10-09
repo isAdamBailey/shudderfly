@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { describe, expect, it, vi } from "vitest";
 import { CAST, CAST_MOVES } from "@/constants/characters.js";
 import { CAST_MOVE_DATA } from "../castMoveData.js";
+import { BUTT_VIEW } from "../buttDraw.js";
 import { createCastKit } from "./castMesh.js";
 
 // jsdom has no 2D canvas; the kit only needs something to wrap in a texture.
@@ -19,11 +20,37 @@ function bodyPose(puppet) {
 }
 
 describe("castMesh", () => {
-    it("draws every cast member as its emoji, lit and casting a shadow", () => {
+    it("draws every cast member lit and casting a shadow", () => {
         const k = kit();
         for (const [id, member] of Object.entries(CAST)) {
             const puppet = k.castMesh(id);
-            if (member.emoji) {
+            if (id === "butt") {
+                const figure = puppet.group.getObjectByName("butt");
+                const solid = [];
+                figure.traverse((node) => {
+                    if (node.isMesh) solid.push(node);
+                });
+                expect(solid.length).toBeGreaterThanOrEqual(5);
+                expect(
+                    solid.every(
+                        (mesh) =>
+                            mesh.material instanceof THREE.MeshStandardMaterial
+                    )
+                ).toBe(true);
+                expect(
+                    solid.some((mesh) => mesh.geometry.type === "SphereGeometry")
+                ).toBe(true);
+                expect(
+                    solid.some(
+                        (mesh) => mesh.geometry.type === "CylinderGeometry"
+                    )
+                ).toBe(true);
+                expect(figure.rotation.y).toBeCloseTo(
+                    (BUTT_VIEW.yaw * Math.PI) / 180
+                );
+                expect(figure.rotation.x).not.toBe(0);
+                expect(puppet.domOverlay).toBe(false);
+            } else if (member.emoji) {
                 const glyph = glyphOf(puppet);
                 expect(glyph.material).toBeInstanceOf(
                     THREE.MeshStandardMaterial
@@ -36,6 +63,16 @@ describe("castMesh", () => {
                 expect(puppet.domOverlay).toBe(true);
             }
         }
+    });
+
+    it("stands the butt on its feet at the size it was given", () => {
+        const puppet = kit().castMesh("butt", { size: 80 });
+        puppet.group.updateMatrixWorld(true);
+        const box = new THREE.Box3().setFromObject(
+            puppet.group.getObjectByName("butt")
+        );
+        expect(box.min.y).toBeCloseTo(0, 0);
+        expect(box.max.y).toBeGreaterThan(60);
     });
 
     it("shares one material per glyph", () => {
@@ -123,7 +160,7 @@ describe("castMesh", () => {
         const puppet = kit().castMesh("butt");
         puppet.set({ facing: "left" });
         puppet.tick(0);
-        expect(glyphOf(puppet).scale.x).toBeLessThan(0);
+        expect(puppet.group.getObjectByName("butt").scale.x).toBeLessThan(0);
     });
 
     it("squashes on landing from a throw, but not from a walking bob", () => {

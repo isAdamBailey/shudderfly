@@ -115,7 +115,15 @@ const at = (x, y) => ({ transform: `translate(${x * 100}%, ${y * 100}%)` });
         @keyup="onKeyup"
     >
         <div class="catch-hud" aria-hidden="true">
-            <span>🍑 {{ state.score }}</span>
+            <span class="catch-score">
+                <component
+                    :is="kit.CastMember"
+                    id="butt"
+                    :move="null"
+                    size="0.85em"
+                />
+                {{ state.score }}
+            </span>
             <span>⏱️ {{ secondsLeft }}</span>
         </div>
 
@@ -170,6 +178,12 @@ const at = (x, y) => ({ transform: `translate(${x * 100}%, ${y * 100}%)` });
     font-size: clamp(1.1rem, 4vmin, 1.5rem);
     color: #fcd34d;
     text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.catch-score {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
 }
 
 .catch-spot {

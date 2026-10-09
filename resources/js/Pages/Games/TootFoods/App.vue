@@ -2,9 +2,9 @@
 import { onMounted, onBeforeUnmount, nextTick, ref } from "vue";
 import { Link, usePage } from "@inertiajs/vue3";
 import GameEndScreen from "@/Components/Games/GameEndScreen.vue";
+import CastMember from "@/Components/Games/Cast/CastMember.vue";
 import TootPuff from "@/Components/Games/Cast/TootPuff.vue";
 import { useTootGame, ROUND_SECONDS } from "./composables/useTootGame.js";
-import { BUTT } from "@/constants/characters.js";
 import { useTootSound } from "@/composables/useTootSound";
 import { useAutoStartGame } from "@/composables/useAutoStartGame";
 import { useTranslations } from "@/composables/useTranslations";
@@ -186,7 +186,12 @@ useAutoStartGame(handlePlay);
             :style="buttStyle()"
             :aria-label="t('games.toot_foods.butt_aria')"
         >
-            {{ BUTT }}
+            <CastMember
+                id="butt"
+                :move="null"
+                :size="`${buttSize}px`"
+                :facing="butt.facing < 0 ? 'left' : 'right'"
+            />
         </div>
 
         <!-- Toot puffs -->
@@ -229,11 +234,18 @@ useAutoStartGame(handlePlay);
     <GameEndScreen
         v-else-if="state.phase === 'end'"
         :title="t('games.toot_foods.end_title')"
-        :emoji="BUTT"
         :score="state.score"
         game-slug="toot-foods"
         @play-again="handlePlayAgain"
     >
+        <template #mark>
+            <CastMember
+                id="butt"
+                class="game-end-emoji mb-2"
+                :move="null"
+                size="clamp(3rem, 10vmin, 5rem)"
+            />
+        </template>
         <p class="text-[clamp(0.85rem,2.4vmin,1rem)] text-gray-400">
             {{
                 t(
@@ -370,7 +382,6 @@ useAutoStartGame(handlePlay);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: clamp(4rem, 18vmin, 8.5rem);
     line-height: 1;
     user-select: none;
     pointer-events: none;
