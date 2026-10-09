@@ -144,6 +144,12 @@ describe("a long hall", () => {
 });
 
 describe("itemBox", () => {
+    it("draws a TV as its flat screen, untitled", () => {
+        expect(
+            itemBox({ type: "tv", screen: { w: 192, h: 108 }, size: 80 })
+        ).toEqual({ width: 192, height: 108, titled: false });
+    });
+
     it("draws an open doorway wider than a door", () => {
         expect(itemBox({ type: "door", open: true })).toEqual({
             ...ROOM_SIZES.doorway,

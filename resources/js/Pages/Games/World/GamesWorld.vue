@@ -115,6 +115,7 @@ const ctx = {
     animate: (id, move) => sceneRef.value?.animate?.(id, move),
     toot: (castId, id) => sceneRef.value?.toot?.(castId, id),
     toggleLight: (id) => sceneRef.value?.toggleLight?.(id),
+    changeChannel: (id) => sceneRef.value?.changeChannel?.(id),
     playSound,
     // Through the same voice as a game's intro (the AI voice when it's on).
     speak: (text) => speakGameIntro(text),

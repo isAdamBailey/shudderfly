@@ -6,6 +6,9 @@ use App\Http\Controllers\BookController;
 use App\Http\Controllers\GameController;
 use App\Models\Book;
 use App\Models\Category;
+use App\Models\Page;
+use App\Models\SiteSetting;
+use App\Services\ContentBlockService;
 use App\Support\GamesWorld;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Lang;
@@ -392,5 +395,52 @@ class GamesWorldScenesTest extends TestCase
                 $this->assertLessThanOrEqual($scene['size']['w'] - 90 - 90, $door['x'], "{$sceneId}.{$door['id']}");
             }
         }
+    }
+
+    private function tv(): array
+    {
+        return collect(GamesWorld::scenes()['house.bedroom']['interactables'])->firstWhere('type', 'tv');
+    }
+
+    public function test_the_tv_plays_family_videos_anyone_can_see(): void
+    {
+        $book = Book::factory()->create(['title' => 'Bath Time']);
+        $video = Page::factory()->create([
+            'book_id' => $book->id,
+            'media_path' => 'https://cdn.test/bath.mp4',
+            'media_poster' => 'https://cdn.test/bath.jpg',
+        ]);
+        // Not on the TV: a blocked video, a YouTube link and a photo.
+        Page::factory()->create(['media_path' => 'https://cdn.test/no.mp4', 'media_poster' => 'https://cdn.test/no.jpg', 'blocked' => true]);
+        Page::factory()->create(['media_path' => '', 'media_poster' => 'https://cdn.test/yt.jpg', 'video_link' => 'https://youtu.be/abc']);
+        Page::factory()->create();
+
+        $tv = $this->tv();
+
+        $this->assertSame('TV', $tv['label']);
+        $this->assertSame([[
+            'id' => $video->id,
+            'video' => 'https://cdn.test/bath.mp4',
+            'poster' => 'https://cdn.test/bath.jpg',
+            'title' => 'Bath Time',
+        ]], $tv['channels']);
+    }
+
+    public function test_a_blocked_video_is_on_the_tv_while_blocking_is_off(): void
+    {
+        SiteSetting::updateOrCreate(['key' => ContentBlockService::SETTING], ['value' => false]);
+        Page::factory()->create(['media_path' => 'https://cdn.test/a.mp4', 'media_poster' => 'https://cdn.test/a.jpg', 'blocked' => true]);
+
+        $this->assertCount(1, $this->tv()['channels']);
+    }
+
+    public function test_the_tv_has_a_few_channels_and_a_line_for_none(): void
+    {
+        $this->assertSame([], $this->tv()['channels']);
+        $this->assertSame(__('messages.games.world.toys.tv_line'), $this->tv()['line']);
+
+        Page::factory()->count(GamesWorld::TV_CHANNELS + 2)->create(['media_path' => 'https://cdn.test/v.mp4', 'media_poster' => 'https://cdn.test/v.jpg']);
+
+        $this->assertCount(GamesWorld::TV_CHANNELS, $this->tv()['channels']);
     }
 }

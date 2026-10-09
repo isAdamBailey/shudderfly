@@ -721,6 +721,8 @@ return [
     'games.world.shelves.halloween' => 'Halloween books',
     'games.world.shelves.fireworks' => '4th of July books',
     'games.world.read' => '📖 Read',
+    'games.world.tv_playing' => 'TV, showing :title',
+    'games.world.tv_channel' => 'CH :number',
     'games.world.exit_sign' => 'Exit',
     'games.world.toys.doorbell' => 'Doorbell',
     'games.world.toys.doorbell_line' => 'Ding dong! Toot toot!',
@@ -744,6 +746,8 @@ return [
     'games.world.toys.bed' => 'Bed',
     'games.world.toys.bed_line' => 'Pfffrt! Who hid a whoopee cushion in the bed?',
     'games.world.toys.nightlight' => 'Nightlight',
+    'games.world.toys.tv' => 'TV',
+    'games.world.toys.tv_line' => 'Kssshhh! Nothing on but static. And a toot.',
 
     // Games - Cast
     'games.cast.butt' => 'The Butt',

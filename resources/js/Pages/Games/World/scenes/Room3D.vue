@@ -18,6 +18,7 @@ import {
 } from "vue";
 import InteractableButton from "../components/InteractableButton.vue";
 import FollowBox from "../components/FollowBox.vue";
+import TvScreen from "../components/TvScreen.vue";
 import { pastTap } from "../components/overlay.js";
 import LandmarkTitle from "../components/LandmarkTitle.vue";
 import {
@@ -28,6 +29,7 @@ import {
 import { bobLift } from "../composables/useGamesWorld.js";
 import { arrivalSpot, useRoom } from "../composables/useRoom.js";
 import { useShelves } from "../composables/useShelves.js";
+import { useTvChannels } from "../composables/useTvChannels.js";
 import { autoTriggers } from "../interactions/index.js";
 import {
     BOOKCASE,
@@ -183,8 +185,12 @@ function setBounds(w, h) {
  * the Butt. */
 const project = (point) => worldToScreen(view.value, point);
 
+// What each TV in the room is showing, if it's on.
+const tvs = useTvChannels(props.scene.interactables);
+
 /** Each interactable's button, over what the canvas draws there: a door's
- * whole frame, a toy's square. These move when a long hall scrolls. */
+ * whole frame, a toy's square. These move when a long hall scrolls. A TV
+ * that's on carries its picture (`tv`) and says what's on. */
 const spots = computed(() => {
     if (!view.value) return [];
     return props.scene.interactables.flatMap((item) => {
@@ -193,8 +199,13 @@ const spots = computed(() => {
         const p = project(pose);
         if (!p) return [];
         const box = itemBox(item);
+        const tv = tvs.channelOf(item);
         return {
             item,
+            label: tv
+                ? t("games.world.tv_playing", { title: tv.channel.title })
+                : item.label,
+            tv,
             x: p.x,
             y: p.y,
             width: box.width * p.scale,
@@ -230,6 +241,7 @@ function stairsSpot(item) {
     const width = Math.max(...xs) - left;
     return {
         item,
+        label: item.label,
         x: left + width / 2,
         y: bottom,
         width,
@@ -457,6 +469,7 @@ defineExpose({
     animate,
     toot,
     toggleLight,
+    changeChannel: tvs.changeChannel,
 });
 </script>
 
@@ -486,11 +499,19 @@ defineExpose({
                 :y="s.y"
                 :size="s.width"
                 :height="s.height"
-                :label="s.item.label"
+                :label="s.label"
                 @pointerdown="pointerFocus = true"
                 @focus="onItemFocus(s.item)"
                 @click="onItemClick(s.item)"
             >
+                <!-- Keyed, so a new channel starts its video afresh. -->
+                <TvScreen
+                    v-if="s.tv"
+                    :key="s.tv.channel.id"
+                    :channel="s.tv.channel"
+                    :number="s.tv.number"
+                    @ended="tvs.changeChannel(s.item.id, { wrap: true })"
+                />
                 <CastMember
                     v-if="s.overlay"
                     :id="s.item.cast"
