@@ -1,4 +1,5 @@
 import { flushPromises, mount } from "@vue/test-utils";
+import axios from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 import GamesWorld from "./GamesWorld.vue";
@@ -361,7 +362,7 @@ describe("GamesWorld stage", () => {
         await button.trigger("focus");
         await button.trigger("click");
 
-        await wrapper.get(".confirm-cancel").trigger("click");
+        await wrapper.get(".world-card-cancel").trigger("click");
         await nextTick();
 
         expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
@@ -760,7 +761,7 @@ describe("GamesWorld rooms", () => {
         expect(wrapper.get('[role="dialog"]').text()).toContain("Sprout Pox");
         expect(wrapper.find(".confirm-speak").exists()).toBe(false);
 
-        await wrapper.get(".confirm-cancel").trigger("click");
+        await wrapper.get(".world-card-cancel").trigger("click");
         await nextTick();
         expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
         expect(wrapper.find(".room-3d").exists()).toBe(true);
@@ -785,5 +786,110 @@ describe("GamesWorld rooms", () => {
 
         expect(wrapper.find(".room-3d").exists()).toBe(true);
         expect(screenX(wrapper.get(".room-3d .peach"))).toBeCloseTo(at, 0);
+    });
+});
+
+describe("GamesWorld Library shelves", () => {
+    // A long category room: 30 books, ten to a page.
+    const shelfRoom = {
+        road: withHouse.road,
+        "library.category-1": {
+            kind: "room",
+            label: "The People Room",
+            size: { w: 1500, d: 450 },
+            frame: 900,
+            spawn: { x: 300, z: 300 },
+            walls: { back: "wallpaper-dots", floor: "wood" },
+            ambient: 0.6,
+            shelves: [
+                {
+                    id: "books",
+                    category: "people",
+                    count: 30,
+                    x: 240,
+                    rows: 3,
+                    span: 110,
+                    perPage: 10,
+                },
+            ],
+            interactables: [
+                {
+                    id: "landing-door",
+                    type: "door",
+                    x: 110,
+                    z: 0,
+                    emoji: "🚪",
+                    label: "Floor 2",
+                    to: "road",
+                    toSpot: "house",
+                    exit: true,
+                },
+            ],
+        },
+    };
+
+    const book = (id) => ({
+        id,
+        slug: `book-${id}`,
+        title: `Book ${id}`,
+        excerpt: "Toot toot.",
+        cover_image: id === 1 ? { id: 9, media_path: "/cover-1.jpg" } : null,
+    });
+
+    it("fetches the books in view and writes their titles on the shelf", async () => {
+        const get = spy(axios, "get").mockImplementation((url) => {
+            const page = Number(
+                new URL(url, "http://x").searchParams.get("page")
+            );
+            const ids = Array.from(
+                { length: 10 },
+                (_, k) => (page - 1) * 10 + k
+            );
+            return Promise.resolve({
+                data: { books: { data: ids.map(book) } },
+            });
+        });
+        wrapper = await mountWorld(shelfRoom, {
+            link: { scene: "library.category-1", visit: "a" },
+        });
+        await showing(wrapper, "button.shelf-book");
+
+        // Only the pages near the view: not the whole shelf.
+        const pages = get.mock.calls.map(([url]) => url);
+        expect(pages.length).toBeGreaterThan(0);
+        expect(pages.every((url) => url.includes("people"))).toBe(true);
+        const first = wrapper.get("button.shelf-book");
+        expect(first.attributes("aria-label")).toBe("Book 0");
+        expect(first.get(".shelf-book-title").text()).toBe("Book 0");
+        // No cover: the coloured book shows through.
+        expect(first.find(".shelf-book-cover").exists()).toBe(false);
+        const second = wrapper.findAll("button.shelf-book")[1];
+        expect(second.get(".shelf-book-cover").attributes("src")).toBe(
+            "/cover-1.jpg"
+        );
+    });
+
+    it("opens a book's card, and the card leads to the book", async () => {
+        spy(axios, "get").mockResolvedValue({
+            data: { books: { data: [0, 1, 2, 3].map(book) } },
+        });
+        wrapper = await mountWorld(shelfRoom, {
+            link: { scene: "library.category-1", visit: "a" },
+        });
+        await showing(wrapper, "button.shelf-book");
+
+        const button = wrapper.get("button.shelf-book");
+        await button.trigger("focus");
+        await button.trigger("click");
+        await showing(wrapper, "[role='dialog']");
+
+        expect(wrapper.get("[role='dialog'] h2").text()).toBe("Book 0");
+        expect(wrapper.get("[role='dialog'] a").attributes("href")).toContain(
+            "book-0"
+        );
+
+        await wrapper.get(".world-card-cancel").trigger("click");
+        await nextTick();
+        expect(wrapper.find("[role='dialog']").exists()).toBe(false);
     });
 });

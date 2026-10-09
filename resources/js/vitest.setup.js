@@ -88,6 +88,8 @@ export const ROUTE_MAPPINGS = {
     "pages.show": (params) => `/pages/${params.id || params}`,
     "books.index": "/books",
     "books.show": (params) => `/books/${params.id || params.book || params}`,
+    "books.category": (params) =>
+        `/books-category?${new URLSearchParams(params)}`,
     "categories.show": (params) => `/categories/${params.categoryName}`,
     "games.index": "/games",
     "games.show": (params) => `/games/${params}`,

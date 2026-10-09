@@ -88,13 +88,13 @@ describe("GameConfirmCard", () => {
 
     it("does not emit cancel when the panel itself is clicked", async () => {
         const wrapper = mountCard();
-        await wrapper.get(".game-confirm-panel").trigger("click");
+        await wrapper.get(".world-card-panel").trigger("click");
         expect(wrapper.emitted("cancel")).toBeUndefined();
     });
 
     it("emits cancel from the cancel button", async () => {
         const wrapper = mountCard();
-        await wrapper.get(".confirm-cancel").trigger("click");
+        await wrapper.get(".world-card-cancel").trigger("click");
         expect(wrapper.emitted("cancel")).toHaveLength(1);
     });
 });

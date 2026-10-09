@@ -9,6 +9,9 @@ import {
 import { applyCamera, disposeTree } from "../three/useWorldRenderer.js";
 import { clockFinish, clockTexture } from "../three/clockFaces.js";
 import { itemBox, itemPose, ROOM_SIZES, wallHeightOf } from "./roomLayout.js";
+import { bookcaseGeometry, booksMesh } from "./bookshelf.js";
+import { doorwayGeometry } from "./doorway.js";
+import { exitSigns } from "./exitSign.js";
 import { floorGeometry, stairsFootprint, stairsGeometry } from "./staircase.js";
 
 // The `kind: "room"` scene graph (issue #130): a dollhouse room with its
@@ -36,11 +39,15 @@ const BULB_ON = 2;
 /**
  * Builds a room from its scene data (`room`: { size, walls, ambient, lights,
  * interactables }), with the Butt at `butt` ({ x, z }), in the light of
- * seasonal `theme`. Returns { scene,
+ * seasonal `theme`, its EXIT signs reading `exitWord`. Returns { scene,
  * camera, layout(L), sync(view, dt), animate(id, move), toggleLight(id),
  * dispose() }.
  */
-export function createRoomScene(THREE, kit, { room, butt: buttAt, theme }) {
+export function createRoomScene(
+    THREE,
+    kit,
+    { room, butt: buttAt, theme, exitWord = "Exit" }
+) {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(BACKGROUND);
     const camera = new THREE.PerspectiveCamera(30, 1, 1, 1);
@@ -169,21 +176,40 @@ export function createRoomScene(THREE, kit, { room, butt: buttAt, theme }) {
         );
     }
 
-    if (stairs.length > 0) {
-        const wood = new THREE.MeshStandardMaterial({
-            vertexColors: true,
-            roughness: 0.8,
-        });
-        for (const item of stairs) {
-            const flight = new THREE.Mesh(
-                stairsGeometry(THREE, item, height),
-                wood
-            );
-            flight.castShadow = true;
-            flight.receiveShadow = true;
-            made.add(flight);
+    // Stairs, open doorways (doorway.js) and the Library's bookcases
+    // (bookshelf.js) are built into the room, in wood coloured in their
+    // vertices; the books on the shelves are one instanced mesh.
+    const shelves = room.shelves ?? [];
+    const doorways = room.interactables.filter((item) => item.open);
+    const wood =
+        stairs.length + doorways.length + shelves.length > 0
+            ? new THREE.MeshStandardMaterial({
+                  vertexColors: true,
+                  roughness: 0.8,
+              })
+            : null;
+    function woodwork(geometry, pose = null) {
+        const mesh = new THREE.Mesh(geometry, wood);
+        if (pose) {
+            mesh.position.set(pose.x, 0, pose.z);
+            mesh.rotation.y = pose.turn;
         }
+        mesh.castShadow = !pose;
+        mesh.receiveShadow = true;
+        made.add(mesh);
     }
+    for (const item of stairs) woodwork(stairsGeometry(THREE, item, height));
+    for (const shelf of shelves) woodwork(bookcaseGeometry(THREE, shelf));
+    if (doorways.length > 0) {
+        const doorway = doorwayGeometry(THREE);
+        for (const item of doorways) woodwork(doorway, itemPose(item));
+    }
+    const books = booksMesh(THREE, shelves);
+    if (books) made.add(books);
+
+    // A red EXIT sign over every way out (exitSign.js).
+    const signs = exitSigns(THREE, room, exitWord);
+    scene.add(signs.group);
 
     const sides = lookMaterial(THREE, look.sides, depth, height);
     made.add(
@@ -225,7 +251,8 @@ export function createRoomScene(THREE, kit, { room, butt: buttAt, theme }) {
 
     const things = new Map();
     for (const item of room.interactables) {
-        if (item.stairs) continue;
+        // Built into the room above, not played with.
+        if (item.stairs || item.open) continue;
         const size = itemBox(item).height;
         // On a wall rather than the floor: no shadow under it.
         const shadows = !((item.y ?? 0) > 0);
@@ -342,6 +369,8 @@ export function createRoomScene(THREE, kit, { room, butt: buttAt, theme }) {
             return lamp.on;
         },
         dispose() {
+            books?.dispose();
+            signs.dispose();
             disposeTree(made);
             for (const material of bulbs) material.dispose();
             for (const puppet of [...puppets, ...decorations]) {

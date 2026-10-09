@@ -285,7 +285,7 @@ describe("Games Index", () => {
         await button.trigger("click");
         expect(wrapper.find('[role="dialog"]').exists()).toBe(true);
 
-        await wrapper.get(".confirm-cancel").trigger("click");
+        await wrapper.get(".world-card-cancel").trigger("click");
         await nextTick();
 
         expect(wrapper.find('[role="dialog"]').exists()).toBe(false);

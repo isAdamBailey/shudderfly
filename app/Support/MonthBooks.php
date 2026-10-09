@@ -34,6 +34,7 @@ class MonthBooks
         return Book::query()
             ->with('coverImage')
             ->whereIn('id', self::getBookIds())
+            ->orderBy('id')
             ->paginate($perPage);
     }
 
@@ -83,9 +84,15 @@ class MonthBooks
      */
     public static function getLabel(): string
     {
-        $month = strtolower(now()->format('F'));
+        return __('messages.books.month_books', ['month' => self::monthName()]);
+    }
 
-        return __('messages.books.month_books', ['month' => __('messages.month.'.$month)]);
+    /**
+     * The current month's name, translated.
+     */
+    public static function monthName(): string
+    {
+        return __('messages.month.'.strtolower(now()->format('F')));
     }
 
     /**

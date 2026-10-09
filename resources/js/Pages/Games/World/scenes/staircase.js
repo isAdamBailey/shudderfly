@@ -33,6 +33,17 @@ export function stairsFootprint(item) {
     };
 }
 
+/** The flight as you see it, as a box in world units: its footprint, up
+ * to under the ceiling going up, or the opening up to its rail going down
+ * (the steps below the floor are hidden by it). Its button covers this. */
+export function stairsBounds(item, wallHeight) {
+    return {
+        ...stairsFootprint(item),
+        y0: 0,
+        y1: item.stairs === "up" ? wallHeight * UP_TOP : RAIL.height,
+    };
+}
+
 /** The stairs for door `item`, in a room whose walls are `wallHeight`
  * tall, as one geometry in world space with its colours in its vertices. */
 export function stairsGeometry(THREE, item, wallHeight) {

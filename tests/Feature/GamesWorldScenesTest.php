@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\BookController;
 use App\Http\Controllers\GameController;
 use App\Models\Book;
 use App\Models\Category;
@@ -122,6 +123,7 @@ class GamesWorldScenesTest extends TestCase
             $keys = [
                 $scene['label'],
                 ...collect(GamesWorld::TRANSLATED)->flatMap(fn ($field) => $items->pluck($field)->filter()),
+                ...collect($scene['shelves'] ?? [])->pluck('label')->filter(),
             ];
             foreach ($keys as $key) {
                 foreach (['en', 'es', 'fr'] as $locale) {
@@ -252,8 +254,20 @@ class GamesWorldScenesTest extends TestCase
         $this->assertArrayNotHasKey('library.floor-4', $scenes);
 
         $people = $scenes["library.category-{$id('people')}"];
-        $this->assertSame(['category' => 'people', 'count' => 20], $people['books']);
-        $this->assertSame(['landing-door' => 'library.floor-2'], $doors("library.category-{$id('people')}"));
+        $this->assertSame([[
+            'id' => 'books',
+            'category' => 'people',
+            'count' => 20,
+            'x' => GamesWorld::LIBRARY_SHELVES_FROM,
+            'rows' => GamesWorld::LIBRARY_SHELF_ROWS,
+            'span' => GamesWorld::LIBRARY_BOOK_SPAN,
+            'perPage' => BookController::PER_PAGE,
+        ]], $people['shelves']);
+        // Out at either end of the shelves, the near one the way out.
+        $this->assertSame(['landing-door' => 'library.floor-2', 'far-door' => 'library.floor-2'], $doors("library.category-{$id('people')}"));
+        $far = collect($people['interactables'])->firstWhere('id', 'far-door');
+        $this->assertTrue($far['open']);
+        $this->assertArrayNotHasKey('exit', $far);
     }
 
     public function test_a_category_room_is_as_long_as_its_shelves(): void
@@ -261,15 +275,43 @@ class GamesWorldScenesTest extends TestCase
         $scenes = GamesWorld::definitions();
         $room = fn (string $name) => $scenes['library.category-'.Category::where('name', $name)->value('id')];
 
-        // 20 books in 3 rows is 7 columns: past the door, then the shelves.
+        // 20 books in 3 rows is 7 columns: past the door, the shelves,
+        // then the far door.
         $this->assertSame(
-            GamesWorld::LIBRARY_SHELVES_FROM + 7 * GamesWorld::LIBRARY_BOOK_SPAN + 120,
+            GamesWorld::LIBRARY_SHELVES_FROM + 7 * GamesWorld::LIBRARY_BOOK_SPAN + 270,
             $room('people')['size']['w'],
         );
         $this->assertSame(900, $room('people')['frame']);
         // A short shelf keeps a room's usual width.
         $this->assertSame(900, $room('shows')['size']['w']);
         $this->assertArrayNotHasKey('frame', $room('shows'));
+    }
+
+    public function test_the_far_door_stands_clear_of_the_shelves(): void
+    {
+        foreach (GamesWorld::definitions() as $sceneId => $scene) {
+            foreach ($scene['shelves'] ?? [] as $shelf) {
+                $end = $shelf['x'] + (int) ceil($shelf['count'] / $shelf['rows']) * $shelf['span'];
+                $far = collect($scene['interactables'])->firstWhere('id', 'far-door');
+                if (! $far) {
+                    continue;
+                }
+                // A doorway is 180 wide in a 14 wide frame; a bookcase's
+                // end board is 8.
+                $this->assertGreaterThanOrEqual($end + 8 + 90 + 14, $far['x'], $sceneId);
+                $this->assertLessThanOrEqual($scene['size']['w'] - 90 - 14, $far['x'], $sceneId);
+            }
+        }
+    }
+
+    public function test_an_emptied_category_has_a_room_with_no_shelf(): void
+    {
+        $shows = Category::where('name', 'shows')->first();
+        $shows->books()->delete();
+
+        $room = GamesWorld::definitions()["library.category-{$shows->id}"];
+
+        $this->assertArrayNotHasKey('shelves', $room);
     }
 
     public function test_an_empty_library_is_just_the_ground_floor(): void
@@ -281,6 +323,47 @@ class GamesWorldScenesTest extends TestCase
 
         $this->assertSame(['front-door'], array_column($scenes['library.hall']['interactables'], 'id'));
         $this->assertEmpty(preg_grep('/^library\.(floor|category)-/', array_keys($scenes)));
+    }
+
+    public function test_the_library_hall_has_the_books_pages_special_shelves(): void
+    {
+        config(['app.force_theme' => '']);
+        $this->travelTo(now()->setDate(2026, 5, 10));
+
+        $shelves = GamesWorld::scenes()['library.hall']['shelves'];
+
+        // 30 books: the hall's shelves hold a few each, side by side.
+        $this->assertSame(['forgotten', 'popular'], array_slice(array_column($shelves, 'category'), 0, 2));
+        $this->assertSame([GamesWorld::LIBRARY_HALL_SHELF, GamesWorld::LIBRARY_HALL_SHELF], array_slice(array_column($shelves, 'count'), 0, 2));
+        $this->assertSame('Remember these?', $shelves[0]['label']);
+        $this->assertGreaterThan($shelves[0]['x'], $shelves[1]['x']);
+        $this->assertArrayNotHasKey('labelArgs', $shelves[0]);
+
+        // The hall reaches past its last shelf, with room for the stairs.
+        $hall = GamesWorld::definitions()['library.hall'];
+        $last = end($shelves);
+        $end = $last['x'] + (int) ceil($last['count'] / GamesWorld::LIBRARY_SHELF_ROWS) * GamesWorld::LIBRARY_BOOK_SPAN;
+        $this->assertGreaterThanOrEqual($end + 200, $hall['size']['w']);
+        $this->assertSame($hall['size']['w'], collect($hall['interactables'])->firstWhere('id', 'upstairs')['x']);
+    }
+
+    public function test_the_library_hall_has_a_seasonal_shelf(): void
+    {
+        Book::factory()->create(['title' => 'The Haunted Toilet']);
+        config(['app.force_theme' => 'halloween']);
+
+        $seasonal = GamesWorld::scenes()['library.hall']['shelves'][2];
+        $this->assertSame('themed', $seasonal['category']);
+        $this->assertSame(1, $seasonal['count']);
+        $this->assertSame('Halloween books', $seasonal['label']);
+
+        config(['app.force_theme' => '']);
+        $this->travelTo(now()->setDate(2026, 5, 10));
+        Book::factory()->create(['title' => 'A Day in May']);
+
+        $seasonal = GamesWorld::scenes()['library.hall']['shelves'][2];
+        $this->assertSame('month', $seasonal['category']);
+        $this->assertSame('May Books', $seasonal['label']);
     }
 
     public function test_library_labels_name_the_floor_and_the_category(): void
@@ -302,10 +385,11 @@ class GamesWorldScenesTest extends TestCase
             if (! str_starts_with($sceneId, 'library.floor-')) {
                 continue;
             }
-            // A door is 120 wide; a flight reaches 90 in off its wall.
+            // A doorway is 180 wide; a flight reaches 90 in off its wall.
             foreach (collect($scene['interactables'])->where('wall', 'back') as $door) {
-                $this->assertGreaterThanOrEqual(90 + 60, $door['x'], "{$sceneId}.{$door['id']}");
-                $this->assertLessThanOrEqual($scene['size']['w'] - 90 - 60, $door['x'], "{$sceneId}.{$door['id']}");
+                $this->assertTrue($door['open'] ?? false, "{$sceneId}.{$door['id']} is an open doorway");
+                $this->assertGreaterThanOrEqual(90 + 90, $door['x'], "{$sceneId}.{$door['id']}");
+                $this->assertLessThanOrEqual($scene['size']['w'] - 90 - 90, $door['x'], "{$sceneId}.{$door['id']}");
             }
         }
     }

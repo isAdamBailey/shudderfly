@@ -453,7 +453,7 @@ const stage = { beginGesture, resetScroll, focus: focusStage, renderer };
         <button
             v-if="inRoom && !transition.active"
             type="button"
-            class="world-back"
+            class="world-back bg-theme-primary text-theme-button hover:bg-theme-button"
             :aria-label="t('games.world.back')"
             @click="leave"
         >
@@ -517,8 +517,7 @@ const stage = { beginGesture, resetScroll, focus: focusStage, renderer };
     width: 3rem;
     height: 3rem;
     border-radius: 9999px;
-    background: rgb(255 255 255 / 0.85);
-    color: #1c1917;
+    /* Coloured like the site's buttons (the classes), theme and all. */
     font-size: 1.5rem;
     line-height: 1;
     box-shadow: 0 2px 6px rgb(0 0 0 / 0.3);

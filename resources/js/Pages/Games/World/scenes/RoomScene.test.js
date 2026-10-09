@@ -209,4 +209,47 @@ describe("the room's scene graph", () => {
         expect(meshes(graph)).toBeLessThanOrEqual(40);
         graph.dispose();
     });
+
+    it("puts a long wall of books up in one draw call, with a bookcase each", () => {
+        const shelf = (id, x, count) => ({
+            id,
+            category: id,
+            count,
+            x,
+            rows: 3,
+            span: 110,
+            perPage: 10,
+        });
+        const library = {
+            ...hall,
+            size: { w: 3000, d: 450 },
+            frame: 900,
+            shelves: [shelf("popular", 240, 9), shelf("people", 700, 200)],
+        };
+        const graph = build(library);
+        const books = graph.scene.getObjectsByProperty("isInstancedMesh", true);
+
+        expect(books).toHaveLength(1);
+        expect(books[0].count).toBe(209);
+        expect(meshes(graph) - meshes(build(hall))).toBe(3);
+        graph.dispose();
+    });
+
+    it("builds an open doorway into its wall instead of a door card", () => {
+        const open = {
+            ...hall,
+            interactables: hall.interactables.map((item) =>
+                item.id === "front-door" ? { ...item, open: true } : item
+            ),
+        };
+        const graph = build(open);
+        // The door card (its glyph and shadow) goes; its doorway, one mesh,
+        // takes its place.
+        expect(meshes(graph)).toBe(meshes(build(hall)) - 1);
+        const doorway = graph.scene
+            .getObjectsByProperty("isMesh", true)
+            .find((m) => m.position.x === 450 && m.geometry.attributes.color);
+        expect(doorway).toBeTruthy();
+        graph.dispose();
+    });
 });
