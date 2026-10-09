@@ -50,7 +50,7 @@ const PEEK = { x: 12, y: 6 };
 // of the viewport's vmin (characters) or of the stage height (buildings,
 // which have to fit between the sky and the street).
 const SIZES = {
-    butt: [52, 0.13, 88],
+    butt: [62, 0.156, 106],
     idler: [32, 0.07, 52],
     building: [100, 0.24, 200], // far side, front wall
     nearBuilding: [70, 0.17, 140],

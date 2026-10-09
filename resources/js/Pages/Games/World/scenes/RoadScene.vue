@@ -444,7 +444,7 @@ defineExpose(api);
     position: absolute;
     pointer-events: auto;
     top: calc(var(--horizon) + 5%);
-    font-size: clamp(3.25rem, 13vmin, 5.5rem);
+    font-size: clamp(3.875rem, 15.6vmin, 6.625rem);
     line-height: 1;
     cursor: grab;
     touch-action: none;
