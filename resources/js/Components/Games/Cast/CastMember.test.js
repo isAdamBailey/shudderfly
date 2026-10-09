@@ -1,11 +1,20 @@
 import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 import { CAST } from "@/constants/characters.js";
 import { buttShapes } from "./buttDraw.js";
+import { sampleButtPose } from "./buttRig.js";
 import CastMember from "./CastMember.vue";
 
 describe("CastMember", () => {
+    beforeEach(() => {
+        vi.stubGlobal("requestAnimationFrame", () => 1);
+        vi.stubGlobal("cancelAnimationFrame", () => {});
+    });
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
     it("draws every character, decorative by default", () => {
         for (const [id, member] of Object.entries(CAST)) {
             const wrapper = mount(CastMember, { props: { id } });
@@ -42,8 +51,11 @@ describe("CastMember", () => {
                     expect(Number(cheek.attributes("cx"))).toBeCloseTo(
                         cheeks[index].x
                     );
-                    expect(Number(cheek.attributes("r"))).toBeCloseTo(
-                        cheeks[index].r
+                    expect(Number(cheek.attributes("rx"))).toBeCloseTo(
+                        cheeks[index].rx
+                    );
+                    expect(Number(cheek.attributes("ry"))).toBeCloseTo(
+                        cheeks[index].ry
                     );
                 });
                 drawnLegs.forEach((leg, index) => {
@@ -124,6 +136,50 @@ describe("CastMember", () => {
         await wrapper.setProps({ lift: 0 });
         await nextTick();
         expect(wrapper.classes()).toContain("cast-landing");
+    });
+
+    it("draws a walking butt from the rig", async () => {
+        let frame = null;
+        vi.stubGlobal("requestAnimationFrame", (callback) => {
+            frame = callback;
+            return 1;
+        });
+        vi.stubGlobal("cancelAnimationFrame", () => {});
+        const wrapper = mount(CastMember, {
+            props: { id: "butt", move: "walk" },
+        });
+        frame(0);
+        frame(50);
+        await nextTick();
+
+        const legs = buttShapes(sampleButtPose("walk", 0.05)).filter(
+            (shape) => shape.type === "leg"
+        );
+        wrapper.findAll(".butt-leg").forEach((leg, index) => {
+            expect(Number(leg.attributes("x2"))).toBeCloseTo(legs[index].x2);
+            expect(Number(leg.attributes("y2"))).toBeCloseTo(legs[index].y2);
+        });
+        wrapper.unmount();
+    });
+
+    it("holds the butt still under reduced motion", async () => {
+        vi.stubGlobal("matchMedia", (query) => ({
+            matches: query.includes("reduce"),
+            addEventListener: () => {},
+            removeEventListener: () => {},
+        }));
+        vi.stubGlobal("requestAnimationFrame", () => 1);
+        vi.stubGlobal("cancelAnimationFrame", () => {});
+        const wrapper = mount(CastMember, {
+            props: { id: "butt", move: "walk" },
+        });
+        const standing = buttShapes().filter((shape) => shape.type === "leg");
+        wrapper.findAll(".butt-leg").forEach((leg, index) => {
+            expect(Number(leg.attributes("x2"))).toBeCloseTo(
+                standing[index].x2
+            );
+        });
+        wrapper.unmount();
     });
 
     it("plays a one-shot over the ongoing move until it ends", async () => {

@@ -390,7 +390,7 @@ function onKeydown(event) {
         return;
     }
     // With the stage focused and nothing in it focused, Enter visits whatever
-    // the peach is standing at. A focused button fires its own click.
+    // the butt is standing at. A focused button fires its own click.
     if (event.key === "Enter") {
         if (!card.value && event.target === event.currentTarget) {
             sceneRef.value?.activateNearest();

@@ -2,7 +2,8 @@ import * as THREE from "three";
 import { describe, expect, it, vi } from "vitest";
 import { CAST, CAST_MOVES } from "@/constants/characters.js";
 import { CAST_MOVE_DATA } from "../castMoveData.js";
-import { BUTT_VIEW } from "../buttDraw.js";
+import { BUTT_VIEW, buttParts } from "../buttDraw.js";
+import { sampleButtPose } from "../buttRig.js";
 import { createCastKit } from "./castMesh.js";
 
 // jsdom has no 2D canvas; the kit only needs something to wrap in a texture.
@@ -17,6 +18,20 @@ function glyphOf(puppet) {
 function bodyPose(puppet) {
     puppet.group.updateMatrixWorld(true);
     return [...puppet.body.matrixWorld.elements];
+}
+
+function buttKey(puppet) {
+    const bits = [];
+    puppet.group.getObjectByName("butt").traverse((node) => {
+        if (!node.isMesh) return;
+        bits.push(
+            node.position.x.toFixed(4),
+            node.position.y.toFixed(4),
+            node.scale.x.toFixed(4),
+            node.scale.y.toFixed(4)
+        );
+    });
+    return bits.join("|");
 }
 
 describe("castMesh", () => {
@@ -38,7 +53,9 @@ describe("castMesh", () => {
                     )
                 ).toBe(true);
                 expect(
-                    solid.some((mesh) => mesh.geometry.type === "SphereGeometry")
+                    solid.some(
+                        (mesh) => mesh.geometry.type === "SphereGeometry"
+                    )
                 ).toBe(true);
                 expect(
                     solid.some(
@@ -98,33 +115,72 @@ describe("castMesh", () => {
             expect(id, `nobody does ${move}`).toBeDefined();
 
             const puppet = k.castMesh(id);
-            const still = bodyPose(puppet);
+            const read = () =>
+                id === "butt" ? buttKey(puppet) : bodyPose(puppet).join();
+            const still = read();
             const data = CAST_MOVE_DATA[move];
             if (data.loop) puppet.setMove(move);
             else puppet.play(move);
 
             const poses = [0.1, 0.25, 0.2].map((share) => {
                 puppet.tick(data.duration * share);
-                return bodyPose(puppet);
+                return read();
             });
-            expect(
-                poses.some((pose) => pose.join() !== still.join()),
-                `${id} ${move}`
-            ).toBe(true);
+            if (id === "butt" && move === "idle") {
+                expect(poses.every((pose) => pose === still)).toBe(true);
+            } else {
+                expect(
+                    poses.some((pose) => pose !== still),
+                    `${id} ${move}`
+                ).toBe(true);
+            }
         }
     });
 
     it("returns to the ongoing move after a one-shot", () => {
         const puppet = kit().castMesh("butt");
-        const still = bodyPose(puppet);
+        const still = buttKey(puppet);
 
         puppet.play("toot");
         puppet.tick(0.1);
-        expect(bodyPose(puppet)).not.toEqual(still);
+        expect(buttKey(puppet)).not.toEqual(still);
 
         puppet.tick(1);
         puppet.tick(0);
-        expect(bodyPose(puppet)).toEqual(still);
+        expect(buttKey(puppet)).toEqual(still);
+    });
+
+    it("holds the butt's meshes to the rig", () => {
+        const puppet = kit().castMesh("butt", { size: 40 });
+        const t = CAST_MOVE_DATA.walk.duration / 4;
+        puppet.setMove("walk");
+        puppet.tick(t);
+
+        const walked = buttParts(sampleButtPose("walk", t));
+        const { legs, cheeks } =
+            puppet.group.getObjectByName("butt").userData.meshes;
+        legs.forEach((mesh, i) => {
+            const leg = walked.legs[i];
+            expect(mesh.position.x).toBeCloseTo((leg.x1 + leg.x2) / 2);
+            expect(mesh.position.y).toBeCloseTo((leg.y1 + leg.y2) / 2);
+        });
+
+        puppet.setReducedMotion(true);
+        puppet.tick(t);
+        const rested = buttParts(sampleButtPose("idle"));
+        legs.forEach((mesh, i) => {
+            const leg = rested.legs[i];
+            expect(mesh.position.x).toBeCloseTo((leg.x1 + leg.x2) / 2);
+            expect(mesh.position.y).toBeCloseTo((leg.y1 + leg.y2) / 2);
+        });
+
+        puppet.setReducedMotion(false);
+        puppet.play("toot");
+        const tootTime = CAST_MOVE_DATA.toot.duration * 0.3;
+        puppet.tick(tootTime);
+        const toot = buttParts(sampleButtPose("toot", tootTime));
+        expect(cheeks[0].scale.x).toBeCloseTo(toot.cheeks[0].rx);
+        expect(cheeks[0].scale.y).toBeCloseTo(toot.cheeks[0].ry);
     });
 
     it("ignores a move the character doesn't have", () => {

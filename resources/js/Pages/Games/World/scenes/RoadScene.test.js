@@ -19,8 +19,8 @@ const idlers = [
 function view(L, overrides = {}) {
     return {
         camera: roadCamera(L, 0),
-        peach: { x: 260, facing: 1, lane: 0 },
-        peachLift: 0,
+        butt: { x: 260, facing: 1, lane: 0 },
+        buttLift: 0,
         idlers: idlers.map((i) => ({ ...i, dx: 0, lift: 0, tilt: 0 })),
         near: null,
         hovered: null,
@@ -114,7 +114,7 @@ describe("the road's scene graph", () => {
 
     it("walks the Butt across the street by its lane", () => {
         const { road, L } = build();
-        road.sync(view(L, { peach: { x: 260, facing: 1, lane: 1 } }), 0);
+        road.sync(view(L, { butt: { x: 260, facing: 1, lane: 1 } }), 0);
 
         expect(road.butt.group.position.z).toBeCloseTo(L.z.near);
         expect(L.z.near).toBeGreaterThan(L.z.roadNear);
@@ -161,13 +161,36 @@ describe("the road's scene graph", () => {
         expect(road.camera.position.x).toBe(100 + 500);
     });
 
+    it("cycles the butt's legs while it walks the street", () => {
+        const { road, L } = build();
+        road.sync(view(L), 0);
+        const leg =
+            road.butt.group.getObjectByName("butt").userData.meshes.legs[0];
+        const planted = leg.position.x;
+
+        road.sync(
+            view(L, { butt: { x: 300, facing: 1, lane: 0, vx: 220 } }),
+            0.1
+        );
+        expect(leg.position.x).not.toBeCloseTo(planted);
+
+        road.sync(
+            view(L, {
+                reduced: true,
+                butt: { x: 320, facing: 1, lane: 0, vx: 220 },
+            }),
+            0.1
+        );
+        expect(leg.position.x).toBeCloseTo(planted);
+    });
+
     it("redraws a walk under reduced motion, when only positions change", () => {
         const { road, L } = build();
         const still = view(L, { reduced: true });
         road.sync(still, 0);
         expect(road.sync(still, 0.016)).toBe(false);
 
-        const walked = { ...still, peach: { x: 280, facing: 1, lane: 0 } };
+        const walked = { ...still, butt: { x: 280, facing: 1, lane: 0 } };
         expect(road.sync(walked, 0.016)).toBe(true);
         expect(road.butt.group.position.x).toBe(280);
     });
@@ -233,7 +256,7 @@ describe("the road's scene graph", () => {
             road.scene.getObjectByName("near-side").children[0].material;
         const at = (x, lane) =>
             view(L, {
-                peach: { x, facing: 1, lane },
+                butt: { x, facing: 1, lane },
                 idlers: [],
                 reduced: true,
             });
@@ -265,7 +288,7 @@ describe("the road's scene graph", () => {
         road.sync(
             view(L, {
                 reduced: true,
-                peach: { x: manholeX, facing: 1, lane: 0 },
+                butt: { x: manholeX, facing: 1, lane: 0 },
             }),
             0
         );
@@ -282,7 +305,7 @@ describe("the road's scene graph", () => {
             road.sync(
                 view(L, {
                     reduced: true,
-                    peach: { x: roach.position.x + dx, facing: 1, lane: 0 },
+                    butt: { x: roach.position.x + dx, facing: 1, lane: 0 },
                 }),
                 0
             );
@@ -303,7 +326,7 @@ describe("the road's scene graph", () => {
             road.sync(
                 view(L, {
                     reduced: true,
-                    peach: { x: roach.position.x + dx, facing: 1, lane: 0 },
+                    butt: { x: roach.position.x + dx, facing: 1, lane: 0 },
                 }),
                 0
             );

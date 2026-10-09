@@ -603,9 +603,9 @@ defineExpose({
             <!-- Over the buttons, so the Butt can be dragged off whatever
                  it's standing at. -->
             <FollowBox
-                class="peach"
+                class="butt"
                 role="img"
-                :aria-label="t('games.world.peach_aria')"
+                :aria-label="t('games.world.butt_aria')"
                 :at="buttSpot"
                 @pointerdown.prevent="onButtPointerDown"
             />
@@ -627,7 +627,7 @@ defineExpose({
 
 /* The Butt's hit box over what the canvas draws: invisible, but it takes
    the pointer. */
-.peach {
+.butt {
     position: absolute;
     left: 0;
     top: 0;
@@ -637,7 +637,7 @@ defineExpose({
     will-change: transform;
 }
 
-.peach:active {
+.butt:active {
     cursor: grabbing;
 }
 

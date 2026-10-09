@@ -328,7 +328,7 @@ describe("GamesWorld stage", () => {
             expect(button.find(".landmark-title").exists()).toBe(true);
         }
         expect(wrapper.findAll(".idler")).toHaveLength(3);
-        expect(wrapper.get(".peach").attributes("role")).toBe("img");
+        expect(wrapper.get(".butt").attributes("role")).toBe("img");
     });
 
     it("carries on in the DOM if the WebGL context is lost", async () => {
@@ -344,14 +344,14 @@ describe("GamesWorld stage", () => {
 
     it("walks the Butt to a landmark focused from the keyboard, and opens its card", async () => {
         wrapper = await mountWorld();
-        const peach = wrapper.get(".peach");
-        const before = screenX(peach);
+        const butt = wrapper.get(".butt");
+        const before = screenX(butt);
 
         const button = wrapper.findAll("button.interactable")[1];
         await button.trigger("focus");
         await nextTick();
         // The camera follows, so the Butt sits in the deadzone, not at 1500.
-        expect(screenX(wrapper.get(".peach"))).not.toBe(before);
+        expect(screenX(wrapper.get(".butt"))).not.toBe(before);
 
         await button.trigger("click");
         const dialog = wrapper.get('[role="dialog"]');
@@ -385,27 +385,27 @@ describe("GamesWorld stage", () => {
 
     it("walks the Butt to where it is dragged, as the flat road did", async () => {
         wrapper = await mountWorld();
-        const start = screenX(wrapper.get(".peach"));
+        const start = screenX(wrapper.get(".butt"));
 
-        await wrapper.get(".peach").trigger("pointerdown", { clientX: start });
+        await wrapper.get(".butt").trigger("pointerdown", { clientX: start });
         window.dispatchEvent(
             new MouseEvent("pointermove", { clientX: start + 100 })
         );
         window.dispatchEvent(new MouseEvent("pointerup"));
         await frames(600);
 
-        expect(screenX(wrapper.get(".peach"))).toBeCloseTo(start + 100, 0);
+        expect(screenX(wrapper.get(".butt"))).toBeCloseTo(start + 100, 0);
     });
 
     it("walks with the arrow keys", async () => {
         wrapper = await mountWorld();
-        const start = screenX(wrapper.get(".peach"));
+        const start = screenX(wrapper.get(".butt"));
 
         await wrapper.get(".stage").trigger("keydown", { key: "ArrowRight" });
         await frames(200);
         await wrapper.get(".stage").trigger("keyup", { key: "ArrowRight" });
 
-        expect(screenX(wrapper.get(".peach"))).toBeGreaterThan(start + 10);
+        expect(screenX(wrapper.get(".butt"))).toBeGreaterThan(start + 10);
     });
 
     it("stops drawing while the tab is hidden, and frees the context when it goes", async () => {
@@ -433,20 +433,20 @@ describe("GamesWorld stage", () => {
 
     it("crosses the street with the up and down arrows", async () => {
         wrapper = await mountWorld();
-        const far = screenFeet(wrapper.get(".peach"));
-        const x = screenX(wrapper.get(".peach"));
+        const far = screenFeet(wrapper.get(".butt"));
+        const x = screenX(wrapper.get(".butt"));
 
         await wrapper.get(".stage").trigger("keydown", { key: "ArrowDown" });
         await frames(600);
-        const near = screenFeet(wrapper.get(".peach"));
+        const near = screenFeet(wrapper.get(".butt"));
         expect(near).toBeGreaterThan(far + 50);
         // The camera keeps it where it was along the road.
-        expect(screenX(wrapper.get(".peach"))).toBeCloseTo(x, 0);
+        expect(screenX(wrapper.get(".butt"))).toBeCloseTo(x, 0);
 
         await wrapper.get(".stage").trigger("keydown", { key: "ArrowUp" });
         await frames(600);
         // Back on the far side (give or take where its walking bob stopped).
-        expect(Math.abs(screenFeet(wrapper.get(".peach")) - far)).toBeLessThan(
+        expect(Math.abs(screenFeet(wrapper.get(".butt")) - far)).toBeLessThan(
             15
         );
     });
@@ -462,11 +462,11 @@ describe("GamesWorld stage", () => {
 
     it("crosses over to a near-side landmark focused from the keyboard", async () => {
         wrapper = await mountWorld(withNearSide("boom", 600));
-        const far = screenFeet(wrapper.get(".peach"));
+        const far = screenFeet(wrapper.get(".butt"));
 
         await wrapper.findAll("button.interactable")[1].trigger("focus");
         await frames(600);
-        expect(screenFeet(wrapper.get(".peach"))).toBeGreaterThan(far + 50);
+        expect(screenFeet(wrapper.get(".butt"))).toBeGreaterThan(far + 50);
 
         await wrapper.get(".stage").trigger("keydown", { key: "Enter" });
         expect(wrapper.get('[role="dialog"]').text()).toContain("Poop Boom");
@@ -474,9 +474,9 @@ describe("GamesWorld stage", () => {
 
     it("walks the Butt to a spot tapped on the street, on that side", async () => {
         wrapper = await mountWorld();
-        const peach = wrapper.get(".peach");
-        const start = screenX(peach);
-        const far = screenFeet(peach);
+        const butt = wrapper.get(".butt");
+        const start = screenX(butt);
+        const far = screenFeet(butt);
         const background = wrapper.get(".road-3d");
 
         // A tap on the near pavement, to the Butt's right.
@@ -487,13 +487,13 @@ describe("GamesWorld stage", () => {
         window.dispatchEvent(new MouseEvent("pointerup"));
         await frames(1200);
 
-        expect(screenX(wrapper.get(".peach"))).toBeGreaterThan(start + 100);
-        expect(screenFeet(wrapper.get(".peach"))).toBeGreaterThan(far + 50);
+        expect(screenX(wrapper.get(".butt"))).toBeGreaterThan(start + 100);
+        expect(screenFeet(wrapper.get(".butt"))).toBeGreaterThan(far + 50);
     });
 
     it("pans, rather than walks, when the street is dragged", async () => {
         wrapper = await mountWorld();
-        const start = screenX(wrapper.get(".peach"));
+        const start = screenX(wrapper.get(".butt"));
         const background = wrapper.get(".road-3d");
 
         await background.trigger("pointerdown", {
@@ -506,13 +506,13 @@ describe("GamesWorld stage", () => {
         window.dispatchEvent(new MouseEvent("pointerup"));
         await frames(300);
 
-        expect(screenFeet(wrapper.get(".peach"))).toBeLessThan(768 * 0.7);
-        expect(screenX(wrapper.get(".peach"))).not.toBeGreaterThan(start);
+        expect(screenFeet(wrapper.get(".butt"))).toBeLessThan(768 * 0.7);
+        expect(screenX(wrapper.get(".butt"))).not.toBeGreaterThan(start);
     });
 
     it("ignores a tap on the sky", async () => {
         wrapper = await mountWorld();
-        const start = screenX(wrapper.get(".peach"));
+        const start = screenX(wrapper.get(".butt"));
 
         await wrapper.get(".road-3d").trigger("pointerdown", {
             clientX: start + 300,
@@ -521,7 +521,7 @@ describe("GamesWorld stage", () => {
         window.dispatchEvent(new MouseEvent("pointerup"));
         await frames(300);
 
-        expect(screenX(wrapper.get(".peach"))).toBe(start);
+        expect(screenX(wrapper.get(".butt"))).toBe(start);
     });
 
     it("tells screen readers about crossing only where there are two sides", async () => {
@@ -662,14 +662,14 @@ describe("GamesWorld rooms", () => {
     it("walks the Butt about the room with the arrow keys", async () => {
         wrapper = await mountWorld(withHouse);
         await enterHouse(wrapper);
-        const before = screenX(wrapper.get(".room-3d .peach"));
+        const before = screenX(wrapper.get(".room-3d .butt"));
 
         const stage = wrapper.get(".stage");
         await stage.trigger("keydown", { key: "ArrowLeft" });
         await frames(300);
         await stage.trigger("keyup", { key: "ArrowLeft" });
 
-        expect(screenX(wrapper.get(".room-3d .peach"))).toBeLessThan(before);
+        expect(screenX(wrapper.get(".room-3d .butt"))).toBeLessThan(before);
     });
 
     it("leaves the door's button when the arrow keys walk off", async () => {
@@ -692,7 +692,7 @@ describe("GamesWorld rooms", () => {
     it("walks the Butt to a spot tapped on the floor", async () => {
         wrapper = await mountWorld(withHouse);
         await enterHouse(wrapper);
-        const before = screenX(wrapper.get(".room-3d .peach"));
+        const before = screenX(wrapper.get(".room-3d .butt"));
 
         // Low on the stage, left of the Butt: the floor.
         await wrapper
@@ -701,7 +701,7 @@ describe("GamesWorld rooms", () => {
         window.dispatchEvent(new Event("pointerup"));
         await frames(600);
 
-        expect(screenX(wrapper.get(".room-3d .peach"))).toBeLessThan(
+        expect(screenX(wrapper.get(".room-3d .butt"))).toBeLessThan(
             before - 100
         );
     });
@@ -716,7 +716,7 @@ describe("GamesWorld rooms", () => {
         // In front of the strawberry (nearer the camera, so a little
         // further out from the middle on screen).
         expect(
-            Math.abs(screenX(wrapper.get(".room-3d .peach")) - screenX(berry))
+            Math.abs(screenX(wrapper.get(".room-3d .butt")) - screenX(berry))
         ).toBeLessThan(40);
 
         await berry.trigger("click");
@@ -729,11 +729,11 @@ describe("GamesWorld rooms", () => {
 
         // And the room isn't left frozen.
         const stage = wrapper.get(".stage");
-        const at = screenX(wrapper.get(".room-3d .peach"));
+        const at = screenX(wrapper.get(".room-3d .butt"));
         await stage.trigger("keydown", { key: "ArrowRight" });
         await frames(200);
         await stage.trigger("keyup", { key: "ArrowRight" });
-        expect(screenX(wrapper.get(".room-3d .peach"))).toBeGreaterThan(at);
+        expect(screenX(wrapper.get(".room-3d .butt"))).toBeGreaterThan(at);
     });
 
     it("drags the Butt off a toy it stands at, and a tap on it plays", async () => {
@@ -742,38 +742,38 @@ describe("GamesWorld rooms", () => {
         const berry = roomButton(wrapper, "Strawberry");
         await berry.trigger("focus");
         await nextTick();
-        const peach = () => wrapper.get(".room-3d .peach");
+        const butt = () => wrapper.get(".room-3d .butt");
         // Drawn over the toy's button, so it takes the press.
         expect(
-            berry.element.compareDocumentPosition(peach().element) &
+            berry.element.compareDocumentPosition(butt().element) &
                 Node.DOCUMENT_POSITION_FOLLOWING
         ).toBeTruthy();
 
         const tap = async (clientX, clientY) => {
-            await peach().trigger("pointerdown", { clientX, clientY });
+            await butt().trigger("pointerdown", { clientX, clientY });
             window.dispatchEvent(new Event("pointerup"));
             await nextTick();
         };
         // On the Butt, but clear of the toy's button: only a grab.
-        const feet = screenFeet(peach()) - 2;
+        const feet = screenFeet(butt()) - 2;
         expect(feet).toBeGreaterThan(screenFeet(berry));
-        await tap(screenX(peach()), feet);
+        await tap(screenX(butt()), feet);
         expect(wrapper.find(".toot-puff").exists()).toBe(false);
 
         // Over the toy's button: it plays.
         await tap(screenX(berry), screenFeet(berry) - 5);
         expect(wrapper.find(".toot-puff").exists()).toBe(true);
 
-        const x = screenX(peach());
-        const y = screenFeet(peach());
+        const x = screenX(butt());
+        const y = screenFeet(butt());
 
-        await peach().trigger("pointerdown", { clientX: x, clientY: y });
+        await butt().trigger("pointerdown", { clientX: x, clientY: y });
         window.dispatchEvent(
             new MouseEvent("pointermove", { clientX: x + 150, clientY: y })
         );
         window.dispatchEvent(new MouseEvent("pointerup"));
         await frames(600);
-        expect(screenX(peach())).toBeGreaterThan(x + 50);
+        expect(screenX(butt())).toBeGreaterThan(x + 50);
     });
 
     it("walks over to a toy that is clicked, then plays with it", async () => {
@@ -812,11 +812,11 @@ describe("GamesWorld rooms", () => {
         expect(wrapper.find(".room-3d").exists()).toBe(true);
 
         const stage = wrapper.get(".stage");
-        const at = screenX(wrapper.get(".room-3d .peach"));
+        const at = screenX(wrapper.get(".room-3d .butt"));
         await stage.trigger("keydown", { key: "ArrowLeft" });
         await frames(200);
         await stage.trigger("keyup", { key: "ArrowLeft" });
-        expect(screenX(wrapper.get(".room-3d .peach"))).toBeLessThan(at);
+        expect(screenX(wrapper.get(".room-3d .butt"))).toBeLessThan(at);
     });
 
     it("plays a minigame over the room, its keys its own, and goes back to the room", async () => {
@@ -857,11 +857,11 @@ describe("GamesWorld rooms", () => {
         expect(document.activeElement).toBe(field.element);
 
         // The arrows move the minigame's Butt, not the room's.
-        const at = screenX(wrapper.get(".room-3d .peach"));
+        const at = screenX(wrapper.get(".room-3d .butt"));
         await field.trigger("keydown", { key: "ArrowLeft" });
         await frames(200);
         await field.trigger("keyup", { key: "ArrowLeft" });
-        expect(screenX(wrapper.get(".room-3d .peach"))).toBe(at);
+        expect(screenX(wrapper.get(".room-3d .butt"))).toBe(at);
         expect(document.activeElement).toBe(field.element);
 
         await field.trigger("keydown", { key: "Escape" });
@@ -875,13 +875,13 @@ describe("GamesWorld rooms", () => {
         await enterHouse(wrapper);
         await roomButton(wrapper, "Lamp").trigger("focus");
         await nextTick();
-        const at = screenX(wrapper.get(".room-3d .peach"));
+        const at = screenX(wrapper.get(".room-3d .butt"));
         wrapper.unmount();
 
         wrapper = await mountWorld(withHouse);
 
         expect(wrapper.find(".room-3d").exists()).toBe(true);
-        expect(screenX(wrapper.get(".room-3d .peach"))).toBeCloseTo(at, 0);
+        expect(screenX(wrapper.get(".room-3d .butt"))).toBeCloseTo(at, 0);
     });
 });
 

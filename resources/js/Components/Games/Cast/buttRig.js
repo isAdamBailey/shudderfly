@@ -11,7 +11,7 @@
  * { body: { x, y, rot }, leftLeg: { rot }, rightLeg: { rot } }.
  */
 
-import { CAST_MOVE_DATA } from "./castMoveData.js";
+import { CAST_MOVE_DATA, sampleMove } from "./castMoveData.js";
 
 export const BUTT_RIG = {
     body: {
@@ -34,7 +34,7 @@ export const BUTT_WALK_SWING = 28;
 
 const REST_Y = -BUTT_RIG.hips.left.y + BUTT_RIG.leg.length;
 
-export const BUTT_REST = { x: 0, y: REST_Y, rot: 0 };
+export const BUTT_REST = { x: 0, y: REST_Y, rot: 0, sx: 1, sy: 1 };
 
 function restPose() {
     return {
@@ -44,10 +44,7 @@ function restPose() {
     };
 }
 
-/** Pose `seconds` into `move`. Only `walk` cycles; `still` holds the rest pose. */
-export function sampleButtPose(move, seconds = 0, { still = false } = {}) {
-    if (still || move !== "walk") return restPose();
-
+function walkPose(seconds) {
     const raw = seconds / CAST_MOVE_DATA.walk.duration;
     const p = ((raw % 1) + 1) % 1;
     const swing = Math.sin(p * Math.PI * 2) * BUTT_WALK_SWING;
@@ -56,5 +53,23 @@ export function sampleButtPose(move, seconds = 0, { still = false } = {}) {
         body: { ...BUTT_REST },
         leftLeg: { rot: swing },
         rightLeg: { rot: -swing },
+    };
+}
+
+/** Pose `seconds` into `move`. `still` holds the rest pose. */
+export function sampleButtPose(move, seconds = 0, { still = false } = {}) {
+    if (still || !CAST_MOVE_DATA[move] || move === "idle") return restPose();
+    if (move === "walk") return walkPose(seconds);
+
+    const sampled = sampleMove(CAST_MOVE_DATA[move], seconds);
+    return {
+        body: {
+            ...BUTT_REST,
+            rot: sampled.rot,
+            sx: sampled.sx,
+            sy: sampled.sy,
+        },
+        leftLeg: { rot: 0 },
+        rightLeg: { rot: 0 },
     };
 }

@@ -1,5 +1,6 @@
 import { CAST, castInDom } from "@/constants/characters.js";
 import { BUTT_COLORS, BUTT_VIEW, buttParts } from "../buttDraw.js";
+import { sampleButtPose } from "../buttRig.js";
 import {
     CAST_MOVE_DATA,
     IDENTITY_POSE,
@@ -17,8 +18,8 @@ import {
 // lift, tilt, facing, landing squash, one-shots and reduced motion.
 //
 // The Butt is the exception (issue #143): cheeks and legs are lit meshes,
-// turned to the same three-quarter view the DOM draws. Moves still pose
-// that whole figure; the legs stay still until a later phase.
+// turned to the same three-quarter view the DOM draws, and posed from the
+// rig (sampleButtPose) rather than the emoji squash.
 //
 // The Face has no emoji: in 3D it is drawn as CastMember (PersonFace) in the
 // scene's DOM overlay at the puppet's projected point, so its own SVG
@@ -85,6 +86,62 @@ export function createCastKit(
         return materials.get(key);
     };
 
+    const up = new THREE.Vector3(0, 1, 0);
+    const along = new THREE.Vector3();
+
+    function poseFigure(figure, pose) {
+        const { cheeks, legs, feet, cleft } = buttParts(pose);
+        const meshes = figure.userData.meshes;
+        cheeks.forEach((cheek, i) => {
+            const mesh = meshes.cheeks[i];
+            mesh.position.set(cheek.x, cheek.y, cheek.z);
+            mesh.scale.set(cheek.rx, cheek.ry, (cheek.rx + cheek.ry) / 2);
+            mesh.material = skin(cheek.color);
+        });
+        feet.forEach((foot, i) => {
+            meshes.feet[i].position.set(foot.x, foot.y, foot.z);
+        });
+        legs.forEach((leg, i) => {
+            along.set(leg.x2 - leg.x1, leg.y2 - leg.y1, leg.z2 - leg.z1);
+            const length = along.length() || 1;
+            const mesh = meshes.legs[i];
+            mesh.position.set(
+                (leg.x1 + leg.x2) / 2,
+                (leg.y1 + leg.y2) / 2,
+                (leg.z1 + leg.z2) / 2
+            );
+            mesh.scale.set(leg.width / 2, length, leg.width / 2);
+            mesh.quaternion.setFromUnitVectors(
+                up,
+                along.multiplyScalar(1 / length)
+            );
+        });
+        const cleftMesh = meshes.cleft;
+        cleftMesh.position.set(
+            (cleft.x1 + cleft.x2) / 2,
+            (cleft.y1 + cleft.y2) / 2,
+            cleft.z1
+        );
+        cleftMesh.scale.set(
+            cleft.width,
+            (cleft.y1 - cleft.y2) / 2,
+            cleft.width
+        );
+    }
+
+    function poseKey(pose) {
+        const { body, leftLeg, rightLeg } = pose;
+        return [
+            body.x,
+            body.y,
+            body.rot,
+            body.sx,
+            body.sy,
+            leftLeg.rot,
+            rightLeg.rot,
+        ].join(",");
+    }
+
     function buttFigure(shadows) {
         const figure = new THREE.Group();
         figure.name = "butt";
@@ -92,66 +149,30 @@ export function createCastKit(
         figure.rotation.y = BUTT_VIEW.yaw * DEG;
         figure.rotation.x = BUTT_VIEW.pitch * DEG;
 
-        const { cheeks, legs, feet, cleft } = buttParts();
-        const add = (geometry, material, position, scale) => {
+        const add = (geometry, material) => {
             const mesh = new THREE.Mesh(geometry, material);
             mesh.castShadow = shadows;
-            mesh.position.set(position.x, position.y, position.z);
-            mesh.scale.set(scale.x, scale.y, scale.z);
             figure.add(mesh);
             return mesh;
         };
+        const { cheeks, legs, feet } = buttParts();
+        figure.userData.meshes = {
+            cheeks: cheeks.map((cheek) => add(sphere, skin(cheek.color))),
+            feet: feet.map((foot) => {
+                const mesh = add(sphere, skin(foot.color));
+                mesh.scale.set(foot.sx, foot.sy, foot.sz);
+                return mesh;
+            }),
+            legs: legs.map((leg) => add(limb, skin(leg.color))),
+            cleft: add(sphere, skin(BUTT_COLORS.cleft)),
+        };
 
-        for (const cheek of cheeks) {
-            add(sphere, skin(cheek.color), cheek, {
-                x: cheek.r,
-                y: cheek.r,
-                z: cheek.r,
-            });
-        }
-        for (const foot of feet) {
-            add(sphere, skin(foot.color), foot, {
-                x: foot.sx,
-                y: foot.sy,
-                z: foot.sz,
-            });
-        }
-        for (const leg of legs) {
-            const dir = new THREE.Vector3(
-                leg.x2 - leg.x1,
-                leg.y2 - leg.y1,
-                leg.z2 - leg.z1
-            );
-            const length = dir.length();
-            const mesh = add(
-                limb,
-                skin(leg.color),
-                {
-                    x: (leg.x1 + leg.x2) / 2,
-                    y: (leg.y1 + leg.y2) / 2,
-                    z: (leg.z1 + leg.z2) / 2,
-                },
-                { x: leg.width / 2, y: length, z: leg.width / 2 }
-            );
-            mesh.quaternion.setFromUnitVectors(
-                new THREE.Vector3(0, 1, 0),
-                dir.multiplyScalar(1 / length)
-            );
-        }
-        add(
-            sphere,
-            skin(BUTT_COLORS.cleft),
-            {
-                x: (cleft.x1 + cleft.x2) / 2,
-                y: (cleft.y1 + cleft.y2) / 2,
-                z: cleft.z1,
-            },
-            { x: cleft.width, y: (cleft.y1 - cleft.y2) / 2, z: cleft.width }
-        );
-
+        const rest = sampleButtPose("idle");
+        poseFigure(figure, rest);
+        figure.userData.poseKey = poseKey(rest);
         figure.updateMatrixWorld(true);
         const box = new THREE.Box3().setFromObject(figure);
-        figure.userData.drop = -box.min.y;
+        figure.userData.foot = -box.min.y;
         return figure;
     }
 
@@ -300,7 +321,7 @@ export function createCastKit(
             const mirror = state.facing === "left" ? -1 : 1;
             if (figure) {
                 figure.scale.set(mirror * s, s, s);
-                figure.position.set(0, figure.userData.drop * s, 0);
+                figure.position.set(0, figure.userData.foot * s, 0);
             } else if (glyphMesh) {
                 glyphMesh.scale.set(
                     (mirror * s) / GLYPH_FILL,
@@ -388,12 +409,14 @@ export function createCastKit(
                 const ongoing = moveData(state.move);
                 let animating = false;
                 let pose;
+                let played = null;
 
                 if (state.reduced) {
                     pose = stillPose(ongoing);
                 } else if (state.oneShot) {
+                    played = state.oneShot;
                     state.oneShotTime += dt;
-                    const shot = CAST_MOVE_DATA[state.oneShot];
+                    const shot = CAST_MOVE_DATA[played];
                     if (state.oneShotTime >= shot.duration) {
                         state.oneShot = null;
                         state.moveTime = phase;
@@ -407,11 +430,11 @@ export function createCastKit(
                 } else {
                     pose = REST;
                 }
-                const origin = (
-                    state.oneShot ? CAST_MOVE_DATA[state.oneShot] : ongoing
-                )?.origin;
+                const origin = (played ? CAST_MOVE_DATA[played] : ongoing)
+                    ?.origin;
 
                 let squashPose = IDENTITY_POSE;
+                let landing = false;
                 if (state.landingTime !== null) {
                     state.landingTime += dt;
                     squashPose = sampleMove(LANDING, state.landingTime);
@@ -419,6 +442,25 @@ export function createCastKit(
                         state.landingTime = null;
                     }
                     animating = true;
+                    landing = true;
+                }
+
+                if (figure) {
+                    const next = sampleButtPose(
+                        state.reduced ? state.move : played ?? state.move,
+                        played ? state.oneShotTime : state.moveTime,
+                        { still: state.reduced }
+                    );
+                    const key = poseKey(next);
+                    if (key !== figure.userData.poseKey) {
+                        figure.userData.poseKey = key;
+                        figure.userData.nextPose = next;
+                        state.dirty = true;
+                    }
+                    // The rig plays the move. The group stays put, so the
+                    // figure is not also squashed like an emoji card.
+                    pose = REST;
+                    if (!played && !landing) animating = false;
                 }
 
                 if (!animating && !state.dirty) return false;
@@ -433,6 +475,15 @@ export function createCastKit(
                     LANDING.origin,
                     state.size
                 );
+                if (figure?.userData.nextPose) {
+                    poseFigure(figure, figure.userData.nextPose);
+                    figure.userData.nextPose = null;
+                    group.updateMatrixWorld(true);
+                    const minY = new THREE.Box3().setFromObject(figure).min.y;
+                    figure.position.y -= minY;
+                    figure.userData.foot =
+                        figure.position.y / (state.size || 1);
+                }
 
                 // As CastMember: shrinks as the body rises, times the move's
                 // own shadow beat.

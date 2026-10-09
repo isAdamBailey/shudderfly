@@ -186,7 +186,7 @@ describe("Games Index", () => {
         await nextTick();
 
         expect(wrapper.find(".toot-puff").exists()).toBe(true);
-        expect(wrapper.get(".peach .cast-member").classes()).toContain(
+        expect(wrapper.get(".butt .cast-member").classes()).toContain(
             "cast-move-toot"
         );
     });

@@ -689,9 +689,9 @@ return [
 
     // Games - World
     'games.world.title' => 'Monde des Jeux',
-    'games.world.stage_aria' => 'Monde des jeux : fais glisser la pêche le long de la route, ou utilise les flèches gauche et droite pour marcher',
-    'games.world.stage_lanes_aria' => 'Monde des jeux : fais glisser la pêche le long de la rue, ou utilise les flèches gauche et droite pour marcher et haut et bas pour traverser la rue',
-    'games.world.peach_aria' => 'Pêche',
+    'games.world.stage_aria' => 'Monde des jeux : fais glisser les Fesses le long de la route, ou utilise les flèches gauche et droite pour marcher',
+    'games.world.stage_lanes_aria' => 'Monde des jeux : fais glisser les Fesses le long de la rue, ou utilise les flèches gauche et droite pour marcher et haut et bas pour traverser la rue',
+    'games.world.butt_aria' => 'Les Fesses',
     'games.world.landmark_aria' => ':game — appuie sur Entrée pour visiter',
     'games.world.play' => '▶ Jouer',
     'games.world.cancel' => 'Pas encore',
@@ -753,7 +753,7 @@ return [
     'games.world.toys.radio_line' => 'Kssshhh ! La radio est éteinte. Juste des grésillements... et un prout.',
     'games.world.minigames.toot_catch' => 'Attrape-Prouts',
     'games.world.minigames.toot_catch_line' => 'Attrape les Aliments à Prouts qui tombent avec les Fesses ! Chaque aliment attrapé les fait prouter.',
-    'games.world.minigames.toot_catch_aria' => 'Attrape-Prouts : fais glisser la pêche, ou utilise les flèches gauche et droite, pour attraper la nourriture qui tombe',
+    'games.world.minigames.toot_catch_aria' => 'Attrape-Prouts : fais glisser les Fesses, ou utilise les flèches gauche et droite, pour attraper la nourriture qui tombe',
     'games.world.minigames.score' => 'Tu en as attrapé :score !',
     'games.world.minigames.play_again' => '🔄 Rejouer',
     'games.world.minigames.done' => 'Terminé',

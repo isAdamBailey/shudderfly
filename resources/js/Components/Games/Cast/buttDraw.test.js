@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { BUTT_VIEW, BUTT_FRAME, buttDrop, buttParts, buttShapes } from "./buttDraw.js";
+import { sampleButtPose } from "./buttRig.js";
+import { CAST_MOVE_DATA } from "./castMoveData.js";
+import {
+    BUTT_VIEW,
+    BUTT_FRAME,
+    buttDrop,
+    buttParts,
+    buttShapes,
+} from "./buttDraw.js";
 
 describe("butt drawing", () => {
     it("is two cheeks, two legs and two feet", () => {
@@ -25,7 +33,7 @@ describe("butt drawing", () => {
         const cheeks = buttShapes().filter((shape) => shape.type === "cheek");
         const [near, far] = [...cheeks].sort((a, b) => b.z - a.z);
         expect(near.z).toBeGreaterThan(far.z);
-        expect(near.r).toBeGreaterThan(far.r * 1.08);
+        expect(near.rx).toBeGreaterThan(far.rx * 1.08);
         expect(near.x).not.toBeCloseTo(far.x);
     });
 
@@ -36,13 +44,33 @@ describe("butt drawing", () => {
                 shape.ry
                     ? shape.y - shape.ry
                     : shape.r
-                      ? shape.y - shape.r
-                      : Math.min(shape.y1, shape.y2) - shape.width / 2
+                    ? shape.y - shape.r
+                    : Math.min(shape.y1, shape.y2) - shape.width / 2
             )
         );
         expect(lowest).toBeCloseTo(0, 1);
         expect(BUTT_FRAME.minY).toBeCloseTo(0, 1);
         expect(buttDrop()).not.toBe(0);
+    });
+
+    it("follows the rig, so a walk and a toot change the figure", () => {
+        const idle = buttParts();
+        const stride = sampleButtPose("walk", CAST_MOVE_DATA.walk.duration / 4);
+        const walked = buttParts(stride);
+        expect(walked.legs[0].x2).not.toBeCloseTo(idle.legs[0].x2);
+        expect(walked.feet[0].x).not.toBeCloseTo(idle.feet[0].x);
+        expect(walked.feet[0].y - walked.feet[0].sy).toBeGreaterThan(0);
+
+        const toot = buttParts(
+            sampleButtPose("toot", CAST_MOVE_DATA.toot.duration * 0.3)
+        );
+        expect(toot.cheeks[0].rx).toBeGreaterThan(idle.cheeks[0].rx);
+        expect(toot.cheeks[0].ry).toBeLessThan(idle.cheeks[0].ry);
+
+        const drawn = buttShapes(stride);
+        const standing = buttShapes();
+        const leg = (shapes) => shapes.find((shape) => shape.type === "leg");
+        expect(leg(drawn).x2).not.toBeCloseTo(leg(standing).x2);
     });
 
     it("draws the far side first", () => {

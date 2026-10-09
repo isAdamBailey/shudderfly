@@ -49,7 +49,7 @@ const layout = computed(() => (bounds.w ? roadLayout(bounds) : null));
 const {
     world,
     landmarks,
-    peach,
+    butt,
     camera,
     nearestLandmark,
     reduced,
@@ -57,10 +57,10 @@ const {
     puffs,
     unlockToot,
     buttCast,
-    peachLift,
+    buttLift,
     peekX,
     peekY,
-    onPeachPointerDown,
+    onButtPointerDown,
     onBackgroundPointerDown,
     onIdlerPointerDown,
     onLandmarkFocus,
@@ -74,7 +74,7 @@ const {
     // it the same. Its side is where the Butt's feet would be under the
     // finger, on the ground.
     dragTo(start, rect) {
-        const feet = peachSpot.value;
+        const feet = buttSpot.value;
         const grab = feet ? feet.y - (start.clientY - rect.top) : 0;
         return (event) => {
             const sx = event.clientX - rect.left;
@@ -102,8 +102,8 @@ const {
     },
     // At the middle of the Butt, in world units; the overlay projects it.
     buttPuffAt: () => ({
-        x: peach.x,
-        y: (layout.value?.sizes.butt ?? 0) / 2 + peachLift.value,
+        x: butt.x,
+        y: (layout.value?.sizes.butt ?? 0) / 2 + buttLift.value,
     }),
     // Idlers stand further back, where a screen px is more than a unit.
     idlerDxToWorld: (idler, dx) =>
@@ -113,7 +113,7 @@ const {
 });
 
 /** The depth the Butt walks at, between its lanes. */
-const buttZ = computed(() => layout.value?.laneZ(peach.lane) ?? 0);
+const buttZ = computed(() => layout.value?.laneZ(butt.lane) ?? 0);
 
 /** The projection.js camera for this frame. */
 const view = computed(() =>
@@ -125,7 +125,7 @@ const view = computed(() =>
               peekY.value,
               // On the far lane the Butt needs no help, and leaving it out
               // keeps the view (and the overlay) still while it walks.
-              peach.lane ? { x: peach.x, z: buttZ.value } : null
+              butt.lane ? { x: butt.x, z: buttZ.value } : null
           )
         : null
 );
@@ -144,8 +144,8 @@ function onFrame(dt) {
     return graph.sync(
         {
             camera: view.value,
-            peach,
-            peachLift: peachLift.value,
+            butt,
+            buttLift: buttLift.value,
             idlers: idlers.value,
             near: nearestLandmark.value?.slug ?? null,
             hovered: hovered.value,
@@ -263,9 +263,9 @@ const idlerSpots = computed(() => {
     });
 });
 
-const peachSpot = computed(() =>
+const buttSpot = computed(() =>
     view.value
-        ? spot(peach.x, buttZ.value, layout.value.sizes.butt, peachLift.value)
+        ? spot(butt.x, buttZ.value, layout.value.sizes.butt, buttLift.value)
         : null
 );
 
@@ -337,11 +337,11 @@ defineExpose({ ...api, setBounds, pointOf });
             </InteractableButton>
 
             <div
-                class="peach"
+                class="butt"
                 role="img"
-                :aria-label="t('games.world.peach_aria')"
-                :style="boxStyle(peachSpot)"
-                @pointerdown.prevent="onPeachPointerDown"
+                :aria-label="t('games.world.butt_aria')"
+                :style="boxStyle(buttSpot)"
+                @pointerdown.prevent="onButtPointerDown"
             ></div>
 
             <TootPuff
@@ -364,7 +364,7 @@ defineExpose({ ...api, setBounds, pointOf });
 /* Hit boxes over what the canvas draws: invisible, but they take the
    pointer, as the flat road's elements did. */
 .idler,
-.peach {
+.butt {
     position: absolute;
     left: 0;
     top: 0;
@@ -376,12 +376,12 @@ defineExpose({ ...api, setBounds, pointOf });
 /* The idlers are draggable and throwable for fun; dropping one has no
    effect on the game, hence aria-hidden despite being interactive. */
 .idler,
-.peach {
+.butt {
     cursor: grab;
 }
 
 .idler:active,
-.peach:active {
+.butt:active {
     cursor: grabbing;
 }
 </style>

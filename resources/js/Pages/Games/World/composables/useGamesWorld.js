@@ -2,24 +2,24 @@ import { reactive, computed, onUnmounted, unref } from "vue";
 import { approach } from "@/utils/math";
 
 export const WALK_SPEED = 220; // px/s while an arrow key is held
-// A drag steers the peach rather than teleporting it: it strolls toward the
+// A drag steers the butt rather than teleporting it: it strolls toward the
 // finger at its own pace, so a flick of the wrist can't rocket it down the road.
 export const DRAG_SPEED = 320; // px/s while being dragged
 export const END_PAD = 700; // road that keeps going past the last landmark
 export const SNAP_RADIUS = 110; // drop this close to a landmark and its card opens
-// Camera deadzone: the camera only moves once the peach leaves the middle band
+// Camera deadzone: the camera only moves once the butt leaves the middle band
 // of the stage, expressed as fractions of stage width.
 export const SOFT_LEFT = 0.35;
 export const SOFT_RIGHT = 0.65;
-// Crossing the street: how long the peach takes to get from one side to the
+// Crossing the street: how long the butt takes to get from one side to the
 // other.
 export const CROSS_TIME = 0.35; // s
-// The two sides of the street, as the peach's `lane`: 0 is the far side
+// The two sides of the street, as the butt's `lane`: 0 is the far side
 // (where landmarks stand unless they say otherwise), 1 the near side.
 export const LANES = { far: 0, near: 1 };
 
-const PEACH_START_X = 260;
-const ROAD_MARGIN = 40; // the peach never stands closer than this to either end
+const BUTT_START_X = 260;
+const ROAD_MARGIN = 40; // the butt never stands closer than this to either end
 
 /** The walking bob as height above the ground, from its phase: 12 units
  * of travel, never below 0, so a body never sinks into its own shadow. */
@@ -32,15 +32,15 @@ export function clamp(value, min, max) {
 }
 
 /**
- * All state and math for the Games World stage: where the peach is, where the
+ * All state and math for the Games World stage: where the butt is, where the
  * camera is looking, and which landmark it is standing near. Deliberately
  * DOM-free — the component feeds it world coordinates and reads back numbers.
  */
 export function useGamesWorld(games, callbacks = {}) {
-    // `isReducedMotion` suppresses the decorative bob only — the peach still
+    // `isReducedMotion` suppresses the decorative bob only — the butt still
     // walks and the camera still follows, because this stage is how you reach
     // the games, not an animation to sit and watch.
-    // `start` ({ x, side }) is where the peach starts, e.g. where it was
+    // `start` ({ x, side }) is where the butt starts, e.g. where it was
     // before a game, or the door it came out of; by default the road's start.
     const {
         onArrive,
@@ -69,20 +69,20 @@ export function useGamesWorld(games, callbacks = {}) {
         return Math.max(bounds.w, furthest + END_PAD);
     });
 
-    // `side` is the side of the street the peach is on, or crossing to;
+    // `side` is the side of the street the butt is on, or crossing to;
     // `lane` eases toward it (LANES), for drawing.
     const startSide = Object.prototype.hasOwnProperty.call(LANES, startAt?.side)
         ? startAt.side
         : "far";
-    const peach = reactive({
-        x: Number.isFinite(startAt?.x) ? wrapX(startAt.x) : PEACH_START_X,
+    const butt = reactive({
+        x: Number.isFinite(startAt?.x) ? wrapX(startAt.x) : BUTT_START_X,
         vx: 0,
         facing: 1,
         bob: 0,
         side: startSide,
         lane: LANES[startSide],
     });
-    // Where the peach is headed: the finger while dragging, and the spot it
+    // Where the butt is headed: the finger while dragging, and the spot it
     // was dropped on afterwards, so a release still completes the journey.
     // Anything that takes over from a journey (walking, a cancelled drag)
     // clears it, so "still heading somewhere" is also what says a landmark
@@ -100,8 +100,8 @@ export function useGamesWorld(games, callbacks = {}) {
         let best = null;
         let bestDistance = SNAP_RADIUS;
         for (const lm of landmarks.value) {
-            if (lm.side !== peach.side) continue;
-            const distance = Math.abs(lm.x - peach.x);
+            if (lm.side !== butt.side) continue;
+            const distance = Math.abs(lm.x - butt.x);
             if (distance <= bestDistance) {
                 best = lm;
                 bestDistance = distance;
@@ -130,14 +130,14 @@ export function useGamesWorld(games, callbacks = {}) {
         return clamp(x, 0, Math.max(0, worldWidth.value - bounds.w));
     }
 
-    /** Snap — not lerp. The peach is under a finger, and a lagging camera
+    /** Snap — not lerp. The butt is under a finger, and a lagging camera
      * reads as rubber-banding rather than as smoothing. */
     function updateCamera() {
-        const screenX = peach.x - camera.x;
+        const screenX = butt.x - camera.x;
         if (screenX < bounds.w * SOFT_LEFT) {
-            camera.x = peach.x - bounds.w * SOFT_LEFT;
+            camera.x = butt.x - bounds.w * SOFT_LEFT;
         } else if (screenX > bounds.w * SOFT_RIGHT) {
-            camera.x = peach.x - bounds.w * SOFT_RIGHT;
+            camera.x = butt.x - bounds.w * SOFT_RIGHT;
         }
         camera.x = clampCameraX(camera.x);
     }
@@ -160,9 +160,9 @@ export function useGamesWorld(games, callbacks = {}) {
         return gap;
     }
 
-    /** The one way the peach moves: wrapped to the road, camera following. */
-    function setPeachX(x) {
-        peach.x = wrapX(x);
+    /** The one way the butt moves: wrapped to the road, camera following. */
+    function setButtX(x) {
+        butt.x = wrapX(x);
         updateCamera();
     }
 
@@ -173,53 +173,53 @@ export function useGamesWorld(games, callbacks = {}) {
 
         const crossing = !settled();
         if (crossing) {
-            peach.lane = approach(
-                peach.lane,
-                LANES[peach.side],
+            butt.lane = approach(
+                butt.lane,
+                LANES[butt.side],
                 dt / CROSS_TIME
             );
         }
 
-        peach.vx = state.walkDir * WALK_SPEED;
+        butt.vx = state.walkDir * WALK_SPEED;
 
         if (targetX !== null) {
             // Close the shortest wrap-aware gap at a fixed speed, never faster,
             // and snap onto the target so a wrap-boundary step can't overshoot
-            // and leave the peach chasing forever.
-            const gap = wrappedGap(peach.x, targetX);
+            // and leave the butt chasing forever.
+            const gap = wrappedGap(butt.x, targetX);
             const maxStep = DRAG_SPEED * dt;
             if (Math.abs(gap) <= maxStep) {
                 if (gap !== 0) {
-                    peach.vx = gap / dt;
-                    peach.facing = Math.sign(gap);
+                    butt.vx = gap / dt;
+                    butt.facing = Math.sign(gap);
                 }
-                setPeachX(targetX);
-                // A crossing finishes before a card opens, so the peach
+                setButtX(targetX);
+                // A crossing finishes before a card opens, so the butt
                 // isn't left standing in the road behind it.
                 if (state.mode !== "dragging" && settled()) arrive();
             } else {
                 const stepX = Math.sign(gap) * maxStep;
-                peach.vx = stepX / dt;
-                peach.facing = Math.sign(stepX);
-                setPeachX(peach.x + stepX);
+                butt.vx = stepX / dt;
+                butt.facing = Math.sign(stepX);
+                setButtX(butt.x + stepX);
             }
-        } else if (peach.vx !== 0) {
-            peach.facing = Math.sign(peach.vx);
-            setPeachX(peach.x + peach.vx * dt);
+        } else if (butt.vx !== 0) {
+            butt.facing = Math.sign(butt.vx);
+            setButtX(butt.x + butt.vx * dt);
         } else if (!crossing) {
             // Nothing is moving: back down on the road, not hanging
             // mid-bob, and nothing else to do.
-            peach.bob = 0;
+            butt.bob = 0;
             return;
         }
         if (isReducedMotion()) {
             // Held at zero rather than frozen wherever it happened to be, so
-            // the peach sits level instead of stuck mid-bounce.
-            peach.bob = 0;
+            // the butt sits level instead of stuck mid-bounce.
+            butt.bob = 0;
             return;
         }
         // Wrapped, so a long session can't drift the bob phase into float mush.
-        peach.bob = (peach.bob + dt) % (Math.PI * 2);
+        butt.bob = (butt.bob + dt) % (Math.PI * 2);
     }
 
     function frame(now) {
@@ -243,7 +243,7 @@ export function useGamesWorld(games, callbacks = {}) {
         lastFrame = 0;
     }
 
-    /** The peach has reached where it was sent; a drop next to a landmark is
+    /** The butt has reached where it was sent; a drop next to a landmark is
      * what opens its card. */
     function arrive() {
         targetX = null;
@@ -251,18 +251,18 @@ export function useGamesWorld(games, callbacks = {}) {
         if (landmark) openConfirm(landmark.slug);
     }
 
-    /** Whether the peach is all the way over on its side of the street. */
+    /** Whether the butt is all the way over on its side of the street. */
     function settled() {
-        return peach.lane === LANES[peach.side];
+        return butt.lane === LANES[butt.side];
     }
 
     /** Crosses the street to `side` ("far" | "near"). */
     function crossTo(side) {
         if (state.confirmSlug) return;
-        peach.side = side;
+        butt.side = side;
     }
 
-    /** Sends the peach to road x `x` on `side`, as a tap does: it strolls
+    /** Sends the butt to road x `x` on `side`, as a tap does: it strolls
      * there like a released drag and opens a landmark it arrives at. */
     function walkTo(x, side) {
         if (state.confirmSlug || state.mode !== "idle") return;
@@ -274,12 +274,12 @@ export function useGamesWorld(games, callbacks = {}) {
     function startDrag() {
         state.mode = "dragging";
         state.walkDir = 0; // a held arrow must not fight the finger
-        targetX = peach.x;
+        targetX = butt.x;
     }
 
-    /** Records where the finger is; `step` walks the peach there at DRAG_SPEED
+    /** Records where the finger is; `step` walks the butt there at DRAG_SPEED
      * rather than snapping, so the world scrolls at a readable pace. The
-     * target is wrapped like peach.x so arrival comparisons stay valid when
+     * target is wrapped like butt.x so arrival comparisons stay valid when
      * the finger goes past either end of the looping road. */
     function updateDrag(worldX, side) {
         if (state.mode !== "dragging") return;
@@ -287,12 +287,12 @@ export function useGamesWorld(games, callbacks = {}) {
         if (side) crossTo(side);
     }
 
-    /** Releasing doesn't stop the peach: it keeps strolling to where it was
+    /** Releasing doesn't stop the butt: it keeps strolling to where it was
      * dropped, and the card opens when it actually gets there. */
     function endDrag() {
         if (state.mode !== "dragging") return;
         state.mode = "idle";
-        if (targetX === null || (peach.x === targetX && settled())) arrive();
+        if (targetX === null || (butt.x === targetX && settled())) arrive();
     }
 
     /** A pointercancel (system gesture, incoming call) never delivers a
@@ -329,26 +329,26 @@ export function useGamesWorld(games, callbacks = {}) {
 
     function stopWalk(dir) {
         // Only the direction actually being walked can stop the walk, so
-        // releasing the other arrow mid-walk doesn't halt the peach.
+        // releasing the other arrow mid-walk doesn't halt the butt.
         if (state.walkDir === dir) state.walkDir = 0;
     }
 
-    /** Teleports the peach to a landmark — used by keyboard focus, and by the
-     * confirm card's Cancel so the peach ends up where it was considering. A
-     * landmark across the street has the peach cross over to it. */
+    /** Teleports the butt to a landmark — used by keyboard focus, and by the
+     * confirm card's Cancel so the butt ends up where it was considering. A
+     * landmark across the street has the butt cross over to it. */
     function walkToLandmark(slug) {
         const landmark = findLandmark(slug);
         if (!landmark) return;
         targetX = null;
         crossTo(landmark.side);
-        setPeachX(landmark.x);
+        setButtX(landmark.x);
     }
 
     function openConfirm(slug) {
         const landmark = findLandmark(slug);
         if (!landmark) return;
         state.confirmSlug = slug;
-        peach.vx = 0; // the world freezes; don't leave a stale velocity behind
+        butt.vx = 0; // the world freezes; don't leave a stale velocity behind
         if (onArrive) onArrive(landmark);
     }
 
@@ -364,7 +364,7 @@ export function useGamesWorld(games, callbacks = {}) {
         bounds,
         landmarks,
         worldWidth,
-        peach,
+        butt,
         camera,
         state,
         nearestLandmark,
