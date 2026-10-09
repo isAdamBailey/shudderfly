@@ -748,6 +748,8 @@ return [
     'games.world.toys.nightlight' => 'Veilleuse',
     'games.world.toys.tv' => 'Télé',
     'games.world.toys.tv_line' => 'Kssshhh ! Rien que de la neige. Et un prout.',
+    'games.world.toys.radio' => 'Radio',
+    'games.world.toys.radio_line' => 'Kssshhh ! La radio est éteinte. Juste des grésillements... et un prout.',
 
     // Games - Cast
     'games.cast.butt' => 'Les Fesses',

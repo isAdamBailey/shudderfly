@@ -748,6 +748,8 @@ return [
     'games.world.toys.nightlight' => 'Nightlight',
     'games.world.toys.tv' => 'TV',
     'games.world.toys.tv_line' => 'Kssshhh! Nothing on but static. And a toot.',
+    'games.world.toys.radio' => 'Radio',
+    'games.world.toys.radio_line' => "Kssshhh! The radio's off. Just static... and a toot.",
 
     // Games - Cast
     'games.cast.butt' => 'The Butt',

@@ -83,11 +83,13 @@ export function useMusicPlayer() {
         });
     };
 
-    const playSong = (song) => {
+    // `openFlyout: false` plays it without opening the flyout over the page
+    // (the Games World radio): the player in it plays all the same.
+    const playSong = (song, { openFlyout = true } = {}) => {
         const isNewSong =
             !currentSong.value || currentSong.value.id !== song.id;
         currentSong.value = song;
-        if (!isFlyoutOpen.value) {
+        if (openFlyout && !isFlyoutOpen.value) {
             isFlyoutOpen.value = true;
         }
         if (isNewSong) {

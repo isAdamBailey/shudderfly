@@ -8,6 +8,8 @@ use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Book;
 use App\Models\Category;
 use App\Models\Page;
+use App\Models\SiteSetting;
+use App\Models\Song;
 use Illuminate\Support\Str;
 
 /**
@@ -43,6 +45,9 @@ final class GamesWorld
     /** How many of the family's videos a TV flicks between, picked afresh
      * on every visit. */
     public const TV_CHANNELS = 6;
+
+    /** How many songs a radio turns through, picked afresh on every visit. */
+    public const RADIO_STATIONS = 6;
 
     /** The walls of a room a door can sit on. `back` is the far wall, facing
      * the open front; `left` and `right` are the ends. */
@@ -168,6 +173,8 @@ final class GamesWorld
                 self::game('toot-foods', 360, 40, ['size' => 110, 'emoji' => '🍔']),
                 self::game('costco-pizza-poop', 600, 180, ['size' => 100, 'cast' => 'pizza']),
                 self::toy('sprout-pot', 200, 290, '🍲', 'sprout_pot', ['move' => 'wobble', 'toot' => 'sprout', 'line' => true]),
+                // On the shelf by the window, playing the family's music.
+                self::radio('radio', 820, 0, 150),
                 // The fruit bowl: each toots at its own pitch.
                 self::resident('grapes', 710, 320, ['size' => 60, 'move' => 'hop', 'toot' => 'grapes']),
                 self::resident('apple', 820, 300, ['size' => 60, 'move' => 'hop', 'toot' => 'apple']),
@@ -559,6 +566,24 @@ final class GamesWorld
         ];
     }
 
+    /** A radio, `y` up a room's wall (0 on the floor). scenes() tunes it to
+     * a few of the family's songs (`songs`); with none, or the music turned
+     * off, it says `toys.radio_line`. */
+    private static function radio(string $id, int $x, int $z, int $y = 0): array
+    {
+        return [
+            'id' => $id,
+            'type' => 'radio',
+            'x' => $x,
+            'z' => $z,
+            'y' => $y,
+            'size' => 60,
+            'emoji' => '📻',
+            'label' => 'messages.games.world.toys.radio',
+            'line' => 'messages.games.world.toys.radio_line',
+        ];
+    }
+
     /** A cast member living in a room, as a toy: its id is its cast id. */
     private static function resident(string $cast, int $x, int $z, array $does = []): array
     {
@@ -576,10 +601,11 @@ final class GamesWorld
     public static function scenes(): array
     {
         $games = GameController::games();
-        // Asked for once, and only if a scene has a TV.
-        $channels = null;
-        $tune = function () use (&$channels) {
-            return $channels ??= self::channels();
+        // A TV's channels and a radio's songs: each asked for once, and only
+        // if a scene has one.
+        $tuned = [];
+        $tune = function (string $what) use (&$tuned) {
+            return $tuned[$what] ??= self::$what();
         };
 
         return collect(self::definitions())
@@ -599,7 +625,11 @@ final class GamesWorld
     private static function resolve(array $item, array $games, callable $tune): array
     {
         if ($item['type'] === 'tv') {
-            return [...self::translate($item), 'channels' => $tune()];
+            return [...self::translate($item), 'channels' => $tune('channels')];
+        }
+
+        if ($item['type'] === 'radio') {
+            return [...self::translate($item), 'songs' => $tune('songs')];
         }
 
         if ($item['type'] === 'game') {
@@ -643,6 +673,23 @@ final class GamesWorld
                 'title' => $page->book?->title ?? '',
             ])
             ->all();
+    }
+
+    /** A few of the family's songs, at random, for a radio, with what the
+     * music player needs to play one. None while the music is turned off:
+     * the player lives in the music flyout, which is only there while it's
+     * on. */
+    private static function songs(): array
+    {
+        if (! (SiteSetting::where('key', 'music_enabled')->first()?->value ?? false)) {
+            return [];
+        }
+
+        return Song::query()
+            ->inRandomOrder()
+            ->limit(self::RADIO_STATIONS)
+            ->get(['id', 'title', 'description', 'youtube_video_id', 'thumbnail_default', 'thumbnail_high'])
+            ->toArray();
     }
 
     /** A scene's or interactable's TRANSLATED fields, each filled in from

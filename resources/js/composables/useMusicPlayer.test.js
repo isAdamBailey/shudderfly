@@ -29,4 +29,15 @@ describe("useMusicPlayer", () => {
             speech.speak.mock.invocationCallOrder[1]
         );
     });
+
+    it("can play a song without opening the flyout", () => {
+        const { playSong, closeFlyout, isFlyoutOpen } = useMusicPlayer();
+        closeFlyout();
+
+        playSong({ id: 3, title: "Quiet" }, { openFlyout: false });
+        expect(isFlyoutOpen.value).toBe(false);
+
+        playSong({ id: 4, title: "Loud" });
+        expect(isFlyoutOpen.value).toBe(true);
+    });
 });
