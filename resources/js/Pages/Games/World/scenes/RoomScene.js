@@ -9,6 +9,7 @@ import {
 import { applyCamera, disposeTree } from "../three/useWorldRenderer.js";
 import { clockFinish, clockTexture } from "../three/clockFaces.js";
 import { itemBox, itemPose, ROOM_SIZES, wallHeightOf } from "./roomLayout.js";
+import { floorGeometry, stairsFootprint, stairsGeometry } from "./staircase.js";
 
 // The `kind: "room"` scene graph (issue #130): a dollhouse room with its
 // front wall taken away. Walls and floor come from the room's `walls` looks
@@ -142,14 +143,47 @@ export function createRoomScene(THREE, kit, { room, butt: buttAt, theme }) {
         return mesh;
     }
 
-    const floor = plane(
-        lookMaterial(THREE, look.floor, width, depth),
-        width,
-        depth,
-        [width / 2, 0, depth / 2]
+    // Stairs are drawn as a flight, not a card; a flight down is a well
+    // cut out of the floor.
+    const stairs = room.interactables.filter((item) => item.stairs);
+    const wells = stairs
+        .filter((item) => item.stairs === "down")
+        .map(stairsFootprint);
+    const floor = new THREE.Mesh(
+        floorGeometry(THREE, width, depth, wells),
+        lookMaterial(THREE, look.floor, width, depth)
     );
-    floor.rotation.x = -Math.PI / 2;
+    floor.receiveShadow = true;
     made.add(floor);
+
+    // A well goes below the floor, which the camera could otherwise see
+    // past the floor's front edge: a skirt there in the background colour.
+    if (wells.length > 0) {
+        made.add(
+            plane(
+                new THREE.MeshBasicMaterial({ color: BACKGROUND }),
+                width,
+                depth,
+                [width / 2, -depth / 2, depth]
+            )
+        );
+    }
+
+    if (stairs.length > 0) {
+        const wood = new THREE.MeshStandardMaterial({
+            vertexColors: true,
+            roughness: 0.8,
+        });
+        for (const item of stairs) {
+            const flight = new THREE.Mesh(
+                stairsGeometry(THREE, item, height),
+                wood
+            );
+            flight.castShadow = true;
+            flight.receiveShadow = true;
+            made.add(flight);
+        }
+    }
 
     const sides = lookMaterial(THREE, look.sides, depth, height);
     made.add(
@@ -191,6 +225,7 @@ export function createRoomScene(THREE, kit, { room, butt: buttAt, theme }) {
 
     const things = new Map();
     for (const item of room.interactables) {
+        if (item.stairs) continue;
         const size = itemBox(item).height;
         // On a wall rather than the floor: no shadow under it.
         const shadows = !((item.y ?? 0) > 0);
