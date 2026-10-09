@@ -3,6 +3,7 @@ import Button from "@/Components/Button.vue";
 import CastMember from "@/Components/Games/Cast/CastMember.vue";
 import { createCastKit } from "@/Components/Games/Cast/three/castMesh.js";
 import TootPuff from "@/Components/Games/Cast/TootPuff.vue";
+import ShareToChatButton from "@/Components/ShareToChatButton.vue";
 import {
     speakGameIntro,
     stopGameIntroSpeech,
@@ -18,7 +19,8 @@ import { playSound } from "../sounds.js";
 
 // A minigame's host: a modal over the stage that says what the game is
 // (read aloud), plays it in its own box on Play, then gives the score with
-// another go or a way back to the room. The minigame gets the world only
+// another go, a way to share it to the chat (its link leads back here), or
+// a way back to the room. The minigame gets the world only
 // through `kit` (see minigames/index.js).
 const props = defineProps({
     // The `minigame` interactable: its `minigame` name, `label`, `line`
@@ -170,6 +172,11 @@ const puffAt = (puff) => ({ left: `${puff.x * 100}%`, top: `${puff.y * 100}%` })
                                 : t("games.world.play")
                         }}
                     </Button>
+                    <ShareToChatButton
+                        v-if="phase === 'done'"
+                        :game-slug="item.minigame"
+                        :score="score"
+                    />
                     <button
                         type="button"
                         class="minigame-cancel rounded-md px-3 py-1 text-sm font-bold text-theme-book-title underline-offset-2 transition-opacity hover:underline hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-primary"

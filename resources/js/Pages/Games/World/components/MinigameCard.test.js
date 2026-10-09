@@ -8,6 +8,14 @@ import {
 import MinigameCard from "./MinigameCard.vue";
 import TootCatch from "../minigames/TootCatch/TootCatch.vue";
 
+vi.mock("@/Components/ShareToChatButton.vue", () => ({
+    default: {
+        name: "ShareToChatButton",
+        template: '<div class="share-stub" />',
+        props: ["gameSlug", "score"],
+    },
+}));
+
 vi.mock("@/composables/useGameIntroSpeech", () => ({
     speakGameIntro: vi.fn(),
     stopGameIntroSpeech: vi.fn(),
@@ -131,6 +139,20 @@ describe("MinigameCard", () => {
 
         await play();
         expect(wrapper.getComponent(TootCatch).vm === first).toBe(false);
+    });
+
+    it("offers to share the score to the chat once it's over", async () => {
+        await mountCard();
+        expect(wrapper.findComponent({ name: "ShareToChatButton" }).exists()).toBe(
+            false
+        );
+
+        const kit = await play();
+        kit.finish({ score: 7 });
+        await nextTick();
+
+        const share = wrapper.getComponent({ name: "ShareToChatButton" });
+        expect(share.props()).toEqual({ gameSlug: "toot-catch", score: 7 });
     });
 
     it("closes on Escape and on its close button, even mid-game", async () => {

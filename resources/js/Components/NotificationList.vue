@@ -306,7 +306,7 @@ import { router, usePage } from "@inertiajs/vue3";
 import axios from "axios";
 import { onMounted, onUnmounted, ref, watch } from "vue";
 
-const GAME_SHARE_SLUG_MARKER = /\uE000g:[a-z0-9-]+\uE000/g;
+const GAME_SHARE_SLUG_MARKER = /\uE000[gm]:[a-z0-9-]+\uE000/g;
 
 const stripGameShareSlugMarker = (text) => {
     if (text == null || text === "") {

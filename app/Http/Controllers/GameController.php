@@ -8,6 +8,7 @@ use App\Models\SiteSetting;
 use App\Models\User;
 use App\Services\UserTaggingService;
 use App\Support\GamesWorld;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -69,20 +70,31 @@ class GameController extends Controller
     public function index(Request $request): Response
     {
         // A shared link can open the world in a given place
-        // (/games?scene=house.hall); anything that isn't a scene is ignored.
+        // (/games?scene=house.hall), or in front of a game's or a
+        // minigame's launcher wherever it stands (/games?game=boom,
+        // /games?minigame=toot-catch: a shared score's link back);
+        // anything that isn't one of those is ignored.
         // `visit` is new on every request but kept when the browser comes
         // back to this page from history, so the world can tell a fresh click
         // on the link (open there) from coming back from a game (stay put).
         $scene = $request->query('scene');
+        $game = $request->query('game');
+        $minigame = $request->query('minigame');
         $scenes = GamesWorld::scenes();
-        $link = is_string($scene) && array_key_exists($scene, $scenes)
-            ? ['scene' => $scene, 'visit' => Str::random(12)]
-            : null;
+        $place = match (true) {
+            is_string($scene) && array_key_exists($scene, $scenes) => ['scene' => $scene],
+            is_string($game) && array_key_exists($game, self::games()) => GamesWorld::whereIs('game', $game),
+            is_string($minigame) && in_array($minigame, GamesWorld::MINIGAMES, true) => GamesWorld::whereIs('minigame', $minigame),
+            default => null,
+        };
+        $link = $place ? [...$place, 'visit' => Str::random(12)] : null;
 
         return Inertia::render('Games/Index', [
             'scenes' => $scenes,
             'link' => $link,
             'fartSoundUrl' => asset('fart.m4a'),
+            // Who a minigame's score can be shared with (ShareToChatButton).
+            'users' => self::users(),
         ]);
     }
 
@@ -91,21 +103,30 @@ class GameController extends Controller
         $games = self::games();
         abort_if(! array_key_exists($game, $games), 404);
 
-        $users = User::select('id', 'name')
-            ->orderBy('name')
-            ->get()
-            ->makeVisible(['id']);
-
         return Inertia::render('Games/'.$games[$game]['component'], [
-            'users' => $users,
+            'users' => self::users(),
             'fartSoundUrl' => asset('fart.m4a'),
         ]);
     }
 
+    /** Everyone a score can be shared with and tagged. */
+    private static function users(): Collection
+    {
+        return User::select('id', 'name')
+            ->orderBy('name')
+            ->get()
+            ->makeVisible(['id']);
+    }
+
+    /** Shares a score to the chat: for a game (`games()`) or a world
+     * minigame (GamesWorld::MINIGAMES). The message carries a marker the
+     * chat turns into a link back into the world, in front of where the
+     * game or minigame is launched from (index()). */
     public function shareScore(string $game, Request $request): RedirectResponse
     {
         $games = self::games();
-        abort_if(! array_key_exists($game, $games), 404);
+        $minigame = in_array($game, GamesWorld::MINIGAMES, true);
+        abort_if(! $minigame && ! array_key_exists($game, $games), 404);
 
         $setting = SiteSetting::where('key', 'messaging_enabled')->first();
         $messagingEnabled = $setting && ($setting->getAttributes()['value'] ?? $setting->value) === '1';
@@ -120,7 +141,7 @@ class GameController extends Controller
             'tagged_user_ids.*' => ['integer', 'exists:users,id'],
         ]);
 
-        $gameName = $games[$game]['name'];
+        $gameName = $minigame ? GamesWorld::minigameName($game) : $games[$game]['name'];
 
         $taggedUserIds = $validated['tagged_user_ids'] ?? [];
         if (! is_array($taggedUserIds)) {
@@ -136,7 +157,7 @@ class GameController extends Controller
             'game' => $gameName,
             'score' => $validated['score'],
         ]);
-        $shareMessage .= "\u{E000}g:{$game}\u{E000}";
+        $shareMessage .= $minigame ? "\u{E000}m:{$game}\u{E000}" : "\u{E000}g:{$game}\u{E000}";
         if ($taggedUser) {
             $shareMessage = $shareMessage.' @'.$taggedUser->name;
         }
