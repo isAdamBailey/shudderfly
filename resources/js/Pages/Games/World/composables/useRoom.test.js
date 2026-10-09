@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { STAIRS_CLEARANCE } from "../scenes/roomLayout.js";
 import { DRAG_SPEED, WALK_SPEED } from "./useGamesWorld.js";
 import { arrivalSpot, REACH, STAND, useRoom } from "./useRoom.js";
 
@@ -270,6 +271,38 @@ describe("arrivalSpot", () => {
         expect(arrivalSpot(hall, { spot: "trapdoor" })).toEqual({
             x: 450,
             z: 330,
+        });
+    });
+
+    it("keeps clear of a wall with stairs, and stands clear to use them", () => {
+        const down = {
+            id: "downstairs",
+            type: "door",
+            wall: "left",
+            x: 0,
+            z: 220,
+            stairs: "down",
+        };
+        const up = {
+            ...down,
+            id: "upstairs",
+            wall: "right",
+            x: 900,
+            stairs: "up",
+        };
+        const landing = { size: { w: 900, d: 450 }, interactables: [down, up] };
+        const r = useRoom(landing, { start: { x: 450, z: 300 } });
+
+        r.walkTo(0, 300);
+        run(r, 5);
+        expect(r.butt.x).toBe(STAIRS_CLEARANCE);
+        r.walkTo(900, 300);
+        run(r, 5);
+        expect(r.butt.x).toBe(900 - STAIRS_CLEARANCE);
+
+        expect(arrivalSpot(landing, { spot: "downstairs" })).toEqual({
+            x: STAIRS_CLEARANCE,
+            z: 220,
         });
     });
 });

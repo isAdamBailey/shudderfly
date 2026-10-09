@@ -52,8 +52,21 @@ const FIT = { floorRow: 0.95, top: 0.06 };
 export const ROOM_SIZES = {
     butt: 90,
     door: { width: 120, height: 210 },
+    // A flight of stairs on a side wall (staircase.js): its button covers
+    // the steps, seen end-on: up, the flight; down, the rail round the well.
+    stairs: {
+        up: { width: 160, height: 300 },
+        down: { width: 160, height: 110 },
+    },
     toy: 80,
 };
+
+// A flight of stairs (staircase.js), in world units: how far it runs along
+// its wall, how far it reaches into the room, and its steps.
+export const STAIRS = { run: 300, width: 90, steps: 9 };
+
+/** How far from a wall with stairs the Butt keeps: clear of the flight. */
+export const STAIRS_CLEARANCE = STAIRS.width + ROOM_SIZES.butt / 2;
 
 /** How tall a room's walls are, in world units: set by the width the camera
  * frames, so a long hall is no taller than the part of it on screen. */
@@ -119,14 +132,21 @@ export function roomLook(pan, lookX, buttX) {
     return Math.min(pan.max, Math.max(pan.min, next));
 }
 
+/** Whether door `item` is plainly how you'd leave: a room's way out, or
+ * stairs. It needs no title over it (its button is still named). */
+const wayBack = (item) => Boolean(item.exit || item.stairs);
+
 /** How an interactable is drawn and covered, in world units: { width,
  * height } (its glyph is `height` tall) and whether its button carries an
- * arched gold title, as the road's landmarks do. A door is a doorway, with
- * its name over it; anything else is a `size` square (ROOM_SIZES.toy if it
+ * arched gold title, as the road's landmarks do. A door is a doorway (or
+ * a flight of stairs), with its name over it unless it's plainly the way
+ * back (see wayBack()); anything else is a `size` square (ROOM_SIZES.toy if it
  * says nothing), titled if it leads somewhere (a game) or says `titled`. */
 export function itemBox(item) {
     const titled =
-        item.titled ?? (item.type === "door" || item.type === "game");
+        item.titled ??
+        (item.type === "game" || (item.type === "door" && !wayBack(item)));
+    if (item.stairs) return { ...ROOM_SIZES.stairs[item.stairs], titled };
     if (item.type === "door") return { ...ROOM_SIZES.door, titled };
     const size = item.size ?? ROOM_SIZES.toy;
     return { width: size, height: size, titled };

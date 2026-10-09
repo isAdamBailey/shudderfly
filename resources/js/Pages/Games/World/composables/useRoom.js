@@ -1,5 +1,5 @@
 import { computed, reactive } from "vue";
-import { wallFacing } from "../scenes/roomLayout.js";
+import { STAIRS_CLEARANCE, wallFacing } from "../scenes/roomLayout.js";
 import { clamp, DRAG_SPEED, WALK_SPEED } from "./useGamesWorld.js";
 
 // Close enough to an interactable to use it, in world units.
@@ -14,12 +14,13 @@ export const TRIGGER_REACH = 60;
 const MARGIN = 50;
 
 /** The spot in front of `item`, where the Butt stands to use it: a step
- * into the room off whichever wall it's on. */
+ * into the room off whichever wall it's on, or clear of a flight of stairs. */
 function frontOf(item) {
     const face = wallFacing(item.wall);
+    const stand = item.stairs ? STAIRS_CLEARANCE : STAND;
     return {
-        x: item.x + face.x * STAND,
-        z: (item.z ?? 0) + face.z * STAND,
+        x: item.x + face.x * stand,
+        z: (item.z ?? 0) + face.z * stand,
     };
 }
 
@@ -38,7 +39,9 @@ export function arrivalSpot(room, { spot, position } = {}) {
  * the Butt is on the floor ({ x, z }, z from the back wall toward the
  * open front), where it's walking to, which interactable it's near, and
  * using one when it gets there. Rooms are rectangles and furniture never
- * blocks, so walking is a straight line. Driven by `step(dt)`.
+ * blocks, so walking is a straight line; only stairs, which take up the
+ * floor along their wall, keep the Butt further from it. Driven by
+ * `step(dt)`.
  *
  * `room` is the scene ({ size: { w, d }, interactables }). Options:
  * - start: { x, z } where the Butt starts.
@@ -53,6 +56,12 @@ export function useRoom(
     { start, onArrive, autoTriggers = () => false, isReducedMotion } = {}
 ) {
     const { w, d } = room.size;
+    const sideMargin = (wall) =>
+        room.interactables.some((i) => i.stairs && i.wall === wall)
+            ? STAIRS_CLEARANCE
+            : MARGIN;
+    const left = sideMargin("left");
+    const right = sideMargin("right");
 
     const butt = reactive({
         x: clampX(start?.x ?? w / 2),
@@ -78,7 +87,7 @@ export function useRoom(
     let walkFrom = null;
 
     function clampX(x) {
-        return clamp(x, MARGIN, w - MARGIN);
+        return clamp(x, left, w - right);
     }
 
     function clampZ(z) {

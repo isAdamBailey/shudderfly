@@ -151,6 +151,18 @@ describe("itemBox", () => {
         });
     });
 
+    it("leaves the way back untitled: a room's way out, and stairs", () => {
+        expect(itemBox({ type: "door", exit: true }).titled).toBe(false);
+        expect(itemBox({ type: "door", stairs: "up" })).toEqual({
+            ...ROOM_SIZES.stairs.up,
+            titled: false,
+        });
+        // Down is a well in the floor: its button is only the rail's height.
+        expect(itemBox({ type: "door", stairs: "down" }).height).toBeLessThan(
+            ROOM_SIZES.stairs.up.height
+        );
+    });
+
     it("draws anything else as a square, its size or the default", () => {
         expect(itemBox({ type: "toy", size: 50 })).toEqual({
             width: 50,

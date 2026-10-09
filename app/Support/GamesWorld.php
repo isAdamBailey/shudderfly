@@ -3,6 +3,8 @@
 namespace App\Support;
 
 use App\Http\Controllers\GameController;
+use App\Models\Category;
+use Illuminate\Support\Str;
 
 /**
  * The Games World scene registry: every place in the world (the road, and
@@ -17,6 +19,17 @@ final class GamesWorld
 {
     /** The two sides of the road a road interactable can stand on. */
     public const ROAD_SIDES = ['far', 'near'];
+
+    /** Library category rooms per landing. */
+    public const LIBRARY_ROOMS_PER_FLOOR = 4;
+
+    /** A category room's shelves: rows of books, how far apart along the
+     * back wall (world units), and where they start (past the door). */
+    public const LIBRARY_SHELF_ROWS = 3;
+
+    public const LIBRARY_BOOK_SPAN = 110;
+
+    public const LIBRARY_SHELVES_FROM = 240;
 
     /** The walls of a room a door can sit on. `back` is the far wall, facing
      * the open front; `left` and `right` are the ends. */
@@ -45,7 +58,8 @@ final class GamesWorld
     ];
 
     /** An interactable's fields that are lang keys in definitions() and
-     * visible text in scenes() (games are named by GameController::games()). */
+     * visible text in scenes() (games are named by GameController::games()),
+     * as is a scene's `label`. A field may take `<field>Args` to fill it in. */
     public const TRANSLATED = ['label', 'line'];
 
     /** Ids of the cast registry, CAST in resources/js/constants/characters.js
@@ -175,15 +189,8 @@ final class GamesWorld
                 self::toy('nightlight', 820, 0, '🌙', 'nightlight', ['y' => 60, 'size' => 50, 'move' => 'wiggle', 'light' => 'nightlight']),
             ]),
 
-            // --- The Library: empty for now --------------------------------------
-            'library.hall' => self::room('library_hall', [
-                'size' => ['w' => 800, 'd' => 450],
-                'spawn' => ['x' => 400, 'z' => 300],
-                'walls' => ['back' => 'brick', 'sides' => 'plaster', 'floor' => 'wood'],
-                'ambient' => 0.55,
-            ], [
-                self::roomDoor('front-door', 400, 'road', 'library', exit: true),
-            ]),
+            // --- The Library: a floor of rooms per few book categories ------------
+            ...self::library(),
 
             // --- The Poop's House --------------------------------------------------
             'poop-house.hall' => self::room('poop_house_hall', [
@@ -196,6 +203,134 @@ final class GamesWorld
                 self::resident('poop', 620, 220, ['move' => 'bounce', 'toot' => 'poop']),
             ]),
         ];
+    }
+
+    /**
+     * The Library, built from the book categories so a new one gets a room
+     * with no code change. The ground floor (`library.hall`) is off the
+     * street; stairs climb to landings (`library.floor-2`, …) with a door
+     * each to a few category rooms (`library.category-<id>`, by id so a
+     * rename keeps saved places and links). A category room is as long as
+     * its shelves: LIBRARY_SHELF_ROWS rows of books, LIBRARY_BOOK_SPAN apart,
+     * from LIBRARY_SHELVES_FROM along the back wall.
+     */
+    private static function library(): array
+    {
+        $floors = Category::query()
+            ->select(['id', 'name'])
+            ->withCount('books')
+            ->orderBy('name')
+            ->get()
+            ->chunk(self::LIBRARY_ROOMS_PER_FLOOR)
+            ->values();
+        // The ground floor is the first; landing $i is floor $i + 2.
+        $floorId = fn (int $i) => $i < 0 ? 'library.hall' : 'library.floor-'.($i + 2);
+
+        $hallW = 800;
+        // A landing: a stairwell's width at each end, and a door's width
+        // apart for each category door between them.
+        $stairsEnd = 150;
+        $doorGap = 200;
+        $landingW = 2 * $stairsEnd + self::LIBRARY_ROOMS_PER_FLOOR * $doorGap;
+        $roomW = 900;
+
+        $scenes = [
+            'library.hall' => self::room('library_hall', [
+                'size' => ['w' => $hallW, 'd' => 450],
+                'spawn' => ['x' => $hallW / 2, 'z' => 300],
+                'walls' => ['back' => 'brick', 'sides' => 'plaster', 'floor' => 'wood'],
+                'ambient' => 0.55,
+            ], [
+                self::roomDoor('front-door', $hallW / 2, 'road', 'library', exit: true),
+                ...($floors->isEmpty() ? [] : [self::stairs(true, $floorId(0), $hallW)]),
+            ]),
+        ];
+
+        foreach ($floors as $i => $categories) {
+            $landing = $floorId($i);
+            $floor = ['number' => $i + 2];
+            $scenes[$landing] = [
+                ...self::room('library_floor', [
+                    'size' => ['w' => $landingW, 'd' => 450],
+                    // Shown at a room's usual scale, so the door titles
+                    // have room: the ends scroll into view.
+                    'frame' => $roomW,
+                    'spawn' => ['x' => $landingW / 2, 'z' => 300],
+                    'walls' => ['back' => 'wallpaper-stripes', 'sides' => 'plaster', 'floor' => 'carpet'],
+                    'ambient' => 0.55,
+                ], [
+                    // Down the way you came on the left, up on the right.
+                    self::stairs(false, $floorId($i - 1)),
+                    ...$categories->values()->map(fn ($category, $n) => [
+                        ...self::roomDoor(
+                            "category-{$category->id}",
+                            $stairsEnd + intdiv($doorGap, 2) + $n * $doorGap,
+                            "library.category-{$category->id}",
+                            'landing-door',
+                            key: 'messages.games.world.doors.library_category',
+                        ),
+                        'labelArgs' => self::categoryName($category),
+                    ])->all(),
+                    ...($i < $floors->count() - 1 ? [self::stairs(true, $floorId($i + 1), $landingW)] : []),
+                ]),
+                'labelArgs' => $floor,
+            ];
+
+            foreach ($categories as $category) {
+                $columns = (int) ceil($category->books_count / self::LIBRARY_SHELF_ROWS);
+                $width = max($roomW, self::LIBRARY_SHELVES_FROM + $columns * self::LIBRARY_BOOK_SPAN + 120);
+                $scenes["library.category-{$category->id}"] = [
+                    ...self::room('library_category', [
+                        'size' => ['w' => $width, 'd' => 450],
+                        ...($width > $roomW ? ['frame' => $roomW] : []),
+                        'spawn' => ['x' => 300, 'z' => 300],
+                        'walls' => ['back' => 'wallpaper-dots', 'sides' => 'plaster', 'floor' => 'wood'],
+                        'ambient' => 0.6,
+                        // Which books its shelves hold: the Books pages'
+                        // own category (books.category), and how many.
+                        'books' => ['category' => $category->name, 'count' => $category->books_count],
+                    ], [
+                        [
+                            ...self::roomDoor('landing-door', 110, $landing, "category-{$category->id}", 'library_floor', exit: true),
+                            'labelArgs' => $floor,
+                        ],
+                    ]),
+                    'labelArgs' => self::categoryName($category),
+                ];
+            }
+        }
+
+        return $scenes;
+    }
+
+    /** Stairs up (`$up`) or down to `$to`, arriving at the stairs going
+     * back. Up is on the right wall (a room `span` wide), down on the left;
+     * down is the way out. A door with `stairs` is drawn as a flight of
+     * steps (staircase.js), not as its emoji. */
+    private static function stairs(bool $up, string $to, int $span = 0): array
+    {
+        $id = $up ? 'upstairs' : 'downstairs';
+
+        return [
+            ...self::roomDoor(
+                $id,
+                220,
+                $to,
+                $up ? 'downstairs' : 'upstairs',
+                exit: ! $up,
+                wall: $up ? 'right' : 'left',
+                span: $span,
+                key: "messages.games.world.doors.{$id}",
+            ),
+            'stairs' => $up ? 'up' : 'down',
+        ];
+    }
+
+    /** A category's name as the Books pages show it, for a label's
+     * `:name`. */
+    private static function categoryName(Category $category): array
+    {
+        return ['name' => Str::ucfirst($category->name)];
     }
 
     /** Game `slug`'s building on the road, on the far side, `landmark` its
@@ -233,10 +368,11 @@ final class GamesWorld
     }
 
     /** A door on `wall` of a room (`back`, `left` or `right`), named
-     * `doors.outside` if it leads out to the road, or `places.<label>`
-     * after the room it leads to. `at` is x along the back wall, or z
+     * `doors.outside` if it leads out to the road, `places.<label>` after
+     * the room it leads to, or by the lang `key` it's given. `at` is x
+     * along the back wall, or z
      * along a side wall; a right-hand door needs the room's `span`. */
-    private static function roomDoor(string $id, int $at, string $to, string $toSpot, ?string $label = null, bool $exit = false, string $wall = 'back', int $span = 0): array
+    private static function roomDoor(string $id, int $at, string $to, string $toSpot, ?string $label = null, bool $exit = false, string $wall = 'back', int $span = 0, ?string $key = null): array
     {
         [$x, $z] = match ($wall) {
             'left' => [0, $at],
@@ -251,9 +387,9 @@ final class GamesWorld
             'x' => $x,
             'z' => $z,
             'emoji' => '🚪',
-            'label' => $to === 'road'
+            'label' => $key ?? ($to === 'road'
                 ? 'messages.games.world.doors.outside'
-                : "messages.games.world.places.{$label}",
+                : "messages.games.world.places.{$label}"),
             'to' => $to,
             'toSpot' => $toSpot,
             ...($exit ? ['exit' => true] : []),
@@ -322,8 +458,7 @@ final class GamesWorld
 
         return collect(self::definitions())
             ->map(fn ($scene) => [
-                ...$scene,
-                'label' => __($scene['label']),
+                ...self::translate($scene),
                 'interactables' => array_map(
                     fn ($item) => self::resolve($item, $games),
                     $scene['interactables'],
@@ -351,12 +486,22 @@ final class GamesWorld
             return $item;
         }
 
+        return self::translate($item);
+    }
+
+    /** A scene's or interactable's TRANSLATED fields, each filled in from
+     * its `<field>Args` if it has them (a Library room's category name, a
+     * floor's number). */
+    private static function translate(array $thing): array
+    {
         foreach (self::TRANSLATED as $field) {
-            if (isset($item[$field])) {
-                $item[$field] = __($item[$field]);
+            $args = $thing["{$field}Args"] ?? [];
+            unset($thing["{$field}Args"]);
+            if (isset($thing[$field])) {
+                $thing[$field] = __($thing[$field], $args);
             }
         }
 
-        return $item;
+        return $thing;
     }
 }
