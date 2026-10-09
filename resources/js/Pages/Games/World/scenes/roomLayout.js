@@ -50,7 +50,7 @@ const FIT = { floorRow: 0.95, top: 0.06 };
 
 // Things in a room, in world units.
 export const ROOM_SIZES = {
-    butt: 90,
+    butt: 135,
     door: { width: 120, height: 210 },
     // An open doorway (doorway.js): wider than a door, and framed.
     doorway: { width: 180, height: 230 },
