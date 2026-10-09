@@ -25,12 +25,14 @@ function playAgain() {
         <div
             class="game-modal-panel max-w-[min(90vw,28rem)] rounded-2xl border-2 border-theme-primary bg-game-modal px-[clamp(1.125rem,4vmin,2.75rem)] py-[clamp(1.25rem,4vmin,2.5rem)] text-center"
         >
-            <div
-                v-if="emoji"
-                class="game-end-emoji mb-2 text-[clamp(3rem,10vmin,5rem)] leading-none"
-            >
-                {{ emoji }}
-            </div>
+            <slot name="mark">
+                <div
+                    v-if="emoji"
+                    class="game-end-emoji mb-2 text-[clamp(3rem,10vmin,5rem)] leading-none"
+                >
+                    {{ emoji }}
+                </div>
+            </slot>
             <h1
                 class="font-heading text-game-modal-title mb-2 text-[clamp(1.6rem,6vmin,2.4rem)] font-black leading-tight"
             >
@@ -84,7 +86,8 @@ function playAgain() {
     animation: gameModalPanelIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.game-end-emoji {
+.game-end-emoji,
+:slotted(.game-end-emoji) {
     animation: gameModalEmojiIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
 }
 
@@ -122,7 +125,8 @@ function playAgain() {
 @media (prefers-reduced-motion: reduce) {
     .game-end-screen,
     .game-modal-panel,
-    .game-end-emoji {
+    .game-end-emoji,
+    :slotted(.game-end-emoji) {
         animation: gameModalBackdropIn 0.2s ease-out both;
     }
 }

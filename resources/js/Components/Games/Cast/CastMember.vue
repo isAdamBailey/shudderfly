@@ -3,7 +3,16 @@ import PersonFace from "@/Components/Games/PersonFace.vue";
 import { CAST } from "@/constants/characters.js";
 import { useTranslations } from "@/composables/useTranslations";
 import { computed, ref, watch } from "vue";
+import { BUTT_FRAME, buttShapes } from "./buttDraw.js";
 import { installCastMoves, LANDING_HEIGHT } from "./castMoveData.js";
+
+// Standing pose for every move. The move still poses this whole figure;
+// the legs cycle in a later phase.
+let buttFigures = 0;
+const standingButt = buttShapes();
+const buttViewBox = `${BUTT_FRAME.minX} ${BUTT_FRAME.minY} ${BUTT_FRAME.width} ${BUTT_FRAME.height}`;
+const buttFlip = `translate(0 ${BUTT_FRAME.minY + BUTT_FRAME.maxY}) scale(1 -1)`;
+const buttWidth = `${BUTT_FRAME.width / BUTT_FRAME.height}em`;
 
 // The one way to draw a cast member (issue #130): the same glyph, depth,
 // ground shadow and moves for a character wherever it appears. Callers place
@@ -35,6 +44,7 @@ const props = defineProps({
 });
 
 const { t } = useTranslations();
+const buttFigId = `butt-fig-${++buttFigures}`;
 
 // The moves are generated from the data castMesh (WebGL) also plays.
 installCastMoves();
@@ -139,6 +149,80 @@ watch(
                     <span v-if="id === 'face'" class="cast-face">
                         <PersonFace :gulping="activeMove === 'chomp'" />
                     </span>
+                    <svg
+                        v-else-if="id === 'butt'"
+                        class="butt-figure"
+                        :viewBox="buttViewBox"
+                        :style="{ width: buttWidth }"
+                    >
+                        <defs>
+                            <template
+                                v-for="(shape, index) in standingButt"
+                                :key="`${buttFigId}-${index}`"
+                            >
+                                <radialGradient
+                                    v-if="shape.r || shape.rx"
+                                    :id="`${buttFigId}-${index}`"
+                                    gradientUnits="userSpaceOnUse"
+                                    :cx="shape.lightX"
+                                    :cy="shape.lightY"
+                                    :r="shape.r || shape.rx"
+                                >
+                                    <stop
+                                        offset="0%"
+                                        :stop-color="shape.highlight"
+                                    />
+                                    <stop
+                                        offset="42%"
+                                        :stop-color="shape.color"
+                                    />
+                                    <stop
+                                        offset="100%"
+                                        :stop-color="shape.shade"
+                                    />
+                                </radialGradient>
+                            </template>
+                        </defs>
+                        <g :transform="buttFlip">
+                            <template
+                                v-for="(shape, index) in standingButt"
+                                :key="index"
+                            >
+                                <ellipse
+                                    v-if="shape.type === 'foot'"
+                                    class="butt-foot"
+                                    :cx="shape.x"
+                                    :cy="shape.y"
+                                    :rx="shape.rx"
+                                    :ry="shape.ry"
+                                    :fill="`url(#${buttFigId}-${index})`"
+                                />
+                                <circle
+                                    v-else-if="shape.type === 'cheek'"
+                                    class="butt-cheek"
+                                    :cx="shape.x"
+                                    :cy="shape.y"
+                                    :r="shape.r"
+                                    :fill="`url(#${buttFigId}-${index})`"
+                                />
+                                <line
+                                    v-else
+                                    :class="
+                                        shape.type === 'leg'
+                                            ? 'butt-leg'
+                                            : 'butt-cleft'
+                                    "
+                                    :x1="shape.x1"
+                                    :y1="shape.y1"
+                                    :x2="shape.x2"
+                                    :y2="shape.y2"
+                                    :stroke="shape.color"
+                                    :stroke-width="shape.width"
+                                    stroke-linecap="round"
+                                />
+                            </template>
+                        </g>
+                    </svg>
                     <span v-else class="cast-glyph">{{ member.emoji }}</span>
                 </span>
             </span>
@@ -168,8 +252,16 @@ watch(
 }
 
 .cast-facing-left .cast-glyph,
-.cast-facing-left .cast-face {
+.cast-facing-left .cast-face,
+.cast-facing-left .butt-figure {
     transform: scaleX(-1);
+}
+
+.butt-figure {
+    display: block;
+    height: 1em;
+    overflow: visible;
+    filter: drop-shadow(0.03em 0.04em 0 rgb(0 0 0 / 0.15));
 }
 
 /* PersonFace sizes itself from its container's height. */

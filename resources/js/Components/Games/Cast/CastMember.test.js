@@ -2,6 +2,7 @@ import { mount } from "@vue/test-utils";
 import { describe, expect, it } from "vitest";
 import { nextTick } from "vue";
 import { CAST } from "@/constants/characters.js";
+import { buttShapes } from "./buttDraw.js";
 import CastMember from "./CastMember.vue";
 
 describe("CastMember", () => {
@@ -12,7 +13,45 @@ describe("CastMember", () => {
 
             expect(root.attributes("aria-hidden")).toBe("true");
             expect(root.classes()).toContain(`cast-${id}`);
-            if (member.emoji) {
+            if (id === "butt") {
+                const cheeks = buttShapes().filter(
+                    (shape) => shape.type === "cheek"
+                );
+                const legs = buttShapes().filter(
+                    (shape) => shape.type === "leg"
+                );
+                expect(wrapper.find(".cast-glyph").exists()).toBe(false);
+                const feet = buttShapes().filter(
+                    (shape) => shape.type === "foot"
+                );
+                const drawnCheeks = wrapper.findAll(".butt-cheek");
+                const drawnLegs = wrapper.findAll(".butt-leg");
+                const drawnFeet = wrapper.findAll(".butt-foot");
+                expect(drawnCheeks).toHaveLength(cheeks.length);
+                expect(drawnLegs).toHaveLength(legs.length);
+                expect(drawnFeet).toHaveLength(feet.length);
+                drawnFeet.forEach((foot, index) => {
+                    expect(Number(foot.attributes("rx"))).toBeGreaterThan(
+                        Number(foot.attributes("ry"))
+                    );
+                    expect(Number(foot.attributes("cx"))).toBeCloseTo(
+                        feet[index].x
+                    );
+                });
+                drawnCheeks.forEach((cheek, index) => {
+                    expect(Number(cheek.attributes("cx"))).toBeCloseTo(
+                        cheeks[index].x
+                    );
+                    expect(Number(cheek.attributes("r"))).toBeCloseTo(
+                        cheeks[index].r
+                    );
+                });
+                drawnLegs.forEach((leg, index) => {
+                    expect(Number(leg.attributes("y2"))).toBeCloseTo(
+                        legs[index].y2
+                    );
+                });
+            } else if (member.emoji) {
                 expect(wrapper.get(".cast-glyph").text()).toBe(member.emoji);
             } else {
                 expect(wrapper.find(".person").exists()).toBe(true);
