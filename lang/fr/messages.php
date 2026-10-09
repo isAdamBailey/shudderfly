@@ -750,6 +750,12 @@ return [
     'games.world.toys.tv_line' => 'Kssshhh ! Rien que de la neige. Et un prout.',
     'games.world.toys.radio' => 'Radio',
     'games.world.toys.radio_line' => 'Kssshhh ! La radio est éteinte. Juste des grésillements... et un prout.',
+    'games.world.minigames.toot_catch' => 'Attrape-Prouts',
+    'games.world.minigames.toot_catch_line' => 'Attrape les Aliments à Prouts qui tombent avec les Fesses ! Chaque aliment attrapé les fait prouter.',
+    'games.world.minigames.toot_catch_aria' => 'Attrape-Prouts : fais glisser la pêche, ou utilise les flèches gauche et droite, pour attraper la nourriture qui tombe',
+    'games.world.minigames.score' => 'Tu en as attrapé :score !',
+    'games.world.minigames.play_again' => '🔄 Rejouer',
+    'games.world.minigames.done' => 'Terminé',
 
     // Games - Cast
     'games.cast.butt' => 'Les Fesses',

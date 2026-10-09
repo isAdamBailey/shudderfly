@@ -64,6 +64,10 @@ final class GamesWorld
      * them in step). */
     public const SOUNDS = ['hiss', 'tick', 'bell'];
 
+    /** The minigames a `minigame` interactable may start:
+     * World/minigames/index.js (a Vitest test keeps them in step). */
+    public const MINIGAMES = ['toot-catch'];
+
     /** Clock faces a hall clock may wear: three/clockFaces.js (a Vitest test
      * keeps them in step). */
     public const CLOCKS = ['round', 'school', 'octagon', 'cuckoo', 'sunburst', 'arch', 'hex', 'banjo'];
@@ -222,6 +226,8 @@ final class GamesWorld
             ], [
                 self::roomDoor('front-door', 400, 'road', 'poop-house', exit: true),
                 self::resident('poop', 620, 220, ['move' => 'bounce', 'toot' => 'poop']),
+                // The Poop's game, played on the spot: catch the falling foods.
+                self::minigame('toot-catch', 170, 180, '🧺', 'toot_catch'),
             ]),
         ];
     }
@@ -581,6 +587,25 @@ final class GamesWorld
             'emoji' => '📻',
             'label' => 'messages.games.world.toys.radio',
             'line' => 'messages.games.world.toys.radio_line',
+        ];
+    }
+
+    /** A minigame (one of MINIGAMES) played where it stands, drawn as
+     * `emoji`, named `minigames.<key>` and explained by
+     * `minigames.<key>_line` as its card opens. Titled like a game. */
+    private static function minigame(string $minigame, int $x, int $z, string $emoji, string $key): array
+    {
+        return [
+            'id' => $minigame,
+            'type' => 'minigame',
+            'minigame' => $minigame,
+            'x' => $x,
+            'z' => $z,
+            'size' => 90,
+            'emoji' => $emoji,
+            'titled' => true,
+            'label' => "messages.games.world.minigames.{$key}",
+            'line' => "messages.games.world.minigames.{$key}_line",
         ];
     }
 

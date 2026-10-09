@@ -750,6 +750,12 @@ return [
     'games.world.toys.tv_line' => 'Kssshhh! Nothing on but static. And a toot.',
     'games.world.toys.radio' => 'Radio',
     'games.world.toys.radio_line' => "Kssshhh! The radio's off. Just static... and a toot.",
+    'games.world.minigames.toot_catch' => 'Toot Catch',
+    'games.world.minigames.toot_catch_line' => 'Catch the falling Toot Foods with the Butt! Every one it catches makes it toot.',
+    'games.world.minigames.toot_catch_aria' => 'Toot Catch — drag the peach, or use the left and right arrow keys, to catch the falling food',
+    'games.world.minigames.score' => 'You caught :score!',
+    'games.world.minigames.play_again' => '🔄 Play again',
+    'games.world.minigames.done' => 'All done',
 
     // Games - Cast
     'games.cast.butt' => 'The Butt',
