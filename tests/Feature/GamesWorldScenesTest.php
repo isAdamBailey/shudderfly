@@ -235,9 +235,14 @@ class GamesWorldScenesTest extends TestCase
         foreach (GamesWorld::definitions() as $sceneId => $scene) {
             foreach (collect($scene['interactables'])->where('type', 'toy') as $toy) {
                 $where = "{$sceneId}.{$toy['id']}";
-                // Drawn as a character, an emoji, or a painted clock face.
-                $ways = (int) isset($toy['cast']) + (int) isset($toy['emoji']) + (int) isset($toy['face']);
+                // Drawn as a character, an emoji, a painted clock face, or a picture.
+                $ways = (int) isset($toy['cast']) + (int) isset($toy['emoji']) + (int) isset($toy['face']) + (int) isset($toy['image']);
                 $this->assertSame(1, $ways, $where);
+                if (isset($toy['image'])) {
+                    $this->assertNotSame('', $toy['image']['src'] ?? '', $where);
+                    $this->assertGreaterThan(0, $toy['image']['w'] ?? 0, $where);
+                    $this->assertGreaterThan(0, $toy['image']['h'] ?? 0, $where);
+                }
                 if (isset($toy['face'])) {
                     $this->assertContains($toy['face'], GamesWorld::CLOCKS, $where);
                 }
@@ -267,6 +272,41 @@ class GamesWorldScenesTest extends TestCase
             }
         }
         $this->assertGreaterThan(0, $found);
+    }
+
+    public function test_the_cockroach_house_is_a_dark_room_you_can_leave(): void
+    {
+        $scenes = GamesWorld::definitions();
+        $door = collect($scenes['road']['interactables'])->firstWhere('id', 'cockroach-house');
+
+        $this->assertSame('door', $door['type']);
+        $this->assertSame(4200, $door['x']);
+        $this->assertSame('far', $door['side']);
+        $this->assertSame('cockroach-house.hall', $door['to']);
+
+        $room = $scenes['cockroach-house.hall'];
+        $this->assertLessThanOrEqual(0.25, $room['ambient']);
+        $this->assertSame('brick', $room['walls']['back']);
+        $this->assertSame('concrete', $room['walls']['floor']);
+
+        $portrait = collect($room['interactables'])->firstWhere('id', 'portrait');
+        $this->assertSame('/img/cockroach.png', $portrait['image']['src']);
+        $this->assertSame(372, $portrait['image']['w']);
+        $this->assertSame(200, $portrait['image']['h']);
+
+        // Both cockroach games stay on the road. The nest's floor is clear.
+        $this->assertEqualsCanonicalizing(
+            ['cockroach', 'cockroach-fight'],
+            collect($scenes['road']['interactables'])->where('type', 'game')->pluck('game')->all(),
+        );
+        $this->assertEmpty(collect($room['interactables'])->where('type', 'game'));
+
+        $shown = GamesWorld::scenes()['cockroach-house.hall'];
+        $this->assertSame("The Cockroach's Nest", $shown['label']);
+        $this->assertSame(
+            'Picture of the cockroach',
+            collect($shown['interactables'])->firstWhere('id', 'portrait')['label'],
+        );
     }
 
     public function test_the_poops_house_has_toot_catch(): void

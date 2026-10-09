@@ -150,6 +150,16 @@ describe("itemBox", () => {
         ).toEqual({ width: 192, height: 108, titled: false });
     });
 
+    it("draws a picture in its own frame", () => {
+        expect(
+            itemBox({
+                type: "toy",
+                image: { src: "/img/cockroach.png", w: 372, h: 200 },
+                size: 80,
+            })
+        ).toEqual({ width: 372, height: 200, titled: false });
+    });
+
     it("draws an open doorway wider than a door", () => {
         expect(itemBox({ type: "door", open: true })).toEqual({
             ...ROOM_SIZES.doorway,

@@ -142,11 +142,12 @@ final class GamesWorld
                     // one). x is along the road, in world units.
                     self::roadGame('cockroach-fight', 2400, '🏟️'),
                     self::roadGame('cockroach', 5100, '🏚️'),
-                    // The buildings you can go into. The road keeps gaps (600,
-                    // 4200 on the far side) for more.
+                    // The buildings you can go into. The road keeps a gap (600
+                    // on the far side) for another.
                     self::roadDoor('house', 1050, 'near', '🏠', 'house', 'house.hall'),
                     self::roadDoor('library', 1500, 'far', '📚', 'library', 'library.hall'),
                     self::roadDoor('poop-house', 3300, 'far', '🏡', 'poop_house', 'poop-house.hall'),
+                    self::roadDoor('cockroach-house', 4200, 'far', '🪳', 'cockroach_house', 'cockroach-house.hall'),
                 ],
             ],
 
@@ -258,6 +259,22 @@ final class GamesWorld
                 self::resident('poop', 620, 220, ['move' => 'bounce', 'toot' => 'poop']),
                 // The Poop's game, played on the spot: catch the falling foods.
                 self::minigame('toot-catch', 170, 180, '🧺'),
+            ]),
+
+            // --- The Cockroach's House: one dark room. The floor stays clear
+            // for Cockroach Fart and Cockroach Fight (they are still on the road).
+            'cockroach-house.hall' => self::room('cockroach_house_hall', [
+                'size' => ['w' => 1000, 'd' => 480],
+                'spawn' => ['x' => 280, 'z' => 320],
+                'walls' => ['back' => 'brick', 'sides' => 'brick', 'floor' => 'concrete'],
+                'ambient' => 0.2,
+                'lights' => [
+                    ['id' => 'lamp', 'x' => 820, 'z' => 80, 'y' => 240, 'color' => '#fcd34d', 'intensity' => 1],
+                ],
+            ], [
+                self::roomDoor('front-door', 160, 'road', 'cockroach-house', exit: true),
+                self::picture('portrait', 500, 130, '/img/cockroach.png', 372, 200, 'cockroach_portrait'),
+                self::lampSwitch(820, 240),
             ]),
         ];
     }
@@ -634,6 +651,25 @@ final class GamesWorld
             'size' => 72,
             'move' => 'wiggle',
             'sound' => $sound,
+        ];
+    }
+
+    /** A picture on a room's back wall, its bottom `y` up it: `src` in a
+     * frame `w` × `h` (the photo's own shape). The room draws it as an
+     * image over a panel, the way a book cover sits on a shelf. Named
+     * `toys.<key>`, and it says `toys.<key>_line`. */
+    private static function picture(string $id, int $x, int $y, string $src, int $w, int $h, string $key): array
+    {
+        return [
+            'id' => $id,
+            'type' => 'toy',
+            'x' => $x,
+            'z' => 0,
+            'y' => $y,
+            'image' => ['src' => $src, 'w' => $w, 'h' => $h],
+            'label' => "messages.games.world.toys.{$key}",
+            'line' => "messages.games.world.toys.{$key}_line",
+            'sound' => 'hiss',
         ];
     }
 
