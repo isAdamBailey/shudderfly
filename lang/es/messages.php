@@ -748,6 +748,8 @@ return [
     'games.world.toys.nightlight' => 'Luz de noche',
     'games.world.toys.tv' => 'Tele',
     'games.world.toys.tv_line' => '¡Kssshhh! Solo hay estática. Y un pedito.',
+    'games.world.toys.radio' => 'Radio',
+    'games.world.toys.radio_line' => '¡Kssshhh! La radio está apagada. Solo estática... y un pedito.',
 
     // Games - Cast
     'games.cast.butt' => 'El Trasero',

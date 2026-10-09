@@ -18,6 +18,7 @@ import {
 import Road3D from "./scenes/Road3D.vue";
 import RoadScene from "./scenes/RoadScene.vue";
 import { ROWS } from "./scenes/roadLayout.js";
+import { useRadio } from "./composables/useRadio.js";
 import { useSceneRouter } from "./composables/useSceneRouter.js";
 import { activate } from "./interactions/index.js";
 import { playSound } from "./sounds.js";
@@ -105,6 +106,8 @@ let resizeObserver = null;
 // The open card, if any: { component, props }. Only one at a time.
 const card = shallowRef(null);
 
+const radio = useRadio();
+
 /** Everything an interaction handler may touch (interactions/index.js). */
 const ctx = {
     openCard(component, cardProps = {}) {
@@ -116,6 +119,8 @@ const ctx = {
     toot: (castId, id) => sceneRef.value?.toot?.(castId, id),
     toggleLight: (id) => sceneRef.value?.toggleLight?.(id),
     changeChannel: (id) => sceneRef.value?.changeChannel?.(id),
+    // Through the site's music player, so it plays on in its flyout.
+    tuneRadio: radio.tune,
     playSound,
     // Through the same voice as a game's intro (the AI voice when it's on).
     speak: (text) => speakGameIntro(text),

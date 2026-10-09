@@ -8,6 +8,7 @@ use App\Models\Book;
 use App\Models\Category;
 use App\Models\Page;
 use App\Models\SiteSetting;
+use App\Models\Song;
 use App\Services\ContentBlockService;
 use App\Support\GamesWorld;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -442,5 +443,47 @@ class GamesWorldScenesTest extends TestCase
         Page::factory()->count(GamesWorld::TV_CHANNELS + 2)->create(['media_path' => 'https://cdn.test/v.mp4', 'media_poster' => 'https://cdn.test/v.jpg']);
 
         $this->assertCount(GamesWorld::TV_CHANNELS, $this->tv()['channels']);
+    }
+
+    private function radio(): array
+    {
+        return collect(GamesWorld::scenes()['house.kitchen']['interactables'])->firstWhere('type', 'radio');
+    }
+
+    public function test_the_radio_plays_the_family_songs(): void
+    {
+        $song = Song::factory()->create([
+            'title' => 'Toot Toot Song',
+            'youtube_video_id' => 'abc123',
+        ]);
+
+        $radio = $this->radio();
+
+        $this->assertSame('Radio', $radio['label']);
+        $this->assertSame('📻', $radio['emoji']);
+        $this->assertSame([$song->id], array_column($radio['songs'], 'id'));
+        $this->assertSame(
+            ['id', 'title', 'description', 'youtube_video_id', 'thumbnail_default', 'thumbnail_high'],
+            array_keys($radio['songs'][0]),
+        );
+        $this->assertSame('abc123', $radio['songs'][0]['youtube_video_id']);
+    }
+
+    public function test_the_radio_has_a_few_songs_and_a_line_for_none(): void
+    {
+        $this->assertSame([], $this->radio()['songs']);
+        $this->assertSame(__('messages.games.world.toys.radio_line'), $this->radio()['line']);
+
+        Song::factory()->count(GamesWorld::RADIO_STATIONS + 2)->create();
+
+        $this->assertCount(GamesWorld::RADIO_STATIONS, $this->radio()['songs']);
+    }
+
+    public function test_the_radio_is_silent_while_the_music_is_off(): void
+    {
+        Song::factory()->create();
+        SiteSetting::updateOrCreate(['key' => 'music_enabled'], ['value' => false]);
+
+        $this->assertSame([], $this->radio()['songs']);
     }
 }
