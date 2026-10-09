@@ -42,6 +42,21 @@ final class GamesWorld
      * books.category. */
     public const LIBRARY_HALL_SHELF = 9;
 
+    /** The most lamps (point lights) a room may have: each one costs every
+     * lit material in it. Every room has at least one, so night isn't dark. */
+    public const ROOM_LIGHTS_MAX = 4;
+
+    /** A Library room's reading lamps: about one for this much shelf, up
+     * to ROOM_LIGHTS_MAX, hung this high and this far out from the wall. A
+     * ceiling light hangs further out, over the middle of the floor. */
+    private const LIBRARY_LAMP_SPACING = 600;
+
+    private const LIBRARY_LAMP_Y = 440;
+
+    private const LIBRARY_LAMP_Z = 140;
+
+    private const LIBRARY_CEILING_Z = 250;
+
     /** How many of the family's videos a TV flicks between, picked afresh
      * on every visit. */
     public const TV_CHANNELS = 6;
@@ -142,28 +157,30 @@ final class GamesWorld
                     ['id' => 'lamp', 'x' => $entry + 300, 'z' => 240, 'y' => 200, 'color' => '#fbbf24', 'intensity' => 1.4],
                 ],
             ], [
-                // Kitchen at the left end, bathroom at the right, bedroom
-                // down the back wall. All three start out of view.
-                self::roomDoor('kitchen-door', 220, 'house.kitchen', 'hall-door', 'house_kitchen', wall: 'left'),
-                self::roomDoor('bedroom-door', 240, 'house.bedroom', 'hall-door', 'house_bedroom'),
+                // Every door on the back wall, facing the camera, so a phone
+                // can read and reach them: the bedroom at the left end, the
+                // kitchen just along from the front door, the bathroom at
+                // the right end.
+                self::roomDoor('bedroom-door', 160, 'house.bedroom', 'hall-door', 'house_bedroom'),
+                self::roomDoor('kitchen-door', 1320, 'house.kitchen', 'hall-door', 'house_kitchen'),
                 self::roomDoor('front-door', $entry, 'road', 'house', exit: true),
                 // A toy plays `move`, toots as `toot` (a cast id), says `line`
                 // and switches `light`, whichever it has. `y` lifts one off the
                 // floor (onto a wall).
                 self::toy('doorbell', $entry + 160, 0, '🔔', 'doorbell', ['y' => 120, 'size' => 50, 'move' => 'wiggle', 'toot' => 'butt', 'line' => true]),
-                // Clocks along the empty back wall, each a different shape.
-                // The cuckoo and the round one sit by the front door, in the
-                // first view; the rest are down the hall. Every other one
-                // chimes, the others tick.
-                self::clock(1, 520, 'school', 'tick', 250),
-                self::clock(2, 800, 'banjo', 'bell', 280),
-                self::clock(3, 1080, 'hex', 'tick', 240),
-                self::clock(4, 1360, 'cuckoo', 'bell', 270),
-                self::clock(5, 1980, 'round', 'tick', 250),
-                self::clock(6, 2260, 'sunburst', 'bell', 280),
-                self::clock(7, 2540, 'octagon', 'tick', 240),
-                self::clock(8, 2820, 'arch', 'bell', 270),
-                self::roomDoor('bathroom-door', 220, 'house.bathroom', 'hall-door', 'house_bathroom', wall: 'right', span: $hallW),
+                // Clocks along the back wall, each a different shape: three
+                // between the bedroom and the kitchen, the rest past the
+                // front door, the cuckoo first. Every other one chimes, the
+                // others tick.
+                self::clock(1, 440, 'school', 'tick', 250),
+                self::clock(2, 720, 'banjo', 'bell', 280),
+                self::clock(3, 1000, 'hex', 'tick', 240),
+                self::clock(4, 2000, 'cuckoo', 'bell', 270),
+                self::clock(5, 2200, 'round', 'tick', 250),
+                self::clock(6, 2400, 'sunburst', 'bell', 280),
+                self::clock(7, 2600, 'octagon', 'tick', 240),
+                self::clock(8, 2800, 'arch', 'bell', 270),
+                self::roomDoor('bathroom-door', $hallW - 160, 'house.bathroom', 'hall-door', 'house_bathroom'),
                 self::toy('lamp-switch', $entry + 300, 240, '💡', 'lamp', ['move' => 'bounce', 'light' => 'lamp']),
                 self::resident('strawberry', $entry - 220, 280, ['move' => 'hop', 'toot' => 'strawberry']),
             ]),
@@ -172,8 +189,10 @@ final class GamesWorld
                 'spawn' => ['x' => 450, 'z' => 330],
                 'walls' => ['back' => 'tiles', 'sides' => 'wallpaper-dots', 'floor' => 'lino'],
                 'ambient' => 0.8,
+                'lights' => [self::lamp('lamp', 520, 300, 0)],
             ], [
                 self::roomDoor('hall-door', 120, 'house.hall', 'kitchen-door', 'house_hall', exit: true),
+                self::lampSwitch(520, 300),
                 self::game('toot-foods', 360, 40, ['size' => 110, 'emoji' => '🍔']),
                 self::game('costco-pizza-poop', 600, 180, ['size' => 100, 'cast' => 'pizza']),
                 self::toy('sprout-pot', 200, 290, '🍲', 'sprout_pot', ['move' => 'wobble', 'toot' => 'sprout', 'line' => true]),
@@ -189,8 +208,10 @@ final class GamesWorld
                 'spawn' => ['x' => 400, 'z' => 300],
                 'walls' => ['back' => 'tiles', 'floor' => 'tiles'],
                 'ambient' => 0.65,
+                'lights' => [self::lamp('lamp', 250, 280, 0)],
             ], [
                 self::roomDoor('hall-door', 100, 'house.hall', 'bathroom-door', 'house_hall', exit: true),
+                self::lampSwitch(250, 280),
                 self::toy('toilet-roll', 400, 0, '🧻', 'toilet_roll', ['y' => 140, 'size' => 50, 'move' => 'wobble', 'line' => true]),
                 self::game('boom', 560, 40, ['size' => 110, 'cast' => 'toilet']),
                 self::toy('plunger', 710, 140, '🪠', 'plunger', ['move' => 'bounce', 'line' => true]),
@@ -223,8 +244,10 @@ final class GamesWorld
                 'spawn' => ['x' => 300, 'z' => 300],
                 'walls' => ['back' => 'wallpaper-stripes', 'sides' => 'plaster', 'floor' => 'concrete'],
                 'ambient' => 0.7,
+                'lights' => [self::lamp('lamp', 600, 280, 0)],
             ], [
                 self::roomDoor('front-door', 400, 'road', 'poop-house', exit: true),
+                self::lampSwitch(600, 280),
                 self::resident('poop', 620, 220, ['move' => 'bounce', 'toot' => 'poop']),
                 // The Poop's game, played on the spot: catch the falling foods.
                 self::minigame('toot-catch', 170, 180, '🧺'),
@@ -264,18 +287,31 @@ final class GamesWorld
         // shelves, then the stairs up at the right.
         $shelves = self::hallShelves();
         $hallW = max($roomW, (int) (collect($shelves)->max(fn ($shelf) => self::shelfEnd($shelf)) ?? 0) + 220);
+        $hallLights = [
+            self::ceilingLamp($hallW),
+            ...($shelves ? self::readingLamps($shelves[0]['x'], self::shelfEnd(end($shelves)), self::ROOM_LIGHTS_MAX - 1) : []),
+        ];
         $scenes = [
             'library.hall' => self::room('library_hall', [
                 'size' => ['w' => $hallW, 'd' => 450],
                 ...($hallW > $roomW ? ['frame' => $roomW] : []),
                 'spawn' => ['x' => 300, 'z' => 300],
                 'walls' => ['back' => 'brick', 'sides' => 'plaster', 'floor' => 'wood'],
-                'ambient' => 0.55,
+                // Dim, so the lamps' light pools on the shelves.
+                'ambient' => 0.4,
+                'lights' => $hallLights,
                 ...($shelves ? ['shelves' => $shelves] : []),
             ], [
                 self::roomDoor('front-door', 110, 'road', 'library', exit: true),
+                self::lightSwitch(220, $hallLights),
                 ...($floors->isEmpty() ? [] : [self::stairs(true, $floorId(0), $hallW)]),
             ]),
+        ];
+
+        // A landing's pair of wall lamps, high between its outer doors.
+        $landingLights = [
+            self::lamp('wall-left', $stairsEnd + $doorGap, 390, 20, '💡'),
+            self::lamp('wall-right', $landingW - $stairsEnd - $doorGap, 390, 20, '💡'),
         ];
 
         foreach ($floors as $i => $categories) {
@@ -289,10 +325,12 @@ final class GamesWorld
                     'frame' => $roomW,
                     'spawn' => ['x' => $landingW / 2, 'z' => 300],
                     'walls' => ['back' => 'wallpaper-stripes', 'sides' => 'plaster', 'floor' => 'carpet'],
-                    'ambient' => 0.55,
+                    'ambient' => 0.45,
+                    'lights' => $landingLights,
                 ], [
                     // Down the way you came on the left, up on the right.
                     self::stairs(false, $floorId($i - 1)),
+                    self::lightSwitch(intdiv($landingW, 2), $landingLights),
                     ...$categories->values()->map(fn ($category, $n) => [
                         ...self::roomDoor(
                             "category-{$category->id}",
@@ -315,13 +353,20 @@ final class GamesWorld
                 $shelf = self::shelf('books', $category->name, $category->books_count, self::LIBRARY_SHELVES_FROM);
                 // Past the shelves, room for a second doorway back out.
                 $width = max($roomW, self::shelfEnd($shelf) + 270);
+                // Reading lamps along the shelves; an emptied category's
+                // bare room has a ceiling light.
+                $lights = $category->books_count > 0
+                    ? self::readingLamps($shelf['x'], self::shelfEnd($shelf), self::ROOM_LIGHTS_MAX)
+                    : [self::ceilingLamp($width)];
                 $scenes["library.category-{$category->id}"] = [
                     ...self::room('library_category', [
                         'size' => ['w' => $width, 'd' => 450],
                         ...($width > $roomW ? ['frame' => $roomW] : []),
                         'spawn' => ['x' => 300, 'z' => 300],
                         'walls' => ['back' => 'wallpaper-dots', 'sides' => 'plaster', 'floor' => 'wood'],
-                        'ambient' => 0.6,
+                        // Dim, so the lamps' light pools on the shelves.
+                        'ambient' => 0.4,
+                        'lights' => $lights,
                         // An emptied category (its books cleaned up) is a bare room.
                         ...($category->books_count > 0 ? ['shelves' => [$shelf]] : []),
                     ], [
@@ -330,6 +375,7 @@ final class GamesWorld
                             'open' => true,
                             'labelArgs' => $floor,
                         ],
+                        self::lightSwitch(220, $lights),
                         // The same way out at the far end of the shelves,
                         // so a long room needn't be walked back.
                         [
@@ -417,6 +463,55 @@ final class GamesWorld
     private static function shelfEnd(array $shelf): int
     {
         return $shelf['x'] + (int) ceil($shelf['count'] / $shelf['rows']) * $shelf['span'];
+    }
+
+    /** A warm lamp (a point light) at x, y, z. With an `emoji` it's drawn
+     * as that, glowing while it's on; otherwise it's unseen unless a toy is
+     * its bulb (a `light` naming only it). */
+    private static function lamp(string $id, int $x, int $y, int $z, ?string $emoji = null): array
+    {
+        return [
+            'id' => $id,
+            'x' => $x,
+            'y' => $y,
+            'z' => $z,
+            'color' => '#fcd34d',
+            'intensity' => 1.3,
+            ...($emoji ? ['emoji' => $emoji] : []),
+        ];
+    }
+
+    /** A ceiling light over the middle of a Library room `$width` wide. */
+    private static function ceilingLamp(int $width): array
+    {
+        return self::lamp('ceiling', intdiv($width, 2), self::LIBRARY_LAMP_Y, self::LIBRARY_CEILING_Z);
+    }
+
+    /** Reading lamps hung evenly over the shelves from x `$from` to `$to`:
+     * one per LIBRARY_LAMP_SPACING, at least one and at most `$max`. */
+    private static function readingLamps(int $from, int $to, int $max): array
+    {
+        $count = max(1, min($max, (int) ceil(($to - $from) / self::LIBRARY_LAMP_SPACING)));
+        $step = ($to - $from) / $count;
+
+        return array_map(
+            fn (int $i) => self::lamp('reading-'.($i + 1), (int) round($from + ($i + 0.5) * $step), self::LIBRARY_LAMP_Y, self::LIBRARY_LAMP_Z),
+            range(0, $count - 1),
+        );
+    }
+
+    /** A bulb on a room's back wall, `y` up it, that is the room's `lamp`
+     * and its switch. */
+    private static function lampSwitch(int $x, int $y): array
+    {
+        return self::toy('lamp-switch', $x, 0, '💡', 'lamp', ['y' => $y, 'size' => 50, 'move' => 'wiggle', 'light' => 'lamp']);
+    }
+
+    /** A switch near the open front of a room that turns all of `$lights`
+     * on or off together. */
+    private static function lightSwitch(int $x, array $lights): array
+    {
+        return self::toy('light-switch', $x, 390, '💡', 'light_switch', ['size' => 60, 'move' => 'wiggle', 'light' => array_column($lights, 'id')]);
     }
 
     /** Stairs up (`$up`) or down to `$to`, arriving at the stairs going

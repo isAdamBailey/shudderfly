@@ -1,3 +1,5 @@
+import { own } from "@/utils/object";
+
 /**
  * The Games World's looks, by seasonal theme name (the `theme` Inertia prop,
  * see CLAUDE.md "Seasonal theme"): colours for the sky, ground, ridge and
@@ -21,6 +23,8 @@ const DEFAULT = {
     ridgeNear: "#3f9a68",
     ridgeFar: "#b3e3ca",
     hill: null,
+    // Multiplies the ridge (and the grass past it) without repainting it.
+    ridgeTint: "#ffffff",
     drifter: "☁️",
     // The street's buildings pick from these by position, so a building
     // keeps its colours from visit to visit.
@@ -85,12 +89,45 @@ export const WORLD_THEMES = {
     },
 };
 
+// What dark mode changes, by theme, on top of that theme's look. A theme
+// without an entry takes the everyday one; fireworks is night already. The
+// road eases between the two looks, so an entry may only change the sky,
+// `ridgeTint`, `lit`/`litIntensity`, `key` and `ambient`: the rest is built
+// into its geometry (RoadScene.js showNight).
+export const NIGHTS = {
+    "": {
+        skyTop: "#0b1230",
+        skyBottom: "#312e81",
+        ridgeTint: "#4b5a8c",
+        lit: "#fde68a",
+        key: { color: "#c7d2fe", intensity: 0.6 },
+        ambient: { sky: "#6366f1", ground: "#0f172a", intensity: 0.7 },
+    },
+    // Snow under the moon: blue, and bright enough to see by.
+    christmas: {
+        skyTop: "#0b1a3a",
+        skyBottom: "#1e3a8a",
+        ridgeTint: "#9fb4e0",
+        litIntensity: 0.8,
+        key: { color: "#dbeafe", intensity: 0.8 },
+        ambient: { sky: "#93c5fd", ground: "#e0f2fe", intensity: 0.9 },
+    },
+    halloween: {
+        skyTop: "#12051f",
+        skyBottom: "#4c1d6b",
+        ridgeTint: "#6b5a80",
+        key: { color: "#fb923c", intensity: 0.5 },
+        ambient: { sky: "#6d28d9", ground: "#0c0a09", intensity: 0.6 },
+    },
+    fireworks: {},
+};
+
 /** The full look for a theme name; anything unknown (or '') is the default. */
 export function worldTheme(name) {
-    return {
-        ...DEFAULT,
-        ...(Object.prototype.hasOwnProperty.call(WORLD_THEMES, name ?? "")
-            ? WORLD_THEMES[name]
-            : {}),
-    };
+    return { ...DEFAULT, ...own(WORLD_THEMES, name ?? "") };
+}
+
+/** The look for a theme name at night (dark mode). */
+export function worldNight(name) {
+    return { ...worldTheme(name), ...(own(NIGHTS, name ?? "") ?? NIGHTS[""]) };
 }

@@ -131,6 +131,40 @@ describe("useWorldRenderer", () => {
         expect(gl.render).toHaveBeenCalledTimes(3);
     });
 
+    it("draws a scene only once its shaders are compiled", async () => {
+        const renderer = useWorldRenderer();
+        await renderer.init(document.createElement("canvas"));
+        const gl = fake.renderers[0];
+        let compiled;
+        gl.compileAsync = vi.fn(
+            () => new Promise((resolve) => (compiled = resolve))
+        );
+        const later = {};
+
+        renderer.show(scene, camera);
+        runFrame();
+        expect(gl.compileAsync).toHaveBeenCalledWith(scene, camera);
+        expect(gl.render).not.toHaveBeenCalled();
+
+        compiled();
+        await vi.waitFor(() => {
+            runFrame();
+            expect(gl.render).toHaveBeenCalledWith(scene, camera);
+        });
+
+        // One left before its compile finishes is never drawn.
+        renderer.show(later, camera);
+        const leftBehind = compiled;
+        renderer.show(null);
+        leftBehind();
+        await Promise.resolve();
+        await Promise.resolve();
+        runFrame();
+        expect(gl.render.mock.calls.map(([drawn]) => drawn)).not.toContain(
+            later
+        );
+    });
+
     it("hands hooks the frame time, capped so a stall can't teleport", async () => {
         const renderer = useWorldRenderer();
         await renderer.init(document.createElement("canvas"));

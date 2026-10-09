@@ -7,7 +7,8 @@ import { canvasTexture } from "./useWorldRenderer.js";
  * names (GamesWorld::WALLS / FLOORS) and a test keeps the two in step. Each
  * look is a base colour and a pattern drawn once into a small tiling
  * texture, so a room is a handful of materials. The seasons restyle rooms
- * here too: their daylight (roomDaylight) and decorations (roomDecorations).
+ * here too: their daylight (roomDaylight) and decorations (roomDecorations),
+ * and dark mode turns that daylight to night (NIGHT).
  *
  * `tile` is how many world units one repeat of the pattern covers.
  */
@@ -58,6 +59,17 @@ const DAYLIGHT = {
 export function roomDaylight(theme) {
     return own(DAYLIGHT, theme) ?? DAYLIGHT[""];
 }
+
+// Night, while the site is in dark mode: the daylight is scaled by `dim`
+// and its colours moved `tint` of the way toward moonlight, so the season
+// still shows through, and every lamp comes on.
+export const NIGHT = {
+    dim: 0.2,
+    tint: 0.6,
+    sky: "#312e81",
+    ground: "#020617",
+    key: "#93c5fd",
+};
 
 // Seasonal decorations, by theme: emoji hung on every room's back wall, at
 // `u` across it and `v` up it (shares of the wall), `size` units tall. High

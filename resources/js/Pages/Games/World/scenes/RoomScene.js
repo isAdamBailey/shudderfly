@@ -1,6 +1,8 @@
 import { CAST_MOVES } from "@/constants/characters.js";
+import { approach } from "@/utils/math";
 import {
     lookMaterial,
+    NIGHT,
     roomDaylight,
     roomDecorations,
     roomLook,
@@ -17,8 +19,9 @@ import { floorGeometry, stairsFootprint, stairsGeometry } from "./staircase.js";
 // The `kind: "room"` scene graph (issue #130): a dollhouse room with its
 // front wall taken away. Walls and floor come from the room's `walls` looks
 // (three/roomLooks.js); the light from its `ambient` level (daylight in
-// through the open front, the one light that casts shadows) and its `lights`
-// (lamps you can switch). Its doors and toys stand where the data puts them,
+// through the open front, the one light that casts shadows, dimmed to
+// moonlight at night) and its `lights` (lamps you can switch, all on at
+// night). Its doors and toys stand where the data puts them,
 // a toy that is a character as its cast puppet, and the Butt walks the
 // floor. It only draws: Room3D.vue owns the state (useRoom) and hands it
 // over each frame through sync().
@@ -35,20 +38,32 @@ const DAYLIGHT = { fill: 2.2, key: 2 };
 const LAMP_REACH = 250;
 // How bright a switched-on bulb's own glyph glows, apart from the light it casts.
 const BULB_ON = 2;
+// How brightly the Butt glows in a room with every lamp off.
+const BUTT_GLOW = 0.25;
+// A lamp drawn as its own glyph (no toy is its bulb), units tall.
+const LAMP_GLYPH = 44;
+// How long night takes to fall or lift when dark mode flips, s.
+const NIGHTFALL = 0.3;
 // A flat-screen TV: how far it stands off its wall, units.
 const SCREEN_DEPTH = 6;
 
 /**
  * Builds a room from its scene data (`room`: { size, walls, ambient, lights,
  * interactables }), with the Butt at `butt` ({ x, z }), in the light of
- * seasonal `theme`, its EXIT signs reading `exitWord`. Returns { scene,
- * camera, layout(L), sync(view, dt), animate(id, move), toggleLight(id),
- * dispose() }.
+ * seasonal `theme` (at `night` in dark mode), its EXIT signs reading
+ * `exitWord`. Returns { scene, camera, layout(L), sync(view, dt),
+ * animate(id, move), toggleLight(id), setNight(on), dispose() }.
  */
 export function createRoomScene(
     THREE,
     kit,
-    { room, butt: buttAt, theme, exitWord = "Exit" }
+    {
+        room,
+        butt: buttAt,
+        theme,
+        night: startAtNight = false,
+        exitWord = "Exit",
+    }
 ) {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(BACKGROUND);
@@ -68,17 +83,9 @@ export function createRoomScene(
 
     const daylight = roomDaylight(theme);
     const ambient = (room.ambient ?? 1) * (daylight.dim ?? 1);
-    made.add(
-        new THREE.HemisphereLight(
-            daylight.sky,
-            daylight.ground,
-            ambient * DAYLIGHT.fill
-        )
-    );
-    const key = new THREE.DirectionalLight(
-        daylight.key,
-        ambient * DAYLIGHT.key
-    );
+    const fill = new THREE.HemisphereLight();
+    const key = new THREE.DirectionalLight();
+    made.add(fill);
     key.castShadow = true;
     key.shadow.mapSize.set(SHADOW_MAP, SHADOW_MAP);
     key.shadow.bias = -0.0005;
@@ -92,10 +99,37 @@ export function createRoomScene(
     aimLight(width / 2);
     made.add(key, key.target);
 
+    // Dark mode: 0 by day, 1 at night, between while night falls.
+    let night = startAtNight ? 1 : 0;
+    let nightTarget = night;
+    const scratch = new THREE.Color();
+    /** The daylight `n` of the way to night: dimmer, and toward moonlight. */
+    function showDaylight(n) {
+        const dim = 1 + (NIGHT.dim - 1) * n;
+        const toward = NIGHT.tint * n;
+        fill.color.set(daylight.sky).lerp(scratch.set(NIGHT.sky), toward);
+        fill.groundColor
+            .set(daylight.ground)
+            .lerp(scratch.set(NIGHT.ground), toward);
+        fill.intensity = ambient * DAYLIGHT.fill * dim;
+        key.color.set(daylight.key).lerp(scratch.set(NIGHT.key), toward);
+        key.intensity = ambient * DAYLIGHT.key * dim;
+        showButtGlow();
+    }
+
+    // The Butt's own faint glow (buttGlow, made with the Butt below), so it
+    // can still be found in the dark: all of it while every lamp is off,
+    // some at night with them on.
+    function showButtGlow() {
+        const lit = lamps.some((lamp) => lamp.on);
+        buttGlow.emissiveIntensity = BUTT_GLOW * (lit ? night / 2 : 1);
+    }
+
     // The room's lamps. Off is no light rather than a hidden one: the
     // number of lights is part of every lit material's shader, so hiding
-    // one would recompile them all. A toy that switches a lamp is the
-    // bulb, so the light is moved onto that glyph (below).
+    // one would recompile them all. A toy that switches one lamp is its
+    // bulb, so the light is moved onto that glyph (below); a lamp no toy
+    // is the bulb of may be drawn as its own `emoji`.
     const lamps = (room.lights ?? []).map((data) => {
         const intensity = data.intensity * LAMP_REACH;
         const light = new THREE.PointLight(
@@ -106,28 +140,37 @@ export function createRoomScene(
         );
         light.position.set(data.x, data.y, data.z);
         made.add(light);
-        return {
-            id: data.id,
-            light,
-            color: data.color,
-            intensity,
-            on: true,
-            bulb: null,
-        };
+        return { data, light, intensity, on: true, bulb: false };
     });
-    const bulbs = [];
+    // Glyphs that glow while any of their lamps is on: { lamps, material }.
+    const glows = [];
 
-    function showLamp(lamp) {
-        lamp.light.intensity = lamp.on ? lamp.intensity : 0;
-        if (lamp.bulb) lamp.bulb.emissiveIntensity = lamp.on ? BULB_ON : 0;
+    function showLamps() {
+        for (const lamp of lamps) {
+            lamp.light.intensity = lamp.on ? lamp.intensity : 0;
+        }
+        for (const glow of glows) {
+            const on = glow.lamps.some((lamp) => lamp.on);
+            glow.material.emissiveIntensity = on ? BULB_ON : 0;
+        }
+        showButtGlow();
     }
 
-    function glyphOf(puppet) {
-        let mesh = null;
+    const lampsOf = (ids) => lamps.filter((lamp) => ids.includes(lamp.data.id));
+
+    /** Gives `puppet`'s glyph its own copy of its material, able to glow in
+     * `color`, named `name`. */
+    function glowing(puppet, color, name) {
+        let glyph = null;
         puppet.body.traverse((node) => {
-            if (node.isMesh) mesh = node;
+            if (node.isMesh) glyph = node;
         });
-        return mesh;
+        const lit = glyph.material.clone();
+        lit.emissive = new THREE.Color(color);
+        lit.emissiveMap = lit.map;
+        glyph.material = lit;
+        glyph.name = name;
+        return lit;
     }
 
     // --- Box -----------------------------------------------------------------
@@ -265,39 +308,64 @@ export function createRoomScene(
         const puppet = item.cast
             ? kit.castMesh(item.cast, { size, shadows })
             : item.face
-              ? kit.paintedMesh(clockTexture(THREE, item.face), {
-                    size,
-                    shadows,
-                    moves: CAST_MOVES,
-                    ...clockFinish(item.face),
-                })
-              : // A prop can play any move.
-                kit.emojiMesh(item.emoji, { size, shadows, moves: CAST_MOVES });
+            ? kit.paintedMesh(clockTexture(THREE, item.face), {
+                  size,
+                  shadows,
+                  moves: CAST_MOVES,
+                  ...clockFinish(item.face),
+              })
+            : // A prop can play any move.
+              kit.emojiMesh(item.emoji, { size, shadows, moves: CAST_MOVES });
         if (item.cast) puppet.setMove("idle");
         const pose = itemPose(item);
         puppet.group.position.set(pose.x, pose.y, pose.z);
         puppet.group.rotation.y = pose.turn;
-        const lamp = lamps.find((entry) => entry.id === item.light);
-        if (lamp) {
-            const glyph = glyphOf(puppet);
-            const lit = glyph.material.clone();
-            lit.emissive = new THREE.Color(lamp.color);
-            lit.emissiveMap = lit.map;
-            lit.emissiveIntensity = BULB_ON;
-            glyph.material = lit;
-            glyph.name = "bulb";
-            lamp.bulb = lit;
-            bulbs.push(lit);
-            lamp.light.position.set(pose.x, pose.y + size / 2, pose.z);
+        // A switch for one lamp is its bulb, and the light sits on it; one
+        // for several (`light: [ids]`) glows with them where it is.
+        const switched = lampsOf([item.light ?? []].flat());
+        if (switched.length > 0) {
+            glows.push({
+                lamps: switched,
+                material: glowing(puppet, switched[0].data.color, "bulb"),
+            });
+            if (typeof item.light === "string") {
+                switched[0].bulb = true;
+                switched[0].light.position.set(
+                    pose.x,
+                    pose.y + size / 2,
+                    pose.z
+                );
+            }
         }
         scene.add(puppet.group);
         things.set(item.id, puppet);
     }
 
+    // Lamps drawn as their own glyph (a wall lamp), hung by its middle.
+    const fixtures = lamps
+        .filter((lamp) => lamp.data.emoji && !lamp.bulb)
+        .map((lamp) => {
+            const { data } = lamp;
+            const puppet = kit.emojiMesh(data.emoji, {
+                size: LAMP_GLYPH,
+                shadows: false,
+            });
+            puppet.group.position.set(data.x, data.y - LAMP_GLYPH / 2, data.z);
+            glows.push({
+                lamps: [lamp],
+                material: glowing(puppet, data.color, "bulb"),
+            });
+            scene.add(puppet.group);
+            return puppet;
+        });
+
     const butt = kit.castMesh("butt", { size: ROOM_SIZES.butt });
     butt.setMove("idle");
     butt.group.position.set(buttAt.x, 0, buttAt.z);
     scene.add(butt.group);
+    const buttGlow = glowing(butt, "#ffffff", "butt-glow");
+    showDaylight(night);
+    showLamps();
 
     /** A flat-screen TV (`screen`: { w, h }): a thin black panel on its
      * wall. What it plays is a <video> over it in the overlay. */
@@ -372,6 +440,13 @@ export function createRoomScene(
             facing: view.butt.facing < 0 ? "left" : "right",
         });
         butt.setMove(view.butt.walking ? "walk" : "idle");
+        if (night !== nightTarget) {
+            night = reduced
+                ? nightTarget
+                : approach(night, nightTarget, dt / NIGHTFALL);
+            showDaylight(night);
+            changed = true;
+        }
         for (const puppet of puppets) changed = puppet.tick(dt) || changed;
         return changed;
     }
@@ -385,20 +460,31 @@ export function createRoomScene(
         animate(id, move) {
             things.get(id)?.play(move);
         },
-        /** Switches room light `id`; whether it's now on. */
+        /** Switches room light `id` (or lights `[ids]`, together: off if
+         * any is on); whether they're now on. */
         toggleLight(id) {
-            const lamp = lamps.find((l) => l.id === id);
-            if (!lamp) return null;
-            lamp.on = !lamp.on;
-            showLamp(lamp);
-            return lamp.on;
+            const switched = lampsOf([id].flat());
+            if (switched.length === 0) return null;
+            const on = !switched.some((lamp) => lamp.on);
+            for (const lamp of switched) lamp.on = on;
+            showLamps();
+            return on;
+        },
+        /** Night falls (or lifts) over the next frames: dark mode flipped.
+         * At nightfall every lamp comes on. */
+        setNight(on) {
+            nightTarget = on ? 1 : 0;
+            if (!on) return;
+            for (const lamp of lamps) lamp.on = true;
+            showLamps();
         },
         dispose() {
             books?.dispose();
             signs.dispose();
             disposeTree(made);
-            for (const material of bulbs) material.dispose();
-            for (const puppet of [...puppets, ...decorations]) {
+            for (const { material } of glows) material.dispose();
+            buttGlow.dispose();
+            for (const puppet of [...puppets, ...decorations, ...fixtures]) {
                 puppet.dispose();
             }
         },

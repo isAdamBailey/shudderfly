@@ -36,7 +36,8 @@ import {
 // side's houses and props in front, which fade when the Butt walks behind
 // them. The cast (the Butt, the roadside foods, a cast landmark, the
 // cockroach in the manhole, the food on the billboard) are the cast kit's
-// puppets. One key light casts the shadows; the season sets the lighting.
+// puppets. One key light casts the shadows; the season sets the lighting,
+// and dark mode turns it to night (setNight).
 // It only draws: Road3D.vue owns the state (useRoad / useGamesWorld) and
 // hands it over each frame through sync().
 
@@ -80,14 +81,27 @@ const MANHOLE = { duck: [60, 0.18, 170], time: 0.25 };
 const ROAD_TOOT = { period: 16, height: 26 };
 // Fireworks: a flash every few seconds, fading this fast.
 const FLASH = { every: 1.8, spread: 2.2, intensity: 2.2, decay: 3.5 };
+// How long night takes to fall or lift when dark mode flips, s.
+const NIGHTFALL = 0.3;
 
 /**
  * Builds the road. `landmarks` are useGamesWorld's ({ slug, x, side, cast,
- * landmark }), `idlers` useRoad's ({ slug, cast, row, phase }), `theme` a
- * three/themes.js look. Call layout() with a roadLayout() before the first
- * sync(), and again on every resize.
+ * landmark }), `idlers` useRoad's ({ slug, cast, row, phase }), `theme` and
+ * `nightTheme` three/themes.js looks (worldTheme / worldNight), and `night`
+ * whether it starts at night. Call layout() with a roadLayout() before the
+ * first sync(), and again on every resize.
  */
-export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
+export function createRoadScene(
+    THREE,
+    kit,
+    {
+        theme,
+        nightTheme = theme,
+        night: startAtNight = false,
+        landmarks,
+        idlers,
+    }
+) {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(30, 1, 1, 1);
     scene.add(camera);
@@ -97,15 +111,23 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
 
     // --- Sky -----------------------------------------------------------------
 
-    const sky = canvasTexture(THREE, 2, 256, (ctx) => {
+    // Repainted as night falls: { top, bottom, grass } CSS colours.
+    function paintSky(ctx, { top, bottom, grass }) {
         const g = ctx.createLinearGradient(0, 0, 0, 256);
-        g.addColorStop(0, theme.skyTop);
-        g.addColorStop(ROWS.horizon, theme.skyBottom);
-        g.addColorStop(ROWS.horizon, theme.grass);
-        g.addColorStop(1, theme.grass);
+        g.addColorStop(0, top);
+        g.addColorStop(ROWS.horizon, bottom);
+        g.addColorStop(ROWS.horizon, grass);
+        g.addColorStop(1, grass);
         ctx.fillStyle = g;
         ctx.fillRect(0, 0, 2, 256);
-    });
+    }
+    const sky = canvasTexture(THREE, 2, 256, (ctx) =>
+        paintSky(ctx, {
+            top: theme.skyTop,
+            bottom: theme.skyBottom,
+            grass: theme.grass,
+        })
+    );
     scene.background = sky;
 
     // --- Light -------------------------------------------------------------
@@ -227,6 +249,72 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
     // Rebuilt by layout(): the street's geometry depends on the stage.
     const street = new THREE.Group();
     made.add(street);
+
+    // --- Night ---------------------------------------------------------------
+
+    // 0 by day, 1 at night, between while it falls.
+    let night = startAtNight ? 1 : 0;
+    let nightTarget = night;
+    const scratch = new THREE.Color();
+    const { lerp } = THREE.MathUtils;
+    /** Sets `color` to `from` moved `t` of the way to `to`. */
+    const blend = (color, from, to, t) =>
+        color.set(from).lerp(scratch.set(to), t);
+    // A look with no lit windows (daylight) glows the other's colour at 0.
+    const litFrom = theme.lit ?? nightTheme.lit ?? "#000000";
+    const litTo = nightTheme.lit ?? litFrom;
+    const skyTop = new THREE.Color();
+    const skyBottom = new THREE.Color();
+    const skyGrass = new THREE.Color();
+
+    /** Lights and colours the street `n` of the way from day to night
+     * (only what NIGHTS may change: the rest is built into the geometry). */
+    function showNight(n) {
+        const tint = ridge.material.color;
+        blend(ambient.color, theme.ambient.sky, nightTheme.ambient.sky, n);
+        blend(
+            ambient.groundColor,
+            theme.ambient.ground,
+            nightTheme.ambient.ground,
+            n
+        );
+        ambient.intensity = lerp(
+            theme.ambient.intensity,
+            nightTheme.ambient.intensity,
+            n
+        );
+        blend(key.color, theme.key.color, nightTheme.key.color, n);
+        key.intensity = lerp(theme.key.intensity, nightTheme.key.intensity, n);
+        blend(glass.emissive, litFrom, litTo, n);
+        glass.emissiveIntensity = lerp(
+            theme.lit ? theme.litIntensity : 0,
+            nightTheme.lit ? nightTheme.litIntensity : 0,
+            n
+        );
+        blend(tint, theme.ridgeTint, nightTheme.ridgeTint, n);
+        const ctx = sky.image.getContext("2d");
+        if (!ctx) return;
+        paintSky(ctx, {
+            top: blend(skyTop, theme.skyTop, nightTheme.skyTop, n).getStyle(),
+            bottom: blend(
+                skyBottom,
+                theme.skyBottom,
+                nightTheme.skyBottom,
+                n
+            ).getStyle(),
+            grass: skyGrass.set(theme.grass).multiply(tint).getStyle(),
+        });
+        sky.needsUpdate = true;
+    }
+    if (night) showNight(night);
+
+    /** Eases toward the night target; whether anything changed. */
+    function fallNight(dt) {
+        if (night === nightTarget) return false;
+        night = ease(night, nightTarget, dt, NIGHTFALL);
+        showNight(night);
+        return true;
+    }
 
     // --- Cast ----------------------------------------------------------------
 
@@ -725,6 +813,7 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
         changed = fadeNearThings(view, buttZ, dt) || changed;
         changed = peekCockroaches(view.peach.x, dt) || changed;
         changed = flashFireworks(dt) || changed;
+        changed = fallNight(dt) || changed;
 
         if (!view.reduced) {
             driftTime += dt;
@@ -879,6 +968,10 @@ export function createRoadScene(THREE, kit, { theme, landmarks, idlers }) {
         /** The puppet drawing a landmark, e.g. to play its greet. */
         landmarkPuppet(slug) {
             return landmarkPuppets.find((e) => e.slug === slug)?.puppet;
+        },
+        /** Night falls (or lifts) over the next frames: dark mode flipped. */
+        setNight(on) {
+            nightTarget = on ? 1 : 0;
         },
         dispose() {
             sky.dispose();

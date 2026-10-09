@@ -243,11 +243,16 @@ function screenX(el) {
     return parseFloat(x) + width / 2;
 }
 
+/** The y px of an overlay element's top, from its transform. */
+function screenTop(el) {
+    const style = el.attributes("style");
+    return parseFloat(style.match(/translate3d\([-\d.]+px, ([-\d.]+)px/)[1]);
+}
+
 /** The y px of an overlay element's feet, from its transform. */
 function screenFeet(el) {
     const style = el.attributes("style");
-    const y = parseFloat(style.match(/translate3d\([-\d.]+px, ([-\d.]+)px/)[1]);
-    return y + parseFloat(style.match(/height: ([\d.]+)px/)[1]);
+    return screenTop(el) + parseFloat(style.match(/height: ([\d.]+)px/)[1]);
 }
 
 let wrapper;
@@ -729,6 +734,46 @@ describe("GamesWorld rooms", () => {
         await frames(200);
         await stage.trigger("keyup", { key: "ArrowRight" });
         expect(screenX(wrapper.get(".room-3d .peach"))).toBeGreaterThan(at);
+    });
+
+    it("drags the Butt off a toy it stands at, and a tap on it plays", async () => {
+        wrapper = await mountWorld(withHouse);
+        await enterHouse(wrapper);
+        const berry = roomButton(wrapper, "Strawberry");
+        await berry.trigger("focus");
+        await nextTick();
+        const peach = () => wrapper.get(".room-3d .peach");
+        // Drawn over the toy's button, so it takes the press.
+        expect(
+            berry.element.compareDocumentPosition(peach().element) &
+                Node.DOCUMENT_POSITION_FOLLOWING
+        ).toBeTruthy();
+
+        const tap = async (clientX, clientY) => {
+            await peach().trigger("pointerdown", { clientX, clientY });
+            window.dispatchEvent(new Event("pointerup"));
+            await nextTick();
+        };
+        // On the Butt, but clear of the toy's button: only a grab.
+        const feet = screenFeet(peach()) - 2;
+        expect(feet).toBeGreaterThan(screenFeet(berry));
+        await tap(screenX(peach()), feet);
+        expect(wrapper.find(".toot-puff").exists()).toBe(false);
+
+        // Over the toy's button: it plays.
+        await tap(screenX(berry), screenFeet(berry) - 5);
+        expect(wrapper.find(".toot-puff").exists()).toBe(true);
+
+        const x = screenX(peach());
+        const y = screenFeet(peach());
+
+        await peach().trigger("pointerdown", { clientX: x, clientY: y });
+        window.dispatchEvent(
+            new MouseEvent("pointermove", { clientX: x + 150, clientY: y })
+        );
+        window.dispatchEvent(new MouseEvent("pointerup"));
+        await frames(600);
+        expect(screenX(peach())).toBeGreaterThan(x + 50);
     });
 
     it("walks over to a toy that is clicked, then plays with it", async () => {

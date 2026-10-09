@@ -44,12 +44,13 @@ beforeEach(() => {
 });
 afterEach(() => spy.mockRestore());
 
-function build(room = hall, theme = "") {
+function build(room = hall, theme = "", night = false) {
     const kit = createCastKit(THREE, { createCanvas });
     const graph = createRoomScene(THREE, kit, {
         room,
         butt: { x: 450, z: 330 },
         theme,
+        night,
     });
     graph.layout(roomLayout(room, { w: 1000, h: 700 }));
     return graph;
@@ -131,6 +132,111 @@ describe("the room's scene graph", () => {
         graph.dispose();
     });
 
+    it("switches several lamps together, and the switch glows with them", () => {
+        const reading = (id, x) => ({
+            id,
+            x,
+            y: 440,
+            z: 140,
+            color: "#fcd34d",
+            intensity: 1.3,
+        });
+        const graph = build({
+            ...hall,
+            lights: [reading("reading-1", 300), reading("reading-2", 600)],
+            interactables: [
+                {
+                    id: "light-switch",
+                    type: "toy",
+                    x: 220,
+                    z: 390,
+                    emoji: "💡",
+                    light: ["reading-1", "reading-2"],
+                },
+            ],
+        });
+        const lamps = graph.scene.getObjectsByProperty("isPointLight", true);
+        const glow = graph.scene.getObjectByName("bulb").material;
+
+        // Left where their data hangs them, not moved onto the switch.
+        expect(lamps.map((l) => l.position.x)).toEqual([300, 600]);
+        expect(glow.emissiveIntensity).toBeGreaterThan(0);
+        expect(graph.toggleLight(["reading-1", "reading-2"])).toBe(false);
+        expect(lamps.every((l) => l.intensity === 0)).toBe(true);
+        expect(glow.emissiveIntensity).toBe(0);
+        expect(graph.toggleLight(["reading-1", "reading-2"])).toBe(true);
+        expect(lamps.every((l) => l.intensity > 0)).toBe(true);
+        graph.dispose();
+    });
+
+    it("draws a lamp no toy is the bulb of as its own glowing glyph", () => {
+        const graph = build({
+            ...hall,
+            lights: [{ ...hall.lights[0], emoji: "💡" }],
+        });
+        const glyph = graph.scene.getObjectByName("bulb");
+
+        expect(glyph.material.emissiveIntensity).toBeGreaterThan(0);
+        graph.toggleLight("lamp");
+        expect(glyph.material.emissiveIntensity).toBe(0);
+        expect(meshes(graph)).toBeGreaterThan(meshes(build()));
+        graph.dispose();
+    });
+
+    it("falls to night: the daylight dims and every lamp comes on", () => {
+        const day = build();
+        const lamp = day.scene.getObjectsByProperty("isPointLight", true)[0];
+        const daylight = fill(day);
+        day.toggleLight("lamp");
+        day.sync(view({ reduced: false }), 0);
+
+        day.setNight(true);
+        expect(lamp.intensity).toBeGreaterThan(0);
+        // Eases over about 300 ms, rather than snapping.
+        expect(day.sync(view({ reduced: false }), 0.1)).toBe(true);
+        expect(fill(day)).toBeLessThan(daylight);
+        expect(fill(day)).toBeGreaterThan(fill(build(hall, "", true)));
+        day.sync(view({ reduced: false }), 0.5);
+        expect(fill(day)).toBeCloseTo(fill(build(hall, "", true)));
+
+        // And lifts again, leaving the lamps as they are.
+        day.setNight(false);
+        day.sync(view({ reduced: false }), 0.5);
+        expect(fill(day)).toBeCloseTo(daylight);
+        expect(lamp.intensity).toBeGreaterThan(0);
+    });
+
+    it("gives the Butt a faint glow when the lamps are off, and a little at night", () => {
+        const graph = build();
+        const glow = () =>
+            graph.scene.getObjectByName("butt-glow").material.emissiveIntensity;
+
+        expect(glow()).toBe(0);
+        graph.toggleLight("lamp");
+        expect(glow()).toBeGreaterThan(0);
+        expect(glow()).toBeLessThan(0.5);
+        const dark = glow();
+
+        graph.toggleLight("lamp");
+        graph.setNight(true);
+        graph.sync(view(), 0.01);
+        expect(glow()).toBeGreaterThan(0);
+        expect(glow()).toBeLessThan(dark);
+        graph.dispose();
+    });
+
+    it("switches night at once under reduced motion, season and all", () => {
+        const graph = build(hall, "halloween");
+        graph.sync(view(), 0);
+
+        graph.setNight(true);
+        graph.sync(view(), 0.01);
+        expect(fill(graph)).toBeCloseTo(fill(build(hall, "halloween", true)));
+        expect(fill(build(hall, "halloween", true))).toBeLessThan(
+            fill(build(hall, "", true))
+        );
+    });
+
     it("walks the Butt about the floor", () => {
         const graph = build();
         graph.sync(view(), 0);
@@ -174,7 +280,9 @@ describe("the room's scene graph", () => {
                 },
             ],
         });
-        const door = graph.scene.children.find((child) => child.position.z === 200);
+        const door = graph.scene.children.find(
+            (child) => child.position.z === 200
+        );
 
         expect(door.position.x).toBe(3);
         expect(door.rotation.y).toBeCloseTo(Math.PI / 2);

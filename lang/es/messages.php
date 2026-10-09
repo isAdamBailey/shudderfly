@@ -735,6 +735,7 @@ return [
     'games.world.toys.clock_hex' => 'Reloj de arce',
     'games.world.toys.clock_banjo' => 'Reloj banjo',
     'games.world.toys.lamp' => 'Lámpara',
+    'games.world.toys.light_switch' => 'Interruptor de luz',
     'games.world.toys.sprout_pot' => 'Olla de coles',
     'games.world.toys.sprout_pot_line' => '¡Blub blub! Sopa de coles. ¡Alerta de pedos!',
     'games.world.toys.toilet_roll' => 'Papel higiénico',
