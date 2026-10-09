@@ -11,16 +11,17 @@ import { nextTick, onMounted, onUnmounted, ref } from "vue";
 
 // The card a thing in the world opens before it takes you out of it (a
 // game, a book): a modal over the stage that reads `script` aloud as it
-// opens, with one way on (`action`, to `href`) and a way back. The card fills in the rest: what it's about,
-// titled by the element `titleId`.
+// opens, with one way on (`action`, to `href`) and a way back. No `href`
+// means the way on stays in the world: a button that emits `play`. The
+// card fills in the rest: what it's about, titled by the element `titleId`.
 const props = defineProps({
     titleId: { type: String, required: true },
     script: { type: String, required: true },
-    href: { type: String, required: true },
+    href: { type: String, default: "" },
     action: { type: String, required: true },
 });
 
-const emit = defineEmits(["cancel"]);
+const emit = defineEmits(["cancel", "play"]);
 
 const { t } = useTranslations();
 
@@ -57,7 +58,17 @@ const cancel = () => emit("cancel");
         >
             <slot />
             <div class="mt-6 flex flex-col items-center gap-3">
+                <Button
+                    v-if="!href"
+                    ref="actionRef"
+                    type="button"
+                    class="world-card-action"
+                    @click="emit('play')"
+                >
+                    {{ action }}
+                </Button>
                 <Link
+                    v-else
                     ref="actionRef"
                     :href="href"
                     class="world-card-action rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-primary"

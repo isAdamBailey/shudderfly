@@ -1,7 +1,12 @@
 <template>
-    <GameBoard v-if="state.phase === 'playing'" :state="state" @hiss="hiss" />
+    <GameBoard
+        v-if="state.phase === 'playing'"
+        :state="state"
+        :kit="kit"
+        @hiss="hiss"
+    />
     <WinScreen
-        v-else-if="state.phase === 'win'"
+        v-else-if="state.phase === 'win' && !kit"
         :score="state.score"
         :stars="stars"
         :fact="currentFact"
@@ -19,9 +24,14 @@ import WinScreen from "./components/WinScreen.vue";
 import { useGameState } from "./composables/useGameState.js";
 import { useSound } from "./composables/useSound.js";
 import { useAutoStartGame } from "@/composables/useAutoStartGame";
-import { useTranslations } from "@/composables/useTranslations";
 
-const { t } = useTranslations();
+// On its page, or, with `kit`, over the world (GameHost). The kit is the
+// only way it reaches the world: the score, the fart, the hiss, and whether
+// motion should stay down. The page keeps its own win screen and share.
+const props = defineProps({
+    kit: { type: Object, default: null },
+});
+
 const fartSoundUrl = usePage().props.fartSoundUrl ?? "/fart.m4a";
 const { state, stars, currentFact, startGame, hiss } = useGameState();
 const { initAudio, playFart, playVictory } = useSound(fartSoundUrl);
@@ -36,6 +46,13 @@ watch(
             victoryTimeoutId = null;
         }
         if (isFarting) {
+            if (props.kit) {
+                props.kit.toot("cockroach", {
+                    x: state.cockroachX / 100,
+                    y: state.cockroachY / 100,
+                });
+                return;
+            }
             playFart();
             victoryTimeoutId = setTimeout(() => {
                 playVictory();
@@ -52,8 +69,17 @@ onUnmounted(() => {
     }
 });
 
+watch(
+    () => state.phase,
+    (phase) => {
+        if (phase === "win" && props.kit) {
+            props.kit.finish({ score: state.score });
+        }
+    }
+);
+
 async function handlePlay() {
-    await initAudio();
+    if (!props.kit) await initAudio();
     startGame();
 }
 

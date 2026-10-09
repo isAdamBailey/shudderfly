@@ -695,6 +695,7 @@ return [
     'games.world.landmark_aria' => ':game — appuie sur Entrée pour visiter',
     'games.world.play' => '▶ Jouer',
     'games.world.cancel' => 'Pas encore',
+    'games.world.score' => 'Tu as fait :score !',
     'games.world.room_aria' => 'Monde des jeux, :place — touche le sol ou utilise les flèches pour marcher, Tab pour trouver des choses, Échap pour revenir',
     'games.world.back' => 'Retour',
     'games.world.needs_webgl' => 'Ce navigateur ne peut pas montrer l\'intérieur de :place',

@@ -1,7 +1,7 @@
 <template>
     <div
         class="cockroach-wrapper"
-        :class="{ fighting: fighting }"
+        :class="{ fighting: fighting, calm: calm }"
         :style="wrapperStyle"
     >
         <div
@@ -33,6 +33,7 @@ const props = defineProps({
     flipped: { type: Boolean, default: false },
     fighting: { type: Boolean, default: false },
     disabled: { type: Boolean, default: false },
+    calm: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(["head-tap"]);
@@ -45,7 +46,7 @@ const wrapperStyle = computed(() => ({
 
 function onHeadTap(event) {
     if (props.disabled) return;
-    if (navigator.vibrate) {
+    if (!props.calm && navigator.vibrate) {
         navigator.vibrate(30);
     }
     const rect = event.currentTarget.getBoundingClientRect();
@@ -60,11 +61,19 @@ function onHeadTap(event) {
     position: absolute;
     width: 28vmin;
     height: auto;
-    transition: left 0.35s ease-out, top 0.35s ease-out,
+    transition:
+        left 0.35s ease-out,
+        top 0.35s ease-out,
         transform 0.35s ease-out;
     z-index: 10;
     user-select: none;
     -webkit-user-select: none;
+}
+
+.cockroach-wrapper.calm,
+.cockroach-wrapper.calm .cockroach-img.hissing {
+    transition: none;
+    animation: none;
 }
 
 .cockroach-img {

@@ -16,9 +16,10 @@
             :y="state.cockroachY"
             :is-hissing="state.isHissing"
             :rotation="state.cockroachRotation"
+            :calm="calm"
             @head-tap="handleHiss"
         />
-        <FartCloud :visible="state.showFart" />
+        <FartCloud v-if="!kit" :visible="state.showFart" />
         <div
             v-if="state.hissCount === 0"
             class="tap-hint"
@@ -34,17 +35,23 @@
 </template>
 
 <script setup>
+import { useTranslations } from "@/composables/useTranslations";
+import { computed } from "vue";
 import CockroachSprite from "./CockroachSprite.vue";
 import FartCloud from "./FartCloud.vue";
 import ScoreDisplay from "./ScoreDisplay.vue";
 import { useSound } from "../composables/useSound.js";
-import { useTranslations } from "@/composables/useTranslations";
 
 const { t } = useTranslations();
 
-defineProps({
+const props = defineProps({
     state: { type: Object, required: true },
+    kit: { type: Object, default: null },
 });
+
+const calm = computed(() =>
+    props.kit ? props.kit.reducedMotion.value : false
+);
 
 const emit = defineEmits(["hiss"]);
 
@@ -52,7 +59,8 @@ const { playHiss } = useSound();
 
 function handleHiss(direction) {
     emit("hiss", direction);
-    playHiss();
+    if (props.kit) props.kit.playSound("hiss");
+    else playHiss();
 }
 </script>
 

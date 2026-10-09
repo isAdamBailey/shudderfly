@@ -695,6 +695,7 @@ return [
     'games.world.landmark_aria' => ':game — press Enter to visit',
     'games.world.play' => '▶ Play',
     'games.world.cancel' => 'Not yet',
+    'games.world.score' => 'You scored :score!',
     'games.world.room_aria' => 'Games world, :place — tap the floor or use the arrow keys to walk, Tab to find things, Escape to go back',
     'games.world.back' => 'Go back',
     'games.world.needs_webgl' => 'This browser can\'t show inside :place',
