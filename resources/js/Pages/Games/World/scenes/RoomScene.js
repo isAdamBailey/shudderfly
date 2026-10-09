@@ -298,8 +298,10 @@ export function createRoomScene(
     for (const item of room.interactables) {
         // Built into the room above, not played with.
         if (item.stairs || item.open) continue;
-        if (item.screen) {
-            made.add(screenMesh(item));
+        // A TV, or a picture: a thin panel. What you see on it is in the
+        // overlay (a <video>, or the picture's <img>).
+        if (item.screen || item.image) {
+            made.add(panelMesh(item, item.image ? "#1c1410" : "#0b0b0f"));
             continue;
         }
         const size = itemBox(item).height;
@@ -367,15 +369,15 @@ export function createRoomScene(
     showDaylight(night);
     showLamps();
 
-    /** A flat-screen TV (`screen`: { w, h }): a thin black panel on its
-     * wall. What it plays is a <video> over it in the overlay. */
-    function screenMesh(item) {
+    /** A thin panel on its wall, `color`: a TV's screen or a picture's
+     * backing. What it shows is in the overlay. */
+    function panelMesh(item, color) {
         const { width: w, height: h } = itemBox(item);
         const pose = itemPose(item);
         const panel = new THREE.Mesh(
             new THREE.BoxGeometry(w, h, SCREEN_DEPTH),
             new THREE.MeshStandardMaterial({
-                color: "#0b0b0f",
+                color,
                 roughness: 0.25,
                 metalness: 0.3,
             })

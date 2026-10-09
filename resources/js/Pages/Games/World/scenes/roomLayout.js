@@ -137,8 +137,9 @@ const wayBack = (item) => Boolean(item.exit || item.stairs);
  * arched gold title, as the road's landmarks do. A door is a doorway
  * (wider and open with `open`), with its name over it unless it's plainly
  * the way back (see wayBack()); anything else is a `size` square
- * (ROOM_SIZES.toy if it says nothing) or a TV's `screen` { w, h },
- * titled if it leads somewhere (a game) or says `titled`. A flight of stairs' button covers the flight
+ * (ROOM_SIZES.toy if it says nothing), a TV's `screen` { w, h }, or a
+ * picture's `image` { w, h }, titled if it leads somewhere (a game) or
+ * says `titled`. A flight of stairs' button covers the flight
  * (staircase.js stairsBounds()). */
 export function itemBox(item) {
     const titled =
@@ -148,6 +149,8 @@ export function itemBox(item) {
     if (item.type === "door") return { ...ROOM_SIZES.door, titled };
     if (item.screen)
         return { width: item.screen.w, height: item.screen.h, titled };
+    if (item.image)
+        return { width: item.image.w, height: item.image.h, titled };
     const size = item.size ?? ROOM_SIZES.toy;
     return { width: size, height: size, titled };
 }

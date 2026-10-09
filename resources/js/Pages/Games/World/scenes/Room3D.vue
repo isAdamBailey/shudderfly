@@ -530,6 +530,13 @@ defineExpose({
                     class="room-overlay"
                     :size="`${s.height}px`"
                 />
+                <img
+                    v-if="s.item.image"
+                    class="room-picture"
+                    :src="s.item.image.src"
+                    alt=""
+                    draggable="false"
+                />
                 <!-- Which way a flight goes, plain to see. -->
                 <span
                     v-if="s.item.stairs"
@@ -647,6 +654,17 @@ defineExpose({
     left: 50%;
     bottom: 0;
     transform: translateX(-50%);
+    pointer-events: none;
+}
+
+/* A picture over its panel, the way a book's cover sits on its face. */
+.room-picture {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    box-shadow: inset 0 0 0 3px #78350f;
     pointer-events: none;
 }
 

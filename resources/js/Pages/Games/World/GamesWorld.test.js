@@ -678,6 +678,36 @@ describe("GamesWorld rooms", () => {
             .findAll("button.room-item")
             .find((b) => b.attributes("aria-label") === label);
 
+    it("hangs a picture on the wall", async () => {
+        const hall = withHouse["house.hall"];
+        wrapper = await mountWorld({
+            ...withHouse,
+            "house.hall": {
+                ...hall,
+                interactables: [
+                    ...hall.interactables,
+                    {
+                        id: "portrait",
+                        type: "toy",
+                        x: 300,
+                        z: 0,
+                        y: 150,
+                        image: { src: "/img/cockroach.png", w: 372, h: 200 },
+                        label: "Picture of the cockroach",
+                        line: "Hiss!",
+                        sound: "hiss",
+                    },
+                ],
+            },
+        });
+        await enterHouse(wrapper);
+
+        const picture = roomButton(wrapper, "Picture of the cockroach");
+        expect(picture.get("img.room-picture").attributes("src")).toBe(
+            "/img/cockroach.png"
+        );
+    });
+
     it("walks the Butt about the room with the arrow keys", async () => {
         wrapper = await mountWorld(withHouse);
         await enterHouse(wrapper);

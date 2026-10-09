@@ -32,10 +32,12 @@ class GamesTest extends TestCase
                 ->missing('games')
                 ->where('scenes.road.kind', 'road')
                 // The cockroach games, then the buildings you can go into.
-                ->has('scenes.road.interactables', 5)
+                ->has('scenes.road.interactables', 6)
                 ->where('scenes.road.interactables.2.id', 'house')
                 ->where('scenes.road.interactables.3.id', 'library')
                 ->where('scenes.road.interactables.4.id', 'poop-house')
+                ->where('scenes.road.interactables.5.id', 'cockroach-house')
+                ->where('scenes.road.interactables.5.to', 'cockroach-house.hall')
                 // A dotted id can't be a path here.
                 ->where('scenes', fn ($scenes) => collect($scenes)->get('house.hall')['kind'] === 'room')
                 ->where('link', null)
