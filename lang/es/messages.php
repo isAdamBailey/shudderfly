@@ -721,6 +721,8 @@ return [
     'games.world.shelves.halloween' => 'Libros de Halloween',
     'games.world.shelves.fireworks' => 'Libros del 4 de julio',
     'games.world.read' => '📖 Leer',
+    'games.world.tv_playing' => 'Tele, con :title',
+    'games.world.tv_channel' => 'CANAL :number',
     'games.world.exit_sign' => 'Salida',
     'games.world.toys.doorbell' => 'Timbre',
     'games.world.toys.doorbell_line' => '¡Din don! ¡Pum pum!',
@@ -744,6 +746,8 @@ return [
     'games.world.toys.bed' => 'Cama',
     'games.world.toys.bed_line' => '¡Prrrt! ¿Quién escondió un cojín de pedos en la cama?',
     'games.world.toys.nightlight' => 'Luz de noche',
+    'games.world.toys.tv' => 'Tele',
+    'games.world.toys.tv_line' => '¡Kssshhh! Solo hay estática. Y un pedito.',
 
     // Games - Cast
     'games.cast.butt' => 'El Trasero',

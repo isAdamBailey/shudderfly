@@ -35,6 +35,8 @@ const DAYLIGHT = { fill: 2.2, key: 2 };
 const LAMP_REACH = 250;
 // How bright a switched-on bulb's own glyph glows, apart from the light it casts.
 const BULB_ON = 2;
+// A flat-screen TV: how far it stands off its wall, units.
+const SCREEN_DEPTH = 6;
 
 /**
  * Builds a room from its scene data (`room`: { size, walls, ambient, lights,
@@ -253,6 +255,10 @@ export function createRoomScene(
     for (const item of room.interactables) {
         // Built into the room above, not played with.
         if (item.stairs || item.open) continue;
+        if (item.screen) {
+            made.add(screenMesh(item));
+            continue;
+        }
         const size = itemBox(item).height;
         // On a wall rather than the floor: no shadow under it.
         const shadows = !((item.y ?? 0) > 0);
@@ -292,6 +298,25 @@ export function createRoomScene(
     butt.setMove("idle");
     butt.group.position.set(buttAt.x, 0, buttAt.z);
     scene.add(butt.group);
+
+    /** A flat-screen TV (`screen`: { w, h }): a thin black panel on its
+     * wall. What it plays is a <video> over it in the overlay. */
+    function screenMesh(item) {
+        const { width: w, height: h } = itemBox(item);
+        const pose = itemPose(item);
+        const panel = new THREE.Mesh(
+            new THREE.BoxGeometry(w, h, SCREEN_DEPTH),
+            new THREE.MeshStandardMaterial({
+                color: "#0b0b0f",
+                roughness: 0.25,
+                metalness: 0.3,
+            })
+        );
+        panel.position.set(pose.x, pose.y + h / 2, pose.z);
+        panel.rotation.y = pose.turn;
+        panel.translateZ(SCREEN_DEPTH / 2);
+        return panel;
+    }
 
     const puppets = [butt, ...things.values()];
     let reduced = null;

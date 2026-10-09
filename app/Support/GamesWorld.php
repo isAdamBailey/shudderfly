@@ -7,6 +7,7 @@ use App\Http\Controllers\GameController;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Book;
 use App\Models\Category;
+use App\Models\Page;
 use Illuminate\Support\Str;
 
 /**
@@ -38,6 +39,10 @@ final class GamesWorld
      * Forgotten and seasonal shelves): three columns, within one page of
      * books.category. */
     public const LIBRARY_HALL_SHELF = 9;
+
+    /** How many of the family's videos a TV flicks between, picked afresh
+     * on every visit. */
+    public const TV_CHANNELS = 6;
 
     /** The walls of a room a door can sit on. `back` is the far wall, facing
      * the open front; `left` and `right` are the ends. */
@@ -191,7 +196,8 @@ final class GamesWorld
                 ],
             ], [
                 self::roomDoor('hall-door', 110, 'house.hall', 'bedroom-door', 'house_hall', exit: true),
-                // The Face, sick in bed. Room to its left for a bookshelf.
+                // The Face, sick in bed, with the TV on the wall to watch.
+                self::tv('tv', 300, 230),
                 self::game('sprout-pox', 440, 60, ['size' => 120, 'cast' => 'face']),
                 self::toy('bed', 640, 130, '🛏️', 'bed', ['size' => 110, 'move' => 'bounce', 'toot' => 'butt', 'line' => true]),
                 self::toy('nightlight', 820, 0, '🌙', 'nightlight', ['y' => 60, 'size' => 50, 'move' => 'wiggle', 'light' => 'nightlight']),
@@ -535,6 +541,24 @@ final class GamesWorld
         ];
     }
 
+    /** A flat-screen TV on a room's back wall, its bottom `y` up it (a
+     * black panel, `screen` units wide and high). scenes() tunes it to a
+     * few of the family's videos (`channels`); with none it says
+     * `toys.tv_line`. */
+    private static function tv(string $id, int $x, int $y): array
+    {
+        return [
+            'id' => $id,
+            'type' => 'tv',
+            'x' => $x,
+            'z' => 0,
+            'y' => $y,
+            'screen' => ['w' => 192, 'h' => 108],
+            'label' => 'messages.games.world.toys.tv',
+            'line' => 'messages.games.world.toys.tv_line',
+        ];
+    }
+
     /** A cast member living in a room, as a toy: its id is its cast id. */
     private static function resident(string $cast, int $x, int $z, array $does = []): array
     {
@@ -552,6 +576,11 @@ final class GamesWorld
     public static function scenes(): array
     {
         $games = GameController::games();
+        // Asked for once, and only if a scene has a TV.
+        $channels = null;
+        $tune = function () use (&$channels) {
+            return $channels ??= self::channels();
+        };
 
         return collect(self::definitions())
             ->map(fn ($scene) => [
@@ -560,15 +589,19 @@ final class GamesWorld
                     ? ['shelves' => array_map(fn ($shelf) => self::translate($shelf), $scene['shelves'])]
                     : []),
                 'interactables' => array_map(
-                    fn ($item) => self::resolve($item, $games),
+                    fn ($item) => self::resolve($item, $games, $tune),
                     $scene['interactables'],
                 ),
             ])
             ->all();
     }
 
-    private static function resolve(array $item, array $games): array
+    private static function resolve(array $item, array $games, callable $tune): array
     {
+        if ($item['type'] === 'tv') {
+            return [...self::translate($item), 'channels' => $tune()];
+        }
+
         if ($item['type'] === 'game') {
             $game = $games[$item['game']];
             $item['label'] = $game['name'];
@@ -587,6 +620,29 @@ final class GamesWorld
         }
 
         return self::translate($item);
+    }
+
+    /** A few of the family's uploaded videos, at random, for a TV: only
+     * pages anyone can see on the Photos page (not blocked), and not YouTube
+     * links, which play on their pages. Paths are the media URLs Page gives. */
+    private static function channels(): array
+    {
+        return Page::query()
+            ->notBlocked()
+            ->whereNotNull('media_poster')
+            ->where('media_poster', '!=', '')
+            ->whereNull('video_link')
+            ->with('book:id,title')
+            ->inRandomOrder()
+            ->limit(self::TV_CHANNELS)
+            ->get()
+            ->map(fn (Page $page) => [
+                'id' => $page->id,
+                'video' => $page->media_path,
+                'poster' => $page->media_poster,
+                'title' => $page->book?->title ?? '',
+            ])
+            ->all();
     }
 
     /** A scene's or interactable's TRANSLATED fields, each filled in from

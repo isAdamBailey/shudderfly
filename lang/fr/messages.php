@@ -721,6 +721,8 @@ return [
     'games.world.shelves.halloween' => 'Livres d\'Halloween',
     'games.world.shelves.fireworks' => 'Livres du 4 juillet',
     'games.world.read' => '📖 Lire',
+    'games.world.tv_playing' => 'Télé, avec :title',
+    'games.world.tv_channel' => 'CH :number',
     'games.world.exit_sign' => 'Sortie',
     'games.world.toys.doorbell' => 'Sonnette',
     'games.world.toys.doorbell_line' => 'Ding dong ! Prout prout !',
@@ -744,6 +746,8 @@ return [
     'games.world.toys.bed' => 'Lit',
     'games.world.toys.bed_line' => 'Prrrout ! Qui a caché un coussin péteur dans le lit ?',
     'games.world.toys.nightlight' => 'Veilleuse',
+    'games.world.toys.tv' => 'Télé',
+    'games.world.toys.tv_line' => 'Kssshhh ! Rien que de la neige. Et un prout.',
 
     // Games - Cast
     'games.cast.butt' => 'Les Fesses',
