@@ -2,16 +2,20 @@
 import PersonFace from "@/Components/Games/PersonFace.vue";
 import { CAST } from "@/constants/characters.js";
 import { useTranslations } from "@/composables/useTranslations";
-import { computed, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { BUTT_FRAME, buttShapes } from "./buttDraw.js";
-import { installCastMoves, LANDING_HEIGHT } from "./castMoveData.js";
+import { sampleButtPose } from "./buttRig.js";
+import {
+    CAST_MOVE_DATA,
+    installCastMoves,
+    LANDING_HEIGHT,
+} from "./castMoveData.js";
 
-// Standing pose for every move. The move still poses this whole figure;
-// the legs cycle in a later phase.
 let buttFigures = 0;
-const standingButt = buttShapes();
 const buttViewBox = `${BUTT_FRAME.minX} ${BUTT_FRAME.minY} ${BUTT_FRAME.width} ${BUTT_FRAME.height}`;
-const buttFlip = `translate(0 ${BUTT_FRAME.minY + BUTT_FRAME.maxY}) scale(1 -1)`;
+const buttFlip = `translate(0 ${
+    BUTT_FRAME.minY + BUTT_FRAME.maxY
+}) scale(1 -1)`;
 const buttWidth = `${BUTT_FRAME.width / BUTT_FRAME.height}em`;
 
 // The one way to draw a cast member (issue #130): the same glyph, depth,
@@ -45,6 +49,65 @@ const props = defineProps({
 
 const { t } = useTranslations();
 const buttFigId = `butt-fig-${++buttFigures}`;
+const buttPose = ref(sampleButtPose("idle"));
+const buttDrawing = computed(() =>
+    props.id === "butt" ? buttShapes(buttPose.value) : []
+);
+
+let rafId = 0;
+let last = null;
+let moveTime = 0;
+let shotTime = 0;
+let motionQuery;
+
+function poseButt(dt) {
+    const still = reducedMotion();
+    if (oneShot.value && !still) {
+        shotTime += dt;
+        if (shotTime >= CAST_MOVE_DATA[oneShot.value].duration) {
+            oneShot.value = null;
+            shotTime = 0;
+            moveTime = 0;
+        } else {
+            buttPose.value = sampleButtPose(oneShot.value, shotTime);
+            return true;
+        }
+    }
+    const move = member.value.moves.includes(props.move) ? props.move : null;
+    const data = move && move !== "idle" ? CAST_MOVE_DATA[move] : null;
+    if (!still && data) {
+        moveTime += dt;
+        buttPose.value = sampleButtPose(move, moveTime);
+        return data.loop || moveTime < data.duration;
+    }
+    buttPose.value = sampleButtPose(move, 0, { still });
+    return false;
+}
+
+function loop(now) {
+    const dt = last === null ? 0 : Math.min(0.05, (now - last) / 1000);
+    last = now;
+    rafId =
+        props.id === "butt" && poseButt(dt) ? requestAnimationFrame(loop) : 0;
+}
+
+function kick() {
+    if (rafId || props.id !== "butt") return;
+    last = null;
+    if (poseButt(0) && typeof requestAnimationFrame === "function") {
+        rafId = requestAnimationFrame(loop);
+    }
+}
+
+function stop() {
+    cancelAnimationFrame(rafId);
+    rafId = 0;
+}
+
+function onMotionChange() {
+    stop();
+    kick();
+}
 
 // The moves are generated from the data castMesh (WebGL) also plays.
 installCastMoves();
@@ -77,7 +140,28 @@ function play(move) {
     if (!member.value.moves.includes(move) || reducedMotion()) return;
     oneShot.value = move;
     plays.value++;
+    shotTime = 0;
+    stop();
+    kick();
 }
+
+watch(
+    () => props.move,
+    () => {
+        moveTime = 0;
+        stop();
+        kick();
+    }
+);
+onMounted(() => {
+    motionQuery = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    motionQuery?.addEventListener?.("change", onMotionChange);
+    kick();
+});
+onBeforeUnmount(() => {
+    motionQuery?.removeEventListener?.("change", onMotionChange);
+    stop();
+});
 
 function onAnimationEnd(event) {
     // Looping moves never end, and PersonFace's own animations bubble up too.
@@ -130,7 +214,11 @@ watch(
         :class="[
             `cast-${id}`,
             moveClass,
-            { 'cast-landing': landing, 'cast-facing-left': facing === 'left' },
+            {
+                'cast-landing': landing,
+                'cast-facing-left': facing === 'left',
+                'cast-rig': id === 'butt',
+            },
         ]"
         :style="size ? { fontSize: size } : null"
         :role="ariaLabel ? 'img' : null"
@@ -157,7 +245,7 @@ watch(
                     >
                         <defs>
                             <template
-                                v-for="(shape, index) in standingButt"
+                                v-for="(shape, index) in buttDrawing"
                                 :key="`${buttFigId}-${index}`"
                             >
                                 <radialGradient
@@ -185,7 +273,7 @@ watch(
                         </defs>
                         <g :transform="buttFlip">
                             <template
-                                v-for="(shape, index) in standingButt"
+                                v-for="(shape, index) in buttDrawing"
                                 :key="index"
                             >
                                 <ellipse
@@ -197,12 +285,13 @@ watch(
                                     :ry="shape.ry"
                                     :fill="`url(#${buttFigId}-${index})`"
                                 />
-                                <circle
+                                <ellipse
                                     v-else-if="shape.type === 'cheek'"
                                     class="butt-cheek"
                                     :cx="shape.x"
                                     :cy="shape.y"
-                                    :r="shape.r"
+                                    :rx="shape.rx"
+                                    :ry="shape.ry"
                                     :fill="`url(#${buttFigId}-${index})`"
                                 />
                                 <line
@@ -241,6 +330,12 @@ watch(
 .cast-squash,
 .cast-body {
     display: block;
+}
+
+/* The rig plays the Butt's moves. The shared move stylesheet would squash
+   the whole figure the way it squashes an emoji card. */
+.cast-rig .cast-body {
+    animation: none;
 }
 
 /* The same depth for everyone: a few stacked, darkening copies of the glyph's

@@ -30,9 +30,11 @@ function place(body, offset) {
     const rad = body.rot * DEG;
     const cos = Math.cos(rad);
     const sin = Math.sin(rad);
+    const ox = offset.x * body.sx;
+    const oy = offset.y * body.sy;
     return {
-        x: body.x + offset.x * cos - offset.y * sin,
-        y: body.y + offset.x * sin + offset.y * cos,
+        x: body.x + ox * cos - oy * sin,
+        y: body.y + ox * sin + oy * cos,
         z: 0,
     };
 }
@@ -43,7 +45,8 @@ export function buttParts(pose = sampleButtPose("idle")) {
     const radius = BUTT_RIG.body.cheekRadius;
     const cheeks = BUTT_RIG.body.cheeks.map((cheek) => ({
         ...place(body, cheek),
-        r: radius,
+        rx: radius * body.sx,
+        ry: radius * body.sy,
     }));
     const nearer = [...cheeks].sort((a, b) => turn(b).z - turn(a).z);
     nearer[0].color = BUTT_COLORS.near;
@@ -83,7 +86,7 @@ export function buttParts(pose = sampleButtPose("idle")) {
         });
         feet.push({
             x: foot.x + length * 0.32,
-            y: height / 2,
+            y: foot.y + height / 2,
             z: foot.z + 0.05 + out * 0.025,
             sx: length / 2,
             sy: height / 2,
@@ -92,16 +95,18 @@ export function buttParts(pose = sampleButtPose("idle")) {
         });
     }
 
-    const cleftX = (cheeks[0].x + cheeks[1].x) / 2;
-    const cleftY = (cheeks[0].y + cheeks[1].y) / 2;
+    const midX = (BUTT_RIG.body.cheeks[0].x + BUTT_RIG.body.cheeks[1].x) / 2;
+    const midY = (BUTT_RIG.body.cheeks[0].y + BUTT_RIG.body.cheeks[1].y) / 2;
+    const cleftTop = place(body, { x: midX, y: midY + radius * 0.28 });
+    const cleftBottom = place(body, { x: midX, y: midY - radius * 0.62 });
     const cleft = {
-        x1: cleftX,
-        y1: cleftY + radius * 0.28,
+        x1: cleftTop.x,
+        y1: cleftTop.y,
         z1: 0.05,
-        x2: cleftX,
-        y2: cleftY - radius * 0.62,
+        x2: cleftBottom.x,
+        y2: cleftBottom.y,
         z2: 0.05,
-        width: radius * 0.16,
+        width: radius * 0.16 * body.sx,
         color: BUTT_COLORS.cleft,
     };
 
@@ -136,8 +141,8 @@ function project(point) {
 }
 
 function shade(shape) {
-    const across = shape.r ?? shape.rx ?? 0;
-    const up = shape.r ?? shape.ry ?? 0;
+    const across = shape.rx ?? shape.r ?? 0;
+    const up = shape.ry ?? shape.r ?? 0;
     return {
         ...shape,
         highlight: BUTT_COLORS.highlight,
@@ -200,7 +205,8 @@ export function buttShapes(pose = sampleButtPose("idle")) {
                 type: "cheek",
                 x: p.x,
                 y: p.y,
-                r: cheek.r * p.scale,
+                rx: cheek.rx * p.scale,
+                ry: cheek.ry * p.scale,
                 color: cheek.color,
                 z: p.z,
             });

@@ -787,6 +787,10 @@ export function createRoadScene(
             lift: view.peachLift,
             facing: view.peach.facing < 0 ? "left" : "right",
         });
+        const crossing =
+            view.peach.side &&
+            view.peach.lane !== (view.peach.side === "near" ? 1 : 0);
+        butt.setMove(view.peach.vx || crossing ? "walk" : null);
 
         view.idlers.forEach((idler, i) => {
             const entry = idlerPuppets[i];

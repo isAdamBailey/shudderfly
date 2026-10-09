@@ -8,6 +8,7 @@ import TiltPermissionButton from "@/Components/TiltPermissionButton.vue";
 import LandmarkTitle from "../components/LandmarkTitle.vue";
 import SkyLogo from "../components/SkyLogo.vue";
 import { useRoad } from "../composables/useRoad.js";
+import { LANES } from "../composables/useGamesWorld.js";
 
 // The `kind: "road"` renderer for when WebGL isn't available (Road3D.vue is
 // the WebGL one): the road drawn in the DOM, as it was before the 3D world.
@@ -125,6 +126,10 @@ const hillStyle = computed(() => ({
     }px, ${peekY.value * PEEK.hills.y}px, 0)`,
 }));
 
+const buttMoving = computed(
+    () => peach.vx !== 0 || peach.lane !== LANES[peach.side]
+);
+
 const peachStyle = computed(() => ({
     // translate rather than `left`: peach.x changes every frame, and `left`
     // would relayout the box each time.
@@ -218,7 +223,7 @@ defineExpose(api);
                 <CastMember
                     id="butt"
                     ref="buttCast"
-                    :move="null"
+                    :move="buttMoving ? 'walk' : null"
                     :facing="peach.facing < 0 ? 'left' : 'right'"
                     :lift="peachLift"
                 />

@@ -161,6 +161,29 @@ describe("the road's scene graph", () => {
         expect(road.camera.position.x).toBe(100 + 500);
     });
 
+    it("cycles the butt's legs while it walks the street", () => {
+        const { road, L } = build();
+        road.sync(view(L), 0);
+        const leg =
+            road.butt.group.getObjectByName("butt").userData.meshes.legs[0];
+        const planted = leg.position.x;
+
+        road.sync(
+            view(L, { peach: { x: 300, facing: 1, lane: 0, vx: 220 } }),
+            0.1
+        );
+        expect(leg.position.x).not.toBeCloseTo(planted);
+
+        road.sync(
+            view(L, {
+                reduced: true,
+                peach: { x: 320, facing: 1, lane: 0, vx: 220 },
+            }),
+            0.1
+        );
+        expect(leg.position.x).toBeCloseTo(planted);
+    });
+
     it("redraws a walk under reduced motion, when only positions change", () => {
         const { road, L } = build();
         const still = view(L, { reduced: true });

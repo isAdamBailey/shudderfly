@@ -69,17 +69,44 @@ describe("the butt rig", () => {
         ).toBeCloseTo(-BUTT_WALK_SWING);
     });
 
-    it("holds the other butt moves at the idle pose", () => {
-        const idle = sampleButtPose("idle", 0.3);
-        for (const move of CAST.butt.moves.filter((name) => name !== "walk")) {
-            expect(sampleButtPose(move, 0.3), move).toEqual(idle);
+    it("plays wiggle, toot, thrown and eat on the body", () => {
+        const idle = sampleButtPose("idle", 0);
+        const at = (move, share) =>
+            sampleButtPose(move, CAST_MOVE_DATA[move].duration * share);
+
+        const wiggle = at("wiggle", 0.25);
+        expect(wiggle.body.rot).toBeCloseTo(-10);
+        expect(wiggle.leftLeg.rot).toBe(0);
+        expect(wiggle.rightLeg.rot).toBe(0);
+
+        const toot = at("toot", 0.3);
+        expect(toot.body.sx).toBeCloseTo(1.18);
+        expect(toot.body.sy).toBeCloseTo(0.84);
+        expect(toot.body.rot).toBe(0);
+
+        const gulp = at("eat", 0.4);
+        expect(gulp.body.sx).toBeCloseTo(1.12);
+        expect(gulp.body.sy).toBeCloseTo(0.86);
+
+        const tumble = at("thrown", 0.25);
+        expect(tumble.body.rot).toBeCloseTo(90);
+        expect(tumble.body.sx).toBe(1);
+
+        for (const pose of [wiggle, toot, gulp, tumble]) {
+            expect(pose).not.toEqual(idle);
         }
+        expect(sampleButtPose("thrown", 0)).toEqual(idle);
+        expect(at("thrown", 1)).toEqual(idle);
     });
 
     it("stays in the rest pose under reduced motion", () => {
-        const walk = CAST_MOVE_DATA.walk;
-        expect(
-            sampleButtPose("walk", walk.duration / 4, { still: true })
-        ).toEqual(sampleButtPose("idle", 0));
+        const idle = sampleButtPose("idle", 0);
+        for (const move of CAST.butt.moves) {
+            const data = CAST_MOVE_DATA[move];
+            expect(
+                sampleButtPose(move, data.duration / 4, { still: true }),
+                move
+            ).toEqual(idle);
+        }
     });
 });
