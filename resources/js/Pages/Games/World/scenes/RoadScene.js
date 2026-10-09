@@ -755,8 +755,8 @@ export function createRoadScene(
      * Poses the scene for one frame and reports whether anything changed.
      * `view`: {
      *   camera,              // roadCamera()
-     *   peach: { x, facing, lane },
-     *   peachLift,           // px
+     *   butt: { x, facing, lane },
+     *   buttLift,           // px
      *   idlers,              // useRoad's, with screen-px dx/lift
      *   near, hovered,       // landmark slugs, or null
      *   reduced,             // prefers reduced motion
@@ -781,16 +781,16 @@ export function createRoadScene(
             changed = true;
         }
 
-        const buttZ = L.laneZ(view.peach.lane);
-        changed = stand(butt, view.peach.x, buttZ) || changed;
+        const buttZ = L.laneZ(view.butt.lane);
+        changed = stand(butt, view.butt.x, buttZ) || changed;
         butt.set({
-            lift: view.peachLift,
-            facing: view.peach.facing < 0 ? "left" : "right",
+            lift: view.buttLift,
+            facing: view.butt.facing < 0 ? "left" : "right",
         });
         const crossing =
-            view.peach.side &&
-            view.peach.lane !== (view.peach.side === "near" ? 1 : 0);
-        butt.setMove(view.peach.vx || crossing ? "walk" : null);
+            view.butt.side &&
+            view.butt.lane !== (view.butt.side === "near" ? 1 : 0);
+        butt.setMove(view.butt.vx || crossing ? "walk" : null);
 
         view.idlers.forEach((idler, i) => {
             const entry = idlerPuppets[i];
@@ -815,7 +815,7 @@ export function createRoadScene(
         }
 
         changed = fadeNearThings(view, buttZ, dt) || changed;
-        changed = peekCockroaches(view.peach.x, dt) || changed;
+        changed = peekCockroaches(view.butt.x, dt) || changed;
         changed = flashFireworks(dt) || changed;
         changed = fallNight(dt) || changed;
 
@@ -833,8 +833,8 @@ export function createRoadScene(
     /** Fades whichever near-side things hide any of the Butt. */
     function fadeNearThings(view, buttZ, dt) {
         const feet = worldToScreen(view.camera, {
-            x: view.peach.x,
-            y: view.peachLift,
+            x: view.butt.x,
+            y: view.buttLift,
             z: buttZ,
         });
         const half = (L.sizes.butt * (feet?.scale ?? 1)) / 2;
@@ -843,7 +843,7 @@ export function createRoadScene(
         let changed = false;
         for (const thing of nearThings) {
             if (
-                Math.abs(thing.x - view.peach.x) > reach &&
+                Math.abs(thing.x - view.butt.x) > reach &&
                 thing.opacity === 1
             ) {
                 continue;

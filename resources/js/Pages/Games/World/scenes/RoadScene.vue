@@ -46,17 +46,17 @@ const buttEl = ref(null);
 const {
     world,
     landmarks,
-    peach,
+    butt,
     camera,
     nearestLandmark,
     idlers,
     puffs,
     unlockToot,
     buttCast,
-    peachLift,
+    buttLift,
     peekX,
     peekY,
-    onPeachPointerDown,
+    onButtPointerDown,
     onBackgroundPointerDown,
     onIdlerPointerDown,
     onLandmarkFocus,
@@ -73,7 +73,7 @@ const {
     buttPuffAt: () => {
         const butt = buttEl.value;
         return {
-            x: peach.x,
+            x: butt.x,
             y: butt ? butt.offsetTop + butt.offsetHeight / 2 : 0,
         };
     },
@@ -127,13 +127,13 @@ const hillStyle = computed(() => ({
 }));
 
 const buttMoving = computed(
-    () => peach.vx !== 0 || peach.lane !== LANES[peach.side]
+    () => butt.vx !== 0 || butt.lane !== LANES[butt.side]
 );
 
-const peachStyle = computed(() => ({
-    // translate rather than `left`: peach.x changes every frame, and `left`
+const buttStyle = computed(() => ({
+    // translate rather than `left`: butt.x changes every frame, and `left`
     // would relayout the box each time.
-    transform: `translate3d(${peach.x}px, 0, 0) translateX(-50%)`,
+    transform: `translate3d(${butt.x}px, 0, 0) translateX(-50%)`,
 }));
 
 defineExpose(api);
@@ -214,18 +214,18 @@ defineExpose(api);
 
             <div
                 ref="buttEl"
-                class="peach"
+                class="butt"
                 role="img"
-                :aria-label="t('games.world.peach_aria')"
-                :style="peachStyle"
-                @pointerdown.prevent="onPeachPointerDown"
+                :aria-label="t('games.world.butt_aria')"
+                :style="buttStyle"
+                @pointerdown.prevent="onButtPointerDown"
             >
                 <CastMember
                     id="butt"
                     ref="buttCast"
                     :move="buttMoving ? 'walk' : null"
-                    :facing="peach.facing < 0 ? 'left' : 'right'"
-                    :lift="peachLift"
+                    :facing="butt.facing < 0 ? 'left' : 'right'"
+                    :lift="buttLift"
                 />
             </div>
 
@@ -364,7 +364,7 @@ defineExpose(api);
     position: absolute;
     inset: 0 auto 0 0;
     /* The world layer covers the whole stage, so it has to let presses on
-       empty sky and grass through to .road-scene's pan handler; only the peach
+       empty sky and grass through to .road-scene's pan handler; only the butt
        and the landmarks take pointers back. */
     pointer-events: none;
     will-change: transform;
@@ -440,7 +440,7 @@ defineExpose(api);
     border-radius: 0.75rem;
 }
 
-.peach {
+.butt {
     position: absolute;
     pointer-events: auto;
     top: calc(var(--horizon) + 5%);

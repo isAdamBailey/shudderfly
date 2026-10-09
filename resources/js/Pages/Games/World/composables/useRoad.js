@@ -90,13 +90,13 @@ export function useRoad(props, emit, options) {
         : arrival.position;
 
     // "confirmSlug" is the road's freeze: set when a landmark is activated,
-    // it stops the peach until the stage calls release().
+    // it stops the butt until the stage calls release().
     const world = useGamesWorld(roadLandmarks, {
         isReducedMotion: () => reduced.value,
         onArrive: (landmark) => emit("activate", landmark.item),
         start: at && { x: at.x, side: lanes ? at.side : "far" },
     });
-    const { landmarks, peach, camera, state, nearestLandmark } = world;
+    const { landmarks, butt, camera, state, nearestLandmark } = world;
 
     // --- Roadside cast -----------------------------------------------------
 
@@ -128,8 +128,8 @@ export function useRoad(props, emit, options) {
                 // Only for a Butt on their side of the street, which they
                 // can be fed to.
                 excited:
-                    peach.side === "far" &&
-                    Math.abs(peach.x - x) < IDLER_EXCITE_RADIUS,
+                    butt.side === "far" &&
+                    Math.abs(butt.x - x) < IDLER_EXCITE_RADIUS,
                 // Screen px: the sideways offset moves the idler, the height
                 // goes to the drawer as lift so its shadow stays put.
                 dx: p?.dx ?? 0,
@@ -153,8 +153,8 @@ export function useRoad(props, emit, options) {
         // The roadside foods are on the far side of the street.
         if (
             !idler ||
-            peach.lane !== LANES.far ||
-            Math.abs(idler.x + idlerDxToWorld(idler, dx) - peach.x) >
+            butt.lane !== LANES.far ||
+            Math.abs(idler.x + idlerDxToWorld(idler, dx) - butt.x) >
                 FEED_RADIUS
         ) {
             return;
@@ -166,7 +166,7 @@ export function useRoad(props, emit, options) {
     // The walking bob, as height above the road so the shadow stays put.
     // 12px of travel, never below 0, so the body never sinks into its own
     // shadow.
-    const peachLift = computed(() => bobLift(peach.bob));
+    const buttLift = computed(() => bobLift(butt.bob));
 
     // --- Lifecycle ---------------------------------------------------------
 
@@ -175,7 +175,7 @@ export function useRoad(props, emit, options) {
     });
 
     /** Tab hidden: stop the loop. Restarting resets the frame clock, so
-     * returning can't land a single giant dt and teleport the peach. */
+     * returning can't land a single giant dt and teleport the butt. */
     function pause() {
         interrupt();
         if (ownLoop) world.stop();
@@ -186,7 +186,7 @@ export function useRoad(props, emit, options) {
     }
 
     /** Window blur: the keyup for a held arrow goes to whatever took focus,
-     * so without this the peach keeps walking to the end of the road while
+     * so without this the butt keeps walking to the end of the road while
      * we're away. A toss's listeners and rAF loop shouldn't run unattended
      * either. */
     function interrupt() {
@@ -208,7 +208,7 @@ export function useRoad(props, emit, options) {
             world.updateDrag(to.x, to.side);
         },
         end: () => world.endDrag(),
-        // Abandoned, not dropped: the peach stays put and no card opens.
+        // Abandoned, not dropped: the butt stays put and no card opens.
         cancel: () => world.cancelDrag(),
     };
 
@@ -233,7 +233,7 @@ export function useRoad(props, emit, options) {
         },
     };
 
-    function onPeachPointerDown(event) {
+    function onButtPointerDown(event) {
         if (state.confirmSlug || event.button > 0) return;
         gestureRect = props.stage.beginGesture(dragGesture);
         dragMove = dragTo(event, gestureRect);
@@ -241,7 +241,7 @@ export function useRoad(props, emit, options) {
     }
 
     /** Only the bare background pans (or, tapped, sends the Butt there); the
-     * peach drags and landmarks click. */
+     * butt drags and landmarks click. */
     function onBackgroundPointerDown(event) {
         if (state.confirmSlug || event.button > 0) return;
         gestureRect = props.stage.beginGesture(panGesture);
@@ -263,7 +263,7 @@ export function useRoad(props, emit, options) {
     }
 
     function onLandmarkFocus(slug) {
-        // Focus walks the peach there, so the keyboard route is a real
+        // Focus walks the butt there, so the keyboard route is a real
         // equivalent of dragging rather than a hidden list of links.
         if (state.confirmSlug) return;
         world.walkToLandmark(slug);
@@ -295,7 +295,7 @@ export function useRoad(props, emit, options) {
         if (dir) world.stopWalk(dir);
     }
 
-    /** Enter on the stage itself visits whichever landmark the peach is
+    /** Enter on the stage itself visits whichever landmark the butt is
      * already standing at. */
     function activateNearest() {
         if (state.confirmSlug) return;
@@ -304,13 +304,13 @@ export function useRoad(props, emit, options) {
     }
 
     /** The stage is done with an activation that showed nothing: just
-     * unfreeze, leaving the peach and focus where they are. */
+     * unfreeze, leaving the butt and focus where they are. */
     function unfreeze() {
         world.closeConfirm();
     }
 
     /** The activation's card was cancelled: unfreeze and put focus back on
-     * the landmark the peach was considering. */
+     * the landmark the butt was considering. */
     function release() {
         const id = state.confirmSlug;
         world.closeConfirm();
@@ -385,7 +385,7 @@ export function useRoad(props, emit, options) {
 
     /** What the stage saves to come back to. */
     function position() {
-        return { x: peach.x, side: peach.side };
+        return { x: butt.x, side: butt.side };
     }
 
     const api = {
@@ -405,7 +405,7 @@ export function useRoad(props, emit, options) {
     return {
         world,
         landmarks,
-        peach,
+        butt,
         camera,
         nearestLandmark,
         reduced,
@@ -413,10 +413,10 @@ export function useRoad(props, emit, options) {
         puffs,
         unlockToot,
         buttCast,
-        peachLift,
+        buttLift,
         peekX,
         peekY,
-        onPeachPointerDown,
+        onButtPointerDown,
         onBackgroundPointerDown,
         onIdlerPointerDown,
         onLandmarkFocus,

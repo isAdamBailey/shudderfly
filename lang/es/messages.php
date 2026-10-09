@@ -689,9 +689,9 @@ return [
 
     // Games - World
     'games.world.title' => 'Mundo de Juegos',
-    'games.world.stage_aria' => 'Mundo de juegos: arrastra el durazno por el camino o usa las flechas izquierda y derecha para caminar',
-    'games.world.stage_lanes_aria' => 'Mundo de juegos: arrastra el durazno por la calle o usa las flechas izquierda y derecha para caminar y arriba y abajo para cruzar la calle',
-    'games.world.peach_aria' => 'Durazno',
+    'games.world.stage_aria' => 'Mundo de juegos: arrastra el Trasero por el camino o usa las flechas izquierda y derecha para caminar',
+    'games.world.stage_lanes_aria' => 'Mundo de juegos: arrastra el Trasero por la calle o usa las flechas izquierda y derecha para caminar y arriba y abajo para cruzar la calle',
+    'games.world.butt_aria' => 'El Trasero',
     'games.world.landmark_aria' => ':game: pulsa Intro para visitar',
     'games.world.play' => '▶ Jugar',
     'games.world.cancel' => 'Todavía no',
@@ -753,7 +753,7 @@ return [
     'games.world.toys.radio_line' => '¡Kssshhh! La radio está apagada. Solo estática... y un pedito.',
     'games.world.minigames.toot_catch' => 'Atrapa Pedos',
     'games.world.minigames.toot_catch_line' => '¡Atrapa la Comida Pedorra que cae con el Trasero! Cada bocado que atrapa lo hace tirarse un pedo.',
-    'games.world.minigames.toot_catch_aria' => 'Atrapa Pedos: arrastra el durazno o usa las flechas izquierda y derecha para atrapar la comida que cae',
+    'games.world.minigames.toot_catch_aria' => 'Atrapa Pedos: arrastra el Trasero o usa las flechas izquierda y derecha para atrapar la comida que cae',
     'games.world.minigames.score' => '¡Atrapaste :score!',
     'games.world.minigames.play_again' => '🔄 Jugar otra vez',
     'games.world.minigames.done' => 'Listo',

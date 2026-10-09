@@ -49,15 +49,15 @@ const GAMES = [
     },
 ];
 
-/** Drags the peach to `x` and lets it stroll the whole way there — a drag
- * steers the peach at DRAG_SPEED rather than teleporting it. */
+/** Drags the butt to `x` and lets it stroll the whole way there — a drag
+ * steers the butt at DRAG_SPEED rather than teleporting it. */
 function dragTo(world, x) {
     world.startDrag();
     world.updateDrag(x);
-    advance(world, (Math.abs(x - world.peach.x) / DRAG_SPEED) * 1000 + 100);
+    advance(world, (Math.abs(x - world.butt.x) / DRAG_SPEED) * 1000 + 100);
 }
 
-/** How long the peach needs to stroll `distance` px after a release. */
+/** How long the butt needs to stroll `distance` px after a release. */
 function travelMs(distance) {
     return (distance / DRAG_SPEED) * 1000 + 100;
 }
@@ -95,16 +95,16 @@ describe("useGamesWorld landmarks and world size", () => {
 });
 
 describe("useGamesWorld camera", () => {
-    it("holds at zero while the peach is inside the deadzone", () => {
+    it("holds at zero while the butt is inside the deadzone", () => {
         const world = makeWorld();
 
         dragTo(world, STAGE_W * 0.5);
 
-        expect(world.peach.x).toBe(STAGE_W * 0.5);
+        expect(world.butt.x).toBe(STAGE_W * 0.5);
         expect(world.camera.x).toBe(0);
     });
 
-    it("follows the peach past the right soft margin", () => {
+    it("follows the butt past the right soft margin", () => {
         const world = makeWorld();
 
         dragTo(world, 1000);
@@ -112,7 +112,7 @@ describe("useGamesWorld camera", () => {
         expect(world.camera.x).toBe(1000 - STAGE_W * SOFT_RIGHT);
     });
 
-    it("pushes back when the peach crosses the left soft margin", () => {
+    it("pushes back when the butt crosses the left soft margin", () => {
         const world = makeWorld();
 
         dragTo(world, 1500);
@@ -133,20 +133,20 @@ describe("useGamesWorld camera", () => {
 });
 
 describe("useGamesWorld walking", () => {
-    it("moves the peach about WALK_SPEED px in a second", () => {
+    it("moves the butt about WALK_SPEED px in a second", () => {
         const world = makeWorld();
-        const startX = world.peach.x;
+        const startX = world.butt.x;
 
         world.setWalk(1);
         advance(world, 1000);
 
         // `advance` steps in whole 60fps frames, so it overshoots one second
         // by at most a frame's worth of travel.
-        expect(world.peach.x - startX).toBeGreaterThanOrEqual(WALK_SPEED);
-        expect(world.peach.x - startX).toBeLessThan(
+        expect(world.butt.x - startX).toBeGreaterThanOrEqual(WALK_SPEED);
+        expect(world.butt.x - startX).toBeLessThan(
             WALK_SPEED + WALK_SPEED * DT * 2
         );
-        expect(world.peach.facing).toBe(1);
+        expect(world.butt.facing).toBe(1);
     });
 
     it("halts when the walking direction is released", () => {
@@ -155,10 +155,10 @@ describe("useGamesWorld walking", () => {
         world.setWalk(1);
         advance(world, 200);
         world.stopWalk(1);
-        const stoppedAt = world.peach.x;
+        const stoppedAt = world.butt.x;
         advance(world, 500);
 
-        expect(world.peach.x).toBe(stoppedAt);
+        expect(world.butt.x).toBe(stoppedAt);
     });
 
     it("ignores the release of a direction that isn't being walked", () => {
@@ -169,7 +169,7 @@ describe("useGamesWorld walking", () => {
         advance(world, 200);
 
         expect(world.state.walkDir).toBe(1);
-        expect(world.peach.x).toBeGreaterThan(260);
+        expect(world.butt.x).toBeGreaterThan(260);
     });
 
     it("drops a held direction when a drag or pan takes over", () => {
@@ -189,10 +189,10 @@ describe("useGamesWorld walking", () => {
         const end = world.worldWidth.value - 40;
 
         world.setWalk(1);
-        advance(world, ((end - world.peach.x) / WALK_SPEED) * 1000 + 500);
+        advance(world, ((end - world.butt.x) / WALK_SPEED) * 1000 + 500);
 
-        expect(world.peach.x).toBeLessThan(400);
-        expect(world.peach.x).toBeGreaterThanOrEqual(40);
+        expect(world.butt.x).toBeLessThan(400);
+        expect(world.butt.x).toBeGreaterThanOrEqual(40);
     });
 
     it("loops round to the end when it walks back past the start", () => {
@@ -201,11 +201,11 @@ describe("useGamesWorld walking", () => {
         world.setWalk(-1);
         advance(world, 3000);
 
-        expect(world.peach.x).toBeGreaterThan(world.worldWidth.value - 800);
+        expect(world.butt.x).toBeGreaterThan(world.worldWidth.value - 800);
     });
 });
 
-describe("useGamesWorld dropping the peach", () => {
+describe("useGamesWorld dropping the butt", () => {
     it("opens the confirm card when dropped within SNAP_RADIUS of a landmark", () => {
         const world = makeWorld();
 
@@ -233,7 +233,7 @@ describe("useGamesWorld dropping the peach", () => {
         world.cancelDrag();
 
         expect(world.state.mode).toBe("idle");
-        expect(world.peach.x).toBe(1500);
+        expect(world.butt.x).toBe(1500);
         expect(world.state.confirmSlug).toBeNull();
     });
 
@@ -242,13 +242,13 @@ describe("useGamesWorld dropping the peach", () => {
 
         world.startDrag();
         world.updateDrag(600);
-        advance(world, 200); // let go long before the peach gets there
+        advance(world, 200); // let go long before the butt gets there
         world.endDrag();
 
         expect(world.state.confirmSlug).toBeNull();
         advance(world, travelMs(600));
 
-        expect(world.peach.x).toBe(600);
+        expect(world.butt.x).toBe(600);
         expect(world.state.confirmSlug).toBe("sprout-pox");
     });
 
@@ -257,9 +257,9 @@ describe("useGamesWorld dropping the peach", () => {
         world.walkToLandmark("boom");
 
         // Finger past the end of the road — without wrapping the target, the
-        // peach would chase an unreachable coordinate forever and never arrive.
+        // butt would chase an unreachable coordinate forever and never arrive.
         const pastEnd = world.worldWidth.value + 40;
-        const startX = world.peach.x;
+        const startX = world.butt.x;
         world.startDrag();
         world.updateDrag(pastEnd);
         world.endDrag();
@@ -267,8 +267,8 @@ describe("useGamesWorld dropping the peach", () => {
         // Shortest wrapped path from boom (2400) to wrapX(pastEnd) (120).
         advance(world, travelMs(800));
 
-        expect(world.peach.x).toBe(120);
-        expect(world.peach.x).not.toBe(startX);
+        expect(world.butt.x).toBe(120);
+        expect(world.butt.x).not.toBe(startX);
         expect(world.state.confirmSlug).toBeNull();
     });
 
@@ -297,16 +297,16 @@ describe("useGamesWorld dropping the peach", () => {
 });
 
 describe("useGamesWorld panning", () => {
-    it("moves the camera and leaves the peach alone", () => {
+    it("moves the camera and leaves the butt alone", () => {
         const world = makeWorld();
-        const peachX = world.peach.x;
+        const buttX = world.butt.x;
 
         world.startPan(500);
         world.updatePan(300);
         world.endPan();
 
         expect(world.camera.x).toBe(200);
-        expect(world.peach.x).toBe(peachX);
+        expect(world.butt.x).toBe(buttX);
         expect(world.state.mode).toBe("idle");
     });
 
@@ -328,10 +328,10 @@ describe("useGamesWorld confirm card", () => {
 
         world.setWalk(1);
         world.openConfirm("sprout-pox");
-        const frozenAt = world.peach.x;
+        const frozenAt = world.butt.x;
         advance(world, 1000);
 
-        expect(world.peach.x).toBe(frozenAt);
+        expect(world.butt.x).toBe(frozenAt);
     });
 
     it("clears any held direction when the card closes", () => {
@@ -345,23 +345,23 @@ describe("useGamesWorld confirm card", () => {
         expect(world.state.walkDir).toBe(0);
     });
 
-    it("walks the peach to a landmark and brings the camera along", () => {
+    it("walks the butt to a landmark and brings the camera along", () => {
         const world = makeWorld();
 
         world.walkToLandmark("boom");
 
-        expect(world.peach.x).toBe(2400);
+        expect(world.butt.x).toBe(2400);
         expect(world.camera.x).toBe(2400 - STAGE_W * SOFT_RIGHT);
     });
 
     it("ignores an unknown slug", () => {
         const world = makeWorld();
-        const peachX = world.peach.x;
+        const buttX = world.butt.x;
 
         world.walkToLandmark("nope");
         world.openConfirm("nope");
 
-        expect(world.peach.x).toBe(peachX);
+        expect(world.butt.x).toBe(buttX);
         expect(world.state.confirmSlug).toBeNull();
     });
 });
@@ -373,18 +373,18 @@ describe("useGamesWorld reduced motion", () => {
         world.setWalk(1);
         advance(world, 200);
 
-        expect(world.peach.bob).toBeGreaterThan(0);
+        expect(world.butt.bob).toBeGreaterThan(0);
     });
 
-    it("holds the bob at rest but still walks the peach", () => {
+    it("holds the bob at rest but still walks the butt", () => {
         const world = makeWorld({ isReducedMotion: () => true });
-        const startX = world.peach.x;
+        const startX = world.butt.x;
 
         world.setWalk(1);
         advance(world, 200);
 
-        expect(world.peach.bob).toBe(0);
-        expect(world.peach.x).toBeGreaterThan(startX);
+        expect(world.butt.bob).toBe(0);
+        expect(world.butt.x).toBeGreaterThan(startX);
     });
 
     it("still arrives at a landmark and opens its card", () => {
@@ -412,24 +412,24 @@ describe("useGamesWorld lanes", () => {
     it("starts on the far side", () => {
         const world = makeSidedWorld();
 
-        expect(world.peach.side).toBe("far");
-        expect(world.peach.lane).toBe(0);
+        expect(world.butt.side).toBe("far");
+        expect(world.butt.lane).toBe(0);
     });
 
     it("eases across the street over CROSS_TIME", () => {
         const world = makeSidedWorld();
 
         world.crossTo("near");
-        expect(world.peach.side).toBe("near");
+        expect(world.butt.side).toBe("near");
         advance(world, (CROSS_TIME * 1000) / 2);
-        expect(world.peach.lane).toBeGreaterThan(0.3);
-        expect(world.peach.lane).toBeLessThan(0.7);
+        expect(world.butt.lane).toBeGreaterThan(0.3);
+        expect(world.butt.lane).toBeLessThan(0.7);
         advance(world, CROSS_TIME * 1000);
-        expect(world.peach.lane).toBe(1);
+        expect(world.butt.lane).toBe(1);
 
         world.crossTo("far");
         advance(world, CROSS_TIME * 1000 + 50);
-        expect(world.peach.lane).toBe(0);
+        expect(world.butt.lane).toBe(0);
     });
 
     it("only reaches landmarks on its own side", () => {
@@ -453,8 +453,8 @@ describe("useGamesWorld lanes", () => {
 
         world.walkToLandmark("boom");
 
-        expect(world.peach.x).toBe(2400);
-        expect(world.peach.side).toBe("near");
+        expect(world.butt.x).toBe(2400);
+        expect(world.butt.side).toBe("near");
         expect(world.nearestLandmark.value.slug).toBe("boom");
     });
 
@@ -464,7 +464,7 @@ describe("useGamesWorld lanes", () => {
         world.walkTo(2400, "near");
         advance(world, travelMs(2400 - 260));
 
-        expect(world.peach.side).toBe("near");
+        expect(world.butt.side).toBe("near");
         expect(world.state.confirmSlug).toBe("boom");
     });
 
@@ -474,12 +474,12 @@ describe("useGamesWorld lanes", () => {
         world.setWalk(0);
 
         // Tapped straight across from where it stands: Boom is there.
-        world.walkTo(world.peach.x, "near");
+        world.walkTo(world.butt.x, "near");
         world.walkTo(2400, "near");
         advance(world, travelMs(2400 - 600));
 
         expect(world.state.confirmSlug).toBe("boom");
-        expect(world.peach.lane).toBe(1);
+        expect(world.butt.lane).toBe(1);
     });
 
     it("opens nothing until the crossing is over, when dropped across the street", () => {
@@ -495,7 +495,7 @@ describe("useGamesWorld lanes", () => {
         expect(world.state.confirmSlug).toBeNull();
 
         advance(world, CROSS_TIME * 1000 + 50);
-        expect(world.peach.lane).toBe(0);
+        expect(world.butt.lane).toBe(0);
         expect(world.state.confirmSlug).toBeNull();
     });
 
@@ -505,19 +505,19 @@ describe("useGamesWorld lanes", () => {
 
         world.crossTo("near");
 
-        expect(world.peach.side).toBe("far");
+        expect(world.butt.side).toBe("far");
     });
 });
 
 describe("useGamesWorld start", () => {
-    it("starts the peach where it is told, on that side", () => {
+    it("starts the butt where it is told, on that side", () => {
         const world = makeWorld({ start: { x: 1500, side: "near" } });
 
-        expect(world.peach.x).toBe(1500);
-        expect(world.peach.side).toBe("near");
-        expect(world.peach.lane).toBe(LANES.near);
+        expect(world.butt.x).toBe(1500);
+        expect(world.butt.side).toBe("near");
+        expect(world.butt.lane).toBe(LANES.near);
         // The camera follows it there.
-        expect(world.peach.x - world.camera.x).toBeLessThanOrEqual(
+        expect(world.butt.x - world.camera.x).toBeLessThanOrEqual(
             STAGE_W * SOFT_RIGHT
         );
     });
@@ -525,8 +525,8 @@ describe("useGamesWorld start", () => {
     it("starts at the road's start for a missing or junk start", () => {
         for (const start of [undefined, { x: "far" }, { side: "middle" }]) {
             const world = makeWorld({ start });
-            expect(world.peach.x).toBe(260);
-            expect(world.peach.side).toBe("far");
+            expect(world.butt.x).toBe(260);
+            expect(world.butt.side).toBe("far");
         }
     });
 
@@ -534,11 +534,11 @@ describe("useGamesWorld start", () => {
         const world = makeWorld();
         world.setWalk(1);
         advance(world, 150);
-        expect(world.peach.bob).toBeGreaterThan(0);
+        expect(world.butt.bob).toBeGreaterThan(0);
 
         world.stopWalk(1);
         world.step(DT);
 
-        expect(world.peach.bob).toBe(0);
+        expect(world.butt.bob).toBe(0);
     });
 });
