@@ -65,12 +65,12 @@ describe("roadLayout", () => {
     });
 
     it("keeps the flat road's on-screen sizes for the cast", () => {
-        // clamp(2rem, 7vmin, 3.25rem) and clamp(3.25rem, 13vmin, 5.5rem) at
-        // a 700px vmin.
+        // clamp(2rem, 7vmin, 3.25rem) and clamp(3.875rem, 15.6vmin, 6.625rem)
+        // at a 700px vmin.
         L.z.idlers.forEach((z, i) =>
             expect(L.sizes.idlers[i] * L.scaleAt(z)).toBeCloseTo(49)
         );
-        expect(L.sizes.butt).toBeCloseTo(88);
+        expect(L.sizes.butt).toBeCloseTo(106);
     });
 
     it("fits the far side's buildings between the sky and the street", () => {
