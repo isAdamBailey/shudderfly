@@ -119,8 +119,8 @@ class AiVoiceService
                 fn () => $this->findClip($hash, $ahead) ?? $this->generate($hash, $text, $locale, $voice, $model, $ahead)
             );
         } catch (LockTimeoutException) {
-            Log::warning('AI voice timed out waiting for a concurrent generation', ['hash' => $hash]);
-
+            // The other request is still on the provider. The client has
+            // already fallen back to the device voice, so this is not an error.
             throw new AiVoiceUnavailable('Timed out waiting for another request to generate the same clip');
         }
     }
@@ -222,7 +222,7 @@ class AiVoiceService
         $path = "ai-voice/{$locale}/{$hash}.mp3";
 
         if (! Storage::disk('s3')->put($path, $audio, 'public')) {
-            Log::warning('AI voice could not store a clip', ['path' => $path]);
+            Log::error('AI voice could not store a clip', ['path' => $path]);
 
             throw new AiVoiceUnavailable("Could not store AI voice clip at {$path}");
         }
@@ -262,9 +262,10 @@ class AiVoiceService
             return;
         }
 
-        // Once per day is enough to explain the fallback in the logs.
+        // Once per day is enough to explain the fallback. It is the limit
+        // working, not a failure, so it stays out of the error log.
         if (Cache::add('ai-voice:budget-logged:'.AiVoice::budgetDay()->toDateString(), true, now()->addDay())) {
-            Log::warning('AI voice daily character limit reached; new clips fall back to the device voice', [
+            Log::info('AI voice daily character limit reached; new clips fall back to the device voice', [
                 'limit' => $limit,
                 'used' => $used,
             ]);
@@ -289,7 +290,7 @@ class AiVoiceService
                 Cache::put(self::budgetKey($day), max(0, $change(self::charactersUsedToday())), $day->endOfDay()->addHour());
             });
         } catch (LockTimeoutException) {
-            Log::warning('AI voice timed out waiting for the budget lock');
+            Log::error('AI voice timed out waiting for the budget lock');
 
             throw new AiVoiceUnavailable('Timed out waiting for the AI voice budget');
         }
@@ -317,7 +318,9 @@ class AiVoiceService
     private function synthesize(string $text, string $voice, string $model): string
     {
         if (! AiVoice::configured()) {
-            Log::warning('AI voice skipped: missing AI_VOICE_API_KEY');
+            if (Cache::add('ai-voice:unconfigured-logged', true, now()->addDay())) {
+                Log::error('AI voice skipped: missing AI_VOICE_API_KEY');
+            }
 
             throw new AiVoiceUnavailable('AI voice provider is not configured');
         }
@@ -333,10 +336,12 @@ class AiVoiceService
                     'response_format' => 'mp3',
                 ]);
         } catch (\Throwable $exception) {
-            Log::warning('AI voice request exception', ['error' => $exception->getMessage()]);
-
+            // A timeout is the provider's. Playback falls back to the device
+            // voice, so it is not an error of ours. Anything else is.
             if ($exception instanceof ConnectionException) {
                 $this->recordConnectionFailure();
+            } else {
+                Log::error('AI voice request failed', ['error' => $exception->getMessage()]);
             }
 
             throw new AiVoiceUnavailable('AI voice request failed', previous: $exception);
@@ -353,7 +358,7 @@ class AiVoiceService
                 __('messages.ai_voice.provider_alert', ['provider' => ucfirst($provider)]),
             );
 
-            Log::warning('AI voice generation failed', [
+            Log::error('AI voice generation failed', [
                 'status' => $response->status(),
                 'body' => mb_substr($response->body(), 0, 500),
             ]);
@@ -364,7 +369,7 @@ class AiVoiceService
         $audio = $this->extractAudio($response);
 
         if ($audio === '') {
-            Log::warning('AI voice provider returned no audio', [
+            Log::error('AI voice provider returned no audio', [
                 'content_type' => $response->header('Content-Type'),
             ]);
 
@@ -375,8 +380,7 @@ class AiVoiceService
     }
 
     /**
-     * Whether new clips are refused after repeated connection failures. The
-     * pause is logged once, when it starts; see recordConnectionFailure().
+     * Whether new clips are refused after repeated connection failures.
      */
     public static function paused(): bool
     {
@@ -385,19 +389,17 @@ class AiVoiceService
 
     /**
      * Counts a timeout or dropped connection, and pauses the provider once
-     * there have been enough in a row. Not atomic: two failures at once may
-     * count as one, which only delays the pause by a request.
+     * there have been enough in a row. A timeout is the provider's, so it
+     * is not logged. Not atomic: two failures at once may count as one,
+     * which only delays the pause by a request.
      */
     private function recordConnectionFailure(): void
     {
         $failures = (int) Cache::get(self::FAILURES_KEY, 0) + 1;
         Cache::put(self::FAILURES_KEY, $failures, self::FAILURE_WINDOW_SECONDS);
 
-        if ($failures >= self::FAILURES_BEFORE_PAUSE && Cache::add(self::PAUSED_KEY, true, self::PAUSE_SECONDS)) {
-            Log::warning('AI voice provider paused after repeated connection failures; clips fall back to the device voice', [
-                'failures' => $failures,
-                'seconds' => self::PAUSE_SECONDS,
-            ]);
+        if ($failures >= self::FAILURES_BEFORE_PAUSE) {
+            Cache::add(self::PAUSED_KEY, true, self::PAUSE_SECONDS);
         }
     }
 

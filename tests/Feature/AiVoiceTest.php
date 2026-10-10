@@ -10,7 +10,10 @@ use App\Services\AiVoiceService;
 use App\Support\AiVoice;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as ClientRequest;
+use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
@@ -185,6 +188,43 @@ class AiVoiceTest extends TestCase
         $this->speak()->assertStatus(503);
 
         Http::assertSentCount(1);
+    }
+
+    public function test_a_provider_timeout_is_not_logged(): void
+    {
+        $logged = $this->recordLogs();
+        Http::fake(['ai-voice.test/*' => Http::failedConnection()]);
+
+        foreach (['one', 'two', 'three', 'four'] as $text) {
+            $this->speak(['text' => $text])->assertStatus(503);
+        }
+
+        $this->assertSame([], $logged->filter(fn ($log) => str_starts_with($log->message, 'AI voice'))->all());
+    }
+
+    public function test_a_provider_error_is_logged_as_an_error(): void
+    {
+        $logged = $this->recordLogs();
+        $this->fakeProvider(500);
+
+        $this->speak()->assertStatus(503);
+
+        $this->assertTrue($logged->contains(fn ($log) => $log->level === 'error'
+            && str_contains($log->message, 'generation failed')
+            && $log->context['status'] === 500));
+    }
+
+    /**
+     * @return Collection<int, MessageLogged>
+     */
+    private function recordLogs(): Collection
+    {
+        $logged = collect();
+        Event::listen(MessageLogged::class, function (MessageLogged $event) use ($logged) {
+            $logged->push($event);
+        });
+
+        return $logged;
     }
 
     /** Times out enough requests in a row to pause the provider. */

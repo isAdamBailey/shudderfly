@@ -4,10 +4,10 @@ namespace App\Jobs;
 
 use App\Exceptions\AiVoiceBudgetExceeded;
 use App\Exceptions\AiVoicePaused;
+use App\Exceptions\AiVoiceUnavailable;
 use App\Services\AiVoiceService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Log;
 
 /**
  * Makes an AI voice clip ahead of time, so the first person to hear it
@@ -27,24 +27,26 @@ class GenerateAiVoiceClip implements ShouldQueue
         public ?string $voice = null,
     ) {}
 
-    public function handle(AiVoiceService $service): void
+    /**
+     * False when this clip was not made. A queued run still succeeds so a
+     * provider timeout does not log a stack trace or fill failed_jobs.
+     */
+    public function handle(AiVoiceService $service): bool
     {
         // Empty or too long for one clip (a long page): it plays in the
         // device voice, so there is nothing to make.
         if (AiVoiceService::keyFor($this->text, $this->locale, $this->voice) === null) {
-            return;
+            return true;
         }
 
         try {
             $service->clipFor($this->text, $this->locale, $this->voice, ahead: true);
-        } catch (AiVoicePaused) {
-            // Expected during a provider outage and logged once by the
-            // service; failing here would fill failed_jobs with one outage.
-        } catch (AiVoiceBudgetExceeded) {
-            Log::warning('AI voice prewarm skipped: daily character limit reached', [
-                'locale' => $this->locale,
-                'characters' => mb_strlen(AiVoiceService::normalize($this->text)),
-            ]);
+
+            return true;
+        } catch (AiVoicePaused|AiVoiceBudgetExceeded) {
+            return true;
+        } catch (AiVoiceUnavailable) {
+            return false;
         }
     }
 }

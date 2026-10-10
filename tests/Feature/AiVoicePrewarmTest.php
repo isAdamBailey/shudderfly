@@ -306,6 +306,16 @@ class AiVoicePrewarmTest extends TestCase
         $this->assertSame(0, AiVoiceClip::count());
     }
 
+    public function test_the_job_does_not_fail_when_the_provider_times_out(): void
+    {
+        Http::fake(['ai-voice.test/*' => Http::failedConnection()]);
+
+        $made = (new GenerateAiVoiceClip('Bluey', 'en'))->handle(app(AiVoiceService::class));
+
+        $this->assertFalse($made);
+        $this->assertSame(0, AiVoiceClip::count());
+    }
+
     public function test_the_job_skips_quietly_while_the_provider_is_paused(): void
     {
         Http::fake(['ai-voice.test/*' => Http::failedConnection()]);

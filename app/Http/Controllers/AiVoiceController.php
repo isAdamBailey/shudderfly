@@ -61,7 +61,6 @@ class AiVoiceController extends Controller
         } catch (AiVoiceBudgetExceeded) {
             return response()->json(['message' => 'AI voice daily limit reached.'], 429);
         } catch (AiVoiceUnavailable) {
-            // Already logged by the service with the provider's response.
             return response()->json(['message' => 'AI voice unavailable.'], 503);
         }
 

@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Exceptions\AiVoiceUnavailable;
 use App\Http\Controllers\GameController;
 use App\Http\Middleware\SetLocale;
 use App\Jobs\GenerateAiVoiceClip;
@@ -15,6 +14,7 @@ use App\Support\AiVoice;
 use App\Support\SpokenText;
 use App\Support\SpokenTranslationKeys;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Traits\Localizable;
 
@@ -96,10 +96,9 @@ class PrewarmAiVoiceClips extends Command
                 return Command::FAILURE;
             }
 
-            try {
-                dispatch_sync(new GenerateAiVoiceClip($clip['text'], $clip['locale'], $clip['voice']));
-            } catch (AiVoiceUnavailable) {
-                // Already logged by the service; one bad clip shouldn't end the run.
+            // dispatchNow, not the queue: a queued job swallows the failure so
+            // a provider timeout is not reported, and this run needs the count.
+            if (Bus::dispatchNow(new GenerateAiVoiceClip($clip['text'], $clip['locale'], $clip['voice'])) === false) {
                 $failed++;
             }
         }
