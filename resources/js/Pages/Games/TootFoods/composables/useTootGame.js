@@ -12,25 +12,7 @@ const EDGE_MARGIN = 56;
 const BASE_POINTS = 10;
 const MAX_SPEED_BONUS_MULT = 2; // speed multiplier ramps from 1x up to 1 + this
 
-const HIGH_SCORE_KEY = "tootFoodsHighScore";
-
 let nextId = 1;
-
-function readHighScore() {
-    try {
-        return Number(localStorage.getItem(HIGH_SCORE_KEY)) || 0;
-    } catch {
-        return 0;
-    }
-}
-
-function writeHighScore(value) {
-    try {
-        localStorage.setItem(HIGH_SCORE_KEY, String(value));
-    } catch {
-        /* ignore */
-    }
-}
 
 export function useTootGame(callbacks = {}) {
     const { onToot, onEnd } = callbacks;
@@ -40,12 +22,10 @@ export function useTootGame(callbacks = {}) {
     const state = reactive({
         phase: "start", // start | playing | end
         score: 0,
-        foodsFed: 0,
         combo: 0, // current streak length (0 = no active streak)
     });
 
     const timeLeft = ref(ROUND_SECONDS);
-    const highScore = ref(readHighScore());
 
     // Butt size and chase speed scale with the smaller screen dimension.
     const buttSize = computed(() => {
@@ -173,7 +153,6 @@ export function useTootGame(callbacks = {}) {
     function start() {
         state.phase = "playing";
         state.score = 0;
-        state.foodsFed = 0;
         state.combo = 0;
         timeLeft.value = ROUND_SECONDS;
         foods.splice(0, foods.length);
@@ -237,7 +216,6 @@ export function useTootGame(callbacks = {}) {
         const speedMultiplier = 1 + speedFrac * MAX_SPEED_BONUS_MULT;
         const points = Math.round((BASE_POINTS + comboBonus) * speedMultiplier);
         state.score += points;
-        state.foodsFed += 1;
 
         butt.squash = 1;
 
@@ -284,17 +262,7 @@ export function useTootGame(callbacks = {}) {
         state.phase = "end";
         state.combo = 0;
         timeLeft.value = 0;
-        if (state.score > highScore.value) {
-            highScore.value = state.score;
-            writeHighScore(state.score);
-        }
-        if (onEnd) onEnd(state.score, state.foodsFed);
-    }
-
-    function reset() {
-        cancelAnimationFrame(rafId);
-        rafId = null;
-        state.phase = "start";
+        if (onEnd) onEnd(state.score);
     }
 
     onUnmounted(() => cancelAnimationFrame(rafId));
@@ -302,7 +270,6 @@ export function useTootGame(callbacks = {}) {
     return {
         state,
         timeLeft,
-        highScore,
         butt,
         buttSize,
         foods,
@@ -313,6 +280,5 @@ export function useTootGame(callbacks = {}) {
         startDrag,
         updateDrag,
         endDrag,
-        reset,
     };
 }

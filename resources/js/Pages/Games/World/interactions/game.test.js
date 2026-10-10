@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import GameConfirmCard from "../components/GameConfirmCard.vue";
 import GameHost from "../components/GameHost.vue";
+import { HOSTED_GAMES } from "../hostedGames.js";
 import { activate } from "./index.js";
 
 const boom = {
@@ -30,7 +31,7 @@ describe("game interaction", () => {
         });
     });
 
-    it.each(["cockroach", "cockroach-fight"])(
+    it.each(HOSTED_GAMES)(
         "plays %s over the world instead of leaving for its page",
         (slug) => {
             const ctx = { openCard: vi.fn() };

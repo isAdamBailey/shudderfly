@@ -135,7 +135,7 @@ class GamesTest extends TestCase
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        foreach (['cockroach', 'cockroach-fight'] as $game) {
+        foreach (GamesWorld::HOSTED as $game) {
             $this->get(route('games.show', $game))
                 ->assertRedirect(route('games.index', ['minigame' => $game]));
         }
@@ -153,22 +153,6 @@ class GamesTest extends TestCase
             fn (Assert $page) => $page
                 ->component('Games/CostcoPizzaPoop')
                 ->has('users')
-        );
-    }
-
-    public function test_toot_foods_game_page_is_displayed(): void
-    {
-        /** @var User $user */
-        $user = User::factory()->create();
-        $this->actingAs($user);
-
-        $response = $this->get(route('games.show', 'toot-foods'));
-
-        $response->assertInertia(
-            fn (Assert $page) => $page
-                ->component('Games/TootFoods')
-                ->has('users')
-                ->where('fartSoundUrl', asset('fart.m4a'))
         );
     }
 
@@ -262,9 +246,10 @@ class GamesTest extends TestCase
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        // In a room, including both games that moved into the cockroach house.
+        // In a room, including the games that moved into their houses.
         foreach ([
             'boom' => 'house.bathroom',
+            'toot-foods' => 'house.kitchen',
             'cockroach' => 'cockroach-house.hall',
             'cockroach-fight' => 'cockroach-house.hall',
         ] as $game => $scene) {
@@ -350,9 +335,10 @@ class GamesTest extends TestCase
         ]);
 
         foreach ([
-            'cockroach' => 'Cockroach Fart',
-            'cockroach-fight' => 'Cockroach Fight',
-        ] as $slug => $name) {
+            'cockroach' => ['Cockroach Fart', 'cockroach-house.hall'],
+            'cockroach-fight' => ['Cockroach Fight', 'cockroach-house.hall'],
+            'toot-foods' => ['Toot Foods', 'house.kitchen'],
+        ] as $slug => [$name, $scene]) {
             Message::query()->delete();
             $this->post(route('games.share-score', $slug), ['score' => 40])
                 ->assertRedirect();
@@ -366,13 +352,13 @@ class GamesTest extends TestCase
 
             $this->get(route('games.index', ['minigame' => $slug]))
                 ->assertInertia(fn (Assert $page) => $page
-                    ->where('link.scene', 'cockroach-house.hall')
+                    ->where('link.scene', $scene)
                     ->where('link.spot', $slug));
 
             // An older share still carries g:<slug> and links with ?game=.
             $this->get(route('games.index', ['game' => $slug]))
                 ->assertInertia(fn (Assert $page) => $page
-                    ->where('link.scene', 'cockroach-house.hall')
+                    ->where('link.scene', $scene)
                     ->where('link.spot', $slug));
         }
     }

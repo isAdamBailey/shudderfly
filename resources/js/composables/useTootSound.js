@@ -2,8 +2,8 @@ import { ref } from "vue";
 import { getAudioContext, unlockAudio } from "@/composables/useAudioContext";
 
 /**
- * Toot audio, used by Toot Foods and the shared useToot. Reuses the shared
- * /fart.m4a sample but plays it back at a per-food playbackRate so each snack
+ * Toot audio, behind the shared useToot. Reuses the shared
+ * /fart.m4a sample but plays it back at a per-character playbackRate so each
  * toots at a distinct pitch. Falls back to a synthesized fart (also
  * pitch-aware) when the sample can't load or autoplay is still locked.
  */
@@ -111,29 +111,5 @@ export function useTootSound(fartSoundUrl = "/fart.m4a") {
         }
     }
 
-    function playVictory() {
-        try {
-            const c = getCtx();
-            const notes = [523.25, 659.25, 783.99, 1046.5];
-            notes.forEach((freq, i) => {
-                const osc = c.createOscillator();
-                const gain = c.createGain();
-                osc.type = "sine";
-                osc.frequency.value = freq;
-                gain.gain.setValueAtTime(0.2, c.currentTime + i * 0.15);
-                gain.gain.exponentialRampToValueAtTime(
-                    0.001,
-                    c.currentTime + i * 0.15 + 0.4
-                );
-                osc.connect(gain);
-                gain.connect(c.destination);
-                osc.start(c.currentTime + i * 0.15);
-                osc.stop(c.currentTime + i * 0.15 + 0.4);
-            });
-        } catch {
-            /* ignore */
-        }
-    }
-
-    return { initAudio, playToot, playVictory, audioReady };
+    return { initAudio, playToot, audioReady };
 }

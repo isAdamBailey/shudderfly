@@ -1,27 +1,25 @@
 <script setup>
-import { onMounted, onBeforeUnmount, nextTick, ref } from "vue";
-import { Link, usePage } from "@inertiajs/vue3";
-import GameEndScreen from "@/Components/Games/GameEndScreen.vue";
+import { onBeforeUnmount, nextTick, ref } from "vue";
 import CastMember from "@/Components/Games/Cast/CastMember.vue";
 import TootPuff from "@/Components/Games/Cast/TootPuff.vue";
-import { useTootGame, ROUND_SECONDS } from "./composables/useTootGame.js";
-import { useTootSound } from "@/composables/useTootSound";
+import { useTootGame } from "./composables/useTootGame.js";
 import { useAutoStartGame } from "@/composables/useAutoStartGame";
 import { useTranslations } from "@/composables/useTranslations";
 
+// Over the world, in the kitchen (GameHost). The kit is the only way it
+// reaches the world: each food's toot (every food is a cast member with its
+// own pitch) and the score.
+const props = defineProps({
+    kit: { type: Object, required: true },
+});
+
 const { t } = useTranslations();
 
-const page = usePage();
-const fartSoundUrl = page.props.fartSoundUrl || "/fart.m4a";
-
-const { initAudio, playToot, playVictory } = useTootSound(fartSoundUrl);
-
 const game = useTootGame({
-    onToot: (food) => playToot(food.pitch),
-    onEnd: () => playVictory(),
+    onToot: (food) => props.kit.toot(food.type),
+    onEnd: (score) => props.kit.finish({ score }),
 });
-const { state, timeLeft, highScore, butt, buttSize, foods, bursts, popups } =
-    game;
+const { state, timeLeft, butt, buttSize, foods, bursts, popups } = game;
 
 const stageEl = ref(null);
 let resizeObserver = null;
@@ -31,12 +29,6 @@ function measure() {
     const rect = stageEl.value.getBoundingClientRect();
     game.setBounds(rect.width, rect.height);
 }
-
-onMounted(() => {
-    measure();
-    resizeObserver = new ResizeObserver(measure);
-    if (stageEl.value) resizeObserver.observe(stageEl.value);
-});
 
 onBeforeUnmount(() => {
     resizeObserver?.disconnect();
@@ -51,17 +43,12 @@ async function startRound() {
     state.phase = "playing";
     await nextTick();
     measure();
+    // The stage only exists from here on, and the host's window can resize.
+    resizeObserver = new ResizeObserver(measure);
+    resizeObserver.observe(stageEl.value);
     game.start();
 }
 
-async function handlePlay() {
-    await initAudio();
-    await startRound();
-}
-
-function handlePlayAgain() {
-    startRound();
-}
 
 // --- Drag handling ---------------------------------------------------------
 const activeDrag = ref(null); // { id, offsetX, offsetY, pointerId }
@@ -110,10 +97,13 @@ function onPointerUp(event) {
 }
 
 // Keyboard players: Enter/Space tosses the focused food straight to the butt.
+// That food's button goes away, so focus holds on the stage, inside the
+// host's dialog, where Escape and Tab still work.
 function tossToButt(food) {
     if (state.phase !== "playing" || food.leaving) return;
     game.startDrag(food.id);
     game.endDrag(food.id, butt.x, butt.y);
+    stageEl.value?.focus();
 }
 
 function foodStyle(food) {
@@ -137,11 +127,16 @@ function buttStyle() {
     };
 }
 
-useAutoStartGame(handlePlay);
+useAutoStartGame(startRound);
 </script>
 
 <template>
-    <div v-if="state.phase === 'playing'" ref="stageEl" class="toot-stage">
+    <div
+        v-if="state.phase === 'playing'"
+        ref="stageEl"
+        class="toot-stage"
+        tabindex="-1"
+    >
         <div class="hud">
             <div class="hud-stat">
                 <span class="hud-label">{{
@@ -172,13 +167,6 @@ useAutoStartGame(handlePlay);
                 >
             </div>
         </div>
-
-        <Link
-            :href="route('games.index')"
-            class="game-quit"
-            :aria-label="t('games.quit_aria')"
-            >✕</Link
-        >
 
         <!-- The wandering butt -->
         <div
@@ -230,33 +218,6 @@ useAutoStartGame(handlePlay);
             {{ food.emoji }}
         </button>
     </div>
-
-    <GameEndScreen
-        v-else-if="state.phase === 'end'"
-        :title="t('games.toot_foods.end_title')"
-        :score="state.score"
-        game-slug="toot-foods"
-        @play-again="handlePlayAgain"
-    >
-        <template #mark>
-            <CastMember
-                id="butt"
-                class="game-end-emoji mb-2"
-                :move="null"
-                size="clamp(3rem, 10vmin, 5rem)"
-            />
-        </template>
-        <p class="text-[clamp(0.85rem,2.4vmin,1rem)] text-gray-400">
-            {{
-                t(
-                    state.foodsFed === 1
-                        ? "games.toot_foods.end_foods_fed_one"
-                        : "games.toot_foods.end_foods_fed_other",
-                    { count: state.foodsFed }
-                )
-            }}
-        </p>
-    </GameEndScreen>
 </template>
 
 <style scoped>
@@ -345,34 +306,6 @@ useAutoStartGame(handlePlay);
 .combo-pop-leave-to {
     transform: scale(0.6);
     opacity: 0;
-}
-
-.game-quit {
-    position: absolute;
-    bottom: clamp(0.6rem, 3vmin, 1.1rem);
-    left: clamp(0.6rem, 3vmin, 1.1rem);
-    z-index: 21;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 9999px;
-    background: rgba(40, 32, 24, 0.8);
-    color: #fff5e6;
-    font-size: 1.1rem;
-    line-height: 1;
-    text-decoration: none;
-    transition: background-color 0.15s ease;
-}
-
-.game-quit:hover {
-    background: rgba(107, 83, 68, 0.85);
-}
-
-.game-quit:focus-visible {
-    outline: 2px solid #fbbf24;
-    outline-offset: 2px;
 }
 
 /* Butt --------------------------------------------------------------------- */

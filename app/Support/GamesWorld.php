@@ -87,7 +87,7 @@ final class GamesWorld
      * `/games/<slug>` redirects to the launcher. A score shares as a
      * minigame, and whereIs('minigame', slug) stands you there. The
      * launcher is still a `game`. World/hostedGames.js stays in step. */
-    public const HOSTED = ['cockroach', 'cockroach-fight'];
+    public const HOSTED = ['cockroach', 'cockroach-fight', 'toot-foods'];
 
     /** Clock faces a hall clock may wear: three/clockFaces.js (a Vitest test
      * keeps them in step). */
