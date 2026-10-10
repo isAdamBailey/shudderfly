@@ -17,10 +17,10 @@ import { box, mergeParts } from "./streetGeometry.js";
 // The plinth is taller than the Butt looks against the wall from anywhere
 // on the floor: the books' titles are DOM over the canvas, so a book drawn
 // behind the Butt would cover it.
-export const BOOKCASE = { plinth: 100, row: 108, board: 8, depth: 34 };
+export const BOOKCASE = { plinth: 148, row: 100, board: 8, depth: 34 };
 // A book standing face out: how wide and tall it may be (each one its own,
 // within these), and how thick.
-export const BOOK = { width: [70, 88], height: [82, 100], depth: 22 };
+export const BOOK = { width: [70, 88], height: [74, 92], depth: 22 };
 
 const WOOD = "#5b3a1e";
 const BACK = "#2b1a0e"; // the panel behind the books
