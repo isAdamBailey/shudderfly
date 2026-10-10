@@ -141,21 +141,6 @@ class GamesTest extends TestCase
         }
     }
 
-    public function test_costco_pizza_poop_game_page_is_displayed(): void
-    {
-        /** @var User $user */
-        $user = User::factory()->create();
-        $this->actingAs($user);
-
-        $response = $this->get(route('games.show', 'costco-pizza-poop'));
-
-        $response->assertInertia(
-            fn (Assert $page) => $page
-                ->component('Games/CostcoPizzaPoop')
-                ->has('users')
-        );
-    }
-
     public function test_unknown_game_returns_404(): void
     {
         /** @var User $user */
@@ -250,6 +235,7 @@ class GamesTest extends TestCase
         foreach ([
             'boom' => 'house.bathroom',
             'toot-foods' => 'house.kitchen',
+            'costco-pizza-poop' => 'house.kitchen',
             'cockroach' => 'cockroach-house.hall',
             'cockroach-fight' => 'cockroach-house.hall',
         ] as $game => $scene) {
@@ -338,6 +324,7 @@ class GamesTest extends TestCase
             'cockroach' => ['Cockroach Fart', 'cockroach-house.hall'],
             'cockroach-fight' => ['Cockroach Fight', 'cockroach-house.hall'],
             'toot-foods' => ['Toot Foods', 'house.kitchen'],
+            'costco-pizza-poop' => ['Costco Food Poop', 'house.kitchen'],
         ] as $slug => [$name, $scene]) {
             Message::query()->delete();
             $this->post(route('games.share-score', $slug), ['score' => 40])

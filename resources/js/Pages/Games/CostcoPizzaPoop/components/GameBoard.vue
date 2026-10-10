@@ -1,6 +1,5 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
-import { Link } from "@inertiajs/vue3";
 import { PIZZA, POOP } from "@/constants/characters.js";
 import { SVG_WIDTH } from "../composables/useGameState.js";
 import PepperoniGlyph from "./PepperoniGlyph.vue";
@@ -244,16 +243,20 @@ function updateSize() {
     pixelH.value = rect.height;
 }
 
+// The host's window can change size without the browser window doing so.
+let resizeObserver = null;
+
 onMounted(() => {
     updateSize();
-    window.addEventListener("resize", updateSize);
+    resizeObserver = new ResizeObserver(updateSize);
+    resizeObserver.observe(boardEl.value);
     window.addEventListener("keydown", onKeyDown);
 });
 
 onUnmounted(() => {
     stopDragLoop();
     if (steerHintTimer) clearTimeout(steerHintTimer);
-    window.removeEventListener("resize", updateSize);
+    resizeObserver?.disconnect();
     window.removeEventListener("keydown", onKeyDown);
     document.removeEventListener("pointermove", onPointerMove);
     document.removeEventListener("pointerup", onPointerUp);
@@ -454,13 +457,6 @@ onUnmounted(() => {
             </div>
         </div>
 
-        <Link
-            :href="route('games.index')"
-            class="game-quit"
-            :aria-label="t('games.quit_aria')"
-            >✕</Link
-        >
-
         <transition name="steer-hint-fade">
             <div v-if="showSteerHint" class="steer-hint" aria-hidden="true">
                 {{ t("games.costco_pizza_poop.steer_hint") }}
@@ -619,35 +615,6 @@ onUnmounted(() => {
     transform: scaleX(0);
     transform-origin: left center;
     transition: transform 0.15s ease;
-}
-
-.game-quit {
-    position: absolute;
-    top: 6px;
-    left: 8px;
-    z-index: 30;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    border-radius: 999px;
-    background: rgba(20, 6, 8, 0.7);
-    color: #f0d0c0;
-    font-size: 1.1rem;
-    line-height: 1;
-    text-decoration: none;
-    pointer-events: auto;
-    transition: background-color 0.15s ease;
-}
-
-.game-quit:hover {
-    background: rgba(160, 60, 70, 0.7);
-}
-
-.game-quit:focus-visible {
-    outline: 2px solid #fbbf24;
-    outline-offset: 2px;
 }
 
 .steer-hint {

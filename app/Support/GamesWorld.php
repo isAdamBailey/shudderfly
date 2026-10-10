@@ -77,7 +77,7 @@ final class GamesWorld
 
     /** Named sounds a toy's `sound` may use: sounds.js (a Vitest test keeps
      * them in step). */
-    public const SOUNDS = ['hiss', 'tick', 'bell'];
+    public const SOUNDS = ['hiss', 'tick', 'bell', 'chomp', 'bonk'];
 
     /** The minigames a `minigame` interactable may start:
      * World/minigames/index.js (a Vitest test keeps them in step). */
@@ -87,7 +87,7 @@ final class GamesWorld
      * `/games/<slug>` redirects to the launcher. A score shares as a
      * minigame, and whereIs('minigame', slug) stands you there. The
      * launcher is still a `game`. World/hostedGames.js stays in step. */
-    public const HOSTED = ['cockroach', 'cockroach-fight', 'toot-foods'];
+    public const HOSTED = ['cockroach', 'cockroach-fight', 'toot-foods', 'costco-pizza-poop'];
 
     /** Clock faces a hall clock may wear: three/clockFaces.js (a Vitest test
      * keeps them in step). */

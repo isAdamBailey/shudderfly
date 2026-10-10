@@ -94,12 +94,6 @@ export function useGameState() {
         return Math.floor((end - state.startTime) / 1000);
     });
 
-    const stars = computed(() => {
-        if (state.score >= 850) return 3;
-        if (state.score >= 500) return 2;
-        return 1;
-    });
-
     const progress = computed(() => {
         return Math.min(
             1,
@@ -176,7 +170,6 @@ export function useGameState() {
         segments: SEGMENTS,
         totalHeight: TOTAL_PATH_HEIGHT,
         elapsedSeconds,
-        stars,
         progress,
         startGame,
         movePoop,

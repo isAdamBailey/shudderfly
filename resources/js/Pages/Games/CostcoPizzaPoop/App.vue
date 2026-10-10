@@ -1,18 +1,16 @@
 <template>
-    <div v-if="phase === 'pizza'" ref="gameEl" class="game-container">
+    <div
+        v-if="phase === 'pizza'"
+        ref="gameEl"
+        class="game-container"
+        tabindex="-1"
+    >
         <div class="hud">
             <span class="hud-label">{{
                 t("games.costco_pizza_poop.hud_food_left")
             }}</span>
             <span class="hud-value">{{ slicesLeft }}</span>
         </div>
-
-        <Link
-            :href="route('games.index')"
-            class="game-quit"
-            :aria-label="t('games.quit_aria')"
-            >✕</Link
-        >
 
         <transition name="pizza-hint-fade">
             <div v-if="showPizzaHint" class="pizza-hint" aria-hidden="true">
@@ -57,7 +55,12 @@
         </div>
     </div>
 
-    <div v-else-if="phase === 'intestine'" class="intestine-wrap">
+    <div
+        v-else-if="phase === 'intestine'"
+        ref="intestineEl"
+        class="intestine-wrap"
+        tabindex="-1"
+    >
         <GameBoard
             :state="intestineState"
             :segments="segments"
@@ -72,55 +75,39 @@
             @move="movePoop"
         />
     </div>
-
-    <GameEndScreen
-        v-else-if="phase === 'win'"
-        :title="t('games.costco_pizza_poop.win_title')"
-        :emoji="POOP"
-        :score="winScore"
-        game-slug="costco-pizza-poop"
-        @play-again="handlePlayAgain"
-    >
-        <p class="win-sub text-[clamp(0.85rem,2.4vmin,1rem)] text-gray-400">
-            {{ t("games.costco_pizza_poop.win_time", { seconds: winElapsed }) }}
-        </p>
-        <p class="win-sub text-[clamp(0.85rem,2.4vmin,1rem)] text-gray-400">
-            {{
-                t("games.costco_pizza_poop.win_wall_hits", {
-                    count: winCollisions,
-                })
-            }}
-        </p>
-    </GameEndScreen>
 </template>
 
 <script setup>
-import GameEndScreen from "@/Components/Games/GameEndScreen.vue";
 import PersonFace from "@/Components/Games/PersonFace.vue";
 import GameBoard from "@/Pages/Games/CostcoPizzaPoop/components/GameBoard.vue";
 import PepperoniStick from "@/Pages/Games/CostcoPizzaPoop/components/PepperoniStick.vue";
-import { PIZZA, POOP } from "@/constants/characters.js";
+import { PIZZA } from "@/constants/characters.js";
 import { useGameState } from "@/Pages/Games/CostcoPizzaPoop/composables/useGameState.js";
-import { useSound } from "@/Pages/Games/CostcoPizzaPoop/composables/useSound.js";
-import { useAutoStartGame } from "@/composables/useAutoStartGame";
 import { useTranslations } from "@/composables/useTranslations";
-import { Link, usePage } from "@inertiajs/vue3";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+
+// Over the world, in the kitchen (GameHost). The kit is the only way it
+// reaches the world: the chomp, the wall bonk, the poop's toot and the score.
+const props = defineProps({
+    kit: { type: Object, required: true },
+});
 
 const { t } = useTranslations();
 
 const PIZZA_COUNT = 3;
 const PEPPERONI_COUNT = 2;
-const SLICE_SIZE = 96;
+const SLICE_MAX = 96;
 const INTESTINE_INTRO_MS = 2600;
-const VICTORY_TUNE_DELAY_MS = 300;
 
-const phase = ref("start");
+const phase = ref("pizza");
 const gameEl = ref(null);
+const intestineEl = ref(null);
 // PersonFace exposes its own element refs; these read through to them.
 const faceRef = ref(null);
 const mouthEl = computed(() => faceRef.value?.mouthEl ?? null);
 const faceEl = computed(() => faceRef.value?.faceEl ?? null);
+// Shrinks so the five foods fit across a narrow window without overlapping.
+const sliceSize = ref(SLICE_MAX);
 const gameW = ref(400);
 const gameH = ref(600);
 
@@ -151,22 +138,15 @@ function createFoodList() {
 
 const sliceList = ref(createFoodList());
 const draggingId = ref(null);
-const showPizzaHint = ref(false);
+const showPizzaHint = ref(true);
 let dragOffsetX = 0;
 let dragOffsetY = 0;
 let activeMove = null;
 let activeEnd = null;
 
-const winScore = ref(0);
-const winElapsed = ref(0);
-const winCollisions = ref(0);
 const intestineIntroActive = ref(false);
 let intestineIntroTimer = null;
-let victoryTuneTimer = null;
 
-const fartSoundUrl = usePage().props.fartSoundUrl ?? "/fart.m4a";
-const { initAudio, playFart, playChomp, playVictory, playMissSound } =
-    useSound(fartSoundUrl);
 const {
     state: intestineState,
     segments,
@@ -190,15 +170,8 @@ watch(
             return;
         }
 
-        playFart();
-        victoryTuneTimer = window.setTimeout(() => {
-            playVictory();
-            victoryTuneTimer = null;
-        }, VICTORY_TUNE_DELAY_MS);
-        winScore.value = intestineState.score;
-        winElapsed.value = intestineElapsedSeconds.value;
-        winCollisions.value = intestineState.collisions;
-        phase.value = "win";
+        props.kit.toot("poop");
+        props.kit.finish({ score: intestineState.score });
     }
 );
 
@@ -209,18 +182,18 @@ watch(
             return;
         }
         if (newCollisions > oldCollisions) {
-            playMissSound();
+            props.kit.playSound("bonk");
         }
     }
 );
 
 function sliceStyle(s) {
     return {
-        left: `${s.x - SLICE_SIZE / 2}px`,
-        top: `${s.y - SLICE_SIZE / 2}px`,
-        width: `${SLICE_SIZE}px`,
-        height: `${SLICE_SIZE}px`,
-        fontSize: `${Math.floor(SLICE_SIZE * 0.85)}px`,
+        left: `${s.x - sliceSize.value / 2}px`,
+        top: `${s.y - sliceSize.value / 2}px`,
+        width: `${sliceSize.value}px`,
+        height: `${sliceSize.value}px`,
+        fontSize: `${Math.floor(sliceSize.value * 0.85)}px`,
     };
 }
 
@@ -238,6 +211,7 @@ function layoutSlices() {
     const margin = 24;
     const usable = w - margin * 2;
     const step = usable / (sliceList.value.length + 1);
+    sliceSize.value = Math.min(SLICE_MAX, Math.floor(step));
     sliceList.value.forEach((s, i) => {
         s.startX = margin + step * (i + 1);
         s.startY = baseY;
@@ -339,9 +313,14 @@ function feedSlice(id) {
     s.eaten = true;
     showPizzaHint.value = false;
     triggerGulp();
-    playChomp();
+    props.kit.playSound("chomp");
+    // The fed food's button goes away; focus holds in the game, inside the
+    // host's dialog, where Escape and Tab still work.
     if (slicesLeft.value === 0) {
         startIntestineRun();
+        nextTick(() => intestineEl.value?.focus());
+    } else {
+        gameEl.value?.focus();
     }
 }
 
@@ -361,12 +340,12 @@ function startDrag(id, e) {
         if (draggingId.value !== id) return;
         const p = getLocalPos(ev);
         s.x = Math.max(
-            SLICE_SIZE / 2,
-            Math.min(gameW.value - SLICE_SIZE / 2, p.x - dragOffsetX)
+            sliceSize.value / 2,
+            Math.min(gameW.value - sliceSize.value / 2, p.x - dragOffsetX)
         );
         s.y = Math.max(
-            SLICE_SIZE / 2,
-            Math.min(gameH.value - SLICE_SIZE / 2, p.y - dragOffsetY)
+            sliceSize.value / 2,
+            Math.min(gameH.value - sliceSize.value / 2, p.y - dragOffsetY)
         );
         updateFaceFocus(s.x, s.y);
     };
@@ -399,70 +378,29 @@ function startIntestineRun() {
     }, INTESTINE_INTRO_MS);
 }
 
-async function handlePlayFromStart() {
-    await initAudio();
-    phase.value = "pizza";
-    showPizzaHint.value = true;
-    await nextTick();
-    updateSize();
-}
-
-async function handlePlayAgain() {
-    clearTimers();
-    removeDragListeners();
-    sliceList.value.forEach((s) => {
-        s.eaten = false;
-    });
-    winScore.value = 0;
-    winElapsed.value = 0;
-    winCollisions.value = 0;
-    intestineIntroActive.value = false;
-    gulping.value = false;
-    resetFaceFocus();
-    await initAudio();
-    phase.value = "pizza";
-    showPizzaHint.value = true;
-    await nextTick();
-    updateSize();
-    draggingId.value = null;
-}
-
-function clearTimers() {
-    if (intestineIntroTimer) {
-        clearTimeout(intestineIntroTimer);
-        intestineIntroTimer = null;
-    }
-    if (victoryTuneTimer) {
-        clearTimeout(victoryTuneTimer);
-        victoryTuneTimer = null;
-    }
-    if (gulpTimer) {
-        clearTimeout(gulpTimer);
-        gulpTimer = null;
-    }
-}
+// The host's window can change size without the browser window doing so.
+let resizeObserver = null;
 
 onMounted(() => {
-    window.addEventListener("resize", updateSize);
+    updateSize();
+    resizeObserver = new ResizeObserver(updateSize);
+    resizeObserver.observe(gameEl.value);
 });
 
 onUnmounted(() => {
-    window.removeEventListener("resize", updateSize);
+    resizeObserver?.disconnect();
     removeDragListeners();
-    clearTimers();
+    clearTimeout(intestineIntroTimer);
+    clearTimeout(gulpTimer);
 });
-
-useAutoStartGame(handlePlayFromStart);
 </script>
 
 <style scoped>
 .game-container {
-    position: relative;
-    width: min(100%, 700px);
-    height: min(calc(100dvh - 4rem - 48px), 720px);
-    margin: 0 auto;
+    position: absolute;
+    inset: 0;
     overflow: hidden;
-    border-radius: 16px;
+    border-radius: 12px;
     background: radial-gradient(
             circle at 20% 15%,
             rgba(255, 220, 180, 0.35),
@@ -533,14 +471,6 @@ useAutoStartGame(handlePlayFromStart);
     height: 100%;
 }
 
-.start-media-pepperoni {
-    display: inline-block;
-    width: 0.85em;
-    height: 0.85em;
-    vertical-align: middle;
-    margin-left: 0.15em;
-}
-
 .slice:focus-visible {
     outline: 3px solid #fbbf24;
     outline-offset: 4px;
@@ -567,46 +497,12 @@ useAutoStartGame(handlePlayFromStart);
 }
 
 .intestine-wrap {
-    position: relative;
-    width: min(100%, 700px);
-    height: min(calc(100dvh - 4rem - 48px), 720px);
-    margin: 0 auto;
+    position: absolute;
+    inset: 0;
     overflow: hidden;
-    border-radius: 16px;
+    border-radius: 12px;
     border: 3px solid #6b5344;
     box-shadow: 0 0 48px rgba(0, 0, 0, 0.45);
-}
-
-.win-sub {
-    margin-top: 0.25rem;
-}
-
-.game-quit {
-    position: absolute;
-    top: 6px;
-    left: 8px;
-    z-index: 30;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    border-radius: 999px;
-    background: rgba(40, 32, 24, 0.8);
-    color: #fff5e6;
-    font-size: 1.1rem;
-    line-height: 1;
-    text-decoration: none;
-    transition: background-color 0.15s ease;
-}
-
-.game-quit:hover {
-    background: rgba(107, 83, 68, 0.85);
-}
-
-.game-quit:focus-visible {
-    outline: 2px solid #fbbf24;
-    outline-offset: 2px;
 }
 
 .pizza-hint {
