@@ -70,7 +70,7 @@ function handleHiss(direction) {
     right: 2%;
     top: 50%;
     transform: translateY(-50%);
-    width: 18vmin;
+    width: 18%;
     height: auto;
     z-index: 5;
     pointer-events: none;
@@ -97,7 +97,7 @@ function handleHiss(direction) {
 .tap-hint {
     position: absolute;
     transform: translate(-50%, 0);
-    font-size: 3vmin;
+    font-size: 0.95rem;
     color: rgba(255, 255, 255, 0.85);
     font-weight: 700;
     animation: hintBounce 1.2s ease-in-out infinite;

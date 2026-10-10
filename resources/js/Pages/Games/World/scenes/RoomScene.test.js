@@ -289,6 +289,21 @@ describe("the room's scene graph", () => {
         graph.dispose();
     });
 
+    it("crawls little cockroaches across a wall that asks for them", () => {
+        const plain = build();
+        const graph = build({ ...hall, crawlers: true });
+        const roaches = graph.scene.getObjectByName("wall-crawlers").children;
+        const before = roaches[0].position.x;
+
+        expect(roaches).toHaveLength(6);
+        expect(roaches[0].material.opacity).toBeGreaterThan(0);
+        expect(plain.scene.getObjectByName("wall-crawlers")).toBeUndefined();
+        expect(graph.sync(view({ reduced: false }), 1)).toBe(true);
+        expect(roaches[0].position.x).not.toBe(before);
+        graph.dispose();
+        plain.dispose();
+    });
+
     it("dresses up for the season: dimmer at Halloween, decorations on the wall", () => {
         const everyday = build();
 

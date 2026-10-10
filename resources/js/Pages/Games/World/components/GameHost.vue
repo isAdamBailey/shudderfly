@@ -24,10 +24,10 @@ import {
 import { hostedGame } from "../hostedGames.js";
 import { playSound } from "../sounds.js";
 
-// A page game played over the world (issue #144). The confirm card already
-// asked; this mounts its App.vue across the stage and, when the round ends,
-// the score. The game reaches the world only through `kit`. Closing returns
-// to the spot the card opened on.
+// A page game played over the world (issue #144), in the same window as a
+// minigame. The confirm card already asked; this mounts its App.vue in that
+// window and, when the round ends, the score. The game reaches the world
+// only through `kit`. Closing returns to the spot the card opened on.
 const props = defineProps({
     // The confirm card's game: slug, name, emoji, and cast or landmark.
     game: { type: Object, required: true },
@@ -103,20 +103,30 @@ const puffAt = (puff) => ({
 
 <template>
     <div
-        ref="panelRef"
-        class="game-host absolute inset-0 z-30 bg-black/75"
+        class="game-host absolute inset-0 z-30 flex items-center justify-center bg-black/75 p-3"
         role="dialog"
         aria-modal="true"
-        :aria-label="phase === 'playing' ? game.name : undefined"
-        :aria-labelledby="phase === 'done' ? titleId : undefined"
+        :aria-labelledby="titleId"
         @click.self="onBackdrop"
         @keydown.esc.prevent="cancel"
         @keydown="trapKeydown"
     >
-        <div v-if="phase === 'playing'" class="game-host-stage">
-            <!-- The game's own layers (its score bar is z-50) stay in here, so
-                 the close control above this box can always be reached. -->
-            <div class="game-host-play">
+        <div
+            ref="panelRef"
+            class="game-host-panel relative flex w-full max-w-lg flex-col rounded-2xl border-2 border-theme-primary bg-theme-content p-4 text-center shadow-xl"
+        >
+            <h2
+                :id="titleId"
+                class="font-heading px-12 text-[clamp(1.35rem,5vmin,1.9rem)] font-black leading-tight tracking-wide text-theme-book-title"
+            >
+                <span aria-hidden="true">{{ game.emoji }}</span>
+                {{ game.name }}
+            </h2>
+
+            <div
+                v-if="phase === 'playing'"
+                class="game-host-play relative mt-3 flex-1 overflow-hidden rounded-xl"
+            >
                 <component :is="Game" :key="round" :kit="kit" />
                 <TootPuff
                     v-for="puff in puffs"
@@ -124,32 +134,15 @@ const puffAt = (puff) => ({
                     :style="puffAt(puff)"
                 />
             </div>
-            <button
-                ref="closeRef"
-                type="button"
-                class="game-host-close absolute left-1/2 top-3 z-10 h-12 w-12 -translate-x-1/2 rounded-full bg-black/70 text-2xl text-white shadow-lg ring-2 ring-white/80 focus-visible:outline-none focus-visible:ring-theme-primary"
-                :aria-label="t('games.world.minigames.done')"
-                @click="cancel"
-            >
-                <span aria-hidden="true">✕</span>
-            </button>
-        </div>
 
-        <div v-else class="flex h-full items-center justify-center p-4">
             <div
-                class="game-host-score w-full max-w-sm rounded-2xl border-2 border-theme-primary bg-theme-content px-6 py-6 text-center shadow-xl"
+                v-else
+                class="game-host-score flex flex-1 flex-col items-center justify-center py-4"
             >
                 <div class="text-[clamp(3rem,14vmin,4.5rem)] leading-none">
                     <CastMember v-if="game.cast" :id="game.cast" :move="null" />
                     <span v-else aria-hidden="true">{{ game.landmark }}</span>
                 </div>
-                <h2
-                    :id="titleId"
-                    class="font-heading mt-1 text-[clamp(1.35rem,5vmin,1.9rem)] font-black leading-tight tracking-wide text-theme-book-title"
-                >
-                    <span aria-hidden="true">{{ game.emoji }}</span>
-                    {{ game.name }}
-                </h2>
                 <p
                     class="game-host-points mt-3 font-heading text-[clamp(1.2rem,4.5vmin,1.7rem)] font-black text-theme-book-title"
                 >
@@ -178,19 +171,30 @@ const puffAt = (puff) => ({
                     </button>
                 </div>
             </div>
+
+            <!-- Outside the play box: the game's own score bar is z-50 in
+                 there, and this has to stay reachable above it. -->
+            <button
+                v-if="phase === 'playing'"
+                ref="closeRef"
+                type="button"
+                class="game-host-close absolute right-3 top-3 z-10 h-12 w-12 rounded-full bg-black/70 text-2xl text-white shadow-lg ring-2 ring-white/80 focus-visible:outline-none focus-visible:ring-theme-primary"
+                :aria-label="t('games.world.minigames.done')"
+                @click="cancel"
+            >
+                <span aria-hidden="true">✕</span>
+            </button>
         </div>
     </div>
 </template>
 
 <style scoped>
-.game-host-stage {
-    position: absolute;
-    inset: 0;
+.game-host-panel {
+    height: min(100%, 36rem);
 }
 
 .game-host-play {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
+    min-height: 18rem;
+    background: #3e2723;
 }
 </style>

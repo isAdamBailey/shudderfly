@@ -83,12 +83,11 @@ final class GamesWorld
      * World/minigames/index.js (a Vitest test keeps them in step). */
     public const MINIGAMES = ['toot-catch'];
 
-    /** Page games that also play inside the world (GameHost; issue #144).
-     * Their pages still share as games. A score from the host shares as a
-     * minigame, and whereIs('minigame', slug) stands you at the launcher,
-     * which is still a `game`. World/hostedGames.js (a Vitest test keeps
-     * them in step). */
-    public const HOSTED = ['cockroach'];
+    /** Games that play inside the world, through GameHost (issue #144).
+     * `/games/<slug>` redirects to the launcher. A score shares as a
+     * minigame, and whereIs('minigame', slug) stands you there. The
+     * launcher is still a `game`. World/hostedGames.js stays in step. */
+    public const HOSTED = ['cockroach', 'cockroach-fight'];
 
     /** Clock faces a hall clock may wear: three/clockFaces.js (a Vitest test
      * keeps them in step). */
@@ -137,17 +136,12 @@ final class GamesWorld
                 'kind' => 'road',
                 'label' => 'messages.games.world.places.street',
                 'interactables' => [
-                    // A game's building: its sign is the landmark, separate
-                    // from the game's own icon (the two cockroach games share
-                    // one). x is along the road, in world units.
-                    self::roadGame('cockroach-fight', 2400, '🏟️'),
-                    self::roadGame('cockroach', 5100, '🏚️'),
                     // The buildings you can go into. The road keeps a gap (600
                     // on the far side) for another.
                     self::roadDoor('house', 1050, 'near', '🏠', 'house', 'house.hall'),
                     self::roadDoor('library', 1500, 'far', '📚', 'library', 'library.hall'),
-                    self::roadDoor('poop-house', 3300, 'far', '🏡', 'poop_house', 'poop-house.hall'),
-                    self::roadDoor('cockroach-house', 4200, 'far', '🪳', 'cockroach_house', 'cockroach-house.hall'),
+                    self::roadDoor('poop-house', 2400, 'far', '🏡', 'poop_house', 'poop-house.hall'),
+                    self::roadDoor('cockroach-house', 3300, 'far', '🪳', 'cockroach_house', 'cockroach-house.hall'),
                 ],
             ],
 
@@ -261,12 +255,14 @@ final class GamesWorld
                 self::minigame('toot-catch', 170, 180, '🧺'),
             ]),
 
-            // --- The Cockroach's House: one dark room. The floor stays clear
-            // for Cockroach Fart and Cockroach Fight (they are still on the road).
+            // --- The Cockroach's House: one dark room. Cockroach Fart and
+            // Cockroach Fight stand on the floor. Little cockroaches crawl
+            // the back wall, the same picture as the site header.
             'cockroach-house.hall' => self::room('cockroach_house_hall', [
                 'size' => ['w' => 1000, 'd' => 480],
                 'spawn' => ['x' => 280, 'z' => 320],
                 'walls' => ['back' => 'brick', 'sides' => 'brick', 'floor' => 'concrete'],
+                'crawlers' => true,
                 'ambient' => 0.2,
                 'lights' => [
                     ['id' => 'lamp', 'x' => 820, 'z' => 80, 'y' => 240, 'color' => '#fcd34d', 'intensity' => 1],
@@ -274,6 +270,8 @@ final class GamesWorld
             ], [
                 self::roomDoor('front-door', 160, 'road', 'cockroach-house', exit: true),
                 self::picture('portrait', 500, 130, '/img/cockroach.png', 372, 200, 'cockroach_portrait'),
+                self::game('cockroach', 300, 180, ['size' => 110, 'cast' => 'cockroach']),
+                self::game('cockroach-fight', 700, 260, ['size' => 110, 'cast' => 'cockroach']),
                 self::lampSwitch(820, 240),
             ]),
         ];
@@ -568,13 +566,6 @@ final class GamesWorld
         return ['name' => Str::ucfirst($category->name)];
     }
 
-    /** Game `slug`'s building on the road, on the far side, `landmark` its
-     * sign. */
-    private static function roadGame(string $slug, int $x, string $landmark): array
-    {
-        return ['id' => $slug, 'type' => 'game', 'x' => $x, 'side' => 'far', 'game' => $slug, 'emoji' => $landmark];
-    }
-
     /** A building on the road you can go into, its sign `emoji`, named
      * `places.<label>`, leading to its room's `front-door`. */
     private static function roadDoor(string $id, int $x, string $side, string $emoji, string $label, string $to): array
@@ -774,8 +765,7 @@ final class GamesWorld
             }
         }
 
-        // A hosted game is shared as a minigame while its launcher is still
-        // a game on the map.
+        // A hosted game shares as a minigame. Its launcher is still a game.
         if ($kind === 'minigame' && in_array($name, self::HOSTED, true)) {
             return self::whereIs('game', $name);
         }

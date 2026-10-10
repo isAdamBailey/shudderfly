@@ -58,7 +58,7 @@ defineProps({
     top: 0;
     left: 0;
     right: 0;
-    padding: calc(env(safe-area-inset-top, 8px) + 1vmin) 2.5vmin 1.2vmin;
+    padding: calc(env(safe-area-inset-top, 8px) + 0.35rem) 0.75rem 0.4rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -75,7 +75,7 @@ defineProps({
 
 .hud-left {
     display: flex;
-    gap: 2.5vmin;
+    gap: 0.6rem;
 }
 
 .stat-box {
@@ -84,13 +84,13 @@ defineProps({
     align-items: flex-start;
     background: rgba(0, 0, 0, 0.35);
     border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 1.2vmin;
-    padding: 0.6vmin 1.8vmin;
-    min-width: 10vmin;
+    border-radius: 0.4rem;
+    padding: 0.2rem 0.55rem;
+    min-width: 3.2rem;
 }
 
 .stat-label {
-    font-size: 1.4vmin;
+    font-size: 0.65rem;
     font-weight: 700;
     color: rgba(255, 255, 255, 0.5);
     letter-spacing: 0.12em;
@@ -98,7 +98,7 @@ defineProps({
 }
 
 .stat-value {
-    font-size: 3.2vmin;
+    font-size: 1.15rem;
     font-weight: 800;
     color: #fff;
     line-height: 1.2;
@@ -112,11 +112,11 @@ defineProps({
     flex: 1;
     display: flex;
     justify-content: center;
-    min-height: 4vmin;
+    min-height: 1.25rem;
 }
 
 .combo-badge {
-    font-size: 3vmin;
+    font-size: 1.05rem;
     font-weight: 900;
     color: #ff6d00;
     text-shadow: 0 0 8px rgba(255, 109, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.6);

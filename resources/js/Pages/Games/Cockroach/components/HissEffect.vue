@@ -15,7 +15,7 @@ defineProps({
     position: absolute;
     top: -20%;
     right: -10%;
-    font-size: 2.5vmin;
+    font-size: 0.85rem;
     font-weight: 900;
     color: #ffcc00;
     text-shadow: -1px -1px 0 #333, 1px -1px 0 #333, -1px 1px 0 #333,

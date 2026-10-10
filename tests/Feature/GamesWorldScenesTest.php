@@ -280,7 +280,7 @@ class GamesWorldScenesTest extends TestCase
         $door = collect($scenes['road']['interactables'])->firstWhere('id', 'cockroach-house');
 
         $this->assertSame('door', $door['type']);
-        $this->assertSame(4200, $door['x']);
+        $this->assertSame(3300, $door['x']);
         $this->assertSame('far', $door['side']);
         $this->assertSame('cockroach-house.hall', $door['to']);
 
@@ -288,18 +288,18 @@ class GamesWorldScenesTest extends TestCase
         $this->assertLessThanOrEqual(0.25, $room['ambient']);
         $this->assertSame('brick', $room['walls']['back']);
         $this->assertSame('concrete', $room['walls']['floor']);
+        $this->assertTrue($room['crawlers']);
 
         $portrait = collect($room['interactables'])->firstWhere('id', 'portrait');
         $this->assertSame('/img/cockroach.png', $portrait['image']['src']);
         $this->assertSame(372, $portrait['image']['w']);
         $this->assertSame(200, $portrait['image']['h']);
 
-        // Both cockroach games stay on the road. The nest's floor is clear.
         $this->assertEqualsCanonicalizing(
             ['cockroach', 'cockroach-fight'],
-            collect($scenes['road']['interactables'])->where('type', 'game')->pluck('game')->all(),
+            collect($room['interactables'])->where('type', 'game')->pluck('game')->all(),
         );
-        $this->assertEmpty(collect($room['interactables'])->where('type', 'game'));
+        $this->assertEmpty(collect($scenes['road']['interactables'])->where('type', 'game'));
 
         $shown = GamesWorld::scenes()['cockroach-house.hall'];
         $this->assertSame("The Cockroach's Nest", $shown['label']);
@@ -340,9 +340,13 @@ class GamesWorldScenesTest extends TestCase
             'cast' => 'toilet',
         ], $boom['card']);
 
-        $fight = collect($scenes['road']['interactables'])->firstWhere('id', 'cockroach-fight');
-        $this->assertSame(2400, $fight['x']);
-        $this->assertSame('🏟️', $fight['card']['landmark']);
+        $nest = $scenes['cockroach-house.hall']['interactables'];
+        $fight = collect($nest)->firstWhere('id', 'cockroach-fight');
+        $this->assertSame(700, $fight['x']);
+        $this->assertSame('cockroach', $fight['card']['cast']);
+        $fart = collect($nest)->firstWhere('id', 'cockroach');
+        $this->assertSame('Cockroach Fart', $fart['label']);
+        $this->assertSame('cockroach', $fart['card']['cast']);
     }
 
     public function test_the_library_has_a_room_per_category_over_its_floors(): void

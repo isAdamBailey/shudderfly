@@ -25,9 +25,9 @@ import { useGameState } from "./composables/useGameState.js";
 import { useSound } from "./composables/useSound.js";
 import { useAutoStartGame } from "@/composables/useAutoStartGame";
 
-// On its page, or, with `kit`, over the world (GameHost). The kit is the
-// only way it reaches the world: the score, the fart, the hiss, and whether
-// motion should stay down. The page keeps its own win screen and share.
+// With `kit`, over the world (GameHost). The kit is the only way it reaches
+// the world: the score, the fart, the hiss, and whether motion should stay
+// down. Without it, the game keeps its own win screen.
 const props = defineProps({
     kit: { type: Object, default: null },
 });

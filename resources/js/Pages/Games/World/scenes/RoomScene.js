@@ -15,6 +15,7 @@ import { bookcaseGeometry, booksMesh } from "./bookshelf.js";
 import { doorwayGeometry } from "./doorway.js";
 import { exitSigns } from "./exitSign.js";
 import { floorGeometry, stairsFootprint, stairsGeometry } from "./staircase.js";
+import { createWallCrawlers } from "./wallCrawlers.js";
 
 // The `kind: "room"` scene graph (issue #130): a dollhouse room with its
 // front wall taken away. Walls and floor come from the room's `walls` looks
@@ -292,6 +293,11 @@ export function createRoomScene(
         return puppet;
     });
 
+    const crawlers = room.crawlers
+        ? createWallCrawlers(THREE, width, height)
+        : null;
+    if (crawlers) scene.add(crawlers.group);
+
     // --- Things in the room and the Butt -------------------------------------
 
     const things = new Map();
@@ -450,6 +456,7 @@ export function createRoomScene(
             changed = true;
         }
         for (const puppet of puppets) changed = puppet.tick(dt) || changed;
+        if (crawlers?.tick(dt, reduced)) changed = true;
         return changed;
     }
 
@@ -481,6 +488,7 @@ export function createRoomScene(
             showLamps();
         },
         dispose() {
+            crawlers?.dispose();
             books?.dispose();
             signs.dispose();
             disposeTree(made);

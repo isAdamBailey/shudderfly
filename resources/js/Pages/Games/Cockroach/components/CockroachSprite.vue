@@ -59,7 +59,7 @@ function onHeadTap(event) {
 <style scoped>
 .cockroach-wrapper {
     position: absolute;
-    width: 28vmin;
+    width: 28%;
     height: auto;
     transition:
         left 0.35s ease-out,

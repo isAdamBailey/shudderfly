@@ -30,30 +30,33 @@ describe("game interaction", () => {
         });
     });
 
-    it("plays a hosted game over the world instead of leaving for its page", () => {
-        const ctx = { openCard: vi.fn() };
-        const cockroach = {
-            ...boom,
-            id: "cockroach",
-            game: "cockroach",
-            card: { ...boom.card, slug: "cockroach", name: "Cockroach Fart" },
-        };
+    it.each(["cockroach", "cockroach-fight"])(
+        "plays %s over the world instead of leaving for its page",
+        (slug) => {
+            const ctx = { openCard: vi.fn() };
+            const hosted = {
+                ...boom,
+                id: slug,
+                game: slug,
+                card: { ...boom.card, slug, name: slug },
+            };
 
-        activate(cockroach, ctx);
+            activate(hosted, ctx);
 
-        const props = ctx.openCard.mock.calls[0][1];
-        expect(ctx.openCard).toHaveBeenCalledWith(
-            GameConfirmCard,
-            expect.objectContaining({
-                game: cockroach.card,
-                start: expect.any(Function),
-            })
-        );
-        props.start();
-        expect(ctx.openCard).toHaveBeenLastCalledWith(GameHost, {
-            game: cockroach.card,
-        });
-    });
+            const props = ctx.openCard.mock.calls[0][1];
+            expect(ctx.openCard).toHaveBeenCalledWith(
+                GameConfirmCard,
+                expect.objectContaining({
+                    game: hosted.card,
+                    start: expect.any(Function),
+                })
+            );
+            props.start();
+            expect(ctx.openCard).toHaveBeenLastCalledWith(GameHost, {
+                game: hosted.card,
+            });
+        }
+    );
 
     it("does nothing for an unknown type", () => {
         const ctx = { openCard: vi.fn() };

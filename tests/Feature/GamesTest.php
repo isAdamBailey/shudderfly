@@ -31,29 +31,23 @@ class GamesTest extends TestCase
                 ->component('Games/Index')
                 ->missing('games')
                 ->where('scenes.road.kind', 'road')
-                // The cockroach games, then the buildings you can go into.
-                ->has('scenes.road.interactables', 6)
-                ->where('scenes.road.interactables.2.id', 'house')
-                ->where('scenes.road.interactables.3.id', 'library')
-                ->where('scenes.road.interactables.4.id', 'poop-house')
-                ->where('scenes.road.interactables.5.id', 'cockroach-house')
-                ->where('scenes.road.interactables.5.to', 'cockroach-house.hall')
+                // The buildings you can go into. The cockroach games' lots
+                // are closed: the Poop's House stands where the fight was,
+                // the Cockroach's House where the Poop's House was.
+                ->has('scenes.road.interactables', 4)
+                ->where('scenes.road.interactables.0.id', 'house')
+                ->where('scenes.road.interactables.1.id', 'library')
+                ->where('scenes.road.interactables.2.id', 'poop-house')
+                ->where('scenes.road.interactables.2.x', 2400)
+                ->where('scenes.road.interactables.3.id', 'cockroach-house')
+                ->where('scenes.road.interactables.3.x', 3300)
+                ->where('scenes.road.interactables.3.to', 'cockroach-house.hall')
                 // A dotted id can't be a path here.
                 ->where('scenes', fn ($scenes) => collect($scenes)->get('house.hall')['kind'] === 'room')
                 ->where('link', null)
-                ->where('scenes.road.interactables.0.id', 'cockroach-fight')
-                ->where('scenes.road.interactables.0.label', 'Cockroach Fight')
-                ->where('scenes.road.interactables.1.id', 'cockroach')
-                ->where('scenes.road.interactables.1.label', 'Cockroach Fart')
-                // A road game needs a landmark and a road position, or it
-                // would be unreachable in the Games World.
                 ->has('scenes.road.interactables.0', fn (Assert $item) => $item->hasAll([
-                    'id', 'type', 'x', 'side', 'game', 'emoji', 'label', 'card',
+                    'id', 'type', 'x', 'side', 'emoji', 'label', 'to', 'toSpot',
                 ]))
-                ->where('scenes.road.interactables.0.emoji', '🏟️')
-                ->where('scenes.road.interactables.0.x', 2400)
-                ->where('scenes.road.interactables.1.emoji', '🏚️')
-                ->where('scenes.road.interactables.1.x', 5100)
                 ->where('fartSoundUrl', asset('fart.m4a'))
         );
     }
@@ -135,35 +129,16 @@ class GamesTest extends TestCase
         );
     }
 
-    public function test_cockroach_game_page_is_displayed(): void
+    public function test_a_moved_game_redirects_to_its_spot_in_the_house(): void
     {
         /** @var User $user */
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        $response = $this->get(route('games.show', 'cockroach'));
-
-        $response->assertInertia(
-            fn (Assert $page) => $page
-                ->component('Games/Cockroach')
-                ->has('users')
-        );
-    }
-
-    public function test_cockroach_fight_game_page_is_displayed(): void
-    {
-        /** @var User $user */
-        $user = User::factory()->create();
-        $this->actingAs($user);
-
-        $response = $this->get(route('games.show', 'cockroach-fight'));
-
-        $response->assertInertia(
-            fn (Assert $page) => $page
-                ->component('Games/CockroachFight')
-                ->has('users')
-                ->where('fartSoundUrl', asset('fart.m4a'))
-        );
+        foreach (['cockroach', 'cockroach-fight'] as $game) {
+            $this->get(route('games.show', $game))
+                ->assertRedirect(route('games.index', ['minigame' => $game]));
+        }
     }
 
     public function test_costco_pizza_poop_game_page_is_displayed(): void
@@ -287,8 +262,12 @@ class GamesTest extends TestCase
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        // In a room, and on the road.
-        foreach (['boom' => 'house.bathroom', 'cockroach' => 'road'] as $game => $scene) {
+        // In a room, including both games that moved into the cockroach house.
+        foreach ([
+            'boom' => 'house.bathroom',
+            'cockroach' => 'cockroach-house.hall',
+            'cockroach-fight' => 'cockroach-house.hall',
+        ] as $game => $scene) {
             $this->get(route('games.index', ['game' => $game]))
                 ->assertInertia(fn (Assert $page) => $page
                     ->where('link.scene', $scene)
@@ -370,33 +349,32 @@ class GamesTest extends TestCase
             ])."\u{E000}m:cockroach\u{E000}",
         ]);
 
-        $this->get(route('games.index', ['minigame' => 'cockroach']))
-            ->assertInertia(fn (Assert $page) => $page
-                ->where('link.scene', 'road')
-                ->where('link.spot', 'cockroach'));
-    }
+        foreach ([
+            'cockroach' => 'Cockroach Fart',
+            'cockroach-fight' => 'Cockroach Fight',
+        ] as $slug => $name) {
+            Message::query()->delete();
+            $this->post(route('games.share-score', $slug), ['score' => 40])
+                ->assertRedirect();
 
-    public function test_a_hosted_games_page_still_shares_as_a_game(): void
-    {
-        Event::fake();
+            $this->assertDatabaseHas('messages', [
+                'message' => __('messages.game_score_shared', [
+                    'game' => $name,
+                    'score' => 40,
+                ])."\u{E000}m:{$slug}\u{E000}",
+            ]);
 
-        SiteSetting::updateOrCreate(
-            ['key' => 'messaging_enabled'],
-            ['value' => '1', 'type' => 'boolean', 'description' => 'x']
-        );
+            $this->get(route('games.index', ['minigame' => $slug]))
+                ->assertInertia(fn (Assert $page) => $page
+                    ->where('link.scene', 'cockroach-house.hall')
+                    ->where('link.spot', $slug));
 
-        $user = User::factory()->create();
-        $this->actingAs($user);
-
-        $this->post(route('games.share-score', 'cockroach'), ['score' => 40])
-            ->assertRedirect();
-
-        $this->assertDatabaseHas('messages', [
-            'message' => __('messages.game_score_shared', [
-                'game' => 'Cockroach Fart',
-                'score' => 40,
-            ])."\u{E000}g:cockroach\u{E000}",
-        ]);
+            // An older share still carries g:<slug> and links with ?game=.
+            $this->get(route('games.index', ['game' => $slug]))
+                ->assertInertia(fn (Assert $page) => $page
+                    ->where('link.scene', 'cockroach-house.hall')
+                    ->where('link.spot', $slug));
+        }
     }
 
     public function test_in_world_share_of_a_game_that_still_leaves_the_world_is_not_found(): void

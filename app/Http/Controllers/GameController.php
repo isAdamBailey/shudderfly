@@ -98,10 +98,16 @@ class GameController extends Controller
         ]);
     }
 
-    public function show(string $game): Response
+    public function show(string $game): Response|RedirectResponse
     {
         $games = self::games();
         abort_if(! array_key_exists($game, $games), 404);
+
+        // A game that has moved into a house: the old page URL stands you
+        // at its launcher, the same place a shared score opens.
+        if (in_array($game, GamesWorld::HOSTED, true)) {
+            return redirect()->route('games.index', ['minigame' => $game]);
+        }
 
         return Inertia::render('Games/'.$games[$game]['component'], [
             'users' => self::users(),
@@ -118,12 +124,10 @@ class GameController extends Controller
             ->makeVisible(['id']);
     }
 
-    /** Shares a score to the chat: for a game (`games()`), a world
-     * minigame (GamesWorld::MINIGAMES), or a hosted game played in the
-     * world (`in_world`, GamesWorld::HOSTED). The message carries a marker
-     * the chat turns into a link back into the world, in front of where it
-     * is launched from (index()). A hosted game's page omits `in_world`,
-     * so that share stays a game link. */
+    /** Shares a score to the chat: a game that still has a page (`g:`),
+     * a world minigame, or a hosted game that plays in its house (`m:`).
+     * The marker is a link back to the launcher (index()). `in_world` is
+     * only for a hosted game; a game that still leaves for its page rejects it. */
     public function shareScore(string $game, Request $request): RedirectResponse
     {
         $games = self::games();
@@ -147,7 +151,7 @@ class GameController extends Controller
 
         $inWorld = $validated['in_world'] ?? false;
         abort_if($inWorld && ! $hosted, 404);
-        $minigame = $inMinigames || $inWorld;
+        $minigame = $inMinigames || $hosted;
 
         $gameName = $inMinigames ? GamesWorld::minigameName($game) : $games[$game]['name'];
 

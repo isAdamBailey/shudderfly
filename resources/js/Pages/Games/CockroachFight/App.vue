@@ -2,10 +2,11 @@
     <GameBoard
         v-if="state.phase === 'playing' || state.phase === 'fighting'"
         :state="state"
+        :kit="kit"
         @tap="tap"
     />
     <WinScreen
-        v-else-if="state.phase === 'win'"
+        v-else-if="state.phase === 'win' && !kit"
         :score="state.score"
         :stars="stars"
         :tap-count="state.tapCount"
@@ -23,13 +24,23 @@ import WinScreen from "./components/WinScreen.vue";
 import { useGameState } from "./composables/useGameState.js";
 import { useSound } from "../Cockroach/composables/useSound.js";
 import { useAutoStartGame } from "@/composables/useAutoStartGame";
-import { useTranslations } from "@/composables/useTranslations";
 
-const { t } = useTranslations();
+// With `kit`, over the world (GameHost). The kit is the only way it reaches
+// the world: the score and the hiss. Without it, the game keeps its own
+// win screen.
+const props = defineProps({
+    kit: { type: Object, default: null },
+});
+
 const FIGHT_HISS_INTERVAL_MS = 400;
 
 const { state, stars, currentFact, startGame, tap, cleanup } = useGameState();
 const { initAudio, playHiss } = useSound(null);
+
+function hiss() {
+    if (props.kit) props.kit.playSound("hiss");
+    else playHiss();
+}
 
 let fightHissIntervalId = null;
 
@@ -45,11 +56,14 @@ watch(
     (phase) => {
         clearFightHisses();
 
+        if (phase === "win" && props.kit) {
+            props.kit.finish({ score: state.score });
+            return;
+        }
+
         if (phase === "fighting") {
-            playHiss();
-            fightHissIntervalId = setInterval(() => {
-                playHiss();
-            }, FIGHT_HISS_INTERVAL_MS);
+            hiss();
+            fightHissIntervalId = setInterval(hiss, FIGHT_HISS_INTERVAL_MS);
         }
     }
 );
@@ -60,7 +74,7 @@ onUnmounted(() => {
 });
 
 async function handlePlay() {
-    await initAudio();
+    if (!props.kit) await initAudio();
     startGame();
 }
 

@@ -43,8 +43,9 @@ import { useTranslations } from "@/composables/useTranslations";
 
 const { t } = useTranslations();
 
-defineProps({
+const props = defineProps({
     state: { type: Object, required: true },
+    kit: { type: Object, default: null },
 });
 
 const emit = defineEmits(["tap"]);
@@ -53,7 +54,8 @@ const { playHiss } = useSound(null);
 
 function handleTap(side) {
     emit("tap", side);
-    playHiss();
+    if (props.kit) props.kit.playSound("hiss");
+    else playHiss();
 }
 </script>
 
@@ -75,7 +77,7 @@ function handleTap(side) {
 
 .hud {
     position: absolute;
-    top: 2vmin;
+    top: 0.5rem;
     left: 50%;
     transform: translateX(-50%);
     z-index: 30;
@@ -87,7 +89,7 @@ function handleTap(side) {
     padding: 0.5em 1.2em;
     font-weight: 700;
     color: rgba(255, 255, 255, 0.9);
-    font-size: clamp(0.9rem, 3vmin, 1.2rem);
+    font-size: 1rem;
     pointer-events: none;
 }
 
@@ -101,7 +103,7 @@ function handleTap(side) {
     left: 50%;
     top: 70%;
     transform: translate(-50%, 0);
-    font-size: 3vmin;
+    font-size: 0.95rem;
     color: rgba(255, 255, 255, 0.85);
     font-weight: 700;
     animation: hintBounce 1.2s ease-in-out infinite;
@@ -116,7 +118,7 @@ function handleTap(side) {
     left: 50%;
     top: 15%;
     transform: translateX(-50%);
-    font-size: clamp(2rem, 8vmin, 4rem);
+    font-size: clamp(1.6rem, 8vw, 2.4rem);
     font-weight: 900;
     color: #fde68a;
     text-shadow: 0 0 20px rgba(253, 230, 138, 0.6),

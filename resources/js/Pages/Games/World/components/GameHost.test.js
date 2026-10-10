@@ -76,6 +76,7 @@ describe("GameHost", () => {
         await mountHost();
 
         expect(wrapper.get(".hosted-cockroach").exists()).toBe(true);
+        expect(wrapper.get(".game-host-panel").classes()).toContain("max-w-lg");
         expect(
             wrapper.get(".game-host-play").find(".game-host-close").exists()
         ).toBe(false);
