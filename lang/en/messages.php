@@ -836,9 +836,6 @@ return [
     // Games - Poop Boom
     'games.boom.name' => 'Poop Boom',
     'games.boom.description' => 'Drag the poop into the toilet. 5 misses and it\'s game over!',
-    'games.boom.title' => 'Poop Boom',
-    'games.boom.play_again_label' => '🔄 Play Again',
-    'games.boom.end_title' => 'Game Over!',
     'games.boom.hud_score_label' => 'Score',
     'games.boom.hud_instruction' => '🖱 Drag 💩 and release to drop!',
     'games.boom.hud_misses_label' => 'Misses',

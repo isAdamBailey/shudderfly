@@ -836,9 +836,6 @@ return [
     // Games - Poop Boom
     'games.boom.name' => 'Caca Boum',
     'games.boom.description' => 'Fais glisser le caca dans les toilettes. 5 ratés et c\'est fini !',
-    'games.boom.title' => 'Caca Boum',
-    'games.boom.play_again_label' => '🔄 Rejouer',
-    'games.boom.end_title' => 'Partie terminée !',
     'games.boom.hud_score_label' => 'Score',
     'games.boom.hud_instruction' => '🖱 Fais glisser 💩 et lâche pour le faire tomber !',
     'games.boom.hud_misses_label' => 'Ratés',

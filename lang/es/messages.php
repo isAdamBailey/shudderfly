@@ -836,9 +836,6 @@ return [
     // Games - Poop Boom
     'games.boom.name' => 'Popó Explosivo',
     'games.boom.description' => 'Arrastra el popó hasta el inodoro. ¡5 fallos y se acabó el juego!',
-    'games.boom.title' => 'Popó Explosivo',
-    'games.boom.play_again_label' => '🔄 Jugar de nuevo',
-    'games.boom.end_title' => '¡Fin del juego!',
     'games.boom.hud_score_label' => 'Puntos',
     'games.boom.hud_instruction' => '🖱 ¡Arrastra 💩 y suelta para dejarlo caer!',
     'games.boom.hud_misses_label' => 'Fallos',

@@ -113,22 +113,6 @@ class GamesTest extends TestCase
         );
     }
 
-    public function test_boom_game_page_is_displayed(): void
-    {
-        /** @var User $user */
-        $user = User::factory()->create();
-        $this->actingAs($user);
-
-        $response = $this->get(route('games.show', 'boom'));
-
-        $response->assertInertia(
-            fn (Assert $page) => $page
-                ->component('Games/Boom')
-                ->has('users')
-                ->where('fartSoundUrl', asset('fart.m4a'))
-        );
-    }
-
     public function test_a_moved_game_redirects_to_its_spot_in_the_house(): void
     {
         /** @var User $user */
@@ -192,14 +176,14 @@ class GamesTest extends TestCase
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        $response = $this->post(route('games.share-score', 'boom'), ['score' => 42]);
+        $response = $this->post(route('games.share-score', 'sprout-pox'), ['score' => 42]);
 
         $response->assertRedirect();
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('messages', [
             'user_id' => $user->id,
-            'message' => __('messages.game_score_shared', ['game' => 'Poop Boom', 'score' => 42])."\u{E000}g:boom\u{E000}",
+            'message' => __('messages.game_score_shared', ['game' => 'Brussels Sprout Chicken Pox', 'score' => 42])."\u{E000}g:sprout-pox\u{E000}",
             'page_id' => null,
         ]);
 
@@ -325,6 +309,7 @@ class GamesTest extends TestCase
             'cockroach-fight' => ['Cockroach Fight', 'cockroach-house.hall'],
             'toot-foods' => ['Toot Foods', 'house.kitchen'],
             'costco-pizza-poop' => ['Costco Food Poop', 'house.kitchen'],
+            'boom' => ['Poop Boom', 'house.bathroom'],
         ] as $slug => [$name, $scene]) {
             Message::query()->delete();
             $this->post(route('games.share-score', $slug), ['score' => 40])
@@ -360,7 +345,7 @@ class GamesTest extends TestCase
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        $this->post(route('games.share-score', 'boom'), [
+        $this->post(route('games.share-score', 'sprout-pox'), [
             'score' => 1,
             'in_world' => true,
         ])->assertNotFound();
