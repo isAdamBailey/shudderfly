@@ -28,6 +28,10 @@ import { playSound } from "../sounds.js";
 // minigame. The confirm card already asked; this mounts its App.vue in that
 // window and, when the round ends, the score. The game reaches the world
 // only through `kit`. Closing returns to the spot the card opened on.
+// It covers the world, so the world stops drawing while it is open
+// (GamesWorld.vue's gameOpen).
+defineOptions({ pausesWorld: true });
+
 const props = defineProps({
     // The confirm card's game: slug, name, emoji, and cast or landmark.
     game: { type: Object, required: true },
@@ -39,7 +43,8 @@ const { t } = useTranslations();
 const page = usePage();
 
 const load = hostedGame(props.game.slug);
-const Game = load ? defineAsyncComponent(load) : null;
+if (!load) throw new Error(`No game "${props.game.slug}" in hostedGames.js`);
+const Game = defineAsyncComponent(load);
 const titleId = `game-host-title-${props.game.slug}`;
 
 // "playing", then "done". Another go mounts the game afresh.
@@ -157,11 +162,7 @@ const puffAt = (puff) => ({
                     >
                         {{ t("games.world.minigames.play_again") }}
                     </Button>
-                    <ShareToChatButton
-                        :game-slug="game.slug"
-                        :score="score"
-                        :in-world="true"
-                    />
+                    <ShareToChatButton :game-slug="game.slug" :score="score" />
                     <button
                         type="button"
                         class="game-host-done rounded-md px-3 py-1 text-sm font-bold text-theme-book-title underline-offset-2 transition-opacity hover:underline hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-primary"

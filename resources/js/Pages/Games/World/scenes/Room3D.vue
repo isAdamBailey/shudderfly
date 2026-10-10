@@ -471,10 +471,19 @@ function activateNearest() {
     if (room.nearest.value) room.goUse(room.nearest.value);
 }
 
+// Set while the world is paused, so a TV's picture and sound wait. (Pausing
+// also lets go of keys and drags, once; see room.halt.)
+const paused = ref(false);
+
 defineExpose({
     setBounds,
-    pause: room.halt,
-    resume: () => {},
+    pause() {
+        paused.value = true;
+        room.halt();
+    },
+    resume() {
+        paused.value = false;
+    },
     interrupt: room.halt,
     onKeydown,
     onKeyup,
@@ -522,6 +531,7 @@ defineExpose({
                     :key="s.tv.channel.id"
                     :channel="s.tv.channel"
                     :number="s.tv.number"
+                    :paused="paused"
                     @ended="tvs.changeChannel(s.item.id, { wrap: true })"
                 />
                 <CastMember

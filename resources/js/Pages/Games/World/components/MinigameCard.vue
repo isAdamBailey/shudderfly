@@ -22,6 +22,10 @@ import { playSound } from "../sounds.js";
 // another go, a way to share it to the chat (its link leads back here), or
 // a way back to the room. The minigame gets the world only
 // through `kit` (see minigames/index.js).
+// It covers the world, so the world stops drawing while it is open
+// (GamesWorld.vue's gameOpen).
+defineOptions({ pausesWorld: true });
+
 const props = defineProps({
     // The `minigame` interactable: its `minigame` name, `label`, `line`
     // (how to play) and look (`emoji` or `cast`).
@@ -95,7 +99,10 @@ function onBackdrop() {
     if (phase.value !== "playing") cancel();
 }
 
-const puffAt = (puff) => ({ left: `${puff.x * 100}%`, top: `${puff.y * 100}%` });
+const puffAt = (puff) => ({
+    left: `${puff.x * 100}%`,
+    top: `${puff.y * 100}%`,
+});
 </script>
 
 <template>

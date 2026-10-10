@@ -77,17 +77,11 @@ final class GamesWorld
 
     /** Named sounds a toy's `sound` may use: sounds.js (a Vitest test keeps
      * them in step). */
-    public const SOUNDS = ['hiss', 'tick', 'bell', 'chomp', 'bonk'];
+    public const SOUNDS = ['hiss', 'tick', 'bell', 'chomp', 'bonk', 'whoosh', 'pop', 'thud', 'fanfare'];
 
     /** The minigames a `minigame` interactable may start:
      * World/minigames/index.js (a Vitest test keeps them in step). */
     public const MINIGAMES = ['toot-catch'];
-
-    /** Games that play inside the world, through GameHost (issue #144).
-     * `/games/<slug>` redirects to the launcher. A score shares as a
-     * minigame, and whereIs('minigame', slug) stands you there. The
-     * launcher is still a `game`. World/hostedGames.js stays in step. */
-    public const HOSTED = ['cockroach', 'cockroach-fight', 'toot-foods', 'costco-pizza-poop', 'boom'];
 
     /** Clock faces a hall clock may wear: three/clockFaces.js (a Vitest test
      * keeps them in step). */
@@ -757,17 +751,18 @@ final class GamesWorld
      * the spot a shared score's link arrives at. Null if it isn't placed. */
     public static function whereIs(string $kind, string $name): ?array
     {
+        // A game's score shares as a minigame (issue #144: every game plays
+        // in the world). Its launcher is still a game.
+        if ($kind === 'minigame' && array_key_exists($name, GameController::games())) {
+            $kind = 'game';
+        }
+
         foreach (self::definitions() as $sceneId => $scene) {
             foreach ($scene['interactables'] as $item) {
                 if ($item['type'] === $kind && ($item[$kind] ?? null) === $name) {
                     return ['scene' => $sceneId, 'spot' => $item['id']];
                 }
             }
-        }
-
-        // A hosted game shares as a minigame. Its launcher is still a game.
-        if ($kind === 'minigame' && in_array($name, self::HOSTED, true)) {
-            return self::whereIs('game', $name);
         }
 
         return null;

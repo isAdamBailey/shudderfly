@@ -1,4 +1,4 @@
-import { reactive, computed, ref } from "vue";
+import { reactive } from "vue";
 
 const POINTS_PER_HISS = 10;
 const COMBO_BONUS = 5;
@@ -8,33 +8,6 @@ const MOVE_X_MAX = 10;
 const STEER_Y_MIN = 2;
 const STEER_Y_MAX = 6;
 const WIN_THRESHOLD_PERCENT = 75;
-
-// Translation KEYS (not literal text) — the caller passes these through
-// t() from useTranslations(). Copy lives in lang/en/messages.php under
-// games.cockroach.fact_1..fact_10.
-const FACTS = [
-    "games.cockroach.fact_1",
-    "games.cockroach.fact_2",
-    "games.cockroach.fact_3",
-    "games.cockroach.fact_4",
-    "games.cockroach.fact_5",
-    "games.cockroach.fact_6",
-    "games.cockroach.fact_7",
-    "games.cockroach.fact_8",
-    "games.cockroach.fact_9",
-    "games.cockroach.fact_10",
-];
-
-function getHighScore() {
-    try {
-        return parseInt(
-            localStorage.getItem("cockroach_high_score") || "0",
-            10
-        );
-    } catch {
-        return 0;
-    }
-}
 
 export function useGameState() {
     const state = reactive({
@@ -48,20 +21,7 @@ export function useGameState() {
         cockroachRotation: 0,
         isHissing: false,
         showFart: false,
-        highScore: getHighScore(),
     });
-
-    const stars = computed(() => {
-        if (state.hissCount <= 12) return 3;
-        if (state.hissCount <= 20) return 2;
-        return 1;
-    });
-
-    const currentFact = ref(randomFact());
-
-    function randomFact() {
-        return FACTS[Math.floor(Math.random() * FACTS.length)];
-    }
 
     function startGame() {
         state.phase = "playing";
@@ -74,7 +34,6 @@ export function useGameState() {
         state.cockroachRotation = 0;
         state.isHissing = false;
         state.showFart = false;
-        currentFact.value = randomFact();
     }
 
     function hiss(direction) {
@@ -119,19 +78,8 @@ export function useGameState() {
         state.showFart = true;
         setTimeout(() => {
             state.phase = "win";
-            if (state.score > state.highScore) {
-                state.highScore = state.score;
-                try {
-                    localStorage.setItem(
-                        "cockroach_high_score",
-                        String(state.score)
-                    );
-                } catch {
-                    // Ignore storage errors so the win screen still renders
-                }
-            }
         }, 3000);
     }
 
-    return { state, stars, currentFact, startGame, hiss };
+    return { state, startGame, hiss };
 }

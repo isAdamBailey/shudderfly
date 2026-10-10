@@ -27,9 +27,6 @@ const props = defineProps({
     },
     gameSlug: { type: String, default: undefined },
     score: { type: Number, default: undefined },
-    // A game played inside the world: the score links back with the
-    // minigame marker. The page's own share leaves this off.
-    inWorld: { type: Boolean, default: false },
     pageId: { type: [Number, String], default: undefined },
     songId: { type: [Number, String], default: undefined },
     movieTmdbId: { type: [Number, String], default: undefined },
@@ -192,7 +189,6 @@ const shareToChat = (taggedUserId = null) => {
             {
                 score: props.score,
                 tagged_user_ids: tagged,
-                ...(props.inWorld ? { in_world: true } : {}),
             },
             options
         );

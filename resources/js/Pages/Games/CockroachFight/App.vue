@@ -5,42 +5,25 @@
         :kit="kit"
         @tap="tap"
     />
-    <WinScreen
-        v-else-if="state.phase === 'win' && !kit"
-        :score="state.score"
-        :stars="stars"
-        :tap-count="state.tapCount"
-        :fact="currentFact"
-        :is-new-high="state.score >= state.highScore && state.score > 0"
-        @play-again="handlePlay"
-    />
 </template>
 
 <script setup>
-import { onUnmounted, watch } from "vue";
+import { onMounted, onUnmounted, watch } from "vue";
 
 import GameBoard from "./components/GameBoard.vue";
-import WinScreen from "./components/WinScreen.vue";
 import { useGameState } from "./composables/useGameState.js";
-import { useSound } from "../Cockroach/composables/useSound.js";
-import { useAutoStartGame } from "@/composables/useAutoStartGame";
 
-// With `kit`, over the world (GameHost). The kit is the only way it reaches
-// the world: the score and the hiss. Without it, the game keeps its own
-// win screen.
+// Over the world, in the Cockroach's Nest (GameHost). The kit is the only way
+// it reaches the world: the score and the hiss.
 const props = defineProps({
-    kit: { type: Object, default: null },
+    kit: { type: Object, required: true },
 });
 
 const FIGHT_HISS_INTERVAL_MS = 400;
 
-const { state, stars, currentFact, startGame, tap, cleanup } = useGameState();
-const { initAudio, playHiss } = useSound(null);
+const { state, startGame, tap, cleanup } = useGameState();
 
-function hiss() {
-    if (props.kit) props.kit.playSound("hiss");
-    else playHiss();
-}
+const hiss = () => props.kit.playSound("hiss");
 
 let fightHissIntervalId = null;
 
@@ -56,7 +39,7 @@ watch(
     (phase) => {
         clearFightHisses();
 
-        if (phase === "win" && props.kit) {
+        if (phase === "win") {
             props.kit.finish({ score: state.score });
             return;
         }
@@ -73,10 +56,5 @@ onUnmounted(() => {
     clearFightHisses();
 });
 
-async function handlePlay() {
-    if (!props.kit) await initAudio();
-    startGame();
-}
-
-useAutoStartGame(handlePlay);
+onMounted(startGame);
 </script>

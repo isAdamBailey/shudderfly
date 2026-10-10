@@ -93,7 +93,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/collages/{collage}/share', [CollageController::class, 'share'])->name('collages.share');
 
     Route::get('/games', [GameController::class, 'index'])->name('games.index');
-    Route::get('/games/{game}', [GameController::class, 'show'])->name('games.show');
+    Route::get('/games/{game}', [GameController::class, 'oldPage'])->name('games.old-page');
     Route::post('/games/{game}/share-score', [GameController::class, 'shareScore'])->name('games.share-score');
 
     Route::get('/movie-cast', [MovieCastController::class, 'index'])->name('movie-cast.index');

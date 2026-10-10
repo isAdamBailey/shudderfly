@@ -20,23 +20,8 @@ const game = {
     description: "Cure the sprouts.",
 };
 
-function mountCard(props = { game }) {
-    return mount(GameConfirmCard, {
-        props,
-        attachTo: document.body,
-        global: {
-            provide: { route: global.route },
-            // The shared Inertia Link stub renders a bare <a>; give it a real
-            // href so focus behaves the way it does in the browser.
-            stubs: {
-                Link: {
-                    name: "Link",
-                    props: ["href"],
-                    template: '<a :href="href"><slot /></a>',
-                },
-            },
-        },
-    });
+function mountCard(props = { game, start: vi.fn() }) {
+    return mount(GameConfirmCard, { props, attachTo: document.body });
 }
 
 beforeEach(() => {
@@ -47,6 +32,7 @@ describe("GameConfirmCard", () => {
     it("draws a landmark that is a cast member as that character", () => {
         const wrapper = mountCard({
             game: { ...game, landmark: undefined, cast: "toilet" },
+            start: vi.fn(),
         });
 
         expect(wrapper.get(".cast-toilet").text()).toBe("🚽");
@@ -59,17 +45,10 @@ describe("GameConfirmCard", () => {
         expect(wrapper.text()).toContain(game.emoji);
     });
 
-    it("links Play to the game route", () => {
-        const wrapper = mountCard();
-        const link = wrapper.findComponent({ name: "Link" });
-        expect(link.props("href")).toBe("/games/sprout-pox");
-    });
-
-    it("plays a hosted game here instead of linking to its page", async () => {
+    it("plays the game here when Play is pressed", async () => {
         const start = vi.fn();
         const wrapper = mountCard({ game, start });
 
-        expect(wrapper.findComponent({ name: "Link" }).exists()).toBe(false);
         await wrapper.get(".world-card-action").trigger("click");
         expect(start).toHaveBeenCalledOnce();
     });
@@ -116,7 +95,7 @@ describe("GameConfirmCard focus", () => {
         await nextTick();
         await nextTick();
         expect(document.activeElement).toBe(
-            wrapper.findComponent({ name: "Link" }).element
+            wrapper.get(".world-card-action").element
         );
     });
 });

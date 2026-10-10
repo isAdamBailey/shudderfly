@@ -38,24 +38,20 @@
 
 <script setup>
 import CockroachSprite from "../../Cockroach/components/CockroachSprite.vue";
-import { useSound } from "../../Cockroach/composables/useSound.js";
 import { useTranslations } from "@/composables/useTranslations";
 
 const { t } = useTranslations();
 
 const props = defineProps({
     state: { type: Object, required: true },
-    kit: { type: Object, default: null },
+    kit: { type: Object, required: true },
 });
 
 const emit = defineEmits(["tap"]);
 
-const { playHiss } = useSound(null);
-
 function handleTap(side) {
     emit("tap", side);
-    if (props.kit) props.kit.playSound("hiss");
-    else playHiss();
+    props.kit.playSound("hiss");
 }
 </script>
 

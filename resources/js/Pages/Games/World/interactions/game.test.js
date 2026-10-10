@@ -4,8 +4,8 @@ import GameHost from "../components/GameHost.vue";
 import { HOSTED_GAMES } from "../hostedGames.js";
 import { activate } from "./index.js";
 
-// The one game that still leaves for its page.
-const sproutPox = {
+// A game's launcher in a room.
+const launcher = {
     id: "sprout-pox",
     type: "game",
     x: 600,
@@ -22,25 +22,15 @@ const sproutPox = {
 };
 
 describe("game interaction", () => {
-    it("opens the confirm card for the game", () => {
-        const ctx = { openCard: vi.fn() };
-
-        activate(sproutPox, ctx);
-
-        expect(ctx.openCard).toHaveBeenCalledWith(GameConfirmCard, {
-            game: sproutPox.card,
-        });
-    });
-
     it.each(HOSTED_GAMES)(
-        "plays %s over the world instead of leaving for its page",
+        "asks first, then plays %s over the world",
         (slug) => {
             const ctx = { openCard: vi.fn() };
             const hosted = {
-                ...sproutPox,
+                ...launcher,
                 id: slug,
                 game: slug,
-                card: { ...sproutPox.card, slug, name: slug },
+                card: { ...launcher.card, slug, name: slug },
             };
 
             activate(hosted, ctx);
@@ -63,8 +53,8 @@ describe("game interaction", () => {
     it("does nothing for an unknown type", () => {
         const ctx = { openCard: vi.fn() };
 
-        activate({ ...sproutPox, type: "teleporter" }, ctx);
-        activate({ ...sproutPox, type: "constructor" }, ctx);
+        activate({ ...launcher, type: "teleporter" }, ctx);
+        activate({ ...launcher, type: "constructor" }, ctx);
 
         expect(ctx.openCard).not.toHaveBeenCalled();
     });

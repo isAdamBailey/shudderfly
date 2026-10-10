@@ -682,9 +682,6 @@ return [
     'locale.updated' => '¡Idioma actualizado!',
 
     // Games - shared
-    'games.quit_aria' => 'Salir a los juegos',
-    'games.new_high_score' => '¡Nuevo récord!',
-    'games.fun_fact_label' => 'Dato curioso:',
     'games.person_face.default_aria' => 'Persona con hambre',
 
     // Games - World
@@ -790,34 +787,18 @@ return [
     // Games - Cockroach Fart
     'games.cockroach.name' => 'Cucaracha Pedorra',
     'games.cockroach.description' => 'Toca la cabeza de la cucaracha para hacerla silbar hasta el inodoro.',
-    'games.cockroach.title' => 'Cucaracha Pedorra',
     'games.cockroach.intro_script' => '¡Cucaracha Pedorra! Toca la cabeza de la cucaracha para hacerla avanzar hacia el inodoro. Toca, toca, toca hasta que llegue y suelte un pedo gigante. ¡Gana el pedo más grande!',
     'games.cockroach.tap_hint' => '¡Toca la cabeza!',
-    'games.cockroach.win_title' => '¡Ganaste!',
     'games.cockroach.hud_score_label' => 'PUNTOS',
     'games.cockroach.hud_hisses_label' => 'SILBIDOS',
     'games.cockroach.combo_label' => '¡Combo x:count!',
-    'games.cockroach.fact_1' => '¡Las cucarachas silbadoras de Madagascar pueden vivir hasta 5 años!',
-    'games.cockroach.fact_2' => 'Silban empujando aire por unos agujeros para respirar llamados espiráculos.',
-    'games.cockroach.fact_3' => 'Los machos tienen cuernos grandes en el tórax para pelear con sus rivales.',
-    'games.cockroach.fact_4' => 'Son una de las especies de cucaracha más grandes — ¡hasta 8 centímetros de largo!',
-    'games.cockroach.fact_5' => 'A diferencia de la mayoría de las cucarachas, no tienen alas.',
-    'games.cockroach.fact_6' => 'Pueden trepar vidrio liso con almohadillas especiales en las patas.',
-    'games.cockroach.fact_7' => 'A un grupo de cucarachas silbadoras a veces se le llama "intrusión."',
-    'games.cockroach.fact_8' => 'Las cucarachas silbadoras bebé se llaman ninfas y nacen blancas y brillantes.',
-    'games.cockroach.fact_9' => '¡Son totalmente inofensivas para las personas — no muerden ni pican!',
-    'games.cockroach.fact_10' => 'Los machos silban para atraer parejas y espantar a otros machos.',
 
     // Games - Cockroach Fight
     'games.cockroach_fight.name' => 'Pelea de Cucarachas',
     'games.cockroach_fight.description' => '¡Toca la cabeza de una cucaracha para juntarlas en una batalla épica!',
-    'games.cockroach_fight.title' => 'Pelea de Cucarachas',
     'games.cockroach_fight.tap_hint' => '¡Toca una cabeza!',
     'games.cockroach_fight.hud_taps_label' => 'Toques:',
     'games.cockroach_fight.fight_label' => '¡PELEA!',
-    'games.cockroach_fight.win_title' => '¡Pelea terminada!',
-    'games.cockroach_fight.taps_to_fight_one' => ':count toque hasta la pelea',
-    'games.cockroach_fight.taps_to_fight_other' => ':count toques hasta la pelea',
 
     // Games - Costco Food Poop
     'games.costco_pizza_poop.name' => 'Popó de Comida de Costco',
@@ -846,13 +827,10 @@ return [
     // Games - Brussels Sprout Chicken Pox
     'games.sprout_pox.name' => 'Varicela de Repollitos de Bruselas',
     'games.sprout_pox.description' => '¡Lanza repollitos con la resortera hasta la boca abierta. Cada uno que entra le da otra varicela!',
-    'games.sprout_pox.title' => 'Varicela de Repollitos de Bruselas',
     'games.sprout_pox.hud_level_label' => 'Nivel',
     'games.sprout_pox.hud_pox_label' => 'Varicela',
     'games.sprout_pox.hud_sprouts_label' => 'Repollitos',
     'games.sprout_pox.level_banner' => '¡Nivel :level!',
     'games.sprout_pox.sprout_aria' => 'Repollito — jálalo hacia atrás para apuntar, suéltalo para lanzarlo hacia la boca',
     'games.sprout_pox.face_aria' => 'Paciente con varicela',
-    'games.sprout_pox.end_title' => '¡Campeón manchado!',
-    'games.sprout_pox.end_summary' => ':count manchas de varicela en el nivel :level',
 ];
