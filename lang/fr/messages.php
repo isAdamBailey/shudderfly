@@ -780,16 +780,12 @@ return [
     // Games - Toot Foods
     'games.toot_foods.name' => 'Aliments à Prouts',
     'games.toot_foods.description' => 'Fais glisser les collations dans les fesses baladeuses pour les faire prouter. Combien en 30 secondes ?',
-    'games.toot_foods.title' => 'Aliments à Prouts',
     'games.toot_foods.hud_score' => 'Score',
     'games.toot_foods.hud_time' => 'Temps',
     'games.toot_foods.hud_combo' => 'x:count',
     'games.toot_foods.food_aria' => ':food — fais-le glisser sur les fesses, ou appuie sur Entrée pour le lancer',
     'games.toot_foods.butt_aria' => 'Fesses baladeuses',
     'games.toot_foods.toot_word' => 'prout !',
-    'games.toot_foods.end_title' => 'Champion du Prout !',
-    'games.toot_foods.end_foods_fed_one' => ':count aliment donné',
-    'games.toot_foods.end_foods_fed_other' => ':count aliments donnés',
 
     // Games - Cockroach Fart
     'games.cockroach.name' => 'Pet de Cafard',

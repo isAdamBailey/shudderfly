@@ -780,16 +780,12 @@ return [
     // Games - Toot Foods
     'games.toot_foods.name' => 'Toot Foods',
     'games.toot_foods.description' => 'Drag snacks into the wandering butt to make it toot. How many in 30 seconds?',
-    'games.toot_foods.title' => 'Toot Foods',
     'games.toot_foods.hud_score' => 'Score',
     'games.toot_foods.hud_time' => 'Time',
     'games.toot_foods.hud_combo' => 'x:count',
     'games.toot_foods.food_aria' => ':food — drag onto the butt, or press Enter to toss it',
     'games.toot_foods.butt_aria' => 'Wandering butt',
     'games.toot_foods.toot_word' => 'toot!',
-    'games.toot_foods.end_title' => 'Toot Champion!',
-    'games.toot_foods.end_foods_fed_one' => ':count food fed',
-    'games.toot_foods.end_foods_fed_other' => ':count foods fed',
 
     // Games - Cockroach Fart
     'games.cockroach.name' => 'Cockroach Fart',

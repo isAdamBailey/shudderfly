@@ -273,9 +273,9 @@ describe("Games Index", () => {
         expect(dialog.text()).toContain(
             "Feed the foods and listen to them toot."
         );
-        expect(wrapper.findComponent({ name: "Link" }).props("href")).toBe(
-            "/games/toot-foods"
-        );
+        // Toot Foods plays in the world, so its card starts it here.
+        expect(wrapper.findComponent({ name: "Link" }).exists()).toBe(false);
+        expect(dialog.find(".world-card-action").exists()).toBe(true);
     });
 
     it("closes the confirm card on cancel and returns focus to the landmark", async () => {

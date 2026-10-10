@@ -13,11 +13,11 @@ vi.mock("@/composables/useGameIntroSpeech", () => ({
 }));
 
 const game = {
-    slug: "toot-foods",
-    name: "Toot Foods",
-    emoji: "🍔",
-    landmark: "🍔",
-    description: "Feed the foods and listen to them toot.",
+    slug: "sprout-pox",
+    name: "Sprout Pox",
+    emoji: "🥬",
+    landmark: "🏥",
+    description: "Cure the sprouts.",
 };
 
 function mountCard(props = { game }) {
@@ -62,7 +62,7 @@ describe("GameConfirmCard", () => {
     it("links Play to the game route", () => {
         const wrapper = mountCard();
         const link = wrapper.findComponent({ name: "Link" });
-        expect(link.props("href")).toBe("/games/toot-foods");
+        expect(link.props("href")).toBe("/games/sprout-pox");
     });
 
     it("plays a hosted game here instead of linking to its page", async () => {
@@ -127,7 +127,7 @@ describe("GameConfirmCard speech", () => {
 
         expect(wrapper.find(".confirm-speak").exists()).toBe(false);
         expect(speakGameIntro).toHaveBeenCalledWith(
-            "Toot Foods. Feed the foods and listen to them toot."
+            "Sprout Pox. Cure the sprouts."
         );
 
         wrapper.unmount();

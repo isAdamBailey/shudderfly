@@ -375,9 +375,9 @@ describe("GamesWorld stage", () => {
         await button.trigger("click");
         const dialog = wrapper.get('[role="dialog"]');
         expect(dialog.text()).toContain("Toot Foods");
-        expect(wrapper.findComponent({ name: "Link" }).props("href")).toBe(
-            "/games/toot-foods"
-        );
+        // Toot Foods plays in the world, so its card starts it here.
+        expect(wrapper.findComponent({ name: "Link" }).exists()).toBe(false);
+        expect(dialog.find(".world-card-action").exists()).toBe(true);
     });
 
     it("puts focus back on the landmark when the card is cancelled", async () => {
@@ -992,10 +992,10 @@ describe("GamesWorld hosted game", () => {
         expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
         expect(wrapper.find(ROAD).exists()).toBe(true);
 
-        await landmark("Toot Foods").trigger("click");
+        await landmark("Sprout Pox").trigger("click");
         await nextTick();
         expect(wrapper.findComponent({ name: "Link" }).props("href")).toBe(
-            "/games/toot-foods"
+            "/games/sprout-pox"
         );
     });
 });

@@ -780,16 +780,12 @@ return [
     // Games - Toot Foods
     'games.toot_foods.name' => 'Comida Pedorra',
     'games.toot_foods.description' => 'Arrastra bocadillos al trasero andante para hacerlo tirarse pedos. ¿Cuántos en 30 segundos?',
-    'games.toot_foods.title' => 'Comida Pedorra',
     'games.toot_foods.hud_score' => 'Puntos',
     'games.toot_foods.hud_time' => 'Tiempo',
     'games.toot_foods.hud_combo' => 'x:count',
     'games.toot_foods.food_aria' => ':food — arrástralo hasta el trasero, o presiona Enter para lanzarlo',
     'games.toot_foods.butt_aria' => 'Trasero andante',
     'games.toot_foods.toot_word' => '¡pedo!',
-    'games.toot_foods.end_title' => '¡Campeón de los pedos!',
-    'games.toot_foods.end_foods_fed_one' => ':count comida servida',
-    'games.toot_foods.end_foods_fed_other' => ':count comidas servidas',
 
     // Games - Cockroach Fart
     'games.cockroach.name' => 'Cucaracha Pedorra',

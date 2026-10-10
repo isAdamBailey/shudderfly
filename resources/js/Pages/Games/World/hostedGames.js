@@ -8,6 +8,7 @@ import { own } from "@/utils/object";
 const HOSTED = {
     cockroach: () => import("@/Pages/Games/Cockroach/App.vue"),
     "cockroach-fight": () => import("@/Pages/Games/CockroachFight/App.vue"),
+    "toot-foods": () => import("@/Pages/Games/TootFoods/App.vue"),
 };
 
 export const HOSTED_GAMES = Object.keys(HOSTED);
