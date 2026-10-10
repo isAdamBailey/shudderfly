@@ -10,6 +10,7 @@ const HOSTED = {
     "cockroach-fight": () => import("@/Pages/Games/CockroachFight/App.vue"),
     "toot-foods": () => import("@/Pages/Games/TootFoods/App.vue"),
     "costco-pizza-poop": () => import("@/Pages/Games/CostcoPizzaPoop/App.vue"),
+    boom: () => import("@/Pages/Games/Boom/App.vue"),
 };
 
 export const HOSTED_GAMES = Object.keys(HOSTED);

@@ -78,6 +78,7 @@
 </template>
 
 <script setup>
+import { useResizeObserver } from "@vueuse/core";
 import PersonFace from "@/Components/Games/PersonFace.vue";
 import GameBoard from "@/Pages/Games/CostcoPizzaPoop/components/GameBoard.vue";
 import PepperoniStick from "@/Pages/Games/CostcoPizzaPoop/components/PepperoniStick.vue";
@@ -379,16 +380,13 @@ function startIntestineRun() {
 }
 
 // The host's window can change size without the browser window doing so.
-let resizeObserver = null;
+useResizeObserver(gameEl, updateSize);
 
 onMounted(() => {
     updateSize();
-    resizeObserver = new ResizeObserver(updateSize);
-    resizeObserver.observe(gameEl.value);
 });
 
 onUnmounted(() => {
-    resizeObserver?.disconnect();
     removeDragListeners();
     clearTimeout(intestineIntroTimer);
     clearTimeout(gulpTimer);

@@ -4,19 +4,20 @@ import GameHost from "../components/GameHost.vue";
 import { HOSTED_GAMES } from "../hostedGames.js";
 import { activate } from "./index.js";
 
-const boom = {
-    id: "boom",
+// The one game that still leaves for its page.
+const sproutPox = {
+    id: "sprout-pox",
     type: "game",
-    x: 4200,
-    game: "boom",
-    emoji: "🚽",
-    label: "Poop Boom",
+    x: 600,
+    game: "sprout-pox",
+    emoji: "🏥",
+    label: "Sprout Pox",
     card: {
-        slug: "boom",
-        name: "Poop Boom",
-        emoji: "💩",
-        description: "Blow it up",
-        landmark: "🚽",
+        slug: "sprout-pox",
+        name: "Sprout Pox",
+        emoji: "🥬",
+        description: "Cure the sprouts",
+        landmark: "🏥",
     },
 };
 
@@ -24,10 +25,10 @@ describe("game interaction", () => {
     it("opens the confirm card for the game", () => {
         const ctx = { openCard: vi.fn() };
 
-        activate(boom, ctx);
+        activate(sproutPox, ctx);
 
         expect(ctx.openCard).toHaveBeenCalledWith(GameConfirmCard, {
-            game: boom.card,
+            game: sproutPox.card,
         });
     });
 
@@ -36,10 +37,10 @@ describe("game interaction", () => {
         (slug) => {
             const ctx = { openCard: vi.fn() };
             const hosted = {
-                ...boom,
+                ...sproutPox,
                 id: slug,
                 game: slug,
-                card: { ...boom.card, slug, name: slug },
+                card: { ...sproutPox.card, slug, name: slug },
             };
 
             activate(hosted, ctx);
@@ -62,8 +63,8 @@ describe("game interaction", () => {
     it("does nothing for an unknown type", () => {
         const ctx = { openCard: vi.fn() };
 
-        activate({ ...boom, type: "teleporter" }, ctx);
-        activate({ ...boom, type: "constructor" }, ctx);
+        activate({ ...sproutPox, type: "teleporter" }, ctx);
+        activate({ ...sproutPox, type: "constructor" }, ctx);
 
         expect(ctx.openCard).not.toHaveBeenCalled();
     });

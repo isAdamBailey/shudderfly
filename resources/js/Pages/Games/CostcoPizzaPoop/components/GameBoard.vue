@@ -1,4 +1,5 @@
 <script setup>
+import { useResizeObserver } from "@vueuse/core";
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { PIZZA, POOP } from "@/constants/characters.js";
 import { SVG_WIDTH } from "../composables/useGameState.js";
@@ -244,19 +245,16 @@ function updateSize() {
 }
 
 // The host's window can change size without the browser window doing so.
-let resizeObserver = null;
+useResizeObserver(boardEl, updateSize);
 
 onMounted(() => {
     updateSize();
-    resizeObserver = new ResizeObserver(updateSize);
-    resizeObserver.observe(boardEl.value);
     window.addEventListener("keydown", onKeyDown);
 });
 
 onUnmounted(() => {
     stopDragLoop();
     if (steerHintTimer) clearTimeout(steerHintTimer);
-    resizeObserver?.disconnect();
     window.removeEventListener("keydown", onKeyDown);
     document.removeEventListener("pointermove", onPointerMove);
     document.removeEventListener("pointerup", onPointerUp);

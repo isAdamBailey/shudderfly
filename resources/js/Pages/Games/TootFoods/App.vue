@@ -1,4 +1,5 @@
 <script setup>
+import { useResizeObserver } from "@vueuse/core";
 import { onBeforeUnmount, nextTick, ref } from "vue";
 import CastMember from "@/Components/Games/Cast/CastMember.vue";
 import TootPuff from "@/Components/Games/Cast/TootPuff.vue";
@@ -22,7 +23,6 @@ const game = useTootGame({
 const { state, timeLeft, butt, buttSize, foods, bursts, popups } = game;
 
 const stageEl = ref(null);
-let resizeObserver = null;
 
 function measure() {
     if (!stageEl.value) return;
@@ -30,8 +30,10 @@ function measure() {
     game.setBounds(rect.width, rect.height);
 }
 
+// The host's window can change size without the browser window doing so.
+useResizeObserver(stageEl, measure);
+
 onBeforeUnmount(() => {
-    resizeObserver?.disconnect();
     window.removeEventListener("pointermove", onPointerMove);
     window.removeEventListener("pointerup", onPointerUp);
 });
@@ -43,12 +45,8 @@ async function startRound() {
     state.phase = "playing";
     await nextTick();
     measure();
-    // The stage only exists from here on, and the host's window can resize.
-    resizeObserver = new ResizeObserver(measure);
-    resizeObserver.observe(stageEl.value);
     game.start();
 }
-
 
 // --- Drag handling ---------------------------------------------------------
 const activeDrag = ref(null); // { id, offsetX, offsetY, pointerId }

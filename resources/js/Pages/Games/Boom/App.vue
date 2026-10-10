@@ -1,15 +1,16 @@
 <script setup>
-import GameEndScreen from "@/Components/Games/GameEndScreen.vue";
 import { POOP, TOILET } from "@/constants/characters.js";
-import { useAutoStartGame } from "@/composables/useAutoStartGame";
-import { useGameViewportLock } from "@/composables/useGameViewportLock";
-import { getAudioContext, unlockAudio } from "@/composables/useAudioContext";
 import { useTranslations } from "@/composables/useTranslations";
-import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import { Head, usePage } from "@inertiajs/vue3";
-import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
+import { useResizeObserver } from "@vueuse/core";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 
-useGameViewportLock();
+// Over the world, in the bathroom (GameHost). The kit is the only way it
+// reaches the world: the poop's toot when it lands, the bonk of a miss, and
+// the score.
+const props = defineProps({
+    kit: { type: Object, required: true },
+});
+
 const { t } = useTranslations();
 
 // ─── constants ────────────────────────────────────────────────────────────────
@@ -24,8 +25,8 @@ const MAX_MISSES = 5;
 // ─── game state ──────────────────────────────────────────────────────────────
 const score = ref(0);
 const misses = ref(0);
-const gameOver = ref(false);
-const gameStarted = ref(false);
+// Once the host has the score it closes the game; this only stops a last drag.
+let gameOver = false;
 
 // toilet
 const toiletX = ref(300); // center-x
@@ -78,6 +79,13 @@ const missStyle = computed(() => ({
     top: `${missY.value - 40}px`,
 }));
 
+// The splash or the miss lingers, then the next poop comes (the loop is
+// paused meanwhile, so there is only ever one); cleared if the host closes.
+let pauseTimer = null;
+function after(ms, fn) {
+    pauseTimer = setTimeout(fn, ms);
+}
+
 // ─── helpers ─────────────────────────────────────────────────────────────────
 function resetPoop() {
     poopX.value = gameW.value / 2;
@@ -94,14 +102,15 @@ function handleHit() {
     splashX.value = toiletX.value;
     splashY.value = gameH.value - TOILET_BOTTOM - TOILET_H;
     showSplash.value = true;
-    playHitSound();
-    setTimeout(() => {
+    props.kit.toot("poop", {
+        x: splashX.value / gameW.value,
+        y: splashY.value / gameH.value,
+    });
+    after(1200, () => {
         showSplash.value = false;
-        if (!gameOver.value) {
-            resetPoop();
-            queueNextTick();
-        }
-    }, 1200);
+        resetPoop();
+        queueNextTick();
+    });
 }
 
 function handleMiss() {
@@ -111,27 +120,24 @@ function handleMiss() {
     missX.value = poopX.value;
     missY.value = Math.min(poopY.value, gameH.value - 60);
     showMiss.value = true;
-    playMissSound();
-    setTimeout(() => {
+    props.kit.playSound("bonk");
+    after(1200, () => {
         showMiss.value = false;
         if (misses.value >= MAX_MISSES) {
-            gameOver.value = true;
-            cancelAnimationFrame(rafId);
-            playGameOverSound();
+            gameOver = true;
+            props.kit.finish({ score: score.value });
         } else {
             resetPoop();
             queueNextTick();
         }
-    }, 1200);
+    });
 }
 
 // ─── game loop ────────────────────────────────────────────────────────────────
 let rafId = null;
 
 function queueNextTick() {
-    if (!gameOver.value) {
-        rafId = requestAnimationFrame(tick);
-    }
+    rafId = requestAnimationFrame(tick);
 }
 
 function tick() {
@@ -197,13 +203,15 @@ function removeDragListeners() {
     if (activeEndHandler) {
         document.removeEventListener("mouseup", activeEndHandler);
         document.removeEventListener("touchend", activeEndHandler);
+        document.removeEventListener("touchcancel", activeEndHandler);
         activeEndHandler = null;
     }
 }
 
 function startDrag(e) {
-    if (isPoopFalling.value || gameOver.value || !gameStarted.value) return;
+    if (isPoopFalling.value || gameOver) return;
     e.preventDefault();
+    removeDragListeners();
     isDragging.value = true;
 
     activeMoveHandler = (ev) => {
@@ -235,321 +243,124 @@ function startDrag(e) {
     });
     document.addEventListener("mouseup", activeEndHandler);
     document.addEventListener("touchend", activeEndHandler);
-}
-
-// ─── sounds (Web Audio API) ───────────────────────────────────────────────────
-// Shared session-wide context (see useAudioContext); returns null if unsupported.
-function makeCtx() {
-    return getAudioContext();
-}
-
-const fartSoundUrl = usePage().props.fartSoundUrl ?? "/fart.m4a";
-const fartSound = new Audio(fartSoundUrl);
-fartSound.preload = "auto";
-fartSound.volume = 0.9;
-let fartSoundReady = false;
-fartSound.addEventListener("canplaythrough", () => {
-    fartSoundReady = true;
-});
-fartSound.addEventListener("error", () => {
-    fartSoundReady = false;
-});
-
-function playHitSound() {
-    if (!fartSoundReady) {
-        playSynthFartSound();
-        return;
-    }
-    const sound = fartSound.cloneNode();
-    sound.volume = fartSound.volume;
-    sound.play().catch(() => playSynthFartSound());
-}
-
-function playSynthFartSound() {
-    try {
-        const ctx = makeCtx();
-        if (!ctx) return;
-        const now = ctx.currentTime;
-
-        const osc = ctx.createOscillator();
-        const oscFilter = ctx.createBiquadFilter();
-        const oscGain = ctx.createGain();
-        osc.type = "sawtooth";
-        osc.frequency.setValueAtTime(220, now);
-        osc.frequency.exponentialRampToValueAtTime(45, now + 0.25);
-        oscFilter.type = "lowpass";
-        oscFilter.frequency.setValueAtTime(900, now);
-        oscFilter.frequency.exponentialRampToValueAtTime(180, now + 0.25);
-        oscGain.gain.setValueAtTime(0.22, now);
-        oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
-
-        const sr = ctx.sampleRate;
-        const len = Math.floor(sr * 0.3);
-        const buf = ctx.createBuffer(1, len, sr);
-        const data = buf.getChannelData(0);
-        for (let i = 0; i < len; i++) {
-            const t = i / len;
-            data[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 2);
-        }
-        const noise = ctx.createBufferSource();
-        const noiseFilter = ctx.createBiquadFilter();
-        const noiseGain = ctx.createGain();
-        noise.buffer = buf;
-        noiseFilter.type = "bandpass";
-        noiseFilter.frequency.setValueAtTime(420, now);
-        noiseFilter.Q.value = 0.7;
-        noiseGain.gain.setValueAtTime(0.14, now);
-        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-
-        osc.connect(oscFilter);
-        oscFilter.connect(oscGain);
-        oscGain.connect(ctx.destination);
-
-        noise.connect(noiseFilter);
-        noiseFilter.connect(noiseGain);
-        noiseGain.connect(ctx.destination);
-
-        osc.start(now);
-        osc.stop(now + 0.28);
-        noise.start(now);
-        noise.stop(now + 0.22);
-    } catch (_) {
-        /* silently ignore */
-    }
-}
-
-function playMissSound() {
-    try {
-        const ctx = makeCtx();
-        if (!ctx) return;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = "sawtooth";
-        osc.frequency.setValueAtTime(280, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.35);
-        gain.gain.setValueAtTime(0.35, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.35);
-    } catch (_) {
-        /* silently ignore */
-    }
-}
-
-function playGameOverSound() {
-    try {
-        const ctx = makeCtx();
-        if (!ctx) return;
-        const notes = [400, 350, 300, 250, 200];
-        notes.forEach((freq, i) => {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            const t = ctx.currentTime + i * 0.15;
-            osc.type = "triangle";
-            osc.frequency.value = freq;
-            gain.gain.setValueAtTime(0.3, t);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start(t);
-            osc.stop(t + 0.14);
-        });
-    } catch (_) {
-        /* silently ignore */
-    }
+    // A finger can wander out of the small game box onto the dialog; a
+    // cancelled touch drops the poop where it is.
+    document.addEventListener("touchcancel", activeEndHandler);
 }
 
 // ─── lifecycle ────────────────────────────────────────────────────────────────
-function updateSize() {
-    if (!gameEl.value) return;
+function measure() {
     const rect = gameEl.value.getBoundingClientRect();
     gameW.value = rect.width;
     gameH.value = rect.height;
-    resetPoop();
-    toiletX.value = gameW.value / 2;
 }
 
-async function startGame() {
-    // Unlock the WebAudio context + HTMLAudio sample during the Play tap so
-    // later hit/miss sounds aren't silenced by Safari's autoplay policy.
-    unlockAudio();
-    fartSound
-        .play()
-        .then(() => {
-            fartSound.pause();
-            fartSound.currentTime = 0;
-        })
-        .catch(() => {});
-    gameStarted.value = true;
-    await nextTick();
-    updateSize();
-    resetPoop();
-    toiletX.value = gameW.value / 2;
-    queueNextTick();
-}
-
-async function restartGame() {
-    cancelAnimationFrame(rafId);
-    score.value = 0;
-    misses.value = 0;
-    gameOver.value = false;
-    toiletDir = 1;
-    await nextTick();
-    updateSize();
-    resetPoop();
-    toiletX.value = gameW.value / 2;
-    queueNextTick();
-}
+// The host's window can change size without the browser window doing so: the
+// next frame keeps the toilet inside, and a poop in play stays where it is,
+// pulled in from the edge.
+useResizeObserver(gameEl, () => {
+    measure();
+    poopX.value = Math.min(poopX.value, gameW.value - POOP_SIZE / 2);
+});
 
 onMounted(() => {
-    updateSize();
-    window.addEventListener("resize", updateSize);
+    measure();
+    resetPoop();
+    toiletX.value = gameW.value / 2;
+    queueNextTick();
 });
 
 onUnmounted(() => {
     cancelAnimationFrame(rafId);
-    window.removeEventListener("resize", updateSize);
+    clearTimeout(pauseTimer);
     removeDragListeners();
 });
-
-useAutoStartGame(startGame);
 </script>
 
 <template>
-    <Head :title="t('games.boom.title')" />
-
-    <AuthenticatedLayout>
-        <div class="boom-wrapper game-page">
-            <Transition name="fade">
-                <GameEndScreen
-                    v-if="gameOver"
-                    :title="t('games.boom.end_title')"
-                    emoji="😱"
-                    :score="score"
-                    game-slug="boom"
-                    :play-again-label="t('games.boom.play_again_label')"
-                    @play-again="restartGame"
-                />
-            </Transition>
-
-            <div
-                v-if="gameStarted && !gameOver"
-                ref="gameEl"
-                class="game-container"
-            >
-                <!-- ── HUD ────────────────────────────────────────── -->
-                <div class="hud">
-                    <div class="hud-item">
-                        <span class="hud-label">{{
-                            t("games.boom.hud_score_label")
-                        }}</span>
-                        <span class="hud-value">{{ score }}</span>
-                    </div>
-                    <div class="hud-instruction">
-                        {{ t("games.boom.hud_instruction") }}
-                    </div>
-                    <div class="hud-item">
-                        <span class="hud-label">{{
-                            t("games.boom.hud_misses_label")
-                        }}</span>
-                        <span class="hud-value misses-value">
-                            <span
-                                v-for="n in MAX_MISSES"
-                                :key="n"
-                                class="miss-pip"
-                                :class="{ used: n <= misses }"
-                                >💔</span
-                            >
-                        </span>
-                    </div>
-                </div>
-
-                <!-- ── draggable poop ─────────────────────────────── -->
-                <div
-                    v-if="poopVisible && gameStarted && !gameOver"
-                    class="poop"
-                    :class="{ dragging: isDragging, falling: isPoopFalling }"
-                    :style="poopStyle"
-                    role="img"
-                    :aria-label="t('games.boom.poop_aria')"
-                    @mousedown="startDrag"
-                    @touchstart.prevent="startDrag"
-                >
-                    {{ POOP }}
-                </div>
-
-                <!-- ── splash effect ─────────────────────────────── -->
-                <Transition name="splash-anim">
-                    <div
-                        v-if="showSplash"
-                        class="splash-effect"
-                        :style="splashStyle"
+    <div ref="gameEl" class="game-container">
+        <!-- ── HUD ────────────────────────────────────────── -->
+        <div class="hud">
+            <div class="hud-item">
+                <span class="hud-label">{{
+                    t("games.boom.hud_score_label")
+                }}</span>
+                <span class="hud-value">{{ score }}</span>
+            </div>
+            <div class="hud-instruction">
+                {{ t("games.boom.hud_instruction") }}
+            </div>
+            <div class="hud-item">
+                <span class="hud-label">{{
+                    t("games.boom.hud_misses_label")
+                }}</span>
+                <span class="hud-value misses-value">
+                    <span
+                        v-for="n in MAX_MISSES"
+                        :key="n"
+                        class="miss-pip"
+                        :class="{ used: n <= misses }"
+                        >💔</span
                     >
-                        <span>💦</span><span>💧</span><span>💦</span>
-                        <div class="splash-score">+1</div>
-                    </div>
-                </Transition>
-
-                <!-- ── miss effect ────────────────────────────────── -->
-                <Transition name="miss-anim">
-                    <div v-if="showMiss" class="miss-effect" :style="missStyle">
-                        <span>💢</span>
-                        <div class="miss-label">
-                            {{ t("games.boom.miss_label") }}
-                        </div>
-                    </div>
-                </Transition>
-
-                <!-- ── toilet ────────────────────────────────────── -->
-                <div class="toilet-wrap" :style="toiletStyle">
-                    <div
-                        class="toilet-emoji"
-                        role="img"
-                        :aria-label="t('games.boom.toilet_aria')"
-                    >
-                        {{ TOILET }}
-                    </div>
-                </div>
-
-                <!-- ── floor line ─────────────────────────────────── -->
-                <div class="floor"></div>
+                </span>
             </div>
         </div>
-    </AuthenticatedLayout>
+
+        <!-- ── draggable poop ─────────────────────────────── -->
+        <div
+            v-if="poopVisible"
+            class="poop"
+            :class="{ dragging: isDragging, falling: isPoopFalling }"
+            :style="poopStyle"
+            role="img"
+            :aria-label="t('games.boom.poop_aria')"
+            @mousedown="startDrag"
+            @touchstart.prevent="startDrag"
+        >
+            {{ POOP }}
+        </div>
+
+        <!-- ── splash effect ─────────────────────────────── -->
+        <Transition name="splash-anim">
+            <div v-if="showSplash" class="splash-effect" :style="splashStyle">
+                <span>💦</span><span>💧</span><span>💦</span>
+                <div class="splash-score">+1</div>
+            </div>
+        </Transition>
+
+        <!-- ── miss effect ────────────────────────────────── -->
+        <Transition name="miss-anim">
+            <div v-if="showMiss" class="miss-effect" :style="missStyle">
+                <span>💢</span>
+                <div class="miss-label">
+                    {{ t("games.boom.miss_label") }}
+                </div>
+            </div>
+        </Transition>
+
+        <!-- ── toilet ────────────────────────────────────── -->
+        <div class="toilet-wrap" :style="toiletStyle">
+            <div
+                class="toilet-emoji"
+                role="img"
+                :aria-label="t('games.boom.toilet_aria')"
+            >
+                {{ TOILET }}
+            </div>
+        </div>
+
+        <!-- ── floor line ─────────────────────────────────── -->
+        <div class="floor"></div>
+    </div>
 </template>
 
 <style scoped>
-/* ── outer wrapper fills space below the nav bar ─────────── */
-.boom-wrapper {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    width: 100%;
-    padding: 24px 24px 20px;
-    background: radial-gradient(
-            circle at 15% 20%,
-            rgba(255, 245, 224, 0.2),
-            transparent 35%
-        ),
-        radial-gradient(
-            circle at 85% 80%,
-            rgba(96, 70, 42, 0.25),
-            transparent 45%
-        ),
-        linear-gradient(145deg, #2f2318, #1e160f);
-}
-
 /* ── game container ─────────────────────────────────────── */
 .game-container {
-    position: relative;
-    width: min(100%, 700px);
-    height: min(calc(100dvh - 4rem - 88px), 700px);
+    position: absolute;
+    inset: 0;
     overflow: hidden;
-    border-radius: 16px;
+    border-radius: 12px;
     background-color: #efe6d6;
     background-image: linear-gradient(
             rgba(125, 102, 76, 0.24) 1px,
@@ -725,16 +536,6 @@ useAutoStartGame(startGame);
     font-weight: 900;
     color: #f44;
     text-shadow: 0 0 8px #f44;
-}
-
-/* ── transitions ─────────────────────────────────────────── */
-.fade-enter-active,
-.fade-leave-active {
-    transition: opacity 0.3s;
-}
-.fade-enter-from,
-.fade-leave-to {
-    opacity: 0;
 }
 
 .splash-anim-enter-active {

@@ -20,7 +20,7 @@ describe("hosted games", () => {
         for (const name of HOSTED_GAMES) {
             expect(hostedGame(name)).toEqual(expect.any(Function));
         }
-        expect(hostedGame("boom")).toBeNull();
+        expect(hostedGame("sprout-pox")).toBeNull();
         expect(hostedGame("constructor")).toBeNull();
     });
 });
