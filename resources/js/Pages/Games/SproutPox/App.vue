@@ -1,4 +1,5 @@
 <script setup>
+import { useResizeObserver } from "@vueuse/core";
 import {
     computed,
     nextTick,
@@ -7,8 +8,6 @@ import {
     ref,
     watch,
 } from "vue";
-import { Link, usePage } from "@inertiajs/vue3";
-import GameEndScreen from "@/Components/Games/GameEndScreen.vue";
 import PersonFace from "@/Components/Games/PersonFace.vue";
 import AimGuide from "./components/AimGuide.vue";
 import {
@@ -17,46 +16,46 @@ import {
     mouthWidthFrac,
     poxTarget,
 } from "./composables/useSproutGame.js";
-import { useSound } from "./composables/useSound.js";
 import { SPROUT } from "@/constants/characters.js";
-import { useAutoStartGame } from "@/composables/useAutoStartGame";
 import { useTranslations } from "@/composables/useTranslations";
+
+// Over the world, in the bedroom (GameHost). The kit is the only way it
+// reaches the world: the flick, the pop, the miss, the level-up fanfare and
+// the sprout's toot after it, and the score.
+const props = defineProps({
+    kit: { type: Object, required: true },
+});
 
 const { t } = useTranslations();
 
-const page = usePage();
-const fartSoundUrl = page.props.fartSoundUrl || "/fart.m4a";
-
-const { initAudio, playLaunch, playHit, playMiss, playLevelUp } =
-    useSound(fartSoundUrl);
+// The sprout toots once the fanfare's four notes have played.
+const FANFARE_MS = 360;
+let tootTimer = null;
 
 const game = useSproutGame({
-    onLaunch: () => playLaunch(),
-    onHit: () => playHit(),
-    onMiss: () => playMiss(),
-    onLevelUp: () => playLevelUp(),
+    onLaunch: () => props.kit.playSound("whoosh"),
+    onHit: () => props.kit.playSound("pop"),
+    onMiss: () => props.kit.playSound("thud"),
+    onLevelUp: () => {
+        props.kit.playSound("fanfare");
+        clearTimeout(tootTimer);
+        tootTimer = setTimeout(() => props.kit.toot("sprout"), FANFARE_MS);
+    },
+    onEnd: (score) => props.kit.finish({ score }),
 });
-const { state, highScore, levelBanner, sprout, aim, aimVector, pox, popups } =
-    game;
+const { state, levelBanner, sprout, aim, aimVector, pox, popups } = game;
 
 const stageEl = ref(null);
 const faceRef = ref(null);
-let resizeObserver = null;
 
 function measure() {
     if (!stageEl.value) return;
     const rect = stageEl.value.getBoundingClientRect();
-    // Cap at what's actually visible below the stage's current top offset,
-    // not just its own CSS box height — the surrounding layout's chrome
-    // (nav, header, bottom padding) can push that box partly below the
-    // fold, and gameplay must never place the sprout past what the player
-    // can actually see without scrolling.
-    const visibleHeight = Math.max(
-        200,
-        Math.min(rect.height, window.innerHeight - rect.top)
-    );
-    game.setBounds(rect.width, visibleHeight);
+    game.setBounds(rect.width, Math.max(200, rect.height));
 }
+
+// The host's window can change size without the browser window doing so.
+useResizeObserver(stageEl, measure);
 
 // --- Gaze tracking: eyes follow the pull-back and the flying sprout,
 // matching the "hungry person" behavior in Costco Food Poop. ---------------
@@ -106,39 +105,21 @@ watch(
     }
 );
 
-onMounted(() => {
-    resizeObserver = new ResizeObserver(measure);
-    window.addEventListener("resize", measure);
-    window.addEventListener("scroll", measure, { passive: true });
-});
-
 onBeforeUnmount(() => {
-    resizeObserver?.disconnect();
-    window.removeEventListener("resize", measure);
-    window.removeEventListener("scroll", measure);
+    clearTimeout(tootTimer);
     window.removeEventListener("pointermove", onPointerMove);
     window.removeEventListener("pointerup", onPointerUp);
 });
 
-async function startRound() {
-    // The stage doesn't exist (phase !== "playing") until after this flips
-    // and Vue flushes the DOM update, so measure and attach the resize
-    // observer only once it's actually rendered.
+// The stage doesn't exist (phase !== "playing") until after this flips and
+// Vue flushes the DOM update, so measure only once it's actually rendered.
+// start() sets "playing" again; this early write is only to render the stage.
+onMounted(async () => {
     state.phase = "playing";
     await nextTick();
-    if (stageEl.value) resizeObserver?.observe(stageEl.value);
     measure();
     game.start();
-}
-
-async function handlePlay() {
-    await initAudio();
-    await startRound();
-}
-
-function handlePlayAgain() {
-    startRound();
-}
+});
 
 // --- Aiming: pull back from the sprout, release to fling it ---------------
 
@@ -244,8 +225,6 @@ const mouthScale = computed(
 const sproutPips = computed(() =>
     Array.from({ length: state.sproutsLeft }, (_, i) => i)
 );
-
-useAutoStartGame(handlePlay);
 </script>
 
 <template>
@@ -282,13 +261,6 @@ useAutoStartGame(handlePlay);
                 {{ t("games.sprout_pox.level_banner", { level: state.level }) }}
             </div>
         </transition>
-
-        <Link
-            :href="route('games.index')"
-            class="game-quit"
-            :aria-label="t('games.quit_aria')"
-            >✕</Link
-        >
 
         <div class="face-wrap">
             <PersonFace
@@ -329,7 +301,7 @@ useAutoStartGame(handlePlay);
                 rolling: state.shotState === 'rolling',
             }"
             :style="sproutStyle"
-            :disabled="state.shotState !== 'ready'"
+            :aria-disabled="state.shotState !== 'ready'"
             :aria-label="t('games.sprout_pox.sprout_aria')"
             @pointerdown.prevent="onSproutPointerDown"
             @keydown.left.prevent="nudgeAngle(-ANGLE_STEP)"
@@ -342,24 +314,6 @@ useAutoStartGame(handlePlay);
             {{ SPROUT }}
         </button>
     </div>
-
-    <GameEndScreen
-        v-else-if="state.phase === 'end'"
-        :title="t('games.sprout_pox.end_title')"
-        :emoji="SPROUT"
-        :score="state.score"
-        game-slug="sprout-pox"
-        @play-again="handlePlayAgain"
-    >
-        <p class="text-[clamp(0.85rem,2.4vmin,1rem)] text-gray-400">
-            {{
-                t("games.sprout_pox.end_summary", {
-                    count: state.poxCount,
-                    level: state.level,
-                })
-            }}
-        </p>
-    </GameEndScreen>
 </template>
 
 <style scoped>
@@ -450,35 +404,6 @@ useAutoStartGame(handlePlay);
     transform: translate(-50%, -8px);
 }
 
-.game-quit {
-    position: absolute;
-    bottom: clamp(0.6rem, 3vmin, 1.1rem);
-    left: clamp(0.6rem, 3vmin, 1.1rem);
-    z-index: 21;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 9999px;
-    background: rgba(40, 32, 24, 0.8);
-    color: #fff5e6;
-    font-size: 1.1rem;
-    line-height: 1;
-    text-decoration: none;
-    transition: background-color 0.15s ease;
-}
-
-.game-quit:hover {
-    background: rgba(107, 83, 68, 0.85);
-}
-
-.game-quit:focus-visible {
-    outline: 2px solid #4ade80;
-    outline-offset: 2px;
-}
-
-/* Face ----------------------------------------------------------------- */
 .face-wrap {
     position: absolute;
     top: clamp(-1rem, -2vmin, 0.5rem);

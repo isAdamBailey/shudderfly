@@ -5,11 +5,11 @@ import { useTranslations } from "@/composables/useTranslations";
 import WorldCard from "./WorldCard.vue";
 
 // A game's card: its landmark, name and description, read aloud, with Play
-// and Cancel. `start` plays it here instead of leaving for its page. The
-// click unlocks audio, which the game needs before it can hiss or toot.
+// and Cancel. `start` plays it over the world. The click unlocks audio,
+// which the game needs before it can hiss or toot.
 const props = defineProps({
     game: { type: Object, required: true },
-    start: { type: Function, default: null },
+    start: { type: Function, required: true },
 });
 
 defineEmits(["cancel"]);
@@ -28,7 +28,6 @@ async function play() {
     <WorldCard
         :title-id="titleId"
         :script="`${game.name}. ${game.description}`"
-        :href="start ? '' : route('games.show', game.slug)"
         :action="t('games.world.play')"
         @play="play"
         @cancel="$emit('cancel')"

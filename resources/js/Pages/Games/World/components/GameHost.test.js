@@ -8,7 +8,7 @@ vi.mock("@/Components/ShareToChatButton.vue", () => ({
     default: {
         name: "ShareToChatButton",
         template: '<div class="share-stub" />',
-        props: ["gameSlug", "score", "inWorld"],
+        props: ["gameSlug", "score"],
     },
 }));
 
@@ -109,7 +109,6 @@ describe("GameHost", () => {
         expect(share.props()).toEqual({
             gameSlug: "cockroach",
             score: 40,
-            inWorld: true,
         });
     });
 

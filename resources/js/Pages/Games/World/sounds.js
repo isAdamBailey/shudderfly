@@ -3,6 +3,7 @@ import { audioRunning } from "@/composables/useAudioContext";
 import { own } from "@/utils/object";
 import { playBell, playTick } from "./clockSounds.js";
 import { playBonk, playChomp } from "./foodSounds.js";
+import { playFanfare, playPop, playThud, playWhoosh } from "./sproutSounds.js";
 
 /**
  * The world's named sounds (issue #130): what a cast member's `sounds` and a
@@ -15,6 +16,10 @@ const SOUNDS = {
     bell: playBell,
     chomp: playChomp,
     bonk: playBonk,
+    whoosh: playWhoosh,
+    pop: playPop,
+    thud: playThud,
+    fanfare: playFanfare,
 };
 
 export const SOUND_NAMES = Object.keys(SOUNDS);

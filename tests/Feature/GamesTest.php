@@ -97,30 +97,14 @@ class GamesTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->where('link', null));
     }
 
-    public function test_sprout_pox_game_page_is_displayed(): void
+    public function test_a_games_old_page_redirects_to_its_spot_in_the_house(): void
     {
         /** @var User $user */
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        $response = $this->get(route('games.show', 'sprout-pox'));
-
-        $response->assertInertia(
-            fn (Assert $page) => $page
-                ->component('Games/SproutPox')
-                ->has('users')
-                ->where('fartSoundUrl', asset('fart.m4a'))
-        );
-    }
-
-    public function test_a_moved_game_redirects_to_its_spot_in_the_house(): void
-    {
-        /** @var User $user */
-        $user = User::factory()->create();
-        $this->actingAs($user);
-
-        foreach (GamesWorld::HOSTED as $game) {
-            $this->get(route('games.show', $game))
+        foreach (array_keys(GameController::games()) as $game) {
+            $this->get("/games/{$game}")
                 ->assertRedirect(route('games.index', ['minigame' => $game]));
         }
     }
@@ -131,18 +115,15 @@ class GamesTest extends TestCase
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        $this->get(route('games.show', 'unknown'))->assertNotFound();
+        $this->get('/games/unknown')->assertNotFound();
     }
 
     public function test_games_require_authentication(): void
     {
         $this->get(route('games.index'))->assertRedirect(route('login'));
-        $this->get(route('games.show', 'boom'))->assertRedirect(route('login'));
-        $this->get(route('games.show', 'cockroach'))->assertRedirect(route('login'));
-        $this->get(route('games.show', 'costco-pizza-poop'))->assertRedirect(route('login'));
-        $this->get(route('games.show', 'cockroach-fight'))->assertRedirect(route('login'));
-        $this->get(route('games.show', 'toot-foods'))->assertRedirect(route('login'));
-        $this->get(route('games.show', 'sprout-pox'))->assertRedirect(route('login'));
+        foreach (array_keys(GameController::games()) as $game) {
+            $this->get("/games/{$game}")->assertRedirect(route('login'));
+        }
     }
 
     public function test_share_game_score_requires_authentication(): void
@@ -183,7 +164,7 @@ class GamesTest extends TestCase
 
         $this->assertDatabaseHas('messages', [
             'user_id' => $user->id,
-            'message' => __('messages.game_score_shared', ['game' => 'Brussels Sprout Chicken Pox', 'score' => 42])."\u{E000}g:sprout-pox\u{E000}",
+            'message' => __('messages.game_score_shared', ['game' => 'Brussels Sprout Chicken Pox', 'score' => 42])."\u{E000}m:sprout-pox\u{E000}",
             'page_id' => null,
         ]);
 
@@ -243,7 +224,7 @@ class GamesTest extends TestCase
         foreach (GamesWorld::MINIGAMES as $minigame) {
             $this->assertNotNull(GamesWorld::whereIs('minigame', $minigame), $minigame);
         }
-        foreach (GamesWorld::HOSTED as $hosted) {
+        foreach (array_keys(GameController::games()) as $hosted) {
             $this->assertNotNull(GamesWorld::whereIs('game', $hosted), $hosted);
             $this->assertSame(
                 GamesWorld::whereIs('game', $hosted),
@@ -279,7 +260,7 @@ class GamesTest extends TestCase
         );
     }
 
-    public function test_a_hosted_game_shared_from_the_world_links_back_as_a_minigame(): void
+    public function test_a_game_shared_from_the_world_links_back_to_its_launcher(): void
     {
         Event::fake();
 
@@ -291,10 +272,8 @@ class GamesTest extends TestCase
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        $this->post(route('games.share-score', 'cockroach'), [
-            'score' => 40,
-            'in_world' => true,
-        ])->assertRedirect()->assertSessionHas('success');
+        $this->post(route('games.share-score', 'cockroach'), ['score' => 40])
+            ->assertRedirect()->assertSessionHas('success');
 
         $this->assertDatabaseHas('messages', [
             'user_id' => $user->id,
@@ -310,6 +289,7 @@ class GamesTest extends TestCase
             'toot-foods' => ['Toot Foods', 'house.kitchen'],
             'costco-pizza-poop' => ['Costco Food Poop', 'house.kitchen'],
             'boom' => ['Poop Boom', 'house.bathroom'],
+            'sprout-pox' => ['Brussels Sprout Chicken Pox', 'house.bedroom'],
         ] as $slug => [$name, $scene]) {
             Message::query()->delete();
             $this->post(route('games.share-score', $slug), ['score' => 40])
@@ -333,22 +313,6 @@ class GamesTest extends TestCase
                     ->where('link.scene', $scene)
                     ->where('link.spot', $slug));
         }
-    }
-
-    public function test_in_world_share_of_a_game_that_still_leaves_the_world_is_not_found(): void
-    {
-        SiteSetting::updateOrCreate(
-            ['key' => 'messaging_enabled'],
-            ['value' => '1', 'type' => 'boolean', 'description' => 'x']
-        );
-
-        $user = User::factory()->create();
-        $this->actingAs($user);
-
-        $this->post(route('games.share-score', 'sprout-pox'), [
-            'score' => 1,
-            'in_world' => true,
-        ])->assertNotFound();
     }
 
     public function test_share_game_score_fails_when_messaging_disabled(): void

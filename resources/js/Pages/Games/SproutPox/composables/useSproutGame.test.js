@@ -40,6 +40,28 @@ describe("useSproutGame", () => {
         localStorage.clear();
     });
 
+    it("still ends when the last sprout clears a level", () => {
+        let ended = null;
+        let levelledUp = false;
+        const game = useSproutGame({
+            onLevelUp: () => (levelledUp = true),
+            onEnd: (score) => (ended = score),
+        });
+        game.setBounds(400, 700);
+        game.start();
+        game.state.sproutsLeft = 1;
+        game.state.levelPox = poxTarget(1) - 1;
+
+        advance(game, mouthClosedMs(1) + 20);
+        aimStraightUp(game, 1);
+        game.release();
+        advance(game, 1500);
+
+        expect(levelledUp).toBe(true);
+        expect(game.state.phase).toBe("end");
+        expect(ended).toBe(game.state.score);
+    });
+
     it("scores a hit and adds one pox dot when the sprout arrives while the mouth is open", () => {
         const game = useSproutGame();
         game.setBounds(400, 700);

@@ -1,6 +1,6 @@
 <script setup>
 import { useTranslations } from "@/composables/useTranslations";
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 
 // A TV's picture in a room's DOM overlay: the channel's video filling the
 // flat black panel the canvas draws, inside a thin bezel, so it plays on
@@ -10,11 +10,14 @@ import { onBeforeUnmount, onMounted, ref } from "vue";
 // when its video ends, so the TV can go on to the next channel. As it
 // comes on, its channel number shows in the corner for a moment, as on a
 // real TV, so a change of channel can be seen.
-defineProps({
+const props = defineProps({
     /** { id, video, poster, title }, as GamesWorld::channels() sends it. */
     channel: { type: Object, required: true },
     /** Which channel it is, from 1. */
     number: { type: Number, required: true },
+    /** The room is paused (a game covers it, or the tab is hidden): the
+     * picture and its sound wait. */
+    paused: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(["ended"]);
@@ -38,15 +41,27 @@ onBeforeUnmount(() => {
     video.load();
 });
 
-onMounted(async () => {
+async function play() {
     const video = videoEl.value;
     try {
         await video.play();
     } catch {
+        // Paused before it got going (a game opened): not the browser
+        // refusing sound, so it stays unmuted for when the room resumes.
+        if (props.paused) return;
         video.muted = true;
         video.play().catch(() => {});
     }
+}
+
+onMounted(() => {
+    if (!props.paused) play();
 });
+
+watch(
+    () => props.paused,
+    (paused) => (paused ? videoEl.value.pause() : play())
+);
 </script>
 
 <template>

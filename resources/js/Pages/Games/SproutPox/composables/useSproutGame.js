@@ -16,8 +16,6 @@ const BASE_POINTS = 20;
 const MAX_SPEED_BONUS = 30;
 export const TOTAL_SPROUTS = 10; // fixed for the whole game — levels never grant more
 
-const HIGH_SCORE_KEY = "sproutPoxHighScore";
-
 // Fixed, hand-placed spots around the face box (percentages), so pox dots
 // never move once they land and stay clear of the eyes/mouth.
 const POX_SPOTS = [
@@ -36,22 +34,6 @@ const POX_SPOTS = [
 ];
 
 let nextId = 1;
-
-function readHighScore() {
-    try {
-        return Number(localStorage.getItem(HIGH_SCORE_KEY)) || 0;
-    } catch {
-        return 0;
-    }
-}
-
-function writeHighScore(value) {
-    try {
-        localStorage.setItem(HIGH_SCORE_KEY, String(value));
-    } catch {
-        /* ignore */
-    }
-}
 
 /** Chicken pox dots needed to clear a level. */
 export function poxTarget(level) {
@@ -93,7 +75,6 @@ export function useSproutGame(callbacks = {}) {
         mouthOpen: false,
     });
 
-    const highScore = ref(readHighScore());
     const levelBanner = ref(false);
 
     const sprout = reactive({ x: 0, y: 0, vx: 0, vy: 0, spin: 0 });
@@ -240,13 +221,11 @@ export function useSproutGame(callbacks = {}) {
 
         if (onHit) onHit(points);
 
-        if (state.levelPox >= poxTarget(state.level)) {
-            advanceLevel();
-        } else if (state.sproutsLeft > 0) {
-            resetSproutToOrigin();
-        } else {
-            end();
-        }
+        // The last sprout can clear a level too: level up, then still end.
+        const cleared = state.levelPox >= poxTarget(state.level);
+        if (cleared) advanceLevel();
+        if (state.sproutsLeft === 0) end();
+        else if (!cleared) resetSproutToOrigin();
     }
 
     function registerMiss() {
@@ -263,11 +242,7 @@ export function useSproutGame(callbacks = {}) {
         rafId = null;
         state.phase = "end";
         state.shotState = "ready";
-        if (state.score > highScore.value) {
-            highScore.value = state.score;
-            writeHighScore(state.score);
-        }
-        if (onEnd) onEnd(state.score, state.poxCount, state.level);
+        if (onEnd) onEnd(state.score);
     }
 
     function updateMouthTimer(dt) {
@@ -347,17 +322,10 @@ export function useSproutGame(callbacks = {}) {
         rafId = requestAnimationFrame(frame);
     }
 
-    function reset() {
-        cancelAnimationFrame(rafId);
-        rafId = null;
-        state.phase = "start";
-    }
-
     onUnmounted(() => cancelAnimationFrame(rafId));
 
     return {
         state,
-        highScore,
         levelBanner,
         sprout,
         sproutRadius,
@@ -376,6 +344,5 @@ export function useSproutGame(callbacks = {}) {
         cancelAim,
         release,
         step,
-        reset,
     };
 }

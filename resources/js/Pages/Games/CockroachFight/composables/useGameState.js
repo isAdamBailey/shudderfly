@@ -1,4 +1,4 @@
-import { reactive, computed, ref } from "vue";
+import { reactive } from "vue";
 
 const MOVE_X_MIN = 4;
 const MOVE_X_MAX = 10;
@@ -12,32 +12,6 @@ const FIGHT_DURATION_MS = 2500;
 const SCORE_BASE = 600;
 const SCORE_PER_TAP = 40;
 const SCORE_MIN = 50;
-
-// Translation KEYS (not literal text) — same fact list as the Cockroach Fart
-// game, so it reuses those games.cockroach.fact_1..fact_10 lang entries.
-const FACTS = [
-    "games.cockroach.fact_1",
-    "games.cockroach.fact_2",
-    "games.cockroach.fact_3",
-    "games.cockroach.fact_4",
-    "games.cockroach.fact_5",
-    "games.cockroach.fact_6",
-    "games.cockroach.fact_7",
-    "games.cockroach.fact_8",
-    "games.cockroach.fact_9",
-    "games.cockroach.fact_10",
-];
-
-function getHighScore() {
-    try {
-        return parseInt(
-            localStorage.getItem("cockroach_fight_high_score") || "0",
-            10
-        );
-    } catch {
-        return 0;
-    }
-}
 
 function randomWobble() {
     const amount = WOBBLE_Y_MIN + Math.random() * (WOBBLE_Y_MAX - WOBBLE_Y_MIN);
@@ -56,12 +30,6 @@ function computeScore(tapCount) {
     return Math.max(SCORE_MIN, SCORE_BASE - tapCount * SCORE_PER_TAP);
 }
 
-function computeStars(tapCount) {
-    if (tapCount <= 8) return 3;
-    if (tapCount <= 14) return 2;
-    return 1;
-}
-
 export function useGameState() {
     const state = reactive({
         phase: "start",
@@ -75,19 +43,10 @@ export function useGameState() {
         rightHissing: false,
         leftFighting: false,
         rightFighting: false,
-        highScore: getHighScore(),
     });
-
-    const stars = computed(() => computeStars(state.tapCount));
-
-    const currentFact = ref(randomFact());
 
     let fightTimeoutId = null;
     let hissTimeoutIds = { left: null, right: null };
-
-    function randomFact() {
-        return FACTS[Math.floor(Math.random() * FACTS.length)];
-    }
 
     function clearFightTimeout() {
         if (fightTimeoutId !== null) {
@@ -119,7 +78,6 @@ export function useGameState() {
         state.rightHissing = false;
         state.leftFighting = false;
         state.rightFighting = false;
-        currentFact.value = randomFact();
     }
 
     function isColliding() {
@@ -148,17 +106,6 @@ export function useGameState() {
         fightTimeoutId = setTimeout(() => {
             fightTimeoutId = null;
             state.score = computeScore(state.tapCount);
-            if (state.score > state.highScore) {
-                state.highScore = state.score;
-                try {
-                    localStorage.setItem(
-                        "cockroach_fight_high_score",
-                        String(state.score)
-                    );
-                } catch {
-                    // Ignore storage errors so the win screen still renders
-                }
-            }
             state.phase = "win";
             state.leftHissing = false;
             state.rightHissing = false;
@@ -205,5 +152,5 @@ export function useGameState() {
         clearHissTimeout("right");
     }
 
-    return { state, stars, currentFact, startGame, tap, cleanup };
+    return { state, startGame, tap, cleanup };
 }

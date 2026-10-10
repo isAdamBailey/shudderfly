@@ -964,7 +964,7 @@ describe("GamesWorld hosted game", () => {
             .findAll("button.landmark")
             .find((button) => button.text().includes(label));
 
-    it("plays one game over the road and still links the others to their pages", async () => {
+    it("plays a game over the road and comes back to the same spot", async () => {
         wrapper = await mountWorld(withCockroach);
         await landmark("Cockroach Fart").trigger("click");
         await nextTick();
@@ -991,12 +991,26 @@ describe("GamesWorld hosted game", () => {
         await nextTick();
         expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
         expect(wrapper.find(ROAD).exists()).toBe(true);
+    });
 
-        await landmark("Sprout Pox").trigger("click");
+    it("stops drawing the world while a game covers it", async () => {
+        wrapper = await mountWorld(withCockroach);
+        const gl = fake.renderers[0];
+        await landmark("Cockroach Fart").trigger("click");
         await nextTick();
-        expect(wrapper.findComponent({ name: "Link" }).props("href")).toBe(
-            "/games/sprout-pox"
-        );
+        await wrapper.get(".world-card-action").trigger("click");
+        await flushPromises();
+
+        await frames(20);
+        const calls = gl.render.mock.calls.length;
+        await frames(80);
+        expect(gl.render.mock.calls.length).toBe(calls);
+
+        await wrapper.get(".game-host").trigger("keydown", { key: "Escape" });
+        await nextTick();
+        await wrapper.get(".stage").trigger("keydown", { key: "ArrowRight" });
+        await frames(80);
+        expect(gl.render.mock.calls.length).toBeGreaterThan(calls);
     });
 });
 

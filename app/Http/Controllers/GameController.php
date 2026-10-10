@@ -28,37 +28,31 @@ class GameController extends Controller
                 'name' => __('messages.games.sprout_pox.name'),
                 'emoji' => '🥬',
                 'description' => __('messages.games.sprout_pox.description'),
-                'component' => 'SproutPox',
             ],
             'toot-foods' => [
                 'name' => __('messages.games.toot_foods.name'),
                 'emoji' => '🍑',
                 'description' => __('messages.games.toot_foods.description'),
-                'component' => 'TootFoods',
             ],
             'cockroach-fight' => [
                 'name' => __('messages.games.cockroach_fight.name'),
                 'emoji' => '🪳',
                 'description' => __('messages.games.cockroach_fight.description'),
-                'component' => 'CockroachFight',
             ],
             'costco-pizza-poop' => [
                 'name' => __('messages.games.costco_pizza_poop.name'),
                 'emoji' => '🍕',
                 'description' => __('messages.games.costco_pizza_poop.description'),
-                'component' => 'CostcoPizzaPoop',
             ],
             'boom' => [
                 'name' => __('messages.games.boom.name'),
                 'emoji' => '💩',
                 'description' => __('messages.games.boom.description'),
-                'component' => 'Boom',
             ],
             'cockroach' => [
                 'name' => __('messages.games.cockroach.name'),
                 'emoji' => '🪳',
                 'description' => __('messages.games.cockroach.description'),
-                'component' => 'Cockroach',
             ],
         ];
     }
@@ -74,17 +68,20 @@ class GameController extends Controller
         // minigame's launcher wherever it stands (/games?game=boom,
         // /games?minigame=toot-catch: a shared score's link back);
         // anything that isn't one of those is ignored.
-        // `visit` is new on every request but kept when the browser comes
-        // back to this page from history, so the world can tell a fresh click
-        // on the link (open there) from coming back from a game (stay put).
+        // A shared score says `minigame` for a game too; an older one says
+        // `game`. `visit` is new on every request but kept when the browser
+        // comes back to this page from history, so the world can tell a fresh
+        // click on the link (open there) from coming back to it (stay put).
         $scene = $request->query('scene');
         $game = $request->query('game');
         $minigame = $request->query('minigame');
         $scenes = GamesWorld::scenes();
+        $games = self::games();
         $place = match (true) {
             is_string($scene) && array_key_exists($scene, $scenes) => ['scene' => $scene],
-            is_string($game) && array_key_exists($game, self::games()) => GamesWorld::whereIs('game', $game),
-            is_string($minigame) && (in_array($minigame, GamesWorld::MINIGAMES, true) || in_array($minigame, GamesWorld::HOSTED, true)) => GamesWorld::whereIs('minigame', $minigame),
+            is_string($game) && array_key_exists($game, $games) => GamesWorld::whereIs('game', $game),
+            is_string($minigame) && array_key_exists($minigame, $games) => GamesWorld::whereIs('game', $minigame),
+            is_string($minigame) && in_array($minigame, GamesWorld::MINIGAMES, true) => GamesWorld::whereIs('minigame', $minigame),
             default => null,
         };
         $link = $place ? [...$place, 'visit' => Str::random(12)] : null;
@@ -98,21 +95,13 @@ class GameController extends Controller
         ]);
     }
 
-    public function show(string $game): Response|RedirectResponse
+    /** Every game plays in its house now (issue #144). A game's old page
+     * URL stands you at its launcher, the same place a shared score opens. */
+    public function oldPage(string $game): RedirectResponse
     {
-        $games = self::games();
-        abort_if(! array_key_exists($game, $games), 404);
+        abort_if(! array_key_exists($game, self::games()), 404);
 
-        // A game that has moved into a house: the old page URL stands you
-        // at its launcher, the same place a shared score opens.
-        if (in_array($game, GamesWorld::HOSTED, true)) {
-            return redirect()->route('games.index', ['minigame' => $game]);
-        }
-
-        return Inertia::render('Games/'.$games[$game]['component'], [
-            'users' => self::users(),
-            'fartSoundUrl' => asset('fart.m4a'),
-        ]);
+        return redirect()->route('games.index', ['minigame' => $game]);
     }
 
     /** Everyone a score can be shared with and tagged. */
@@ -124,15 +113,13 @@ class GameController extends Controller
             ->makeVisible(['id']);
     }
 
-    /** Shares a score to the chat: a game that still has a page (`g:`),
-     * a world minigame, or a hosted game that plays in its house (`m:`).
-     * The marker is a link back to the launcher (index()). `in_world` is
-     * only for a hosted game; a game that still leaves for its page rejects it. */
+    /** Shares a score to the chat: a world minigame, or a game that plays in
+     * its house. The `m:` marker is a link back to the launcher (index()).
+     * Older messages still carry `g:<slug>`, which links to the same spot. */
     public function shareScore(string $game, Request $request): RedirectResponse
     {
         $games = self::games();
         $inMinigames = in_array($game, GamesWorld::MINIGAMES, true);
-        $hosted = in_array($game, GamesWorld::HOSTED, true);
         abort_if(! $inMinigames && ! array_key_exists($game, $games), 404);
 
         $setting = SiteSetting::where('key', 'messaging_enabled')->first();
@@ -146,12 +133,7 @@ class GameController extends Controller
             'score' => ['required', 'integer', 'min:0', 'max:99999999'],
             'tagged_user_ids' => ['sometimes', 'array'],
             'tagged_user_ids.*' => ['integer', 'exists:users,id'],
-            'in_world' => ['sometimes', 'boolean'],
         ]);
-
-        $inWorld = $validated['in_world'] ?? false;
-        abort_if($inWorld && ! $hosted, 404);
-        $minigame = $inMinigames || $hosted;
 
         $gameName = $inMinigames ? GamesWorld::minigameName($game) : $games[$game]['name'];
 
@@ -169,7 +151,7 @@ class GameController extends Controller
             'game' => $gameName,
             'score' => $validated['score'],
         ]);
-        $shareMessage .= $minigame ? "\u{E000}m:{$game}\u{E000}" : "\u{E000}g:{$game}\u{E000}";
+        $shareMessage .= "\u{E000}m:{$game}\u{E000}";
         if ($taggedUser) {
             $shareMessage = $shareMessage.' @'.$taggedUser->name;
         }

@@ -682,9 +682,6 @@ return [
     'locale.updated' => 'Language updated!',
 
     // Games - shared
-    'games.quit_aria' => 'Quit to games',
-    'games.new_high_score' => 'New High Score!',
-    'games.fun_fact_label' => 'Fun Fact:',
     'games.person_face.default_aria' => 'Hungry person',
 
     // Games - World
@@ -790,34 +787,18 @@ return [
     // Games - Cockroach Fart
     'games.cockroach.name' => 'Cockroach Fart',
     'games.cockroach.description' => 'Tap the cockroach\'s head to make it hiss its way to the toilet.',
-    'games.cockroach.title' => 'Cockroach Fart',
     'games.cockroach.intro_script' => 'Cockroach Fart! Tap the cockroach on the head to make it scoot toward the toilet. Tap, tap, tap until it gets there and lets out a giant fart. The biggest fart wins!',
     'games.cockroach.tap_hint' => 'Tap the head!',
-    'games.cockroach.win_title' => 'You Win!',
     'games.cockroach.hud_score_label' => 'SCORE',
     'games.cockroach.hud_hisses_label' => 'HISSES',
     'games.cockroach.combo_label' => ':count x Combo!',
-    'games.cockroach.fact_1' => 'Madagascar hissing cockroaches can live up to 5 years!',
-    'games.cockroach.fact_2' => 'They hiss by pushing air through breathing holes called spiracles.',
-    'games.cockroach.fact_3' => 'Males have large horns on their thorax for fighting rivals.',
-    'games.cockroach.fact_4' => 'They are one of the largest cockroach species — up to 3 inches long!',
-    'games.cockroach.fact_5' => 'Unlike most cockroaches, they have no wings at all.',
-    'games.cockroach.fact_6' => 'They can climb smooth glass with special pads on their feet.',
-    'games.cockroach.fact_7' => 'A group of hissing cockroaches is sometimes called an "intrusion."',
-    'games.cockroach.fact_8' => 'Baby hissing cockroaches are called nymphs and are bright white at birth.',
-    'games.cockroach.fact_9' => 'They are completely harmless to humans — no biting or stinging!',
-    'games.cockroach.fact_10' => 'Males hiss to attract mates and scare off other males.',
 
     // Games - Cockroach Fight
     'games.cockroach_fight.name' => 'Cockroach Fight',
     'games.cockroach_fight.description' => 'Tap a cockroach head to bring them together for an epic battle!',
-    'games.cockroach_fight.title' => 'Cockroach Fight',
     'games.cockroach_fight.tap_hint' => 'Tap a head!',
     'games.cockroach_fight.hud_taps_label' => 'Taps:',
     'games.cockroach_fight.fight_label' => 'FIGHT!',
-    'games.cockroach_fight.win_title' => 'Fight Over!',
-    'games.cockroach_fight.taps_to_fight_one' => ':count tap to the fight',
-    'games.cockroach_fight.taps_to_fight_other' => ':count taps to the fight',
 
     // Games - Costco Food Poop
     'games.costco_pizza_poop.name' => 'Costco Food Poop',
@@ -846,13 +827,10 @@ return [
     // Games - Brussels Sprout Chicken Pox
     'games.sprout_pox.name' => 'Brussels Sprout Chicken Pox',
     'games.sprout_pox.description' => 'Slingshot sprouts into the open mouth. Every one that lands gives him another chicken pox!',
-    'games.sprout_pox.title' => 'Brussels Sprout Chicken Pox',
     'games.sprout_pox.hud_level_label' => 'Level',
     'games.sprout_pox.hud_pox_label' => 'Pox',
     'games.sprout_pox.hud_sprouts_label' => 'Sprouts',
     'games.sprout_pox.level_banner' => 'Level :level!',
     'games.sprout_pox.sprout_aria' => 'Sprout — drag back to aim, release to fling it at the mouth',
     'games.sprout_pox.face_aria' => 'Chicken pox patient',
-    'games.sprout_pox.end_title' => 'Spotty Champion!',
-    'games.sprout_pox.end_summary' => ':count chicken pox on level :level',
 ];

@@ -40,27 +40,21 @@ import { computed } from "vue";
 import CockroachSprite from "./CockroachSprite.vue";
 import FartCloud from "./FartCloud.vue";
 import ScoreDisplay from "./ScoreDisplay.vue";
-import { useSound } from "../composables/useSound.js";
 
 const { t } = useTranslations();
 
 const props = defineProps({
     state: { type: Object, required: true },
-    kit: { type: Object, default: null },
+    kit: { type: Object, required: true },
 });
 
-const calm = computed(() =>
-    props.kit ? props.kit.reducedMotion.value : false
-);
+const calm = computed(() => props.kit.reducedMotion.value);
 
 const emit = defineEmits(["hiss"]);
 
-const { playHiss } = useSound();
-
 function handleHiss(direction) {
     emit("hiss", direction);
-    if (props.kit) props.kit.playSound("hiss");
-    else playHiss();
+    props.kit.playSound("hiss");
 }
 </script>
 

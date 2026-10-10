@@ -17,7 +17,7 @@
 /* Chrome heights from Layouts/Nav/Navigation.vue: the 65px top bar, plus the
    57px pill row from `sm` up, or the fixed bottom tab bar below `sm`. Update
    if the nav changes. --app-stage-h is the viewport left over for a
-   full-height page (Page/Show, .game-page). */
+   full-height page (Page/Show). */
 :root {
     --app-header-h: 65px;
     --app-bottom-nav-h: calc(65px + env(safe-area-inset-bottom));
@@ -443,16 +443,6 @@
 @tailwind utilities;
 
 @layer components {
-    /*
-     * Shared by every full-screen game page (Boom, Cockroach*, CostcoPizzaPoop,
-     * TootFoods, SproutPox) so the game box never runs taller than the space
-     * the nav chrome leaves, which would push controls like a close button
-     * out of view.
-     */
-    .game-page {
-        min-height: var(--app-stage-h);
-    }
-
     .btn-bulge {
         @apply transform-gpu transition-[transform,box-shadow,filter] duration-150 ease-out;
         touch-action: manipulation;

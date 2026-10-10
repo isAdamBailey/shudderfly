@@ -871,8 +871,9 @@ const formatDate = (dateString) => {
     return date.toLocaleDateString();
 };
 
-// A shared score's marker (GameController::shareScore): `g:` a game's slug,
-// `m:` a world minigame's name.
+// A shared score's marker (GameController::shareScore): `m:` a minigame's or
+// a game's name. Older shares carry `g:` and a game's slug; both link to the
+// same launcher in the world.
 const GAME_SHARE_SLUG_MARKER = /\uE000([gm]):([a-z0-9-]+)\uE000/g;
 
 const LEGACY_GAME_DISPLAY_NAME_TO_SLUG = {

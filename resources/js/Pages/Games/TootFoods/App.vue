@@ -1,10 +1,9 @@
 <script setup>
 import { useResizeObserver } from "@vueuse/core";
-import { onBeforeUnmount, nextTick, ref } from "vue";
+import { nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import CastMember from "@/Components/Games/Cast/CastMember.vue";
 import TootPuff from "@/Components/Games/Cast/TootPuff.vue";
 import { useTootGame } from "./composables/useTootGame.js";
-import { useAutoStartGame } from "@/composables/useAutoStartGame";
 import { useTranslations } from "@/composables/useTranslations";
 
 // Over the world, in the kitchen (GameHost). The kit is the only way it
@@ -125,7 +124,7 @@ function buttStyle() {
     };
 }
 
-useAutoStartGame(startRound);
+onMounted(startRound);
 </script>
 
 <template>

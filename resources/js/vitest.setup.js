@@ -92,7 +92,6 @@ export const ROUTE_MAPPINGS = {
         `/books-category?${new URLSearchParams(params)}`,
     "categories.show": (params) => `/categories/${params.categoryName}`,
     "games.index": "/games",
-    "games.show": (params) => `/games/${params}`,
     "games.share-score": (params) => `/games/${params}/share-score`,
     "music.share": (params) => `/music/${params}/share`,
     "music.show": (params) => `/music/${params}`,

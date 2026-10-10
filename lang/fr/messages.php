@@ -682,9 +682,6 @@ return [
     'locale.updated' => 'Langue mise à jour !',
 
     // Games - shared
-    'games.quit_aria' => 'Quitter vers les jeux',
-    'games.new_high_score' => 'Nouveau record !',
-    'games.fun_fact_label' => 'Le savais-tu :',
     'games.person_face.default_aria' => 'Personne qui a faim',
 
     // Games - World
@@ -790,34 +787,18 @@ return [
     // Games - Cockroach Fart
     'games.cockroach.name' => 'Pet de Cafard',
     'games.cockroach.description' => 'Touche la tête du cafard pour le faire siffler jusqu\'aux toilettes.',
-    'games.cockroach.title' => 'Pet de Cafard',
     'games.cockroach.intro_script' => 'Pet de Cafard ! Touche le cafard sur la tête pour le faire avancer vers les toilettes. Touche, touche, touche jusqu\'à ce qu\'il arrive et lâche un pet géant. Le plus gros pet gagne !',
     'games.cockroach.tap_hint' => 'Touche la tête !',
-    'games.cockroach.win_title' => 'Tu as gagné !',
     'games.cockroach.hud_score_label' => 'SCORE',
     'games.cockroach.hud_hisses_label' => 'SIFFLEMENTS',
     'games.cockroach.combo_label' => 'Combo x :count !',
-    'games.cockroach.fact_1' => 'Les cafards siffleurs de Madagascar peuvent vivre jusqu\'à 5 ans !',
-    'games.cockroach.fact_2' => 'Ils sifflent en poussant de l\'air par des trous respiratoires appelés stigmates.',
-    'games.cockroach.fact_3' => 'Les mâles ont de grandes cornes sur le thorax pour se battre entre rivaux.',
-    'games.cockroach.fact_4' => 'C\'est une des plus grandes espèces de cafards — jusqu\'à 7 centimètres de long !',
-    'games.cockroach.fact_5' => 'Contrairement à la plupart des cafards, ils n\'ont pas du tout d\'ailes.',
-    'games.cockroach.fact_6' => 'Ils peuvent grimper sur du verre lisse grâce à des coussinets spéciaux sous leurs pattes.',
-    'games.cockroach.fact_7' => 'Un groupe de cafards siffleurs s\'appelle parfois une « intrusion ».',
-    'games.cockroach.fact_8' => 'Les bébés cafards siffleurs s\'appellent des nymphes et sont tout blancs à la naissance.',
-    'games.cockroach.fact_9' => 'Ils sont totalement inoffensifs pour les humains — ils ne mordent pas et ne piquent pas !',
-    'games.cockroach.fact_10' => 'Les mâles sifflent pour attirer les femelles et faire peur aux autres mâles.',
 
     // Games - Cockroach Fight
     'games.cockroach_fight.name' => 'Combat de Cafards',
     'games.cockroach_fight.description' => 'Touche la tête d\'un cafard pour les rapprocher et lancer un combat épique !',
-    'games.cockroach_fight.title' => 'Combat de Cafards',
     'games.cockroach_fight.tap_hint' => 'Touche une tête !',
     'games.cockroach_fight.hud_taps_label' => 'Touches :',
     'games.cockroach_fight.fight_label' => 'COMBAT !',
-    'games.cockroach_fight.win_title' => 'Combat terminé !',
-    'games.cockroach_fight.taps_to_fight_one' => ':count touche jusqu\'au combat',
-    'games.cockroach_fight.taps_to_fight_other' => ':count touches jusqu\'au combat',
 
     // Games - Costco Food Poop
     'games.costco_pizza_poop.name' => 'Caca de Costco',
@@ -846,13 +827,10 @@ return [
     // Games - Brussels Sprout Chicken Pox
     'games.sprout_pox.name' => 'Varicelle aux Choux de Bruxelles',
     'games.sprout_pox.description' => 'Lance des choux dans la bouche ouverte avec un lance-pierre. Chaque chou qui rentre lui donne un bouton de varicelle !',
-    'games.sprout_pox.title' => 'Varicelle aux Choux de Bruxelles',
     'games.sprout_pox.hud_level_label' => 'Niveau',
     'games.sprout_pox.hud_pox_label' => 'Boutons',
     'games.sprout_pox.hud_sprouts_label' => 'Choux',
     'games.sprout_pox.level_banner' => 'Niveau :level !',
     'games.sprout_pox.sprout_aria' => 'Chou — tire en arrière pour viser, lâche pour l\'envoyer vers la bouche',
     'games.sprout_pox.face_aria' => 'Patient avec la varicelle',
-    'games.sprout_pox.end_title' => 'Champion des Boutons !',
-    'games.sprout_pox.end_summary' => ':count boutons de varicelle au niveau :level',
 ];

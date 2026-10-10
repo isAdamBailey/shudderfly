@@ -49,18 +49,4 @@ describe("CockroachFight useGameState", () => {
         expect(state.phase).toBe("win");
         expect(state.score).toBe(560);
     });
-
-    it("awards more stars for fewer taps", () => {
-        const { state, stars, startGame } = useGameState();
-        startGame();
-
-        state.tapCount = 5;
-        expect(stars.value).toBe(3);
-
-        state.tapCount = 10;
-        expect(stars.value).toBe(2);
-
-        state.tapCount = 20;
-        expect(stars.value).toBe(1);
-    });
 });

@@ -267,10 +267,11 @@ function measure() {
 }
 
 // A scene mounted after the first measure (once three has loaded, say)
-// still needs the stage's size.
+// still needs the stage's size, and to know whether the world is paused.
 watch(sceneRef, (scene) => {
     if (!scene) return;
     measure();
+    syncDrawing();
     sceneMounted?.();
     sceneMounted = null;
 });
@@ -295,7 +296,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
-    // Leaving for a game: come back to the same spot.
+    // Leaving the world (for a book, say): come back to the same spot.
     remember();
     window.removeEventListener("pagehide", remember);
     resizeObserver?.disconnect();
@@ -305,8 +306,15 @@ onBeforeUnmount(() => {
     renderer.dispose();
 });
 
-function onVisibilityChange() {
-    if (document.hidden) {
+// A card that runs a game (`pausesWorld` in its options: GameHost,
+// MinigameCard) covers the world, so the world stops drawing behind it
+// rather than run a second animation loop under the game's.
+const gameOpen = computed(() => Boolean(card.value?.component.pausesWorld));
+
+/** The world draws only while it can be seen: the tab is showing and no
+ * game covers it. */
+function syncDrawing() {
+    if (document.hidden || gameOpen.value) {
         sceneRef.value?.pause();
         renderer.pause();
     } else {
@@ -314,6 +322,10 @@ function onVisibilityChange() {
         sceneRef.value?.resume();
     }
 }
+
+watch(gameOpen, syncDrawing);
+
+const onVisibilityChange = syncDrawing;
 
 /** The GPU took the context back (memory pressure, a backgrounded phone).
  * Rather than a blank canvas under live buttons, carry on in the DOM. */
@@ -486,8 +498,8 @@ const stage = { beginGesture, resetScroll, focus: focusStage, renderer };
     width: 100%;
     height: 60vh; /* replaced by the measured height on mount */
     overflow: hidden;
-    /* Narrower than useGameViewportLock(): drags must not fight page scroll,
-       but this is a navigation hub, so pinch-zoom stays available elsewhere. */
+    /* Drags must not fight page scroll, but this is a navigation hub, so
+       pinch-zoom stays available elsewhere. */
     touch-action: none;
     user-select: none;
     outline: none;

@@ -5,7 +5,7 @@ namespace App\Support;
 final class GameShareMessage
 {
     /**
-     * Remove embedded game slug marker from chat message text (see GameController::shareScore): `g:` a game, `m:` a world minigame.
+     * Remove embedded game slug marker from chat message text (see GameController::shareScore): `m:` a minigame or game; older messages carry `g:` and a game's slug.
      */
     public static function stripSlugMarker(?string $text): string
     {
