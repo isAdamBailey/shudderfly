@@ -248,6 +248,36 @@ export function speakPhrase(
     return false;
 }
 
+// Whether the device voice has spoken during a tap. iOS Safari ignores
+// speechSynthesis.speak() until it has, so a fallback for an AI clip that
+// timed out, or a line said after the tap, would otherwise be silent. Set
+// only once the primer has ended: one cancelled by the speech that same
+// tap starts doesn't count, and the next tap tries again.
+let devicePrimed = false;
+
+/**
+ * Lets both voices speak later, outside the tap: call inside a user
+ * gesture (a pointerup, click or keydown, not a touch's pointerdown) when
+ * a line may follow it, as the Games World does. Cheap to call on every
+ * tap.
+ */
+export function primeSpeech() {
+    if (aiVoiceEnabled()) {
+        primeAiVoice();
+    }
+    if (devicePrimed || !isSpeechSynthesisAvailable()) {
+        return;
+    }
+    // Silent and empty, but spoken in the gesture: that unlocks it. Not
+    // through speakUtterance, which would resume speech left paused.
+    const utterance = new SpeechSynthesisUtterance("");
+    utterance.volume = 0;
+    utterance.onend = () => {
+        devicePrimed = true;
+    };
+    window.speechSynthesis.speak(utterance);
+}
+
 export function speechStopCount() {
     return stops;
 }
