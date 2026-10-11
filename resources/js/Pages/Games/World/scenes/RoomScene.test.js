@@ -439,6 +439,67 @@ describe("the room's scene graph", () => {
         graph.dispose();
     });
 
+    it("builds a pipe organ into its wall, and plays its keys", () => {
+        const organ = {
+            id: "organ",
+            type: "organ",
+            wall: "left",
+            x: 0,
+            z: 250,
+        };
+        const graph = build({
+            ...hall,
+            interactables: [...hall.interactables, organ],
+        });
+        // Turned to face into the room off the left wall.
+        const built = graph.scene
+            .getObjectsByProperty("isGroup", true)
+            .find((g) => g.rotation.y === Math.PI / 2 && g.position.z === 250);
+        expect(built).toBeTruthy();
+
+        // Still (the strawberry's idle aside), until a key goes down.
+        graph.sync(view(), 0.016);
+        expect(graph.sync(view(), 0.016)).toBe(false);
+        graph.pressKey("organ", 2, 3);
+        expect(graph.sync(view(), 0.05)).toBe(true);
+        // Nothing for an organ that isn't there.
+        expect(() => graph.pressKey("nope", 0, 0)).not.toThrow();
+        graph.dispose();
+    });
+
+    it("flickers its candles, but not under reduced motion", () => {
+        const lit = {
+            ...hall,
+            lights: [{ ...hall.lights[0], flicker: true }],
+        };
+        const graph = build(lit);
+        const light = graph.scene.getObjectsByProperty("isPointLight", true)[0];
+        const steady = light.intensity;
+
+        graph.sync(view({ reduced: false }), 0.1);
+        expect(light.intensity).not.toBe(steady);
+
+        graph.sync(view({ reduced: true }), 0.1);
+        expect(light.intensity).toBe(steady);
+        graph.dispose();
+    });
+
+    it("builds a fireplace into its back wall, its mantel where it says", () => {
+        const graph = build({
+            ...hall,
+            fireplaces: [{ x: 450, w: 440, h: 130, d: 50 }],
+        });
+        const built = graph.scene
+            .getObjectsByProperty("isMesh", true)
+            .filter((m) => m.geometry.attributes.color)
+            .map((m) => new THREE.Box3().setFromObject(m))
+            .find((b) => Math.abs((b.min.x + b.max.x) / 2 - 450) < 1);
+        expect(built.max.y).toBeCloseTo(130);
+        expect(built.min.y).toBeCloseTo(0);
+        expect(built.max.x - built.min.x).toBeCloseTo(460);
+        graph.dispose();
+    });
+
     it("builds an open doorway into its wall instead of a door card", () => {
         const open = {
             ...hall,
