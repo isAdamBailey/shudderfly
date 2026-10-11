@@ -3,6 +3,7 @@ import book from "./book.js";
 import door from "./door.js";
 import game from "./game.js";
 import minigame from "./minigame.js";
+import organ from "./organ.js";
 import radio from "./radio.js";
 import toy from "./toy.js";
 import tv from "./tv.js";
@@ -12,7 +13,7 @@ import tv from "./tv.js";
  * only reach the world through `ctx`, so a new kind of interaction is one new
  * file plus a line here (issue #130).
  */
-const interactions = { book, door, game, minigame, radio, toy, tv };
+const interactions = { book, door, game, minigame, organ, radio, toy, tv };
 
 // An own key, so a type like "constructor" can't reach Object.prototype.
 const handlerFor = (item) => own(interactions, item.type);

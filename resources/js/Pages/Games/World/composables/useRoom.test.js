@@ -2,7 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import { shallowRef } from "vue";
 import { STAIRS_CLEARANCE } from "../scenes/roomLayout.js";
 import { DRAG_SPEED, WALK_SPEED } from "./useGamesWorld.js";
-import { arrivalSpot, REACH, STAND, useRoom } from "./useRoom.js";
+import {
+    arrivalSpot,
+    BLOCK_CLEARANCE,
+    REACH,
+    STAND,
+    useRoom,
+} from "./useRoom.js";
 
 const DOOR = { id: "front-door", type: "door", x: 450, z: 0 };
 const BELL = { id: "doorbell", type: "toy", x: 700, z: 0 };
@@ -175,6 +181,59 @@ describe("useRoom", () => {
         expect(r.butt).toMatchObject({ x: BELL.x, z: BELL.z + STAND });
         expect(r.nearest.value).toBe(BELL);
         expect(onArrive).not.toHaveBeenCalled();
+    });
+
+    it("stands as far out as a thing says, off whichever wall it's on", () => {
+        const organ = {
+            id: "organ",
+            type: "organ",
+            wall: "left",
+            x: 0,
+            z: 250,
+            stand: 150,
+        };
+        const { r } = makeRoom();
+
+        r.standBy(organ);
+
+        expect(r.butt).toMatchObject({ x: 150, z: 250 });
+    });
+
+    it("keeps off an organ's floor, sliding along it, and stands clear of it", () => {
+        const organ = {
+            id: "organ",
+            type: "organ",
+            wall: "right",
+            x: 900,
+            z: 250,
+            stand: 200,
+        };
+        const r = useRoom(
+            { size: { w: 900, d: 500 }, interactables: [organ] },
+            { start: { x: 600, z: 250 } }
+        );
+
+        // Straight at it: stops at its edge, the Butt's half-width short of
+        // where the organ reaches (its pedals, 127 out of the wall).
+        const edge = 900 - 127 - BLOCK_CLEARANCE;
+        r.setKey("x", 1);
+        run(r, 3);
+        expect(r.butt.x).toBeLessThanOrEqual(edge);
+        expect(r.butt.x).toBeGreaterThan(edge - 10);
+        // A tap on it walks only to its edge.
+        r.setKey("x", 0);
+        r.walkTo(890, 250);
+        run(r, 3);
+        expect(r.butt.x).toBeLessThanOrEqual(edge);
+
+        r.standBy(organ);
+        expect(r.butt).toMatchObject({ x: 700, z: 250 });
+        // Never starts inside it either.
+        const inside = useRoom(
+            { size: { w: 900, d: 500 }, interactables: [organ] },
+            { start: { x: 880, z: 250 } }
+        );
+        expect(inside.butt.x).toBeLessThanOrEqual(edge);
     });
 
     it("is near nothing in the middle of the floor", () => {

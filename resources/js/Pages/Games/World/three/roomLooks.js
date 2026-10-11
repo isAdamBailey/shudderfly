@@ -28,6 +28,8 @@ export const WALLS = {
     tiles: { base: "#e0f2fe", ink: "#7dd3fc", pattern: "grid", tile: 50 },
     brick: { base: "#b45309", ink: "#78350f", pattern: "bricks", tile: 90 },
     plaster: { base: "#e7e5e4", ink: "#d6d3d1", pattern: "plain", tile: 200 },
+    // A castle's: rough grey blocks, some darker, in deep mortar.
+    stone: { base: "#6b6560", ink: "#292524", pattern: "ashlar", tile: 130 },
 };
 
 export const FLOORS = {
@@ -36,6 +38,12 @@ export const FLOORS = {
     tiles: { base: "#f1f5f9", ink: "#94a3b8", pattern: "grid", tile: 70 },
     carpet: { base: "#7c3aed", ink: "#6d28d9", pattern: "plain", tile: 200 },
     concrete: { base: "#78716c", ink: "#57534e", pattern: "plain", tile: 200 },
+    flagstones: {
+        base: "#57534e",
+        ink: "#1c1917",
+        pattern: "flags",
+        tile: 160,
+    },
 };
 
 // Skirting and the ceiling edge.
@@ -129,6 +137,38 @@ const PATTERNS = {
         ctx.fillRect(0, PX / 2, PX, 2);
         ctx.fillRect(PX * 0.3, 0, 2, PX / 2);
         ctx.fillRect(PX * 0.8, PX / 2, 2, PX / 2);
+    },
+    // Stone blocks in courses of two, each course offset, a few shaded.
+    ashlar(ctx, ink) {
+        ctx.fillStyle = ink;
+        const course = PX / 3;
+        for (let row = 0; row < 3; row += 1) {
+            const y = row * course;
+            const shift = (row % 2) * (PX / 4);
+            ctx.globalAlpha = 0.22;
+            ctx.fillRect(
+                ((shift + PX / 2) % PX) + 2,
+                y + 2,
+                PX / 2 - 3,
+                course - 3
+            );
+            ctx.globalAlpha = 1;
+            ctx.fillRect(0, y, PX, 2);
+            ctx.fillRect(shift, y, 2, course);
+            ctx.fillRect((shift + PX / 2) % PX, y, 2, course);
+        }
+    },
+    // Big uneven slabs.
+    flags(ctx, ink) {
+        ctx.fillStyle = ink;
+        ctx.globalAlpha = 0.25;
+        ctx.fillRect(PX * 0.42 + 2, 2, PX * 0.58 - 3, PX * 0.55 - 3);
+        ctx.globalAlpha = 1;
+        ctx.fillRect(0, 0, PX, 2);
+        ctx.fillRect(0, 0, 2, PX);
+        ctx.fillRect(PX * 0.42, 0, 2, PX * 0.55);
+        ctx.fillRect(0, PX * 0.55, PX, 2);
+        ctx.fillRect(PX * 0.7, PX * 0.55, 2, PX * 0.45);
     },
     checks(ctx, ink) {
         ctx.fillStyle = ink;

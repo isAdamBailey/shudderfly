@@ -31,7 +31,7 @@ function roof(THREE, color, { length, depth, height, y, z }) {
 }
 
 /** The geometry, non-indexed, with every vertex in `color`. */
-function paint(THREE, geometry, color) {
+export function paint(THREE, geometry, color) {
     const flat = geometry.index ? geometry.toNonIndexed() : geometry;
     if (flat !== geometry) geometry.dispose();
     const c = new THREE.Color(color);

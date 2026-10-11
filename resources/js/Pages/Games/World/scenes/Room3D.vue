@@ -34,6 +34,7 @@ import { useTvChannels } from "../composables/useTvChannels.js";
 import { autoTriggers } from "../interactions/index.js";
 import { BOOKCASE, bookcaseHeight, shelfEnd, slotsIn } from "./bookshelf.js";
 import { createRoomScene } from "./RoomScene.js";
+import { convexHull, keyAt, ORGAN, zoneCorners } from "./organLayout.js";
 import { stairsBounds } from "./staircase.js";
 import {
     itemBox,
@@ -59,7 +60,10 @@ const props = defineProps({
     arrival: { type: Object, default: () => ({}) },
 });
 
-const emit = defineEmits(["activate"]);
+// `activate`: the Butt has reached something and uses it (the room is
+// frozen until the stage lets go). `play`: an organ key was pressed, at
+// once, wherever the Butt is: nothing is frozen, and nothing is let go.
+const emit = defineEmits(["activate", "play"]);
 
 const { t } = useTranslations();
 const page = usePage();
@@ -210,6 +214,8 @@ const spots = computed(() => {
     if (!view.value) return [];
     return props.scene.interactables.flatMap((item) => {
         if (item.stairs) return stairsSpot(item);
+        // An organ is played by its keys (organSpots).
+        if (item.type === "organ") return [];
         const pose = itemPose(item);
         const p = project(pose);
         if (!p) return [];
@@ -248,23 +254,64 @@ function stairsSpot(item) {
     }
     if (corners.length === 0) return [];
     // Kept on the stage, so its middle (and its arrow) can be seen.
-    const xs = corners.map((p) => Math.min(bounds.w, Math.max(0, p.x)));
-    const ys = corners.map((p) => Math.min(bounds.h, Math.max(0, p.y)));
-    const left = Math.min(...xs);
-    const top = Math.min(...ys);
-    const bottom = Math.max(...ys);
-    const width = Math.max(...xs) - left;
+    const { left, top, width, height } = screenRect(
+        corners.map((p) => ({
+            x: Math.min(bounds.w, Math.max(0, p.x)),
+            y: Math.min(bounds.h, Math.max(0, p.y)),
+        }))
+    );
     return {
         item,
         label: item.label,
         x: left + width / 2,
-        y: bottom,
+        y: top + height,
         width,
-        height: bottom - top,
+        height,
         titled: false,
         overlay: false,
     };
 }
+
+/** The screen rectangle round screen points `points`. */
+function screenRect(points) {
+    const xs = points.map((p) => p.x);
+    const ys = points.map((p) => p.y);
+    const left = Math.min(...xs);
+    const top = Math.min(...ys);
+    return {
+        left,
+        top,
+        width: Math.max(...xs) - left,
+        height: Math.max(...ys) - top,
+    };
+}
+
+/** A button over each zone of an organ's keyboard: the outline of its keys
+ * as drawn (on a side wall, they run off into the room at a slant), and the
+ * line along them a press is placed on, to find its key. */
+const organSpots = computed(() => {
+    if (!view.value) return [];
+    return props.scene.interactables
+        .filter((item) => item.type === "organ")
+        .flatMap((item) =>
+            item.zones.flatMap((label, zone) => {
+                const corners = zoneCorners(item, zone).map(project);
+                if (corners.some((p) => !p)) return [];
+                const hull = convexHull(corners);
+                const rect = screenRect(hull);
+                const { left, top } = rect;
+                return {
+                    item,
+                    zone,
+                    label,
+                    ...rect,
+                    outline: hull
+                        .map((p) => `${p.x - left}px ${p.y - top}px`)
+                        .join(", "),
+                };
+            })
+        );
+});
 
 // The stretch of back wall the overlay keeps books' buttons up for: what's
 // in view, and half as much again either side, so Tab can step to the next
@@ -354,6 +401,48 @@ function onItemClick(item) {
     room.goUse(item);
 }
 
+const rootEl = ref(null);
+
+/** Plays organ zone `s`'s key `key` (the handler presses it and sounds
+ * it). Nothing walks: the organ answers at once, however far the Butt is,
+ * and a walk or held arrow key carries on. */
+function playZone(s, key) {
+    if (room.state.frozen) return;
+    emit("play", { ...s.item, zone: s.zone, key });
+}
+
+/** A press on a zone plays the key under it straight away, not on the
+ * click a press only makes once it's let go: the point on the keys' plane
+ * under the pointer, read along the keyboard. */
+function onZonePointerDown(s, event) {
+    pointerFocus = true;
+    if (event.button > 0) return;
+    const rect = rootEl.value.getBoundingClientRect();
+    const cam = view.value;
+    const at = screenToGround(
+        { ...cam, y: cam.y - ORGAN.keys.y },
+        event.clientX - rect.left,
+        event.clientY - rect.top
+    );
+    playZone(s, at ? keyAt(s.item, s.zone, at) : 0);
+}
+
+// The key Enter or Space last played in each zone: each press plays the
+// next, up the scale and round again, so every key can be reached.
+const keyboardKeys = new Map();
+
+/** Enter or Space on a zone (a click with no pointer). */
+function onZoneClick(s, event) {
+    pointerFocus = false;
+    if (event.detail !== 0) return;
+    const id = `${s.item.id}-${s.zone}`;
+    const key = keyboardKeys.has(id)
+        ? (keyboardKeys.get(id) + 1) % ORGAN.whiteKeys
+        : 0;
+    keyboardKeys.set(id, key);
+    playZone(s, key);
+}
+
 function focusItem(id) {
     buttons[id]?.focus({ preventScroll: true });
     props.stage.resetScroll();
@@ -375,6 +464,12 @@ function animate(id, move) {
 /** Toots as `castId` at thing `id` (ctx.toot). */
 function toot(castId, id) {
     tootAt(castId, pointOf(id));
+}
+
+/** Presses organ `id`'s key `key` in zone `zone` (ctx.pressKey). */
+function pressKey(id, zone, key) {
+    graph?.pressKey(id, zone, key);
+    props.stage.renderer.invalidate();
 }
 
 /** Switches room light `id` (ctx.toggleLight). */
@@ -514,12 +609,14 @@ defineExpose({
     animate,
     toot,
     toggleLight,
+    pressKey,
     changeChannel: tvs.changeChannel,
 });
 </script>
 
 <template>
     <div
+        ref="rootEl"
         class="room-3d"
         @pointerdown.self="onBackgroundPointerDown"
         @pointerup="unlockToot"
@@ -640,6 +737,25 @@ defineExpose({
                 :aria-label="t('games.world.butt_aria')"
                 :at="buttSpot"
                 @pointerdown.prevent="onButtPointerDown"
+            />
+
+            <!-- Over the Butt too: standing at the organ, it mustn't
+                 cover the keys. -->
+            <button
+                v-for="s in organSpots"
+                :key="`${s.item.id}-${s.zone}`"
+                type="button"
+                class="organ-zone"
+                :aria-label="s.label"
+                :style="{
+                    width: `${s.width}px`,
+                    height: `${s.height}px`,
+                    transform: `translate3d(${s.left}px, ${s.top}px, 0)`,
+                    clipPath: `polygon(${s.outline})`,
+                }"
+                @pointerdown="onZonePointerDown(s, $event)"
+                @focus="onItemFocus(s.item)"
+                @click="onZoneClick(s, $event)"
             />
 
             <TootPuff
@@ -773,6 +889,27 @@ defineExpose({
 .shelf-book-title.over-cover {
     height: auto;
     background: linear-gradient(rgb(0 0 0 / 0.7), rgb(0 0 0 / 0.35));
+}
+
+/* A zone of an organ's keyboard: shaped to its keys as drawn, so it takes
+   only presses on them. Focus shades the whole zone, since an outline
+   would be clipped away. */
+.organ-zone {
+    position: absolute;
+    left: 0;
+    top: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    pointer-events: auto;
+    touch-action: manipulation;
+    cursor: pointer;
+    will-change: transform;
+}
+
+.organ-zone:focus-visible {
+    outline: none;
+    background: rgb(29 78 216 / 0.45);
 }
 
 /* Under reduced motion, a toy that was used rings rather than moves. */

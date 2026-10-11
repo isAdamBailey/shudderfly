@@ -1,5 +1,10 @@
 import { computed, reactive } from "vue";
-import { STAIRS_CLEARANCE, wallFacing } from "../scenes/roomLayout.js";
+import { organFootprint } from "../scenes/organLayout.js";
+import {
+    ROOM_SIZES,
+    STAIRS_CLEARANCE,
+    wallFacing,
+} from "../scenes/roomLayout.js";
 import { clamp, DRAG_SPEED, WALK_SPEED } from "./useGamesWorld.js";
 
 // Close enough to an interactable to use it, in world units.
@@ -12,12 +17,16 @@ export const STAND = 100;
 export const TRIGGER_REACH = 60;
 // The Butt never walks closer than this to a wall.
 export const MARGIN = 50;
+// Nor closer than this to furniture that blocks it (an organ): half its
+// own width, so its sprite never covers the thing.
+export const BLOCK_CLEARANCE = ROOM_SIZES.butt / 2;
 
 /** The spot in front of `item`, where the Butt stands to use it: a step
- * into the room off whichever wall it's on, or clear of a flight of stairs. */
+ * into the room off whichever wall it's on, or clear of a flight of stairs
+ * or anything else that says how far (`stand`: an organ's keydesk). */
 function frontOf(item) {
     const face = wallFacing(item.wall);
-    const stand = item.stairs ? STAIRS_CLEARANCE : STAND;
+    const stand = item.stairs ? STAIRS_CLEARANCE : item.stand ?? STAND;
     return {
         x: item.x + face.x * stand,
         z: (item.z ?? 0) + face.z * stand,
@@ -38,10 +47,11 @@ export function arrivalSpot(room, { spot, position } = {}) {
  * Everything a room does, DOM-free like useGamesWorld (issue #130): where
  * the Butt is on the floor ({ x, z }, z from the back wall toward the
  * open front), where it's walking to, which interactable it's near, and
- * using one when it gets there. Rooms are rectangles and furniture never
- * blocks, so walking is a straight line; only stairs, which take up the
- * floor along their wall, keep the Butt further from it. Driven by
- * `step(dt)`.
+ * using one when it gets there. Rooms are rectangles and most furniture
+ * never blocks, so walking is a straight line; stairs, which take up the
+ * floor along their wall, keep the Butt further from it, and an organ's
+ * floor is kept off (the Butt slides along its edge), so the Butt can't
+ * stand over its keys. Driven by `step(dt)`.
  *
  * `room` is the scene ({ size: { w, d }, interactables }). Options:
  * - start: { x, z } where the Butt starts.
@@ -70,10 +80,20 @@ export function useRoom(
             : MARGIN;
     const left = sideMargin("left");
     const right = sideMargin("right");
+    // Floor the Butt keeps off: each organ's, and a little round it.
+    const blocks = room.interactables
+        .filter((item) => item.type === "organ")
+        .map((item) => {
+            const f = organFootprint(item);
+            const c = BLOCK_CLEARANCE;
+            return { x0: f.x0 - c, x1: f.x1 + c, z0: f.z0 - c, z1: f.z1 + c };
+        });
+    const blocked = (x, z) =>
+        blocks.find((b) => x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1);
 
     const butt = reactive({
-        x: clampX(start?.x ?? w / 2),
-        z: clampZ(start?.z ?? d / 2),
+        // Never starting inside an organ (a spot saved before it came).
+        ...clear(clampX(start?.x ?? w / 2), clampZ(start?.z ?? d / 2)),
         facing: 1,
         bob: 0,
         walking: false,
@@ -102,10 +122,33 @@ export function useRoom(
         return clamp(z, MARGIN, d);
     }
 
+    /** Spot (x, z) in the room, off any furniture that blocks: out by the
+     * nearest edge that's still in the room. */
+    function clear(x, z) {
+        const b = blocked(x, z);
+        if (!b) return { x, z };
+        let best = { x, z };
+        let bestDistance = Infinity;
+        for (const [ox, oz] of [
+            [b.x0, z],
+            [b.x1, z],
+            [x, b.z0],
+            [x, b.z1],
+        ]) {
+            const out = { x: clampX(ox), z: clampZ(oz) };
+            const distance = (out.x - x) ** 2 + (out.z - z) ** 2;
+            if (distance < bestDistance && !blocked(out.x, out.z)) {
+                best = out;
+                bestDistance = distance;
+            }
+        }
+        return best;
+    }
+
     /** Where to stand to use `item`: in front of it, inside the room. */
     function standAt(item) {
         const front = frontOf(item);
-        return { x: clampX(front.x), z: clampZ(front.z) };
+        return clear(clampX(front.x), clampZ(front.z));
     }
 
     const distanceTo = (item) => {
@@ -171,8 +214,18 @@ export function useRoom(
         }
 
         // Against a wall, a held key goes nowhere: that isn't walking.
-        const x = clampX(butt.x + dx);
-        const z = clampZ(butt.z + dz);
+        // Into furniture, it slides along it, or stops.
+        let x = clampX(butt.x + dx);
+        let z = clampZ(butt.z + dz);
+        if (blocked(x, z)) {
+            if (!blocked(x, butt.z)) z = butt.z;
+            else if (!blocked(butt.x, z)) x = butt.x;
+            else [x, z] = [butt.x, butt.z];
+            // Stuck short of where it was going: it's got as far as it can.
+            if (target && x === butt.x && z === butt.z) {
+                arrived = !state.dragging;
+            }
+        }
         const walking = x !== butt.x || z !== butt.z;
         let changed = walking !== butt.walking;
         butt.walking = walking;
@@ -211,7 +264,7 @@ export function useRoom(
     function walkTo(x, z) {
         if (state.frozen) return;
         walkFrom = doorway();
-        target = { x: clampX(x), z: clampZ(z) };
+        target = clear(clampX(x), clampZ(z));
     }
 
     /** Walks to `item` and uses it there; uses it now if already there. */
@@ -239,7 +292,7 @@ export function useRoom(
     /** The finger is over the floor at (x, z): stroll toward it. */
     function updateDrag(x, z) {
         if (!state.dragging) return;
-        target = { x: clampX(x), z: clampZ(z) };
+        target = clear(clampX(x), clampZ(z));
     }
 
     /** Let go: the Butt finishes the stroll, and a door it lands at opens. */

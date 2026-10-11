@@ -295,8 +295,13 @@ class GamesWorldScenesTest extends TestCase
 
         $room = $scenes['cockroach-house.hall'];
         $this->assertLessThanOrEqual(0.25, $room['ambient']);
-        $this->assertSame('brick', $room['walls']['back']);
-        $this->assertSame('concrete', $room['walls']['floor']);
+        $this->assertSame('stone', $room['walls']['back']);
+        $this->assertSame('flagstones', $room['walls']['floor']);
+        // Lit by candles alone, every one flickering, and no bulbs.
+        foreach ($room['lights'] as $light) {
+            $this->assertTrue($light['flicker'] ?? false, $light['id']);
+        }
+        $this->assertEmpty(collect($room['interactables'])->where('emoji', '💡'));
         $this->assertTrue($room['crawlers']);
 
         $portrait = collect($room['interactables'])->firstWhere('id', 'portrait');
@@ -602,6 +607,56 @@ class GamesWorldScenesTest extends TestCase
         $this->assertSame($center['h'], $lamp['y']);
         $this->assertLessThan($center['w'] / 2, abs($lamp['x'] - $center['x']));
         $this->assertContains('table-lamp', array_column($hall['lights'], 'id'));
+    }
+
+    public function test_the_cockroach_house_has_a_pipe_organ_on_its_right_wall(): void
+    {
+        $room = GamesWorld::definitions()['cockroach-house.hall'];
+        $organ = collect($room['interactables'])->firstWhere('type', 'organ');
+
+        // Across the room from the way out, so a press on the keys can't
+        // be a press on the door.
+        $this->assertSame('right', $organ['wall']);
+        $this->assertSame($room['size']['w'], $organ['x']);
+        $door = collect($room['interactables'])->firstWhere('exit', true);
+        $this->assertLessThan($room['size']['w'] / 2, $door['x']);
+        $this->assertCount(count(GamesWorld::ORGAN_ZONES), $organ['zones']);
+        foreach ([$organ['label'], ...$organ['zones']] as $key) {
+            foreach (['en', 'es', 'fr'] as $locale) {
+                $this->assertTrue(Lang::has($key, $locale, false), "{$key} missing in {$locale}");
+            }
+        }
+
+        // A candle on the opposite wall, and none on the floor.
+        $side = collect($room['interactables'])->firstWhere('id', 'sconce-side');
+        $this->assertSame('sconce-side', $side['light']);
+        $this->assertLessThan(50, $side['x']);
+        $this->assertGreaterThan(0, $side['y']);
+
+        $shown = collect(GamesWorld::scenes()['cockroach-house.hall']['interactables'])->firstWhere('type', 'organ');
+        $this->assertSame('Pipe organ', $shown['label']);
+        $this->assertSame(
+            ['Pipe organ, deep notes', 'Pipe organ, low notes', 'Pipe organ, high notes', 'Pipe organ, squeaky notes'],
+            $shown['zones'],
+        );
+    }
+
+    public function test_hanks_portrait_stands_on_the_cockroach_house_mantel_over_a_fire(): void
+    {
+        $room = GamesWorld::scenes()['cockroach-house.hall'];
+        $fireplace = $room['fireplaces'][0];
+        $items = collect($room['interactables']);
+        $portrait = $items->firstWhere('id', 'portrait');
+        $fire = $items->firstWhere('id', 'fire');
+
+        $this->assertSame($fireplace['h'], $portrait['y']);
+        $this->assertSame($fireplace['x'], $portrait['x']);
+        $tribute = $items->firstWhere('id', 'tribute');
+        $this->assertSame('📜', $tribute['emoji']);
+        $this->assertSame('This house is dedicated to the memory of Hank Bailey. May your hiss live on forever.', $tribute['line']);
+        $this->assertSame('fire', $fire['light']);
+        $this->assertLessThan($fireplace['d'], $fire['z']);
+        $this->assertLessThan($fireplace['h'] - $fire['size'], $fire['y']);
     }
 
     public function test_the_radio_plays_the_family_songs(): void

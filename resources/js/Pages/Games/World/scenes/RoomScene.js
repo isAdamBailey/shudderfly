@@ -11,11 +11,14 @@ import {
 import { applyCamera, disposeTree } from "../three/useWorldRenderer.js";
 import { clockFinish, clockTexture } from "../three/clockFaces.js";
 import { MODELS } from "../three/models.js";
+import { pipeOrgan } from "../three/pipeOrgan.js";
 import { itemBox, itemPose, ROOM_SIZES, wallHeightOf } from "./roomLayout.js";
 import { bookcaseGeometry, booksMesh } from "./bookshelf.js";
 import { doorwayGeometry } from "./doorway.js";
 import { entertainmentCenterGeometry } from "./entertainmentCenter.js";
 import { exitSigns } from "./exitSign.js";
+import { fireplaceGeometry } from "./fireplace.js";
+import { ORGAN } from "./organLayout.js";
 import { floorGeometry, stairsFootprint, stairsGeometry } from "./staircase.js";
 import { createWallCrawlers } from "./wallCrawlers.js";
 
@@ -47,6 +50,10 @@ const BUTT_GLOW = 0.25;
 const LAMP_GLYPH = 44;
 // How long night takes to fall or lift when dark mode flips, s.
 const NIGHTFALL = 0.3;
+// A candle (a light marked `flicker`) wavers about its brightness, by up
+// to this share of it, a step every this many s: often enough to read as
+// a flame, seldom enough that a candlelit room isn't redrawn every frame.
+const FLICKER = { amount: 0.18, step: 0.09 };
 // A flat-screen TV: how far it stands off its wall, units.
 const SCREEN_DEPTH = 6;
 
@@ -55,7 +62,8 @@ const SCREEN_DEPTH = 6;
  * interactables }), with the Butt at `butt` ({ x, z }), in the light of
  * seasonal `theme` (at `night` in dark mode), its EXIT signs reading
  * `exitWord`. Returns { scene, camera, layout(L), sync(view, dt),
- * animate(id, move), toggleLight(id), setNight(on), dispose() }.
+ * animate(id, move), pressKey(id, zone, key), toggleLight(id),
+ * setNight(on), dispose() }.
  */
 export function createRoomScene(
     THREE,
@@ -161,6 +169,31 @@ export function createRoomScene(
         showButtGlow();
     }
 
+    // Candles' flicker: a few sines out of step, so it never repeats.
+    let flame = 0;
+    let sinceFlicker = 0;
+    const flickering = lamps.filter((lamp) => lamp.data.flicker);
+    /** Wavers each lit candle, a step at a time; whether any did. Still
+     * under reduced motion. */
+    function flicker(dt) {
+        if (reduced) return false;
+        flame += dt;
+        sinceFlicker += dt;
+        if (sinceFlicker < FLICKER.step) return false;
+        sinceFlicker = 0;
+        let any = false;
+        for (const [i, lamp] of flickering.entries()) {
+            if (!lamp.on) continue;
+            const t = flame * 9 + i * 2.1;
+            const waver =
+                (Math.sin(t) + Math.sin(t * 2.3 + 1) + Math.sin(t * 5.7)) / 3;
+            lamp.light.intensity =
+                lamp.intensity * (1 + FLICKER.amount * waver);
+            any = true;
+        }
+        return any;
+    }
+
     const lampsOf = (ids) => lamps.filter((lamp) => ids.includes(lamp.data.id));
 
     /** Gives `puppet`'s glyph its own copy of its material, able to glow in
@@ -234,13 +267,15 @@ export function createRoomScene(
     }
 
     // Stairs, open doorways (doorway.js), the Library's bookcases
-    // (bookshelf.js) and entertainment centers (entertainmentCenter.js) are
-    // built into the room, in wood coloured in their vertices; the books on
+    // (bookshelf.js), entertainment centers (entertainmentCenter.js) and
+    // fireplaces (fireplace.js) are built into the room, in wood and stone
+    // coloured in their vertices; the books on
     // the shelves are one instanced mesh.
     const shelves = room.shelves ?? [];
     const entertainment = room.entertainment ?? [];
+    const fireplaces = room.fireplaces ?? [];
     const doorways = room.interactables.filter((item) => item.open);
-    const wood = [stairs, doorways, shelves, entertainment].some(
+    const wood = [stairs, doorways, shelves, entertainment, fireplaces].some(
         (list) => list.length
     )
         ? new THREE.MeshStandardMaterial({
@@ -263,6 +298,7 @@ export function createRoomScene(
     for (const unit of entertainment) {
         woodwork(entertainmentCenterGeometry(THREE, unit));
     }
+    for (const unit of fireplaces) woodwork(fireplaceGeometry(THREE, unit));
     if (doorways.length > 0) {
         const doorway = doorwayGeometry(THREE);
         for (const item of doorways) woodwork(doorway, itemPose(item));
@@ -321,9 +357,21 @@ export function createRoomScene(
     // Each modelled thing's own switch (its setOn: a radio's dial, a
     // lamp's shade), by its id.
     const switches = new Map();
+    // Pipe organs (three/pipeOrgan.js), by id: built into their wall, but
+    // played, so they're ticked.
+    const organs = new Map();
     for (const item of room.interactables) {
         // Built into the room above, not played with.
         if (item.stairs || item.open) continue;
+        if (item.type === "organ") {
+            const organ = pipeOrgan(THREE);
+            const pose = itemPose(item);
+            organ.group.position.set(pose.x, pose.y, pose.z);
+            organ.group.rotation.y = pose.turn;
+            made.add(organ.group);
+            organs.set(item.id, organ);
+            continue;
+        }
         // A TV, or a picture: a thin panel. What you see on it is in the
         // overlay (a <video>, or the picture's <img>).
         if (item.screen || item.image) {
@@ -466,6 +514,8 @@ export function createRoomScene(
         if (view.reduced !== reduced) {
             reduced = view.reduced;
             for (const puppet of puppets) puppet.setReducedMotion(reduced);
+            // Candles stop wavering at their own brightness.
+            showLamps();
             changed = true;
         }
         if (view.camera && view.camera.x !== camera.position.x) {
@@ -492,6 +542,10 @@ export function createRoomScene(
         }
         for (const puppet of puppets) changed = puppet.tick(dt) || changed;
         if (crawlers?.tick(dt, reduced)) changed = true;
+        if (flicker(dt)) changed = true;
+        for (const organ of organs.values()) {
+            changed = organ.tick(dt, reduced) || changed;
+        }
         return changed;
     }
 
@@ -503,6 +557,11 @@ export function createRoomScene(
         /** Plays `move` on the thing `id` (a one-shot). */
         animate(id, move) {
             things.get(id)?.play(move);
+        },
+        /** Presses white key `key` of zone `zone` on organ `id`: it goes
+         * down and its pipe sounds. */
+        pressKey(id, zone, key) {
+            organs.get(id)?.press(zone * ORGAN.whiteKeys + key);
         },
         /** Switches modelled thing `id`'s own light (a radio's dial while
          * it plays). */

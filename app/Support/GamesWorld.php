@@ -70,6 +70,18 @@ final class GamesWorld
      * Butt walks (useRoom.js MARGIN). */
     public const ENTERTAINMENT_CENTER = ['w' => 380, 'h' => 120, 'd' => 36];
 
+    /** The Cockroach's fireplace (scenes/fireplace.js draws it), its size in
+     * world units: `w` along the wall, `h` to its mantel, where Hank's
+     * portrait stands, `d` deep. */
+    public const FIREPLACE = ['w' => 440, 'h' => 200, 'd' => 50];
+
+    /** Where the fire burns in that fireplace: `y` up off the hearth, `z`
+     * out from the wall. */
+    private const HEARTH_FIRE = ['y' => 6, 'z' => 20];
+
+    /** How high up the wall the Cockroach's candle sconces hang. */
+    private const SCONCE_Y = 270;
+
     /** The walls of a room a door can sit on. `back` is the far wall, facing
      * the open front; `left` and `right` are the ends. */
     public const ROOM_WALLS = ['back', 'left', 'right'];
@@ -77,9 +89,9 @@ final class GamesWorld
     /** A room's looks, by name: `walls.back` (and `walls.sides`) from WALLS,
      * `walls.floor` from FLOORS. three/roomLooks.js draws each one (a Vitest
      * test keeps the lists in step). */
-    public const WALLS = ['wallpaper-stripes', 'wallpaper-dots', 'tiles', 'brick', 'plaster'];
+    public const WALLS = ['wallpaper-stripes', 'wallpaper-dots', 'tiles', 'brick', 'plaster', 'stone'];
 
-    public const FLOORS = ['wood', 'lino', 'tiles', 'carpet', 'concrete'];
+    public const FLOORS = ['wood', 'lino', 'tiles', 'carpet', 'concrete', 'flagstones'];
 
     /** Named sounds a toy's `sound` may use: sounds.js (a Vitest test keeps
      * them in step). */
@@ -92,6 +104,11 @@ final class GamesWorld
     /** Clock faces a hall clock may wear: three/clockFaces.js (a Vitest test
      * keeps them in step). */
     public const CLOCKS = ['round', 'school', 'octagon', 'cuckoo', 'sunburst', 'arch', 'hex', 'banjo'];
+
+    /** A pipe organ's keyboard zones, deepest first: each is a button of
+     * its own, named `toys.organ_<zone>` (scenes/organLayout.js draws as
+     * many). */
+    public const ORGAN_ZONES = ['deep', 'low', 'high', 'squeaky'];
 
     /** Props modelled in 3D that an interactable's `model` may name:
      * three/models.js (a Vitest test keeps them in step). */
@@ -138,6 +155,11 @@ final class GamesWorld
         $den = 2500;
         // The table lamp beside the radio.
         $tableLamp = $den - 120;
+        // The Cockroach's fireplace, and its candles: where each burns
+        // ([x, z], up the wall at SCONCE_Y).
+        $nestW = 1000;
+        $hearth = 500;
+        $sconces = ['sconce-left' => [250, 0], 'sconce-right' => [780, 0], 'sconce-side' => [20, 260]];
 
         return [
             'road' => [
@@ -270,22 +292,43 @@ final class GamesWorld
 
             // --- The Cockroach's House: one dark room. Cockroach Fart and
             // Cockroach Fight stand on the floor. Little cockroaches crawl
-            // the back wall, the same picture as the site header.
+            // the back wall, the same picture as the site header. Dark-ages
+            // stone, lit only by flames: a fire in the hearth under Hank's
+            // portrait, and candles in sconces either side of it (the right
+            // one by the pipe organ that fills the right wall, well clear of
+            // the way out) and on the left wall. Every flame flickers.
             'cockroach-house.hall' => self::room('cockroach_house_hall', [
-                'size' => ['w' => 1000, 'd' => 480],
+                'size' => ['w' => $nestW, 'd' => 480],
                 'spawn' => ['x' => 280, 'z' => 320],
-                'walls' => ['back' => 'brick', 'sides' => 'brick', 'floor' => 'concrete'],
+                'walls' => ['back' => 'stone', 'sides' => 'stone', 'floor' => 'flagstones'],
                 'crawlers' => true,
+                'fireplaces' => [['x' => $hearth, ...self::FIREPLACE]],
                 'ambient' => 0.2,
                 'lights' => [
-                    ['id' => 'lamp', 'x' => 820, 'z' => 80, 'y' => 240, 'color' => '#fcd34d', 'intensity' => 1],
+                    self::flame('fire', $hearth, self::HEARTH_FIRE['y'], self::HEARTH_FIRE['z'], '#f97316', 1.3),
+                    ...array_map(
+                        fn ($id, $at) => self::flame($id, $at[0], self::SCONCE_Y, $at[1], '#f59e0b', 1.1),
+                        array_keys($sconces),
+                        $sconces,
+                    ),
                 ],
             ], [
                 self::roomDoor('front-door', 160, 'road', 'cockroach-house', exit: true),
-                self::picture('portrait', 500, 130, '/img/cockroach.png', 372, 200, 'cockroach_portrait'),
+                self::organ('organ', 200, $nestW),
+                // Hank, remembered over the fire, and on a scroll beside it
+                // that reads itself aloud.
+                self::picture('portrait', $hearth, self::FIREPLACE['h'], '/img/cockroach.png', 372, 200, 'cockroach_portrait'),
+                self::toy('tribute', 800, 0, '📜', 'tribute', ['y' => 110, 'size' => 70, 'move' => 'wiggle', 'line' => true]),
+                self::toy('fire', $hearth, self::HEARTH_FIRE['z'], '🔥', 'fire', ['y' => self::HEARTH_FIRE['y'], 'size' => 96, 'move' => 'wiggle', 'light' => 'fire']),
                 self::game('cockroach', 300, 180, ['size' => 110, 'cast' => 'cockroach']),
                 self::game('cockroach-fight', 700, 260, ['size' => 110, 'cast' => 'cockroach']),
-                self::lampSwitch(820, 240),
+                // The side wall's faces the room just off it, as a card
+                // turned to its wall would be seen edge on.
+                ...array_map(
+                    fn ($id, $at) => self::toy($id, $at[0], $at[1], '🕯️', 'sconce', ['y' => self::SCONCE_Y, 'size' => 50, 'move' => 'wiggle', 'light' => $id]),
+                    array_keys($sconces),
+                    $sconces,
+                ),
             ]),
         ];
     }
@@ -516,6 +559,13 @@ final class GamesWorld
         ];
     }
 
+    /** A flickering flame (a point light) at x, y, z: where its toy (a
+     * candle, a fire) burns, which the room hangs it in. */
+    private static function flame(string $id, int $x, int $y, int $z, string $color, float $intensity): array
+    {
+        return ['id' => $id, 'x' => $x, 'y' => $y, 'z' => $z, 'color' => $color, 'intensity' => $intensity, 'flicker' => true];
+    }
+
     /** A ceiling light over the middle of a Library room `$width` wide. */
     private static function ceilingLamp(int $width): array
     {
@@ -742,6 +792,28 @@ final class GamesWorld
         ];
     }
 
+    /** A pipe organ against the right wall of a room `span` wide, its
+     * middle `z` along it (three/pipeOrgan.js draws it, scenes/
+     * organLayout.js sizes it, and the Butt can't walk into it). Each of its
+     * keyboard's ORGAN_ZONES is a button of its own that plays the key it's
+     * pressed on; using the organ as a whole plays a chord. */
+    private static function organ(string $id, int $z, int $span): array
+    {
+        return [
+            'id' => $id,
+            'type' => 'organ',
+            'wall' => 'right',
+            'x' => $span,
+            'z' => $z,
+            // Where the Butt stands to play it: clear of its keydesk and
+            // pedals, the Butt's own half-width out (useRoom.js keeps it
+            // off them).
+            'stand' => 200,
+            'label' => 'messages.games.world.toys.organ',
+            'zones' => array_map(fn ($zone) => "messages.games.world.toys.organ_{$zone}", self::ORGAN_ZONES),
+        ];
+    }
+
     /** A minigame (one of MINIGAMES) played where it stands, drawn as
      * `emoji`, named by minigameKey() and explained by its `_line` as its
      * card opens. Titled like a game. */
@@ -843,6 +915,10 @@ final class GamesWorld
 
         if ($item['type'] === 'radio') {
             return [...self::translate($item), 'songs' => $tune('songs')];
+        }
+
+        if ($item['type'] === 'organ') {
+            return [...self::translate($item), 'zones' => array_map(fn ($zone) => __($zone), $item['zones'])];
         }
 
         if ($item['type'] === 'game') {
