@@ -51,7 +51,7 @@ export const TRIM = "#78350f";
 
 // The daylight in through a room's open front: a sky and ground fill and a
 // key light, by seasonal theme (HandleInertiaRequests::THEMES), "" for the
-// rest of the year. `dim` scales the room's own `ambient` (Halloween dusk).
+// rest of the year. `dim` scales the daylight (Halloween dusk).
 // A seasonal room light is an entry here.
 const DAYLIGHT = {
     "": { sky: "#fff7ed", ground: "#78350f", key: "#fde68a" },

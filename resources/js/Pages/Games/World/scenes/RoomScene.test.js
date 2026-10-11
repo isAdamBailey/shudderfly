@@ -11,7 +11,6 @@ const hall = {
     size: { w: 900, d: 500 },
     spawn: { x: 450, z: 330 },
     walls: { back: "wallpaper-stripes", floor: "wood" },
-    ambient: 0.35,
     lights: [
         {
             id: "lamp",
@@ -76,13 +75,22 @@ const view = (overrides = {}) => ({
 });
 
 describe("the room's scene graph", () => {
-    it("is lit as dimly as its data says, with one light casting shadows", () => {
-        const dim = build();
-        const bright = build({ ...hall, ambient: 1, lights: [] });
+    it("has the same daylight in every room, with one light casting shadows", () => {
+        const graph = build();
+        const other = build({
+            ...hall,
+            size: { w: 1500, d: 450 },
+            walls: { back: "stone", floor: "flagstones" },
+            // Rooms no longer set their own daylight: an old one is ignored.
+            ambient: 0.1,
+            lights: [],
+        });
         const casters = [];
-        dim.scene.traverse((o) => o.isLight && o.castShadow && casters.push(o));
+        graph.scene.traverse(
+            (o) => o.isLight && o.castShadow && casters.push(o)
+        );
 
-        expect(fill(dim)).toBeLessThan(fill(bright));
+        expect(fill(other)).toBe(fill(graph));
         expect(casters).toHaveLength(1);
     });
 

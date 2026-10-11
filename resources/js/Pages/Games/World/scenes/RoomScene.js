@@ -25,21 +25,24 @@ import { createWallCrawlers } from "./wallCrawlers.js";
 
 // The `kind: "room"` scene graph (issue #130): a dollhouse room with its
 // front wall taken away. Walls and floor come from the room's `walls` looks
-// (three/roomLooks.js); the light from its `ambient` level (daylight in
-// through the open front, the one light that casts shadows, dimmed to
-// moonlight at night) and its `lights` (lamps you can switch, all on at
-// night). Its doors and toys stand where the data puts them,
-// a toy that is a character as its cast puppet, and the Butt walks the
-// floor. It only draws: Room3D.vue owns the state (useRoom) and hands it
-// over each frame through sync().
+// (three/roomLooks.js). The daylight in through the open front (the one
+// light that casts shadows) is the same in every room: enough to see by
+// with every lamp off, dimmed to moonlight at night. Its `lights` are lamps
+// you can switch, adding to the daylight by day, all on at nightfall. Its
+// doors and toys stand where the data puts them, a toy that is a character
+// as its cast puppet, and the Butt walks the floor. It only draws:
+// Room3D.vue owns the state (useRoom) and hands it over each frame through
+// sync().
 
 const BACKGROUND = "#1c1917";
 const SKIRTING = 14; // units tall
 const CEILING_EDGE = 10; // units: the trim along the walls' tops
 const SHADOW_MAP = 1024;
-// The daylight's share of the light, at ambient 1: a sky fill and a key
-// that casts the shadows.
-const DAYLIGHT = { fill: 2.2, key: 2 };
+// The daylight's share of the light: a sky fill and a key that casts the
+// shadows, at `level` in every room (the Poop's House's, which got it
+// right). Enough by day to see by with the lamps off; at night (NIGHT.dim)
+// dark enough that the lamps are what light it.
+const DAYLIGHT_INTENSITY = { fill: 2.2, key: 2, level: 0.7 };
 // Lamps fall off with distance (decay 1): this scales an intensity so a
 // lamp has it at about this many units away.
 const LAMP_REACH = 250;
@@ -61,7 +64,7 @@ const SCREEN_DEPTH = 6;
 const PICTURE_BACKING = "#1c1410";
 
 /**
- * Builds a room from its scene data (`room`: { size, walls, ambient, lights,
+ * Builds a room from its scene data (`room`: { size, walls, lights,
  * photos, interactables }), with the Butt at `butt` ({ x, z }), in the light of
  * seasonal `theme` (at `night` in dark mode), its EXIT signs reading
  * `exitWord`. Returns { scene, camera, layout(L), sync(view, dt),
@@ -96,7 +99,8 @@ export function createRoomScene(
     // --- Light ---------------------------------------------------------------
 
     const daylight = roomDaylight(theme);
-    const ambient = (room.ambient ?? 1) * (daylight.dim ?? 1);
+    // Dimmed by the season's dusk (Halloween), the same all visit.
+    const day = DAYLIGHT_INTENSITY.level * (daylight.dim ?? 1);
     const fill = new THREE.HemisphereLight();
     const key = new THREE.DirectionalLight();
     made.add(fill);
@@ -125,9 +129,9 @@ export function createRoomScene(
         fill.groundColor
             .set(daylight.ground)
             .lerp(scratch.set(NIGHT.ground), toward);
-        fill.intensity = ambient * DAYLIGHT.fill * dim;
+        fill.intensity = DAYLIGHT_INTENSITY.fill * day * dim;
         key.color.set(daylight.key).lerp(scratch.set(NIGHT.key), toward);
-        key.intensity = ambient * DAYLIGHT.key * dim;
+        key.intensity = DAYLIGHT_INTENSITY.key * day * dim;
         showButtGlow();
     }
 

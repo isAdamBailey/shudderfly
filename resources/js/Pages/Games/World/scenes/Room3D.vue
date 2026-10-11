@@ -70,11 +70,8 @@ const page = usePage();
 const dark = useDarkMode();
 
 // Pictures and photos are <img>s over the canvas, out of the scene's light:
-// dimmed to sit in a dim room (a candlelit one, or any at night) rather
-// than glow in it.
-const pictureLight = computed(() =>
-    dark.value ? 0.6 : Math.min(1, 0.55 + (props.scene.ambient ?? 1))
-);
+// dimmed at night to sit in the dark room rather than glow in it.
+const pictureLight = computed(() => (dark.value ? 0.6 : 1));
 
 const prefersReducedMotion = usePreferredReducedMotion();
 const reduced = computed(() => prefersReducedMotion.value === "reduce");
