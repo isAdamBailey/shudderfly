@@ -10,7 +10,7 @@ import {
 } from "../three/roomLooks.js";
 import { applyCamera, disposeTree } from "../three/useWorldRenderer.js";
 import { clockFinish, clockTexture } from "../three/clockFaces.js";
-import { radioLook } from "../three/antiqueRadio.js";
+import { MODELS } from "../three/models.js";
 import { itemBox, itemPose, ROOM_SIZES, wallHeightOf } from "./roomLayout.js";
 import { bookcaseGeometry, booksMesh } from "./bookshelf.js";
 import { doorwayGeometry } from "./doorway.js";
@@ -145,8 +145,10 @@ export function createRoomScene(
         made.add(light);
         return { data, light, intensity, on: true, bulb: false };
     });
-    // Glyphs that glow while any of their lamps is on: { lamps, material }.
+    // Things that glow while any of their lamps is on: { lamps, set(on) }.
     const glows = [];
+    // Glyph materials copied to glow (glowing()), freed with the room.
+    const glowMaterials = [];
 
     function showLamps() {
         for (const lamp of lamps) {
@@ -154,7 +156,7 @@ export function createRoomScene(
         }
         for (const glow of glows) {
             const on = glow.lamps.some((lamp) => lamp.on);
-            glow.material.emissiveIntensity = on ? BULB_ON : 0;
+            glow.set(on);
         }
         showButtGlow();
     }
@@ -162,7 +164,7 @@ export function createRoomScene(
     const lampsOf = (ids) => lamps.filter((lamp) => ids.includes(lamp.data.id));
 
     /** Gives `puppet`'s glyph its own copy of its material, able to glow in
-     * `color`, named `name`. */
+     * `color`, named `name`; switches its glow. */
     function glowing(puppet, color, name) {
         let glyph = null;
         puppet.body.traverse((node) => {
@@ -174,6 +176,13 @@ export function createRoomScene(
         glyph.material = lit;
         glyph.name = name;
         return lit;
+    }
+
+    /** A glow switch for `puppet`'s glyph, in `color`. */
+    function glowSwitch(puppet, color) {
+        const material = glowing(puppet, color, "bulb");
+        glowMaterials.push(material);
+        return (on) => (material.emissiveIntensity = on ? BULB_ON : 0);
     }
 
     // --- Box -----------------------------------------------------------------
@@ -309,6 +318,9 @@ export function createRoomScene(
     // --- Things in the room and the Butt -------------------------------------
 
     const things = new Map();
+    // Each modelled thing's own switch (its setOn: a radio's dial, a
+    // lamp's shade), by its id.
+    const switches = new Map();
     for (const item of room.interactables) {
         // Built into the room above, not played with.
         if (item.stairs || item.open) continue;
@@ -322,10 +334,17 @@ export function createRoomScene(
         // Hung on the back wall (up it, against it): no shadow under it.
         // One standing on something (a radio on its cabinet) has one.
         const shadows = !((item.y ?? 0) > 0 && !item.z);
-        const puppet = item.cast
+        // A prop modelled in 3D (three/models.js), lit like the room.
+        const model = MODELS[item.model]?.(THREE) ?? null;
+        // A lamp's own light drives its glow (below), so only the others
+        // are switched by id.
+        if (model?.userData.setOn && !item.light) {
+            switches.set(item.id, model.userData.setOn);
+        }
+        const puppet = model
+            ? kit.modelMesh(model, { size, shadows, moves: CAST_MOVES })
+            : item.cast
             ? kit.castMesh(item.cast, { size, shadows })
-            : item.type === "radio"
-            ? antiqueRadio(size, shadows)
             : item.face
             ? kit.paintedMesh(clockTexture(THREE, item.face), {
                   size,
@@ -339,19 +358,24 @@ export function createRoomScene(
         const pose = itemPose(item);
         puppet.group.position.set(pose.x, pose.y, pose.z);
         puppet.group.rotation.y = pose.turn;
-        // A switch for one lamp is its bulb, and the light sits on it; one
-        // for several (`light: [ids]`) glows with them where it is.
+        // A switch for one lamp is its bulb, and the light sits on it (in
+        // a modelled lamp, at its `bulb`); one for several (`light: [ids]`)
+        // glows with them where it is. A model lights up its own way.
         const switched = lampsOf([item.light ?? []].flat());
         if (switched.length > 0) {
             glows.push({
                 lamps: switched,
-                material: glowing(puppet, switched[0].data.color, "bulb"),
+                // A model lights up its own way, or not at all: its last
+                // mesh isn't a glyph to glow.
+                set: model
+                    ? model.userData.setOn ?? (() => {})
+                    : glowSwitch(puppet, switched[0].data.color),
             });
             if (typeof item.light === "string") {
                 switched[0].bulb = true;
                 switched[0].light.position.set(
                     pose.x,
-                    pose.y + size / 2,
+                    pose.y + size * (model?.userData.bulb ?? 0.5),
                     pose.z
                 );
             }
@@ -372,7 +396,7 @@ export function createRoomScene(
             puppet.group.position.set(data.x, data.y - LAMP_GLYPH / 2, data.z);
             glows.push({
                 lamps: [lamp],
-                material: glowing(puppet, data.color, "bulb"),
+                set: glowSwitch(puppet, data.color),
             });
             scene.add(puppet.group);
             return puppet;
@@ -385,17 +409,6 @@ export function createRoomScene(
     const buttGlow = glowing(butt, "#ffffff", "butt-glow");
     showDaylight(night);
     showLamps();
-
-    /** The radio, an old wooden one, its dial lit from behind. */
-    function antiqueRadio(size, shadows) {
-        const { texture, ...look } = radioLook(THREE);
-        return kit.paintedMesh(texture, {
-            size,
-            shadows,
-            moves: CAST_MOVES,
-            ...look,
-        });
-    }
 
     /** A thin panel on its wall, `color`: a TV's screen or a picture's
      * backing. What it shows is in the overlay. */
@@ -491,6 +504,11 @@ export function createRoomScene(
         animate(id, move) {
             things.get(id)?.play(move);
         },
+        /** Switches modelled thing `id`'s own light (a radio's dial while
+         * it plays). */
+        setOn(id, on) {
+            switches.get(id)?.(on);
+        },
         /** Switches room light `id` (or lights `[ids]`, together: off if
          * any is on); whether they're now on. */
         toggleLight(id) {
@@ -514,7 +532,7 @@ export function createRoomScene(
             books?.dispose();
             signs.dispose();
             disposeTree(made);
-            for (const { material } of glows) material.dispose();
+            for (const material of glowMaterials) material.dispose();
             buttGlow.dispose();
             for (const puppet of [...puppets, ...decorations, ...fixtures]) {
                 puppet.dispose();

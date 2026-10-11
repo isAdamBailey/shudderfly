@@ -430,7 +430,14 @@ function focusStage() {
     stageEl.value?.focus({ preventScroll: true });
 }
 
-const stage = { beginGesture, resetScroll, focus: focusStage, renderer };
+// `radioOn(songs)`: whether a radio's songs are playing, for its dial.
+const stage = {
+    beginGesture,
+    resetScroll,
+    focus: focusStage,
+    renderer,
+    radioOn: radio.isOn,
+};
 </script>
 
 <template>

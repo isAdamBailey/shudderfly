@@ -271,13 +271,35 @@ describe("castMesh", () => {
         expect(spy).toHaveBeenCalled();
     });
 
-    it("frees a painted prop's own textures when the prop goes", () => {
+    it("frees a painted prop's own texture when the prop goes", () => {
         const k = kit();
         const texture = new THREE.Texture();
-        const glow = new THREE.Texture();
-        const puppet = k.paintedMesh(texture, { glow, glowColor: "#ffb347" });
-        const spies = [texture, glow].map((t) => vi.spyOn(t, "dispose"));
+        const puppet = k.paintedMesh(texture);
+        const spy = vi.spyOn(texture, "dispose");
 
+        puppet.dispose();
+        expect(spy).toHaveBeenCalledTimes(1);
+        k.dispose();
+        expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it("sizes a modelled prop and frees its meshes when it goes", () => {
+        const k = kit();
+        const texture = new THREE.Texture();
+        const model = new THREE.Group();
+        const mesh = new THREE.Mesh(
+            new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0),
+            new THREE.MeshStandardMaterial({ map: texture })
+        );
+        model.add(mesh);
+        const puppet = k.modelMesh(model, { size: 80 });
+        puppet.group.updateMatrixWorld(true);
+        const box = new THREE.Box3().setFromObject(model);
+        expect(box.max.y - box.min.y).toBeCloseTo(80);
+
+        const spies = [mesh.geometry, mesh.material, texture].map((t) =>
+            vi.spyOn(t, "dispose")
+        );
         puppet.dispose();
         for (const spy of spies) expect(spy).toHaveBeenCalledTimes(1);
         k.dispose();

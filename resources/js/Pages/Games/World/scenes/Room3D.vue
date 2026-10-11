@@ -142,6 +142,7 @@ onMounted(() => {
         night: dark.value,
         exitWord: t("games.world.exit_sign"),
     });
+    showRadios(radiosOn.value);
     const frame = framed();
     if (frame) graph.layout(frame);
     renderer.show(graph.scene, graph.camera);
@@ -161,6 +162,20 @@ onMounted(() => {
 });
 
 watch(dark, (on) => graph?.setNight(on));
+
+// Each radio's dial is lit while one of its songs plays (the world's own
+// radio says, through the stage).
+const radiosOn = computed(() =>
+    props.scene.interactables
+        .filter((item) => item.type === "radio")
+        .map((item) => [item.id, props.stage.radioOn?.(item.songs) ?? false])
+);
+function showRadios(radios) {
+    if (!graph) return;
+    for (const [id, on] of radios) graph.setOn(id, on);
+    props.stage.renderer.invalidate();
+}
+watch(radiosOn, showRadios);
 
 onBeforeUnmount(() => {
     stopFrames?.();

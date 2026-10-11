@@ -49,6 +49,23 @@ function defaultCanvas(px) {
     return canvas;
 }
 
+/** Frees every geometry, material and texture under `root`, each once
+ * (parts of a model share them). */
+function freeTree(root) {
+    const owned = new Set();
+    root.traverse((node) => {
+        if (!node.isMesh) return;
+        owned.add(node.geometry);
+        for (const material of [node.material].flat()) {
+            owned.add(material);
+            for (const value of Object.values(material)) {
+                if (value?.isTexture) owned.add(value);
+            }
+        }
+    });
+    for (const thing of owned) thing.dispose();
+}
+
 /**
  * The cast kit for one renderer: puppets for cast members and for plain emoji
  * props, sharing one texture and one material per glyph and one geometry for
@@ -65,6 +82,7 @@ export function createCastKit(
 ) {
     const materials = new Map();
     const pictures = [];
+    const models = new Set();
     const plane = new THREE.PlaneGeometry(1, 1);
     const ground = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
     const sphere = new THREE.SphereGeometry(1, 28, 20);
@@ -268,6 +286,7 @@ export function createCastKit(
     function puppet({
         glyph,
         picture = null,
+        model = null,
         fit = "glyph",
         moves,
         size,
@@ -296,6 +315,11 @@ export function createCastKit(
         if (fit === "butt") {
             figure = buttFigure(shadows);
             bodyInner.add(figure);
+        } else if (model) {
+            model.traverse((node) => {
+                if (node.isMesh && !shadows) node.castShadow = false;
+            });
+            bodyInner.add(model);
         } else if (glyph || picture) {
             glyphMesh = new THREE.Mesh(plane, picture ?? glyphMaterial(glyph));
             glyphMesh.castShadow = shadows;
@@ -322,6 +346,8 @@ export function createCastKit(
             if (figure) {
                 figure.scale.set(mirror * s, s, s);
                 figure.position.set(0, figure.userData.foot * s, 0);
+            } else if (model) {
+                model.scale.set(mirror * s, s, s);
             } else if (glyphMesh) {
                 glyphMesh.scale.set(
                     (mirror * s) / GLYPH_FILL,
@@ -536,8 +562,7 @@ export function createCastKit(
         },
 
         /** A prop painted onto its own texture (a clock face), with the same
-         * moves as an emoji prop. A `glow` texture lights parts of it from
-         * within (a radio's dial), tinted `glowColor`. Its dispose() frees
+         * moves as an emoji prop. Its dispose() frees
          * the textures with the material (or the kit's, if it outlives it). */
         paintedMesh(
             texture,
@@ -547,8 +572,6 @@ export function createCastKit(
                 moves = [],
                 roughness = 0.8,
                 metalness = 0,
-                glow = null,
-                glowColor = "#ffffff",
             } = {}
         ) {
             const material = new THREE.MeshStandardMaterial({
@@ -557,12 +580,6 @@ export function createCastKit(
                 side: THREE.DoubleSide,
                 roughness,
                 metalness,
-                ...(glow
-                    ? {
-                          emissiveMap: glow,
-                          emissive: new THREE.Color(glowColor),
-                      }
-                    : {}),
             });
             pictures.push(material);
             const painted = puppet({ picture: material, moves, size, shadows });
@@ -573,10 +590,25 @@ export function createCastKit(
                 remove();
                 pictures.splice(pictures.indexOf(material), 1);
                 material.map?.dispose();
-                material.emissiveMap?.dispose();
                 material.dispose();
             };
             return painted;
+        },
+
+        /** A prop modelled in 3D (`model`: one unit tall, standing on y = 0,
+         * facing +z), lit like the room around it, with the same moves as
+         * an emoji prop. Its meshes are its own: its dispose() frees them
+         * (or the kit's, if it outlives it). */
+        modelMesh(model, { size = 64, shadows = true, moves = [] } = {}) {
+            models.add(model);
+            const modelled = puppet({ model, moves, size, shadows });
+            const remove = modelled.dispose;
+            modelled.dispose = () => {
+                remove();
+                models.delete(model);
+                freeTree(model);
+            };
+            return modelled;
         },
 
         dispose() {
@@ -587,10 +619,11 @@ export function createCastKit(
             materials.clear();
             for (const material of pictures) {
                 material.map?.dispose();
-                material.emissiveMap?.dispose();
                 material.dispose();
             }
             pictures.length = 0;
+            for (const model of models) freeTree(model);
+            models.clear();
             blobMaterial?.map?.dispose();
             blobMaterial?.dispose();
             blobMaterial = null;

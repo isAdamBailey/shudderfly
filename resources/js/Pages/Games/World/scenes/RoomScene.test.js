@@ -358,10 +358,21 @@ describe("the room's scene graph", () => {
         graph.dispose();
     });
 
-    it("stands an antique radio, its dial lit, on an entertainment center", () => {
+    it("stands a modelled radio and table lamp on an entertainment center, each lighting up", () => {
         const den = {
             ...hall,
             entertainment: [{ x: 300, w: 380, h: 120, d: 36 }],
+            lights: [
+                ...hall.lights,
+                {
+                    id: "table-lamp",
+                    x: 180,
+                    z: 16,
+                    y: 190,
+                    color: "#ffd58a",
+                    intensity: 1.1,
+                },
+            ],
             interactables: [
                 ...hall.interactables,
                 {
@@ -372,20 +383,50 @@ describe("the room's scene graph", () => {
                     y: 120,
                     size: 100,
                     emoji: "📻",
+                    model: "radio",
+                },
+                {
+                    id: "table-lamp",
+                    type: "toy",
+                    x: 180,
+                    z: 16,
+                    y: 120,
+                    size: 110,
+                    model: "table-lamp",
+                    light: "table-lamp",
                 },
             ],
         };
         const graph = build(den);
-        const radio = graph.scene
-            .getObjectsByProperty("isMesh", true)
-            // Its own glow map: a lit switch glows by its picture instead.
-            .find(
-                (m) =>
-                    m.material.emissiveMap &&
-                    m.material.emissiveMap !== m.material.map
-            );
-        expect(radio).toBeTruthy();
-        expect(radio.material.map).toBeTruthy();
+        const meshes = graph.scene.getObjectsByProperty("isMesh", true);
+        // Modelled, not a card: a lacquered cabinet the lamps fall on.
+        expect(meshes.some((m) => m.material.clearcoat > 0)).toBe(true);
+        const dial = meshes.find(
+            (m) =>
+                m.material.emissiveMap && m.geometry.type === "CircleGeometry"
+        ).material;
+        expect(dial.emissiveIntensity).toBe(0);
+        graph.setOn("radio", true);
+        expect(dial.emissiveIntensity).toBeGreaterThan(0);
+        graph.setOn("radio", false);
+        expect(dial.emissiveIntensity).toBe(0);
+
+        // The table lamp's shade glows while its light is on, which hangs
+        // inside it.
+        const shade = meshes.find(
+            (m) =>
+                m.geometry.type === "CylinderGeometry" &&
+                m.material.emissive &&
+                m.material.side === THREE.DoubleSide
+        ).material;
+        const light = graph.scene
+            .getObjectsByProperty("isPointLight", true)
+            .find((l) => l.position.x === 180);
+        expect(light.position.y).toBeGreaterThan(120 + 110 * 0.5);
+        expect(shade.emissiveIntensity).toBeGreaterThan(0);
+        graph.toggleLight("table-lamp");
+        expect(shade.emissiveIntensity).toBe(0);
+        expect(light.intensity).toBe(0);
         const center = graph.scene
             .getObjectsByProperty("isMesh", true)
             .filter((m) => m.geometry.attributes.color)

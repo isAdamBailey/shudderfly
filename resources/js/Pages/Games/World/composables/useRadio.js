@@ -5,7 +5,8 @@ import { useMusicPlayer } from "@/composables/useMusicPlayer";
  * shut, so the world isn't covered). `tune(songs)` plays the next of a
  * radio's songs: the first if none of them is on, and after the last one
  * playing, it switches off. The songs become the player's list, so a song
- * that ends moves on to the next by itself.
+ * that ends moves on to the next by itself. `isOn(songs)`: whether one of
+ * a radio's songs is playing (reactive), so its dial can light.
  */
 export function useRadio(player = musicPlayer()) {
     function tune(songs) {
@@ -22,7 +23,13 @@ export function useRadio(player = musicPlayer()) {
         player.playSong(songs[(at + 1) % songs.length], { openFlyout: false });
     }
 
-    return { tune };
+    function isOn(songs) {
+        if (!player || !player.isPlaying.value) return false;
+        const id = player.currentSong.value?.id;
+        return Boolean(songs?.some((song) => song.id === id));
+    }
+
+    return { tune, isOn };
 }
 
 /** The site's music player, or none where it can't start (it reads

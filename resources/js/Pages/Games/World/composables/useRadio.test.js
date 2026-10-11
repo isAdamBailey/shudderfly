@@ -72,5 +72,24 @@ describe("useRadio", () => {
 
     it("is silent with no music player", () => {
         expect(() => useRadio(null).tune(songs)).not.toThrow();
+        expect(useRadio(null).isOn(songs)).toBe(false);
+    });
+
+    it("is on only while one of its songs plays", () => {
+        expect(
+            useRadio(fakePlayer({ current: songs[1], playing: true })).isOn(
+                songs
+            )
+        ).toBe(true);
+        expect(
+            useRadio(fakePlayer({ current: songs[1], playing: false })).isOn(
+                songs
+            )
+        ).toBe(false);
+        expect(
+            useRadio(fakePlayer({ current: { id: 9 }, playing: true })).isOn(
+                songs
+            )
+        ).toBe(false);
     });
 });

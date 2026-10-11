@@ -230,13 +230,22 @@ class GamesWorldScenesTest extends TestCase
         $this->assertCount(GamesWorld::ROOM_LIGHTS_MAX, $lights);
     }
 
+    public function test_modelled_things_are_known_models(): void
+    {
+        foreach (GamesWorld::definitions() as $sceneId => $scene) {
+            foreach (collect($scene['interactables'])->whereNotNull('model') as $item) {
+                $this->assertContains($item['model'], GamesWorld::MODELS, "{$sceneId}.{$item['id']}");
+            }
+        }
+    }
+
     public function test_toys_play_known_moves_and_toot_as_the_cast(): void
     {
         foreach (GamesWorld::definitions() as $sceneId => $scene) {
             foreach (collect($scene['interactables'])->where('type', 'toy') as $toy) {
                 $where = "{$sceneId}.{$toy['id']}";
-                // Drawn as a character, an emoji, a painted clock face, or a picture.
-                $ways = (int) isset($toy['cast']) + (int) isset($toy['emoji']) + (int) isset($toy['face']) + (int) isset($toy['image']);
+                // Drawn as a character, an emoji, a painted clock face, a picture, or a model.
+                $ways = (int) isset($toy['cast']) + (int) isset($toy['emoji']) + (int) isset($toy['face']) + (int) isset($toy['image']) + (int) isset($toy['model']);
                 $this->assertSame(1, $ways, $where);
                 if (isset($toy['image'])) {
                     $this->assertNotSame('', $toy['image']['src'] ?? '', $where);
@@ -578,6 +587,21 @@ class GamesWorldScenesTest extends TestCase
         $this->assertSame($center['h'], $radio['y']);
         $this->assertLessThan($center['d'], $radio['z']);
         $this->assertNull(collect(GamesWorld::scenes()['house.kitchen']['interactables'])->firstWhere('type', 'radio'));
+        $this->assertSame('radio', $radio['model']);
+    }
+
+    public function test_a_table_lamp_on_the_entertainment_center_switches_its_own_light(): void
+    {
+        $hall = GamesWorld::scenes()['house.hall'];
+        $center = $hall['entertainment'][0];
+        $lamp = collect($hall['interactables'])->firstWhere('id', 'table-lamp');
+
+        $this->assertSame('table-lamp', $lamp['model']);
+        $this->assertSame('table-lamp', $lamp['light']);
+        $this->assertSame('Table lamp', $lamp['label']);
+        $this->assertSame($center['h'], $lamp['y']);
+        $this->assertLessThan($center['w'] / 2, abs($lamp['x'] - $center['x']));
+        $this->assertContains('table-lamp', array_column($hall['lights'], 'id'));
     }
 
     public function test_the_radio_plays_the_family_songs(): void

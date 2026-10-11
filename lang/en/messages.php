@@ -735,6 +735,7 @@ return [
     'games.world.toys.clock_hex' => 'Maple clock',
     'games.world.toys.clock_banjo' => 'Banjo clock',
     'games.world.toys.lamp' => 'Lamp',
+    'games.world.toys.table_lamp' => 'Table lamp',
     'games.world.toys.light_switch' => 'Light switch',
     'games.world.toys.sprout_pot' => 'Pot of sprouts',
     'games.world.toys.sprout_pot_line' => 'Blub blub! Sprout soup. Toot alert!',

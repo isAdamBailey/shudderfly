@@ -93,6 +93,10 @@ final class GamesWorld
      * keeps them in step). */
     public const CLOCKS = ['round', 'school', 'octagon', 'cuckoo', 'sunburst', 'arch', 'hex', 'banjo'];
 
+    /** Props modelled in 3D that an interactable's `model` may name:
+     * three/models.js (a Vitest test keeps them in step). */
+    public const MODELS = ['radio', 'table-lamp'];
+
     /** The moves a toy may play: CAST_MOVES in characters.js (a Vitest test
      * keeps them in step). A prop can play any; a cast member only its own. */
     public const MOVES = [
@@ -132,6 +136,8 @@ final class GamesWorld
         $entry = intdiv($hallW, 2);
         // Where the radio stands on its entertainment center.
         $den = 2500;
+        // The table lamp beside the radio.
+        $tableLamp = $den - 120;
 
         return [
             'road' => [
@@ -157,10 +163,13 @@ final class GamesWorld
                 'walls' => ['back' => 'wallpaper-stripes', 'floor' => 'wood'],
                 // Under the clocks past the front door, with the radio on it.
                 'entertainment' => [self::entertainmentCenter($den)],
-                // A dim hall: low daylight, and a lamp you can switch.
+                // A dim hall: low daylight, a lamp you can switch, and the
+                // table lamp by the radio (its light hangs in its shade).
                 'ambient' => 0.35,
                 'lights' => [
                     ['id' => 'lamp', 'x' => $entry + 300, 'z' => 240, 'y' => 200, 'color' => '#fbbf24', 'intensity' => 1.4],
+                    // Hung in the lamp's shade by the room (RoomScene.js), wherever this says.
+                    ['id' => 'table-lamp', 'x' => $tableLamp, 'z' => 16, 'y' => 190, 'color' => '#ffd58a', 'intensity' => 1.1],
                 ],
             ], [
                 // Every door on the back wall, facing the camera, so a phone
@@ -186,7 +195,8 @@ final class GamesWorld
                 self::clock(6, 2400, 'sunburst', 'bell', 280),
                 self::clock(7, 2600, 'octagon', 'tick', 240),
                 self::clock(8, 2800, 'arch', 'bell', 270),
-                self::radio('radio', $den, 16, self::ENTERTAINMENT_CENTER['h'], 100),
+                self::radio('radio', $den, 16, self::ENTERTAINMENT_CENTER['h'], 120),
+                self::toy('table-lamp', $tableLamp, 16, null, 'table_lamp', ['y' => self::ENTERTAINMENT_CENTER['h'], 'size' => 110, 'model' => 'table-lamp', 'move' => 'wiggle', 'light' => 'table-lamp']),
                 self::roomDoor('bathroom-door', $hallW - 160, 'house.bathroom', 'hall-door', 'house_bathroom'),
                 self::toy('lamp-switch', $entry + 300, 240, '💡', 'lamp', ['move' => 'bounce', 'light' => 'lamp']),
                 self::resident('strawberry', $entry - 220, 280, ['move' => 'hop', 'toot' => 'strawberry']),
@@ -668,8 +678,9 @@ final class GamesWorld
     }
 
     /** A prop to play with, named `toys.<key>`; with `line: true` in `$does`
-     * it says `toys.<key>_line`. */
-    private static function toy(string $id, int $x, int $z, string $emoji, string $key, array $does = []): array
+     * it says `toys.<key>_line`. Drawn as `emoji`, or with none, as what
+     * `$does` says (a `model`). */
+    private static function toy(string $id, int $x, int $z, ?string $emoji, string $key, array $does = []): array
     {
         $line = $does['line'] ?? false;
         unset($does['line']);
@@ -679,7 +690,7 @@ final class GamesWorld
             'type' => 'toy',
             'x' => $x,
             'z' => $z,
-            'emoji' => $emoji,
+            ...($emoji !== null ? ['emoji' => $emoji] : []),
             'label' => "messages.games.world.toys.{$key}",
             ...$does,
             ...($line ? ['line' => "messages.games.world.toys.{$key}_line"] : []),
@@ -725,6 +736,7 @@ final class GamesWorld
             'y' => $y,
             'size' => $size,
             'emoji' => '📻',
+            'model' => 'radio',
             'label' => 'messages.games.world.toys.radio',
             'line' => 'messages.games.world.toys.radio_line',
         ];
