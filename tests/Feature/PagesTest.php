@@ -9,6 +9,7 @@ use App\Models\Page;
 use App\Models\SiteSetting;
 use App\Models\Song;
 use App\Models\User;
+use App\Services\ContentBlockService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Http\UploadedFile;
@@ -1890,5 +1891,22 @@ class PagesTest extends TestCase
             'page_id' => $page->id,
             'message' => __('messages.page_shared', ['media' => 'screenshot', 'book' => $book->title]),
         ]);
+    }
+
+    public function test_has_image_stays_inside_the_conditions_before_it(): void
+    {
+        SiteSetting::updateOrCreate(['key' => ContentBlockService::SETTING], ['value' => true]);
+        $book = Book::factory()->create();
+        $photo = Page::factory()->create(['book_id' => $book->id, 'media_path' => 'https://cdn.test/a.jpg']);
+        Page::factory()->create(['book_id' => $book->id, 'media_path' => 'https://cdn.test/b.mp4']);
+        Page::factory()->create(['book_id' => $book->id, 'media_path' => 'https://cdn.test/c.webp', 'blocked' => true]);
+        // Another book's photo, and a blocked one: Eloquent groups a scope's ORs, so neither gets in.
+        Page::factory()->create(['media_path' => 'https://cdn.test/d.png']);
+        Page::factory()->create(['media_path' => 'https://cdn.test/e.png', 'blocked' => true]);
+
+        $this->assertSame(
+            [$photo->id],
+            Page::notBlocked()->where('book_id', $book->id)->hasImage()->pluck('id')->all(),
+        );
     }
 }

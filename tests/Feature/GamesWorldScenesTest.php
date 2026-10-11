@@ -12,6 +12,8 @@ use App\Models\Song;
 use App\Services\ContentBlockService;
 use App\Support\GamesWorld;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Lang;
 use Tests\TestCase;
 
@@ -572,7 +574,7 @@ class GamesWorldScenesTest extends TestCase
         $this->assertSame([], $this->tv()['channels']);
         $this->assertSame(__('messages.games.world.toys.tv_line'), $this->tv()['line']);
 
-        Page::factory()->count(GamesWorld::TV_CHANNELS + 2)->create(['media_path' => 'https://cdn.test/v.mp4', 'media_poster' => 'https://cdn.test/v.jpg']);
+        $this->videos(GamesWorld::TV_CHANNELS + 2);
 
         $this->assertCount(GamesWorld::TV_CHANNELS, $this->tv()['channels']);
     }
@@ -694,5 +696,90 @@ class GamesWorldScenesTest extends TestCase
         SiteSetting::updateOrCreate(['key' => 'music_enabled'], ['value' => false]);
 
         $this->assertSame([], $this->radio()['songs']);
+    }
+
+    /** `$count` videos the TV can show. */
+    private function videos(int $count): void
+    {
+        Page::factory()->count($count)->create(['media_path' => 'https://cdn.test/v.mp4', 'media_poster' => 'https://cdn.test/v.jpg']);
+    }
+
+    /** The random-order queries run while `$callback` does. */
+    private function randomQueries(callable $callback): array
+    {
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $callback();
+        DB::disableQueryLog();
+
+        return array_filter(
+            array_column(DB::getQueryLog(), 'query'),
+            fn ($sql) => preg_match('/\brand(om)?\(\)/i', $sql),
+        );
+    }
+
+    public function test_the_tv_and_radio_keep_the_same_picks_all_day_and_change_the_next(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 10, 11, 9, 0, 0, config('app.local_timezone')));
+        $this->videos(GamesWorld::TV_CHANNELS * 4);
+        Song::factory()->count(GamesWorld::RADIO_STATIONS * 4)->create();
+
+        $channels = array_column($this->tv()['channels'], 'id');
+        $songs = array_column($this->radio()['songs'], 'id');
+        $this->assertCount(GamesWorld::TV_CHANNELS, $channels);
+
+        // Same set, same order, later that day; a second visit draws no
+        // random query, only the lookup by id.
+        Carbon::setTestNow(Carbon::create(2026, 10, 11, 23, 30, 0, config('app.local_timezone')));
+        $this->assertSame([], $this->randomQueries(function () use ($channels, $songs) {
+            $this->assertSame($channels, array_column($this->tv()['channels'], 'id'));
+            $this->assertSame($songs, array_column($this->radio()['songs'], 'id'));
+        }));
+
+        // After midnight in Los Angeles, a fresh pick.
+        Carbon::setTestNow(Carbon::create(2026, 10, 12, 0, 30, 0, config('app.local_timezone')));
+        $this->assertNotEmpty($this->randomQueries(function () use (&$next) {
+            $next = array_column($this->tv()['channels'], 'id');
+        }));
+        $this->assertNotSame($channels, $next);
+        $this->assertNotSame($songs, array_column($this->radio()['songs'], 'id'));
+    }
+
+    public function test_what_is_blocked_or_deleted_during_the_day_drops_out_of_the_picks(): void
+    {
+        SiteSetting::updateOrCreate(['key' => ContentBlockService::SETTING], ['value' => true]);
+        $this->videos(GamesWorld::TV_CHANNELS);
+        Song::factory()->count(GamesWorld::RADIO_STATIONS)->create();
+        $channels = array_column($this->tv()['channels'], 'id');
+        $songs = array_column($this->radio()['songs'], 'id');
+        $blocked = array_shift($channels);
+        $deleted = array_shift($songs);
+
+        Page::whereKey($blocked)->update(['blocked' => true]);
+        Song::destroy($deleted);
+
+        $this->assertSame($channels, array_column($this->tv()['channels'], 'id'));
+        $this->assertSame($songs, array_column($this->radio()['songs'], 'id'));
+    }
+
+    public function test_the_radio_plays_again_once_the_music_is_back_on(): void
+    {
+        SiteSetting::updateOrCreate(['key' => 'music_enabled'], ['value' => false]);
+        $song = Song::factory()->create();
+        $this->assertSame([], $this->radio()['songs']);
+
+        SiteSetting::updateOrCreate(['key' => 'music_enabled'], ['value' => true]);
+
+        $this->assertSame([$song->id], array_column($this->radio()['songs'], 'id'));
+    }
+
+    public function test_a_short_pick_is_not_kept_so_later_songs_join_the_radio(): void
+    {
+        $morning = Song::factory()->create();
+        $this->assertSame([$morning->id], array_column($this->radio()['songs'], 'id'));
+
+        Song::factory()->count(GamesWorld::RADIO_STATIONS)->create();
+
+        $this->assertCount(GamesWorld::RADIO_STATIONS, $this->radio()['songs']);
     }
 }
