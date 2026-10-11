@@ -964,7 +964,13 @@ defineExpose({
     border: 0;
     background: none;
     pointer-events: auto;
-    touch-action: manipulation;
+    /* Not manipulation: that still lets a chord of fingers pinch-zoom or
+       pan, which cancels the presses (and the tap that unlocks sound). */
+    touch-action: none;
+    /* A held key mustn't bring up iOS's magnifier or callout. */
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
     cursor: pointer;
     will-change: transform;
 }

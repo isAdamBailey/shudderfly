@@ -43,8 +43,19 @@ function attachReArmListeners(ctx) {
     document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "visible") resumeIfDormant();
     });
-    window.addEventListener("pointerdown", resumeIfDormant, { passive: true });
+    // Only some events may start audio. A touch's pointerdown isn't one (a
+    // mouse's is): iOS refuses a resume() from it, so a tap re-unlocks on
+    // its pointerup or touchend. Capture, so nothing on the page can stop
+    // one first.
+    for (const type of RE_ARM_EVENTS) {
+        window.addEventListener(type, resumeIfDormant, {
+            capture: true,
+            passive: true,
+        });
+    }
 }
+
+const RE_ARM_EVENTS = ["pointerdown", "pointerup", "touchend", "keydown"];
 
 /** Whether the shared context exists and is playing, without making one:
  * a sound that isn't the answer to a gesture can check this first. */
@@ -59,6 +70,11 @@ export function audioRunning() {
 export function getAudioContext() {
     if (!isAudioSupported) return null;
     if (!audioCtx) {
+        // By default iOS mutes Web Audio with the ring/silent switch, but
+        // not an <audio> element: on silent, the games went quiet except
+        // while the AI voice played. Playback plays through the switch, as
+        // the voice does (Safari 16.4+).
+        if (navigator.audioSession) navigator.audioSession.type = "playback";
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         attachReArmListeners(audioCtx);
     }
