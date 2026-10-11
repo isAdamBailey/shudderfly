@@ -80,10 +80,7 @@ export function zoneCorners(item, zone) {
  * along the keyboard in the organ's own space, so a key's whole depth is
  * that key, however slanted the keyboard is seen. */
 export function keyAt(item, zone, at) {
-    const pose = itemPose(item);
-    const dx = at.x - pose.x;
-    const dz = at.z - pose.z;
-    const along = dx * Math.cos(pose.turn) - dz * Math.sin(pose.turn);
+    const along = organLocal(item, at).x;
     const from = keyX(zone * ORGAN.whiteKeys) - KEY_WIDTH / 2;
     const key = Math.floor((along - from) / KEY_WIDTH);
     return clamp(key, 0, ORGAN.whiteKeys - 1);
@@ -94,17 +91,20 @@ export function keyAt(item, zone, at) {
 const REACH = ORGAN.desk.depth + 54;
 const ENDS = ORGAN.length / 2 + 10;
 
-/** The floor organ `item` stands on, in the room: { x0, x1, z0, z1 }.
+/** The floor organ `item` stands on, in its own space ({ x0, x1, z0, z1 },
+ * as organPoint() takes it), so it's the organ's shape however it's turned.
  * The Butt keeps off it (useRoom.js), so it never covers the keys. */
-export function organFootprint(item) {
-    const a = organPoint(item, [-ENDS, 0, 0]);
-    const b = organPoint(item, [ENDS, 0, REACH]);
-    return {
-        x0: Math.min(a.x, b.x),
-        x1: Math.max(a.x, b.x),
-        z0: Math.min(a.z, b.z),
-        z1: Math.max(a.z, b.z),
-    };
+export const ORGAN_FOOTPRINT = { x0: -ENDS, x1: ENDS, z0: 0, z1: REACH };
+
+/** Room point `at` ({ x, z }) in organ `item`'s own space: organPoint()
+ * undone. */
+export function organLocal(item, at) {
+    const pose = itemPose(item);
+    const cos = Math.cos(pose.turn);
+    const sin = Math.sin(pose.turn);
+    const dx = at.x - pose.x;
+    const dz = at.z - pose.z;
+    return { x: dx * cos - dz * sin, z: dx * sin + dz * cos };
 }
 
 /** The convex hull of screen points `points` ({ x, y }), round it in order

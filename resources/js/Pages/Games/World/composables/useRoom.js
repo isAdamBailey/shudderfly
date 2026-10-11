@@ -1,5 +1,9 @@
 import { computed, reactive } from "vue";
-import { organFootprint } from "../scenes/organLayout.js";
+import {
+    ORGAN_FOOTPRINT,
+    organLocal,
+    organPoint,
+} from "../scenes/organLayout.js";
 import {
     ROOM_SIZES,
     STAIRS_CLEARANCE,
@@ -80,16 +84,24 @@ export function useRoom(
             : MARGIN;
     const left = sideMargin("left");
     const right = sideMargin("right");
-    // Floor the Butt keeps off: each organ's, and a little round it.
+    // Floor the Butt keeps off: each organ's, and a little round it, in
+    // the organ's own space (it may stand turned in a corner).
+    const c = BLOCK_CLEARANCE;
+    const f = ORGAN_FOOTPRINT;
     const blocks = room.interactables
         .filter((item) => item.type === "organ")
-        .map((item) => {
-            const f = organFootprint(item);
-            const c = BLOCK_CLEARANCE;
-            return { x0: f.x0 - c, x1: f.x1 + c, z0: f.z0 - c, z1: f.z1 + c };
-        });
+        .map((item) => ({
+            item,
+            x0: f.x0 - c,
+            x1: f.x1 + c,
+            z0: f.z0 - c,
+            z1: f.z1 + c,
+        }));
     const blocked = (x, z) =>
-        blocks.find((b) => x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1);
+        blocks.find((b) => {
+            const p = organLocal(b.item, { x, z });
+            return p.x > b.x0 && p.x < b.x1 && p.z > b.z0 && p.z < b.z1;
+        });
 
     const butt = reactive({
         // Never starting inside an organ (a spot saved before it came).
@@ -129,13 +141,15 @@ export function useRoom(
         if (!b) return { x, z };
         let best = { x, z };
         let bestDistance = Infinity;
-        for (const [ox, oz] of [
-            [b.x0, z],
-            [b.x1, z],
-            [x, b.z0],
-            [x, b.z1],
+        const p = organLocal(b.item, { x, z });
+        for (const [lx, lz] of [
+            [b.x0, p.z],
+            [b.x1, p.z],
+            [p.x, b.z0],
+            [p.x, b.z1],
         ]) {
-            const out = { x: clampX(ox), z: clampZ(oz) };
+            const edge = organPoint(b.item, [lx, 0, lz]);
+            const out = { x: clampX(edge.x), z: clampZ(edge.z) };
             const distance = (out.x - x) ** 2 + (out.z - z) ** 2;
             if (distance < bestDistance && !blocked(out.x, out.z)) {
                 best = out;

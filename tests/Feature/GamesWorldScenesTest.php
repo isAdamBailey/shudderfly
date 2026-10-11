@@ -622,15 +622,16 @@ class GamesWorldScenesTest extends TestCase
         $this->assertContains('table-lamp', array_column($hall['lights'], 'id'));
     }
 
-    public function test_the_cockroach_house_has_a_pipe_organ_on_its_right_wall(): void
+    public function test_the_cockroach_house_has_a_pipe_organ_in_its_back_right_corner(): void
     {
         $room = GamesWorld::definitions()['cockroach-house.hall'];
         $organ = collect($room['interactables'])->firstWhere('type', 'organ');
 
         // Across the room from the way out, so a press on the keys can't
         // be a press on the door.
-        $this->assertSame('right', $organ['wall']);
-        $this->assertSame($room['size']['w'], $organ['x']);
+        $this->assertSame('back-right', $organ['wall']);
+        $this->assertSame($room['size']['w'] - $organ['z'], $organ['x']);
+        $this->assertGreaterThan($room['size']['w'] / 2, $organ['x']);
         $door = collect($room['interactables'])->firstWhere('exit', true);
         $this->assertLessThan($room['size']['w'] / 2, $door['x']);
         $this->assertCount(count(GamesWorld::ORGAN_ZONES), $organ['zones']);

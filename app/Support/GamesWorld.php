@@ -124,6 +124,11 @@ final class GamesWorld
      * many). */
     public const ORGAN_ZONES = ['deep', 'low', 'high', 'squeaky'];
 
+    /** How far out of the corner, along each wall, a corner organ's middle
+     * stands: its ends (organLayout.js, 160 out from its middle, turned
+     * half round) just meet the walls. */
+    private const ORGAN_CORNER = 115;
+
     /** Props modelled in 3D that an interactable's `model` may name:
      * three/models.js (a Vitest test keeps them in step). */
     public const MODELS = ['radio', 'table-lamp'];
@@ -175,7 +180,7 @@ final class GamesWorld
         $tableLamp = $den - 120;
         // The Cockroach's fireplace, and its candles: where each burns
         // ([x, z], up the wall at SCONCE_Y).
-        $nestW = 1200;
+        $nestW = 1400;
         $hearth = 650;
         $sconces = ['sconce-left' => [400, 0], 'sconce-right' => [930, 0], 'sconce-side' => [20, 260]];
 
@@ -311,9 +316,10 @@ final class GamesWorld
             // Cockroach Fight stand on the floor. Little cockroaches crawl
             // the back wall, the same picture as the site header. Dark-ages
             // stone, lit only by flames: a fire in the hearth under Hank's
-            // portrait, and candles in sconces either side of it (the right
-            // one by the pipe organ that fills the right wall, well clear of
-            // the way out) and on the left wall. Every flame flickers.
+            // portrait, and candles in sconces either side of it and on the
+            // left wall. The pipe organ stands turned in the back-right
+            // corner, well clear of the way out: flat on the right wall, a
+            // phone saw it all but edge on, behind the music tab. Every flame flickers.
             // Photos of Hank from his book hang either side of them, past
             // the door's EXIT sign and the scroll, a new pair each day.
             'cockroach-house.hall' => self::room('cockroach_house_hall', [
@@ -337,7 +343,7 @@ final class GamesWorld
                 ],
             ], [
                 self::roomDoor('front-door', 160, 'road', 'cockroach-house', exit: true),
-                self::organ('organ', 200, $nestW),
+                self::organ('organ', $nestW),
                 // Hank, remembered over the fire, and on a scroll beside it
                 // that reads itself aloud.
                 self::picture('portrait', $hearth, self::FIREPLACE['h'], '/img/cockroach.png', 372, 200, 'cockroach_portrait'),
@@ -828,19 +834,19 @@ final class GamesWorld
         ];
     }
 
-    /** A pipe organ against the right wall of a room `span` wide, its
-     * middle `z` along it (three/pipeOrgan.js draws it, scenes/
-     * organLayout.js sizes it, and the Butt can't walk into it). Each of its
-     * keyboard's ORGAN_ZONES is a button of its own that plays the key it's
-     * pressed on; using the organ as a whole plays a chord. */
-    private static function organ(string $id, int $z, int $span): array
+    /** A pipe organ turned into the back-right corner of a room `span`
+     * wide, its ends against both walls (three/pipeOrgan.js draws it,
+     * scenes/organLayout.js sizes it, and the Butt can't walk into it).
+     * Each of its keyboard's ORGAN_ZONES is a button of its own that plays
+     * the key it's pressed on; using the organ as a whole plays a chord. */
+    private static function organ(string $id, int $span): array
     {
         return [
             'id' => $id,
             'type' => 'organ',
-            'wall' => 'right',
-            'x' => $span,
-            'z' => $z,
+            'wall' => 'back-right',
+            'x' => $span - self::ORGAN_CORNER,
+            'z' => self::ORGAN_CORNER,
             // Where the Butt stands to play it: clear of its keydesk and
             // pedals, the Butt's own half-width out (useRoom.js keeps it
             // off them).

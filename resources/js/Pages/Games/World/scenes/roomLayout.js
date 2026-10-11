@@ -12,13 +12,16 @@
  */
 
 // How a door faces, inward off its wall: `back` is the far wall, `left` and
-// `right` the ends. `x`/`z` is the step into the room, `turn` swings a card
-// that faces +z around to face that way.
+// `right` the ends, and `back-right` the corner between them (half turned,
+// so a big thing there is still seen on a narrow phone, where the right
+// wall is all but edge on). `x`/`z` is the step into the room, `turn`
+// swings a card that faces +z around to face that way.
 const WALL_INSET = 3;
 const FACING = {
     back: { x: 0, z: 1, turn: 0 },
     left: { x: 1, z: 0, turn: Math.PI / 2 },
     right: { x: -1, z: 0, turn: -Math.PI / 2 },
+    "back-right": { x: -Math.SQRT1_2, z: Math.SQRT1_2, turn: -Math.PI / 4 },
 };
 
 /** Which way `wall` faces into the room (`back` when it doesn't say). */
