@@ -117,6 +117,10 @@ export function playOrgan(zone, key) {
         gain.connect(note);
         pipe.start(t);
         pipe.stop(end + 0.05);
+        // Off the hall once silent: mobile Safari is slow to free nodes
+        // left connected, and a keyboard mashed for a while crackles and
+        // drops out. The pipes all stop together; any of them will do.
+        pipe.onended = () => soften.disconnect();
     }
 
     // The chiff: a breath of air through the pipe's mouth as it speaks.
@@ -135,4 +139,5 @@ export function playOrgan(zone, key) {
     puff.connect(input);
     breath.start(t);
     breath.stop(t + 0.1);
+    breath.onended = () => puff.disconnect();
 }

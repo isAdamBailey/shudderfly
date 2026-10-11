@@ -106,4 +106,85 @@ describe("useGameIntroSpeech", () => {
             expect(playAiVoice.mock.calls[1][0]).toBe("Second game");
         });
     });
+
+    describe("tapping the same thing again", () => {
+        beforeEach(() => {
+            pageProps.aiVoice = { voices: { en: ["af_heart"] } };
+        });
+
+        it("doesn't restart a line still being fetched", async () => {
+            playAiVoice.mockImplementation(() => new Promise(() => {}));
+            const first = vi.fn();
+            const second = vi.fn();
+
+            speakGameIntro("Toot!", first);
+            await flushPromises();
+            speakGameIntro("Toot!", second);
+            speakGameIntro("Toot!");
+            await flushPromises();
+
+            expect(playAiVoice).toHaveBeenCalledOnce();
+            expect(first).not.toHaveBeenCalled();
+
+            stopGameIntroSpeech();
+            expect(first).toHaveBeenCalledOnce();
+            expect(second).toHaveBeenCalledOnce();
+        });
+
+        it("doesn't restart a line already playing", async () => {
+            speakGameIntro("Toot!");
+            await flushPromises();
+            speakGameIntro("Toot!");
+            await flushPromises();
+
+            expect(playAiVoice).toHaveBeenCalledOnce();
+            expect(aiClip.options).not.toBeNull();
+        });
+
+        it("says it again once it has ended", async () => {
+            speakGameIntro("Toot!");
+            await flushPromises();
+            aiClip.options.onEnd();
+            speakGameIntro("Toot!");
+            await flushPromises();
+
+            expect(playAiVoice).toHaveBeenCalledTimes(2);
+        });
+
+        it("says it again after something else stopped it", async () => {
+            speakGameIntro("Toot!");
+            await flushPromises();
+            stopAllSpeech();
+            speakGameIntro("Toot!");
+            await flushPromises();
+
+            expect(playAiVoice).toHaveBeenCalledTimes(2);
+        });
+
+        it("lets go of an AI line whose end never comes", async () => {
+            playAiVoice.mockImplementation(() => new Promise(() => {}));
+            speakGameIntro("Toot!");
+            await flushPromises();
+            vi.setSystemTime(Date.now() + 16000);
+            speakGameIntro("Toot!");
+            await flushPromises();
+
+            expect(playAiVoice).toHaveBeenCalledTimes(2);
+        });
+
+        it("lets go of a device line whose end never comes", async () => {
+            pageProps.aiVoice = null;
+            speakGameIntro("Toot!");
+            await vi.advanceTimersByTimeAsync(0);
+            speakGameIntro("Toot!");
+            await vi.advanceTimersByTimeAsync(0);
+            expect(window.speechSynthesis.speak).toHaveBeenCalledOnce();
+
+            vi.setSystemTime(Date.now() + 16000);
+            speakGameIntro("Toot!");
+            await vi.advanceTimersByTimeAsync(0);
+
+            expect(window.speechSynthesis.speak).toHaveBeenCalledTimes(2);
+        });
+    });
 });

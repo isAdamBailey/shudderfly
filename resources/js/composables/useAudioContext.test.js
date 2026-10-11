@@ -107,6 +107,30 @@ describe("composables/useAudioContext", () => {
         expect(ctx.resume).toHaveBeenCalled();
     });
 
+    it("re-resumes on the pointerup or touchend that ends a tap", async () => {
+        const { getAudioContext } = await import(
+            "@/composables/useAudioContext"
+        );
+
+        const ctx = getAudioContext();
+        for (const type of ["pointerup", "touchend"]) {
+            ctx.state = "interrupted";
+            ctx.resume.mockClear();
+            window.dispatchEvent(new Event(type));
+            expect(ctx.resume).toHaveBeenCalled();
+        }
+    });
+
+    it("plays through iOS's silent switch, like the voice", async () => {
+        vi.stubGlobal("navigator", { audioSession: { type: "auto" } });
+        const { getAudioContext } = await import(
+            "@/composables/useAudioContext"
+        );
+
+        getAudioContext();
+        expect(navigator.audioSession.type).toBe("playback");
+    });
+
     it("returns null when Web Audio is unsupported", async () => {
         vi.resetModules();
         vi.stubGlobal("AudioContext", undefined);

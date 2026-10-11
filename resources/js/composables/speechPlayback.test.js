@@ -1,10 +1,12 @@
 import {
     playAiVoice,
+    primeAiVoice,
     resetAiVoiceMock,
     stopAiVoice,
 } from "@/composables/aiVoice";
 import {
     pauseAllSpeech,
+    primeSpeech,
     resumeAllSpeech,
     speakPhrase,
     stopAllSpeech,
@@ -227,6 +229,30 @@ describe("speechPlayback", () => {
 
             expect(window.speechSynthesis.speak).toHaveBeenCalledOnce();
             expect(window.speechSynthesis.pause).not.toHaveBeenCalled();
+        });
+    });
+
+    describe("primeSpeech", () => {
+        it("primes the AI voice too when it's on", () => {
+            pageProps.aiVoice = { voices: { en: ["af_heart"] } };
+
+            primeSpeech();
+
+            expect(primeAiVoice).toHaveBeenCalledOnce();
+        });
+
+        // Last: once a primer has ended, the module stays primed.
+        it("tries each tap until a silent primer has ended", () => {
+            primeSpeech();
+            primeSpeech();
+            const { calls } = window.speechSynthesis.speak.mock;
+            expect(calls).toHaveLength(2);
+            expect(calls[0][0].volume).toBe(0);
+
+            calls[1][0].onend();
+            primeSpeech();
+
+            expect(window.speechSynthesis.speak).toHaveBeenCalledTimes(2);
         });
     });
 });

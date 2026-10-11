@@ -2,6 +2,7 @@
 import { usePage } from "@inertiajs/vue3";
 import { audioRunning, unlockAudio } from "@/composables/useAudioContext";
 import { speakGameIntro } from "@/composables/useGameIntroSpeech";
+import { primeSpeech } from "@/composables/speechPlayback";
 import { useTranslations } from "@/composables/useTranslations";
 import { usePreferredReducedMotion } from "@vueuse/core";
 import {
@@ -393,9 +394,12 @@ function resetScroll() {
 }
 
 /** A key or a tap anywhere on the stage lets the world's sounds start (a
- * keyboard player never taps). */
+ * keyboard player never taps), and its voices: a line said once the Butt
+ * has walked over, or a device voice standing in for an AI clip that was
+ * slow, comes after the tap, and iOS keeps quiet unless one spoke in it. */
 function unlockSounds() {
     if (!audioRunning()) unlockAudio();
+    primeSpeech();
 }
 
 function onKeydown(event) {
