@@ -727,7 +727,8 @@ class GamesWorldScenesTest extends TestCase
 
         return array_values(array_filter(
             array_column(DB::getQueryLog(), 'query'),
-            fn ($sql) => preg_match('/from "(pages|songs)"/', $sql),
+            // Quoted "pages" in SQLite, `pages` in MySQL.
+            fn ($sql) => preg_match('/from ["`](pages|songs)["`]/', $sql),
         ));
     }
 
