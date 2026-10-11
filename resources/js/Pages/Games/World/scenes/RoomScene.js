@@ -17,6 +17,7 @@ import { bookcaseGeometry, booksMesh } from "./bookshelf.js";
 import { doorwayGeometry } from "./doorway.js";
 import { entertainmentCenterGeometry } from "./entertainmentCenter.js";
 import { exitSigns } from "./exitSign.js";
+import { pictureFrame } from "../three/pictureFrame.js";
 import { fireplaceGeometry } from "./fireplace.js";
 import { ORGAN } from "./organLayout.js";
 import { floorGeometry, stairsFootprint, stairsGeometry } from "./staircase.js";
@@ -56,10 +57,12 @@ const NIGHTFALL = 0.3;
 const FLICKER = { amount: 0.18, step: 0.09 };
 // A flat-screen TV: how far it stands off its wall, units.
 const SCREEN_DEPTH = 6;
+// A picture's or photo's backing, round the edge of its <img>.
+const PICTURE_BACKING = "#1c1410";
 
 /**
  * Builds a room from its scene data (`room`: { size, walls, ambient, lights,
- * interactables }), with the Butt at `butt` ({ x, z }), in the light of
+ * photos, interactables }), with the Butt at `butt` ({ x, z }), in the light of
  * seasonal `theme` (at `night` in dark mode), its EXIT signs reading
  * `exitWord`. Returns { scene, camera, layout(L), sync(view, dt),
  * animate(id, move), pressKey(id, zone, key), toggleLight(id),
@@ -372,10 +375,14 @@ export function createRoomScene(
             organs.set(item.id, organ);
             continue;
         }
-        // A TV, or a picture: a thin panel. What you see on it is in the
-        // overlay (a <video>, or the picture's <img>).
-        if (item.screen || item.image) {
-            made.add(panelMesh(item, item.image ? "#1c1410" : "#0b0b0f"));
+        // A TV, or a picture: a thin panel, framed if it says. What you see
+        // on it is in the overlay (a <video>, or the picture's <img>).
+        if (item.image) {
+            made.add(pictureMesh(item));
+            continue;
+        }
+        if (item.screen) {
+            made.add(panelMesh(item, "#0b0b0f"));
             continue;
         }
         const size = itemBox(item).height;
@@ -432,6 +439,10 @@ export function createRoomScene(
         things.set(item.id, puppet);
     }
 
+    // The room's photos: a panel each, like a picture's. The photo is in the
+    // overlay.
+    for (const photo of room.photos ?? []) made.add(pictureMesh(photo));
+
     // Lamps drawn as their own glyph (a wall lamp), hung by its middle.
     const fixtures = lamps
         .filter((lamp) => lamp.data.emoji && !lamp.bulb)
@@ -475,6 +486,21 @@ export function createRoomScene(
         panel.rotation.y = pose.turn;
         panel.translateZ(SCREEN_DEPTH / 2);
         return panel;
+    }
+
+    /** A picture or photo's backing panel, in its frame
+     * (three/pictureFrame.js) if `image.frame` names one. */
+    function pictureMesh(item) {
+        const panel = panelMesh(item, PICTURE_BACKING);
+        const { w, h, frame: style } = item.image;
+        const frame = style && pictureFrame(THREE, style, w, h);
+        if (!frame) return panel;
+        const pose = itemPose(item);
+        frame.position.set(pose.x, pose.y, pose.z);
+        frame.rotation.y = pose.turn;
+        const group = new THREE.Group();
+        group.add(panel, frame);
+        return group;
     }
 
     const puppets = [butt, ...things.values()];

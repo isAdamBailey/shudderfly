@@ -156,10 +156,8 @@ class GamesWorldScenesTest extends TestCase
             $this->assertContains($scene['walls']['floor'], GamesWorld::FLOORS, "{$sceneId} floor");
             $this->assertGreaterThanOrEqual(0, $scene['ambient'], "{$sceneId} ambient");
             $this->assertLessThanOrEqual(1, $scene['ambient'], "{$sceneId} ambient");
-            if (isset($scene['frame'])) {
-                $this->assertGreaterThan(0, $scene['frame'], "{$sceneId} frame");
-                $this->assertLessThan($scene['size']['w'], $scene['frame'], "{$sceneId} frame");
-            }
+            // Every room is seen at the same scale: a wider one scrolls.
+            $this->assertSame(GamesWorld::ROOM_FRAME, $scene['frame'], "{$sceneId} frame");
 
             foreach (collect($scene['interactables'])->where('type', 'door') as $door) {
                 $where = "{$sceneId}.{$door['id']}";
@@ -237,6 +235,17 @@ class GamesWorldScenesTest extends TestCase
         foreach (GamesWorld::definitions() as $sceneId => $scene) {
             foreach (collect($scene['interactables'])->whereNotNull('model') as $item) {
                 $this->assertContains($item['model'], GamesWorld::MODELS, "{$sceneId}.{$item['id']}");
+            }
+        }
+    }
+
+    public function test_framed_pictures_and_photos_are_in_known_frames(): void
+    {
+        foreach (GamesWorld::definitions() as $sceneId => $scene) {
+            foreach ([...$scene['interactables'], ...($scene['photos'] ?? [])] as $item) {
+                if (isset($item['image']['frame'])) {
+                    $this->assertContains($item['image']['frame'], GamesWorld::PICTURE_FRAMES, "{$sceneId}.{$item['id']}");
+                }
             }
         }
     }
@@ -358,7 +367,7 @@ class GamesWorldScenesTest extends TestCase
 
         $nest = $scenes['cockroach-house.hall']['interactables'];
         $fight = collect($nest)->firstWhere('id', 'cockroach-fight');
-        $this->assertSame(700, $fight['x']);
+        $this->assertSame(850, $fight['x']);
         $this->assertSame('cockroach', $fight['card']['cast']);
         $fart = collect($nest)->firstWhere('id', 'cockroach');
         $this->assertSame('Cockroach Fart', $fart['label']);
@@ -419,10 +428,8 @@ class GamesWorldScenesTest extends TestCase
             GamesWorld::LIBRARY_SHELVES_FROM + 7 * GamesWorld::LIBRARY_BOOK_SPAN + 270,
             $room('people')['size']['w'],
         );
-        $this->assertSame(900, $room('people')['frame']);
         // A short shelf keeps a room's usual width.
-        $this->assertSame(900, $room('shows')['size']['w']);
-        $this->assertArrayNotHasKey('frame', $room('shows'));
+        $this->assertSame(GamesWorld::ROOM_FRAME, $room('shows')['size']['w']);
     }
 
     public function test_the_far_door_stands_clear_of_the_shelves(): void
@@ -729,18 +736,21 @@ class GamesWorldScenesTest extends TestCase
         $this->assertCount(GamesWorld::TV_CHANNELS, $channels);
 
         // Same set, same order, later that day; a second visit draws no
-        // random query, only the lookup by id.
+        // random query, only the lookup by id (Hank's frames, with no book
+        // here, look again).
         Carbon::setTestNow(Carbon::create(2026, 10, 11, 23, 30, 0, config('app.local_timezone')));
-        $this->assertSame([], $this->randomQueries(function () use ($channels, $songs) {
+        $random = $this->randomQueries(function () use ($channels, $songs) {
             $this->assertSame($channels, array_column($this->tv()['channels'], 'id'));
             $this->assertSame($songs, array_column($this->radio()['songs'], 'id'));
-        }));
+        });
+        $this->assertSame([], preg_grep('/book_id/', $random, PREG_GREP_INVERT));
 
         // After midnight in Los Angeles, a fresh pick.
         Carbon::setTestNow(Carbon::create(2026, 10, 12, 0, 30, 0, config('app.local_timezone')));
-        $this->assertNotEmpty($this->randomQueries(function () use (&$next) {
+        $random = $this->randomQueries(function () use (&$next) {
             $next = array_column($this->tv()['channels'], 'id');
-        }));
+        });
+        $this->assertNotEmpty(preg_grep('/book_id/', $random, PREG_GREP_INVERT));
         $this->assertNotSame($channels, $next);
         $this->assertNotSame($songs, array_column($this->radio()['songs'], 'id'));
     }
@@ -781,5 +791,128 @@ class GamesWorldScenesTest extends TestCase
         Song::factory()->count(GamesWorld::RADIO_STATIONS)->create();
 
         $this->assertCount(GamesWorld::RADIO_STATIONS, $this->radio()['songs']);
+    }
+
+    /** The Cockroach's House's photos, as the page gets them. */
+    private function hankPhotos(): array
+    {
+        return GamesWorld::scenes()['cockroach-house.hall']['photos'];
+    }
+
+    /** Hank's book, with `$count` photos in it. */
+    private function hankBook(int $count): Book
+    {
+        $book = Book::factory()->create(['title' => 'Hank']);
+        $this->assertSame(GamesWorld::HANK_BOOK, $book->slug);
+        Page::factory()->count($count)->sequence(fn ($s) => ['media_path' => "https://cdn.test/hank-{$s->index}.jpg"])->create(['book_id' => $book->id]);
+
+        return $book;
+    }
+
+    public function test_the_cockroach_house_hangs_photos_from_hanks_book(): void
+    {
+        SiteSetting::updateOrCreate(['key' => ContentBlockService::SETTING], ['value' => true]);
+        $book = $this->hankBook(0);
+        $photo = Page::factory()->create(['book_id' => $book->id, 'media_path' => 'https://cdn.test/hank.png']);
+        // Not a photo, not one anyone can see, not Hank's.
+        Page::factory()->create(['book_id' => $book->id, 'media_path' => 'https://cdn.test/hank.mp4']);
+        Page::factory()->create(['book_id' => $book->id, 'media_path' => 'https://cdn.test/hidden.jpg', 'blocked' => true]);
+        Page::factory()->create(['media_path' => 'https://cdn.test/other.jpg']);
+
+        $photos = $this->hankPhotos();
+
+        // One photo, so the second frame is blank.
+        $this->assertSame(
+            [
+                ['id' => 'hank-left', 'x' => 300, 'y' => 150, 'image' => ['w' => 110, 'h' => 150, 'frame' => 'ornate', 'src' => $photo->media_path]],
+                ['id' => 'hank-right', 'x' => 1070, 'y' => 150, 'image' => ['w' => 110, 'h' => 150, 'frame' => 'ornate']],
+            ],
+            $photos,
+        );
+    }
+
+    public function test_frames_sharing_a_book_get_different_photos(): void
+    {
+        $this->hankBook(10);
+
+        $srcs = array_column(array_column($this->hankPhotos(), 'image'), 'src');
+
+        $this->assertCount(2, $srcs);
+        $this->assertCount(2, array_unique($srcs));
+    }
+
+    public function test_frames_hang_blank_without_hanks_photos(): void
+    {
+        $blank = fn () => array_map(fn ($photo) => isset($photo['image']['src']), $this->hankPhotos());
+        $this->assertSame([false, false], $blank());
+
+        $this->hankBook(0);
+
+        $this->assertSame([false, false], $blank());
+    }
+
+    public function test_hanks_photos_stay_all_day_and_change_the_next(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 10, 11, 9, 0, 0, config('app.local_timezone')));
+        $this->hankBook(20);
+        $photos = $this->hankPhotos();
+
+        Carbon::setTestNow(Carbon::create(2026, 10, 11, 23, 30, 0, config('app.local_timezone')));
+        // The TV and radio, with nothing to pick, ask again; the frames don't.
+        $random = $this->randomQueries(fn () => $this->assertSame($photos, $this->hankPhotos()));
+        $this->assertEmpty(preg_grep('/book_id/', $random));
+
+        // After midnight, a fresh pick.
+        Carbon::setTestNow(Carbon::create(2026, 10, 12, 0, 30, 0, config('app.local_timezone')));
+        $random = $this->randomQueries(fn () => $this->hankPhotos());
+        $this->assertNotEmpty(preg_grep('/book_id/', $random));
+    }
+
+    public function test_a_photo_blocked_or_deleted_during_the_day_comes_down(): void
+    {
+        SiteSetting::updateOrCreate(['key' => ContentBlockService::SETTING], ['value' => true]);
+        $this->hankBook(2);
+        $src = fn () => array_column(array_column($this->hankPhotos(), 'image'), 'src');
+        [$first, $second] = $src();
+
+        // Each comes down, leaving its frame blank.
+        Page::where('media_path', $first)->update(['blocked' => true]);
+        $this->assertSame([$second], $src());
+
+        Page::where('media_path', $second)->delete();
+        $this->assertSame([], $src());
+    }
+
+    public function test_hanks_photos_hang_clear_of_the_door_its_exit_sign_sconces_portrait_and_scroll(): void
+    {
+        $room = GamesWorld::definitions()['cockroach-house.hall'];
+        $items = collect($room['interactables']);
+        // The ornate frame's moulding past the photo (three/pictureFrame.js),
+        // and under the season's decorations, which hang from 0.84 up the
+        // wall, the biggest 90 tall (three/roomLooks.js).
+        $border = 18;
+        $decorations = $room['frame'] / 2 * 0.84 - 45;
+        // What else is on the back wall, as [left, right, bottom, top].
+        $boxes = $items->where('z', 0)->map(fn ($item) => match (true) {
+            // A door with its EXIT sign over it.
+            $item['type'] === 'door' => [$item['x'] - 60, $item['x'] + 60, 0, 300],
+            isset($item['image']) => [$item['x'] - $item['image']['w'] / 2, $item['x'] + $item['image']['w'] / 2, $item['y'], $item['y'] + $item['image']['h']],
+            default => [$item['x'] - $item['size'] / 2, $item['x'] + $item['size'] / 2, $item['y'] ?? 0, ($item['y'] ?? 0) + $item['size']],
+        });
+
+        $this->assertCount(2, $room['photos']);
+        foreach ($room['photos'] as $photo) {
+            $this->assertSame(['book' => GamesWorld::HANK_BOOK], $photo['from']);
+            $this->assertSame('ornate', $photo['image']['frame']);
+            [$left, $right] = [$photo['x'] - $photo['image']['w'] / 2 - $border, $photo['x'] + $photo['image']['w'] / 2 + $border];
+            [$bottom, $top] = [$photo['y'] - $border, $photo['y'] + $photo['image']['h'] + $border];
+            $this->assertGreaterThan(0, $left);
+            $this->assertLessThan($room['size']['w'], $right);
+            $this->assertLessThan($decorations, $top);
+            foreach ($boxes as $id => $box) {
+                $apart = $right <= $box[0] || $left >= $box[1] || $top <= $box[2] || $bottom >= $box[3];
+                $this->assertTrue($apart, "{$photo['id']} overlaps {$items[$id]['id']}");
+            }
+        }
     }
 }
