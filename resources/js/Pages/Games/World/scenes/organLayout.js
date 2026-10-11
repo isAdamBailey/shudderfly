@@ -15,7 +15,7 @@ import { itemPose } from "./roomLayout.js";
 export const ORGAN = {
     // Along its wall, and how tall the pipe case stands.
     length: 300,
-    height: 460,
+    height: 410,
     // The keydesk: how far it reaches out of the wall, and its top.
     desk: { depth: 70, top: 78 },
     // The keyboard: across x, its keys' top, and from their back to the
@@ -29,7 +29,7 @@ export const ORGAN = {
     ledge: 138,
     rows: [10, 24],
     // The tallest (deepest) pipe and the shortest.
-    pipes: { tallest: 300, shortest: 64 },
+    pipes: { tallest: 250, shortest: 64 },
 };
 
 /** How many white keys (and pipes) the organ has. */

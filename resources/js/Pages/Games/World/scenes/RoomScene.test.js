@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createCastKit } from "@/Components/Games/Cast/three/castMesh.js";
+import { frameBorder } from "../three/pictureFrame.js";
 import { createRoomScene } from "./RoomScene.js";
 import { roomLayout } from "./roomLayout.js";
 
@@ -498,6 +499,58 @@ describe("the room's scene graph", () => {
         expect(built.min.y).toBeCloseTo(0);
         expect(built.max.x - built.min.x).toBeCloseTo(460);
         graph.dispose();
+    });
+
+    it("backs each of the room's photos with a panel where it hangs", () => {
+        const graph = build({
+            ...hall,
+            photos: [{ id: "hank", x: 150, y: 240, image: { w: 120, h: 160 } }],
+        });
+        expect(meshes(graph)).toBe(meshes(build(hall)) + 1);
+        const panel = graph.scene
+            .getObjectsByProperty("isMesh", true)
+            .map((m) => new THREE.Box3().setFromObject(m))
+            .find((b) => Math.abs(b.min.y - 240) < 1);
+        expect(panel.max.x - panel.min.x).toBeCloseTo(120);
+        expect(panel.max.y - panel.min.y).toBeCloseTo(160);
+        graph.dispose();
+    });
+
+    it("hangs a picture or photo that names a frame in it, and a plain one on its panel", () => {
+        const photo = { id: "hank", x: 150, y: 240, image: { w: 120, h: 160 } };
+        // A framed picture is its panel and its frame, in a group.
+        const extent = (graph) =>
+            new THREE.Box3().setFromObject(
+                graph.scene
+                    .getObjectsByProperty("isGroup", true)
+                    .find(
+                        (g) => g.children[0]?.isMesh && g.children[1]?.isGroup
+                    )
+            );
+        const framed = build({
+            ...hall,
+            photos: [{ ...photo, image: { ...photo.image, frame: "ornate" } }],
+        });
+        const box = extent(framed);
+        expect(box.max.x - box.min.x).toBeCloseTo(
+            120 + 2 * frameBorder("ornate")
+        );
+        expect(box.min.y).toBeCloseTo(240 - frameBorder("ornate"));
+        // An unknown frame, or none, is the plain panel.
+        expect(meshes(build({ ...hall, photos: [photo] }))).toBe(
+            meshes(build(hall)) + 1
+        );
+        expect(
+            meshes(
+                build({
+                    ...hall,
+                    photos: [
+                        { ...photo, image: { ...photo.image, frame: "nope" } },
+                    ],
+                })
+            )
+        ).toBe(meshes(build(hall)) + 1);
+        framed.dispose();
     });
 
     it("builds an open doorway into its wall instead of a door card", () => {

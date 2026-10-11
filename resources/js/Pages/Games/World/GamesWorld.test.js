@@ -708,6 +708,33 @@ describe("GamesWorld rooms", () => {
         );
     });
 
+    it("hangs a room's photos as decor, with nothing to tap", async () => {
+        const hall = withHouse["house.hall"];
+        wrapper = await mountWorld({
+            ...withHouse,
+            "house.hall": {
+                ...hall,
+                photos: [
+                    {
+                        id: "hank-left",
+                        x: 300,
+                        y: 240,
+                        image: { src: "/hank.jpg", w: 120, h: 160 },
+                    },
+                    { id: "blank", x: 600, y: 240, image: { w: 120, h: 160 } },
+                ],
+            },
+        });
+        await enterHouse(wrapper);
+
+        // The blank one is only its panel.
+        expect(wrapper.findAll("img.room-photo")).toHaveLength(1);
+        const photo = wrapper.get("img.room-photo");
+        expect(photo.attributes("src")).toBe("/hank.jpg");
+        expect(photo.element.closest("button")).toBeNull();
+        expect(photo.attributes("style")).toContain("width");
+    });
+
     it("walks the Butt about the room with the arrow keys", async () => {
         wrapper = await mountWorld(withHouse);
         await enterHouse(wrapper);

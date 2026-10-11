@@ -3,13 +3,13 @@
  * hit box sits over what the canvas draws, and what counts as a tap.
  */
 
-/** A square `size` px hit box standing on screen point (x, y): centred on
- * x, its bottom at y (a character's feet). */
-export function boxStyle({ x, y, size }) {
+/** A `size` px hit box (`height` tall, if it isn't square) standing on
+ * screen point (x, y): centred on x, its bottom at y (a character's feet). */
+export function boxStyle({ x, y, size, height = size }) {
     return {
         width: `${size}px`,
-        height: `${size}px`,
-        transform: `translate3d(${x - size / 2}px, ${y - size}px, 0)`,
+        height: `${height}px`,
+        transform: `translate3d(${x - size / 2}px, ${y - height}px, 0)`,
     };
 }
 

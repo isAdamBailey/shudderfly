@@ -20,7 +20,7 @@ import {
 import InteractableButton from "../components/InteractableButton.vue";
 import FollowBox from "../components/FollowBox.vue";
 import TvScreen from "../components/TvScreen.vue";
-import { onButton, pastTap } from "../components/overlay.js";
+import { boxStyle, onButton, pastTap } from "../components/overlay.js";
 import LandmarkTitle from "../components/LandmarkTitle.vue";
 import {
     screenToGround,
@@ -68,6 +68,13 @@ const emit = defineEmits(["activate", "play"]);
 const { t } = useTranslations();
 const page = usePage();
 const dark = useDarkMode();
+
+// Pictures and photos are <img>s over the canvas, out of the scene's light:
+// dimmed to sit in a dim room (a candlelit one, or any at night) rather
+// than glow in it.
+const pictureLight = computed(() =>
+    dark.value ? 0.6 : Math.min(1, 0.55 + (props.scene.ambient ?? 1))
+);
 
 const prefersReducedMotion = usePreferredReducedMotion();
 const reduced = computed(() => prefersReducedMotion.value === "reduce");
@@ -235,6 +242,26 @@ const spots = computed(() => {
             // A cast member with no emoji (the Face) is drawn in the DOM,
             // over its anchor in the scene graph.
             overlay: castInDom(item.cast),
+        };
+    });
+});
+
+/** Each of the room's photos over its panel, where it hangs (a blank one
+ * is just its panel). Decor, with nothing to tap, so not a button. */
+const photoSpots = computed(() => {
+    if (!view.value) return [];
+    return (props.scene.photos ?? []).flatMap((photo) => {
+        const p = photo.image.src && project(itemPose(photo));
+        if (!p) return [];
+        const { width, height } = itemBox(photo);
+        return {
+            photo,
+            style: boxStyle({
+                x: p.x,
+                y: p.y,
+                size: width * p.scale,
+                height: height * p.scale,
+            }),
         };
     });
 });
@@ -618,10 +645,22 @@ defineExpose({
     <div
         ref="rootEl"
         class="room-3d"
+        :style="{ '--picture-light': pictureLight }"
         @pointerdown.self="onBackgroundPointerDown"
         @pointerup="unlockToot"
     >
         <template v-if="layout">
+            <!-- Under the buttons: nothing to tap. -->
+            <img
+                v-for="s in photoSpots"
+                :key="`photo-${s.photo.id}`"
+                class="room-photo"
+                :class="{ framed: s.photo.image.frame }"
+                :src="s.photo.image.src"
+                alt=""
+                draggable="false"
+                :style="s.style"
+            />
             <InteractableButton
                 v-for="s in spots"
                 :key="s.item.id"
@@ -655,6 +694,7 @@ defineExpose({
                 <img
                     v-if="s.item.image"
                     class="room-picture"
+                    :class="{ framed: s.item.image.frame }"
                     :src="s.item.image.src"
                     alt=""
                     draggable="false"
@@ -798,15 +838,37 @@ defineExpose({
     pointer-events: none;
 }
 
-/* A picture over its panel, the way a book's cover sits on its face. */
+/* A picture over its panel, the way a book's cover sits on its face, and
+   a room's photo over its panel; both dimmed to the room's light. A
+   picture keeps its whole shape; a photo, or a picture in a frame, fills
+   it (the frame is drawn round it, so needs no edge of its own). */
+.room-picture,
+.room-photo {
+    object-fit: contain;
+    box-shadow: inset 0 0 0 3px #78350f;
+    filter: brightness(var(--picture-light, 1));
+    pointer-events: none;
+}
+
 .room-picture {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
-    object-fit: contain;
-    box-shadow: inset 0 0 0 3px #78350f;
-    pointer-events: none;
+}
+
+.room-photo {
+    position: absolute;
+    left: 0;
+    top: 0;
+    object-fit: cover;
+    will-change: transform;
+}
+
+.room-picture.framed,
+.room-photo.framed {
+    object-fit: cover;
+    box-shadow: none;
 }
 
 /* A flight's arrow badge, in the middle of its button: up or down. */

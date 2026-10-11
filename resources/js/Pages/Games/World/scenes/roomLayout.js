@@ -4,9 +4,11 @@
  * across and `size.d` from the back wall (z = 0) to the open front (z = d),
  * seen straight on by the same level, lens-shifted camera as the road
  * (composables/projection.js). The walls fill the stage's height, so a
- * phone doesn't shrink a wide room down to a strip. `frame` (the whole
- * width, when a room doesn't say) is how tall those walls are. A room
- * wider than the view scrolls as the Butt walks.
+ * phone doesn't shrink a wide room down to a strip. `frame`, the width the
+ * camera shows, sets how tall those walls are: every room the server sends
+ * has the same one (GamesWorld::ROOM_FRAME), so the world is drawn at one
+ * size; with none, as in tests, it's the room's width. A room wider than
+ * the view scrolls as the Butt walks.
  */
 
 // How a door faces, inward off its wall: `back` is the far wall, `left` and

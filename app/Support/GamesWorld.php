@@ -46,6 +46,12 @@ final class GamesWorld
      * books.category. */
     public const LIBRARY_HALL_SHELF = 9;
 
+    /** How much of a room's width the camera shows at once, the same in
+     * every room so everything in the world is drawn at one size (walls are
+     * half this tall). A wider room scrolls as the Butt walks; a narrower
+     * one doesn't fill the view. room() sets it. */
+    public const ROOM_FRAME = 900;
+
     /** The most lamps (point lights) a room may have: each one costs every
      * lit material in it. Every room has at least one, so night isn't dark. */
     public const ROOM_LIGHTS_MAX = 4;
@@ -84,6 +90,9 @@ final class GamesWorld
      * out from the wall. */
     private const HEARTH_FIRE = ['y' => 6, 'z' => 20];
 
+    /** The slug of Hank's book: the Cockroach's House hangs his photos. */
+    public const HANK_BOOK = 'hank';
+
     /** How high up the wall the Cockroach's candle sconces hang. */
     private const SCONCE_Y = 270;
 
@@ -119,6 +128,11 @@ final class GamesWorld
      * three/models.js (a Vitest test keeps them in step). */
     public const MODELS = ['radio', 'table-lamp'];
 
+    /** Frames a wall picture or a room's photo can hang in (its
+     * `image.frame`), drawn by three/pictureFrame.js; with none it hangs on
+     * a plain panel. The moulding reaches past the picture, so leave room. */
+    public const PICTURE_FRAMES = ['ornate'];
+
     /** The moves a toy may play: CAST_MOVES in characters.js (a Vitest test
      * keeps them in step). A prop can play any; a cast member only its own. */
     public const MOVES = [
@@ -151,9 +165,8 @@ final class GamesWorld
      */
     public static function definitions(): array
     {
-        // The hall runs long. `frame` is the width the camera shows, and the
-        // walls stay as tall as that; the rest of the hall is off-screen
-        // until the Butt walks there. The front door is in that first view.
+        // The hall runs long: the camera shows ROOM_FRAME of it, and the
+        // rest is off-screen until the Butt walks there. The front door is in that first view.
         $hallW = 3200;
         $entry = intdiv($hallW, 2);
         // Where the radio stands on its entertainment center.
@@ -162,9 +175,9 @@ final class GamesWorld
         $tableLamp = $den - 120;
         // The Cockroach's fireplace, and its candles: where each burns
         // ([x, z], up the wall at SCONCE_Y).
-        $nestW = 1000;
-        $hearth = 500;
-        $sconces = ['sconce-left' => [250, 0], 'sconce-right' => [780, 0], 'sconce-side' => [20, 260]];
+        $nestW = 1200;
+        $hearth = 650;
+        $sconces = ['sconce-left' => [400, 0], 'sconce-right' => [930, 0], 'sconce-side' => [20, 260]];
 
         return [
             'road' => [
@@ -183,9 +196,8 @@ final class GamesWorld
             // --- The Butt's House ---------------------------------------------
             'house.hall' => self::room('house_hall', [
                 // Floor size in world units: x across, z from the back wall
-                // to the open front. `frame` is how much of x the camera shows.
+                // to the open front.
                 'size' => ['w' => $hallW, 'd' => 500],
-                'frame' => 900,
                 'spawn' => ['x' => $entry, 'z' => 330],
                 'walls' => ['back' => 'wallpaper-stripes', 'floor' => 'wood'],
                 // Under the clocks past the front door, with the radio on it.
@@ -246,18 +258,18 @@ final class GamesWorld
                 self::resident('blueberries', 770, 420, ['size' => 60, 'move' => 'hop', 'toot' => 'blueberries']),
             ]),
             'house.bathroom' => self::room('house_bathroom', [
-                'size' => ['w' => 800, 'd' => 450],
-                'spawn' => ['x' => 400, 'z' => 300],
+                'size' => ['w' => self::ROOM_FRAME, 'd' => 450],
+                'spawn' => ['x' => 450, 'z' => 300],
                 'walls' => ['back' => 'tiles', 'floor' => 'tiles'],
                 'ambient' => 0.65,
-                'lights' => [self::lamp('lamp', 250, 280, 0)],
+                'lights' => [self::lamp('lamp', 300, 280, 0)],
             ], [
-                self::roomDoor('hall-door', 100, 'house.hall', 'bathroom-door', 'house_hall', exit: true),
-                self::lampSwitch(250, 280),
-                self::toy('toilet-roll', 400, 0, '🧻', 'toilet_roll', ['y' => 140, 'size' => 50, 'move' => 'wobble', 'line' => true]),
-                self::game('boom', 560, 40, ['size' => 110, 'cast' => 'toilet']),
-                self::toy('plunger', 710, 140, '🪠', 'plunger', ['move' => 'bounce', 'line' => true]),
-                self::toy('air-freshener', 250, 230, '🧴', 'air_freshener', ['move' => 'hop', 'line' => true]),
+                self::roomDoor('hall-door', 150, 'house.hall', 'bathroom-door', 'house_hall', exit: true),
+                self::lampSwitch(300, 280),
+                self::toy('toilet-roll', 450, 0, '🧻', 'toilet_roll', ['y' => 140, 'size' => 50, 'move' => 'wobble', 'line' => true]),
+                self::game('boom', 610, 40, ['size' => 110, 'cast' => 'toilet']),
+                self::toy('plunger', 760, 140, '🪠', 'plunger', ['move' => 'bounce', 'line' => true]),
+                self::toy('air-freshener', 300, 230, '🧴', 'air_freshener', ['move' => 'hop', 'line' => true]),
             ]),
             'house.bedroom' => self::room('house_bedroom', [
                 'size' => ['w' => 900, 'd' => 500],
@@ -282,17 +294,17 @@ final class GamesWorld
 
             // --- The Poop's House --------------------------------------------------
             'poop-house.hall' => self::room('poop_house_hall', [
-                'size' => ['w' => 800, 'd' => 450],
-                'spawn' => ['x' => 300, 'z' => 300],
+                'size' => ['w' => self::ROOM_FRAME, 'd' => 450],
+                'spawn' => ['x' => 350, 'z' => 300],
                 'walls' => ['back' => 'wallpaper-stripes', 'sides' => 'plaster', 'floor' => 'concrete'],
                 'ambient' => 0.7,
-                'lights' => [self::lamp('lamp', 600, 280, 0)],
+                'lights' => [self::lamp('lamp', 650, 280, 0)],
             ], [
-                self::roomDoor('front-door', 400, 'road', 'poop-house', exit: true),
-                self::lampSwitch(600, 280),
-                self::resident('poop', 620, 220, ['move' => 'bounce', 'toot' => 'poop']),
+                self::roomDoor('front-door', 450, 'road', 'poop-house', exit: true),
+                self::lampSwitch(650, 280),
+                self::resident('poop', 670, 220, ['move' => 'bounce', 'toot' => 'poop']),
                 // The Poop's game, played on the spot: catch the falling foods.
-                self::minigame('toot-catch', 170, 180, '🧺'),
+                self::minigame('toot-catch', 220, 180, '🧺'),
             ]),
 
             // --- The Cockroach's House: one dark room. Cockroach Fart and
@@ -302,12 +314,18 @@ final class GamesWorld
             // portrait, and candles in sconces either side of it (the right
             // one by the pipe organ that fills the right wall, well clear of
             // the way out) and on the left wall. Every flame flickers.
+            // Photos of Hank from his book hang either side of them, past
+            // the door's EXIT sign and the scroll, a new pair each day.
             'cockroach-house.hall' => self::room('cockroach_house_hall', [
                 'size' => ['w' => $nestW, 'd' => 480],
                 'spawn' => ['x' => 280, 'z' => 320],
                 'walls' => ['back' => 'stone', 'sides' => 'stone', 'floor' => 'flagstones'],
                 'crawlers' => true,
                 'fireplaces' => [['x' => $hearth, ...self::FIREPLACE]],
+                'photos' => [
+                    self::photoFrame('hank-left', 300, 150, 110, 150, ['book' => self::HANK_BOOK], 'ornate'),
+                    self::photoFrame('hank-right', 1070, 150, 110, 150, ['book' => self::HANK_BOOK], 'ornate'),
+                ],
                 'ambient' => 0.2,
                 'lights' => [
                     self::flame('fire', $hearth, self::HEARTH_FIRE['y'], self::HEARTH_FIRE['z'], '#f97316', 1.3),
@@ -323,10 +341,10 @@ final class GamesWorld
                 // Hank, remembered over the fire, and on a scroll beside it
                 // that reads itself aloud.
                 self::picture('portrait', $hearth, self::FIREPLACE['h'], '/img/cockroach.png', 372, 200, 'cockroach_portrait'),
-                self::toy('tribute', 800, 0, '📜', 'tribute', ['y' => 110, 'size' => 70, 'move' => 'wiggle', 'line' => true]),
+                self::toy('tribute', $hearth + 300, 0, '📜', 'tribute', ['y' => 110, 'size' => 70, 'move' => 'wiggle', 'line' => true]),
                 self::toy('fire', $hearth, self::HEARTH_FIRE['z'], '🔥', 'fire', ['y' => self::HEARTH_FIRE['y'], 'size' => 96, 'move' => 'wiggle', 'light' => 'fire']),
-                self::game('cockroach', 300, 180, ['size' => 110, 'cast' => 'cockroach']),
-                self::game('cockroach-fight', 700, 260, ['size' => 110, 'cast' => 'cockroach']),
+                self::game('cockroach', $hearth - 200, 180, ['size' => 110, 'cast' => 'cockroach']),
+                self::game('cockroach-fight', $hearth + 200, 260, ['size' => 110, 'cast' => 'cockroach']),
                 // The side wall's faces the room just off it, as a card
                 // turned to its wall would be seen edge on.
                 ...array_map(
@@ -359,7 +377,7 @@ final class GamesWorld
         // The ground floor is the first; landing $i is floor $i + 2.
         $floorId = fn (int $i) => $i < 0 ? 'library.hall' : 'library.floor-'.($i + 2);
 
-        $roomW = 900;
+        $roomW = self::ROOM_FRAME;
         // A landing: a stairwell's width at each end, and a door's width
         // apart for each category door between them.
         $stairsEnd = 150;
@@ -377,7 +395,6 @@ final class GamesWorld
         $scenes = [
             'library.hall' => self::room('library_hall', [
                 'size' => ['w' => $hallW, 'd' => 450],
-                ...($hallW > $roomW ? ['frame' => $roomW] : []),
                 'spawn' => ['x' => 300, 'z' => 300],
                 'walls' => ['back' => 'brick', 'sides' => 'plaster', 'floor' => 'wood'],
                 // Dim, so the lamps' light pools on the shelves.
@@ -403,9 +420,6 @@ final class GamesWorld
             $scenes[$landing] = [
                 ...self::room('library_floor', [
                     'size' => ['w' => $landingW, 'd' => 450],
-                    // Shown at a room's usual scale, so the door titles
-                    // have room: the ends scroll into view.
-                    'frame' => $roomW,
                     'spawn' => ['x' => $landingW / 2, 'z' => 300],
                     'walls' => ['back' => 'wallpaper-stripes', 'sides' => 'plaster', 'floor' => 'carpet'],
                     'ambient' => 0.45,
@@ -444,7 +458,6 @@ final class GamesWorld
                 $scenes["library.category-{$category->id}"] = [
                     ...self::room('library_category', [
                         'size' => ['w' => $width, 'd' => 450],
-                        ...($width > $roomW ? ['frame' => $roomW] : []),
                         'spawn' => ['x' => 300, 'z' => 300],
                         'walls' => ['back' => 'wallpaper-dots', 'sides' => 'plaster', 'floor' => 'wood'],
                         // Dim, so the lamps' light pools on the shelves.
@@ -650,12 +663,13 @@ final class GamesWorld
         ];
     }
 
-    /** A room named `places.<label>`. */
+    /** A room named `places.<label>`, seen ROOM_FRAME wide. */
     private static function room(string $label, array $room, array $interactables): array
     {
         return [
             'kind' => 'room',
             'label' => "messages.games.world.places.{$label}",
+            'frame' => self::ROOM_FRAME,
             ...$room,
             'interactables' => $interactables,
         ];
@@ -713,11 +727,12 @@ final class GamesWorld
         ];
     }
 
-    /** A picture on a room's back wall, its bottom `y` up it: `src` in a
-     * frame `w` × `h` (the photo's own shape). The room draws it as an
-     * image over a panel, the way a book cover sits on a shelf. Named
-     * `toys.<key>`, and it says `toys.<key>_line`. */
-    private static function picture(string $id, int $x, int $y, string $src, int $w, int $h, string $key): array
+    /** A picture on a room's back wall, its bottom `y` up it: `src`
+     * `w` × `h` (the photo's own shape), in one of PICTURE_FRAMES or on a
+     * plain panel. The room draws it as an image over that, the way a book
+     * cover sits on a shelf. Named `toys.<key>`, and it says
+     * `toys.<key>_line`. */
+    private static function picture(string $id, int $x, int $y, string $src, int $w, int $h, string $key, ?string $frame = null): array
     {
         return [
             'id' => $id,
@@ -725,10 +740,26 @@ final class GamesWorld
             'x' => $x,
             'z' => 0,
             'y' => $y,
-            'image' => ['src' => $src, 'w' => $w, 'h' => $h],
+            'image' => ['src' => $src, 'w' => $w, 'h' => $h, ...($frame ? ['frame' => $frame] : [])],
             'label' => "messages.games.world.toys.{$key}",
             'line' => "messages.games.world.toys.{$key}_line",
             'sound' => 'hiss',
+        ];
+    }
+
+    /** A photo frame on a room's back wall, its bottom `y` up it, `w` ×
+     * `h`, filled with one of the photos `from` names (for now only
+     * `['book' => '<slug>']`, that book's pictures), picked once a day by
+     * scenes(); blank if there's none to give it. In one of PICTURE_FRAMES,
+     * or on a plain panel. A room's `photos` are decor: nothing to tap. */
+    private static function photoFrame(string $id, int $x, int $y, int $w, int $h, array $from, ?string $frame = null): array
+    {
+        return [
+            'id' => $id,
+            'x' => $x,
+            'y' => $y,
+            'image' => ['w' => $w, 'h' => $h, ...($frame ? ['frame' => $frame] : [])],
+            'from' => $from,
         ];
     }
 
@@ -891,18 +922,29 @@ final class GamesWorld
     public static function scenes(): array
     {
         $games = GameController::games();
+        $definitions = self::definitions();
         // A TV's channels and a radio's songs: each asked for once, and only
         // if a scene has one.
         $tuned = [];
         $tune = function (string $what) use (&$tuned) {
             return $tuned[$what] ??= self::$what();
         };
+        // Each photo source's pictures today, enough for every frame in the
+        // world that names it, handed out in turn so frames sharing one
+        // differ.
+        $photos = collect($definitions)
+            ->flatMap(fn ($scene) => $scene['photos'] ?? [])
+            ->groupBy(fn ($frame) => self::photoSource($frame['from']))
+            ->map(fn ($frames) => collect(self::photos($frames->first()['from'], $frames->count())));
 
-        return collect(self::definitions())
+        return collect($definitions)
             ->map(fn ($scene) => [
                 ...self::translate($scene),
                 ...(isset($scene['shelves'])
                     ? ['shelves' => array_map(fn ($shelf) => self::translate($shelf), $scene['shelves'])]
+                    : []),
+                ...(isset($scene['photos'])
+                    ? ['photos' => array_map(fn ($frame) => self::hang($frame, $photos), $scene['photos'])]
                     : []),
                 'interactables' => array_map(
                     fn ($item) => self::resolve($item, $games, $tune),
@@ -952,25 +994,22 @@ final class GamesWorld
      * URLs Page gives. */
     private static function channels(): array
     {
-        $videos = fn () => Page::query()
+        return self::pickedToday('channels', fn () => Page::query()
             ->notBlocked()
             ->whereNotNull('media_poster')
             ->where('media_poster', '!=', '')
-            ->whereNull('video_link');
-
-        return self::pickedToday(
-            'channels',
-            self::TV_CHANNELS,
-            fn () => $videos()->inRandomOrder()->limit(self::TV_CHANNELS)->pluck('id'),
-            fn (array $ids) => $videos()->with('book:id,title')->whereKey($ids)->get(),
-        )
+            ->whereNull('video_link')
+            ->with('book:id,title')
+            ->inRandomOrder()
+            ->limit(self::TV_CHANNELS)
+            ->get()
             ->map(fn (Page $page) => [
                 'id' => $page->id,
                 'video' => $page->media_path,
                 'poster' => $page->media_poster,
                 'title' => $page->book?->title ?? '',
             ])
-            ->all();
+            ->all());
     }
 
     /** A few of the family's songs, picked at random once a day, for a
@@ -984,40 +1023,67 @@ final class GamesWorld
             return [];
         }
 
-        return self::pickedToday(
-            'songs',
-            self::RADIO_STATIONS,
-            fn () => Song::query()->inRandomOrder()->limit(self::RADIO_STATIONS)->pluck('id'),
-            fn (array $ids) => Song::query()
-                ->whereKey($ids)
-                ->get(['id', 'title', 'description', 'youtube_video_id', 'thumbnail_default', 'thumbnail_high']),
-        )->toArray();
+        return self::pickedToday('songs', fn () => Song::query()
+            ->inRandomOrder()
+            ->limit(self::RADIO_STATIONS)
+            ->get(['id', 'title', 'description', 'youtube_video_id', 'thumbnail_default', 'thumbnail_high'])
+            ->toArray());
     }
 
-    /** Up to `$count` ids picked at random once a day (Los Angeles time,
-     * like the scheduler) and cached until midnight; each request looks them
-     * up afresh by primary key through `$fetch`, so what's blocked or deleted
-     * since drops out at once, and returns them in the order picked, so a
-     * TV's channel numbers hold all day. A short pick isn't cached: until
-     * there are `$count` to choose from, what's uploaded later that day
-     * still shows. The first pick stored wins, so visitors who arrive
-     * together at midnight share one. */
-    private static function pickedToday(string $key, int $count, Closure $pickIds, Closure $fetch): Collection
+    /** The key photo source `$photos` is known by: `book:<slug>`. */
+    private static function photoSource(array $photos): string
+    {
+        return "book:{$photos['book']}";
+    }
+
+    /** Up to `$count` pictures from photo source `$photos`, picked at
+     * random once a day: a book's image pages anyone can see on the Photos
+     * page. */
+    private static function photos(array $photos, int $count): array
+    {
+        return self::pickedToday(self::photoSource($photos).":{$count}", fn () => Page::query()
+            ->notBlocked()
+            ->whereIn('book_id', Book::select('id')->where('slug', $photos['book']))
+            ->hasImage()
+            ->inRandomOrder()
+            ->limit($count)
+            ->get(['id', 'media_path'])
+            ->pluck('media_path')
+            ->all());
+    }
+
+    /** Frame `$frame`, given the next of its source's pictures in
+     * `$photos` (by photoSource()) as its `image.src`; once its source has
+     * run out it hangs blank. */
+    private static function hang(array $frame, Collection $photos): array
+    {
+        $src = $photos[self::photoSource($frame['from'])]->shift();
+        unset($frame['from']);
+
+        return $src === null ? $frame : [...$frame, 'image' => [...$frame['image'], 'src' => $src]];
+    }
+
+    /** What `$pick` chooses at random, once a day (Los Angeles time, like
+     * the scheduler), cached as it is until midnight: the rest of the day's
+     * visits run no query for it at all, and see it in the same order, so a
+     * TV's channel numbers hold. Whatever it picks is kept, even a short or
+     * empty pick, and what's blocked, deleted or added during the day waits
+     * for the next pick (or the cache being cleared). The first pick stored
+     * wins, so visitors who arrive together at midnight share one. */
+    private static function pickedToday(string $key, Closure $pick): array
     {
         $today = CarbonImmutable::now(config('app.local_timezone'));
-        $cacheKey = "games-world:picks:{$key}:{$today->toDateString()}";
+        $cacheKey = "games-world:day-picks:{$key}:{$today->toDateString()}";
 
-        $ids = Cache::get($cacheKey);
-        if ($ids === null) {
-            $ids = $pickIds()->all();
-            if (count($ids) === $count && ! Cache::add($cacheKey, $ids, $today->endOfDay())) {
-                $ids = Cache::get($cacheKey, $ids);
+        $picked = Cache::get($cacheKey);
+        if ($picked === null) {
+            $picked = $pick();
+            if (! Cache::add($cacheKey, $picked, $today->endOfDay())) {
+                $picked = Cache::get($cacheKey, $picked);
             }
         }
 
-        $order = array_flip($ids);
-
-        return $fetch($ids)->sortBy(fn ($model) => $order[$model->getKey()])->values();
+        return $picked;
     }
 
     /** A scene's or interactable's TRANSLATED fields, each filled in from
