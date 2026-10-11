@@ -994,25 +994,22 @@ final class GamesWorld
      * URLs Page gives. */
     private static function channels(): array
     {
-        $videos = fn () => Page::query()
+        return self::pickedToday('channels', fn () => Page::query()
             ->notBlocked()
             ->whereNotNull('media_poster')
             ->where('media_poster', '!=', '')
-            ->whereNull('video_link');
-
-        return self::pickedToday(
-            'channels',
-            self::TV_CHANNELS,
-            fn () => $videos()->inRandomOrder()->limit(self::TV_CHANNELS)->pluck('id'),
-            fn (array $ids) => $videos()->with('book:id,title')->whereKey($ids)->get(),
-        )
+            ->whereNull('video_link')
+            ->with('book:id,title')
+            ->inRandomOrder()
+            ->limit(self::TV_CHANNELS)
+            ->get()
             ->map(fn (Page $page) => [
                 'id' => $page->id,
                 'video' => $page->media_path,
                 'poster' => $page->media_poster,
                 'title' => $page->book?->title ?? '',
             ])
-            ->all();
+            ->all());
     }
 
     /** A few of the family's songs, picked at random once a day, for a
@@ -1026,14 +1023,11 @@ final class GamesWorld
             return [];
         }
 
-        return self::pickedToday(
-            'songs',
-            self::RADIO_STATIONS,
-            fn () => Song::query()->inRandomOrder()->limit(self::RADIO_STATIONS)->pluck('id'),
-            fn (array $ids) => Song::query()
-                ->whereKey($ids)
-                ->get(['id', 'title', 'description', 'youtube_video_id', 'thumbnail_default', 'thumbnail_high']),
-        )->toArray();
+        return self::pickedToday('songs', fn () => Song::query()
+            ->inRandomOrder()
+            ->limit(self::RADIO_STATIONS)
+            ->get(['id', 'title', 'description', 'youtube_video_id', 'thumbnail_default', 'thumbnail_high'])
+            ->toArray());
     }
 
     /** The key photo source `$photos` is known by: `book:<slug>`. */
@@ -1047,19 +1041,15 @@ final class GamesWorld
      * page. */
     private static function photos(array $photos, int $count): array
     {
-        $pictures = fn () => Page::query()
+        return self::pickedToday(self::photoSource($photos).":{$count}", fn () => Page::query()
             ->notBlocked()
             ->whereIn('book_id', Book::select('id')->where('slug', $photos['book']))
-            ->hasImage();
-
-        return self::pickedToday(
-            self::photoSource($photos),
-            $count,
-            fn () => $pictures()->inRandomOrder()->limit($count)->pluck('id'),
-            fn (array $ids) => $pictures()->whereKey($ids)->get(['id', 'media_path']),
-        )
+            ->hasImage()
+            ->inRandomOrder()
+            ->limit($count)
+            ->get(['id', 'media_path'])
             ->pluck('media_path')
-            ->all();
+            ->all());
     }
 
     /** Frame `$frame`, given the next of its source's pictures in
@@ -1073,30 +1063,27 @@ final class GamesWorld
         return $src === null ? $frame : [...$frame, 'image' => [...$frame['image'], 'src' => $src]];
     }
 
-    /** Up to `$count` ids picked at random once a day (Los Angeles time,
-     * like the scheduler) and cached until midnight; each request looks them
-     * up afresh by primary key through `$fetch`, so what's blocked or deleted
-     * since drops out at once, and returns them in the order picked, so a
-     * TV's channel numbers hold all day. A short pick isn't cached: until
-     * there are `$count` to choose from, what's uploaded later that day
-     * still shows. The first pick stored wins, so visitors who arrive
-     * together at midnight share one. */
-    private static function pickedToday(string $key, int $count, Closure $pickIds, Closure $fetch): Collection
+    /** What `$pick` chooses at random, once a day (Los Angeles time, like
+     * the scheduler), cached as it is until midnight: the rest of the day's
+     * visits run no query for it at all, and see it in the same order, so a
+     * TV's channel numbers hold. Whatever it picks is kept, even a short or
+     * empty pick, and what's blocked, deleted or added during the day waits
+     * for the next pick (or the cache being cleared). The first pick stored
+     * wins, so visitors who arrive together at midnight share one. */
+    private static function pickedToday(string $key, Closure $pick): array
     {
         $today = CarbonImmutable::now(config('app.local_timezone'));
-        $cacheKey = "games-world:picks:{$key}:{$today->toDateString()}";
+        $cacheKey = "games-world:day-picks:{$key}:{$today->toDateString()}";
 
-        $ids = Cache::get($cacheKey);
-        if ($ids === null) {
-            $ids = $pickIds()->all();
-            if (count($ids) === $count && ! Cache::add($cacheKey, $ids, $today->endOfDay())) {
-                $ids = Cache::get($cacheKey, $ids);
+        $picked = Cache::get($cacheKey);
+        if ($picked === null) {
+            $picked = $pick();
+            if (! Cache::add($cacheKey, $picked, $today->endOfDay())) {
+                $picked = Cache::get($cacheKey, $picked);
             }
         }
 
-        $order = array_flip($ids);
-
-        return $fetch($ids)->sortBy(fn ($model) => $order[$model->getKey()])->values();
+        return $picked;
     }
 
     /** A scene's or interactable's TRANSLATED fields, each filled in from
