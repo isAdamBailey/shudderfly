@@ -207,9 +207,8 @@ final class GamesWorld
                 'walls' => ['back' => 'wallpaper-stripes', 'floor' => 'wood'],
                 // Under the clocks past the front door, with the radio on it.
                 'entertainment' => [self::entertainmentCenter($den)],
-                // A dim hall: low daylight, a lamp you can switch, and the
-                // table lamp by the radio (its light hangs in its shade).
-                'ambient' => 0.35,
+                // A lamp you can switch, and the table lamp by the radio
+                // (its light hangs in its shade).
                 'lights' => [
                     ['id' => 'lamp', 'x' => $entry + 300, 'z' => 240, 'y' => 200, 'color' => '#fbbf24', 'intensity' => 1.4],
                     // Hung in the lamp's shade by the room (RoomScene.js), wherever this says.
@@ -249,7 +248,6 @@ final class GamesWorld
                 'size' => ['w' => 900, 'd' => 500],
                 'spawn' => ['x' => 450, 'z' => 330],
                 'walls' => ['back' => 'tiles', 'sides' => 'wallpaper-dots', 'floor' => 'lino'],
-                'ambient' => 0.8,
                 'lights' => [self::lamp('lamp', 520, 300, 0)],
             ], [
                 self::roomDoor('hall-door', 120, 'house.hall', 'kitchen-door', 'house_hall', exit: true),
@@ -266,7 +264,6 @@ final class GamesWorld
                 'size' => ['w' => self::ROOM_FRAME, 'd' => 450],
                 'spawn' => ['x' => 450, 'z' => 300],
                 'walls' => ['back' => 'tiles', 'floor' => 'tiles'],
-                'ambient' => 0.65,
                 'lights' => [self::lamp('lamp', 300, 280, 0)],
             ], [
                 self::roomDoor('hall-door', 150, 'house.hall', 'bathroom-door', 'house_hall', exit: true),
@@ -280,8 +277,7 @@ final class GamesWorld
                 'size' => ['w' => 900, 'd' => 500],
                 'spawn' => ['x' => 450, 'z' => 330],
                 'walls' => ['back' => 'wallpaper-dots', 'sides' => 'plaster', 'floor' => 'carpet'],
-                // Night-time dark, but for a nightlight you can switch.
-                'ambient' => 0.25,
+                // A nightlight you can switch.
                 'lights' => [
                     ['id' => 'nightlight', 'x' => 820, 'z' => 30, 'y' => 80, 'color' => '#a5b4fc', 'intensity' => 1.2],
                 ],
@@ -302,7 +298,6 @@ final class GamesWorld
                 'size' => ['w' => self::ROOM_FRAME, 'd' => 450],
                 'spawn' => ['x' => 350, 'z' => 300],
                 'walls' => ['back' => 'wallpaper-stripes', 'sides' => 'plaster', 'floor' => 'concrete'],
-                'ambient' => 0.7,
                 'lights' => [self::lamp('lamp', 650, 280, 0)],
             ], [
                 self::roomDoor('front-door', 450, 'road', 'poop-house', exit: true),
@@ -312,10 +307,10 @@ final class GamesWorld
                 self::minigame('toot-catch', 220, 180, '🧺'),
             ]),
 
-            // --- The Cockroach's House: one dark room. Cockroach Fart and
+            // --- The Cockroach's House: one room. Cockroach Fart and
             // Cockroach Fight stand on the floor. Little cockroaches crawl
             // the back wall, the same picture as the site header. Dark-ages
-            // stone, lit only by flames: a fire in the hearth under Hank's
+            // stone, its lamps all flames: a fire in the hearth under Hank's
             // portrait, and candles in sconces either side of it and on the
             // left wall. The pipe organ stands turned in the back-right
             // corner, well clear of the way out: flat on the right wall, a
@@ -332,7 +327,6 @@ final class GamesWorld
                     self::photoFrame('hank-left', 300, 150, 110, 150, ['book' => self::HANK_BOOK], 'ornate'),
                     self::photoFrame('hank-right', 1070, 150, 110, 150, ['book' => self::HANK_BOOK], 'ornate'),
                 ],
-                'ambient' => 0.2,
                 'lights' => [
                     self::flame('fire', $hearth, self::HEARTH_FIRE['y'], self::HEARTH_FIRE['z'], '#f97316', 1.3),
                     ...array_map(
@@ -403,8 +397,6 @@ final class GamesWorld
                 'size' => ['w' => $hallW, 'd' => 450],
                 'spawn' => ['x' => 300, 'z' => 300],
                 'walls' => ['back' => 'brick', 'sides' => 'plaster', 'floor' => 'wood'],
-                // Dim, so the lamps' light pools on the shelves.
-                'ambient' => 0.4,
                 'lights' => $hallLights,
                 ...($shelves ? ['shelves' => $shelves] : []),
             ], [
@@ -428,7 +420,6 @@ final class GamesWorld
                     'size' => ['w' => $landingW, 'd' => 450],
                     'spawn' => ['x' => $landingW / 2, 'z' => 300],
                     'walls' => ['back' => 'wallpaper-stripes', 'sides' => 'plaster', 'floor' => 'carpet'],
-                    'ambient' => 0.45,
                     'lights' => $landingLights,
                 ], [
                     // Down the way you came on the left, up on the right.
@@ -466,8 +457,6 @@ final class GamesWorld
                         'size' => ['w' => $width, 'd' => 450],
                         'spawn' => ['x' => 300, 'z' => 300],
                         'walls' => ['back' => 'wallpaper-dots', 'sides' => 'plaster', 'floor' => 'wood'],
-                        // Dim, so the lamps' light pools on the shelves.
-                        'ambient' => 0.4,
                         'lights' => $lights,
                         // An emptied category (its books cleaned up) is a bare room.
                         ...($category->books_count > 0 ? ['shelves' => [$shelf]] : []),

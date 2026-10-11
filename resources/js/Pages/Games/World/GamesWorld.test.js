@@ -138,7 +138,6 @@ const withHouse = {
         size: { w: 900, d: 500 },
         spawn: { x: 450, z: 330 },
         walls: { back: "wallpaper-stripes", floor: "wood" },
-        ambient: 0.35,
         lights: [
             {
                 id: "lamp",
@@ -1052,7 +1051,6 @@ describe("GamesWorld Library shelves", () => {
             frame: 900,
             spawn: { x: 300, z: 300 },
             walls: { back: "wallpaper-dots", floor: "wood" },
-            ambient: 0.6,
             shelves: [
                 {
                     id: "books",

@@ -155,8 +155,8 @@ class GamesWorldScenesTest extends TestCase
             $this->assertContains($scene['walls']['back'], GamesWorld::WALLS, "{$sceneId} walls");
             $this->assertContains($scene['walls']['sides'] ?? $scene['walls']['back'], GamesWorld::WALLS, "{$sceneId} sides");
             $this->assertContains($scene['walls']['floor'], GamesWorld::FLOORS, "{$sceneId} floor");
-            $this->assertGreaterThanOrEqual(0, $scene['ambient'], "{$sceneId} ambient");
-            $this->assertLessThanOrEqual(1, $scene['ambient'], "{$sceneId} ambient");
+            // Every room has the same daylight (RoomScene.js), none its own.
+            $this->assertArrayNotHasKey('ambient', $scene, $sceneId);
             // Every room is seen at the same scale: a wider one scrolls.
             $this->assertSame(GamesWorld::ROOM_FRAME, $scene['frame'], "{$sceneId} frame");
 
@@ -295,7 +295,7 @@ class GamesWorldScenesTest extends TestCase
         $this->assertGreaterThan(0, $found);
     }
 
-    public function test_the_cockroach_house_is_a_dark_room_you_can_leave(): void
+    public function test_the_cockroach_house_is_a_candlelit_room_you_can_leave(): void
     {
         $scenes = GamesWorld::definitions();
         $door = collect($scenes['road']['interactables'])->firstWhere('id', 'cockroach-house');
@@ -306,7 +306,6 @@ class GamesWorldScenesTest extends TestCase
         $this->assertSame('cockroach-house.hall', $door['to']);
 
         $room = $scenes['cockroach-house.hall'];
-        $this->assertLessThanOrEqual(0.25, $room['ambient']);
         $this->assertSame('stone', $room['walls']['back']);
         $this->assertSame('flagstones', $room['walls']['floor']);
         // Lit by candles alone, every one flickering, and no bulbs.
