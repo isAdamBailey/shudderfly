@@ -64,6 +64,12 @@ final class GamesWorld
     /** How many songs a radio turns through, picked afresh on every visit. */
     public const RADIO_STATIONS = 6;
 
+    /** An entertainment center's size in world units (scenes/
+     * entertainmentCenter.js draws it): `w` along the wall, `h` to its top,
+     * where a radio stands, `d` deep: its knobs stay clear of where the
+     * Butt walks (useRoom.js MARGIN). */
+    public const ENTERTAINMENT_CENTER = ['w' => 380, 'h' => 120, 'd' => 36];
+
     /** The walls of a room a door can sit on. `back` is the far wall, facing
      * the open front; `left` and `right` are the ends. */
     public const ROOM_WALLS = ['back', 'left', 'right'];
@@ -124,6 +130,8 @@ final class GamesWorld
         // until the Butt walks there. The front door is in that first view.
         $hallW = 3200;
         $entry = intdiv($hallW, 2);
+        // Where the radio stands on its entertainment center.
+        $den = 2500;
 
         return [
             'road' => [
@@ -147,6 +155,8 @@ final class GamesWorld
                 'frame' => 900,
                 'spawn' => ['x' => $entry, 'z' => 330],
                 'walls' => ['back' => 'wallpaper-stripes', 'floor' => 'wood'],
+                // Under the clocks past the front door, with the radio on it.
+                'entertainment' => [self::entertainmentCenter($den)],
                 // A dim hall: low daylight, and a lamp you can switch.
                 'ambient' => 0.35,
                 'lights' => [
@@ -176,6 +186,7 @@ final class GamesWorld
                 self::clock(6, 2400, 'sunburst', 'bell', 280),
                 self::clock(7, 2600, 'octagon', 'tick', 240),
                 self::clock(8, 2800, 'arch', 'bell', 270),
+                self::radio('radio', $den, 16, self::ENTERTAINMENT_CENTER['h'], 100),
                 self::roomDoor('bathroom-door', $hallW - 160, 'house.bathroom', 'hall-door', 'house_bathroom'),
                 self::toy('lamp-switch', $entry + 300, 240, '💡', 'lamp', ['move' => 'bounce', 'light' => 'lamp']),
                 self::resident('strawberry', $entry - 220, 280, ['move' => 'hop', 'toot' => 'strawberry']),
@@ -192,8 +203,6 @@ final class GamesWorld
                 self::game('toot-foods', 360, 40, ['size' => 110, 'emoji' => '🍔']),
                 self::game('costco-pizza-poop', 600, 180, ['size' => 100, 'cast' => 'pizza']),
                 self::toy('sprout-pot', 200, 290, '🍲', 'sprout_pot', ['move' => 'wobble', 'toot' => 'sprout', 'line' => true]),
-                // On the shelf by the window, playing the family's music.
-                self::radio('radio', 820, 0, 150),
                 // The fruit bowl: each toots at its own pitch.
                 self::resident('grapes', 710, 320, ['size' => 60, 'move' => 'hop', 'toot' => 'grapes']),
                 self::resident('apple', 820, 300, ['size' => 60, 'move' => 'hop', 'toot' => 'apple']),
@@ -695,10 +704,18 @@ final class GamesWorld
         ];
     }
 
-    /** A radio, `y` up a room's wall (0 on the floor). scenes() tunes it to
-     * a few of the family's songs (`songs`); with none, or the music turned
+    /** An entertainment center against the back wall, its middle `x` along
+     * it, ENTERTAINMENT_CENTER in size. */
+    private static function entertainmentCenter(int $x): array
+    {
+        return ['x' => $x, ...self::ENTERTAINMENT_CENTER];
+    }
+
+    /** An old wooden radio (three/antiqueRadio.js draws it), `y` up a room's
+     * wall or on top of something (0 on the floor). scenes() tunes it to a
+     * few of the family's songs (`songs`); with none, or the music turned
      * off, it says `toys.radio_line`. */
-    private static function radio(string $id, int $x, int $z, int $y = 0): array
+    private static function radio(string $id, int $x, int $z, int $y = 0, int $size = 60): array
     {
         return [
             'id' => $id,
@@ -706,7 +723,7 @@ final class GamesWorld
             'x' => $x,
             'z' => $z,
             'y' => $y,
-            'size' => 60,
+            'size' => $size,
             'emoji' => '📻',
             'label' => 'messages.games.world.toys.radio',
             'line' => 'messages.games.world.toys.radio_line',

@@ -271,6 +271,19 @@ describe("castMesh", () => {
         expect(spy).toHaveBeenCalled();
     });
 
+    it("frees a painted prop's own textures when the prop goes", () => {
+        const k = kit();
+        const texture = new THREE.Texture();
+        const glow = new THREE.Texture();
+        const puppet = k.paintedMesh(texture, { glow, glowColor: "#ffb347" });
+        const spies = [texture, glow].map((t) => vi.spyOn(t, "dispose"));
+
+        puppet.dispose();
+        for (const spy of spies) expect(spy).toHaveBeenCalledTimes(1);
+        k.dispose();
+        for (const spy of spies) expect(spy).toHaveBeenCalledTimes(1);
+    });
+
     it("frees its materials and textures on dispose", () => {
         const k = kit();
         const material = glyphOf(k.castMesh("poop")).material;

@@ -1,3 +1,5 @@
+import { canvasTexture } from "./useWorldRenderer.js";
+
 // Wall clocks in the hall, each a different shape. Names match
 // GamesWorld::CLOCKS (a test keeps the lists in step). Drawn into a square
 // canvas; the transparent ground is the silhouette.
@@ -301,12 +303,5 @@ export function paintClock(ctx, face) {
 
 /** A texture of `face` for a lit, cut-out plane. */
 export function clockTexture(THREE, face, size = 256) {
-    const canvas = document.createElement("canvas");
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext("2d");
-    if (ctx) paintClock(ctx, face);
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    return texture;
+    return canvasTexture(THREE, size, size, (ctx) => paintClock(ctx, face));
 }

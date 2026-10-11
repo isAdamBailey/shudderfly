@@ -10,9 +10,11 @@ import {
 } from "../three/roomLooks.js";
 import { applyCamera, disposeTree } from "../three/useWorldRenderer.js";
 import { clockFinish, clockTexture } from "../three/clockFaces.js";
+import { radioLook } from "../three/antiqueRadio.js";
 import { itemBox, itemPose, ROOM_SIZES, wallHeightOf } from "./roomLayout.js";
 import { bookcaseGeometry, booksMesh } from "./bookshelf.js";
 import { doorwayGeometry } from "./doorway.js";
+import { entertainmentCenterGeometry } from "./entertainmentCenter.js";
 import { exitSigns } from "./exitSign.js";
 import { floorGeometry, stairsFootprint, stairsGeometry } from "./staircase.js";
 import { createWallCrawlers } from "./wallCrawlers.js";
@@ -222,18 +224,21 @@ export function createRoomScene(
         );
     }
 
-    // Stairs, open doorways (doorway.js) and the Library's bookcases
-    // (bookshelf.js) are built into the room, in wood coloured in their
-    // vertices; the books on the shelves are one instanced mesh.
+    // Stairs, open doorways (doorway.js), the Library's bookcases
+    // (bookshelf.js) and entertainment centers (entertainmentCenter.js) are
+    // built into the room, in wood coloured in their vertices; the books on
+    // the shelves are one instanced mesh.
     const shelves = room.shelves ?? [];
+    const entertainment = room.entertainment ?? [];
     const doorways = room.interactables.filter((item) => item.open);
-    const wood =
-        stairs.length + doorways.length + shelves.length > 0
-            ? new THREE.MeshStandardMaterial({
-                  vertexColors: true,
-                  roughness: 0.8,
-              })
-            : null;
+    const wood = [stairs, doorways, shelves, entertainment].some(
+        (list) => list.length
+    )
+        ? new THREE.MeshStandardMaterial({
+              vertexColors: true,
+              roughness: 0.8,
+          })
+        : null;
     function woodwork(geometry, pose = null) {
         const mesh = new THREE.Mesh(geometry, wood);
         if (pose) {
@@ -246,6 +251,9 @@ export function createRoomScene(
     }
     for (const item of stairs) woodwork(stairsGeometry(THREE, item, height));
     for (const shelf of shelves) woodwork(bookcaseGeometry(THREE, shelf));
+    for (const unit of entertainment) {
+        woodwork(entertainmentCenterGeometry(THREE, unit));
+    }
     if (doorways.length > 0) {
         const doorway = doorwayGeometry(THREE);
         for (const item of doorways) woodwork(doorway, itemPose(item));
@@ -311,10 +319,13 @@ export function createRoomScene(
             continue;
         }
         const size = itemBox(item).height;
-        // On a wall rather than the floor: no shadow under it.
-        const shadows = !((item.y ?? 0) > 0);
+        // Hung on the back wall (up it, against it): no shadow under it.
+        // One standing on something (a radio on its cabinet) has one.
+        const shadows = !((item.y ?? 0) > 0 && !item.z);
         const puppet = item.cast
             ? kit.castMesh(item.cast, { size, shadows })
+            : item.type === "radio"
+            ? antiqueRadio(size, shadows)
             : item.face
             ? kit.paintedMesh(clockTexture(THREE, item.face), {
                   size,
@@ -374,6 +385,17 @@ export function createRoomScene(
     const buttGlow = glowing(butt, "#ffffff", "butt-glow");
     showDaylight(night);
     showLamps();
+
+    /** The radio, an old wooden one, its dial lit from behind. */
+    function antiqueRadio(size, shadows) {
+        const { texture, ...look } = radioLook(THREE);
+        return kit.paintedMesh(texture, {
+            size,
+            shadows,
+            moves: CAST_MOVES,
+            ...look,
+        });
+    }
 
     /** A thin panel on its wall, `color`: a TV's screen or a picture's
      * backing. What it shows is in the overlay. */

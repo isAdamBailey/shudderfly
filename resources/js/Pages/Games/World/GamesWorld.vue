@@ -229,15 +229,18 @@ const layerStyle = computed(() =>
 );
 
 const stageLabel = computed(() => {
+    const title = t("games.world.title");
     if (inRoom.value) {
         return t("games.world.room_aria", {
+            title,
             place: router.current.value.label,
         });
     }
     return t(
         mode.value === "dom"
             ? "games.world.stage_aria"
-            : "games.world.stage_lanes_aria"
+            : "games.world.stage_lanes_aria",
+        { title }
     );
 });
 

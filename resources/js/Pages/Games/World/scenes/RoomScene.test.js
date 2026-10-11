@@ -358,6 +358,46 @@ describe("the room's scene graph", () => {
         graph.dispose();
     });
 
+    it("stands an antique radio, its dial lit, on an entertainment center", () => {
+        const den = {
+            ...hall,
+            entertainment: [{ x: 300, w: 380, h: 120, d: 36 }],
+            interactables: [
+                ...hall.interactables,
+                {
+                    id: "radio",
+                    type: "radio",
+                    x: 300,
+                    z: 16,
+                    y: 120,
+                    size: 100,
+                    emoji: "📻",
+                },
+            ],
+        };
+        const graph = build(den);
+        const radio = graph.scene
+            .getObjectsByProperty("isMesh", true)
+            // Its own glow map: a lit switch glows by its picture instead.
+            .find(
+                (m) =>
+                    m.material.emissiveMap &&
+                    m.material.emissiveMap !== m.material.map
+            );
+        expect(radio).toBeTruthy();
+        expect(radio.material.map).toBeTruthy();
+        const center = graph.scene
+            .getObjectsByProperty("isMesh", true)
+            .filter((m) => m.geometry.attributes.color)
+            .map((m) => {
+                m.geometry.computeBoundingBox();
+                return m.geometry.boundingBox;
+            })
+            .find((b) => b.min.x < 300 && b.max.x > 300 && b.max.y > 100);
+        expect(center.max.y).toBe(120);
+        graph.dispose();
+    });
+
     it("builds an open doorway into its wall instead of a door card", () => {
         const open = {
             ...hall,

@@ -22,7 +22,7 @@ export const BOOKCASE = { plinth: 148, row: 100, board: 8, depth: 34 };
 // within these), and how thick.
 export const BOOK = { width: [70, 88], height: [74, 92], depth: 22 };
 
-const WOOD = "#5b3a1e";
+export const WOOD = "#5b3a1e";
 const BACK = "#2b1a0e"; // the panel behind the books
 const CUPBOARD = "#6b4423"; // the doors under the bottom shelf
 

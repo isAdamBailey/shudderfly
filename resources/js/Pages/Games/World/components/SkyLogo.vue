@@ -1,9 +1,15 @@
 <script setup>
+import { computed } from "vue";
 import { useTranslations } from "@/composables/useTranslations";
 
-// The gold "Game World" arched across the sky, shared by both road drawers.
-// Decorative: the page has its own heading.
+// The gold "Toot Food World" arched across the sky, shared by both road
+// drawers. Decorative: the page has its own heading.
 const { t } = useTranslations();
+
+// Smaller letters for a longer name (a translation), so it fits the arch.
+const fontSize = computed(
+    () => `${Math.min(40, Math.floor(600 / t("games.world.title").length))}px`
+);
 </script>
 
 <template>
@@ -12,6 +18,7 @@ const { t } = useTranslations();
             class="sky-logo-svg"
             viewBox="0 0 400 120"
             preserveAspectRatio="xMidYMid meet"
+            :style="{ '--sky-logo-size': fontSize }"
         >
             <defs>
                 <path
@@ -72,7 +79,7 @@ const { t } = useTranslations();
 .sky-logo-depth {
     font-family: "Spicy Rice", ui-rounded, system-ui, sans-serif;
     font-weight: 800;
-    font-size: 40px;
+    font-size: var(--sky-logo-size, 40px);
     text-anchor: middle;
     fill: #b5590f;
 }
@@ -80,7 +87,7 @@ const { t } = useTranslations();
 .sky-logo-face {
     font-family: "Spicy Rice", ui-rounded, system-ui, sans-serif;
     font-weight: 800;
-    font-size: 40px;
+    font-size: var(--sky-logo-size, 40px);
     text-anchor: middle;
     fill: url(#skyLogoFill);
     stroke: #7a3b00;

@@ -536,7 +536,9 @@ export function createCastKit(
         },
 
         /** A prop painted onto its own texture (a clock face), with the same
-         * moves as an emoji prop. The kit frees the texture with the material. */
+         * moves as an emoji prop. A `glow` texture lights parts of it from
+         * within (a radio's dial), tinted `glowColor`. Its dispose() frees
+         * the textures with the material (or the kit's, if it outlives it). */
         paintedMesh(
             texture,
             {
@@ -545,6 +547,8 @@ export function createCastKit(
                 moves = [],
                 roughness = 0.8,
                 metalness = 0,
+                glow = null,
+                glowColor = "#ffffff",
             } = {}
         ) {
             const material = new THREE.MeshStandardMaterial({
@@ -553,9 +557,26 @@ export function createCastKit(
                 side: THREE.DoubleSide,
                 roughness,
                 metalness,
+                ...(glow
+                    ? {
+                          emissiveMap: glow,
+                          emissive: new THREE.Color(glowColor),
+                      }
+                    : {}),
             });
             pictures.push(material);
-            return puppet({ picture: material, moves, size, shadows });
+            const painted = puppet({ picture: material, moves, size, shadows });
+            // Its material and textures are its own, so it frees them
+            // itself: a room rebuilt on every visit doesn't pile them up.
+            const remove = painted.dispose;
+            painted.dispose = () => {
+                remove();
+                pictures.splice(pictures.indexOf(material), 1);
+                material.map?.dispose();
+                material.emissiveMap?.dispose();
+                material.dispose();
+            };
+            return painted;
         },
 
         dispose() {
@@ -566,6 +587,7 @@ export function createCastKit(
             materials.clear();
             for (const material of pictures) {
                 material.map?.dispose();
+                material.emissiveMap?.dispose();
                 material.dispose();
             }
             pictures.length = 0;

@@ -565,7 +565,19 @@ class GamesWorldScenesTest extends TestCase
 
     private function radio(): array
     {
-        return collect(GamesWorld::scenes()['house.kitchen']['interactables'])->firstWhere('type', 'radio');
+        return collect(GamesWorld::scenes()['house.hall']['interactables'])->firstWhere('type', 'radio');
+    }
+
+    public function test_the_radio_stands_on_the_hall_entertainment_center(): void
+    {
+        $hall = GamesWorld::scenes()['house.hall'];
+        $center = $hall['entertainment'][0];
+        $radio = $this->radio();
+
+        $this->assertSame($center['x'], $radio['x']);
+        $this->assertSame($center['h'], $radio['y']);
+        $this->assertLessThan($center['d'], $radio['z']);
+        $this->assertNull(collect(GamesWorld::scenes()['house.kitchen']['interactables'])->firstWhere('type', 'radio'));
     }
 
     public function test_the_radio_plays_the_family_songs(): void
