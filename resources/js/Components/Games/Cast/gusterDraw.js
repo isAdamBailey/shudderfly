@@ -8,25 +8,39 @@
  *
  * Parts are ellipsoids in figure space before the view turn: y up, his flat
  * base on y = 0, his face toward +z, about one unit tall. His right is -x
- * (the viewer's left). Body parts are glossy blobs: a broad core, lumpy
- * sides in three tiers narrowing upward, and a curled tip leaning to his
- * left. Face parts sit on the core's front: two uneven eyes with dot pupils,
- * worried brows that flatten their tops, and a crooked row of teeth.
+ * (the viewer's left). Body parts are glossy blobs that make one smooth,
+ * soft cloud: a broad core on a wide bottom, gentle lobes up his sides, and
+ * a dome that rounds into one thin stem leaning to his left. Face parts sit
+ * on the core's front: two uneven eyes with small dot pupils, worried brows
+ * that flatten their tops, and one wide grimace: teeth cut straight by his
+ * lip above and scalloped below, its corners creased up into his cheeks.
  */
 
 import { GUSTER_COLORS } from "@/constants/characters.js";
 import { boundsOf, project as projectTo } from "./figureView.js";
 
-/** Degrees. A small yaw shows his lumpy side; pitch looks down onto his
- * tip. */
-export const GUSTER_VIEW = Object.freeze({ yaw: -14, pitch: 10, focal: 3 });
+/** Degrees. A small yaw shows his rounded side; a slight pitch looks onto
+ * his top, near enough level to meet his eyes. */
+export const GUSTER_VIEW = Object.freeze({ yaw: -10, pitch: 4, focal: 3 });
 
 const GUSTER_LIGHT = { x: -0.32, y: 0.46 };
 const DEG = Math.PI / 180;
 
-const CORE = { x: 0, y: 0.42, z: 0, rx: 0.4, ry: 0.4, rz: 0.32 };
-
-const blob = (x, y, z, rx, ry, rz, color = GUSTER_COLORS.body, rot = 0) => ({
+/**
+ * A glossy body part. `rim: false` leaves it out of his dark outline (his
+ * smooth bottom has none); `gloss` is a shiny streak on it, as shares of its
+ * radii from its centre: the DOM paints it, WebGL gets its shine from the
+ * light.
+ */
+const blob = (
+    x,
+    y,
+    z,
+    rx,
+    ry,
+    rz,
+    { color = GUSTER_COLORS.body, rot = 0, rim = true, gloss = null } = {}
+) => ({
     type: "blob",
     x,
     y,
@@ -36,61 +50,90 @@ const blob = (x, y, z, rx, ry, rz, color = GUSTER_COLORS.body, rot = 0) => ({
     rz,
     rot,
     color,
+    glossy: true,
+    rim,
+    gloss,
 });
 
 const BODY = [
-    blob(0, 0.09, 0.02, 0.43, 0.09, 0.32, GUSTER_COLORS.base),
-    blob(CORE.x, CORE.y, CORE.z, CORE.rx, CORE.ry, CORE.rz),
-    // Bottom tier: the widest bulges, at the sides and toward the front.
-    blob(-0.3, 0.17, 0.02, 0.19, 0.17, 0.22, GUSTER_COLORS.mid),
-    blob(0.31, 0.17, 0.02, 0.19, 0.17, 0.22, GUSTER_COLORS.mid),
-    blob(-0.14, 0.12, 0.12, 0.19, 0.12, 0.19, GUSTER_COLORS.mid),
-    blob(0.15, 0.12, 0.12, 0.19, 0.12, 0.19, GUSTER_COLORS.mid),
-    // Middle tier.
-    blob(-0.33, 0.4, 0, 0.15, 0.16, 0.2),
-    blob(0.34, 0.42, 0, 0.15, 0.16, 0.2),
-    // Top tier, narrower.
-    blob(-0.25, 0.6, 0, 0.15, 0.14, 0.18),
-    blob(0.26, 0.62, 0, 0.14, 0.13, 0.17),
-    // The dome, then the tip curling up to his left and back.
-    blob(0.02, 0.7, -0.02, 0.27, 0.16, 0.22),
-    blob(0.06, 0.82, -0.03, 0.13, 0.11, 0.11, undefined, -10),
-    blob(0.11, 0.91, -0.05, 0.075, 0.085, 0.07, undefined, -22),
-    blob(0.135, 0.985, -0.07, 0.04, 0.06, 0.04, undefined, -34),
+    // A soft cloud: one wide, smooth bottom on a flat base, broadest low
+    // down like a pear, and lobes above it tucked mostly inside his core, so
+    // his outline only swells gently.
+    blob(0, 0.07, 0.03, 0.3, 0.07, 0.26, {
+        color: GUSTER_COLORS.mid,
+        rim: false,
+    }),
+    blob(0, 0.45, 0, 0.46, 0.43, 0.34),
+    blob(0, 0.26, 0.03, 0.5, 0.26, 0.33, {
+        color: GUSTER_COLORS.mid,
+        rim: false,
+    }),
+    // Side lobes.
+    blob(-0.24, 0.42, 0, 0.24, 0.27, 0.23),
+    blob(0.25, 0.43, 0, 0.24, 0.27, 0.23),
+    // Shoulders, narrower; a soft glint on his left one.
+    blob(-0.17, 0.65, 0, 0.22, 0.18, 0.21),
+    blob(0.18, 0.66, 0, 0.21, 0.17, 0.2, {
+        gloss: { x: 0.05, y: 0.45, rx: 0.4, ry: 0.2, rot: -20 },
+    }),
+    // The dome, rounding up into one thin stem, like a garlic bulb's, that
+    // leans a little to his left. A long glint runs down the stem.
+    blob(0.01, 0.71, -0.02, 0.34, 0.21, 0.26, {
+        gloss: { x: -0.25, y: 0.45, rx: 0.3, ry: 0.15, rot: 12 },
+    }),
+    blob(0.035, 0.84, -0.04, 0.15, 0.12, 0.13),
+    blob(0.055, 0.94, -0.05, 0.055, 0.09, 0.05, {
+        rot: -6,
+        gloss: { x: -0.3, y: 0.1, rx: 0.3, ry: 0.8, rot: -4 },
+    }),
+    blob(0.072, 1.02, -0.05, 0.036, 0.08, 0.032, {
+        rot: -10,
+        gloss: { x: -0.3, y: 0, rx: 0.3, ry: 0.8, rot: -8 },
+    }),
+    blob(0.088, 1.08, -0.05, 0.022, 0.045, 0.02, { rot: -16 }),
 ];
 
-// The shiny spots, as shares of a body part's radii from its centre: the
-// DOM paints them; WebGL gets its shine from the light.
-const GLOSS = [
-    { part: 1, x: -0.35, y: 0.5, rx: 0.2, ry: 0.12, rot: 20 },
-    { part: 10, x: -0.2, y: 0.35, rx: 0.3, ry: 0.18, rot: 10 },
-    { part: 11, x: -0.15, y: 0.3, rx: 0.3, ry: 0.22, rot: -10 },
-    { part: 12, x: -0.2, y: 0.2, rx: 0.3, ry: 0.4, rot: -22 },
-    { part: 9, x: 0.1, y: 0.4, rx: 0.35, ry: 0.22, rot: -20 },
-];
-
-/** How far forward the core's front is at (x, y). */
-function frontOf(x, y) {
-    const k = 1 - ((x - CORE.x) / CORE.rx) ** 2 - ((y - CORE.y) / CORE.ry) ** 2;
-    return CORE.z + CORE.rz * Math.sqrt(Math.max(k, 0));
+/** How far forward his body's front is at (x, y): the nearest of his
+ * blobs there, seen straight on. */
+export function gusterFront(x, y) {
+    let front = -Infinity;
+    for (const part of BODY) {
+        const k =
+            1 - ((x - part.x) / part.rx) ** 2 - ((y - part.y) / part.ry) ** 2;
+        if (k >= 0) front = Math.max(front, part.z + part.rz * Math.sqrt(k));
+    }
+    return front;
 }
 
-/** A flat feature on the core's front, poking out by most of its depth. */
-function feature(type, x, y, rx, ry, rot, color, depth = 0.03, out = 0) {
+/** A flat feature on his body's front, poking out by most of its `depth`
+ * (and `out` more). A wide one takes a deep `depth`, and a matching
+ * negative `out`, so its ends sink into his curve rather than float off it.
+ * `glossy` ones are body-coloured and glossed like his body. */
+function feature(
+    type,
+    x,
+    y,
+    rx,
+    ry,
+    rot,
+    color,
+    { depth = 0.03, out = 0, glossy = false } = {}
+) {
     return {
         type,
         x,
         y,
-        z: frontOf(x, y) - depth * 0.4 + out,
+        z: gusterFront(x, y) - depth * 0.4 + out,
         rx,
         ry,
         rz: depth,
         rot,
         color,
+        glossy,
     };
 }
 
-function eyeParts(eye, inward, browTilt) {
+function eyeParts(eye, look, browTilt) {
     const white = feature(
         "eye",
         eye.x,
@@ -100,70 +143,120 @@ function eyeParts(eye, inward, browTilt) {
         eye.rot,
         GUSTER_COLORS.eyeWhite
     );
-    // Near the inner edge, looking a little up.
+    // A small dot in the upper half, `look` of the way toward his nose: he
+    // looks up and out at you.
     const pupil = feature(
         "pupil",
-        eye.x + inward * eye.rx * 0.32,
-        eye.y + eye.ry * 0.08,
-        eye.rx * 0.24,
-        eye.rx * 0.24,
+        eye.x + look * eye.rx,
+        eye.y + eye.ry * 0.22,
+        eye.rx * 0.17,
+        eye.rx * 0.17,
         0,
         GUSTER_COLORS.pupil,
-        0.02,
-        0.02
+        { depth: 0.02, out: 0.02 }
     );
-    // Body-coloured, over the eye's top: it flattens it and slants it,
-    // the inner end higher, for the worried look.
+    // Over the eye's top: it flattens it and slants it, the inner end
+    // higher, for the worried look.
     const brow = feature(
         "brow",
         eye.x,
-        eye.y + eye.ry + 0.012,
+        eye.y + eye.ry + 0.03,
         eye.rx * 1.3,
         0.05,
         browTilt,
         GUSTER_COLORS.body,
-        0.04,
-        0.012
+        { depth: 0.04, out: 0.012, glossy: true }
     );
     return [white, pupil, brow];
 }
 
+const MOUTH = { x: 0.005, y: 0.37, rx: 0.17 };
+
+function mouthParts() {
+    // One wide grimace: a shade gap behind a white bar of teeth, its
+    // bottom edge scalloped by a row of uneven bumps.
+    const gap = feature(
+        "mouth",
+        MOUTH.x,
+        MOUTH.y - 0.002,
+        MOUTH.rx + 0.008,
+        0.036,
+        0,
+        GUSTER_COLORS.shade,
+        { depth: 0.06, out: -0.021 }
+    );
+    const bar = feature(
+        "tooth",
+        MOUTH.x,
+        MOUTH.y + 0.008,
+        MOUTH.rx,
+        0.036,
+        0,
+        GUSTER_COLORS.teeth,
+        { depth: 0.06, out: -0.014 }
+    );
+    const bumps = [
+        [-0.125, 0.026, 0.024],
+        [-0.065, 0.032, 0.03],
+        [-0.005, 0.03, 0.027],
+        [0.055, 0.033, 0.031],
+        [0.115, 0.027, 0.023],
+    ].map(([dx, rx, ry]) =>
+        feature(
+            "tooth",
+            MOUTH.x + dx,
+            MOUTH.y - 0.012,
+            rx,
+            ry,
+            0,
+            GUSTER_COLORS.teeth,
+            { depth: 0.02, out: 0.01 }
+        )
+    );
+    // His upper lip, over the top of the teeth: it cuts their top edge
+    // straight.
+    const lip = feature(
+        "lip",
+        MOUTH.x,
+        MOUTH.y + 0.052,
+        MOUTH.rx + 0.05,
+        0.03,
+        0,
+        GUSTER_COLORS.body,
+        { depth: 0.08, out: -0.01, glossy: true }
+    );
+    // The corners curl up and out into his cheeks, a nervous smile.
+    const creases = [-1, 1].map((side) =>
+        feature(
+            "crease",
+            MOUTH.x + side * (MOUTH.rx + 0.012),
+            MOUTH.y + 0.03,
+            0.007,
+            0.03,
+            -side * 35,
+            GUSTER_COLORS.shade,
+            { depth: 0.02, out: 0.016 }
+        )
+    );
+    return [gap, bar, ...bumps, lip, ...creases];
+}
+
 function faceParts() {
-    // His right eye (the viewer's left) is the larger, and tilted.
+    // His right eye (the viewer's left) is the larger and rounder, its
+    // pupil in the middle; his left is flatter, its pupil toward his nose.
     const right = eyeParts(
-        { x: -0.125, y: 0.545, rx: 0.11, ry: 0.082, rot: 8 },
-        1,
-        16
+        { x: -0.13, y: 0.54, rx: 0.115, ry: 0.09, rot: 6 },
+        0.05,
+        14
     );
     const left = eyeParts(
-        { x: 0.135, y: 0.535, rx: 0.085, ry: 0.07, rot: -4 },
-        -1,
-        -14
-    );
-    // A crooked grimace: a shade gap behind an uneven row of teeth that
-    // drops a little to his left.
-    const mouth = feature(
-        "mouth",
-        0.005,
-        0.375,
-        0.17,
-        0.036,
-        -4,
-        GUSTER_COLORS.shade,
-        0.025
-    );
-    const teeth = [
-        [-0.12, 0.386, 0.045, 0.03],
-        [-0.06, 0.384, 0.042, 0.036],
-        [0, 0.378, 0.044, 0.033],
-        [0.06, 0.371, 0.042, 0.038],
-        [0.118, 0.366, 0.04, 0.028],
-    ].map(([x, y, rx, ry]) =>
-        feature("tooth", x, y, rx, ry, 0, GUSTER_COLORS.teeth, 0.02, 0.01)
+        { x: 0.135, y: 0.525, rx: 0.09, ry: 0.07, rot: -6 },
+        -0.2,
+        -12
     );
     // Drawn in this order: the mouth, then both eyes' whites, pupils and
     // brows.
-    return [mouth, ...teeth, ...[0, 1, 2].flatMap((i) => [right[i], left[i]])];
+    return [...mouthParts(), ...[0, 1, 2].flatMap((i) => [right[i], left[i]])];
 }
 
 /** Guster's body and face in figure space, before the view turn. */
@@ -187,50 +280,47 @@ function project(part) {
         ry: ry * p.scale,
         rot: part.rot,
         color: part.color,
+        glossy: Boolean(part.glossy),
     };
 }
 
-// The dark edge round his outline, in figure units.
-const RIM = 0.009;
+// The thin dark edge round his outline, in figure units: enough to keep
+// him apart from a green background, no more.
+const RIM = 0.005;
 
 /** Projected shapes, his base on y = 0, back to front: a dark rim round
- * his outline, the body blobs far to near, the gloss spots, then his face
- * in a fixed order. Shapes marked `glossy` (the body blobs and his brows)
- * are all painted with one gloss, GUSTER_GLOSS, so they read as one lumpy
- * body; the rest are flat `color`. */
+ * his outline (but his bottom), the body blobs far to near, the gloss
+ * streaks, then his face in a fixed order. Shapes marked `glossy` (the body
+ * blobs, his brows and lip) are all painted with one gloss, GUSTER_GLOSS, so
+ * they read as one lumpy body; the rest are flat `color`. */
 function gusterShapes() {
     const { body, face } = gusterParts();
-    const projected = body.map(project);
-    const blobs = [...projected].sort((a, b) => a.z - b.z);
-    const rims = blobs.map((shape) => ({
-        ...shape,
-        type: "rim",
-        rx: shape.rx + RIM,
-        ry: shape.ry + RIM,
-        color: GUSTER_COLORS.base,
-    }));
-    const gloss = GLOSS.map((spot) => {
-        const part = projected[spot.part];
-        return {
+    const parts = body.map((part) => [part, project(part)]);
+    const blobs = parts.map(([, shape]) => shape).sort((a, b) => a.z - b.z);
+    const rims = parts
+        .filter(([part]) => part.rim)
+        .map(([, shape]) => ({
+            ...shape,
+            type: "rim",
+            rx: shape.rx + RIM,
+            ry: shape.ry + RIM,
+            color: GUSTER_COLORS.shade,
+            glossy: false,
+        }));
+    const gloss = parts
+        .filter(([part]) => part.gloss)
+        .map(([{ gloss: spot }, shape]) => ({
             type: "gloss",
-            x: part.x + part.rx * spot.x,
-            y: part.y + part.ry * spot.y,
-            z: part.z,
-            rx: part.rx * spot.rx,
-            ry: part.ry * spot.ry,
+            x: shape.x + shape.rx * spot.x,
+            y: shape.y + shape.ry * spot.y,
+            z: shape.z,
+            rx: shape.rx * spot.rx,
+            ry: shape.ry * spot.ry,
             rot: spot.rot,
             color: GUSTER_COLORS.highlight,
-        };
-    });
-    const shapes = [
-        ...rims,
-        ...blobs.map((shape) => ({ ...shape, glossy: true })),
-        ...gloss,
-        ...face.map(project).map((shape) => ({
-            ...shape,
-            glossy: shape.type === "brow",
-        })),
-    ];
+            glossy: false,
+        }));
+    const shapes = [...rims, ...blobs, ...gloss, ...face.map(project)];
 
     const ground = Math.min(...blobs.map((shape) => shape.y - shape.ry));
     for (const shape of shapes) shape.y -= ground;

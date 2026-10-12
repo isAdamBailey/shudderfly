@@ -234,7 +234,8 @@ export function createCastKit(
      * built once per kit: his parts merged into one
      * geometry per material (a few draw calls, not one per part), turned to
      * the DOM's view and sized one unit tall on y = 0, centred. Only his
-     * body casts a shadow; his face sits on it. */
+     * glossy parts (his body, brows and lip) cast a shadow; the rest of his
+     * face sits on them. */
     function gusterPieces() {
         if (gusterBuild) return gusterBuild;
         const { body, face } = gusterParts();
@@ -251,7 +252,7 @@ export function createCastKit(
         const spin = new THREE.Quaternion();
         const z = new THREE.Vector3(0, 0, 1);
         for (const part of [...body, ...face]) {
-            const onBody = part.type === "blob" || part.type === "brow";
+            const onBody = Boolean(part.glossy);
             const material = skin(
                 part.color,
                 onBody || part.type === "pupil" ? 0.28 : 0.5

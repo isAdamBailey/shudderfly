@@ -8,6 +8,7 @@ import {
     GUSTER_SHAPES,
     GUSTER_SVG,
     GUSTER_VIEW,
+    gusterFront,
     gusterParts,
     gusterSvgMarkup,
 } from "./gusterDraw.js";
@@ -15,7 +16,7 @@ import {
 const of = (type) => GUSTER_SHAPES.filter((shape) => shape.type === type);
 
 describe("Guster drawing", () => {
-    it("is a lumpy body with two eyes, two pupils, two brows and teeth", () => {
+    it("is a lumpy body with two eyes, two pupils, two brows and a grimace", () => {
         const { body, face } = gusterParts();
         expect(body.length).toBeGreaterThanOrEqual(8);
         const count = (type) => face.filter((part) => part.type === type);
@@ -24,6 +25,31 @@ describe("Guster drawing", () => {
         expect(count("brow")).toHaveLength(2);
         expect(count("mouth")).toHaveLength(1);
         expect(count("tooth").length).toBeGreaterThanOrEqual(4);
+        expect(count("lip")).toHaveLength(1);
+        expect(count("crease")).toHaveLength(2);
+    });
+
+    it("cuts his teeth straight on top with his lip", () => {
+        const { face } = gusterParts();
+        const teeth = face.filter((part) => part.type === "tooth");
+        const [lip] = face.filter((part) => part.type === "lip");
+        const top = Math.max(...teeth.map((t) => t.y + t.ry));
+        // The lip's lower edge sits below the teeth's tops, covering them.
+        expect(lip.y - lip.ry).toBeLessThan(top);
+        expect(lip.y).toBeGreaterThan(top - lip.ry);
+        const left = Math.min(...teeth.map((t) => t.x - t.rx));
+        const right = Math.max(...teeth.map((t) => t.x + t.rx));
+        expect(lip.x - lip.rx).toBeLessThan(left);
+        expect(lip.x + lip.rx).toBeGreaterThan(right);
+    });
+
+    it("tapers his top into one thin stem", () => {
+        const { body } = gusterParts();
+        const top = [...body].sort((a, b) => b.y - a.y).slice(0, 3);
+        // Each higher part is narrower, and the stem is far narrower than he.
+        expect(top[0].rx).toBeLessThan(top[1].rx);
+        expect(top[1].rx).toBeLessThan(top[2].rx);
+        expect(top[1].rx * 2).toBeLessThan(GUSTER_FRAME.width * 0.1);
     });
 
     it("has uneven, worried eyes: his right the larger, brows up inside", () => {
@@ -43,10 +69,28 @@ describe("Guster drawing", () => {
     });
 
     it("sits his face on the front of his body", () => {
-        const { body, face } = gusterParts();
-        const front = Math.max(...body.map((part) => part.z));
-        for (const part of face) {
+        for (const part of gusterParts().face) {
+            const front = gusterFront(part.x, part.y);
+            // It shows in front of his body, and its back is sunk into it.
             expect(part.z + part.rz, part.type).toBeGreaterThan(front);
+            expect(part.z - part.rz, part.type).toBeLessThan(front);
+        }
+    });
+
+    it("sinks the ends of his wide mouth parts into his curve", () => {
+        // The shade gap, the bar of teeth and his lip.
+        const wide = gusterParts().face.filter(
+            (part) =>
+                ["mouth", "tooth", "lip"].includes(part.type) && part.rx > 0.1
+        );
+        expect(wide).toHaveLength(3);
+        for (const part of wide) {
+            for (const end of [-1, 1]) {
+                const x = part.x + end * part.rx * 0.9;
+                expect(part.z - part.rz, part.type).toBeLessThan(
+                    gusterFront(x, part.y)
+                );
+            }
         }
     });
 
@@ -86,7 +130,18 @@ describe("Guster drawing", () => {
         expect(depths).toEqual([...depths].sort((a, b) => a - b));
         expect(of("blob").every((shape) => shape.glossy)).toBe(true);
         expect(of("brow").every((shape) => shape.glossy)).toBe(true);
+        expect(of("lip").every((shape) => shape.glossy)).toBe(true);
         expect(of("eye").some((shape) => shape.glossy)).toBe(false);
+    });
+
+    it("outlines all of him but his smooth bottom", () => {
+        const { body } = gusterParts();
+        const bare = body.filter((part) => !part.rim);
+        expect(bare.length).toBeGreaterThan(0);
+        // Only the parts his bottom is made of go without a rim.
+        for (const part of bare) expect(part.y - part.ry).toBeLessThan(0.05);
+        expect(of("rim")).toHaveLength(body.length - bare.length);
+        expect(of("rim").every((shape) => !shape.glossy)).toBe(true);
     });
 
     it("is seen nearly from the front", () => {
