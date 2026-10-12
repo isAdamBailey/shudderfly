@@ -73,7 +73,7 @@ describe("Poop Boom", () => {
         document.dispatchEvent(new MouseEvent("mouseup"));
         await vi.advanceTimersByTimeAsync(1000);
 
-        expect(kit.toot).toHaveBeenCalledWith("poop", {
+        expect(kit.toot).toHaveBeenCalledWith("guster", {
             x: expect.closeTo(0.68, 1),
             y: 0.81,
         });

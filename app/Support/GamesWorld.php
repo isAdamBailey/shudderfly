@@ -10,6 +10,7 @@ use App\Models\Category;
 use App\Models\Page;
 use App\Models\SiteSetting;
 use App\Models\Song;
+use App\Models\Sound;
 use Carbon\CarbonImmutable;
 use Closure;
 use Illuminate\Support\Collection;
@@ -90,6 +91,10 @@ final class GamesWorld
      * out from the wall. */
     private const HEARTH_FIRE = ['y' => 6, 'z' => 20];
 
+    /** The most sounds of his own a cast member toots (castSounds()): each
+     * one loads on the visitor's first tap in the world. */
+    public const CAST_SOUNDS_MAX = 8;
+
     /** The slug of Hank's book: the Cockroach's House hangs his photos. */
     public const HANK_BOOK = 'hank';
 
@@ -103,9 +108,14 @@ final class GamesWorld
     /** A room's looks, by name: `walls.back` (and `walls.sides`) from WALLS,
      * `walls.floor` from FLOORS. three/roomLooks.js draws each one (a Vitest
      * test keeps the lists in step). */
-    public const WALLS = ['wallpaper-stripes', 'wallpaper-dots', 'tiles', 'brick', 'plaster', 'stone'];
+    public const WALLS = ['wallpaper-stripes', 'wallpaper-dots', 'wallpaper-green', 'tiles', 'brick', 'plaster', 'stone'];
 
-    public const FLOORS = ['wood', 'lino', 'tiles', 'carpet', 'concrete', 'flagstones'];
+    public const FLOORS = ['wood', 'lino', 'tiles', 'carpet', 'moss', 'concrete', 'flagstones'];
+
+    /** Front doors a building on the road may have instead of the plain
+     * wooden one (a road door's `door`): scenes/streetGeometry.js DOORS (a
+     * Vitest test keeps them in step). */
+    public const DOORS = ['guster'];
 
     /** Named sounds a toy's `sound` may use: sounds.js (a Vitest test keeps
      * them in step). */
@@ -154,7 +164,7 @@ final class GamesWorld
      * (a Vitest test keeps the two in step). Scenes name characters by these
      * ids, never by emoji. */
     public const CAST = [
-        'butt', 'poop', 'toilet', 'cockroach', 'pizza', 'face',
+        'butt', 'guster', 'toilet', 'cockroach', 'pizza', 'face',
         'blueberries', 'grapes', 'strawberry', 'taco', 'apple', 'sprout',
     ];
 
@@ -193,7 +203,8 @@ final class GamesWorld
                     // on the far side) for another.
                     self::roadDoor('house', 1050, 'near', '🏠', 'house', 'house.hall'),
                     self::roadDoor('library', 1500, 'far', '📚', 'library', 'library.hall'),
-                    self::roadDoor('poop-house', 2400, 'far', '🏡', 'poop_house', 'poop-house.hall'),
+                    // Guster himself is the sign over his green door.
+                    self::roadDoor('guster-house', 2400, 'far', null, 'guster_house', 'guster-house.hall', cast: 'guster', door: 'guster'),
                     self::roadDoor('cockroach-house', 3300, 'far', '🪳', 'cockroach_house', 'cockroach-house.hall'),
                 ],
             ],
@@ -293,17 +304,17 @@ final class GamesWorld
             // --- The Library: a floor of rooms per few book categories ------------
             ...self::library(),
 
-            // --- The Poop's House --------------------------------------------------
-            'poop-house.hall' => self::room('poop_house_hall', [
+            // --- Guster's House: all in his greens -------------------------------
+            'guster-house.hall' => self::room('guster_house_hall', [
                 'size' => ['w' => self::ROOM_FRAME, 'd' => 450],
                 'spawn' => ['x' => 350, 'z' => 300],
-                'walls' => ['back' => 'wallpaper-stripes', 'sides' => 'plaster', 'floor' => 'concrete'],
+                'walls' => ['back' => 'wallpaper-green', 'floor' => 'moss'],
                 'lights' => [self::lamp('lamp', 650, 280, 0)],
             ], [
-                self::roomDoor('front-door', 450, 'road', 'poop-house', exit: true),
+                self::roomDoor('front-door', 450, 'road', 'guster-house', exit: true),
                 self::lampSwitch(650, 280),
-                self::resident('poop', 670, 220, ['move' => 'bounce', 'toot' => 'poop']),
-                // The Poop's game, played on the spot: catch the falling foods.
+                self::resident('guster', 670, 220, ['move' => 'bounce', 'toot' => 'guster']),
+                // Guster's game, played on the spot: catch the falling foods.
                 self::minigame('toot-catch', 220, 180, '🧺'),
             ]),
 
@@ -642,19 +653,22 @@ final class GamesWorld
         return ['name' => Str::ucfirst($category->name)];
     }
 
-    /** A building on the road you can go into, its sign `emoji`, named
-     * `places.<label>`, leading to its room's `front-door`. */
-    private static function roadDoor(string $id, int $x, string $side, string $emoji, string $label, string $to): array
+    /** A building on the road you can go into, named `places.<label>`,
+     * leading to its room's `front-door`. Its sign is its `emoji`, or a
+     * `cast` member over its door instead. Its front door is plain
+     * wood, or the `door` named from DOORS. */
+    private static function roadDoor(string $id, int $x, string $side, ?string $emoji, string $label, string $to, ?string $cast = null, ?string $door = null): array
     {
         return [
             'id' => $id,
             'type' => 'door',
             'x' => $x,
             'side' => $side,
-            'emoji' => $emoji,
+            ...($cast ? ['cast' => $cast] : ['emoji' => $emoji]),
             'label' => "messages.games.world.places.{$label}",
             'to' => $to,
             'toSpot' => 'front-door',
+            ...($door ? ['door' => $door] : []),
         ];
     }
 
@@ -1023,6 +1037,25 @@ final class GamesWorld
             ->limit(self::RADIO_STATIONS)
             ->get(['id', 'title', 'description', 'youtube_video_id', 'thumbnail_default', 'thumbnail_high'])
             ->toArray());
+    }
+
+    /** The sounds cast members toot instead of the fart, by cast id, as
+     * URLs: Guster's are the Sounds with his name in their title (issue
+     * #164), looked up once a day, so a new one joins the next day. One
+     * with none toots the fart. They're his voice in the world, not the
+     * sound board, so they play even while the Sounds page is turned off
+     * (`sounds_enabled`) or one of them is blocked there. */
+    public static function castSounds(): array
+    {
+        return ['guster' => self::pickedToday('guster-sounds', fn () => Sound::query()
+            ->where('title', 'like', '%guster%')
+            ->whereNotNull('audio_path')
+            ->where('audio_path', '!=', '')
+            ->orderBy('id')
+            ->limit(self::CAST_SOUNDS_MAX)
+            ->get(['audio_path'])
+            ->pluck('audio_path')
+            ->all())];
     }
 
     /** The key photo source `$photos` is known by: `book:<slug>`. */

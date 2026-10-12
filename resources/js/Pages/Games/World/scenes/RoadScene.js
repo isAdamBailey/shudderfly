@@ -318,21 +318,27 @@ export function createRoadScene(
 
     // --- Cast ----------------------------------------------------------------
 
-    const landmarkPuppets = landmarks.map((landmark) => ({
-        slug: landmark.slug,
-        x: landmark.x,
-        side: landmark.side,
-        // A cast landmark stands at its building's door; anything else is
-        // the building's sign.
-        sign: !landmark.cast,
-        // A building you can go into has a front door.
-        door: landmark.item?.type === "door",
-        puppet: landmark.cast
-            ? kit.castMesh(landmark.cast)
-            : kit.emojiMesh(landmark.landmark, { shadows: false }),
-        grow: 0, // 0..1 toward NEAR_SCALE
-        base: { y: 0, z: 0 }, // where it stands, before it grows
-    }));
+    const landmarkPuppets = landmarks.map((landmark) => {
+        const door = landmark.item?.type === "door";
+        return {
+            slug: landmark.slug,
+            x: landmark.x,
+            side: landmark.side,
+            // A cast landmark stands on the ground before its building,
+            // unless the building has a door to keep clear: then it's the
+            // sign over the door (Guster over his), like any emoji.
+            sign: !landmark.cast || door,
+            // A building you can go into has a front door, its own if it
+            // names one (streetGeometry.js DOORS).
+            door: door ? landmark.item.door ?? "plain" : null,
+            // A sign is up on the wall, with no ground to shadow.
+            puppet: landmark.cast
+                ? kit.castMesh(landmark.cast, { shadows: !door })
+                : kit.emojiMesh(landmark.landmark, { shadows: false }),
+            grow: 0, // 0..1 toward NEAR_SCALE
+            base: { y: 0, z: 0 }, // where it stands, before it grows
+        };
+    });
     const idlerPuppets = idlers.map((idler) => ({
         slug: idler.slug,
         row: idler.row,
@@ -645,8 +651,8 @@ export function createRoadScene(
         );
     }
 
-    /** A landmark's sign on its building's front, or its cast member at the
-     * door. */
+    /** A landmark's sign on its building's front, over any door, or its
+     * cast member standing before the building. */
     function placeLandmarkPuppet(entry, box) {
         if (entry.sign) {
             const size = Math.min(box.width, box.height) * 0.42;

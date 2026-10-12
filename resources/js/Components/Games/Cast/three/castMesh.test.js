@@ -308,7 +308,7 @@ describe("castMesh", () => {
 
     it("frees its materials and textures on dispose", () => {
         const k = kit();
-        const material = glyphOf(k.castMesh("poop")).material;
+        const material = glyphOf(k.castMesh("guster")).material;
         const spy = vi.spyOn(material, "dispose");
         const textureSpy = vi.spyOn(material.map, "dispose");
 

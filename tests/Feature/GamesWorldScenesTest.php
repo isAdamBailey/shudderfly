@@ -9,6 +9,7 @@ use App\Models\Category;
 use App\Models\Page;
 use App\Models\SiteSetting;
 use App\Models\Song;
+use App\Models\Sound;
 use App\Services\ContentBlockService;
 use App\Support\GamesWorld;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -78,6 +79,11 @@ class GamesWorldScenesTest extends TestCase
     {
         foreach (GamesWorld::definitions()['road']['interactables'] as $item) {
             $this->assertContains($item['side'], GamesWorld::ROAD_SIDES, "road.{$item['id']}");
+            // Its sign: an emoji or a cast member at the door, not both.
+            $this->assertTrue(isset($item['cast']) xor isset($item['emoji']), "road.{$item['id']} sign");
+            if (isset($item['door'])) {
+                $this->assertContains($item['door'], GamesWorld::DOORS, "road.{$item['id']} door");
+            }
         }
     }
 
@@ -334,13 +340,29 @@ class GamesWorldScenesTest extends TestCase
         );
     }
 
-    public function test_the_poops_house_has_toot_catch(): void
+    public function test_gusters_house_has_toot_catch(): void
     {
-        $catch = collect(GamesWorld::scenes()['poop-house.hall']['interactables'])->firstWhere('type', 'minigame');
+        $catch = collect(GamesWorld::scenes()['guster-house.hall']['interactables'])->firstWhere('type', 'minigame');
 
         $this->assertSame('toot-catch', $catch['minigame']);
         $this->assertSame('Toot Catch', $catch['label']);
         $this->assertSame(__('messages.games.world.minigames.toot_catch_line'), $catch['line']);
+    }
+
+    public function test_gusters_house_is_green_with_guster_at_home(): void
+    {
+        $scenes = GamesWorld::definitions();
+
+        // Guster, not a house emoji, is the sign over his door.
+        $door = collect($scenes['road']['interactables'])->firstWhere('id', 'guster-house');
+        $this->assertSame('guster', $door['cast']);
+        $this->assertSame('guster-house.hall', $door['to']);
+
+        $hall = $scenes['guster-house.hall'];
+        $this->assertSame(['back' => 'wallpaper-green', 'floor' => 'moss'], $hall['walls']);
+        $guster = collect($hall['interactables'])->firstWhere('id', 'guster');
+        $this->assertSame('guster', $guster['cast']);
+        $this->assertSame('guster', $guster['toot']);
     }
 
     public function test_scenes_translate_labels(): void
@@ -728,7 +750,7 @@ class GamesWorldScenesTest extends TestCase
         return array_values(array_filter(
             array_column(DB::getQueryLog(), 'query'),
             // Quoted "pages" in SQLite, `pages` in MySQL.
-            fn ($sql) => preg_match('/from ["`](pages|songs)["`]/', $sql),
+            fn ($sql) => preg_match('/from ["`](pages|songs|sounds)["`]/', $sql),
         ));
     }
 
@@ -921,5 +943,54 @@ class GamesWorldScenesTest extends TestCase
                 $this->assertTrue($apart, "{$photo['id']} overlaps {$items[$id]['id']}");
             }
         }
+    }
+
+    public function test_guster_toots_the_sounds_named_after_him(): void
+    {
+        $eek = Sound::factory()->create(['title' => 'Guster eek', 'audio_path' => 'sounds/eek.m4a']);
+        $sigh = Sound::factory()->create(['title' => 'big GUSTER sigh', 'audio_path' => 'sounds/sigh.m4a']);
+        // His voice even blocked on the Sounds page.
+        $burp = Sound::factory()->create(['title' => 'Guster burp', 'audio_path' => 'sounds/burp.m4a', 'blocked' => true]);
+        // Not his, nor one whose upload never finished.
+        Sound::factory()->create(['title' => 'Cockroach hiss']);
+        Sound::factory()->create(['title' => 'Guster hum', 'audio_path' => '']);
+
+        $sounds = GamesWorld::castSounds();
+
+        // The URLs Sound gives their keys.
+        $this->assertSame(['guster' => [$eek->audio_path, $sigh->audio_path, $burp->audio_path]], $sounds);
+        $this->assertStringEndsWith('sounds/eek.m4a', $sounds['guster'][0]);
+        $this->assertNotSame('sounds/eek.m4a', $sounds['guster'][0]);
+    }
+
+    public function test_guster_has_only_so_many_sounds(): void
+    {
+        Sound::factory()->count(GamesWorld::CAST_SOUNDS_MAX + 2)->create(['title' => 'Guster']);
+
+        $this->assertCount(GamesWorld::CAST_SOUNDS_MAX, GamesWorld::castSounds()['guster']);
+    }
+
+    public function test_guster_has_no_sounds_with_none_named_after_him(): void
+    {
+        Sound::factory()->create(['title' => 'Fanfare']);
+
+        $this->assertSame(['guster' => []], GamesWorld::castSounds());
+    }
+
+    public function test_gusters_sounds_are_looked_up_once_a_day(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 10, 12, 9, 0, 0, config('app.local_timezone')));
+        $sound = Sound::factory()->create(['title' => 'Guster eek']);
+        $sounds = GamesWorld::castSounds();
+        $this->assertCount(1, $sounds['guster']);
+
+        // Deleted later that day, it plays on from the cache: a second
+        // visit runs no query for his sounds.
+        $sound->delete();
+        $this->assertSame([], $this->pickQueries(fn () => $this->assertSame($sounds, GamesWorld::castSounds())));
+
+        // The next day's pick leaves it out.
+        Carbon::setTestNow(Carbon::create(2026, 10, 13, 9, 0, 0, config('app.local_timezone')));
+        $this->assertNotEmpty($this->pickQueries(fn () => $this->assertSame(['guster' => []], GamesWorld::castSounds())));
     }
 }

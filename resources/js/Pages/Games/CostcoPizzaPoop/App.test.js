@@ -93,7 +93,7 @@ describe("Costco Food Poop", () => {
         intestine.state.phase = "win";
         await nextTick();
 
-        expect(kit.toot).toHaveBeenCalledWith("poop");
+        expect(kit.toot).toHaveBeenCalledWith("guster");
         expect(kit.finish).toHaveBeenCalledWith({ score: 640 });
     });
 });

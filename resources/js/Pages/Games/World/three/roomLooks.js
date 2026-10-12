@@ -1,3 +1,4 @@
+import { GUSTER_COLORS } from "@/constants/characters.js";
 import { own } from "@/utils/object";
 import { canvasTexture } from "./useWorldRenderer.js";
 
@@ -25,6 +26,14 @@ export const WALLS = {
         pattern: "dots",
         tile: 60,
     },
+    // Guster's: dark olive with stripes a shade lighter, so he, lighter
+    // still, stands out against it.
+    "wallpaper-green": {
+        base: GUSTER_COLORS.shade,
+        ink: GUSTER_COLORS.mid,
+        pattern: "stripes",
+        tile: 80,
+    },
     tiles: { base: "#e0f2fe", ink: "#7dd3fc", pattern: "grid", tile: 50 },
     brick: { base: "#b45309", ink: "#78350f", pattern: "bricks", tile: 90 },
     plaster: { base: "#e7e5e4", ink: "#d6d3d1", pattern: "plain", tile: 200 },
@@ -37,6 +46,13 @@ export const FLOORS = {
     lino: { base: "#f5f5f4", ink: "#a8a29e", pattern: "checks", tile: 100 },
     tiles: { base: "#f1f5f9", ink: "#94a3b8", pattern: "grid", tile: 70 },
     carpet: { base: "#7c3aed", ink: "#6d28d9", pattern: "plain", tile: 200 },
+    // Guster's: deep olive carpet.
+    moss: {
+        base: GUSTER_COLORS.base,
+        ink: GUSTER_COLORS.shade,
+        pattern: "plain",
+        tile: 200,
+    },
     concrete: { base: "#78716c", ink: "#57534e", pattern: "plain", tile: 200 },
     flagstones: {
         base: "#57534e",

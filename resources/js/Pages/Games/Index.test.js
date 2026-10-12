@@ -43,7 +43,7 @@ const games = [
         emoji: "💩",
         landmark: "🚽",
         distance: 4200,
-        description: "Drag the poop into the toilet.",
+        description: "Drag Guster into the toilet.",
     },
     {
         slug: "cockroach",

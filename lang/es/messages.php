@@ -707,8 +707,8 @@ return [
     'games.world.places.library_hall' => 'La sala de lectura',
     'games.world.places.library_floor' => 'Piso :number',
     'games.world.places.library_category' => 'La sala de :name',
-    'games.world.places.poop_house' => 'La Casa de la Caca',
-    'games.world.places.poop_house_hall' => 'La sala de la Caca',
+    'games.world.places.guster_house' => 'La Casa de Guster',
+    'games.world.places.guster_house_hall' => 'La sala de Guster',
     'games.world.places.cockroach_house' => 'La Casa de la Cucaracha',
     'games.world.places.cockroach_house_hall' => 'El nido de la Cucaracha',
     'games.world.doors.outside' => 'Salir',
@@ -772,7 +772,7 @@ return [
 
     // Games - Cast
     'games.cast.butt' => 'El Trasero',
-    'games.cast.poop' => 'La Caca',
+    'games.cast.guster' => 'Guster',
     'games.cast.toilet' => 'El Inodoro',
     'games.cast.cockroach' => 'La Cucaracha',
     'games.cast.pizza' => 'La Pizza',
@@ -826,12 +826,12 @@ return [
 
     // Games - Poop Boom
     'games.boom.name' => 'Popó Explosivo',
-    'games.boom.description' => 'Arrastra el popó hasta el inodoro. ¡5 fallos y se acabó el juego!',
+    'games.boom.description' => 'Arrastra a Guster hasta el inodoro. ¡5 fallos y se acabó el juego!',
     'games.boom.hud_score_label' => 'Puntos',
-    'games.boom.hud_instruction' => '🖱 ¡Arrastra 💩 y suelta para dejarlo caer!',
+    'games.boom.hud_instruction' => '🖱 ¡Arrastra a Guster y suelta para dejarlo caer!',
     'games.boom.hud_misses_label' => 'Fallos',
     'games.boom.miss_label' => '¡Fallaste!',
-    'games.boom.poop_aria' => 'popó',
+    'games.boom.guster_aria' => 'Guster',
     'games.boom.toilet_aria' => 'inodoro',
 
     // Games - Brussels Sprout Chicken Pox

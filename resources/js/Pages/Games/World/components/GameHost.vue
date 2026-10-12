@@ -11,7 +11,6 @@ import {
 import { useFocusTrap } from "@/composables/useFocusTrap";
 import { useToot } from "@/composables/useToot";
 import { useTranslations } from "@/composables/useTranslations";
-import { usePage } from "@inertiajs/vue3";
 import { usePreferredReducedMotion } from "@vueuse/core";
 import {
     computed,
@@ -40,7 +39,6 @@ const props = defineProps({
 const emit = defineEmits(["cancel"]);
 
 const { t } = useTranslations();
-const page = usePage();
 
 const load = hostedGame(props.game.slug);
 if (!load) throw new Error(`No game "${props.game.slug}" in hostedGames.js`);
@@ -57,7 +55,7 @@ const playRef = ref(null);
 const closeRef = ref(null);
 const { trapKeydown } = useFocusTrap(panelRef);
 
-const { puffs, toot, unlock } = useToot(page.props.fartSoundUrl);
+const { puffs, toot, unlock } = useToot();
 const motion = usePreferredReducedMotion();
 
 const kit = {

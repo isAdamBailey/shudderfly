@@ -171,7 +171,7 @@ watch(
             return;
         }
 
-        props.kit.toot("poop");
+        props.kit.toot("guster");
         props.kit.finish({ score: intestineState.score });
     }
 );

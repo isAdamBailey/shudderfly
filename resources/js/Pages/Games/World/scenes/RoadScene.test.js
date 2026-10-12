@@ -112,6 +112,38 @@ describe("the road's scene graph", () => {
         expect(road.butt.group.position.toArray()).toEqual([260, 0, 0]);
     });
 
+    it("hangs a cast member over its building's door, as the sign", () => {
+        const kit = createCastKit(THREE, { createCanvas });
+        const road = createRoadScene(THREE, kit, {
+            theme: worldTheme(""),
+            landmarks: [
+                {
+                    slug: "guster-house",
+                    x: 600,
+                    side: "far",
+                    cast: "guster",
+                    item: { type: "door", door: "guster" },
+                },
+            ],
+            idlers: [],
+        });
+        const L = roadLayout({ w: 1000, h: 700, vmin: 700 });
+        road.layout(L, 2200);
+        road.sync(view(L, { idlers: [] }), 0);
+
+        const box = buildingBox(L, { x: 600 });
+        const guster = road.landmarkPuppet("guster-house").group.position;
+        // Above the door, which is 0.4 of the building tall.
+        expect(guster.y).toBeGreaterThan(box.height * 0.4);
+        expect(guster.z).toBeCloseTo(box.z + 2);
+        // Up on the wall, he casts no shadow.
+        const casting = [];
+        road.landmarkPuppet("guster-house").group.traverse((o) => {
+            if (o.isMesh && o.visible && o.castShadow) casting.push(o);
+        });
+        expect(casting).toEqual([]);
+    });
+
     it("walks the Butt across the street by its lane", () => {
         const { road, L } = build();
         road.sync(view(L, { butt: { x: 260, facing: 1, lane: 1 } }), 0);

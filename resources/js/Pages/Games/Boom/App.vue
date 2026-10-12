@@ -1,5 +1,5 @@
 <script setup>
-import { POOP, TOILET } from "@/constants/characters.js";
+import { GUSTER, TOILET } from "@/constants/characters.js";
 import { useTranslations } from "@/composables/useTranslations";
 import { useResizeObserver } from "@vueuse/core";
 import { ref, computed, onMounted, onUnmounted } from "vue";
@@ -102,7 +102,7 @@ function handleHit() {
     splashX.value = toiletX.value;
     splashY.value = gameH.value - TOILET_BOTTOM - TOILET_H;
     showSplash.value = true;
-    props.kit.toot("poop", {
+    props.kit.toot("guster", {
         x: splashX.value / gameW.value,
         y: splashY.value / gameH.value,
     });
@@ -313,11 +313,11 @@ onUnmounted(() => {
             :class="{ dragging: isDragging, falling: isPoopFalling }"
             :style="poopStyle"
             role="img"
-            :aria-label="t('games.boom.poop_aria')"
+            :aria-label="t('games.boom.guster_aria')"
             @mousedown="startDrag"
             @touchstart.prevent="startDrag"
         >
-            {{ POOP }}
+            {{ GUSTER }}
         </div>
 
         <!-- ── splash effect ─────────────────────────────── -->

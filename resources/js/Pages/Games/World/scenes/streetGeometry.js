@@ -1,3 +1,6 @@
+import { GUSTER_COLORS } from "@/constants/characters.js";
+import { own } from "@/utils/object";
+
 /**
  * The road's buildings and props as plain coloured geometry (issue #130).
  * Each piece is a list of parts with their colour baked into the vertices, so
@@ -72,19 +75,25 @@ export function mergeParts(THREE, parts) {
     return merged;
 }
 
-// A front door's wood and its knob.
-const DOOR = { wood: "#7c2d12", knob: "#facc15" };
+// Front doors, `wood` and `knob`: `plain` for every building that names
+// none, the rest by the name a road door's `door` gives (GamesWorld::DOORS,
+// which a test keeps in step).
+export const DOORS = {
+    plain: { wood: "#7c2d12", knob: "#facc15" },
+    guster: { wood: GUSTER_COLORS.mid, knob: GUSTER_COLORS.highlight },
+};
 
 /**
  * A building `width` wide and `height` to its eaves, with a gabled roof
  * `roof` high and a grid of windows on its front. The middle of the front is
  * left clear: the upper part for its sign, the bottom for a front door,
- * drawn only with `door` (a building you can go into). Returns { body,
+ * drawn only with `door` (a building you can go into), a name from DOORS.
+ * Returns { body,
  * windows } part lists, so the windows can glow on their own material.
  */
 export function building(
     THREE,
-    { width, height, depth, roof: roofHeight, look, palette, door = false }
+    { width, height, depth, roof: roofHeight, look, palette, door = null }
 ) {
     const wall = look.walls[palette % look.walls.length];
     const roofColor = look.roofs[palette % look.roofs.length];
@@ -108,13 +117,14 @@ export function building(
     ];
 
     if (door) {
+        const doorLook = own(DOORS, door) ?? DOORS.plain;
         const w = width * 0.22;
         const h = height * 0.4;
         body.push(
-            box(THREE, DOOR.wood, [w, h, 3], [0, h / 2, 1.5]),
+            box(THREE, doorLook.wood, [w, h, 3], [0, h / 2, 1.5]),
             box(
                 THREE,
-                DOOR.knob,
+                doorLook.knob,
                 [w * 0.14, w * 0.14, 3],
                 [w * 0.28, h * 0.48, 3.5]
             )

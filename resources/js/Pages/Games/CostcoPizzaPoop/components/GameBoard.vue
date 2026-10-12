@@ -1,7 +1,7 @@
 <script setup>
 import { useResizeObserver } from "@vueuse/core";
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
-import { PIZZA, POOP } from "@/constants/characters.js";
+import { GUSTER, PIZZA } from "@/constants/characters.js";
 import { SVG_WIDTH } from "../composables/useGameState.js";
 import PepperoniGlyph from "./PepperoniGlyph.vue";
 import { useTranslations } from "@/composables/useTranslations";
@@ -341,7 +341,7 @@ onUnmounted(() => {
                 :font-size="poopRadius * 2.2"
                 class="poop-sprite"
             >
-                {{ POOP }}
+                {{ GUSTER }}
             </text>
 
             <g
@@ -420,7 +420,7 @@ onUnmounted(() => {
                         }px`,
                     }"
                 >
-                    {{ POOP }}
+                    {{ GUSTER }}
                 </text>
             </g>
         </svg>

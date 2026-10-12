@@ -1,9 +1,24 @@
 export const BUTT = "🍑";
 export const COCKROACH = "🪳";
 export const TOILET = "🚽";
-export const POOP = "💩";
+export const GUSTER = "💩";
 export const PIZZA = "🍕";
 export const SPROUT = "🥬";
+
+// Guster's palette (issue #164), sampled from his photo and brightened: a
+// yellow-green, chartreuse-olive, not a grass green. Anything of his
+// coloured green takes it from here: his house and door so far, and his
+// figure's body, eyes and teeth once he is drawn (#164).
+export const GUSTER_COLORS = {
+    body: "#b3ad2a",
+    mid: "#958c22",
+    shade: "#6e6614",
+    base: "#555019",
+    highlight: "#e3eb9c",
+    eyeWhite: "#f4f6f1",
+    pupil: "#1e2230",
+    teeth: "#eef0eb",
+};
 
 // The six fart-makers, shared by Toot Foods and the Games World roadside.
 // pitch = playbackRate for the toot (bigger food = lower).
@@ -65,9 +80,9 @@ export const CAST = {
         moves: ["idle", "walk", "wiggle", "toot", "thrown", "eat"],
         tootPitch: 1,
     },
-    poop: {
-        emoji: POOP,
-        nameKey: "games.cast.poop",
+    guster: {
+        emoji: GUSTER,
+        nameKey: "games.cast.guster",
         moves: ["idle", "bounce", "toot"],
         tootPitch: 0.85,
     },
