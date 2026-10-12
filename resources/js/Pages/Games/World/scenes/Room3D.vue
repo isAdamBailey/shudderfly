@@ -130,11 +130,7 @@ function framed() {
 // The walking bob, as height above the floor, as on the road.
 const buttLift = computed(() => bobLift(butt.bob));
 
-const {
-    puffs,
-    toot: tootAt,
-    unlock: unlockToot,
-} = useToot(page.props.fartSoundUrl);
+const { puffs, toot: tootAt, unlock: unlockToot } = useToot();
 
 // --- Scene graph -----------------------------------------------------------
 

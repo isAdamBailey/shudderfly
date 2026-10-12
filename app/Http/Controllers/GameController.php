@@ -90,6 +90,8 @@ class GameController extends Controller
             'scenes' => $scenes,
             'link' => $link,
             'fartSoundUrl' => asset('fart.m4a'),
+            // Recorded toots a cast member plays instead (Guster's).
+            'castSounds' => GamesWorld::castSounds(),
             // Who a minigame's score can be shared with (ShareToChatButton).
             'users' => self::users(),
         ]);

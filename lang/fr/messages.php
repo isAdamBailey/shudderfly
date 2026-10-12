@@ -707,8 +707,8 @@ return [
     'games.world.places.library_hall' => 'La salle de lecture',
     'games.world.places.library_floor' => 'Étage :number',
     'games.world.places.library_category' => 'La salle :name',
-    'games.world.places.poop_house' => 'La Maison du Caca',
-    'games.world.places.poop_house_hall' => 'Le salon du Caca',
+    'games.world.places.guster_house' => 'La Maison de Guster',
+    'games.world.places.guster_house_hall' => 'Le salon de Guster',
     'games.world.places.cockroach_house' => 'La Maison du Cafard',
     'games.world.places.cockroach_house_hall' => 'Le nid du Cafard',
     'games.world.doors.outside' => 'Sortir',
@@ -772,7 +772,7 @@ return [
 
     // Games - Cast
     'games.cast.butt' => 'Les Fesses',
-    'games.cast.poop' => 'Le Caca',
+    'games.cast.guster' => 'Guster',
     'games.cast.toilet' => 'Les Toilettes',
     'games.cast.cockroach' => 'Le Cafard',
     'games.cast.pizza' => 'La Pizza',
@@ -826,12 +826,12 @@ return [
 
     // Games - Poop Boom
     'games.boom.name' => 'Caca Boum',
-    'games.boom.description' => 'Fais glisser le caca dans les toilettes. 5 ratés et c\'est fini !',
+    'games.boom.description' => 'Fais glisser Guster dans les toilettes. 5 ratés et c\'est fini !',
     'games.boom.hud_score_label' => 'Score',
-    'games.boom.hud_instruction' => '🖱 Fais glisser 💩 et lâche pour le faire tomber !',
+    'games.boom.hud_instruction' => '🖱 Fais glisser Guster et lâche pour le faire tomber !',
     'games.boom.hud_misses_label' => 'Ratés',
     'games.boom.miss_label' => 'Raté !',
-    'games.boom.poop_aria' => 'caca',
+    'games.boom.guster_aria' => 'Guster',
     'games.boom.toilet_aria' => 'toilettes',
 
     // Games - Brussels Sprout Chicken Pox

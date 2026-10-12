@@ -707,8 +707,8 @@ return [
     'games.world.places.library_hall' => 'The Reading Room',
     'games.world.places.library_floor' => 'Floor :number',
     'games.world.places.library_category' => 'The :name Room',
-    'games.world.places.poop_house' => 'The Poop\'s House',
-    'games.world.places.poop_house_hall' => 'The Poop\'s Living Room',
+    'games.world.places.guster_house' => 'Guster\'s House',
+    'games.world.places.guster_house_hall' => 'Guster\'s Living Room',
     'games.world.places.cockroach_house' => 'The Cockroach\'s House',
     'games.world.places.cockroach_house_hall' => 'The Cockroach\'s Nest',
     'games.world.doors.outside' => 'Go outside',
@@ -772,7 +772,7 @@ return [
 
     // Games - Cast
     'games.cast.butt' => 'The Butt',
-    'games.cast.poop' => 'The Poop',
+    'games.cast.guster' => 'Guster',
     'games.cast.toilet' => 'The Toilet',
     'games.cast.cockroach' => 'The Cockroach',
     'games.cast.pizza' => 'The Pizza',
@@ -826,12 +826,12 @@ return [
 
     // Games - Poop Boom
     'games.boom.name' => 'Poop Boom',
-    'games.boom.description' => 'Drag the poop into the toilet. 5 misses and it\'s game over!',
+    'games.boom.description' => 'Drag Guster into the toilet. 5 misses and it\'s game over!',
     'games.boom.hud_score_label' => 'Score',
-    'games.boom.hud_instruction' => '🖱 Drag 💩 and release to drop!',
+    'games.boom.hud_instruction' => '🖱 Drag Guster and release to drop!',
     'games.boom.hud_misses_label' => 'Misses',
     'games.boom.miss_label' => 'Miss!',
-    'games.boom.poop_aria' => 'poop',
+    'games.boom.guster_aria' => 'Guster',
     'games.boom.toilet_aria' => 'toilet',
 
     // Games - Brussels Sprout Chicken Pox

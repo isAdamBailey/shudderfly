@@ -9,16 +9,7 @@ import {
     roomLook,
     WALLS,
 } from "./roomLooks.js";
-
-const php = readFileSync(`${process.cwd()}/app/Support/GamesWorld.php`, "utf8");
-
-/** The names in the server's `const NAME = [...]`. */
-function serverList(name) {
-    return php
-        .match(new RegExp(`const ${name} = \\[([^\\]]*)\\]`))[1]
-        .match(/'([a-z-]+)'/g)
-        .map((id) => id.slice(1, -1));
-}
+import { serverList } from "../testing/serverList.js";
 
 describe("room looks", () => {
     it("draw every wall and floor the server's rooms may name", () => {

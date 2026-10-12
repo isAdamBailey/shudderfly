@@ -11,7 +11,6 @@ import {
 import { useFocusTrap } from "@/composables/useFocusTrap";
 import { useToot } from "@/composables/useToot";
 import { useTranslations } from "@/composables/useTranslations";
-import { usePage } from "@inertiajs/vue3";
 import { usePreferredReducedMotion } from "@vueuse/core";
 import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 import { minigameComponent } from "../minigames/index.js";
@@ -35,7 +34,6 @@ const props = defineProps({
 const emit = defineEmits(["cancel"]);
 
 const { t } = useTranslations();
-const page = usePage();
 
 const game = minigameComponent(props.item.minigame);
 const titleId = `minigame-title-${props.item.id}`;
@@ -50,7 +48,7 @@ const panelRef = ref(null);
 const playRef = ref(null);
 const { trapKeydown } = useFocusTrap(panelRef);
 
-const { puffs, toot, unlock } = useToot(page.props.fartSoundUrl);
+const { puffs, toot, unlock } = useToot();
 const motion = usePreferredReducedMotion();
 
 const kit = {

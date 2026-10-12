@@ -39,7 +39,7 @@ const SKIRTING = 14; // units tall
 const CEILING_EDGE = 10; // units: the trim along the walls' tops
 const SHADOW_MAP = 1024;
 // The daylight's share of the light: a sky fill and a key that casts the
-// shadows, at `level` in every room (the Poop's House's, which got it
+// shadows, at `level` in every room (Guster's House's, which got it
 // right). Enough by day to see by with the lamps off; at night (NIGHT.dim)
 // dark enough that the lamps are what light it.
 const DAYLIGHT_INTENSITY = { fill: 2.2, key: 2, level: 0.7 };

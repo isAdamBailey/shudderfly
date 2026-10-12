@@ -32,13 +32,16 @@ class GamesTest extends TestCase
                 ->missing('games')
                 ->where('scenes.road.kind', 'road')
                 // The buildings you can go into. The cockroach games' lots
-                // are closed: the Poop's House stands where the fight was,
-                // the Cockroach's House where the Poop's House was.
+                // are closed: Guster's House stands where the fight was,
+                // the Cockroach's House past it.
                 ->has('scenes.road.interactables', 4)
                 ->where('scenes.road.interactables.0.id', 'house')
                 ->where('scenes.road.interactables.1.id', 'library')
-                ->where('scenes.road.interactables.2.id', 'poop-house')
+                ->where('scenes.road.interactables.2.id', 'guster-house')
                 ->where('scenes.road.interactables.2.x', 2400)
+                ->where('scenes.road.interactables.2.door', 'guster')
+                // Guster's sounds, none here (they live in production).
+                ->where('castSounds', ['guster' => []])
                 ->where('scenes.road.interactables.3.id', 'cockroach-house')
                 ->where('scenes.road.interactables.3.x', 3300)
                 ->where('scenes.road.interactables.3.to', 'cockroach-house.hall')
@@ -179,7 +182,7 @@ class GamesTest extends TestCase
 
         $this->get(route('games.index', ['minigame' => 'toot-catch']))
             ->assertInertia(fn (Assert $page) => $page
-                ->where('link.scene', 'poop-house.hall')
+                ->where('link.scene', 'guster-house.hall')
                 ->where('link.spot', 'toot-catch')
                 ->has('link.visit')
                 ->has('users'));

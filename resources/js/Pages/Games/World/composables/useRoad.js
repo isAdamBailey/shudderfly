@@ -1,4 +1,3 @@
-import { usePage } from "@inertiajs/vue3";
 import { CAST, TOOT_FOODS } from "@/constants/characters.js";
 import { useToot } from "@/composables/useToot";
 import { deadband } from "@/utils/math";
@@ -58,8 +57,6 @@ export function useRoad(props, emit, options) {
         peekTarget,
     } = options;
 
-    const page = usePage();
-
     const prefersReducedMotion = usePreferredReducedMotion();
     const reduced = computed(() => prefersReducedMotion.value === "reduce");
 
@@ -100,11 +97,7 @@ export function useRoad(props, emit, options) {
 
     // --- Roadside cast -----------------------------------------------------
 
-    const {
-        puffs,
-        toot,
-        unlock: unlockToot,
-    } = useToot(page.props.fartSoundUrl);
+    const { puffs, toot, unlock: unlockToot } = useToot();
 
     const idlerPhysicsCtl = useIdlerPhysics({
         isBlocked: () => Boolean(state.confirmSlug),
@@ -154,8 +147,7 @@ export function useRoad(props, emit, options) {
         if (
             !idler ||
             butt.lane !== LANES.far ||
-            Math.abs(idler.x + idlerDxToWorld(idler, dx) - butt.x) >
-                FEED_RADIUS
+            Math.abs(idler.x + idlerDxToWorld(idler, dx) - butt.x) > FEED_RADIUS
         ) {
             return;
         }

@@ -1,8 +1,8 @@
 import { computed, ref } from "vue";
-import { COCKROACH, POOP, TOOT_FOODS } from "@/constants/characters.js";
+import { COCKROACH, GUSTER, TOOT_FOODS } from "@/constants/characters.js";
 
 export const FOOD_EMOJI_POOL = TOOT_FOODS.map((food) => food.emoji);
-const EMOJI_POOL = [COCKROACH, POOP, ...FOOD_EMOJI_POOL];
+const EMOJI_POOL = [COCKROACH, GUSTER, ...FOOD_EMOJI_POOL];
 
 let nextId = 1;
 
