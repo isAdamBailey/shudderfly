@@ -295,6 +295,9 @@ class GamesWorldScenesTest extends TestCase
                 $this->assertSame('room', $scene['kind'], $where);
                 $this->assertContains($item['minigame'], GamesWorld::MINIGAMES, $where);
                 $this->assertArrayHasKey('line', $item, $where);
+                // Its card gives the score in its own words, translated.
+                $this->assertTrue(Lang::has($item['score']), $where);
+                $this->assertStringContainsString(':score', __($item['score']), $where);
                 $found++;
             }
         }
@@ -342,11 +345,23 @@ class GamesWorldScenesTest extends TestCase
 
     public function test_gusters_house_has_toot_catch(): void
     {
-        $catch = collect(GamesWorld::scenes()['guster-house.hall']['interactables'])->firstWhere('type', 'minigame');
+        $catch = collect(GamesWorld::scenes()['guster-house.hall']['interactables'])->firstWhere('minigame', 'toot-catch');
 
         $this->assertSame('toot-catch', $catch['minigame']);
         $this->assertSame('Toot Catch', $catch['label']);
         $this->assertSame(__('messages.games.world.minigames.toot_catch_line'), $catch['line']);
+    }
+
+    public function test_gusters_house_has_toot_slots_on_the_wall(): void
+    {
+        $slots = collect(GamesWorld::scenes()['guster-house.hall']['interactables'])->firstWhere('minigame', 'toot-slots');
+
+        $this->assertSame('minigame', $slots['type']);
+        $this->assertSame('Toot Slots', $slots['label']);
+        $this->assertSame('slot-machine', $slots['model']);
+        $this->assertSame('You won :score times!', $slots['score']);
+        // Hung up the back wall, not standing on the floor.
+        $this->assertGreaterThan(0, $slots['y']);
     }
 
     public function test_gusters_house_is_green_with_guster_at_home(): void

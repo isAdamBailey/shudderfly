@@ -42,6 +42,7 @@ const item = {
     emoji: "🧺",
     label: "Toot Catch",
     line: "Catch them!",
+    score: "You caught :score!",
 };
 
 let wrapper;
@@ -127,7 +128,8 @@ describe("MinigameCard", () => {
         await nextTick();
 
         expect(wrapper.find(".minigame-box").exists()).toBe(false);
-        const words = "games.world.minigames.score".replace(":score", 7);
+        // In the minigame's own words, its `score`.
+        const words = "You caught 7!";
         expect(wrapper.get(".minigame-score").text()).toBe(words);
         expect(speakGameIntro).toHaveBeenLastCalledWith(words);
         expect(wrapper.get(".minigame-play").text()).toBe(
@@ -143,9 +145,9 @@ describe("MinigameCard", () => {
 
     it("offers to share the score to the chat once it's over", async () => {
         await mountCard();
-        expect(wrapper.findComponent({ name: "ShareToChatButton" }).exists()).toBe(
-            false
-        );
+        expect(
+            wrapper.findComponent({ name: "ShareToChatButton" }).exists()
+        ).toBe(false);
 
         const kit = await play();
         kit.finish({ score: 7 });

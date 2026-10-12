@@ -1,4 +1,5 @@
 import { radioModel } from "./antiqueRadio.js";
+import { slotMachineModel } from "./slotMachine.js";
 import { tableLampModel } from "./tableLamp.js";
 
 // Props modelled in 3D, by the name an interactable's `model` gives
@@ -10,4 +11,5 @@ import { tableLampModel } from "./tableLamp.js";
 export const MODELS = {
     radio: radioModel,
     "table-lamp": tableLampModel,
+    "slot-machine": slotMachineModel,
 };

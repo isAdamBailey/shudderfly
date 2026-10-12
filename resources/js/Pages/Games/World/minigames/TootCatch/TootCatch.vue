@@ -1,7 +1,8 @@
 <script setup>
 import { GUSTER_CSS_VARS } from "@/constants/characters.js";
 import { useTranslations } from "@/composables/useTranslations";
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
+import { useMinigameLoop } from "../useMinigameLoop.js";
 import { BUTT_Y, useTootCatch } from "./useTootCatch.js";
 
 // Toot Catch, the world's first minigame: Toot Foods fall, and the Butt
@@ -30,14 +31,7 @@ const secondsLeft = computed(() => Math.ceil(state.timeLeft));
 
 // --- The loop -------------------------------------------------------------------
 
-let frame = 0;
-let last = 0;
-
-function tick(now) {
-    // At most a twentieth of a second a frame, so a stall (a hidden tab)
-    // doesn't drop a round's worth of food at once.
-    const dt = Math.min(0.05, (now - last) / 1000);
-    last = now;
+useMinigameLoop((dt) => {
     const was = state.butt.x;
     for (const event of game.step(dt)) {
         if (event.type !== "catch") continue;
@@ -46,20 +40,12 @@ function tick(now) {
     }
     moving.value = state.butt.x !== was;
     if (state.finished) {
-        frame = 0;
         props.kit.finish({ score: state.score });
-        return;
+        return false;
     }
-    frame = requestAnimationFrame(tick);
-}
-
-onMounted(() => {
-    fieldEl.value?.focus({ preventScroll: true });
-    last = performance.now();
-    frame = requestAnimationFrame(tick);
 });
 
-onBeforeUnmount(() => cancelAnimationFrame(frame));
+onMounted(() => fieldEl.value?.focus({ preventScroll: true }));
 
 // --- Input ----------------------------------------------------------------------
 

@@ -27,7 +27,8 @@ defineOptions({ pausesWorld: true });
 
 const props = defineProps({
     // The `minigame` interactable: its `minigame` name, `label`, `line`
-    // (how to play) and look (`emoji` or `cast`).
+    // (how to play), `score` (the words the score is given in, with a
+    // `:score`) and look (`emoji` or `cast`).
     item: { type: Object, required: true },
 });
 
@@ -61,9 +62,7 @@ const kit = {
     finish(result) {
         score.value = result.score;
         phase.value = "done";
-        const words = t("games.world.minigames.score", {
-            score: result.score,
-        });
+        const words = t(props.item.score, { score: result.score });
         speakGameIntro(words);
         focusButton();
     },
@@ -157,7 +156,7 @@ const puffAt = (puff) => ({
                     v-if="phase === 'done'"
                     class="minigame-score mt-3 font-heading text-[clamp(1.2rem,4.5vmin,1.7rem)] font-black text-theme-book-title"
                 >
-                    {{ t("games.world.minigames.score", { score }) }}
+                    {{ t(item.score, { score }) }}
                 </p>
                 <p
                     v-else

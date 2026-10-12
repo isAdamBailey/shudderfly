@@ -123,7 +123,7 @@ final class GamesWorld
 
     /** The minigames a `minigame` interactable may start:
      * World/minigames/index.js (a Vitest test keeps them in step). */
-    public const MINIGAMES = ['toot-catch'];
+    public const MINIGAMES = ['toot-catch', 'toot-slots'];
 
     /** Clock faces a hall clock may wear: three/clockFaces.js (a Vitest test
      * keeps them in step). */
@@ -141,7 +141,7 @@ final class GamesWorld
 
     /** Props modelled in 3D that an interactable's `model` may name:
      * three/models.js (a Vitest test keeps them in step). */
-    public const MODELS = ['radio', 'table-lamp'];
+    public const MODELS = ['radio', 'table-lamp', 'slot-machine'];
 
     /** Frames a wall picture or a room's photo can hang in (its
      * `image.frame`), drawn by three/pictureFrame.js; with none it hangs on
@@ -158,7 +158,7 @@ final class GamesWorld
     /** An interactable's fields that are lang keys in definitions() and
      * visible text in scenes() (games are named by GameController::games()),
      * as is a scene's `label`. A field may take `<field>Args` to fill it in. */
-    public const TRANSLATED = ['label', 'line'];
+    public const TRANSLATED = ['label', 'line', 'score'];
 
     /** Ids of the cast registry, CAST in resources/js/constants/characters.js
      * (a Vitest test keeps the two in step). Scenes name characters by these
@@ -316,6 +316,9 @@ final class GamesWorld
                 self::resident('guster', 670, 220, ['move' => 'bounce', 'toot' => 'guster', 'line' => 'messages.games.cast.guster_line']),
                 // Guster's game, played on the spot: catch the falling foods.
                 self::minigame('toot-catch', 220, 180, '🧺'),
+                // His slot machine, in his greens with a toot cloud on top,
+                // hung on the back wall: three Gusters wins.
+                self::minigame('toot-slots', 790, 0, '🎰', ['y' => 90, 'size' => 130, 'model' => 'slot-machine']),
             ]),
 
             // --- The Cockroach's House: one room. Cockroach Fart and
@@ -861,8 +864,11 @@ final class GamesWorld
 
     /** A minigame (one of MINIGAMES) played where it stands, drawn as
      * `emoji`, named by minigameKey() and explained by its `_line` as its
-     * card opens. Titled like a game. */
-    private static function minigame(string $minigame, int $x, int $z, string $emoji): array
+     * card opens. Titled like a game. Its `score` is the words its card
+     * gives the score in (`_score`), their `:score` left for the card to
+     * fill in. `$does` adds to it, or changes its
+     * size: `y` hangs it up the back wall (with `z` 0). */
+    private static function minigame(string $minigame, int $x, int $z, string $emoji, array $does = []): array
     {
         $key = self::minigameKey($minigame);
 
@@ -877,6 +883,8 @@ final class GamesWorld
             'titled' => true,
             'label' => $key,
             'line' => "{$key}_line",
+            'score' => "{$key}_score",
+            ...$does,
         ];
     }
 

@@ -21,12 +21,14 @@ import { own } from "@/utils/object";
  * - speak(text): says a line, in the same voice as the rest of the world.
  * - playSound(name): a sound from World/sounds.js.
  * - reducedMotion: a ref, true when motion should be kept down.
- * - finish({ score }): the round is over. The host shows the score and
- *   offers another go, which mounts the minigame afresh.
+ * - finish({ score }): the round is over. The host shows the score (in
+ *   the minigame's own `<name>_score` words) and offers another go, which
+ *   mounts the minigame afresh.
  * Escape closes the host; the minigame needn't handle it.
  */
 const MINIGAMES = {
     "toot-catch": () => import("./TootCatch/TootCatch.vue"),
+    "toot-slots": () => import("./TootSlots/TootSlots.vue"),
 };
 
 export const MINIGAME_NAMES = Object.keys(MINIGAMES);
