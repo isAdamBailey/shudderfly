@@ -4,6 +4,7 @@ import { CAST } from "@/constants/characters.js";
 import { useTranslations } from "@/composables/useTranslations";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { BUTT_FRAME, buttShapes } from "./buttDraw.js";
+import CastIcon from "./CastIcon.vue";
 import { sampleButtPose } from "./buttRig.js";
 import {
     CAST_MOVE_DATA,
@@ -312,6 +313,11 @@ watch(
                             </template>
                         </g>
                     </svg>
+                    <CastIcon
+                        v-else-if="member.figure"
+                        :figure="member.figure"
+                        class="cast-figure"
+                    />
                     <span v-else class="cast-glyph">{{ member.emoji }}</span>
                 </span>
             </span>
@@ -348,8 +354,16 @@ watch(
 
 .cast-facing-left .cast-glyph,
 .cast-facing-left .cast-face,
-.cast-facing-left .butt-figure {
+.cast-facing-left .butt-figure,
+.cast-facing-left .cast-figure {
     transform: scaleX(-1);
+}
+
+/* A figure with no rig (Guster): the shared moves squash and lift it
+   whole. */
+.cast-body .cast-figure {
+    display: block;
+    filter: drop-shadow(0.03em 0.04em 0 rgb(0 0 0 / 0.15));
 }
 
 .butt-figure {

@@ -1,14 +1,15 @@
+import { own } from "@/utils/object";
+
 export const BUTT = "🍑";
 export const COCKROACH = "🪳";
 export const TOILET = "🚽";
-export const GUSTER = "💩";
 export const PIZZA = "🍕";
 export const SPROUT = "🥬";
 
 // Guster's palette (issue #164), sampled from his photo and brightened: a
 // yellow-green, chartreuse-olive, not a grass green. Anything of his
-// coloured green takes it from here: his house and door so far, and his
-// figure's body, eyes and teeth once he is drawn (#164).
+// coloured green takes it from here: his house and door, his figure's body,
+// eyes and teeth (gusterDraw.js), and his games.
 export const GUSTER_COLORS = {
     body: "#b3ad2a",
     mid: "#958c22",
@@ -19,6 +20,29 @@ export const GUSTER_COLORS = {
     pupil: "#1e2230",
     teeth: "#eef0eb",
 };
+
+/** GUSTER_COLORS as CSS custom properties, for a component to bind on its
+ * root and its stylesheet to read, so his games take their greens from the
+ * one palette: `--guster-eye-white` is the colour, and `--guster-eye-white-rgb`
+ * its channels, for a see-through one (`rgb(var(--guster-base-rgb) / 0.8)`;
+ * older iOS Safari has no color-mix()). */
+export const GUSTER_CSS_VARS = Object.freeze(
+    Object.fromEntries(
+        Object.entries(GUSTER_COLORS).flatMap(([name, color]) => {
+            const prop = `--guster-${name.replace(
+                /[A-Z]/g,
+                (c) => `-${c.toLowerCase()}`
+            )}`;
+            const rgb = [1, 3, 5]
+                .map((at) => parseInt(color.slice(at, at + 2), 16))
+                .join(" ");
+            return [
+                [prop, color],
+                [`${prop}-rgb`, rgb],
+            ];
+        })
+    )
+);
 
 // The six fart-makers, shared by Toot Foods and the Games World roadside.
 // pitch = playbackRate for the toot (bigger food = lower).
@@ -63,7 +87,10 @@ const FOOD_MOVES = ["idle", "hop", "excited"];
  * WebGL (issue #130).
  *
  * - emoji: the glyph, the same one the games use. Absent for `face`, which is
- *   drawn by PersonFace instead.
+ *   drawn by PersonFace instead, and for a `figure`.
+ * - figure: drawn as a solid figure by the cast kit, with no emoji to fall
+ *   back to: "guster" (Components/Games/Cast/gusterDraw.js). The same name
+ *   CastIcon draws for a game's or a particle's `figure`.
  * - nameKey: translation key for the character's name.
  * - moves: the CAST_MOVES this character does.
  * - tootPitch: playbackRate for its toot (bigger = lower); absent if it
@@ -81,7 +108,7 @@ export const CAST = {
         tootPitch: 1,
     },
     guster: {
-        emoji: GUSTER,
+        figure: "guster",
         nameKey: "games.cast.guster",
         moves: ["idle", "bounce", "toot"],
         tootPitch: 0.85,
@@ -123,8 +150,9 @@ export const CAST = {
 };
 
 /** Whether cast member `id` is drawn in the DOM even in the WebGL world: one
- * with no emoji (the Face, drawn by PersonFace). castMesh gives it only an
- * anchor, and a scene lays CastMember over that. */
+ * with neither an emoji nor a figure (the Face, drawn by PersonFace).
+ * castMesh gives it only an anchor, and a scene lays CastMember over that. */
 export function castInDom(id) {
-    return Object.prototype.hasOwnProperty.call(CAST, id) && !CAST[id].emoji;
+    const member = own(CAST, id);
+    return !!member && !member.emoji && !member.figure;
 }

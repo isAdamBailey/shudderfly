@@ -1,14 +1,26 @@
 <script setup>
+import { GUSTER_CSS_VARS } from "@/constants/characters.js";
 import { useTranslations } from "@/composables/useTranslations";
 
 // The look of a toot: two 💨 clouds and the translated "toot!", ported from
 // Toot Foods. Placed by its caller (see useToot's `puffs`) and gone after
-// PUFF_MS; reduced motion fades it in place instead of drifting.
+// PUFF_MS; reduced motion fades it in place instead of drifting. Guster's
+// toots are in his greens.
+defineProps({
+    /** Who tooted (a puff's `castId`). */
+    castId: { type: String, default: null },
+});
+
 const { t } = useTranslations();
 </script>
 
 <template>
-    <span class="toot-puff" aria-hidden="true">
+    <span
+        class="toot-puff"
+        :class="{ 'toot-puff-guster': castId === 'guster' }"
+        :style="castId === 'guster' ? GUSTER_CSS_VARS : null"
+        aria-hidden="true"
+    >
         <span class="toot-cloud">💨</span>
         <span class="toot-cloud toot-cloud-2">💨</span>
         <span class="toot-word">{{ t("games.toot_foods.toot_word") }}</span>
@@ -47,6 +59,15 @@ const { t } = useTranslations();
     text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
     white-space: nowrap;
     animation: toot-word 0.72s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.toot-puff-guster .toot-cloud {
+    filter: drop-shadow(0 0 0.12em var(--guster-body));
+}
+
+.toot-puff-guster .toot-word {
+    color: var(--guster-highlight);
+    text-shadow: 0 2px 6px var(--guster-base);
 }
 
 @keyframes toot-cloud {

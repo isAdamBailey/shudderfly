@@ -1,11 +1,12 @@
 <script setup>
-import { GUSTER, TOILET } from "@/constants/characters.js";
+import GusterGlyph from "@/Components/Games/Cast/GusterGlyph.vue";
+import { GUSTER_CSS_VARS, TOILET } from "@/constants/characters.js";
 import { useTranslations } from "@/composables/useTranslations";
 import { useResizeObserver } from "@vueuse/core";
 import { ref, computed, onMounted, onUnmounted } from "vue";
 
 // Over the world, in the bathroom (GameHost). The kit is the only way it
-// reaches the world: the poop's toot when it lands, the bonk of a miss, and
+// reaches the world: Guster's toot when he lands, the bonk of a miss, and
 // the score.
 const props = defineProps({
     kit: { type: Object, required: true },
@@ -79,7 +80,7 @@ const missStyle = computed(() => ({
     top: `${missY.value - 40}px`,
 }));
 
-// The splash or the miss lingers, then the next poop comes (the loop is
+// The splash or the miss lingers, then the next Guster comes (the loop is
 // paused meanwhile, so there is only ever one); cleared if the host closes.
 let pauseTimer = null;
 function after(ms, fn) {
@@ -154,7 +155,7 @@ function tick() {
         toiletDir = 1;
     }
 
-    // Falling poop physics
+    // Falling Guster physics
     if (isPoopFalling.value) {
         poopVelY.value += GRAVITY;
         poopY.value += poopVelY.value;
@@ -278,7 +279,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div ref="gameEl" class="game-container">
+    <div ref="gameEl" class="game-container" :style="GUSTER_CSS_VARS">
         <!-- ── HUD ────────────────────────────────────────── -->
         <div class="hud">
             <div class="hud-item">
@@ -306,7 +307,7 @@ onUnmounted(() => {
             </div>
         </div>
 
-        <!-- ── draggable poop ─────────────────────────────── -->
+        <!-- ── draggable Guster ───────────────────────────── -->
         <div
             v-if="poopVisible"
             class="poop"
@@ -317,7 +318,7 @@ onUnmounted(() => {
             @mousedown="startDrag"
             @touchstart.prevent="startDrag"
         >
-            {{ GUSTER }}
+            <GusterGlyph />
         </div>
 
         <!-- ── splash effect ─────────────────────────────── -->
@@ -361,12 +362,17 @@ onUnmounted(() => {
     inset: 0;
     overflow: hidden;
     border-radius: 12px;
-    background-color: #efe6d6;
+    /* Guster's bathroom: pale chartreuse tiles with olive grout. */
+    background-color: #f6f7ee;
     background-image: linear-gradient(
-            rgba(125, 102, 76, 0.24) 1px,
+            rgb(var(--guster-mid-rgb) / 0.3) 1px,
             transparent 1px
         ),
-        linear-gradient(90deg, rgba(125, 102, 76, 0.24) 1px, transparent 1px),
+        linear-gradient(
+            90deg,
+            rgb(var(--guster-mid-rgb) / 0.3) 1px,
+            transparent 1px
+        ),
         radial-gradient(
             circle at 20% 10%,
             rgba(255, 255, 255, 0.38),
@@ -374,12 +380,16 @@ onUnmounted(() => {
         ),
         radial-gradient(
             circle at 80% 85%,
-            rgba(96, 70, 42, 0.1),
+            rgb(var(--guster-base-rgb) / 0.12),
             transparent 42%
+        ),
+        linear-gradient(
+            rgb(var(--guster-highlight-rgb) / 0.35),
+            rgb(var(--guster-highlight-rgb) / 0.35)
         );
-    background-size: 56px 56px, 56px 56px, 100% 100%, 100% 100%;
+    background-size: 56px 56px, 56px 56px, 100% 100%, 100% 100%, 100% 100%;
     box-shadow: 0 0 60px rgba(0, 0, 0, 0.6);
-    border: 3px solid #9d8263;
+    border: 3px solid var(--guster-mid);
     user-select: none;
     -webkit-user-select: none;
     touch-action: none;
@@ -395,12 +405,12 @@ onUnmounted(() => {
     align-items: center;
     justify-content: space-between;
     padding: 10px 18px;
-    background: rgba(63, 45, 28, 0.72);
+    background: rgb(var(--guster-base-rgb) / 0.8);
     backdrop-filter: blur(6px);
-    color: #fff5e7;
+    color: var(--guster-eye-white);
     font-weight: 700;
     z-index: 10;
-    border-bottom: 2px solid rgba(188, 155, 113, 0.7);
+    border-bottom: 2px solid var(--guster-body);
 }
 
 .hud-label {
@@ -420,7 +430,7 @@ onUnmounted(() => {
 
 .hud-instruction {
     font-size: 0.75rem;
-    color: #e6d4bb;
+    color: var(--guster-highlight);
     text-align: center;
 }
 
@@ -433,7 +443,7 @@ onUnmounted(() => {
     filter: grayscale(0) opacity(1);
 }
 
-/* ── poop ────────────────────────────────────────────────── */
+/* ── Guster ──────────────────────────────────────────────── */
 .poop {
     position: absolute;
     font-size: 52px;
@@ -446,7 +456,7 @@ onUnmounted(() => {
 }
 
 .poop:not(.falling):not(.dragging):hover {
-    filter: drop-shadow(0 0 12px rgba(145, 112, 55, 0.95)) !important;
+    filter: drop-shadow(0 0 12px var(--guster-highlight)) !important;
     transform: scale(1.08);
 }
 
@@ -491,11 +501,11 @@ onUnmounted(() => {
     height: 24px;
     background: repeating-linear-gradient(
             90deg,
-            #b6a085 0 28px,
-            #a88f71 28px 30px
+            var(--guster-mid) 0 28px,
+            var(--guster-shade) 28px 30px
         ),
-        linear-gradient(#c8b59a, #9f896e);
-    border-top: 3px solid #81684b;
+        linear-gradient(var(--guster-body), var(--guster-shade));
+    border-top: 3px solid var(--guster-base);
 }
 
 /* ── splash ──────────────────────────────────────────────── */
@@ -517,8 +527,8 @@ onUnmounted(() => {
     text-align: center;
     font-weight: 900;
     font-size: 1.5rem;
-    color: #8f6a34;
-    text-shadow: 0 0 8px rgba(143, 106, 52, 0.75);
+    color: var(--guster-shade);
+    text-shadow: 0 0 8px var(--guster-highlight);
 }
 
 /* ── miss ────────────────────────────────────────────────── */

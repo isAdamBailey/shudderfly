@@ -1,4 +1,5 @@
 <script setup>
+import { GUSTER_CSS_VARS } from "@/constants/characters.js";
 import { useTranslations } from "@/composables/useTranslations";
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { BUTT_Y, useTootCatch } from "./useTootCatch.js";
@@ -6,6 +7,7 @@ import { BUTT_Y, useTootCatch } from "./useTootCatch.js";
 // Toot Catch, the world's first minigame: Toot Foods fall, and the Butt
 // slides along the bottom to catch them, tooting at each one's pitch. Like
 // every minigame it reaches the world only through `kit` (minigames/index.js).
+// It's Guster's game, in his house, so it's played in his greens.
 const props = defineProps({
     kit: { type: Object, required: true },
 });
@@ -105,6 +107,7 @@ const at = (x, y) => ({ transform: `translate(${x * 100}%, ${y * 100}%)` });
     <div
         ref="fieldEl"
         class="catch-field"
+        :style="GUSTER_CSS_VARS"
         tabindex="0"
         :aria-label="t('games.world.minigames.toot_catch_aria')"
         @pointerdown="onPointerDown"
@@ -161,6 +164,14 @@ const at = (x, y) => ({ transform: `translate(${x * 100}%, ${y * 100}%)` });
     touch-action: none;
     outline: none;
     font-size: clamp(2rem, 9vmin, 3.25rem);
+    /* His living room: a pale wall over a mossy floor. */
+    background: #fbfcf3
+        linear-gradient(
+            rgb(var(--guster-highlight-rgb) / 0.45),
+            rgb(var(--guster-highlight-rgb) / 0.9) 72%,
+            var(--guster-mid) 72%,
+            var(--guster-shade)
+        );
 }
 
 .catch-field:focus-visible {
@@ -176,8 +187,9 @@ const at = (x, y) => ({ transform: `translate(${x * 100}%, ${y * 100}%)` });
     justify-content: space-between;
     font-family: "Spicy Rice", cursive;
     font-size: clamp(1.1rem, 4vmin, 1.5rem);
-    color: #fcd34d;
-    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+    color: var(--guster-base);
+    text-shadow: 0 1px 0 var(--guster-eye-white),
+        0 0 6px var(--guster-eye-white);
 }
 
 .catch-score {

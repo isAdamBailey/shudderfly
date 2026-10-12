@@ -132,10 +132,15 @@ describe("the road's scene graph", () => {
         road.sync(view(L, { idlers: [] }), 0);
 
         const box = buildingBox(L, { x: 600 });
-        const guster = road.landmarkPuppet("guster-house").group.position;
+        const sign = road.landmarkPuppet("guster-house");
+        const guster = sign.group.position;
         // Above the door, which is 0.4 of the building tall.
         expect(guster.y).toBeGreaterThan(box.height * 0.4);
-        expect(guster.z).toBeCloseTo(box.z + 2);
+        // Out from the wall by as far as he reaches behind, so his solid
+        // body doesn't sink into it.
+        const size = Math.min(box.width, box.height) * 0.42;
+        expect(sign.back).toBeGreaterThan(0);
+        expect(guster.z).toBeCloseTo(box.z + 2 + size * sign.back);
         // Up on the wall, he casts no shadow.
         const casting = [];
         road.landmarkPuppet("guster-house").group.traverse((o) => {

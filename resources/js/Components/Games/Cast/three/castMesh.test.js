@@ -4,6 +4,7 @@ import { CAST, CAST_MOVES } from "@/constants/characters.js";
 import { CAST_MOVE_DATA } from "../castMoveData.js";
 import { BUTT_VIEW, buttParts } from "../buttDraw.js";
 import { sampleButtPose } from "../buttRig.js";
+import { gusterParts } from "../gusterDraw.js";
 import { createCastKit } from "./castMesh.js";
 
 // jsdom has no 2D canvas; the kit only needs something to wrap in a texture.
@@ -67,6 +68,28 @@ describe("castMesh", () => {
                 );
                 expect(figure.rotation.x).not.toBe(0);
                 expect(puppet.domOverlay).toBe(false);
+            } else if (id === "guster") {
+                const figure = puppet.group.getObjectByName("guster");
+                const solid = [];
+                figure.traverse((node) => {
+                    if (node.isMesh) solid.push(node);
+                });
+                // Merged by material: a few draw calls, not one per part.
+                const parts =
+                    gusterParts().body.length + gusterParts().face.length;
+                expect(solid.length).toBeGreaterThan(1);
+                expect(solid.length).toBeLessThanOrEqual(10);
+                expect(solid.length).toBeLessThan(parts / 2);
+                // His body casts the shadow; his face sits on it.
+                expect(solid.some((mesh) => mesh.castShadow)).toBe(true);
+                expect(solid.some((mesh) => !mesh.castShadow)).toBe(true);
+                expect(
+                    solid.every(
+                        (mesh) =>
+                            mesh.material instanceof THREE.MeshStandardMaterial
+                    )
+                ).toBe(true);
+                expect(puppet.domOverlay).toBe(false);
             } else if (member.emoji) {
                 const glyph = glyphOf(puppet);
                 expect(glyph.material).toBeInstanceOf(
@@ -90,6 +113,69 @@ describe("castMesh", () => {
         );
         expect(box.min.y).toBeCloseTo(0, 0);
         expect(box.max.y).toBeGreaterThan(60);
+    });
+
+    it("shares Guster's geometry between copies, built once per kit", () => {
+        const k = kit();
+        const meshes = (puppet) => {
+            const found = [];
+            puppet.group.getObjectByName("guster").traverse((node) => {
+                if (node.isMesh) found.push(node);
+            });
+            return found;
+        };
+        const [a, b] = [
+            meshes(k.castMesh("guster")),
+            meshes(k.castMesh("guster")),
+        ];
+        expect(a.map((mesh) => mesh.geometry)).toEqual(
+            b.map((mesh) => mesh.geometry)
+        );
+        const spy = vi.spyOn(a[0].geometry, "dispose");
+        k.dispose();
+        expect(spy).toHaveBeenCalled();
+    });
+
+    it("says how far a solid figure reaches behind it, for a wall sign", () => {
+        const k = kit();
+        expect(k.castMesh("guster").back).toBeGreaterThan(0.1);
+        expect(k.castMesh("toilet").back).toBe(0);
+    });
+
+    it("stands Guster on his base at the size he was given", () => {
+        const puppet = kit().castMesh("guster", { size: 80 });
+        puppet.group.updateMatrixWorld(true);
+        const box = new THREE.Box3().setFromObject(
+            puppet.group.getObjectByName("guster"),
+            true
+        );
+        expect(box.min.y).toBeCloseTo(0, 0);
+        expect(box.max.y).toBeCloseTo(80, 0);
+        expect((box.min.x + box.max.x) / 2).toBeCloseTo(0, 0);
+    });
+
+    it("builds Guster without shadows as a sign, mirrored facing left", () => {
+        const k = kit();
+        const sign = k.castMesh("guster", { shadows: false });
+        sign.group.getObjectByName("guster").traverse((node) => {
+            if (node.isMesh) expect(node.castShadow).toBe(false);
+        });
+
+        const puppet = k.castMesh("guster");
+        puppet.set({ facing: "left" });
+        puppet.tick(0);
+        expect(puppet.group.getObjectByName("guster").scale.x).toBeLessThan(0);
+    });
+
+    it("squashes Guster whole on a toot, as the move data says", () => {
+        const puppet = kit().castMesh("guster", { size: 50 });
+        puppet.play("toot");
+        puppet.tick(CAST_MOVE_DATA.toot.duration * 0.3);
+        expect(puppet.body.scale.x).toBeCloseTo(1.18);
+        expect(puppet.body.scale.y).toBeCloseTo(0.84);
+        puppet.tick(CAST_MOVE_DATA.toot.duration);
+        expect(puppet.body.scale.x).toBeCloseTo(1);
+        expect(puppet.body.scale.y).toBeCloseTo(1);
     });
 
     it("shares one material per glyph", () => {
@@ -308,7 +394,7 @@ describe("castMesh", () => {
 
     it("frees its materials and textures on dispose", () => {
         const k = kit();
-        const material = glyphOf(k.castMesh("guster")).material;
+        const material = glyphOf(k.castMesh("toilet")).material;
         const spy = vi.spyOn(material, "dispose");
         const textureSpy = vi.spyOn(material.map, "dispose");
 

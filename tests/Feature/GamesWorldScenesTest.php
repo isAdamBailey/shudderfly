@@ -363,6 +363,8 @@ class GamesWorldScenesTest extends TestCase
         $guster = collect($hall['interactables'])->firstWhere('id', 'guster');
         $this->assertSame('guster', $guster['cast']);
         $this->assertSame('guster', $guster['toot']);
+        // He greets and apologises for it in one breath.
+        $this->assertSame('Hello.... and excuse me.', __($guster['line']));
     }
 
     public function test_scenes_translate_labels(): void
@@ -382,7 +384,7 @@ class GamesWorldScenesTest extends TestCase
         $this->assertSame([
             'slug' => 'boom',
             'name' => 'Poop Boom',
-            'emoji' => '💩',
+            'figure' => 'guster',
             'description' => __('messages.games.boom.description'),
             'cast' => 'toilet',
         ], $boom['card']);

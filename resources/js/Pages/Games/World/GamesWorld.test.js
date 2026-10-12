@@ -65,7 +65,13 @@ const GAMES = [
         landmark: "🍔",
         x: 1500,
     },
-    { slug: "boom", name: "Poop Boom", emoji: "💩", cast: "toilet", x: 2400 },
+    {
+        slug: "boom",
+        name: "Poop Boom",
+        figure: "guster",
+        cast: "toilet",
+        x: 2400,
+    },
 ];
 
 const scenes = {

@@ -22,7 +22,8 @@ export function tootPitch(castId) {
  * them at random instead, and the sample at its pitch if it has none.
  * `sounds` stands in for the page's props.
  *
- * Render `puffs` ({ id, x, y }, in the caller's coordinates) with TootPuff.
+ * Render `puffs` ({ id, x, y, castId }, in the caller's coordinates) with
+ * TootPuff, passing it the `castId` of whoever tooted.
  * Call `unlock()` from a user gesture before the first toot; autoplay rules
  * would silence it otherwise.
  */
@@ -66,7 +67,7 @@ export function useToot(sounds = usePage().props) {
         if (!at) return;
 
         const id = ++nextId;
-        puffs.value.push({ id, x: at.x, y: at.y });
+        puffs.value.push({ id, x: at.x, y: at.y, castId });
         const timer = setTimeout(() => {
             timers.delete(timer);
             puffs.value = puffs.value.filter((puff) => puff.id !== id);

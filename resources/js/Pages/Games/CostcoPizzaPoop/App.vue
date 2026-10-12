@@ -3,6 +3,7 @@
         v-if="phase === 'pizza'"
         ref="gameEl"
         class="game-container"
+        :style="GUSTER_CSS_VARS"
         tabindex="-1"
     >
         <div class="hud">
@@ -59,6 +60,7 @@
         v-else-if="phase === 'intestine'"
         ref="intestineEl"
         class="intestine-wrap"
+        :style="GUSTER_CSS_VARS"
         tabindex="-1"
     >
         <GameBoard
@@ -82,7 +84,7 @@ import { useResizeObserver } from "@vueuse/core";
 import PersonFace from "@/Components/Games/PersonFace.vue";
 import GameBoard from "@/Pages/Games/CostcoPizzaPoop/components/GameBoard.vue";
 import PepperoniStick from "@/Pages/Games/CostcoPizzaPoop/components/PepperoniStick.vue";
-import { PIZZA } from "@/constants/characters.js";
+import { GUSTER_CSS_VARS, PIZZA } from "@/constants/characters.js";
 import { useGameState } from "@/Pages/Games/CostcoPizzaPoop/composables/useGameState.js";
 import { useTranslations } from "@/composables/useTranslations";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
@@ -411,7 +413,7 @@ onUnmounted(() => {
         ),
         linear-gradient(165deg, #2a2218, #1a1510);
     box-shadow: 0 0 48px rgba(0, 0, 0, 0.45);
-    border: 3px solid #6b5344;
+    border: 3px solid var(--guster-mid);
     user-select: none;
     touch-action: none;
 }
@@ -427,9 +429,9 @@ onUnmounted(() => {
     justify-content: center;
     gap: 0.5rem;
     padding: 10px 16px;
-    background: rgba(40, 32, 24, 0.85);
+    background: rgb(var(--guster-base-rgb) / 0.88);
     backdrop-filter: blur(8px);
-    color: #fff5e6;
+    color: var(--guster-eye-white);
     font-weight: 800;
 }
 
@@ -499,7 +501,7 @@ onUnmounted(() => {
     inset: 0;
     overflow: hidden;
     border-radius: 12px;
-    border: 3px solid #6b5344;
+    border: 3px solid var(--guster-mid);
     box-shadow: 0 0 48px rgba(0, 0, 0, 0.45);
 }
 
@@ -511,8 +513,8 @@ onUnmounted(() => {
     z-index: 18;
     padding: 8px 16px;
     border-radius: 999px;
-    background: rgba(40, 32, 24, 0.85);
-    color: #fff5e6;
+    background: rgb(var(--guster-base-rgb) / 0.88);
+    color: var(--guster-eye-white);
     font-size: clamp(0.95rem, 3vmin, 1.2rem);
     font-weight: 800;
     white-space: nowrap;

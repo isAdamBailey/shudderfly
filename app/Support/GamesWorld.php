@@ -313,7 +313,7 @@ final class GamesWorld
             ], [
                 self::roomDoor('front-door', 450, 'road', 'guster-house', exit: true),
                 self::lampSwitch(650, 280),
-                self::resident('guster', 670, 220, ['move' => 'bounce', 'toot' => 'guster']),
+                self::resident('guster', 670, 220, ['move' => 'bounce', 'toot' => 'guster', 'line' => 'messages.games.cast.guster_line']),
                 // Guster's game, played on the spot: catch the falling foods.
                 self::minigame('toot-catch', 220, 180, '🧺'),
             ]),
@@ -984,7 +984,9 @@ final class GamesWorld
             $item['card'] = [
                 'slug' => $item['game'],
                 'name' => $game['name'],
-                'emoji' => $game['emoji'],
+                ...(isset($game['figure'])
+                    ? ['figure' => $game['figure']]
+                    : ['emoji' => $game['emoji']]),
                 'description' => $game['description'],
                 ...(isset($item['cast'])
                     ? ['cast' => $item['cast']]

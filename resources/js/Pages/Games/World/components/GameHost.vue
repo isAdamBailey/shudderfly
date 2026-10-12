@@ -1,5 +1,6 @@
 <script setup>
 import Button from "@/Components/Button.vue";
+import CastIcon from "@/Components/Games/Cast/CastIcon.vue";
 import CastMember from "@/Components/Games/Cast/CastMember.vue";
 import { createCastKit } from "@/Components/Games/Cast/three/castMesh.js";
 import TootPuff from "@/Components/Games/Cast/TootPuff.vue";
@@ -32,7 +33,8 @@ import { playSound } from "../sounds.js";
 defineOptions({ pausesWorld: true });
 
 const props = defineProps({
-    // The confirm card's game: slug, name, emoji, and cast or landmark.
+    // The confirm card's game: slug, name, emoji or figure, and cast or
+    // landmark.
     game: { type: Object, required: true },
 });
 
@@ -122,7 +124,7 @@ const puffAt = (puff) => ({
                 :id="titleId"
                 class="font-heading px-12 text-[clamp(1.35rem,5vmin,1.9rem)] font-black leading-tight tracking-wide text-theme-book-title"
             >
-                <span aria-hidden="true">{{ game.emoji }}</span>
+                <CastIcon :emoji="game.emoji" :figure="game.figure" />
                 {{ game.name }}
             </h2>
 
@@ -134,6 +136,7 @@ const puffAt = (puff) => ({
                 <TootPuff
                     v-for="puff in puffs"
                     :key="puff.id"
+                    :cast-id="puff.castId"
                     :style="puffAt(puff)"
                 />
             </div>

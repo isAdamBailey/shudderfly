@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 import { CAST } from "@/constants/characters.js";
 import { buttShapes } from "./buttDraw.js";
+import { GUSTER_SHAPES } from "./gusterDraw.js";
 import { sampleButtPose } from "./buttRig.js";
 import CastMember from "./CastMember.vue";
 
@@ -63,6 +64,12 @@ describe("CastMember", () => {
                         legs[index].y2
                     );
                 });
+            } else if (id === "guster") {
+                expect(wrapper.find(".cast-glyph").exists()).toBe(false);
+                expect(wrapper.findAll(".cast-figure ellipse")).toHaveLength(
+                    GUSTER_SHAPES.length
+                );
+                expect(wrapper.text()).not.toContain("💩");
             } else if (member.emoji) {
                 expect(wrapper.get(".cast-glyph").text()).toBe(member.emoji);
             } else {

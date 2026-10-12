@@ -273,6 +273,7 @@ const puffSpots = computed(() =>
     view.value
         ? puffs.value.map((puff) => ({
               id: puff.id,
+              castId: puff.castId,
               ...worldToScreen(view.value, {
                   x: puff.x,
                   y: puff.y,
@@ -347,6 +348,7 @@ defineExpose({ ...api, setBounds, pointOf });
             <TootPuff
                 v-for="puff in puffSpots"
                 :key="puff.id"
+                :cast-id="puff.castId"
                 :style="{ left: `${puff.x}px`, top: `${puff.y}px` }"
             />
         </template>

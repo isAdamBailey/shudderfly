@@ -657,7 +657,12 @@ export function createRoadScene(
         if (entry.sign) {
             const size = Math.min(box.width, box.height) * 0.42;
             entry.puppet.set({ size });
-            entry.base = { y: box.height * 0.97 - size, z: box.z + 2 };
+            // Out from the wall far enough that a solid sign (Guster)
+            // doesn't sink into it.
+            entry.base = {
+                y: box.height * 0.97 - size,
+                z: box.z + 2 + size * (entry.puppet.back ?? 0),
+            };
         } else {
             const size = box.height * 0.62;
             entry.puppet.set({ size });

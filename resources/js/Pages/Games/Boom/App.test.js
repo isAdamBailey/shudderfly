@@ -30,6 +30,16 @@ describe("Poop Boom", () => {
         spies = [];
     });
 
+    it("drops Guster, drawn as his figure, in his greens", () => {
+        play();
+
+        expect(wrapper.find(".poop .guster-glyph").exists()).toBe(true);
+        expect(wrapper.text()).not.toContain("💩");
+        expect(wrapper.get(".game-container").attributes("style")).toContain(
+            "--guster-body"
+        );
+    });
+
     it("bonks through the world when the poop misses", async () => {
         play();
 

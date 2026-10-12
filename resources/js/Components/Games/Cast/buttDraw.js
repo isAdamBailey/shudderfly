@@ -8,6 +8,11 @@
  */
 
 import { BUTT_RIG, sampleButtPose } from "./buttRig.js";
+import {
+    boundsOf,
+    project as projectTo,
+    turn as turnTo,
+} from "./figureView.js";
 
 export const BUTT_COLORS = {
     highlight: "#ffe7d2",
@@ -113,32 +118,8 @@ export function buttParts(pose = sampleButtPose("idle")) {
     return { cheeks, legs, feet, cleft };
 }
 
-function turn(point) {
-    const pitch = BUTT_VIEW.pitch * DEG;
-    const yaw = BUTT_VIEW.yaw * DEG;
-    const cp = Math.cos(pitch);
-    const sp = Math.sin(pitch);
-    const cy = Math.cos(yaw);
-    const sy = Math.sin(yaw);
-    const y1 = point.y * cp - point.z * sp;
-    const z1 = point.y * sp + point.z * cp;
-    return {
-        x: point.x * cy + z1 * sy,
-        y: y1,
-        z: -point.x * sy + z1 * cy,
-    };
-}
-
-function project(point) {
-    const viewed = turn(point);
-    const scale = BUTT_VIEW.focal / (BUTT_VIEW.focal - viewed.z);
-    return {
-        x: viewed.x * scale,
-        y: viewed.y * scale,
-        z: viewed.z,
-        scale,
-    };
-}
+const turn = (point) => turnTo(point, BUTT_VIEW);
+const project = (point) => projectTo(point, BUTT_VIEW);
 
 function shade(shape) {
     const across = shape.rx ?? shape.r ?? 0;
@@ -244,40 +225,6 @@ export function buttShapes(pose = sampleButtPose("idle")) {
 
     shapes.sort((a, b) => a.z - b.z);
     return shapes;
-}
-
-function boundsOf(shapes) {
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-    const add = (x, y, r) => {
-        minX = Math.min(minX, x - r);
-        maxX = Math.max(maxX, x + r);
-        minY = Math.min(minY, y - r);
-        maxY = Math.max(maxY, y + r);
-    };
-    for (const shape of shapes) {
-        if (shape.rx) {
-            add(shape.x, shape.y, 0);
-            minX = Math.min(minX, shape.x - shape.rx);
-            maxX = Math.max(maxX, shape.x + shape.rx);
-            minY = Math.min(minY, shape.y - shape.ry);
-            maxY = Math.max(maxY, shape.y + shape.ry);
-        } else if (shape.r) add(shape.x, shape.y, shape.r);
-        else {
-            add(shape.x1, shape.y1, shape.width / 2);
-            add(shape.x2, shape.y2, shape.width / 2);
-        }
-    }
-    return {
-        minX,
-        minY,
-        maxX,
-        maxY,
-        width: maxX - minX,
-        height: maxY - minY,
-    };
 }
 
 export const BUTT_FRAME = Object.freeze(boundsOf(buttShapes()));

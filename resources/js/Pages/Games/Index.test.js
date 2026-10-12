@@ -40,7 +40,7 @@ const games = [
     {
         slug: "boom",
         name: "Poop Boom",
-        emoji: "💩",
+        figure: "guster",
         landmark: "🚽",
         distance: 4200,
         description: "Drag Guster into the toilet.",
