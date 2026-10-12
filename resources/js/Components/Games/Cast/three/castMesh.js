@@ -1,6 +1,7 @@
 import { CAST, castInDom } from "@/constants/characters.js";
 import { BUTT_COLORS, BUTT_VIEW, buttParts } from "../buttDraw.js";
 import { sampleButtPose } from "../buttRig.js";
+import { GUSTER_VIEW, gusterParts } from "../gusterDraw.js";
 import {
     CAST_MOVE_DATA,
     IDENTITY_POSE,
@@ -20,6 +21,10 @@ import {
 // The Butt is the exception (issue #143): cheeks and legs are lit meshes,
 // turned to the same three-quarter view the DOM draws, and posed from the
 // rig (sampleButtPose) rather than the emoji squash.
+//
+// Guster is a figure too (issue #164): his body and face are lit, glossy
+// meshes turned to the DOM's view, merged into a few shared geometries, but
+// he has no rig, so his moves pose the whole figure as they do an emoji.
 //
 // The Face has no emoji: in 3D it is drawn as CastMember (PersonFace) in the
 // scene's DOM overlay at the puppet's projected point, so its own SVG
@@ -41,6 +46,36 @@ const SHADOW_FALLOFF = 120;
 const DEG = Math.PI / 180;
 const SETTABLE = ["size", "lift", "tilt", "facing"];
 const REST = Object.freeze({ ...IDENTITY_POSE, shadow: 1 });
+
+/** One indexed geometry holding all of `geometries` (positions and normals,
+ * which is all the kit's lit materials read), which it frees. */
+function mergeGeometries(THREE, geometries) {
+    let vertices = 0;
+    let indices = 0;
+    for (const geometry of geometries) {
+        vertices += geometry.attributes.position.count;
+        indices += geometry.index.count;
+    }
+    const position = new Float32Array(vertices * 3);
+    const normal = new Float32Array(vertices * 3);
+    const index = new Uint32Array(indices);
+    let v = 0;
+    let i = 0;
+    for (const geometry of geometries) {
+        position.set(geometry.attributes.position.array, v * 3);
+        normal.set(geometry.attributes.normal.array, v * 3);
+        const own = geometry.index.array;
+        for (let k = 0; k < own.length; k++) index[i + k] = own[k] + v;
+        v += geometry.attributes.position.count;
+        i += own.length;
+        geometry.dispose();
+    }
+    const merged = new THREE.BufferGeometry();
+    merged.setAttribute("position", new THREE.BufferAttribute(position, 3));
+    merged.setAttribute("normal", new THREE.BufferAttribute(normal, 3));
+    merged.setIndex(new THREE.BufferAttribute(index, 1));
+    return merged;
+}
 
 function defaultCanvas(px) {
     const canvas = document.createElement("canvas");
@@ -88,15 +123,16 @@ export function createCastKit(
     const sphere = new THREE.SphereGeometry(1, 28, 20);
     const limb = new THREE.CylinderGeometry(1, 1, 1, 14);
     let blobMaterial = null;
+    let gusterBuild = null;
 
-    const skin = (color) => {
-        const key = `\0butt${color}`;
+    const skin = (color, roughness = 0.55) => {
+        const key = `\0skin${color}/${roughness}`;
         if (!materials.has(key)) {
             materials.set(
                 key,
                 new THREE.MeshStandardMaterial({
                     color,
-                    roughness: 0.55,
+                    roughness,
                     metalness: 0,
                 })
             );
@@ -191,6 +227,88 @@ export function createCastKit(
         figure.updateMatrixWorld(true);
         const box = new THREE.Box3().setFromObject(figure);
         figure.userData.foot = -box.min.y;
+        return figure;
+    }
+
+    /** Guster's pieces (and how far he reaches behind his origin, `back`),
+     * built once per kit: his parts merged into one
+     * geometry per material (a few draw calls, not one per part), turned to
+     * the DOM's view and sized one unit tall on y = 0, centred. Only his
+     * body casts a shadow; his face sits on it. */
+    function gusterPieces() {
+        if (gusterBuild) return gusterBuild;
+        const { body, face } = gusterParts();
+        const groups = new Map();
+        const matrix = new THREE.Matrix4();
+        const turn = new THREE.Matrix4().makeRotationFromEuler(
+            new THREE.Euler(
+                GUSTER_VIEW.pitch * DEG,
+                GUSTER_VIEW.yaw * DEG,
+                0,
+                "YXZ"
+            )
+        );
+        const spin = new THREE.Quaternion();
+        const z = new THREE.Vector3(0, 0, 1);
+        for (const part of [...body, ...face]) {
+            const onBody = part.type === "blob" || part.type === "brow";
+            const material = skin(
+                part.color,
+                onBody || part.type === "pupil" ? 0.28 : 0.5
+            );
+            const key = `${material.uuid}/${onBody}`;
+            if (!groups.has(key)) {
+                groups.set(key, { material, shadow: onBody, parts: [] });
+            }
+            matrix.compose(
+                new THREE.Vector3(part.x, part.y, part.z),
+                spin.setFromAxisAngle(z, part.rot * DEG),
+                new THREE.Vector3(part.rx, part.ry, part.rz)
+            );
+            groups
+                .get(key)
+                .parts.push(
+                    sphere.clone().applyMatrix4(turn.clone().multiply(matrix))
+                );
+        }
+
+        const pieces = [...groups.values()].map((group) => ({
+            material: group.material,
+            shadow: group.shadow,
+            geometry: mergeGeometries(THREE, group.parts),
+        }));
+        const box = new THREE.Box3();
+        for (const piece of pieces) {
+            piece.geometry.computeBoundingBox();
+            box.union(piece.geometry.boundingBox);
+        }
+        const k = 1 / (box.max.y - box.min.y);
+        for (const piece of pieces) {
+            piece.geometry.translate(
+                -(box.min.x + box.max.x) / 2,
+                -box.min.y,
+                0
+            );
+            piece.geometry.scale(k, k, k);
+        }
+        gusterBuild = { pieces, back: -box.min.z * k };
+        return gusterBuild;
+    }
+
+    // A cast member's `figure` → its model builder.
+    const FIGURES = { guster: gusterFigure };
+
+    /** Guster as a model: one unit tall on y = 0, facing +z. */
+    function gusterFigure() {
+        const figure = new THREE.Group();
+        figure.name = "guster";
+        const { pieces, back } = gusterPieces();
+        figure.userData.back = back;
+        for (const piece of pieces) {
+            const mesh = new THREE.Mesh(piece.geometry, piece.material);
+            mesh.castShadow = piece.shadow;
+            figure.add(mesh);
+        }
         return figure;
     }
 
@@ -372,6 +490,10 @@ export function createCastKit(
             // moves. A DOM overlay (the Face) can follow it.
             body,
             domOverlay,
+            // How far a solid model reaches behind its origin, per unit of
+            // size: a sign hung on a wall stands out by this much. 0 for a
+            // flat glyph.
+            back: model?.userData.back ?? 0,
 
             /** The ongoing move, or null to stand still. A move the character
              * doesn't have stands still too. Restarts like a CSS class swap. */
@@ -533,23 +655,21 @@ export function createCastKit(
         castMesh(id, { size = 64, phase = 0, shadows = true } = {}) {
             const member = CAST[id];
             if (!member) throw new Error(`Unknown cast member "${id}"`);
-            if (id === "butt") {
-                return puppet({
-                    fit: "butt",
-                    moves: member.moves,
-                    size,
-                    phase,
-                    shadows,
-                    sounds: member.sounds,
-                });
-            }
+            const look =
+                id === "butt"
+                    ? { fit: "butt" }
+                    : member.figure
+                    ? { model: FIGURES[member.figure]() }
+                    : {
+                          glyph: member.emoji ?? null,
+                          domOverlay: castInDom(id),
+                      };
             return puppet({
-                glyph: member.emoji ?? null,
+                ...look,
                 moves: member.moves,
                 size,
                 phase,
                 shadows,
-                domOverlay: castInDom(id),
                 sounds: member.sounds,
             });
         },
@@ -627,6 +747,10 @@ export function createCastKit(
             blobMaterial?.map?.dispose();
             blobMaterial?.dispose();
             blobMaterial = null;
+            for (const piece of gusterBuild?.pieces ?? []) {
+                piece.geometry.dispose();
+            }
+            gusterBuild = null;
             plane.dispose();
             ground.dispose();
             sphere.dispose();

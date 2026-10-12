@@ -1,8 +1,10 @@
 import { computed, ref } from "vue";
-import { COCKROACH, GUSTER, TOOT_FOODS } from "@/constants/characters.js";
+import { COCKROACH, TOOT_FOODS } from "@/constants/characters.js";
 
 export const FOOD_EMOJI_POOL = TOOT_FOODS.map((food) => food.emoji);
-const EMOJI_POOL = [COCKROACH, GUSTER, ...FOOD_EMOJI_POOL];
+// A pool holds emoji, and figures the overlay draws instead of text:
+// { figure: "guster" } (GusterGlyph, issue #164).
+const EMOJI_POOL = [COCKROACH, { figure: "guster" }, ...FOOD_EMOJI_POOL];
 
 let nextId = 1;
 
@@ -24,9 +26,10 @@ export function useEmojiRise() {
             const duration = randomBetween(minDuration, maxDuration);
             const delay = randomBetween(0, 0.4);
 
+            const pick = pool[Math.floor(Math.random() * pool.length)];
             particles.value.push({
                 id,
-                emoji: pool[Math.floor(Math.random() * pool.length)],
+                ...(typeof pick === "string" ? { emoji: pick } : pick),
                 left: randomBetween(5, 95),
                 size: randomBetween(1.2, 2.2),
                 duration,

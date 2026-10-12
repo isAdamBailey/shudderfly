@@ -232,6 +232,7 @@ defineExpose(api);
             <TootPuff
                 v-for="puff in puffs"
                 :key="puff.id"
+                :cast-id="puff.castId"
                 :style="{ left: `${puff.x}px`, top: `${puff.y}px` }"
             />
         </div>

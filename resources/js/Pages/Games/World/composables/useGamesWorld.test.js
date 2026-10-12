@@ -43,7 +43,7 @@ const GAMES = [
         slug: "boom",
         name: "Boom",
         description: "Blow it up",
-        emoji: "💩",
+        figure: "guster",
         landmark: "🚽",
         distance: 2400,
     },

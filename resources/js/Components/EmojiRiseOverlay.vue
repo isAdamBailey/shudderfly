@@ -1,5 +1,12 @@
 <script setup>
 import { useEmojiRise } from "@/composables/useEmojiRise";
+import { defineAsyncComponent } from "vue";
+
+// Mounted on every page, but a figure (Guster) rises rarely: load his
+// drawing only then.
+const CastIcon = defineAsyncComponent(() =>
+    import("@/Components/Games/Cast/CastIcon.vue")
+);
 
 const { particles } = useEmojiRise();
 
@@ -19,7 +26,8 @@ const particleStyle = (particle) => ({
             class="emoji-rise-particle"
             :style="particleStyle(particle)"
         >
-            {{ particle.emoji }}
+            <CastIcon v-if="particle.figure" :figure="particle.figure" />
+            <template v-else>{{ particle.emoji }}</template>
         </span>
     </div>
 </template>

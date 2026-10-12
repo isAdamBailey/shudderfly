@@ -106,7 +106,7 @@ describe("useToot", () => {
 
         toot("butt", { x: 300, y: 40 });
 
-        expect(puffs.value).toEqual([{ id: 1, x: 300, y: 40 }]);
+        expect(puffs.value).toEqual([{ id: 1, x: 300, y: 40, castId: "butt" }]);
         vi.advanceTimersByTime(PUFF_MS);
         expect(puffs.value).toEqual([]);
     });

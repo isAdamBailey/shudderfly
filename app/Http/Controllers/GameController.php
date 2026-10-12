@@ -20,7 +20,9 @@ class GameController extends Controller
     /** Newest games first (Games index list order). Name/description are
      * translated at call time, so this can't be a compile-time const. Where
      * each game is in the Games World (on the road or in a room) is
-     * GamesWorld::definitions()'s business, not this list's. */
+     * GamesWorld::definitions()'s business, not this list's. A game's icon
+     * is an `emoji`, or a `figure`: a cast member the cast kit draws, for
+     * one with no emoji (Guster, issue #164). */
     public static function games(): array
     {
         return [
@@ -46,7 +48,7 @@ class GameController extends Controller
             ],
             'boom' => [
                 'name' => __('messages.games.boom.name'),
-                'emoji' => '💩',
+                'figure' => 'guster',
                 'description' => __('messages.games.boom.description'),
             ],
             'cockroach' => [

@@ -29,6 +29,16 @@ beforeEach(() => {
 });
 
 describe("GameConfirmCard", () => {
+    it("draws a game whose icon is a figure as that figure, not an emoji", () => {
+        const wrapper = mountCard({
+            game: { ...game, emoji: undefined, figure: "guster" },
+            start: vi.fn(),
+        });
+
+        expect(wrapper.find("h2 .guster-glyph").exists()).toBe(true);
+        expect(wrapper.get("h2").text()).toBe(game.name);
+    });
+
     it("draws a landmark that is a cast member as that character", () => {
         const wrapper = mountCard({
             game: { ...game, landmark: undefined, cast: "toilet" },

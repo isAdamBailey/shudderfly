@@ -132,6 +132,7 @@ const puffAt = (puff) => ({
                 <TootPuff
                     v-for="puff in puffs"
                     :key="puff.id"
+                    :cast-id="puff.castId"
                     :style="puffAt(puff)"
                 />
                 <button

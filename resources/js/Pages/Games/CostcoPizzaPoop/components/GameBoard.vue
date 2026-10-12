@@ -1,8 +1,9 @@
 <script setup>
 import { useResizeObserver } from "@vueuse/core";
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
-import { GUSTER, PIZZA } from "@/constants/characters.js";
+import { GUSTER_CSS_VARS, PIZZA } from "@/constants/characters.js";
 import { SVG_WIDTH } from "../composables/useGameState.js";
+import GusterGlyph from "@/Components/Games/Cast/GusterGlyph.vue";
 import PepperoniGlyph from "./PepperoniGlyph.vue";
 import { useTranslations } from "@/composables/useTranslations";
 
@@ -265,6 +266,7 @@ onUnmounted(() => {
     <div
         ref="boardEl"
         class="game-board"
+        :style="GUSTER_CSS_VARS"
         :class="{ 'game-board-locked': !controlsEnabled }"
         @pointerdown="onPointerDown"
     >
@@ -332,17 +334,13 @@ onUnmounted(() => {
                 fill="rgba(100,30,30,0.4)"
             />
 
-            <text
+            <GusterGlyph
                 v-if="poopVisible"
+                class="poop-sprite"
                 :x="state.poopX"
                 :y="state.poopY"
-                text-anchor="middle"
-                dominant-baseline="central"
-                :font-size="poopRadius * 2.2"
-                class="poop-sprite"
-            >
-                {{ GUSTER }}
-            </text>
+                :size="poopRadius * 2.2"
+            />
 
             <g
                 v-if="showDigestIntro"
@@ -408,11 +406,7 @@ onUnmounted(() => {
                         </g>
                     </g>
                 </g>
-                <text
-                    :x="digestIntro.stomachCx"
-                    :y="digestIntro.stomachCy"
-                    text-anchor="middle"
-                    dominant-baseline="central"
+                <g
                     class="digest-intro-poop"
                     :style="{
                         '--digest-drop': `${
@@ -420,8 +414,12 @@ onUnmounted(() => {
                         }px`,
                     }"
                 >
-                    {{ GUSTER }}
-                </text>
+                    <GusterGlyph
+                        :x="digestIntro.stomachCx"
+                        :y="digestIntro.stomachCy"
+                        :size="46"
+                    />
+                </g>
             </g>
         </svg>
 
@@ -521,8 +519,6 @@ onUnmounted(() => {
 
 .digest-slice,
 .digest-intro-poop {
-    font-size: 52px;
-    line-height: 1;
     transform-box: fill-box;
     transform-origin: center;
 }
@@ -568,11 +564,11 @@ onUnmounted(() => {
     align-items: center;
     justify-content: space-between;
     padding: 8px 14px;
-    background: rgba(30, 8, 12, 0.96);
-    color: #f0d0c0;
+    background: rgb(var(--guster-base-rgb) / 0.96);
+    color: var(--guster-eye-white);
     font-weight: 700;
     z-index: 20;
-    border-bottom: 2px solid rgba(160, 60, 70, 0.5);
+    border-bottom: 2px solid var(--guster-body);
     pointer-events: none;
 }
 
@@ -609,7 +605,7 @@ onUnmounted(() => {
     width: 100%;
     height: 100%;
     border-radius: 4px;
-    background: linear-gradient(90deg, #d4606a, #4caf50);
+    background: linear-gradient(90deg, #d4606a, var(--guster-body));
     transform: scaleX(0);
     transform-origin: left center;
     transition: transform 0.15s ease;
@@ -623,8 +619,8 @@ onUnmounted(() => {
     z-index: 18;
     padding: 8px 16px;
     border-radius: 999px;
-    background: rgba(20, 6, 8, 0.82);
-    color: #ffe9d6;
+    background: rgb(var(--guster-base-rgb) / 0.88);
+    color: var(--guster-eye-white);
     font-size: clamp(0.95rem, 3vmin, 1.2rem);
     font-weight: 800;
     white-space: nowrap;

@@ -20,10 +20,21 @@ describe("useEmojiRise", () => {
 
         expect(particles.value).toHaveLength(4);
         particles.value.forEach((particle) => {
-            expect(particle.emoji).toBeTruthy();
+            expect(particle.emoji || particle.figure).toBeTruthy();
             expect(particle.left).toBeGreaterThanOrEqual(5);
             expect(particle.left).toBeLessThanOrEqual(95);
         });
+    });
+
+    it("can rise Guster as a figure, not an emoji", () => {
+        vi.spyOn(Math, "random").mockReturnValue(0.2);
+        const { particles, spawnEmojiRise } = useEmojiRise();
+
+        spawnEmojiRise(1);
+
+        expect(particles.value[0].figure).toBe("guster");
+        expect(particles.value[0].emoji).toBeUndefined();
+        vi.restoreAllMocks();
     });
 
     it("defaults to spawning 6 particles", () => {

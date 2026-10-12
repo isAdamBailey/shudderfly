@@ -1,4 +1,5 @@
 <script setup>
+import CastIcon from "@/Components/Games/Cast/CastIcon.vue";
 import CastMember from "@/Components/Games/Cast/CastMember.vue";
 import { unlockAudio } from "@/composables/useAudioContext";
 import { useTranslations } from "@/composables/useTranslations";
@@ -40,7 +41,7 @@ async function play() {
             :id="titleId"
             class="font-heading mt-1 text-[clamp(1.35rem,5vmin,1.9rem)] font-black leading-tight tracking-wide text-theme-book-title"
         >
-            <span aria-hidden="true">{{ game.emoji }}</span>
+            <CastIcon :emoji="game.emoji" :figure="game.figure" />
             {{ game.name }}
         </h2>
         <p

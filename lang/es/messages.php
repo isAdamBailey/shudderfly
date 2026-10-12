@@ -773,6 +773,7 @@ return [
     // Games - Cast
     'games.cast.butt' => 'El Trasero',
     'games.cast.guster' => 'Guster',
+    'games.cast.guster_line' => 'Hola.... y perdón.',
     'games.cast.toilet' => 'El Inodoro',
     'games.cast.cockroach' => 'La Cucaracha',
     'games.cast.pizza' => 'La Pizza',
