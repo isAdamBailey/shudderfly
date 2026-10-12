@@ -114,7 +114,7 @@ class AiVoiceService
         try {
             // Two simultaneous misses on the same text would otherwise both
             // pay the provider and race to insert the same unique hash.
-            return Cache::lock("ai-voice:{$hash}", $this->lockSeconds())->block(
+            return Cache::lock("ai-voice:{$hash}", $this->lockSeconds($this->timeoutSeconds($ahead)))->block(
                 self::LOCK_WAIT_SECONDS,
                 fn () => $this->findClip($hash, $ahead) ?? $this->generate($hash, $text, $locale, $voice, $model, $ahead)
             );
@@ -209,7 +209,7 @@ class AiVoiceService
         $this->reserveBudget($characters, $ahead ? AiVoice::aheadOfTimeCharacterLimit() : AiVoice::dailyCharacterLimit());
 
         try {
-            $audio = $this->synthesize($text, $voice, $model);
+            $audio = $this->synthesize($text, $voice, $model, $this->timeoutSeconds($ahead));
         } catch (AiVoiceUnavailable $exception) {
             // A timeout or dropped connection may still have been billed,
             // so it stays charged; anything else produced no audio.
@@ -315,7 +315,7 @@ class AiVoiceService
     /**
      * MP3 bytes for $text from the provider.
      */
-    private function synthesize(string $text, string $voice, string $model): string
+    private function synthesize(string $text, string $voice, string $model, int $timeout): string
     {
         if (! AiVoice::configured()) {
             if (Cache::add('ai-voice:unconfigured-logged', true, now()->addDay())) {
@@ -326,7 +326,7 @@ class AiVoiceService
         }
 
         try {
-            $response = $this->httpClient()
+            $response = $this->httpClient($timeout)
                 ->withToken((string) config('services.ai_voice.api_key'))
                 ->post((string) config('services.ai_voice.endpoint'), [
                     'model' => $model,
@@ -389,17 +389,22 @@ class AiVoiceService
 
     /**
      * Counts a timeout or dropped connection, and pauses the provider once
-     * there have been enough in a row. A timeout is the provider's, so it
-     * is not logged. Not atomic: two failures at once may count as one,
-     * which only delays the pause by a request.
+     * there have been enough in a row. A single timeout is the provider's,
+     * so it is not logged, but a pause is, once as it starts: every miss
+     * until it ends is a 503, which is otherwise invisible. Not atomic: two
+     * failures at once may count as one, which only delays the pause by a
+     * request.
      */
     private function recordConnectionFailure(): void
     {
         $failures = (int) Cache::get(self::FAILURES_KEY, 0) + 1;
         Cache::put(self::FAILURES_KEY, $failures, self::FAILURE_WINDOW_SECONDS);
 
-        if ($failures >= self::FAILURES_BEFORE_PAUSE) {
-            Cache::add(self::PAUSED_KEY, true, self::PAUSE_SECONDS);
+        if ($failures >= self::FAILURES_BEFORE_PAUSE && Cache::add(self::PAUSED_KEY, true, self::PAUSE_SECONDS)) {
+            Log::warning('AI voice provider paused after repeated connection failures; new clips fall back to the device voice', [
+                'failures' => $failures,
+                'pause_seconds' => self::PAUSE_SECONDS,
+            ]);
         }
     }
 
@@ -424,20 +429,26 @@ class AiVoiceService
      * Outlasts the worst-case generation, so the lock never expires while a
      * clip is still being made and a second request pays for it again.
      */
-    private function lockSeconds(): int
+    private function lockSeconds(int $timeout): int
     {
-        return self::ATTEMPTS * (self::CONNECT_TIMEOUT_SECONDS + $this->timeoutSeconds()) + self::LOCK_MARGIN_SECONDS;
+        return self::ATTEMPTS * (self::CONNECT_TIMEOUT_SECONDS + $timeout) + self::LOCK_MARGIN_SECONDS;
     }
 
-    private function timeoutSeconds(): int
+    /**
+     * A live play waits only so long, as the client has long since fallen
+     * back by then. A clip made ahead of time has nobody waiting, so it gets
+     * longer: a slow provider then makes the clip instead of timing out and
+     * pausing new clips for everyone.
+     */
+    private function timeoutSeconds(bool $ahead): int
     {
-        return (int) config('services.ai_voice.timeout');
+        return (int) config($ahead ? 'services.ai_voice.ahead_timeout' : 'services.ai_voice.timeout');
     }
 
-    private function httpClient(): PendingRequest
+    private function httpClient(int $timeout): PendingRequest
     {
         return Http::connectTimeout(self::CONNECT_TIMEOUT_SECONDS)
-            ->timeout($this->timeoutSeconds())
+            ->timeout($timeout)
             ->retry(
                 self::ATTEMPTS,
                 self::RETRY_SLEEP_MS,

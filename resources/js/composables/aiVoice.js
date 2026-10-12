@@ -47,8 +47,8 @@ export const AI_VOICE_BACKOFF_MS = 60000;
 export const AI_VOICE_TIMEOUTS_BEFORE_BACKOFF = 3;
 
 // A prefetch nobody is waiting on can take as long as the server does to
-// make a long clip: two provider attempts, well inside its 10 s timeout.
-export const AI_VOICE_PREFETCH_TIMEOUT_MS = 15000;
+// make a long clip, which has the longer ahead-of-time provider timeout.
+export const AI_VOICE_PREFETCH_TIMEOUT_MS = 25000;
 
 // How long text must stay on screen before its clip is prefetched, so
 // paging quickly through a book doesn't make a clip for every page passed.
