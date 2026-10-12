@@ -76,6 +76,11 @@ return [
         'endpoint' => env('AI_VOICE_ENDPOINT', 'https://api.deepinfra.com/v1/audio/speech'),
         'model' => env('AI_VOICE_MODEL', 'hexgrad/Kokoro-82M'),
         'timeout' => (int) env('AI_VOICE_TIMEOUT') ?: 10,
+        // For clips made before anyone asks to hear them (prefetch, warming):
+        // nobody is waiting, and a long page can take the provider past the
+        // live timeout. Two attempts at this must finish inside a queue
+        // worker's default 60 s timeout (see GenerateAiVoiceClip::$timeout).
+        'ahead_timeout' => (int) env('AI_VOICE_AHEAD_TIMEOUT') ?: 20,
         // Dollars per 1M input characters; only used to estimate cost in reports.
         'price_per_million' => (float) env('AI_VOICE_PRICE_PER_MILLION') ?: 0.62,
         'voices' => [

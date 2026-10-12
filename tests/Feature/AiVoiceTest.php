@@ -180,6 +180,22 @@ class AiVoiceTest extends TestCase
         $this->assertSame([], Storage::disk('s3')->allFiles());
     }
 
+    public function test_a_prefetch_waits_longer_on_the_provider_than_a_live_play(): void
+    {
+        config(['services.ai_voice.timeout' => 10, 'services.ai_voice.ahead_timeout' => 20]);
+        $timeouts = [];
+        Http::fake(function ($request, array $options) use (&$timeouts) {
+            $timeouts[$request['input']] = $options['timeout'];
+
+            return Http::response(self::AUDIO, 200, ['Content-Type' => 'audio/mpeg']);
+        });
+
+        $this->speak(['text' => 'live'])->assertOk();
+        $this->postJson(route('ai-voice.prefetch'), ['text' => 'ahead', 'locale' => 'en'])->assertOk();
+
+        $this->assertSame(['live' => 10, 'ahead' => 20], $timeouts);
+    }
+
     public function test_a_timeout_is_not_retried(): void
     {
         // A retry here could bill the same clip twice.
@@ -195,11 +211,26 @@ class AiVoiceTest extends TestCase
         $logged = $this->recordLogs();
         Http::fake(['ai-voice.test/*' => Http::failedConnection()]);
 
-        foreach (['one', 'two', 'three', 'four'] as $text) {
+        foreach (['one', 'two'] as $text) {
             $this->speak(['text' => $text])->assertStatus(503);
         }
 
         $this->assertSame([], $logged->filter(fn ($log) => str_starts_with($log->message, 'AI voice'))->all());
+    }
+
+    public function test_a_pause_is_logged_once_as_a_warning(): void
+    {
+        $logged = $this->recordLogs();
+        $this->pauseProvider();
+
+        foreach (['four', 'five'] as $text) {
+            $this->speak(['text' => $text])->assertStatus(503);
+        }
+
+        $voice = $logged->filter(fn ($log) => str_starts_with($log->message, 'AI voice'));
+        $this->assertCount(1, $voice);
+        $this->assertSame('warning', $voice->sole()->level);
+        $this->assertStringContainsString('paused', $voice->sole()->message);
     }
 
     public function test_a_provider_error_is_logged_as_an_error(): void
