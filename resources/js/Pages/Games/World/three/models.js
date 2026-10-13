@@ -1,4 +1,6 @@
 import { radioModel } from "./antiqueRadio.js";
+import { fridgeModel } from "./fridge.js";
+import { ovenModel } from "./oven.js";
 import { slotMachineModel } from "./slotMachine.js";
 import { tableLampModel } from "./tableLamp.js";
 
@@ -12,4 +14,6 @@ export const MODELS = {
     radio: radioModel,
     "table-lamp": tableLampModel,
     "slot-machine": slotMachineModel,
+    fridge: fridgeModel,
+    oven: ovenModel,
 };

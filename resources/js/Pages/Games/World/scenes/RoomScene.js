@@ -19,6 +19,7 @@ import { entertainmentCenterGeometry } from "./entertainmentCenter.js";
 import { exitSigns } from "./exitSign.js";
 import { pictureFrame } from "../three/pictureFrame.js";
 import { fireplaceGeometry } from "./fireplace.js";
+import { kitchenCounterGeometry } from "./kitchenCounter.js";
 import { ORGAN } from "./organLayout.js";
 import { floorGeometry, stairsFootprint, stairsGeometry } from "./staircase.js";
 import { createWallCrawlers } from "./wallCrawlers.js";
@@ -274,17 +275,24 @@ export function createRoomScene(
     }
 
     // Stairs, open doorways (doorway.js), the Library's bookcases
-    // (bookshelf.js), entertainment centers (entertainmentCenter.js) and
-    // fireplaces (fireplace.js) are built into the room, in wood and stone
+    // (bookshelf.js), entertainment centers (entertainmentCenter.js),
+    // fireplaces (fireplace.js) and kitchen counters (kitchenCounter.js)
+    // are built into the room, in wood and stone
     // coloured in their vertices; the books on
     // the shelves are one instanced mesh.
     const shelves = room.shelves ?? [];
     const entertainment = room.entertainment ?? [];
     const fireplaces = room.fireplaces ?? [];
+    const counters = room.counters ?? [];
     const doorways = room.interactables.filter((item) => item.open);
-    const wood = [stairs, doorways, shelves, entertainment, fireplaces].some(
-        (list) => list.length
-    )
+    const wood = [
+        stairs,
+        doorways,
+        shelves,
+        entertainment,
+        fireplaces,
+        counters,
+    ].some((list) => list.length)
         ? new THREE.MeshStandardMaterial({
               vertexColors: true,
               roughness: 0.8,
@@ -306,6 +314,7 @@ export function createRoomScene(
         woodwork(entertainmentCenterGeometry(THREE, unit));
     }
     for (const unit of fireplaces) woodwork(fireplaceGeometry(THREE, unit));
+    for (const unit of counters) woodwork(kitchenCounterGeometry(THREE, unit));
     if (doorways.length > 0) {
         const doorway = doorwayGeometry(THREE);
         for (const item of doorways) woodwork(doorway, itemPose(item));
@@ -536,6 +545,9 @@ export function createRoomScene(
      *   buttLift,   // units, the walking bob
      *   reduced,    // prefers reduced motion
      *   camera,     // the view, when a long hall has scrolled
+     *   thrown,     // [{ id, x, y, z, ground, tilt }]: things picked up
+     *               // or thrown (useThrowables), stood on `ground` and
+     *               // lifted off it, so their shadow stays under them
      * }
      */
     function sync(view, dt) {
@@ -552,6 +564,16 @@ export function createRoomScene(
             applyCamera(camera, view.camera);
             aimLight(view.camera.x);
             changed = true;
+        }
+        for (const t of view.thrown ?? []) {
+            const puppet = things.get(t.id);
+            if (!puppet) continue;
+            const spot = puppet.group.position;
+            if (spot.x !== t.x || spot.y !== t.ground || spot.z !== t.z) {
+                spot.set(t.x, t.ground, t.z);
+                changed = true;
+            }
+            puppet.set({ lift: t.y - t.ground, tilt: t.tilt });
         }
         const at = butt.group.position;
         if (at.x !== view.butt.x || at.z !== view.butt.z) {
@@ -587,6 +609,10 @@ export function createRoomScene(
         /** Plays `move` on the thing `id` (a one-shot). */
         animate(id, move) {
             things.get(id)?.play(move);
+        },
+        /** Plays `move` on the Butt (a one-shot: a toot when it's fed). */
+        animateButt(move) {
+            butt.play(move);
         },
         /** Presses white key `key` of zone `zone` on organ `id`: it goes
          * down and its pipe sounds. */

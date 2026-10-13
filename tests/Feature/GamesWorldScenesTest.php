@@ -660,6 +660,69 @@ class GamesWorldScenesTest extends TestCase
         $this->assertContains('table-lamp', array_column($hall['lights'], 'id'));
     }
 
+    public function test_the_kitchen_games_are_its_fridge_and_oven_between_the_counters(): void
+    {
+        $kitchen = GamesWorld::scenes()['house.kitchen'];
+        $items = collect($kitchen['interactables'])->keyBy('id');
+        $fridge = $items['toot-foods'];
+        $oven = $items['costco-pizza-poop'];
+
+        $this->assertSame('fridge', $fridge['model']);
+        $this->assertSame('oven', $oven['model']);
+        foreach ([$fridge, $oven] as $game) {
+            // Against the back wall, with no gold name over it.
+            $this->assertSame(0, $game['z']);
+            $this->assertFalse($game['titled']);
+        }
+        // Their cards keep the burger and the Pizza.
+        $this->assertSame('🍔', $fridge['card']['landmark']);
+        $this->assertSame('pizza', $oven['card']['cast']);
+
+        // The oven stands in the gap between the counters, its cooktop at
+        // their worktop and as wide as the gap (three/footprints.js: 1.09
+        // of its size across, its cooktop at 0.84); the fridge stands
+        // between the door and the counters (0.48 across).
+        [$left, $right] = $kitchen['counters'];
+        $gap = [$left['x'] + $left['w'] / 2, $right['x'] - $right['w'] / 2];
+        $this->assertSame($oven['x'], array_sum($gap) / 2);
+        $this->assertEqualsWithDelta($gap[1] - $gap[0], $oven['size'] * 1.09, 1);
+        $this->assertEqualsWithDelta(GamesWorld::KITCHEN_COUNTER['h'], $oven['size'] * 0.84, 1);
+        $this->assertLessThanOrEqual($gap[0] - $left['w'], $fridge['x'] + $fridge['size'] * 0.24);
+        $this->assertGreaterThan($items['hall-door']['x'] + 60, $fridge['x'] - $fridge['size'] * 0.24);
+
+        foreach ($kitchen['counters'] as $counter) {
+            // Shallow enough that the Butt never walks into it.
+            $this->assertLessThan(50, $counter['d']);
+            $this->assertLessThanOrEqual($kitchen['size']['w'], $counter['x'] + $counter['w'] / 2);
+        }
+
+        // The pot and the fruit stand on the worktops.
+        foreach (['sprout-pot', 'grapes', 'apple', 'blueberries'] as $id) {
+            $this->assertSame(GamesWorld::KITCHEN_COUNTER['h'], $items[$id]['y'], $id);
+            $this->assertLessThan(GamesWorld::KITCHEN_COUNTER['d'], $items[$id]['z'], $id);
+            $on = collect($kitchen['counters'])->contains(fn ($c) => abs($items[$id]['x'] - $c['x']) + $items[$id]['size'] / 2 <= $c['w'] / 2);
+            $this->assertTrue($on, "{$id} is on no counter");
+        }
+
+        // The fruit can be thrown about the room.
+        foreach (['grapes', 'apple', 'blueberries'] as $id) {
+            $this->assertTrue($items[$id]['throwable'], $id);
+        }
+        $this->assertArrayNotHasKey('throwable', $items['sprout-pot']);
+    }
+
+    public function test_only_sized_toys_can_be_thrown(): void
+    {
+        foreach (GamesWorld::definitions() as $sceneId => $scene) {
+            foreach (collect($scene['interactables'])->where('throwable', true) as $item) {
+                // Thrown about a room, it needs its size to bounce off the walls.
+                $this->assertSame('room', $scene['kind'], "{$sceneId}.{$item['id']}");
+                $this->assertSame('toy', $item['type'], "{$sceneId}.{$item['id']}");
+                $this->assertGreaterThan(0, $item['size'] ?? 0, "{$sceneId}.{$item['id']}");
+            }
+        }
+    }
+
     public function test_the_cockroach_house_has_a_pipe_organ_in_its_back_right_corner(): void
     {
         $room = GamesWorld::definitions()['cockroach-house.hall'];

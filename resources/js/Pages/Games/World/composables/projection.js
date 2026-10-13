@@ -50,10 +50,15 @@ export function screenToGround(camera, sx, sy) {
     };
 }
 
+/** World units per screen px on the plane at depth `z`. */
+function perPxAt(camera, z) {
+    return (camera.z - z) / camera.focal;
+}
+
 /** How much of the plane at depth `z` is across the stage: { x0, x1 },
  * world x at its left and right edges. */
 export function spanAt(camera, z) {
-    const perPx = (camera.z - z) / camera.focal;
+    const perPx = perPxAt(camera, z);
     return {
         x0: camera.x - centre(camera) * perPx,
         x1: camera.x + (camera.w - centre(camera)) * perPx,
@@ -63,4 +68,16 @@ export function spanAt(camera, z) {
 /** The depth `z` at which the ground is drawn at screen row `row`. */
 export function groundZAtRow(camera, row) {
     return camera.z - (camera.focal * camera.y) / (row - camera.eyeRow);
+}
+
+/** The point at depth `z` under a screen point: { x, y } in world units on
+ * that upright plane facing the camera (where a thing held at that depth
+ * is carried). Null at or behind the camera. */
+export function screenToPlane(camera, sx, sy, z) {
+    const perPx = perPxAt(camera, z);
+    if (perPx <= 0) return null;
+    return {
+        x: camera.x + (sx - centre(camera)) * perPx,
+        y: camera.y - (sy - camera.eyeRow) * perPx,
+    };
 }

@@ -83,6 +83,14 @@ final class GamesWorld
      * Butt walks (useRoom.js MARGIN). */
     public const ENTERTAINMENT_CENTER = ['w' => 380, 'h' => 120, 'd' => 36];
 
+    /** A kitchen counter (scenes/kitchenCounter.js draws it): `h` to its
+     * worktop, where things stand on it, `d` deep, clear of where the Butt
+     * walks (useRoom.js MARGIN). Its wall cabinets hang from `y` up the
+     * wall, `h` tall and `d` deep, under the season's decorations. */
+    public const KITCHEN_COUNTER = ['h' => 92, 'd' => 44];
+
+    public const KITCHEN_CABINETS = ['y' => 200, 'h' => 90, 'd' => 34];
+
     /** The Cockroach's fireplace (scenes/fireplace.js draws it), its size in
      * world units: `w` along the wall, `h` to its mantel, where Hank's
      * portrait stands, `d` deep. */
@@ -142,7 +150,7 @@ final class GamesWorld
 
     /** Props modelled in 3D that an interactable's `model` may name:
      * three/models.js (a Vitest test keeps them in step). */
-    public const MODELS = ['radio', 'table-lamp', 'slot-machine'];
+    public const MODELS = ['radio', 'table-lamp', 'slot-machine', 'fridge', 'oven'];
 
     /** Frames a wall picture or a room's photo can hang in (its
      * `image.frame`), drawn by three/pictureFrame.js; with none it hangs on
@@ -194,6 +202,13 @@ final class GamesWorld
         $nestW = 1400;
         $hearth = 650;
         $sconces = ['sconce-left' => [400, 0], 'sconce-right' => [930, 0], 'sconce-side' => [20, 260]];
+        // The kitchen's back wall, from the door: the fridge, a counter,
+        // the oven, and a counter to the far wall, with cabinets over both
+        // counters and the lamp over the oven. Things on a counter stand
+        // on its worktop, halfway back.
+        $fridge = 264;
+        $oven = 560;
+        $worktop = ['y' => self::KITCHEN_COUNTER['h'], 'z' => intdiv(self::KITCHEN_COUNTER['d'], 2)];
 
         return [
             'road' => [
@@ -260,17 +275,28 @@ final class GamesWorld
                 'size' => ['w' => 900, 'd' => 500],
                 'spawn' => ['x' => 450, 'z' => 330],
                 'walls' => ['back' => 'tiles', 'sides' => 'wallpaper-dots', 'floor' => 'lino'],
-                'lights' => [self::lamp('lamp', 520, 300, 0)],
+                'counters' => [self::kitchenCounter(320, 500), self::kitchenCounter(620, 900)],
+                'lights' => [self::lamp('lamp', $oven, 240, 0)],
             ], [
                 self::roomDoor('hall-door', 120, 'house.hall', 'kitchen-door', 'house_hall', exit: true),
-                self::lampSwitch(520, 300),
-                self::game('toot-foods', 360, 40, ['size' => 110, 'emoji' => '🍔']),
-                self::game('costco-pizza-poop', 600, 180, ['size' => 100, 'cast' => 'pizza']),
-                self::toy('sprout-pot', 200, 290, '🍲', 'sprout_pot', ['move' => 'wobble', 'toot' => 'sprout', 'line' => true]),
-                // The fruit bowl: each toots at its own pitch.
-                self::resident('grapes', 710, 320, ['size' => 60, 'move' => 'hop', 'toot' => 'grapes']),
-                self::resident('apple', 820, 300, ['size' => 60, 'move' => 'hop', 'toot' => 'apple']),
-                self::resident('blueberries', 770, 420, ['size' => 60, 'move' => 'hop', 'toot' => 'blueberries']),
+                self::lampSwitch($oven, 240),
+                // The kitchen's games are its appliances, untitled: the
+                // snacks in the fridge, the pizza in the oven. Their cards
+                // still show the burger and the Pizza. Each is as wide and
+                // deep as its model (three/footprints.js: the oven 1.09 of
+                // its size across, its cooktop at 0.84, the worktop), and a
+                // thrown fruit can land on either.
+                self::game('toot-foods', $fridge, 0, ['size' => 230, 'emoji' => '🍔', 'model' => 'fridge', 'titled' => false]),
+                self::game('costco-pizza-poop', $oven, 0, ['size' => 110, 'cast' => 'pizza', 'model' => 'oven', 'titled' => false]),
+                self::toy('sprout-pot', 410, $worktop['z'], '🍲', 'sprout_pot', ['y' => $worktop['y'], 'size' => 70, 'move' => 'wobble', 'toot' => 'sprout', 'line' => true]),
+                // The fruit bowl, along the far counter: each toots at its
+                // own pitch, and can be picked up and thrown about the room
+                // (useThrowables.js), as the road's foods can.
+                ...array_map(
+                    fn ($fruit, $x) => self::resident($fruit, $x, $worktop['z'], ['y' => $worktop['y'], 'size' => 55, 'move' => 'hop', 'toot' => $fruit, 'throwable' => true]),
+                    ['grapes', 'apple', 'blueberries'],
+                    [690, 770, 845],
+                ),
             ]),
             'house.bathroom' => self::room('house_bathroom', [
                 'size' => ['w' => self::ROOM_FRAME, 'd' => 450],
@@ -717,7 +743,9 @@ final class GamesWorld
         ];
     }
 
-    /** Game `slug` in a room, drawn as its `emoji` or `cast` (`$look`). */
+    /** Game `slug` in a room, drawn as its `emoji` or `cast` (`$look`),
+     * or as a `model` with them on its card. `titled: false` leaves off
+     * the gold name over it. */
     private static function game(string $slug, int $x, int $z, array $look): array
     {
         return ['id' => $slug, 'type' => 'game', 'x' => $x, 'z' => $z, 'game' => $slug, ...$look];
@@ -811,6 +839,18 @@ final class GamesWorld
             'screen' => ['w' => 192, 'h' => 108],
             'label' => 'messages.games.world.toys.tv',
             'line' => 'messages.games.world.toys.tv_line',
+        ];
+    }
+
+    /** A kitchen counter against the back wall from x `from` to `to`,
+     * KITCHEN_COUNTER in size, with KITCHEN_CABINETS over it. */
+    private static function kitchenCounter(int $from, int $to): array
+    {
+        return [
+            'x' => intdiv($from + $to, 2),
+            'w' => $to - $from,
+            ...self::KITCHEN_COUNTER,
+            'upper' => self::KITCHEN_CABINETS,
         ];
     }
 

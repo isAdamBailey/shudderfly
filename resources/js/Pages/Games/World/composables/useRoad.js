@@ -8,7 +8,13 @@ import {
 } from "@vueuse/core";
 import { computed, nextTick, onMounted, shallowRef, watch } from "vue";
 import { pastTap } from "../components/overlay.js";
-import { bobLift, clamp, LANES, useGamesWorld } from "./useGamesWorld.js";
+import {
+    bobLift,
+    clamp,
+    LANES,
+    tossTilt,
+    useGamesWorld,
+} from "./useGamesWorld.js";
 import { useIdlerPhysics } from "./useIdlerPhysics.js";
 
 const IDLER_SETBACK = 260; // px before its neighbouring landmark
@@ -129,7 +135,7 @@ export function useRoad(props, emit, options) {
                 lift: -(p?.dy ?? 0),
                 // A little spin while airborne, driven by whatever
                 // horizontal speed the toss carried.
-                tilt: p?.airborne ? clamp(p.vx / 15, -35, 35) : 0,
+                tilt: p?.airborne ? tossTilt(p.vx) : 0,
             };
         })
     );
