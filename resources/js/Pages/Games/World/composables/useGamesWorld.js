@@ -31,6 +31,12 @@ export function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
 }
 
+/** A thrown thing's spin, degrees, from the speed it was thrown across at:
+ * a little, either way, for the road's foods and a room's fruit alike. */
+export function tossTilt(vx) {
+    return clamp(vx / 15, -35, 35);
+}
+
 /**
  * All state and math for the Games World stage: where the butt is, where the
  * camera is looking, and which landmark it is standing near. Deliberately
@@ -173,11 +179,7 @@ export function useGamesWorld(games, callbacks = {}) {
 
         const crossing = !settled();
         if (crossing) {
-            butt.lane = approach(
-                butt.lane,
-                LANES[butt.side],
-                dt / CROSS_TIME
-            );
+            butt.lane = approach(butt.lane, LANES[butt.side], dt / CROSS_TIME);
         }
 
         butt.vx = state.walkDir * WALK_SPEED;

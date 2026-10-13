@@ -86,6 +86,19 @@ describe("useRoom", () => {
         expect(r.butt.x).toBeCloseTo(150);
     });
 
+    it("walks to a thing where it's been moved, and hands back the thing itself", () => {
+        // The strawberry, thrown to the far end of the room.
+        const { r, onArrive } = makeRoom({
+            placed: (item) => (item === BERRY ? { ...item, x: 800 } : item),
+        });
+
+        r.goUse(BERRY);
+        run(r, 3);
+        expect(r.butt.x).toBeCloseTo(800);
+        expect(onArrive).toHaveBeenCalledWith(BERRY);
+        expect(r.nearest.value).toBe(BERRY);
+    });
+
     it("uses something straight away if it's already there", () => {
         const { r, onArrive } = makeRoom({
             start: { x: BERRY.x, z: BERRY.z + STAND },

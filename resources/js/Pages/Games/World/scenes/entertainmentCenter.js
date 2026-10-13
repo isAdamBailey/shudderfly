@@ -19,7 +19,7 @@ const SLEEVE = 9; // a record sleeve to every this many units
 const DOOR = "#7a4a24";
 const PANEL = "#8b5a2b";
 const SHADOW = "#1f1209"; // the inside of the open middle
-const BRASS = "#c9a227";
+export const BRASS = "#c9a227";
 
 // Record sleeves' spines, filed in the middle.
 const SLEEVES = [

@@ -66,6 +66,8 @@ export function arrivalSpot(room, { spot, position } = {}) {
  * - isReducedMotion(): suppresses the walking bob.
  * - extras(): interactables the scene's data doesn't list, fetched since
  *   (the books on a Library shelf).
+ * - placed(item): `item` where it is now, if it can be moved (a thrown
+ *   fruit, useThrowables.js); the Butt goes there to use it.
  */
 export function useRoom(
     room,
@@ -75,6 +77,7 @@ export function useRoom(
         autoTriggers = () => false,
         isReducedMotion,
         extras = () => [],
+        placed = (item) => item,
     } = {}
 ) {
     const { w, d } = room.size;
@@ -161,12 +164,12 @@ export function useRoom(
 
     /** Where to stand to use `item`: in front of it, inside the room. */
     function standAt(item) {
-        const front = frontOf(item);
+        const front = frontOf(placed(item));
         return clear(clampX(front.x), clampZ(front.z));
     }
 
     const distanceTo = (item) => {
-        const front = frontOf(item);
+        const front = frontOf(placed(item));
         return Math.hypot(front.x - butt.x, front.z - butt.z);
     };
 

@@ -1,3 +1,5 @@
+import { FOOTPRINTS } from "../three/footprints.js";
+
 /**
  * Where a room goes on the stage, as pure numbers (issue #130). A room is a
  * dollhouse box with its front wall taken away: the floor runs `size.w`
@@ -141,8 +143,10 @@ const wayBack = (item) => Boolean(item.exit || item.stairs);
  * height } (its glyph is `height` tall) and whether its button carries an
  * arched gold title, as the road's landmarks do. A door is a doorway
  * (wider and open with `open`), with its name over it unless it's plainly
- * the way back (see wayBack()); anything else is a `size` square
- * (ROOM_SIZES.toy if it says nothing), a TV's `screen` { w, h }, or a
+ * the way back (see wayBack()); anything else is `size` tall
+ * (ROOM_SIZES.toy if it says nothing) and as wide, or as wide as its
+ * model's footprint (three/footprints.js: a tall fridge), a TV's
+ * `screen` { w, h }, or a
  * picture's `image` { w, h }, titled if it leads somewhere (a game) or
  * says `titled`. A flight of stairs' button covers the flight
  * (staircase.js stairsBounds()). */
@@ -157,5 +161,6 @@ export function itemBox(item) {
     if (item.image)
         return { width: item.image.w, height: item.image.h, titled };
     const size = item.size ?? ROOM_SIZES.toy;
-    return { width: size, height: size, titled };
+    const across = FOOTPRINTS[item.model]?.w ?? 1;
+    return { width: size * across, height: size, titled };
 }

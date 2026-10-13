@@ -105,15 +105,16 @@ describe("a long hall", () => {
             expect(clock.x).toBeGreaterThan(0);
             expect(clock.x).toBeLessThan(stage.w);
 
-            for (const id of ["kitchen-door", "bedroom-door", "bathroom-door"]) {
+            for (const id of [
+                "kitchen-door",
+                "bedroom-door",
+                "bathroom-door",
+            ]) {
                 const p = worldToScreen(entry, itemPose(door(id)));
                 expect(p.x < 0 || p.x > stage.w).toBe(true);
             }
 
-            const atKitchen = roomCamera(
-                L,
-                roomLook(L.pan, 1600, 100)
-            );
+            const atKitchen = roomCamera(L, roomLook(L.pan, 1600, 100));
             const kitchen = worldToScreen(
                 atKitchen,
                 itemPose(door("kitchen-door"))
@@ -122,10 +123,7 @@ describe("a long hall", () => {
             expect(kitchen.x).toBeLessThan(stage.w);
             expect(ROOM_SIZES.door.height * kitchen.scale).toBeGreaterThan(48);
 
-            const atBathroom = roomCamera(
-                L,
-                roomLook(L.pan, 1600, 3100)
-            );
+            const atBathroom = roomCamera(L, roomLook(L.pan, 1600, 3100));
             const bathroom = worldToScreen(
                 atBathroom,
                 itemPose(door("bathroom-door"))
@@ -189,9 +187,16 @@ describe("itemBox", () => {
         expect(itemBox({ type: "toy" }).height).toBe(ROOM_SIZES.toy);
     });
 
-    it("titles a game, or anything that asks", () => {
+    it("draws a modelled prop as wide as its footprint, its size tall", () => {
+        expect(
+            itemBox({ type: "game", model: "fridge", size: 200 })
+        ).toMatchObject({ width: 96, height: 200 });
+    });
+
+    it("titles a game, or anything that asks, unless it says not to", () => {
         expect(itemBox({ type: "game" }).titled).toBe(true);
         expect(itemBox({ type: "radio", titled: true }).titled).toBe(true);
+        expect(itemBox({ type: "game", titled: false }).titled).toBe(false);
     });
 });
 

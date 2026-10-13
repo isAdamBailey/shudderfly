@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import * as THREE from "three";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { FOOTPRINTS } from "./footprints.js";
 import { MODELS } from "./models.js";
 
 let spy;
@@ -31,6 +32,20 @@ describe("modelled props", () => {
             expect(box.min.y).toBeCloseTo(0, 2);
             expect(box.max.y).toBeGreaterThan(0.9);
             expect(box.max.y).toBeLessThan(1.05);
+        }
+    );
+
+    it.each(Object.keys(FOOTPRINTS))(
+        "builds %s to its footprint, so its hit box and what lands on it match it",
+        (name) => {
+            const f = FOOTPRINTS[name];
+            const box = new THREE.Box3().setFromObject(MODELS[name](THREE));
+            expect(box.max.x - box.min.x).toBeCloseTo(f.w, 2);
+            expect(box.min.z).toBeCloseTo(0, 2);
+            // Handles and knobs may stand proud of its body.
+            expect(box.max.z).toBeGreaterThanOrEqual(f.d);
+            expect(box.max.z).toBeLessThan(f.d + 0.1);
+            expect(f.top).toBeLessThanOrEqual(box.max.y + 0.001);
         }
     );
 

@@ -24,11 +24,13 @@ import { boxStyle, onButton, pastTap } from "../components/overlay.js";
 import LandmarkTitle from "../components/LandmarkTitle.vue";
 import {
     screenToGround,
+    screenToPlane,
     spanAt,
     worldToScreen,
 } from "../composables/projection.js";
 import { bobLift } from "../composables/useGamesWorld.js";
 import { arrivalSpot, useRoom } from "../composables/useRoom.js";
+import { useThrowables } from "../composables/useThrowables.js";
 import { useShelves } from "../composables/useShelves.js";
 import { useTvChannels } from "../composables/useTvChannels.js";
 import { autoTriggers } from "../interactions/index.js";
@@ -103,10 +105,20 @@ const shelves = useShelves(props.scene.shelves, {
     },
 });
 
+// The fruit you can pick up and throw about the room. One that comes to
+// rest at the Butt's feet feeds it, and it toots at the fruit's pitch, as
+// on the road.
+const throwables = useThrowables(props.scene, {
+    isReducedMotion: () => reduced.value,
+    onLand: feedIfAtButt,
+});
+
 const room = useRoom(props.scene, {
     start,
     autoTriggers,
     extras: () => shelves.items.value,
+    // A thrown thing is where it landed: the Butt walks there to use it.
+    placed: throwables.placed,
     isReducedMotion: () => reduced.value,
     onArrive(item) {
         lastUsed = item.id;
@@ -132,6 +144,27 @@ const buttLift = computed(() => bobLift(butt.bob));
 
 const { puffs, toot: tootAt, unlock: unlockToot } = useToot();
 
+// How close to the Butt a thrown thing must come to rest to feed it, and
+// how low (units).
+const FEED_REACH = 90;
+const FEED_HEIGHT = 60;
+
+/** Throwable `id` came to rest: at the Butt's feet, it's eaten (a toot). */
+function feedIfAtButt(id) {
+    const p = throwables.at[id];
+    if (
+        p.y > FEED_HEIGHT ||
+        Math.hypot(p.x - butt.x, p.z - butt.z) > FEED_REACH
+    ) {
+        return;
+    }
+    const item = props.scene.interactables.find((i) => i.id === id);
+    const spot = buttSpot();
+    if (spot)
+        tootAt(item.toot ?? item.cast, { x: spot.x, y: spot.y - spot.size });
+    graph?.animateButt("toot");
+}
+
 // --- Scene graph -----------------------------------------------------------
 
 let graph = null;
@@ -152,16 +185,20 @@ onMounted(() => {
     renderer.show(graph.scene, graph.camera);
     stopFrames = renderer.onFrame((dt) => {
         room.step(dt);
+        // A throw waits, mid-air, while a card is up.
+        const flew = !room.state.frozen && throwables.step(dt);
         follow();
-        return graph.sync(
+        const changed = graph.sync(
             {
                 butt,
                 buttLift: buttLift.value,
                 reduced: reduced.value,
                 camera: view.value,
+                thrown: throwables.changed(),
             },
             dt
         );
+        return changed || flew;
     });
 });
 
@@ -207,37 +244,54 @@ const project = (point) => worldToScreen(view.value, point);
 // What each TV in the room is showing, if it's on.
 const tvs = useTvChannels(props.scene.interactables);
 
-/** Each interactable's button, over what the canvas draws there: a door's
- * whole frame, a toy's square. These move when a long hall scrolls. A TV
- * that's on carries its picture (`tv`) and says what's on. */
-const spots = computed(() => {
-    if (!view.value) return [];
-    return props.scene.interactables.flatMap((item) => {
-        if (item.stairs) return stairsSpot(item);
-        // An organ is played by its keys (organSpots).
-        if (item.type === "organ") return [];
-        const pose = itemPose(item);
-        const p = project(pose);
-        if (!p) return [];
-        const box = itemBox(item);
-        const tv = tvs.channelOf(item);
-        return {
-            item,
-            label: tv
-                ? t("games.world.tv_playing", { title: tv.channel.title })
-                : item.label,
-            tv,
-            x: p.x,
-            y: p.y,
-            width: box.width * p.scale,
-            height: box.height * p.scale,
-            titled: box.titled,
-            // A cast member with no emoji (the Face) is drawn in the DOM,
-            // over its anchor in the scene graph.
-            overlay: castInDom(item.cast),
-        };
-    });
-});
+/** Interactable `item`'s button, over what the canvas draws there: a
+ * door's whole frame, a toy's square. A TV that's on carries its picture
+ * (`tv`) and says what's on. */
+function spotOf(item) {
+    if (item.stairs) return stairsSpot(item);
+    // An organ is played by its keys (organSpots).
+    if (item.type === "organ") return [];
+    const p = project(itemPose(throwables.placed(item)));
+    if (!p) return [];
+    const box = itemBox(item);
+    const tv = tvs.channelOf(item);
+    return {
+        item,
+        label: tv
+            ? t("games.world.tv_playing", { title: tv.channel.title })
+            : item.label,
+        tv,
+        x: p.x,
+        y: p.y,
+        width: box.width * p.scale,
+        height: box.height * p.scale,
+        titled: box.titled,
+        // A cast member with no emoji (the Face) is drawn in the DOM,
+        // over its anchor in the scene graph.
+        overlay: castInDom(item.cast),
+    };
+}
+
+/** The buttons of the interactables in `items`, by id. */
+const spotsOf = (items) =>
+    new Map(view.value ? items.map((item) => [item.id, spotOf(item)]) : []);
+
+// Every button moves when a long hall scrolls; a thrown thing's moves
+// with it too, every frame of its flight, so it's worked out apart.
+const fixedSpots = computed(() =>
+    spotsOf(props.scene.interactables.filter((item) => !item.throwable))
+);
+const thrownSpots = computed(() =>
+    spotsOf(props.scene.interactables.filter((item) => item.throwable))
+);
+
+/** Each interactable's button, in the room's order. */
+const spots = computed(() =>
+    props.scene.interactables.flatMap(
+        (item) =>
+            (item.throwable ? thrownSpots : fixedSpots).value.get(item.id) ?? []
+    )
+);
 
 /** Each of the room's photos over its panel, where it hangs (a blank one
  * is just its panel). Decor, with nothing to tap, so not a button. */
@@ -415,10 +469,58 @@ function onItemFocus(item) {
 }
 
 /** A click (or Enter) on a thing: walk there and use it. Clears the
- * pointer flag too, for browsers that don't focus a clicked button. */
-function onItemClick(item) {
+ * pointer flag too, for browsers that don't focus a clicked button. A
+ * throwable's press decides for itself (onThrowablePointerDown), so its
+ * click only counts from the keyboard. */
+function onItemClick(item, event) {
     pointerFocus = false;
+    if (item.throwable && event.detail !== 0) return;
     room.goUse(item);
+}
+
+/** A press on a throwable: a tap uses it, but past a tap it's picked up
+ * and carried at its depth under the finger, and letting go throws it as
+ * fast as it was carried (useThrowables). */
+function onThrowablePointerDown(item, event) {
+    // The press may still focus it: the Butt walks there on a tap, it
+    // doesn't jump.
+    pointerFocus = true;
+    if (room.state.frozen || event.button > 0 || !layout.value) return;
+    event.preventDefault();
+    const { id } = item;
+    const start = { clientX: event.clientX, clientY: event.clientY };
+    // Where the finger holds it, from where it stands.
+    let held = null;
+    const rect = props.stage.beginGesture({
+        move(e) {
+            if (!held && !pastTap(start, e)) return;
+            e.preventDefault();
+            const p = throwables.at[id];
+            const plane = (point) =>
+                screenToPlane(
+                    view.value,
+                    point.clientX - rect.left,
+                    point.clientY - rect.top,
+                    p.z
+                );
+            if (!held) {
+                const from = plane(start);
+                if (!from) return;
+                held = { x: p.x - from.x, y: p.y - from.y };
+                throwables.grab(id);
+            }
+            const to = plane(e);
+            if (to) throwables.carry(id, to.x + held.x, to.y + held.y);
+        },
+        end() {
+            if (held) throwables.release(id);
+            // One still in the air has nowhere yet to walk to.
+            else if (!throwables.at[id].flying) room.goUse(item);
+        },
+        cancel() {
+            if (held) throwables.drop();
+        },
+    });
 }
 
 const rootEl = ref(null);
@@ -610,11 +712,15 @@ defineExpose({
     pause() {
         paused.value = true;
         room.halt();
+        throwables.drop();
     },
     resume() {
         paused.value = false;
     },
-    interrupt: room.halt,
+    interrupt() {
+        room.halt();
+        throwables.drop();
+    },
     onKeydown,
     onKeyup,
     activateNearest,
@@ -659,15 +765,22 @@ defineExpose({
                 :key="s.item.id"
                 :ref="(el) => setButton(s.item.id, el)"
                 class="room-item"
-                :class="{ used: used.has(s.item.id) }"
+                :class="{
+                    used: used.has(s.item.id),
+                    throwable: s.item.throwable,
+                }"
                 :x="s.x"
                 :y="s.y"
                 :size="s.width"
                 :height="s.height"
                 :label="s.label"
-                @pointerdown="pointerFocus = true"
+                @pointerdown="
+                    s.item.throwable
+                        ? onThrowablePointerDown(s.item, $event)
+                        : (pointerFocus = true)
+                "
                 @focus="onItemFocus(s.item)"
-                @click="onItemClick(s.item)"
+                @click="onItemClick(s.item, $event)"
             >
                 <!-- Keyed, so a new channel starts its video afresh. -->
                 <TvScreen
@@ -972,6 +1085,19 @@ defineExpose({
 .organ-zone:focus-visible {
     outline: none;
     background: rgb(29 78 216 / 0.45);
+}
+
+/* Fruit to pick up and throw: a drag mustn't scroll the page or select. */
+.room-item.throwable {
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    cursor: grab;
+}
+
+.room-item.throwable:active {
+    cursor: grabbing;
 }
 
 /* Under reduced motion, a toy that was used rings rather than moves. */
