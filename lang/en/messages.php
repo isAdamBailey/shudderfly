@@ -13,6 +13,7 @@ return [
 
     // Sharing & books
     'game_score_shared' => 'I scored :score in :game!',
+    'game_score_shared_where' => 'I was hanging out in :place. Come check it out!',
     'game.score_shared' => 'Shared! Your score is on the chat.',
     'page_shared' => 'Look! This :media is from :book',
     'song_shared' => 'Listen to this song: :title',
@@ -711,6 +712,13 @@ return [
     'games.world.places.guster_house_hall' => 'Guster\'s Living Room',
     'games.world.places.cockroach_house' => 'The Cockroach\'s House',
     'games.world.places.cockroach_house_hall' => 'The Cockroach\'s Nest',
+    'games.world.where.house_hall' => 'the Hall at the Butt\'s House',
+    'games.world.where.house_kitchen' => 'the Kitchen at the Butt\'s House',
+    'games.world.where.house_bathroom' => 'the Bathroom at the Butt\'s House',
+    'games.world.where.house_bedroom' => 'the Bedroom at the Butt\'s House',
+    'games.world.where.library_hall' => 'the Reading Room at the Library',
+    'games.world.where.guster_house_hall' => 'Guster\'s Living Room',
+    'games.world.where.cockroach_house_hall' => 'the Cockroach\'s Nest',
     'games.world.doors.outside' => 'Go outside',
     'games.world.doors.upstairs' => 'Go upstairs',
     'games.world.doors.downstairs' => 'Go downstairs',

@@ -13,6 +13,7 @@ return [
 
     // Sharing & books
     'game_score_shared' => '¡Saqué :score en :game!',
+    'game_score_shared_where' => 'Estaba pasando el rato en :place. ¡Ven a verlo!',
     'game.score_shared' => '¡Compartido! Tu puntaje está en el chat.',
     'page_shared' => '¡Mira! Esto (:media) es de :book',
     'song_shared' => 'Escucha esta canción: :title',
@@ -711,6 +712,13 @@ return [
     'games.world.places.guster_house_hall' => 'La sala de Guster',
     'games.world.places.cockroach_house' => 'La Casa de la Cucaracha',
     'games.world.places.cockroach_house_hall' => 'El nido de la Cucaracha',
+    'games.world.where.house_hall' => 'el recibidor de la Casa del Trasero',
+    'games.world.where.house_kitchen' => 'la cocina de la Casa del Trasero',
+    'games.world.where.house_bathroom' => 'el baño de la Casa del Trasero',
+    'games.world.where.house_bedroom' => 'el dormitorio de la Casa del Trasero',
+    'games.world.where.library_hall' => 'la sala de lectura de la Biblioteca',
+    'games.world.where.guster_house_hall' => 'la sala de Guster',
+    'games.world.where.cockroach_house_hall' => 'el nido de la Cucaracha',
     'games.world.doors.outside' => 'Salir',
     'games.world.doors.upstairs' => 'Subir',
     'games.world.doors.downstairs' => 'Bajar',

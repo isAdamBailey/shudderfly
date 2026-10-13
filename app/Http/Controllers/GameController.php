@@ -155,6 +155,12 @@ class GameController extends Controller
             'game' => $gameName,
             'score' => $validated['score'],
         ]);
+        // Where it was played, after the score: the chat links the game's
+        // name by "I scored … in …!" (MessageTimeline.vue), so that leads.
+        $where = GamesWorld::whereIsSaid('minigame', $game);
+        if ($where) {
+            $shareMessage .= ' '.__('messages.game_score_shared_where', ['place' => $where]);
+        }
         $shareMessage .= "\u{E000}m:{$game}\u{E000}";
         if ($taggedUser) {
             $shareMessage = $shareMessage.' @'.$taggedUser->name;

@@ -13,6 +13,7 @@ return [
 
     // Sharing & books
     'game_score_shared' => 'J\'ai fait :score à :game !',
+    'game_score_shared_where' => 'Je traînais dans :place. Viens voir !',
     'game.score_shared' => 'Partagé ! Ton score est dans le chat.',
     'page_shared' => 'Regarde ! Ce :media vient de :book',
     'song_shared' => 'Écoute cette chanson : :title',
@@ -711,6 +712,13 @@ return [
     'games.world.places.guster_house_hall' => 'Le salon de Guster',
     'games.world.places.cockroach_house' => 'La Maison du Cafard',
     'games.world.places.cockroach_house_hall' => 'Le nid du Cafard',
+    'games.world.where.house_hall' => 'l\'entrée de la Maison des Fesses',
+    'games.world.where.house_kitchen' => 'la cuisine de la Maison des Fesses',
+    'games.world.where.house_bathroom' => 'la salle de bain de la Maison des Fesses',
+    'games.world.where.house_bedroom' => 'la chambre de la Maison des Fesses',
+    'games.world.where.library_hall' => 'la salle de lecture de la Bibliothèque',
+    'games.world.where.guster_house_hall' => 'le salon de Guster',
+    'games.world.where.cockroach_house_hall' => 'le nid du Cafard',
     'games.world.doors.outside' => 'Sortir',
     'games.world.doors.upstairs' => 'Monter',
     'games.world.doors.downstairs' => 'Descendre',

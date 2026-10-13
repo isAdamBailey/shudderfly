@@ -167,7 +167,7 @@ class GamesTest extends TestCase
 
         $this->assertDatabaseHas('messages', [
             'user_id' => $user->id,
-            'message' => __('messages.game_score_shared', ['game' => 'Brussels Sprout Chicken Pox', 'score' => 42])."\u{E000}m:sprout-pox\u{E000}",
+            'message' => "I scored 42 in Brussels Sprout Chicken Pox! I was hanging out in the Bedroom at the Butt's House. Come check it out!\u{E000}m:sprout-pox\u{E000}",
             'page_id' => null,
         ]);
 
@@ -255,10 +255,10 @@ class GamesTest extends TestCase
 
         $this->assertDatabaseHas('messages', [
             'user_id' => $user->id,
-            'message' => __('messages.game_score_shared', ['game' => 'Toot Catch', 'score' => 9])."\u{E000}m:toot-catch\u{E000}",
+            'message' => "I scored 9 in Toot Catch! I was hanging out in Guster's Living Room. Come check it out!\u{E000}m:toot-catch\u{E000}",
         ]);
         $this->assertSame(
-            __('messages.game_score_shared', ['game' => 'Toot Catch', 'score' => 9]),
+            "I scored 9 in Toot Catch! I was hanging out in Guster's Living Room. Come check it out!",
             GameShareMessage::stripSlugMarker(Message::first()->message),
         );
     }
@@ -280,29 +280,23 @@ class GamesTest extends TestCase
 
         $this->assertDatabaseHas('messages', [
             'user_id' => $user->id,
-            'message' => __('messages.game_score_shared', [
-                'game' => 'Cockroach Fart',
-                'score' => 40,
-            ])."\u{E000}m:cockroach\u{E000}",
+            'message' => "I scored 40 in Cockroach Fart! I was hanging out in the Cockroach's Nest. Come check it out!\u{E000}m:cockroach\u{E000}",
         ]);
 
         foreach ([
-            'cockroach' => ['Cockroach Fart', 'cockroach-house.hall'],
-            'cockroach-fight' => ['Cockroach Fight', 'cockroach-house.hall'],
-            'toot-foods' => ['Toot Foods', 'house.kitchen'],
-            'costco-pizza-poop' => ['Costco Food Poop', 'house.kitchen'],
-            'boom' => ['Poop Boom', 'house.bathroom'],
-            'sprout-pox' => ['Brussels Sprout Chicken Pox', 'house.bedroom'],
-        ] as $slug => [$name, $scene]) {
+            'cockroach' => ['Cockroach Fart', 'cockroach-house.hall', "the Cockroach's Nest"],
+            'cockroach-fight' => ['Cockroach Fight', 'cockroach-house.hall', "the Cockroach's Nest"],
+            'toot-foods' => ['Toot Foods', 'house.kitchen', "the Kitchen at the Butt's House"],
+            'costco-pizza-poop' => ['Costco Food Poop', 'house.kitchen', "the Kitchen at the Butt's House"],
+            'boom' => ['Poop Boom', 'house.bathroom', "the Bathroom at the Butt's House"],
+            'sprout-pox' => ['Brussels Sprout Chicken Pox', 'house.bedroom', "the Bedroom at the Butt's House"],
+        ] as $slug => [$name, $scene, $where]) {
             Message::query()->delete();
             $this->post(route('games.share-score', $slug), ['score' => 40])
                 ->assertRedirect();
 
             $this->assertDatabaseHas('messages', [
-                'message' => __('messages.game_score_shared', [
-                    'game' => $name,
-                    'score' => 40,
-                ])."\u{E000}m:{$slug}\u{E000}",
+                'message' => "I scored 40 in {$name}! I was hanging out in {$where}. Come check it out!\u{E000}m:{$slug}\u{E000}",
             ]);
 
             $this->get(route('games.index', ['minigame' => $slug]))
@@ -315,6 +309,16 @@ class GamesTest extends TestCase
                 ->assertInertia(fn (Assert $page) => $page
                     ->where('link.scene', $scene)
                     ->where('link.spot', $slug));
+        }
+    }
+
+    public function test_every_game_and_minigame_says_where_it_was_played(): void
+    {
+        foreach (array_keys(GameController::games()) as $slug) {
+            $this->assertNotNull(GamesWorld::whereIsSaid('game', $slug), $slug);
+        }
+        foreach (GamesWorld::MINIGAMES as $minigame) {
+            $this->assertNotNull(GamesWorld::whereIsSaid('minigame', $minigame), $minigame);
         }
     }
 

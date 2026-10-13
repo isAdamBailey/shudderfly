@@ -15,6 +15,7 @@ use Carbon\CarbonImmutable;
 use Closure;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Str;
 
 /**
@@ -905,13 +906,36 @@ final class GamesWorld
      * the spot a shared score's link arrives at. Null if it isn't placed. */
     public static function whereIs(string $kind, string $name): ?array
     {
+        return self::findIn(self::definitions(), $kind, $name);
+    }
+
+    /** Where a game or minigame is played, as a shared score tells it
+     * mid-sentence: its room's `where` line, the room's `places` key under
+     * `where` ("the Bathroom at the Butt's House"). Null for one on the
+     * street, not placed, or in a room with no such line. */
+    public static function whereIsSaid(string $kind, string $name): ?string
+    {
+        $definitions = self::definitions();
+        $place = self::findIn($definitions, $kind, $name);
+        if ($place === null) {
+            return null;
+        }
+
+        $key = str_replace('.places.', '.where.', $definitions[$place['scene']]['label']);
+
+        return Lang::has($key) ? __($key) : null;
+    }
+
+    /** whereIs() in `$definitions`, so a caller can share one build of them. */
+    private static function findIn(array $definitions, string $kind, string $name): ?array
+    {
         // A game's score shares as a minigame (issue #144: every game plays
         // in the world). Its launcher is still a game.
         if ($kind === 'minigame' && array_key_exists($name, GameController::games())) {
             $kind = 'game';
         }
 
-        foreach (self::definitions() as $sceneId => $scene) {
+        foreach ($definitions as $sceneId => $scene) {
             foreach ($scene['interactables'] as $item) {
                 if ($item['type'] === $kind && ($item[$kind] ?? null) === $name) {
                     return ['scene' => $sceneId, 'spot' => $item['id']];
