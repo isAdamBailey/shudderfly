@@ -30,7 +30,7 @@ describe("toy interaction", () => {
         );
 
         expect(ctx.animate).toHaveBeenCalledWith("doorbell", "wiggle");
-        expect(ctx.toot).toHaveBeenCalledWith("butt", "doorbell");
+        expect(ctx.toot).toHaveBeenCalledWith("butt", "doorbell", undefined);
         expect(ctx.speak).toHaveBeenCalledWith("Ding dong!");
         expect(ctx.playSound).not.toHaveBeenCalled();
         expect(ctx.toggleLight).not.toHaveBeenCalled();
@@ -49,6 +49,29 @@ describe("toy interaction", () => {
         expect(ctx.toggleLight).toHaveBeenCalledWith("lamp");
         expect(ctx.playSound).toHaveBeenCalledWith("hiss");
         expect(ctx.animate).not.toHaveBeenCalled();
+    });
+
+    it("toots a recording in place of the fart", () => {
+        const ctx = fakeCtx();
+
+        activate(
+            {
+                id: "guster",
+                type: "toy",
+                move: "bounce",
+                toot: "guster",
+                clip: "https://x/hello.m4a",
+            },
+            ctx
+        );
+
+        expect(ctx.toot).toHaveBeenCalledWith(
+            "guster",
+            "guster",
+            "https://x/hello.m4a"
+        );
+        expect(ctx.animate).toHaveBeenCalledWith("guster", "bounce");
+        expect(ctx.speak).not.toHaveBeenCalled();
     });
 
     it("needs a tap, where a door goes off when walked up to", () => {

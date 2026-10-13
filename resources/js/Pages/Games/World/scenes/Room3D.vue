@@ -142,7 +142,15 @@ function framed() {
 // The walking bob, as height above the floor, as on the road.
 const buttLift = computed(() => bobLift(butt.bob));
 
-const { puffs, toot: tootAt, unlock: unlockToot } = useToot();
+// The recordings this room's things toot (a toy's `clip`), loaded up front.
+const {
+    puffs,
+    toot: tootAt,
+    unlock: unlockToot,
+} = useToot(
+    page.props,
+    props.scene.interactables.map((item) => item.clip).filter(Boolean)
+);
 
 // How close to the Butt a thrown thing must come to rest to feed it, and
 // how low (units).
@@ -583,9 +591,10 @@ function animate(id, move) {
     setTimeout(() => used.delete(id), USED_MS);
 }
 
-/** Toots as `castId` at thing `id` (ctx.toot). */
-function toot(castId, id) {
-    tootAt(castId, pointOf(id));
+/** Toots as `castId` at thing `id`, recording `clip` for its sound if
+ * given (ctx.toot). */
+function toot(castId, id, clip) {
+    tootAt(castId, pointOf(id), clip);
 }
 
 /** Presses organ `id`'s key `key` in zone `zone` (ctx.pressKey). */

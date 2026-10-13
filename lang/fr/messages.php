@@ -787,7 +787,6 @@ return [
     // Games - Cast
     'games.cast.butt' => 'Les Fesses',
     'games.cast.guster' => 'Guster',
-    'games.cast.guster_line' => 'Bonjour.... et excusez-moi.',
     'games.cast.toilet' => 'Les Toilettes',
     'games.cast.cockroach' => 'Le Cafard',
     'games.cast.pizza' => 'La Pizza',

@@ -6,6 +6,7 @@
  *   motion: the scene handles that).
  * - toot: a cast id to toot as, the puff at the toy.
  * - sound: a named sound (sounds.js).
+ * - clip: the URL of a recording the toot plays instead of the fart.
  * - light: the id of a room light it switches on or off, or a list of ids
  *   it switches together.
  * - line: a translated line to say.
@@ -14,7 +15,7 @@
 export default {
     activate(item, ctx) {
         if (item.move) ctx.animate(item.id, item.move);
-        if (item.toot) ctx.toot(item.toot, item.id);
+        if (item.toot) ctx.toot(item.toot, item.id, item.clip);
         if (item.sound) ctx.playSound(item.sound);
         if (item.light) ctx.toggleLight(item.light);
         if (item.line) ctx.speak(item.line);

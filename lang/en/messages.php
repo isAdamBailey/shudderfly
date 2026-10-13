@@ -787,7 +787,6 @@ return [
     // Games - Cast
     'games.cast.butt' => 'The Butt',
     'games.cast.guster' => 'Guster',
-    'games.cast.guster_line' => 'Hello.... and excuse me.',
     'games.cast.toilet' => 'The Toilet',
     'games.cast.cockroach' => 'The Cockroach',
     'games.cast.pizza' => 'The Pizza',
