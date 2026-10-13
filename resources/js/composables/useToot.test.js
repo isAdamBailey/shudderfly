@@ -31,11 +31,11 @@ afterEach(() => {
 });
 
 /** useToot inside a component, as it would be used. */
-function mountToot(castSounds = {}) {
+function mountToot(castSounds = {}, clips = []) {
     let toot;
     mount({
         setup() {
-            toot = useToot({ fartSoundUrl: "/fart.m4a", castSounds });
+            toot = useToot({ fartSoundUrl: "/fart.m4a", castSounds }, clips);
             return () => null;
         },
     });
@@ -176,6 +176,43 @@ describe("useToot", () => {
             played = [];
 
             toot("guster");
+            await vi.runAllTimersAsync();
+
+            expect(played).toEqual([0.85]);
+        });
+    });
+
+    describe("a toot given a recording", () => {
+        const HELLO = "https://cdn.test/sounds/hello.m4a";
+
+        it("plays it instead of his own sounds or the sample, with the puff", async () => {
+            const { toot, puffs, unlock } = mountToot(
+                { guster: ["https://cdn.test/sounds/eek.m4a"] },
+                [HELLO]
+            );
+            unlock();
+            await vi.runAllTimersAsync();
+            heard = [];
+
+            toot("guster", { x: 1, y: 2 }, HELLO);
+
+            expect(heard).toEqual([HELLO]);
+            expect(puffs.value).toHaveLength(1);
+        });
+
+        it("toots the sample at his pitch when it won't play", async () => {
+            const { toot, unlock } = mountToot({}, [HELLO]);
+            unlock();
+            await vi.runAllTimersAsync();
+            HTMLMediaElement.prototype.play.mockImplementation(function () {
+                if (this.src === HELLO)
+                    return Promise.reject(new Error("NotSupportedError"));
+                played.push(this.playbackRate);
+                return Promise.resolve();
+            });
+            played = [];
+
+            toot("guster", null, HELLO);
             await vi.runAllTimersAsync();
 
             expect(played).toEqual([0.85]);

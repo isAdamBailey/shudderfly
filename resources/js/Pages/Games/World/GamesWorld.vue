@@ -118,7 +118,7 @@ const ctx = {
     goToScene,
     // On the scene's things, by id: whichever scene draws them does it.
     animate: (id, move) => sceneRef.value?.animate?.(id, move),
-    toot: (castId, id) => sceneRef.value?.toot?.(castId, id),
+    toot: (castId, id, clip) => sceneRef.value?.toot?.(castId, id, clip),
     toggleLight: (id) => sceneRef.value?.toggleLight?.(id),
     pressKey: (id, zone, key) => sceneRef.value?.pressKey?.(id, zone, key),
     changeChannel: (id) => sceneRef.value?.changeChannel?.(id),

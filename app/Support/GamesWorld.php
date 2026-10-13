@@ -107,6 +107,11 @@ final class GamesWorld
     /** The slug of Hank's book: the Cockroach's House hangs his photos. */
     public const HANK_BOOK = 'hank';
 
+    /** Guster's hello, a recording on the Sounds page ("guster hello"): its
+     * S3 key, his toot when he's tapped (the puff with it). Only production has
+     * the file: elsewhere his toot falls back to the fart. */
+    public const GUSTER_HELLO = 'sounds/d81e2f70-318a-44f3-b967-c48d1c91ce0f.m4a';
+
     /** How high up the wall the Cockroach's candle sconces hang. */
     private const SCONCE_Y = 270;
 
@@ -340,7 +345,7 @@ final class GamesWorld
             ], [
                 self::roomDoor('front-door', 450, 'road', 'guster-house', exit: true),
                 self::lampSwitch(650, 280),
-                self::resident('guster', 670, 220, ['move' => 'bounce', 'toot' => 'guster', 'line' => 'messages.games.cast.guster_line']),
+                self::resident('guster', 670, 220, ['move' => 'bounce', 'toot' => 'guster', 'clip' => self::GUSTER_HELLO]),
                 // Guster's game, played on the spot: catch the falling foods.
                 self::minigame('toot-catch', 220, 180, '🧺'),
                 // His slot machine, in his greens with a toot cloud on top,
@@ -1037,6 +1042,10 @@ final class GamesWorld
 
     private static function resolve(array $item, array $games, callable $tune): array
     {
+        if (isset($item['clip'])) {
+            $item['clip'] = Sound::urlForPath($item['clip']);
+        }
+
         if ($item['type'] === 'tv') {
             return [...self::translate($item), 'channels' => $tune('channels')];
         }
@@ -1125,6 +1134,8 @@ final class GamesWorld
             ->where('title', 'like', '%guster%')
             ->whereNotNull('audio_path')
             ->where('audio_path', '!=', '')
+            // His hello is what he says when tapped, not a toot.
+            ->where('audio_path', 'not like', '%'.self::GUSTER_HELLO)
             ->orderBy('id')
             ->limit(self::CAST_SOUNDS_MAX)
             ->get(['audio_path'])

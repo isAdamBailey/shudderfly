@@ -20,14 +20,16 @@ export function tootPitch(castId) {
  * The sample is the page's `fartSoundUrl`. A character with sounds of its
  * own in the page's `castSounds` ({ castId: [url] }: Guster's) toots one of
  * them at random instead, and the sample at its pitch if it has none.
- * `sounds` stands in for the page's props.
+ * `sounds` stands in for the page's props. `clips` are other recordings a
+ * toot may be given to play (a scene's: Guster's hello), loaded and primed
+ * with his.
  *
  * Render `puffs` ({ id, x, y, castId }, in the caller's coordinates) with
  * TootPuff, passing it the `castId` of whoever tooted.
  * Call `unlock()` from a user gesture before the first toot; autoplay rules
  * would silence it otherwise.
  */
-export function useToot(sounds = usePage().props) {
+export function useToot(sounds = usePage().props, clips = []) {
     const { fartSoundUrl = "/fart.m4a" } = sounds;
     const castSounds = sounds.castSounds ?? {};
     const puffs = ref([]);
@@ -37,10 +39,10 @@ export function useToot(sounds = usePage().props) {
     let sound = null;
     function getSound() {
         if (!sound)
-            sound = useTootSound(
-                fartSoundUrl,
-                Object.values(castSounds).flat()
-            );
+            sound = useTootSound(fartSoundUrl, [
+                ...Object.values(castSounds).flat(),
+                ...clips,
+            ]);
         return sound;
     }
     let unlocking = null;
@@ -58,12 +60,14 @@ export function useToot(sounds = usePage().props) {
             });
     }
 
-    /** Toots as `castId`; `at` ({ x, y }) also shows a puff there. */
-    function toot(castId, at = null) {
+    /** Toots as `castId`; `at` ({ x, y }) also shows a puff there. A
+     * `clip` (one of `clips`) is the recording it plays, the fart if it
+     * won't play. */
+    function toot(castId, at = null, clip = null) {
         const recordings = own(castSounds, castId) ?? [];
-        const clip =
-            recordings[Math.floor(Math.random() * recordings.length)] ?? null;
-        getSound().playToot(tootPitch(castId), clip);
+        const recording =
+            clip ?? recordings[Math.floor(Math.random() * recordings.length)];
+        getSound().playToot(tootPitch(castId), recording);
         if (!at) return;
 
         const id = ++nextId;

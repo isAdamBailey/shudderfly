@@ -377,9 +377,19 @@ class GamesWorldScenesTest extends TestCase
         $this->assertSame(['back' => 'wallpaper-green', 'floor' => 'moss'], $hall['walls']);
         $guster = collect($hall['interactables'])->firstWhere('id', 'guster');
         $this->assertSame('guster', $guster['cast']);
+        // He toots his hello: the puff, with his recording for its sound,
+        // and no spoken line.
         $this->assertSame('guster', $guster['toot']);
-        // He greets and apologises for it in one breath.
-        $this->assertSame('Hello.... and excuse me.', __($guster['line']));
+        $this->assertSame(GamesWorld::GUSTER_HELLO, $guster['clip']);
+        $this->assertArrayNotHasKey('line', $guster);
+    }
+
+    public function test_gusters_hello_is_served_as_a_url(): void
+    {
+        $guster = collect(GamesWorld::scenes()['guster-house.hall']['interactables'])->firstWhere('id', 'guster');
+
+        $this->assertSame(Sound::urlForPath(GamesWorld::GUSTER_HELLO), $guster['clip']);
+        $this->assertStringEndsWith(GamesWorld::GUSTER_HELLO, $guster['clip']);
     }
 
     public function test_scenes_translate_labels(): void
@@ -1041,6 +1051,15 @@ class GamesWorldScenesTest extends TestCase
         $this->assertSame(['guster' => [$eek->audio_path, $sigh->audio_path, $burp->audio_path]], $sounds);
         $this->assertStringEndsWith('sounds/eek.m4a', $sounds['guster'][0]);
         $this->assertNotSame('sounds/eek.m4a', $sounds['guster'][0]);
+    }
+
+    public function test_gusters_hello_is_not_one_of_his_toots(): void
+    {
+        $eek = Sound::factory()->create(['title' => 'Guster eek', 'audio_path' => 'sounds/eek.m4a']);
+        Sound::factory()->create(['title' => 'guster hello', 'audio_path' => GamesWorld::GUSTER_HELLO]);
+        Sound::factory()->create(['title' => 'guster hello', 'audio_path' => 'https://cdn.example.com/'.GamesWorld::GUSTER_HELLO]);
+
+        $this->assertSame(['guster' => [$eek->audio_path]], GamesWorld::castSounds());
     }
 
     public function test_guster_has_only_so_many_sounds(): void
