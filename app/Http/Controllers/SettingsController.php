@@ -78,6 +78,6 @@ class SettingsController extends Controller
             return response()->json(['message' => $message]);
         }
 
-        return redirect(route('welcome'))->with('success', $message);
+        return redirect(route('dashboard'))->with('success', $message);
     }
 }

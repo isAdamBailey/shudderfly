@@ -29,7 +29,7 @@ class WorldClockTest extends TestCase
 
         TimezoneLabel::create(['timezone' => 'Asia/Tokyo', 'label' => 'Office']);
 
-        $this->get(route('welcome'))->assertInertia(
+        $this->get(route('dashboard'))->assertInertia(
             fn (Assert $page) => $page
                 ->component('Users/Show')
                 ->where('maxCities', 6)

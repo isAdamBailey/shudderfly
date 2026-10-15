@@ -13,12 +13,14 @@ import NavPill from "@/Layouts/Nav/NavPill.vue";
 import NavTab from "@/Layouts/Nav/NavTab.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useSiteSetting } from "@/composables/useSiteSetting";
+import { useTranslations } from "@/composables/useTranslations";
 import { useUnreadNotifications } from "@/composables/useUnreadNotifications";
 import ThemeToggle from "@/Layouts/Nav/ThemeToggle.vue";
 import { Link } from "@inertiajs/vue3";
 import { computed, ref } from "vue";
 
 const { canEditPages, canEditProfile } = usePermissions();
+const { t } = useTranslations();
 const isDesktopProfileOpen = ref(false);
 const isNotificationsOpen = ref(false);
 const { unreadCount, isNewNotification } = useUnreadNotifications();
@@ -31,17 +33,15 @@ const spinLogo = () => {
     });
 };
 
+// The logo is the way back to Books (there is no Books pill), so it shows
+// where you are the way the pills do.
+const isHome = computed(() => route().current("books.*"));
+
 const messagingEnabled = useSiteSetting("messaging_enabled");
 const soundsEnabled = useSiteSetting("sounds_enabled");
 
 const topNavItems = computed(() => {
     const items = [
-        {
-            label: "Books",
-            href: route("books.index"),
-            active: route().current("books.*"),
-            icon: "ri-book-open-line",
-        },
         {
             label: "ALL",
             href: route("pictures.index"),
@@ -103,8 +103,17 @@ const topNavItems = computed(() => {
                 <div class="grid h-16 grid-cols-3 items-center gap-1">
                     <div class="flex min-w-0 items-center justify-start gap-1">
                         <Link
-                            :href="route('welcome')"
-                            class="shrink-0 flex items-center max-w-10 sm:max-w-14"
+                            :href="route('books.index')"
+                            class="shrink-0 flex items-center max-w-11 rounded-full p-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 sm:max-w-[3.75rem]"
+                            :class="
+                                isHome ? 'bg-white/25' : 'hover:bg-white/10'
+                            "
+                            :aria-label="t('common.home')"
+                            :aria-current="
+                                route().current('books.index')
+                                    ? 'page'
+                                    : undefined
+                            "
                             @click="spinLogo"
                         >
                             <ApplicationLogo
@@ -197,6 +206,14 @@ const topNavItems = computed(() => {
 
                                 <template #content>
                                     <div class="space-y-2">
+                                        <NavMenuItem
+                                            :href="route('dashboard')"
+                                            :label="t('dashboard.my_dashboard')"
+                                            icon="ri-dashboard-line"
+                                            :active="
+                                                route().current('dashboard')
+                                            "
+                                        />
                                         <NavMenuItem
                                             :href="route('profile.edit')"
                                             label="Account"

@@ -26,7 +26,7 @@ class AdminPermissionsTest extends TestCase
 
         $this->assertTrue($editUser->fresh()->hasPermissionTo('edit pages'));
 
-        $response->assertRedirect(route('welcome'));
+        $response->assertRedirect(route('dashboard'));
     }
 
     public function test_users_permissions_are_revoked()
@@ -46,7 +46,7 @@ class AdminPermissionsTest extends TestCase
 
         $this->assertFalse($editUser->fresh()->hasPermissionTo('edit pages'));
 
-        $response->assertRedirect(route('welcome'));
+        $response->assertRedirect(route('dashboard'));
     }
 
     public function test_users_can_be_deleted()
@@ -65,7 +65,7 @@ class AdminPermissionsTest extends TestCase
 
         $this->assertFalse(User::where('id', $deleteUser->id)->exists());
 
-        $response->assertRedirect(route('welcome'));
+        $response->assertRedirect(route('dashboard'));
     }
 
     public function test_non_admin_users_cannot_update_permissions()
@@ -113,7 +113,7 @@ class AdminPermissionsTest extends TestCase
         ];
         $response = $this->put(route('admin.permissions'), $payload);
 
-        $response->assertRedirect(route('welcome'));
+        $response->assertRedirect(route('dashboard'));
         $this->assertTrue($editUser->fresh()->hasPermissionTo('super admin'));
     }
 
@@ -166,7 +166,7 @@ class AdminPermissionsTest extends TestCase
         ];
         $response = $this->put(route('admin.permissions'), $payload);
 
-        $response->assertRedirect(route('welcome'));
+        $response->assertRedirect(route('dashboard'));
         $this->assertTrue($editUser->fresh()->hasPermissionTo('edit pages'));
         $this->assertTrue($editUser->fresh()->hasPermissionTo('super admin'));
     }
@@ -200,7 +200,7 @@ class AdminPermissionsTest extends TestCase
         ];
         $response = $this->put(route('admin.permissions'), $payload);
 
-        $response->assertRedirect(route('welcome'));
+        $response->assertRedirect(route('dashboard'));
         $this->assertFalse($otherSuperAdmin->fresh()->can('super admin'));
     }
 

@@ -46,7 +46,7 @@ class MusicController extends Controller
             return $this->indexJson($request);
         }
 
-        return redirect()->route('welcome');
+        return redirect()->route('dashboard');
     }
 
     private function indexJson(Request $request): JsonResponse
@@ -95,7 +95,7 @@ class MusicController extends Controller
             ]);
         }
 
-        return redirect()->route('welcome')->with('open_song_id', $song->id);
+        return redirect()->route('dashboard')->with('open_song_id', $song->id);
     }
 
     /**

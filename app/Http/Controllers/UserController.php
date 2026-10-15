@@ -140,7 +140,6 @@ class UserController extends Controller
      */
     private function ownerProps(User $user): array
     {
-        $canEditPages = $user->can('edit pages');
         $canAdmin = $user->can('admin');
 
         return [
@@ -173,10 +172,6 @@ class UserController extends Controller
                 ->latest()
                 ->take(6)
                 ->get(),
-            'authors' => $canEditPages ? User::all() : [],
-            'newBookCategories' => $canEditPages
-                ? Category::all()->map->only(['id', 'name'])->sortBy('name')->values()->toArray()
-                : [],
             'adminUsers' => User::admins()->get(['name']),
             'users' => User::all(),
             'categories' => $canAdmin ? Category::withCount('books')->get() : [],

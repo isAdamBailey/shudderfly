@@ -84,6 +84,10 @@ class BookController extends Controller
             'search' => $search,
             'themeLabel' => $themeLabel,
             'monthLabel' => MonthBooks::isActive() ? MonthBooks::getLabel() : null,
+            // Only the new-book form reads it, so the page asks for it when the form opens.
+            'authors' => Inertia::optional(fn () => $request->user()->can('edit pages')
+                ? $this->authorOptions()
+                : []),
         ]);
     }
 
@@ -184,7 +188,7 @@ class BookController extends Controller
             : null;
 
         $authors = $canEditPages
-            ? User::all()->toArray()
+            ? $this->authorOptions()
             : [];
 
         $books = $canEditPages
@@ -357,5 +361,14 @@ class BookController extends Controller
         return redirect()
             ->to(route('messages.index').'#message-'.$message->id)
             ->with('success', __('messages.book.shared'));
+    }
+
+    /**
+     * Everyone a book can be credited to, for the new- and edit-book forms
+     * (they only show names).
+     */
+    private function authorOptions(): Collection
+    {
+        return User::orderBy('name')->get(['id', 'name']);
     }
 }

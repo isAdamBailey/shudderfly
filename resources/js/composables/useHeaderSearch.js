@@ -11,11 +11,13 @@ export const voiceSearchSupported =
 
 // Only the books and photos indexes run this search. Other pages (e.g. Music)
 // send a `search` prop of their own, which must not leak into the header.
-const SEARCH_PATHS = ["/books", "/photos"];
+// Keyed by page component, not URL, so it survives the pages moving.
+const SEARCH_PAGES = ["Books/Index", "Uploads/Index"];
 
 export function siteSearchQuery(page) {
-    const path = (page.url || "").split("?")[0];
-    return SEARCH_PATHS.includes(path) ? page.props?.search?.trim() || "" : "";
+    return SEARCH_PAGES.includes(page.component)
+        ? page.props?.search?.trim() || ""
+        : "";
 }
 
 export function useHeaderSearch() {

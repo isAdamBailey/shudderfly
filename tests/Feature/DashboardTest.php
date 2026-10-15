@@ -18,7 +18,7 @@ class DashboardTest extends TestCase
         $user = User::factory()->create();
         $user->givePermissionTo('edit pages');
 
-        $response = $this->actingAs($user)->get(route('welcome'));
+        $response = $this->actingAs($user)->get(route('dashboard'));
 
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
@@ -26,6 +26,9 @@ class DashboardTest extends TestCase
             ->where('isOwner', true)
             ->has('adminSettings')
             ->has('categories')
+            // The new-book form moved to the Books page.
+            ->missing('authors')
+            ->missing('newBookCategories')
         );
     }
 
@@ -33,7 +36,7 @@ class DashboardTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $response = $this->actingAs($user)->get(route('welcome'));
+        $response = $this->actingAs($user)->get(route('dashboard'));
 
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
@@ -75,7 +78,7 @@ class DashboardTest extends TestCase
         Page::factory()->count(5)->create(['book_id' => $book->id]);
         Song::factory()->count(4)->create();
 
-        $response = $this->actingAs($user)->get(route('welcome'));
+        $response = $this->actingAs($user)->get(route('dashboard'));
 
         $response->assertStatus(200);
 
@@ -95,7 +98,7 @@ class DashboardTest extends TestCase
         $bookWithLeastPages = Book::factory()->create(['title' => 'Small Book']);
         Page::factory()->count(1)->create(['book_id' => $bookWithLeastPages->id]);
 
-        $response = $this->actingAs($user)->get(route('welcome'));
+        $response = $this->actingAs($user)->get(route('dashboard'));
 
         $response->assertStatus(200);
 
@@ -117,7 +120,7 @@ class DashboardTest extends TestCase
             $book->update(['read_count' => 100 - ($index * 10)]);
         });
 
-        $response = $this->actingAs($user)->get(route('welcome'));
+        $response = $this->actingAs($user)->get(route('dashboard'));
 
         $response->assertStatus(200);
 
@@ -141,7 +144,7 @@ class DashboardTest extends TestCase
             $song->update(['read_count' => 200 - ($index * 20)]);
         });
 
-        $response = $this->actingAs($user)->get(route('welcome'));
+        $response = $this->actingAs($user)->get(route('dashboard'));
 
         $response->assertStatus(200);
 
@@ -167,7 +170,7 @@ class DashboardTest extends TestCase
         Page::factory()->create(['book_id' => $book->id, 'media_path' => 'images/snapshot.webp']);
         Page::factory()->create(['book_id' => $book->id, 'video_link' => 'https://youtube.com/watch?v=123']);
 
-        $response = $this->actingAs($user)->get(route('welcome'));
+        $response = $this->actingAs($user)->get(route('dashboard'));
 
         $response->assertStatus(200);
 
@@ -181,7 +184,7 @@ class DashboardTest extends TestCase
 
     public function test_dashboard_requires_authentication()
     {
-        $response = $this->get(route('welcome'));
+        $response = $this->get(route('dashboard'));
 
         $response->assertRedirect(route('login'));
     }

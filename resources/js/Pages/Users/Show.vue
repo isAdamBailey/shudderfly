@@ -1,18 +1,14 @@
 <script setup>
 /* global route */
 import Avatar from "@/Components/Avatar.vue";
-import Button from "@/Components/Button.vue";
-import FormModal from "@/Components/FormModal.vue";
 import SpeakButton from "@/Components/SpeakButton.vue";
 import MessageTimeline from "@/Components/Messages/MessageTimeline.vue";
 import StatCard from "@/Components/StatCard.vue";
 import BreezeAuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import NewBookForm from "@/Pages/Books/NewBookForm.vue";
 import BlockedContentPanel from "@/Pages/Users/Partials/BlockedContentPanel.vue";
 import OwnerPanel from "@/Pages/Users/Partials/OwnerPanel.vue";
 import { useNotificationSync } from "@/composables/useNotificationSync";
 import { usePermissions } from "@/composables/permissions";
-import { useSiteSetting } from "@/composables/useSiteSetting";
 import { FOOD_EMOJI_POOL, useEmojiRise } from "@/composables/useEmojiRise";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
@@ -25,18 +21,10 @@ defineOptions({
 
 const { speak, speaking } = useSpeechSynthesis();
 const { t } = useTranslations();
-const { canAdmin, canEditPages } = usePermissions();
+const { canAdmin } = usePermissions();
 const { spawnEmojiRise } = useEmojiRise();
 const { isRead, markAsRead: markNotificationAsRead } = useNotificationSync();
 const regenerating = ref(false);
-const showNewBookForm = ref(false);
-const newBookFormRef = ref(null);
-
-const openNewBookForm = () => {
-    showNewBookForm.value = true;
-};
-
-const messagingEnabled = useSiteSetting("messaging_enabled");
 
 function scrollToAdministration() {
     document
@@ -85,14 +73,6 @@ const props = defineProps({
         default: () => [],
     },
     recentUploads: {
-        type: Array,
-        default: () => [],
-    },
-    authors: {
-        type: Array,
-        default: () => [],
-    },
-    newBookCategories: {
         type: Array,
         default: () => [],
     },
@@ -365,7 +345,7 @@ const speakUserSummary = () => {
             <div class="flex items-center gap-2">
                 <Link
                     v-if="!isOwner"
-                    :href="route('welcome')"
+                    :href="route('dashboard')"
                     class="inline-flex items-center justify-center min-h-11 min-w-11 -ml-2 text-theme-title opacity-70 hover:opacity-100 transition-opacity"
                     :aria-label="t('profile.back_to_dashboard')"
                 >
@@ -467,46 +447,9 @@ const speakUserSummary = () => {
                         </p>
                     </div>
 
-                    <!-- Quick actions: equal-width, inline on desktop, each
-                         stacked full-width on mobile -->
-                    <div class="mt-4 flex flex-col items-start gap-3">
-                        <div class="flex w-full flex-col gap-3 sm:flex-row">
-                            <!-- Primary CTA: create a new book (edit-pages only) -->
-                            <template v-if="canEditPages">
-                                <Button
-                                    v-if="!showNewBookForm"
-                                    type="button"
-                                    class="w-full justify-center ring-2 ring-amber-400/70 shadow-lg sm:flex-1"
-                                    @click="openNewBookForm"
-                                >
-                                    <i class="ri-add-line mr-1.5 text-base"></i>
-                                    {{ t("dashboard.add_new_book") }}
-                                </Button>
-                                <Button
-                                    v-else
-                                    type="button"
-                                    class="w-full justify-center !bg-red-700 sm:flex-1"
-                                    @click="showNewBookForm = false"
-                                >
-                                    {{ t("dashboard.close_book_form") }}
-                                </Button>
-                            </template>
-
-                            <!-- Secondary CTA: chat (all users). Alone (no
-                                 edit-pages permission), it fills the row. -->
-                            <Link
-                                v-if="messagingEnabled"
-                                :href="route('messages.index')"
-                                class="btn-bulge inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md bg-orange-700 px-3 py-2.5 text-center text-sm font-semibold leading-tight text-amber-50 transition-colors hover:bg-orange-600 sm:flex-1"
-                            >
-                                <i class="ri-chat-3-line flex-shrink-0"></i>
-                                {{ t("dashboard.browse_chat") }}
-                            </Link>
-                        </div>
-
-                        <!-- Regenerate AI summary (admins only, low-emphasis) -->
+                    <!-- Regenerate AI summary (admins only, low-emphasis) -->
+                    <div v-if="canAdmin" class="mt-4">
                         <button
-                            v-if="canAdmin"
                             type="button"
                             :disabled="regenerating"
                             title="Generate a new AI story for this profile"
@@ -524,21 +467,6 @@ const speakUserSummary = () => {
                             }}
                         </button>
                     </div>
-
-                    <FormModal
-                        v-if="canEditPages"
-                        :show="showNewBookForm"
-                        :title="t('book.new_book_title')"
-                        :submit-ref="newBookFormRef"
-                        @close="showNewBookForm = false"
-                    >
-                        <NewBookForm
-                            ref="newBookFormRef"
-                            :authors="authors"
-                            :categories="newBookCategories"
-                            @close-form="showNewBookForm = false"
-                        />
-                    </FormModal>
                 </div>
 
                 <!-- Profile Header (visitors only; owners see this in the hero) -->

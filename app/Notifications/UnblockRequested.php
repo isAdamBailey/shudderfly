@@ -74,7 +74,7 @@ class UnblockRequested extends Notification implements ShouldBroadcast
                 'count' => $this->blockedCount,
             ]))
             ->action(__('messages.unblock_request.action'), $url)
-            ->line(__('messages.notifications.email.opt_out_markdown', ['url' => route('welcome')]))
+            ->line(__('messages.notifications.email.opt_out_markdown', ['url' => route('profile.edit')]))
             ->line(__('messages.unblock_request.thank_you'));
     }
 

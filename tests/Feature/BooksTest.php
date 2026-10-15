@@ -25,6 +25,45 @@ class BooksTest extends TestCase
     use RefreshDatabase;
     use WithFaker;
 
+    public function test_books_are_the_home_page(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $this->assertSame(url('/'), route('books.index'));
+        $this->get('/')->assertInertia(fn (Assert $page) => $page->component('Books/Index'));
+    }
+
+    public function test_the_old_books_url_redirects_home_keeping_its_search(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $this->get('/books')->assertRedirect(route('books.index'));
+        $this->get('/books?search=dogs')->assertRedirect(route('books.index', ['search' => 'dogs']));
+    }
+
+    public function test_only_page_editors_get_authors_for_the_new_book_form(): void
+    {
+        $this->actingAs(User::factory()->create(['name' => 'Reader']));
+        $this->get(route('books.index'))->assertInertia(fn (Assert $page) => $page
+            // Not on the home page's every visit: the form asks for it when it opens.
+            ->missing('authors')
+            ->reloadOnly('authors', fn (Assert $reload) => $reload->where('authors', []))
+        );
+
+        $editor = User::factory()->create(['name' => 'Editor']);
+        $editor->givePermissionTo('edit pages');
+        $this->actingAs($editor);
+        $this->get(route('books.index'))->assertInertia(fn (Assert $page) => $page
+            ->missing('authors')
+            ->reloadOnly('authors', fn (Assert $reload) => $reload
+                ->has('authors', 2)
+                ->where('authors.0.name', 'Editor')
+                ->where('authors.1.name', 'Reader')
+                ->missing('authors.0.email')
+            )
+        );
+    }
+
     public function test_category_books_page_through_every_book_once(): void
     {
         $this->actingAs(User::factory()->create());
@@ -127,7 +166,7 @@ class BooksTest extends TestCase
         $this->get(route('books.index', ['search' => $searchTerm]))->assertInertia(
             fn (Assert $page) => $page
                 ->component('Books/Index')
-                ->url('/books?search='.$searchTerm)
+                ->url('/?search='.$searchTerm)
                 ->has('searchCategories.0.books', $searchCategory->books->count())
                 ->has('searchCategories.0.books.0.cover_image')
                 ->has('categories')

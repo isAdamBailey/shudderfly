@@ -181,7 +181,7 @@ class ProfileController extends Controller
                     'sender_id' => $sender->id,
                     'sender_name' => $sender->name,
                     'message' => $message,
-                    'url' => route('welcome'),
+                    'url' => route('books.index'),
                 ]
             );
         }

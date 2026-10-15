@@ -70,10 +70,9 @@ describe("siteSearchQuery", () => {
             "@/composables/useHeaderSearch"
         );
         const props = { search: " dogs " };
-        expect(siteSearchQuery({ url: "/photos?search=dogs", props })).toBe(
-            "dogs"
-        );
-        expect(siteSearchQuery({ url: "/books", props })).toBe("dogs");
-        expect(siteSearchQuery({ url: "/music?search=dogs", props })).toBe("");
+        const query = (component) => siteSearchQuery({ component, props });
+        expect(query("Uploads/Index")).toBe("dogs");
+        expect(query("Books/Index")).toBe("dogs");
+        expect(query("Music/Index")).toBe("");
     });
 });
