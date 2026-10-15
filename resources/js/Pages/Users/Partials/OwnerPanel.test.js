@@ -87,7 +87,7 @@ describe("OwnerPanel", () => {
         );
     });
 
-    it("does not render a New Book accordion (the CTA lives on the dashboard instead)", () => {
+    it("does not render a New Book accordion (the New Book button lives on the Books page)", () => {
         mockCanAdmin.mockReturnValueOnce(true);
 
         const wrapper = mount(OwnerPanel);
@@ -95,6 +95,5 @@ describe("OwnerPanel", () => {
         expect(wrapper.findComponent({ name: "NewBookForm" }).exists()).toBe(
             false
         );
-        expect(wrapper.text()).not.toContain("dashboard.new_book");
     });
 });

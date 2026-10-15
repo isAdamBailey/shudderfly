@@ -274,7 +274,7 @@ class MusicTest extends TestCase
             ->assertJsonPath('song.title', 'Test Song');
     }
 
-    public function test_music_show_redirects_to_welcome_with_open_song_flash_when_not_json_api(): void
+    public function test_music_show_redirects_to_dashboard_with_open_song_flash_when_not_json_api(): void
     {
         $user = User::factory()->create();
         $this->actingAs($user);
@@ -283,7 +283,7 @@ class MusicTest extends TestCase
 
         $response = $this->get(route('music.show', $song));
 
-        $response->assertRedirect(route('welcome'));
+        $response->assertRedirect(route('dashboard'));
         $response->assertSessionHas('open_song_id', $song->id);
     }
 

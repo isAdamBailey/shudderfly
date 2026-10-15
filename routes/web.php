@@ -37,8 +37,10 @@ use Inertia\Inertia;
 */
 
 Route::middleware('auth')->group(function () {
-    Route::get('/', [UserController::class, 'dashboard'])->name('welcome');
-    Route::get('/books', [BookController::class, 'index'])->name('books.index');
+    Route::get('/', [BookController::class, 'index'])->name('books.index');
+    // Books used to live at /books; keep old links (and their ?search=) working.
+    Route::get('/books', fn () => redirect()->route('books.index', request()->query()));
+    Route::get('/dashboard', [UserController::class, 'dashboard'])->name('dashboard');
     Route::get('/books-category', [BookController::class, 'category'])->name('books.category');
     Route::get('/categories/{categoryName}', [CategoryController::class, 'show'])->name('categories.show');
     Route::get('/book/{book}', [BookController::class, 'show'])->name('books.show');

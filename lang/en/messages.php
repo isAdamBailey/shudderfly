@@ -4,6 +4,7 @@ return [
     'common.cancel' => 'Cancel',
     'common.ok' => 'OK',
     'common.close' => 'Close',
+    'common.home' => 'Home',
 
     // Admin form modals
     'book.add_pages_title' => 'Add Pages',
@@ -418,13 +419,9 @@ return [
     'unblock_request.expired_heading' => 'This link expired',
     'unblock_request.expired_body' => 'Open the app and unblock from your dashboard.',
     'unblock_request.back_to_app' => 'Go to :app',
-    'dashboard.new_book' => 'New Book',
-    'dashboard.add_new_book' => 'Add a new book',
-    'dashboard.close_book_form' => 'Close book form',
     'dashboard.hero_default_summary' => 'Dive into your books or browse everything you have shared. Check back after a busy week for a personalized AI recap of your latest stories.',
     'dashboard.hero_summary_updated' => 'AI recap · updated :date',
-    'dashboard.browse_collages' => 'Collages',
-    'dashboard.browse_chat' => 'Chat',
+    'dashboard.my_dashboard' => 'My Dashboard',
 
     // World Clock - Timer
     'world_clock.timer_done' => "Time's up!",

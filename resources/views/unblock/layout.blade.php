@@ -85,7 +85,7 @@
 <body>
     <main class="card">
         @yield('content')
-        <a class="secondary" href="{{ config('app.url') }}">
+        <a class="secondary" href="{{ route('dashboard') }}">
             {{ __('messages.unblock_request.back_to_app', ['app' => config('app.name')]) }}
         </a>
     </main>

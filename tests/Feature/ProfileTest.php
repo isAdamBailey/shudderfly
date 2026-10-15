@@ -108,14 +108,14 @@ class ProfileTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->from(route('welcome'))
+            ->from(route('dashboard'))
             ->patch('/profile/avatar', [
                 'avatar' => 'avatar-1',
             ]);
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('welcome'));
+            ->assertRedirect(route('dashboard'));
 
         $user->refresh();
 
@@ -129,14 +129,14 @@ class ProfileTest extends TestCase
         foreach (['bigears-1', 'avataaars-6', 'adventurer-12'] as $avatarId) {
             $response = $this
                 ->actingAs($user)
-                ->from(route('welcome'))
+                ->from(route('dashboard'))
                 ->patch('/profile/avatar', [
                     'avatar' => $avatarId,
                 ]);
 
             $response
                 ->assertSessionHasNoErrors()
-                ->assertRedirect(route('welcome'));
+                ->assertRedirect(route('dashboard'));
 
             $user->refresh();
 
@@ -151,14 +151,14 @@ class ProfileTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->from(route('welcome'))
+            ->from(route('dashboard'))
             ->patch('/profile/avatar', [
                 'avatar' => 'avatar-2',
             ]);
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('welcome'));
+            ->assertRedirect(route('dashboard'));
 
         $user->refresh();
 
@@ -171,14 +171,14 @@ class ProfileTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->from(route('welcome'))
+            ->from(route('dashboard'))
             ->patch('/profile/avatar', [
                 'avatar' => null,
             ]);
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('welcome'));
+            ->assertRedirect(route('dashboard'));
 
         $user->refresh();
 
@@ -222,7 +222,7 @@ class ProfileTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->from(route('welcome'))
+            ->from(route('dashboard'))
             ->patch('/profile/notifications/preferences', [
                 'email_notifications_enabled' => false,
             ]);
@@ -230,7 +230,7 @@ class ProfileTest extends TestCase
         $response
             ->assertSessionHasNoErrors()
             ->assertSessionHas('success', __('messages.notifications.email.updated'))
-            ->assertRedirect(route('welcome'));
+            ->assertRedirect(route('dashboard'));
 
         $this->assertFalse($user->refresh()->email_notifications_enabled);
     }
@@ -259,7 +259,7 @@ class ProfileTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->from(route('welcome'))
+            ->from(route('dashboard'))
             ->patch('/profile/locale/preference', [
                 'locale' => 'es',
             ]);
@@ -267,7 +267,7 @@ class ProfileTest extends TestCase
         $response
             ->assertSessionHasNoErrors()
             ->assertSessionHas('success', __('messages.locale.updated'))
-            ->assertRedirect(route('welcome'));
+            ->assertRedirect(route('dashboard'));
 
         $this->assertSame('es', $user->refresh()->locale);
     }

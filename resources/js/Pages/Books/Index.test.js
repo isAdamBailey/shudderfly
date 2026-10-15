@@ -1,7 +1,7 @@
 import Index from "@/Pages/Books/Index.vue";
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { usePage } from "@inertiajs/vue3";
+import { router } from "@inertiajs/vue3";
 
 // Mock usePage with a dynamic implementation
 const mockPageData = {
@@ -43,6 +43,7 @@ vi.mock("@inertiajs/vue3", async () => {
         })),
         router: {
             get: vi.fn(),
+            reload: vi.fn(),
             post: vi.fn(),
             put: vi.fn(),
             patch: vi.fn(),
@@ -52,9 +53,13 @@ vi.mock("@inertiajs/vue3", async () => {
 });
 
 // Mock composables
+const mockCanEditPages = vi.hoisted(() => vi.fn(() => false));
+
 vi.mock("@/composables/permissions", () => ({
     usePermissions: () => ({
-        canEditPages: false,
+        get canEditPages() {
+            return mockCanEditPages();
+        },
     }),
 }));
 
@@ -91,6 +96,23 @@ vi.mock("@/Components/svg/ManEmptyCircle.vue", () => ({
     default: {
         name: "ManEmptyCircle",
         template: '<div class="man-empty-circle" />',
+    },
+}));
+vi.mock("@/Pages/Books/NewBookForm.vue", () => ({
+    // Loaded with defineAsyncComponent, which unwraps `default` only from
+    // something that looks like an ES module.
+    __esModule: true,
+    default: {
+        name: "NewBookForm",
+        template: '<form class="new-book-form-stub" />',
+        props: ["authors", "categories"],
+    },
+}));
+vi.mock("@/Components/FormModal.vue", () => ({
+    default: {
+        name: "FormModal",
+        template: '<div v-if="show"><slot /></div>',
+        props: ["show", "title", "submitRef"],
     },
 }));
 vi.mock("@/Pages/Books/BooksGrid.vue", () => ({
@@ -263,5 +285,62 @@ describe("Books/Index.vue", () => {
             (grid) => grid.props("label") === "Halloween Books"
         );
         expect(themedGrid).toBeFalsy();
+    });
+
+    describe("new book", () => {
+        const newBookButton = (w) =>
+            w
+                .findAll("button")
+                .find((button) => button.text() === "book.new_book_title");
+
+        it("hides the New Book button from people who cannot edit pages", () => {
+            expect(newBookButton(wrapper)).toBeUndefined();
+        });
+
+        it("opens the new-book form and closes it when the form emits close-form", async () => {
+            mockCanEditPages.mockReturnValue(true);
+            wrapper = mount(Index, {
+                props: {
+                    categories,
+                    searchCategories: null,
+                    authors: [{ id: 1, name: "Ada" }],
+                },
+            });
+            mockCanEditPages.mockReturnValue(false);
+
+            const form = () => wrapper.findComponent({ name: "NewBookForm" });
+            expect(form().exists()).toBe(false);
+
+            await newBookButton(wrapper).trigger("click");
+            await flushPromises();
+            expect(router.reload).not.toHaveBeenCalled();
+            expect(form().props("authors")).toEqual([{ id: 1, name: "Ada" }]);
+            expect(form().props("categories")).toEqual(categories);
+
+            await form().vm.$emit("close-form");
+            expect(form().exists()).toBe(false);
+        });
+
+        it("asks for the authors only when the form first opens", async () => {
+            router.reload.mockClear();
+            mockCanEditPages.mockReturnValue(true);
+            wrapper = mount(Index, {
+                props: { categories, searchCategories: null },
+            });
+            mockCanEditPages.mockReturnValue(false);
+
+            expect(router.reload).not.toHaveBeenCalled();
+            await newBookButton(wrapper).trigger("click");
+            expect(router.reload).toHaveBeenCalledWith(
+                expect.objectContaining({ only: ["authors"] })
+            );
+
+            // Reopening while that request is in flight doesn't send another.
+            await wrapper
+                .findComponent({ name: "FormModal" })
+                .vm.$emit("close");
+            await newBookButton(wrapper).trigger("click");
+            expect(router.reload).toHaveBeenCalledTimes(1);
+        });
     });
 });

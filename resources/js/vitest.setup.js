@@ -86,7 +86,8 @@ export const ROUTE_MAPPINGS = {
         `/music/${params}/increment-read-count`,
     "pictures.index": "/pictures",
     "pages.show": (params) => `/pages/${params.id || params}`,
-    "books.index": "/books",
+    "books.index": "/",
+    dashboard: "/dashboard",
     "books.show": (params) => `/books/${params.id || params.book || params}`,
     "books.category": (params) =>
         `/books-category?${new URLSearchParams(params)}`,
@@ -124,14 +125,23 @@ export const ROUTE_MAPPINGS = {
     "world-clock.timer.stop": "/api/world-clock/timer",
 };
 
-export const createRouteMock = () =>
-    vi.fn((name, params) => {
+export const createRouteMock = () => {
+    // `route()` with no name is Ziggy's router; tests steer which route is
+    // current with `route.current.mockImplementation(...)`.
+    const current = vi.fn(() => false);
+    const mock = vi.fn((name, params) => {
+        if (name === undefined) {
+            return { current };
+        }
         if (typeof ROUTE_MAPPINGS[name] === "function") {
             return ROUTE_MAPPINGS[name](params);
         }
 
         return ROUTE_MAPPINGS[name] || name;
     });
+    mock.current = current;
+    return mock;
+};
 
 global.route = createRouteMock();
 

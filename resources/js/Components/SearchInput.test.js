@@ -47,11 +47,6 @@ describe("Components/SearchInput.vue", () => {
     });
 
     it("updates the placeholder when switching target", async () => {
-        Object.defineProperty(window, "location", {
-            value: { pathname: "/" },
-            writable: true,
-        });
-
         const wrapper = mount(SearchInput);
         await wrapper.findAll('[role="radio"]')[0].trigger("click");
 
@@ -94,11 +89,6 @@ describe("Components/SearchInput.vue", () => {
     });
 
     it("navigates to pictures.index on Enter when target is uploads", async () => {
-        Object.defineProperty(window, "location", {
-            value: { pathname: "/pictures" },
-            writable: true,
-        });
-
         const wrapper = mount(SearchInput);
         await wrapper.findAll('[role="radio"]')[1].trigger("click");
 
@@ -120,7 +110,16 @@ describe("Components/SearchInput.vue", () => {
         await input.trigger("keyup.enter");
 
         expect(router.get).toHaveBeenCalledTimes(1);
-        expect(router.get.mock.calls[0][0]).toBe("/books");
+        expect(router.get.mock.calls[0][0]).toBe("/");
         expect(router.get.mock.calls[0][1]).toMatchObject({ search: "dogs" });
+    });
+
+    it("starts on Books on a books page and on ALL elsewhere", () => {
+        route.current.mockImplementation((name) => name === "books.*");
+        const radios = () => mount(SearchInput).findAll('[role="radio"]');
+        expect(radios()[0].attributes("aria-checked")).toBe("true");
+
+        route.current.mockImplementation(() => false);
+        expect(radios()[1].attributes("aria-checked")).toBe("true");
     });
 });

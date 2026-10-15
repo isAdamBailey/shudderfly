@@ -54,7 +54,7 @@ class SettingsTest extends TestCase
             ],
         ]);
 
-        $response->assertRedirect(route('welcome'));
+        $response->assertRedirect(route('dashboard'));
         $response->assertSessionHas('success', __('messages.settings.updated'));
 
         // Assert boolean setting was updated

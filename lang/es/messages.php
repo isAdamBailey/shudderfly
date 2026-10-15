@@ -4,6 +4,7 @@ return [
     'common.cancel' => 'Cancelar',
     'common.ok' => 'Aceptar',
     'common.close' => 'Cerrar',
+    'common.home' => 'Inicio',
 
     // Admin form modals
     'book.add_pages_title' => 'Agregar páginas',
@@ -418,13 +419,9 @@ return [
     'unblock_request.expired_heading' => 'Este enlace caducó',
     'unblock_request.expired_body' => 'Abre la aplicación y desbloquea desde tu panel.',
     'unblock_request.back_to_app' => 'Ir a :app',
-    'dashboard.new_book' => 'Nuevo libro',
-    'dashboard.add_new_book' => 'Añadir un nuevo libro',
-    'dashboard.close_book_form' => 'Cerrar formulario de libro',
     'dashboard.hero_default_summary' => 'Explora tus libros o mira todo lo que has compartido. Vuelve después de una semana ajetreada para ver un resumen personalizado con IA de tus últimas historias.',
     'dashboard.hero_summary_updated' => 'Resumen de IA · actualizado :date',
-    'dashboard.browse_collages' => 'Collages',
-    'dashboard.browse_chat' => 'Chat',
+    'dashboard.my_dashboard' => 'Mi panel',
 
     // World Clock - Timer
     'world_clock.timer_done' => '¡Se acabó el tiempo!',

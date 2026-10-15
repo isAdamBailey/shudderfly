@@ -464,15 +464,11 @@ function setTarget(newTarget) {
 }
 
 function getDefaultTarget() {
-    const currentUrl =
-        typeof window !== "undefined" ? window.location.pathname : "";
-    if (
-        currentUrl === "/" ||
-        currentUrl.startsWith("/books") ||
-        currentUrl.startsWith("/book/")
+    return ["books.*", "categories.show", "dashboard"].some((name) =>
+        route().current(name)
     )
-        return "books";
-    return "uploads";
+        ? "books"
+        : "uploads";
 }
 
 const toggleVoiceRecognition = async () => {

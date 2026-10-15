@@ -4,6 +4,7 @@ return [
     'common.cancel' => 'Annuler',
     'common.ok' => 'OK',
     'common.close' => 'Fermer',
+    'common.home' => 'Accueil',
 
     // Admin form modals
     'book.add_pages_title' => 'Ajouter des pages',
@@ -418,13 +419,9 @@ return [
     'unblock_request.expired_heading' => 'Ce lien a expiré',
     'unblock_request.expired_body' => 'Ouvre l\'application et débloque depuis ton tableau de bord.',
     'unblock_request.back_to_app' => 'Aller à :app',
-    'dashboard.new_book' => 'Nouveau livre',
-    'dashboard.add_new_book' => 'Ajouter un nouveau livre',
-    'dashboard.close_book_form' => 'Fermer le formulaire du livre',
     'dashboard.hero_default_summary' => 'Plonge dans tes livres ou parcours tout ce que tu as partagé. Reviens après une semaine bien remplie pour un résumé personnalisé de tes dernières histoires, créé par l\'IA.',
     'dashboard.hero_summary_updated' => 'Résumé IA · mis à jour le :date',
-    'dashboard.browse_collages' => 'Collages',
-    'dashboard.browse_chat' => 'Chat',
+    'dashboard.my_dashboard' => 'Mon tableau de bord',
 
     // World Clock - Timer
     'world_clock.timer_done' => 'C\'est fini !',

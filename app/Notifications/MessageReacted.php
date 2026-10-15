@@ -85,7 +85,7 @@ class MessageReacted extends Notification implements ShouldBroadcast
             ->line(__($lineKey, ['name' => $this->reactor->name, 'emoji' => $this->emoji]))
             ->line('"'.$this->contentText().'"')
             ->action(__('messages.reacted.action'), $this->url())
-            ->line(__('messages.notifications.email.opt_out_markdown', ['url' => route('welcome')]))
+            ->line(__('messages.notifications.email.opt_out_markdown', ['url' => route('profile.edit')]))
             ->line(__('messages.reacted.thank_you'));
     }
 

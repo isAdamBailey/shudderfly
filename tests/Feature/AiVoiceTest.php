@@ -455,7 +455,7 @@ class AiVoiceTest extends TestCase
         $this->fakeProvider();
 
         $this->speak()->assertNotFound();
-        $this->get(route('welcome'))->assertInertia(fn (Assert $page) => $page->where('aiVoice', null));
+        $this->get(route('dashboard'))->assertInertia(fn (Assert $page) => $page->where('aiVoice', null));
 
         Http::assertNothingSent();
     }
@@ -526,14 +526,14 @@ class AiVoiceTest extends TestCase
 
     public function test_ai_voice_prop_is_shared_only_when_enabled(): void
     {
-        $this->get(route('welcome'))->assertInertia(fn (Assert $page) => $page
+        $this->get(route('dashboard'))->assertInertia(fn (Assert $page) => $page
             ->where('aiVoice.voices.en.0', 'af_heart')
             ->where('aiVoice.voices.fr', ['ff_siwis'])
         );
 
         SiteSetting::where('key', AiVoice::SETTING_KEY)->update(['value' => '0']);
 
-        $this->get(route('welcome'))->assertInertia(fn (Assert $page) => $page
+        $this->get(route('dashboard'))->assertInertia(fn (Assert $page) => $page
             ->where('aiVoice', null)
         );
     }

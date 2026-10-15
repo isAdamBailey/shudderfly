@@ -42,7 +42,7 @@ class AdminController extends Controller
 
         $user->syncPermissions($permissions);
 
-        return redirect(route('welcome'));
+        return redirect(route('dashboard'));
     }
 
     /**
@@ -76,7 +76,7 @@ class AdminController extends Controller
         $user->syncPermissions();
         $user->delete();
 
-        return redirect(route('welcome'));
+        return redirect(route('dashboard'));
     }
 
     /**

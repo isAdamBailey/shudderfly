@@ -14,7 +14,6 @@ global.route = (name, params) => {
 
 const mockRouterPost = vi.hoisted(() => vi.fn());
 const mockCanAdmin = vi.hoisted(() => vi.fn(() => false));
-const mockCanEditPages = vi.hoisted(() => vi.fn(() => false));
 
 vi.mock("@inertiajs/vue3", () => ({
     Head: { name: "Head", template: "<head><slot /></head>", props: ["title"] },
@@ -29,9 +28,6 @@ vi.mock("@/composables/permissions", () => ({
     usePermissions: () => ({
         get canAdmin() {
             return mockCanAdmin();
-        },
-        get canEditPages() {
-            return mockCanEditPages();
         },
     }),
 }));
@@ -48,14 +44,6 @@ vi.mock("@/Pages/Users/Partials/OwnerPanel.vue", () => ({
     default: {
         name: "OwnerPanel",
         template: '<div class="owner-panel-stub" />',
-    },
-}));
-
-vi.mock("@/Pages/Books/NewBookForm.vue", () => ({
-    default: {
-        name: "NewBookForm",
-        template: '<form class="new-book-form-stub" />',
-        props: ["authors", "categories"],
     },
 }));
 
@@ -563,8 +551,7 @@ describe("UserShow", () => {
             expect(wrapper.text()).not.toContain("profile.recent_uploads");
         });
 
-        it("shows the hero summary and chat CTA to every owner regardless of permissions", () => {
-            mockCanEditPages.mockReturnValueOnce(false);
+        it("shows the hero summary to every owner without the old book and chat CTAs", () => {
             mockCanAdmin.mockReturnValueOnce(false);
 
             const wrapper = mount(UserShow, {
@@ -578,11 +565,11 @@ describe("UserShow", () => {
                 global: { stubs: ownerStubs },
             });
 
-            // Personalized welcome + navigation CTAs exposed to all users
             expect(wrapper.text()).toContain("profile.welcome_with_name");
-            expect(wrapper.text()).toContain("dashboard.browse_chat");
-            // Edit/admin-only actions hidden for a plain user
-            expect(wrapper.text()).not.toContain("dashboard.add_new_book");
+            // Adding a book lives on the Books page and Chat is in the nav.
+            expect(
+                wrapper.findComponent({ name: "NewBookForm" }).exists()
+            ).toBe(false);
             expect(wrapper.text()).not.toContain("Regenerate AI overview");
         });
 
@@ -605,75 +592,6 @@ describe("UserShow", () => {
             expect(wrapper.text()).toContain(
                 "You had a wonderful week of stories!"
             );
-        });
-
-        it("shows the new-book CTA and Add button only when isOwner and canEditPages", () => {
-            mockCanEditPages.mockReturnValueOnce(true);
-
-            const wrapper = mount(UserShow, {
-                props: {
-                    profileUser,
-                    isOwner: true,
-                    stats,
-                    recentMessages: [],
-                    recentReplies: [],
-                },
-                global: { stubs: ownerStubs },
-            });
-
-            expect(wrapper.text()).toContain("dashboard.add_new_book");
-            expect(
-                wrapper.findComponent({ name: "NewBookForm" }).exists()
-            ).toBe(false);
-        });
-
-        it("opens the new-book modal and closes it when the form emits close-form", async () => {
-            mockCanEditPages.mockReturnValueOnce(true);
-
-            const wrapper = mount(UserShow, {
-                props: {
-                    profileUser,
-                    isOwner: true,
-                    stats,
-                    recentMessages: [],
-                    recentReplies: [],
-                },
-                global: { stubs: ownerStubs },
-            });
-
-            const addButton = wrapper
-                .findAll("button")
-                .find((button) => button.text() === "dashboard.add_new_book");
-            await addButton.trigger("click");
-
-            expect(
-                wrapper.findComponent({ name: "NewBookForm" }).exists()
-            ).toBe(true);
-
-            await wrapper
-                .findComponent({ name: "NewBookForm" })
-                .vm.$emit("close-form");
-
-            expect(
-                wrapper.findComponent({ name: "NewBookForm" }).exists()
-            ).toBe(false);
-        });
-
-        it("hides the add-new-book button when the owner cannot edit pages", () => {
-            mockCanEditPages.mockReturnValueOnce(false);
-
-            const wrapper = mount(UserShow, {
-                props: {
-                    profileUser,
-                    isOwner: true,
-                    stats,
-                    recentMessages: [],
-                    recentReplies: [],
-                },
-                global: { stubs: ownerStubs },
-            });
-
-            expect(wrapper.text()).not.toContain("dashboard.add_new_book");
         });
     });
 });
