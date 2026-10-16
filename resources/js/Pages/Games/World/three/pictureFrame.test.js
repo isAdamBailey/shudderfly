@@ -4,16 +4,26 @@ import { describe, expect, it } from "vitest";
 import { frameBorder, PICTURE_FRAMES, pictureFrame } from "./pictureFrame.js";
 
 describe("picture frames", () => {
-    it("are the ones GamesWorld::PICTURE_FRAMES names", () => {
+    it("are the ones GamesWorld::PICTURE_FRAMES names, with its borders", () => {
         const php = readFileSync(
             `${process.cwd()}/app/Support/GamesWorld.php`,
             "utf8"
         );
-        const names = php
-            .match(/const PICTURE_FRAMES = \[([^\]]*)\]/)[1]
-            .match(/'([^']+)'/g)
-            .map((name) => name.slice(1, -1));
-        expect(Object.keys(PICTURE_FRAMES).sort()).toEqual(names.sort());
+        const borders = Object.fromEntries(
+            [
+                ...php
+                    .match(/const PICTURE_FRAMES = \[([^\]]*)\]/)[1]
+                    .matchAll(/'([^']+)' => (\d+)/g),
+            ].map(([, name, border]) => [name, Number(border)])
+        );
+        expect(
+            Object.fromEntries(
+                Object.keys(PICTURE_FRAMES).map((name) => [
+                    name,
+                    frameBorder(name),
+                ])
+            )
+        ).toEqual(borders);
     });
 
     it.each(Object.keys(PICTURE_FRAMES))(

@@ -29,6 +29,20 @@ export const PICTURE_FRAMES = {
         },
         rosettes: 7,
     },
+    // Guster's: chunky wood painted his toot green, a plain gold lip round
+    // the picture and a green knob at each corner.
+    green: {
+        border: 14,
+        depth: 9,
+        bevel: 3,
+        finish: { color: "#16a34a", metalness: 0.05, roughness: 0.55 },
+        lip: {
+            width: 3,
+            finish: { color: "#facc15", metalness: 0.6, roughness: 0.35 },
+            beads: 0,
+        },
+        rosettes: 5,
+    },
 };
 
 /** How far frame style `name`'s moulding reaches past its picture (0 for

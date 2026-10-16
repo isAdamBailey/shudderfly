@@ -251,7 +251,7 @@ class GamesWorldScenesTest extends TestCase
         foreach (GamesWorld::definitions() as $sceneId => $scene) {
             foreach ([...$scene['interactables'], ...($scene['photos'] ?? [])] as $item) {
                 if (isset($item['image']['frame'])) {
-                    $this->assertContains($item['image']['frame'], GamesWorld::PICTURE_FRAMES, "{$sceneId}.{$item['id']}");
+                    $this->assertArrayHasKey($item['image']['frame'], GamesWorld::PICTURE_FRAMES, "{$sceneId}.{$item['id']}");
                 }
             }
         }
@@ -350,6 +350,26 @@ class GamesWorldScenesTest extends TestCase
         $this->assertSame('toot-catch', $catch['minigame']);
         $this->assertSame('Toot Catch', $catch['label']);
         $this->assertSame(__('messages.games.world.minigames.toot_catch_line'), $catch['line']);
+    }
+
+    public function test_toot_catch_is_gusters_washing_machine_against_his_wall(): void
+    {
+        $room = GamesWorld::definitions()['guster-house.hall'];
+        $items = collect($room['interactables'])->keyBy('id');
+        $washer = $items['toot-catch'];
+
+        // On the floor against the back wall, with no gold name over it,
+        // like the kitchen's appliances.
+        $this->assertSame('washing-machine', $washer['model']);
+        $this->assertSame(0, $washer['z']);
+        $this->assertArrayNotHasKey('y', $washer);
+        $this->assertFalse($washer['titled']);
+
+        // Clear of the front door (three/footprints.js: 0.7 of its size
+        // across) and inside the room.
+        $half = $washer['size'] * 0.7 / 2;
+        $this->assertGreaterThan(0, $washer['x'] - $half);
+        $this->assertLessThan($items['front-door']['x'] - 60, $washer['x'] + $half);
     }
 
     public function test_gusters_house_has_toot_slots_on_the_wall(): void
@@ -1002,14 +1022,14 @@ class GamesWorldScenesTest extends TestCase
         $this->assertSame([], $src());
     }
 
-    public function test_hanks_photos_hang_clear_of_the_door_its_exit_sign_sconces_portrait_and_scroll(): void
+    /** Asserts room `$sceneId`'s photos hang inside its back wall, under
+     * the season's decorations, and clear of everything else on it. */
+    private function assertPhotosHangClear(string $sceneId): void
     {
-        $room = GamesWorld::definitions()['cockroach-house.hall'];
+        $room = GamesWorld::definitions()[$sceneId];
         $items = collect($room['interactables']);
-        // The ornate frame's moulding past the photo (three/pictureFrame.js),
-        // and under the season's decorations, which hang from 0.84 up the
+        // Under the season's decorations, which hang from 0.84 up the
         // wall, the biggest 90 tall (three/roomLooks.js).
-        $border = 18;
         $decorations = $room['frame'] / 2 * 0.84 - 45;
         // What else is on the back wall, as [left, right, bottom, top].
         $boxes = $items->where('z', 0)->map(fn ($item) => match (true) {
@@ -1019,20 +1039,107 @@ class GamesWorldScenesTest extends TestCase
             default => [$item['x'] - $item['size'] / 2, $item['x'] + $item['size'] / 2, $item['y'] ?? 0, ($item['y'] ?? 0) + $item['size']],
         });
 
-        $this->assertCount(2, $room['photos']);
+        // Each photo's box, its frame's moulding and all.
+        $framed = collect($room['photos'])->keyBy('id')->map(function ($photo) {
+            $border = GamesWorld::PICTURE_FRAMES[$photo['image']['frame'] ?? ''] ?? 0;
+
+            return [
+                $photo['x'] - $photo['image']['w'] / 2 - $border, $photo['x'] + $photo['image']['w'] / 2 + $border,
+                $photo['y'] - $border, $photo['y'] + $photo['image']['h'] + $border,
+            ];
+        });
+        $apart = fn ($a, $b) => $a[1] <= $b[0] || $a[0] >= $b[1] || $a[3] <= $b[2] || $a[2] >= $b[3];
+
+        foreach ($framed as $id => $box) {
+            foreach ($framed as $other => $otherBox) {
+                $this->assertTrue($id === $other || $apart($box, $otherBox), "{$id} overlaps {$other}");
+            }
+        }
+
         foreach ($room['photos'] as $photo) {
-            $this->assertSame(['book' => GamesWorld::HANK_BOOK], $photo['from']);
-            $this->assertSame('ornate', $photo['image']['frame']);
-            [$left, $right] = [$photo['x'] - $photo['image']['w'] / 2 - $border, $photo['x'] + $photo['image']['w'] / 2 + $border];
-            [$bottom, $top] = [$photo['y'] - $border, $photo['y'] + $photo['image']['h'] + $border];
+            [$left, $right, $bottom, $top] = $framed[$photo['id']];
             $this->assertGreaterThan(0, $left);
             $this->assertLessThan($room['size']['w'], $right);
             $this->assertLessThan($decorations, $top);
             foreach ($boxes as $id => $box) {
-                $apart = $right <= $box[0] || $left >= $box[1] || $top <= $box[2] || $bottom >= $box[3];
-                $this->assertTrue($apart, "{$photo['id']} overlaps {$items[$id]['id']}");
+                $this->assertTrue($apart([$left, $right, $bottom, $top], $box), "{$photo['id']} overlaps {$items[$id]['id']}");
             }
         }
+    }
+
+    public function test_hanks_photos_hang_clear_of_the_door_its_exit_sign_sconces_portrait_and_scroll(): void
+    {
+        $room = GamesWorld::definitions()['cockroach-house.hall'];
+
+        $this->assertCount(2, $room['photos']);
+        foreach ($room['photos'] as $photo) {
+            $this->assertSame(['book' => GamesWorld::HANK_BOOK], $photo['from']);
+            $this->assertSame('ornate', $photo['image']['frame']);
+        }
+        $this->assertPhotosHangClear('cockroach-house.hall');
+    }
+
+    public function test_gusters_photos_hang_clear_of_his_door_washer_lamp_and_slot_machine(): void
+    {
+        $room = GamesWorld::definitions()['guster-house.hall'];
+
+        $this->assertCount(4, $room['photos']);
+        foreach ($room['photos'] as $photo) {
+            $this->assertSame(['search' => GamesWorld::GUSTER_SEARCH], $photo['from']);
+        }
+        $this->assertPhotosHangClear('guster-house.hall');
+    }
+
+    /** Guster's House's photos' pictures, as the page gets them. */
+    private function gusterPhotos(): array
+    {
+        return array_values(array_filter(array_map(
+            fn ($photo) => $photo['image']['src'] ?? null,
+            GamesWorld::scenes()['guster-house.hall']['photos'],
+        )));
+    }
+
+    public function test_gusters_house_hangs_photos_of_pages_that_mention_him(): void
+    {
+        SiteSetting::updateOrCreate(['key' => ContentBlockService::SETTING], ['value' => true]);
+        $said = Page::factory()->create(['content' => '<p>Big GUSTER nap</p>', 'media_path' => 'https://cdn.test/nap.jpg']);
+        $book = Book::factory()->create(['title' => 'Guster at the beach']);
+        $titled = Page::factory()->create(['book_id' => $book->id, 'content' => 'Sand', 'media_path' => 'https://cdn.test/sand.webp']);
+        // Not a photo, not one anyone can see, not about him.
+        Page::factory()->create(['content' => 'Guster video', 'media_path' => 'https://cdn.test/guster.mp4']);
+        Page::factory()->create(['content' => 'Guster hiding', 'media_path' => 'https://cdn.test/hidden.jpg', 'blocked' => true]);
+        Page::factory()->create(['content' => 'The cockroach', 'media_path' => 'https://cdn.test/other.jpg']);
+
+        // Two photos for four frames: the rest hang blank.
+        $this->assertEqualsCanonicalizing([$said->media_path, $titled->media_path], $this->gusterPhotos());
+    }
+
+    public function test_forgetting_the_photo_picks_lets_new_photos_hang_the_same_day(): void
+    {
+        $this->assertSame([], $this->gusterPhotos());
+        Page::factory()->create(['content' => 'Guster', 'media_path' => 'https://cdn.test/guster.jpg']);
+        $this->assertSame([], $this->gusterPhotos());
+
+        GamesWorld::forgetPhotoPicks();
+
+        $this->assertSame(['https://cdn.test/guster.jpg'], $this->gusterPhotos());
+    }
+
+    public function test_gusters_photos_stay_all_day_and_change_the_next(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 10, 11, 9, 0, 0, config('app.local_timezone')));
+        Page::factory()->count(20)->sequence(fn ($s) => ['media_path' => "https://cdn.test/guster-{$s->index}.jpg"])->create(['content' => 'Guster']);
+        $photos = $this->gusterPhotos();
+        $this->assertCount(4, $photos);
+        $this->assertCount(4, array_unique($photos));
+
+        // A second visit that day runs no query for them.
+        Carbon::setTestNow(Carbon::create(2026, 10, 11, 23, 30, 0, config('app.local_timezone')));
+        $this->assertSame([], $this->pickQueries(fn () => $this->assertSame($photos, $this->gusterPhotos())));
+
+        // After midnight, a fresh pick.
+        Carbon::setTestNow(Carbon::create(2026, 10, 12, 0, 30, 0, config('app.local_timezone')));
+        $this->assertNotEmpty(preg_grep('/content/', $this->pickQueries(fn () => $this->gusterPhotos())));
     }
 
     public function test_guster_toots_the_sounds_named_after_him(): void
