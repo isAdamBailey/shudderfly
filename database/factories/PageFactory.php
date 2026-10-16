@@ -25,7 +25,8 @@ class PageFactory extends Factory
         return [
             'book_id' => Book::factory(),
             'content' => $faker->paragraphs(3, true),
-            'media_path' => $faker->picsumUrl(640, 480),
+            // Ending .jpg, as uploads do, so Page::hasImage() finds it.
+            'media_path' => $faker->picsumUrl(640, 480, imageExtension: 'jpg'),
             'blocked' => false,
         ];
     }

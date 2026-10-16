@@ -77,6 +77,15 @@ class Page extends Model
             ->orWhere('media_path', 'like', '%.webp%');
     }
 
+    /** Pages a search for `$term` finds on the Photos page: it's in their
+     * words or their book's title. */
+    public function scopeMentioning($query, string $term)
+    {
+        return $query->where(fn ($query) => $query
+            ->where('content', 'LIKE', "%{$term}%")
+            ->orWhereHas('book', fn ($book) => $book->where('title', 'LIKE', "%{$term}%")));
+    }
+
     public function book(): BelongsTo
     {
         return $this->belongsTo(Book::class);

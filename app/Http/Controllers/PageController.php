@@ -238,12 +238,7 @@ class PageController extends Controller
             ->when($search, function ($query) use ($searchQueries) {
                 $query->where(function ($query) use ($searchQueries) {
                     foreach ($searchQueries as $term) {
-                        $query->orWhere(function ($q) use ($term) {
-                            $q->where('content', 'LIKE', '%'.$term.'%')
-                                ->orWhereHas('book', function ($query) use ($term) {
-                                    $query->where('title', 'LIKE', '%'.$term.'%');
-                                });
-                        });
+                        $query->orWhere(fn ($q) => $q->mentioning($term));
                     }
                 });
             });

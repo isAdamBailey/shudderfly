@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             SiteSeeder::class,
             BookSeeder::class,
             SongSeeder::class,
+            GamesWorldPhotoSeeder::class,
         ]);
     }
 }

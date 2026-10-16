@@ -17,6 +17,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 
 /**
  * The Games World scene registry: every place in the world (the road, and
@@ -107,6 +108,10 @@ final class GamesWorld
     /** The slug of Hank's book: the Cockroach's House hangs his photos. */
     public const HANK_BOOK = 'hank';
 
+    /** What Guster's House searches the family's pages for: his photos
+     * hang on his wall. */
+    public const GUSTER_SEARCH = 'guster';
+
     /** Guster's hello, a recording on the Sounds page ("guster hello"): its
      * S3 key, his toot when he's tapped (the puff with it). Only production has
      * the file: elsewhere his toot falls back to the fart. */
@@ -155,12 +160,14 @@ final class GamesWorld
 
     /** Props modelled in 3D that an interactable's `model` may name:
      * three/models.js (a Vitest test keeps them in step). */
-    public const MODELS = ['radio', 'table-lamp', 'slot-machine', 'fridge', 'oven'];
+    public const MODELS = ['radio', 'table-lamp', 'slot-machine', 'fridge', 'oven', 'washing-machine'];
 
     /** Frames a wall picture or a room's photo can hang in (its
      * `image.frame`), drawn by three/pictureFrame.js; with none it hangs on
-     * a plain panel. The moulding reaches past the picture, so leave room. */
-    public const PICTURE_FRAMES = ['ornate'];
+     * a plain panel. Each by how far its moulding reaches past the picture
+     * (its `border` there; a Vitest test keeps them in step), so leave
+     * that much room. */
+    public const PICTURE_FRAMES = ['ornate' => 18, 'green' => 14];
 
     /** The moves a toy may play: CAST_MOVES in characters.js (a Vitest test
      * keeps them in step). A prop can play any; a cast member only its own. */
@@ -337,17 +344,30 @@ final class GamesWorld
             ...self::library(),
 
             // --- Guster's House: all in his greens -------------------------------
+            // Longer than the frame: past his slot machine, photos of him
+            // (pages that mention him) hang along the wall, a new set each
+            // day, and one more over his washing machine.
             'guster-house.hall' => self::room('guster_house_hall', [
-                'size' => ['w' => self::ROOM_FRAME, 'd' => 450],
+                'size' => ['w' => 1400, 'd' => 450],
                 'spawn' => ['x' => 350, 'z' => 300],
                 'walls' => ['back' => 'wallpaper-green', 'floor' => 'moss'],
-                'lights' => [self::lamp('lamp', 650, 280, 0)],
+                'photos' => array_map(
+                    fn ($n, $x) => self::photoFrame("guster-{$n}", $x, 160, 100, 130, ['search' => self::GUSTER_SEARCH], 'green'),
+                    [1, 2, 3, 4],
+                    [180, 960, 1110, 1260],
+                ),
+                // A second, unseen lamp lights the far end and his photos:
+                // the bulb by the door is the switch for both.
+                'lights' => [self::lamp('lamp', 650, 280, 0), self::lamp('far-lamp', 1110, 340, 120)],
             ], [
                 self::roomDoor('front-door', 450, 'road', 'guster-house', exit: true),
-                self::lampSwitch(650, 280),
-                self::resident('guster', 670, 220, ['move' => 'bounce', 'toot' => 'guster', 'clip' => self::GUSTER_HELLO]),
-                // Guster's game, played on the spot: catch the falling foods.
-                self::minigame('toot-catch', 220, 180, '🧺'),
+                self::lampSwitch(650, 280, ['lamp', 'far-lamp']),
+                self::resident('guster', 1130, 240, ['size' => 150, 'move' => 'bounce', 'toot' => 'guster', 'clip' => self::GUSTER_HELLO]),
+                // Guster's game is his washing machine, untitled like the
+                // kitchen's appliances: catch the falling foods. As wide
+                // and deep as its model (three/footprints.js: 0.7 of its
+                // size across), and a thrown thing can land on it.
+                self::minigame('toot-catch', 180, 0, '🧺', ['size' => 140, 'model' => 'washing-machine', 'titled' => false]),
                 // His slot machine, in his greens with a toot cloud on top,
                 // hung on the back wall: three Gusters wins.
                 self::minigame('toot-slots', 790, 0, '🎰', ['y' => 90, 'size' => 130, 'model' => 'slot-machine']),
@@ -645,10 +665,10 @@ final class GamesWorld
     }
 
     /** A bulb on a room's back wall, `y` up it, that is the room's `lamp`
-     * and its switch. */
-    private static function lampSwitch(int $x, int $y): array
+     * and its switch, or the switch for all of `$lights`. */
+    private static function lampSwitch(int $x, int $y, array $lights = ['lamp']): array
     {
-        return self::toy('lamp-switch', $x, 0, '💡', 'lamp', ['y' => $y, 'size' => 50, 'move' => 'wiggle', 'light' => 'lamp']);
+        return self::toy('lamp-switch', $x, 0, '💡', 'lamp', ['y' => $y, 'size' => 50, 'move' => 'wiggle', 'light' => count($lights) === 1 ? $lights[0] : $lights]);
     }
 
     /** A switch near the open front of a room that turns all of `$lights`
@@ -794,8 +814,9 @@ final class GamesWorld
     }
 
     /** A photo frame on a room's back wall, its bottom `y` up it, `w` ×
-     * `h`, filled with one of the photos `from` names (for now only
-     * `['book' => '<slug>']`, that book's pictures), picked once a day by
+     * `h`, filled with one of the photos `from` names (`['book' =>
+     * '<slug>']`, that book's pictures, or `['search' => '<term>']`, the
+     * pictures on pages mentioning it), picked once a day by
      * scenes(); blank if there's none to give it. In one of PICTURE_FRAMES,
      * or on a plain panel. A room's `photos` are decor: nothing to tap. */
     private static function photoFrame(string $id, int $x, int $y, int $w, int $h, array $from, ?string $frame = null): array
@@ -1018,9 +1039,7 @@ final class GamesWorld
         // Each photo source's pictures today, enough for every frame in the
         // world that names it, handed out in turn so frames sharing one
         // differ.
-        $photos = collect($definitions)
-            ->flatMap(fn ($scene) => $scene['photos'] ?? [])
-            ->groupBy(fn ($frame) => self::photoSource($frame['from']))
+        $photos = self::photoFrames($definitions)
             ->map(fn ($frames) => collect(self::photos($frames->first()['from'], $frames->count())));
 
         return collect($definitions)
@@ -1143,26 +1162,60 @@ final class GamesWorld
             ->all())];
     }
 
-    /** The key photo source `$photos` is known by: `book:<slug>`. */
+    /** The key photo source `$photos` is known by: `book:<slug>` or
+     * `search:<term>`. */
     private static function photoSource(array $photos): string
     {
-        return "book:{$photos['book']}";
+        return self::photoKind($photos).':'.reset($photos);
+    }
+
+    /** Which kind of photo source `$photos` is: `book` or `search`. */
+    private static function photoKind(array $photos): string
+    {
+        $kind = array_key_first($photos);
+
+        return in_array($kind, ['book', 'search'], true)
+            ? $kind
+            : throw new InvalidArgumentException("Unknown photo source: {$kind}");
     }
 
     /** Up to `$count` pictures from photo source `$photos`, picked at
-     * random once a day: a book's image pages anyone can see on the Photos
-     * page. */
+     * random once a day, from the image pages anyone can see on the Photos
+     * page: a book's, or those its search for a term finds
+     * (Page::mentioning()). */
     private static function photos(array $photos, int $count): array
     {
         return self::pickedToday(self::photoSource($photos).":{$count}", fn () => Page::query()
             ->notBlocked()
-            ->whereIn('book_id', Book::select('id')->where('slug', $photos['book']))
+            ->when(
+                self::photoKind($photos) === 'book',
+                fn ($pages) => $pages->whereIn('book_id', Book::select('id')->where('slug', $photos['book'])),
+                fn ($pages) => $pages->mentioning($photos['search']),
+            )
             ->hasImage()
             ->inRandomOrder()
             ->limit($count)
             ->get(['id', 'media_path'])
             ->pluck('media_path')
             ->all());
+    }
+
+    /** Every room's photo frames in `$definitions`, grouped by
+     * photoSource(). */
+    private static function photoFrames(array $definitions): Collection
+    {
+        return collect($definitions)
+            ->flatMap(fn ($scene) => $scene['photos'] ?? [])
+            ->groupBy(fn ($frame) => self::photoSource($frame['from']));
+    }
+
+    /** Forgets today's pick of photos for every frame, so the next visit
+     * picks again (a seeder that has just added some). */
+    public static function forgetPhotoPicks(): void
+    {
+        foreach (self::photoFrames(self::definitions()) as $source => $frames) {
+            Cache::forget(self::dayPickKey("{$source}:{$frames->count()}"));
+        }
     }
 
     /** Frame `$frame`, given the next of its source's pictures in
@@ -1186,7 +1239,7 @@ final class GamesWorld
     private static function pickedToday(string $key, Closure $pick): array
     {
         $today = CarbonImmutable::now(config('app.local_timezone'));
-        $cacheKey = "games-world:day-picks:{$key}:{$today->toDateString()}";
+        $cacheKey = self::dayPickKey($key, $today);
 
         $picked = Cache::get($cacheKey);
         if ($picked === null) {
@@ -1197,6 +1250,14 @@ final class GamesWorld
         }
 
         return $picked;
+    }
+
+    /** The cache key of pick `$key` on `$day` (today, Los Angeles time). */
+    private static function dayPickKey(string $key, ?CarbonImmutable $day = null): string
+    {
+        $day ??= CarbonImmutable::now(config('app.local_timezone'));
+
+        return "games-world:day-picks:{$key}:{$day->toDateString()}";
     }
 
     /** A scene's or interactable's TRANSLATED fields, each filled in from

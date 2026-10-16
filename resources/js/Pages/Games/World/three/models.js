@@ -3,6 +3,7 @@ import { fridgeModel } from "./fridge.js";
 import { ovenModel } from "./oven.js";
 import { slotMachineModel } from "./slotMachine.js";
 import { tableLampModel } from "./tableLamp.js";
+import { washingMachineModel } from "./washingMachine.js";
 
 // Props modelled in 3D, by the name an interactable's `model` gives
 // (GamesWorld::MODELS; a test keeps the lists in step). Each builds a
@@ -16,4 +17,5 @@ export const MODELS = {
     "slot-machine": slotMachineModel,
     fridge: fridgeModel,
     oven: ovenModel,
+    "washing-machine": washingMachineModel,
 };
