@@ -43,14 +43,14 @@
 }
 
 [data-theme="christmas"] {
-    --wc-face: #f8f8ff;
-    --wc-rim: #ffd700;
-    --wc-tick: #165b33;
-    --wc-tick-minor: #2d5a27;
-    --wc-numeral: #be0b31;
-    --wc-hand: #165b33;
-    --wc-second: #d42426;
-    --wc-cap: #ffd700;
+    --wc-face: #f7f9fc;
+    --wc-rim: #e8b547;
+    --wc-tick: #0f3d2e;
+    --wc-tick-minor: #1f6b45;
+    --wc-numeral: #b3192b;
+    --wc-hand: #0f3d2e;
+    --wc-second: #d7263d;
+    --wc-cap: #e8b547;
 }
 
 [data-theme="halloween"] {
@@ -80,21 +80,21 @@
     .text-theme-title {
         @apply text-amber-400
     dark:text-gray-100
-    christmas:text-christmas-berry
+    christmas:text-christmas-gold
     halloween:text-halloween-pumpkin;
     }
 
     .text-theme-book-title {
         @apply text-indigo-600
     dark:text-gray-700
-    christmas:text-christmas-green
+    christmas:text-christmas-spruce
     halloween:text-halloween-purple;
     }
 
     .text-theme-primary {
         @apply text-amber-400
     dark:text-gray-400
-    christmas:text-christmas-berry
+    christmas:text-christmas-candle
     halloween:text-halloween-orange;
     }
 
@@ -109,14 +109,14 @@
     .bg-theme-primary {
         @apply bg-indigo-600
     dark:bg-indigo-900
-    christmas:bg-christmas-green
+    christmas:bg-christmas-spruce
     halloween:bg-halloween-midnight;
     }
 
     .bg-theme-secondary {
         @apply bg-gray-300
     dark:bg-gray-300
-    christmas:bg-christmas-holly
+    christmas:bg-christmas-evergreen
     halloween:bg-halloween-witch;
     }
 
@@ -132,7 +132,7 @@
     dark:bg-red-700
     hover:bg-amber-500
     dark:hover:bg-amber-500
-    christmas:hover:bg-christmas-mint
+    christmas:hover:bg-christmas-gold
     halloween:hover:bg-halloween-spooky;
     }
 
@@ -141,7 +141,7 @@
     .bg-theme-selected {
         @apply bg-indigo-600 text-white
     dark:bg-white dark:text-gray-900
-    christmas:bg-christmas-red christmas:text-white
+    christmas:bg-christmas-poinsettia christmas:text-white
     halloween:bg-halloween-orange halloween:text-white
     shadow;
     }
@@ -158,7 +158,7 @@
     .bg-rainbow {
         @apply bg-gradient-to-r from-red-500 via-blue-500 to-indigo-600
         dark:from-red-950 dark:via-blue-900 dark:to-indigo-900
-        christmas:from-christmas-green christmas:via-christmas-pine christmas:to-christmas-berry
+        christmas:from-christmas-spruce christmas:via-christmas-evergreen christmas:to-christmas-spruce
         fireworks:from-red-500 fireworks:via-blue-500 fireworks:to-red-500
         halloween:from-halloween-midnight halloween:via-halloween-orange halloween:to-halloween-witch;
     }
@@ -181,7 +181,7 @@
     .border-theme-input {
         @apply border-indigo-600
     dark:border-gray-800
-    christmas:border-christmas-holly
+    christmas:border-christmas-evergreen
     halloween:border-halloween-purple;
     }
 
@@ -196,21 +196,21 @@
     .border-theme-button-active {
         @apply border-indigo-600
     dark:border-amber-400
-    christmas:border-christmas-berry
+    christmas:border-christmas-cranberry
     halloween:border-halloween-pumpkin;
     }
 
     .hover\:bg-theme-button-active:hover {
         @apply hover:bg-amber-500
     dark:hover:bg-amber-500
-    christmas:hover:bg-christmas-silver
+    christmas:hover:bg-christmas-candle
     halloween:hover:bg-halloween-orange;
     }
 
     .active\:bg-theme-button:active {
         @apply active:bg-orange-900
     dark:active:bg-amber-700
-    christmas:active:bg-christmas-berry
+    christmas:active:bg-christmas-evergreen
     halloween:active:bg-halloween-witch;
     }
 
@@ -224,7 +224,7 @@
     .focus\:shadow-theme-button:focus {
         @apply focus:shadow-outline-blue
     dark:focus:shadow-outline-amber
-    christmas:focus:shadow-outline-christmas-mint
+    christmas:focus:shadow-outline-christmas-ice
     halloween:focus:shadow-outline-halloween-spooky;
     }
 
@@ -252,27 +252,27 @@
     .text-theme-button-active {
         @apply text-gray-800
     dark:text-gray-900
-    christmas:text-christmas-berry
+    christmas:text-christmas-spruce
     halloween:text-halloween-black;
     }
 
     .hover\:text-theme-button-hover {
         @apply hover:text-gray-800
     dark:hover:text-gray-900
-    christmas:hover:text-christmas-berry
+    christmas:hover:text-christmas-spruce
     halloween:hover:text-halloween-midnight;
     }
 
     .hover\:bg-theme-button:hover {
         @apply hover:bg-amber-400
     dark:hover:bg-amber-500
-    christmas:hover:bg-christmas-mint
+    christmas:hover:bg-christmas-gold
     halloween:hover:bg-halloween-candy;
     }
 
     .bg-game-modal {
         @apply bg-neutral-950/95 text-gray-100 shadow-xl ring-1 ring-white/10
-      christmas:bg-christmas-pine/95
+      christmas:bg-christmas-spruce/95
       halloween:bg-halloween-midnight/95
       fireworks:bg-slate-950/95;
     }
@@ -622,115 +622,92 @@
     }
 }
 
-/* Christmas Snow Animation - Optimized for mobile performance */
-@keyframes snowfall {
-    0% {
-        transform: translate3d(0, -100vh, 0);
-        opacity: 0;
+/* ---------------------------------------------------------------------------
+   Christmas winter night, laid out like the Halloween sky below: fixed
+   pseudo-elements at negative z-index, above <body>'s background and below
+   the app shell (both layouts carry `christmas:bg-transparent`), so nothing
+   in the page needs lifting over it.
+   --------------------------------------------------------------------------- */
+@keyframes christmas-snowfall {
+    from {
+        transform: translate3d(0, 0, 0);
     }
-    10% {
-        opacity: 1;
-    }
-    90% {
-        opacity: 1;
-    }
-    100% {
-        transform: translate3d(50px, 100vh, 0);
-        opacity: 0;
+    /* One whole repeat of both flake tiles (600px and 300px), so the loop
+       never shows a seam. */
+    to {
+        transform: translate3d(0, 600px, 0);
     }
 }
 
-/* Snow animation only when Christmas theme is active - simplified for performance */
 [data-theme="christmas"] body {
-    position: relative;
     overflow-x: hidden;
+    /* Propagates to the canvas, so overscroll past either end stays night. */
+    background-color: theme("colors.christmas.night");
 }
 
-/* Single optimized snow layer with minimal gradients */
+/* Deep winter sky, a cold moonglow and a few stars. */
+/* prettier-ignore */
 [data-theme="christmas"] body::before {
     content: "";
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 150%;
+    inset: 0;
     pointer-events: none;
-    z-index: 0;
-    /* Reduced to 8 snowflakes for better performance */
-    background-image: radial-gradient(
-            circle at 15% 10%,
-            rgba(255, 255, 255, 0.9) 1.5px,
-            transparent 1.5px
-        ),
-        radial-gradient(
-            circle at 35% 20%,
-            rgba(255, 255, 255, 0.9) 1.5px,
-            transparent 1.5px
-        ),
-        radial-gradient(
-            circle at 55% 5%,
-            rgba(255, 255, 255, 0.9) 1.5px,
-            transparent 1.5px
-        ),
-        radial-gradient(
-            circle at 75% 15%,
-            rgba(255, 255, 255, 0.9) 1.5px,
-            transparent 1.5px
-        ),
-        radial-gradient(
-            circle at 25% 30%,
-            rgba(255, 255, 255, 0.95) 2px,
-            transparent 2px
-        ),
-        radial-gradient(
-            circle at 65% 25%,
-            rgba(255, 255, 255, 0.95) 2px,
-            transparent 2px
-        ),
-        radial-gradient(
-            circle at 45% 35%,
-            rgba(255, 255, 255, 1) 2.5px,
-            transparent 2.5px
-        ),
-        radial-gradient(
-            circle at 85% 40%,
-            rgba(255, 255, 255, 1) 2.5px,
-            transparent 2.5px
-        );
-    background-size: 100% 60%;
-    background-repeat: repeat;
-    animation: snowfall 20s linear infinite;
-    /* Removed blur filter for better performance */
+    z-index: -2;
+    background-image:
+        radial-gradient(circle at 86% 7%, rgba(220, 235, 245, 0.2) 0, rgba(156, 199, 228, 0.08) 24%, transparent 46%),
+        radial-gradient(circle at 14% 16%, rgba(244, 213, 141, 0.85) 1.5px, transparent 2px),
+        radial-gradient(circle at 38% 8%, rgba(220, 235, 245, 0.7) 1px, transparent 1.5px),
+        radial-gradient(circle at 61% 21%, rgba(220, 235, 245, 0.8) 1px, transparent 1.5px),
+        radial-gradient(circle at 74% 4%, rgba(244, 213, 141, 0.7) 1px, transparent 1.5px),
+        radial-gradient(circle at 27% 37%, rgba(220, 235, 245, 0.5) 1px, transparent 1.5px),
+        /* snow lying along the bottom of the screen */
+        radial-gradient(ellipse 80% 22% at 25% 100%, rgba(220, 235, 245, 0.16), transparent 80%),
+        radial-gradient(ellipse 70% 18% at 80% 100%, rgba(220, 235, 245, 0.12), transparent 80%),
+        linear-gradient(180deg, #0a1428 0%, theme("colors.christmas.night") 40%, #1b2f55 85%, #23396a 100%);
+}
+
+/* Falling snow: flakes scattered over a 600px tile (big, near) and a
+   300px one (small, far), falling together. The layer overhangs the
+   viewport by one repeat at the top only (not the sides too, to keep this
+   always-on GPU layer small on phones), which the animation slides into
+   view. */
+/* prettier-ignore */
+[data-theme="christmas"] body::after {
+    content: "";
+    position: fixed;
+    top: -600px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: -1;
+    background-image:
+        radial-gradient(circle at 44% 22%, rgba(255, 255, 255, 0.76) 2.5px, transparent 3.0px),
+        radial-gradient(circle at 71% 15%, rgba(255, 255, 255, 0.76) 2.5px, transparent 3.0px),
+        radial-gradient(circle at 67% 30%, rgba(255, 255, 255, 0.84) 2.0px, transparent 2.5px),
+        radial-gradient(circle at 11% 33%, rgba(255, 255, 255, 0.83) 2.0px, transparent 2.5px),
+        radial-gradient(circle at 75% 18%, rgba(255, 255, 255, 0.88) 3.0px, transparent 3.5px),
+        radial-gradient(circle at 77% 10%, rgba(255, 255, 255, 0.83) 2.5px, transparent 3.0px),
+        radial-gradient(circle at 31% 8%, rgba(255, 255, 255, 0.78) 2.5px, transparent 3.0px),
+        radial-gradient(circle at 56% 21%, rgba(255, 255, 255, 0.86) 2.5px, transparent 3.0px),
+        radial-gradient(circle at 74% 90%, rgba(255, 255, 255, 0.87) 2.0px, transparent 2.5px),
+        radial-gradient(circle at 84% 27%, rgba(255, 255, 255, 0.51) 1.0px, transparent 1.5px),
+        radial-gradient(circle at 11% 75%, rgba(255, 255, 255, 0.44) 1.0px, transparent 1.5px),
+        radial-gradient(circle at 90% 71%, rgba(255, 255, 255, 0.46) 1.0px, transparent 1.5px),
+        radial-gradient(circle at 77% 61%, rgba(255, 255, 255, 0.45) 1.0px, transparent 1.5px),
+        radial-gradient(circle at 26% 92%, rgba(255, 255, 255, 0.42) 1.5px, transparent 2.0px),
+        radial-gradient(circle at 41% 70%, rgba(255, 255, 255, 0.47) 1.0px, transparent 1.5px),
+        radial-gradient(circle at 60% 39%, rgba(255, 255, 255, 0.41) 1.5px, transparent 2.0px);
+    background-size: 600px 600px, 600px 600px, 600px 600px, 600px 600px, 600px 600px, 600px 600px, 600px 600px, 600px 600px, 600px 600px, 300px 300px, 300px 300px, 300px 300px, 300px 300px, 300px 300px, 300px 300px, 300px 300px;
+    animation: christmas-snowfall 40s linear infinite;
     will-change: transform;
-    /* Hardware acceleration */
-    transform: translateZ(0);
-    backface-visibility: hidden;
 }
 
-/* Ensure Page/Show content appears above snow */
-[data-theme="christmas"] main {
-    position: relative;
-    z-index: 1;
-}
-
-[data-theme="christmas"] main > div:not(.fixed) {
-    position: relative;
-    z-index: 1;
-}
-
-/* Ensure images and media in page/show appear above snow */
-/* Exclude Google Maps images which use their own positioning */
-[data-theme="christmas"] main img:not(.gm-style img, .book-table__backdrop),
-[data-theme="christmas"] main video,
-[data-theme="christmas"] main iframe {
-    position: relative;
-    z-index: 1;
-}
-
-/* Ensure the page view (Page/Show.vue) appears above snow */
-[data-theme="christmas"] .book-table {
-    position: relative;
-    z-index: 1;
+@media (prefers-reduced-motion: reduce) {
+    [data-theme="christmas"] body::after {
+        animation: none;
+        will-change: auto;
+    }
 }
 
 /* ---------------------------------------------------------------------------

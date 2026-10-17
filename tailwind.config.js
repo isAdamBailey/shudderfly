@@ -25,17 +25,20 @@ module.exports = {
                 content: ["Newsreader", ...defaultTheme.fontFamily.sans],
             },
             colors: {
+                // Storybook Christmas: two greens far enough apart to tell,
+                // two reds, a warm antique gold (on dark surfaces only: it
+                // fails contrast on snow), and ice blue in place of silver
+                // and mint. `night` is the page backdrop (app.css).
                 christmas: {
-                    red: "#D42426",
-                    green: "#165B33",
-                    gold: "#FFD700",
-                    silver: "#C0C0C0",
-                    pine: "#2D5A27",
-                    holly: "#00843D",
-                    berry: "#BE0B31",
-                    snow: "#F8F8FF",
-                    candy: "#EE204D",
-                    mint: "#2AC8A4",
+                    spruce: "#0F3D2E",
+                    evergreen: "#1F6B45",
+                    cranberry: "#B3192B",
+                    poinsettia: "#D7263D",
+                    gold: "#E8B547",
+                    candle: "#F4D58D",
+                    ice: "#9CC7E4",
+                    snow: "#F7F9FC",
+                    night: "#0E1B33",
                 },
                 halloween: {
                     orange: "#FF6600",

@@ -101,10 +101,10 @@ const searchPlaceholder = computed(() => {
 const searchInputClass = computed(() => [
     "flex-1 w-full dark:bg-gray-800 dark:text-gray-100",
     isListening.value
-        ? "border-red-700 border-2 dark:border-red-700 christmas:border-christmas-berry halloween:border-halloween-candy"
+        ? "border-red-700 border-2 dark:border-red-700 christmas:border-christmas-cranberry halloween:border-halloween-candy"
         : hasGoodResult.value && !isListening.value
-        ? "border-green-600 border-2 dark:border-green-600 christmas:border-christmas-holly halloween:border-halloween-witch"
-        : "dark:border-gray-600 border-gray-300 christmas:border-christmas-holly halloween:border-halloween-purple",
+        ? "border-green-600 border-2 dark:border-green-600 christmas:border-christmas-evergreen halloween:border-halloween-witch"
+        : "dark:border-gray-600 border-gray-300 christmas:border-christmas-evergreen halloween:border-halloween-purple",
     isSupported.value ? "pr-5" : "",
 ]);
 
@@ -476,11 +476,11 @@ onBeforeUnmount(() => {
                             type="button"
                             class="self-center w-8 h-8 flex-shrink-0 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 christmas:focus:ring-christmas-gold halloween:focus:ring-halloween-orange flex items-center justify-center"
                             :class="{
-                                'bg-red-700 hover:bg-purple-400 dark:bg-red-700 dark:hover:bg-purple-400 text-white christmas:bg-christmas-berry christmas:hover:bg-christmas-mint halloween:bg-halloween-candy halloween:hover:bg-halloween-spooky':
+                                'bg-red-700 hover:bg-purple-400 dark:bg-red-700 dark:hover:bg-purple-400 text-white christmas:bg-christmas-cranberry christmas:hover:bg-christmas-poinsettia halloween:bg-halloween-candy halloween:hover:bg-halloween-spooky':
                                     isListening,
-                                'bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white christmas:bg-christmas-holly christmas:hover:bg-christmas-green halloween:bg-halloween-witch halloween:hover:bg-halloween-purple':
+                                'bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white christmas:bg-christmas-evergreen christmas:hover:bg-christmas-spruce halloween:bg-halloween-witch halloween:hover:bg-halloween-purple':
                                     hasGoodResult && !isListening,
-                                'bg-blue-600 hover:bg-blue-700 dark:bg-gray-800 dark:hover:bg-gray-700 text-white christmas:bg-christmas-green christmas:hover:bg-christmas-holly halloween:bg-halloween-midnight halloween:hover:bg-halloween-witch':
+                                'bg-blue-600 hover:bg-blue-700 dark:bg-gray-800 dark:hover:bg-gray-700 text-white christmas:bg-christmas-spruce christmas:hover:bg-christmas-evergreen halloween:bg-halloween-midnight halloween:hover:bg-halloween-witch':
                                     !isListening && !hasGoodResult,
                             }"
                             :disabled="isLoading"
@@ -516,7 +516,7 @@ onBeforeUnmount(() => {
                                 class="absolute right-2 top-1/2 transform -translate-y-1/2"
                             >
                                 <div
-                                    class="bg-red-600 text-white christmas:bg-christmas-berry halloween:bg-halloween-candy text-xs rounded-full w-4 h-4 flex items-center justify-center"
+                                    class="bg-red-600 text-white christmas:bg-christmas-cranberry halloween:bg-halloween-candy text-xs rounded-full w-4 h-4 flex items-center justify-center"
                                     :title="speechErrorMessage"
                                 >
                                     !

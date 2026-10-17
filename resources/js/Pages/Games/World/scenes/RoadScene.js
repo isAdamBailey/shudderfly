@@ -83,6 +83,19 @@ const ROAD_TOOT = { period: 16, height: 26 };
 const FLASH = { every: 1.8, spread: 2.2, intensity: 2.2, decay: 3.5 };
 // How long night takes to fall or lift when dark mode flips, s.
 const NIGHTFALL = 0.3;
+// The eaves' bulbs are unlit colour, held back a little by day so they glow
+// against the dark at night.
+const BULB_GLOW = { day: 0.55, night: 1 };
+// Falling snow: a near layer of big flakes in front of the street and a far
+// one of small flakes behind its front, each `count` flakes between
+// `depth` (world units per px there) falling `fall` screens a second, `size`
+// px across, swaying `sway` of a screen to and fro. Still under reduced
+// motion.
+const SNOW = [
+    { count: 90, depth: [0.35, 0.9], fall: 0.11, size: 5, sway: 0.012 },
+    { count: 160, depth: [1.2, 2.6], fall: 0.06, size: 2.5, sway: 0.008 },
+];
+const SNOW_NIGHT = "#c7d6ea"; // flakes under the moon
 
 /**
  * Builds the road. `landmarks` are useGamesWorld's ({ slug, x, side, cast,
@@ -174,6 +187,9 @@ export function createRoadScene(
         emissive: theme.lit ?? "#000000",
         emissiveIntensity: theme.lit ? theme.litIntensity : 0,
     });
+    // Christmas lights along the eaves (the look's `bulbs`).
+    const bulb = new THREE.MeshBasicMaterial({ vertexColors: true });
+    bulb.color.setScalar(BULB_GLOW.day);
 
     // --- Ridge -------------------------------------------------------------
 
@@ -292,6 +308,10 @@ export function createRoadScene(
             n
         );
         blend(tint, theme.ridgeTint, nightTheme.ridgeTint, n);
+        bulb.color.setScalar(lerp(BULB_GLOW.day, BULB_GLOW.night, n));
+        for (const layer of snow) {
+            blend(layer.points.material.color, "#ffffff", SNOW_NIGHT, n);
+        }
         const ctx = sky.image.getContext("2d");
         if (!ctx) return;
         paintSky(ctx, {
@@ -306,6 +326,53 @@ export function createRoadScene(
         });
         sky.needsUpdate = true;
     }
+    // --- Snow ----------------------------------------------------------------
+
+    // A soft round flake, shared by both layers.
+    const flake = theme.snowfall
+        ? canvasTexture(THREE, 32, 32, (ctx) => {
+              const g = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+              g.addColorStop(0, "rgba(255,255,255,1)");
+              g.addColorStop(0.5, "rgba(255,255,255,0.8)");
+              g.addColorStop(1, "rgba(255,255,255,0)");
+              ctx.fillStyle = g;
+              ctx.fillRect(0, 0, 32, 32);
+          })
+        : null;
+    // Each flake: where it starts across and down the screen (0..1), its
+    // depth, and a phase for its sway. They ride with the camera, like the
+    // drifters, and placeSnow() works out where that puts them.
+    const snow = (theme.snowfall ? SNOW : []).map((spec, layer) => {
+        const flakes = Array.from({ length: spec.count }, (_, i) => {
+            const seed = layer * 1000 + i;
+            return {
+                u: jitter(seed),
+                v: jitter(seed + 0.5),
+                depth: lerp(spec.depth[0], spec.depth[1], jitter(seed + 0.25)),
+                phase: jitter(seed + 0.75) * Math.PI * 2,
+            };
+        });
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute(
+            "position",
+            new THREE.BufferAttribute(new Float32Array(spec.count * 3), 3)
+        );
+        const points = new THREE.Points(
+            geometry,
+            new THREE.PointsMaterial({
+                size: spec.size,
+                sizeAttenuation: false,
+                map: flake,
+                transparent: true,
+                depthWrite: false,
+            })
+        );
+        points.name = "snowfall";
+        points.frustumCulled = false;
+        camera.add(points);
+        return { spec, flakes, points };
+    });
+
     if (night) showNight(night);
 
     /** Eases toward the night target; whether anything changed. */
@@ -346,7 +413,8 @@ export function createRoadScene(
     }));
     const butt = kit.castMesh("butt");
 
-    const drifters = Array.from({ length: DRIFTERS.count }, (_, i) => {
+    const drifterCount = theme.drifter ? DRIFTERS.count : 0;
+    const drifters = Array.from({ length: drifterCount }, (_, i) => {
         const puppet = kit.emojiMesh(theme.drifter, { shadows: false });
         camera.add(puppet.group);
         return { i: i + 1, puppet };
@@ -403,7 +471,7 @@ export function createRoadScene(
      * last ones. */
     function buildStreet(worldWidth) {
         // The shared materials outlive a rebuild.
-        disposeTree(street, [solid, glass]);
+        disposeTree(street, [solid, glass, bulb]);
         street.clear();
         for (const puppet of sceneryPuppets) puppet.dispose();
         sceneryPuppets = [];
@@ -414,8 +482,8 @@ export function createRoadScene(
         const from = -w * 2;
         const to = worldWidth + w * 2;
         const scenery = roadScenery({ landmarks, from, to });
-        const body = [];
-        const windows = [];
+        const parts = { body: [], windows: [], bulbs: [] };
+        const { body } = parts;
 
         // Pavements, kerbs and the mid-distance row: one mesh.
         const length = to - from;
@@ -457,8 +525,7 @@ export function createRoadScene(
                     look: theme,
                     palette: item.palette,
                 });
-                body.push(...place(house.body, at));
-                windows.push(...place(house.windows, at));
+                addParts(parts, house, at);
             }
         }
 
@@ -466,7 +533,7 @@ export function createRoadScene(
         // a near-side one fades, so it gets its own mesh.
         landmarkPuppets.forEach((entry, palette) => {
             const box = buildingBox(L, entry);
-            const parts = building(THREE, {
+            const house = building(THREE, {
                 ...box,
                 look: theme,
                 palette,
@@ -474,15 +541,11 @@ export function createRoadScene(
             });
             const at = { x: box.x, z: box.z };
             if (entry.side === "near") {
-                addNearThing(
-                    box,
-                    place(parts.body, at),
-                    place(parts.windows, at),
-                    [entry.puppet]
-                );
+                addNearThing(box, addParts(noParts(), house, at), [
+                    entry.puppet,
+                ]);
             } else {
-                body.push(...place(parts.body, at));
-                windows.push(...place(parts.windows, at));
+                addParts(parts, house, at);
             }
             placeLandmarkPuppet(entry, box);
         });
@@ -493,8 +556,7 @@ export function createRoadScene(
             const at = { x: item.x, z: z.nearBuildings };
             addNearThing(
                 { x: item.x, z: at.z, roof: 0, ...thing.box },
-                place(thing.body, at),
-                place(thing.windows ?? [], at),
+                addParts(noParts(), thing, at),
                 thing.puppets ?? []
             );
         }
@@ -540,15 +602,13 @@ export function createRoadScene(
             cockroaches.push({ puppet, x, size: roachSize, peek: 1 });
         }
 
-        street.add(mesh(mergeParts(THREE, body), solid));
-        const glassGeometry = mergeParts(THREE, windows);
-        if (glassGeometry) street.add(mesh(glassGeometry, glass, false));
+        street.add(...partMeshes(parts));
         for (const puppet of sceneryPuppets) puppet.setReducedMotion(reduced);
         puppets = [...fixedPuppets, ...sceneryPuppets];
     }
 
     /** One of the near side's own things, in its own space: { box: { width,
-     * height }, body, windows?, puppets? }. Its puppets are already in the
+     * height }, body, windows?, bulbs?, puppets? }. Its puppets are already in the
      * scene, placed at its road x. */
     function nearProp(item) {
         const height = L.sizes.nearBuilding * item.scale;
@@ -597,19 +657,41 @@ export function createRoadScene(
         };
     }
 
+    /** Empty { body, windows, bulbs } part lists, to collect a street's
+     * (or one near-side thing's) parts by the material they go on. */
+    const noParts = () => ({ body: [], windows: [], bulbs: [] });
+
+    /** Adds `thing`'s part lists (any it has), placed `at`, to `parts`. */
+    function addParts(parts, thing, at) {
+        for (const name of Object.keys(parts)) {
+            parts[name].push(...place(thing[name] ?? [], at));
+        }
+        return parts;
+    }
+
+    /** One mesh per part list that has anything in it, on its shared
+     * material: the body first. */
+    function partMeshes(parts) {
+        const meshes = [mesh(mergeParts(THREE, parts.body), solid)];
+        const glassGeometry = mergeParts(THREE, parts.windows);
+        if (glassGeometry) meshes.push(mesh(glassGeometry, glass, false));
+        const bulbGeometry = mergeParts(THREE, parts.bulbs);
+        if (bulbGeometry) meshes.push(mesh(bulbGeometry, bulb, false));
+        return meshes;
+    }
+
     /** A near-side thing that fades when the Butt is behind it: its own
-     * meshes, and the puppets on it (hidden while faded). */
-    function addNearThing(box, bodyParts, windowParts, thingPuppets) {
+     * meshes (from `parts`), and the puppets on it (hidden while faded). */
+    function addNearThing(box, parts, thingPuppets) {
         const group = new THREE.Group();
         group.name = "near-side";
-        const meshes = [mesh(mergeParts(THREE, bodyParts), solid)];
-        const glassGeometry = mergeParts(THREE, windowParts);
-        if (glassGeometry) meshes.push(mesh(glassGeometry, glass, false));
+        const meshes = partMeshes(parts);
         group.add(...meshes);
         street.add(group);
         nearThings.push({
             ...box,
             meshes,
+            shared: meshes.map((m) => m.material),
             faded: null,
             puppets: thingPuppets,
             opacity: 1,
@@ -634,7 +716,7 @@ export function createRoadScene(
     function unfade(thing) {
         if (!thing.faded) return;
         thing.meshes.forEach((m, i) => {
-            m.material = i === 0 ? solid : glass;
+            m.material = thing.shared[i];
         });
         for (const material of thing.faded) material.dispose();
         thing.faded = null;
@@ -729,6 +811,7 @@ export function createRoadScene(
             puppet.set({ size: DRIFTERS.size * DRIFTER_DEPTH });
         }
         placeDrifters();
+        placeSnow();
         lastCamera = null;
     }
 
@@ -833,6 +916,7 @@ export function createRoadScene(
         if (!view.reduced) {
             driftTime += dt;
             placeDrifters();
+            placeSnow();
             changed = true;
         }
         placeRoadToot(view.camera);
@@ -974,6 +1058,28 @@ export function createRoadScene(
         }
     }
 
+    /** The snow falls down the screen and comes round again at the top,
+     * swaying as it goes; the near layer falls faster. Like the drifters, it
+     * rides with the camera, `depth` world units per px out. */
+    function placeSnow() {
+        const { w, h, focal, eyeRow } = L;
+        for (const { spec, flakes, points } of snow) {
+            const at = points.geometry.attributes.position;
+            flakes.forEach((f, i) => {
+                const v = (f.v + driftTime * spec.fall) % 1;
+                const u = f.u + Math.sin(driftTime * 0.8 + f.phase) * spec.sway;
+                // A little past each edge, so flakes don't pop in.
+                at.setXYZ(
+                    i,
+                    (u * 1.1 - 0.55) * w * f.depth,
+                    (eyeRow - (v * 1.1 - 0.05) * h) * f.depth,
+                    -f.depth * focal
+                );
+            });
+            at.needsUpdate = true;
+        }
+    }
+
     return {
         scene,
         camera,
@@ -993,6 +1099,12 @@ export function createRoadScene(
             disposeTree(made);
             solid.dispose();
             glass.dispose();
+            bulb.dispose();
+            for (const { points } of snow) {
+                points.geometry.dispose();
+                points.material.dispose();
+            }
+            flake?.dispose();
             for (const puppet of puppets) puppet.dispose();
             scene.clear();
         },
