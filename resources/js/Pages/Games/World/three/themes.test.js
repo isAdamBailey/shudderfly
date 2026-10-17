@@ -31,7 +31,7 @@ describe("worldTheme", () => {
             .map((name) => name.slice(1, -1));
 
         expect(Object.keys(WORLD_THEMES).sort()).toEqual(themes.sort());
-        expect(worldTheme("christmas").drifter).toBe("❄️");
+        expect(worldTheme("christmas").snowfall).toBe(true);
         expect(worldTheme("fireworks").skyTop).toBe("#0b1230");
         expect(worldTheme("halloween").hill).toBe("#3a1854");
         for (const theme of Object.keys(NIGHTS).filter(Boolean)) {
@@ -58,7 +58,10 @@ describe("worldNight", () => {
         expect(worldNight("christmas").grass).toBe(
             worldTheme("christmas").grass
         );
-        expect(worldNight("christmas").drifter).toBe("❄️");
+        expect(worldNight("christmas").snowfall).toBe(true);
+        expect(worldNight("christmas").bulbs).toEqual(
+            worldTheme("christmas").bulbs
+        );
         expect(worldNight("fireworks")).toEqual(worldTheme("fireworks"));
         expect(worldNight("constructor")).toEqual(worldNight(""));
     });

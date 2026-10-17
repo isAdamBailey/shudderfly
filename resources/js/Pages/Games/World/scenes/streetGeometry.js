@@ -88,8 +88,9 @@ export const DOORS = {
  * `roof` high and a grid of windows on its front. The middle of the front is
  * left clear: the upper part for its sign, the bottom for a front door,
  * drawn only with `door` (a building you can go into), a name from DOORS.
- * Returns { body,
- * windows } part lists, so the windows can glow on their own material.
+ * Returns { body, windows, bulbs } part lists, so the windows and the
+ * string of lights under the eaves (the look's `bulbs`, none without) can
+ * glow on their own materials.
  */
 export function building(
     THREE,
@@ -147,7 +148,37 @@ export function building(
             );
         }
     }
-    return { body, windows };
+    return { body, windows, bulbs: eaveBulbs(THREE, look, width, height) };
+}
+
+// Bulbs under the eaves: about this many units apart, and this big a share
+// of the building's height (with a floor, so a far house's still show).
+// None within `gap` of the middle (a share of the building's smaller side),
+// where a landmark's sign hangs (RoadScene.js placeLandmarkPuppet).
+const BULB = { spacing: 18, size: 0.035, min: 3, gap: 0.26 };
+
+/** Two strings of bulbs hung just under the eaves trim across a building's
+ * front, either side of its sign, through the look's bulb colours in turn. */
+function eaveBulbs(THREE, look, width, height) {
+    if (!look.bulbs?.length) return [];
+    const size = Math.max(BULB.min, height * BULB.size);
+    const count = Math.max(2, Math.round(width / BULB.spacing));
+    const gap = Math.min(width, height) * BULB.gap;
+    const xs = Array.from(
+        { length: count },
+        (_, i) => -width / 2 + ((i + 0.5) * width) / count
+    ).filter((x) => Math.abs(x) > gap);
+    return xs.map((x, i) =>
+        paint(
+            THREE,
+            new THREE.OctahedronGeometry(size / 2, 0).translate(
+                x,
+                height - 3 - size / 2,
+                4 + size / 2
+            ),
+            look.bulbs[i % look.bulbs.length]
+        )
+    );
 }
 
 /** A round-topped tree `size` tall. */

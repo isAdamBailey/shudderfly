@@ -45,17 +45,34 @@ const DEFAULT = {
     // Fireworks over the street: the sky lights up in these colours now and
     // then. Null for none.
     flashes: null,
+    // A string of coloured lights along every building's eaves, in turn
+    // through these colours: always lit, brighter at night. Null for none.
+    bulbs: null,
+    // Real snow falling through the street, in front of it and behind.
+    snowfall: false,
 };
 
 export const WORLD_THEMES = {
-    // Snowlight: cold and bright, snow on the ground and the roofs, and the
-    // windows lit warm.
+    // Snowlight: cold and bright, snow on the ground, the roofs and the
+    // pavements, falling snow instead of drifting clouds, gingerbread
+    // houses iced white with lights along their eaves, and the windows lit
+    // warm.
     christmas: {
         skyTop: "#bfe6ff",
         hill: "#f8fbff",
-        drifter: "❄️",
+        drifter: null,
+        snowfall: true,
         grass: "#f1f7ff",
+        road: "#8d939b",
+        roadEdge: "#e6eef7", // snow banked in the gutters
+        roadLine: "#f4d58d",
+        pavement: "#eef4fb",
+        kerb: "#cfdcea",
+        // Cranberry, evergreen, cream and gingerbread.
+        walls: ["#b3192b", "#1f6b45", "#f4e7d0", "#b5703a"],
         roofs: ["#f8fbff"],
+        trim: "#ffffff",
+        bulbs: ["#ff3b3b", "#36d16b", "#ffc83d", "#4aa8ff"],
         leaves: ["#166534", "#14532d"],
         lit: "#ffd27a",
         litIntensity: 0.35, // in snowlight, a stronger glow reads as white

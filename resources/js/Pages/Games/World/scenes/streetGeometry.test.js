@@ -41,6 +41,43 @@ function house(door) {
 }
 
 describe("street geometry", () => {
+    it("hangs lights under the eaves only for a look with bulbs", () => {
+        const parts = (look) =>
+            building(THREE, {
+                width: 200,
+                height: 160,
+                depth: 120,
+                roof: 60,
+                look,
+                palette: 0,
+            }).bulbs;
+        const lit = parts({ ...LOOK, bulbs: ["#ff0000", "#00ff00"] });
+
+        expect(parts(LOOK)).toEqual([]);
+        expect(lit.length).toBeGreaterThan(2);
+        expect(painted(lit, "#ff0000")).toBe(true);
+        expect(painted(lit, "#00ff00")).toBe(true);
+    });
+
+    it("leaves the middle of the eaves clear for the sign", () => {
+        const lit = building(THREE, {
+            width: 200,
+            height: 160,
+            depth: 120,
+            roof: 60,
+            look: { ...LOOK, bulbs: ["#ff0000"] },
+            palette: 0,
+        }).bulbs;
+        const centres = lit.map((part) => {
+            part.computeBoundingBox();
+            return part.boundingBox.getCenter(new THREE.Vector3()).x;
+        });
+
+        expect(centres.some((x) => x < 0)).toBe(true);
+        expect(centres.some((x) => x > 0)).toBe(true);
+        expect(Math.min(...centres.map(Math.abs))).toBeGreaterThan(30);
+    });
+
     it("draws every front door the server's road may name", () => {
         const named = Object.keys(DOORS).filter((name) => name !== "plain");
 

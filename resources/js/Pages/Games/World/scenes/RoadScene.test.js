@@ -241,7 +241,6 @@ describe("the road's scene graph", () => {
     });
 
     it("takes its drifters from the seasonal theme", () => {
-        const { road, kit } = build("christmas");
         const glyphs = (root) => {
             const found = new Set();
             root.traverse((o) => {
@@ -249,12 +248,57 @@ describe("the road's scene graph", () => {
             });
             return found;
         };
-        // One material per glyph, so the drifters share the snowflake's.
-        const [snow] = glyphs(kit.emojiMesh("❄️").group);
-        const [cloud] = glyphs(kit.emojiMesh("☁️").group);
+        const everyday = build("");
+        // One material per glyph, so the drifters share the cloud's.
+        const [cloud] = glyphs(everyday.kit.emojiMesh("☁️").group);
 
-        expect(glyphs(road.camera).has(snow)).toBe(true);
-        expect(glyphs(road.camera).has(cloud)).toBe(false);
+        expect(glyphs(everyday.road.camera).has(cloud)).toBe(true);
+        expect(everyday.road.camera.getObjectByName("snowfall")).toBe(
+            undefined
+        );
+        // Christmas has real snow instead.
+        expect(glyphs(build("christmas").road.camera).size).toBe(0);
+    });
+
+    it("lets the snow fall at Christmas, and holds it still under reduced motion", () => {
+        const { road, L } = build("christmas");
+        const layers = road.camera.children.filter((o) => o.isPoints);
+        expect(layers).toHaveLength(2);
+        const heights = () =>
+            layers.flatMap((p) => [...p.geometry.attributes.position.array]);
+
+        road.sync(view(L), 0);
+        const before = heights();
+        road.sync(view(L), 0.5);
+        expect(heights()).not.toEqual(before);
+
+        const still = heights();
+        road.sync(view(L, { reduced: true }), 0.5);
+        expect(heights()).toEqual(still);
+    });
+
+    it("strings lights along the eaves at Christmas, brighter at night", () => {
+        const bulbs = (road) => {
+            let found = null;
+            road.scene.traverse((o) => {
+                if (
+                    o.isMesh &&
+                    o.material.isMeshBasicMaterial &&
+                    o.material.vertexColors
+                ) {
+                    found = o.material;
+                }
+            });
+            return found;
+        };
+        expect(bulbs(build("").road)).toBe(null);
+
+        const { road, L } = build("christmas");
+        const material = bulbs(road);
+        const day = material.color.r;
+        road.setNight(true);
+        road.sync(view(L, { reduced: true }), 0);
+        expect(material.color.r).toBeGreaterThan(day);
     });
 
     it("frees what it made, and leaves the kit's shared materials", () => {
@@ -311,6 +355,31 @@ describe("the road's scene graph", () => {
         road.sync(at(5000, 1), 0);
         expect(material()).toBe(opaque);
         expect(sign.group.visible).toBe(true);
+    });
+
+    it("puts a faded house's lights back on their shared material", () => {
+        const kit = createCastKit(THREE, { createCanvas });
+        const road = createRoadScene(THREE, kit, {
+            theme: worldTheme("christmas"),
+            landmarks: [{ slug: "shop", x: 600, landmark: "🏪", side: "near" }],
+            idlers: [],
+        });
+        const L = roadLayout({ w: 1000, h: 700, vmin: 700 });
+        road.layout(L, 2200);
+        const meshes = road.scene.getObjectByName("near-side").children;
+        const shared = meshes.map((m) => m.material);
+        const at = (lane) =>
+            view(L, {
+                butt: { x: 600, facing: 1, lane },
+                idlers: [],
+                reduced: true,
+            });
+
+        expect(shared.some((m) => m.isMeshBasicMaterial)).toBe(true);
+        road.sync(at(1), 0);
+        expect(meshes.every((m) => m.material.transparent)).toBe(true);
+        road.sync(at(0), 0);
+        expect(meshes.map((m) => m.material)).toEqual(shared);
     });
 
     it("ducks the manhole's cockroach while the Butt is near", () => {

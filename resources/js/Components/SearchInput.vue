@@ -50,11 +50,11 @@
                 :aria-label="t('search.voice_aria')"
                 class="self-center w-8 h-8 flex-shrink-0 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-400 christmas:focus:ring-christmas-gold halloween:focus:ring-halloween-orange flex items-center justify-center"
                 :class="{
-                    'bg-red-700 hover:bg-red-800 dark:bg-red-700 dark:hover:bg-red-800 text-white christmas:bg-christmas-berry christmas:hover:bg-christmas-mint halloween:bg-halloween-candy halloween:hover:bg-halloween-spooky':
+                    'bg-red-700 hover:bg-red-800 dark:bg-red-700 dark:hover:bg-red-800 text-white christmas:bg-christmas-cranberry christmas:hover:bg-christmas-poinsettia halloween:bg-halloween-candy halloween:hover:bg-halloween-spooky':
                         isListening,
-                    'bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white christmas:bg-christmas-holly christmas:hover:bg-christmas-green halloween:bg-halloween-witch halloween:hover:bg-halloween-purple':
+                    'bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white christmas:bg-christmas-evergreen christmas:hover:bg-christmas-spruce halloween:bg-halloween-witch halloween:hover:bg-halloween-purple':
                         hasGoodResult && !isListening,
-                    'bg-indigo-700 hover:bg-indigo-600 dark:bg-gray-800 dark:hover:bg-gray-700 text-white christmas:bg-christmas-green christmas:hover:bg-christmas-holly halloween:bg-halloween-midnight halloween:hover:bg-halloween-witch':
+                    'bg-indigo-700 hover:bg-indigo-600 dark:bg-gray-800 dark:hover:bg-gray-700 text-white christmas:bg-christmas-spruce christmas:hover:bg-christmas-evergreen halloween:bg-halloween-midnight halloween:hover:bg-halloween-witch':
                         !isListening && !hasGoodResult,
                 }"
                 :disabled="isProcessing"
@@ -78,11 +78,11 @@
                     :value="displayValue"
                     class="h-8 w-full cursor-pointer rounded-full border bg-gray-100 dark:bg-gray-800 px-4 pb-0 pt-px text-gray-700 dark:text-gray-300 outline-none transition focus:border-indigo-400 christmas:focus:border-christmas-gold halloween:focus:border-halloween-orange"
                     :class="{
-                        'border-red-700 border-2 dark:border-red-700 christmas:border-christmas-berry halloween:border-halloween-candy':
+                        'border-red-700 border-2 dark:border-red-700 christmas:border-christmas-cranberry halloween:border-halloween-candy':
                             isListening,
-                        'border-green-600 border-2 dark:border-green-600 christmas:border-christmas-holly halloween:border-halloween-witch':
+                        'border-green-600 border-2 dark:border-green-600 christmas:border-christmas-evergreen halloween:border-halloween-witch':
                             hasGoodResult && !isListening,
-                        'border-indigo-700 dark:border-gray-800 christmas:border-christmas-holly halloween:border-halloween-purple':
+                        'border-indigo-700 dark:border-gray-800 christmas:border-christmas-evergreen halloween:border-halloween-purple':
                             !isListening && !hasGoodResult,
                         'pr-5': isSupported,
                     }"
@@ -104,7 +104,7 @@
                     class="absolute right-2 top-1/2 transform -translate-y-1/2"
                 >
                     <div
-                        class="bg-red-600 text-white christmas:bg-christmas-berry halloween:bg-halloween-candy text-xs rounded-full w-4 h-4 flex items-center justify-center"
+                        class="bg-red-600 text-white christmas:bg-christmas-cranberry halloween:bg-halloween-candy text-xs rounded-full w-4 h-4 flex items-center justify-center"
                         :title="speechErrorMessage"
                     >
                         !
@@ -124,7 +124,7 @@
 
                 <div
                     v-if="isListening"
-                    class="absolute z-50 w-full mt-1 bg-gradient-to-r from-orange-700 via-amber-500 to-indigo-700 dark:from-red-700 dark:via-amber-600 dark:to-gray-800 christmas:from-christmas-berry christmas:via-christmas-mint christmas:to-christmas-green halloween:from-halloween-candy halloween:via-halloween-spooky halloween:to-halloween-midnight rounded-lg shadow-lg p-3 text-white"
+                    class="absolute z-50 w-full mt-1 bg-gradient-to-r from-orange-700 via-amber-500 to-indigo-700 dark:from-red-700 dark:via-amber-600 dark:to-gray-800 christmas:from-christmas-cranberry christmas:via-christmas-evergreen christmas:to-christmas-spruce halloween:from-halloween-candy halloween:via-halloween-spooky halloween:to-halloween-midnight rounded-lg shadow-lg p-3 text-white"
                 >
                     <div class="flex items-center gap-2 mb-2">
                         <div class="flex gap-1">
