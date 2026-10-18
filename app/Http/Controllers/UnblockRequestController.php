@@ -49,10 +49,10 @@ class UnblockRequestController extends Controller
         // Users who can unblock have the button; they should not be asking.
         abort_if($requester->can('edit pages'), 403);
 
-        // The same setting switches blocking off as a whole; with nothing
-        // hidden there is nothing to ask for. `edit pages` users can still
-        // unblock directly at any time.
-        abort_unless(ContentBlockService::enabled(), 403);
+        // Off when blocking is off as a whole (nothing hidden, nothing to ask
+        // for) or when asking alone is switched off. `edit pages` users can
+        // still unblock directly at any time.
+        abort_unless(ContentBlockService::askingEnabled(), 403);
 
         $count = $this->contentBlockService->blockedCount();
 

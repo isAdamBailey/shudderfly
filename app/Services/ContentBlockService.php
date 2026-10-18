@@ -40,7 +40,31 @@ class ContentBlockService
      */
     public static function enabled(): bool
     {
-        return (bool) (SiteSetting::where('key', self::SETTING)->first()?->value ?? true);
+        return self::flag(self::SETTING);
+    }
+
+    /**
+     * The site setting that lets users without `edit pages` ask an admin to
+     * unblock. Off, the ask button is gone and the endpoint refuses, while
+     * blocking and the admin unblock button carry on as before.
+     */
+    public const ASK_SETTING = 'ask_to_unblock_enabled';
+
+    /**
+     * Whether a user can ask an admin to unblock: blocking must be on, and so
+     * must asking. A missing row counts as on, matching its migration default.
+     */
+    public static function askingEnabled(): bool
+    {
+        return self::enabled() && self::flag(self::ASK_SETTING);
+    }
+
+    /**
+     * A boolean setting, with a missing row counting as on.
+     */
+    private static function flag(string $key): bool
+    {
+        return (bool) (SiteSetting::where('key', $key)->first()?->value ?? true);
     }
 
     /**

@@ -119,6 +119,37 @@ class UnblockRequestTest extends TestCase
         Notification::assertNothingSent();
     }
 
+    public function test_request_is_refused_when_asking_is_off(): void
+    {
+        Notification::fake();
+
+        $this->admin();
+        $requester = User::factory()->create();
+        $this->blockedPage();
+
+        SiteSetting::where('key', ContentBlockService::ASK_SETTING)->update(['value' => '0']);
+
+        $this->actingAs($requester)
+            ->postJson(route('unblock-requests.store'))
+            ->assertForbidden();
+
+        Notification::assertNothingSent();
+    }
+
+    public function test_admin_can_still_unblock_when_asking_is_off(): void
+    {
+        $admin = $this->admin();
+        $page = $this->blockedPage();
+
+        SiteSetting::where('key', ContentBlockService::ASK_SETTING)->update(['value' => '0']);
+
+        $this->actingAs($admin)
+            ->postJson(route('pages.unblock-all'))
+            ->assertOk();
+
+        $this->assertFalse($page->fresh()->blocked);
+    }
+
     public function test_request_sends_nothing_when_no_content_is_blocked(): void
     {
         Notification::fake();
@@ -537,6 +568,22 @@ class UnblockRequestTest extends TestCase
         $this->actingAs($requester)
             ->get(route('users.show', ['user' => $requester->email]))
             ->assertInertia(fn ($page) => $page->where('unblockAskedToday', true));
+    }
+
+    public function test_the_dashboard_reports_whether_the_user_can_ask(): void
+    {
+        $requester = User::factory()->create();
+        $dashboard = fn () => $this->actingAs($requester)
+            ->get(route('users.show', ['user' => $requester->email]));
+
+        $dashboard()->assertInertia(fn ($page) => $page->where('canAskToUnblock', true));
+
+        SiteSetting::where('key', ContentBlockService::ASK_SETTING)->update(['value' => '0']);
+        $dashboard()->assertInertia(fn ($page) => $page->where('canAskToUnblock', false));
+
+        SiteSetting::where('key', ContentBlockService::ASK_SETTING)->update(['value' => '1']);
+        SiteSetting::where('key', ContentBlockService::SETTING)->update(['value' => '0']);
+        $dashboard()->assertInertia(fn ($page) => $page->where('canAskToUnblock', false));
     }
 
     public function test_a_request_nobody_received_does_not_use_up_the_day(): void
