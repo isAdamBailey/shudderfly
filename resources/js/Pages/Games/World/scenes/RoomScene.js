@@ -1,5 +1,6 @@
 import { CAST_MOVES } from "@/constants/characters.js";
 import { approach } from "@/utils/math";
+import { own } from "@/utils/object";
 import {
     lookMaterial,
     NIGHT,
@@ -11,6 +12,8 @@ import {
 import { applyCamera, disposeTree } from "../three/useWorldRenderer.js";
 import { clockFinish, clockTexture } from "../three/clockFaces.js";
 import { MODELS } from "../three/models.js";
+import { bassDrum } from "../three/bassDrum.js";
+import { harp } from "../three/harp.js";
 import { pipeOrgan } from "../three/pipeOrgan.js";
 import { itemBox, itemPose, ROOM_SIZES, wallHeightOf } from "./roomLayout.js";
 import { bookcaseGeometry, booksMesh } from "./bookshelf.js";
@@ -63,13 +66,17 @@ const FLICKER = { amount: 0.18, step: 0.09 };
 const SCREEN_DEPTH = 6;
 // A picture's or photo's backing, round the edge of its <img>.
 const PICTURE_BACKING = "#1c1410";
+// What an instrument interactable is drawn as, by its type: each model is
+// { group, tick(dt, reduced) } and its own way to be played.
+export const INSTRUMENTS = { organ: pipeOrgan, harp, drum: bassDrum };
 
 /**
  * Builds a room from its scene data (`room`: { size, walls, lights,
  * photos, interactables }), with the Butt at `butt` ({ x, z }), in the light of
  * seasonal `theme` (at `night` in dark mode), its EXIT signs reading
  * `exitWord`. Returns { scene, camera, layout(L), sync(view, dt),
- * animate(id, move), pressKey(id, zone, key), toggleLight(id),
+ * animate(id, move), pressKey(id, zone, key), pluckString(id, n, delay),
+ * hitDrum(id, edge), toggleLight(id),
  * setNight(on), dispose() }.
  */
 export function createRoomScene(
@@ -373,19 +380,20 @@ export function createRoomScene(
     // Each modelled thing's own switch (its setOn: a radio's dial, a
     // lamp's shade), by its id.
     const switches = new Map();
-    // Pipe organs (three/pipeOrgan.js), by id: built into their wall, but
-    // played, so they're ticked.
-    const organs = new Map();
+    // Instruments (INSTRUMENTS), by id: built into the room, but played,
+    // so they're ticked.
+    const instruments = new Map();
     for (const item of room.interactables) {
         // Built into the room above, not played with.
         if (item.stairs || item.open) continue;
-        if (item.type === "organ") {
-            const organ = pipeOrgan(THREE);
+        const instrument = own(INSTRUMENTS, item.type);
+        if (instrument) {
+            const built = instrument(THREE);
             const pose = itemPose(item);
-            organ.group.position.set(pose.x, pose.y, pose.z);
-            organ.group.rotation.y = pose.turn;
-            made.add(organ.group);
-            organs.set(item.id, organ);
+            built.group.position.set(pose.x, pose.y, pose.z);
+            built.group.rotation.y = pose.turn;
+            made.add(built.group);
+            instruments.set(item.id, built);
             continue;
         }
         // A TV, or a picture: a thin panel, framed if it says. What you see
@@ -595,8 +603,8 @@ export function createRoomScene(
         for (const puppet of puppets) changed = puppet.tick(dt) || changed;
         if (crawlers?.tick(dt, reduced)) changed = true;
         if (flicker(dt)) changed = true;
-        for (const organ of organs.values()) {
-            changed = organ.tick(dt, reduced) || changed;
+        for (const instrument of instruments.values()) {
+            changed = instrument.tick(dt, reduced) || changed;
         }
         return changed;
     }
@@ -617,7 +625,16 @@ export function createRoomScene(
         /** Presses white key `key` of zone `zone` on organ `id`: it goes
          * down and its pipe sounds. */
         pressKey(id, zone, key) {
-            organs.get(id)?.press(zone * ORGAN.whiteKeys + key);
+            instruments.get(id)?.press?.(zone * ORGAN.whiteKeys + key);
+        },
+        /** Plucks string `n` of harp `id`, `delay` s from now: it rings. */
+        pluckString(id, n, delay = 0) {
+            instruments.get(id)?.pluck?.(n, delay);
+        },
+        /** Hits bass drum `id` `edge` out from its head's middle: it swings
+         * and its head ripples. */
+        hitDrum(id, edge = 0) {
+            instruments.get(id)?.hit?.(edge);
         },
         /** Switches modelled thing `id`'s own light (a radio's dial while
          * it plays). */

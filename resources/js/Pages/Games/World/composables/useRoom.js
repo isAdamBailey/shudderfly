@@ -1,10 +1,8 @@
 import { computed, reactive } from "vue";
+import { INSTRUMENT_FOOTPRINTS, isInstrument } from "../scenes/instruments.js";
 import {
-    ORGAN_FOOTPRINT,
-    organLocal,
-    organPoint,
-} from "../scenes/organLayout.js";
-import {
+    itemLocal,
+    itemPoint,
     ROOM_SIZES,
     STAIRS_CLEARANCE,
     wallFacing,
@@ -21,7 +19,7 @@ export const STAND = 100;
 export const TRIGGER_REACH = 60;
 // The Butt never walks closer than this to a wall.
 export const MARGIN = 50;
-// Nor closer than this to furniture that blocks it (an organ): half its
+// Nor closer than this to furniture that blocks it (an instrument): half its
 // own width, so its sprite never covers the thing.
 export const BLOCK_CLEARANCE = ROOM_SIZES.butt / 2;
 
@@ -53,9 +51,9 @@ export function arrivalSpot(room, { spot, position } = {}) {
  * open front), where it's walking to, which interactable it's near, and
  * using one when it gets there. Rooms are rectangles and most furniture
  * never blocks, so walking is a straight line; stairs, which take up the
- * floor along their wall, keep the Butt further from it, and an organ's
+ * floor along their wall, keep the Butt further from it, and an instrument's
  * floor is kept off (the Butt slides along its edge), so the Butt can't
- * stand over its keys. Driven by `step(dt)`.
+ * stand over what's played. Driven by `step(dt)`.
  *
  * `room` is the scene ({ size: { w, d }, interactables }). Options:
  * - start: { x, z } where the Butt starts.
@@ -87,27 +85,27 @@ export function useRoom(
             : MARGIN;
     const left = sideMargin("left");
     const right = sideMargin("right");
-    // Floor the Butt keeps off: each organ's, and a little round it, in
-    // the organ's own space (it may stand turned in a corner).
+    // Floor the Butt keeps off: each instrument's, and a little round it,
+    // in the instrument's own space (an organ may stand turned in a corner).
     const c = BLOCK_CLEARANCE;
-    const f = ORGAN_FOOTPRINT;
-    const blocks = room.interactables
-        .filter((item) => item.type === "organ")
-        .map((item) => ({
+    const blocks = room.interactables.filter(isInstrument).map((item) => {
+        const f = INSTRUMENT_FOOTPRINTS[item.type];
+        return {
             item,
             x0: f.x0 - c,
             x1: f.x1 + c,
             z0: f.z0 - c,
             z1: f.z1 + c,
-        }));
+        };
+    });
     const blocked = (x, z) =>
         blocks.find((b) => {
-            const p = organLocal(b.item, { x, z });
+            const p = itemLocal(b.item, { x, z });
             return p.x > b.x0 && p.x < b.x1 && p.z > b.z0 && p.z < b.z1;
         });
 
     const butt = reactive({
-        // Never starting inside an organ (a spot saved before it came).
+        // Never starting inside an instrument (a spot saved before it came).
         ...clear(clampX(start?.x ?? w / 2), clampZ(start?.z ?? d / 2)),
         facing: 1,
         bob: 0,
@@ -144,14 +142,14 @@ export function useRoom(
         if (!b) return { x, z };
         let best = { x, z };
         let bestDistance = Infinity;
-        const p = organLocal(b.item, { x, z });
+        const p = itemLocal(b.item, { x, z });
         for (const [lx, lz] of [
             [b.x0, p.z],
             [b.x1, p.z],
             [p.x, b.z0],
             [p.x, b.z1],
         ]) {
-            const edge = organPoint(b.item, [lx, 0, lz]);
+            const edge = itemPoint(b.item, [lx, 0, lz]);
             const out = { x: clampX(edge.x), z: clampZ(edge.z) };
             const distance = (out.x - x) ** 2 + (out.z - z) ** 2;
             if (distance < bestDistance && !blocked(out.x, out.z)) {

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { shallowRef } from "vue";
-import { organLocal } from "../scenes/organLayout.js";
+import { INSTRUMENT_FOOTPRINTS } from "../scenes/instruments.js";
+import { itemLocal } from "../scenes/roomLayout.js";
 import { STAIRS_CLEARANCE } from "../scenes/roomLayout.js";
 import { DRAG_SPEED, WALK_SPEED } from "./useGamesWorld.js";
 import {
@@ -267,7 +268,7 @@ describe("useRoom", () => {
         // Walking into the corner stops short of the organ's slanted front.
         r.walkTo(880, 60);
         run(r, 5);
-        const keys = organLocal(organ, r.butt);
+        const keys = itemLocal(organ, r.butt);
         expect(keys.z).toBeGreaterThanOrEqual(124 + BLOCK_CLEARANCE - 1);
 
         // Its spot to play it is out on the diagonal, clear of it, and
@@ -276,6 +277,26 @@ describe("useRoom", () => {
         expect(r.butt.x).toBeCloseTo(785 - 200 * Math.SQRT1_2, 0);
         expect(r.butt.z).toBeCloseTo(115 + 200 * Math.SQRT1_2, 0);
         expect(r.nearest.value).toBe(organ);
+    });
+
+    it("keeps off a harp's and a drum's floor too, and stands clear of each", () => {
+        const harp = { id: "harp", type: "harp", x: 720, z: 30, stand: 120 };
+        const drum = { id: "drum", type: "drum", x: 420, z: 40, stand: 170 };
+        const room = { size: { w: 1300, d: 480 }, interactables: [harp, drum] };
+        for (const item of [harp, drum]) {
+            const r = useRoom(room, { start: { x: item.x, z: 400 } });
+            // Walking straight at it stops short of its front.
+            r.walkTo(item.x, 60);
+            run(r, 5);
+            const f = INSTRUMENT_FOOTPRINTS[item.type];
+            expect(itemLocal(item, r.butt).z).toBeGreaterThanOrEqual(
+                f.z1 + BLOCK_CLEARANCE - 1
+            );
+            // Its spot to play it is clear of it, and near enough.
+            r.standBy(item);
+            expect(r.butt.z).toBeCloseTo(item.z + item.stand, 0);
+            expect(r.nearest.value).toBe(item);
+        }
     });
 
     it("is near nothing in the middle of the floor", () => {

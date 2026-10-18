@@ -36,10 +36,22 @@ import { useTvChannels } from "../composables/useTvChannels.js";
 import { autoTriggers } from "../interactions/index.js";
 import { BOOKCASE, bookcaseHeight, shelfEnd, slotsIn } from "./bookshelf.js";
 import { createRoomScene } from "./RoomScene.js";
+import { BASS_DRUM, headPoint, hitEdge } from "./drumLayout.js";
+import { isInstrument } from "./instruments.js";
+import {
+    crossed,
+    gapAt,
+    HARP,
+    nearestString,
+    stringCorners,
+    stringEnds,
+    stringX,
+} from "./harpLayout.js";
 import { convexHull, keyAt, ORGAN, zoneCorners } from "./organLayout.js";
 import { stairsBounds } from "./staircase.js";
 import {
     itemBox,
+    itemPoint,
     itemPose,
     ROOM_SIZES,
     roomCamera,
@@ -63,8 +75,9 @@ const props = defineProps({
 });
 
 // `activate`: the Butt has reached something and uses it (the room is
-// frozen until the stage lets go). `play`: an organ key was pressed, at
-// once, wherever the Butt is: nothing is frozen, and nothing is let go.
+// frozen until the stage lets go). `play`: an organ key was pressed or a
+// harp string plucked, at once, wherever the Butt is: nothing is frozen,
+// and nothing is let go.
 const emit = defineEmits(["activate", "play"]);
 
 const { t } = useTranslations();
@@ -257,8 +270,9 @@ const tvs = useTvChannels(props.scene.interactables);
  * (`tv`) and says what's on. */
 function spotOf(item) {
     if (item.stairs) return stairsSpot(item);
-    // An organ is played by its keys (organSpots).
-    if (item.type === "organ") return [];
+    // An organ is played by its keys (organSpots), a harp by its strings
+    // (harpSpots), a drum on its head (drumSpots).
+    if (isInstrument(item)) return [];
     const p = project(itemPose(throwables.placed(item)));
     if (!p) return [];
     const box = itemBox(item);
@@ -368,6 +382,22 @@ function screenRect(points) {
     };
 }
 
+/** The screen box round room points `corners` once projected, and the
+ * outline of them in it (a clip-path polygon), so a button over them takes
+ * only presses on what's drawn; null if any is off-camera. */
+function hullSpot(corners) {
+    const points = corners.map(project);
+    if (points.some((p) => !p)) return null;
+    const hull = convexHull(points);
+    const rect = screenRect(hull);
+    return {
+        ...rect,
+        outline: hull
+            .map((p) => `${p.x - rect.left}px ${p.y - rect.top}px`)
+            .join(", "),
+    };
+}
+
 /** A button over each zone of an organ's keyboard: the outline of its keys
  * as drawn (on a side wall, they run off into the room at a slant), and the
  * line along them a press is placed on, to find its key. */
@@ -377,22 +407,49 @@ const organSpots = computed(() => {
         .filter((item) => item.type === "organ")
         .flatMap((item) =>
             item.zones.flatMap((label, zone) => {
-                const corners = zoneCorners(item, zone).map(project);
-                if (corners.some((p) => !p)) return [];
-                const hull = convexHull(corners);
-                const rect = screenRect(hull);
-                const { left, top } = rect;
-                return {
-                    item,
-                    zone,
-                    label,
-                    ...rect,
-                    outline: hull
-                        .map((p) => `${p.x - left}px ${p.y - top}px`)
-                        .join(", "),
-                };
+                const spot = hullSpot(zoneCorners(item, zone));
+                return spot ? { item, zone, label, ...spot } : [];
             })
         );
+});
+
+/** A button over each harp's strings, shaped to them as drawn. */
+const harpSpots = computed(() => {
+    if (!view.value) return [];
+    return props.scene.interactables
+        .filter((item) => item.type === "harp")
+        .flatMap((item) => {
+            const spot = hullSpot(stringCorners(item));
+            return spot ? { item, ...spot } : [];
+        });
+});
+
+/** A round button over each bass drum's front head: its middle on screen,
+ * and its radii across and up. */
+const drumSpots = computed(() => {
+    if (!view.value) return [];
+    return props.scene.interactables
+        .filter((item) => item.type === "drum")
+        .flatMap((item) => {
+            const r = BASS_DRUM.radius;
+            const [middle, across, up] = [
+                headPoint(item),
+                headPoint(item, r, 0),
+                headPoint(item, 0, r),
+            ].map(project);
+            if (!middle || !across || !up) return [];
+            const rx = Math.hypot(across.x - middle.x, across.y - middle.y);
+            const ry = Math.hypot(up.x - middle.x, up.y - middle.y);
+            return {
+                item,
+                middle,
+                radii: { rx, ry },
+                left: middle.x - rx,
+                top: middle.y - ry,
+                width: rx * 2,
+                height: ry * 2,
+            };
+        });
 });
 
 // The stretch of back wall the overlay keeps books' buttons up for: what's
@@ -557,6 +614,91 @@ function onZonePointerDown(s, event) {
     playZone(s, at ? keyAt(s.item, s.zone, at) : 0);
 }
 
+/** Plucks harp `item`'s `strings` (the handler rings and sounds them). */
+function pluck(item, strings) {
+    if (room.state.frozen || strings.length === 0) return;
+    emit("play", { ...item, strings });
+}
+
+/** Each of harp `item`'s strings' screen x, halfway up it, in order. */
+function stringXs(item) {
+    return Array.from({ length: HARP.strings.count }, (_, n) => {
+        const { bottom, top } = stringEnds(n);
+        return project(
+            itemPoint(item, [stringX(n), (bottom + top) / 2, HARP.z])
+        )?.x;
+    });
+}
+
+/** A press on the strings plucks the one under it; dragging on across them,
+ * a strum, plucks every string it crosses, as it crosses it, however fast
+ * it goes. */
+function onHarpPointerDown(item, event) {
+    if (room.state.frozen || event.button > 0) return;
+    // Not focused by it either (no pointerFocus), so a strum's finger
+    // can't scroll the page or select.
+    event.preventDefault();
+    const xs = stringXs(item);
+    if (xs.some((x) => x === undefined)) return;
+    const left = rootEl.value.getBoundingClientRect().left;
+    const at = (e) => e.clientX - left;
+    const first = nearestString(xs, at(event));
+    pluck(item, [first]);
+    let gap = gapAt(xs, at(event));
+    // The string the press plucked, until the strum has crossed it: it
+    // was just played, so crossing it straight after doesn't play it again.
+    let played = first;
+    props.stage.beginGesture({
+        move(e) {
+            // Only the finger that began it: another's moves would jump
+            // the strum back and forth between them.
+            if (e.pointerId !== event.pointerId) return;
+            e.preventDefault();
+            // Where the strings are now: the camera may be following the
+            // Butt down the room.
+            const now = stringXs(item);
+            if (now.some((x) => x === undefined)) return;
+            const to = gapAt(now, at(e));
+            if (to === gap) return;
+            const strings = crossed(gap, to);
+            pluck(
+                item,
+                strings.filter((n) => n !== played)
+            );
+            played = null;
+            gap = to;
+        },
+        end() {},
+        cancel() {},
+    });
+}
+
+/** Whether a press on an instrument's button focuses it: not if it has
+ * focus already, when no focus event comes to clear the flag (onItemFocus)
+ * and the next Tab would leave the Butt where it is. */
+function focusesOnPress(event) {
+    return document.activeElement !== event.currentTarget;
+}
+
+/** Enter or Space on a harp's strings or a drum's head (a click with no
+ * pointer): the instrument played as a whole, a glissando up the harp, a
+ * hit in the middle of the drum. */
+function onInstrumentClick(item, event) {
+    pointerFocus = false;
+    if (event.detail !== 0 || room.state.frozen) return;
+    emit("play", item);
+}
+
+/** A press on a drum's head hits it there, at once: harder, deeper and
+ * longer the nearer the middle. */
+function onDrumPointerDown(s, event) {
+    pointerFocus = focusesOnPress(event);
+    if (room.state.frozen || event.button > 0) return;
+    const rect = rootEl.value.getBoundingClientRect();
+    const at = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    emit("play", { ...s.item, edge: hitEdge(s.middle, s.radii, at) });
+}
+
 // The key Enter or Space last played in each zone: each press plays the
 // next, up the scale and round again, so every key can be reached.
 const keyboardKeys = new Map();
@@ -600,6 +742,18 @@ function toot(castId, id, clip) {
 /** Presses organ `id`'s key `key` in zone `zone` (ctx.pressKey). */
 function pressKey(id, zone, key) {
     graph?.pressKey(id, zone, key);
+    props.stage.renderer.invalidate();
+}
+
+/** Plucks string `n` of harp `id`, `delay` s from now (ctx.pluckString). */
+function pluckString(id, n, delay) {
+    graph?.pluckString(id, n, delay);
+    props.stage.renderer.invalidate();
+}
+
+/** Hits drum `id` `edge` out from its head's middle (ctx.hitDrum). */
+function hitDrum(id, edge) {
+    graph?.hitDrum(id, edge);
     props.stage.renderer.invalidate();
 }
 
@@ -745,6 +899,8 @@ defineExpose({
     toot,
     toggleLight,
     pressKey,
+    pluckString,
+    hitDrum,
     changeChannel: tvs.changeChannel,
 });
 </script>
@@ -913,6 +1069,40 @@ defineExpose({
                 @click="onZoneClick(s, $event)"
             />
 
+            <!-- Over the Butt too, as the organ's keys are. -->
+            <button
+                v-for="s in harpSpots"
+                :key="s.item.id"
+                type="button"
+                class="harp-strings"
+                :aria-label="s.item.label"
+                :style="{
+                    width: `${s.width}px`,
+                    height: `${s.height}px`,
+                    transform: `translate3d(${s.left}px, ${s.top}px, 0)`,
+                    clipPath: `polygon(${s.outline})`,
+                }"
+                @pointerdown="onHarpPointerDown(s.item, $event)"
+                @focus="onItemFocus(s.item)"
+                @click="onInstrumentClick(s.item, $event)"
+            />
+
+            <button
+                v-for="s in drumSpots"
+                :key="s.item.id"
+                type="button"
+                class="drum-head"
+                :aria-label="s.item.label"
+                :style="{
+                    width: `${s.width}px`,
+                    height: `${s.height}px`,
+                    transform: `translate3d(${s.left}px, ${s.top}px, 0)`,
+                }"
+                @pointerdown="onDrumPointerDown(s, $event)"
+                @focus="onItemFocus(s.item)"
+                @click="onInstrumentClick(s.item, $event)"
+            />
+
             <TootPuff
                 v-for="puff in puffs"
                 :key="puff.id"
@@ -1069,10 +1259,12 @@ defineExpose({
     background: linear-gradient(rgb(0 0 0 / 0.7), rgb(0 0 0 / 0.35));
 }
 
-/* A zone of an organ's keyboard: shaped to its keys as drawn, so it takes
-   only presses on them. Focus shades the whole zone, since an outline
-   would be clipped away. */
-.organ-zone {
+/* A zone of an organ's keyboard, a harp's strings or a drum's head: shaped
+   to them as drawn, so it takes only presses on them. Focus shades the
+   whole of it, since an outline would be clipped away. */
+.organ-zone,
+.harp-strings,
+.drum-head {
     position: absolute;
     left: 0;
     top: 0;
@@ -1091,9 +1283,15 @@ defineExpose({
     will-change: transform;
 }
 
-.organ-zone:focus-visible {
+.organ-zone:focus-visible,
+.harp-strings:focus-visible,
+.drum-head:focus-visible {
     outline: none;
     background: rgb(29 78 216 / 0.45);
+}
+
+.drum-head {
+    border-radius: 50%;
 }
 
 /* Fruit to pick up and throw: a drag mustn't scroll the page or select. */

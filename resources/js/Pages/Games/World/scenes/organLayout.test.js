@@ -6,9 +6,9 @@ import {
     keyAt,
     keyX,
     ORGAN,
-    organPoint,
     zoneCorners,
 } from "./organLayout.js";
+import { itemPoint } from "./roomLayout.js";
 
 const organ = { id: "organ", type: "organ", wall: "left", x: 0, z: 200 };
 
@@ -31,15 +31,15 @@ describe("the pipe organ's layout", () => {
     });
 
     it("stands out of the left wall into the room, deep notes to the front", () => {
-        const back = organPoint(organ, [0, 0, 0]);
-        const front = organPoint(organ, [0, 0, ORGAN.keys.front]);
+        const back = itemPoint(organ, [0, 0, 0]);
+        const front = itemPoint(organ, [0, 0, ORGAN.keys.front]);
         expect(back.x).toBeCloseTo(3);
         expect(front.x).toBeGreaterThan(back.x);
         expect(front.z).toBeCloseTo(back.z);
 
         // Deep notes toward the open front (along local -x).
-        const deep = organPoint(organ, [keyX(0), 0, 0]);
-        const squeaky = organPoint(organ, [keyX(KEY_COUNT - 1), 0, 0]);
+        const deep = itemPoint(organ, [keyX(0), 0, 0]);
+        const squeaky = itemPoint(organ, [keyX(KEY_COUNT - 1), 0, 0]);
         expect(deep.z).toBeGreaterThan(squeaky.z);
     });
 
@@ -54,7 +54,7 @@ describe("the pipe organ's layout", () => {
 
     it("finds the key a press lands on, anywhere across its depth", () => {
         const on = (zone, n, depth) => {
-            const p = organPoint(organ, [
+            const p = itemPoint(organ, [
                 keyX(zone * ORGAN.whiteKeys + n),
                 ORGAN.keys.y,
                 depth,

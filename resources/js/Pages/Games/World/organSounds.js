@@ -1,9 +1,10 @@
 import { getAudioContext } from "@/composables/useAudioContext";
+import { stoneHall } from "./stoneHall.js";
 
 // The Cockroach's pipe organ, made in Web Audio: each note is a few ranks
 // of pipes sounding together (the note, its octave, the twelfth and the
-// fifteenth), a breathy chiff of air as the pipe speaks, and a big stone
-// hall's echo after it.
+// fifteenth), and a breathy chiff of air as the pipe speaks, into the
+// music room's stone hall (stoneHall.js).
 
 // The keyboard runs A to G an octave a zone, so every note is in A minor:
 // the white keys from A, in semitones.
@@ -26,8 +27,6 @@ const HARMONICS = [0, 1, 0.55, 0.3, 0.22, 0.12, 0.08, 0.05, 0.03];
 const NOTE = { hold: 0.9, attack: 0.05, release: 0.45 };
 // One note's loudness, under the hall's limiter.
 const LEVEL = 0.16;
-// The hall: how long its echo rings, s, and how much of it you hear.
-const HALL = { seconds: 2.6, wet: 0.45 };
 
 /** Zone `zone`'s white key `key` (0 is its A), as a MIDI note. */
 export function organNote(zone, key) {
@@ -39,48 +38,22 @@ export function frequencyOf(midi) {
     return 440 * 2 ** ((midi - 69) / 12);
 }
 
-// Made once per audio context: the hall every note plays into, the
-// pipe's tone, and the noise its chiff is cut from.
+// Made once per audio context: the pipe's tone, and the noise its chiff
+// is cut from.
 let made = null;
 
-function hallFor(ctx) {
+function pipesFor(ctx) {
     if (made?.ctx === ctx) return made;
-
-    // A stone hall: noise dying away, a little different in each ear.
-    const rate = ctx.sampleRate;
-    const length = Math.floor(rate * HALL.seconds);
-    const echo = ctx.createBuffer(2, length, rate);
-    for (let channel = 0; channel < 2; channel += 1) {
-        const data = echo.getChannelData(channel);
-        for (let i = 0; i < length; i += 1) {
-            data[i] = (Math.random() * 2 - 1) * (1 - i / length) ** 3;
-        }
-    }
-    const reverb = ctx.createConvolver();
-    reverb.buffer = echo;
-    const wet = ctx.createGain();
-    wet.gain.value = HALL.wet;
-
-    // A chord of deep notes adds up: a limiter keeps it from clipping.
-    const limiter = ctx.createDynamicsCompressor();
-    limiter.threshold.value = -12;
-    limiter.ratio.value = 8;
-
-    const input = ctx.createGain();
-    input.connect(limiter);
-    input.connect(reverb);
-    reverb.connect(wet);
-    wet.connect(limiter);
-    limiter.connect(ctx.destination);
 
     const real = new Float32Array(HARMONICS.length);
     const tone = ctx.createPeriodicWave(real, Float32Array.from(HARMONICS));
 
+    const rate = ctx.sampleRate;
     const noise = ctx.createBuffer(1, Math.floor(rate * 0.1), rate);
     const hiss = noise.getChannelData(0);
     for (let i = 0; i < hiss.length; i += 1) hiss[i] = Math.random() * 2 - 1;
 
-    made = { ctx, input, tone, noise };
+    made = { ctx, tone, noise };
     return made;
 }
 
@@ -88,7 +61,8 @@ function hallFor(ctx) {
 export function playOrgan(zone, key) {
     const ctx = getAudioContext();
     if (!ctx) return;
-    const { input, tone, noise } = hallFor(ctx);
+    const input = stoneHall(ctx);
+    const { tone, noise } = pipesFor(ctx);
     const t = ctx.currentTime;
     const hz = frequencyOf(organNote(zone, key));
     const end = t + NOTE.hold + NOTE.release;
