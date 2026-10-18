@@ -22,6 +22,8 @@ import { ROWS } from "./scenes/roadLayout.js";
 import { useRadio } from "./composables/useRadio.js";
 import { useSceneRouter } from "./composables/useSceneRouter.js";
 import { activate } from "./interactions/index.js";
+import { playDrum } from "./drumSounds.js";
+import { playHarp } from "./harpSounds.js";
 import { playOrgan } from "./organSounds.js";
 import { playSound } from "./sounds.js";
 import { worldTheme } from "./three/themes.js";
@@ -121,11 +123,15 @@ const ctx = {
     toot: (castId, id, clip) => sceneRef.value?.toot?.(castId, id, clip),
     toggleLight: (id) => sceneRef.value?.toggleLight?.(id),
     pressKey: (id, zone, key) => sceneRef.value?.pressKey?.(id, zone, key),
+    pluckString: (id, n, delay) => sceneRef.value?.pluckString?.(id, n, delay),
+    hitDrum: (id, edge) => sceneRef.value?.hitDrum?.(id, edge),
     changeChannel: (id) => sceneRef.value?.changeChannel?.(id),
     // Through the site's music player, so it plays on in its flyout.
     tuneRadio: radio.tune,
     playSound,
     playOrgan,
+    playHarp,
+    playDrum,
     // Through the same voice as a game's intro (the AI voice when it's on).
     speak: (text) => speakGameIntro(text),
 };

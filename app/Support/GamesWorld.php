@@ -214,6 +214,11 @@ final class GamesWorld
         $nestW = 1400;
         $hearth = 650;
         $sconces = ['sconce-left' => [400, 0], 'sconce-right' => [930, 0], 'sconce-side' => [20, 260]];
+        // Its music room, longer than the frame: from the door, the bass
+        // drum, the harp, and the organ in the far corner, with candles
+        // along the back wall between them.
+        $musicW = 1300;
+        $musicSconces = ['sconce-left' => [260, 0], 'sconce-middle' => [570, 0], 'sconce-right' => [950, 0]];
         // The kitchen's back wall, from the door: the fridge, a counter,
         // the oven, and a counter to the far wall, with cabinets over both
         // counters and the lamp over the oven. Things on a counter stand
@@ -373,16 +378,15 @@ final class GamesWorld
                 self::minigame('toot-slots', 790, 0, '🎰', ['y' => 90, 'size' => 130, 'model' => 'slot-machine']),
             ]),
 
-            // --- The Cockroach's House: one room. Cockroach Fart and
-            // Cockroach Fight stand on the floor. Little cockroaches crawl
-            // the back wall, the same picture as the site header. Dark-ages
-            // stone, its lamps all flames: a fire in the hearth under Hank's
-            // portrait, and candles in sconces either side of it and on the
-            // left wall. The pipe organ stands turned in the back-right
-            // corner, well clear of the way out: flat on the right wall, a
-            // phone saw it all but edge on, behind the music tab. Every flame flickers.
+            // --- The Cockroach's House: the Nest, and a music room off it.
+            // Cockroach Fart and Cockroach Fight stand on the Nest's floor.
+            // Little cockroaches crawl the back walls, the same picture as
+            // the site header. Dark-ages stone, its lamps all flames: a fire
+            // in the hearth under Hank's portrait, and candles in sconces
+            // either side of it and on the left wall. Every flame flickers.
             // Photos of Hank from his book hang either side of them, past
-            // the door's EXIT sign and the scroll, a new pair each day.
+            // the door's EXIT sign and the scroll, a new pair each day. The
+            // music room's door is at the Nest's far end.
             'cockroach-house.hall' => self::room('cockroach_house_hall', [
                 'size' => ['w' => $nestW, 'd' => 480],
                 'spawn' => ['x' => 280, 'z' => 320],
@@ -395,15 +399,11 @@ final class GamesWorld
                 ],
                 'lights' => [
                     self::flame('fire', $hearth, self::HEARTH_FIRE['y'], self::HEARTH_FIRE['z'], '#f97316', 1.3),
-                    ...array_map(
-                        fn ($id, $at) => self::flame($id, $at[0], self::SCONCE_Y, $at[1], '#f59e0b', 1.1),
-                        array_keys($sconces),
-                        $sconces,
-                    ),
+                    ...self::sconceFlames($sconces),
                 ],
             ], [
                 self::roomDoor('front-door', 160, 'road', 'cockroach-house', exit: true),
-                self::organ('organ', $nestW),
+                self::roomDoor('music-door', 1260, 'cockroach-house.music', 'nest-door', 'cockroach_house_music'),
                 // Hank, remembered over the fire, and on a scroll beside it
                 // that reads itself aloud.
                 self::picture('portrait', $hearth, self::FIREPLACE['h'], '/img/cockroach.png', 372, 200, 'cockroach_portrait'),
@@ -413,11 +413,25 @@ final class GamesWorld
                 self::game('cockroach-fight', $hearth + 200, 260, ['size' => 110, 'cast' => 'cockroach']),
                 // The side wall's faces the room just off it, as a card
                 // turned to its wall would be seen edge on.
-                ...array_map(
-                    fn ($id, $at) => self::toy($id, $at[0], $at[1], '🕯️', 'sconce', ['y' => self::SCONCE_Y, 'size' => 50, 'move' => 'wiggle', 'light' => $id]),
-                    array_keys($sconces),
-                    $sconces,
-                ),
+                ...self::sconceToys($sconces),
+            ]),
+            // The pipe organ stands turned in the back-right corner, well
+            // clear of the way out: flat on the right wall, a phone saw it
+            // all but edge on, behind the music tab. The bass drum and the
+            // harp stand between it and the door, facing out to be hit
+            // and strummed.
+            'cockroach-house.music' => self::room('cockroach_house_music', [
+                'size' => ['w' => $musicW, 'd' => 480],
+                'spawn' => ['x' => 300, 'z' => 320],
+                'walls' => ['back' => 'stone', 'sides' => 'stone', 'floor' => 'flagstones'],
+                'crawlers' => true,
+                'lights' => self::sconceFlames($musicSconces),
+            ], [
+                self::roomDoor('nest-door', 160, 'cockroach-house.hall', 'music-door', 'cockroach_house_hall', exit: true),
+                self::organ('organ', $musicW),
+                self::drum('bass-drum', 420, 40),
+                self::harp('harp', 720, 30),
+                ...self::sconceToys($musicSconces),
             ]),
         ];
     }
@@ -643,6 +657,27 @@ final class GamesWorld
     private static function flame(string $id, int $x, int $y, int $z, string $color, float $intensity): array
     {
         return ['id' => $id, 'x' => $x, 'y' => $y, 'z' => $z, 'color' => $color, 'intensity' => $intensity, 'flicker' => true];
+    }
+
+    /** The candles in the Cockroach's sconces, by id: [x, z], up the wall
+     * at SCONCE_Y. */
+    private static function sconceFlames(array $sconces): array
+    {
+        return array_map(
+            fn ($id, $at) => self::flame($id, $at[0], self::SCONCE_Y, $at[1], '#f59e0b', 1.1),
+            array_keys($sconces),
+            $sconces,
+        );
+    }
+
+    /** The sconces those candles burn in, each switching its own. */
+    private static function sconceToys(array $sconces): array
+    {
+        return array_map(
+            fn ($id, $at) => self::toy($id, $at[0], $at[1], '🕯️', 'sconce', ['y' => self::SCONCE_Y, 'size' => 50, 'move' => 'wiggle', 'light' => $id]),
+            array_keys($sconces),
+            $sconces,
+        );
     }
 
     /** A ceiling light over the middle of a Library room `$width` wide. */
@@ -926,6 +961,41 @@ final class GamesWorld
             'stand' => 200,
             'label' => 'messages.games.world.toys.organ',
             'zones' => array_map(fn ($zone) => "messages.games.world.toys.organ_{$zone}", self::ORGAN_ZONES),
+        ];
+    }
+
+    /** A harp standing on the floor, facing out (three/harp.js draws it,
+     * scenes/harpLayout.js sizes it). A strum across its strings plucks
+     * each one it crosses; using the harp as a whole runs up them all. */
+    private static function harp(string $id, int $x, int $z): array
+    {
+        return [
+            'id' => $id,
+            'type' => 'harp',
+            'x' => $x,
+            'z' => $z,
+            // Where the Butt stands to play it: clear of its frame, its
+            // own half-width out.
+            'stand' => 120,
+            'label' => 'messages.games.world.toys.harp',
+        ];
+    }
+
+    /** A bass drum hung on its side in a cradle, its head facing out
+     * (three/bassDrum.js draws it, scenes/drumLayout.js sizes it). A hit
+     * on its head booms, deeper nearer the middle; using the drum as a
+     * whole hits the middle. */
+    private static function drum(string $id, int $x, int $z): array
+    {
+        return [
+            'id' => $id,
+            'type' => 'drum',
+            'x' => $x,
+            'z' => $z,
+            // Where the Butt stands to hit it: clear of its cradle (the
+            // Butt keeps off it, useRoom.js), its own half-width out.
+            'stand' => 170,
+            'label' => 'messages.games.world.toys.bass_drum',
         ];
     }
 

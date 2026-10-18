@@ -476,6 +476,39 @@ describe("the room's scene graph", () => {
         graph.dispose();
     });
 
+    it("stands a harp in the room, and rings its strings", () => {
+        const harp = { id: "harp", type: "harp", x: 400, z: 30 };
+        const graph = build({
+            ...hall,
+            interactables: [...hall.interactables, harp],
+        });
+        const built = graph.scene
+            .getObjectsByProperty("isGroup", true)
+            .find((g) => g.position.x === 400 && g.rotation.y === 0);
+        expect(built).toBeTruthy();
+
+        graph.sync(view(), 0.016);
+        expect(graph.sync(view(), 0.016)).toBe(false);
+        graph.pluckString("harp", 3);
+        expect(graph.sync(view(), 0.05)).toBe(true);
+        expect(() => graph.pluckString("nope", 0)).not.toThrow();
+        graph.dispose();
+    });
+
+    it("stands a bass drum in the room, and hits it", () => {
+        const drum = { id: "bass-drum", type: "drum", x: 420, z: 40 };
+        const graph = build({
+            ...hall,
+            interactables: [...hall.interactables, drum],
+        });
+        graph.sync(view(), 0.016);
+        expect(graph.sync(view(), 0.016)).toBe(false);
+        graph.hitDrum("bass-drum", 0.2);
+        expect(graph.sync(view(), 0.05)).toBe(true);
+        expect(() => graph.hitDrum("nope")).not.toThrow();
+        graph.dispose();
+    });
+
     it("flickers its candles, but not under reduced motion", () => {
         const lit = {
             ...hall,

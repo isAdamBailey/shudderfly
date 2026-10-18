@@ -44,6 +44,30 @@ export function itemPose(item) {
     };
 }
 
+/** Point [x, y, z] in `item`'s own space (built facing +z, its middle on
+ * x = 0, as a card on the back wall would be) in the room, posed on its
+ * wall as itemPose() poses it. */
+export function itemPoint(item, [x, y, z]) {
+    const pose = itemPose(item);
+    const cos = Math.cos(pose.turn);
+    const sin = Math.sin(pose.turn);
+    return {
+        x: pose.x + x * cos + z * sin,
+        y: pose.y + y,
+        z: pose.z - x * sin + z * cos,
+    };
+}
+
+/** Room point `at` ({ x, z }) in `item`'s own space: itemPoint() undone. */
+export function itemLocal(item, at) {
+    const pose = itemPose(item);
+    const cos = Math.cos(pose.turn);
+    const sin = Math.sin(pose.turn);
+    const dx = at.x - pose.x;
+    const dz = at.z - pose.z;
+    return { x: dx * cos - dz * sin, z: dx * sin + dz * cos };
+}
+
 // Focal length in stage heights: a little shorter than the road's, so the
 // room's side walls and floor show their depth.
 const FOCAL = 1.6;

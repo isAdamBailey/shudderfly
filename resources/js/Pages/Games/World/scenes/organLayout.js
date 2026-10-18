@@ -1,5 +1,5 @@
 import { clamp } from "../composables/useGamesWorld.js";
-import { itemPose } from "./roomLayout.js";
+import { itemLocal, itemPoint } from "./roomLayout.js";
 
 /**
  * The Cockroach's pipe organ, as pure numbers: how big it is, where its keys
@@ -43,18 +43,6 @@ export function keyX(n) {
     return ORGAN.keys.from + (n + 0.5) * KEY_WIDTH;
 }
 
-/** Organ `item`'s local point [x, y, z] in the room. */
-export function organPoint(item, [x, y, z]) {
-    const pose = itemPose(item);
-    const cos = Math.cos(pose.turn);
-    const sin = Math.sin(pose.turn);
-    return {
-        x: pose.x + x * cos + z * sin,
-        y: pose.y + y,
-        z: pose.z - x * sin + z * cos,
-    };
-}
-
 // What a zone's button covers: its keys from the front of the desk below
 // them to a little above their tops.
 const ZONE_Y = { from: ORGAN.desk.top - 24, to: ORGAN.keys.y + 8 };
@@ -68,7 +56,7 @@ export function zoneCorners(item, zone) {
     for (const x of [x0, x1]) {
         for (const y of [ZONE_Y.from, ZONE_Y.to]) {
             for (const z of [ORGAN.keys.back, ORGAN.keys.front]) {
-                corners.push(organPoint(item, [x, y, z]));
+                corners.push(itemPoint(item, [x, y, z]));
             }
         }
     }
@@ -80,7 +68,7 @@ export function zoneCorners(item, zone) {
  * along the keyboard in the organ's own space, so a key's whole depth is
  * that key, however slanted the keyboard is seen. */
 export function keyAt(item, zone, at) {
-    const along = organLocal(item, at).x;
+    const along = itemLocal(item, at).x;
     const from = keyX(zone * ORGAN.whiteKeys) - KEY_WIDTH / 2;
     const key = Math.floor((along - from) / KEY_WIDTH);
     return clamp(key, 0, ORGAN.whiteKeys - 1);
@@ -92,20 +80,9 @@ const REACH = ORGAN.desk.depth + 54;
 const ENDS = ORGAN.length / 2 + 10;
 
 /** The floor organ `item` stands on, in its own space ({ x0, x1, z0, z1 },
- * as organPoint() takes it), so it's the organ's shape however it's turned.
+ * as itemPoint() takes it), so it's the organ's shape however it's turned.
  * The Butt keeps off it (useRoom.js), so it never covers the keys. */
 export const ORGAN_FOOTPRINT = { x0: -ENDS, x1: ENDS, z0: 0, z1: REACH };
-
-/** Room point `at` ({ x, z }) in organ `item`'s own space: organPoint()
- * undone. */
-export function organLocal(item, at) {
-    const pose = itemPose(item);
-    const cos = Math.cos(pose.turn);
-    const sin = Math.sin(pose.turn);
-    const dx = at.x - pose.x;
-    const dz = at.z - pose.z;
-    return { x: dx * cos - dz * sin, z: dx * sin + dz * cos };
-}
 
 /** The convex hull of screen points `points` ({ x, y }), round it in order
  * (Andrew's monotone chain): the outline of a zone's projected keys. */
