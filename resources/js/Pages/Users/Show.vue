@@ -96,6 +96,10 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    canAskToUnblock: {
+        type: Boolean,
+        default: false,
+    },
     siteStats: {
         type: Object,
         default: () => ({}),
@@ -357,6 +361,7 @@ const speakUserSummary = () => {
                     <BlockedContentPanel
                         :blocked-count="blockedCount"
                         :unblock-asked-today="unblockAskedToday"
+                        :can-ask-to-unblock="canAskToUnblock"
                     />
                     <button
                         v-if="canAdmin"

@@ -181,6 +181,8 @@ class UserController extends Controller
             // The other half of the CTA's enable condition, so the button
             // can't offer an ask the server would refuse.
             'unblockAskedToday' => UnblockRequest::askedToday($user),
+            // Both settings that gate the ask, decided once on the server.
+            'canAskToUnblock' => ContentBlockService::askingEnabled(),
             'siteStats' => $this->siteStats(),
             'adminSettings' => $canAdmin ? $this->settingsController->index() : [],
             'defaultCities' => config('world_clock.default_cities'),

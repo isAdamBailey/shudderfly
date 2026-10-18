@@ -33,17 +33,11 @@ vi.mock("@/composables/useTranslations", () => ({
     }),
 }));
 
-let mockUnblockRequestsEnabled = "1";
 vi.mock("@inertiajs/vue3", () => ({
     router: { reload: vi.fn() },
     usePage: () => ({
         props: {
             auth: { user: { id: 7 } },
-            settings: {
-                get unblock_requests_enabled() {
-                    return mockUnblockRequestsEnabled;
-                },
-            },
         },
     }),
 }));
@@ -55,8 +49,14 @@ vi.mock("axios", () => ({
     },
 }));
 
-const mountPanel = (blockedCount = 3, unblockAskedToday = false) =>
-    mount(BlockedContentPanel, { props: { blockedCount, unblockAskedToday } });
+const mountPanel = (
+    blockedCount = 3,
+    unblockAskedToday = false,
+    canAskToUnblock = true
+) =>
+    mount(BlockedContentPanel, {
+        props: { blockedCount, unblockAskedToday, canAskToUnblock },
+    });
 
 // The CTA's presence is the observable cooldown: the button is gone once the
 // user has asked today, so no unusable control is left on screen.
@@ -78,7 +78,6 @@ describe("BlockedContentPanel", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockCanEditPages = false;
-        mockUnblockRequestsEnabled = "1";
         mockPost.mockResolvedValue({
             data: { message: "sent", sent: true },
         });
@@ -285,22 +284,23 @@ describe("BlockedContentPanel", () => {
         });
     });
 
-    describe("unblock_requests_enabled setting", () => {
-        it("hides the ask-to-unblock CTA when the site setting is off", () => {
-            mockUnblockRequestsEnabled = "0";
-            const wrapper = mountPanel();
+    describe("canAskToUnblock prop", () => {
+        it("hides the ask-to-unblock CTA when the site does not allow asking", () => {
+            const wrapper = mountPanel(3, false, false);
 
             expect(ctaExists(wrapper)).toBe(false);
         });
 
-        it("still shows the unblock-all button to an edit-pages user when the setting is off", () => {
-            mockUnblockRequestsEnabled = "0";
+        it("still shows the unblock-all button to an edit-pages user when asking is off", () => {
             mockCanEditPages = true;
-            const wrapper = mountPanel();
+            const wrapper = mountPanel(3, false, false);
 
             expect(wrapper.text()).toContain(
                 "dashboard.unlock_all_blocked_pages"
             );
+            expect(
+                wrapper.find("button").attributes("disabled")
+            ).toBeUndefined();
         });
     });
 });
