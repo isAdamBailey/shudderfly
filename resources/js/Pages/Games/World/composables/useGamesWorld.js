@@ -1,4 +1,4 @@
-import { reactive, computed, onUnmounted, unref } from "vue";
+import { reactive, computed, markRaw, onUnmounted, unref } from "vue";
 import { approach } from "@/utils/math";
 
 export const WALK_SPEED = 220; // px/s while an arrow key is held
@@ -52,6 +52,9 @@ export function useGamesWorld(games, callbacks = {}) {
         onArrive,
         isReducedMotion = () => false,
         start: startAt,
+        // How often other people say where they are, s: each walks to
+        // where they said over about that long, never slower than walking.
+        othersEvery = 2,
     } = callbacks;
 
     const bounds = reactive({ w: 0, h: 0 });
@@ -95,6 +98,10 @@ export function useGamesWorld(games, callbacks = {}) {
     // there should open.
     let targetX = null;
     const camera = reactive({ x: 0 });
+
+    // Other people on the street: { id, name, x, lane, facing, walking,
+    // bob, lift }, each walking to `to`, where they last said they were.
+    const others = reactive([]);
 
     const state = reactive({
         mode: "idle", // idle | dragging | panning
@@ -172,9 +179,75 @@ export function useGamesWorld(games, callbacks = {}) {
         updateCamera();
     }
 
+    /** Where other people on the street last said they were: [{ id, name,
+     * x, lane, facing, moving }]. Someone new appears there; someone known
+     * walks there; someone missing is gone. */
+    function setOthers(list) {
+        const kept = list.map((said) => {
+            // Read, never watched: only what's drawn from it is.
+            const to = markRaw(said);
+            const known = others.find((o) => o.id === to.id);
+            if (known) {
+                known.name = to.name;
+                // A new spot, not just a new list: someone else moving.
+                if (known.to.x !== to.x) known.speed = catchUp(known.x, to.x);
+                known.to = to;
+                return known;
+            }
+            return {
+                speed: WALK_SPEED,
+                id: to.id,
+                name: to.name,
+                x: wrapX(to.x),
+                lane: to.lane,
+                facing: to.facing,
+                walking: Boolean(to.moving),
+                bob: 0,
+                lift: 0,
+                to,
+            };
+        });
+        others.splice(0, others.length, ...kept);
+    }
+
+    /** How fast to walk from `from` to `to` to get there in othersEvery:
+     * set once per new spot, so it arrives rather than easing in. */
+    function catchUp(from, to) {
+        return Math.max(
+            WALK_SPEED,
+            Math.abs(wrappedGap(from, to)) / othersEvery
+        );
+    }
+
+    /** Walks everyone else toward where they last said, the short way round
+     * the looping road. */
+    function stepOthers(dt) {
+        for (const other of others) {
+            const { to } = other;
+            const gap = wrappedGap(other.x, to.x);
+            const { speed } = other;
+            if (Math.abs(gap) <= speed * dt) {
+                other.x = wrapX(to.x);
+            } else {
+                other.x = wrapX(other.x + Math.sign(gap) * speed * dt);
+            }
+            other.facing = gap ? Math.sign(gap) : to.facing;
+            other.lane = approach(other.lane, to.lane, dt / CROSS_TIME);
+            other.walking =
+                Boolean(to.moving) || gap !== 0 || other.lane !== to.lane;
+            other.bob =
+                other.walking && !isReducedMotion()
+                    ? (other.bob + dt) % (Math.PI * 2)
+                    : 0;
+            other.lift = bobLift(other.bob);
+        }
+    }
+
     /** Advances the world by dt seconds. Called every rAF tick; also exposed
      * directly so tests can drive it without faking rAF. */
     function step(dt) {
+        // Other people carry on behind a card: it's only your world frozen.
+        if (others.length) stepOthers(dt);
         if (state.confirmSlug) return; // the world freezes behind the card
 
         const crossing = !settled();
@@ -367,10 +440,12 @@ export function useGamesWorld(games, callbacks = {}) {
         landmarks,
         worldWidth,
         butt,
+        others,
         camera,
         state,
         nearestLandmark,
         setBounds,
+        setOthers,
         start,
         stop,
         step,

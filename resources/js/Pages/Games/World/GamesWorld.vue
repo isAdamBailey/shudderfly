@@ -120,7 +120,19 @@ const presence = useWorldPresence({
     enabled:
         useSiteSetting("world_together_enabled").value &&
         Boolean(page.props.auth?.user),
+    me: page.props.auth?.user?.id ?? null,
 });
+
+// Only the street has other people on it so far: in a room you're on the
+// roster and nowhere else.
+watch(
+    router.current,
+    (scene) => {
+        if (scene?.kind === "road") presence.enterScene(router.currentId.value);
+        else presence.leaveScene();
+    },
+    { immediate: true }
+);
 
 /** Everything an interaction handler may touch (interactions/index.js). */
 const ctx = {
@@ -462,6 +474,8 @@ const stage = {
     focus: focusStage,
     renderer,
     radioOn: radio.isOn,
+    // Where the Butt is, and where everyone else is (useWorldPresence).
+    together: presence.enabled ? presence : null,
 };
 </script>
 

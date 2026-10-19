@@ -1166,14 +1166,30 @@ describe("GamesWorld together", () => {
         });
     }
 
+    // Echo with a channel per name that keeps its callbacks, so a test can
+    // play people arriving and whispering. No Pusher connection is opened.
+    let channels;
+
     beforeEach(() => {
-        const channel = {};
-        channel.here =
-            channel.joining =
-            channel.leaving =
-            channel.error =
-                () => channel;
-        echo = { join: vi.fn(() => channel), leave: vi.fn() };
+        channels = {};
+        echo = {
+            join: vi.fn((name) => {
+                const handlers = { whispers: {} };
+                const channel = {
+                    handlers,
+                    whisper: vi.fn(),
+                    listenForWhisper: (event, fn) => (
+                        (handlers.whispers[event] = fn), channel
+                    ),
+                };
+                for (const on of ["here", "joining", "leaving", "error"]) {
+                    channel[on] = (fn) => ((handlers[on] = fn), channel);
+                }
+                channels[name] = channel;
+                return channel;
+            }),
+            leave: vi.fn(),
+        };
         window.Echo = echo;
     });
 
@@ -1182,16 +1198,86 @@ describe("GamesWorld together", () => {
         usePage.mockImplementation(setupPage);
     });
 
-    it("joins the roster while the switch is on, and leaves it with the world", async () => {
+    const roadChannel = () =>
+        Object.entries(channels).find(([name]) =>
+            /(^|\.)world\.road$/.test(name)
+        );
+
+    it("joins the roster and the road while the switch is on, and leaves them with the world", async () => {
         asVisitor({ together: true });
         wrapper = await mountWorld();
 
-        expect(echo.join).toHaveBeenCalledOnce();
-        expect(echo.join.mock.calls[0][0]).toMatch(/(^|\.)world$/);
+        const joined = echo.join.mock.calls.map(([name]) => name);
+        expect(joined).toHaveLength(2);
+        expect(joined[0]).toMatch(/(^|\.)world$/);
+        expect(joined[1]).toMatch(/(^|\.)world\.road$/);
 
         wrapper.unmount();
         wrapper = null;
-        expect(echo.leave).toHaveBeenCalledWith(echo.join.mock.calls[0][0]);
+        expect(echo.leave.mock.calls.map(([name]) => name).sort()).toEqual(
+            [...joined].sort()
+        );
+    });
+
+    it("draws someone else on the street with their name", async () => {
+        asVisitor({ together: true });
+        wrapper = await mountWorld();
+        const [, road] = roadChannel();
+        road.handlers.here([
+            { id: 7, name: "Me" },
+            { id: 8, name: "Friend" },
+        ]);
+
+        road.handlers.whispers.place(
+            { scene: "road", x: 900, z: 0, lane: 0 },
+            { user_id: "8" }
+        );
+        await showing(wrapper, ".other-name");
+
+        expect(wrapper.get(".other-name").text()).toBe("Friend");
+        // Arriving, you said where you are.
+        expect(road.whisper).toHaveBeenCalledWith(
+            "place",
+            expect.objectContaining({ scene: "road", z: 0, lane: 0 })
+        );
+
+        road.handlers.leaving({ id: 8, name: "Friend" });
+        await nextTick();
+        expect(wrapper.find(".other-name").exists()).toBe(false);
+    });
+
+    it("draws someone else on the street without WebGL too", async () => {
+        fake.webgl = false;
+        asVisitor({ together: true });
+        wrapper = await mountWorld();
+        const [, road] = roadChannel();
+        road.handlers.here([
+            { id: 7, name: "Me" },
+            { id: 8, name: "Friend" },
+        ]);
+
+        road.handlers.whispers.move(
+            { x: 900, z: 0, lane: 1, facing: -1, moving: 0 },
+            { user_id: 8 }
+        );
+        await showing(wrapper, ".road-scene .butt.other");
+
+        expect(wrapper.get(".butt.other .other-name").text()).toBe("Friend");
+    });
+
+    it("leaves the road's channel in a room and joins it again outside", async () => {
+        asVisitor({ together: true });
+        wrapper = await mountWorld(withHouse);
+        const [roadName] = roadChannel();
+
+        await enterHouse(wrapper);
+        expect(echo.leave).toHaveBeenCalledWith(roadName);
+
+        await wrapper.get(".stage").trigger("keydown", { key: "Escape" });
+        await showing(wrapper, ".road-3d");
+        expect(
+            echo.join.mock.calls.filter(([name]) => name === roadName)
+        ).toHaveLength(2);
     });
 
     it("joins nothing while the switch is off", async () => {

@@ -16,6 +16,7 @@ import {
     useGamesWorld,
 } from "./useGamesWorld.js";
 import { useIdlerPhysics } from "./useIdlerPhysics.js";
+import { MOVE_EVERY_MS } from "./useWorldPresence.js";
 
 const IDLER_SETBACK = 260; // px before its neighbouring landmark
 const IDLER_EXCITE_RADIUS = 180;
@@ -34,7 +35,9 @@ const PEEK_DEADBAND = 0.005;
  * (scenes/Road3D.vue) draw the same state, take the same gestures and expose
  * the same API to the stage.
  *
- * `props` are the scene's ({ scene, stage, arrival }); `emit` its emit. The drawer
+ * `props` are the scene's ({ scene, stage, arrival }); `emit` its emit.
+ * `stage.together`, when the world is shared (useWorldPresence), hears where
+ * the Butt is and says where everyone else is, as `world.others`. The drawer
  * supplies what only it knows:
  * - dragTo(event, stageRect): called as a drag of the Butt starts; returns
  *   a function from each pointer event of the drag to where it sends the
@@ -98,8 +101,42 @@ export function useRoad(props, emit, options) {
         isReducedMotion: () => reduced.value,
         onArrive: (landmark) => emit("activate", landmark.item),
         start: at && { x: at.x, side: lanes ? at.side : "far" },
+        othersEvery: MOVE_EVERY_MS / 1000,
     });
     const { landmarks, butt, camera, state, nearestLandmark } = world;
+
+    /** Walking, or crossing the street. */
+    const buttMoving = computed(
+        () => butt.vx !== 0 || butt.lane !== LANES[butt.side]
+    );
+
+    // --- Other people ------------------------------------------------------
+
+    const together = props.stage.together;
+    if (together) {
+        // Whole road px, and the side it's on or crossing to. Watched as
+        // numbers, so a frame that changes none of them sends nothing.
+        watch(
+            () => [
+                Math.round(butt.x),
+                LANES[butt.side],
+                butt.facing,
+                buttMoving.value ? 1 : 0,
+            ],
+            ([x, lane, facing, moving]) =>
+                together.move({ x, z: 0, lane, facing, moving }),
+            { immediate: true }
+        );
+        // A drawer with one side of the street has everyone on it.
+        watch(
+            together.others,
+            (list) =>
+                world.setOthers(
+                    list.map((o) => ({ ...o, lane: lanes ? o.lane : 0 }))
+                ),
+            { immediate: true }
+        );
+    }
 
     // --- Roadside cast -----------------------------------------------------
 
@@ -412,6 +449,7 @@ export function useRoad(props, emit, options) {
         unlockToot,
         buttCast,
         buttLift,
+        buttMoving,
         peekX,
         peekY,
         onButtPointerDown,
