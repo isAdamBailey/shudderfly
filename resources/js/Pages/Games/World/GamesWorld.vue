@@ -3,6 +3,7 @@ import { usePage } from "@inertiajs/vue3";
 import { audioRunning, unlockAudio } from "@/composables/useAudioContext";
 import { speakGameIntro } from "@/composables/useGameIntroSpeech";
 import { primeSpeech } from "@/composables/speechPlayback";
+import { useSiteSetting } from "@/composables/useSiteSetting";
 import { useTranslations } from "@/composables/useTranslations";
 import { usePreferredReducedMotion } from "@vueuse/core";
 import {
@@ -21,6 +22,7 @@ import RoadScene from "./scenes/RoadScene.vue";
 import { ROWS } from "./scenes/roadLayout.js";
 import { useRadio } from "./composables/useRadio.js";
 import { useSceneRouter } from "./composables/useSceneRouter.js";
+import { useWorldPresence } from "./composables/useWorldPresence.js";
 import { activate } from "./interactions/index.js";
 import { playDrum } from "./drumSounds.js";
 import { playHarp } from "./harpSounds.js";
@@ -111,6 +113,14 @@ let resizeObserver = null;
 const card = shallowRef(null);
 
 const radio = useRadio();
+
+// Other people in the world (issue #174): logged-in visitors only, and only
+// while the site has it switched on. Off, nothing is joined at all.
+const presence = useWorldPresence({
+    enabled:
+        useSiteSetting("world_together_enabled").value &&
+        Boolean(page.props.auth?.user),
+});
 
 /** Everything an interaction handler may touch (interactions/index.js). */
 const ctx = {
@@ -299,6 +309,7 @@ onMounted(async () => {
     document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("blur", onWindowBlur);
     window.addEventListener("pagehide", remember);
+    presence.join();
 
     if (mode.value === "loading") {
         const ready = await renderer.init(canvasEl.value);
@@ -317,6 +328,7 @@ onBeforeUnmount(() => {
     window.removeEventListener("blur", onWindowBlur);
     detachPointerListeners();
     renderer.dispose();
+    presence.leave();
 });
 
 // A card that runs a game (`pausesWorld` in its options: GameHost,
