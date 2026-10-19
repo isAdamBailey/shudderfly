@@ -15,6 +15,7 @@ import {
 import InteractableButton from "../components/InteractableButton.vue";
 import { boxStyle } from "../components/overlay.js";
 import LandmarkTitle from "../components/LandmarkTitle.vue";
+import OtherName from "../components/OtherName.vue";
 import SkyLogo from "../components/SkyLogo.vue";
 import { screenToGround, worldToScreen } from "../composables/projection.js";
 import { useRoad } from "../composables/useRoad.js";
@@ -146,6 +147,7 @@ function onFrame(dt) {
             camera: view.value,
             butt,
             buttLift: buttLift.value,
+            others: world.others,
             idlers: idlers.value,
             near: nearestLandmark.value?.slug ?? null,
             hovered: hovered.value,
@@ -269,6 +271,22 @@ const buttSpot = computed(() =>
         : null
 );
 
+// Where each other person's name goes: just over their head.
+const otherSpots = computed(() =>
+    view.value
+        ? world.others.map((other) => ({
+              id: other.id,
+              name: other.name,
+              ...spot(
+                  other.x,
+                  layout.value.laneZ(other.lane),
+                  layout.value.sizes.butt,
+                  other.lift
+              ),
+          }))
+        : []
+);
+
 const puffSpots = computed(() =>
     view.value
         ? puffs.value.map((puff) => ({
@@ -336,6 +354,13 @@ defineExpose({ ...api, setBounds, pointOf });
             >
                 <LandmarkTitle :id="landmark.slug" :name="landmark.name" />
             </InteractableButton>
+
+            <OtherName
+                v-for="s in otherSpots"
+                :key="s.id"
+                :name="s.name"
+                :style="{ left: `${s.x}px`, top: `${s.y - s.size}px` }"
+            />
 
             <div
                 class="butt"

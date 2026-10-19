@@ -6,9 +6,9 @@ import { useTranslations } from "@/composables/useTranslations";
 import { computed, ref } from "vue";
 import TiltPermissionButton from "@/Components/TiltPermissionButton.vue";
 import LandmarkTitle from "../components/LandmarkTitle.vue";
+import OtherName from "../components/OtherName.vue";
 import SkyLogo from "../components/SkyLogo.vue";
 import { useRoad } from "../composables/useRoad.js";
-import { LANES } from "../composables/useGamesWorld.js";
 
 // The `kind: "road"` renderer for when WebGL isn't available (Road3D.vue is
 // the WebGL one): the road drawn in the DOM, as it was before the 3D world.
@@ -54,6 +54,7 @@ const {
     unlockToot,
     buttCast,
     buttLift,
+    buttMoving,
     peekX,
     peekY,
     onButtPointerDown,
@@ -125,10 +126,6 @@ const hillStyle = computed(() => ({
         -((camera.x * 0.25) % HILL_TILE) + peekX.value * PEEK.hills.x
     }px, ${peekY.value * PEEK.hills.y}px, 0)`,
 }));
-
-const buttMoving = computed(
-    () => butt.vx !== 0 || butt.lane !== LANES[butt.side]
-);
 
 const buttStyle = computed(() => ({
     // translate rather than `left`: butt.x changes every frame, and `left`
@@ -211,6 +208,27 @@ defineExpose(api);
                     <template v-else>{{ landmark.landmark }}</template>
                 </span>
             </button>
+
+            <div
+                v-for="other in world.others"
+                :key="other.id"
+                class="butt other"
+                :style="{
+                    transform: `translate3d(${other.x}px, 0, 0) translateX(-50%)`,
+                }"
+                aria-hidden="true"
+            >
+                <OtherName
+                    :name="other.name"
+                    :style="{ left: '50%', top: `${-other.lift}px` }"
+                />
+                <CastMember
+                    id="butt"
+                    :move="other.walking ? 'walk' : null"
+                    :facing="other.facing < 0 ? 'left' : 'right'"
+                    :lift="other.lift"
+                />
+            </div>
 
             <div
                 ref="buttEl"
@@ -450,6 +468,12 @@ defineExpose(api);
     cursor: grab;
     touch-action: none;
     will-change: transform;
+}
+
+/* Someone else's butt, drawn behind yours: there to see, not to drag. */
+.butt.other {
+    pointer-events: none;
+    cursor: auto;
 }
 
 @media (prefers-reduced-motion: reduce) {

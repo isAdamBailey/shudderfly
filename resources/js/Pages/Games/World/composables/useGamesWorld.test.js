@@ -542,3 +542,109 @@ describe("useGamesWorld start", () => {
         expect(world.butt.bob).toBe(0);
     });
 });
+
+describe("useGamesWorld other people", () => {
+    function makeWorld(options) {
+        const world = useGamesWorld(GAMES, options);
+        world.setBounds(STAGE_W, STAGE_H);
+        return world;
+    }
+
+    const friend = (to) => ({
+        id: 2,
+        name: "Friend",
+        x: 1000,
+        lane: 0,
+        facing: 1,
+        moving: 0,
+        ...to,
+    });
+
+    it("puts someone new where they say, and walks them on from there", () => {
+        const world = makeWorld();
+        world.setOthers([friend()]);
+        expect(world.others[0]).toMatchObject({ id: 2, x: 1000, lane: 0 });
+
+        world.setOthers([friend({ x: 1440, moving: 1 })]);
+        world.step(DT);
+        expect(world.others[0].x).toBeGreaterThan(1000);
+        expect(world.others[0].walking).toBe(true);
+        expect(world.others[0].facing).toBe(1);
+
+        // Walking pace for a walk's worth of road: there in two seconds.
+        advance(world, 2050);
+        expect(world.others[0].x).toBe(1440);
+    });
+
+    it("takes the short way round the end of the road", () => {
+        const world = makeWorld();
+        const end = world.worldWidth.value;
+        world.setOthers([friend({ x: end - 100 })]);
+
+        world.setOthers([friend({ x: 100, moving: 1 })]);
+        for (let i = 0; i < 60; i++) {
+            world.step(DT);
+            const { x } = world.others[0];
+            expect(x > end - 200 || x < 200).toBe(true);
+        }
+        expect(world.others[0].x).toBe(100);
+        expect(world.others[0].facing).toBe(1);
+    });
+
+    it("crosses the street to their side, and stops when they do", () => {
+        const world = makeWorld();
+        world.setOthers([friend()]);
+
+        world.setOthers([friend({ lane: 1 })]);
+        world.step(DT);
+        expect(world.others[0].walking).toBe(true);
+        advance(world, CROSS_TIME * 1000 + 50);
+
+        expect(world.others[0].lane).toBe(1);
+        expect(world.others[0].walking).toBe(false);
+        expect(world.others[0].bob).toBe(0);
+    });
+
+    it("doesn't bob anyone under reduced motion", () => {
+        const world = makeWorld({ isReducedMotion: () => true });
+        world.setOthers([friend()]);
+        world.setOthers([friend({ x: 1400, moving: 1 })]);
+
+        advance(world, 500);
+
+        expect(world.others[0].walking).toBe(true);
+        expect(world.others[0].bob).toBe(0);
+    });
+
+    it("drops someone who's gone", () => {
+        const world = makeWorld();
+        world.setOthers([friend(), friend({ id: 3, name: "C" })]);
+
+        world.setOthers([friend({ id: 3, name: "C" })]);
+
+        expect(world.others.map((o) => o.id)).toEqual([3]);
+    });
+});
+
+describe("useGamesWorld keeping up with other people", () => {
+    it("keeps up with someone dragging faster than walking", () => {
+        const world = useGamesWorld(GAMES, { othersEvery: 2 });
+        world.setBounds(STAGE_W, STAGE_H);
+        const at = (x) => ({
+            id: 2,
+            name: "Friend",
+            x,
+            lane: 0,
+            facing: 1,
+            moving: 1,
+        });
+        world.setOthers([at(100)]);
+
+        // 640px every 2s, as a drag at DRAG_SPEED sends it.
+        for (const x of [740, 1380, 2020]) {
+            world.setOthers([at(x)]);
+            advance(world, 2000);
+            expect(Math.abs(world.others[0].x - x)).toBeLessThan(15);
+        }
+    });
+});
