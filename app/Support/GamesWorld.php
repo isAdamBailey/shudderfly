@@ -74,6 +74,14 @@ final class GamesWorld
      * day (pickedToday()). */
     public const TV_CHANNELS = 6;
 
+    /**
+     * The site setting that lets logged-in people in the world see each
+     * other (issue #174). Off, the page joins no presence channel and the
+     * channels refuse anyone who tries; whoever already joined stays until
+     * they leave the page.
+     */
+    public const TOGETHER_SETTING = 'world_together_enabled';
+
     /** How many songs a radio turns through, picked once a day
      * (pickedToday()). */
     public const RADIO_STATIONS = 6;
@@ -1277,6 +1285,12 @@ final class GamesWorld
         return collect($definitions)
             ->flatMap(fn ($scene) => $scene['photos'] ?? [])
             ->groupBy(fn ($frame) => self::photoSource($frame['from']));
+    }
+
+    /** Whether togetherness is on. A missing row counts as off. */
+    public static function togetherEnabled(): bool
+    {
+        return (bool) (SiteSetting::where('key', self::TOGETHER_SETTING)->first()?->value);
     }
 
     /** Forgets today's pick of photos for every frame, so the next visit

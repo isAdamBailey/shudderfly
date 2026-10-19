@@ -1,3 +1,4 @@
+import { usePage } from "@inertiajs/vue3";
 import { flushPromises, mount } from "@vue/test-utils";
 import axios from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -1147,5 +1148,66 @@ describe("GamesWorld Library shelves", () => {
         await wrapper.get(".world-card-cancel").trigger("click");
         await nextTick();
         expect(wrapper.find("[role='dialog']").exists()).toBe(false);
+    });
+});
+
+describe("GamesWorld together", () => {
+    let echo;
+    // vitest.setup.js's page, put back after each test.
+    const setupPage = usePage.getMockImplementation();
+
+    /** The page as a visitor sees it, with the together switch on or off. */
+    function asVisitor({ together, user = { id: 7, name: "Me" } }) {
+        usePage.mockReturnValue({
+            props: {
+                auth: { user },
+                settings: { world_together_enabled: together ? "1" : "0" },
+            },
+        });
+    }
+
+    beforeEach(() => {
+        const channel = {};
+        channel.here =
+            channel.joining =
+            channel.leaving =
+            channel.error =
+                () => channel;
+        echo = { join: vi.fn(() => channel), leave: vi.fn() };
+        window.Echo = echo;
+    });
+
+    afterEach(() => {
+        delete window.Echo;
+        usePage.mockImplementation(setupPage);
+    });
+
+    it("joins the roster while the switch is on, and leaves it with the world", async () => {
+        asVisitor({ together: true });
+        wrapper = await mountWorld();
+
+        expect(echo.join).toHaveBeenCalledOnce();
+        expect(echo.join.mock.calls[0][0]).toMatch(/(^|\.)world$/);
+
+        wrapper.unmount();
+        wrapper = null;
+        expect(echo.leave).toHaveBeenCalledWith(echo.join.mock.calls[0][0]);
+    });
+
+    it("joins nothing while the switch is off", async () => {
+        asVisitor({ together: false });
+        wrapper = await mountWorld();
+        wrapper.unmount();
+        wrapper = null;
+
+        expect(echo.join).not.toHaveBeenCalled();
+        expect(echo.leave).not.toHaveBeenCalled();
+    });
+
+    it("joins nothing for a guest", async () => {
+        asVisitor({ together: true, user: null });
+        wrapper = await mountWorld();
+
+        expect(echo.join).not.toHaveBeenCalled();
     });
 });
