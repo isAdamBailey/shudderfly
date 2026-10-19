@@ -21,8 +21,10 @@ import Road3D from "./scenes/Road3D.vue";
 import RoadScene from "./scenes/RoadScene.vue";
 import { ROWS } from "./scenes/roadLayout.js";
 import { useRadio } from "./composables/useRadio.js";
+import { useFollow } from "./composables/useFollow.js";
 import { useSceneRouter } from "./composables/useSceneRouter.js";
 import { useWorldPresence } from "./composables/useWorldPresence.js";
+import WorldRoster from "./components/WorldRoster.vue";
 import { activate } from "./interactions/index.js";
 import { playDrum } from "./drumSounds.js";
 import { playHarp } from "./harpSounds.js";
@@ -121,15 +123,14 @@ const presence = useWorldPresence({
         useSiteSetting("world_together_enabled").value &&
         Boolean(page.props.auth?.user),
     me: page.props.auth?.user?.id ?? null,
+    scenes: Object.keys(props.scenes),
 });
 
-// Only the street has other people on it so far: in a room you're on the
-// roster and nowhere else.
+// Whichever scene you're in, its channel: the people standing in it.
 watch(
-    router.current,
-    (scene) => {
-        if (scene?.kind === "road") presence.enterScene(router.currentId.value);
-        else presence.leaveScene();
+    router.currentId,
+    (id) => {
+        if (router.current.value) presence.enterScene(id);
     },
     { immediate: true }
 );
@@ -162,7 +163,10 @@ function onActivate(item) {
     activate(item, ctx);
     // A handler that didn't open a card or start a scene change is
     // finished, so the scene mustn't stay frozen waiting for one.
-    if (!card.value && !transition.active) sceneRef.value?.unfreeze();
+    if (!card.value && !transition.active) {
+        sceneRef.value?.unfreeze();
+        follow.nudge();
+    }
 }
 
 // --- Scenes -----------------------------------------------------------------
@@ -170,6 +174,18 @@ function onActivate(item) {
 // A scene change in progress: `dolly` is the point the camera moves toward,
 // `veil` whether the world is faded out.
 const transition = reactive({ active: false, dolly: null, veil: false });
+
+// Following someone on the roster (WorldRoster) or tapped on (a scene's
+// `stage.follow`): it walks through doors itself, and stops the moment you
+// steer (a scene's `stage.steered`).
+const follow = useFollow({
+    presence,
+    scenes: () => props.scenes,
+    currentId: router.currentId,
+    scene: () => sceneRef.value,
+    busy: () => transition.active,
+    canEnter: (id) => Boolean(rendererFor(props.scenes[id])),
+});
 
 // What the aria-live region says: the place you've just arrived in, or why
 // you couldn't go in.
@@ -237,10 +253,13 @@ async function goToScene(id, { spot, from } = {}) {
     transition.active = false;
 }
 
-/** Escape or the back button: out of the room the way you came. */
+/** Escape or the back button: out of the room the way you came, which is
+ * steering, so it stops a follow. */
 function leave() {
     const door = router.exitDoor();
-    if (door && !card.value) onActivate(door);
+    if (!door || card.value) return;
+    follow.stop();
+    onActivate(door);
 }
 
 /** Saves the scene and where the Butt is in it, to come back to after a
@@ -279,6 +298,15 @@ const stageLabel = computed(() => {
 function closeCard() {
     card.value = null;
     sceneRef.value?.release();
+    // A follow the card held up carries on.
+    follow.nudge();
+}
+
+/** Follows user `id`, from the roster: focus back on the stage, so the
+ * keys that steer (and stop it) still reach the world. */
+function followFromRoster(id) {
+    follow.start(id);
+    focusStage();
 }
 
 // --- Layout -----------------------------------------------------------------
@@ -476,6 +504,9 @@ const stage = {
     radioOn: radio.isOn,
     // Where the Butt is, and where everyone else is (useWorldPresence).
     together: presence.enabled ? presence : null,
+    // Starts following user `id`, and stops when the player steers.
+    follow: follow.start,
+    steered: follow.stop,
 };
 </script>
 
@@ -530,6 +561,15 @@ const stage = {
         >
             <span aria-hidden="true">←</span>
         </button>
+
+        <WorldRoster
+            v-if="presence.enabled"
+            :roster="presence.roster.value"
+            :scenes="scenes"
+            :leader="follow.leader.value"
+            @follow="followFromRoster"
+            @stop="follow.stop"
+        />
 
         <p class="sr-only" aria-live="polite">{{ announcement }}</p>
 

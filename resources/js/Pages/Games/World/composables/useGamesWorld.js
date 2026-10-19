@@ -17,6 +17,9 @@ export const CROSS_TIME = 0.35; // s
 // The two sides of the street, as the butt's `lane`: 0 is the far side
 // (where landmarks stand unless they say otherwise), 1 the near side.
 export const LANES = { far: 0, near: 1 };
+// Following someone (issue #174) stops this far short of them, so the two
+// butts stand side by side rather than one on top of the other.
+export const FOLLOW_GAP = 90;
 
 const BUTT_START_X = 260;
 const ROAD_MARGIN = 40; // the butt never stands closer than this to either end
@@ -35,6 +38,96 @@ export function clamp(value, min, max) {
  * a little, either way, for the road's foods and a room's fruit alike. */
 export function tossTilt(vx) {
     return clamp(vx / 15, -35, 35);
+}
+
+/**
+ * Other people in a scene (issue #174), each walking to where they last said
+ * they were: { id, name, x, z, lane, facing, walking, bob, lift }. The road
+ * and a room both use it: the road has lanes and loops (`gap`, `wrap`), a
+ * room has depth (`z`).
+ *
+ * - every: how often they say where they are, s. Each new spot sets a speed
+ *   that gets them there in about that long, never slower than walking, so
+ *   they arrive rather than ease in.
+ * - gap(from, to): signed distance along x (default to - from).
+ * - wrap(x): x as drawn (default x).
+ */
+export function useOthers({
+    every = 2,
+    isReducedMotion = () => false,
+    gap: gapX = (from, to) => to - from,
+    wrap = (x) => x,
+} = {}) {
+    const others = reactive([]);
+
+    /** How fast to walk from `other` to `to` to get there in `every`. */
+    const catchUp = (other, to) =>
+        Math.max(
+            WALK_SPEED,
+            Math.hypot(gapX(other.x, to.x), to.z - other.z) / every
+        );
+
+    /** Where everyone last said they were: [{ id, name, x, z, lane, facing,
+     * moving }]. Someone new appears there; someone known walks there;
+     * someone missing is gone. */
+    function set(list) {
+        const kept = list.map((said) => {
+            // Read, never watched: only what's drawn from it is.
+            const to = markRaw(said);
+            const known = others.find((o) => o.id === to.id);
+            if (known) {
+                known.name = to.name;
+                // A new spot, not just a new list: someone else moving.
+                if (known.to.x !== to.x || known.to.z !== to.z) {
+                    known.speed = catchUp(known, to);
+                }
+                known.to = to;
+                return known;
+            }
+            return {
+                speed: WALK_SPEED,
+                id: to.id,
+                name: to.name,
+                x: wrap(to.x),
+                z: to.z,
+                lane: to.lane,
+                facing: to.facing,
+                walking: Boolean(to.moving),
+                bob: 0,
+                lift: 0,
+                to,
+            };
+        });
+        others.splice(0, others.length, ...kept);
+    }
+
+    /** Walks everyone toward where they last said. */
+    function step(dt) {
+        for (const other of others) {
+            const { to, speed } = other;
+            const gx = gapX(other.x, to.x);
+            const gz = to.z - other.z;
+            const gap = Math.hypot(gx, gz);
+            if (gap <= speed * dt) {
+                other.x = wrap(to.x);
+                other.z = to.z;
+            } else {
+                other.x = wrap(other.x + (gx / gap) * speed * dt);
+                other.z += (gz / gap) * speed * dt;
+            }
+            other.facing = gx ? Math.sign(gx) : to.facing;
+            other.lane = approach(other.lane, to.lane, dt / CROSS_TIME);
+            other.walking =
+                Boolean(to.moving) || gap !== 0 || other.lane !== to.lane;
+            other.bob =
+                other.walking && !isReducedMotion()
+                    ? (other.bob + dt) % (Math.PI * 2)
+                    : 0;
+            other.lift = bobLift(other.bob);
+        }
+    }
+
+    return { others, set, step };
 }
 
 /**
@@ -97,11 +190,20 @@ export function useGamesWorld(games, callbacks = {}) {
     // clears it, so "still heading somewhere" is also what says a landmark
     // there should open.
     let targetX = null;
+    // Whether reaching targetX opens nothing: walking up to someone, not
+    // to a landmark.
+    let quietArrival = false;
     const camera = reactive({ x: 0 });
 
-    // Other people on the street: { id, name, x, lane, facing, walking,
-    // bob, lift }, each walking to `to`, where they last said they were.
-    const others = reactive([]);
+    // Other people on the street, walking to where they last said, the
+    // short way round the looping road.
+    const othersCtl = useOthers({
+        every: othersEvery,
+        isReducedMotion,
+        gap: wrappedGap,
+        wrap: wrapX,
+    });
+    const { others } = othersCtl;
 
     const state = reactive({
         mode: "idle", // idle | dragging | panning
@@ -179,75 +281,11 @@ export function useGamesWorld(games, callbacks = {}) {
         updateCamera();
     }
 
-    /** Where other people on the street last said they were: [{ id, name,
-     * x, lane, facing, moving }]. Someone new appears there; someone known
-     * walks there; someone missing is gone. */
-    function setOthers(list) {
-        const kept = list.map((said) => {
-            // Read, never watched: only what's drawn from it is.
-            const to = markRaw(said);
-            const known = others.find((o) => o.id === to.id);
-            if (known) {
-                known.name = to.name;
-                // A new spot, not just a new list: someone else moving.
-                if (known.to.x !== to.x) known.speed = catchUp(known.x, to.x);
-                known.to = to;
-                return known;
-            }
-            return {
-                speed: WALK_SPEED,
-                id: to.id,
-                name: to.name,
-                x: wrapX(to.x),
-                lane: to.lane,
-                facing: to.facing,
-                walking: Boolean(to.moving),
-                bob: 0,
-                lift: 0,
-                to,
-            };
-        });
-        others.splice(0, others.length, ...kept);
-    }
-
-    /** How fast to walk from `from` to `to` to get there in othersEvery:
-     * set once per new spot, so it arrives rather than easing in. */
-    function catchUp(from, to) {
-        return Math.max(
-            WALK_SPEED,
-            Math.abs(wrappedGap(from, to)) / othersEvery
-        );
-    }
-
-    /** Walks everyone else toward where they last said, the short way round
-     * the looping road. */
-    function stepOthers(dt) {
-        for (const other of others) {
-            const { to } = other;
-            const gap = wrappedGap(other.x, to.x);
-            const { speed } = other;
-            if (Math.abs(gap) <= speed * dt) {
-                other.x = wrapX(to.x);
-            } else {
-                other.x = wrapX(other.x + Math.sign(gap) * speed * dt);
-            }
-            other.facing = gap ? Math.sign(gap) : to.facing;
-            other.lane = approach(other.lane, to.lane, dt / CROSS_TIME);
-            other.walking =
-                Boolean(to.moving) || gap !== 0 || other.lane !== to.lane;
-            other.bob =
-                other.walking && !isReducedMotion()
-                    ? (other.bob + dt) % (Math.PI * 2)
-                    : 0;
-            other.lift = bobLift(other.bob);
-        }
-    }
-
     /** Advances the world by dt seconds. Called every rAF tick; also exposed
      * directly so tests can drive it without faking rAF. */
     function step(dt) {
         // Other people carry on behind a card: it's only your world frozen.
-        if (others.length) stepOthers(dt);
+        if (others.length) othersCtl.step(dt);
         if (state.confirmSlug) return; // the world freezes behind the card
 
         const crossing = !settled();
@@ -322,6 +360,10 @@ export function useGamesWorld(games, callbacks = {}) {
      * what opens its card. */
     function arrive() {
         targetX = null;
+        if (quietArrival) {
+            quietArrival = false;
+            return;
+        }
         const landmark = nearestLandmark.value;
         if (landmark) openConfirm(landmark.slug);
     }
@@ -344,12 +386,30 @@ export function useGamesWorld(games, callbacks = {}) {
         state.walkDir = 0;
         crossTo(side);
         targetX = wrapX(x);
+        quietArrival = false;
+    }
+
+    /** Walks up to someone standing at road x `x` on `side`: over to their
+     * side, stopping FOLLOW_GAP short of them on the side it comes from,
+     * and opening nothing there. Already that close, it only crosses. */
+    function walkUpTo(x, side) {
+        if (state.confirmSlug || state.mode !== "idle") return;
+        state.walkDir = 0;
+        crossTo(side);
+        const gap = wrappedGap(butt.x, x);
+        if (Math.abs(gap) <= FOLLOW_GAP) {
+            targetX = null;
+            return;
+        }
+        targetX = wrapX(x - Math.sign(gap) * FOLLOW_GAP);
+        quietArrival = true;
     }
 
     function startDrag() {
         state.mode = "dragging";
         state.walkDir = 0; // a held arrow must not fight the finger
         targetX = butt.x;
+        quietArrival = false;
     }
 
     /** Records where the finger is; `step` walks the butt there at DRAG_SPEED
@@ -445,7 +505,7 @@ export function useGamesWorld(games, callbacks = {}) {
         state,
         nearestLandmark,
         setBounds,
-        setOthers,
+        setOthers: othersCtl.set,
         start,
         stop,
         step,
@@ -460,6 +520,7 @@ export function useGamesWorld(games, callbacks = {}) {
         stopWalk,
         walkToLandmark,
         walkTo,
+        walkUpTo,
         crossTo,
         openConfirm,
         closeConfirm,

@@ -15,7 +15,7 @@ import {
 import InteractableButton from "../components/InteractableButton.vue";
 import { boxStyle } from "../components/overlay.js";
 import LandmarkTitle from "../components/LandmarkTitle.vue";
-import OtherName from "../components/OtherName.vue";
+import OtherButton from "../components/OtherButton.vue";
 import SkyLogo from "../components/SkyLogo.vue";
 import { screenToGround, worldToScreen } from "../composables/projection.js";
 import { useRoad } from "../composables/useRoad.js";
@@ -271,7 +271,8 @@ const buttSpot = computed(() =>
         : null
 );
 
-// Where each other person's name goes: just over their head.
+// Where each other person stands on screen: a box to tap, their name
+// over it.
 const otherSpots = computed(() =>
     view.value
         ? world.others.map((other) => ({
@@ -355,11 +356,14 @@ defineExpose({ ...api, setBounds, pointOf });
                 <LandmarkTitle :id="landmark.slug" :name="landmark.name" />
             </InteractableButton>
 
-            <OtherName
+            <!-- Someone else: a tap follows them. -->
+            <OtherButton
                 v-for="s in otherSpots"
                 :key="s.id"
+                class="other"
                 :name="s.name"
-                :style="{ left: `${s.x}px`, top: `${s.y - s.size}px` }"
+                :style="boxStyle(s)"
+                @click="stage.follow?.(s.id)"
             />
 
             <div
@@ -391,7 +395,8 @@ defineExpose({ ...api, setBounds, pointOf });
 /* Hit boxes over what the canvas draws: invisible, but they take the
    pointer, as the flat road's elements did. */
 .idler,
-.butt {
+.butt,
+.other {
     position: absolute;
     left: 0;
     top: 0;

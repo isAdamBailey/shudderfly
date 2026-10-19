@@ -7,7 +7,7 @@ import {
     STAIRS_CLEARANCE,
     wallFacing,
 } from "../scenes/roomLayout.js";
-import { clamp, DRAG_SPEED, WALK_SPEED } from "./useGamesWorld.js";
+import { clamp, DRAG_SPEED, FOLLOW_GAP, WALK_SPEED } from "./useGamesWorld.js";
 
 // Close enough to an interactable to use it, in world units.
 export const REACH = 120;
@@ -120,8 +120,8 @@ export function useRoom(
         keys: { x: 0, z: 0 },
     });
 
-    // Where the Butt is walking to: { x, z, item? }. With `item`, it uses
-    // it on arrival.
+    // Where the Butt is walking to: { x, z, item?, quiet? }. With `item`,
+    // it uses it on arrival; `quiet`, nothing at all (not even a door).
     let target = null;
     // The door the Butt was at when this walk began, which it won't go
     // through just for ending the walk there again.
@@ -264,6 +264,10 @@ export function useRoom(
     /** The Butt got where it was going: use what it was sent to, or a door
      * it walked up to (not the one it set off from). */
     function arrive() {
+        if (target.quiet) {
+            target = null;
+            return;
+        }
         const door = doorway();
         const item = target.item ?? (door !== walkFrom ? door : null);
         target = null;
@@ -280,6 +284,31 @@ export function useRoom(
         if (state.frozen) return;
         walkFrom = doorway();
         target = clear(clampX(x), clampZ(z));
+    }
+
+    /** Walks up to someone standing at (x, z): toward them, stopping
+     * FOLLOW_GAP short, and using nothing there, a door included. Already
+     * that close, it stays put. */
+    function walkUpTo(x, z) {
+        if (state.frozen) return;
+        const gx = x - butt.x;
+        const gz = z - butt.z;
+        const gap = Math.hypot(gx, gz);
+        if (gap <= FOLLOW_GAP) {
+            target = null;
+            return;
+        }
+        const k = (gap - FOLLOW_GAP) / gap;
+        target = {
+            ...clear(clampX(butt.x + gx * k), clampZ(butt.z + gz * k)),
+            quiet: true,
+        };
+    }
+
+    /** Spot (x, z) moved inside the room's walls (someone else's, who may
+     * say anything). */
+    function inside(x, z) {
+        return { x: clampX(x), z: clampZ(z) };
     }
 
     /** Walks to `item` and uses it there; uses it now if already there. */
@@ -346,6 +375,8 @@ export function useRoom(
         nearest,
         step,
         walkTo,
+        walkUpTo,
+        inside,
         goUse,
         standBy,
         startDrag,

@@ -22,17 +22,19 @@ import FollowBox from "../components/FollowBox.vue";
 import TvScreen from "../components/TvScreen.vue";
 import { boxStyle, onButton, pastTap } from "../components/overlay.js";
 import LandmarkTitle from "../components/LandmarkTitle.vue";
+import OtherButton from "../components/OtherButton.vue";
 import {
     screenToGround,
     screenToPlane,
     spanAt,
     worldToScreen,
 } from "../composables/projection.js";
-import { bobLift } from "../composables/useGamesWorld.js";
+import { bobLift, useOthers } from "../composables/useGamesWorld.js";
 import { arrivalSpot, useRoom } from "../composables/useRoom.js";
 import { useThrowables } from "../composables/useThrowables.js";
 import { useShelves } from "../composables/useShelves.js";
 import { useTvChannels } from "../composables/useTvChannels.js";
+import { MOVE_EVERY_MS } from "../composables/useWorldPresence.js";
 import { autoTriggers } from "../interactions/index.js";
 import { BOOKCASE, bookcaseHeight, shelfEnd, slotsIn } from "./bookshelf.js";
 import { createRoomScene } from "./RoomScene.js";
@@ -140,6 +142,42 @@ const room = useRoom(props.scene, {
 });
 const { butt } = room;
 
+// --- Other people ------------------------------------------------------------
+
+// Who else is standing in the room (issue #174), walking to where they last
+// said, kept inside its walls. `stage.together` hears where the Butt is.
+const visitors = useOthers({
+    every: MOVE_EVERY_MS / 1000,
+    isReducedMotion: () => reduced.value,
+});
+const together = props.stage.together;
+if (together) {
+    // Whole units, each its own source, so a frame that changes none of
+    // them sends nothing. A room has no lanes.
+    watch(
+        [
+            () => Math.round(butt.x),
+            () => Math.round(butt.z),
+            () => butt.facing,
+            () => (butt.walking ? 1 : 0),
+        ],
+        ([x, z, facing, moving]) =>
+            together.move({ x, z, lane: 0, facing, moving }),
+        { immediate: true }
+    );
+    watch(
+        together.others,
+        (list) =>
+            visitors.set(
+                list.map((o) => ({ ...o, ...room.inside(o.x, o.z), lane: 0 }))
+            ),
+        { immediate: true }
+    );
+}
+
+/** The player is steering the Butt: any follow stops (useFollow). */
+const steered = () => props.stage.steered?.();
+
 /** Follows the Butt down a long room, and leaves a short one alone. */
 function follow() {
     if (!layout.value) return;
@@ -206,6 +244,8 @@ onMounted(() => {
     renderer.show(graph.scene, graph.camera);
     stopFrames = renderer.onFrame((dt) => {
         room.step(dt);
+        // Other people carry on behind a card: it's only your room frozen.
+        visitors.step(dt);
         // A throw waits, mid-air, while a card is up.
         const flew = !room.state.frozen && throwables.step(dt);
         follow();
@@ -213,6 +253,7 @@ onMounted(() => {
             {
                 butt,
                 buttLift: buttLift.value,
+                others: visitors.others,
                 reduced: reduced.value,
                 camera: view.value,
                 thrown: throwables.changed(),
@@ -508,10 +549,26 @@ const shelfSpots = computed(() => {
 /** Where the Butt's hit box goes: read by FollowBox, so the overlay
  * doesn't re-render as it walks. */
 function buttSpot() {
-    if (!view.value) return null;
-    const p = project({ x: butt.x, y: buttLift.value, z: butt.z });
-    return { x: p.x, y: p.y, size: ROOM_SIZES.butt * p.scale };
+    return view.value && buttSpotAt({ ...butt, lift: buttLift.value });
 }
+
+/** The screen box of a butt standing at { x, z }, `lift` units up, or
+ * null off camera. */
+function buttSpotAt({ x, z, lift }) {
+    const p = project({ x, y: lift, z });
+    return p && { x: p.x, y: p.y, size: ROOM_SIZES.butt * p.scale };
+}
+
+// Each other person on screen: a box over them to tap and follow, their
+// name over it.
+const visitorSpots = computed(() =>
+    view.value
+        ? visitors.others.flatMap((other) => {
+              const spot = buttSpotAt(other);
+              return spot ? { id: other.id, name: other.name, ...spot } : [];
+          })
+        : []
+);
 
 const buttons = {};
 function setButton(id, el) {
@@ -526,6 +583,7 @@ let pointerFocus = false;
 /** Keyboard focus stands the Butt at the thing, as on the road. */
 function onItemFocus(item) {
     if (!pointerFocus) {
+        if (!placedFocus) steered();
         room.standBy(item);
         follow();
     }
@@ -540,6 +598,7 @@ function onItemFocus(item) {
 function onItemClick(item, event) {
     pointerFocus = false;
     if (item.throwable && event.detail !== 0) return;
+    steered();
     room.goUse(item);
 }
 
@@ -580,7 +639,10 @@ function onThrowablePointerDown(item, event) {
         end() {
             if (held) throwables.release(id);
             // One still in the air has nowhere yet to walk to.
-            else if (!throwables.at[id].flying) room.goUse(item);
+            else if (!throwables.at[id].flying) {
+                steered();
+                room.goUse(item);
+            }
         },
         cancel() {
             if (held) throwables.drop();
@@ -715,8 +777,14 @@ function onZoneClick(s, event) {
     playZone(s, key);
 }
 
+// Set while focus is put somewhere by the world (the door you came in by),
+// not moved by the player: that isn't steering.
+let placedFocus = false;
+
 function focusItem(id) {
+    placedFocus = true;
     buttons[id]?.focus({ preventScroll: true });
+    placedFocus = false;
     props.stage.resetScroll();
 }
 
@@ -816,6 +884,7 @@ function onButtPointerDown(event) {
     });
     // Held anywhere on the Butt, it's dragged by its feet.
     grab = buttSpot().y - (event.clientY - rect.top);
+    steered();
     room.startDrag();
 }
 
@@ -830,7 +899,9 @@ function onBackgroundPointerDown(event) {
         },
         end() {
             const floor = tap && floorAt(start, rect);
-            if (floor) room.walkTo(floor.x, floor.z);
+            if (!floor) return;
+            steered();
+            room.walkTo(floor.x, floor.z);
         },
         cancel() {},
     });
@@ -852,6 +923,7 @@ function onKeydown(event) {
     // Walking off leaves whatever button was focused behind: Enter should
     // use what the Butt is standing at, not that.
     if (event.target !== event.currentTarget) props.stage.focus();
+    steered();
     room.setKey(...key);
 }
 
@@ -902,6 +974,9 @@ defineExpose({
     pluckString,
     hitDrum,
     changeChannel: tvs.changeChannel,
+    // Following someone (useFollow): up to them, or through a door.
+    walkUpTo: (other) => room.walkUpTo(other.x, other.z),
+    walkThrough: (door) => room.goUse(door),
 });
 </script>
 
@@ -1040,6 +1115,16 @@ defineExpose({
                 </InteractableButton>
             </template>
 
+            <!-- Someone else: a tap follows them. Under your own Butt. -->
+            <OtherButton
+                v-for="s in visitorSpots"
+                :key="`visitor-${s.id}`"
+                class="visitor"
+                :name="s.name"
+                :style="boxStyle(s)"
+                @click="stage.follow?.(s.id)"
+            />
+
             <!-- Over the buttons, so the Butt can be dragged off whatever
                  it's standing at. -->
             <FollowBox
@@ -1133,6 +1218,14 @@ defineExpose({
 
 .butt:active {
     cursor: grabbing;
+}
+
+/* Someone else's box over what the canvas draws of them. */
+.visitor {
+    position: absolute;
+    left: 0;
+    top: 0;
+    will-change: transform;
 }
 
 /* Stands on the button's floor, as the canvas would draw it. */
