@@ -1,6 +1,7 @@
 import { channelName } from "@/utils/broadcastChannel";
 import { sameId } from "@/utils/object";
 import { whenEcho } from "@/utils/whenEcho";
+import throttle from "lodash/throttle";
 import { computed, ref } from "vue";
 
 const ROSTER = "world";
@@ -18,6 +19,11 @@ export const CROWD = 8;
 const STALE_MS = 5000;
 // Nobody stands further from the start of a scene than this.
 const POSITION_LIMIT = 100000;
+// A radio tuned again and again sends no more often than this, the last
+// tune winning.
+export const RADIO_EVERY_MS = 1000;
+// A song said to be further in than this is nothing to join.
+const RADIO_SINCE_MS = 6 * 60 * 60 * 1000;
 
 const isCoordinate = (n) =>
     Number.isInteger(n) && Math.abs(n) <= POSITION_LIMIT;
@@ -34,6 +40,20 @@ function readPosition(data, { place }) {
     if (facing !== -1 && facing !== 1) return null;
     if (moving !== 0 && moving !== 1) return null;
     return { x, z, lane, facing, moving };
+}
+
+/** A whispered radio, checked: `{ id, songId, at, again }` for a song
+ * `at` ms in, `{ id, songId: null }` for switched off, or null for anything
+ * else. `again` marks a song told again for someone arriving. */
+function readRadio(data) {
+    if (!data || typeof data !== "object") return null;
+    const { id, songId, at, again = false } = data;
+    if (typeof id !== "string" || !/^[\w.-]{1,64}$/.test(id)) return null;
+    if (songId === null) return { id, songId: null };
+    if (!Number.isInteger(songId) || songId < 1) return null;
+    if (!Number.isInteger(at) || at < 0 || at > RADIO_SINCE_MS) return null;
+    if (typeof again !== "boolean") return null;
+    return { id, songId, at, again };
 }
 
 /** Whether `next` is worth a whisper after `last`. */
@@ -59,7 +79,8 @@ function changedEnough(last, next) {
  *   as `roster` (everyone but you).
  * - `world.<scene id>`, the scene you are standing in (enterScene): where
  *   the people in it are, from their `client-place` on arrival and their
- *   `client-move`s, as `others`.
+ *   `client-move`s, as `others`; and its radio, `client-radio`, sent
+ *   through `radio()` and handed to `hearRadio`.
  *
  * Positions are `{ x, z, lane, facing, moving }` in the scene's own whole
  * units: the road's x and lane (z 0), a room's x and z (lane 0).
@@ -68,8 +89,24 @@ function changedEnough(last, next) {
  * and a logged-in visitor). Off, nothing is ever joined or sent, so the world
  * is exactly what it is without this. `me` is the visitor's user id;
  * `scenes` the ids of every scene, the only ones a place may name.
+ *
+ * A radio is `{ id, songId, startedAt }`, the radio's id, the song on it
+ * and when it began in this browser's clock (`{ id, songId: null }`
+ * switched off). On the wire it's `{ id, songId, at }`, `at` ms into the
+ * song when sent, so no two clocks need agree. `hearRadio(radio)` is called
+ * with someone else's in your scene; `radioNow(id)` says what's on radio
+ * `id`, the one you last tuned, as `{ songId, startedAt }` (or null), to
+ * tell someone who arrives. That retelling is marked `again`, and is only
+ * for whoever hasn't heard the radio in this scene yet, so it doesn't
+ * restart it for someone who switched theirs off.
  */
-export function useWorldPresence({ enabled, me = null, scenes = [] }) {
+export function useWorldPresence({
+    enabled,
+    me = null,
+    scenes = [],
+    radioNow = () => null,
+    hearRadio = () => {},
+}) {
     const knownScenes = new Set(scenes);
     const members = ref([]);
     // Which scene each person on the roster last said they were in: user
@@ -98,6 +135,16 @@ export function useWorldPresence({ enabled, me = null, scenes = [] }) {
     let moveTimer = null;
     // Whether you've walked since the last whisper.
     let walked = false;
+    // Whether you tuned the radio last in this scene (so you're the one to
+    // tell a newcomer).
+    let radioMine = false;
+    // The radio you last tuned here, to say what's on it.
+    let radioTuned = null;
+    // Whether you've heard (or tuned) a radio in this scene: a retelling is
+    // then old news.
+    let radioHeard = false;
+    // Whether the radio to send next is a tune, not a retelling.
+    let radioFresh = false;
     const staleTimers = {};
 
     const without = (list, member) =>
@@ -261,8 +308,10 @@ export function useWorldPresence({ enabled, me = null, scenes = [] }) {
                         ...without(sceneMembers.value, member),
                         member,
                     ];
-                    // Someone new: they don't know where you are yet.
+                    // Someone new: they don't know where you are yet,
+                    // or what's on the radio you tuned.
                     if (current) send("move", current);
+                    tellRadio();
                 })
                 .leaving((member) => {
                     const wasCrowded = crowded();
@@ -285,7 +334,8 @@ export function useWorldPresence({ enabled, me = null, scenes = [] }) {
                 )
                 .listenForWhisper("move", (data, meta) =>
                     hear(meta, data, false)
-                );
+                )
+                .listenForWhisper("radio", heardRadio);
         } catch (e) {
             console.error("Error joining the Games World scene:", e);
             sceneChannel = null;
@@ -296,6 +346,11 @@ export function useWorldPresence({ enabled, me = null, scenes = [] }) {
     function leaveScene() {
         clearTimeout(moveTimer);
         moveTimer = null;
+        sendRadio.cancel();
+        radioMine = false;
+        radioTuned = null;
+        radioHeard = false;
+        radioFresh = false;
         Object.keys(staleTimers).forEach(stopStale);
         sceneMembers.value = [];
         positions.value = {};
@@ -338,6 +393,24 @@ export function useWorldPresence({ enabled, me = null, scenes = [] }) {
         }
     }
 
+    /** Someone in the scene tuned its radio, or switched it off. */
+    function heardRadio(data, meta) {
+        const id = meta?.user_id;
+        if (!sceneMembers.value.some((m) => sameId(m.id, id))) return;
+        if (sameId(id, me)) return;
+        const radio = readRadio(data);
+        if (!radio || (radio.again && radioHeard)) return;
+        radioHeard = true;
+        // Theirs now: they tell whoever arrives.
+        radioMine = false;
+        const { id: radioId, songId, at } = radio;
+        hearRadio(
+            songId === null
+                ? { id: radioId, songId }
+                : { id: radioId, songId, startedAt: Date.now() - at }
+        );
+    }
+
     function stopStale(id) {
         clearTimeout(staleTimers[id]);
         delete staleTimers[id];
@@ -357,26 +430,16 @@ export function useWorldPresence({ enabled, me = null, scenes = [] }) {
     // sends nothing: whoever arrives is told on `joining`.
     const crowded = () => sceneMembers.value.length >= CROWD;
 
-    function canSend() {
-        return (
-            sceneReady &&
-            !document.hidden &&
-            sceneMembers.value.length > 1 &&
-            !crowded()
-        );
-    }
+    const canWhisper = () =>
+        sceneReady && !document.hidden && sceneMembers.value.length > 1;
+    // A crowd hears no more moves; a radio is one whisper a tune.
+    const canSend = () => canWhisper() && !crowded();
 
     /** Whispers `data`; `heard` is what others now think of you (a place
      * says nothing of facing or moving, so they take 1 and 0). */
     function send(event, data, heard = data) {
-        if (!canSend()) return;
-        try {
-            sceneChannel.whisper(event, data);
-        } catch (e) {
-            // A dropped whisper only leaves you standing still for others.
-            console.warn("Couldn't whisper in the Games World:", e);
-            return;
-        }
+        // A dropped whisper only leaves you standing still for others.
+        if (!canSend() || !whisper(event, data)) return;
         lastSent = heard;
         lastSentAt = Date.now();
         walked = false;
@@ -415,6 +478,56 @@ export function useWorldPresence({ enabled, me = null, scenes = [] }) {
         }
     }
 
+    /** Tuned a radio, or switched it off: `{ id, songId, startedAt }`, or
+     * `{ id, songId: null }`. A tune that comes quickly after the last
+     * waits out RADIO_EVERY_MS, and the latest goes. `again` retells it to
+     * someone arriving (tellRadio). */
+    function radio(state, { again = false } = {}) {
+        if (!enabled || !sceneId) return;
+        radioMine = state.songId !== null;
+        radioTuned = state.id;
+        radioHeard = true;
+        // A tune waiting to go stays one, whatever comes after it.
+        if (!again) radioFresh = true;
+        sendRadio(state, again && !radioFresh);
+    }
+
+    const sendRadio = throttle((state, again) => {
+        radioFresh = false;
+        if (!canWhisper()) return;
+        const { id, songId, startedAt } = state;
+        if (songId === null) {
+            whisper("radio", { id, songId });
+            return;
+        }
+        // How far in, as it goes: however long the throttle held it.
+        const at = Math.max(0, Date.now() - startedAt);
+        whisper(
+            "radio",
+            again ? { id, songId, at, again } : { id, songId, at }
+        );
+    }, RADIO_EVERY_MS);
+
+    /** Whispers on the scene's channel; whether it went. */
+    function whisper(event, data) {
+        try {
+            sceneChannel.whisper(event, data);
+            return true;
+        } catch (e) {
+            console.warn("Couldn't whisper in the Games World:", e);
+            return false;
+        }
+    }
+
+    /** Someone has arrived: what's on the radio you tuned, if it's still
+     * on. */
+    function tellRadio() {
+        if (!radioMine) return;
+        const now = radioNow(radioTuned);
+        if (now) radio({ id: radioTuned, ...now }, { again: true });
+        else radioMine = false;
+    }
+
     return {
         enabled,
         members,
@@ -425,5 +538,6 @@ export function useWorldPresence({ enabled, me = null, scenes = [] }) {
         enterScene,
         leaveScene,
         move,
+        radio,
     };
 }

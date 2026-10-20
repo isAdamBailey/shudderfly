@@ -20,7 +20,7 @@ describe("radio interaction", () => {
 
         activate({ ...radio, songs }, ctx);
 
-        expect(ctx.tuneRadio).toHaveBeenCalledWith(songs);
+        expect(ctx.tuneRadio).toHaveBeenCalledWith({ ...radio, songs });
         expect(ctx.animate).toHaveBeenCalledWith("radio", "wiggle");
         expect(ctx.openCard).not.toHaveBeenCalled();
         expect(ctx.speak).not.toHaveBeenCalled();

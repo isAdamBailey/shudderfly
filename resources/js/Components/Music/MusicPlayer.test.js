@@ -20,6 +20,9 @@ const mockSetPlaying = vi.fn();
 const mockGetSavedPlaybackState = vi.fn(() => null);
 const mockPlayNextSong = vi.fn();
 const mockPlayPreviousSong = vi.fn();
+const mockJoinAt = ref(null);
+const mockTakeJoinAt = vi.fn(() => null);
+const mockSetPlayback = vi.fn();
 
 vi.mock("@/Components/ShareToChatButton.vue", () => ({
     default: {
@@ -39,6 +42,9 @@ vi.mock("@/composables/useMusicPlayer", () => ({
         playNextSong: mockPlayNextSong,
         playPreviousSong: mockPlayPreviousSong,
         getSavedPlaybackState: mockGetSavedPlaybackState,
+        joinAt: computed(() => mockJoinAt.value),
+        takeJoinAt: mockTakeJoinAt,
+        setPlayback: mockSetPlayback,
     }),
 }));
 
@@ -64,6 +70,7 @@ describe("MusicPlayer", () => {
         mockPlayNextSong.mockClear();
         mockPlayPreviousSong.mockClear();
         mockGetSavedPlaybackState.mockReturnValue(null);
+        mockJoinAt.value = null;
 
         // Initialize global player variables
         if (!window.__globalMusicPlayer) {
@@ -430,5 +437,102 @@ describe("MusicPlayer", () => {
         expect(share.exists()).toBe(true);
         expect(share.props("kind")).toBe("song");
         expect(share.props("songId")).toBe(mockSong.id);
+    });
+
+    describe("joining a song part way through", () => {
+        beforeEach(() => {
+            vi.useFakeTimers();
+            vi.setSystemTime(100000);
+        });
+
+        afterEach(() => {
+            vi.useRealTimers();
+        });
+
+        it("seeks to where it has got to once it plays, and notes since when", async () => {
+            mockCurrentSong.value = mockSong;
+            mockTakeJoinAt.mockReturnValueOnce(70000);
+            wrapper = mount(MusicPlayer);
+            await nextTick();
+
+            mockPlayer.getCurrentTime.mockReturnValue(0);
+            wrapper.vm.onPlayerStateChange({
+                data: global.YT.PlayerState.PLAYING,
+                target: mockPlayer,
+            });
+
+            expect(mockTakeJoinAt).toHaveBeenCalledWith(mockSong.id);
+            expect(mockPlayer.seekTo).toHaveBeenCalledWith(30, true);
+            // The seek's start, not where it was before it.
+            expect(mockSetPlayback).toHaveBeenLastCalledWith({
+                id: mockSong.id,
+                startedAt: 70000,
+            });
+        });
+
+        it("doesn't seek past the end of a song joined long ago", async () => {
+            mockCurrentSong.value = mockSong;
+            mockTakeJoinAt.mockReturnValueOnce(100000 - 200000);
+            wrapper = mount(MusicPlayer);
+            await nextTick();
+
+            mockPlayer.getCurrentTime.mockReturnValue(0);
+            wrapper.vm.onPlayerStateChange({
+                data: global.YT.PlayerState.PLAYING,
+                target: mockPlayer,
+            });
+
+            expect(mockPlayer.seekTo).not.toHaveBeenCalled();
+            expect(mockSetPlayback).toHaveBeenLastCalledWith({
+                id: mockSong.id,
+                startedAt: 100000,
+            });
+        });
+
+        it("doesn't seek a song played the usual way", async () => {
+            mockCurrentSong.value = mockSong;
+            wrapper = mount(MusicPlayer);
+            await nextTick();
+
+            wrapper.vm.onPlayerStateChange({
+                data: global.YT.PlayerState.PLAYING,
+                target: mockPlayer,
+            });
+
+            expect(mockPlayer.seekTo).not.toHaveBeenCalled();
+            expect(mockSetPlayback).toHaveBeenCalledWith({
+                id: mockSong.id,
+                startedAt: 100000 - 45000,
+            });
+        });
+
+        it("seeks and starts a song that's already loaded", async () => {
+            mockCurrentSong.value = mockSong;
+            wrapper = mount(MusicPlayer);
+            await nextTick();
+            window.__globalMusicPlayer = mockPlayer;
+
+            mockTakeJoinAt.mockReturnValueOnce(90000);
+            mockJoinAt.value = { id: mockSong.id, startedAt: 90000 };
+            await nextTick();
+
+            expect(mockPlayer.seekTo).toHaveBeenCalledWith(10, true);
+            expect(mockPlayer.playVideo).toHaveBeenCalled();
+            expect(mockSetPlaying).toHaveBeenCalledWith(true);
+        });
+
+        it("leaves a new song to catch up once it plays", async () => {
+            mockCurrentSong.value = mockSong;
+            wrapper = mount(MusicPlayer);
+            await nextTick();
+            window.__globalMusicPlayer = mockPlayer;
+            mockPlayer.getVideoData.mockReturnValue({ video_id: "other" });
+
+            mockJoinAt.value = { id: mockSong.id, startedAt: 90000 };
+            await nextTick();
+
+            expect(mockTakeJoinAt).not.toHaveBeenCalled();
+            expect(mockPlayer.playVideo).not.toHaveBeenCalled();
+        });
     });
 });

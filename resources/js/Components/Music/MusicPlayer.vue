@@ -221,6 +221,9 @@ const {
     playNextSong,
     playPreviousSong,
     isAnnouncing,
+    joinAt,
+    takeJoinAt,
+    setPlayback,
 } = useMusicPlayer();
 
 if (!window.__globalMusicPlayer) window.__globalMusicPlayer = null;
@@ -608,6 +611,9 @@ const onPlayerStateChange = (event) => {
     switch (event.data) {
         case window.YT.PlayerState.PLAYING:
             setPlaying(true);
+            // A seek's start wins over where it was.
+            notePlayback(event.target);
+            catchUp(event.target);
             if (currentSong.value && !hasIncrementedReadCount.value) {
                 incrementReadCount();
             }
@@ -628,6 +634,57 @@ const onPlayerStateChange = (event) => {
             break;
     }
 };
+
+/** Seeks a song joined part way through (playSong's `startedAt`) to where
+ * it has got to, unless that's past its end (autoplay held it back, say). */
+const catchUp = (player) => {
+    const id = currentSong.value?.id;
+    const startedAt = takeJoinAt(id);
+    if (startedAt === null) return;
+    const seconds = (Date.now() - startedAt) / 1000;
+    try {
+        if (seconds > 1 && seconds < player.getDuration() - 1) {
+            player.seekTo(seconds, true);
+            setPlayback({ id, startedAt });
+        }
+    } catch (error) {
+        // Player may be in transition
+    }
+};
+
+/** What's playing and since when, each time it starts (a seek starts it
+ * again), for the Games World radio to tell others. */
+const notePlayback = (player) => {
+    try {
+        setPlayback({
+            id: currentSong.value?.id,
+            startedAt: Math.round(Date.now() - player.getCurrentTime() * 1000),
+        });
+    } catch (error) {
+        // Player may be in transition
+    }
+};
+
+// A song joined part way through that's already loaded (paused, say)
+// won't start by itself: seek it and play. A new song catches up once it
+// plays.
+watch(joinAt, (join) => {
+    const player = globalPlayer();
+    if (!join || !player || join.id !== currentSong.value?.id) return;
+    try {
+        if (
+            player.getVideoData()?.video_id !==
+            currentSong.value.youtube_video_id
+        ) {
+            return;
+        }
+        catchUp(player);
+        player.playVideo();
+        setPlaying(true);
+    } catch (error) {
+        // Player may not be ready
+    }
+});
 
 const onPlayerError = (event) => {
     let errorMessage = "This video cannot be played.";

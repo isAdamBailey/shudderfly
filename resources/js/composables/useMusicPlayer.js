@@ -14,6 +14,13 @@ const search = ref("");
 const filter = ref("");
 const songsList = ref([]);
 const isAnnouncing = ref(false);
+// A song joined part way through (a Games World radio someone else tuned):
+// `{ id, startedAt }`, when it began in this browser's clock, for
+// MusicPlayer to seek to where it has got to (takeJoinAt).
+const joinAt = ref(null);
+// What's playing and since when, `{ id, startedAt }` in this browser's
+// clock, as MusicPlayer last found it on starting to play.
+const playback = ref(null);
 
 // Load initial state from localStorage
 const loadState = () => {
@@ -85,16 +92,32 @@ export function useMusicPlayer() {
 
     // `openFlyout: false` plays it without opening the flyout over the page
     // (the Games World radio): the player in it plays all the same.
-    const playSong = (song, { openFlyout = true } = {}) => {
+    // `startedAt` (ms, this browser's clock) joins it part way through:
+    // MusicPlayer seeks it to where it has got to.
+    const playSong = (song, { openFlyout = true, startedAt = null } = {}) => {
         const isNewSong =
             !currentSong.value || currentSong.value.id !== song.id;
         currentSong.value = song;
+        joinAt.value = startedAt === null ? null : { id: song.id, startedAt };
         if (openFlyout && !isFlyoutOpen.value) {
             isFlyoutOpen.value = true;
         }
         if (isNewSong) {
             announceSong(song);
         }
+    };
+
+    /** When song `id` was joined part way through, once (null if it
+     * wasn't). */
+    const takeJoinAt = (id) => {
+        if (joinAt.value?.id !== id) return null;
+        const { startedAt } = joinAt.value;
+        joinAt.value = null;
+        return startedAt;
+    };
+
+    const setPlayback = (value) => {
+        playback.value = value;
     };
 
     const toggleCurrentSongPlayback = () => {
@@ -109,6 +132,18 @@ export function useMusicPlayer() {
                 player.playVideo();
                 setPlaying(true);
             }
+        } catch (e) {
+            // Player may not be ready
+        }
+    };
+
+    /** Pauses whatever is playing, or about to (still loading or
+     * buffering), and forgets a song waiting to be joined part way. */
+    const pause = () => {
+        joinAt.value = null;
+        setPlaying(false);
+        try {
+            window.__globalMusicPlayer?.pauseVideo();
         } catch (e) {
             // Player may not be ready
         }
@@ -206,10 +241,15 @@ export function useMusicPlayer() {
         filter: computed(() => filter.value),
         songsList: computed(() => songsList.value),
         isAnnouncing: computed(() => isAnnouncing.value),
+        joinAt: computed(() => joinAt.value),
+        playback: computed(() => playback.value),
 
         // Methods
         playSong,
+        takeJoinAt,
+        setPlayback,
         toggleCurrentSongPlayback,
+        pause,
         setSongsList,
         playNextSong,
         playPreviousSong,
