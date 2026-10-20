@@ -12,6 +12,7 @@ import {
 import { applyCamera, disposeTree } from "../three/useWorldRenderer.js";
 import { clockFinish, clockTexture } from "../three/clockFaces.js";
 import { MODELS } from "../three/models.js";
+import { createOtherPuppets } from "../three/otherPuppets.js";
 import { bassDrum } from "../three/bassDrum.js";
 import { harp } from "../three/harp.js";
 import { pipeOrgan } from "../three/pipeOrgan.js";
@@ -484,6 +485,9 @@ export function createRoomScene(
 
     const butt = kit.castMesh("butt", { size: ROOM_SIZES.butt });
     butt.setMove("idle");
+    // Other people's butts in the room (issue #174), the same size.
+    const otherPuppets = createOtherPuppets(kit, scene);
+    otherPuppets.setSize(ROOM_SIZES.butt);
     butt.group.position.set(buttAt.x, 0, buttAt.z);
     scene.add(butt.group);
     const buttGlow = glowing(butt, "#ffffff", "butt-glow");
@@ -551,6 +555,7 @@ export function createRoomScene(
      * Poses the room for one frame; whether anything changed. `view`: {
      *   butt: { x, z, facing, walking },
      *   buttLift,   // units, the walking bob
+     *   others,     // useOthers', each with its own `lift` in units
      *   reduced,    // prefers reduced motion
      *   camera,     // the view, when a long hall has scrolled
      *   thrown,     // [{ id, x, y, z, ground, tilt }]: things picked up
@@ -564,6 +569,7 @@ export function createRoomScene(
         if (view.reduced !== reduced) {
             reduced = view.reduced;
             for (const puppet of puppets) puppet.setReducedMotion(reduced);
+            otherPuppets.setReducedMotion(reduced);
             // Candles stop wavering at their own brightness.
             showLamps();
             changed = true;
@@ -593,6 +599,9 @@ export function createRoomScene(
             facing: view.butt.facing < 0 ? "left" : "right",
         });
         butt.setMove(view.butt.walking ? "walk" : "idle");
+        changed =
+            otherPuppets.sync(view.others ?? [], (other) => other, dt) ||
+            changed;
         if (night !== nightTarget) {
             night = reduced
                 ? nightTarget
@@ -666,6 +675,7 @@ export function createRoomScene(
             disposeTree(made);
             for (const material of glowMaterials) material.dispose();
             buttGlow.dispose();
+            otherPuppets.dispose();
             for (const puppet of [...puppets, ...decorations, ...fixtures]) {
                 puppet.dispose();
             }

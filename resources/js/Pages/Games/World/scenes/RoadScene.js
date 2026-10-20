@@ -15,6 +15,7 @@ import {
     ROOF,
     screenSize,
 } from "./roadLayout.js";
+import { createOtherPuppets } from "../three/otherPuppets.js";
 import { roadScenery } from "./roadScenery.js";
 import {
     billboard,
@@ -433,10 +434,8 @@ export function createRoadScene(
         ...landmarkPuppets.map((e) => e.puppet),
         ...drifters.map((d) => d.puppet),
     ];
-    // Other people's butts (issue #174), made as they turn up: user id →
-    // puppet.
-    const otherPuppets = new Map();
-    const allPuppets = () => [...puppets, ...otherPuppets.values()];
+    // Other people's butts (issue #174).
+    const otherPuppets = createOtherPuppets(kit, scene);
     // Scenery puppets (the cockroaches, the billboard foods, the moons on
     // the porta-potties) are made by layout() and live as long as it does.
     let sceneryPuppets = [];
@@ -796,9 +795,8 @@ export function createRoadScene(
         idlerPuppets.forEach(({ row, puppet }) => {
             puppet.set({ size: sizes.idlers[row] });
         });
-        for (const puppet of [butt, ...otherPuppets.values()]) {
-            puppet.set({ size: sizes.butt });
-        }
+        butt.set({ size: sizes.butt });
+        otherPuppets.setSize(sizes.butt);
         roadToot.set({ size: sizes.butt * 0.7 });
         tootSpan = w / L.scaleAt(z.roadToot) + 200;
 
@@ -876,7 +874,8 @@ export function createRoadScene(
 
         if (view.reduced !== reduced) {
             reduced = view.reduced;
-            for (const puppet of allPuppets()) puppet.setReducedMotion(reduced);
+            for (const puppet of puppets) puppet.setReducedMotion(reduced);
+            otherPuppets.setReducedMotion(reduced);
             changed = true;
         }
 
@@ -890,7 +889,12 @@ export function createRoadScene(
             view.butt.side &&
             view.butt.lane !== (view.butt.side === "near" ? 1 : 0);
         butt.setMove(view.butt.vx || crossing ? "walk" : null);
-        changed = syncOthers(view.others ?? [], dt) || changed;
+        changed =
+            otherPuppets.sync(
+                view.others ?? [],
+                (other) => ({ x: other.x, z: L.laneZ(other.lane) }),
+                dt
+            ) || changed;
 
         view.idlers.forEach((idler, i) => {
             const entry = idlerPuppets[i];
@@ -928,36 +932,6 @@ export function createRoadScene(
         placeRoadToot(view.camera);
 
         for (const puppet of puppets) changed = puppet.tick(dt) || changed;
-        return changed;
-    }
-
-    /** Stands everyone else on the street, making and dropping their
-     * butts as they come and go; true if that changed anything. */
-    function syncOthers(others, dt) {
-        let changed = false;
-        for (const [id, puppet] of otherPuppets) {
-            if (others.some((o) => o.id === id)) continue;
-            puppet.dispose();
-            otherPuppets.delete(id);
-            changed = true;
-        }
-        for (const other of others) {
-            let puppet = otherPuppets.get(other.id);
-            if (!puppet) {
-                puppet = kit.castMesh("butt", { size: L.sizes.butt });
-                puppet.setReducedMotion(reduced);
-                scene.add(puppet.group);
-                otherPuppets.set(other.id, puppet);
-                changed = true;
-            }
-            changed = stand(puppet, other.x, L.laneZ(other.lane)) || changed;
-            puppet.set({
-                lift: other.lift,
-                facing: other.facing < 0 ? "left" : "right",
-            });
-            puppet.setMove(other.walking ? "walk" : null);
-            changed = puppet.tick(dt) || changed;
-        }
         return changed;
     }
 
@@ -1141,7 +1115,8 @@ export function createRoadScene(
                 points.material.dispose();
             }
             flake?.dispose();
-            for (const puppet of allPuppets()) puppet.dispose();
+            for (const puppet of puppets) puppet.dispose();
+            otherPuppets.dispose();
             scene.clear();
         },
     };

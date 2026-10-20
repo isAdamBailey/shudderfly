@@ -1,5 +1,6 @@
 import { userChannelName } from "@/utils/broadcastChannel";
 import { onNotificationRefresh } from "@/utils/notificationRefresh";
+import { whenEcho } from "@/utils/whenEcho";
 import { router, usePage } from "@inertiajs/vue3";
 import throttle from "lodash/throttle";
 import { effectScope, onScopeDispose, ref, watch } from "vue";
@@ -13,7 +14,6 @@ const unreadCount = ref(0);
 const isNewNotification = ref(false);
 
 const NEW_NOTIFICATION_ANIMATION_MS = 4000;
-const ECHO_RETRY_MS = 500;
 const ECHO_MAX_RETRIES = 10;
 const REFRESH_THROTTLE_MS = 150;
 
@@ -21,8 +21,8 @@ let consumers = 0;
 let sharedPage = null;
 let scope = null;
 let animationTimer = null;
-let echoRetryTimer = null;
-let echoRetries = 0;
+// Stops waiting for Echo, while it's still being waited for.
+let cancelEchoWait = null;
 let notificationsChannel = null;
 let unsubscribeRefresh = null;
 
@@ -54,11 +54,8 @@ const flagNewNotification = () => {
  * one and the count ends up incremented twice per notification.
  */
 const stopListeningToEcho = (userId) => {
-    if (echoRetryTimer) {
-        clearTimeout(echoRetryTimer);
-        echoRetryTimer = null;
-    }
-    echoRetries = 0;
+    cancelEchoWait?.();
+    cancelEchoWait = null;
 
     if (!notificationsChannel || !window.Echo || !userId) return;
     try {
@@ -70,29 +67,19 @@ const stopListeningToEcho = (userId) => {
 };
 
 const listenToEcho = (page) => {
-    const user = page.props.auth?.user;
-    if (!user?.id || !window.Echo) {
-        if (echoRetries < ECHO_MAX_RETRIES) {
-            echoRetries++;
-            echoRetryTimer = setTimeout(
-                () => listenToEcho(page),
-                ECHO_RETRY_MS
-            );
-        }
-        return;
-    }
-
-    if (echoRetryTimer) {
-        clearTimeout(echoRetryTimer);
-        echoRetryTimer = null;
-    }
-    echoRetries = 0;
-
-    notificationsChannel = window.Echo.private(userChannelName(user.id));
-    notificationsChannel.notification(() => {
-        unreadCount.value++;
-        flagNewNotification();
-    });
+    cancelEchoWait = whenEcho(
+        (echo) => {
+            cancelEchoWait = null;
+            const user = page.props.auth?.user;
+            if (!user?.id) return;
+            notificationsChannel = echo.private(userChannelName(user.id));
+            notificationsChannel.notification(() => {
+                unreadCount.value++;
+                flagNewNotification();
+            });
+        },
+        { attempts: ECHO_MAX_RETRIES }
+    );
 };
 
 const start = (page) => {

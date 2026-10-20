@@ -9,3 +9,9 @@ export function own(map, key) {
         ? map[key]
         : undefined;
 }
+
+/** Whether two ids are the same, whether they came as numbers or strings
+ * (Pusher's metadata sends user ids as strings). */
+export function sameId(a, b) {
+    return String(a) === String(b);
+}

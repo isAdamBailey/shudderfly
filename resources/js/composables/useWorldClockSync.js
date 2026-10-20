@@ -1,5 +1,6 @@
 /* global route */
 import { channelName } from "@/utils/broadcastChannel";
+import { whenEcho } from "@/utils/whenEcho";
 import { nextTick, reactive, ref } from "vue";
 
 // The single source of truth for the World Clock, shared by every user. State
@@ -32,8 +33,8 @@ const serverOffsetMs = ref(0);
 // True while we are applying a server payload, so the local save watchers can
 // skip — otherwise an incoming change would echo straight back as a new save.
 let applyingRemote = false;
-let echoReady = false;
-let echoAttempts = 0;
+// Set once the broadcast listener is set up, or being waited for.
+let echoWaiting = false;
 // Seeded from server props exactly once per page load. Re-seeding on later prop
 // refreshes is avoided so a background update can never revert an in-flight
 // local edit; live updates from other clients arrive via the Echo broadcast.
@@ -120,28 +121,21 @@ async function push(routeName, method, body = {}) {
 }
 
 // Subscribe once to the broadcast channel. Mirrors the retry/guard pattern used
-// for the messages channel; degrades silently when Echo/Pusher is unavailable.
+// for the messages channel; degrades silently when Echo/Pusher is unavailable
+// (the app still works via server reconcile + fresh props on each navigation).
 function setupEcho() {
-    if (echoReady) return;
-    // A pending retry can outlive the page (or a test environment teardown),
-    // by which point there is no window left to look at.
-    if (typeof window === "undefined") return;
-    if (!window.Echo) {
-        // Give up after ~10s: Pusher may be unconfigured, in which case the app
-        // still works via server reconcile + fresh props on each navigation.
-        if (echoAttempts++ >= 20) return;
-        setTimeout(setupEcho, 500);
-        return;
-    }
-    try {
-        window.Echo.private(channelName("world-clock")).listen(
-            ".WorldClockUpdated",
-            (payload) => applyRemote(payload)
-        );
-        echoReady = true;
-    } catch (e) {
-        console.error("Error setting up world clock Echo listener:", e);
-    }
+    if (echoWaiting) return;
+    echoWaiting = true;
+    whenEcho((echo) => {
+        try {
+            echo.private(channelName("world-clock")).listen(
+                ".WorldClockUpdated",
+                (payload) => applyRemote(payload)
+            );
+        } catch (e) {
+            console.error("Error setting up world clock Echo listener:", e);
+        }
+    });
 }
 
 export function useWorldClockSync() {

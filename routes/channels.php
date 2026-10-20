@@ -37,9 +37,9 @@ Broadcast::channel(BroadcastChannel::name('messages'), function ($user) {
 $worldMember = fn ($user) => GamesWorld::togetherEnabled()
     ? ['id' => $user->id, 'name' => $user->name]
     : false;
-// The switch first, so the registry isn't built for a refusal.
+// The switch first, so the scene ids aren't read for a refusal.
 $sceneMember = fn ($user, string $scene) => ($member = $worldMember($user))
-    && array_key_exists($scene, GamesWorld::definitions())
+    && in_array($scene, GamesWorld::sceneIds(), true)
     ? $member
     : false;
 

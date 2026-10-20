@@ -6,7 +6,7 @@ import { useTranslations } from "@/composables/useTranslations";
 import { computed, ref } from "vue";
 import TiltPermissionButton from "@/Components/TiltPermissionButton.vue";
 import LandmarkTitle from "../components/LandmarkTitle.vue";
-import OtherName from "../components/OtherName.vue";
+import OtherButton from "../components/OtherButton.vue";
 import SkyLogo from "../components/SkyLogo.vue";
 import { useRoad } from "../composables/useRoad.js";
 
@@ -209,26 +209,24 @@ defineExpose(api);
                 </span>
             </button>
 
-            <div
+            <OtherButton
                 v-for="other in world.others"
                 :key="other.id"
                 class="butt other"
+                :name="other.name"
+                :lift="other.lift"
                 :style="{
                     transform: `translate3d(${other.x}px, 0, 0) translateX(-50%)`,
                 }"
-                aria-hidden="true"
+                @click="stage.follow?.(other.id)"
             >
-                <OtherName
-                    :name="other.name"
-                    :style="{ left: '50%', top: `${-other.lift}px` }"
-                />
                 <CastMember
                     id="butt"
                     :move="other.walking ? 'walk' : null"
                     :facing="other.facing < 0 ? 'left' : 'right'"
                     :lift="other.lift"
                 />
-            </div>
+            </OtherButton>
 
             <div
                 ref="buttEl"
@@ -470,10 +468,10 @@ defineExpose(api);
     will-change: transform;
 }
 
-/* Someone else's butt, drawn behind yours: there to see, not to drag. */
+/* Someone else's butt, drawn behind yours: not to drag, but a tap
+   follows them (OtherButton). */
 .butt.other {
-    pointer-events: none;
-    cursor: auto;
+    cursor: pointer;
 }
 
 @media (prefers-reduced-motion: reduce) {

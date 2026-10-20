@@ -1265,13 +1265,19 @@ describe("GamesWorld together", () => {
         expect(wrapper.get(".butt.other .other-name").text()).toBe("Friend");
     });
 
-    it("leaves the road's channel in a room and joins it again outside", async () => {
+    const channel = (pattern) =>
+        Object.entries(channels).find(([name]) => pattern.test(name));
+    const rosterChannel = () => channel(/(^|\.)world$/)[1];
+    const hallChannel = () => channel(/(^|\.)world\.house\.hall$/)?.[1];
+
+    it("moves from the road's channel to a room's and back outside", async () => {
         asVisitor({ together: true });
         wrapper = await mountWorld(withHouse);
         const [roadName] = roadChannel();
 
         await enterHouse(wrapper);
         expect(echo.leave).toHaveBeenCalledWith(roadName);
+        expect(hallChannel()).toBeTruthy();
 
         await wrapper.get(".stage").trigger("keydown", { key: "Escape" });
         await showing(wrapper, ".road-3d");
@@ -1279,6 +1285,111 @@ describe("GamesWorld together", () => {
             echo.join.mock.calls.filter(([name]) => name === roadName)
         ).toHaveLength(2);
     });
+
+    it("draws someone else in a room with their name", async () => {
+        asVisitor({ together: true });
+        wrapper = await mountWorld(withHouse);
+        await enterHouse(wrapper);
+        const hall = hallChannel();
+        hall.handlers.here([
+            { id: 7, name: "Me" },
+            { id: 8, name: "Friend" },
+        ]);
+
+        // Arriving, you said where you are in it.
+        expect(hall.whisper).toHaveBeenCalledWith(
+            "place",
+            expect.objectContaining({ scene: "house.hall", lane: 0 })
+        );
+
+        hall.handlers.whispers.move(
+            { x: 300, z: 200, lane: 0, facing: 1, moving: 0 },
+            { user_id: 8 }
+        );
+        await showing(wrapper, ".room-3d .visitor .other-name");
+        expect(wrapper.get(".visitor .other-name").text()).toBe("Friend");
+    });
+
+    it("lists who is in the world and where, and says where you are", async () => {
+        asVisitor({ together: true });
+        wrapper = await mountWorld(withHouse);
+        const roster = rosterChannel();
+        roster.handlers.here([
+            { id: 7, name: "Me" },
+            { id: 8, name: "Friend" },
+        ]);
+
+        expect(roster.whisper).toHaveBeenCalledWith("place", {
+            scene: "road",
+        });
+
+        roster.handlers.whispers.place(
+            { scene: "house.hall", x: 300, z: 200, lane: 0 },
+            { user_id: 8 }
+        );
+        await wrapper.get(".roster-toggle").trigger("click");
+
+        const rows = wrapper.findAll(".roster-panel li");
+        expect(rows).toHaveLength(1);
+        expect(rows[0].get(".roster-name").text()).toBe("Friend");
+        expect(rows[0].get(".roster-place").text()).toBe("The Hall");
+    });
+
+    it("follows someone tapped on the street, and stops when you steer", async () => {
+        asVisitor({ together: true });
+        wrapper = await mountWorld(withHouse);
+        const people = [
+            { id: 7, name: "Me" },
+            { id: 8, name: "Friend" },
+        ];
+        rosterChannel().handlers.here(people);
+        rosterChannel().handlers.whispers.place(
+            { scene: "road", x: 900, z: 0, lane: 0 },
+            { user_id: 8 }
+        );
+        const [, road] = roadChannel();
+        road.handlers.here(people);
+        road.handlers.whispers.place(
+            { scene: "road", x: 900, z: 0, lane: 0 },
+            { user_id: 8 }
+        );
+        await showing(wrapper, ".road-3d button.other");
+
+        await wrapper.get("button.other").trigger("click");
+        await nextTick();
+        expect(wrapper.find(".roster-chip").exists()).toBe(true);
+
+        await wrapper.get(".stage").trigger("keydown", { key: "ArrowLeft" });
+        expect(wrapper.find(".roster-chip").exists()).toBe(false);
+    });
+
+    it("follows someone through a door into the room they're in", async () => {
+        asVisitor({ together: true });
+        wrapper = await mountWorld(withHouse);
+        const roster = rosterChannel();
+        roster.handlers.here([
+            { id: 7, name: "Me" },
+            { id: 8, name: "Friend" },
+        ]);
+        roster.handlers.whispers.place(
+            { scene: "house.hall", x: 300, z: 200, lane: 0 },
+            { user_id: 8 }
+        );
+        await wrapper.get(".roster-toggle").trigger("click");
+
+        await wrapper.get(".roster-panel .roster-action").trigger("click");
+
+        await vi.waitFor(
+            () => {
+                if (!wrapper.find(".room-3d").exists()) {
+                    throw new Error("not in yet");
+                }
+            },
+            { timeout: 8000 }
+        );
+        // Still following, in there.
+        expect(wrapper.find(".roster-chip").exists()).toBe(true);
+    }, 10000);
 
     it("joins nothing while the switch is off", async () => {
         asVisitor({ together: false });

@@ -1,4 +1,5 @@
 import { userChannelName } from "@/utils/broadcastChannel";
+import { whenEcho } from "@/utils/whenEcho";
 import { usePage } from "@inertiajs/vue3";
 import { useFlashMessage } from "@/composables/useFlashMessage";
 import { useTranslations } from "@/composables/useTranslations";
@@ -27,9 +28,8 @@ export function usePusherNotifications() {
     const { setFlashMessage } = useFlashMessage();
     const { t } = useTranslations();
     const channel = ref(null);
-    const retryTimeout = ref(null);
-    const maxRetries = 10;
-    const retryCount = ref(0);
+    // Stops waiting for Echo, while it's still being waited for.
+    let cancelWait = null;
 
     const getInteractionFlashMessage = (notification, recipientName) => {
         if (!notification || !recipientName) {
@@ -79,22 +79,7 @@ export function usePusherNotifications() {
         return false;
     };
 
-    const setupNotifications = () => {
-        if (!window.Echo) {
-            if (retryCount.value < maxRetries) {
-                retryCount.value++;
-                retryTimeout.value = setTimeout(() => {
-                    setupNotifications();
-                }, 500);
-            }
-            return;
-        }
-
-        if (retryTimeout.value) {
-            clearTimeout(retryTimeout.value);
-            retryTimeout.value = null;
-        }
-
+    const setupNotifications = (echo) => {
         const page = usePage();
         const user = page.props.auth?.user;
 
@@ -103,7 +88,7 @@ export function usePusherNotifications() {
         }
 
         try {
-            channel.value = window.Echo.private(userChannelName(user.id));
+            channel.value = echo.private(userChannelName(user.id));
         } catch {
             return;
         }
@@ -122,10 +107,8 @@ export function usePusherNotifications() {
     };
 
     const cleanup = () => {
-        if (retryTimeout.value) {
-            clearTimeout(retryTimeout.value);
-            retryTimeout.value = null;
-        }
+        cancelWait?.();
+        cancelWait = null;
 
         if (channel.value && window.Echo) {
             try {
@@ -138,7 +121,7 @@ export function usePusherNotifications() {
     };
 
     onMounted(() => {
-        setupNotifications();
+        cancelWait = whenEcho(setupNotifications, { attempts: 10 });
     });
 
     onUnmounted(() => {

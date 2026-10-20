@@ -37,7 +37,10 @@ const PEEK_DEADBAND = 0.005;
  *
  * `props` are the scene's ({ scene, stage, arrival }); `emit` its emit.
  * `stage.together`, when the world is shared (useWorldPresence), hears where
- * the Butt is and says where everyone else is, as `world.others`. The drawer
+ * the Butt is and says where everyone else is, as `world.others`; whatever
+ * the player does to steer the Butt tells `stage.steered()`, which stops a
+ * follow (useFollow), and the follow walks it with `api.walkUpTo` and
+ * `api.walkThrough`. The drawer
  * supplies what only it knows:
  * - dragTo(event, stageRect): called as a drag of the Butt starts; returns
  *   a function from each pointer event of the drag to where it sends the
@@ -114,14 +117,14 @@ export function useRoad(props, emit, options) {
 
     const together = props.stage.together;
     if (together) {
-        // Whole road px, and the side it's on or crossing to. Watched as
-        // numbers, so a frame that changes none of them sends nothing.
+        // Whole road px, and the side it's on or crossing to. Each its own
+        // source, so a frame that changes none of them sends nothing.
         watch(
-            () => [
-                Math.round(butt.x),
-                LANES[butt.side],
-                butt.facing,
-                buttMoving.value ? 1 : 0,
+            [
+                () => Math.round(butt.x),
+                () => LANES[butt.side],
+                () => butt.facing,
+                () => (buttMoving.value ? 1 : 0),
             ],
             ([x, lane, facing, moving]) =>
                 together.move({ x, z: 0, lane, facing, moving }),
@@ -260,7 +263,9 @@ export function useRoad(props, emit, options) {
             world.endPan();
             const to = tapStart && tapTo?.(tapStart, gestureRect);
             tapStart = null;
-            if (to) world.walkTo(to.x, to.side);
+            if (!to) return;
+            steered();
+            world.walkTo(to.x, to.side);
         },
         cancel() {
             tapStart = null;
@@ -268,8 +273,12 @@ export function useRoad(props, emit, options) {
         },
     };
 
+    /** The player is steering the Butt: any follow stops. */
+    const steered = () => props.stage.steered?.();
+
     function onButtPointerDown(event) {
         if (state.confirmSlug || event.button > 0) return;
+        steered();
         gestureRect = props.stage.beginGesture(dragGesture);
         dragMove = dragTo(event, gestureRect);
         world.startDrag();
@@ -301,6 +310,7 @@ export function useRoad(props, emit, options) {
         // Focus walks the butt there, so the keyboard route is a real
         // equivalent of dragging rather than a hidden list of links.
         if (state.confirmSlug) return;
+        if (!placedFocus) steered();
         world.walkToLandmark(slug);
         // Focusing an off-screen button makes the browser scroll the (hidden)
         // overflow of the stage; the camera is the only thing allowed to
@@ -316,12 +326,14 @@ export function useRoad(props, emit, options) {
         const side = lanes && CROSS_KEYS[event.key];
         if (side) {
             event.preventDefault();
+            steered();
             world.crossTo(side);
             return;
         }
         const dir = WALK_KEYS[event.key];
         if (!dir) return;
         event.preventDefault();
+        steered();
         world.setWalk(dir);
     }
 
@@ -413,9 +425,27 @@ export function useRoad(props, emit, options) {
 
     /** Focus on a landmark's button, e.g. the door the Butt just came out
      * of. */
+    // Set while focus is put somewhere by the world (the door you came out
+    // of), not moved by the player: that isn't steering.
+    let placedFocus = false;
+
     function focusItem(id) {
+        placedFocus = true;
         landmarkEls[id]?.focus({ preventScroll: true });
+        placedFocus = false;
         props.stage.resetScroll();
+    }
+
+    /** Walks up beside someone else on the street (useFollow). */
+    function walkUpTo(other) {
+        world.walkUpTo(other.x, lanes && other.lane ? "near" : "far");
+    }
+
+    /** Walks to door `door` (an interactable here) and goes through it,
+     * as dropping the Butt at it does (useFollow). */
+    function walkThrough(door) {
+        const landmark = landmarks.value.find((lm) => lm.slug === door.id);
+        if (landmark) world.walkTo(landmark.x, landmark.side);
     }
 
     /** What the stage saves to come back to. */
@@ -435,6 +465,8 @@ export function useRoad(props, emit, options) {
         activateNearest,
         unfreeze,
         release,
+        walkUpTo,
+        walkThrough,
     };
 
     return {

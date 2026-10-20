@@ -1,6 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
     useGamesWorld,
+    useOthers,
     WALK_SPEED,
     DRAG_SPEED,
     END_PAD,
@@ -9,6 +10,7 @@ import {
     SOFT_RIGHT,
     CROSS_TIME,
     LANES,
+    FOLLOW_GAP,
 } from "./useGamesWorld.js";
 
 const DT = 1 / 60;
@@ -554,6 +556,7 @@ describe("useGamesWorld other people", () => {
         id: 2,
         name: "Friend",
         x: 1000,
+        z: 0,
         lane: 0,
         facing: 1,
         moving: 0,
@@ -634,6 +637,7 @@ describe("useGamesWorld keeping up with other people", () => {
             id: 2,
             name: "Friend",
             x,
+            z: 0,
             lane: 0,
             facing: 1,
             moving: 1,
@@ -646,5 +650,70 @@ describe("useGamesWorld keeping up with other people", () => {
             advance(world, 2000);
             expect(Math.abs(world.others[0].x - x)).toBeLessThan(15);
         }
+    });
+});
+
+describe("useOthers in a room", () => {
+    it("walks someone across the floor and back toward the wall", () => {
+        const room = useOthers({ every: 2 });
+        const at = (x, z, moving = 1) => ({
+            id: 2,
+            name: "Friend",
+            x,
+            z,
+            lane: 0,
+            facing: 1,
+            moving,
+        });
+        room.set([at(100, 400)]);
+        room.set([at(500, 100, 0)]);
+        room.step(0.1);
+        const [other] = room.others;
+        expect(other.x).toBeGreaterThan(100);
+        expect(other.z).toBeLessThan(400);
+        expect(other.walking).toBe(true);
+
+        for (let i = 0; i < 40; i += 1) room.step(0.1);
+        expect(other).toMatchObject({ x: 500, z: 100, walking: false });
+    });
+});
+
+describe("useGamesWorld walking up to someone", () => {
+    it("stops beside them on their side, opening nothing there", () => {
+        const onArrive = vi.fn();
+        const world = useGamesWorld(GAMES, { onArrive });
+        world.setBounds(STAGE_W, STAGE_H);
+
+        // Someone standing right at Sprout Pox, across the street.
+        world.walkUpTo(600, "near");
+        advance(world, 3000);
+
+        expect(world.butt.x).toBe(600 - FOLLOW_GAP);
+        expect(world.butt.side).toBe("near");
+        expect(onArrive).not.toHaveBeenCalled();
+        expect(world.state.confirmSlug).toBeNull();
+    });
+
+    it("stays put when already that close", () => {
+        const world = useGamesWorld(GAMES);
+        world.setBounds(STAGE_W, STAGE_H);
+        const { x } = world.butt;
+
+        world.walkUpTo(x + FOLLOW_GAP / 2, "far");
+        advance(world, 1000);
+
+        expect(world.butt.x).toBe(x);
+    });
+
+    it("still opens a landmark it's sent to afterwards", () => {
+        const onArrive = vi.fn();
+        const world = useGamesWorld(GAMES, { onArrive });
+        world.setBounds(STAGE_W, STAGE_H);
+
+        world.walkUpTo(900, "far");
+        world.walkTo(600, "far");
+        advance(world, 3000);
+
+        expect(onArrive).toHaveBeenCalledOnce();
     });
 });

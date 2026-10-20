@@ -2,12 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Models\Category;
 use App\Models\SiteSetting;
 use App\Models\User;
 use App\Support\BroadcastChannel;
 use App\Support\GamesWorld;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
@@ -96,6 +98,36 @@ class GamesWorldTogetherTest extends TestCase
 
         $this->join('world.nowhere')->assertForbidden();
         $this->join('world.house.attic')->assertForbidden();
+    }
+
+    public function test_joining_a_scene_again_does_not_rebuild_the_world(): void
+    {
+        $this->together();
+        $this->actingAs(User::factory()->create());
+        $this->join('world.road')->assertOk();
+
+        DB::enableQueryLog();
+        $this->join('world.house.hall')->assertOk();
+        $queries = collect(DB::getQueryLog())->pluck('query');
+
+        $this->assertFalse(
+            $queries->contains(fn ($sql) => str_contains($sql, 'categories')),
+            'The scene ids should come from the cache: '.$queries->implode('; ')
+        );
+    }
+
+    public function test_a_new_category_room_can_be_joined_at_once(): void
+    {
+        $this->together();
+        $this->actingAs(User::factory()->create());
+        $this->join('world.road')->assertOk();
+
+        $category = Category::create(['name' => 'brand new']);
+
+        $this->join("world.library.category-{$category->id}")->assertOk();
+
+        $category->delete();
+        $this->join("world.library.category-{$category->id}")->assertForbidden();
     }
 
     public function test_a_guest_is_refused(): void

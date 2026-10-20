@@ -1,12 +1,7 @@
 import { channelName } from "@/utils/broadcastChannel";
+import { sameId } from "@/utils/object";
+import { whenEcho } from "@/utils/whenEcho";
 import { computed, ref } from "vue";
-
-// Echo is made after the page boots (bootstrap.js), and never when Pusher
-// isn't configured: look for it this many times, this far apart, then give
-// up quietly and leave the world as it is alone (useWorldClockSync does the
-// same).
-const ECHO_ATTEMPTS = 20;
-const ECHO_RETRY_MS = 500;
 
 const ROSTER = "world";
 
@@ -23,8 +18,6 @@ export const CROWD = 8;
 const STALE_MS = 5000;
 // Nobody stands further from the start of a scene than this.
 const POSITION_LIMIT = 100000;
-
-const sameId = (a, b) => String(a) === String(b);
 
 const isCoordinate = (n) =>
     Number.isInteger(n) && Math.abs(n) <= POSITION_LIMIT;
@@ -60,25 +53,39 @@ function changedEnough(last, next) {
  * place that joins the world's channels and the only one that whispers on
  * them.
  *
- * - `world`, the roster: everyone in the world, as `{ id, name }` members.
+ * - `world`, the roster: everyone in the world, as `{ id, name }` members,
+ *   and which scene each is in, from the `client-place` ({ scene }) each
+ *   sends on joining it, on changing scene and when someone new joins it,
+ *   as `roster` (everyone but you).
  * - `world.<scene id>`, the scene you are standing in (enterScene): where
  *   the people in it are, from their `client-place` on arrival and their
  *   `client-move`s, as `others`.
  *
+ * Positions are `{ x, z, lane, facing, moving }` in the scene's own whole
+ * units: the road's x and lane (z 0), a room's x and z (lane 0).
+ *
  * `enabled` is decided once by the page (the `world_together_enabled` setting
  * and a logged-in visitor). Off, nothing is ever joined or sent, so the world
- * is exactly what it is without this. `me` is the visitor's user id.
+ * is exactly what it is without this. `me` is the visitor's user id;
+ * `scenes` the ids of every scene, the only ones a place may name.
  */
-export function useWorldPresence({ enabled, me = null }) {
+export function useWorldPresence({ enabled, me = null, scenes = [] }) {
+    const knownScenes = new Set(scenes);
     const members = ref([]);
+    // Which scene each person on the roster last said they were in: user
+    // id → scene id.
+    const places = ref({});
     // Who is in the scene with you (yourself included), and where the ones
     // who have said are: user id → readPosition()'s.
     const sceneMembers = ref([]);
     const positions = ref({});
 
-    let joined = false;
-    let retry = null;
-    let attempts = 0;
+    let cancelWait = null;
+    // The roster's channel, once joined.
+    let roster = null;
+    let rosterReady = false;
+    // Whether the roster has yet to hear which scene you're in now.
+    let placeUntold = false;
 
     let sceneId = null;
     let sceneName = null;
@@ -96,6 +103,18 @@ export function useWorldPresence({ enabled, me = null }) {
     const without = (list, member) =>
         list.filter((m) => !sameId(m.id, member.id));
 
+    /** Everyone else in the world, and the scene each is in (null until
+     * they say). */
+    const rosterList = computed(() =>
+        members.value
+            .filter((member) => !sameId(member.id, me))
+            .map((member) => ({
+                id: member.id,
+                name: member.name,
+                scene: places.value[member.id] ?? null,
+            }))
+    );
+
     /** The other people standing in your scene, where they are: no more
      * than CROWD of them. */
     const others = computed(() =>
@@ -111,49 +130,99 @@ export function useWorldPresence({ enabled, me = null }) {
     );
 
     function join() {
-        if (!enabled || joined || retry) return;
-        if (!window.Echo) {
-            if (attempts++ >= ECHO_ATTEMPTS) return;
-            retry = setTimeout(() => {
-                retry = null;
-                join();
-            }, ECHO_RETRY_MS);
-            return;
-        }
+        if (!enabled || roster || cancelWait) return;
+        // A tab that was hidden when the roster needed telling tells it
+        // once it's back.
+        document.addEventListener("visibilitychange", tellRoster);
+        cancelWait = whenEcho(joinRoster);
+    }
+
+    function joinRoster(echo) {
+        cancelWait = null;
         try {
-            window.Echo.join(channelName(ROSTER))
+            roster = echo
+                .join(channelName(ROSTER))
                 .here((here) => {
                     members.value = here;
+                    rosterReady = true;
+                    tellRoster();
                 })
                 .joining((member) => {
                     members.value = [...without(members.value, member), member];
+                    // Someone new: they don't know where you are yet.
+                    placeUntold = true;
+                    tellRoster();
                 })
                 .leaving((member) => {
                     members.value = without(members.value, member);
+                    forgetPlace(member.id);
                 })
                 // Refused (switched off since the page loaded): nobody
                 // to see, and nothing else changes.
                 .error((error) => {
                     console.warn("Not let into the Games World roster:", error);
                     members.value = [];
-                });
-            joined = true;
+                    places.value = {};
+                    rosterReady = false;
+                })
+                .listenForWhisper("place", hearPlace);
         } catch (e) {
             console.error("Error joining the Games World roster:", e);
+            roster = null;
             return;
         }
         if (sceneId) joinScene();
     }
 
     function leave() {
-        clearTimeout(retry);
-        retry = null;
+        cancelWait?.();
+        cancelWait = null;
+        document.removeEventListener("visibilitychange", tellRoster);
         leaveScene();
         current = null;
         members.value = [];
-        if (!joined) return;
-        joined = false;
+        places.value = {};
+        rosterReady = false;
+        if (!roster) return;
+        roster = null;
         window.Echo?.leave(channelName(ROSTER));
+    }
+
+    /** Tells the roster which scene you're in, once it hasn't heard.
+     * Nobody else there, nothing goes: whoever joins is told then. */
+    function tellRoster() {
+        if (
+            !placeUntold ||
+            !sceneId ||
+            !rosterReady ||
+            document.hidden ||
+            members.value.length < 2
+        ) {
+            return;
+        }
+        try {
+            roster.whisper("place", { scene: sceneId });
+            placeUntold = false;
+        } catch (e) {
+            console.warn("Couldn't whisper in the Games World:", e);
+        }
+    }
+
+    /** Someone on the roster says which scene they're in. */
+    function hearPlace(data, meta) {
+        const id = meta?.user_id;
+        const member = members.value.find((m) => sameId(m.id, id));
+        if (!member || sameId(id, me)) return;
+        const scene = data?.scene;
+        if (!knownScenes.has(scene)) return;
+        places.value = { ...places.value, [member.id]: scene };
+    }
+
+    function forgetPlace(id) {
+        if (!(id in places.value)) return;
+        const rest = { ...places.value };
+        delete rest[id];
+        places.value = rest;
     }
 
     // --- The scene you're in -------------------------------------------------
@@ -164,7 +233,11 @@ export function useWorldPresence({ enabled, me = null }) {
         if (!enabled || id === sceneId) return;
         leaveScene();
         sceneId = id;
-        if (joined) joinScene();
+        // Where you stand here comes with the scene's first move().
+        current = null;
+        placeUntold = true;
+        tellRoster();
+        if (roster) joinScene();
     }
 
     function joinScene() {
@@ -219,8 +292,7 @@ export function useWorldPresence({ enabled, me = null }) {
         }
     }
 
-    /** Out of the scene you were in, into none (a room, until rooms have
-     * channels too, or the world left). */
+    /** Out of the scene you were in, into none (the world left). */
     function leaveScene() {
         clearTimeout(moveTimer);
         moveTimer = null;
@@ -346,6 +418,7 @@ export function useWorldPresence({ enabled, me = null }) {
     return {
         enabled,
         members,
+        roster: rosterList,
         others,
         join,
         leave,

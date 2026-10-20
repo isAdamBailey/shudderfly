@@ -1287,6 +1287,37 @@ final class GamesWorld
             ->groupBy(fn ($frame) => self::photoSource($frame['from']));
     }
 
+    private const SCENE_IDS_KEY = 'games-world.scene-ids';
+
+    /** How long the scene ids are cached at most, s: a deploy that adds a
+     * room in code is joinable within this long (a category is at once). */
+    public const SCENE_IDS_TTL = 600;
+
+    /**
+     * Every scene's id, for the together channels (routes/channels.php),
+     * which check one on every room change. Cached, since definitions()
+     * queries the book categories each time it's built; the only ids that
+     * change between deploys are the Library's category rooms, so a
+     * category saved or deleted forgets them (Category::booted()).
+     *
+     * @return list<string>
+     */
+    public static function sceneIds(): array
+    {
+        return Cache::remember(
+            self::SCENE_IDS_KEY,
+            self::SCENE_IDS_TTL,
+            fn () => array_keys(self::definitions())
+        );
+    }
+
+    /** Forgets the cached scene ids (sceneIds()), so the next join reads
+     * them afresh. */
+    public static function forgetSceneIds(): void
+    {
+        Cache::forget(self::SCENE_IDS_KEY);
+    }
+
     /** Whether togetherness is on. A missing row counts as off. */
     public static function togetherEnabled(): bool
     {

@@ -3,7 +3,7 @@ import { shallowRef } from "vue";
 import { INSTRUMENT_FOOTPRINTS } from "../scenes/instruments.js";
 import { itemLocal } from "../scenes/roomLayout.js";
 import { STAIRS_CLEARANCE } from "../scenes/roomLayout.js";
-import { DRAG_SPEED, WALK_SPEED } from "./useGamesWorld.js";
+import { DRAG_SPEED, FOLLOW_GAP, WALK_SPEED } from "./useGamesWorld.js";
 import {
     arrivalSpot,
     BLOCK_CLEARANCE,
@@ -445,5 +445,34 @@ describe("arrivalSpot", () => {
             x: STAIRS_CLEARANCE,
             z: 220,
         });
+    });
+});
+
+describe("useRoom walking up to someone", () => {
+    it("stops short of them, and never goes through a door beside them", () => {
+        const { r, onArrive } = makeRoom();
+
+        // Someone standing in the front door.
+        r.walkUpTo(450, 50);
+        run(r, 3);
+
+        expect(Math.hypot(r.butt.x - 450, r.butt.z - 50)).toBeCloseTo(
+            FOLLOW_GAP
+        );
+        expect(onArrive).not.toHaveBeenCalled();
+    });
+
+    it("stays put when already that close", () => {
+        const { r } = makeRoom();
+        r.walkUpTo(450 + FOLLOW_GAP / 2, 400);
+        run(r, 1);
+
+        expect(r.butt).toMatchObject({ x: 450, z: 400, walking: false });
+    });
+
+    it("keeps someone else's spot inside the walls", () => {
+        const { r } = makeRoom();
+
+        expect(r.inside(-500, 9999)).toEqual({ x: 50, z: 500 });
     });
 });

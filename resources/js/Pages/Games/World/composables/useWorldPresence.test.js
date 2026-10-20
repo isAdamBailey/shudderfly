@@ -453,3 +453,114 @@ describe("useWorldPresence on the street", () => {
         expect(echo.join).toHaveBeenLastCalledWith("testing.world.house.hall");
     });
 });
+
+describe("useWorldPresence on the roster", () => {
+    const ME = { id: 1, name: "Me" };
+    const FRIEND = { id: 2, name: "Friend" };
+    const SCENES = ["road", "house.hall"];
+    const standing = { x: 300, z: 0, lane: 0, facing: 1, moving: 0 };
+    let echo;
+
+    beforeEach(() => {
+        vi.useFakeTimers();
+        window.broadcastChannelPrefix = "testing";
+        echo = fakeEcho();
+        window.Echo = echo;
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+        delete window.Echo;
+        delete window.broadcastChannelPrefix;
+    });
+
+    /** In the world with `people`, on the road at `standing`. */
+    function inTheWorld(people = [ME, FRIEND]) {
+        const presence = useWorldPresence({
+            enabled: true,
+            me: ME.id,
+            scenes: SCENES,
+        });
+        presence.enterScene("road");
+        presence.join();
+        presence.move(standing);
+        const roster = echo.channels["testing.world"];
+        roster.handlers.here(people);
+        return { presence, roster };
+    }
+
+    const places = (roster) =>
+        roster.whisper.mock.calls.filter(([event]) => event === "place");
+
+    it("tells the roster which scene you're in, once", () => {
+        const { presence, roster } = inTheWorld();
+        presence.move({ ...standing, x: 900, moving: 1 });
+
+        expect(places(roster)).toEqual([["place", { scene: "road" }]]);
+    });
+
+    it("tells it again in a new scene, straight away", () => {
+        const { presence, roster } = inTheWorld();
+
+        presence.enterScene("house.hall");
+
+        expect(places(roster)[1]).toEqual(["place", { scene: "house.hall" }]);
+    });
+
+    it("tells the roster once the tab is back, if it was hidden", () => {
+        let hidden = true;
+        vi.spyOn(document, "hidden", "get").mockImplementation(() => hidden);
+        const { roster } = inTheWorld();
+        expect(places(roster)).toEqual([]);
+
+        hidden = false;
+        document.dispatchEvent(new Event("visibilitychange"));
+
+        expect(places(roster)).toEqual([["place", { scene: "road" }]]);
+        vi.restoreAllMocks();
+    });
+
+    it("tells nobody alone, and tells whoever joins", () => {
+        const { roster } = inTheWorld([ME]);
+        expect(roster.whisper).not.toHaveBeenCalled();
+
+        roster.handlers.joining(FRIEND);
+
+        expect(places(roster)).toHaveLength(1);
+    });
+
+    it("keeps everyone else's scene, and forgets theirs when they go", () => {
+        const { presence, roster } = inTheWorld();
+        expect(presence.roster.value).toEqual([
+            { id: 2, name: "Friend", scene: null },
+        ]);
+
+        roster.handlers.whispers.place(
+            { scene: "house.hall" },
+            { user_id: "2" }
+        );
+        expect(presence.roster.value).toEqual([
+            { id: 2, name: "Friend", scene: "house.hall" },
+        ]);
+
+        roster.handlers.leaving(FRIEND);
+        roster.handlers.joining(FRIEND);
+        expect(presence.roster.value[0].scene).toBeNull();
+    });
+
+    it("drops a place for an unknown scene, or from a stranger", () => {
+        const { presence, roster } = inTheWorld();
+        const { place } = roster.handlers.whispers;
+
+        place({ scene: "house.attic" }, { user_id: 2 });
+        place({ scene: "constructor" }, { user_id: 2 });
+        place({ scene: ["road"] }, { user_id: 2 });
+        place(null, { user_id: 2 });
+        place({ scene: "road" }, { user_id: 99 });
+        place({ scene: "road" }, { user_id: 1 });
+
+        expect(presence.roster.value).toEqual([
+            { id: 2, name: "Friend", scene: null },
+        ]);
+    });
+});
