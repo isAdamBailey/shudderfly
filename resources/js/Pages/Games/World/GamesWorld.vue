@@ -116,6 +116,12 @@ const card = shallowRef(null);
 
 const radio = useRadio();
 
+/** The radios in the scene you're in. */
+const radiosHere = () =>
+    (router.current.value?.interactables ?? []).filter(
+        (item) => item.type === "radio" && item.songs?.length
+    );
+
 // Other people in the world (issue #174): logged-in visitors only, and only
 // while the site has it switched on. Off, nothing is joined at all.
 const presence = useWorldPresence({
@@ -124,7 +130,36 @@ const presence = useWorldPresence({
         Boolean(page.props.auth?.user),
     me: page.props.auth?.user?.id ?? null,
     scenes: Object.keys(props.scenes),
+    // What's on the radio here you tuned, for someone arriving.
+    radioNow(id) {
+        const item = radiosHere().find((r) => r.id === id);
+        return item ? radio.nowPlaying(item.songs) : null;
+    },
+    // Someone here tuned a radio, or switched it off.
+    hearRadio({ id, songId, startedAt }) {
+        const item = radiosHere().find((r) => r.id === id);
+        if (!item) return;
+        if (songId === null) radio.stop(item.songs);
+        else radio.join(item.songs, songId, startedAt);
+    },
 });
+
+/** Tunes a radio, and once the song is playing, tells everyone in the
+ * room so theirs plays it too. */
+async function tuneRadio(item) {
+    const song = radio.tune(item.songs);
+    if (song === undefined || !presence.enabled) return;
+    if (song === null) {
+        presence.radio({ id: item.id, songId: null });
+        return;
+    }
+    const scene = router.currentId.value;
+    const startedAt = await radio.started(song);
+    // Gone through a door meanwhile: that room's radio isn't on.
+    if (startedAt !== null && router.currentId.value === scene) {
+        presence.radio({ id: item.id, songId: song.id, startedAt });
+    }
+}
 
 // Whichever scene you're in, its channel: the people standing in it.
 watch(
@@ -150,7 +185,7 @@ const ctx = {
     hitDrum: (id, edge) => sceneRef.value?.hitDrum?.(id, edge),
     changeChannel: (id) => sceneRef.value?.changeChannel?.(id),
     // Through the site's music player, so it plays on in its flyout.
-    tuneRadio: radio.tune,
+    tuneRadio,
     playSound,
     playOrgan,
     playHarp,
@@ -368,6 +403,7 @@ onBeforeUnmount(() => {
     window.removeEventListener("blur", onWindowBlur);
     detachPointerListeners();
     renderer.dispose();
+    radio.dispose();
     presence.leave();
 });
 

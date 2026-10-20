@@ -564,3 +564,243 @@ describe("useWorldPresence on the roster", () => {
         ]);
     });
 });
+
+describe("useWorldPresence's radio", () => {
+    const ME = { id: 1, name: "Me" };
+    const FRIEND = { id: 2, name: "Friend" };
+    const SCENE = "testing.world.house.den";
+    const NOW = 1000000;
+    let echo;
+    let hidden;
+
+    beforeEach(() => {
+        vi.useFakeTimers();
+        vi.setSystemTime(NOW);
+        window.broadcastChannelPrefix = "testing";
+        echo = fakeEcho();
+        window.Echo = echo;
+        hidden = false;
+        vi.spyOn(document, "hidden", "get").mockImplementation(() => hidden);
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+        vi.restoreAllMocks();
+        delete window.Echo;
+        delete window.broadcastChannelPrefix;
+    });
+
+    /** In the den with `people` (you first). */
+    function inTheDen(people = [ME, FRIEND], options = {}) {
+        const hearRadio = vi.fn();
+        const presence = useWorldPresence({
+            enabled: true,
+            me: ME.id,
+            hearRadio,
+            ...options,
+        });
+        presence.enterScene("house.den");
+        presence.join();
+        const den = echo.channels[SCENE];
+        den.handlers.here(people);
+        return { presence, den, hearRadio };
+    }
+
+    const radios = (den) =>
+        den.whisper.mock.calls
+            .filter(([event]) => event === "radio")
+            .map(([, data]) => data);
+
+    it("tells the room a tune as how far into the song it is", () => {
+        const { presence, den } = inTheDen();
+
+        presence.radio({ id: "radio", songId: 7, startedAt: NOW - 2000 });
+
+        expect(radios(den)).toEqual([{ id: "radio", songId: 7, at: 2000 }]);
+    });
+
+    it("tells it the radio is off", () => {
+        const { presence, den } = inTheDen();
+
+        presence.radio({ id: "radio", songId: null });
+
+        expect(radios(den)).toEqual([{ id: "radio", songId: null }]);
+    });
+
+    it("sends a quick run of tunes once a second, the last one winning", () => {
+        const { presence, den } = inTheDen();
+
+        presence.radio({ id: "radio", songId: 7, startedAt: NOW });
+        presence.radio({ id: "radio", songId: 8, startedAt: NOW });
+        presence.radio({ id: "radio", songId: null });
+        expect(radios(den)).toHaveLength(1);
+
+        vi.advanceTimersByTime(1000);
+        expect(radios(den)).toEqual([
+            { id: "radio", songId: 7, at: 0 },
+            { id: "radio", songId: null },
+        ]);
+    });
+
+    it("says how far in a held-back tune is when it goes", () => {
+        const { presence, den } = inTheDen();
+
+        presence.radio({ id: "radio", songId: 7, startedAt: NOW });
+        presence.radio({ id: "radio", songId: 8, startedAt: NOW });
+        vi.advanceTimersByTime(1000);
+
+        expect(radios(den).at(-1)).toEqual({
+            id: "radio",
+            songId: 8,
+            at: 1000,
+        });
+    });
+
+    it("sends nothing alone", () => {
+        const { presence, den } = inTheDen([ME]);
+
+        presence.radio({ id: "radio", songId: 7, startedAt: NOW });
+
+        expect(radios(den)).toEqual([]);
+    });
+
+    it("sends nothing while the tab is hidden", () => {
+        const { presence, den } = inTheDen();
+        hidden = true;
+
+        presence.radio({ id: "radio", songId: 7, startedAt: NOW });
+
+        expect(radios(den)).toEqual([]);
+    });
+
+    it("sends nothing while the switch is off", () => {
+        const presence = useWorldPresence({ enabled: false });
+        presence.enterScene("house.den");
+        presence.join();
+
+        presence.radio({ id: "radio", songId: 7, startedAt: NOW });
+        vi.runAllTimers();
+
+        expect(echo.join).not.toHaveBeenCalled();
+    });
+
+    it("hears someone else's tune in this browser's clock", () => {
+        const { den, hearRadio } = inTheDen();
+
+        den.handlers.whispers.radio(
+            { id: "radio", songId: 7, at: 2000 },
+            { user_id: 2 }
+        );
+        den.handlers.whispers.radio(
+            { id: "radio", songId: null },
+            { user_id: 2 }
+        );
+
+        expect(hearRadio.mock.calls).toEqual([
+            [{ id: "radio", songId: 7, startedAt: NOW - 2000 }],
+            [{ id: "radio", songId: null }],
+        ]);
+    });
+
+    it("drops a radio that isn't one, or isn't from someone in the room", () => {
+        const { den, hearRadio } = inTheDen();
+        const { radio } = den.handlers.whispers;
+
+        radio({ id: "radio", songId: 7, at: 0 }, { user_id: 99 });
+        radio({ id: "radio", songId: 7, at: 0 }, { user_id: 1 });
+        radio({ id: "<b>", songId: 7, at: 0 }, { user_id: 2 });
+        radio({ id: "radio", songId: "7", at: 0 }, { user_id: 2 });
+        radio({ id: "radio", songId: 0, at: 0 }, { user_id: 2 });
+        radio({ id: "radio", songId: 7 }, { user_id: 2 });
+        radio({ id: "radio", songId: 7, at: -1 }, { user_id: 2 });
+        radio({ id: "radio", songId: 7, at: 1.5 }, { user_id: 2 });
+        radio({ id: "radio", songId: 7, at: 7 * 3600000 }, { user_id: 2 });
+        radio({ id: "radio", songId: 7, at: 0, again: 1 }, { user_id: 2 });
+        radio(null, { user_id: 2 });
+
+        expect(hearRadio).not.toHaveBeenCalled();
+    });
+
+    it("tells someone who arrives what's on the radio you tuned, as a retelling", () => {
+        const radioNow = vi.fn(() => ({ songId: 8, startedAt: NOW - 30000 }));
+        const { presence, den } = inTheDen([ME, FRIEND], { radioNow });
+        presence.radio({ id: "radio", songId: 7, startedAt: NOW });
+        vi.advanceTimersByTime(1000);
+
+        den.handlers.joining({ id: 3, name: "Late" });
+
+        expect(radioNow).toHaveBeenCalledWith("radio");
+        expect(radios(den).at(-1)).toEqual({
+            id: "radio",
+            songId: 8,
+            at: 31000,
+            again: true,
+        });
+    });
+
+    it("keeps a tune waiting to go a tune when someone arrives", () => {
+        const radioNow = vi.fn(() => ({ songId: 8, startedAt: NOW }));
+        const { presence, den } = inTheDen([ME, FRIEND], { radioNow });
+        presence.radio({ id: "radio", songId: 7, startedAt: NOW });
+        presence.radio({ id: "radio", songId: 8, startedAt: NOW });
+
+        den.handlers.joining({ id: 3, name: "Late" });
+        vi.advanceTimersByTime(1000);
+
+        expect(radios(den).at(-1)).not.toHaveProperty("again");
+    });
+
+    it("takes a retelling only before hearing the radio here", () => {
+        const { den, hearRadio } = inTheDen();
+        const { radio } = den.handlers.whispers;
+
+        radio({ id: "radio", songId: 7, at: 0, again: true }, { user_id: 2 });
+        expect(hearRadio).toHaveBeenCalledOnce();
+
+        radio({ id: "radio", songId: 8, at: 0, again: true }, { user_id: 2 });
+        expect(hearRadio).toHaveBeenCalledOnce();
+
+        radio({ id: "radio", songId: null }, { user_id: 2 });
+        expect(hearRadio).toHaveBeenCalledTimes(2);
+    });
+
+    it("takes no retelling after tuning, until in another scene", () => {
+        const { presence, den, hearRadio } = inTheDen();
+        presence.radio({ id: "radio", songId: 7, startedAt: NOW });
+
+        den.handlers.whispers.radio(
+            { id: "radio", songId: 8, at: 0, again: true },
+            { user_id: 2 }
+        );
+        expect(hearRadio).not.toHaveBeenCalled();
+
+        presence.leaveScene();
+        presence.enterScene("house.den");
+        const again = echo.channels[SCENE];
+        again.handlers.here([ME, FRIEND]);
+        again.handlers.whispers.radio(
+            { id: "radio", songId: 8, at: 0, again: true },
+            { user_id: 2 }
+        );
+        expect(hearRadio).toHaveBeenCalledOnce();
+    });
+
+    it("leaves telling newcomers to whoever tuned it last, and only while it's on", () => {
+        const radioNow = vi.fn(() => null);
+        const { presence, den } = inTheDen([ME, FRIEND], { radioNow });
+        presence.radio({ id: "radio", songId: 7, startedAt: NOW });
+        den.handlers.whispers.radio(
+            { id: "radio", songId: 8, at: 0 },
+            { user_id: 2 }
+        );
+        vi.advanceTimersByTime(1000);
+        den.handlers.joining({ id: 3, name: "Late" });
+        expect(radioNow).not.toHaveBeenCalled();
+
+        presence.radio({ id: "radio", songId: 9, startedAt: NOW });
+        vi.advanceTimersByTime(1000);
+        den.handlers.joining({ id: 4, name: "Later" });
+        expect(radioNow).toHaveBeenCalledOnce();
+        expect(radios(den)).toHaveLength(2);
+    });
+});

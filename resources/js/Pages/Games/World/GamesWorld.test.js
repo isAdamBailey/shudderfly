@@ -32,6 +32,34 @@ vi.mock("./three/useWorldRenderer.js", async (importOriginal) => ({
     supportsWebGL: () => fake.webgl,
 }));
 
+// The radio's wiring (issue #174): the options the World hands presence,
+// the presence it gets back, and a stand-in radio a test can put in place.
+const wiring = vi.hoisted(() => ({
+    options: null,
+    presence: null,
+    radio: null,
+}));
+
+vi.mock("./composables/useWorldPresence.js", async (importOriginal) => {
+    const actual = await importOriginal();
+    return {
+        ...actual,
+        useWorldPresence(options) {
+            wiring.options = options;
+            wiring.presence = actual.useWorldPresence(options);
+            return wiring.presence;
+        },
+    };
+});
+
+vi.mock("./composables/useRadio.js", async (importOriginal) => {
+    const actual = await importOriginal();
+    return {
+        ...actual,
+        useRadio: (...args) => wiring.radio ?? actual.useRadio(...args),
+    };
+});
+
 const hostedStandIn = vi.hoisted(() => ({
     component: {
         name: "CockroachApp",
@@ -294,6 +322,7 @@ function spy(object, method) {
 beforeEach(() => {
     // The world remembers where the Butt was; every test starts fresh.
     sessionStorage.clear();
+    wiring.radio = null;
     fake.webgl = true;
     fake.fail = false;
     fake.renderers = [];
@@ -1406,5 +1435,148 @@ describe("GamesWorld together", () => {
         wrapper = await mountWorld();
 
         expect(echo.join).not.toHaveBeenCalled();
+    });
+
+    describe("radio", () => {
+        const SONGS = [
+            { id: 1, title: "One" },
+            { id: 2, title: "Two" },
+        ];
+        const RADIO = {
+            id: "radio",
+            type: "radio",
+            x: 300,
+            z: 100,
+            emoji: "📻",
+            label: "Radio",
+            songs: SONGS,
+        };
+        const hall = withHouse["house.hall"];
+        const withRadio = {
+            ...withHouse,
+            "house.hall": {
+                ...hall,
+                interactables: [...hall.interactables, RADIO],
+            },
+        };
+
+        /** A radio whose `started` resolves when the test says. */
+        function standInRadio() {
+            let start;
+            wiring.radio = {
+                tune: vi.fn(() => SONGS[0]),
+                started: vi.fn(
+                    () => new Promise((resolve) => (start = resolve))
+                ),
+                start: (at) => start(at),
+                nowPlaying: vi.fn(() => ({ songId: 2, startedAt: 5000 })),
+                join: vi.fn(),
+                stop: vi.fn(),
+                isOn: () => false,
+                dispose: vi.fn(),
+            };
+            return wiring.radio;
+        }
+
+        async function tapRadio() {
+            const button = wrapper
+                .findAll("button.room-item")
+                .find((b) => b.attributes("aria-label") === "Radio");
+            await button.trigger("focus");
+            await nextTick();
+            await button.trigger("click");
+            await flushPromises();
+        }
+
+        async function inTheHall({ together = true } = {}) {
+            asVisitor({ together });
+            const radio = standInRadio();
+            wrapper = await mountWorld(withRadio);
+            await enterHouse(wrapper);
+            const tell = vi.fn();
+            wiring.presence.radio = tell;
+            return { radio, tell };
+        }
+
+        it("tells the room a tuned song once it's playing", async () => {
+            const { radio, tell } = await inTheHall();
+
+            await tapRadio();
+            expect(radio.tune).toHaveBeenCalledWith(SONGS);
+            expect(tell).not.toHaveBeenCalled();
+
+            radio.start(4000);
+            await flushPromises();
+            expect(tell).toHaveBeenCalledWith({
+                id: "radio",
+                songId: 1,
+                startedAt: 4000,
+            });
+        });
+
+        it("tells the room it's switched off", async () => {
+            const { radio, tell } = await inTheHall();
+            radio.tune.mockReturnValue(null);
+
+            await tapRadio();
+
+            expect(radio.started).not.toHaveBeenCalled();
+            expect(tell).toHaveBeenCalledWith({ id: "radio", songId: null });
+        });
+
+        it("only tunes with the together switch off", async () => {
+            const { radio, tell } = await inTheHall({ together: false });
+
+            await tapRadio();
+
+            expect(radio.tune).toHaveBeenCalled();
+            expect(radio.started).not.toHaveBeenCalled();
+            expect(tell).not.toHaveBeenCalled();
+        });
+
+        it("tells nobody of a song that starts after going through a door", async () => {
+            const { radio, tell } = await inTheHall();
+            await tapRadio();
+
+            await wrapper.get(".stage").trigger("keydown", { key: "Escape" });
+            await showing(wrapper, ".road-3d");
+            radio.start(4000);
+            await flushPromises();
+
+            expect(tell).not.toHaveBeenCalled();
+        });
+
+        it("plays and stops what someone else here tunes", async () => {
+            const { radio } = await inTheHall();
+            const { hearRadio } = wiring.options;
+
+            hearRadio({ id: "nowhere", songId: 1, startedAt: 4000 });
+            expect(radio.join).not.toHaveBeenCalled();
+            expect(radio.stop).not.toHaveBeenCalled();
+
+            hearRadio({ id: "radio", songId: 2, startedAt: 4000 });
+            expect(radio.join).toHaveBeenCalledWith(SONGS, 2, 4000);
+
+            hearRadio({ id: "radio", songId: null });
+            expect(radio.stop).toHaveBeenCalledWith(SONGS);
+        });
+
+        it("says what's on the radio asked about", async () => {
+            const { radio } = await inTheHall();
+            const { radioNow } = wiring.options;
+
+            expect(radioNow("radio")).toEqual({ songId: 2, startedAt: 5000 });
+            expect(radio.nowPlaying).toHaveBeenCalledWith(SONGS);
+            expect(radioNow("nowhere")).toBeNull();
+        });
+
+        it("gives up waiting on the radio when the world goes", async () => {
+            const { radio } = await inTheHall();
+
+            wrapper.unmount();
+            wrapper = null;
+
+            expect(radio.dispose).toHaveBeenCalled();
+        });
     });
 });
