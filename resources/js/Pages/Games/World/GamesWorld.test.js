@@ -1,4 +1,4 @@
-import { usePage } from "@inertiajs/vue3";
+import { router as inertia, usePage } from "@inertiajs/vue3";
 import { flushPromises, mount } from "@vue/test-utils";
 import axios from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -1193,12 +1193,22 @@ describe("GamesWorld together", () => {
     // vitest.setup.js's page, put back after each test.
     const setupPage = usePage.getMockImplementation();
 
-    /** The page as a visitor sees it, with the together switch on or off. */
-    function asVisitor({ together, user = { id: 7, name: "Me" } }) {
+    /** The page as a visitor sees it, with the together switch on or off,
+     * and messaging; `users` who could be invited. */
+    function asVisitor({
+        together,
+        messaging = false,
+        user = { id: 7, name: "Me" },
+        users = [],
+    }) {
         usePage.mockReturnValue({
             props: {
                 auth: { user },
-                settings: { world_together_enabled: together ? "1" : "0" },
+                users,
+                settings: {
+                    world_together_enabled: together ? "1" : "0",
+                    messaging_enabled: messaging ? "1" : "0",
+                },
             },
         });
     }
@@ -1427,6 +1437,123 @@ describe("GamesWorld together", () => {
         // Still following, in there.
         expect(wrapper.find(".roster-chip").exists()).toBe(true);
     }, 10000);
+
+    // A link of its own each time, so a visit saved by another test
+    // doesn't read as coming back to it.
+    const inviteFrom = (id) => ({
+        scene: "road",
+        with: id,
+        visit: `invite-${Math.random()}`,
+    });
+
+    it("follows whoever sent an invite's link once they're on the roster", async () => {
+        asVisitor({ together: true });
+        wrapper = await mountWorld(withHouse, { link: inviteFrom(8) });
+        expect(wrapper.find(".roster-chip").exists()).toBe(false);
+
+        rosterChannel().handlers.here([
+            { id: 7, name: "Me" },
+            { id: 8, name: "Friend" },
+        ]);
+        await nextTick();
+
+        expect(wrapper.find(".roster-chip").exists()).toBe(true);
+    });
+
+    it("only opens the place when whoever sent the invite has left", async () => {
+        asVisitor({ together: true });
+        wrapper = await mountWorld(withHouse, { link: inviteFrom(8) });
+        const roster = rosterChannel();
+
+        roster.handlers.here([{ id: 7, name: "Me" }]);
+        roster.handlers.joining({ id: 8, name: "Friend" });
+        await nextTick();
+
+        expect(wrapper.find(".roster-chip").exists()).toBe(false);
+    });
+
+    it("doesn't follow an inviter once you've steered", async () => {
+        asVisitor({ together: true });
+        wrapper = await mountWorld(withHouse, { link: inviteFrom(8) });
+
+        await wrapper.get(".stage").trigger("keydown", { key: "ArrowLeft" });
+        rosterChannel().handlers.here([
+            { id: 7, name: "Me" },
+            { id: 8, name: "Friend" },
+        ]);
+        await nextTick();
+
+        expect(wrapper.find(".roster-chip").exists()).toBe(false);
+    });
+
+    it("invites people picked into the place you're in", async () => {
+        inertia.post.mockClear();
+        asVisitor({
+            together: true,
+            messaging: true,
+            users: [
+                { id: 7, name: "Me" },
+                { id: 8, name: "Friend" },
+                { id: 9, name: "Pal" },
+            ],
+        });
+        wrapper = await mountWorld(withHouse);
+        await wrapper.get(".roster-toggle").trigger("click");
+        await wrapper.get(".roster-invite").trigger("click");
+
+        // Everyone but you, whether or not they're in the world.
+        const picks = wrapper.findAll(".roster-pick");
+        expect(picks.map((pick) => pick.text())).toEqual(["Friend", "Pal"]);
+        expect(wrapper.get("button[type=submit]").element.disabled).toBe(true);
+
+        await picks[0].get("input").setValue(true);
+        await picks[1].get("input").setValue(true);
+        await wrapper.get("form.roster-panel").trigger("submit");
+
+        expect(inertia.post).toHaveBeenCalledOnce();
+        expect(inertia.post).toHaveBeenCalledWith(
+            "/games/invite",
+            { scene: "road", tagged_user_ids: [8, 9] },
+            expect.objectContaining({ preserveState: true })
+        );
+        expect(wrapper.find(".roster-pick").exists()).toBe(false);
+    });
+
+    it("closes the invite picker on Escape, staying in the room", async () => {
+        asVisitor({
+            together: true,
+            messaging: true,
+            users: [{ id: 8, name: "Friend" }],
+        });
+        wrapper = await mountWorld(withHouse);
+        await enterHouse(wrapper);
+        await wrapper.get(".roster-toggle").trigger("click");
+        await wrapper.get(".roster-invite").trigger("click");
+        expect(document.activeElement).toBe(
+            wrapper.get(".roster-pick input").element
+        );
+
+        await wrapper
+            .get(".roster-pick input")
+            .trigger("keydown", { key: "Escape" });
+
+        expect(wrapper.find(".roster-pick").exists()).toBe(false);
+        expect(wrapper.find(".room-3d").exists()).toBe(true);
+        expect(document.activeElement).toBe(
+            wrapper.get(".roster-toggle").element
+        );
+    });
+
+    it("offers no invite while messaging is off", async () => {
+        asVisitor({
+            together: true,
+            users: [{ id: 8, name: "Friend" }],
+        });
+        wrapper = await mountWorld(withHouse);
+        await wrapper.get(".roster-toggle").trigger("click");
+
+        expect(wrapper.find(".roster-invite").exists()).toBe(false);
+    });
 
     it("joins nothing while the switch is off", async () => {
         asVisitor({ together: false });

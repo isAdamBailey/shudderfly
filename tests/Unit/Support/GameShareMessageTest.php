@@ -26,4 +26,11 @@ class GameShareMessageTest extends TestCase
     {
         $this->assertSame('', GameShareMessage::stripSlugMarker(null));
     }
+
+    public function test_strip_slug_marker_keeps_an_invites_place(): void
+    {
+        $raw = 'Come hang out with me in '.GameShareMessage::invitePlace('house.hall', 'the Hall').'! @Ann';
+        $this->assertSame('Come hang out with me in the Hall! @Ann', GameShareMessage::stripSlugMarker($raw));
+        $this->assertNull(GameShareMessage::slugFromContent($raw));
+    }
 }

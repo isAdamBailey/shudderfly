@@ -1,10 +1,13 @@
 <script setup>
-import { usePage } from "@inertiajs/vue3";
+/* global route */
+import { router as inertia, usePage } from "@inertiajs/vue3";
 import { audioRunning, unlockAudio } from "@/composables/useAudioContext";
+import { useFlashMessage } from "@/composables/useFlashMessage";
 import { speakGameIntro } from "@/composables/useGameIntroSpeech";
 import { primeSpeech } from "@/composables/speechPlayback";
 import { useSiteSetting } from "@/composables/useSiteSetting";
 import { useTranslations } from "@/composables/useTranslations";
+import { sameId } from "@/utils/object";
 import { usePreferredReducedMotion } from "@vueuse/core";
 import {
     computed,
@@ -41,7 +44,8 @@ import { supportsWebGL, useWorldRenderer } from "./three/useWorldRenderer.js";
 // through the API it exposes (see useRoad's `api`).
 const props = defineProps({
     scenes: { type: Object, required: true },
-    // A shared link's { scene, visit }, to open in (useSceneRouter).
+    // A shared link's { scene, spot?, with?, visit }, to open in
+    // (useSceneRouter).
     link: { type: Object, default: null },
 });
 
@@ -249,6 +253,12 @@ const follow = useFollow({
     canEnter: (id) => Boolean(rendererFor(props.scenes[id])),
 });
 
+// An invite's link (/games?scene=…&with=<id>): follow whoever sent it, if
+// they're still in the world.
+if (presence.enabled && router.invitedBy !== null) {
+    follow.startWhenHere(router.invitedBy);
+}
+
 // What the aria-live region says: the place you've just arrived in, or why
 // you couldn't go in.
 const announcement = ref("");
@@ -368,6 +378,37 @@ function closeCard() {
  * keys that steer (and stop it) still reach the world. */
 function followFromRoster(id) {
     follow.start(id);
+    focusStage();
+}
+
+// Who you can invite into the place you're in (WorldRoster): everyone the
+// page knows but you, while messaging is on.
+const messagingEnabled = useSiteSetting("messaging_enabled");
+const invitees = computed(() =>
+    messagingEnabled.value
+        ? (page.props.users ?? []).filter(
+              (user) => !sameId(user.id, page.props.auth?.user?.id)
+          )
+        : []
+);
+const { setFlashMessage } = useFlashMessage();
+
+/** Invites users `ids` into the scene you're in: a chat message linking
+ * them here (GameController::invite). You stay where you are. */
+function invite(ids) {
+    inertia.post(
+        route("games.invite"),
+        { scene: router.currentId.value, tagged_user_ids: ids },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            only: ["flash"],
+            onError: (errors) => {
+                const text = Object.values(errors)[0];
+                if (text) setFlashMessage("error", text);
+            },
+        }
+    );
     focusStage();
 }
 
@@ -630,7 +671,10 @@ const stage = {
             :roster="presence.roster.value"
             :scenes="scenes"
             :leader="follow.leader.value"
+            :invitees="invitees"
+            :place="router.current.value?.label ?? ''"
             @follow="followFromRoster"
+            @invite="invite"
             @stop="follow.stop"
         />
 

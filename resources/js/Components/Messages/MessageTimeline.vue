@@ -87,7 +87,7 @@
             <div class="w-full">
                 <div
                     class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words text-lg leading-relaxed"
-                    v-html="formatMessage(message.message)"
+                    v-html="formatMessage(message.message, message.user_id)"
                 ></div>
                 <div
                     v-if="
@@ -616,6 +616,12 @@ const props = defineProps({
         type: String,
         default: "",
     },
+    // The Games World's scene ids: an invite's place links only to one of
+    // these, and reads as plain text otherwise (a room since gone).
+    worldScenes: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const { canAdmin } = usePermissions();
@@ -883,6 +889,9 @@ const LEGACY_GAME_DISPLAY_NAME_TO_SLUG = {
     "Cockroach Fart": "cockroach",
 };
 
+const GAME_LINK_CLASS =
+    "font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline";
+
 const escapeHtml = (s) =>
     s
         .replace(/&/g, "&amp;")
@@ -920,15 +929,34 @@ const applyGameScoreShareFormatting = (text) => {
                 [kind === "m" ? "minigame" : "game"]: slug,
             });
             const safe = escapeHtml(gameName);
-            return `I scored ${score} in <a href="${href}" class="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline">${safe}</a>!`;
+            return `I scored ${score} in <a href="${href}" class="${GAME_LINK_CLASS}">${safe}</a>!`;
         }
     );
 };
 
-const formatMessage = (text) => {
+// An invite into the Games World (GameController::invite): the scene id, then
+// the place's name, which links to that scene and to following whoever sent
+// it there. Scene ids have dots, unlike a score's slug.
+const WORLD_INVITE_MARKER = /\uE000w:([a-z0-9.-]+)\uE000([^\uE000]*)\uE000/g;
+
+const applyWorldInviteFormatting = (text, inviterId) =>
+    text.replace(WORLD_INVITE_MARKER, (_, scene, place) => {
+        const safe = escapeHtml(place);
+        if (!props.worldScenes.includes(scene)) return safe;
+        const href = route("games.index", {
+            scene,
+            ...(inviterId ? { with: inviterId } : {}),
+        });
+        return `<a href="${href}" class="${GAME_LINK_CLASS}">${safe}</a>`;
+    });
+
+const formatMessage = (text, inviterId) => {
     if (!text) return "";
 
-    let formatted = applyGameScoreShareFormatting(text);
+    let formatted = applyWorldInviteFormatting(
+        applyGameScoreShareFormatting(text),
+        inviterId
+    );
 
     if (props.users && props.users.length > 0) {
         const sortedUsers = [...props.users].sort(
@@ -1025,7 +1053,10 @@ const formatMessage = (text) => {
 const formatMentionsForSpeech = (text) => {
     if (!text) return "";
 
-    let formatted = text;
+    // A score's or an invite's marker isn't said; an invite's place is.
+    let formatted = text
+        .replace(WORLD_INVITE_MARKER, "$2")
+        .replace(GAME_SHARE_SLUG_MARKER, "");
 
     if (props.users?.length) {
         const sortedUsers = [...props.users].sort(

@@ -28,7 +28,7 @@ export function doorToward(scenes, from, to) {
  * scene you share, or through the doors toward the scene they're in, and on
  * after them as they move. DOM-free: the stage hands it what it needs.
  *
- * - presence: useWorldPresence's ({ roster, others }).
+ * - presence: useWorldPresence's ({ roster, ready, others }).
  * - scenes(): the registry, scene id → scene.
  * - currentId: the scene you're in (a ref).
  * - scene(): the mounted scene's API, which walks the Butt: walkUpTo(other)
@@ -38,7 +38,9 @@ export function doorToward(scenes, from, to) {
  *   WebGL). A follow that would need one it can't stops.
  *
  * Whatever the player does to steer the Butt calls stop(); so does the
- * person leaving the world. A scene may refuse a walk (a card is up): the
+ * person leaving the world. startWhenHere(id) is for an invite's link:
+ * once the roster says who is in the world, it follows them if they still
+ * are, and steering before then calls it off. A scene may refuse a walk (a card is up): the
  * stage calls nudge() once it's let go, to try again.
  */
 export function useFollow({
@@ -69,13 +71,33 @@ export function useFollow({
               ) ?? null
     );
 
+    // Who to follow once the roster says who's there, or null.
+    let awaited = null;
+
     function start(id) {
+        awaited = null;
         following.value = id;
     }
 
     function stop() {
+        awaited = null;
         following.value = null;
     }
+
+    function startWhenHere(id) {
+        awaited = id;
+        followAwaited();
+    }
+
+    function followAwaited() {
+        if (awaited === null || !presence.ready?.value) return;
+        const id = awaited;
+        awaited = null;
+        if (presence.roster.value.some((m) => sameId(m.id, id))) start(id);
+    }
+
+    // Sync: who was there when the roster said, not who joined since.
+    watch(() => presence.ready?.value, followAwaited, { flush: "sync" });
 
     /** Takes the next step after them: walks up to them here, or to the
      * door toward wherever they are. */
@@ -113,5 +135,5 @@ export function useFollow({
         lead
     );
 
-    return { following, leader, start, stop, nudge: lead };
+    return { following, leader, start, startWhenHere, stop, nudge: lead };
 }

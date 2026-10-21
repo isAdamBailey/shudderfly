@@ -90,6 +90,20 @@ describe("useWorldPresence", () => {
         expect(members.value).toEqual([{ id: 1, name: "Me" }]);
     });
 
+    it("is ready once the roster says who's there, and not once refused", () => {
+        vi.spyOn(console, "warn").mockImplementation(() => {});
+        const { ready, join } = useWorldPresence({ enabled: true });
+        join();
+        expect(ready.value).toBe(false);
+
+        const { handlers } = echo.channels["testing.world"];
+        handlers.here([{ id: 1, name: "Me" }]);
+        expect(ready.value).toBe(true);
+
+        handlers.error({ status: 403 });
+        expect(ready.value).toBe(false);
+    });
+
     it("sees nobody when the roster refuses it", () => {
         vi.spyOn(console, "warn").mockImplementation(() => {});
         const { members, join, leave } = useWorldPresence({ enabled: true });

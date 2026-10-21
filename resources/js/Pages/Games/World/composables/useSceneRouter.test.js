@@ -214,6 +214,24 @@ describe("useSceneRouter", () => {
         expect(router.arrival.value).toEqual({ spot: "front-door" });
     });
 
+    it("knows who sent an invite's link, only while opening at it", () => {
+        const store = memoryStorage();
+        const link = { scene: "house.hall", with: 7, visit: "a" };
+        const first = useSceneRouter(scenes, { link, storage: store });
+        expect(first.invitedBy).toBe(7);
+        first.remember();
+
+        // Back to the same page from history: no one to follow again.
+        const again = useSceneRouter(scenes, { link, storage: store });
+        expect(again.invitedBy).toBe(null);
+
+        const plain = useSceneRouter(scenes, {
+            link: { scene: "house.hall", visit: "b" },
+            storage: memoryStorage(),
+        });
+        expect(plain.invitedBy).toBe(null);
+    });
+
     it("ignores a link to a scene that doesn't exist", () => {
         const router = useSceneRouter(scenes, {
             link: { scene: "house.attic", visit: "a" },

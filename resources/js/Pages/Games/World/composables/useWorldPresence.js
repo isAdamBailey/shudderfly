@@ -118,7 +118,7 @@ function changedEnough(last, next) {
  * - `world`, the roster: everyone in the world, as `{ id, name }` members,
  *   and which scene each is in, from the `client-place` ({ scene }) each
  *   sends on joining it, on changing scene and when someone new joins it,
- *   as `roster` (everyone but you).
+ *   as `roster` (everyone but you); `ready` once it has said who's there.
  * - `world.<scene id>`, the scene you are standing in (enterScene): where
  *   the people in it are, from their `client-place` on arrival and their
  *   `client-move`s, as `others`; its radio, `client-radio`, sent
@@ -170,7 +170,8 @@ export function useWorldPresence({
     let cancelWait = null;
     // The roster's channel, once joined.
     let roster = null;
-    let rosterReady = false;
+    // Whether the roster has said who is in the world (its `here`).
+    const rosterReady = ref(false);
     // Whether the roster has yet to hear which scene you're in now.
     let placeUntold = false;
 
@@ -248,7 +249,7 @@ export function useWorldPresence({
                 .join(channelName(ROSTER))
                 .here((here) => {
                     members.value = here;
-                    rosterReady = true;
+                    rosterReady.value = true;
                     tellRoster();
                 })
                 .joining((member) => {
@@ -267,7 +268,7 @@ export function useWorldPresence({
                     console.warn("Not let into the Games World roster:", error);
                     members.value = [];
                     places.value = {};
-                    rosterReady = false;
+                    rosterReady.value = false;
                 })
                 .listenForWhisper("place", hearPlace);
         } catch (e) {
@@ -286,7 +287,7 @@ export function useWorldPresence({
         current = null;
         members.value = [];
         places.value = {};
-        rosterReady = false;
+        rosterReady.value = false;
         if (!roster) return;
         roster = null;
         window.Echo?.leave(channelName(ROSTER));
@@ -298,7 +299,7 @@ export function useWorldPresence({
         if (
             !placeUntold ||
             !sceneId ||
-            !rosterReady ||
+            !rosterReady.value ||
             document.hidden ||
             members.value.length < 2
         ) {
@@ -639,6 +640,7 @@ export function useWorldPresence({
         enabled,
         members,
         roster: rosterList,
+        ready: rosterReady,
         others,
         join,
         leave,

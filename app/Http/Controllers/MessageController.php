@@ -8,6 +8,7 @@ use App\Models\SiteSetting;
 use App\Models\User;
 use App\Services\PushNotificationService;
 use App\Services\UserTaggingService;
+use App\Support\GamesWorld;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -68,6 +69,9 @@ class MessageController extends Controller
             'messagingEnabled' => true,
             'users' => $users,
             'tmdbImageBaseUrl' => config('services.tmdb.base_image_url'),
+            // Which places an invite (GameController::invite) can still
+            // link to; one to a room since gone reads as plain text.
+            'worldScenes' => GamesWorld::sceneIds(),
         ]);
     }
 
