@@ -78,7 +78,7 @@ Shudderfly includes AI-powered user overview support via Hugging Face.
 ### Requirements
 
 -   Docker / Laravel Sail
--   Node 20+
+-   Node 20+ (24 LTS in development and CI; see `.nvmrc`)
 -   npm 10+
 
 ### Start locally

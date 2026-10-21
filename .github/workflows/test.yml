@@ -18,7 +18,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: '24'
         cache: 'npm'
         
     - name: Install dependencies
@@ -59,22 +59,22 @@ jobs:
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
       with:
-        php-version: '8.3'
+        php-version: '8.5'
         extensions: bcmath, ctype, fileinfo, json, mbstring, openssl, pdo, pdo_mysql, tokenizer, xml
         coverage: none
 
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: '24'
         cache: 'npm'
 
     - name: Cache Composer dependencies
       uses: actions/cache@v3
       with:
         path: vendor
-        key: composer-${{ hashFiles('composer.lock') }}
-        restore-keys: composer-
+        key: composer-php8.5-${{ hashFiles('composer.lock') }}
+        restore-keys: composer-php8.5-
 
     - name: Copy .env
       run: php -r "file_exists('.env') || copy('.env.example', '.env');"
