@@ -25,7 +25,7 @@ import { useFollow } from "./composables/useFollow.js";
 import { useSceneRouter } from "./composables/useSceneRouter.js";
 import { useWorldPresence } from "./composables/useWorldPresence.js";
 import WorldRoster from "./components/WorldRoster.vue";
-import { activate } from "./interactions/index.js";
+import { activate, noteOf, playedFrom } from "./interactions/index.js";
 import { playDrum } from "./drumSounds.js";
 import { playHarp } from "./harpSounds.js";
 import { playOrgan } from "./organSounds.js";
@@ -116,11 +116,11 @@ const card = shallowRef(null);
 
 const radio = useRadio();
 
+const thingsHere = () => router.current.value?.interactables ?? [];
+
 /** The radios in the scene you're in. */
 const radiosHere = () =>
-    (router.current.value?.interactables ?? []).filter(
-        (item) => item.type === "radio" && item.songs?.length
-    );
+    thingsHere().filter((item) => item.type === "radio" && item.songs?.length);
 
 // Other people in the world (issue #174): logged-in visitors only, and only
 // while the site has it switched on. Off, nothing is joined at all.
@@ -141,6 +141,15 @@ const presence = useWorldPresence({
         if (!item) return;
         if (songId === null) radio.stop(item.songs);
         else radio.join(item.songs, songId, startedAt);
+    },
+    // Someone here played an instrument: it plays here too, and moves, but
+    // says nothing and opens nothing. Not over a card or a scene change,
+    // where your own taps don't play either.
+    hearNote({ id, which }) {
+        if (card.value || transition.active) return;
+        const item = thingsHere().find((t) => t.id === id);
+        const played = item && playedFrom(item, which);
+        if (played) activate(played, instrumentCtx);
     },
 });
 
@@ -194,8 +203,26 @@ const ctx = {
     speak: (text) => speakGameIntro(text),
 };
 
-function onActivate(item) {
+/** All an instrument someone else played may touch. */
+const instrumentCtx = {
+    pressKey: ctx.pressKey,
+    pluckString: ctx.pluckString,
+    hitDrum: ctx.hitDrum,
+    playOrgan,
+    playHarp,
+    playDrum,
+};
+
+/** Uses `item`, and if it's an instrument, tells everyone in the room what
+ * was played. It has played here whether or not that goes. */
+function play(item) {
     activate(item, ctx);
+    const which = noteOf(item);
+    if (which) presence.note({ id: item.id, which });
+}
+
+function onActivate(item) {
+    play(item);
     // A handler that didn't open a card or start a scene change is
     // finished, so the scene mustn't stay frozen waiting for one.
     if (!card.value && !transition.active) {
@@ -578,7 +605,7 @@ const stage = {
                 :arrival="router.arrival.value"
                 :stage="stage"
                 @activate="onActivate"
-                @play="(item) => activate(item, ctx)"
+                @play="play"
             />
         </div>
 

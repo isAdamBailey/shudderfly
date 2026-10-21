@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { deadband } from "./math";
+import { deadband, isIndex } from "./math";
 
 describe("deadband", () => {
     it("passes through a value past the threshold", () => {
@@ -23,5 +23,15 @@ describe("deadband", () => {
     it("zeroes an infinite value", () => {
         expect(deadband(Infinity, 0.005)).toBe(0);
         expect(deadband(-Infinity, 0.005)).toBe(0);
+    });
+});
+
+describe("isIndex", () => {
+    it("takes a whole number from 0 up to, not including, the count", () => {
+        expect(isIndex(0, 3)).toBe(true);
+        expect(isIndex(2, 3)).toBe(true);
+        for (const n of [3, -1, 1.5, "1", null, NaN]) {
+            expect(isIndex(n, 3)).toBe(false);
+        }
     });
 });

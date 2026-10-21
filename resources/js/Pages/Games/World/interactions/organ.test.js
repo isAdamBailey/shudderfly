@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { activate, autoTriggers } from "./index.js";
+import { ORGAN } from "../scenes/organLayout.js";
+import { activate, autoTriggers, noteOf, playedFrom } from "./index.js";
 
 const organ = { id: "organ", type: "organ", wall: "left", x: 0, z: 200 };
 
@@ -33,5 +34,27 @@ describe("organ interaction", () => {
 
     it("needs a tap or Enter, not just walking past", () => {
         expect(autoTriggers(organ)).toBe(false);
+    });
+
+    it("tells the room a key, or the chord, and plays it back", () => {
+        const key = { ...organ, zone: 2, key: 5 };
+        expect(noteOf(key)).toEqual([2, 5]);
+        expect(noteOf(organ)).toEqual([]);
+        expect(playedFrom(organ, [2, 5])).toEqual(key);
+        expect(playedFrom(organ, [])).toEqual(organ);
+    });
+
+    it("plays back no key that isn't on the keyboard", () => {
+        for (const which of [
+            [ORGAN.zones, 0],
+            [0, ORGAN.whiteKeys],
+            [-1, 0],
+            [0.5, 0],
+            [0],
+            [0, 0, 0],
+            "0",
+        ]) {
+            expect(playedFrom(organ, which)).toBeNull();
+        }
     });
 });

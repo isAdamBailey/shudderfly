@@ -60,6 +60,14 @@ vi.mock("./composables/useRadio.js", async (importOriginal) => {
     };
 });
 
+// The drum's sound, so a test can hear it hit.
+const sounds = vi.hoisted(() => ({ drum: null }));
+
+vi.mock("./drumSounds.js", async (importOriginal) => ({
+    ...(await importOriginal()),
+    playDrum: (...args) => sounds.drum?.(...args),
+}));
+
 const hostedStandIn = vi.hoisted(() => ({
     component: {
         name: "CockroachApp",
@@ -1577,6 +1585,64 @@ describe("GamesWorld together", () => {
             wrapper = null;
 
             expect(radio.dispose).toHaveBeenCalled();
+        });
+    });
+
+    describe("instruments", () => {
+        const DRUM = {
+            id: "bass-drum",
+            type: "drum",
+            x: 500,
+            z: 100,
+            stand: 170,
+            label: "Bass drum",
+        };
+        const hall = withHouse["house.hall"];
+        const withDrum = {
+            ...withHouse,
+            "house.hall": {
+                ...hall,
+                interactables: [...hall.interactables, DRUM],
+            },
+        };
+
+        async function inTheHall() {
+            asVisitor({ together: true });
+            sounds.drum = vi.fn();
+            wrapper = await mountWorld(withDrum);
+            await enterHouse(wrapper);
+            const tell = vi.fn();
+            wiring.presence.note = tell;
+            return { tell };
+        }
+
+        afterEach(() => {
+            sounds.drum = null;
+        });
+
+        it("tells the room what was played, once it has played here", async () => {
+            const { tell } = await inTheHall();
+
+            // Enter on the head: a hit in the middle.
+            await wrapper.get("button.drum-head").trigger("click");
+
+            expect(sounds.drum).toHaveBeenCalledExactlyOnceWith(0);
+            expect(tell).toHaveBeenCalledExactlyOnceWith({
+                id: "bass-drum",
+                which: [0],
+            });
+        });
+
+        it("plays what someone else here played, and nothing else", async () => {
+            await inTheHall();
+            const { hearNote } = wiring.options;
+
+            hearNote({ id: "nowhere", which: [50] });
+            hearNote({ id: "bass-drum", which: [500] });
+            expect(sounds.drum).not.toHaveBeenCalled();
+
+            hearNote({ id: "bass-drum", which: [50] });
+            expect(sounds.drum).toHaveBeenCalledExactlyOnceWith(0.5);
         });
     });
 });
