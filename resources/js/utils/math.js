@@ -27,3 +27,9 @@ export function jitter(n) {
 export function approach(from, to, maxStep) {
     return from + Math.min(maxStep, Math.max(-maxStep, to - from));
 }
+
+/** Whether `n` is a whole number from 0 up to, not including, `count`: an
+ * index into something that many long. */
+export function isIndex(n, count) {
+    return Number.isInteger(n) && n >= 0 && n < count;
+}

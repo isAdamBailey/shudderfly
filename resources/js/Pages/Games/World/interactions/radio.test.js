@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { activate, autoTriggers } from "./index.js";
+import { activate, autoTriggers, noteOf, playedFrom } from "./index.js";
 
 const songs = [{ id: 7, title: "Toot Toot Song", youtube_video_id: "abc" }];
 const radio = { id: "radio", type: "radio", x: 820, z: 0, line: "Static!" };
@@ -38,5 +38,10 @@ describe("radio interaction", () => {
 
     it("needs a tap or Enter, not just walking past", () => {
         expect(autoTriggers(radio)).toBe(false);
+    });
+
+    it("is nothing for anyone else in the room to hear played", () => {
+        expect(noteOf(radio)).toBeNull();
+        expect(playedFrom(radio, [])).toBeNull();
     });
 });

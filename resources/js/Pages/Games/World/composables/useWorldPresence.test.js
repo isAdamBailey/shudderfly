@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useWorldPresence } from "./useWorldPresence.js";
+import {
+    NOTE_BATCH,
+    NOTE_CROWD,
+    NOTES_PER_SECOND,
+    useWorldPresence,
+} from "./useWorldPresence.js";
 
 // A stand-in for Echo's presence channels, one per name: each keeps its
 // callbacks so a test can play members arriving, leaving and whispering. No
@@ -802,5 +807,205 @@ describe("useWorldPresence's radio", () => {
         den.handlers.joining({ id: 4, name: "Later" });
         expect(radioNow).toHaveBeenCalledOnce();
         expect(radios(den)).toHaveLength(2);
+    });
+});
+
+describe("useWorldPresence's notes", () => {
+    const ME = { id: 1, name: "Me" };
+    const FRIEND = { id: 2, name: "Friend" };
+    const SCENE = "testing.world.cockroach.music";
+    const DRUM = { id: "bass-drum", which: [0] };
+    const NOW = 1000000;
+    let echo;
+    let hidden;
+
+    beforeEach(() => {
+        vi.useFakeTimers();
+        vi.setSystemTime(NOW);
+        window.broadcastChannelPrefix = "testing";
+        echo = fakeEcho();
+        window.Echo = echo;
+        hidden = false;
+        vi.spyOn(document, "hidden", "get").mockImplementation(() => hidden);
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+        vi.restoreAllMocks();
+        delete window.Echo;
+        delete window.broadcastChannelPrefix;
+    });
+
+    /** In the music room with `people` (you first). */
+    function inTheMusicRoom(people = [ME, FRIEND], options = {}) {
+        const hearNote = vi.fn();
+        const presence = useWorldPresence({
+            enabled: true,
+            me: ME.id,
+            hearNote,
+            ...options,
+        });
+        presence.enterScene("cockroach.music");
+        presence.join();
+        const room = echo.channels[SCENE];
+        room.handlers.here(people);
+        return { presence, room, hearNote };
+    }
+
+    const whispers = (room) =>
+        room.whisper.mock.calls
+            .filter(([event]) => event === "note")
+            .map(([, data]) => data.notes);
+
+    const people = (n) =>
+        Array.from({ length: n }, (_, i) => ({ id: i + 1, name: `P${i}` }));
+
+    it("tells the room the first note at once", () => {
+        const { presence, room } = inTheMusicRoom();
+
+        presence.note({ id: "organ", which: [1, 2] });
+
+        expect(whispers(room)).toEqual([
+            [{ id: "organ", which: [1, 2], after: 0 }],
+        ]);
+    });
+
+    it("sends the notes that follow together, as far apart as they came", () => {
+        const { presence, room } = inTheMusicRoom();
+        const strum = (n) => presence.note({ id: "harp", which: [n] });
+
+        strum(0);
+        vi.advanceTimersByTime(50);
+        strum(1);
+        vi.advanceTimersByTime(50);
+        strum(2);
+        expect(whispers(room)).toHaveLength(1);
+
+        vi.advanceTimersByTime(1000 / NOTES_PER_SECOND);
+        expect(whispers(room)).toEqual([
+            [{ id: "harp", which: [0], after: 0 }],
+            [
+                { id: "harp", which: [1], after: 0 },
+                { id: "harp", which: [2], after: 50 },
+            ],
+        ]);
+    });
+
+    it("whispers no more than twice a second, however fast it's played", () => {
+        const { presence, room } = inTheMusicRoom();
+
+        for (let i = 0; i < 100; i += 1) {
+            presence.note(DRUM);
+            vi.advanceTimersByTime(20);
+        }
+
+        expect(whispers(room)).toHaveLength(2 * NOTES_PER_SECOND + 1);
+        expect(
+            whispers(room).every((notes) => notes.length <= NOTE_BATCH)
+        ).toBe(true);
+    });
+
+    it("forgets notes waiting to go when it leaves the room", () => {
+        const { presence, room } = inTheMusicRoom();
+        presence.note(DRUM);
+        presence.note(DRUM);
+
+        presence.enterScene("house.hall");
+        vi.runAllTimers();
+
+        expect(whispers(room)).toHaveLength(1);
+    });
+
+    it("sends no notes once the room has more than six people", () => {
+        const full = inTheMusicRoom(people(NOTE_CROWD));
+        full.presence.note(DRUM);
+        expect(whispers(full.room)).toHaveLength(1);
+
+        full.room.handlers.joining({ id: 99, name: "One more" });
+        vi.advanceTimersByTime(1000);
+        full.presence.note(DRUM);
+        vi.runAllTimers();
+        expect(whispers(full.room)).toHaveLength(1);
+    });
+
+    it("sends nothing alone, hidden, or with the switch off", () => {
+        const alone = inTheMusicRoom([ME]);
+        alone.presence.note(DRUM);
+        expect(whispers(alone.room)).toEqual([]);
+
+        const { presence, room } = inTheMusicRoom();
+        hidden = true;
+        presence.note(DRUM);
+        expect(whispers(room)).toEqual([]);
+
+        const off = useWorldPresence({ enabled: false });
+        off.enterScene("cockroach.music");
+        off.join();
+        off.note(DRUM);
+        expect(echo.join).toHaveBeenCalledTimes(4);
+    });
+
+    it("hears someone else's notes as far apart as they were played", () => {
+        const { room, hearNote } = inTheMusicRoom();
+
+        room.handlers.whispers.note(
+            {
+                notes: [
+                    { id: "harp", which: [0, 1], after: 0 },
+                    { id: "harp", which: [2], after: 50 },
+                ],
+            },
+            { user_id: 2 }
+        );
+        expect(hearNote.mock.calls).toEqual([[{ id: "harp", which: [0, 1] }]]);
+
+        vi.advanceTimersByTime(50);
+        expect(hearNote).toHaveBeenLastCalledWith({ id: "harp", which: [2] });
+    });
+
+    it("hears nothing more from the room it left, or while hidden", () => {
+        const { presence, room, hearNote } = inTheMusicRoom();
+        const { note } = room.handlers.whispers;
+
+        note({ notes: [{ ...DRUM, after: 100 }] }, { user_id: 2 });
+        presence.enterScene("house.hall");
+        vi.runAllTimers();
+        expect(hearNote).not.toHaveBeenCalled();
+
+        const again = inTheMusicRoom();
+        hidden = true;
+        again.room.handlers.whispers.note(
+            { notes: [{ ...DRUM, after: 0 }] },
+            { user_id: 2 }
+        );
+        expect(again.hearNote).not.toHaveBeenCalled();
+    });
+
+    it("drops notes that aren't, or aren't from someone in the room", () => {
+        const { room, hearNote } = inTheMusicRoom();
+        const { note } = room.handlers.whispers;
+        const one = (n) => ({ notes: [{ ...DRUM, after: 0, ...n }] });
+
+        note(one(), { user_id: 99 });
+        note(one(), { user_id: 1 });
+        note(one({ id: "<b>" }), { user_id: 2 });
+        note(one({ which: 0 }), { user_id: 2 });
+        note(one({ which: [0.5] }), { user_id: 2 });
+        note(one({ which: [-1] }), { user_id: 2 });
+        note(one({ which: Array(17).fill(0) }), { user_id: 2 });
+        note(one({ after: -1 }), { user_id: 2 });
+        note(one({ after: 1001 }), { user_id: 2 });
+        note(one({ after: "0" }), { user_id: 2 });
+        note({ notes: [] }, { user_id: 2 });
+        note(
+            { notes: Array(NOTE_BATCH + 1).fill({ ...DRUM, after: 0 }) },
+            { user_id: 2 }
+        );
+        note({ notes: [{ ...DRUM, after: 0 }, null] }, { user_id: 2 });
+        note(DRUM, { user_id: 2 });
+        note(null, { user_id: 2 });
+        vi.runAllTimers();
+
+        expect(hearNote).not.toHaveBeenCalled();
     });
 });

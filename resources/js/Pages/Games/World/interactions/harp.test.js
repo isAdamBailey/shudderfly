@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { HARP } from "../scenes/harpLayout.js";
-import { activate, autoTriggers } from "./index.js";
+import { activate, autoTriggers, noteOf, playedFrom } from "./index.js";
 
 const harp = { id: "harp", type: "harp", x: 430, z: 30 };
 
@@ -46,5 +46,23 @@ describe("harp interaction", () => {
 
     it("needs a tap or Enter, not just walking past", () => {
         expect(autoTriggers(harp)).toBe(false);
+    });
+
+    it("tells the room the strings plucked, or a glissando, and plays them back", () => {
+        expect(noteOf({ ...harp, strings: [3, 4] })).toEqual([3, 4]);
+        expect(noteOf(harp)).toEqual([]);
+        expect(playedFrom(harp, [0, 11])).toEqual({
+            ...harp,
+            strings: [0, 11],
+        });
+        expect(playedFrom(harp, [])).toEqual(harp);
+    });
+
+    it("plays back no string that isn't on the harp", () => {
+        const { count } = HARP.strings;
+        expect(playedFrom(harp, [count])).toBeNull();
+        expect(playedFrom(harp, [1, "2"])).toBeNull();
+        expect(playedFrom(harp, [3, 3])).toBeNull();
+        expect(playedFrom(harp, Array(count + 1).fill(0))).toBeNull();
     });
 });

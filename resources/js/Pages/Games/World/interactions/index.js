@@ -14,6 +14,13 @@ import tv from "./tv.js";
  * Interactable `type` → handler. A handler is `{ activate(item, ctx) }` and may
  * only reach the world through `ctx`, so a new kind of interaction is one new
  * file plus a line here (issue #130).
+ *
+ * A handler other people in the room hear played (issue #174's
+ * `client-note`) also has `note(item)`, what was played as a few whole
+ * numbers, and `fromNote(item, which)`, the item as someone else played it
+ * (or null when `which` isn't something it can play). Played back, its
+ * `activate` gets only sounds and moves on `ctx` (GamesWorld.vue's
+ * `instrumentCtx`): nothing it says or opens.
  */
 const interactions = {
     book,
@@ -41,4 +48,18 @@ export function autoTriggers(item) {
  * than throwing, so a registry entry the client doesn't know yet is inert. */
 export function activate(item, ctx) {
     handlerFor(item)?.activate(item, ctx);
+}
+
+/** What playing `item` played, for the room (its handler's `note`), or
+ * null when it's nothing anyone else hears. */
+export function noteOf(item) {
+    return handlerFor(item)?.note?.(item) ?? null;
+}
+
+/** `item` as someone else played it, `which` being their noteOf(), or null
+ * when its handler can't play that. */
+export function playedFrom(item, which) {
+    const handler = handlerFor(item);
+    if (!handler?.fromNote || !Array.isArray(which)) return null;
+    return handler.fromNote(item, which);
 }

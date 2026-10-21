@@ -24,9 +24,24 @@ const POSITION_LIMIT = 100000;
 export const RADIO_EVERY_MS = 1000;
 // A song said to be further in than this is nothing to join.
 const RADIO_SINCE_MS = 6 * 60 * 60 * 1000;
+// Notes from an organ, harp or drum: no more than this many whispers a
+// second, and none at all once a scene has more people in it than
+// NOTE_CROWD. Notes played while one can't go wait for the next, together
+// (no more than NOTE_BATCH of them), each saying how long after the first
+// it came, so a strum or a tune is heard whole.
+export const NOTES_PER_SECOND = 2;
+export const NOTE_CROWD = 6;
+export const NOTE_BATCH = 16;
+// How many numbers a note may carry (its handler says what they mean).
+const NOTE_MAX_NUMBERS = 16;
+// No note in a whisper comes later than this after its first, ms.
+const NOTE_AFTER_MS = 1000;
 
 const isCoordinate = (n) =>
     Number.isInteger(n) && Math.abs(n) <= POSITION_LIMIT;
+
+/** Whether `id` could be a thing's id in a scene. */
+const isThingId = (id) => typeof id === "string" && /^[\w.-]{1,64}$/.test(id);
 
 /** A whispered place or move, checked and trimmed to what we draw, or null
  * for anything else. A place says nothing of facing or moving. */
@@ -48,12 +63,39 @@ function readPosition(data, { place }) {
 function readRadio(data) {
     if (!data || typeof data !== "object") return null;
     const { id, songId, at, again = false } = data;
-    if (typeof id !== "string" || !/^[\w.-]{1,64}$/.test(id)) return null;
+    if (!isThingId(id)) return null;
     if (songId === null) return { id, songId: null };
     if (!Number.isInteger(songId) || songId < 1) return null;
     if (!Number.isInteger(at) || at < 0 || at > RADIO_SINCE_MS) return null;
     if (typeof again !== "boolean") return null;
     return { id, songId, at, again };
+}
+
+/** A note in a whisper, checked: `{ id, which, after }`, the instrument's
+ * id, a short list of whole numbers and how many ms after the whisper's
+ * first note it was played, or null for anything else. Whether `which` is
+ * something it can play is its handler's to say (interactions/index.js
+ * playedFrom). */
+function readNote(data) {
+    if (!data || typeof data !== "object") return null;
+    const { id, which, after } = data;
+    if (!isThingId(id)) return null;
+    if (!Array.isArray(which) || which.length > NOTE_MAX_NUMBERS) return null;
+    if (!which.every((n) => Number.isInteger(n) && n >= 0)) return null;
+    if (!Number.isInteger(after) || after < 0 || after > NOTE_AFTER_MS) {
+        return null;
+    }
+    return { id, which, after };
+}
+
+/** A whispered `{ notes }`, checked: its notes (readNote()'s), or null if
+ * any isn't one. */
+function readNotes(data) {
+    const notes = data?.notes;
+    if (!Array.isArray(notes) || notes.length === 0) return null;
+    if (notes.length > NOTE_BATCH) return null;
+    const read = notes.map(readNote);
+    return read.every(Boolean) ? read : null;
 }
 
 /** Whether `next` is worth a whisper after `last`. */
@@ -79,8 +121,9 @@ function changedEnough(last, next) {
  *   as `roster` (everyone but you).
  * - `world.<scene id>`, the scene you are standing in (enterScene): where
  *   the people in it are, from their `client-place` on arrival and their
- *   `client-move`s, as `others`; and its radio, `client-radio`, sent
- *   through `radio()` and handed to `hearRadio`.
+ *   `client-move`s, as `others`; its radio, `client-radio`, sent
+ *   through `radio()` and handed to `hearRadio`; and its instruments,
+ *   `client-note`, sent through `note()` and handed to `hearNote`.
  *
  * Positions are `{ x, z, lane, facing, moving }` in the scene's own whole
  * units: the road's x and lane (z 0), a room's x and z (lane 0).
@@ -99,6 +142,12 @@ function changedEnough(last, next) {
  * tell someone who arrives. That retelling is marked `again`, and is only
  * for whoever hasn't heard the radio in this scene yet, so it doesn't
  * restart it for someone who switched theirs off.
+ *
+ * A note is `{ id, which }`: an instrument played, as its handler tells it
+ * (interactions/index.js noteOf). On the wire a whisper is `{ notes }`,
+ * each note with `after`, ms after the first. `hearNote(note)` is called
+ * with each of someone else's in your scene, as far apart as they were
+ * played, while this tab is showing.
  */
 export function useWorldPresence({
     enabled,
@@ -106,6 +155,7 @@ export function useWorldPresence({
     scenes = [],
     radioNow = () => null,
     hearRadio = () => {},
+    hearNote = () => {},
 }) {
     const knownScenes = new Set(scenes);
     const members = ref([]);
@@ -145,6 +195,13 @@ export function useWorldPresence({
     let radioHeard = false;
     // Whether the radio to send next is a tune, not a retelling.
     let radioFresh = false;
+    // Notes played while none could go, waiting for the next whisper, and
+    // when the first of them was played.
+    let notesWaiting = [];
+    let notesSince = 0;
+    // Someone else's notes waiting to be heard, as far apart as they were
+    // played.
+    const noteTimers = new Set();
     const staleTimers = {};
 
     const without = (list, member) =>
@@ -335,7 +392,8 @@ export function useWorldPresence({
                 .listenForWhisper("move", (data, meta) =>
                     hear(meta, data, false)
                 )
-                .listenForWhisper("radio", heardRadio);
+                .listenForWhisper("radio", heardRadio)
+                .listenForWhisper("note", heardNote);
         } catch (e) {
             console.error("Error joining the Games World scene:", e);
             sceneChannel = null;
@@ -347,6 +405,10 @@ export function useWorldPresence({
         clearTimeout(moveTimer);
         moveTimer = null;
         sendRadio.cancel();
+        sendNotes.cancel();
+        notesWaiting = [];
+        noteTimers.forEach(clearTimeout);
+        noteTimers.clear();
         radioMine = false;
         radioTuned = null;
         radioHeard = false;
@@ -393,11 +455,17 @@ export function useWorldPresence({
         }
     }
 
+    /** Whether a whisper's sender is someone else in the scene. */
+    function fromSomeoneHere(meta) {
+        const id = meta?.user_id;
+        return (
+            !sameId(id, me) && sceneMembers.value.some((m) => sameId(m.id, id))
+        );
+    }
+
     /** Someone in the scene tuned its radio, or switched it off. */
     function heardRadio(data, meta) {
-        const id = meta?.user_id;
-        if (!sceneMembers.value.some((m) => sameId(m.id, id))) return;
-        if (sameId(id, me)) return;
+        if (!fromSomeoneHere(meta)) return;
         const radio = readRadio(data);
         if (!radio || (radio.again && radioHeard)) return;
         radioHeard = true;
@@ -409,6 +477,23 @@ export function useWorldPresence({
                 ? { id: radioId, songId }
                 : { id: radioId, songId, startedAt: Date.now() - at }
         );
+    }
+
+    /** Someone in the scene played an instrument. */
+    function heardNote(data, meta) {
+        // A hidden tab would only pile the notes up, to all sound at once.
+        if (!fromSomeoneHere(meta) || document.hidden) return;
+        for (const { id, which, after } of readNotes(data) ?? []) {
+            if (after === 0) {
+                hearNote({ id, which });
+                continue;
+            }
+            const timer = setTimeout(() => {
+                noteTimers.delete(timer);
+                hearNote({ id, which });
+            }, after);
+            noteTimers.add(timer);
+        }
     }
 
     function stopStale(id) {
@@ -508,6 +593,28 @@ export function useWorldPresence({
         );
     }, RADIO_EVERY_MS);
 
+    const canNote = () =>
+        canWhisper() && sceneMembers.value.length <= NOTE_CROWD;
+
+    /** Played an instrument: `{ id, which }`. The first goes at once; any
+     * played in the next 1/NOTES_PER_SECOND s go together after it. None go
+     * in a scene of more than NOTE_CROWD; a note that can't go is only heard
+     * here. */
+    function note({ id, which }) {
+        if (!canNote()) return;
+        const now = Date.now();
+        if (notesWaiting.length === 0) notesSince = now;
+        if (notesWaiting.length >= NOTE_BATCH) return;
+        notesWaiting.push({ id, which, after: now - notesSince });
+        sendNotes();
+    }
+
+    const sendNotes = throttle(() => {
+        const notes = notesWaiting;
+        notesWaiting = [];
+        if (notes.length && canNote()) whisper("note", { notes });
+    }, 1000 / NOTES_PER_SECOND);
+
     /** Whispers on the scene's channel; whether it went. */
     function whisper(event, data) {
         try {
@@ -539,5 +646,6 @@ export function useWorldPresence({
         leaveScene,
         move,
         radio,
+        note,
     };
 }
