@@ -357,6 +357,59 @@ describe("MessageTimeline", () => {
             expect(link.exists()).toBe(true);
         });
 
+        it("links an invite's place to that scene, with whoever sent it", () => {
+            const marked =
+                "Come hang out with me in \uE000w:house.hall\uE000the Hall <b>\uE000! @Bob";
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: [
+                        {
+                            id: 904,
+                            user_id: 7,
+                            message: marked,
+                            created_at: new Date().toISOString(),
+                            user: { id: 7, name: "Alice" },
+                        },
+                    ],
+                    users: [],
+                    worldScenes: ["road", "house.hall"],
+                },
+            });
+
+            expect(wrapper.text()).not.toMatch(/\uE000/);
+            const link = wrapper.find(
+                'a[href="/games?scene=house.hall&with=7"]'
+            );
+            expect(link.exists()).toBe(true);
+            // A place's name is only ever text.
+            expect(link.text()).toBe("the Hall <b>");
+            expect(link.find("b").exists()).toBe(false);
+        });
+
+        it("names an invite's place as plain text once the scene is gone", () => {
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: [
+                        {
+                            id: 905,
+                            user_id: 7,
+                            message:
+                                "Come hang out with me in \uE000w:library.gone\uE000the Gone Room\uE000!",
+                            created_at: new Date().toISOString(),
+                            user: { id: 7, name: "Alice" },
+                        },
+                    ],
+                    users: [],
+                    worldScenes: ["road"],
+                },
+            });
+
+            expect(wrapper.text()).toContain(
+                "Come hang out with me in the Gone Room!"
+            );
+            expect(wrapper.find('a[href^="/games"]').exists()).toBe(false);
+        });
+
         it("links a minigame's score back to it in the world", () => {
             const marked = "I scored 9 in Toot Catch!\uE000m:toot-catch\uE000";
             const wrapper = mount(MessageTimeline, {

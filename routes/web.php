@@ -95,6 +95,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/collages/{collage}/share', [CollageController::class, 'share'])->name('collages.share');
 
     Route::get('/games', [GameController::class, 'index'])->name('games.index');
+    Route::post('/games/invite', [GameController::class, 'invite'])
+        ->middleware('throttle:10,1')
+        ->name('games.invite');
     Route::get('/games/{game}', [GameController::class, 'oldPage'])->name('games.old-page');
     Route::post('/games/{game}/share-score', [GameController::class, 'shareScore'])->name('games.share-score');
 

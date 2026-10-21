@@ -64,6 +64,11 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    // The Games World's scene ids, for invites' links.
+    worldScenes: {
+        type: Array,
+        default: () => [],
+    },
     recentActivity: {
         type: Object,
         default: () => ({ replies: [], mentions: [] }),
@@ -817,6 +822,7 @@ const speakUserSummary = () => {
                             </div>
                             <MessageTimeline
                                 :messages="recentMessages"
+                                :world-scenes="worldScenes"
                                 read-only
                             />
                         </div>

@@ -17,6 +17,7 @@ use App\Notifications\UserTagged;
 use App\Services\ContentBlockService;
 use App\Services\PopularityService;
 use App\Services\UserWeeklyOverviewService;
+use App\Support\GamesWorld;
 use App\Support\WorldClockState;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -124,6 +125,8 @@ class UserController extends Controller
             ],
             'recentMessages' => $recentMessages,
             'recentReplies' => $recentReplies,
+            // Which places an invite in those messages can still link to.
+            'worldScenes' => GamesWorld::sceneIds(),
         ];
 
         if ($isOwner) {

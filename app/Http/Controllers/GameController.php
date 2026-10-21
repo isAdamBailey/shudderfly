@@ -7,11 +7,14 @@ use App\Models\Message;
 use App\Models\SiteSetting;
 use App\Models\User;
 use App\Services\UserTaggingService;
+use App\Support\GameShareMessage;
 use App\Support\GamesWorld;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -66,7 +69,7 @@ class GameController extends Controller
     public function index(Request $request): Response
     {
         // A shared link can open the world in a given place
-        // (/games?scene=house.hall), or in front of a game's or a
+        // (/games?scene=house.hall, an invite's), or in front of a game's or a
         // minigame's launcher wherever it stands (/games?game=boom,
         // /games?minigame=toot-catch: a shared score's link back);
         // anything that isn't one of those is ignored.
@@ -77,25 +80,33 @@ class GameController extends Controller
         $scene = $request->query('scene');
         $game = $request->query('game');
         $minigame = $request->query('minigame');
-        $scenes = GamesWorld::scenes();
         $games = self::games();
         $place = match (true) {
-            is_string($scene) && array_key_exists($scene, $scenes) => ['scene' => $scene],
+            is_string($scene) && in_array($scene, GamesWorld::sceneIds(), true) => ['scene' => $scene],
             is_string($game) && array_key_exists($game, $games) => GamesWorld::whereIs('game', $game),
             is_string($minigame) && array_key_exists($minigame, $games) => GamesWorld::whereIs('game', $minigame),
             is_string($minigame) && in_array($minigame, GamesWorld::MINIGAMES, true) => GamesWorld::whereIs('minigame', $minigame),
             default => null,
         };
         $link = $place ? [...$place, 'visit' => Str::random(12)] : null;
+        // An invite's link also names who sent it (`with`), for the world to
+        // follow them in (issue #174); only a real user, never yourself.
+        $with = filter_var($request->query('with'), FILTER_VALIDATE_INT);
+        if ($link && $with && $with !== $request->user()->id && User::whereKey($with)->exists()) {
+            $link['with'] = $with;
+        }
 
+        // Closures, so a request back for only the flash (an invite sent
+        // from the world) builds none of it.
         return Inertia::render('Games/Index', [
-            'scenes' => $scenes,
+            'scenes' => fn () => GamesWorld::scenes(),
             'link' => $link,
             'fartSoundUrl' => asset('fart.m4a'),
             // Recorded toots a cast member plays instead (Guster's).
-            'castSounds' => GamesWorld::castSounds(),
-            // Who a minigame's score can be shared with (ShareToChatButton).
-            'users' => self::users(),
+            'castSounds' => fn () => GamesWorld::castSounds(),
+            // Who a minigame's score can be shared with (ShareToChatButton),
+            // or invited into the world.
+            'users' => fn () => self::users(),
         ]);
     }
 
@@ -117,6 +128,68 @@ class GameController extends Controller
             ->makeVisible(['id']);
     }
 
+    /** Invites people into the scene you're standing in (issue #174): one
+     * chat message tagging everyone picked, whose place links to that scene
+     * and to following you there. */
+    public function invite(Request $request): RedirectResponse
+    {
+        if (! self::messagingEnabled()) {
+            return back()->withErrors(['message' => __('messages.messaging.disabled')]);
+        }
+        if (! GamesWorld::togetherEnabled()) {
+            return back()->withErrors(['message' => __('messages.games.world.invite_off')]);
+        }
+
+        $validated = $request->validate([
+            'scene' => ['required', 'string', Rule::in(GamesWorld::sceneIds())],
+            'tagged_user_ids' => ['required', 'array', 'min:1'],
+            'tagged_user_ids.*' => ['integer', 'distinct', 'exists:users,id', Rule::notIn([$request->user()->id])],
+        ]);
+
+        // Checked against the cached ids; a room gone since is refused too.
+        $place = GamesWorld::sceneSaid($validated['scene'])
+            ?? throw ValidationException::withMessages(['scene' => __('validation.in', ['attribute' => 'scene'])]);
+
+        $taggedUserIds = $validated['tagged_user_ids'];
+        $names = User::whereIn('id', $taggedUserIds)->orderBy('name')->pluck('name');
+
+        $this->postToChat(
+            $request->user(),
+            __('messages.games.world.invite_message', [
+                'place' => GameShareMessage::invitePlace($validated['scene'], $place),
+            ]).$names->map(fn ($name) => ' @'.$name)->implode(''),
+            $taggedUserIds,
+        );
+
+        return back()->with('success', __('messages.games.world.invite_sent'));
+    }
+
+    /** Posts `$text` to the chat from `$from`, notifying everyone tagged. */
+    private function postToChat(User $from, string $text, array $taggedUserIds): Message
+    {
+        $message = Message::create([
+            'user_id' => $from->id,
+            'message' => $text,
+            'page_id' => null,
+        ]);
+
+        $message->load(['page', 'user']);
+
+        if (! empty($taggedUserIds)) {
+            $this->userTaggingService->notifyTaggedUsers($taggedUserIds, $from, $message, 'message');
+        }
+        event(new MessageCreated($message));
+
+        return $message;
+    }
+
+    private static function messagingEnabled(): bool
+    {
+        $setting = SiteSetting::where('key', 'messaging_enabled')->first();
+
+        return $setting && ($setting->getAttributes()['value'] ?? $setting->value) === '1';
+    }
+
     /** Shares a score to the chat: a world minigame, or a game that plays in
      * its house. The `m:` marker is a link back to the launcher (index()).
      * Older messages still carry `g:<slug>`, which links to the same spot. */
@@ -126,10 +199,7 @@ class GameController extends Controller
         $inMinigames = in_array($game, GamesWorld::MINIGAMES, true);
         abort_if(! $inMinigames && ! array_key_exists($game, $games), 404);
 
-        $setting = SiteSetting::where('key', 'messaging_enabled')->first();
-        $messagingEnabled = $setting && ($setting->getAttributes()['value'] ?? $setting->value) === '1';
-
-        if (! $messagingEnabled) {
+        if (! self::messagingEnabled()) {
             return back()->withErrors(['message' => __('messages.messaging.disabled')]);
         }
 
@@ -166,23 +236,7 @@ class GameController extends Controller
             $shareMessage = $shareMessage.' @'.$taggedUser->name;
         }
 
-        $message = Message::create([
-            'user_id' => $request->user()->id,
-            'message' => $shareMessage,
-            'page_id' => null,
-        ]);
-
-        $message->load(['page', 'user']);
-
-        if (! empty($taggedUserIds)) {
-            $this->userTaggingService->notifyTaggedUsers(
-                $taggedUserIds,
-                $request->user(),
-                $message,
-                'message'
-            );
-        }
-        event(new MessageCreated($message));
+        $message = $this->postToChat($request->user(), $shareMessage, $taggedUserIds);
 
         return redirect()
             ->to(route('messages.index').'#message-'.$message->id)

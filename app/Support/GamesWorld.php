@@ -1055,8 +1055,8 @@ final class GamesWorld
 
     /** Where a game or minigame is played, as a shared score tells it
      * mid-sentence: its room's `where` line, the room's `places` key under
-     * `where` ("the Bathroom at the Butt's House"). Null for one on the
-     * street, not placed, or in a room with no such line. */
+     * `where` ("the Bathroom at the Butt's House", "the street"). Null for
+     * one not placed, or in a room with no such line. */
     public static function whereIsSaid(string $kind, string $name): ?string
     {
         $definitions = self::definitions();
@@ -1065,7 +1065,26 @@ final class GamesWorld
             return null;
         }
 
-        $key = str_replace('.places.', '.where.', $definitions[$place['scene']]['label']);
+        return self::said($definitions[$place['scene']]);
+    }
+
+    /** Scene `$id` as an invite names it mid-sentence: its `where` line
+     * ("the Kitchen at the Butt's House"), or its label where it has none.
+     * Null for a scene that isn't in the world. */
+    public static function sceneSaid(string $id): ?string
+    {
+        $scene = self::definitions()[$id] ?? null;
+        if ($scene === null) {
+            return null;
+        }
+
+        return self::said($scene) ?? self::translate($scene)['label'];
+    }
+
+    /** A scene's `where` line: its `places` key under `where`, or null. */
+    private static function said(array $scene): ?string
+    {
+        $key = str_replace('.places.', '.where.', $scene['label']);
 
         return Lang::has($key) ? __($key) : null;
     }

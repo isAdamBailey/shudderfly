@@ -45,16 +45,58 @@ describe("useFollow", () => {
         const api = { walkUpTo: vi.fn(), walkThrough: vi.fn() };
         const mounted = shallowRef(api);
         const busy = ref(false);
+        const ready = ref(true);
         const follow = useFollow({
-            presence: { roster, others },
+            presence: { roster, ready, others },
             scenes: () => SCENES,
             currentId,
             scene: () => mounted.value,
             busy: () => busy.value,
             canEnter,
         });
-        return { follow, roster, others, currentId, api, mounted, busy };
+        return {
+            follow,
+            roster,
+            ready,
+            others,
+            currentId,
+            api,
+            mounted,
+            busy,
+        };
     }
+
+    it("follows an inviter once the roster says they're in the world", () => {
+        const { follow, ready } = setup();
+        ready.value = false;
+
+        follow.startWhenHere(8);
+        expect(follow.following.value).toBe(null);
+
+        ready.value = true;
+        expect(follow.following.value).toBe(8);
+    });
+
+    it("doesn't follow an inviter who wasn't there, or once you've steered", () => {
+        const { follow, roster, ready } = setup();
+        ready.value = false;
+        roster.value = [];
+        follow.startWhenHere(8);
+        ready.value = true;
+        expect(follow.following.value).toBe(null);
+
+        // Arriving later doesn't start it.
+        ready.value = false;
+        roster.value = [{ id: 8, name: "Friend", scene: "road" }];
+        ready.value = true;
+        expect(follow.following.value).toBe(null);
+
+        ready.value = false;
+        follow.startWhenHere(8);
+        follow.stop();
+        ready.value = true;
+        expect(follow.following.value).toBe(null);
+    });
 
     const at = (x, z = 0) => ({ id: 8, name: "Friend", x, z, lane: 0 });
 

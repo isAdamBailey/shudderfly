@@ -1,11 +1,13 @@
 <script setup>
 import { useTranslations } from "@/composables/useTranslations";
-import { computed, ref } from "vue";
+import { computed, nextTick, ref } from "vue";
 
 // Who else is in the Games World right now, and where (issue #174): a
 // button with how many, opening a list of names, each with the place
 // they're in and a button to follow them there. While following, a chip
-// says who and stops it. Names are other people's, so only ever text.
+// says who and stops it. Below the list, where messaging is on, inviting
+// people into the place you're in: pick who, and they get a chat message
+// linking here. Names are other people's, so only ever text.
 const props = defineProps({
     /** useWorldPresence's roster: [{ id, name, scene }] (you left out). */
     roster: { type: Array, required: true },
@@ -14,13 +16,23 @@ const props = defineProps({
     /** Who is being followed (useFollow's leader: one of `roster`), or
      * null. */
     leader: { type: Object, default: null },
+    /** Who can be invited ({ id, name }, you left out); none while
+     * messaging is off. */
+    invitees: { type: Array, default: () => [] },
+    /** The name of the place you're in, which an invite brings them to. */
+    place: { type: String, default: "" },
 });
 
-const emit = defineEmits(["follow", "stop"]);
+const emit = defineEmits(["follow", "stop", "invite"]);
 
 const { t } = useTranslations();
 
 const open = ref(false);
+// Picking who to invite, in place of the list; the ids picked.
+const inviting = ref(false);
+const picked = ref([]);
+const toggleEl = ref(null);
+const inviteForm = ref(null);
 
 const people = computed(() =>
     props.roster.map((person) => ({
@@ -36,17 +48,43 @@ function follow(person) {
     emit("follow", person.id);
     open.value = false;
 }
+
+function toggle() {
+    open.value = !open.value;
+    inviting.value = false;
+}
+
+// The button pressed goes away, so focus moves on with it: to the first
+// name to pick, and back to the toggle after.
+async function startInviting() {
+    picked.value = [];
+    inviting.value = true;
+    await nextTick();
+    inviteForm.value?.querySelector("input")?.focus();
+}
+
+function stopInviting() {
+    inviting.value = false;
+    toggleEl.value?.focus();
+}
+
+function invite() {
+    emit("invite", [...picked.value]);
+    open.value = false;
+    stopInviting();
+}
 </script>
 
 <template>
     <div class="world-roster">
         <button
+            ref="toggleEl"
             type="button"
             class="roster-toggle bg-theme-primary text-theme-button hover:bg-theme-button"
             :aria-expanded="open"
             aria-controls="world-roster-list"
             :aria-label="t('games.world.roster_aria', { count: people.length })"
-            @click="open = !open"
+            @click="toggle"
         >
             <span aria-hidden="true">👥 {{ people.length }}</span>
         </button>
@@ -65,7 +103,54 @@ function follow(person) {
             </button>
         </div>
 
-        <div v-show="open" id="world-roster-list" class="roster-panel">
+        <!-- Escape closes the picker, not the room behind it. -->
+        <form
+            v-if="open && inviting"
+            ref="inviteForm"
+            class="roster-panel"
+            @submit.prevent="invite"
+            @keydown.escape.stop="stopInviting"
+        >
+            <fieldset>
+                <legend class="roster-title">
+                    {{ t("games.world.invite_title", { place }) }}
+                </legend>
+                <label
+                    v-for="person in invitees"
+                    :key="person.id"
+                    class="roster-pick"
+                >
+                    <input
+                        v-model="picked"
+                        type="checkbox"
+                        :value="person.id"
+                    />
+                    <span class="roster-name">{{ person.name }}</span>
+                </label>
+            </fieldset>
+            <div class="roster-buttons">
+                <button
+                    type="button"
+                    class="roster-action"
+                    @click="stopInviting"
+                >
+                    {{ t("common.cancel") }}
+                </button>
+                <button
+                    type="submit"
+                    class="roster-action"
+                    :disabled="picked.length === 0"
+                >
+                    {{ t("games.world.invite_send") }}
+                </button>
+            </div>
+        </form>
+
+        <div
+            v-show="open && !inviting"
+            id="world-roster-list"
+            class="roster-panel"
+        >
             <p class="roster-title">{{ t("games.world.roster_title") }}</p>
             <p v-if="people.length === 0" class="roster-empty">
                 {{ t("games.world.roster_empty") }}
@@ -97,6 +182,14 @@ function follow(person) {
                     </button>
                 </li>
             </ul>
+            <button
+                v-if="invitees.length"
+                type="button"
+                class="roster-action roster-invite"
+                @click="startInviting"
+            >
+                {{ t("games.world.invite") }}
+            </button>
         </div>
     </div>
 </template>
@@ -210,19 +303,50 @@ function follow(person) {
     padding: 0.375rem 0.75rem;
 }
 
+.roster-action:disabled {
+    opacity: 0.5;
+}
+
+.roster-invite {
+    width: 100%;
+    margin-top: 0.75rem;
+}
+
+.roster-pick {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 0.375rem 0;
+}
+
+.roster-pick input {
+    flex-shrink: 0;
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.roster-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
 .roster-stop {
     width: 2rem;
     height: 2rem;
 }
 
-.roster-action:hover,
+.roster-action:hover:not(:disabled),
 .roster-stop:hover {
     background: rgb(255 255 255 / 0.3);
 }
 
 .roster-toggle:focus-visible,
 .roster-action:focus-visible,
-.roster-stop:focus-visible {
+.roster-stop:focus-visible,
+.roster-pick input:focus-visible {
     outline: 3px solid #1d4ed8;
     outline-offset: 2px;
 }

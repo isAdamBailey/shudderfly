@@ -28,6 +28,7 @@
                         :messages="messages"
                         :users="users"
                         :tmdb-image-base-url="tmdbImageBaseUrl"
+                        :world-scenes="worldScenes"
                     />
                 </div>
             </div>
@@ -56,6 +57,11 @@ defineProps({
     tmdbImageBaseUrl: {
         type: String,
         default: "",
+    },
+    // The Games World's scene ids, for invites' links.
+    worldScenes: {
+        type: Array,
+        default: () => [],
     },
 });
 </script>

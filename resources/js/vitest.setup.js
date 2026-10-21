@@ -94,6 +94,7 @@ export const ROUTE_MAPPINGS = {
     "categories.show": (params) => `/categories/${params.categoryName}`,
     "games.index": "/games",
     "games.share-score": (params) => `/games/${params}/share-score`,
+    "games.invite": "/games/invite",
     "music.share": (params) => `/music/${params}/share`,
     "music.show": (params) => `/music/${params}`,
     "movie-cast.index": (params) => {
