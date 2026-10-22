@@ -381,6 +381,9 @@ export function createRoomScene(
     // Each modelled thing's own switch (its setOn: a radio's dial, a
     // lamp's shade), by its id.
     const switches = new Map();
+    // Each modelled thing that swings (a clock's pendulum: its userData
+    // swing and beat), by id.
+    const swings = new Map();
     // Instruments (INSTRUMENTS), by id: built into the room, but played,
     // so they're ticked.
     const instruments = new Map();
@@ -418,6 +421,7 @@ export function createRoomScene(
         if (model?.userData.setOn && !item.light) {
             switches.set(item.id, model.userData.setOn);
         }
+        if (model?.userData.swing) swings.set(item.id, model.userData);
         const puppet = model
             ? kit.modelMesh(model, { size, shadows, moves: CAST_MOVES })
             : item.cast
@@ -557,6 +561,7 @@ export function createRoomScene(
      *   buttLift,   // units, the walking bob
      *   others,     // useOthers', each with its own `lift` in units
      *   reduced,    // prefers reduced motion
+     *   time,       // s on the room's clock, which a pendulum swings to
      *   camera,     // the view, when a long hall has scrolled
      *   thrown,     // [{ id, x, y, z, ground, tilt }]: things picked up
      *               // or thrown (useThrowables), stood on `ground` and
@@ -611,6 +616,9 @@ export function createRoomScene(
         }
         for (const puppet of puppets) changed = puppet.tick(dt) || changed;
         if (crawlers?.tick(dt, reduced)) changed = true;
+        for (const { swing } of swings.values()) {
+            changed = swing(view.time ?? 0, reduced) || changed;
+        }
         if (flicker(dt)) changed = true;
         for (const instrument of instruments.values()) {
             changed = instrument.tick(dt, reduced) || changed;
@@ -645,6 +653,9 @@ export function createRoomScene(
         hitDrum(id, edge = 0) {
             instruments.get(id)?.hit?.(edge);
         },
+        /** What swings to the room's clock: [{ id, beat }], a tick at the
+         * end of each swing, every `beat` s. */
+        swinging: [...swings].map(([id, { beat }]) => ({ id, beat })),
         /** Switches modelled thing `id`'s own light (a radio's dial while
          * it plays). */
         setOn(id, on) {

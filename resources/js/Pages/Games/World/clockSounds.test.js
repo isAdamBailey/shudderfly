@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { playBell, playTick } from "./clockSounds.js";
+import { playBell, playTick, tickLevel } from "./clockSounds.js";
 
 const oscillators = [];
 
@@ -59,6 +59,12 @@ describe("clock sounds", () => {
         expect(oscillators[0].stop).toHaveBeenCalled();
     });
 
+    it("makes no tick too quiet to hear", () => {
+        playTick(0);
+
+        expect(oscillators).toHaveLength(0);
+    });
+
     it("chimes a bell from several partials", () => {
         playBell();
 
@@ -66,5 +72,13 @@ describe("clock sounds", () => {
         for (const osc of oscillators) {
             expect(osc.start).toHaveBeenCalled();
         }
+    });
+});
+
+describe("a clock ticking in a room", () => {
+    it("is loudest beside it and fades to nothing across the room", () => {
+        expect(tickLevel(0)).toBeGreaterThan(tickLevel(300));
+        expect(tickLevel(300)).toBeGreaterThan(tickLevel(600));
+        expect(tickLevel(5000)).toBe(0);
     });
 });

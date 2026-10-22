@@ -370,9 +370,8 @@ class GamesWorldScenesTest extends TestCase
         $this->assertArrayNotHasKey('y', $washer);
         $this->assertFalse($washer['titled']);
 
-        // Clear of the front door (three/footprints.js: 0.7 of its size
-        // across) and inside the room.
-        $half = $washer['size'] * 0.7 / 2;
+        // Clear of the front door and inside the room.
+        $half = $this->modelWidth($washer) / 2;
         $this->assertGreaterThan(0, $washer['x'] - $half);
         $this->assertLessThan($items['front-door']['x'] - 60, $washer['x'] + $half);
     }
@@ -441,7 +440,7 @@ class GamesWorldScenesTest extends TestCase
 
         $nest = $scenes['cockroach-house.hall']['interactables'];
         $fight = collect($nest)->firstWhere('id', 'cockroach-fight');
-        $this->assertSame(850, $fight['x']);
+        $this->assertSame('Cockroach Fight', $fight['label']);
         $this->assertSame('cockroach', $fight['card']['cast']);
         $fart = collect($nest)->firstWhere('id', 'cockroach');
         $this->assertSame('Cockroach Fart', $fart['label']);
@@ -714,16 +713,16 @@ class GamesWorldScenesTest extends TestCase
         $this->assertSame('pizza', $oven['card']['cast']);
 
         // The oven stands in the gap between the counters, its cooktop at
-        // their worktop and as wide as the gap (three/footprints.js: 1.09
-        // of its size across, its cooktop at 0.84); the fridge stands
-        // between the door and the counters (0.48 across).
+        // their worktop and as wide as the gap (three/footprints.js: its
+        // cooktop at 0.84 of its size); the fridge stands between the door
+        // and the counters.
         [$left, $right] = $kitchen['counters'];
         $gap = [$left['x'] + $left['w'] / 2, $right['x'] - $right['w'] / 2];
         $this->assertSame($oven['x'], array_sum($gap) / 2);
-        $this->assertEqualsWithDelta($gap[1] - $gap[0], $oven['size'] * 1.09, 1);
+        $this->assertEqualsWithDelta($gap[1] - $gap[0], $this->modelWidth($oven), 1);
         $this->assertEqualsWithDelta(GamesWorld::KITCHEN_COUNTER['h'], $oven['size'] * 0.84, 1);
-        $this->assertLessThanOrEqual($gap[0] - $left['w'], $fridge['x'] + $fridge['size'] * 0.24);
-        $this->assertGreaterThan($items['hall-door']['x'] + 60, $fridge['x'] - $fridge['size'] * 0.24);
+        $this->assertLessThanOrEqual($gap[0] - $left['w'], $fridge['x'] + $this->modelWidth($fridge) / 2);
+        $this->assertGreaterThan($items['hall-door']['x'] + 60, $fridge['x'] - $this->modelWidth($fridge) / 2);
 
         foreach ($kitchen['counters'] as $counter) {
             // Shallow enough that the Butt never walks into it.
@@ -744,6 +743,46 @@ class GamesWorldScenesTest extends TestCase
             $this->assertTrue($items[$id]['throwable'], $id);
         }
         $this->assertArrayNotHasKey('throwable', $items['sprout-pot']);
+    }
+
+    public function test_the_nests_games_are_its_armchair_and_grandfather_clock(): void
+    {
+        $nest = GamesWorld::scenes()['cockroach-house.hall'];
+        $items = collect($nest['interactables'])->keyBy('id');
+        $chair = $items['cockroach'];
+        $clock = $items['cockroach-fight'];
+
+        $this->assertSame('armchair', $chair['model']);
+        $this->assertSame('grandfather-clock', $clock['model']);
+        foreach ([$chair, $clock] as $game) {
+            // On the floor against the back wall, with no gold name over
+            // it, like the kitchen's appliances; their cards keep the
+            // Cockroach.
+            $this->assertSame(0, $game['z']);
+            $this->assertArrayNotHasKey('y', $game);
+            $this->assertFalse($game['titled']);
+            $this->assertSame('cockroach', $game['card']['cast']);
+        }
+
+        // Side by side past Hank's right-hand photo (its ornate moulding
+        // and all) and short of the music room's door, the clock first so
+        // the door's name arcs over the low armchair, not its face, with a
+        // candle between them.
+        $photo = collect($nest['photos'])->firstWhere('id', 'hank-right');
+        $clockHalf = $this->modelWidth($clock) / 2;
+        $chairHalf = $this->modelWidth($chair) / 2;
+        $candle = $items['sconce-right'];
+        $this->assertGreaterThan($photo['x'] + $photo['image']['w'] / 2 + GamesWorld::PICTURE_FRAMES['ornate'], $clock['x'] - $clockHalf);
+        $this->assertLessThan($candle['x'] - $candle['size'] / 2, $clock['x'] + $clockHalf);
+        $this->assertLessThan($chair['x'] - $chairHalf, $candle['x'] + $candle['size'] / 2);
+        $this->assertLessThan($items['music-door']['x'] - 60, $chair['x'] + $chairHalf);
+        $this->assertLessThan($candle['y'], $chair['size']);
+        // Shallow enough that the Butt never walks into them (useRoom.js
+        // MARGIN keeps it 50 off the wall).
+        foreach ([$chair, $clock] as $game) {
+            $this->assertLessThan(50, $game['size'] * GamesWorld::MODEL_FOOTPRINTS[$game['model']]['d'], $game['id']);
+        }
+        $this->assertLessThan($this->decorationsBottom($nest), $clock['size']);
     }
 
     public function test_only_sized_toys_can_be_thrown(): void
@@ -1017,8 +1056,8 @@ class GamesWorldScenesTest extends TestCase
         // One photo, so the second frame is blank.
         $this->assertSame(
             [
-                ['id' => 'hank-left', 'x' => 300, 'y' => 150, 'image' => ['w' => 110, 'h' => 150, 'frame' => 'ornate', 'src' => $photo->media_path]],
-                ['id' => 'hank-right', 'x' => 1070, 'y' => 150, 'image' => ['w' => 110, 'h' => 150, 'frame' => 'ornate']],
+                ['id' => 'hank-left', 'x' => 400, 'y' => 150, 'image' => ['w' => 110, 'h' => 150, 'frame' => 'ornate', 'src' => $photo->media_path]],
+                ['id' => 'hank-right', 'x' => 1350, 'y' => 150, 'image' => ['w' => 110, 'h' => 150, 'frame' => 'ornate']],
             ],
             $photos,
         );
@@ -1075,21 +1114,37 @@ class GamesWorldScenesTest extends TestCase
         $this->assertSame([], $src());
     }
 
+    /** How wide `$item` is drawn: its model's footprint
+     * (GamesWorld::MODEL_FOOTPRINTS), or as wide as it's tall. */
+    private function modelWidth(array $item): float
+    {
+        return $item['size'] * (GamesWorld::MODEL_FOOTPRINTS[$item['model'] ?? '']['w'] ?? 1);
+    }
+
+    /** How far up `$room`'s back wall the season's decorations reach down
+     * to: they hang from 0.84 up it, the biggest 90 tall
+     * (three/roomLooks.js). */
+    private function decorationsBottom(array $room): float
+    {
+        return $room['frame'] / 2 * 0.84 - 45;
+    }
+
     /** Asserts room `$sceneId`'s photos hang inside its back wall, under
      * the season's decorations, and clear of everything else on it. */
     private function assertPhotosHangClear(string $sceneId): void
     {
         $room = GamesWorld::definitions()[$sceneId];
         $items = collect($room['interactables']);
-        // Under the season's decorations, which hang from 0.84 up the
-        // wall, the biggest 90 tall (three/roomLooks.js).
-        $decorations = $room['frame'] / 2 * 0.84 - 45;
+        $decorations = $this->decorationsBottom($room);
         // What else is on the back wall, as [left, right, bottom, top].
         $boxes = $items->where('z', 0)->map(fn ($item) => match (true) {
             // A door with its EXIT sign over it.
             $item['type'] === 'door' => [$item['x'] - 60, $item['x'] + 60, 0, 300],
             isset($item['image']) => [$item['x'] - $item['image']['w'] / 2, $item['x'] + $item['image']['w'] / 2, $item['y'], $item['y'] + $item['image']['h']],
-            default => [$item['x'] - $item['size'] / 2, $item['x'] + $item['size'] / 2, $item['y'] ?? 0, ($item['y'] ?? 0) + $item['size']],
+            default => [
+                $item['x'] - $this->modelWidth($item) / 2, $item['x'] + $this->modelWidth($item) / 2,
+                $item['y'] ?? 0, ($item['y'] ?? 0) + $item['size'],
+            ],
         });
 
         // Each photo's box, its frame's moulding and all.

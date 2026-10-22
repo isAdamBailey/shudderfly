@@ -25,6 +25,30 @@ describe("modelled props", () => {
         expect(Object.keys(MODELS).sort()).toEqual(names.sort());
     });
 
+    it("gives GamesWorld::MODEL_FOOTPRINTS each footprint's width and depth", () => {
+        const php = readFileSync(
+            `${process.cwd()}/app/Support/GamesWorld.php`,
+            "utf8"
+        );
+        const footprints = Object.fromEntries(
+            [
+                ...php
+                    .match(/const MODEL_FOOTPRINTS = \[(.*?)\];/s)[1]
+                    .matchAll(
+                        /'([^']+)' => \['w' => ([\d.]+), 'd' => ([\d.]+)\]/g
+                    ),
+            ].map(([, name, w, d]) => [name, { w: Number(w), d: Number(d) }])
+        );
+        expect(footprints).toEqual(
+            Object.fromEntries(
+                Object.entries(FOOTPRINTS).map(([name, { w, d }]) => [
+                    name,
+                    { w, d },
+                ])
+            )
+        );
+    });
+
     it.each(Object.keys(MODELS))(
         "builds %s one unit tall, standing on the floor",
         (name) => {
@@ -54,5 +78,26 @@ describe("modelled props", () => {
         expect(typeof lamp.userData.setOn).toBe("function");
         expect(lamp.userData.bulb).toBeGreaterThan(0);
         expect(lamp.userData.bulb).toBeLessThan(1);
+    });
+
+    it("swings the grandfather clock's pendulum to an end on each beat, still under reduced motion", () => {
+        const clock = MODELS["grandfather-clock"](THREE);
+        const pendulum = () =>
+            clock.children.find((child) => child.isGroup).rotation.z;
+        const { swing, beat: BEAT } = clock.userData;
+        expect(BEAT).toBeGreaterThan(0);
+
+        expect(swing(0, false)).toBe(true);
+        const end = pendulum();
+        expect(end).toBeGreaterThan(0);
+        expect(swing(BEAT, false)).toBe(true);
+        expect(pendulum()).toBeCloseTo(-end);
+        expect(swing(BEAT / 2, false)).toBe(true);
+        expect(pendulum()).toBeCloseTo(0);
+
+        swing(0, false);
+        expect(swing(BEAT / 3, true)).toBe(true);
+        expect(pendulum()).toBe(0);
+        expect(swing(BEAT, true)).toBe(false);
     });
 });

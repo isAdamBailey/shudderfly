@@ -1,9 +1,20 @@
 import { getAudioContext } from "@/composables/useAudioContext";
 
-/** A clock's tick: a short mechanical click. */
-export function playTick() {
+// A clock ticking in a room: how loud it is beside it, and how far off,
+// in world units, it can no longer be heard.
+const ROOM_TICK = { level: 0.1, reach: 900 };
+
+/** How loud a clock ticking in a room is `distance` units away: from
+ * ROOM_TICK.level beside it to 0 at its reach. */
+export function tickLevel(distance) {
+    return ROOM_TICK.level * Math.max(0, 1 - distance / ROOM_TICK.reach);
+}
+
+/** A clock's tick: a short mechanical click, `level` loud at its peak. */
+export function playTick(level = 0.16) {
     const ctx = getAudioContext();
-    if (!ctx) return;
+    // Its envelope ramps from 0.0001: anything quieter can't be heard.
+    if (!ctx || level <= 0.0001) return;
     const t = ctx.currentTime;
 
     const click = ctx.createOscillator();
@@ -17,7 +28,7 @@ export function playTick() {
 
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.16, t + 0.001);
+    gain.gain.exponentialRampToValueAtTime(level, t + 0.001);
     gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
 
     click.connect(filter);
