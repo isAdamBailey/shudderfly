@@ -9,6 +9,8 @@ import { FOOTPRINTS } from "./footprints.js";
 // Its userData `swing(time, still)` poses the pendulum `time` s into the
 // room's clock, at an end of its swing every `beat` s (when it ticks,
 // Room3D.vue), and hangs it still under reduced motion; whether it moved.
+// Every `chime` s it also dongs, low, and every `tune`th dong it plays
+// its tune first (clockSounds.js chimesBetween()).
 //
 // Built one unit tall (the crown's top), standing on y = 0, its middle on
 // x = 0 and its back on z = 0, facing +z, so it stands flat against a wall,
@@ -33,6 +35,10 @@ const GLASS = "#1a1410";
 
 // Seconds per swing of the pendulum: it ticks at the end of each.
 const BEAT = 1;
+// Seconds between its dongs.
+const CHIME = 10;
+// Dongs to a tune: every fourth plays it.
+const TUNE = 4;
 // How far it swings either way, radians: its bob stays inside the window.
 const SWING = 0.12;
 
@@ -117,6 +123,8 @@ export function grandfatherClockModel(THREE) {
         TRUNK.d + 0.014
     );
     model.userData.beat = BEAT;
+    model.userData.chime = CHIME;
+    model.userData.tune = TUNE;
     model.userData.swing = (time, still) => {
         const angle = still ? 0 : SWING * Math.cos((Math.PI * time) / BEAT);
         if (angle === pendulum.rotation.z) return false;
