@@ -301,6 +301,14 @@ export function paintClock(ctx, face) {
     paint(ctx, s);
 }
 
+/** A bare round dial on `paper`, showing `hour`:`minute`, filling a
+ * square texture: for a clock that draws its own case (grandfatherClock.js). */
+export function dialTexture(THREE, paper, hour, minute, size = 128) {
+    return canvasTexture(THREE, size, size, (ctx) =>
+        dial(ctx, size / 2, size / 2, size * 0.47, paper, hour, minute)
+    );
+}
+
 /** A texture of `face` for a lit, cut-out plane. */
 export function clockTexture(THREE, face, size = 256) {
     return canvasTexture(THREE, size, size, (ctx) => paintClock(ctx, face));

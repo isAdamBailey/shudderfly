@@ -7,6 +7,7 @@ import { castInDom } from "@/constants/characters.js";
 import { useDarkMode } from "@/composables/useDarkMode";
 import { useToot } from "@/composables/useToot";
 import { useTranslations } from "@/composables/useTranslations";
+import { audioRunning } from "@/composables/useAudioContext";
 import { usePreferredReducedMotion } from "@vueuse/core";
 import {
     computed,
@@ -36,6 +37,7 @@ import { useShelves } from "../composables/useShelves.js";
 import { useTvChannels } from "../composables/useTvChannels.js";
 import { MOVE_EVERY_MS } from "../composables/useWorldPresence.js";
 import { autoTriggers } from "../interactions/index.js";
+import { playTick, tickLevel } from "../clockSounds.js";
 import { BOOKCASE, bookcaseHeight, shelfEnd, slotsIn } from "./bookshelf.js";
 import { createRoomScene } from "./RoomScene.js";
 import { BASS_DRUM, headPoint, hitEdge } from "./drumLayout.js";
@@ -228,6 +230,22 @@ function feedIfAtButt(id) {
 
 let graph = null;
 let stopFrames = null;
+// The room's clock, s: its pendulums swing to it, and each ticks at the
+// end of every swing. The clocks that swing, where they stand: [{ x, z,
+// beat }].
+let time = 0;
+let clocks = [];
+
+/** Ticks each clock whose swing ended between `from` s and now, as loud
+ * as the Butt is close to it, once audio's running (a tick nobody asked
+ * for). */
+function tickClocks(from) {
+    if (!audioRunning()) return;
+    for (const { x, z, beat } of clocks) {
+        if (Math.floor(from / beat) === Math.floor(time / beat)) continue;
+        playTick(tickLevel(Math.hypot(x - butt.x, z - butt.z)));
+    }
+}
 
 onMounted(() => {
     const { renderer } = props.stage;
@@ -237,6 +255,10 @@ onMounted(() => {
         theme: page.props.theme,
         night: dark.value,
         exitWord: t("games.world.exit_sign"),
+    });
+    clocks = graph.swinging.map(({ id, beat }) => {
+        const clock = props.scene.interactables.find((i) => i.id === id);
+        return { x: clock.x, z: clock.z ?? 0, beat };
     });
     showRadios(radiosOn.value);
     const frame = framed();
@@ -249,12 +271,16 @@ onMounted(() => {
         // A throw waits, mid-air, while a card is up.
         const flew = !room.state.frozen && throwables.step(dt);
         follow();
+        const from = time;
+        time += dt;
+        tickClocks(from);
         const changed = graph.sync(
             {
                 butt,
                 buttLift: buttLift.value,
                 others: visitors.others,
                 reduced: reduced.value,
+                time,
                 camera: view.value,
                 thrown: throwables.changed(),
             },

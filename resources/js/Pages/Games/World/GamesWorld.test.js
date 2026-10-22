@@ -3,6 +3,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import axios from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
+import { tickLevel } from "./clockSounds.js";
 import GamesWorld from "./GamesWorld.vue";
 
 // The stage with WebGL stubbed both ways (issue #130): a fake renderer in
@@ -60,12 +61,23 @@ vi.mock("./composables/useRadio.js", async (importOriginal) => {
     };
 });
 
-// The drum's sound, so a test can hear it hit.
-const sounds = vi.hoisted(() => ({ drum: null }));
+// The drum's sound and a clock's tick, so a test can hear them, and
+// whether audio has started (a room's clocks only tick once it has).
+const sounds = vi.hoisted(() => ({ drum: null, tick: null, running: false }));
 
 vi.mock("./drumSounds.js", async (importOriginal) => ({
     ...(await importOriginal()),
     playDrum: (...args) => sounds.drum?.(...args),
+}));
+
+vi.mock("./clockSounds.js", async (importOriginal) => ({
+    ...(await importOriginal()),
+    playTick: (...args) => sounds.tick?.(...args),
+}));
+
+vi.mock("@/composables/useAudioContext", async (importOriginal) => ({
+    ...(await importOriginal()),
+    audioRunning: () => sounds.running,
 }));
 
 const hostedStandIn = vi.hoisted(() => ({
@@ -1001,6 +1013,52 @@ describe("GamesWorld rooms", () => {
 
         expect(wrapper.find(".room-3d").exists()).toBe(true);
         expect(screenX(wrapper.get(".room-3d .butt"))).toBeCloseTo(at, 0);
+    });
+});
+
+describe("GamesWorld clocks", () => {
+    const CLOCK = {
+        id: "grandfather-clock",
+        type: "toy",
+        x: 450,
+        z: 0,
+        model: "grandfather-clock",
+        size: 300,
+        label: "Clock",
+    };
+    const hall = withHouse["house.hall"];
+    const withClock = {
+        ...withHouse,
+        "house.hall": {
+            ...hall,
+            interactables: [...hall.interactables, CLOCK],
+        },
+    };
+
+    afterEach(() => {
+        sounds.tick = null;
+        sounds.running = false;
+    });
+
+    it("ticks a pendulum clock once a swing, as loud as the Butt is near it, once audio's running", async () => {
+        sounds.tick = vi.fn();
+        wrapper = await mountWorld(withClock);
+        await enterHouse(wrapper);
+
+        // Before any sound has played, it ticks silently.
+        await frames(1100);
+        expect(sounds.tick).not.toHaveBeenCalled();
+
+        sounds.running = true;
+        await frames(2100);
+        const levels = sounds.tick.mock.calls.map(([level]) => level);
+        expect(levels.length).toBeGreaterThanOrEqual(1);
+        expect(levels.length).toBeLessThanOrEqual(3);
+        // The Butt stands 330 out from it, so it isn't at its loudest.
+        for (const level of levels) {
+            expect(level).toBeGreaterThan(0);
+            expect(level).toBeLessThan(tickLevel(0));
+        }
     });
 });
 

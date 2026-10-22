@@ -1,5 +1,7 @@
 import { radioModel } from "./antiqueRadio.js";
+import { armchairModel } from "./armchair.js";
 import { fridgeModel } from "./fridge.js";
+import { grandfatherClockModel } from "./grandfatherClock.js";
 import { ovenModel } from "./oven.js";
 import { slotMachineModel } from "./slotMachine.js";
 import { tableLampModel } from "./tableLamp.js";
@@ -18,4 +20,6 @@ export const MODELS = {
     fridge: fridgeModel,
     oven: ovenModel,
     "washing-machine": washingMachineModel,
+    "grandfather-clock": grandfatherClockModel,
+    armchair: armchairModel,
 };

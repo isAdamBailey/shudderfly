@@ -168,7 +168,19 @@ final class GamesWorld
 
     /** Props modelled in 3D that an interactable's `model` may name:
      * three/models.js (a Vitest test keeps them in step). */
-    public const MODELS = ['radio', 'table-lamp', 'slot-machine', 'fridge', 'oven', 'washing-machine'];
+    public const MODELS = ['radio', 'table-lamp', 'slot-machine', 'fridge', 'oven', 'washing-machine', 'grandfather-clock', 'armchair'];
+
+    /** What a model that stands on the floor takes up, per unit of its
+     * size: `w` across and `d` out from the wall, three/footprints.js's (a
+     * Vitest test keeps them in step), so a room's layout can be checked
+     * here. */
+    public const MODEL_FOOTPRINTS = [
+        'fridge' => ['w' => 0.48, 'd' => 0.18],
+        'oven' => ['w' => 1.09, 'd' => 0.4],
+        'washing-machine' => ['w' => 0.7, 'd' => 0.36],
+        'grandfather-clock' => ['w' => 0.3, 'd' => 0.14],
+        'armchair' => ['w' => 0.8, 'd' => 0.3],
+    ];
 
     /** Frames a wall picture or a room's photo can hang in (its
      * `image.frame`), drawn by three/pictureFrame.js; with none it hangs on
@@ -218,10 +230,14 @@ final class GamesWorld
         // The table lamp beside the radio.
         $tableLamp = $den - 120;
         // The Cockroach's fireplace, and its candles: where each burns
-        // ([x, z], up the wall at SCONCE_Y).
-        $nestW = 1400;
-        $hearth = 650;
-        $sconces = ['sconce-left' => [400, 0], 'sconce-right' => [930, 0], 'sconce-side' => [20, 260]];
+        // ([x, z], up the wall at SCONCE_Y). Past Hank's right-hand photo,
+        // his grandfather clock and armchair, a candle between them; the
+        // armchair stands low by the music room's door, under its name.
+        $nestW = 2200;
+        $hearth = 850;
+        $clock = 1600;
+        $armchair = 1880;
+        $sconces = ['sconce-left' => [560, 0], 'sconce-right' => [1740, 0], 'sconce-side' => [20, 260]];
         // Its music room, longer than the frame: from the door, the bass
         // drum, the harp, and the organ in the far corner, with candles
         // along the back wall between them.
@@ -387,13 +403,14 @@ final class GamesWorld
             ]),
 
             // --- The Cockroach's House: the Nest, and a music room off it.
-            // Cockroach Fart and Cockroach Fight stand on the Nest's floor.
+            // Cockroach Fight and Cockroach Fart are the Nest's grandfather
+            // clock and armchair, along its back wall.
             // Little cockroaches crawl the back walls, the same picture as
             // the site header. Dark-ages stone, its lamps all flames: a fire
             // in the hearth under Hank's portrait, and candles in sconces
-            // either side of it and on the left wall. Every flame flickers.
-            // Photos of Hank from his book hang either side of them, past
-            // the door's EXIT sign and the scroll, a new pair each day. The
+            // along the back wall and on the left wall. Every flame flickers.
+            // Photos of Hank from his book hang past the door's EXIT sign
+            // and past the scroll, a new pair each day. The
             // music room's door is at the Nest's far end.
             'cockroach-house.hall' => self::room('cockroach_house_hall', [
                 'size' => ['w' => $nestW, 'd' => 480],
@@ -402,8 +419,8 @@ final class GamesWorld
                 'crawlers' => true,
                 'fireplaces' => [['x' => $hearth, ...self::FIREPLACE]],
                 'photos' => [
-                    self::photoFrame('hank-left', 300, 150, 110, 150, ['book' => self::HANK_BOOK], 'ornate'),
-                    self::photoFrame('hank-right', 1070, 150, 110, 150, ['book' => self::HANK_BOOK], 'ornate'),
+                    self::photoFrame('hank-left', 400, 150, 110, 150, ['book' => self::HANK_BOOK], 'ornate'),
+                    self::photoFrame('hank-right', 1350, 150, 110, 150, ['book' => self::HANK_BOOK], 'ornate'),
                 ],
                 'lights' => [
                     self::flame('fire', $hearth, self::HEARTH_FIRE['y'], self::HEARTH_FIRE['z'], '#f97316', 1.3),
@@ -411,14 +428,18 @@ final class GamesWorld
                 ],
             ], [
                 self::roomDoor('front-door', 160, 'road', 'cockroach-house', exit: true),
-                self::roomDoor('music-door', 1260, 'cockroach-house.music', 'nest-door', 'cockroach_house_music'),
+                self::roomDoor('music-door', $nestW - 140, 'cockroach-house.music', 'nest-door', 'cockroach_house_music'),
                 // Hank, remembered over the fire, and on a scroll beside it
                 // that reads itself aloud.
                 self::picture('portrait', $hearth, self::FIREPLACE['h'], '/img/cockroach.png', 372, 200, 'cockroach_portrait'),
                 self::toy('tribute', $hearth + 300, 0, '📜', 'tribute', ['y' => 110, 'size' => 70, 'move' => 'wiggle', 'line' => true]),
                 self::toy('fire', $hearth, self::HEARTH_FIRE['z'], '🔥', 'fire', ['y' => self::HEARTH_FIRE['y'], 'size' => 96, 'move' => 'wiggle', 'light' => 'fire']),
-                self::game('cockroach', $hearth - 200, 180, ['size' => 110, 'cast' => 'cockroach']),
-                self::game('cockroach-fight', $hearth + 200, 260, ['size' => 110, 'cast' => 'cockroach']),
+                // Its games are its furniture, untitled like the kitchen's
+                // appliances, their cards still showing the Cockroach. Each
+                // is as wide as its model (MODEL_FOOTPRINTS) and shallow
+                // enough that the Butt never walks into it.
+                self::game('cockroach', $armchair, 0, ['size' => 150, 'cast' => 'cockroach', 'model' => 'armchair', 'titled' => false]),
+                self::game('cockroach-fight', $clock, 0, ['size' => 300, 'cast' => 'cockroach', 'model' => 'grandfather-clock', 'titled' => false]),
                 // The side wall's faces the room just off it, as a card
                 // turned to its wall would be seen edge on.
                 ...self::sconceToys($sconces),
