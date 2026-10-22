@@ -3,7 +3,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import axios from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
-import { tickLevel } from "./clockSounds.js";
+import { dongLevel, tickLevel } from "./clockSounds.js";
 import GamesWorld from "./GamesWorld.vue";
 
 // The stage with WebGL stubbed both ways (issue #130): a fake renderer in
@@ -61,9 +61,16 @@ vi.mock("./composables/useRadio.js", async (importOriginal) => {
     };
 });
 
-// The drum's sound and a clock's tick, so a test can hear them, and
-// whether audio has started (a room's clocks only tick once it has).
-const sounds = vi.hoisted(() => ({ drum: null, tick: null, running: false }));
+// The drum's sound and a clock's tick and chimes, so a test can hear
+// them, and whether audio has started (a room's clocks only tick once it
+// has). `due`, when set, stands in for what a clock's chimes strike next.
+const sounds = vi.hoisted(() => ({
+    drum: null,
+    tick: null,
+    chime: null,
+    due: null,
+    running: false,
+}));
 
 vi.mock("./drumSounds.js", async (importOriginal) => ({
     ...(await importOriginal()),
@@ -73,6 +80,8 @@ vi.mock("./drumSounds.js", async (importOriginal) => ({
 vi.mock("./clockSounds.js", async (importOriginal) => ({
     ...(await importOriginal()),
     playTick: (...args) => sounds.tick?.(...args),
+    playChime: (...args) => sounds.chime?.(...args),
+    chimesBetween: (...args) => sounds.due?.(...args) ?? [],
 }));
 
 vi.mock("@/composables/useAudioContext", async (importOriginal) => ({
@@ -1037,6 +1046,8 @@ describe("GamesWorld clocks", () => {
 
     afterEach(() => {
         sounds.tick = null;
+        sounds.chime = null;
+        sounds.due = null;
         sounds.running = false;
     });
 
@@ -1059,6 +1070,30 @@ describe("GamesWorld clocks", () => {
             expect(level).toBeGreaterThan(0);
             expect(level).toBeLessThan(tickLevel(0));
         }
+    });
+
+    it("strikes a grandfather clock's chimes as they come due, as loud as the Butt is near it", async () => {
+        const strike = { note: 40, ring: 3.5, loud: 1 };
+        let struck = false;
+        sounds.due = vi.fn((from, to, { chime, tune }) => {
+            expect(chime).toBe(10);
+            expect(tune).toBe(4);
+            if (struck) return [];
+            struck = true;
+            return [strike];
+        });
+        sounds.chime = vi.fn();
+        wrapper = await mountWorld(withClock);
+        await enterHouse(wrapper);
+        sounds.running = true;
+        await frames(300);
+
+        expect(sounds.chime).toHaveBeenCalledTimes(1);
+        const [played, level] = sounds.chime.mock.calls[0];
+        expect(played).toBe(strike);
+        // The Butt stands 330 out from it, so it isn't at its loudest.
+        expect(level).toBeGreaterThan(0);
+        expect(level).toBeLessThan(dongLevel(0));
     });
 });
 

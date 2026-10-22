@@ -100,4 +100,13 @@ describe("modelled props", () => {
         expect(pendulum()).toBe(0);
         expect(swing(BEAT, true)).toBe(false);
     });
+
+    it("dongs the grandfather clock every ten seconds, on a tick, and plays its tune every fourth", () => {
+        const { beat, chime, tune } =
+            MODELS["grandfather-clock"](THREE).userData;
+
+        expect(chime).toBe(10);
+        expect(chime % beat).toBe(0);
+        expect(tune).toBe(4);
+    });
 });
