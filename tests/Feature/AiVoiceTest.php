@@ -180,9 +180,11 @@ class AiVoiceTest extends TestCase
         $this->assertSame([], Storage::disk('s3')->allFiles());
     }
 
-    public function test_a_prefetch_waits_longer_on_the_provider_than_a_live_play(): void
+    public function test_a_live_play_waits_on_the_provider_as_long_as_a_prefetch(): void
     {
-        config(['services.ai_voice.timeout' => 10, 'services.ai_voice.ahead_timeout' => 20]);
+        // The client has fallen back by then either way; a shorter live wait
+        // only threw away slow page clips and paused the provider.
+        config(['services.ai_voice.timeout' => 20]);
         $timeouts = [];
         Http::fake(function ($request, array $options) use (&$timeouts) {
             $timeouts[$request['input']] = $options['timeout'];
@@ -193,7 +195,7 @@ class AiVoiceTest extends TestCase
         $this->speak(['text' => 'live'])->assertOk();
         $this->postJson(route('ai-voice.prefetch'), ['text' => 'ahead', 'locale' => 'en'])->assertOk();
 
-        $this->assertSame(['live' => 10, 'ahead' => 20], $timeouts);
+        $this->assertSame(['live' => 20, 'ahead' => 20], $timeouts);
     }
 
     public function test_a_timeout_is_not_retried(): void
@@ -231,6 +233,18 @@ class AiVoiceTest extends TestCase
         $this->assertCount(1, $voice);
         $this->assertSame('warning', $voice->sole()->level);
         $this->assertStringContainsString('paused', $voice->sole()->message);
+    }
+
+    public function test_a_pause_logs_the_failure_that_started_it(): void
+    {
+        $logged = $this->recordLogs();
+        $this->pauseProvider();
+
+        $context = $logged->sole(fn ($log) => str_contains($log->message, 'paused'))->context;
+        $this->assertSame(3, $context['failures']);
+        $this->assertSame(config('services.ai_voice.timeout'), $context['timeout_seconds']);
+        $this->assertSame(mb_strlen('three'), $context['characters']);
+        $this->assertNotSame('', $context['error']);
     }
 
     public function test_a_provider_error_is_logged_as_an_error(): void

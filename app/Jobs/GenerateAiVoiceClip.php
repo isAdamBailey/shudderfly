@@ -21,7 +21,7 @@ class GenerateAiVoiceClip implements ShouldQueue
     // pay for the same clip twice. A clip that fails is made on first play.
     public int $tries = 1;
 
-    // Two provider attempts at the ahead-of-time timeout plus the upload,
+    // Two provider attempts at the provider timeout plus the upload,
     // under a worker's default 60 s so it is not killed mid-clip.
     public int $timeout = 55;
 
