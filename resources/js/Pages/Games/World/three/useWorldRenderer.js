@@ -1,4 +1,5 @@
 import { createCastKit } from "@/Components/Games/Cast/three/castMesh.js";
+import { fromView, viewYaw } from "../composables/views.js";
 import { playAmbientSound } from "../sounds.js";
 
 // Pixel ratio cap: past 2 a phone pays four times the fill for detail nobody
@@ -38,10 +39,10 @@ export function supportsWebGL() {
 
 /**
  * Points a Three.js PerspectiveCamera the way a projection.js camera
- * describes: level, at its position, with the lens shifted so its eye height
- * is drawn at `eyeRow` (and its centre `lensX` px off the middle). The
- * shift is a view offset into a larger frame centred on the camera's axis, so
- * projection.js's maths and Three's agree.
+ * describes: level, at its position, turned to face its `view`'s wall, with
+ * the lens shifted so its eye height is drawn at `eyeRow` (and its centre
+ * `lensX` px off the middle). The shift is a view offset into a larger frame
+ * centred on the camera's axis, so projection.js's maths and Three's agree.
  */
 export function applyCamera(threeCamera, camera) {
     const { w, h, eyeRow, focal } = camera;
@@ -58,8 +59,9 @@ export function applyCamera(threeCamera, camera) {
         w,
         h
     );
-    threeCamera.position.set(camera.x, camera.y, camera.z);
-    threeCamera.rotation.set(0, 0, 0);
+    const at = fromView(camera.view, camera);
+    threeCamera.position.set(at.x, at.y, at.z);
+    threeCamera.rotation.set(0, viewYaw(camera.view), 0);
     threeCamera.updateProjectionMatrix();
 }
 

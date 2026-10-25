@@ -4,9 +4,11 @@ import { applyCamera } from "../three/useWorldRenderer.js";
 import {
     groundZAtRow,
     screenToGround,
+    screenToPlane,
     spanAt,
     worldToScreen,
 } from "./projection.js";
+import { WALLS } from "./views.js";
 
 const camera = {
     x: 900,
@@ -17,6 +19,12 @@ const camera = {
     w: 1000,
     h: 700,
 };
+
+// The same camera turned to face each wall of a room this size.
+const TURNED = WALLS.map((wall) => ({
+    ...camera,
+    view: { wall, size: { w: 1800, d: 1200 } },
+}));
 
 const POINTS = [
     { x: 900, y: 0, z: 0 },
@@ -65,11 +73,48 @@ describe("projection", () => {
         );
     });
 
+    it("gives the same numbers facing back as with no view", () => {
+        const back = TURNED.find((cam) => cam.view.wall === "back");
+        for (const point of POINTS) {
+            expect(worldToScreen(back, point)).toEqual(
+                worldToScreen(camera, point)
+            );
+        }
+        expect(screenToGround(back, 250, 600)).toEqual(
+            screenToGround(camera, 250, 600)
+        );
+    });
+
+    it.each(TURNED)("round-trips the ground facing $view.wall", (cam) => {
+        for (const sx of [0, 250, 999]) {
+            for (const sy of [430, 699]) {
+                const ground = screenToGround(cam, sx, sy);
+                const back = worldToScreen(cam, { ...ground, y: 0 });
+                expect(back.x).toBeCloseTo(sx, 6);
+                expect(back.y).toBeCloseTo(sy, 6);
+            }
+        }
+    });
+
+    it.each(TURNED)(
+        "carries a held thing on its own plane facing $view.wall",
+        (cam) => {
+            const at = { x: 700, z: 300 };
+            const p = screenToPlane(cam, 320, 410, at);
+            const drawn = worldToScreen(cam, p);
+            expect(drawn.x).toBeCloseTo(320, 6);
+            expect(drawn.y).toBeCloseTo(410, 6);
+            // Still as far from the camera as the point it was picked up at.
+            expect(worldToScreen(cam, at).scale).toBeCloseTo(drawn.scale, 9);
+        }
+    );
+
     it("agrees with the Three.js camera the renderer sets up", () => {
         for (const cam of [
             camera,
             { ...camera, eyeRow: 420, lensX: -30 },
             { ...camera, eyeRow: -20, lensX: 15 },
+            ...TURNED,
         ]) {
             const three = new PerspectiveCamera(50, 1, 1, 100000);
             applyCamera(three, cam);
@@ -80,6 +125,8 @@ describe("projection", () => {
                     three
                 );
                 const ours = worldToScreen(cam, point);
+                // Turned round, some of them are behind the camera.
+                if (!ours) continue;
                 expect(((ndc.x + 1) / 2) * cam.w).toBeCloseTo(ours.x, 4);
                 expect(((1 - ndc.y) / 2) * cam.h).toBeCloseTo(ours.y, 4);
             }
@@ -91,10 +138,25 @@ describe("spanAt", () => {
     it("reaches the stage's edges at that depth, lens shift and all", () => {
         for (const cam of [camera, { ...camera, lensX: 120 }]) {
             for (const z of [0, -300, 400]) {
-                const { x0, x1 } = spanAt(cam, z);
-                expect(worldToScreen(cam, { x: x0, z }).x).toBeCloseTo(0);
-                expect(worldToScreen(cam, { x: x1, z }).x).toBeCloseTo(cam.w);
+                const { from, to } = spanAt(cam, { x: 0, z });
+                expect(worldToScreen(cam, from).x).toBeCloseTo(0);
+                expect(worldToScreen(cam, to).x).toBeCloseTo(cam.w);
             }
+        }
+    });
+
+    it.each(TURNED)("gives room points facing $view.wall", (cam) => {
+        for (const at of [
+            { x: 300, z: 200 },
+            { x: 1200, z: 1000 },
+        ]) {
+            const { from, to } = spanAt(cam, at);
+            expect(worldToScreen(cam, from).x).toBeCloseTo(0);
+            expect(worldToScreen(cam, to).x).toBeCloseTo(cam.w);
+            expect(worldToScreen(cam, from).scale).toBeCloseTo(
+                worldToScreen(cam, at).scale,
+                9
+            );
         }
     });
 });

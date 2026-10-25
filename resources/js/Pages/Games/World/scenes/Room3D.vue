@@ -538,9 +538,9 @@ const drumSpots = computed(() => {
 // book before the camera follows.
 const near = computed(() => {
     if (!view.value) return null;
-    const { x0, x1 } = spanAt(view.value, 0);
-    const pad = (x1 - x0) / 2;
-    return { x0: x0 - pad, x1: x1 + pad };
+    const { from, to } = spanAt(view.value, { x: 0, z: 0 });
+    const pad = (to.x - from.x) / 2;
+    return { x0: from.x - pad, x1: to.x + pad };
 });
 
 // Fetches books only when the pages in view change, not every frame.
@@ -665,7 +665,7 @@ function onThrowablePointerDown(item, event) {
                     view.value,
                     point.clientX - rect.left,
                     point.clientY - rect.top,
-                    p.z
+                    p
                 );
             if (!held) {
                 const from = plane(start);
