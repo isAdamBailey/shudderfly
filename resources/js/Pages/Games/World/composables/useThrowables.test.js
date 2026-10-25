@@ -32,8 +32,8 @@ const kitchen = (more = {}) => ({
 
 /** Carries the held `id` from (x, y) at (vx, vy) for 10 ms, and lets go. */
 function fling(t, id, x, y, vx, vy) {
-    t.carry(id, x, y, 0);
-    t.carry(id, x + vx / 100, y + vy / 100, 10);
+    t.carry(id, { x, y }, 0);
+    t.carry(id, { x: x + vx / 100, y: y + vy / 100 }, 10);
     t.release(id, 10);
 }
 
@@ -81,19 +81,49 @@ describe("useThrowables", () => {
     it("carries a held thing inside the room, never into what's under it", () => {
         const t = useThrowables(kitchen());
         t.grab("apple");
-        t.carry("apple", 790, -100);
+        t.carry("apple", { x: 790, y: -100 });
         expect(t.at.apple).toMatchObject({ x: 790, y: 92, held: true });
         // Against the right wall, its middle a radius in, past the counter.
-        t.carry("apple", 5000, -100);
+        t.carry("apple", { x: 5000, y: -100 });
         expect(t.at.apple).toMatchObject({ x: 872, y: 0 });
-        t.carry("apple", 600, 9999);
+        t.carry("apple", { x: 600, y: 9999 });
         // Under the ceiling (the walls are half the frame tall).
         expect(t.at.apple.y).toBe(450 - 56);
     });
 
+    it("carries a held thing across a side wall's view, along the room's depth", () => {
+        const t = useThrowables(kitchen());
+        t.grab("apple");
+        // Facing the right wall, across the screen is toward the front.
+        t.carry("apple", { x: 600, y: 200, z: 300 });
+        expect(t.at.apple).toMatchObject({ x: 600, y: 200, z: 300 });
+        // Against the front wall, its middle a radius in.
+        t.carry("apple", { x: 600, y: 200, z: 9999 });
+        expect(t.at.apple.z).toBe(500 - 28);
+    });
+
+    it("throws out toward the camera, whichever wall it faces", () => {
+        // Facing the right wall, the camera is off toward the left.
+        const t = useThrowables(kitchen(), { toward: () => ({ x: -1, z: 0 }) });
+        t.grab("apple");
+        t.carry("apple", { x: 600, y: 300, z: 200 }, 0);
+        t.carry("apple", { x: 600, y: 300, z: 220 }, 10);
+        t.release("apple", 10);
+        expect(t.at.apple.vz).toBeCloseTo(2000);
+        expect(t.at.apple.vx).toBeLessThan(0);
+        // It bounces off the front wall it was flung at.
+        let bounced = false;
+        for (let i = 0; i < 60 && !bounced; i += 1) {
+            t.step(1 / 60);
+            bounced = t.at.apple.vz < 0;
+        }
+        expect(bounced).toBe(true);
+        expect(t.at.apple.z).toBeLessThanOrEqual(500 - 28);
+    });
+
     it("carries nothing it isn't holding", () => {
         const t = useThrowables(kitchen());
-        t.carry("apple", 100, 300);
+        t.carry("apple", { x: 100, y: 300 });
         expect(t.at.apple).toMatchObject({ x: 600, y: 92 });
     });
 
@@ -127,8 +157,8 @@ describe("useThrowables", () => {
         const t = useThrowables(kitchen());
         t.grab("apple");
         // Up over the fridge, at the apple's depth (on its footprint).
-        t.carry("apple", 600, 380, 0);
-        t.carry("apple", 265, 380, 0);
+        t.carry("apple", { x: 600, y: 380 }, 0);
+        t.carry("apple", { x: 265, y: 380 }, 0);
         t.release("apple", 1000);
         settle(t);
         expect(t.at.apple).toMatchObject({ x: 265, y: 250 });
@@ -153,8 +183,8 @@ describe("useThrowables", () => {
     it("lets a thing held still fall, not fly", () => {
         const t = useThrowables(kitchen());
         t.grab("apple");
-        t.carry("apple", 600, 300, 0);
-        t.carry("apple", 650, 300, 10);
+        t.carry("apple", { x: 600, y: 300 }, 0);
+        t.carry("apple", { x: 650, y: 300 }, 10);
         // Held there a while before letting go.
         t.release("apple", 500);
         expect(t.at.apple).toMatchObject({ vx: 0, vz: 0, flying: true });
@@ -166,7 +196,7 @@ describe("useThrowables", () => {
         const t = useThrowables(kitchen());
         expect(t.changed()).toEqual([]);
         t.grab("apple");
-        t.carry("apple", 700, 300);
+        t.carry("apple", { x: 700, y: 300 });
         expect(t.changed()).toEqual([
             { id: "apple", x: 700, y: 300, z: 28, ground: 92, tilt: 0 },
         ]);
@@ -190,7 +220,7 @@ describe("useThrowables", () => {
         const onLand = vi.fn();
         const t = useThrowables(kitchen(), { onLand });
         t.grab("apple");
-        t.carry("apple", 600, 300);
+        t.carry("apple", { x: 600, y: 300 });
         t.drop();
         expect(t.at.apple).toMatchObject({ y: 92, held: false });
         expect(onLand).not.toHaveBeenCalled();
@@ -199,8 +229,8 @@ describe("useThrowables", () => {
     it("flings as fast as it really moved, not the finger pushing it into the floor", () => {
         const t = useThrowables(kitchen());
         t.grab("apple");
-        t.carry("apple", 600, 92, 0);
-        t.carry("apple", 600, -2000, 10);
+        t.carry("apple", { x: 600, y: 92 }, 0);
+        t.carry("apple", { x: 600, y: -2000 }, 10);
         t.release("apple", 10);
         expect(t.at.apple).toMatchObject({ vx: 0, vy: 0, vz: 0 });
     });
@@ -208,13 +238,13 @@ describe("useThrowables", () => {
     it("stops at the side of something taller when carried low into it", () => {
         const t = useThrowables(kitchen());
         t.grab("apple");
-        t.carry("apple", 360, 50);
+        t.carry("apple", { x: 360, y: 50 });
         // Along the wall into the fridge (205 to 325, 250 tall).
-        t.carry("apple", 300, 50);
+        t.carry("apple", { x: 300, y: 50 });
         expect(t.at.apple).toMatchObject({ x: 360, y: 50 });
         // Lifted over it, it can be put on top.
-        t.carry("apple", 360, 300);
-        t.carry("apple", 265, 300);
+        t.carry("apple", { x: 360, y: 300 });
+        t.carry("apple", { x: 265, y: 300 });
         expect(t.at.apple.x).toBe(265);
     });
 
@@ -228,8 +258,8 @@ describe("useThrowables", () => {
         });
         const t = useThrowables(room);
         t.grab("apple");
-        t.carry("apple", 780, 92, 0);
-        t.carry("apple", 785, 92, 10);
+        t.carry("apple", { x: 780, y: 92 }, 0);
+        t.carry("apple", { x: 785, y: 92 }, 10);
         t.release("apple", 10);
         t.at.apple.vz = 0;
         for (let i = 0; i < 20; i += 1) t.step(1 / 60);
@@ -240,7 +270,7 @@ describe("useThrowables", () => {
         const room = kitchen();
         const t = useThrowables(room);
         t.grab("apple");
-        t.carry("apple", 700, 300);
+        t.carry("apple", { x: 700, y: 300 });
         t.drop();
         const [, apple, pot] = room.interactables;
         expect(t.placed(apple)).toMatchObject({ id: "apple", x: 700, y: 92 });

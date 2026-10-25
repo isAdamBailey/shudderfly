@@ -9,7 +9,9 @@ import {
     roomLayout,
     roomLook,
     ROOM_SIZES,
+    viewBand,
     wallOf,
+    wallToFace,
 } from "./roomLayout.js";
 
 const hall = {
@@ -306,6 +308,29 @@ describe("things on a wall", () => {
         // Up in the middle of the room, or on the floor by a wall.
         expect(wallOf({ x: 450, z: 250, y: 300 }, size)).toBeNull();
         expect(wallOf({ x: 300, z: 0 }, size)).toBeNull();
+    });
+
+    it("are seen by facing their wall, or the wall nearest them", () => {
+        const size = { w: 2200, d: 500 };
+        expect(wallToFace({ wall: "left", x: 0, z: 200 }, size)).toBe("left");
+        expect(wallToFace({ x: 300, y: 120 }, size)).toBe("back");
+        // Standing in the room, or turned in a corner.
+        expect(wallToFace({ x: 2100, z: 250 }, size)).toBe("right");
+        expect(wallToFace({ x: 1100, z: 420 }, size)).toBe("front");
+        expect(wallToFace({ wall: "back-right", x: 2150, z: 100 }, size)).toBe(
+            "right"
+        );
+        // Whichever it is, it's on the floor in view facing it.
+        for (const thing of [
+            { x: 2100, z: 250 },
+            { x: 1100, z: 420 },
+            { x: 240, z: 260 },
+        ]) {
+            const wall = wallToFace(thing, size);
+            expect(inView(thing, { wall, size }, viewBand(size, wall))).toBe(
+                true
+            );
+        }
     });
 
     it("are framed with the floor in front of the wall in view", () => {

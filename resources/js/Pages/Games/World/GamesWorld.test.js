@@ -884,7 +884,7 @@ describe("GamesWorld rooms", () => {
         expect(wrapper.get("[aria-live]").text()).toBe("The Hall");
     });
 
-    it("brings the Butt to the end of a long room it turns to face", async () => {
+    it("keeps the Butt to the end of a long room it turns to face", async () => {
         const long = {
             ...withHouse,
             "house.hall": {
@@ -906,6 +906,20 @@ describe("GamesWorld rooms", () => {
         const x = screenX(butt);
         expect(x).toBeGreaterThan(0);
         expect(x).toBeLessThan(STAGE.width);
+
+        // Walked toward the camera, and right, it stays on that floor.
+        const stage = wrapper.get(".stage");
+        await stage.trigger("keydown", { key: "ArrowDown" });
+        await stage.trigger("keydown", { key: "ArrowRight" });
+        await frames(3000);
+        await stage.trigger("keyup", { key: "ArrowDown" });
+        await stage.trigger("keyup", { key: "ArrowRight" });
+        const walked = wrapper.get(".room-3d .butt");
+        expect(screenX(walked)).toBeGreaterThan(x);
+        expect(screenX(walked)).toBeLessThan(STAGE.width);
+        // No nearer than the floor's front edge (the stage is the
+        // window's height, 768).
+        expect(screenFeet(walked)).toBeCloseTo(768 * 0.95);
     });
 
     it("leaves the Butt where it is when it's in view either way", async () => {
@@ -1662,6 +1676,40 @@ describe("GamesWorld together", () => {
         );
         await showing(wrapper, ".room-3d .visitor .other-name");
         expect(wrapper.get(".visitor .other-name").text()).toBe("Friend");
+    });
+
+    it("hides someone behind the camera, and turns to face them to follow", async () => {
+        asVisitor({ together: true });
+        wrapper = await mountWorld(withHouse);
+        const people = [
+            { id: 7, name: "Me" },
+            { id: 8, name: "Friend" },
+        ];
+        const roster = rosterChannel();
+        roster.handlers.here(people);
+        await enterHouse(wrapper);
+        // Facing the right wall: the floor in view is the 500 nearest it.
+        await wrapper.get(".stage").trigger("keydown", { key: "e" });
+        await frames(600);
+        const hall = hallChannel();
+        hall.handlers.here(people);
+        roster.handlers.whispers.place(
+            { scene: "house.hall", x: 300, z: 200, lane: 0 },
+            { user_id: 8 }
+        );
+        hall.handlers.whispers.move(
+            { x: 300, z: 200, lane: 0, facing: 1, moving: 0 },
+            { user_id: 8 }
+        );
+        await frames(600);
+        expect(wrapper.find(".room-3d .visitor").exists()).toBe(false);
+
+        await wrapper.get(".roster-toggle").trigger("click");
+        await wrapper.get(".roster-panel .roster-action").trigger("click");
+        await frames(600);
+
+        // Turned to the back wall they're nearest, and there they are.
+        expect(wrapper.find(".room-3d .visitor").exists()).toBe(true);
     });
 
     it("lists who is in the world and where, and says where you are", async () => {

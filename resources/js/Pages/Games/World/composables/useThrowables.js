@@ -5,7 +5,7 @@ import { clamp, tossTilt } from "./useGamesWorld.js";
 
 // The kitchen's fruit, thrown about the room as the road's are along the
 // verge (useIdlerPhysics.js), but in the room's own world units and in all
-// three directions: they bounce off its walls and ceiling, land on the
+// three directions: they bounce off its four walls and ceiling, land on the
 // floor or on whatever stands against the back wall (a counter, the fridge),
 // and roll to a stop.
 const GRAVITY = 1800; // units/s²
@@ -20,8 +20,8 @@ const ROLL_FRICTION = 4;
 const REST_SPEED = 10;
 // The fastest a fling can throw one, units/s.
 const MAX_SPEED = 2600;
-// How much of a fling's speed carries it out into the room, toward the open
-// front: a finger can only throw across and up, so every throw also sails
+// How much of a fling's speed carries it out into the room, toward the
+// camera: a finger can only throw across and up, so every throw also sails
 // forward.
 const FORWARD = 0.4;
 // A ledge no higher than this (units) is stepped up onto, not bounced off
@@ -66,9 +66,14 @@ const inside = (b, x, z) => x >= b.x0 && x <= b.x1 && z <= b.z1;
  * The physics runs on plain objects; `version` ticks when any of them
  * moves, for whatever draws them to follow. `isReducedMotion()` drops a
  * let-go throwable straight onto what's under it instead of flinging it;
- * `onLand(id)` hears where one comes to rest.
+ * `onLand(id)` hears where one comes to rest; `toward()` is the way to the
+ * camera ({ x, z }, a step off the wall it faces; the back's if not given),
+ * which every throw also sails.
  */
-export function useThrowables(room, { isReducedMotion, onLand } = {}) {
+export function useThrowables(
+    room,
+    { isReducedMotion, onLand, toward = () => ({ x: 0, z: 1 }) } = {}
+) {
     const { w, d } = room.size;
     const ceiling = wallHeightOf(room);
     const blocks = roomBlocks(room);
@@ -143,12 +148,14 @@ export function useThrowables(room, { isReducedMotion, onLand } = {}) {
         p.last = null;
     }
 
-    /** Carries the held throwable `id` to (x, y), staying at its depth, at
-     * time `now` (ms): how fast it's carried is the fling it's let go with. */
-    function carry(id, x, y, now = performance.now()) {
+    /** Carries the held throwable `id` to `to` ({ x, y, z }, z staying
+     * where it is if it doesn't say: across the screen, at its depth, when
+     * the camera faces the back) at time `now` (ms): how fast it's carried
+     * is the fling it's let go with. */
+    function carry(id, { x, y, z }, now = performance.now()) {
         const p = at[id];
         if (!p?.held) return;
-        let to = within(id, x, y, p.z);
+        let to = within(id, x, y, z ?? p.z);
         // Carried low into the side of something taller, it stops there,
         // as it would bounce off it in flight, rather than climb onto it.
         if (blocks.some((b) => climbs(b, p, to))) {
@@ -160,6 +167,7 @@ export function useThrowables(room, { isReducedMotion, onLand } = {}) {
             const dt = Math.max((now - p.last.t) / 1000, 1 / 120);
             p.vx = (to.x - p.x) / dt;
             p.vy = (to.y - p.y) / dt;
+            p.vz = (to.z - p.z) / dt;
         }
         p.last = { t: now };
         Object.assign(p, to);
@@ -175,7 +183,8 @@ export function useThrowables(room, { isReducedMotion, onLand } = {}) {
     }
 
     /** Lets go of throwable `id` at time `now` (ms), flinging it as fast as
-     * it was last carried, unless it was held still. */
+     * it was last carried, unless it was held still, and out toward the
+     * camera. */
     function release(id, now = performance.now()) {
         const p = at[id];
         if (!p?.held) return;
@@ -185,12 +194,14 @@ export function useThrowables(room, { isReducedMotion, onLand } = {}) {
         }
         // Held still before letting go, it falls from where it is.
         const still = !p.last || now - p.last.t > STALE_FLING;
-        const speed = still ? 0 : Math.hypot(p.vx, p.vy);
+        const speed = still ? 0 : Math.hypot(p.vx, p.vy, p.vz);
         const k = speed > MAX_SPEED ? MAX_SPEED / speed : still ? 0 : 1;
+        const forward = speed * k * FORWARD;
+        const out = toward();
         Object.assign(p, {
-            vx: p.vx * k,
+            vx: p.vx * k + out.x * forward,
             vy: p.vy * k,
-            vz: speed * k * FORWARD,
+            vz: p.vz * k + out.z * forward,
             held: false,
             flying: true,
             last: null,
@@ -220,7 +231,7 @@ export function useThrowables(room, { isReducedMotion, onLand } = {}) {
             }
         }
 
-        // The walls and the ceiling, and the open front kept like a wall.
+        // The four walls and the ceiling.
         if (x < r || x > w - r) {
             x = clamp(x, r, w - r);
             p.vx = -p.vx * WALL_BOUNCE;

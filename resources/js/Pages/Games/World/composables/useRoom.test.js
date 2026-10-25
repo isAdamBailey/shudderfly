@@ -198,19 +198,6 @@ describe("useRoom", () => {
         expect(onArrive).not.toHaveBeenCalled();
     });
 
-    it("is put down at once where it's told, kept to the floor", () => {
-        const { r } = makeRoom();
-        r.walkTo(100, 100);
-        r.placeAt(300, 200);
-        expect(r.butt).toMatchObject({ x: 300, z: 200 });
-        // It doesn't carry on to where it was walking.
-        run(r, 1);
-        expect(r.butt).toMatchObject({ x: 300, z: 200 });
-
-        r.placeAt(-500, 9999);
-        expect(r.butt).toMatchObject(r.inside(-500, 9999));
-    });
-
     it("stands as far out as a thing says, off whichever wall it's on", () => {
         const organ = {
             id: "organ",
@@ -486,6 +473,103 @@ describe("useRoom walking up to someone", () => {
     it("keeps someone else's spot inside the walls", () => {
         const { r } = makeRoom();
 
-        expect(r.inside(-500, 9999)).toEqual({ x: 50, z: 500 });
+        expect(r.inside(-500, 9999)).toEqual({ x: 50, z: 450 });
+    });
+});
+
+describe("useRoom facing another wall", () => {
+    // A long hall: facing its left wall, the floor in view is as deep as
+    // the hall is from back to front (600), the rest behind the camera.
+    const hall = { size: { w: 3200, d: 600 }, interactables: [] };
+
+    it("walks only the floor in front of the wall it faces", () => {
+        const r = useRoom(hall, { start: { x: 1600, z: 300 }, wall: "left" });
+        expect(r.butt).toMatchObject({ x: 600, z: 300 });
+
+        r.walkTo(3000, 300);
+        run(r, 3);
+        expect(r.butt).toMatchObject({ x: 600, z: 300 });
+        expect(r.inside(3000, 300)).toEqual({ x: 3000, z: 300 });
+    });
+
+    it("is brought onto the floor in view when it turns, stopping", () => {
+        const r = useRoom(hall, { start: { x: 1600, z: 300 } });
+        r.walkTo(1000, 300);
+        r.face("right");
+        expect(r.butt).toMatchObject({ x: 3200 - 600, z: 300 });
+        run(r, 1);
+        expect(r.butt).toMatchObject({ x: 3200 - 600, z: 300 });
+
+        // Back round, it stands where it is.
+        r.face("back");
+        expect(r.butt).toMatchObject({ x: 3200 - 600, z: 300 });
+    });
+
+    it("turns to face something out of view before walking to it", () => {
+        const lamp = { id: "lamp", type: "toy", x: 3000, z: 250 };
+        const onTurn = vi.fn();
+        const r = useRoom(
+            { ...hall, interactables: [lamp] },
+            { start: { x: 300, z: 300 }, wall: "left", onTurn }
+        );
+
+        r.goUse(lamp);
+        // Standing in the room, it's seen from the wall nearest it.
+        expect(onTurn).toHaveBeenCalledWith("right");
+        run(r, 3);
+        expect(r.nearest.value).toBe(lamp);
+
+        // Already in view, nothing turns.
+        onTurn.mockClear();
+        r.standBy(lamp);
+        r.face("right");
+        expect(onTurn).not.toHaveBeenCalled();
+    });
+
+    it("walks the screen's way with the arrow keys", () => {
+        const r = useRoom(hall, { start: { x: 300, z: 300 }, wall: "left" });
+
+        // Facing the left wall, the back wall is on the right.
+        r.setKey("x", 1);
+        r.step(0.1);
+        expect(r.butt.z).toBeCloseTo(300 - WALK_SPEED * 0.1);
+        expect(r.butt.x).toBeCloseTo(300);
+        expect(r.butt.facing).toBe(1);
+        r.setKey("x", -1);
+        r.step(0.1);
+        expect(r.butt.facing).toBe(-1);
+
+        // Up the screen is toward the wall it faces.
+        r.setKey("x", 0);
+        r.setKey("z", -1);
+        r.step(0.1);
+        expect(r.butt.x).toBeCloseTo(300 - WALK_SPEED * 0.1);
+    });
+
+    it("keeps clear of stairs along any wall, and of the wall behind", () => {
+        const landing = {
+            size: { w: 900, d: 500 },
+            interactables: [{ id: "up", type: "door", x: 450, stairs: "up" }],
+        };
+        const r = useRoom(landing, {
+            start: { x: 450, z: 250 },
+            wall: "right",
+        });
+
+        // The stairs run along the back wall, on the left facing right.
+        r.walkTo(450, -500);
+        run(r, 3);
+        expect(r.butt.z).toBeCloseTo(STAIRS_CLEARANCE);
+
+        // The floor in view is as deep as the room is from back to front.
+        r.walkTo(-500, 250);
+        run(r, 5);
+        expect(r.butt.x).toBeCloseTo(900 - 500);
+
+        // Facing the front, the floor reaches the back wall, behind.
+        r.face("front");
+        r.walkTo(450, -500);
+        run(r, 3);
+        expect(r.butt.z).toBeCloseTo(STAIRS_CLEARANCE);
     });
 });
