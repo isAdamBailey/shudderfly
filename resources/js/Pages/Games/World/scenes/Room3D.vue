@@ -31,7 +31,7 @@ import {
     spanAt,
     worldToScreen,
 } from "../composables/projection.js";
-import { fromView, toView, WALLS, wallTurned } from "../composables/views.js";
+import { toView, WALLS, wallTurned } from "../composables/views.js";
 import { bobLift, useOthers } from "../composables/useGamesWorld.js";
 import { arrivalSpot, useRoom } from "../composables/useRoom.js";
 import { useThrowables } from "../composables/useThrowables.js";
@@ -70,6 +70,7 @@ import {
     roomCamera,
     roomLayout,
     roomLook,
+    wallFacing,
 } from "./roomLayout.js";
 
 // The `kind: "room"` renderer on the stage's WebGL canvas (issue #130): the
@@ -78,7 +79,9 @@ import {
 // puffs. The room's behaviour is useRoom's: tap the floor or drag the Butt
 // to walk, arrow keys walk four ways, Tab stands the Butt at each thing in
 // turn and Enter uses it. A swipe across the room, Q / E or the stage's
-// buttons turn it to face the next wall round (issue #183). Rooms need
+// buttons turn it to face the next wall round (issue #183), and the Butt
+// walks the floor in front of that wall; sent to something out of view, it
+// turns to face it first. Rooms need
 // WebGL; the stage doesn't send a browser without it into one. Loaded only
 // when a door is first used.
 const props = defineProps({
@@ -147,11 +150,14 @@ const shelves = useShelves(props.scene.shelves, {
 // on the road.
 const throwables = useThrowables(props.scene, {
     isReducedMotion: () => reduced.value,
+    toward: () => wallFacing(faced.value),
     onLand: feedIfAtButt,
 });
 
 const room = useRoom(props.scene, {
     start,
+    wall: faced.value,
+    onTurn: swingTo,
     autoTriggers,
     extras: () => shelves.items.value,
     // A thrown thing is where it landed: the Butt walks there to use it.
@@ -373,32 +379,27 @@ const turning = shallowRef(null);
  * left (-1). Not while a card is up, nor mid-turn. */
 function turn(quarters) {
     if (!layout.value || turning.value || room.state.frozen) return;
-    // A focused button may be on the wall turned away from.
-    if (rootEl.value?.contains(document.activeElement)) props.stage.focus();
-    const from = framed();
-    faced.value = wallTurned(faced.value, quarters);
-    stepIntoView();
-    lookX.value = toView(layout.value.camera.view, butt).x;
-    const to = framed();
-    emit("turned", faced.value);
-    if (!graph) return;
-    if (reduced.value) graph.layout(to);
-    else turning.value = { s: 0, pose: graph.swing(from, to) };
-    props.stage.renderer.invalidate();
+    room.face(wallTurned(faced.value, quarters));
 }
 
-/** Steps the Butt onto the floor in view if it's past it, cut away behind
- * the camera: facing the end wall of a long room, it's brought to that end,
- * a Butt's length in. */
-function stepIntoView() {
-    const { band, camera } = layout.value;
-    const at = toView(camera.view, butt);
-    if (at.z <= band) return;
-    const { x, z } = fromView(camera.view, {
-        ...at,
-        z: band - ROOM_SIZES.butt,
-    });
-    room.placeAt(x, z);
+/** The room has turned to face `wall` (turn(), or the Butt sent to
+ * something out of view): the camera swings round to it. */
+function swingTo(wall) {
+    // A focused button may be on the wall turned away from.
+    if (rootEl.value?.contains(document.activeElement)) props.stage.focus();
+    const from = layout.value && { ...layout.value, camera: view.value };
+    faced.value = wall;
+    lookX.value = toView({ wall, size: props.scene.size }, butt).x;
+    emit("turned", wall);
+    if (!from || !graph) return;
+    const to = framed();
+    // Turned again mid-turn (sent to something behind), it's round at once:
+    // the camera is somewhere between, which the swing can't start from.
+    if (reduced.value || turning.value) {
+        turning.value = null;
+        graph.layout(to);
+    } else turning.value = { s: 0, pose: graph.swing(from, to) };
+    props.stage.renderer.invalidate();
 }
 
 /** Carries the turn on by `dt` s, eased in and out, and lays the room out
@@ -438,12 +439,9 @@ const inSight = computed(() => {
             .filter((item) => item.throwable || seen(item))
             .sort((a, b) => along(a) - along(b)),
         photos: (props.scene.photos ?? []).filter(seen),
-        // Bookcases stand against the back wall.
-        shelves: new Set(
-            (props.scene.shelves ?? []).filter((shelf) =>
-                seen({ x: shelf.x, wall: "back" })
-            )
-        ),
+        // Bookcases stand against the back wall: their books are only
+        // reached facing it (from the side, they're edge on).
+        shelves: new Set(view.wall === "back" ? props.scene.shelves : []),
     };
 });
 
@@ -641,9 +639,9 @@ const drumSpots = computed(() => {
 
 // The stretch of back wall the overlay keeps books' buttons up for: what's
 // in view, and half as much again either side, so Tab can step to the next
-// book before the camera follows.
+// book before the camera follows. None facing any other wall.
 const near = computed(() => {
-    if (!view.value) return null;
+    if (!view.value || inSight.value.shelves.size === 0) return null;
     const { from, to } = spanAt(view.value, { x: 0, z: 0 });
     const pad = (to.x - from.x) / 2;
     return { x0: from.x - pad, x1: to.x + pad };
@@ -707,11 +705,12 @@ function buttSpotAt({ x, z, lift }) {
 }
 
 // Each other person on screen: a box over them to tap and follow, their
-// name over it.
+// name over it. Someone behind the camera (in your room, facing another
+// way) has neither.
 const visitorSpots = computed(() =>
     view.value
         ? visitors.others.flatMap((other) => {
-              const spot = buttSpotAt(other);
+              const spot = seen(other) && buttSpotAt(other);
               return spot ? { id: other.id, name: other.name, ...spot } : [];
           })
         : []
@@ -777,11 +776,17 @@ function onThrowablePointerDown(item, event) {
             if (!held) {
                 const from = plane(start);
                 if (!from) return;
-                held = { x: p.x - from.x, y: p.y - from.y };
+                held = { x: p.x - from.x, y: p.y - from.y, z: p.z - from.z };
                 throwables.grab(id);
             }
             const to = plane(e);
-            if (to) throwables.carry(id, to.x + held.x, to.y + held.y);
+            if (to) {
+                throwables.carry(id, {
+                    x: to.x + held.x,
+                    y: to.y + held.y,
+                    z: to.z + held.z,
+                });
+            }
         },
         end() {
             if (held) throwables.release(id);

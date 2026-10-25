@@ -1,13 +1,17 @@
 import { computed, reactive } from "vue";
 import { INSTRUMENT_FOOTPRINTS, isInstrument } from "../scenes/instruments.js";
 import {
+    inView,
     itemLocal,
     itemPoint,
     ROOM_SIZES,
     STAIRS_CLEARANCE,
+    viewBand,
     wallFacing,
+    wallToFace,
 } from "../scenes/roomLayout.js";
 import { clamp, DRAG_SPEED, FOLLOW_GAP, WALK_SPEED } from "./useGamesWorld.js";
+import { fromView, toView, viewSize, wallBehind, wallTurned } from "./views.js";
 
 // Close enough to an interactable to use it, in world units.
 export const REACH = 120;
@@ -17,7 +21,8 @@ export const STAND = 100;
 // unless it started there: a tap beside the door you just came in by
 // mustn't send you back out.
 export const TRIGGER_REACH = 60;
-// The Butt never walks closer than this to a wall.
+// The Butt never walks closer than this to a wall, nor someone else is
+// kept.
 export const MARGIN = 50;
 // Nor closer than this to furniture that blocks it (an instrument): half its
 // own width, so its sprite never covers the thing.
@@ -48,15 +53,22 @@ export function arrivalSpot(room, { spot, position } = {}) {
 /**
  * Everything a room does, DOM-free like useGamesWorld (issue #130): where
  * the Butt is on the floor ({ x, z }, z from the back wall toward the
- * open front), where it's walking to, which interactable it's near, and
+ * front), where it's walking to, which interactable it's near, and
  * using one when it gets there. Rooms are rectangles and most furniture
  * never blocks, so walking is a straight line; stairs, which take up the
  * floor along their wall, keep the Butt further from it, and an instrument's
  * floor is kept off (the Butt slides along its edge), so the Butt can't
  * stand over what's played. Driven by `step(dt)`.
  *
+ * The Butt walks the floor in view (issue #183): the band in front of the
+ * wall the camera faces (roomLayout.js viewBand()), and the arrow keys'
+ * left, right, up and down are the screen's. `face(wall)` turns it, as
+ * does sending the Butt to something out of view: it faces it first.
+ *
  * `room` is the scene ({ size: { w, d }, interactables }). Options:
  * - start: { x, z } where the Butt starts.
+ * - wall: the wall the camera faces to begin with (back if it doesn't say).
+ * - onTurn(wall): it has turned to face `wall`, for the camera to follow.
  * - onArrive(item): the Butt has reached something it was sent to use, or
  *   was dropped next to one that `autoTriggers` (a door, not a toy).
  * - autoTriggers(item): whether walking up to `item` uses it
@@ -71,6 +83,8 @@ export function useRoom(
     room,
     {
         start,
+        wall = "back",
+        onTurn,
         onArrive,
         autoTriggers = () => false,
         isReducedMotion,
@@ -79,12 +93,12 @@ export function useRoom(
     } = {}
 ) {
     const { w, d } = room.size;
-    const sideMargin = (wall) =>
-        room.interactables.some((i) => i.stairs && i.wall === wall)
+    // How far off `wall` the Butt keeps: clear of any stairs along it
+    // (stairs that don't say are on the back wall).
+    const margin = (wall) =>
+        room.interactables.some((i) => i.stairs && (i.wall ?? "back") === wall)
             ? STAIRS_CLEARANCE
             : MARGIN;
-    const left = sideMargin("left");
-    const right = sideMargin("right");
     // Floor the Butt keeps off: each instrument's, and a little round it,
     // in the instrument's own space (an organ may stand turned in a corner).
     const c = BLOCK_CLEARANCE;
@@ -104,9 +118,17 @@ export function useRoom(
             return p.x > b.x0 && p.x < b.x1 && p.z > b.z0 && p.z < b.z1;
         });
 
+    // The camera's view ({ wall, size }, views.js), how deep the floor in
+    // view runs, and the part of it the Butt walks, in the view's frame:
+    // { x0, x1, z0, z1 }.
+    let view = null;
+    let band = 0;
+    let floor = null;
+    setView(wall);
+
     const butt = reactive({
         // Never starting inside an instrument (a spot saved before it came).
-        ...clear(clampX(start?.x ?? w / 2), clampZ(start?.z ?? d / 2)),
+        ...clear(within(start?.x ?? w / 2, start?.z ?? d / 2)),
         facing: 1,
         bob: 0,
         walking: false,
@@ -127,17 +149,41 @@ export function useRoom(
     // through just for ending the walk there again.
     let walkFrom = null;
 
-    function clampX(x) {
-        return clamp(x, left, w - right);
+    /** Faces `faced`: the floor in view is the band in front of it, clear
+     * of its walls, and of the wall behind the camera if the band reaches
+     * it. */
+    function setView(faced) {
+        view = { wall: faced, size: room.size };
+        const seen = viewSize(view);
+        band = viewBand(room.size, faced);
+        floor = {
+            x0: margin(wallTurned(faced, -1)),
+            x1: seen.w - margin(wallTurned(faced, 1)),
+            z0: margin(faced),
+            z1: band < seen.d ? band : seen.d - margin(wallBehind(faced)),
+        };
     }
 
-    function clampZ(z) {
-        return clamp(z, MARGIN, d);
+    /** Spot (x, z) kept to the floor in view. */
+    function within(x, z) {
+        const p = toView(view, { x, z });
+        return fromView(view, {
+            x: clamp(p.x, floor.x0, floor.x1),
+            z: clamp(p.z, floor.z0, floor.z1),
+        });
     }
 
-    /** Spot (x, z) in the room, off any furniture that blocks: out by the
-     * nearest edge that's still in the room. */
-    function clear(x, z) {
+    /** A step of `dx`, `dz` in the view's frame (the screen's across, and
+     * away or toward), in the room's. */
+    function stepInRoom(dx, dz) {
+        const o = fromView(view, { x: 0, z: 0 });
+        const p = fromView(view, { x: dx, z: dz });
+        return { dx: p.x - o.x, dz: p.z - o.z };
+    }
+
+    /** Spot { x, z } on the floor, off any furniture that blocks: out by
+     * the nearest edge that's still on the floor. */
+    function clear({ x, z }) {
         const b = blocked(x, z);
         if (!b) return { x, z };
         let best = { x, z };
@@ -150,7 +196,7 @@ export function useRoom(
             [p.x, b.z1],
         ]) {
             const edge = itemPoint(b.item, [lx, 0, lz]);
-            const out = { x: clampX(edge.x), z: clampZ(edge.z) };
+            const out = within(edge.x, edge.z);
             const distance = (out.x - x) ** 2 + (out.z - z) ** 2;
             if (distance < bestDistance && !blocked(out.x, out.z)) {
                 best = out;
@@ -160,10 +206,11 @@ export function useRoom(
         return best;
     }
 
-    /** Where to stand to use `item`: in front of it, inside the room. */
+    /** Where to stand to use `item`: in front of it, on the floor in
+     * view. */
     function standAt(item) {
         const front = frontOf(placed(item));
-        return clear(clampX(front.x), clampZ(front.z));
+        return clear(within(front.x, front.z));
     }
 
     const distanceTo = (item) => {
@@ -211,8 +258,10 @@ export function useRoom(
         let arrived = false;
         if (keys.x || keys.z) {
             const length = Math.hypot(keys.x, keys.z);
-            dx = (keys.x / length) * WALK_SPEED * dt;
-            dz = (keys.z / length) * WALK_SPEED * dt;
+            ({ dx, dz } = stepInRoom(
+                (keys.x / length) * WALK_SPEED * dt,
+                (keys.z / length) * WALK_SPEED * dt
+            ));
         } else if (target) {
             const gx = target.x - butt.x;
             const gz = target.z - butt.z;
@@ -230,8 +279,7 @@ export function useRoom(
 
         // Against a wall, a held key goes nowhere: that isn't walking.
         // Into furniture, it slides along it, or stops.
-        let x = clampX(butt.x + dx);
-        let z = clampZ(butt.z + dz);
+        let { x, z } = dx || dz ? within(butt.x + dx, butt.z + dz) : butt;
         if (blocked(x, z)) {
             if (!blocked(x, butt.z)) z = butt.z;
             else if (!blocked(butt.x, z)) x = butt.x;
@@ -245,9 +293,13 @@ export function useRoom(
         let changed = walking !== butt.walking;
         butt.walking = walking;
         if (walking) {
+            // Facing the way it goes across the screen.
+            const across =
+                toView(view, { x, z }).x -
+                toView(view, { x: butt.x, z: butt.z }).x;
             butt.x = x;
             butt.z = z;
-            if (dx !== 0) butt.facing = Math.sign(dx);
+            if (across !== 0) butt.facing = Math.sign(across);
             butt.bob = isReducedMotion?.()
                 ? 0
                 : (butt.bob + dt) % (Math.PI * 2);
@@ -283,7 +335,7 @@ export function useRoom(
     function walkTo(x, z) {
         if (state.frozen) return;
         walkFrom = doorway();
-        target = clear(clampX(x), clampZ(z));
+        target = clear(within(x, z));
     }
 
     /** Walks up to someone standing at (x, z): toward them, stopping
@@ -291,6 +343,7 @@ export function useRoom(
      * that close, it stays put. */
     function walkUpTo(x, z) {
         if (state.frozen) return;
+        faceToward(inside(x, z));
         const gx = x - butt.x;
         const gz = z - butt.z;
         const gap = Math.hypot(gx, gz);
@@ -300,20 +353,24 @@ export function useRoom(
         }
         const k = (gap - FOLLOW_GAP) / gap;
         target = {
-            ...clear(clampX(butt.x + gx * k), clampZ(butt.z + gz * k)),
+            ...clear(within(butt.x + gx * k, butt.z + gz * k)),
             quiet: true,
         };
     }
 
     /** Spot (x, z) moved inside the room's walls (someone else's, who may
-     * say anything). */
+     * say anything, and faces whichever wall they like). */
     function inside(x, z) {
-        return { x: clampX(x), z: clampZ(z) };
+        return {
+            x: clamp(x, margin("left"), w - margin("right")),
+            z: clamp(z, margin("back"), d - margin("front")),
+        };
     }
 
     /** Walks to `item` and uses it there; uses it now if already there. */
     function goUse(item) {
         if (state.frozen) return;
+        faceToward(placed(item));
         if (distanceTo(item) <= REACH) return use(item);
         target = { ...standAt(item), item };
     }
@@ -322,17 +379,27 @@ export function useRoom(
      * the road: the keyboard route shouldn't make you wait. */
     function standBy(item) {
         if (state.frozen) return;
+        faceToward(placed(item));
         target = null;
         Object.assign(butt, standAt(item));
     }
 
-    /** Puts the Butt at (x, z) straight away, kept to the floor and off
-     * anything played: turning round in a long room brings it into the
-     * floor in view. */
-    function placeAt(x, z) {
-        if (state.frozen) return;
+    /** Turns to face `faced`: whatever's in hand stops, the Butt is kept
+     * to the new floor in view (facing the end wall of a long hall, it's
+     * brought to that end), and onTurn hears of it. */
+    function face(faced) {
+        if (faced === view.wall) return;
         halt();
-        Object.assign(butt, clear(clampX(x), clampZ(z)));
+        setView(faced);
+        Object.assign(butt, clear(within(butt.x, butt.z)));
+        onTurn?.(faced);
+    }
+
+    /** Faces whichever wall `thing` ({ x, y?, z, wall? }) is seen from, if
+     * it's out of view: on the wall behind the camera, or past the floor
+     * in view. */
+    function faceToward(thing) {
+        if (!inView(thing, view, band)) face(wallToFace(thing, room.size));
     }
 
     function startDrag() {
@@ -345,7 +412,7 @@ export function useRoom(
     /** The finger is over the floor at (x, z): stroll toward it. */
     function updateDrag(x, z) {
         if (!state.dragging) return;
-        target = clear(clampX(x), clampZ(z));
+        target = clear(within(x, z));
     }
 
     /** Let go: the Butt finishes the stroll, and a door it lands at opens. */
@@ -388,7 +455,7 @@ export function useRoom(
         inside,
         goUse,
         standBy,
-        placeAt,
+        face,
         startDrag,
         updateDrag,
         endDrag,

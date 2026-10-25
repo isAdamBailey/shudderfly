@@ -1,4 +1,10 @@
-import { toView, viewSize, viewYaw, wallBehind } from "../composables/views.js";
+import {
+    toView,
+    viewSize,
+    viewYaw,
+    WALLS,
+    wallBehind,
+} from "../composables/views.js";
 import { FOOTPRINTS } from "../three/footprints.js";
 
 /**
@@ -55,9 +61,16 @@ export const WALL_REACH = 60;
 /** The wall `thing` is on in a room `size` ({ w, d }) across: its own
  * `wall`, or for a thing up off the floor, the wall it's within WALL_REACH
  * of; null for a thing standing in the room. */
-export function wallOf(thing, { w, d }) {
+export function wallOf(thing, size) {
     if (thing.wall) return thing.wall;
     if (!((thing.y ?? 0) > 0)) return null;
+    const [wall, gap] = nearestWall(thing, size);
+    return gap <= WALL_REACH ? wall : null;
+}
+
+/** The wall nearest `thing` in a room `size` across, and how far it is:
+ * [wall, gap]. */
+function nearestWall(thing, { w, d }) {
     const z = thing.z ?? 0;
     const gaps = [
         ["back", z],
@@ -65,10 +78,23 @@ export function wallOf(thing, { w, d }) {
         ["left", thing.x],
         ["right", w - thing.x],
     ];
-    const [wall, gap] = gaps.reduce((near, next) =>
-        next[1] < near[1] ? next : near
-    );
-    return gap <= WALL_REACH ? wall : null;
+    return gaps.reduce((near, next) => (next[1] < near[1] ? next : near));
+}
+
+/** The wall to face to see `thing` in a room `size` across: the one it's
+ * on, or for a thing standing in the room (or in a corner), the nearest,
+ * whose floor in view (viewBand()) it's always on. */
+export function wallToFace(thing, size) {
+    const wall = wallOf(thing, size);
+    return WALLS.includes(wall) ? wall : nearestWall(thing, size)[0];
+}
+
+/** How deep the floor in view runs from `wall` in a room `size` ({ w, d })
+ * across: as deep as the room is from back to front, or the whole room if
+ * that's less (facing an end wall of a long hall, the rest is behind the
+ * camera, cut away). */
+export function viewBand(size, wall) {
+    return Math.min(size.d, viewSize({ wall, size }).d);
 }
 
 /** Whether `thing` is seen by a camera facing `view`'s wall over a floor
@@ -157,10 +183,8 @@ export function wallHeightOf(room) {
  * before the view scrolls. A wall narrower than the view stays put. */
 export function roomLayout(room, { w, h }, wall = "back") {
     const view = { wall, size: room.size };
-    const seen = viewSize(view);
-    const width = seen.w;
-    // Never deeper than the room is from back to front.
-    const depth = Math.min(room.size.d, seen.d);
+    const width = viewSize(view).w;
+    const depth = viewBand(room.size, wall);
     const wallHeight = wallHeightOf(room);
     const eyeY = wallHeight * EYE;
     const focal = FOCAL * h;
