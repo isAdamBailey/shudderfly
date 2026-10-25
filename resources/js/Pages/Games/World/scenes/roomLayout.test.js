@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { screenToGround, worldToScreen } from "../composables/projection.js";
+import { toView } from "../composables/views.js";
 import {
     itemBox,
     itemPose,
@@ -220,4 +221,65 @@ describe("the room's floor and the screen", () => {
             }
         }
     );
+});
+
+// A view from each wall (issue #183), the corners of the wall it faces, and
+// the near corners of the band of floor in front of it, in the room's frame.
+const FACED = [
+    ["back", [0, 0], [900, 0], [0, 500], [900, 500]],
+    ["right", [900, 0], [900, 500], [400, 0], [400, 500]],
+    ["front", [900, 500], [0, 500], [900, 0], [0, 0]],
+    ["left", [0, 500], [0, 0], [500, 500], [500, 0]],
+];
+
+describe("a room seen from each wall", () => {
+    it("faces back unless it says, with today's numbers", () => {
+        for (const stage of STAGES) {
+            const L = roomLayout(hall, stage, "back");
+            expect(L).toEqual(roomLayout(hall, stage));
+            expect(L.camera.x).toBe(450);
+            expect(worldToScreen(L.camera, { x: 450, z: 500 }).x).toBeCloseTo(
+                stage.w / 2
+            );
+        }
+    });
+
+    it.each(FACED)(
+        "frames the %s wall and the floor in front of it",
+        (wall, ...corners) => {
+            for (const stage of STAGES) {
+                const L = roomLayout(hall, stage, wall);
+                expect(L.camera.view.wall).toBe(wall);
+                expect(L.wallHeight).toBe(roomLayout(hall, stage).wallHeight);
+                const [left, right] = corners;
+                for (const [x, z] of corners) {
+                    // Scrolled along the wall to the corner, on a phone.
+                    const along = toView(L.camera.view, { x, z }).x;
+                    const cam = roomCamera(L, along);
+                    const p = worldToScreen(cam, { x, z });
+                    expect(p).not.toBeNull();
+                    const back = screenToGround(cam, p.x, p.y);
+                    expect(back.x).toBeCloseTo(x, 6);
+                    expect(back.z).toBeCloseTo(z, 6);
+                }
+                // The faced wall's left end is drawn left of its right end.
+                const cam = L.camera;
+                expect(
+                    worldToScreen(cam, { x: left[0], z: left[1] }).x
+                ).toBeLessThan(
+                    worldToScreen(cam, { x: right[0], z: right[1] }).x
+                );
+            }
+        }
+    );
+
+    it("pans along a long hall's back wall but not its short end", () => {
+        const back = roomLayout(longHall, STAGES[2], "back");
+        const end = roomLayout(longHall, STAGES[2], "left");
+
+        expect(back.pan.max).toBeGreaterThan(back.pan.min);
+        expect(end.pan).toEqual({ min: 250, max: 250, slack: 0 });
+        // The end wall is seen as close as the back wall is.
+        expect(end.camera.z).toBeCloseTo(back.camera.z);
+    });
 });

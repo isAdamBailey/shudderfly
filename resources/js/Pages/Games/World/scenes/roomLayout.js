@@ -1,3 +1,4 @@
+import { viewSize } from "../composables/views.js";
 import { FOOTPRINTS } from "../three/footprints.js";
 
 /**
@@ -11,6 +12,12 @@ import { FOOTPRINTS } from "../three/footprints.js";
  * has the same one (GamesWorld::ROOM_FRAME), so the world is drawn at one
  * size; with none, as in tests, it's the room's width. A room wider than
  * the view scrolls as the Butt walks.
+ *
+ * The camera can face any of the room's walls (issue #183, `view` in
+ * composables/views.js). Each is framed as the back wall is: the camera
+ * stands in front of it, seeing it at the same size, over a band of floor
+ * as deep as the room is from back to front (or the whole room, if that's
+ * less), and pans along it if it's longer than the view.
  */
 
 // How a door faces, inward off its wall: `back` is the far wall, `left` and
@@ -102,13 +109,16 @@ export function wallHeightOf(room) {
 }
 
 /** The room scene `room` ({ size: { w, d }, frame? }) on a stage `w` × `h`
- * px: { camera, wallHeight, pan }. `pan` is how far the camera may look
- * along the room ({ min, max } world x) and `slack`, how far the Butt walks
- * from the middle before the view scrolls. A room narrower than the view
- * stays put. */
-export function roomLayout(room, { w, h }) {
-    const width = room.size.w;
-    const depth = room.size.d;
+ * px, facing `wall` (back unless it says): { camera, wallHeight, pan }.
+ * `pan` is how far the camera may look along that wall ({ min, max } x in
+ * the view's frame) and `slack`, how far the Butt walks from the middle
+ * before the view scrolls. A wall narrower than the view stays put. */
+export function roomLayout(room, { w, h }, wall = "back") {
+    const view = { wall, size: room.size };
+    const seen = viewSize(view);
+    const width = seen.w;
+    // Never deeper than the room is from back to front.
+    const depth = Math.min(room.size.d, seen.d);
     const wallHeight = wallHeightOf(room);
     const eyeY = wallHeight * EYE;
     const focal = FOCAL * h;
@@ -126,6 +136,7 @@ export function roomLayout(room, { w, h }) {
         eyeRow: FIT.floorRow * h - eyeY * front,
         w,
         h,
+        view,
     };
 
     // Half the width on screen at the front edge, the narrowest the view
@@ -142,7 +153,8 @@ export function roomLayout(room, { w, h }) {
     };
 }
 
-/** `layout`'s camera aimed at world x `lookX`, kept inside the room. */
+/** `layout`'s camera aimed at `lookX` along the wall it faces, kept inside
+ * the room. */
 export function roomCamera(layout, lookX) {
     const x = Math.min(layout.pan.max, Math.max(layout.pan.min, lookX));
     if (x === layout.camera.x) return layout.camera;

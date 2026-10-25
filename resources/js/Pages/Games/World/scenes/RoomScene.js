@@ -537,6 +537,9 @@ export function createRoomScene(
     const puppets = [butt, ...things.values()];
     let reduced = null;
     let laidOut = false;
+    // The projection.js camera last applied: Room3D hands over a new one
+    // only when it moves.
+    let shown = null;
 
     /** Points the camera for the stage. */
     function layout(L) {
@@ -544,7 +547,10 @@ export function createRoomScene(
         const cam = L.camera;
         camera.far = cam.z + depth;
         applyCamera(camera, cam);
+        shown = cam;
 
+        // The daylight comes through the open front, so it follows the
+        // camera along the back wall only (issue #183 Phase 2 turns it).
         aimLight(cam.x);
         const shadow = key.shadow.camera;
         const reach = Math.max(span, depth);
@@ -581,8 +587,9 @@ export function createRoomScene(
             showLamps();
             changed = true;
         }
-        if (view.camera && view.camera.x !== camera.position.x) {
+        if (view.camera && view.camera !== shown) {
             applyCamera(camera, view.camera);
+            shown = view.camera;
             aimLight(view.camera.x);
             changed = true;
         }

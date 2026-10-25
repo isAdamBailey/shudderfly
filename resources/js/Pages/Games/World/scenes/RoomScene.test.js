@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createCastKit } from "@/Components/Games/Cast/three/castMesh.js";
 import { frameBorder } from "../three/pictureFrame.js";
 import { createRoomScene } from "./RoomScene.js";
-import { roomLayout } from "./roomLayout.js";
+import { roomCamera, roomLayout } from "./roomLayout.js";
 
 const createCanvas = () => ({ width: 1, height: 1, getContext: () => null });
 
@@ -244,6 +244,31 @@ describe("the room's scene graph", () => {
         expect(fill(build(hall, "halloween", true))).toBeLessThan(
             fill(build(hall, "", true))
         );
+    });
+
+    it("aims the camera again only when it's handed a new one", () => {
+        const long = { ...hall, size: { w: 2200, d: 500 }, frame: 900 };
+        const graph = build(long);
+        const L = roomLayout(long, { w: 1000, h: 700 });
+        graph.layout(L);
+        graph.sync(view({ camera: L.camera }), 0);
+
+        expect(graph.sync(view({ camera: L.camera }), 0)).toBe(false);
+        const along = roomCamera(L, 1600);
+        expect(graph.sync(view({ camera: along }), 0)).toBe(true);
+        expect(graph.camera.position.x).toBe(along.x);
+        expect(graph.camera.rotation.y).toBe(0);
+    });
+
+    it("turns the camera to the wall its view faces", () => {
+        const graph = build();
+        const L = roomLayout(hall, { w: 1000, h: 700 }, "left");
+        graph.layout(L);
+
+        expect(graph.camera.rotation.y).toBeCloseTo(Math.PI / 2);
+        // Standing in the room's frame, out past the right wall's side.
+        expect(graph.camera.position.x).toBeCloseTo(L.camera.z);
+        expect(graph.camera.position.z).toBeCloseTo(500 - L.camera.x);
     });
 
     it("walks the Butt about the floor", () => {
