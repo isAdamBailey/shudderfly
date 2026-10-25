@@ -298,8 +298,25 @@ class MovieCastTest extends TestCase
         $this->assertDatabaseMissing('movie_favorites', ['tmdb_id' => 862]);
     }
 
+    public function test_favorites_come_a_rack_at_a_time_newest_first_with_posters(): void
+    {
+        $this->actingAs(User::factory()->create());
+        MovieFavorite::query()->create(['tmdb_id' => 862, 'title' => 'Toy Story', 'image_path' => '/toy.jpg']);
+        $this->travel(1)->minutes();
+        MovieFavorite::query()->create(['tmdb_id' => 12, 'title' => 'Finding Nemo', 'image_path' => null]);
+
+        $this->getJson(route('movie-cast.favorites.index'))
+            ->assertOk()
+            ->assertJsonPath('movies.total', 2)
+            ->assertJsonPath('movies.data', [
+                ['id' => 12, 'title' => 'Finding Nemo', 'cover' => null],
+                ['id' => 862, 'title' => 'Toy Story', 'cover' => 'https://image.tmdb.org/t/p/w200/toy.jpg'],
+            ]);
+    }
+
     public function test_movie_cast_routes_require_authentication(): void
     {
+        $this->getJson(route('movie-cast.favorites.index'))->assertUnauthorized();
         $this->get(route('movie-cast.index'))->assertRedirect(route('login'));
         $this->getJson(route('movie-cast.search', ['query' => 'Toy Story']))
             ->assertUnauthorized();

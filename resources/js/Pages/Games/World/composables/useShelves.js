@@ -13,8 +13,9 @@ import {
  * scenes/bookshelf.js draws it. Books come a page at a time from
  * `fetchPage(shelf, page)` (books.category, the Books pages' own lists), as
  * `show(x0, x1, wall)` says that stretch of a wall is in view, so a long
- * shelf fills in as the Butt walks along it. A page that fails is asked
- * for again a little later, a few times.
+ * shelf fills in as the Butt walks along it. A movie rack's (`holds:
+ * "movies"`) come the same way, from the Movies page's favourites. A page
+ * that fails is asked for again a little later, a few times.
  * `size` is the room's ({ w, d }), to stand books on a wall but the back.
  */
 
@@ -100,20 +101,23 @@ export function useShelves(shelves = [], { fetchPage, size }) {
 /** Book `book` in slot `i` of `shelf` (the room's `s`th, in a room `size`
  * across) as an interactable, where it stands in the room and on the
  * shelf's wall. Its `width` × `height` is the book as drawn, for its
- * button. */
+ * button. On a movie rack (`holds: "movies"`) it's a favourite movie
+ * (`type: "movie"`) as movie-cast.favorites.index sends it, with its
+ * poster for a `cover`. */
 function bookItem(shelf, s, book, i, size) {
     const slot = bookSlot(shelf, i);
     const look = bookLook(i, s);
     const wall = shelfWall(shelf);
+    const type = shelf.holds === "movies" ? "movie" : "book";
     return {
         id: `book-${shelf.id}-${i}`,
-        type: "book",
+        type,
         ...onShelfWall(shelf, size, slot),
         ...(wall === "back" ? {} : { wall }),
         width: look.width,
         height: look.height,
         label: book.title,
-        cover: book.cover_image?.media_path ?? null,
-        book,
+        cover: book.cover ?? book.cover_image?.media_path ?? null,
+        [type]: book,
     };
 }

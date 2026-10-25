@@ -6,6 +6,7 @@ use App\Http\Controllers\BookController;
 use App\Http\Controllers\GameController;
 use App\Models\Book;
 use App\Models\Category;
+use App\Models\MovieFavorite;
 use App\Models\Page;
 use App\Models\SiteSetting;
 use App\Models\Song;
@@ -631,6 +632,36 @@ class GamesWorldScenesTest extends TestCase
         $end = $this->shelfEnd($last);
         $this->assertGreaterThanOrEqual($end + 200, $hall['size']['w']);
         $this->assertSame($hall['size']['w'], collect($hall['interactables'])->firstWhere('id', 'upstairs')['x']);
+    }
+
+    public function test_the_library_hall_racks_the_favourite_movies_on_its_front_wall(): void
+    {
+        // No favourites, no rack.
+        $this->assertNull(collect(GamesWorld::scenes()['library.hall']['shelves'])->firstWhere('id', 'movies'));
+
+        foreach (range(1, GamesWorld::LIBRARY_MOVIE_SHELF + 5) as $n) {
+            MovieFavorite::query()->create(['tmdb_id' => $n, 'title' => "Movie {$n}"]);
+        }
+        $hall = GamesWorld::scenes()['library.hall'];
+        $movies = collect($hall['shelves'])->firstWhere('id', 'movies');
+
+        $this->assertSame('movies', $movies['holds']);
+        // Not a list of books.category, whatever a category is called.
+        $this->assertArrayNotHasKey('category', $movies);
+        $this->assertSame(GamesWorld::LIBRARY_MOVIE_SHELF, $movies['perPage']);
+        $this->assertSame('front', $movies['wall']);
+        $this->assertSame('Favorite movies', $movies['label']);
+        // No more than fit along a wall, and the hall long enough for them.
+        $this->assertSame(GamesWorld::LIBRARY_MOVIE_SHELF, $movies['count']);
+        $this->assertGreaterThanOrEqual($this->shelfEnd($movies) + 200, $hall['size']['w']);
+        // A reading lamp over them too, still within the budget, all on the switch.
+        $this->assertContains('reading-front-1', array_column($hall['lights'], 'id'));
+        $this->assertLessThanOrEqual(GamesWorld::ROOM_LIGHTS_MAX, count($hall['lights']));
+        $switch = collect($hall['interactables'])->firstWhere('id', 'light-switch');
+        $this->assertSame(array_column($hall['lights'], 'id'), $switch['light']);
+        // Clear of the front door and the stairs round the corners.
+        $this->test_everything_against_a_wall_fits_along_it();
+        $this->test_nothing_against_a_wall_overlaps_anything_else_on_it();
     }
 
     public function test_the_library_hall_has_a_seasonal_shelf(): void

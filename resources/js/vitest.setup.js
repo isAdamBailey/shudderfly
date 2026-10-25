@@ -114,6 +114,8 @@ export const ROUTE_MAPPINGS = {
     "movie-cast.search": "/api/movie-cast/search",
     "movie-cast.credits": (params) => `/api/movie-cast/${params}/credits`,
     "movie-cast.details": (params) => `/api/movie-cast/${params}/details`,
+    "movie-cast.favorites.index": (params) =>
+        `/api/movie-cast/favorites?${new URLSearchParams(params)}`,
     "movie-cast.favorites.store": "/movie-cast/favorites",
     "movie-cast.favorites.destroy": (params) =>
         `/movie-cast/favorites/${params}`,

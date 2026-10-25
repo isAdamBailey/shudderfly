@@ -5,6 +5,7 @@ import drum from "./drum.js";
 import game from "./game.js";
 import harp from "./harp.js";
 import minigame from "./minigame.js";
+import movie from "./movie.js";
 import organ from "./organ.js";
 import radio from "./radio.js";
 import toy from "./toy.js";
@@ -29,6 +30,7 @@ const interactions = {
     game,
     harp,
     minigame,
+    movie,
     organ,
     radio,
     toy,

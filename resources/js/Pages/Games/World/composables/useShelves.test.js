@@ -126,6 +126,40 @@ describe("useShelves", () => {
         });
     });
 
+    it("stands a movie rack's favourites on it as movies, posters for covers", async () => {
+        const movies = {
+            ...shelf,
+            id: "movies",
+            category: undefined,
+            holds: "movies",
+            wall: "front",
+        };
+        const fetchPage = vi.fn(() =>
+            Promise.resolve([
+                { id: 862, title: "Toy Story", cover: "https://p.test/t.jpg" },
+                { id: 12, title: "Finding Nemo", cover: null },
+            ])
+        );
+        const { items, show } = useShelves([movies], {
+            fetchPage,
+            size: { w: 1200, d: 450 },
+        });
+
+        show(0, 500, "front");
+        await flushPromises();
+
+        expect(fetchPage).toHaveBeenCalledWith(movies, 1);
+        expect(items.value[0]).toMatchObject({
+            id: "book-movies-0",
+            type: "movie",
+            label: "Toy Story",
+            cover: "https://p.test/t.jpg",
+            movie: { id: 862 },
+        });
+        expect(items.value[0]).not.toHaveProperty("book");
+        expect(items.value[1].cover).toBeNull();
+    });
+
     it("carries a list on from a shelf's first", async () => {
         const fetchPage = vi.fn((s, p) =>
             Promise.resolve(page((p - 1) * 10, 10))

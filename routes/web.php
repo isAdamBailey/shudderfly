@@ -105,6 +105,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/movie-cast/search', [MovieCastController::class, 'search'])->name('movie-cast.search');
     Route::get('/api/movie-cast/{id}/credits', [MovieCastController::class, 'credits'])->name('movie-cast.credits');
     Route::get('/api/movie-cast/{id}/details', [MovieCastController::class, 'details'])->name('movie-cast.details');
+    Route::get('/api/movie-cast/favorites', [MovieCastController::class, 'favoritesPage'])->name('movie-cast.favorites.index');
     Route::post('/movie-cast/favorites', [MovieCastController::class, 'storeFavorite'])->name('movie-cast.favorites.store');
     Route::delete('/movie-cast/favorites/{tmdbId}', [MovieCastController::class, 'destroyFavorite'])->name('movie-cast.favorites.destroy');
     Route::post('/movie-cast/share', [MovieCastController::class, 'share'])->name('movie-cast.share');
