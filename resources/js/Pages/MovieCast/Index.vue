@@ -546,6 +546,14 @@ onBeforeUnmount(() => {
                     <h3 class="text-lg font-semibold text-gray-100">
                         {{ t("movie.favorites_heading") }}
                     </h3>
+                    <p class="text-sm text-gray-400">
+                        🎬
+                        {{
+                            t("movie.favorites_library_note", {
+                                world: t("games.world.title"),
+                            })
+                        }}
+                    </p>
                     <p v-if="!favoritesList.length" class="text-gray-400">
                         {{ t("movie.favorites_empty") }}
                     </p>

@@ -1507,6 +1507,56 @@ describe("GamesWorld Library shelves", () => {
         await nextTick();
         expect(wrapper.find("[role='dialog']").exists()).toBe(false);
     });
+
+    it("fills a movie rack from the favourites, and a movie's card leads to it", async () => {
+        const [room] = Object.values(shelfRoom).slice(1);
+        const movieRoom = {
+            road: shelfRoom.road,
+            "library.category-1": {
+                ...room,
+                shelves: [
+                    {
+                        id: "movies",
+                        holds: "movies",
+                        count: 2,
+                        x: 240,
+                        rows: 3,
+                        span: 110,
+                        perPage: 24,
+                    },
+                ],
+            },
+        };
+        const get = spy(axios, "get").mockResolvedValue({
+            data: {
+                movies: {
+                    data: [
+                        { id: 862, title: "Toy Story", cover: "/toy.jpg" },
+                        { id: 12, title: "Finding Nemo", cover: null },
+                    ],
+                },
+            },
+        });
+        wrapper = await mountWorld(movieRoom, {
+            link: { scene: "library.category-1", visit: "a" },
+        });
+        await showing(wrapper, "button.shelf-book");
+
+        expect(get).toHaveBeenCalledWith("/api/movie-cast/favorites?page=1");
+        const button = wrapper.get("button.shelf-book");
+        expect(button.attributes("aria-label")).toBe("Toy Story");
+        expect(button.get(".shelf-book-cover").attributes("src")).toBe(
+            "/toy.jpg"
+        );
+
+        await button.trigger("focus");
+        await button.trigger("click");
+        await showing(wrapper, "[role='dialog']");
+        expect(wrapper.get("[role='dialog'] h2").text()).toBe("Toy Story");
+        expect(wrapper.get("[role='dialog'] a").attributes("href")).toContain(
+            "movieId=862"
+        );
+    });
 });
 
 describe("GamesWorld together", () => {

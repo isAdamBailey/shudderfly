@@ -7,6 +7,7 @@ use App\Http\Controllers\GameController;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Book;
 use App\Models\Category;
+use App\Models\MovieFavorite;
 use App\Models\Page;
 use App\Models\SiteSetting;
 use App\Models\Song;
@@ -58,6 +59,11 @@ final class GamesWorld
      * Forgotten and seasonal shelves): three columns, within one page of
      * books.category. */
     public const LIBRARY_HALL_SHELF = 9;
+
+    /** The most movies the hall's movie rack holds (the Movies page's
+     * favourites, newest first): as many columns as fit along
+     * LIBRARY_WALL_SHELF. */
+    public const LIBRARY_MOVIE_SHELF = 8 * self::LIBRARY_SHELF_ROWS;
 
     /** How much of a room's width the camera shows at once, the same in
      * every room so everything in the world is drawn at one size (walls are
@@ -518,21 +524,25 @@ final class GamesWorld
         $landingSize = ['w' => $landingW, 'd' => $libraryD];
 
         // The hall: the front door at the left end, then the special
-        // shelves, then the stairs up at the right.
+        // shelves, then the stairs up at the right; across from them, on
+        // the front wall, the rack of favourite movies.
         $shelves = self::hallShelves();
-        $hallW = max($roomW, (int) (collect($shelves)->max(fn ($shelf) => self::shelfEnd($shelf)) ?? 0) + 220);
+        $movies = self::movieShelf();
+        $allShelves = array_values(array_filter([...$shelves, $movies]));
+        $hallW = max($roomW, (int) (collect($allShelves)->max(fn ($shelf) => self::shelfEnd($shelf)) ?? 0) + 220);
+        $hallSize = ['w' => $hallW, 'd' => $libraryD];
         $hallLights = [
             self::ceilingLamp($hallW),
-            ...($shelves ? self::readingLamps($shelves[0]['x'], self::shelfEnd(end($shelves)), self::ROOM_LIGHTS_MAX - 1) : []),
+            ...($shelves ? self::readingLamps($shelves[0]['x'], self::shelfEnd(end($shelves)), self::ROOM_LIGHTS_MAX - ($movies ? 2 : 1)) : []),
+            ...($movies ? self::readingLamps($movies['x'], self::shelfEnd($movies), 1, 'front', $hallSize) : []),
         ];
-        $hallSize = ['w' => $hallW, 'd' => $libraryD];
         $scenes = [
             'library.hall' => self::room('library_hall', [
                 'size' => $hallSize,
                 'spawn' => ['x' => 300, 'z' => 300],
                 'walls' => ['back' => 'brick', 'sides' => 'plaster', 'floor' => 'wood'],
                 'lights' => $hallLights,
-                ...($shelves ? ['shelves' => $shelves] : []),
+                ...($allShelves ? ['shelves' => $allShelves] : []),
             ], [
                 self::roomDoor('front-door', 110, 'road', 'library', exit: true),
                 self::lightSwitch(220, $hallLights),
@@ -683,6 +693,25 @@ final class GamesWorld
         return $shelves;
     }
 
+    /** The hall's movie rack on the front wall: the Movies page's
+     * favourites (MovieCastController::favoritesPage()), up to
+     * LIBRARY_MOVIE_SHELF, or null with none. */
+    private static function movieShelf(): ?array
+    {
+        // Counted live, as hallShelves() counts the books, not picked once
+        // a day (pickedToday()): a movie favourited on the Movies page is
+        // on the rack the next visit, as that page promises.
+        $count = min(MovieFavorite::count(), self::LIBRARY_MOVIE_SHELF);
+
+        return $count === 0 ? null : [
+            ...self::shelf('movies', null, $count, self::LIBRARY_SHELVES_FROM, 'front'),
+            'holds' => 'movies',
+            // The whole rack in one page of movie-cast.favorites.index.
+            'perPage' => self::LIBRARY_MOVIE_SHELF,
+            'label' => 'messages.games.world.shelves.movies',
+        ];
+    }
+
     /** A category room's shelves of `count` books: one bookcase along the
      * back wall from LIBRARY_SHELVES_FROM, or, longer than
      * LIBRARY_WALL_SHELF, its first half of columns there and the rest
@@ -705,14 +734,15 @@ final class GamesWorld
      * along it as you face it (not turned into the room's x, as onWall()
      * turns a point: a bookcase is laid out along its wall): `count` books
      * of the Books pages' list `category` (books.category, `perPage` a
-     * page), from its `first`, `rows` high and a book every `span` along.
+     * page; none for a rack that `holds` something else), from its
+     * `first`, `rows` high and a book every `span` along.
      * The client fetches the books as they come into view;
      * scenes/bookshelf.js lays them out the same way (shelfEnd()). */
-    private static function shelf(string $id, string $category, int $count, int $from, string $wall = 'back', int $first = 0): array
+    private static function shelf(string $id, ?string $category, int $count, int $from, string $wall = 'back', int $first = 0): array
     {
         return [
             'id' => $id,
-            'category' => $category,
+            ...($category === null ? [] : ['category' => $category]),
             'count' => $count,
             'x' => $from,
             'rows' => self::LIBRARY_SHELF_ROWS,

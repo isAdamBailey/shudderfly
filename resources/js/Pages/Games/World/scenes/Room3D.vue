@@ -142,10 +142,17 @@ const view = computed(() =>
 );
 
 // A Library room's books, fetched a page at a time from the Books pages'
-// own lists as their stretch of shelf comes near the view.
+// own lists as their stretch of shelf comes near the view; the hall's movie
+// rack from the Movies page's favourites.
 const shelves = useShelves(props.scene.shelves, {
     size: props.scene.size,
     async fetchPage(shelf, page) {
+        if (shelf.holds === "movies") {
+            const { data } = await axios.get(
+                route("movie-cast.favorites.index", { page })
+            );
+            return data.movies.data;
+        }
         const { data } = await axios.get(
             route("books.category", { categoryName: shelf.category, page })
         );

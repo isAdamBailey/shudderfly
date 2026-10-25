@@ -8,6 +8,8 @@ use App\Models\MovieFavorite;
 use App\Models\SiteSetting;
 use App\Models\User;
 use App\Services\UserTaggingService;
+use App\Support\GamesWorld;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,12 +31,7 @@ class MovieCastController extends Controller
 
         return Inertia::render('MovieCast/Index', [
             'tmdbImageBaseUrl' => config('services.tmdb.base_image_url'),
-            'favorites' => MovieFavorite::query()
-                ->orderByDesc('created_at')
-                ->get()
-                ->map(fn (MovieFavorite $favorite) => $favorite->toFrontendArray())
-                ->values()
-                ->all(),
+            'favorites' => $this->favoritesPayload(),
             'title' => $request->query('title'),
             'movieId' => is_numeric($movieId) ? (int) $movieId : null,
         ]);
@@ -178,6 +175,25 @@ class MovieCastController extends Controller
         ]);
     }
 
+    /**
+     * The favourites a rack at a time, newest first, each with its poster's
+     * URL as its `cover`: the Games World Library's movie rack
+     * (GamesWorld::movieShelf()).
+     */
+    public function favoritesPage(): JsonResponse
+    {
+        $base = config('services.tmdb.base_image_url');
+        $movies = $this->newestFavorites()
+            ->paginate(GamesWorld::LIBRARY_MOVIE_SHELF)
+            ->through(fn (MovieFavorite $favorite) => [
+                'id' => $favorite->tmdb_id,
+                'title' => $favorite->title,
+                'cover' => $favorite->image_path ? $base.$favorite->image_path : null,
+            ]);
+
+        return response()->json(['movies' => $movies]);
+    }
+
     public function storeFavorite(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -261,10 +277,16 @@ class MovieCastController extends Controller
             ->with('success', __('messages.movie.shared'));
     }
 
+    /** The favourites, newest first, as the Movies page and the Games World
+     * Library's movie rack both list them. */
+    private function newestFavorites(): Builder
+    {
+        return MovieFavorite::query()->orderByDesc('created_at')->orderByDesc('id');
+    }
+
     private function favoritesPayload(): array
     {
-        return MovieFavorite::query()
-            ->orderByDesc('created_at')
+        return $this->newestFavorites()
             ->get()
             ->map(fn (MovieFavorite $favorite) => $favorite->toFrontendArray())
             ->values()
