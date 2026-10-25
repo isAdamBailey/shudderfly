@@ -17,7 +17,7 @@ function fakeKit() {
             const puppet = {
                 id,
                 options,
-                group: { position },
+                group: { position, rotation: { y: 0 } },
                 set: vi.fn(),
                 setMove: vi.fn(),
                 setReducedMotion: vi.fn(),

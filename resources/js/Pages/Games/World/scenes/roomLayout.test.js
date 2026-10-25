@@ -8,6 +8,7 @@ import {
     roomLayout,
     roomLook,
     ROOM_SIZES,
+    wallOf,
 } from "./roomLayout.js";
 
 const hall = {
@@ -281,5 +282,35 @@ describe("a room seen from each wall", () => {
         expect(end.pan).toEqual({ min: 250, max: 250, slack: 0 });
         // The end wall is seen as close as the back wall is.
         expect(end.camera.z).toBeCloseTo(back.camera.z);
+    });
+});
+
+describe("things on a wall", () => {
+    it("hang on the front wall facing into the room", () => {
+        const pose = itemPose({ wall: "front", x: 300, z: 500 });
+        expect(pose.x).toBeCloseTo(300);
+        expect(pose.z).toBe(497);
+        expect(pose.turn).toBeCloseTo(Math.PI);
+    });
+
+    it("know which wall they're on: their own, or the one they're up against", () => {
+        const size = { w: 900, d: 500 };
+        expect(wallOf({ wall: "left", x: 0, z: 200 }, size)).toBe("left");
+        // Hung up the back wall, or standing on a counter against it.
+        expect(wallOf({ x: 300, y: 120 }, size)).toBe("back");
+        expect(wallOf({ x: 300, z: 17, y: 90 }, size)).toBe("back");
+        // A sconce a little out from the left wall, and one on the right.
+        expect(wallOf({ x: 20, z: 260, y: 270 }, size)).toBe("left");
+        expect(wallOf({ x: 880, z: 260, y: 270 }, size)).toBe("right");
+        // Up in the middle of the room, or on the floor by a wall.
+        expect(wallOf({ x: 450, z: 250, y: 300 }, size)).toBeNull();
+        expect(wallOf({ x: 300, z: 0 }, size)).toBeNull();
+    });
+
+    it("are framed with the floor in front of the wall in view", () => {
+        const long = { size: { w: 2200, d: 500 } };
+        expect(roomLayout(long, STAGES[0]).band).toBe(500);
+        expect(roomLayout(long, STAGES[0], "left").band).toBe(500);
+        expect(roomLayout(hall, STAGES[0], "front").band).toBe(500);
     });
 });

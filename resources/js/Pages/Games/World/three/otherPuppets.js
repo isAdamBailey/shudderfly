@@ -1,13 +1,14 @@
 /**
  * Other people's butts in a scene (issue #174), for the road and the rooms
  * alike: a `castMesh("butt")` each, made as they turn up and dropped as they
- * go. Returns { sync(others, place, dt), setSize(size),
+ * go. Returns { sync(others, place, dt), setSize(size), setTurn(yaw),
  * setReducedMotion(on), dispose() }.
  */
 export function createOtherPuppets(kit, scene) {
     // User id → puppet.
     const puppets = new Map();
     let size = null;
+    let turn = 0;
     let reduced = false;
 
     /** Stands everyone in `others` (useOthers' { id, x, z, lane, facing,
@@ -26,6 +27,7 @@ export function createOtherPuppets(kit, scene) {
             if (!puppet) {
                 puppet = kit.castMesh("butt", size ? { size } : {});
                 puppet.setReducedMotion(reduced);
+                puppet.group.rotation.y = turn;
                 scene.add(puppet.group);
                 puppets.set(other.id, puppet);
                 changed = true;
@@ -51,6 +53,13 @@ export function createOtherPuppets(kit, scene) {
         setSize(next) {
             size = next;
             for (const puppet of puppets.values()) puppet.set({ size });
+        },
+        /** Turns everyone `yaw` about y, to face a camera turned as much. */
+        setTurn(yaw) {
+            turn = yaw;
+            for (const puppet of puppets.values()) {
+                puppet.group.rotation.y = yaw;
+            }
         },
         setReducedMotion(on) {
             reduced = on;

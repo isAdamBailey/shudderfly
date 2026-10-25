@@ -4,7 +4,7 @@ import { canvasTexture } from "./useWorldRenderer.js";
 
 /**
  * What a room's walls and floor look like, by the names its scene data uses
- * (issue #130): `walls: { back, sides?, floor }`. The server lists the same
+ * (issue #130): `walls: { back, sides?, front?, floor }`. The server lists the same
  * names (GamesWorld::WALLS / FLOORS) and a test keeps the two in step. Each
  * look is a base colour and a pattern drawn once into a small tiling
  * texture, so a room is a handful of materials. The seasons restyle rooms
@@ -65,9 +65,10 @@ export const FLOORS = {
 // Skirting and the ceiling edge.
 export const TRIM = "#78350f";
 
-// The daylight in through a room's open front: a sky and ground fill and a
-// key light, by seasonal theme (HandleInertiaRequests::THEMES), "" for the
-// rest of the year. `dim` scales the daylight (Halloween dusk).
+// The daylight from behind the camera, whichever wall it faces: a sky and
+// ground fill and a key light, by seasonal theme
+// (HandleInertiaRequests::THEMES), "" for the rest of the year. `dim`
+// scales the daylight (Halloween dusk).
 // A seasonal room light is an entry here.
 const DAYLIGHT = {
     "": { sky: "#fff7ed", ground: "#78350f", key: "#fde68a" },
@@ -95,8 +96,8 @@ export const NIGHT = {
     key: "#93c5fd",
 };
 
-// Seasonal decorations, by theme: emoji hung on every room's back wall, at
-// `u` across it and `v` up it (shares of the wall), `size` units tall. High
+// Seasonal decorations, by theme: emoji hung on every wall of every room,
+// at `u` across it and `v` up it (shares of the wall), `size` units tall. High
 // on the wall, above the doors and anything hung there.
 const garland = (glyphs, v = 0.86, size = 40) =>
     glyphs.map((emoji, i) => ({
@@ -197,9 +198,11 @@ const PATTERNS = {
  * wood for a name this client doesn't know. */
 export function roomLook(walls = {}) {
     const back = own(WALLS, walls.back) ?? WALLS.plaster;
+    const sides = own(WALLS, walls.sides) ?? back;
     return {
         back,
-        sides: own(WALLS, walls.sides) ?? back,
+        sides,
+        front: own(WALLS, walls.front) ?? sides,
         floor: own(FLOORS, walls.floor) ?? FLOORS.wood,
     };
 }

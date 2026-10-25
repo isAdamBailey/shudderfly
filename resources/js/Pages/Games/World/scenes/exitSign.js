@@ -35,11 +35,15 @@ export function exitSignPose(item) {
 }
 
 /** The signs over `room`'s ways out, reading `word` (translated), as a
- * group to add to the scene; `dispose()` frees what they share. */
+ * group to add to the scene, with each door's sign in `signs` (door →
+ * sign);
+ * `dispose()` frees what they share. */
 export function exitSigns(THREE, room, word) {
     const group = new THREE.Group();
     const doors = room.interactables.filter((item) => leadsOut(room, item));
-    if (doors.length === 0) return { group, dispose() {} };
+    // Door → its sign.
+    const signs = new Map();
+    if (doors.length === 0) return { group, signs, dispose() {} };
 
     const { width, height, depth } = EXIT_SIGN;
     // The word as big as the face takes it, glowing: drawn soft and wide,
@@ -93,10 +97,12 @@ export function exitSigns(THREE, room, word) {
         sign.position.set(pose.x, pose.y, pose.z + depth / 2);
         sign.rotation.y = pose.turn;
         group.add(sign);
+        signs.set(door, sign);
     }
 
     return {
         group,
+        signs,
         dispose() {
             for (const thing of [
                 housing,

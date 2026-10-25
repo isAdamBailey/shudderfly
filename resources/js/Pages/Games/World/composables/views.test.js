@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { fromView, toView, turned, viewSize, viewYaw, WALLS } from "./views.js";
+import {
+    fromView,
+    toView,
+    turned,
+    viewSize,
+    viewYaw,
+    WALLS,
+    wallBehind,
+} from "./views.js";
 
 const size = { w: 2200, d: 500 };
 const POINTS = [
@@ -56,5 +64,14 @@ describe("views", () => {
         expect(viewSize({ wall: "front", size })).toEqual(size);
         expect(viewSize({ wall: "left", size })).toEqual({ w: 500, d: 2200 });
         expect(viewSize({ wall: "right", size })).toEqual({ w: 500, d: 2200 });
+    });
+
+    it("knows the wall behind the camera, across the room", () => {
+        expect(WALLS.map(wallBehind)).toEqual([
+            "front",
+            "left",
+            "back",
+            "right",
+        ]);
     });
 });
