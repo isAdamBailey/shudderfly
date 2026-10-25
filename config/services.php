@@ -75,19 +75,28 @@ return [
         'api_key' => env('AI_VOICE_API_KEY'),
         'endpoint' => env('AI_VOICE_ENDPOINT', 'https://api.deepinfra.com/v1/audio/speech'),
         'model' => env('AI_VOICE_MODEL', 'hexgrad/Kokoro-82M'),
-        // How long any clip waits on the provider, live plays included: the
-        // client falls back after at most 5 s, so this only decides whether
-        // a slow (and already billed) page clip is kept for the next play or
-        // thrown away and counted towards a pause. Two attempts at this must
-        // finish inside a queue worker's default 60 s timeout (see
-        // GenerateAiVoiceClip::$timeout).
+        // How long a clip requested over HTTP (a live play or a prefetch)
+        // waits on the provider: the client falls back after at most 5 s, so
+        // this only decides whether a slow (and already billed) clip is kept
+        // for the next play or thrown away and counted towards a pause.
         'timeout' => (int) env('AI_VOICE_TIMEOUT') ?: 20,
+        // The same for a clip made in the background (GenerateAiVoiceClip),
+        // where nobody is waiting, so a long page or summary has time to
+        // come back. Two attempts at this, plus the upload, must finish
+        // inside GenerateAiVoiceClip::$timeout.
+        'job_timeout' => (int) env('AI_VOICE_JOB_TIMEOUT') ?: 30,
         // Dollars per 1M input characters; only used to estimate cost in reports.
         'price_per_million' => (float) env('AI_VOICE_PRICE_PER_MILLION') ?: 0.62,
         'voices' => [
             'en' => ['af_heart', 'af_bella', 'af_nova', 'am_puck', 'am_michael', 'bf_emma', 'bm_george', 'am_santa'],
             'es' => ['ef_dora', 'em_alex', 'em_santa'],
             'fr' => ['ff_siwis'],
+        ],
+        // The voice a seasonal theme (HandleInertiaRequests::getCurrentTheme)
+        // speaks in, per locale, for people who never picked one. Used only
+        // while it is in that locale's list above; French has no Santa voice.
+        'seasonal_voices' => [
+            'christmas' => ['en' => 'am_santa', 'es' => 'em_santa'],
         ],
     ],
 

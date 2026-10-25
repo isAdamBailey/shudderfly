@@ -9,6 +9,7 @@ use App\Models\MessageComment;
 use App\Models\MessageReaction;
 use App\Models\User;
 use App\Support\AiFeature;
+use App\Support\AiVoice;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
@@ -37,6 +38,37 @@ class UserWeeklyOverviewService
     public function prepareForBatchRun(): void
     {
         $this->popularityService->warmReadCountCache(Book::class);
+    }
+
+    /**
+     * Saves $user's overview and warms the AI voice clips its profile
+     * speaks, so the first listener isn't left waiting on the provider.
+     */
+    public function store(User $user, string $overview): void
+    {
+        $overview = trim($overview);
+
+        $user->forceFill([
+            'weekly_profile_overview' => $overview,
+            'weekly_profile_overview_generated_at' => now(),
+        ])->save();
+
+        if ($overview !== '') {
+            AiVoice::warm(fn (string $locale) => self::spokenOverviews($user, $overview, $locale));
+        }
+    }
+
+    /**
+     * What speakUserSummary() in Users/Show.vue says for this overview: the
+     * owner hears a welcome first, everyone else the user's name.
+     *
+     * @return list<string>
+     */
+    public static function spokenOverviews(User $user, string $overview, string $locale): array
+    {
+        $welcome = __('messages.profile.welcome_with_name', ['app_name' => config('app.name'), 'name' => $user->name], $locale);
+
+        return ["{$welcome} {$overview}", "{$user->name}. {$overview}"];
     }
 
     public function generateOverview(User $user): string

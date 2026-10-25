@@ -79,6 +79,10 @@ class AiVoiceService
 
     private const PAUSED_KEY = 'ai-voice:provider-paused';
 
+    // Seconds to wait on the provider instead of services.ai_voice.timeout;
+    // see withTimeout().
+    private ?int $timeout = null;
+
     private const FAILURES_KEY = 'ai-voice:provider-failures';
 
     /**
@@ -123,6 +127,18 @@ class AiVoiceService
             // already fallen back to the device voice, so this is not an error.
             throw new AiVoiceUnavailable('Timed out waiting for another request to generate the same clip');
         }
+    }
+
+    /**
+     * A copy that waits $seconds on the provider, for a caller with nobody
+     * waiting on it (a queued job) that can let a long clip finish.
+     */
+    public function withTimeout(int $seconds): static
+    {
+        $service = clone $this;
+        $service->timeout = $seconds;
+
+        return $service;
     }
 
     /**
@@ -440,14 +456,15 @@ class AiVoiceService
     }
 
     /**
-     * The same for a live play as for a clip made ahead of time. The client
-     * has fallen back to the device voice long before either, so a shorter
-     * live wait saved nothing: a slow page clip was billed, thrown away and
-     * counted towards a pause, and the next tap paid for it again.
+     * The same for a live play as for a prefetch. The client has fallen
+     * back to the device voice long before either, so a shorter live wait
+     * saved nothing: a slow page clip was billed, thrown away and counted
+     * towards a pause, and the next tap paid for it again. A queued job
+     * waits longer (withTimeout()).
      */
     private function timeoutSeconds(): int
     {
-        return (int) config('services.ai_voice.timeout');
+        return $this->timeout ?? (int) config('services.ai_voice.timeout');
     }
 
     private function httpClient(): PendingRequest

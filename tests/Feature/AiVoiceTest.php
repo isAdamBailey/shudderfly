@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\GenerateAiVoiceClip;
 use App\Mail\AiProviderQuotaAlertMail;
 use App\Models\AiVoiceClip;
 use App\Models\SiteSetting;
@@ -196,6 +197,33 @@ class AiVoiceTest extends TestCase
         $this->postJson(route('ai-voice.prefetch'), ['text' => 'ahead', 'locale' => 'en'])->assertOk();
 
         $this->assertSame(['live' => 20, 'ahead' => 20], $timeouts);
+    }
+
+    public function test_a_queued_clip_waits_on_the_provider_for_the_job_timeout(): void
+    {
+        // Nobody is waiting on a queued clip, so a long one may finish.
+        config(['services.ai_voice.timeout' => 20, 'services.ai_voice.job_timeout' => 30]);
+        $timeouts = [];
+        Http::fake(function ($request, array $options) use (&$timeouts) {
+            $timeouts[] = $options['timeout'];
+
+            return Http::response(self::AUDIO, 200, ['Content-Type' => 'audio/mpeg']);
+        });
+
+        $this->assertTrue((new GenerateAiVoiceClip('queued', 'en'))->handle(app(AiVoiceService::class)));
+        $this->speak(['text' => 'live'])->assertOk();
+
+        $this->assertSame([30, 20], $timeouts);
+    }
+
+    public function test_a_queued_clip_finishes_inside_the_job_timeout(): void
+    {
+        // Two attempts (3 s connect each), the retry sleep and the upload.
+        $this->assertGreaterThanOrEqual(
+            2 * (3 + config('services.ai_voice.job_timeout')) + 10,
+            (new GenerateAiVoiceClip('x', 'en'))->timeout,
+        );
+        $this->assertLessThan(config('queue.connections.database.retry_after'), (new GenerateAiVoiceClip('x', 'en'))->timeout);
     }
 
     public function test_a_timeout_is_not_retried(): void
@@ -543,6 +571,12 @@ class AiVoiceTest extends TestCase
         $this->get(route('dashboard'))->assertInertia(fn (Assert $page) => $page
             ->where('aiVoice.voices.en.0', 'af_heart')
             ->where('aiVoice.voices.fr', ['ff_siwis'])
+            ->where('aiVoice.seasonal', [])
+        );
+
+        config(['app.force_theme' => 'christmas']);
+        $this->get(route('dashboard'))->assertInertia(fn (Assert $page) => $page
+            ->where('aiVoice.seasonal', ['en' => 'am_santa', 'es' => 'em_santa'])
         );
 
         SiteSetting::where('key', AiVoice::SETTING_KEY)->update(['value' => '0']);

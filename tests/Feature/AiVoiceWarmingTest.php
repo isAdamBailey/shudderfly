@@ -3,12 +3,15 @@
 namespace Tests\Feature;
 
 use App\Jobs\GenerateAiVoiceClip;
+use App\Jobs\StoreImage;
 use App\Models\AiVoiceClip;
 use App\Models\Book;
 use App\Models\Page;
 use App\Models\SiteSetting;
 use App\Models\User;
 use App\Services\AiVoiceService;
+use App\Services\MediaDescriptionService;
+use App\Services\UserWeeklyOverviewService;
 use App\Support\AiVoice;
 use App\Support\SpokenText;
 use Illuminate\Contracts\Bus\Dispatcher;
@@ -60,6 +63,48 @@ class AiVoiceWarmingTest extends TestCase
         $this->assertCount(1, $this->jobsFor('A dog story'));
     }
 
+    public function test_at_christmas_clips_are_warmed_in_the_seasonal_voice_where_the_locale_has_it(): void
+    {
+        config(['app.force_theme' => 'christmas']);
+        User::factory()->create(['locale' => 'es']);
+        User::factory()->create(['locale' => 'fr']);
+
+        Page::factory()->create(['content' => '<p>Ho ho ho</p>']);
+
+        $this->assertEqualsCanonicalizing(
+            ['en:am_santa', 'es:em_santa', 'fr:'],
+            $this->jobsFor('Ho ho ho')->map(fn ($job) => "{$job->locale}:{$job->voice}")->all(),
+        );
+    }
+
+    public function test_a_stored_weekly_overview_warms_what_its_owner_and_everyone_else_hear(): void
+    {
+        config(['app.name' => 'Shudderfly']);
+        $user = User::factory()->create(['name' => 'Sunny', 'locale' => 'es']);
+        Queue::fake();
+
+        app(UserWeeklyOverviewService::class)->store($user, "  Sunny read three books.\n");
+
+        $this->assertSame('Sunny read three books.', $user->fresh()->weekly_profile_overview);
+        $this->assertSame(
+            [
+                'en' => ['Welcome to Shudderfly, Sunny! Sunny read three books.', 'Sunny. Sunny read three books.'],
+                'es' => ['¡Bienvenido a Shudderfly, Sunny! Sunny read three books.', 'Sunny. Sunny read three books.'],
+            ],
+            Queue::pushed(GenerateAiVoiceClip::class)->groupBy('locale')->map->pluck('text')->map->all()->sortKeys()->all(),
+        );
+    }
+
+    public function test_a_blank_weekly_overview_warms_nothing(): void
+    {
+        $user = User::factory()->create();
+        Queue::fake();
+
+        app(UserWeeklyOverviewService::class)->store($user, ' ');
+
+        Queue::assertNotPushed(GenerateAiVoiceClip::class);
+    }
+
     public function test_nothing_is_warmed_while_the_ai_voice_is_off(): void
     {
         SiteSetting::where('key', AiVoice::SETTING_KEY)->update(['value' => '0']);
@@ -79,6 +124,24 @@ class AiVoiceWarmingTest extends TestCase
 
         $page->update(['content' => '<p>Hello again</p>']);
         $this->assertCount(1, $this->jobsFor('Hello again'));
+    }
+
+    public function test_an_uploaded_image_warms_its_ai_caption_once_it_is_written(): void
+    {
+        Storage::fake('local');
+        Storage::fake('s3');
+        $png = imagecreatetruecolor(4, 4);
+        ob_start();
+        imagepng($png);
+        Storage::disk('local')->put('uploads/cat.png', ob_get_clean());
+        $this->mock(MediaDescriptionService::class)
+            ->shouldReceive('resolveCaption')->andReturn('<p>A cat naps in the sun.</p>');
+        $book = Book::factory()->createQuietly(['slug' => 'quiet']);
+
+        (new StoreImage('uploads/cat.png', 'books/quiet/cat.webp', $book))->handle(app(MediaDescriptionService::class));
+
+        // The page is first saved with no words, which warms nothing.
+        $this->assertSame(['A cat naps in the sun.'], Queue::pushed(GenerateAiVoiceClip::class)->pluck('text')->all());
     }
 
     public function test_a_book_edit_warms_only_the_attribute_that_changed(): void

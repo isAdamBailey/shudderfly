@@ -2,7 +2,9 @@
 
 namespace App\Support;
 
+use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SetLocale;
+use App\Jobs\GenerateAiVoiceClip;
 use App\Models\AiVoiceClip;
 use App\Models\SiteSetting;
 use App\Models\User;
@@ -64,6 +66,49 @@ class AiVoice
         $chosen = User::whereNotNull('locale')->distinct()->pluck('locale')->all();
 
         return array_values(array_intersect(SetLocale::SUPPORTED_LOCALES, ['en', ...$chosen]));
+    }
+
+    /**
+     * The current theme's voice for each locale that has one, for people
+     * who never picked a voice (resolveAiVoice() in aiVoice.js).
+     *
+     * @return array<string, string>
+     */
+    public static function seasonalVoices(): array
+    {
+        return config('services.ai_voice.seasonal_voices.'.HandleInertiaRequests::getCurrentTheme()) ?: [];
+    }
+
+    /**
+     * The voice clips for $locale are warmed in: the seasonal one while it
+     * is allowed, as most listeners never pick a voice and hear that, else
+     * null for the locale's default.
+     */
+    public static function warmingVoice(string $locale): ?string
+    {
+        $voice = self::seasonalVoices()[$locale] ?? null;
+
+        return in_array($voice, config("services.ai_voice.voices.{$locale}", []), true) ? $voice : null;
+    }
+
+    /**
+     * Queues a clip for each text in every spoken locale, once the current
+     * transaction commits, so the first listener gets it from the cache.
+     * $texts takes a locale for text that is worded differently in each.
+     *
+     * @param  list<string>|\Closure(string): list<string>  $texts
+     */
+    public static function warm(array|\Closure $texts): void
+    {
+        if (! self::enabled()) {
+            return;
+        }
+
+        foreach (self::spokenLocales() as $locale) {
+            foreach ($texts instanceof \Closure ? $texts($locale) : $texts as $text) {
+                GenerateAiVoiceClip::dispatch($text, $locale, self::warmingVoice($locale))->afterCommit();
+            }
+        }
     }
 
     /**

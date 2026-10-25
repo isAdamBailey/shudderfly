@@ -21,9 +21,11 @@ class GenerateAiVoiceClip implements ShouldQueue
     // pay for the same clip twice. A clip that fails is made on first play.
     public int $tries = 1;
 
-    // Two provider attempts at the provider timeout plus the upload,
-    // under a worker's default 60 s so it is not killed mid-clip.
-    public int $timeout = 55;
+    // Two provider attempts at services.ai_voice.job_timeout (30 s by
+    // default, each after a 3 s connect) plus the upload, under the queues'
+    // retry_after of 90 s so a clip still being made is not handed to a
+    // second worker and paid for twice.
+    public int $timeout = 80;
 
     public function __construct(
         public string $text,
@@ -44,7 +46,9 @@ class GenerateAiVoiceClip implements ShouldQueue
         }
 
         try {
-            $service->clipFor($this->text, $this->locale, $this->voice, ahead: true);
+            // Nobody is waiting on this clip, so a long one has time to finish.
+            $service->withTimeout((int) config('services.ai_voice.job_timeout'))
+                ->clipFor($this->text, $this->locale, $this->voice, ahead: true);
 
             return true;
         } catch (AiVoicePaused|AiVoiceBudgetExceeded) {

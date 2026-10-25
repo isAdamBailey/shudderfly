@@ -242,7 +242,6 @@ import MapEmbed from "@/Components/Map/MapEmbed.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
 import ShareToChatButton from "@/Components/ShareToChatButton.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
-import { usePrefetchAiVoice } from "@/composables/aiVoice";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { usePermissions } from "@/composables/permissions";
 import { useSiteSetting } from "@/composables/useSiteSetting";
@@ -299,9 +298,6 @@ const blockConfirmPending = ref(false);
 
 const plainText = computed(() => stripTags(props.page.content));
 const hasContent = computed(() => Boolean(plainText.value));
-
-// Ready the clip the speak button plays, so it starts at once.
-usePrefetchAiVoice(plainText);
 
 const canAddToCollage = computed(() => {
     return (

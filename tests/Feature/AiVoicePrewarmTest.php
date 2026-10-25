@@ -133,6 +133,21 @@ class AiVoicePrewarmTest extends TestCase
         );
     }
 
+    public function test_at_christmas_clips_are_queued_in_the_seasonal_voice_where_the_locale_has_it(): void
+    {
+        Queue::fake();
+        config(['app.force_theme' => 'christmas']);
+        $this->book('Bluey');
+
+        $this->artisan('ai-voice:prewarm', ['--source' => ['books'], '--locale' => ['en', 'fr']])
+            ->assertSuccessful();
+
+        $this->assertEqualsCanonicalizing(
+            ['en:am_santa', 'fr:ff_siwis'],
+            $this->queuedJobs()->map(fn ($job) => "{$job->locale}:{$job->voice}")->all(),
+        );
+    }
+
     public function test_game_cards_and_intro_scripts_are_queued(): void
     {
         Queue::fake();
