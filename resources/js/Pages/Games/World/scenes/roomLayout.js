@@ -63,10 +63,13 @@ export function hungUp(thing, size) {
 export const WALL_REACH = 60;
 
 /** The wall `thing` is on in a room `size` ({ w, d }) across: its own
- * `wall`, or for a thing up off the floor, the wall it's within WALL_REACH
+ * `wall`, the one it goes `against` (out in the room but part of what's
+ * built on that wall: the auditorium's curtain and spotlights, over its
+ * stage), or for a thing up off the floor, the wall it's within WALL_REACH
  * of; null for a thing standing in the room. */
 export function wallOf(thing, size) {
     if (thing.wall) return thing.wall;
+    if (thing.against) return thing.against;
     if (!((thing.y ?? 0) > 0)) return null;
     const [wall, gap] = nearestWall(thing, size);
     return gap <= WALL_REACH ? wall : null;

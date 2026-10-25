@@ -339,6 +339,10 @@ describe("things on a wall", () => {
         // Up in the middle of the room, or on the floor by a wall.
         expect(wallOf({ x: 450, z: 250, y: 300 }, size)).toBeNull();
         expect(wallOf({ x: 300, z: 0 }, size)).toBeNull();
+        // Out over a stage, but part of what's built against the back.
+        expect(wallOf({ x: 450, z: 180, y: 30, against: "back" }, size)).toBe(
+            "back"
+        );
     });
 
     it("are seen by facing their wall, or the wall nearest them", () => {

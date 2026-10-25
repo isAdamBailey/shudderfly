@@ -1000,7 +1000,7 @@ class GamesWorldScenesTest extends TestCase
         }
     }
 
-    public function test_the_cockroach_house_has_a_music_room_off_the_nest(): void
+    public function test_the_cockroach_house_has_an_auditorium_off_the_nest(): void
     {
         $scenes = GamesWorld::definitions();
         $nest = collect($scenes['cockroach-house.hall']['interactables']);
@@ -1008,81 +1008,114 @@ class GamesWorldScenesTest extends TestCase
         $back = collect($room['interactables'])->firstWhere('exit', true);
 
         // A door on the Nest's front wall, and its way back the Nest's
-        // door.
+        // door, in the auditorium's front wall: you come in facing the
+        // stage.
         $door = $nest->firstWhere('id', 'music-door');
         $this->assertSame('cockroach-house.music', $door['to']);
         $this->assertSame($back['id'], $door['toSpot']);
         $this->assertSame('cockroach-house.hall', $back['to']);
         $this->assertSame($door['id'], $back['toSpot']);
         $this->assertSame('front', $door['wall']);
+        $this->assertSame('front', $back['wall']);
+        $this->assertSame('back', $back['arriveFacing']);
 
-        // The organ is the music room's, not the Nest's, and the room is
-        // the Nest's stone, lit by candles alone.
+        // The organ is the auditorium's, not the Nest's, and the room is
+        // the Nest's stone, its house lit by candles.
         $this->assertEmpty($nest->where('type', 'organ'));
         $this->assertSame($room['walls'], $scenes['cockroach-house.hall']['walls']);
         $this->assertTrue($room['crawlers']);
-        foreach ($room['lights'] as $light) {
+        foreach (collect($room['lights'])->whereNull('spot') as $light) {
             $this->assertTrue($light['flicker'] ?? false, $light['id']);
         }
 
-        $this->assertSame('The Music Room', GamesWorld::scenes()['cockroach-house.music']['label']);
-        $this->assertSame('The Music Room', collect(GamesWorld::scenes()['cockroach-house.hall']['interactables'])->firstWhere('id', 'music-door')['label']);
+        $this->assertSame('The Auditorium', GamesWorld::scenes()['cockroach-house.music']['label']);
+        $this->assertSame('The Auditorium', collect(GamesWorld::scenes()['cockroach-house.hall']['interactables'])->firstWhere('id', 'music-door')['label']);
     }
 
-    public function test_the_cockroach_house_music_room_has_a_pipe_organ_on_its_right_wall(): void
-    {
-        $room = GamesWorld::definitions()['cockroach-house.music'];
-        $organ = collect($room['interactables'])->firstWhere('type', 'organ');
-
-        // Flat on the right wall, seen face on facing it, and across the
-        // room from the way out, so a press on the keys can't be a press
-        // on the door.
-        $this->assertSame('right', $organ['wall']);
-        $door = collect($room['interactables'])->firstWhere('exit', true);
-        $this->assertLessThan($room['size']['w'] / 2, $door['x']);
-        $this->assertCount(count(GamesWorld::ORGAN_ZONES), $organ['zones']);
-        foreach ([$organ['label'], ...$organ['zones']] as $key) {
-            foreach (['en', 'es', 'fr'] as $locale) {
-                $this->assertTrue(Lang::has($key, $locale, false), "{$key} missing in {$locale}");
-            }
-        }
-
-        $shown = collect(GamesWorld::scenes()['cockroach-house.music']['interactables'])->firstWhere('type', 'organ');
-        $this->assertSame('Pipe organ', $shown['label']);
-        $this->assertSame(
-            ['Pipe organ, deep notes', 'Pipe organ, low notes', 'Pipe organ, high notes', 'Pipe organ, squeaky notes'],
-            $shown['zones'],
-        );
-    }
-
-    public function test_the_music_room_has_a_bass_drum_and_a_harp_clear_of_the_door_and_the_organ(): void
+    public function test_the_auditorium_stands_its_instruments_side_by_side_on_the_stage(): void
     {
         $room = GamesWorld::definitions()['cockroach-house.music'];
         $items = collect($room['interactables']);
-        $door = $items->firstWhere('exit', true);
-        $drum = $items->firstWhere('type', 'drum');
-        $harp = $items->firstWhere('type', 'harp');
-        $organ = $items->firstWhere('type', 'organ');
+        $stage = $room['stage'];
 
-        // The door and harp along the back wall, the organ on the right
-        // and the drum on the left: each played where it stands, clear of
-        // the others (a drum's cradle and a harp reach about 120 either
-        // side of their middles), the harp clear of the organ's player.
-        $this->assertGreaterThan($door['x'] + 60 + 120, $harp['x']);
-        $this->assertLessThan($organ['x'] - $organ['stand'] - 120, $harp['x']);
-        [$wall, $along, , $length] = $this->wallSpot($drum, $room['size']);
-        $this->assertSame('left', $wall);
-        $this->assertGreaterThan(120, $along);
-        $this->assertLessThan($length - 120, $along);
-        foreach ([$drum, $harp] as $thing) {
+        // Along the whole back wall.
+        $this->assertSame([$room['size']['w'], GamesWorld::STAGE['h'], GamesWorld::STAGE['d']], [$stage['w'], $stage['h'], $stage['d']]);
+
+        // The harp, the organ and the drum, left to right, each standing
+        // on the stage and played from the floor past its edge.
+        $instruments = $items->whereIn('type', ['harp', 'organ', 'drum'])->sortBy('x')->values();
+        $this->assertSame(['harp', 'organ', 'drum'], $instruments->pluck('type')->all());
+        // How far each reaches either side of its middle (instruments.js
+        // INSTRUMENT_FOOTPRINTS for the drum's cradle, the harp's frame
+        // and organLayout.js ORGAN.length with its towers for the organ).
+        $reach = ['harp' => 114, 'organ' => 160, 'drum' => 120];
+        foreach ($instruments as $n => $thing) {
+            $this->assertArrayNotHasKey('wall', $thing, $thing['id']);
+            $this->assertTrue($thing['onStage'], $thing['id']);
+            $this->assertSame('curtain', $thing['curtain'], $thing['id']);
+            $this->assertSame($stage['h'], $thing['y'], $thing['id']);
+            $this->assertGreaterThan($stage['d'], $thing['z'] + $thing['stand'], "{$thing['id']} is played from the floor");
+            $this->assertGreaterThan(0, $thing['x'] - $reach[$thing['type']], $thing['id']);
+            $this->assertLessThan($stage['w'], $thing['x'] + $reach[$thing['type']], $thing['id']);
+            if ($n > 0) {
+                $before = $instruments[$n - 1];
+                $this->assertLessThan($thing['x'] - $reach[$thing['type']], $before['x'] + $reach[$before['type']], "{$before['id']} crowds {$thing['id']}");
+            }
             foreach (['en', 'es', 'fr'] as $locale) {
                 $this->assertTrue(Lang::has($thing['label'], $locale, false), "{$thing['label']} missing in {$locale}");
             }
         }
 
+        $organ = $items->firstWhere('type', 'organ');
+        $this->assertCount(count(GamesWorld::ORGAN_ZONES), $organ['zones']);
+        // Organ pipes clear of the top of the walls (ROOM_FRAME / 2) and
+        // its ceiling trim (RoomScene.js CEILING_EDGE), on the stage.
+        $this->assertLessThan(GamesWorld::ROOM_FRAME / 2 - 5, $stage['h'] + 410);
+
         $shown = collect(GamesWorld::scenes()['cockroach-house.music']['interactables'])->keyBy('id');
+        $this->assertSame('Pipe organ', $shown['organ']['label']);
+        $this->assertSame(
+            ['Pipe organ, deep notes', 'Pipe organ, low notes', 'Pipe organ, high notes', 'Pipe organ, squeaky notes'],
+            $shown['organ']['zones'],
+        );
         $this->assertSame('Bass drum', $shown['bass-drum']['label']);
         $this->assertSame('Harp', $shown['harp']['label']);
+    }
+
+    public function test_the_auditorium_has_a_curtain_across_the_stage_and_spotlights_on_it(): void
+    {
+        $room = GamesWorld::definitions()['cockroach-house.music'];
+        $items = collect($room['interactables']);
+        $stage = $room['stage'];
+
+        // Across the front of the stage, hidden with the back wall.
+        $curtain = $items->firstWhere('type', 'curtain');
+        $this->assertSame([$stage['w'] / 2, $stage['h'], $stage['d'], $stage['w']], [$curtain['x'], $curtain['y'], $curtain['z'], $curtain['w']]);
+        $this->assertSame('back', $curtain['against']);
+        $this->assertSame('Stage curtain', collect(GamesWorld::scenes()['cockroach-house.music']['interactables'])->firstWhere('id', 'curtain')['label']);
+
+        // Two spotlights in front of it, each its own switch, shining down
+        // onto the stage behind it.
+        $spots = collect($room['lights'])->whereNotNull('spot');
+        $this->assertCount(2, $spots);
+        foreach ($spots as $light) {
+            $toy = $items->firstWhere('light', $light['id']);
+            $this->assertSame('spotlight', $toy['model']);
+            $this->assertSame('back', $toy['against']);
+            $this->assertGreaterThan($curtain['z'], $toy['z']);
+            $this->assertSame($stage['h'], $light['spot']['y']);
+            $this->assertLessThan($stage['d'], $light['spot']['z']);
+            $this->assertSame($toy['x'], $light['spot']['x']);
+        }
+
+        // Rows of chairs facing the stage, clear of it and of the way out.
+        $door = $items->firstWhere('exit', true);
+        foreach ($room['seats'] as $row) {
+            $this->assertGreaterThan($stage['d'] + 100, $row['z']);
+            $this->assertLessThan($room['size']['d'] - 50, $row['z']);
+            $this->assertGreaterThan($door['x'] + 60, $row['from']);
+            $this->assertLessThanOrEqual($room['size']['w'], $row['to']);
+        }
     }
 
     public function test_hanks_portrait_stands_on_the_cockroach_house_mantel_over_a_fire(): void

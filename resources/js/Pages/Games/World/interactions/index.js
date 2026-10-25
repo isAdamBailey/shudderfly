@@ -1,5 +1,6 @@
 import { own } from "@/utils/object";
 import book from "./book.js";
+import curtain from "./curtain.js";
 import door from "./door.js";
 import drum from "./drum.js";
 import game from "./game.js";
@@ -25,6 +26,7 @@ import tv from "./tv.js";
  */
 const interactions = {
     book,
+    curtain,
     door,
     drum,
     game,

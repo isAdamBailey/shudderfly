@@ -147,6 +147,21 @@ final class GamesWorld
     /** How high up the wall the Cockroach's candle sconces hang. */
     private const SCONCE_Y = 270;
 
+    /** The auditorium's stage (scenes/stage.js draws it and its curtain):
+     * `h` up off the floor, where its instruments stand, and `d` out from
+     * the back wall, the whole of which it runs along. The Butt keeps off
+     * it (useRoom.js) and plays them from in front. */
+    public const STAGE = ['h' => 30, 'd' => 180];
+
+    /** Where a spotlight (three/spotlight.js) hangs from the curtain's
+     * valance: `y` its foot, `size` tall, `z` just out in front of the
+     * curtain, and the stage floor it shines at, `aim` out from the back
+     * wall. */
+    private const SPOTLIGHT = ['y' => 330, 'size' => 56, 'z' => self::STAGE['d'] + 14, 'aim' => 70];
+
+    /** How far apart the auditorium's chairs stand along a row. */
+    private const SEAT_PITCH = 58;
+
     /** The walls of a room things can go on (onWall()). `back` is the far
      * wall, as you come in, and `front` the one across from it, behind you
      * (hidden while you face the back); `left` and `right` are the ends. */
@@ -184,7 +199,7 @@ final class GamesWorld
 
     /** Props modelled in 3D that an interactable's `model` may name:
      * three/models.js (a Vitest test keeps them in step). */
-    public const MODELS = ['radio', 'table-lamp', 'slot-machine', 'fridge', 'oven', 'washing-machine', 'grandfather-clock', 'armchair'];
+    public const MODELS = ['radio', 'table-lamp', 'slot-machine', 'fridge', 'oven', 'washing-machine', 'grandfather-clock', 'armchair', 'spotlight'];
 
     /** What a model that stands on the floor takes up, per unit of its
      * size: `w` across and `d` out from the wall, three/footprints.js's (a
@@ -257,15 +272,18 @@ final class GamesWorld
         // fireplace on the back wall, and its candles, where each burns
         // ([wall, x along it], up it at SCONCE_Y): one by the hearth, one
         // between the grandfather clock and the armchair on the right
-        // wall, one by the music room's door on the front wall.
+        // wall, one by the auditorium's door on the front wall.
         $nest = ['w' => 1400, 'd' => 480];
         $nestOn = fn (string $wall, array $thing) => self::onWall($wall, $nest, $thing);
         $hearth = 840;
         $sconces = ['sconce-left' => ['back', 560], 'sconce-right' => ['right', 230], 'sconce-front' => ['front', 460]];
-        // Its music room: an instrument on every wall but the front, each
-        // seen face on from its wall, and a candle by each.
+        // Its auditorium: the stage across the back wall, the house lit by
+        // a candle on each end wall over the chairs, and the stage by two
+        // spotlights hung from the curtain's valance, each at x, over the
+        // instruments.
         $music = ['w' => self::ROOM_FRAME, 'd' => 480];
-        $musicSconces = ['sconce-left' => ['left', 380], 'sconce-middle' => ['back', 300], 'sconce-right' => ['right', 435]];
+        $musicSconces = ['sconce-left' => ['left', 160], 'sconce-right' => ['right', 320]];
+        $spotlights = ['spotlight-left' => 250, 'spotlight-right' => 680];
         // The kitchen's back wall, from the door: the fridge, a counter,
         // the oven, and a counter to the far wall, with cabinets over both
         // counters and the lamp over the oven. Things on a counter stand
@@ -427,7 +445,7 @@ final class GamesWorld
                 $gusterOn('right', self::minigame('toot-slots', 225, 0, '🎰', ['y' => 90, 'size' => 130, 'model' => 'slot-machine'])),
             ]),
 
-            // --- The Cockroach's House: the Nest, and a music room off it.
+            // --- The Cockroach's House: the Nest, and an auditorium off it.
             // Cockroach Fight and Cockroach Fart are the Nest's grandfather
             // clock and armchair, on its right wall.
             // Little cockroaches crawl the walls, the same picture as the
@@ -435,8 +453,8 @@ final class GamesWorld
             // the hearth under Hank's portrait on the back wall, and
             // candles in sconces. Every flame flickers. Photos of Hank from
             // his book hang either side of the fireplace, past the door's
-            // EXIT sign and past the scroll, a new pair each day. The music
-            // room's door is on the front wall, at its left end as you face
+            // EXIT sign and past the scroll, a new pair each day. The
+            // auditorium's door is on the front wall, at its left end as you face
             // it: at the right end, across from the way in, the music tab
             // covered it on a phone.
             'cockroach-house.hall' => self::room('cockroach_house_hall', [
@@ -469,22 +487,37 @@ final class GamesWorld
                 $nestOn('right', self::game('cockroach', 350, 0, ['size' => 150, 'cast' => 'cockroach', 'model' => 'armchair', 'titled' => false])),
                 ...self::sconceToys($sconces, $nest),
             ]),
-            // The harp stands out from the back wall past the door, facing
-            // out to be strummed; the pipe organ fills the middle of the
-            // right wall, across the room from the way out; and the bass
-            // drum hangs on the left wall, its head facing into the room
-            // to be hit.
+            // The auditorium: the harp, the pipe organ and the bass drum
+            // stand on the stage, left to right, behind a curtain that draws
+            // shut across it and open again. Two rows of chairs face it
+            // either side of an aisle, and the way back to the Nest is in
+            // the front wall, past the end of the rows: you come in facing
+            // the stage.
             'cockroach-house.music' => self::room('cockroach_house_music', [
                 'size' => $music,
-                'spawn' => ['x' => 300, 'z' => 320],
+                'spawn' => ['x' => 450, 'z' => 340],
                 'walls' => ['back' => 'stone', 'sides' => 'stone', 'floor' => 'flagstones'],
                 'crawlers' => true,
-                'lights' => self::sconceFlames($musicSconces, $music),
+                'stage' => ['w' => $music['w'], ...self::STAGE],
+                'seats' => [self::seatRow(300, 196, 428), self::seatRow(300, 472, 704), self::seatRow(400, 196, 428), self::seatRow(400, 472, 704)],
+                'lights' => [
+                    ...self::sconceFlames($musicSconces, $music),
+                    ...array_map(fn ($id, $x) => self::spotlight($id, $x), array_keys($spotlights), $spotlights),
+                ],
             ], [
-                self::roomDoor('nest-door', 160, 'cockroach-house.hall', 'music-door', 'cockroach_house_hall', exit: true),
-                self::onWall('right', $music, self::organ('organ', intdiv($music['d'], 2))),
-                self::onWall('left', $music, self::drum('bass-drum', 200, 40)),
-                self::harp('harp', 520, 30),
+                [
+                    ...self::roomDoor('nest-door', 780, 'cockroach-house.hall', 'music-door', 'cockroach_house_hall', exit: true, wall: 'front', size: $music),
+                    'arriveFacing' => 'back',
+                ],
+                self::onStage(self::harp('harp', 180, 30), 'curtain'),
+                self::onStage(self::organ('organ', 465), 'curtain'),
+                self::onStage(self::drum('bass-drum', 750, 40), 'curtain'),
+                self::curtain('curtain', $music['w']),
+                ...array_map(
+                    fn ($id, $x) => self::toy($id, $x, self::SPOTLIGHT['z'], null, 'spotlight', ['y' => self::SPOTLIGHT['y'], 'size' => self::SPOTLIGHT['size'], 'model' => 'spotlight', 'move' => 'wiggle', 'light' => $id, 'against' => 'back']),
+                    array_keys($spotlights),
+                    $spotlights,
+                ),
                 ...self::sconceToys($musicSconces, $music),
             ]),
         ];
@@ -1149,6 +1182,64 @@ final class GamesWorld
             'stand' => 170,
             'label' => 'messages.games.world.toys.bass_drum',
         ];
+    }
+
+    /** Instrument `thing` stood on the auditorium's stage, the Butt playing
+     * it from the floor in front (`stand` out past the stage's edge).
+     * Curtain `$curtain` hides it while that curtain is drawn. */
+    private static function onStage(array $thing, string $curtain): array
+    {
+        return [
+            ...$thing,
+            'y' => self::STAGE['h'],
+            'stand' => self::STAGE['d'] + 40 - $thing['z'],
+            'onStage' => true,
+            'curtain' => $curtain,
+        ];
+    }
+
+    /** The stage curtain, `w` across the front of the stage, from the
+     * stage up to the top of the walls (scenes/stage.js draws it): a tap
+     * draws it shut, or open again. Hidden with the back wall, as the stage
+     * is, so turned to face the front it doesn't stand in the way. */
+    private static function curtain(string $id, int $w): array
+    {
+        return [
+            'id' => $id,
+            'type' => 'curtain',
+            'x' => intdiv($w, 2),
+            'y' => self::STAGE['h'],
+            'z' => self::STAGE['d'],
+            'w' => $w,
+            'against' => 'back',
+            'stand' => 60,
+            'label' => 'messages.games.world.toys.curtain',
+        ];
+    }
+
+    /** A spotlight's light at `x`, shining down onto the stage under it
+     * (a `spot`, RoomScene.js). Its toy (a `spotlight` model) is its bulb,
+     * so the light hangs there. */
+    private static function spotlight(string $id, int $x): array
+    {
+        return [
+            'id' => $id,
+            'x' => $x,
+            'y' => self::SPOTLIGHT['y'],
+            'z' => self::SPOTLIGHT['z'],
+            'color' => '#fff3d1',
+            'intensity' => 2.4,
+            'spot' => ['x' => $x, 'y' => self::STAGE['h'], 'z' => self::SPOTLIGHT['aim']],
+            'against' => 'back',
+        ];
+    }
+
+    /** A row of the auditorium's chairs (scenes/stage.js), `z` out from the
+     * back wall, facing the stage, a chair every SEAT_PITCH from x `from`
+     * to `to`. */
+    private static function seatRow(int $z, int $from, int $to): array
+    {
+        return ['z' => $z, 'from' => $from, 'to' => $to, 'pitch' => self::SEAT_PITCH];
     }
 
     /** A minigame (one of MINIGAMES) played where it stands, drawn as
