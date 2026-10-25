@@ -30,6 +30,7 @@ import {
     spanAt,
     worldToScreen,
 } from "../composables/projection.js";
+import { toView, WALLS } from "../composables/views.js";
 import { bobLift, useOthers } from "../composables/useGamesWorld.js";
 import { arrivalSpot, useRoom } from "../composables/useRoom.js";
 import { useThrowables } from "../composables/useThrowables.js";
@@ -101,18 +102,28 @@ const pictureLight = computed(() => (dark.value ? 0.6 : 1));
 const prefersReducedMotion = usePreferredReducedMotion();
 const reduced = computed(() => prefersReducedMotion.value === "reduce");
 
+// The wall the camera faces. Only the back can be reached yet (issue #183
+// Phase 3 turns the room): in development, `?view=left` (or right, front)
+// shows another, to check it.
+const faced = (() => {
+    if (!import.meta.env.DEV) return "back";
+    const asked = new URLSearchParams(window.location.search).get("view");
+    return WALLS.includes(asked) ? asked : "back";
+})();
+const facing = { wall: faced, size: props.scene.size };
+
 const bounds = reactive({ w: 0, h: 0 });
 const layout = computed(() =>
-    bounds.w ? roomLayout(props.scene, bounds) : null
+    bounds.w ? roomLayout(props.scene, bounds, faced) : null
 );
 
 // The interactable last used, to put focus back on.
 let lastUsed = null;
 
 const start = arrivalSpot(props.scene, props.arrival);
-// Where the camera looks along the room. A hall longer than the frame
-// scrolls to keep the Butt in view; anything else stays put.
-const lookX = ref(start.x);
+// Where the camera looks along the wall it faces. A wall longer than the
+// frame scrolls to keep the Butt in view; anything else stays put.
+const lookX = ref(toView(facing, start).x);
 const view = computed(() =>
     layout.value ? roomCamera(layout.value, lookX.value) : null
 );
@@ -189,7 +200,11 @@ const steered = () => props.stage.steered?.();
 /** Follows the Butt down a long room, and leaves a short one alone. */
 function follow() {
     if (!layout.value) return;
-    lookX.value = roomLook(layout.value.pan, lookX.value, butt.x);
+    lookX.value = roomLook(
+        layout.value.pan,
+        lookX.value,
+        toView(facing, butt).x
+    );
 }
 
 /** The laid-out room with the camera aimed where `follow` left it. */

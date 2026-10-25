@@ -160,6 +160,7 @@ class GamesWorldScenesTest extends TestCase
             }
             $this->assertContains($scene['walls']['back'], GamesWorld::WALLS, "{$sceneId} walls");
             $this->assertContains($scene['walls']['sides'] ?? $scene['walls']['back'], GamesWorld::WALLS, "{$sceneId} sides");
+            $this->assertContains($scene['walls']['front'] ?? $scene['walls']['sides'] ?? $scene['walls']['back'], GamesWorld::WALLS, "{$sceneId} front");
             $this->assertContains($scene['walls']['floor'], GamesWorld::FLOORS, "{$sceneId} floor");
             // Every room has the same daylight (RoomScene.js), none its own.
             $this->assertArrayNotHasKey('ambient', $scene, $sceneId);
@@ -173,6 +174,8 @@ class GamesWorldScenesTest extends TestCase
                     $this->assertSame(0, $door['x'], $where);
                 } elseif ($door['wall'] === 'right') {
                     $this->assertSame($scene['size']['w'], $door['x'], $where);
+                } elseif ($door['wall'] === 'front') {
+                    $this->assertSame($scene['size']['d'], $door['z'], $where);
                 } else {
                     $this->assertSame(0, $door['z'], $where);
                 }

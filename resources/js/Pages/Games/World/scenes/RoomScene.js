@@ -10,13 +10,27 @@ import {
     TRIM,
 } from "../three/roomLooks.js";
 import { applyCamera, disposeTree } from "../three/useWorldRenderer.js";
+import {
+    fromView,
+    viewSize,
+    viewYaw,
+    WALLS,
+    wallBehind,
+} from "../composables/views.js";
 import { clockFinish, clockTexture } from "../three/clockFaces.js";
 import { MODELS } from "../three/models.js";
 import { createOtherPuppets } from "../three/otherPuppets.js";
 import { bassDrum } from "../three/bassDrum.js";
 import { harp } from "../three/harp.js";
 import { pipeOrgan } from "../three/pipeOrgan.js";
-import { itemBox, itemPose, ROOM_SIZES, wallHeightOf } from "./roomLayout.js";
+import {
+    hungUp,
+    itemBox,
+    itemPose,
+    ROOM_SIZES,
+    wallHeightOf,
+    wallOf,
+} from "./roomLayout.js";
 import { bookcaseGeometry, booksMesh } from "./bookshelf.js";
 import { doorwayGeometry } from "./doorway.js";
 import { entertainmentCenterGeometry } from "./entertainmentCenter.js";
@@ -28,10 +42,12 @@ import { ORGAN } from "./organLayout.js";
 import { floorGeometry, stairsFootprint, stairsGeometry } from "./staircase.js";
 import { createWallCrawlers } from "./wallCrawlers.js";
 
-// The `kind: "room"` scene graph (issue #130): a dollhouse room with its
-// front wall taken away. Walls and floor come from the room's `walls` looks
-// (three/roomLooks.js). The daylight in through the open front (the one
-// light that casts shadows) is the same in every room: enough to see by
+// The `kind: "room"` scene graph (issue #130): a dollhouse room, its four
+// walls built and whichever is between the camera and the room taken away
+// (issue #183), with anything nearer than the floor in view. Walls and
+// floor come from the room's `walls` looks (three/roomLooks.js). The
+// daylight from behind the camera (the one light that casts shadows) is
+// the same in every room: enough to see by
 // with every lamp off, dimmed to moonlight at night. Its `lights` are lamps
 // you can switch, adding to the daylight by day, all on at nightfall. Its
 // doors and toys stand where the data puts them, a toy that is a character
@@ -43,6 +59,9 @@ const BACKGROUND = "#1c1917";
 const SKIRTING = 14; // units tall
 const CEILING_EDGE = 10; // units: the trim along the walls' tops
 const SHADOW_MAP = 1024;
+// How far nearer the camera than the floor in view (the layout's `band`)
+// still shows, units: the Butt at the front edge stands out past it.
+const NEAR_SLACK = ROOM_SIZES.butt / 2;
 // The daylight's share of the light: a sky fill and a key that casts the
 // shadows, at `level` in every room (Guster's House's, which got it
 // right). Enough by day to see by with the lamps off; at night (NIGHT.dim)
@@ -117,13 +136,17 @@ export function createRoomScene(
     key.shadow.mapSize.set(SHADOW_MAP, SHADOW_MAP);
     key.shadow.bias = -0.0005;
     key.shadow.normalBias = 0.5;
-    // Aimed at wherever the camera is looking, from the same angle a room
-    // the size of the frame would have: a long hall isn't lit from a mile up.
-    function aimLight(x) {
-        key.position.set(x - span * 0.2, span, depth + span);
-        key.target.position.set(x, 0, depth / 2);
+    // How deep the floor in view runs from the wall the camera faces.
+    let band = depth;
+    // Aimed from behind the camera at wherever it's looking, from the same
+    // angle a room the size of the frame would have: a long hall isn't lit
+    // from a mile up. `cam` is a projection.js camera, in its view's frame.
+    function aimLight(cam) {
+        const room = (x, y, z) => fromView(cam.view, { x, y, z });
+        key.position.copy(room(cam.x - span * 0.2, span, band + span));
+        key.target.position.copy(room(cam.x, 0, band / 2));
     }
-    aimLight(width / 2);
+    aimLight({ x: width / 2 });
     made.add(key, key.target);
 
     // Dark mode: 0 by day, 1 at night, between while night falls.
@@ -256,6 +279,138 @@ export function createRoomScene(
         return mesh;
     }
 
+    /** Where `wall` stands: its middle on the floor, its length, and its
+     * turn to face into the room (views.js: it's the back wall of a camera
+     * facing it). */
+    function wallLine(wall) {
+        const view = { wall, size: room.size };
+        const along = viewSize(view).w;
+        return {
+            middle: fromView(view, { x: along / 2, z: 0 }),
+            along,
+            turn: viewYaw(view),
+        };
+    }
+
+    // Each wall's look (the ends' is `sides`) by its length, made once:
+    // look → length → material.
+    const wallMaterials = new Map();
+    function wallMaterial(wall, along) {
+        const finish = look[wall] ?? look.sides;
+        if (!wallMaterials.has(finish)) wallMaterials.set(finish, new Map());
+        const byLength = wallMaterials.get(finish);
+        if (!byLength.has(along)) {
+            byLength.set(along, lookMaterial(THREE, finish, along, height));
+        }
+        return byLength.get(along);
+    }
+
+    // The four walls, each stood on the floor at its middle and turned to
+    // face into the room, with its skirting and the ceiling edge along its
+    // top. Wall → everything on it (hang()), hidden with it while it's the
+    // one behind the camera (showWalls()).
+    const walls = Object.fromEntries(
+        WALLS.map((wall) => {
+            const { middle, along, turn } = wallLine(wall);
+            const box = new THREE.Group();
+            box.position.set(middle.x, 0, middle.z);
+            box.rotation.y = turn;
+            box.add(
+                plane(wallMaterial(wall, along), along, height, [
+                    0,
+                    height / 2,
+                    0,
+                ]),
+                trimBox([along, CEILING_EDGE, 6], [0, height, 3]),
+                trimBox([along, SKIRTING, 4], [0, SKIRTING / 2, 2])
+            );
+            made.add(box);
+            return [wall, [box]];
+        })
+    );
+
+    /** The wall `thing` is on (roomLayout.js wallOf()), or null. */
+    const wallIn = (thing) => wallOf(thing, room.size);
+
+    /** Hangs `object` on `wall`, to be hidden with it. A thing standing in
+     * the room (no wall), or in a corner, is never hidden. */
+    function hang(wall, object) {
+        walls[wall]?.push(object);
+    }
+
+    // The faced wall's dressing, the kit's: the season's decorations
+    // (garlands and cobwebs, hung by their middles) and any crawlers. Only
+    // the wall faced is dressed (the ends, seen edge on, would cost a draw
+    // call a decoration for little to see), so one is made for each length
+    // of wall as it's first faced, and moved onto whichever is.
+    const dressings = new Map();
+    function dressingFor(along) {
+        if (dressings.has(along)) return dressings.get(along);
+        const group = new THREE.Group();
+        const puppets = roomDecorations(theme).map((d) => {
+            const puppet = kit.emojiMesh(d.emoji, {
+                size: d.size,
+                shadows: false,
+            });
+            puppet.group.position.set(
+                (d.u - 0.5) * along,
+                d.v * height - d.size / 2,
+                4
+            );
+            group.add(puppet.group);
+            return puppet;
+        });
+        const crawling =
+            room.crawlers && createWallCrawlers(THREE, along, height);
+        if (crawling) {
+            crawling.group.position.x = -along / 2;
+            group.add(crawling.group);
+        }
+        scene.add(group);
+        const dressing = { group, puppets, crawling };
+        dressings.set(along, dressing);
+        return dressing;
+    }
+
+    // Flat cards (cast puppets and emoji, not models, nor anything posed on
+    // a wall it names): turned to face the camera (layout()).
+    const cards = [];
+    // The camera's turn, which the cards share.
+    let yaw = 0;
+
+    /** Thing `id`'s `puppet` was picked up or thrown: it's in the room now,
+     * a card, not hidden with any wall. */
+    const loose = new Set();
+    function loosen(id, puppet) {
+        if (loose.has(id)) return;
+        loose.add(id);
+        for (const hung of Object.values(walls)) {
+            const at = hung.indexOf(puppet.group);
+            if (at >= 0) hung.splice(at, 1);
+        }
+        puppet.group.visible = true;
+        puppet.group.rotation.y = yaw;
+        if (!cards.includes(puppet)) cards.push(puppet);
+    }
+
+    // The faced wall's dressing, whose crawlers crawl.
+    let dressed = null;
+    /** Shows every wall but the one behind a camera facing `faced`, and
+     * dresses `faced`. */
+    function showWalls(faced) {
+        const behind = wallBehind(faced);
+        for (const [wall, hung] of Object.entries(walls)) {
+            for (const object of hung) object.visible = wall !== behind;
+        }
+        const { middle, along, turn } = wallLine(faced);
+        if (dressed) dressed.group.visible = false;
+        dressed = dressingFor(along);
+        dressed.group.visible = true;
+        dressed.group.position.set(middle.x, 0, middle.z);
+        dressed.group.rotation.y = turn;
+    }
+    showWalls("back");
+
     // Stairs are drawn as a flight, not a card; a flight down is a well
     // cut out of the floor.
     const stairs = room.interactables.filter((item) => item.stairs);
@@ -270,17 +425,19 @@ export function createRoomScene(
     made.add(floor);
 
     // A well goes below the floor, which the camera could otherwise see
-    // past the floor's front edge: a skirt there in the background colour.
-    if (wells.length > 0) {
-        made.add(
-            plane(
-                new THREE.MeshBasicMaterial({ color: BACKGROUND }),
-                width,
-                depth,
-                [width / 2, -depth / 2, depth]
-            )
-        );
-    }
+    // past the near edge of the floor in view: a skirt there in the
+    // background colour, moved there for each view (layout()).
+    const across = Math.max(width, depth);
+    const skirt =
+        wells.length > 0
+            ? plane(
+                  new THREE.MeshBasicMaterial({ color: BACKGROUND }),
+                  across,
+                  across,
+                  [width / 2, -across / 2, depth]
+              )
+            : null;
+    if (skirt) made.add(skirt);
 
     // Stairs, open doorways (doorway.js), the Library's bookcases
     // (bookshelf.js), entertainment centers (entertainmentCenter.js),
@@ -306,7 +463,9 @@ export function createRoomScene(
               roughness: 0.8,
           })
         : null;
-    function woodwork(geometry, pose = null) {
+    /** Builds `geometry` in wood into the room, on `wall` (if it's on
+     * one), posed as `pose` if it says. */
+    function woodwork(wall, geometry, pose = null) {
         const mesh = new THREE.Mesh(geometry, wood);
         if (pose) {
             mesh.position.set(pose.x, 0, pose.z);
@@ -315,65 +474,39 @@ export function createRoomScene(
         mesh.castShadow = !pose;
         mesh.receiveShadow = true;
         made.add(mesh);
+        hang(wall, mesh);
     }
-    for (const item of stairs) woodwork(stairsGeometry(THREE, item, height));
-    for (const shelf of shelves) woodwork(bookcaseGeometry(THREE, shelf));
+    for (const item of stairs) {
+        woodwork(wallIn(item), stairsGeometry(THREE, item, height));
+    }
+    for (const shelf of shelves) {
+        woodwork("back", bookcaseGeometry(THREE, shelf));
+    }
     for (const unit of entertainment) {
-        woodwork(entertainmentCenterGeometry(THREE, unit));
+        woodwork("back", entertainmentCenterGeometry(THREE, unit));
     }
-    for (const unit of fireplaces) woodwork(fireplaceGeometry(THREE, unit));
-    for (const unit of counters) woodwork(kitchenCounterGeometry(THREE, unit));
+    for (const unit of fireplaces) {
+        woodwork("back", fireplaceGeometry(THREE, unit));
+    }
+    for (const unit of counters) {
+        woodwork("back", kitchenCounterGeometry(THREE, unit));
+    }
     if (doorways.length > 0) {
         const doorway = doorwayGeometry(THREE);
-        for (const item of doorways) woodwork(doorway, itemPose(item));
+        for (const item of doorways) {
+            woodwork(wallIn(item), doorway, itemPose(item));
+        }
     }
     const books = booksMesh(THREE, shelves);
-    if (books) made.add(books);
+    if (books) {
+        made.add(books);
+        hang("back", books);
+    }
 
-    // A red EXIT sign over every way out (exitSign.js).
+    // A red EXIT sign over every way out (exitSign.js), on its door's wall.
     const signs = exitSigns(THREE, room, exitWord);
     scene.add(signs.group);
-
-    const sides = lookMaterial(THREE, look.sides, depth, height);
-    made.add(
-        plane(lookMaterial(THREE, look.back, width, height), width, height, [
-            width / 2,
-            height / 2,
-            0,
-        ]),
-        plane(sides, depth, height, [0, height / 2, depth / 2], Math.PI / 2),
-        plane(
-            sides,
-            depth,
-            height,
-            [width, height / 2, depth / 2],
-            -Math.PI / 2
-        ),
-        // The ceiling edge, along the back and both sides.
-        trimBox([width, CEILING_EDGE, 6], [width / 2, height, 3]),
-        trimBox([6, CEILING_EDGE, depth], [3, height, depth / 2]),
-        trimBox([6, CEILING_EDGE, depth], [width - 3, height, depth / 2])
-    );
-
-    made.add(
-        trimBox([width, SKIRTING, 4], [width / 2, SKIRTING / 2, 2]),
-        trimBox([4, SKIRTING, depth], [2, SKIRTING / 2, depth / 2]),
-        trimBox([4, SKIRTING, depth], [width - 2, SKIRTING / 2, depth / 2])
-    );
-
-    // The season's decorations on the back wall (garlands, cobwebs), hung
-    // by their middles. They never move, so they aren't ticked.
-    const decorations = roomDecorations(theme).map((d) => {
-        const puppet = kit.emojiMesh(d.emoji, { size: d.size, shadows: false });
-        puppet.group.position.set(d.u * width, d.v * height - d.size / 2, 4);
-        scene.add(puppet.group);
-        return puppet;
-    });
-
-    const crawlers = room.crawlers
-        ? createWallCrawlers(THREE, width, height)
-        : null;
-    if (crawlers) scene.add(crawlers.group);
+    for (const [door, sign] of signs.signs) hang(wallIn(door), sign);
 
     // --- Things in the room and the Butt -------------------------------------
 
@@ -397,23 +530,24 @@ export function createRoomScene(
             built.group.position.set(pose.x, pose.y, pose.z);
             built.group.rotation.y = pose.turn;
             made.add(built.group);
+            hang(wallIn(item), built.group);
             instruments.set(item.id, built);
             continue;
         }
         // A TV, or a picture: a thin panel, framed if it says. What you see
         // on it is in the overlay (a <video>, or the picture's <img>).
-        if (item.image) {
-            made.add(pictureMesh(item));
-            continue;
-        }
-        if (item.screen) {
-            made.add(panelMesh(item, "#0b0b0f"));
+        if (item.image || item.screen) {
+            const mesh = item.image
+                ? pictureMesh(item)
+                : panelMesh(item, "#0b0b0f");
+            made.add(mesh);
+            hang(wallIn(item), mesh);
             continue;
         }
         const size = itemBox(item).height;
         // Hung on the back wall (up it, against it): no shadow under it.
         // One standing on something (a radio on its cabinet) has one.
-        const shadows = !((item.y ?? 0) > 0 && !item.z);
+        const shadows = !hungUp(item);
         // A prop modelled in 3D (three/models.js), lit like the room.
         const model = MODELS[item.model]?.(THREE) ?? null;
         // A lamp's own light drives its glow (below), so only the others
@@ -464,14 +598,21 @@ export function createRoomScene(
             }
         }
         scene.add(puppet.group);
+        hang(wallIn(item), puppet.group);
+        if (!model && !item.wall) cards.push(puppet);
         things.set(item.id, puppet);
     }
 
     // The room's photos: a panel each, like a picture's. The photo is in the
     // overlay.
-    for (const photo of room.photos ?? []) made.add(pictureMesh(photo));
+    for (const photo of room.photos ?? []) {
+        const mesh = pictureMesh(photo);
+        made.add(mesh);
+        hang(wallIn(photo), mesh);
+    }
 
-    // Lamps drawn as their own glyph (a wall lamp), hung by its middle.
+    // Lamps drawn as their own glyph (a wall lamp), hung by its middle on
+    // its wall.
     const fixtures = lamps
         .filter((lamp) => lamp.data.emoji && !lamp.bulb)
         .map((lamp) => {
@@ -486,6 +627,7 @@ export function createRoomScene(
                 set: glowSwitch(puppet, data.color),
             });
             scene.add(puppet.group);
+            hang(wallIn(data), puppet.group);
             return puppet;
         });
 
@@ -496,6 +638,7 @@ export function createRoomScene(
     otherPuppets.setSize(ROOM_SIZES.butt);
     butt.group.position.set(buttAt.x, 0, buttAt.z);
     scene.add(butt.group);
+    cards.push(butt);
     const buttGlow = glowing(butt, "#ffffff", "butt-glow");
     showDaylight(night);
     showLamps();
@@ -541,17 +684,35 @@ export function createRoomScene(
     // only when it moves.
     let shown = null;
 
-    /** Points the camera for the stage. */
+    /** Points the camera for the stage, at the wall its view faces: the
+     * wall behind it hidden, with anything nearer than the floor in view
+     * (`L.band` deep), and the cards standing in the room turned to it. */
     function layout(L) {
         laidOut = true;
         const cam = L.camera;
+        const faced = cam.view?.wall ?? "back";
+        band = L.band;
+        camera.near = Math.max(1, cam.z - band - NEAR_SLACK);
         camera.far = cam.z + depth;
         applyCamera(camera, cam);
         shown = cam;
+        showWalls(faced);
+        yaw = viewYaw(cam.view);
+        for (const card of cards) card.group.rotation.y = yaw;
+        otherPuppets.setTurn(yaw);
+        if (skirt) {
+            // Across the middle of the wall in view, so it covers every pan.
+            const edge = fromView(cam.view, {
+                x: viewSize(cam.view).w / 2,
+                z: band,
+            });
+            skirt.position.set(edge.x, -across / 2, edge.z);
+            skirt.rotation.y = yaw;
+        }
 
-        // The daylight comes through the open front, so it follows the
-        // camera along the back wall only (issue #183 Phase 2 turns it).
-        aimLight(cam.x);
+        // The daylight comes from behind the camera, and follows it along
+        // the wall it faces.
+        aimLight(cam);
         const shadow = key.shadow.camera;
         const reach = Math.max(span, depth);
         shadow.left = -reach;
@@ -590,12 +751,13 @@ export function createRoomScene(
         if (view.camera && view.camera !== shown) {
             applyCamera(camera, view.camera);
             shown = view.camera;
-            aimLight(view.camera.x);
+            aimLight(view.camera);
             changed = true;
         }
         for (const t of view.thrown ?? []) {
             const puppet = things.get(t.id);
             if (!puppet) continue;
+            loosen(t.id, puppet);
             const spot = puppet.group.position;
             if (spot.x !== t.x || spot.y !== t.ground || spot.z !== t.z) {
                 spot.set(t.x, t.ground, t.z);
@@ -624,7 +786,9 @@ export function createRoomScene(
             changed = true;
         }
         for (const puppet of puppets) changed = puppet.tick(dt) || changed;
-        if (crawlers?.tick(dt, reduced)) changed = true;
+        if (dressed.crawling && dressed.crawling.tick(dt, reduced)) {
+            changed = true;
+        }
         for (const { swing } of swings) {
             changed = swing(view.time ?? 0, reduced) || changed;
         }
@@ -691,14 +855,17 @@ export function createRoomScene(
             showLamps();
         },
         dispose() {
-            crawlers?.dispose();
+            for (const dressing of dressings.values()) {
+                for (const puppet of dressing.puppets) puppet.dispose();
+                if (dressing.crawling) dressing.crawling.dispose();
+            }
             books?.dispose();
             signs.dispose();
             disposeTree(made);
             for (const material of glowMaterials) material.dispose();
             buttGlow.dispose();
             otherPuppets.dispose();
-            for (const puppet of [...puppets, ...decorations, ...fixtures]) {
+            for (const puppet of [...puppets, ...fixtures]) {
                 puppet.dispose();
             }
         },

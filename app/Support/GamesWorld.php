@@ -128,11 +128,13 @@ final class GamesWorld
     /** How high up the wall the Cockroach's candle sconces hang. */
     private const SCONCE_Y = 270;
 
-    /** The walls of a room a door can sit on. `back` is the far wall, facing
-     * the open front; `left` and `right` are the ends. */
-    public const ROOM_WALLS = ['back', 'left', 'right'];
+    /** The walls of a room a door can sit on. `back` is the far wall, as
+     * you come in, and `front` the one across from it, behind you (hidden
+     * while you face the back); `left` and `right` are the ends. */
+    public const ROOM_WALLS = ['back', 'left', 'right', 'front'];
 
-    /** A room's looks, by name: `walls.back` (and `walls.sides`) from WALLS,
+    /** A room's looks, by name: `walls.back` (and `walls.sides`, and
+     * `walls.front`, which is like the sides unless it says) from WALLS,
      * `walls.floor` from FLOORS. three/roomLooks.js draws each one (a Vitest
      * test keeps the lists in step). */
     public const WALLS = ['wallpaper-stripes', 'wallpaper-dots', 'wallpaper-green', 'tiles', 'brick', 'plaster', 'stone'];
@@ -803,16 +805,17 @@ final class GamesWorld
         ];
     }
 
-    /** A door on `wall` of a room (`back`, `left` or `right`), named
+    /** A door on `wall` of a room (`back`, `left`, `right` or `front`), named
      * `doors.outside` if it leads out to the road, `places.<label>` after
      * the room it leads to, or by the lang `key` it's given. `at` is x
-     * along the back wall, or z
-     * along a side wall; a right-hand door needs the room's `span`. */
+     * along the back or front wall, or z along a side wall; a right-hand
+     * door needs the room's `span` (its width), a front one its depth. */
     private static function roomDoor(string $id, int $at, string $to, string $toSpot, ?string $label = null, bool $exit = false, string $wall = 'back', int $span = 0, ?string $key = null): array
     {
         [$x, $z] = match ($wall) {
             'left' => [0, $at],
             'right' => [$span, $at],
+            'front' => [$at, $span],
             default => [$at, 0],
         };
 

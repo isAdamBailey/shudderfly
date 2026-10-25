@@ -17,26 +17,32 @@ describe("room looks", () => {
         expect(Object.keys(FLOORS).sort()).toEqual(serverList("FLOORS").sort());
     });
 
-    it("dress the sides like the back unless told otherwise", () => {
+    it("dress the sides like the back, and the front like the sides, unless told otherwise", () => {
         expect(roomLook({ back: "tiles", floor: "lino" })).toEqual({
             back: WALLS.tiles,
             sides: WALLS.tiles,
+            front: WALLS.tiles,
             floor: FLOORS.lino,
         });
-        expect(roomLook({ back: "tiles", sides: "brick" }).sides).toBe(
-            WALLS.brick
-        );
+        const sided = roomLook({ back: "tiles", sides: "brick" });
+        expect(sided.sides).toBe(WALLS.brick);
+        expect(sided.front).toBe(WALLS.brick);
+        expect(
+            roomLook({ back: "tiles", sides: "brick", front: "stone" }).front
+        ).toBe(WALLS.stone);
     });
 
     it("fall back to plaster and wood for a name this client doesn't know", () => {
         expect(roomLook({ back: "constructor", floor: "toString" })).toEqual({
             back: WALLS.plaster,
             sides: WALLS.plaster,
+            front: WALLS.plaster,
             floor: FLOORS.wood,
         });
         expect(roomLook({ back: "marble", floor: "lava" })).toEqual({
             back: WALLS.plaster,
             sides: WALLS.plaster,
+            front: WALLS.plaster,
             floor: FLOORS.wood,
         });
     });

@@ -1,11 +1,11 @@
-import { viewSize } from "../composables/views.js";
+import { viewSize, viewYaw } from "../composables/views.js";
 import { FOOTPRINTS } from "../three/footprints.js";
 
 /**
  * Where a room goes on the stage, as pure numbers (issue #130). A room is a
- * dollhouse box with its front wall taken away: the floor runs `size.w`
- * across and `size.d` from the back wall (z = 0) to the open front (z = d),
- * seen straight on by the same level, lens-shifted camera as the road
+ * dollhouse box with the wall nearest the camera taken away: the floor runs
+ * `size.w` across and `size.d` from the back wall (z = 0) to the front wall
+ * (z = d), seen straight on by the same level, lens-shifted camera as the road
  * (composables/projection.js). The walls fill the stage's height, so a
  * phone doesn't shrink a wide room down to a strip. `frame`, the width the
  * camera shows, sets how tall those walls are: every room the server sends
@@ -20,22 +20,55 @@ import { FOOTPRINTS } from "../three/footprints.js";
  * less), and pans along it if it's longer than the view.
  */
 
-// How a door faces, inward off its wall: `back` is the far wall, `left` and
+// How a door faces, inward off its wall: `back` is the far wall, `front`
+// the one across from it (hidden while you face the back), `left` and
 // `right` the ends, and `back-right` the corner between them (half turned,
 // so a big thing there is still seen on a narrow phone, where the right
 // wall is all but edge on). `x`/`z` is the step into the room, `turn`
-// swings a card that faces +z around to face that way.
+// swings a card that faces +z around to face that way: for a wall, as a
+// camera facing it is turned (views.js).
 const WALL_INSET = 3;
 const FACING = {
-    back: { x: 0, z: 1, turn: 0 },
-    left: { x: 1, z: 0, turn: Math.PI / 2 },
-    right: { x: -1, z: 0, turn: -Math.PI / 2 },
+    back: { x: 0, z: 1, turn: viewYaw({ wall: "back" }) },
+    left: { x: 1, z: 0, turn: viewYaw({ wall: "left" }) },
+    right: { x: -1, z: 0, turn: viewYaw({ wall: "right" }) },
+    front: { x: 0, z: -1, turn: viewYaw({ wall: "front" }) },
     "back-right": { x: -Math.SQRT1_2, z: Math.SQRT1_2, turn: -Math.PI / 4 },
 };
 
 /** Which way `wall` faces into the room (`back` when it doesn't say). */
 export function wallFacing(wall) {
     return FACING[wall] ?? FACING.back;
+}
+
+/** Whether `thing` hangs up the back wall without saying so: off the
+ * floor, against it. */
+export function hungUp(thing) {
+    return (thing.y ?? 0) > 0 && !thing.z;
+}
+
+// How far out from a wall a thing up off the floor still belongs to it,
+// units: hung on it, or standing on what's built against it (a counter, a
+// mantel, a sconce's bracket).
+export const WALL_REACH = 60;
+
+/** The wall `thing` is on in a room `size` ({ w, d }) across: its own
+ * `wall`, or for a thing up off the floor, the wall it's within WALL_REACH
+ * of; null for a thing standing in the room. */
+export function wallOf(thing, { w, d }) {
+    if (thing.wall) return thing.wall;
+    if (!((thing.y ?? 0) > 0)) return null;
+    const z = thing.z ?? 0;
+    const gaps = [
+        ["back", z],
+        ["front", d - z],
+        ["left", thing.x],
+        ["right", w - thing.x],
+    ];
+    const [wall, gap] = gaps.reduce((near, next) =>
+        next[1] < near[1] ? next : near
+    );
+    return gap <= WALL_REACH ? wall : null;
 }
 
 /** Where `item` is drawn: on its wall, a hair into the room, turned to
@@ -109,7 +142,8 @@ export function wallHeightOf(room) {
 }
 
 /** The room scene `room` ({ size: { w, d }, frame? }) on a stage `w` × `h`
- * px, facing `wall` (back unless it says): { camera, wallHeight, pan }.
+ * px, facing `wall` (back unless it says): { camera, wallHeight, band,
+ * pan }. `band` is how deep the floor in view runs from that wall.
  * `pan` is how far the camera may look along that wall ({ min, max } x in
  * the view's frame) and `slack`, how far the Butt walks from the middle
  * before the view scrolls. A wall narrower than the view stays put. */
@@ -147,6 +181,7 @@ export function roomLayout(room, { w, h }, wall = "back") {
     return {
         wallHeight,
         camera,
+        band: depth,
         pan: scrolls
             ? { min: half, max: width - half, slack: half * 0.4 }
             : { min: width / 2, max: width / 2, slack: 0 },

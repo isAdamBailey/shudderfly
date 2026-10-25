@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createCastKit } from "@/Components/Games/Cast/three/castMesh.js";
 import { frameBorder } from "../three/pictureFrame.js";
 import { createRoomScene } from "./RoomScene.js";
-import { roomCamera, roomLayout } from "./roomLayout.js";
+import { roomCamera, roomLayout, ROOM_SIZES } from "./roomLayout.js";
 
 const createCanvas = () => ({ width: 1, height: 1, getContext: () => null });
 
@@ -60,10 +60,10 @@ function build(room = hall, theme = "", night = false) {
 const fill = (graph) =>
     graph.scene.getObjectsByProperty("isHemisphereLight", true)[0].intensity;
 
-/** How many meshes `graph` draws. */
+/** How many meshes `graph` draws: hidden ones, or in a hidden group, aren't. */
 function meshes(graph) {
     let n = 0;
-    graph.scene.traverse((o) => o.isMesh && o.visible && n++);
+    graph.scene.traverseVisible((o) => o.isMesh && n++);
     return n;
 }
 
@@ -635,5 +635,188 @@ describe("the room's scene graph", () => {
             .find((m) => m.position.x === 450 && m.geometry.attributes.color);
         expect(doorway).toBeTruthy();
         graph.dispose();
+    });
+
+    describe("seen from each wall", () => {
+        const fourWalls = {
+            ...hall,
+            interactables: [
+                ...hall.interactables,
+                {
+                    id: "back-door",
+                    type: "door",
+                    wall: "front",
+                    x: 450,
+                    z: 500,
+                    emoji: "🚪",
+                },
+            ],
+        };
+
+        /** `room` built and laid out facing `wall`. */
+        function facing(wall, room = fourWalls, theme = "") {
+            const graph = build(room, theme);
+            const L = roomLayout(room, { w: 1000, h: 700 }, wall);
+            graph.layout(L);
+            return { graph, L };
+        }
+
+        /** The thing drawn in `graph` standing at room point `x`, `z`. */
+        const thingAt = (graph, x, z) =>
+            graph.scene.children.find(
+                (child) => child.position.x === x && child.position.z === z
+            );
+
+        /** The walls `graph` draws (tall planes), and how many show. */
+        function wallsOf(graph) {
+            const walls = [];
+            graph.scene.traverse(
+                (o) =>
+                    o.isMesh &&
+                    o.geometry.type === "PlaneGeometry" &&
+                    o.geometry.parameters.height === 450 &&
+                    walls.push(o)
+            );
+            const shown = [];
+            graph.scene.traverseVisible(
+                (o) => walls.includes(o) && shown.push(o)
+            );
+            return { all: walls.length, shown: shown.length };
+        }
+
+        it("builds all four walls and hides the one behind the camera", () => {
+            for (const wall of ["back", "right", "front", "left"]) {
+                const { graph } = facing(wall);
+                expect(wallsOf(graph)).toEqual({ all: 4, shown: 3 });
+                graph.dispose();
+            }
+        });
+
+        it("hides what hangs on the wall behind the camera with it", () => {
+            const back = facing("back").graph;
+            const front = facing("front").graph;
+            // The door on the front wall, a hair into the room.
+            expect(thingAt(back, 450, 497).visible).toBe(false);
+            expect(thingAt(front, 450, 497).visible).toBe(true);
+            // The doorbell, up on the back wall.
+            expect(thingAt(back, 560, 3).visible).toBe(true);
+            expect(thingAt(front, 560, 3).visible).toBe(false);
+            // The strawberry stands in the room, seen from anywhere.
+            expect(thingAt(front, 180, 263).visible).toBe(true);
+        });
+
+        it("turns its cards to the camera, but not what's posed on the wall it names", () => {
+            const { graph } = facing("left");
+            graph.sync(view(), 0);
+
+            // The strawberry, the Butt, and the doorbell (a card stuck up
+            // the back wall).
+            for (const [x, z] of [
+                [180, 263],
+                [450, 330],
+                [560, 3],
+            ]) {
+                expect(thingAt(graph, x, z).rotation.y).toBeCloseTo(
+                    Math.PI / 2
+                );
+            }
+            expect(thingAt(graph, 450, 497).rotation.y).toBeCloseTo(Math.PI);
+        });
+
+        it("lets a thing thrown off a wall into the room, seen from anywhere", () => {
+            const shelved = {
+                ...hall,
+                interactables: [
+                    {
+                        id: "apple",
+                        type: "toy",
+                        x: 300,
+                        z: 0,
+                        y: 120,
+                        cast: "apple",
+                        throwable: true,
+                    },
+                ],
+            };
+            const { graph } = facing("front", shelved);
+            const apple = thingAt(graph, 300, 3);
+            expect(apple.visible).toBe(false);
+
+            graph.sync(
+                view({
+                    thrown: [
+                        {
+                            id: "apple",
+                            x: 300,
+                            y: 0,
+                            z: 250,
+                            ground: 0,
+                            tilt: 0,
+                        },
+                    ],
+                }),
+                0
+            );
+            expect(apple.visible).toBe(true);
+            expect(apple.rotation.y).toBeCloseTo(Math.PI);
+        });
+
+        it("keeps the well's skirt under the whole wall in view as it pans", () => {
+            const long = {
+                ...hall,
+                size: { w: 2200, d: 500 },
+                frame: 900,
+                interactables: [
+                    {
+                        id: "down",
+                        type: "door",
+                        wall: "left",
+                        x: 0,
+                        z: 200,
+                        stairs: "down",
+                        emoji: "🚪",
+                    },
+                ],
+            };
+            const { graph, L } = facing("back", long);
+            graph.sync(view({ camera: roomCamera(L, 1900) }), 0);
+            const skirt = graph.scene
+                .getObjectsByProperty("isMesh", true)
+                .find(
+                    (m) => m.material.isMeshBasicMaterial && m.position.y < 0
+                );
+            expect(skirt.position.x).toBe(1100);
+            expect(skirt.geometry.parameters.width).toBeGreaterThanOrEqual(
+                2200
+            );
+        });
+
+        it("cuts away anything nearer than the floor in view", () => {
+            const long = { ...hall, size: { w: 2200, d: 500 }, frame: 900 };
+            const { graph, L } = facing("left", long);
+            expect(graph.camera.near).toBeCloseTo(
+                L.camera.z - L.band - ROOM_SIZES.butt / 2
+            );
+            expect(graph.camera.near).toBeGreaterThan(1);
+        });
+
+        it("lights the room from behind the camera", () => {
+            const key = (graph) =>
+                graph.scene.getObjectsByProperty("isDirectionalLight", true)[0];
+            const back = key(facing("back").graph);
+            expect(back.position.z).toBeGreaterThan(back.target.position.z);
+            const left = key(facing("left").graph);
+            expect(left.position.x).toBeGreaterThan(left.target.position.x);
+            const front = key(facing("front").graph);
+            expect(front.position.z).toBeLessThan(front.target.position.z);
+        });
+
+        it("dresses the wall it faces for the season, as the back is today", () => {
+            const extra = (wall) =>
+                meshes(facing(wall, hall, "christmas").graph) -
+                meshes(facing(wall, hall).graph);
+            expect(extra("back")).toBe(5);
+            expect(extra("left")).toBe(5);
+        });
     });
 });

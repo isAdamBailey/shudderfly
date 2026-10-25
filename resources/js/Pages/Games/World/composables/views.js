@@ -41,6 +41,11 @@ const VIEWS = {
 /** The walls a view can face, turning right from the back. */
 export const WALLS = Object.keys(VIEWS);
 
+/** The wall across the room from `wall`: behind a camera facing it. */
+export function wallBehind(wall) {
+    return WALLS[(WALLS.indexOf(wall) + 2) % WALLS.length];
+}
+
 /** Whether `view` turns the room at all: not on the road, nor facing back. */
 export function turned(view) {
     return Boolean(view) && view.wall !== "back";
