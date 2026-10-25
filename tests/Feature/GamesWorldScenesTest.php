@@ -380,7 +380,7 @@ class GamesWorldScenesTest extends TestCase
         $this->assertLessThan($items['front-door']['x'] - 60, $washer['x'] + $half);
     }
 
-    public function test_gusters_house_has_toot_slots_on_the_wall(): void
+    public function test_gusters_house_has_toot_slots_on_the_right_wall(): void
     {
         $slots = collect(GamesWorld::scenes()['guster-house.hall']['interactables'])->firstWhere('minigame', 'toot-slots');
 
@@ -388,8 +388,18 @@ class GamesWorldScenesTest extends TestCase
         $this->assertSame('Toot Slots', $slots['label']);
         $this->assertSame('slot-machine', $slots['model']);
         $this->assertSame('You won :score times!', $slots['score']);
-        // Hung up the back wall, not standing on the floor.
+        // Hung up the right wall, not standing on the floor.
+        $this->assertSame('right', $slots['wall']);
         $this->assertGreaterThan(0, $slots['y']);
+    }
+
+    public function test_gusters_house_is_no_wider_than_the_frame_with_one_switch_for_both_lamps(): void
+    {
+        $room = GamesWorld::definitions()['guster-house.hall'];
+        $this->assertSame(GamesWorld::ROOM_FRAME, $room['size']['w']);
+
+        $switch = collect($room['interactables'])->firstWhere('id', 'lamp-switch');
+        $this->assertEqualsCanonicalizing(array_column($room['lights'], 'id'), $switch['light']);
     }
 
     public function test_gusters_house_is_green_with_guster_at_home(): void
