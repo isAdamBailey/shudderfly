@@ -198,6 +198,19 @@ describe("useRoom", () => {
         expect(onArrive).not.toHaveBeenCalled();
     });
 
+    it("is put down at once where it's told, kept to the floor", () => {
+        const { r } = makeRoom();
+        r.walkTo(100, 100);
+        r.placeAt(300, 200);
+        expect(r.butt).toMatchObject({ x: 300, z: 200 });
+        // It doesn't carry on to where it was walking.
+        run(r, 1);
+        expect(r.butt).toMatchObject({ x: 300, z: 200 });
+
+        r.placeAt(-500, 9999);
+        expect(r.butt).toMatchObject(r.inside(-500, 9999));
+    });
+
     it("stands as far out as a thing says, off whichever wall it's on", () => {
         const organ = {
             id: "organ",

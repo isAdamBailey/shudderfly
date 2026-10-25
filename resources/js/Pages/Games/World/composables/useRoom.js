@@ -326,6 +326,15 @@ export function useRoom(
         Object.assign(butt, standAt(item));
     }
 
+    /** Puts the Butt at (x, z) straight away, kept to the floor and off
+     * anything played: turning round in a long room brings it into the
+     * floor in view. */
+    function placeAt(x, z) {
+        if (state.frozen) return;
+        halt();
+        Object.assign(butt, clear(clampX(x), clampZ(z)));
+    }
+
     function startDrag() {
         if (state.frozen) return;
         state.dragging = true;
@@ -379,6 +388,7 @@ export function useRoom(
         inside,
         goUse,
         standBy,
+        placeAt,
         startDrag,
         updateDrag,
         endDrag,
