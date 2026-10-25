@@ -89,6 +89,12 @@ return [
             'es' => ['ef_dora', 'em_alex', 'em_santa'],
             'fr' => ['ff_siwis'],
         ],
+        // The voice a seasonal theme (HandleInertiaRequests::getCurrentTheme)
+        // speaks in, per locale, for people who never picked one. Used only
+        // while it is in that locale's list above; French has no Santa voice.
+        'seasonal_voices' => [
+            'christmas' => ['en' => 'am_santa', 'es' => 'em_santa'],
+        ],
     ],
 
     'tmdb' => [

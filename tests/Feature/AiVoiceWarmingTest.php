@@ -9,6 +9,7 @@ use App\Models\Page;
 use App\Models\SiteSetting;
 use App\Models\User;
 use App\Services\AiVoiceService;
+use App\Services\UserWeeklyOverviewService;
 use App\Support\AiVoice;
 use App\Support\SpokenText;
 use Illuminate\Contracts\Bus\Dispatcher;
@@ -58,6 +59,48 @@ class AiVoiceWarmingTest extends TestCase
 
         $this->assertCount(1, $this->jobsFor('Bluey'));
         $this->assertCount(1, $this->jobsFor('A dog story'));
+    }
+
+    public function test_at_christmas_clips_are_warmed_in_the_seasonal_voice_where_the_locale_has_it(): void
+    {
+        config(['app.force_theme' => 'christmas']);
+        User::factory()->create(['locale' => 'es']);
+        User::factory()->create(['locale' => 'fr']);
+
+        Page::factory()->create(['content' => '<p>Ho ho ho</p>']);
+
+        $this->assertEqualsCanonicalizing(
+            ['en:am_santa', 'es:em_santa', 'fr:'],
+            $this->jobsFor('Ho ho ho')->map(fn ($job) => "{$job->locale}:{$job->voice}")->all(),
+        );
+    }
+
+    public function test_a_stored_weekly_overview_warms_what_its_owner_and_everyone_else_hear(): void
+    {
+        config(['app.name' => 'Shudderfly']);
+        $user = User::factory()->create(['name' => 'Sunny', 'locale' => 'es']);
+        Queue::fake();
+
+        app(UserWeeklyOverviewService::class)->store($user, "  Sunny read three books.\n");
+
+        $this->assertSame('Sunny read three books.', $user->fresh()->weekly_profile_overview);
+        $this->assertSame(
+            [
+                'en' => ['Welcome to Shudderfly, Sunny! Sunny read three books.', 'Sunny. Sunny read three books.'],
+                'es' => ['¡Bienvenido a Shudderfly, Sunny! Sunny read three books.', 'Sunny. Sunny read three books.'],
+            ],
+            Queue::pushed(GenerateAiVoiceClip::class)->groupBy('locale')->map->pluck('text')->map->all()->sortKeys()->all(),
+        );
+    }
+
+    public function test_a_blank_weekly_overview_warms_nothing(): void
+    {
+        $user = User::factory()->create();
+        Queue::fake();
+
+        app(UserWeeklyOverviewService::class)->store($user, ' ');
+
+        Queue::assertNotPushed(GenerateAiVoiceClip::class);
     }
 
     public function test_nothing_is_warmed_while_the_ai_voice_is_off(): void

@@ -477,8 +477,11 @@ describe("aiVoice", () => {
             function withTheme(theme) {
                 usePage.mockImplementation(() => ({
                     props: {
-                        theme,
                         aiVoice: {
+                            seasonal:
+                                theme === "christmas"
+                                    ? { en: "am_santa", es: "em_santa" }
+                                    : [],
                             voices: {
                                 en: ["af_heart", "am_puck", "am_santa"],
                                 es: ["ef_dora", "em_santa"],
@@ -514,8 +517,10 @@ describe("aiVoice", () => {
             it("keeps the default when Santa isn't in the allow-list", () => {
                 usePage.mockImplementation(() => ({
                     props: {
-                        theme: "christmas",
-                        aiVoice: { voices: { en: ["af_heart"] } },
+                        aiVoice: {
+                            seasonal: { en: "am_santa" },
+                            voices: { en: ["af_heart"] },
+                        },
                     },
                 }));
 

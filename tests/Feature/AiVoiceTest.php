@@ -543,6 +543,12 @@ class AiVoiceTest extends TestCase
         $this->get(route('dashboard'))->assertInertia(fn (Assert $page) => $page
             ->where('aiVoice.voices.en.0', 'af_heart')
             ->where('aiVoice.voices.fr', ['ff_siwis'])
+            ->where('aiVoice.seasonal', [])
+        );
+
+        config(['app.force_theme' => 'christmas']);
+        $this->get(route('dashboard'))->assertInertia(fn (Assert $page) => $page
+            ->where('aiVoice.seasonal', ['en' => 'am_santa', 'es' => 'em_santa'])
         );
 
         SiteSetting::where('key', AiVoice::SETTING_KEY)->update(['value' => '0']);

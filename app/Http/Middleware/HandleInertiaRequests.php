@@ -113,7 +113,7 @@ class HandleInertiaRequests extends Middleware
             // POST /ai-voice is for signed-in users only, so guests get no
             // gate and speak with the device voice.
             'aiVoice' => $request->user() && AiVoice::enabled($siteSettings)
-                ? ['voices' => config('services.ai_voice.voices')]
+                ? ['voices' => config('services.ai_voice.voices'), 'seasonal' => AiVoice::seasonalVoices()]
                 : null,
             'collageMaxPages' => (int) config('collage.max_pages'),
             'broadcastChannelPrefix' => fn () => (string) config('broadcasting.channel_prefix'),

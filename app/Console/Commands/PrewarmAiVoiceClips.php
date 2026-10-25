@@ -26,7 +26,7 @@ class PrewarmAiVoiceClips extends Command
 
     protected $signature = 'ai-voice:prewarm
         {--locale=* : Locales to warm (default: en plus every locale a user has picked)}
-        {--voice= : Voice to warm in (default: each locale\'s default voice)}
+        {--voice= : Voice to warm in (default: the seasonal voice, else each locale\'s default)}
         {--source=* : ui, games, books and/or songs (default: all)}
         {--dry-run : Report how many clips would be made and their cost, without making them}
         {--sync : Make the clips now instead of queueing them}';
@@ -164,7 +164,7 @@ class PrewarmAiVoiceClips extends Command
         foreach ($locales as $locale) {
             foreach ($sources as $source) {
                 foreach ($this->phrases($source, $locale) as [$text, $voice]) {
-                    $key = AiVoiceService::keyFor($text, $locale, $voice ?? $this->option('voice'));
+                    $key = AiVoiceService::keyFor($text, $locale, $voice ?? $this->option('voice') ?? AiVoice::warmingVoice($locale));
 
                     if ($key === null) {
                         // Blank text is nothing to say; anything else was too long.
@@ -209,7 +209,7 @@ class PrewarmAiVoiceClips extends Command
 
     /**
      * The texts $source speaks in $locale, each with the voice it must be
-     * made in, or null for the --voice option or the locale's default.
+     * made in, or null for the --voice option or the voice warming uses.
      *
      * @return iterable<array{0: string, 1: ?string}>
      */

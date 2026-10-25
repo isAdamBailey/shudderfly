@@ -27,12 +27,10 @@ class GenerateWeeklyUserOverviews extends Command
             ->orderBy('id')
             ->chunkById(100, function ($users) {
                 foreach ($users as $user) {
-                    $overview = $this->userWeeklyOverviewService->generateOverview($user);
-
-                    $user->forceFill([
-                        'weekly_profile_overview' => trim($overview),
-                        'weekly_profile_overview_generated_at' => now(),
-                    ])->save();
+                    $this->userWeeklyOverviewService->store(
+                        $user,
+                        $this->userWeeklyOverviewService->generateOverview($user),
+                    );
                     $this->line("Generated overview for {$user->name}");
                 }
             });

@@ -93,14 +93,6 @@ export function aiVoicesForLocale(locale) {
     return usePage().props.aiVoice?.voices?.[locale] ?? [];
 }
 
-// The voice a seasonal theme (HandleInertiaRequests::getCurrentTheme) uses
-// instead of the locale's default, for people who never picked one. Used
-// only while the voice is still in the locale's allow-list; French has no
-// Santa voice.
-const SEASONAL_AI_VOICES = {
-    christmas: { en: "am_santa", es: "em_santa" },
-};
-
 /**
  * The voice to speak `locale` in: the saved choice while it is still
  * allowed, otherwise the seasonal voice for the current theme, otherwise
@@ -113,7 +105,9 @@ export function resolveAiVoice(locale) {
         return saved;
     }
 
-    const seasonal = SEASONAL_AI_VOICES[usePage().props.theme]?.[locale];
+    // The current theme's voice (services.ai_voice.seasonal_voices), which
+    // the server also warms clips in. French has no Santa voice.
+    const seasonal = usePage().props.aiVoice?.seasonal?.[locale];
 
     return voices.includes(seasonal) ? seasonal : voices[0] ?? null;
 }

@@ -12,7 +12,6 @@ const mockPatch = vi.fn();
 const pageProps = reactive({
     locale: null,
     aiVoice: null,
-    theme: "",
     auth: { user: { id: 1, name: "Alice", locale: "" } },
 });
 
@@ -85,7 +84,6 @@ beforeEach(() => {
     speech = createSpeechApi();
     pageProps.locale = null;
     pageProps.aiVoice = null;
-    pageProps.theme = "";
     pageProps.auth.user.locale = "";
 });
 
@@ -259,7 +257,7 @@ describe("VoiceSettingsForm voices", () => {
         });
 
         it("checks Santa at Christmas until a voice is saved", async () => {
-            pageProps.theme = "christmas";
+            pageProps.aiVoice.seasonal = { en: "am_santa", es: "em_santa" };
             pageProps.locale = "es";
             const wrapper = mount(VoiceSettingsForm);
 

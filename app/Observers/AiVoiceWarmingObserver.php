@@ -2,7 +2,6 @@
 
 namespace App\Observers;
 
-use App\Jobs\GenerateAiVoiceClip;
 use App\Models\Book;
 use App\Models\Page;
 use App\Services\AiVoiceService;
@@ -44,14 +43,8 @@ class AiVoiceWarmingObserver
             array_map(fn (string $attribute) => $this->changedText($model, $attribute), self::SPOKEN[$model::class] ?? []),
         ));
 
-        if ($texts === [] || ! AiVoice::enabled()) {
-            return;
-        }
-
-        foreach (AiVoice::spokenLocales() as $locale) {
-            foreach ($texts as $text) {
-                GenerateAiVoiceClip::dispatch($text, $locale)->afterCommit();
-            }
+        if ($texts !== []) {
+            AiVoice::warm($texts);
         }
     }
 

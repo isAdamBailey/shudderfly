@@ -2,7 +2,7 @@ import UserTagList from "@/Components/UserTagList.vue";
 import Show from "@/Pages/Page/Show.vue";
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { nextTick, toValue } from "vue";
+import { nextTick } from "vue";
 
 const mockUsePrefetchAiVoice = vi.fn();
 vi.mock("@/composables/aiVoice", () => ({
@@ -271,15 +271,14 @@ describe("Page/Show.vue", () => {
         wrapper = mountShow();
     });
 
-    it("prefetches the AI voice clip for the page's plain text", () => {
+    // The server warms a page's clip when the page is saved
+    // (AiVoiceWarmingObserver), so the browser doesn't ask for it.
+    it("doesn't prefetch the AI voice clip for the page", () => {
         mockUsePrefetchAiVoice.mockClear();
 
         mountShow({ content: "<p>Hello <b>there</b></p>" });
 
-        expect(mockUsePrefetchAiVoice).toHaveBeenCalledOnce();
-        expect(toValue(mockUsePrefetchAiVoice.mock.calls[0][0])).toBe(
-            "Hello there"
-        );
+        expect(mockUsePrefetchAiVoice).not.toHaveBeenCalled();
     });
 
     it("renders the page content", () => {
