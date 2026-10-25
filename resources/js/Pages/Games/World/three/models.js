@@ -4,6 +4,7 @@ import { fridgeModel } from "./fridge.js";
 import { grandfatherClockModel } from "./grandfatherClock.js";
 import { ovenModel } from "./oven.js";
 import { slotMachineModel } from "./slotMachine.js";
+import { spotlightModel } from "./spotlight.js";
 import { tableLampModel } from "./tableLamp.js";
 import { washingMachineModel } from "./washingMachine.js";
 
@@ -22,4 +23,5 @@ export const MODELS = {
     "washing-machine": washingMachineModel,
     "grandfather-clock": grandfatherClockModel,
     armchair: armchairModel,
+    spotlight: spotlightModel,
 };

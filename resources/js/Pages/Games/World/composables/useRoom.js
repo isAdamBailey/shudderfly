@@ -1,5 +1,5 @@
 import { computed, reactive } from "vue";
-import { INSTRUMENT_FOOTPRINTS, isInstrument } from "../scenes/instruments.js";
+import { blockedFloor } from "../scenes/instruments.js";
 import {
     inView,
     itemLocal,
@@ -79,8 +79,8 @@ export function arrivalWall(room, { spot, position } = {}) {
  * using one when it gets there. Rooms are rectangles and most furniture
  * never blocks, so walking is a straight line; stairs, which take up the
  * floor along their wall, keep the Butt further from it, and an instrument's
- * floor is kept off (the Butt slides along its edge), so the Butt can't
- * stand over what's played. Driven by `step(dt)`.
+ * floor, or a stage's, is kept off (the Butt slides along its edge), so the
+ * Butt can't stand over what's played. Driven by `step(dt)`.
  *
  * The Butt walks the floor in view (issue #183): the band in front of the
  * wall the camera faces (roomLayout.js viewBand()), and the arrow keys'
@@ -100,6 +100,8 @@ export function arrivalWall(room, { spot, position } = {}) {
  *   (the books on a Library shelf).
  * - placed(item): `item` where it is now, if it can be moved (a thrown
  *   fruit, useThrowables.js); the Butt goes there to use it.
+ * - usable(item): whether `item` can be used just now (not an instrument
+ *   behind a drawn curtain); the Butt is never at one that can't.
  */
 export function useRoom(
     room,
@@ -112,6 +114,7 @@ export function useRoom(
         isReducedMotion,
         extras = () => [],
         placed = (item) => item,
+        usable = () => true,
     } = {}
 ) {
     const { w, d } = room.size;
@@ -121,24 +124,23 @@ export function useRoom(
         room.interactables.some((i) => i.stairs && (i.wall ?? "back") === wall)
             ? STAIRS_CLEARANCE
             : MARGIN;
-    // Floor the Butt keeps off: each instrument's, and a little round it,
-    // in the instrument's own space, whichever wall it stands against.
-    const c = BLOCK_CLEARANCE;
-    const blocks = room.interactables.filter(isInstrument).map((item) => {
-        const f = INSTRUMENT_FOOTPRINTS[item.type];
+    // Floor the Butt keeps off: each instrument's (and a stage's), and a
+    // little round it, in its own space, whichever wall it stands against.
+    const blocks = blockedFloor(room).map((f) => {
+        const c = f.clearance ?? BLOCK_CLEARANCE;
         return {
-            item,
+            item: f.item,
             x0: f.x0 - c,
             x1: f.x1 + c,
             z0: f.z0 - c,
             z1: f.z1 + c,
         };
     });
-    const blocked = (x, z) =>
-        blocks.find((b) => {
-            const p = itemLocal(b.item, { x, z });
-            return p.x > b.x0 && p.x < b.x1 && p.z > b.z0 && p.z < b.z1;
-        });
+    const inBlock = (b, x, z) => {
+        const p = itemLocal(b.item, { x, z });
+        return p.x > b.x0 && p.x < b.x1 && p.z > b.z0 && p.z < b.z1;
+    };
+    const blocked = (x, z) => blocks.find((b) => inBlock(b, x, z));
 
     // The camera's view ({ wall, size }, views.js), how deep the floor in
     // view runs, and the part of it the Butt walks, in the view's frame:
@@ -204,25 +206,27 @@ export function useRoom(
     }
 
     /** Spot { x, z } on the floor, off any furniture that blocks: out by
-     * the nearest edge that's still on the floor. */
+     * the nearest edge of whatever it's on that's still on the floor and
+     * off everything else (an instrument stands on a stage, which is
+     * furniture too). */
     function clear({ x, z }) {
-        const b = blocked(x, z);
-        if (!b) return { x, z };
         let best = { x, z };
         let bestDistance = Infinity;
-        const p = itemLocal(b.item, { x, z });
-        for (const [lx, lz] of [
-            [b.x0, p.z],
-            [b.x1, p.z],
-            [p.x, b.z0],
-            [p.x, b.z1],
-        ]) {
-            const edge = itemPoint(b.item, [lx, 0, lz]);
-            const out = within(edge.x, edge.z);
-            const distance = (out.x - x) ** 2 + (out.z - z) ** 2;
-            if (distance < bestDistance && !blocked(out.x, out.z)) {
-                best = out;
-                bestDistance = distance;
+        for (const b of blocks.filter((b) => inBlock(b, x, z))) {
+            const p = itemLocal(b.item, { x, z });
+            for (const [lx, lz] of [
+                [b.x0, p.z],
+                [b.x1, p.z],
+                [p.x, b.z0],
+                [p.x, b.z1],
+            ]) {
+                const edge = itemPoint(b.item, [lx, 0, lz]);
+                const out = within(edge.x, edge.z);
+                const distance = (out.x - x) ** 2 + (out.z - z) ** 2;
+                if (distance < bestDistance && !blocked(out.x, out.z)) {
+                    best = out;
+                    bestDistance = distance;
+                }
             }
         }
         return best;
@@ -246,6 +250,7 @@ export function useRoom(
         let bestDistance = REACH;
         for (const list of [room.interactables, extras()]) {
             for (const item of list) {
+                if (!usable(item)) continue;
                 const distance = distanceTo(item);
                 if (distance <= bestDistance) {
                     best = item;

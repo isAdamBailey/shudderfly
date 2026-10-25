@@ -80,6 +80,23 @@ describe("modelled props", () => {
         expect(lamp.userData.bulb).toBeLessThan(1);
     });
 
+    it("shines the spotlight from its lens, and can light it", () => {
+        const spot = MODELS.spotlight(THREE);
+        expect(typeof spot.userData.setOn).toBe("function");
+        expect(spot.userData.bulb).toBeGreaterThan(0);
+        expect(spot.userData.bulb).toBeLessThan(0.5);
+        // Tipped back toward the stage, so the beam starts at the lens.
+        expect(spot.userData.lens).toBeLessThan(0);
+        spot.updateMatrixWorld(true);
+        const glass = spot
+            .getObjectsByProperty("isMesh", true)
+            .find((mesh) => mesh.geometry.type === "CircleGeometry");
+        const at = new THREE.Vector3();
+        glass.getWorldPosition(at);
+        expect(at.y).toBeCloseTo(spot.userData.bulb, 3);
+        expect(at.z).toBeCloseTo(spot.userData.lens, 3);
+    });
+
     it("swings the grandfather clock's pendulum to an end on each beat, still under reduced motion", () => {
         const clock = MODELS["grandfather-clock"](THREE);
         const pendulum = () =>

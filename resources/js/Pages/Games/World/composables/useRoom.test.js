@@ -300,6 +300,46 @@ describe("useRoom", () => {
         }
     });
 
+    it("walks a tap on the stage beside an instrument to the floor in front", () => {
+        const harp = {
+            id: "harp",
+            type: "harp",
+            x: 180,
+            z: 30,
+            y: 30,
+            stand: 190,
+        };
+        const r = useRoom(
+            {
+                size: { w: 900, d: 500 },
+                stage: { w: 900, d: 180 },
+                interactables: [harp],
+            },
+            { start: { x: 180, z: 400 } }
+        );
+
+        r.walkTo(180, 50);
+        run(r, 5);
+
+        expect(r.butt.z).toBeGreaterThan(180);
+    });
+
+    it("is never standing at something that can't be used", () => {
+        const organ = {
+            id: "organ",
+            type: "organ",
+            x: 450,
+            z: 0,
+            stand: 200,
+        };
+        const r = useRoom(
+            { size: { w: 900, d: 500 }, interactables: [organ] },
+            { start: { x: 450, z: 200 }, usable: () => false }
+        );
+
+        expect(r.nearest.value).toBeNull();
+    });
+
     it("is near nothing in the middle of the floor", () => {
         const { r } = makeRoom({ start: { x: 450, z: 100 + STAND + REACH } });
 

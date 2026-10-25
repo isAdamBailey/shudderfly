@@ -23,6 +23,7 @@ import { createOtherPuppets } from "../three/otherPuppets.js";
 import { bassDrum } from "../three/bassDrum.js";
 import { harp } from "../three/harp.js";
 import { pipeOrgan } from "../three/pipeOrgan.js";
+import { stageCurtain } from "../three/stageCurtain.js";
 import {
     hungUp,
     itemBox,
@@ -45,6 +46,7 @@ import { pictureFrame } from "../three/pictureFrame.js";
 import { fireplaceGeometry } from "./fireplace.js";
 import { kitchenCounterGeometry } from "./kitchenCounter.js";
 import { ORGAN } from "./organLayout.js";
+import { seatsGeometry, stageGeometry } from "./stage.js";
 import { floorGeometry, stairsFootprint, stairsGeometry } from "./staircase.js";
 import { createWallCrawlers } from "./wallCrawlers.js";
 
@@ -95,6 +97,10 @@ const PICTURE_BACKING = "#1c1410";
 // What an instrument interactable is drawn as, by its type: each model is
 // { group, tick(dt, reduced) } and its own way to be played.
 export const INSTRUMENTS = { organ: pipeOrgan, harp, drum: bassDrum };
+// A spotlight (a light with a `spot`, the stage floor it shines at): how
+// wide its cone is (radians, to its edge), how soft its edge, and how
+// strongly the beam shows in the air.
+const SPOT = { angle: 0.42, penumbra: 0.55, beam: 0.07 };
 
 /**
  * Builds a room from its scene data (`room`: { size, walls, lights,
@@ -102,7 +108,7 @@ export const INSTRUMENTS = { organ: pipeOrgan, harp, drum: bassDrum };
  * seasonal `theme` (at `night` in dark mode), its EXIT signs reading
  * `exitWord`. Returns { scene, camera, layout(L), sync(view, dt),
  * animate(id, move), pressKey(id, zone, key), pluckString(id, n, delay),
- * hitDrum(id, edge), toggleLight(id),
+ * hitDrum(id, edge), setCurtain(id, open), toggleLight(id),
  * setNight(on), dispose() }.
  */
 export function createRoomScene(
@@ -194,18 +200,27 @@ export function createRoomScene(
     // number of lights is part of every lit material's shader, so hiding
     // one would recompile them all. A toy that switches one lamp is its
     // bulb, so the light is moved onto that glyph (below); a lamp no toy
-    // is the bulb of may be drawn as its own `emoji`.
+    // is the bulb of may be drawn as its own `emoji`. A lamp with a `spot`
+    // is a spotlight, shining down at it, its beam drawn in the air (below).
     const lamps = (room.lights ?? []).map((data) => {
         const intensity = data.intensity * LAMP_REACH;
-        const light = new THREE.PointLight(
-            data.color,
-            intensity,
-            width * 1.5,
-            1
-        );
+        const light = data.spot
+            ? new THREE.SpotLight(
+                  data.color,
+                  intensity,
+                  width * 1.5,
+                  SPOT.angle,
+                  SPOT.penumbra,
+                  1
+              )
+            : new THREE.PointLight(data.color, intensity, width * 1.5, 1);
         light.position.set(data.x, data.y, data.z);
         made.add(light);
-        return { data, light, intensity, on: true, bulb: false };
+        if (data.spot) {
+            light.target.position.set(data.spot.x, data.spot.y, data.spot.z);
+            made.add(light.target);
+        }
+        return { data, light, intensity, on: true, bulb: false, beam: null };
     });
     // Things that glow while any of their lamps is on: { lamps, set(on) }.
     const glows = [];
@@ -215,6 +230,7 @@ export function createRoomScene(
     function showLamps() {
         for (const lamp of lamps) {
             lamp.light.intensity = lamp.on ? lamp.intensity : 0;
+            if (lamp.beam) lamp.beam.visible = lamp.on;
         }
         for (const glow of glows) {
             const on = glow.lamps.some((lamp) => lamp.on);
@@ -458,15 +474,16 @@ export function createRoomScene(
 
     // Stairs, open doorways (doorway.js), the Library's bookcases
     // (bookshelf.js), entertainment centers (entertainmentCenter.js),
-    // fireplaces (fireplace.js) and kitchen counters (kitchenCounter.js)
-    // are built into the room, in wood and stone
-    // coloured in their vertices; the books on
-    // the shelves are one instanced mesh.
+    // fireplaces (fireplace.js), kitchen counters (kitchenCounter.js) and
+    // the auditorium's stage and chairs (stage.js) are built into the room,
+    // in wood and stone coloured in their vertices; the books on the
+    // shelves are one instanced mesh.
     const shelves = room.shelves ?? [];
     const entertainment = room.entertainment ?? [];
     const fireplaces = room.fireplaces ?? [];
     const counters = room.counters ?? [];
     const doorways = room.interactables.filter((item) => item.open);
+    const seats = room.seats ?? [];
     const wood = [
         stairs,
         doorways,
@@ -474,6 +491,8 @@ export function createRoomScene(
         entertainment,
         fireplaces,
         counters,
+        seats,
+        room.stage ? [room.stage] : [],
     ].some((list) => list.length)
         ? new THREE.MeshStandardMaterial({
               vertexColors: true,
@@ -531,6 +550,12 @@ export function createRoomScene(
     for (const unit of counters) {
         builtIn(unit, (u) => kitchenCounterGeometry(THREE, u));
     }
+    // The stage, along the back wall and hidden with it; the chairs stand
+    // in the room.
+    if (room.stage) {
+        woodwork("back", stageGeometry(THREE, room.stage));
+    }
+    if (seats.length > 0) woodwork(null, seatsGeometry(THREE, seats));
     if (doorways.length > 0) {
         const doorway = doorwayGeometry(THREE);
         for (const item of doorways) {
@@ -565,11 +590,22 @@ export function createRoomScene(
     // stands, with its userData: swing, beat, and any chime and tune.
     const swings = [];
     // Instruments (INSTRUMENTS), by id: built into the room, but played,
-    // so they're ticked.
+    // so they're ticked. A stage's curtain is ticked as it's drawn.
     const instruments = new Map();
+    const curtains = new Map();
     for (const item of room.interactables) {
         // Built into the room above, not played with.
         if (item.stairs || item.open) continue;
+        if (item.type === "curtain") {
+            const built = stageCurtain(THREE, item, height);
+            const pose = itemPose(item);
+            built.group.position.set(pose.x, pose.y, pose.z);
+            built.group.rotation.y = pose.turn;
+            made.add(built.group);
+            hang(wallIn(item), built.group);
+            curtains.set(item.id, built);
+            continue;
+        }
         const instrument = own(INSTRUMENTS, item.type);
         if (instrument) {
             const built = instrument(THREE);
@@ -623,8 +659,9 @@ export function createRoomScene(
         puppet.group.position.set(pose.x, pose.y, pose.z);
         puppet.group.rotation.y = pose.turn;
         // A switch for one lamp is its bulb, and the light sits on it (in
-        // a modelled lamp, at its `bulb`); one for several (`light: [ids]`)
-        // glows with them where it is. A model lights up its own way.
+        // a modelled lamp, at its `bulb`, and `lens` out in its own z when
+        // the lens is tipped); one for several (`light: [ids]`) glows with
+        // them where it is. A model lights up its own way.
         const switched = lampsOf([item.light ?? []].flat());
         if (switched.length > 0) {
             glows.push({
@@ -637,10 +674,14 @@ export function createRoomScene(
             });
             if (typeof item.light === "string") {
                 switched[0].bulb = true;
+                const bulb = model?.userData.bulb ?? 0.5;
+                const lens = size * (model?.userData.lens ?? 0);
+                const cos = Math.cos(pose.turn);
+                const sin = Math.sin(pose.turn);
                 switched[0].light.position.set(
-                    pose.x,
-                    pose.y + size * (model?.userData.bulb ?? 0.5),
-                    pose.z
+                    pose.x + lens * sin,
+                    pose.y + size * bulb,
+                    pose.z + lens * cos
                 );
             }
         }
@@ -679,6 +720,44 @@ export function createRoomScene(
             hang(wallIn(data), puppet.group);
             return puppet;
         });
+
+    // Each spotlight's beam, a faint cone from its lens (where its toy hung
+    // its light) to the floor it shines at, showing while it's on.
+    for (const lamp of lamps.filter((l) => l.data.spot)) {
+        const from = lamp.light.position;
+        const to = lamp.light.target.position;
+        const along = new THREE.Vector3().subVectors(to, from);
+        const long = along.length();
+        const cone = new THREE.ConeGeometry(
+            long * Math.tan(SPOT.angle * 0.8),
+            long,
+            32,
+            1,
+            true
+        ).translate(0, -long / 2, 0);
+        lamp.beam = new THREE.Mesh(
+            cone,
+            new THREE.MeshBasicMaterial({
+                color: lamp.data.color,
+                transparent: true,
+                opacity: SPOT.beam,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                side: THREE.DoubleSide,
+            })
+        );
+        lamp.beam.quaternion.setFromUnitVectors(
+            new THREE.Vector3(0, -1, 0),
+            along.normalize()
+        );
+        // In a group of its own, hung with its wall: switching it only
+        // shows and hides the cone.
+        const beam = new THREE.Group();
+        beam.position.copy(from);
+        beam.add(lamp.beam);
+        made.add(beam);
+        hang(wallIn(lamp.data), beam);
+    }
 
     const butt = kit.castMesh("butt", { size: ROOM_SIZES.butt });
     butt.setMove("idle");
@@ -883,7 +962,10 @@ export function createRoomScene(
             changed = swing(view.time ?? 0, reduced) || changed;
         }
         if (flicker(dt)) changed = true;
-        for (const instrument of instruments.values()) {
+        for (const instrument of [
+            ...instruments.values(),
+            ...curtains.values(),
+        ]) {
             changed = instrument.tick(dt, reduced) || changed;
         }
         return changed;
@@ -916,6 +998,10 @@ export function createRoomScene(
          * and its head ripples. */
         hitDrum(id, edge = 0) {
             instruments.get(id)?.hit?.(edge);
+        },
+        /** Draws curtain `id` open (or shut) over the next frames. */
+        setCurtain(id, open) {
+            curtains.get(id)?.setOpen(open);
         },
         /** What swings to the room's clock, where it stands: [{ x, z,
          * beat, chime, tune }], a tick at the end of each swing, every

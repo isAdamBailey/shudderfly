@@ -196,6 +196,7 @@ const ctx = {
     pressKey: (id, zone, key) => sceneRef.value?.pressKey?.(id, zone, key),
     pluckString: (id, n, delay) => sceneRef.value?.pluckString?.(id, n, delay),
     hitDrum: (id, edge) => sceneRef.value?.hitDrum?.(id, edge),
+    drawCurtain: (id) => sceneRef.value?.drawCurtain?.(id),
     changeChannel: (id) => sceneRef.value?.changeChannel?.(id),
     // Through the site's music player, so it plays on in its flyout.
     tuneRadio,

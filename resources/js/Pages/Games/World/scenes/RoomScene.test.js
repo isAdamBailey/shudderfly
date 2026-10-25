@@ -470,6 +470,42 @@ describe("the room's scene graph", () => {
         graph.dispose();
     });
 
+    it("hangs a spotlight's light back at its tipped lens", () => {
+        const graph = build({
+            ...hall,
+            lights: [
+                {
+                    id: "spot",
+                    x: 300,
+                    y: 330,
+                    z: 194,
+                    color: "#fff3d1",
+                    intensity: 2.4,
+                    spot: { x: 300, y: 30, z: 70 },
+                    against: "back",
+                },
+            ],
+            interactables: [
+                ...hall.interactables,
+                {
+                    id: "spot-toy",
+                    type: "toy",
+                    x: 300,
+                    z: 194,
+                    y: 330,
+                    size: 56,
+                    model: "spotlight",
+                    light: "spot",
+                    against: "back",
+                },
+            ],
+        });
+        const light = graph.scene.getObjectsByProperty("isSpotLight", true)[0];
+
+        expect(light.position.z).toBeLessThan(194);
+        graph.dispose();
+    });
+
     it("builds a pipe organ into its wall, and plays its keys", () => {
         const organ = {
             id: "organ",

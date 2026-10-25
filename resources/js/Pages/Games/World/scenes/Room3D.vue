@@ -38,6 +38,7 @@ import { useThrowables } from "../composables/useThrowables.js";
 import { useShelves } from "../composables/useShelves.js";
 import { useTvChannels } from "../composables/useTvChannels.js";
 import { MOVE_EVERY_MS } from "../composables/useWorldPresence.js";
+import { hiddenByCurtain } from "../interactions/curtain.js";
 import { autoTriggers } from "../interactions/index.js";
 import {
     chimesBetween,
@@ -69,6 +70,7 @@ import {
 } from "./harpLayout.js";
 import { convexHull, keyAt, ORGAN, zoneCorners } from "./organLayout.js";
 import { stairsBounds } from "./staircase.js";
+import { curtainCorners } from "./stageLayout.js";
 import {
     itemBox,
     itemPoint,
@@ -169,6 +171,13 @@ const throwables = useThrowables(props.scene, {
     onLand: feedIfAtButt,
 });
 
+// The stage curtains drawn shut, by id (drawCurtain()): what's on the
+// stage behind one has no button, nor can it be used, while it is.
+const shutCurtains = reactive(new Set());
+
+/** Whether `item` can be used: not behind its own drawn curtain. */
+const usable = (item) => !hiddenByCurtain(item, shutCurtains);
+
 const room = useRoom(props.scene, {
     start,
     wall: faced.value,
@@ -177,6 +186,7 @@ const room = useRoom(props.scene, {
     extras: () => shelves.items.value,
     // A thrown thing is where it landed: the Butt walks there to use it.
     placed: throwables.placed,
+    usable,
     isReducedMotion: () => reduced.value,
     onArrive(item) {
         lastUsed = item.id;
@@ -453,6 +463,7 @@ const inSight = computed(() => {
     return {
         items: props.scene.interactables
             .filter((item) => item.throwable || seen(item))
+            .filter(usable)
             .sort((a, b) => along(a) - along(b)),
         photos: (props.scene.photos ?? []).filter(seen),
         // Bookcases stand against a wall: their books are only reached
@@ -474,8 +485,9 @@ const tvs = useTvChannels(props.scene.interactables);
 function spotOf(item) {
     if (item.stairs) return stairsSpot(item);
     // An organ is played by its keys (organSpots), a harp by its strings
-    // (harpSpots), a drum on its head (drumSpots).
-    if (isInstrument(item)) return [];
+    // (harpSpots), a drum on its head (drumSpots); a curtain is drawn
+    // from curtainSpots.
+    if (isInstrument(item) || item.type === "curtain") return [];
     const placed = throwables.placed(item);
     if (item.throwable && !seen(placed)) return [];
     const p = project(itemPose(placed));
@@ -654,6 +666,21 @@ const drumSpots = computed(() => {
                 width: rx * 2,
                 height: ry * 2,
             };
+        });
+});
+
+/** A button over each stage curtain, shaped to it as drawn: its valance
+ * while it's open, all of it drawn shut. */
+const curtainSpots = computed(() => {
+    if (!view.value) return [];
+    return inSight.value.items
+        .filter((item) => item.type === "curtain")
+        .flatMap((item) => {
+            const open = !shutCurtains.has(item.id);
+            const spot = hullSpot(
+                curtainCorners(item, layout.value.wallHeight, open)
+            );
+            return spot ? { item, open, ...spot } : [];
         });
 });
 
@@ -852,7 +879,7 @@ function onZonePointerDown(s, event) {
     const rect = rootEl.value.getBoundingClientRect();
     const cam = view.value;
     const at = screenToGround(
-        { ...cam, y: cam.y - ORGAN.keys.y },
+        { ...cam, y: cam.y - ORGAN.keys.y - (s.item.y ?? 0) },
         event.clientX - rect.left,
         event.clientY - rect.top
     );
@@ -1005,6 +1032,22 @@ function pluckString(id, n, delay) {
 /** Hits drum `id` `edge` out from its head's middle (ctx.hitDrum). */
 function hitDrum(id, edge) {
     graph?.hitDrum(id, edge);
+    props.stage.renderer.invalidate();
+}
+
+/** A tap (or Enter) on a curtain draws it at once, wherever the Butt is. */
+function onCurtainClick(item) {
+    pointerFocus = false;
+    if (room.state.frozen) return;
+    emit("play", item);
+}
+
+/** Draws curtain `id` shut, or open again (ctx.drawCurtain). */
+function drawCurtain(id) {
+    const open = shutCurtains.has(id);
+    if (open) shutCurtains.delete(id);
+    else shutCurtains.add(id);
+    graph?.setCurtain(id, open);
     props.stage.renderer.invalidate();
 }
 
@@ -1182,6 +1225,7 @@ defineExpose({
     pressKey,
     pluckString,
     hitDrum,
+    drawCurtain,
     changeChannel: tvs.changeChannel,
     // Following someone (useFollow): up to them, or through a door.
     walkUpTo: (other) => room.walkUpTo(other.x, other.z),
@@ -1209,6 +1253,25 @@ defineExpose({
                 alt=""
                 draggable="false"
                 :style="s.style"
+            />
+            <!-- Under the other buttons: the spotlights hang in front of it. -->
+            <button
+                v-for="s in curtainSpots"
+                :key="s.item.id"
+                :ref="(el) => setButton(s.item.id, el)"
+                type="button"
+                class="stage-curtain"
+                :aria-label="s.item.label"
+                :aria-pressed="!s.open"
+                :style="{
+                    width: `${s.width}px`,
+                    height: `${s.height}px`,
+                    transform: `translate3d(${s.left}px, ${s.top}px, 0)`,
+                    clipPath: `polygon(${s.outline})`,
+                }"
+                @pointerdown="pointerFocus = true"
+                @focus="onItemFocus(s.item)"
+                @click="onCurtainClick(s.item)"
             />
             <InteractableButton
                 v-for="s in spots"
@@ -1568,12 +1631,13 @@ defineExpose({
     background: linear-gradient(rgb(0 0 0 / 0.7), rgb(0 0 0 / 0.35));
 }
 
-/* A zone of an organ's keyboard, a harp's strings or a drum's head: shaped
+/* A zone of an organ's keyboard, a harp's strings, a drum's head or a curtain: shaped
    to them as drawn, so it takes only presses on them. Focus shades the
    whole of it, since an outline would be clipped away. */
 .organ-zone,
 .harp-strings,
-.drum-head {
+.drum-head,
+.stage-curtain {
     position: absolute;
     left: 0;
     top: 0;
@@ -1594,7 +1658,8 @@ defineExpose({
 
 .organ-zone:focus-visible,
 .harp-strings:focus-visible,
-.drum-head:focus-visible {
+.drum-head:focus-visible,
+.stage-curtain:focus-visible {
     outline: none;
     background: rgb(29 78 216 / 0.45);
 }

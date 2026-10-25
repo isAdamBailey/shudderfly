@@ -23,6 +23,33 @@ export const INSTRUMENT_FOOTPRINTS = {
     },
 };
 
+// How close the Butt comes to the edge of a stage: up to it, to play
+// what's on it, not half its own width off as from an instrument.
+const STAGE_CLEARANCE = 20;
+
+/** The floor the Butt keeps off in `room` (useRoom.js): each instrument's
+ * (INSTRUMENT_FOOTPRINTS), and a room's `stage` ({ w, d }) along the back
+ * wall, whose instruments are played from in front. Each is { item, x0,
+ * x1, z0, z1 } in the space of `item` (as itemPoint() takes it), with the
+ * `clearance` the Butt keeps from it if it says. */
+export function blockedFloor(room) {
+    const floors = room.interactables
+        .filter(isInstrument)
+        .map((item) => ({ item, ...INSTRUMENT_FOOTPRINTS[item.type] }));
+    if (room.stage) {
+        const { w, d } = room.stage;
+        floors.push({
+            item: { x: w / 2, z: 0 },
+            x0: -w / 2,
+            x1: w / 2,
+            z0: 0,
+            z1: d,
+            clearance: STAGE_CLEARANCE,
+        });
+    }
+    return floors;
+}
+
 /** Whether interactable `item` is an instrument. */
 export function isInstrument(item) {
     return Object.hasOwn(INSTRUMENT_FOOTPRINTS, item.type);
