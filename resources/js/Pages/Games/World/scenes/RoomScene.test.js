@@ -464,12 +464,9 @@ describe("the room's scene graph", () => {
         const center = graph.scene
             .getObjectsByProperty("isMesh", true)
             .filter((m) => m.geometry.attributes.color)
-            .map((m) => {
-                m.geometry.computeBoundingBox();
-                return m.geometry.boundingBox;
-            })
+            .map((m) => new THREE.Box3().setFromObject(m))
             .find((b) => b.min.x < 300 && b.max.x > 300 && b.max.y > 100);
-        expect(center.max.y).toBe(120);
+        expect(center.max.y).toBeCloseTo(120);
         graph.dispose();
     });
 
@@ -565,6 +562,32 @@ describe("the room's scene graph", () => {
         expect(built.min.y).toBeCloseTo(0);
         expect(built.max.x - built.min.x).toBeCloseTo(460);
         graph.dispose();
+    });
+
+    it("builds furniture against the side wall it names, facing into the room", () => {
+        const unit = { w: 440, h: 130, d: 50 };
+        /** The box round what's built in `room`'s fireplace. */
+        function fireplaceIn(room) {
+            const graph = build({ ...hall, ...room });
+            const box = new THREE.Box3();
+            for (const m of graph.scene.getObjectsByProperty("isMesh", true)) {
+                if (m.geometry.attributes.color) box.expandByObject(m);
+            }
+            graph.dispose();
+            return box;
+        }
+        const back = fireplaceIn({ fireplaces: [{ x: 450, ...unit }] });
+        // Its middle 250 along the left wall.
+        const left = fireplaceIn({
+            fireplaces: [{ x: 0, z: 250, wall: "left", ...unit }],
+        });
+        expect(left.max.y).toBeCloseTo(back.max.y);
+        // Running along the wall, and as far out from it into the room as
+        // the back wall's.
+        expect((left.min.z + left.max.z) / 2).toBeCloseTo(250);
+        expect(left.max.z - left.min.z).toBeCloseTo(back.max.x - back.min.x);
+        expect(left.min.x).toBeCloseTo(back.min.z);
+        expect(left.max.x).toBeCloseTo(back.max.z);
     });
 
     it("backs each of the room's photos with a panel where it hangs", () => {

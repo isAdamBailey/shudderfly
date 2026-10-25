@@ -11,7 +11,14 @@ import {
     wallToFace,
 } from "../scenes/roomLayout.js";
 import { clamp, DRAG_SPEED, FOLLOW_GAP, WALK_SPEED } from "./useGamesWorld.js";
-import { fromView, toView, viewSize, wallBehind, wallTurned } from "./views.js";
+import {
+    fromView,
+    toView,
+    viewSize,
+    WALLS,
+    wallBehind,
+    wallTurned,
+} from "./views.js";
 
 // Close enough to an interactable to use it, in world units.
 export const REACH = 120;
@@ -48,6 +55,21 @@ export function arrivalSpot(room, { spot, position } = {}) {
     }
     const item = spot && room.interactables.find((i) => i.id === spot);
     return item ? frontOf(item) : { ...room.spawn };
+}
+
+/** The wall the camera faces on arriving in `room`: the one faced when
+ * the place was saved (`position.view`), the one the door it came in by
+ * (`spot`) says to (`arriveFacing`), or the wall to face to see what it
+ * arrived at (wallToFace(): a door's own wall, so it's in sight as you come
+ * through it, or for a game a link leads to, the wall it's on or nearest);
+ * the back with neither. */
+export function arrivalWall(room, { spot, position } = {}) {
+    if (WALLS.includes(position?.view)) return position.view;
+    const item = spot && room.interactables.find((i) => i.id === spot);
+    if (!item) return "back";
+    return WALLS.includes(item.arriveFacing)
+        ? item.arriveFacing
+        : wallToFace(item, room.size);
 }
 
 /**

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { screenToGround, worldToScreen } from "../composables/projection.js";
 import { toView } from "../composables/views.js";
 import {
+    faceOn,
+    hungUp,
     inView,
     itemBox,
     itemPose,
@@ -289,6 +291,35 @@ describe("a room seen from each wall", () => {
 });
 
 describe("things on a wall", () => {
+    it("hang up the wall they name, or the back, and stand off it otherwise", () => {
+        const size = { w: 900, d: 500 };
+        expect(hungUp({ x: 300, y: 120 }, size)).toBe(true);
+        expect(hungUp({ wall: "left", x: 0, z: 200, y: 120 }, size)).toBe(true);
+        expect(hungUp({ wall: "right", x: 900, z: 200, y: 120 }, size)).toBe(
+            true
+        );
+        // On a cabinet out from its wall, or on the floor.
+        expect(hungUp({ x: 300, z: 16, y: 120 }, size)).toBe(false);
+        expect(hungUp({ wall: "front", x: 300, z: 484, y: 120 }, size)).toBe(
+            false
+        );
+        expect(hungUp({ wall: "left", x: 0, z: 200 }, size)).toBe(false);
+    });
+
+    it("show a picture only facing the wall it hangs on", () => {
+        const size = { w: 900, d: 500 };
+        const onBack = { x: 300, y: 150, image: { w: 100, h: 130 } };
+        const onLeft = { ...onBack, wall: "left", x: 0, z: 200 };
+        expect(faceOn(onBack, { wall: "back", size })).toBe(true);
+        expect(faceOn(onBack, { wall: "left", size })).toBe(false);
+        expect(faceOn(onLeft, { wall: "left", size })).toBe(true);
+        expect(faceOn(onLeft, { wall: "back", size })).toBe(false);
+        // Standing in the room, it faces out as the back wall's things do.
+        const standing = { x: 450, z: 200, screen: { w: 192, h: 108 } };
+        expect(faceOn(standing, { wall: "back", size })).toBe(true);
+        expect(faceOn(standing, { wall: "front", size })).toBe(false);
+    });
+
     it("hang on the front wall facing into the room", () => {
         const pose = itemPose({ wall: "front", x: 300, z: 500 });
         expect(pose.x).toBeCloseTo(300);
