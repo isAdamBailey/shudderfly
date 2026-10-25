@@ -818,5 +818,54 @@ describe("the room's scene graph", () => {
             expect(extra("back")).toBe(5);
             expect(extra("left")).toBe(5);
         });
+
+        describe("turning from one wall to the next", () => {
+            const stage = { w: 1000, h: 700 };
+            const from = roomLayout(fourWalls, stage, "back");
+            const to = roomLayout(fourWalls, stage, "right");
+
+            it("swings the camera round between them, the short way", () => {
+                const { graph } = facing("back");
+                const pose = graph.swing(from, to);
+                pose(0.5);
+                // Halfway round, the far right corner is straight ahead.
+                expect(graph.camera.rotation.y).toBeCloseTo(-Math.PI / 4);
+                pose(1);
+                const end = graph.camera.position.clone();
+                graph.layout(to);
+                expect(graph.camera.position.distanceTo(end)).toBeCloseTo(0);
+                expect(graph.camera.rotation.y).toBeCloseTo(-Math.PI / 2);
+
+                // Turning left from the left wall is three quarters of
+                // yaw on paper, but goes a quarter.
+                const left = roomLayout(fourWalls, stage, "left");
+                graph.swing(left, from)(0.5);
+                expect(graph.camera.rotation.y).toBeCloseTo(Math.PI / 4);
+                graph.dispose();
+            });
+
+            it("hides both walls behind it on the way, then only the one", () => {
+                const { graph } = facing("back");
+                graph.swing(from, to)(0.5);
+                expect(wallsOf(graph)).toEqual({ all: 4, shown: 2 });
+                // The front wall's door, behind the camera at the start.
+                expect(thingAt(graph, 450, 497).visible).toBe(false);
+                graph.layout(to);
+                expect(wallsOf(graph)).toEqual({ all: 4, shown: 3 });
+                expect(thingAt(graph, 450, 497).visible).toBe(true);
+                graph.dispose();
+            });
+
+            it("dresses both walls on the way, and only the new one after", () => {
+                const plain = facing("back").graph;
+                const { graph } = facing("back", fourWalls, "christmas");
+                const extra = () => meshes(graph) - meshes(plain);
+                const one = extra();
+                for (const g of [graph, plain]) g.swing(from, to)(0.5);
+                expect(extra()).toBe(one * 2);
+                for (const g of [graph, plain]) g.layout(to);
+                expect(extra()).toBe(one);
+            });
+        });
     });
 });

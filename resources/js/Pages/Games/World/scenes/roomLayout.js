@@ -1,4 +1,4 @@
-import { viewSize, viewYaw } from "../composables/views.js";
+import { toView, viewSize, viewYaw, wallBehind } from "../composables/views.js";
 import { FOOTPRINTS } from "../three/footprints.js";
 
 /**
@@ -69,6 +69,14 @@ export function wallOf(thing, { w, d }) {
         next[1] < near[1] ? next : near
     );
     return gap <= WALL_REACH ? wall : null;
+}
+
+/** Whether `thing` is seen by a camera facing `view`'s wall over a floor
+ * `band` deep: not on the wall behind the camera, nor standing nearer than
+ * the floor in view (cut away). */
+export function inView(thing, view, band) {
+    if (wallOf(thing, view.size) === wallBehind(view.wall)) return false;
+    return toView(view, { x: thing.x, z: thing.z ?? 0 }).z <= band;
 }
 
 /** Where `item` is drawn: on its wall, a hair into the room, turned to

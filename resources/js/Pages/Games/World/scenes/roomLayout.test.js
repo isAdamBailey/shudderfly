@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { screenToGround, worldToScreen } from "../composables/projection.js";
 import { toView } from "../composables/views.js";
 import {
+    inView,
     itemBox,
     itemPose,
     roomCamera,
@@ -312,5 +313,23 @@ describe("things on a wall", () => {
         expect(roomLayout(long, STAGES[0]).band).toBe(500);
         expect(roomLayout(long, STAGES[0], "left").band).toBe(500);
         expect(roomLayout(hall, STAGES[0], "front").band).toBe(500);
+    });
+
+    it("are in view unless behind the camera or nearer than the floor", () => {
+        const size = { w: 2200, d: 500 };
+        const seen = (thing, wall) => inView(thing, { wall, size }, 500);
+        const clock = { x: 300, y: 120 };
+        expect(seen(clock, "back")).toBe(true);
+        expect(seen(clock, "front")).toBe(false);
+        // Facing the left wall, the back wall's end by it is in view; its
+        // far end, 2200 off, is behind the camera with the rest of the room.
+        expect(seen(clock, "left")).toBe(true);
+        expect(seen({ x: 2000, y: 120 }, "left")).toBe(false);
+        // A door on the left wall, from the right: behind the camera.
+        expect(seen({ wall: "left", x: 0, z: 200 }, "right")).toBe(false);
+        expect(seen({ wall: "left", x: 0, z: 200 }, "back")).toBe(true);
+        // Something standing in the room near the right wall.
+        expect(seen({ x: 2100, z: 250 }, "right")).toBe(true);
+        expect(seen({ x: 2100, z: 250 }, "left")).toBe(false);
     });
 });

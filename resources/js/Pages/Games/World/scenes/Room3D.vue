@@ -16,6 +16,7 @@ import {
     onMounted,
     reactive,
     ref,
+    shallowRef,
     watch,
 } from "vue";
 import InteractableButton from "../components/InteractableButton.vue";
@@ -30,7 +31,7 @@ import {
     spanAt,
     worldToScreen,
 } from "../composables/projection.js";
-import { toView, WALLS } from "../composables/views.js";
+import { fromView, toView, WALLS, wallTurned } from "../composables/views.js";
 import { bobLift, useOthers } from "../composables/useGamesWorld.js";
 import { arrivalSpot, useRoom } from "../composables/useRoom.js";
 import { useThrowables } from "../composables/useThrowables.js";
@@ -61,6 +62,7 @@ import {
 import { convexHull, keyAt, ORGAN, zoneCorners } from "./organLayout.js";
 import { stairsBounds } from "./staircase.js";
 import {
+    inView,
     itemBox,
     itemPoint,
     itemPose,
@@ -75,8 +77,10 @@ import {
 // <button> per door and toy, a hit box for dragging the Butt, and the toot
 // puffs. The room's behaviour is useRoom's: tap the floor or drag the Butt
 // to walk, arrow keys walk four ways, Tab stands the Butt at each thing in
-// turn and Enter uses it. Rooms need WebGL; the stage doesn't send a
-// browser without it into one. Loaded only when a door is first used.
+// turn and Enter uses it. A swipe across the room, Q / E or the stage's
+// buttons turn it to face the next wall round (issue #183). Rooms need
+// WebGL; the stage doesn't send a browser without it into one. Loaded only
+// when a door is first used.
 const props = defineProps({
     scene: { type: Object, required: true },
     // { beginGesture(handlers) -> stage rect, resetScroll(), renderer }
@@ -88,8 +92,9 @@ const props = defineProps({
 // `activate`: the Butt has reached something and uses it (the room is
 // frozen until the stage lets go). `play`: an organ key was pressed or a
 // harp string plucked, at once, wherever the Butt is: nothing is frozen,
-// and nothing is let go.
-const emit = defineEmits(["activate", "play"]);
+// and nothing is let go. `turned`: the camera turned to face a wall (its
+// name), to say so.
+const emit = defineEmits(["activate", "play", "turned"]);
 
 const { t } = useTranslations();
 const page = usePage();
@@ -102,19 +107,15 @@ const pictureLight = computed(() => (dark.value ? 0.6 : 1));
 const prefersReducedMotion = usePreferredReducedMotion();
 const reduced = computed(() => prefersReducedMotion.value === "reduce");
 
-// The wall the camera faces. Only the back can be reached yet (issue #183
-// Phase 3 turns the room): in development, `?view=left` (or right, front)
-// shows another, to check it.
-const faced = (() => {
-    if (!import.meta.env.DEV) return "back";
-    const asked = new URLSearchParams(window.location.search).get("view");
-    return WALLS.includes(asked) ? asked : "back";
-})();
-const facing = { wall: faced, size: props.scene.size };
+// The wall the camera faces, a quarter turn at a time (turn()): the back
+// on the way in, or whichever was faced when the place was saved (the
+// stage keeps it with the Butt's spot, position()).
+const restored = props.arrival.position?.view;
+const faced = ref(WALLS.includes(restored) ? restored : "back");
 
 const bounds = reactive({ w: 0, h: 0 });
 const layout = computed(() =>
-    bounds.w ? roomLayout(props.scene, bounds, faced) : null
+    bounds.w ? roomLayout(props.scene, bounds, faced.value) : null
 );
 
 // The interactable last used, to put focus back on.
@@ -123,7 +124,9 @@ let lastUsed = null;
 const start = arrivalSpot(props.scene, props.arrival);
 // Where the camera looks along the wall it faces. A wall longer than the
 // frame scrolls to keep the Butt in view; anything else stays put.
-const lookX = ref(toView(facing, start).x);
+const lookX = ref(
+    toView({ wall: faced.value, size: props.scene.size }, start).x
+);
 const view = computed(() =>
     layout.value ? roomCamera(layout.value, lookX.value) : null
 );
@@ -203,7 +206,7 @@ function follow() {
     lookX.value = roomLook(
         layout.value.pan,
         lookX.value,
-        toView(facing, butt).x
+        toView(layout.value.camera.view, butt).x
     );
 }
 
@@ -299,6 +302,8 @@ onMounted(() => {
         // A throw waits, mid-air, while a card is up.
         const flew = !room.state.frozen && throwables.step(dt);
         follow();
+        const swung = Boolean(turning.value);
+        if (swung) stepTurn(dt);
         const from = time;
         time += dt;
         tickClocks(from);
@@ -309,12 +314,13 @@ onMounted(() => {
                 others: visitors.others,
                 reduced: reduced.value,
                 time,
-                camera: view.value,
+                // Mid-turn, the camera is the turn's (stepTurn).
+                camera: turning.value ? null : view.value,
                 thrown: throwables.changed(),
             },
             dt
         );
-        return changed || flew;
+        return changed || flew || swung;
     });
 });
 
@@ -345,6 +351,8 @@ onBeforeUnmount(() => {
 function setBounds(w, h) {
     bounds.w = w;
     bounds.h = h;
+    // A turn under way ends where it was going, laid out afresh.
+    turning.value = null;
     const frame = framed();
     if (graph && frame) {
         graph.layout(frame);
@@ -352,11 +360,92 @@ function setBounds(w, h) {
     }
 }
 
+// --- Turning ---------------------------------------------------------------
+
+// How long a quarter turn takes, s (at once under reduced motion).
+const TURN_S = 0.4;
+// The turn under way: how far round it is (0 to 1), and `pose(s)`, the
+// scene's swing from the wall it turns from to the one it turns to. The
+// overlay waits, hidden, for the view it ends on.
+const turning = shallowRef(null);
+
+/** Turns to face the next wall round, to the right (`quarters` 1) or the
+ * left (-1). Not while a card is up, nor mid-turn. */
+function turn(quarters) {
+    if (!layout.value || turning.value || room.state.frozen) return;
+    // A focused button may be on the wall turned away from.
+    if (rootEl.value?.contains(document.activeElement)) props.stage.focus();
+    const from = framed();
+    faced.value = wallTurned(faced.value, quarters);
+    stepIntoView();
+    lookX.value = toView(layout.value.camera.view, butt).x;
+    const to = framed();
+    emit("turned", faced.value);
+    if (!graph) return;
+    if (reduced.value) graph.layout(to);
+    else turning.value = { s: 0, pose: graph.swing(from, to) };
+    props.stage.renderer.invalidate();
+}
+
+/** Steps the Butt onto the floor in view if it's past it, cut away behind
+ * the camera: facing the end wall of a long room, it's brought to that end,
+ * a Butt's length in. */
+function stepIntoView() {
+    const { band, camera } = layout.value;
+    const at = toView(camera.view, butt);
+    if (at.z <= band) return;
+    const { x, z } = fromView(camera.view, {
+        ...at,
+        z: band - ROOM_SIZES.butt,
+    });
+    room.placeAt(x, z);
+}
+
+/** Carries the turn on by `dt` s, eased in and out, and lays the room out
+ * facing its new wall once it's round. */
+function stepTurn(dt) {
+    const turn = turning.value;
+    turn.s = Math.min(1, turn.s + dt / TURN_S);
+    if (turn.s < 1) {
+        turn.pose(turn.s * turn.s * (3 - 2 * turn.s));
+        return;
+    }
+    turning.value = null;
+    graph.layout(framed());
+}
+
 // --- Overlay ---------------------------------------------------------------
 
 /** Screen px of world point { x, y, z }, through the camera that follows
  * the Butt. */
 const project = (point) => worldToScreen(view.value, point);
+
+/** Whether `thing` can be seen facing the wall the camera faces. */
+const seen = (thing) =>
+    inView(thing, layout.value.camera.view, layout.value.band);
+
+// What can be seen facing the wall the camera faces: only that has a
+// button, to tap, Tab to and hear. Its interactables run left to right
+// along the wall, Tab's order, where each was put (a thrown thing is
+// checked where it is as it flies, spotOf). Worked out again on a turn,
+// not as a long hall scrolls.
+const inSight = computed(() => {
+    if (!layout.value) return { items: [], photos: [], shelves: new Set() };
+    const { view } = layout.value.camera;
+    const along = (thing) => toView(view, { x: thing.x, z: thing.z ?? 0 }).x;
+    return {
+        items: props.scene.interactables
+            .filter((item) => item.throwable || seen(item))
+            .sort((a, b) => along(a) - along(b)),
+        photos: (props.scene.photos ?? []).filter(seen),
+        // Bookcases stand against the back wall.
+        shelves: new Set(
+            (props.scene.shelves ?? []).filter((shelf) =>
+                seen({ x: shelf.x, wall: "back" })
+            )
+        ),
+    };
+});
 
 // What each TV in the room is showing, if it's on.
 const tvs = useTvChannels(props.scene.interactables);
@@ -369,7 +458,9 @@ function spotOf(item) {
     // An organ is played by its keys (organSpots), a harp by its strings
     // (harpSpots), a drum on its head (drumSpots).
     if (isInstrument(item)) return [];
-    const p = project(itemPose(throwables.placed(item)));
+    const placed = throwables.placed(item);
+    if (item.throwable && !seen(placed)) return [];
+    const p = project(itemPose(placed));
     if (!p) return [];
     const box = itemBox(item);
     const tv = tvs.channelOf(item);
@@ -397,15 +488,15 @@ const spotsOf = (items) =>
 // Every button moves when a long hall scrolls; a thrown thing's moves
 // with it too, every frame of its flight, so it's worked out apart.
 const fixedSpots = computed(() =>
-    spotsOf(props.scene.interactables.filter((item) => !item.throwable))
+    spotsOf(inSight.value.items.filter((item) => !item.throwable))
 );
 const thrownSpots = computed(() =>
-    spotsOf(props.scene.interactables.filter((item) => item.throwable))
+    spotsOf(inSight.value.items.filter((item) => item.throwable))
 );
 
-/** Each interactable's button, in the room's order. */
+/** Each interactable's button in view, in Tab's order (inSight). */
 const spots = computed(() =>
-    props.scene.interactables.flatMap(
+    inSight.value.items.flatMap(
         (item) =>
             (item.throwable ? thrownSpots : fixedSpots).value.get(item.id) ?? []
     )
@@ -415,7 +506,7 @@ const spots = computed(() =>
  * is just its panel). Decor, with nothing to tap, so not a button. */
 const photoSpots = computed(() => {
     if (!view.value) return [];
-    return (props.scene.photos ?? []).flatMap((photo) => {
+    return inSight.value.photos.flatMap((photo) => {
         const p = photo.image.src && project(itemPose(photo));
         if (!p) return [];
         const { width, height } = itemBox(photo);
@@ -499,7 +590,7 @@ function hullSpot(corners) {
  * line along them a press is placed on, to find its key. */
 const organSpots = computed(() => {
     if (!view.value) return [];
-    return props.scene.interactables
+    return inSight.value.items
         .filter((item) => item.type === "organ")
         .flatMap((item) =>
             item.zones.flatMap((label, zone) => {
@@ -512,7 +603,7 @@ const organSpots = computed(() => {
 /** A button over each harp's strings, shaped to them as drawn. */
 const harpSpots = computed(() => {
     if (!view.value) return [];
-    return props.scene.interactables
+    return inSight.value.items
         .filter((item) => item.type === "harp")
         .flatMap((item) => {
             const spot = hullSpot(stringCorners(item));
@@ -524,7 +615,7 @@ const harpSpots = computed(() => {
  * and its radii across and up. */
 const drumSpots = computed(() => {
     if (!view.value) return [];
-    return props.scene.interactables
+    return inSight.value.items
         .filter((item) => item.type === "drum")
         .flatMap((item) => {
             const r = BASS_DRUM.radius;
@@ -574,7 +665,8 @@ const BOOK_FRONT = BOOKCASE.depth - 4;
 const shelfSpots = computed(() => {
     if (!near.value) return [];
     const { x0, x1 } = near.value;
-    return (props.scene.shelves ?? []).map((shelf, s) => {
+    return (props.scene.shelves ?? []).flatMap((shelf, s) => {
+        if (!inSight.value.shelves.has(shelf)) return [];
         const sign =
             shelf.label &&
             project({
@@ -943,16 +1035,32 @@ function onButtPointerDown(event) {
     room.startDrag();
 }
 
-/** A tap on the bare floor walks the Butt there. */
+/** A tap on the bare floor walks the Butt there; a swipe across the room
+ * turns it, the way the finger goes (dragged left, the wall on the right
+ * comes round). */
 function onBackgroundPointerDown(event) {
-    if (room.state.frozen || event.button > 0 || !layout.value) return;
+    if (
+        room.state.frozen ||
+        turning.value ||
+        event.button > 0 ||
+        !layout.value
+    ) {
+        return;
+    }
     const start = { clientX: event.clientX, clientY: event.clientY };
     let tap = true;
+    let last = start;
     const rect = props.stage.beginGesture({
         move(e) {
+            // Only the finger that began it.
+            if (e.pointerId !== event.pointerId) return;
+            last = e;
             if (pastTap(start, e)) tap = false;
         },
         end() {
+            const dx = last.clientX - start.clientX;
+            const dy = last.clientY - start.clientY;
+            if (!tap && Math.abs(dx) > Math.abs(dy)) turn(dx < 0 ? 1 : -1);
             const floor = tap && floorAt(start, rect);
             if (!floor) return;
             steered();
@@ -971,7 +1079,16 @@ const KEYS = {
     ArrowDown: ["z", 1],
 };
 
+// Q turns left, E right: a quarter turn a press, not repeated while held.
+const TURN_KEYS = { q: -1, e: 1 };
+
 function onKeydown(event) {
+    const quarters = TURN_KEYS[event.key?.toLowerCase()];
+    if (quarters && !(event.ctrlKey || event.metaKey || event.altKey)) {
+        event.preventDefault();
+        if (!event.repeat) turn(quarters);
+        return;
+    }
     const key = KEYS[event.key];
     if (!key) return;
     event.preventDefault();
@@ -1021,7 +1138,8 @@ defineExpose({
     },
     focusItem,
     pointOf,
-    position: () => ({ x: butt.x, z: butt.z }),
+    position: () => ({ x: butt.x, z: butt.z, view: faced.value }),
+    turn,
     animate,
     toot,
     toggleLight,
@@ -1039,6 +1157,7 @@ defineExpose({
     <div
         ref="rootEl"
         class="room-3d"
+        :class="{ turning: Boolean(turning) }"
         :style="{ '--picture-light': pictureLight }"
         @pointerdown.self="onBackgroundPointerDown"
         @pointerup="unlockToot"
@@ -1257,6 +1376,12 @@ defineExpose({
 .room-3d {
     position: absolute;
     inset: 0;
+}
+
+/* Mid-turn, nothing over the room is where it's drawn: it waits, hidden,
+   for the view the turn ends on. */
+.room-3d.turning > * {
+    visibility: hidden;
 }
 
 /* The Butt's hit box over what the canvas draws: invisible, but it takes

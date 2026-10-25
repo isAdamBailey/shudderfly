@@ -216,6 +216,8 @@ const withHouse = {
             {
                 id: "front-door",
                 type: "door",
+                // As the server's roomDoor() says it.
+                wall: "back",
                 x: 450,
                 z: 0,
                 emoji: "🚪",
@@ -633,12 +635,9 @@ describe("GamesWorld doors", () => {
         expect(wrapper.get(".stage").attributes("aria-label")).toBe(
             "games.world.room_aria"
         );
-        expect(wrapper.get("button.room-item").attributes("aria-label")).toBe(
-            "Go outside"
-        );
         // Focus lands on the door you came in by.
-        expect(document.activeElement).toBe(
-            wrapper.get("button.room-item").element
+        expect(document.activeElement.getAttribute("aria-label")).toBe(
+            "Go outside"
         );
     });
 
@@ -741,6 +740,221 @@ describe("GamesWorld rooms", () => {
         wrapper
             .findAll("button.room-item")
             .find((b) => b.attributes("aria-label") === label);
+
+    /** The room's buttons' labels, in Tab order. */
+    const roomLabels = (wrapper) =>
+        wrapper
+            .findAll("button.room-item")
+            .map((b) => b.attributes("aria-label"));
+
+    /** Turns the room with the stage's ↺ (-1) or ↻ (1), and lets it go
+     * round. */
+    async function turnRoom(wrapper, quarters) {
+        const label = quarters < 0 ? "turn_left" : "turn_right";
+        await wrapper
+            .get(`.world-turn [aria-label="games.world.${label}"]`)
+            .trigger("click");
+        await frames(600);
+    }
+
+    /** A touch on the room's bare background at `from`, slid to `to`. */
+    async function touchDrag(wrapper, from, to) {
+        await wrapper.get(".room-3d").trigger("pointerdown", {
+            pointerType: "touch",
+            clientX: from.x,
+            clientY: from.y,
+        });
+        window.dispatchEvent(
+            new MouseEvent("pointermove", { clientX: to.x, clientY: to.y })
+        );
+        window.dispatchEvent(new MouseEvent("pointerup"));
+        await frames(600);
+    }
+
+    it("tabs left to right along the wall it faces", async () => {
+        wrapper = await mountWorld(withHouse);
+        await enterHouse(wrapper);
+        expect(roomLabels(wrapper)).toEqual([
+            "Strawberry",
+            "Go outside",
+            "Sprout Pox",
+            "Lamp",
+        ]);
+
+        // Turned round, the back wall's door is behind the camera, and
+        // the rest run the other way.
+        await turnRoom(wrapper, 1);
+        await turnRoom(wrapper, 1);
+        expect(wrapper.get("[aria-live]").text()).toBe(
+            "games.world.facing_front"
+        );
+        expect(roomLabels(wrapper)).toEqual([
+            "Lamp",
+            "Sprout Pox",
+            "Strawberry",
+        ]);
+    });
+
+    it("turns a quarter at a time with Q and E, and back again", async () => {
+        wrapper = await mountWorld(withHouse);
+        await enterHouse(wrapper);
+        const stage = wrapper.get(".stage");
+
+        await stage.trigger("keydown", { key: "e" });
+        await frames(600);
+        expect(wrapper.get("[aria-live]").text()).toBe(
+            "games.world.facing_right"
+        );
+        // Held down, it doesn't keep turning.
+        await stage.trigger("keydown", { key: "q", repeat: true });
+        await frames(50);
+        expect(wrapper.get("[aria-live]").text()).toBe(
+            "games.world.facing_right"
+        );
+        await stage.trigger("keydown", { key: "Q" });
+        await frames(600);
+        expect(wrapper.get("[aria-live]").text()).toBe(
+            "games.world.facing_back"
+        );
+        expect(roomLabels(wrapper)).toContain("Go outside");
+    });
+
+    it("hides what's over the room while it turns", async () => {
+        wrapper = await mountWorld(withHouse);
+        await enterHouse(wrapper);
+
+        await wrapper.get(".stage").trigger("keydown", { key: "e" });
+        await nextTick();
+        expect(wrapper.get(".room-3d").classes()).toContain("turning");
+        await frames(600);
+        expect(wrapper.get(".room-3d").classes()).not.toContain("turning");
+    });
+
+    it("turns with a sideways swipe across the room, the way it goes", async () => {
+        wrapper = await mountWorld(withHouse);
+        await enterHouse(wrapper);
+        const before = screenX(wrapper.get(".room-3d .butt"));
+
+        // Dragged left: the right wall comes round.
+        await touchDrag(wrapper, { x: 700, y: 620 }, { x: 400, y: 630 });
+        expect(wrapper.get("[aria-live]").text()).toBe(
+            "games.world.facing_right"
+        );
+        // And dragged back.
+        await touchDrag(wrapper, { x: 300, y: 620 }, { x: 600, y: 610 });
+        expect(wrapper.get("[aria-live]").text()).toBe(
+            "games.world.facing_back"
+        );
+        // A swipe doesn't walk.
+        expect(screenX(wrapper.get(".room-3d .butt"))).toBeCloseTo(before);
+    });
+
+    it("walks, and doesn't turn, on a touch that only taps", async () => {
+        wrapper = await mountWorld(withHouse);
+        await enterHouse(wrapper);
+        const before = screenX(wrapper.get(".room-3d .butt"));
+
+        await touchDrag(wrapper, { x: 250, y: 620 }, { x: 252, y: 621 });
+
+        expect(screenX(wrapper.get(".room-3d .butt"))).toBeLessThan(
+            before - 100
+        );
+        expect(wrapper.get("[aria-live]").text()).toBe("The Hall");
+    });
+
+    it("drags the Butt sideways by touch without turning", async () => {
+        wrapper = await mountWorld(withHouse);
+        await enterHouse(wrapper);
+        const butt = () => wrapper.get(".room-3d .butt");
+        const x = screenX(butt());
+        const y = screenFeet(butt());
+
+        await butt().trigger("pointerdown", {
+            pointerType: "touch",
+            clientX: x,
+            clientY: y,
+        });
+        window.dispatchEvent(
+            new MouseEvent("pointermove", { clientX: x + 150, clientY: y })
+        );
+        window.dispatchEvent(new MouseEvent("pointerup"));
+        await frames(600);
+
+        expect(screenX(butt())).toBeGreaterThan(x + 50);
+        expect(wrapper.get("[aria-live]").text()).toBe("The Hall");
+    });
+
+    it("brings the Butt to the end of a long room it turns to face", async () => {
+        const long = {
+            ...withHouse,
+            "house.hall": {
+                ...withHouse["house.hall"],
+                size: { w: 3200, d: 500 },
+                spawn: { x: 1600, z: 330 },
+                frame: 900,
+            },
+        };
+        wrapper = await mountWorld(long);
+        await enterHouse(wrapper);
+
+        await turnRoom(wrapper, 1);
+
+        // Facing the right wall, it's on the floor in view, not cut away
+        // behind the camera 1600 units back.
+        const butt = wrapper.get(".room-3d .butt");
+        expect(butt.attributes("style")).toContain("translate3d");
+        const x = screenX(butt);
+        expect(x).toBeGreaterThan(0);
+        expect(x).toBeLessThan(STAGE.width);
+    });
+
+    it("leaves the Butt where it is when it's in view either way", async () => {
+        wrapper = await mountWorld(withHouse);
+        await enterHouse(wrapper);
+        const before = screenX(wrapper.get(".room-3d .butt"));
+
+        await turnRoom(wrapper, 1);
+        await turnRoom(wrapper, -1);
+
+        expect(screenX(wrapper.get(".room-3d .butt"))).toBeCloseTo(before);
+    });
+
+    it("doesn't turn for another finger's move", async () => {
+        wrapper = await mountWorld(withHouse);
+        await enterHouse(wrapper);
+
+        await wrapper.get(".room-3d").trigger("pointerdown", {
+            pointerType: "touch",
+            pointerId: 1,
+            clientX: 250,
+            clientY: 620,
+        });
+        const other = new MouseEvent("pointermove", {
+            clientX: 700,
+            clientY: 620,
+        });
+        Object.defineProperty(other, "pointerId", { value: 2 });
+        window.dispatchEvent(other);
+        window.dispatchEvent(new MouseEvent("pointerup"));
+        await frames(600);
+
+        expect(wrapper.get("[aria-live]").text()).toBe("The Hall");
+    });
+
+    it("comes back facing the same way after a reload", async () => {
+        wrapper = await mountWorld(withHouse);
+        await enterHouse(wrapper);
+        await turnRoom(wrapper, -1);
+        await turnRoom(wrapper, -1);
+        wrapper.unmount();
+
+        wrapper = await mountWorld(withHouse);
+        expect(wrapper.find(".room-3d").exists()).toBe(true);
+        expect(roomLabels(wrapper)).not.toContain("Go outside");
+        // Escape still leaves, facing any way.
+        await wrapper.get(".stage").trigger("keydown", { key: "Escape" });
+        await showing(wrapper, ".road-3d");
+    });
 
     it("hangs a picture on the wall", async () => {
         const hall = withHouse["house.hall"];

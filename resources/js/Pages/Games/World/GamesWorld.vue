@@ -325,6 +325,12 @@ async function goToScene(id, { spot, from } = {}) {
     transition.active = false;
 }
 
+// The room's turn buttons: [quarter turns, label, glyph].
+const TURNS = [
+    [-1, "turn_left", "↺"],
+    [1, "turn_right", "↻"],
+];
+
 /** Escape or the back button: out of the room the way you came, which is
  * steering, so it stops a follow. */
 function leave() {
@@ -647,6 +653,7 @@ const stage = {
                 :stage="stage"
                 @activate="onActivate"
                 @play="play"
+                @turned="(wall) => announce(t(`games.world.facing_${wall}`))"
             />
         </div>
 
@@ -665,6 +672,21 @@ const stage = {
         >
             <span aria-hidden="true">←</span>
         </button>
+
+        <!-- Turning round in a room (issue #183), for anyone who doesn't
+             find the swipe or Q / E. -->
+        <div v-if="inRoom && !transition.active" class="world-turn">
+            <button
+                v-for="[quarters, name, glyph] in TURNS"
+                :key="name"
+                type="button"
+                class="bg-theme-primary text-theme-button hover:bg-theme-button"
+                :aria-label="t(`games.world.${name}`)"
+                @click="sceneRef?.turn?.(quarters)"
+            >
+                <span aria-hidden="true">{{ glyph }}</span>
+            </button>
+        </div>
 
         <WorldRoster
             v-if="presence.enabled"
@@ -741,9 +763,30 @@ const stage = {
     box-shadow: 0 2px 6px rgb(0 0 0 / 0.3);
 }
 
-.world-back:focus-visible {
+.world-back:focus-visible,
+.world-turn button:focus-visible {
     outline: 3px solid #1d4ed8;
     outline-offset: 3px;
+}
+
+/* Bottom left: clear of the back button above, the music tab on the right
+   and the home indicator below. */
+.world-turn {
+    position: absolute;
+    left: calc(0.75rem + env(safe-area-inset-left, 0px));
+    bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    z-index: 10;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.world-turn button {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 9999px;
+    font-size: 1.5rem;
+    line-height: 1;
+    box-shadow: 0 2px 6px rgb(0 0 0 / 0.3);
 }
 
 .world-canvas {

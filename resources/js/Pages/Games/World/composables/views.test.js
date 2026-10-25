@@ -7,6 +7,7 @@ import {
     viewYaw,
     WALLS,
     wallBehind,
+    wallTurned,
 } from "./views.js";
 
 const size = { w: 2200, d: 500 };
@@ -73,5 +74,13 @@ describe("views", () => {
             "back",
             "right",
         ]);
+    });
+
+    it("turns a quarter at a time, right from the back and round again", () => {
+        expect(wallTurned("back", 1)).toBe("right");
+        expect(wallTurned("left", 1)).toBe("back");
+        expect(wallTurned("back", -1)).toBe("left");
+        expect(wallTurned("right", -1)).toBe("back");
+        expect(wallTurned("front", -6)).toBe("back");
     });
 });

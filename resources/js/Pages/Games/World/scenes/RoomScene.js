@@ -138,13 +138,22 @@ export function createRoomScene(
     key.shadow.normalBias = 0.5;
     // How deep the floor in view runs from the wall the camera faces.
     let band = depth;
-    // Aimed from behind the camera at wherever it's looking, from the same
-    // angle a room the size of the frame would have: a long hall isn't lit
-    // from a mile up. `cam` is a projection.js camera, in its view's frame.
-    function aimLight(cam) {
+    /** Where the daylight shines from, and at, for projection.js camera
+     * `cam` (in its view's frame) over a floor `deep` units deep: from
+     * behind the camera at wherever it's looking, from the same angle a
+     * room the size of the frame would have, so a long hall isn't lit from
+     * a mile up. */
+    function lightAim(cam, deep) {
         const room = (x, y, z) => fromView(cam.view, { x, y, z });
-        key.position.copy(room(cam.x - span * 0.2, span, band + span));
-        key.target.position.copy(room(cam.x, 0, band / 2));
+        return {
+            from: room(cam.x - span * 0.2, span, deep + span),
+            at: room(cam.x, 0, deep / 2),
+        };
+    }
+    function aimLight(cam) {
+        const { from, at } = lightAim(cam, band);
+        key.position.copy(from);
+        key.target.position.copy(at);
     }
     aimLight({ x: width / 2 });
     made.add(key, key.target);
@@ -341,12 +350,15 @@ export function createRoomScene(
     // The faced wall's dressing, the kit's: the season's decorations
     // (garlands and cobwebs, hung by their middles) and any crawlers. Only
     // the wall faced is dressed (the ends, seen edge on, would cost a draw
-    // call a decoration for little to see), so one is made for each length
-    // of wall as it's first faced, and moved onto whichever is.
+    // call a decoration for little to see), so a wall's is made when it's
+    // first faced, and hidden while it isn't.
     const dressings = new Map();
-    function dressingFor(along) {
-        if (dressings.has(along)) return dressings.get(along);
+    function dressingFor(wall) {
+        if (dressings.has(wall)) return dressings.get(wall);
+        const { middle, along, turn } = wallLine(wall);
         const group = new THREE.Group();
+        group.position.set(middle.x, 0, middle.z);
+        group.rotation.y = turn;
         const puppets = roomDecorations(theme).map((d) => {
             const puppet = kit.emojiMesh(d.emoji, {
                 size: d.size,
@@ -368,7 +380,7 @@ export function createRoomScene(
         }
         scene.add(group);
         const dressing = { group, puppets, crawling };
-        dressings.set(along, dressing);
+        dressings.set(wall, dressing);
         return dressing;
     }
 
@@ -393,21 +405,20 @@ export function createRoomScene(
         if (!cards.includes(puppet)) cards.push(puppet);
     }
 
-    // The faced wall's dressing, whose crawlers crawl.
-    let dressed = null;
-    /** Shows every wall but the one behind a camera facing `faced`, and
-     * dresses `faced`. */
-    function showWalls(faced) {
-        const behind = wallBehind(faced);
+    // The faced walls' dressings, whose crawlers crawl.
+    let dressed = [];
+    /** Shows every wall but the one behind a camera facing any of `faced`
+     * (two while it turns from one to the other), and dresses those. */
+    function showWalls(...faced) {
+        const behind = faced.map(wallBehind);
         for (const [wall, hung] of Object.entries(walls)) {
-            for (const object of hung) object.visible = wall !== behind;
+            for (const object of hung) {
+                object.visible = !behind.includes(wall);
+            }
         }
-        const { middle, along, turn } = wallLine(faced);
-        if (dressed) dressed.group.visible = false;
-        dressed = dressingFor(along);
-        dressed.group.visible = true;
-        dressed.group.position.set(middle.x, 0, middle.z);
-        dressed.group.rotation.y = turn;
+        for (const dressing of dressed) dressing.group.visible = false;
+        dressed = faced.map(dressingFor);
+        for (const dressing of dressed) dressing.group.visible = true;
     }
     showWalls("back");
 
@@ -697,9 +708,7 @@ export function createRoomScene(
         applyCamera(camera, cam);
         shown = cam;
         showWalls(faced);
-        yaw = viewYaw(cam.view);
-        for (const card of cards) card.group.rotation.y = yaw;
-        otherPuppets.setTurn(yaw);
+        turnCards(viewYaw(cam.view));
         if (skirt) {
             // Across the middle of the wall in view, so it covers every pan.
             const edge = fromView(cam.view, {
@@ -722,6 +731,49 @@ export function createRoomScene(
         shadow.near = 1;
         shadow.far = width * 4;
         shadow.updateProjectionMatrix();
+    }
+
+    /** The cards (and others) turned to `turn`, the camera's yaw. */
+    function turnCards(turn) {
+        yaw = turn;
+        for (const card of cards) card.group.rotation.y = yaw;
+        otherPuppets.setTurn(yaw);
+    }
+
+    /** Starts a quarter turn from laid-out room `from` to `to` (as
+     * layout() takes them, each facing its own wall): both walls behind
+     * them hidden, and only what's nearer than both floors in view cut
+     * away. Returns `pose(s)`, which puts the camera, its light and the
+     * cards `s` (0 to 1) of the way round. layout(to) finishes it. */
+    function swing(from, to) {
+        const [a, b] = [from.camera, to.camera];
+        applyCamera(camera, a);
+        camera.near = Math.max(
+            1,
+            Math.min(a.z - from.band, b.z - to.band) - NEAR_SLACK
+        );
+        camera.far = Math.max(a.z, b.z) + Math.max(width, depth);
+        camera.updateProjectionMatrix();
+        shown = null;
+        showWalls(a.view.wall, b.view.wall);
+        const v = (p) => new THREE.Vector3(p.x, p.y, p.z);
+        const [eye, light] = [lightAim(a, from.band), lightAim(b, to.band)];
+        const ends = {
+            camera: [v(fromView(a.view, a)), v(fromView(b.view, b))],
+            key: [v(eye.from), v(light.from)],
+            target: [v(eye.at), v(light.at)],
+        };
+        // The short way round: a quarter turn, never three.
+        const start = viewYaw(a.view);
+        const by = viewYaw(b.view) - start;
+        const turn = Math.atan2(Math.sin(by), Math.cos(by));
+        return (s) => {
+            camera.position.lerpVectors(...ends.camera, s);
+            key.position.lerpVectors(...ends.key, s);
+            key.target.position.lerpVectors(...ends.target, s);
+            camera.rotation.set(0, start + turn * s, 0);
+            turnCards(start + turn * s);
+        };
     }
 
     /**
@@ -786,8 +838,8 @@ export function createRoomScene(
             changed = true;
         }
         for (const puppet of puppets) changed = puppet.tick(dt) || changed;
-        if (dressed.crawling && dressed.crawling.tick(dt, reduced)) {
-            changed = true;
+        for (const { crawling } of dressed) {
+            if (crawling && crawling.tick(dt, reduced)) changed = true;
         }
         for (const { swing } of swings) {
             changed = swing(view.time ?? 0, reduced) || changed;
@@ -803,6 +855,7 @@ export function createRoomScene(
         scene,
         camera,
         layout,
+        swing,
         sync,
         /** Plays `move` on the thing `id` (a one-shot). */
         animate(id, move) {
