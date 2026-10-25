@@ -80,7 +80,7 @@ const REACH = ORGAN.desk.depth + 54;
 const ENDS = ORGAN.length / 2 + 10;
 
 /** The floor organ `item` stands on, in its own space ({ x0, x1, z0, z1 },
- * as itemPoint() takes it), so it's the organ's shape however it's turned.
+ * as itemPoint() takes it), so it's the organ's shape whichever wall it's on.
  * The Butt keeps off it (useRoom.js), so it never covers the keys. */
 export const ORGAN_FOOTPRINT = { x0: -ENDS, x1: ENDS, z0: 0, z1: REACH };
 
