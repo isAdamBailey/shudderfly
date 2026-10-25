@@ -343,7 +343,7 @@ export function createRoomScene(
     const wallIn = (thing) => wallOf(thing, room.size);
 
     /** Hangs `object` on `wall`, to be hidden with it. A thing standing in
-     * the room (no wall), or in a corner, is never hidden. */
+     * the room (no wall) is never hidden. */
     function hang(wall, object) {
         walls[wall]?.push(object);
     }

@@ -122,7 +122,7 @@ export function useRoom(
             ? STAIRS_CLEARANCE
             : MARGIN;
     // Floor the Butt keeps off: each instrument's, and a little round it,
-    // in the instrument's own space (an organ may stand turned in a corner).
+    // in the instrument's own space, whichever wall it stands against.
     const c = BLOCK_CLEARANCE;
     const blocks = room.interactables.filter(isInstrument).map((item) => {
         const f = INSTRUMENT_FOOTPRINTS[item.type];

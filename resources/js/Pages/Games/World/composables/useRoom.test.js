@@ -252,31 +252,31 @@ describe("useRoom", () => {
         expect(inside.butt.x).toBeLessThanOrEqual(edge);
     });
 
-    it("keeps off an organ turned in a corner, and stands at its keys", () => {
+    it("keeps off an organ on the right wall, and stands at its keys", () => {
         const organ = {
             id: "organ",
             type: "organ",
-            wall: "back-right",
-            x: 900 - 115,
-            z: 115,
+            wall: "right",
+            x: 900,
+            z: 240,
             stand: 200,
         };
         const r = useRoom(
-            { size: { w: 900, d: 500 }, interactables: [organ] },
-            { start: { x: 400, z: 400 } }
+            { size: { w: 900, d: 480 }, interactables: [organ] },
+            { start: { x: 400, z: 240 }, wall: "right" }
         );
 
-        // Walking into the corner stops short of the organ's slanted front.
-        r.walkTo(880, 60);
+        // Walking at the wall stops short of the organ's front.
+        r.walkTo(880, 240);
         run(r, 5);
         const keys = itemLocal(organ, r.butt);
         expect(keys.z).toBeGreaterThanOrEqual(124 + BLOCK_CLEARANCE - 1);
 
-        // Its spot to play it is out on the diagonal, clear of it, and
-        // near enough to use it.
+        // Its spot to play it is straight out from the wall, clear of it,
+        // and near enough to use it.
         r.standBy(organ);
-        expect(r.butt.x).toBeCloseTo(785 - 200 * Math.SQRT1_2, 0);
-        expect(r.butt.z).toBeCloseTo(115 + 200 * Math.SQRT1_2, 0);
+        expect(r.butt.x).toBeCloseTo(900 - 200, 0);
+        expect(r.butt.z).toBeCloseTo(240, 0);
         expect(r.nearest.value).toBe(organ);
     });
 

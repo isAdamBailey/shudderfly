@@ -28,18 +28,15 @@ import { FOOTPRINTS } from "../three/footprints.js";
 
 // How a door faces, inward off its wall: `back` is the far wall, `front`
 // the one across from it (hidden while you face the back), `left` and
-// `right` the ends, and `back-right` the corner between them (half turned,
-// so a big thing there is still seen on a narrow phone, where the right
-// wall is all but edge on). `x`/`z` is the step into the room, `turn`
-// swings a card that faces +z around to face that way: for a wall, as a
-// camera facing it is turned (views.js).
+// `right` the ends. `x`/`z` is the step into the room, `turn` swings a
+// card that faces +z around to face that way, as a camera facing that
+// wall is turned (views.js).
 const WALL_INSET = 3;
 const FACING = {
     back: { x: 0, z: 1, turn: viewYaw({ wall: "back" }) },
     left: { x: 1, z: 0, turn: viewYaw({ wall: "left" }) },
     right: { x: -1, z: 0, turn: viewYaw({ wall: "right" }) },
     front: { x: 0, z: -1, turn: viewYaw({ wall: "front" }) },
-    "back-right": { x: -Math.SQRT1_2, z: Math.SQRT1_2, turn: -Math.PI / 4 },
 };
 
 /** Which way `wall` faces into the room (`back` when it doesn't say). */
@@ -89,7 +86,7 @@ function nearestWall(thing, { w, d }) {
 }
 
 /** The wall to face to see `thing` in a room `size` across: the one it's
- * on, or for a thing standing in the room (or in a corner), the nearest,
+ * on, or for a thing standing in the room, the nearest,
  * whose floor in view (viewBand()) it's always on. */
 export function wallToFace(thing, size) {
     const wall = wallOf(thing, size);

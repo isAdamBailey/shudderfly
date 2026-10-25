@@ -327,11 +327,14 @@ class GamesWorldScenesTest extends TestCase
         }
         $this->assertEmpty(collect($room['interactables'])->where('emoji', '💡'));
         $this->assertTrue($room['crawlers']);
-        // A candle on the left wall, and none on the floor.
-        $side = collect($room['interactables'])->firstWhere('id', 'sconce-side');
-        $this->assertSame('sconce-side', $side['light']);
-        $this->assertLessThan(50, $side['x']);
-        $this->assertGreaterThan(0, $side['y']);
+        // A candle on every wall with something on it but the left, and
+        // none on the floor.
+        $candles = collect($room['interactables'])->where('emoji', '🕯️');
+        $this->assertEqualsCanonicalizing(['back', 'right', 'front'], $candles->map(fn ($candle) => $this->wallSpot($candle, $room['size'])[0])->values()->all());
+        foreach ($candles as $candle) {
+            $this->assertSame($candle['id'], $candle['light']);
+            $this->assertGreaterThan(0, $candle['y']);
+        }
 
         $portrait = collect($room['interactables'])->firstWhere('id', 'portrait');
         $this->assertSame('/img/cockroach.png', $portrait['image']['src']);
@@ -816,27 +819,22 @@ class GamesWorldScenesTest extends TestCase
         $this->assertSame('armchair', $chair['model']);
         $this->assertSame('grandfather-clock', $clock['model']);
         foreach ([$chair, $clock] as $game) {
-            // On the floor against the back wall, with no gold name over
+            // On the floor against the right wall, with no gold name over
             // it, like the kitchen's appliances; their cards keep the
             // Cockroach.
-            $this->assertSame(0, $game['z']);
+            $this->assertSame('right', $game['wall']);
             $this->assertArrayNotHasKey('y', $game);
             $this->assertFalse($game['titled']);
             $this->assertSame('cockroach', $game['card']['cast']);
         }
 
-        // Side by side past Hank's right-hand photo (its ornate moulding
-        // and all) and short of the music room's door, the clock first so
-        // the door's name arcs over the low armchair, not its face, with a
-        // candle between them.
-        $photo = collect($nest['photos'])->firstWhere('id', 'hank-right');
-        $clockHalf = $this->modelWidth($clock) / 2;
-        $chairHalf = $this->modelWidth($chair) / 2;
+        // Side by side along the right wall, with a candle between them,
+        // lower than it.
         $candle = $items['sconce-right'];
-        $this->assertGreaterThan($photo['x'] + $photo['image']['w'] / 2 + GamesWorld::PICTURE_FRAMES['ornate'], $clock['x'] - $clockHalf);
-        $this->assertLessThan($candle['x'] - $candle['size'] / 2, $clock['x'] + $clockHalf);
-        $this->assertLessThan($chair['x'] - $chairHalf, $candle['x'] + $candle['size'] / 2);
-        $this->assertLessThan($items['music-door']['x'] - 60, $chair['x'] + $chairHalf);
+        $this->assertSame('right', $candle['wall']);
+        $along = fn ($thing) => $this->wallSpot($thing, $nest['size'])[1];
+        $this->assertLessThan($along($candle) - $candle['size'] / 2, $along($clock) + $this->modelWidth($clock) / 2);
+        $this->assertLessThan($along($chair) - $this->modelWidth($chair) / 2, $along($candle) + $candle['size'] / 2);
         $this->assertLessThan($candle['y'], $chair['size']);
         // Shallow enough that the Butt never walks into them (useRoom.js
         // MARGIN keeps it 50 off the wall).
@@ -865,13 +863,14 @@ class GamesWorldScenesTest extends TestCase
         $room = $scenes['cockroach-house.music'];
         $back = collect($room['interactables'])->firstWhere('exit', true);
 
-        // A door at the Nest's far end, and its way back the Nest's door.
+        // A door on the Nest's front wall, and its way back the Nest's
+        // door.
         $door = $nest->firstWhere('id', 'music-door');
         $this->assertSame('cockroach-house.music', $door['to']);
         $this->assertSame($back['id'], $door['toSpot']);
         $this->assertSame('cockroach-house.hall', $back['to']);
         $this->assertSame($door['id'], $back['toSpot']);
-        $this->assertGreaterThan($scenes['cockroach-house.hall']['size']['w'] / 2, $door['x']);
+        $this->assertSame('front', $door['wall']);
 
         // The organ is the music room's, not the Nest's, and the room is
         // the Nest's stone, lit by candles alone.
@@ -886,16 +885,15 @@ class GamesWorldScenesTest extends TestCase
         $this->assertSame('The Music Room', collect(GamesWorld::scenes()['cockroach-house.hall']['interactables'])->firstWhere('id', 'music-door')['label']);
     }
 
-    public function test_the_cockroach_house_music_room_has_a_pipe_organ_in_its_back_right_corner(): void
+    public function test_the_cockroach_house_music_room_has_a_pipe_organ_on_its_right_wall(): void
     {
         $room = GamesWorld::definitions()['cockroach-house.music'];
         $organ = collect($room['interactables'])->firstWhere('type', 'organ');
 
-        // Across the room from the way out, so a press on the keys can't
-        // be a press on the door.
-        $this->assertSame('back-right', $organ['wall']);
-        $this->assertSame($room['size']['w'] - $organ['z'], $organ['x']);
-        $this->assertGreaterThan($room['size']['w'] / 2, $organ['x']);
+        // Flat on the right wall, seen face on facing it, and across the
+        // room from the way out, so a press on the keys can't be a press
+        // on the door.
+        $this->assertSame('right', $organ['wall']);
         $door = collect($room['interactables'])->firstWhere('exit', true);
         $this->assertLessThan($room['size']['w'] / 2, $door['x']);
         $this->assertCount(count(GamesWorld::ORGAN_ZONES), $organ['zones']);
@@ -913,7 +911,7 @@ class GamesWorldScenesTest extends TestCase
         );
     }
 
-    public function test_the_music_room_has_a_bass_drum_and_a_harp_between_the_door_and_the_organ(): void
+    public function test_the_music_room_has_a_bass_drum_and_a_harp_clear_of_the_door_and_the_organ(): void
     {
         $room = GamesWorld::definitions()['cockroach-house.music'];
         $items = collect($room['interactables']);
@@ -922,12 +920,16 @@ class GamesWorldScenesTest extends TestCase
         $harp = $items->firstWhere('type', 'harp');
         $organ = $items->firstWhere('type', 'organ');
 
-        // Door, drum, harp, organ, along the room: each played where it
-        // stands, clear of the others (a drum's cradle and a harp reach
-        // about 120 either side of their middles).
-        $this->assertGreaterThan($door['x'] + 60 + 120, $drum['x']);
-        $this->assertGreaterThan($drum['x'] + 240, $harp['x']);
-        $this->assertLessThan($organ['x'] - 300, $harp['x']);
+        // The door and harp along the back wall, the organ on the right
+        // and the drum on the left: each played where it stands, clear of
+        // the others (a drum's cradle and a harp reach about 120 either
+        // side of their middles), the harp clear of the organ's player.
+        $this->assertGreaterThan($door['x'] + 60 + 120, $harp['x']);
+        $this->assertLessThan($organ['x'] - $organ['stand'] - 120, $harp['x']);
+        [$wall, $along, , $length] = $this->wallSpot($drum, $room['size']);
+        $this->assertSame('left', $wall);
+        $this->assertGreaterThan(120, $along);
+        $this->assertLessThan($length - 120, $along);
         foreach ([$drum, $harp] as $thing) {
             foreach (['en', 'es', 'fr'] as $locale) {
                 $this->assertTrue(Lang::has($thing['label'], $locale, false), "{$thing['label']} missing in {$locale}");
@@ -1118,7 +1120,7 @@ class GamesWorldScenesTest extends TestCase
         $this->assertSame(
             [
                 ['id' => 'hank-left', 'x' => 400, 'y' => 150, 'image' => ['w' => 110, 'h' => 150, 'frame' => 'ornate', 'src' => $photo->media_path]],
-                ['id' => 'hank-right', 'x' => 1350, 'y' => 150, 'image' => ['w' => 110, 'h' => 150, 'frame' => 'ornate']],
+                ['id' => 'hank-right', 'x' => 1270, 'y' => 150, 'image' => ['w' => 110, 'h' => 150, 'frame' => 'ornate']],
             ],
             $photos,
         );
@@ -1228,6 +1230,8 @@ class GamesWorldScenesTest extends TestCase
             isset($item['stairs']) => 300,
             ($item['open'] ?? false) => 180,
             ($item['type'] ?? null) === 'door' => 120,
+            // organLayout.js ORGAN.length.
+            ($item['type'] ?? null) === 'organ' => 300,
             isset($item['image']) => $item['image']['w'],
             isset($item['screen']) => $item['screen']['w'],
             // Built in: an entertainment center, a counter, a fireplace.
@@ -1304,6 +1308,8 @@ class GamesWorldScenesTest extends TestCase
         [$bottom, $top] = match (true) {
             isset($thing['stairs']) => [0, PHP_INT_MAX],
             ($thing['type'] ?? null) === 'door' => [0, 300],
+            // organLayout.js ORGAN.height.
+            ($thing['type'] ?? null) === 'organ' => [0, 410],
             isset($thing['image']) => [$y - $border, $y + $thing['image']['h'] + $border],
             isset($thing['screen']) => [$y, $y + $thing['screen']['h']],
             // A counter's cabinets hang over it, up the same wall.

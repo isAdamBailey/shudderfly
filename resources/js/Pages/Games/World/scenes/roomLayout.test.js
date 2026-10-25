@@ -345,12 +345,9 @@ describe("things on a wall", () => {
         const size = { w: 2200, d: 500 };
         expect(wallToFace({ wall: "left", x: 0, z: 200 }, size)).toBe("left");
         expect(wallToFace({ x: 300, y: 120 }, size)).toBe("back");
-        // Standing in the room, or turned in a corner.
+        // Standing in the room.
         expect(wallToFace({ x: 2100, z: 250 }, size)).toBe("right");
         expect(wallToFace({ x: 1100, z: 420 }, size)).toBe("front");
-        expect(wallToFace({ wall: "back-right", x: 2150, z: 100 }, size)).toBe(
-            "right"
-        );
         // Whichever it is, it's on the floor in view facing it.
         for (const thing of [
             { x: 2100, z: 250 },
