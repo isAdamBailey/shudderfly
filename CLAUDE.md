@@ -111,7 +111,7 @@ Four Spatie permissions gate functionality: `edit pages`, `edit profile`, `admin
 
 Queued jobs in `app/Jobs/` handle media processing: `StoreImage`, `StoreVideo`, `StoreSoundAudio`, `CreateVideoSnapshot`, `GenerateCollagePdf`. Local dev uses `QUEUE_CONNECTION=sync` (runs inline). Production uses Amazon SQS.
 
-AI voice clips are made ahead of time on the server, not fetched by the browser: `AiVoice::warm()` queues a `GenerateAiVoiceClip` per spoken locale, after commit. `AiVoiceWarmingObserver` calls it whenever a page's content or a book's title or excerpt is saved (so pages made by `StoreImage`, `StoreVideo` and `CreateVideoSnapshot` are covered, captions included), and `UserWeeklyOverviewService::store()` calls it for the profile summary. `usePrefetchAiVoice()` is left only where it still helps, such as `Book/Show.vue`. Clips nobody plays are removed by `ai-voice:prune` after 90 days.
+AI voice clips are made ahead of time on the server, not fetched by the browser: `AiVoice::warm()` queues a `GenerateAiVoiceClip` per spoken locale, after commit. `AiVoiceWarmingObserver` calls it whenever a page's content or a book's title or excerpt is saved (so pages made by `StoreImage`, `StoreVideo` and `CreateVideoSnapshot` are covered, captions included), and `UserWeeklyOverviewService::store()` calls it for the profile summary. Nobody waits on that job, so it gives the provider `services.ai_voice.job_timeout` (30 s) rather than the 20 s an HTTP request gets. `usePrefetchAiVoice()` is left only where it still helps, such as `Book/Show.vue`. Clips nobody plays are removed by `ai-voice:prune` after 90 days.
 
 ### Scheduled commands
 

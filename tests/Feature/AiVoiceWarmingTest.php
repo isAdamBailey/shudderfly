@@ -3,12 +3,14 @@
 namespace Tests\Feature;
 
 use App\Jobs\GenerateAiVoiceClip;
+use App\Jobs\StoreImage;
 use App\Models\AiVoiceClip;
 use App\Models\Book;
 use App\Models\Page;
 use App\Models\SiteSetting;
 use App\Models\User;
 use App\Services\AiVoiceService;
+use App\Services\MediaDescriptionService;
 use App\Services\UserWeeklyOverviewService;
 use App\Support\AiVoice;
 use App\Support\SpokenText;
@@ -122,6 +124,24 @@ class AiVoiceWarmingTest extends TestCase
 
         $page->update(['content' => '<p>Hello again</p>']);
         $this->assertCount(1, $this->jobsFor('Hello again'));
+    }
+
+    public function test_an_uploaded_image_warms_its_ai_caption_once_it_is_written(): void
+    {
+        Storage::fake('local');
+        Storage::fake('s3');
+        $png = imagecreatetruecolor(4, 4);
+        ob_start();
+        imagepng($png);
+        Storage::disk('local')->put('uploads/cat.png', ob_get_clean());
+        $this->mock(MediaDescriptionService::class)
+            ->shouldReceive('resolveCaption')->andReturn('<p>A cat naps in the sun.</p>');
+        $book = Book::factory()->createQuietly(['slug' => 'quiet']);
+
+        (new StoreImage('uploads/cat.png', 'books/quiet/cat.webp', $book))->handle(app(MediaDescriptionService::class));
+
+        // The page is first saved with no words, which warms nothing.
+        $this->assertSame(['A cat naps in the sun.'], Queue::pushed(GenerateAiVoiceClip::class)->pluck('text')->all());
     }
 
     public function test_a_book_edit_warms_only_the_attribute_that_changed(): void
