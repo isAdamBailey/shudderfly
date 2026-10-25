@@ -226,14 +226,18 @@ final class GamesWorld
      */
     public static function definitions(): array
     {
-        // The hall runs long: the camera shows ROOM_FRAME of it, and the
-        // rest is off-screen until the Butt walks there. The front door is in that first view.
-        $hallW = 3200;
-        $entry = intdiv($hallW, 2);
-        // Where the radio stands on its entertainment center.
-        $den = 2500;
-        // The table lamp beside the radio.
+        // The Butt's hall, folded onto its four walls (issue #183): the
+        // front door in the middle of the back wall, where you come in,
+        // the bedroom off the left wall, the bathroom off the right, and
+        // the kitchen on the front wall, beside the radio. A little wider than the frame, so the long walls scroll
+        // a little; no deeper than before, so the back wall is no smaller.
+        $hall = ['w' => 1300, 'd' => 500];
+        $entry = intdiv($hall['w'], 2);
+        // Where the radio stands on its entertainment center, along the
+        // front wall as you face it, and the table lamp beside it.
+        $den = 800;
         $tableLamp = $den - 120;
+        $on = fn (string $wall, array $thing) => self::onWall($wall, $hall, $thing);
         // The Cockroach's fireplace, and its candles: where each burns
         // ([x, z], up the wall at SCONCE_Y). Past Hank's right-hand photo,
         // his grandfather clock and armchair, a candle between them; the
@@ -274,49 +278,49 @@ final class GamesWorld
             // --- The Butt's House ---------------------------------------------
             'house.hall' => self::room('house_hall', [
                 // Floor size in world units: x across, z from the back wall
-                // to the open front.
-                'size' => ['w' => $hallW, 'd' => 500],
+                // to the front wall.
+                'size' => $hall,
                 'spawn' => ['x' => $entry, 'z' => 330],
                 'walls' => ['back' => 'wallpaper-stripes', 'floor' => 'wood'],
-                // Under the clocks past the front door, with the radio on it.
-                'entertainment' => [self::entertainmentCenter($den)],
+                // Against the front wall, with the radio on it.
+                'entertainment' => [$on('front', self::entertainmentCenter($den))],
                 // A lamp you can switch, and the table lamp by the radio
                 // (its light hangs in its shade).
                 'lights' => [
                     ['id' => 'lamp', 'x' => $entry + 300, 'z' => 240, 'y' => 200, 'color' => '#fbbf24', 'intensity' => 1.4],
                     // Hung in the lamp's shade by the room (RoomScene.js), wherever this says.
-                    ['id' => 'table-lamp', 'x' => $tableLamp, 'z' => 16, 'y' => 190, 'color' => '#ffd58a', 'intensity' => 1.1],
+                    $on('front', ['id' => 'table-lamp', 'x' => $tableLamp, 'z' => 16, 'y' => 190, 'color' => '#ffd58a', 'intensity' => 1.1]),
                 ],
             ], [
-                // Every door on the back wall, facing the camera, so a phone
-                // can read and reach them: the bedroom at the left end, the
-                // kitchen just along from the front door, the bathroom at
-                // the right end.
-                self::roomDoor('bedroom-door', 160, 'house.bedroom', 'hall-door', 'house_bedroom'),
-                self::roomDoor('kitchen-door', 1320, 'house.kitchen', 'hall-door', 'house_kitchen'),
+                // A door on every wall, each facing into the hall: the way
+                // out on the back, the bedroom and bathroom at the ends,
+                // the kitchen on the front.
                 self::roomDoor('front-door', $entry, 'road', 'house', exit: true),
+                self::roomDoor('bedroom-door', 300, 'house.bedroom', 'hall-door', 'house_bedroom', wall: 'left', size: $hall),
+                self::roomDoor('bathroom-door', 200, 'house.bathroom', 'hall-door', 'house_bathroom', wall: 'right', size: $hall),
+                self::roomDoor('kitchen-door', 200, 'house.kitchen', 'hall-door', 'house_kitchen', wall: 'front', size: $hall),
                 // A toy plays `move`, toots as `toot` (a cast id), says `line`
                 // and switches `light`, whichever it has. `y` lifts one off the
                 // floor (onto a wall).
                 self::toy('doorbell', $entry + 160, 0, '🔔', 'doorbell', ['y' => 120, 'size' => 50, 'move' => 'wiggle', 'toot' => 'butt', 'line' => true]),
-                // Clocks along the back wall, each a different shape: three
-                // between the bedroom and the kitchen, the rest past the
-                // front door, the cuckoo first. Every other one chimes, the
-                // others tick.
-                self::clock(1, 440, 'school', 'tick', 250),
-                self::clock(2, 720, 'banjo', 'bell', 280),
-                self::clock(3, 1000, 'hex', 'tick', 240),
-                self::clock(4, 2000, 'cuckoo', 'bell', 270),
-                self::clock(5, 2200, 'round', 'tick', 250),
-                self::clock(6, 2400, 'sunburst', 'bell', 280),
-                self::clock(7, 2600, 'octagon', 'tick', 240),
-                self::clock(8, 2800, 'arch', 'bell', 270),
-                self::radio('radio', $den, 16, self::ENTERTAINMENT_CENTER['h'], 120),
-                self::toy('table-lamp', $tableLamp, 16, null, 'table_lamp', ['y' => self::ENTERTAINMENT_CENTER['h'], 'size' => 110, 'model' => 'table-lamp', 'move' => 'wiggle', 'light' => 'table-lamp']),
-                self::roomDoor('bathroom-door', $hallW - 160, 'house.bathroom', 'hall-door', 'house_bathroom'),
+                // Clocks round the walls, each a different shape: four on
+                // the back, either side of the front door, one by each end
+                // door, and two on the front, either side of the radio.
+                // Every other one chimes, the others tick.
+                self::clock(1, 200, 'school', 'tick', 250),
+                self::clock(2, 420, 'banjo', 'bell', 280),
+                self::clock(3, 960, 'hex', 'tick', 240),
+                self::clock(4, 1140, 'cuckoo', 'bell', 270),
+                $on('left', self::clock(5, 110, 'round', 'tick', 250)),
+                $on('right', self::clock(6, 390, 'sunburst', 'bell', 280)),
+                $on('front', self::clock(7, 430, 'octagon', 'tick', 240)),
+                $on('front', self::clock(8, 1120, 'arch', 'bell', 270)),
+                $on('front', self::radio('radio', $den, 16, self::ENTERTAINMENT_CENTER['h'], 120)),
+                $on('front', self::toy('table-lamp', $tableLamp, 16, null, 'table_lamp', ['y' => self::ENTERTAINMENT_CENTER['h'], 'size' => 110, 'model' => 'table-lamp', 'move' => 'wiggle', 'light' => 'table-lamp'])),
                 self::toy('lamp-switch', $entry + 300, 240, '💡', 'lamp', ['move' => 'bounce', 'light' => 'lamp']),
                 self::resident('strawberry', $entry - 220, 280, ['move' => 'hop', 'toot' => 'strawberry']),
             ]),
+
             'house.kitchen' => self::room('house_kitchen', [
                 'size' => ['w' => 900, 'd' => 500],
                 'spawn' => ['x' => 450, 'z' => 330],
