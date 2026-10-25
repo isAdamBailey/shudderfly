@@ -1,4 +1,4 @@
-[![Laravel Forge Site Deployment Status](https://img.shields.io/endpoint?url=https%3A%2F%2Fforge.laravel.com%2Fsite-badges%2Fa89488e3-6bf3-4f91-9427-41050b590248%3Fdate%3D1&style=flat)](https://forge.laravel.com/adam-f6w/adambaileyio/1819049)
+[![Laravel Forge Site Deployment Status](https://img.shields.io/endpoint?url=https%3A%2F%2Fforge.laravel.com%2Fsite-badges%2F926b1f9f-f104-4f3c-b91b-849071eaebd1&style=plastic)](https://forge.laravel.com/adam-f6w/stunning-fern-s7f/3456565)
 [![Tests](https://github.com/isAdamBailey/shudderfly/actions/workflows/test.yml/badge.svg)](https://github.com/isAdamBailey/shudderfly/actions/workflows/test.yml)
 
 # 🦋 Shudderfly
@@ -34,7 +34,7 @@ Shudderfly includes AI-powered user overview support via Hugging Face.
 
 ### Backend
 
--   PHP `^8.3`
+-   PHP `^8.5`
 -   Laravel Framework `^13.0`
 -   Laravel Sanctum `^4.0`
 -   Laravel Scout `^10.22`
@@ -48,7 +48,7 @@ Shudderfly includes AI-powered user overview support via Hugging Face.
 
 ### Frontend
 
--   Node `>=20.0.0`
+-   Node `>=24.0.0`
 -   npm `>=10.0.0`
 -   Vue `^3.2.41`
 -   Vite `^6.3.5`
