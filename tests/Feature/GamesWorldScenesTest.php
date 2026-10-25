@@ -14,6 +14,7 @@ use App\Services\ContentBlockService;
 use App\Support\GamesWorld;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Lang;
@@ -677,6 +678,31 @@ class GamesWorldScenesTest extends TestCase
         $this->assertCount(GamesWorld::TV_CHANNELS, $this->tv()['channels']);
     }
 
+    public function test_the_butts_hall_is_folded_onto_its_four_walls(): void
+    {
+        $hall = GamesWorld::definitions()['house.hall'];
+        $items = collect($hall['interactables'])->keyBy('id');
+        $wallOf = fn (array $thing) => $this->wallSpot($thing, $hall['size'])[0];
+
+        // No longer one long hall: a little wider than the frame, no deeper.
+        $this->assertLessThanOrEqual(1300, $hall['size']['w']);
+        $this->assertSame(500, $hall['size']['d']);
+
+        // A door on every wall, the way out on the back, where you come in.
+        $this->assertSame(
+            ['front-door' => 'back', 'bedroom-door' => 'left', 'bathroom-door' => 'right', 'kitchen-door' => 'front'],
+            $items->where('type', 'door')->map($wallOf)->all(),
+        );
+        $this->assertTrue($items['front-door']['exit']);
+
+        // All eight clocks, on every wall, and the radio on the front.
+        $clocks = $items->filter(fn ($item) => str_starts_with($item['id'], 'clock-'));
+        $this->assertCount(8, $clocks);
+        $this->assertEqualsCanonicalizing(['back', 'left', 'right', 'front'], $clocks->map($wallOf)->unique()->values()->all());
+        $this->assertSame('front', $wallOf($items['radio']));
+        $this->assertSame('front', $wallOf($hall['entertainment'][0]));
+    }
+
     private function radio(): array
     {
         return collect(GamesWorld::scenes()['house.hall']['interactables'])->firstWhere('type', 'radio');
@@ -687,10 +713,14 @@ class GamesWorldScenesTest extends TestCase
         $hall = GamesWorld::scenes()['house.hall'];
         $center = $hall['entertainment'][0];
         $radio = $this->radio();
+        [$wall, $along] = $this->wallSpot($center, $hall['size']);
+        [$radioWall, $radioAlong, $radioOut] = $this->wallSpot($radio, $hall['size']);
 
-        $this->assertSame($center['x'], $radio['x']);
+        // On top of it, against the same wall.
+        $this->assertSame($wall, $radioWall);
+        $this->assertSame($along, $radioAlong);
         $this->assertSame($center['h'], $radio['y']);
-        $this->assertLessThan($center['d'], $radio['z']);
+        $this->assertLessThan($center['d'], $radioOut);
         $this->assertNull(collect(GamesWorld::scenes()['house.kitchen']['interactables'])->firstWhere('type', 'radio'));
         $this->assertSame('radio', $radio['model']);
     }
@@ -705,8 +735,14 @@ class GamesWorldScenesTest extends TestCase
         $this->assertSame('table-lamp', $lamp['light']);
         $this->assertSame('Table lamp', $lamp['label']);
         $this->assertSame($center['h'], $lamp['y']);
-        $this->assertLessThan($center['w'] / 2, abs($lamp['x'] - $center['x']));
-        $this->assertContains('table-lamp', array_column($hall['lights'], 'id'));
+        [$wall, $along] = $this->wallSpot($center, $hall['size']);
+        [$lampWall, $lampAlong, $lampOut] = $this->wallSpot($lamp, $hall['size']);
+        $this->assertSame($wall, $lampWall);
+        $this->assertLessThan($center['w'] / 2, abs($lampAlong - $along));
+        $this->assertLessThan($center['d'], $lampOut);
+        // Its light hangs where it stands, in its shade.
+        $light = collect($hall['lights'])->firstWhere('id', 'table-lamp');
+        $this->assertSame([$lamp['x'], $lamp['z']], [$light['x'], $light['z']]);
     }
 
     public function test_the_kitchen_games_are_its_fridge_and_oven_between_the_counters(): void
@@ -1151,21 +1187,30 @@ class GamesWorldScenesTest extends TestCase
      * undone, so the two change together. */
     private function againstWall(array $thing, array $size): ?array
     {
-        $wall = in_array($thing['wall'] ?? null, GamesWorld::ROOM_WALLS, true) ? $thing['wall'] : 'back';
-        $x = $thing['x'];
-        $z = $thing['z'] ?? 0;
-        [$along, $out, $length] = match ($wall) {
-            'back' => [$x, $z, $size['w']],
-            'right' => [$z, $size['w'] - $x, $size['d']],
-            'front' => [$size['w'] - $x, $size['d'] - $z, $size['w']],
-            'left' => [$size['d'] - $z, $x, $size['d']],
-        };
+        [$wall, $along, $out, $length] = $this->wallSpot($thing, $size);
 
         return $out == 0 ? [$wall, $along, $length] : null;
     }
 
+    /** Where `$thing` is from the wall it names (the back if none) in a
+     * room `$size` across: [wall, along it as you face it, out from it,
+     * the wall's length]. */
+    private function wallSpot(array $thing, array $size): array
+    {
+        $wall = in_array($thing['wall'] ?? null, GamesWorld::ROOM_WALLS, true) ? $thing['wall'] : 'back';
+        $x = $thing['x'];
+        $z = $thing['z'] ?? 0;
+
+        return [$wall, ...match ($wall) {
+            'back' => [$x, $z, $size['w']],
+            'right' => [$z, $size['w'] - $x, $size['d']],
+            'front' => [$size['w'] - $x, $size['d'] - $z, $size['w']],
+            'left' => [$size['d'] - $z, $x, $size['d']],
+        }];
+    }
+
     /** How wide `$item` is along its wall: a door's frame, a picture or
-     * TV's panel, a flight of stairs' run, or its size (its model's
+     * TV's panel, a flight of stairs' run, a built-in's width, or its size (its model's
      * footprint; roomLayout.js ROOM_SIZES.toy, 80, if it says none). */
     private function widthOnWall(array $item): float
     {
@@ -1175,6 +1220,8 @@ class GamesWorldScenesTest extends TestCase
             ($item['type'] ?? null) === 'door' => 120,
             isset($item['image']) => $item['image']['w'],
             isset($item['screen']) => $item['screen']['w'],
+            // Built in: an entertainment center, a counter, a fireplace.
+            isset($item['w']) => $item['w'],
             default => $this->modelWidth($item + ['size' => 80]),
         };
     }
@@ -1230,54 +1277,106 @@ class GamesWorldScenesTest extends TestCase
     /** Asserts room `$sceneId`'s photos hang inside the wall each is on,
      * under the season's decorations, and clear of everything else on it
      * (doors with their EXIT signs, stairs, pictures and props). */
+    /** `$thing`'s box on its wall in a room `$size` across, as [wall,
+     * left, right, bottom, top, the wall's length] along it, or null for
+     * one standing out in the room. A door reaches up to its EXIT sign or
+     * name, stairs all the way up, a picture or photo its frame's moulding
+     * and all, a built-in its height, anything else its size. */
+    private function wallBox(array $thing, array $size): ?array
+    {
+        $on = $this->againstWall($thing, $size);
+        if ($on === null) {
+            return null;
+        }
+        $border = isset($thing['image']) ? GamesWorld::PICTURE_FRAMES[$thing['image']['frame'] ?? ''] ?? 0 : 0;
+        $half = $this->widthOnWall($thing) / 2 + $border;
+        $y = $thing['y'] ?? 0;
+        [$bottom, $top] = match (true) {
+            isset($thing['stairs']) => [0, PHP_INT_MAX],
+            ($thing['type'] ?? null) === 'door' => [0, 300],
+            isset($thing['image']) => [$y - $border, $y + $thing['image']['h'] + $border],
+            isset($thing['screen']) => [$y, $y + $thing['screen']['h']],
+            // A counter's cabinets hang over it, up the same wall.
+            isset($thing['upper']) => [0, $thing['upper']['y'] + $thing['upper']['h']],
+            isset($thing['w'], $thing['h']) => [0, $thing['h']],
+            default => [$y, $y + ($thing['size'] ?? 80)],
+        };
+
+        return [$on[0], $on[1] - $half, $on[1] + $half, $bottom, $top, $on[2]];
+    }
+
+    /** Whether wall boxes `$a` and `$b` (wallBox()) don't overlap. */
+    private function apart(array $a, array $b): bool
+    {
+        return $a[0] !== $b[0] || $a[2] <= $b[1] || $a[1] >= $b[2] || $a[4] <= $b[3] || $a[3] >= $b[4];
+    }
+
+    /** Everything against a wall of `$room`, by id: interactables, photos
+     * and built-ins (entertainment centers, counters, fireplaces), each
+     * as its wallBox(). */
+    private function wallBoxes(array $room): Collection
+    {
+        $builtIns = collect(['entertainment', 'counters', 'fireplaces'])
+            ->flatMap(fn ($kind) => collect($room[$kind] ?? [])->map(fn ($unit, $n) => ['id' => "{$kind}-{$n}", ...$unit]));
+        $things = collect([...$room['interactables'], ...($room['photos'] ?? []), ...$builtIns]);
+        // Ids are unique, so nothing is lost keying by them.
+        $this->assertSame($things->count(), $things->pluck('id')->unique()->count(), $room['label']);
+
+        return $things->keyBy('id')
+            ->map(fn ($thing) => $this->wallBox($thing, $room['size']))
+            ->filter();
+    }
+
+    /** The walls in the order a camera turns right through them
+     * (views.js WALLS): each one's right end meets the next one's left. */
+    private const TURN_ORDER = ['back', 'right', 'front', 'left'];
+
+    /** How far from a corner two things on the walls either side of it
+     * must not both reach. */
+    private const CORNER = 60;
+
+    public function test_nothing_against_a_wall_overlaps_anything_else_on_it(): void
+    {
+        foreach (GamesWorld::definitions() as $sceneId => $room) {
+            if ($room['kind'] !== 'room') {
+                continue;
+            }
+            $boxes = $this->wallBoxes($room);
+            foreach ($boxes as $id => $box) {
+                foreach ($boxes as $other => $otherBox) {
+                    $this->assertTrue($id === $other || $this->apart($box, $otherBox), "{$sceneId}: {$id} overlaps {$other} on the {$box[0]} wall");
+                    // Nor crowd a corner from the wall round it: facing a
+                    // wall, its right end meets the next wall's left end
+                    // (back, right, front, left).
+                    if (self::TURN_ORDER[(array_search($box[0], self::TURN_ORDER, true) + 1) % 4] === $otherBox[0]) {
+                        $high = $box[3] < $otherBox[4] && $otherBox[3] < $box[4];
+                        $this->assertFalse(
+                            $high && $box[5] - $box[2] < self::CORNER && $otherBox[1] < self::CORNER,
+                            "{$sceneId}: {$id} and {$other} crowd the corner between the {$box[0]} and {$otherBox[0]} walls",
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    /** Asserts room `$sceneId`'s photos hang on a wall, inside it, under
+     * the season's decorations, and clear of everything else on it. */
     private function assertPhotosHangClear(string $sceneId): void
     {
         $room = GamesWorld::definitions()[$sceneId];
         $decorations = $this->decorationsBottom($room);
-        // A thing's box on its wall, as [wall, left, right, bottom, top,
-        // the wall's length] along it, or null for one standing out in the
-        // room.
-        $boxOf = function (array $thing, float $bottom, float $top) use ($room) {
-            $on = $this->againstWall($thing, $room['size']);
-            if ($on === null) {
-                return null;
-            }
-            $half = $this->widthOnWall($thing) / 2;
+        $boxes = $this->wallBoxes($room);
 
-            return [$on[0], $on[1] - $half, $on[1] + $half, $bottom, $top, $on[2]];
-        };
-        $items = collect($room['interactables'])->keyBy('id');
-        $boxes = $items->map(fn ($item) => match (true) {
-            isset($item['stairs']) => $boxOf($item, 0, PHP_INT_MAX),
-            // A door with its EXIT sign over it.
-            $item['type'] === 'door' => $boxOf($item, 0, 300),
-            isset($item['image']) => $boxOf($item, $item['y'], $item['y'] + $item['image']['h']),
-            default => $boxOf($item, $item['y'] ?? 0, ($item['y'] ?? 0) + ($item['size'] ?? 80)),
-        })->filter();
-
-        // Each photo's box, its frame's moulding and all.
-        $framed = collect($room['photos'])->keyBy('id')->map(function ($photo) use ($boxOf) {
-            $border = GamesWorld::PICTURE_FRAMES[$photo['image']['frame'] ?? ''] ?? 0;
-            $box = $boxOf($photo, $photo['y'] - $border, $photo['y'] + $photo['image']['h'] + $border);
+        foreach ($room['photos'] as $photo) {
+            $box = $boxes[$photo['id']] ?? null;
             $this->assertNotNull($box, "{$photo['id']} hangs on a wall");
-
-            return [$box[0], $box[1] - $border, $box[2] + $border, $box[3], $box[4], $box[5]];
-        });
-        $apart = fn ($a, $b) => $a[0] !== $b[0] || $a[2] <= $b[1] || $a[1] >= $b[2] || $a[4] <= $b[3] || $a[3] >= $b[4];
-
-        foreach ($framed as $id => $box) {
-            foreach ($framed as $other => $otherBox) {
-                $this->assertTrue($id === $other || $apart($box, $otherBox), "{$id} overlaps {$other}");
-            }
-        }
-
-        foreach ($framed as $id => $box) {
             [, $left, $right, , $top, $length] = $box;
-            $this->assertGreaterThan(0, $left, $id);
-            $this->assertLessThan($length, $right, $id);
-            $this->assertLessThan($decorations, $top, $id);
+            $this->assertGreaterThan(0, $left, $photo['id']);
+            $this->assertLessThan($length, $right, $photo['id']);
+            $this->assertLessThan($decorations, $top, $photo['id']);
             foreach ($boxes as $other => $otherBox) {
-                $this->assertTrue($apart($box, $otherBox), "{$id} overlaps {$other}");
+                $this->assertTrue($photo['id'] === $other || $this->apart($box, $otherBox), "{$photo['id']} overlaps {$other}");
             }
         }
     }
