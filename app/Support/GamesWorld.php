@@ -41,13 +41,18 @@ final class GamesWorld
      * and another on the front. */
     public const LIBRARY_ROOMS_PER_FLOOR = 2 * self::LIBRARY_DOORS_PER_WALL;
 
-    /** A category room's shelves: rows of books, how far apart along the
-     * back wall (world units), and where they start (past the door). */
+    /** A category room's shelves: rows of books, how far apart along their
+     * wall (world units), and where they start (past the door). */
     public const LIBRARY_SHELF_ROWS = 3;
 
     public const LIBRARY_BOOK_SPAN = 110;
 
     public const LIBRARY_SHELVES_FROM = 260;
+
+    /** The longest a category room's shelf runs along the back wall
+     * (world units): a longer one goes half there and half round on the
+     * front wall, so the room is half as long. */
+    public const LIBRARY_WALL_SHELF = self::ROOM_FRAME;
 
     /** The most books a shelf in the Library's hall holds (its Popular,
      * Forgotten and seasonal shelves): three columns, within one page of
@@ -486,7 +491,8 @@ final class GamesWorld
      * each to a few category rooms (`library.category-<id>`, by id so a
      * rename keeps saved places and links). A category room is as long as
      * its shelves: LIBRARY_SHELF_ROWS rows of books, LIBRARY_BOOK_SPAN apart,
-     * from LIBRARY_SHELVES_FROM along the back wall.
+     * from LIBRARY_SHELVES_FROM along the back wall, and past
+     * LIBRARY_WALL_SHELF round on the front (categoryShelves()).
      */
     private static function library(): array
     {
@@ -582,22 +588,29 @@ final class GamesWorld
             ];
 
             foreach ($categories as $category) {
-                $shelf = self::shelf('books', $category->name, $category->books_count, self::LIBRARY_SHELVES_FROM);
+                $shelves = self::categoryShelves($category->name, $category->books_count);
                 // Past the shelves, room for a second doorway back out.
-                $width = max($roomW, self::shelfEnd($shelf) + 270);
-                // Reading lamps along the shelves; an emptied category's
-                // bare room has a ceiling light.
+                $width = max($roomW, self::shelfEnd($shelves[0]) + 270);
+                $size = ['w' => $width, 'd' => $libraryD];
+                // Reading lamps along the shelves, shared between their
+                // walls; an emptied category's bare room has a ceiling light.
                 $lights = $category->books_count > 0
-                    ? self::readingLamps($shelf['x'], self::shelfEnd($shelf), self::ROOM_LIGHTS_MAX)
+                    ? collect($shelves)->flatMap(fn ($shelf) => self::readingLamps(
+                        $shelf['x'],
+                        self::shelfEnd($shelf),
+                        intdiv(self::ROOM_LIGHTS_MAX, count($shelves)),
+                        $shelf['wall'] ?? 'back',
+                        $size,
+                    ))->all()
                     : [self::ceilingLamp($width)];
                 $scenes["library.category-{$category->id}"] = [
                     ...self::room('library_category', [
-                        'size' => ['w' => $width, 'd' => $libraryD],
+                        'size' => $size,
                         'spawn' => ['x' => 300, 'z' => 300],
                         'walls' => ['back' => 'wallpaper-dots', 'sides' => 'plaster', 'floor' => 'wood'],
                         'lights' => $lights,
                         // An emptied category (its books cleaned up) is a bare room.
-                        ...($category->books_count > 0 ? ['shelves' => [$shelf]] : []),
+                        ...($category->books_count > 0 ? ['shelves' => $shelves] : []),
                     ], [
                         [
                             ...self::roomDoor('landing-door', 130, $landing, "category-{$category->id}", 'library_floor', exit: true),
@@ -670,12 +683,32 @@ final class GamesWorld
         return $shelves;
     }
 
-    /** A bookcase on a room's back wall, from x `from`: `count` books of
-     * the Books pages' list `category` (books.category, `perPage` a page),
-     * `rows` high and a book every `span` along. The client fetches the
-     * books as they come into view; scenes/bookshelf.js lays them out the
-     * same way (shelfEnd()). */
-    private static function shelf(string $id, string $category, int $count, int $from): array
+    /** A category room's shelves of `count` books: one bookcase along the
+     * back wall from LIBRARY_SHELVES_FROM, or, longer than
+     * LIBRARY_WALL_SHELF, its first half of columns there and the rest
+     * along the front from as far in, as you face it. */
+    private static function categoryShelves(string $category, int $count): array
+    {
+        $shelf = self::shelf('books', $category, $count, self::LIBRARY_SHELVES_FROM);
+        if (self::shelfEnd($shelf) - $shelf['x'] <= self::LIBRARY_WALL_SHELF) {
+            return [$shelf];
+        }
+        $back = (int) ceil($count / self::LIBRARY_SHELF_ROWS / 2) * self::LIBRARY_SHELF_ROWS;
+
+        return [
+            self::shelf('books', $category, $back, self::LIBRARY_SHELVES_FROM),
+            self::shelf('books-front', $category, $count - $back, self::LIBRARY_SHELVES_FROM, 'front', $back),
+        ];
+    }
+
+    /** A bookcase on a room's `wall` (back unless it says), from `from`
+     * along it as you face it (not turned into the room's x, as onWall()
+     * turns a point: a bookcase is laid out along its wall): `count` books
+     * of the Books pages' list `category` (books.category, `perPage` a
+     * page), from its `first`, `rows` high and a book every `span` along.
+     * The client fetches the books as they come into view;
+     * scenes/bookshelf.js lays them out the same way (shelfEnd()). */
+    private static function shelf(string $id, string $category, int $count, int $from, string $wall = 'back', int $first = 0): array
     {
         return [
             'id' => $id,
@@ -685,10 +718,12 @@ final class GamesWorld
             'rows' => self::LIBRARY_SHELF_ROWS,
             'span' => self::LIBRARY_BOOK_SPAN,
             'perPage' => BookController::PER_PAGE,
+            ...($first ? ['first' => $first] : []),
+            ...($wall === 'back' ? [] : ['wall' => $wall]),
         ];
     }
 
-    /** Where `shelf` ends along the back wall (as bookshelf.js shelfEnd()). */
+    /** Where `shelf` ends along its wall (as bookshelf.js shelfEnd()). */
     private static function shelfEnd(array $shelf): int
     {
         return $shelf['x'] + (int) ceil($shelf['count'] / $shelf['rows']) * $shelf['span'];
@@ -744,15 +779,17 @@ final class GamesWorld
         return self::lamp('ceiling', intdiv($width, 2), self::LIBRARY_LAMP_Y, self::LIBRARY_CEILING_Z);
     }
 
-    /** Reading lamps hung evenly over the shelves from x `$from` to `$to`:
-     * one per LIBRARY_LAMP_SPACING, at least one and at most `$max`. */
-    private static function readingLamps(int $from, int $to, int $max): array
+    /** Reading lamps hung evenly over the shelves from `$from` to `$to`
+     * along `$wall` of a room `$size` across (onWall()): one per
+     * LIBRARY_LAMP_SPACING, at least one and at most `$max`. */
+    private static function readingLamps(int $from, int $to, int $max, string $wall = 'back', array $size = []): array
     {
         $count = max(1, min($max, (int) ceil(($to - $from) / self::LIBRARY_LAMP_SPACING)));
         $step = ($to - $from) / $count;
+        $id = $wall === 'back' ? 'reading-' : "reading-{$wall}-";
 
         return array_map(
-            fn (int $i) => self::lamp('reading-'.($i + 1), (int) round($from + ($i + 0.5) * $step), self::LIBRARY_LAMP_Y, self::LIBRARY_LAMP_Z),
+            fn (int $i) => self::onWall($wall, $size, self::lamp($id.($i + 1), (int) round($from + ($i + 0.5) * $step), self::LIBRARY_LAMP_Y, self::LIBRARY_LAMP_Z)),
             range(0, $count - 1),
         );
     }

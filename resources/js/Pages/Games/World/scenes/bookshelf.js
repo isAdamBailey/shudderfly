@@ -1,15 +1,21 @@
 import { jitter } from "@/utils/math";
+import { fromView, viewYaw } from "../composables/views.js";
 import { box, mergeParts } from "./streetGeometry.js";
 
 /**
  * The Library's bookcases (issue #130). A room's `shelves` are bookcases
- * against its back wall: shelf `{ id, category, count, x, rows, span }`
- * holds `count` books of the Books pages' list `category`, from `x` along
- * the wall, `rows` high and a book every `span`. Books fill a column top to
- * bottom, then the next column along, so the pages of books.category (in
- * order, `perPage` each) come in left to right as the Butt walks. The
- * server lays shelves out the same way (GamesWorld::shelfEnd()). Pure
- * numbers, and geometry from an injected `THREE`, as in streetGeometry.js.
+ * against its walls: shelf `{ id, category, count, x, rows, span, first?,
+ * wall? }` holds `count` books of the Books pages' list `category`, from
+ * its `first` (0 unless it says), from `x` along its `wall` (the back
+ * unless it says) as you face it, `rows` high and a book every `span`.
+ * Unlike a point onWall() turns, `x` stays along the wall: everything here
+ * is laid out as if on the back wall, and onShelfWall() / shelfPose() put
+ * it on the shelf's own. Books fill a column top to bottom, then the next
+ * column along, so the pages of books.category (in order, `perPage` each)
+ * come in left to right as the Butt walks; a long room's shelf on the
+ * back wall carries on round on the front. The server lays shelves out the
+ * same way (GamesWorld::shelfEnd()). Pure numbers, and geometry from an
+ * injected `THREE`, as in streetGeometry.js.
  */
 
 // A bookcase, in world units: the plinth under its bottom shelf, the height
@@ -45,7 +51,26 @@ export function columnsOf(shelf) {
     return Math.ceil(shelf.count / shelf.rows);
 }
 
-/** Where `shelf` ends along the back wall. */
+/** The wall `shelf` stands against. */
+export function shelfWall(shelf) {
+    return shelf.wall ?? "back";
+}
+
+/** Point `point` ({ x, y?, z? }) laid out along `shelf`'s wall as if on
+ * the back, in a room `size` ({ w, d }) across: where it is in the room. */
+export function onShelfWall(shelf, size, { x, y = 0, z = 0 }) {
+    return { y, ...fromView({ wall: shelfWall(shelf), size }, { x, z }) };
+}
+
+/** How what's laid out for `shelf` as if on the back wall stands on its
+ * own in a room `size` across: moved to `x`, `z` and turned `turn` about
+ * +y, as woodwork() poses it. */
+export function shelfPose(shelf, size) {
+    const { x, z } = onShelfWall(shelf, size, { x: 0 });
+    return { x, z, turn: viewYaw({ wall: shelfWall(shelf) }) };
+}
+
+/** Where `shelf` ends along its wall. */
 export function shelfEnd(shelf) {
     return shelf.x + columnsOf(shelf) * shelf.span;
 }
@@ -79,7 +104,7 @@ export function bookLook(i, seed = 0) {
     };
 }
 
-/** The slots of `shelf`'s books between `x0` and `x1` along the wall:
+/** The slots of `shelf`'s books between `x0` and `x1` along its wall:
  * { from, to } (inclusive), or null when none are. */
 export function slotsIn(shelf, x0, x1) {
     const first = Math.max(0, Math.floor((x0 - shelf.x) / shelf.span));
@@ -95,13 +120,18 @@ export function slotsIn(shelf, x0, x1) {
 }
 
 /** The pages of books.category with any of `shelf`'s books between `x0`
- * and `x1` along the wall, first to last. */
+ * and `x1` along its wall, first to last. */
 export function pagesIn(shelf, x0, x1) {
     const slots = slotsIn(shelf, x0, x1);
     if (!slots) return [];
     const pages = [];
-    const last = Math.floor(slots.to / shelf.perPage);
-    for (let p = Math.floor(slots.from / shelf.perPage); p <= last; p += 1) {
+    const first = shelf.first ?? 0;
+    const last = Math.floor((first + slots.to) / shelf.perPage);
+    for (
+        let p = Math.floor((first + slots.from) / shelf.perPage);
+        p <= last;
+        p += 1
+    ) {
         pages.push(p + 1);
     }
     return pages;
@@ -160,11 +190,16 @@ export function bookcaseGeometry(THREE, shelf) {
     return mergeParts(THREE, parts);
 }
 
-/** Every book on `shelves` as one instanced mesh (a single draw call for a
- * wall of books), or null with no books. Each is a box
+/** Every book on the `shelves` against `wall` as one instanced mesh (a
+ * single draw call for a wall of books), laid out as if on the back wall
+ * (shelfPose() stands it on its own), or null with no books. Each is a box
  * standing face out on its shelf, in its own size and colour. */
-export function booksMesh(THREE, shelves) {
-    const total = shelves.reduce((n, shelf) => n + shelf.count, 0);
+export function booksMesh(THREE, shelves, wall = "back") {
+    const on = (shelf) => shelfWall(shelf) === wall;
+    const total = shelves.reduce(
+        (n, shelf) => n + (on(shelf) ? shelf.count : 0),
+        0
+    );
     if (total === 0) return null;
     const mesh = new THREE.InstancedMesh(
         new THREE.BoxGeometry(1, 1, 1),
@@ -178,7 +213,10 @@ export function booksMesh(THREE, shelves) {
     const color = new THREE.Color();
     const z = BOOKCASE.depth - BOOK.depth / 2 - 4;
     let n = 0;
+    // Each shelf's looks seeded by where it is in the room's list, as
+    // useShelves.js gives its books' buttons.
     shelves.forEach((shelf, s) => {
+        if (!on(shelf)) return;
         for (let i = 0; i < shelf.count; i += 1) {
             const slot = bookSlot(shelf, i);
             const look = bookLook(i, s);
