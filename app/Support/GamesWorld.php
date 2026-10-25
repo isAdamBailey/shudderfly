@@ -238,6 +238,10 @@ final class GamesWorld
         $den = 800;
         $tableLamp = $den - 120;
         $on = fn (string $wall, array $thing) => self::onWall($wall, $hall, $thing);
+        // Guster's hall: no wider than the frame now his photos and slot
+        // machine hang round the walls.
+        $gusterHall = ['w' => self::ROOM_FRAME, 'd' => 450];
+        $gusterOn = fn (string $wall, array $thing) => self::onWall($wall, $gusterHall, $thing);
         // The Cockroach's fireplace, and its candles: where each burns
         // ([x, z], up the wall at SCONCE_Y). Past Hank's right-hand photo,
         // his grandfather clock and armchair, a candle between them; the
@@ -382,33 +386,35 @@ final class GamesWorld
             ...self::library(),
 
             // --- Guster's House: all in his greens -------------------------------
-            // Longer than the frame: past his slot machine, photos of him
-            // (pages that mention him) hang along the wall, a new set each
-            // day, and one more over his washing machine.
+            // The way in on the back wall, by his washing machine with a
+            // photo of him over it; his slot machine on the right wall, and
+            // more photos of him (pages that mention him), a new set each
+            // day, on the left and front walls. Guster stands in the room,
+            // toward the slot machine, where he's seen from three walls.
             'guster-house.hall' => self::room('guster_house_hall', [
-                'size' => ['w' => 1400, 'd' => 450],
+                'size' => $gusterHall,
                 'spawn' => ['x' => 350, 'z' => 300],
                 'walls' => ['back' => 'wallpaper-green', 'floor' => 'moss'],
                 'photos' => array_map(
-                    fn ($n, $x) => self::photoFrame("guster-{$n}", $x, 160, 100, 130, ['search' => self::GUSTER_SEARCH], 'green'),
-                    [1, 2, 3, 4],
-                    [180, 960, 1110, 1260],
+                    fn ($at) => $gusterOn($at[1], self::photoFrame($at[0], $at[2], 160, 100, 130, ['search' => self::GUSTER_SEARCH], 'green')),
+                    [['guster-1', 'back', 180], ['guster-2', 'left', 225], ['guster-3', 'front', 330], ['guster-4', 'front', 570]],
                 ),
-                // A second, unseen lamp lights the far end and his photos:
-                // the bulb by the door is the switch for both.
-                'lights' => [self::lamp('lamp', 650, 280, 0), self::lamp('far-lamp', 1110, 340, 120)],
+                // A second, unseen lamp toward the front lights the side
+                // and front walls and their photos: the bulb by the door is
+                // the switch for both.
+                'lights' => [self::lamp('lamp', 650, 280, 0), self::lamp('front-lamp', 450, 340, 330)],
             ], [
                 self::roomDoor('front-door', 450, 'road', 'guster-house', exit: true),
-                self::lampSwitch(650, 280, ['lamp', 'far-lamp']),
-                self::resident('guster', 1130, 240, ['size' => 150, 'move' => 'bounce', 'toot' => 'guster', 'clip' => self::GUSTER_HELLO]),
+                self::lampSwitch(650, 280, ['lamp', 'front-lamp']),
+                self::resident('guster', 700, 240, ['size' => 150, 'move' => 'bounce', 'toot' => 'guster', 'clip' => self::GUSTER_HELLO]),
                 // Guster's game is his washing machine, untitled like the
                 // kitchen's appliances: catch the falling foods. As wide
                 // and deep as its model (three/footprints.js: 0.7 of its
                 // size across), and a thrown thing can land on it.
                 self::minigame('toot-catch', 180, 0, '🧺', ['size' => 140, 'model' => 'washing-machine', 'titled' => false]),
                 // His slot machine, in his greens with a toot cloud on top,
-                // hung on the back wall: three Gusters wins.
-                self::minigame('toot-slots', 790, 0, '🎰', ['y' => 90, 'size' => 130, 'model' => 'slot-machine']),
+                // hung on the right wall: three Gusters wins.
+                $gusterOn('right', self::minigame('toot-slots', 225, 0, '🎰', ['y' => 90, 'size' => 130, 'model' => 'slot-machine'])),
             ]),
 
             // --- The Cockroach's House: the Nest, and a music room off it.
