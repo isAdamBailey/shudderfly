@@ -28,8 +28,9 @@ class GamesWorldScenesTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** Six categories, so the Library has two landings and every rule
-     * below also checks its generated rooms. `people` is long. */
+    /** Six categories, so the Library has a landing with doors on both
+     * long walls and every rule below also checks its generated rooms.
+     * `people` is long. */
     protected function setUp(): void
     {
         parent::setUp();
@@ -470,7 +471,8 @@ class GamesWorldScenesTest extends TestCase
         $doors = fn (string $id) => collect($scenes[$id]['interactables'])->where('type', 'door')->pluck('to', 'id')->all();
         $id = fn (string $name) => Category::where('name', $name)->value('id');
 
-        // Four rooms a landing, in name order; stairs chain the floors.
+        // Up to eight rooms a landing, in name order: all six fit on one
+        // floor, so it has no stairs up.
         $this->assertSame([
             'front-door' => 'road',
             'upstairs' => 'library.floor-2',
@@ -481,14 +483,10 @@ class GamesWorldScenesTest extends TestCase
             "category-{$id('movies')}" => "library.category-{$id('movies')}",
             "category-{$id('people')}" => "library.category-{$id('people')}",
             "category-{$id('places')}" => "library.category-{$id('places')}",
-            'upstairs' => 'library.floor-3',
-        ], $doors('library.floor-2'));
-        $this->assertSame([
-            'downstairs' => 'library.floor-2',
             "category-{$id('shows')}" => "library.category-{$id('shows')}",
             "category-{$id('things')}" => "library.category-{$id('things')}",
-        ], $doors('library.floor-3'));
-        $this->assertArrayNotHasKey('library.floor-4', $scenes);
+        ], $doors('library.floor-2'));
+        $this->assertArrayNotHasKey('library.floor-3', $scenes);
 
         $people = $scenes["library.category-{$id('people')}"];
         $this->assertSame([[
@@ -616,17 +614,79 @@ class GamesWorldScenesTest extends TestCase
 
     public function test_landing_doors_stand_clear_of_the_stairs(): void
     {
+        $checked = 0;
         foreach (GamesWorld::definitions() as $sceneId => $scene) {
             if (! str_starts_with($sceneId, 'library.floor-')) {
                 continue;
             }
-            // A doorway is 180 wide; a flight reaches 90 in off its wall.
-            foreach (collect($scene['interactables'])->where('wall', 'back') as $door) {
+            // A doorway is 180 wide; a flight reaches 90 in off its wall,
+            // whichever long wall the doorway is on.
+            foreach ($this->landingDoors($scene) as $door) {
+                [$wall, $along, , $length] = $this->wallSpot($door, $scene['size']);
+                $this->assertContains($wall, ['back', 'front'], "{$sceneId}.{$door['id']}");
                 $this->assertTrue($door['open'] ?? false, "{$sceneId}.{$door['id']} is an open doorway");
-                $this->assertGreaterThanOrEqual(90 + 90, $door['x'], "{$sceneId}.{$door['id']}");
-                $this->assertLessThanOrEqual($scene['size']['w'] - 90 - 90, $door['x'], "{$sceneId}.{$door['id']}");
+                $this->assertGreaterThanOrEqual(90 + 90, $along, "{$sceneId}.{$door['id']}");
+                $this->assertLessThanOrEqual($length - 90 - 90, $along, "{$sceneId}.{$door['id']}");
+                $checked++;
             }
         }
+        $this->assertGreaterThan(GamesWorld::LIBRARY_DOORS_PER_WALL, $checked);
+    }
+
+    public function test_a_landings_light_switch_stands_clear_of_its_front_doorways(): void
+    {
+        $landing = GamesWorld::definitions()['library.floor-2'];
+        $switch = collect($landing['interactables'])->firstWhere('id', 'light-switch');
+        $front = $this->landingDoors($landing)->where('wall', 'front');
+
+        // On the floor just off the front wall, between two doorways (180
+        // wide), not in one.
+        $this->assertNotEmpty($front);
+        foreach ($front as $door) {
+            $this->assertGreaterThanOrEqual(90 + $switch['size'] / 2, abs($switch['x'] - $door['x']), $door['id']);
+        }
+    }
+
+    public function test_a_landing_fills_its_back_wall_then_its_front_left_to_right(): void
+    {
+        // Nine categories: a full landing, and a second with one door.
+        foreach (['art', 'boats', 'cars'] as $name) {
+            Category::factory()->create(['name' => $name]);
+        }
+        $scenes = GamesWorld::definitions();
+        $names = Category::orderBy('name')->pluck('name');
+        $toRoom = Category::all()->mapWithKeys(fn ($category) => ["category-{$category->id}" => $category->name]);
+        // Each landing's category doors, by wall, named left to right as
+        // you face it.
+        $walls = fn (string $landing) => $this->landingDoors($scenes[$landing])
+            ->map(fn ($door) => [
+                'name' => $toRoom[$door['id']],
+                'wall' => $this->wallSpot($door, $scenes[$landing]['size'])[0],
+                'along' => $this->wallSpot($door, $scenes[$landing]['size'])[1],
+            ])
+            ->groupBy('wall')
+            ->map(fn ($doors) => $doors->sortBy('along')->pluck('name')->all())
+            ->all();
+
+        $perWall = GamesWorld::LIBRARY_DOORS_PER_WALL;
+        $this->assertSame([
+            'back' => $names->slice(0, $perWall)->values()->all(),
+            'front' => $names->slice($perWall, $perWall)->values()->all(),
+        ], $walls('library.floor-2'));
+        $this->assertSame(['back' => [$names->last()]], $walls('library.floor-3'));
+        $this->assertArrayNotHasKey('library.floor-4', $scenes);
+
+        // A wall with doors has its pair of lamps: the full landing's
+        // front wall too, the last landing's back wall alone.
+        $lit = fn (string $landing) => collect($scenes[$landing]['lights'])->countBy(fn ($light) => $light['wall'] ?? 'back')->all();
+        $this->assertSame(['back' => 2, 'front' => 2], $lit('library.floor-2'));
+        $this->assertSame(['back' => 2], $lit('library.floor-3'));
+    }
+
+    /** A Library landing's category doors: every door but its stairs. */
+    private function landingDoors(array $landing): Collection
+    {
+        return collect($landing['interactables'])->where('type', 'door')->whereNull('stairs');
     }
 
     public function test_stairs_stand_the_same_way_out_from_the_back_wall_on_either_side(): void

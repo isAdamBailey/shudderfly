@@ -33,8 +33,13 @@ final class GamesWorld
     /** The two sides of the road a road interactable can stand on. */
     public const ROAD_SIDES = ['far', 'near'];
 
-    /** Library category rooms per landing. */
-    public const LIBRARY_ROOMS_PER_FLOOR = 4;
+    /** Library category doors along each of a landing's long walls, the
+     * back and the front. */
+    public const LIBRARY_DOORS_PER_WALL = 4;
+
+    /** Library category rooms per landing: a wall of doors on the back,
+     * and another on the front. */
+    public const LIBRARY_ROOMS_PER_FLOOR = 2 * self::LIBRARY_DOORS_PER_WALL;
 
     /** A category room's shelves: rows of books, how far apart along the
      * back wall (world units), and where they start (past the door). */
@@ -497,10 +502,11 @@ final class GamesWorld
 
         $roomW = self::ROOM_FRAME;
         // A landing: a stairwell's width at each end, and a door's width
-        // apart for each category door between them.
+        // apart for each category door between them, on the back wall and
+        // again on the front.
         $stairsEnd = 150;
         $doorGap = 240;
-        $landingW = 2 * $stairsEnd + self::LIBRARY_ROOMS_PER_FLOOR * $doorGap;
+        $landingW = 2 * $stairsEnd + self::LIBRARY_DOORS_PER_WALL * $doorGap;
         // Every Library room is as deep.
         $libraryD = 450;
         $landingSize = ['w' => $landingW, 'd' => $libraryD];
@@ -528,15 +534,21 @@ final class GamesWorld
             ]),
         ];
 
-        // A landing's pair of wall lamps, high between its outer doors.
-        $landingLights = [
-            self::lamp('wall-left', $stairsEnd + $doorGap, 390, 20, '💡'),
-            self::lamp('wall-right', $landingW - $stairsEnd - $doorGap, 390, 20, '💡'),
-        ];
+        // A pair of wall lamps high between a wall's outer doors: on the
+        // back wall, and on the front once it has doors.
+        $wallLamps = fn (string $wall) => array_map(
+            fn ($side, $x) => self::onWall($wall, $landingSize, self::lamp("{$wall}-{$side}", $x, 390, 20, '💡')),
+            ['left', 'right'],
+            [$stairsEnd + $doorGap, $landingW - $stairsEnd - $doorGap],
+        );
 
         foreach ($floors as $i => $categories) {
             $landing = $floorId($i);
             $floor = ['number' => $i + 2];
+            $landingLights = [
+                ...$wallLamps('back'),
+                ...($categories->count() > self::LIBRARY_DOORS_PER_WALL ? $wallLamps('front') : []),
+            ];
             $scenes[$landing] = [
                 ...self::room('library_floor', [
                     'size' => $landingSize,
@@ -547,13 +559,17 @@ final class GamesWorld
                     // Down the way you came on the left, up on the right.
                     self::stairs(false, $floorId($i - 1), $landingSize),
                     self::lightSwitch(intdiv($landingW, 2), $landingLights),
+                    // The first wall of categories along the back, the rest
+                    // along the front, each left to right as you face it.
                     ...$categories->values()->map(fn ($category, $n) => [
                         ...self::roomDoor(
                             "category-{$category->id}",
-                            $stairsEnd + intdiv($doorGap, 2) + $n * $doorGap,
+                            $stairsEnd + intdiv($doorGap, 2) + ($n % self::LIBRARY_DOORS_PER_WALL) * $doorGap,
                             "library.category-{$category->id}",
                             'landing-door',
                             key: 'messages.games.world.doors.library_category',
+                            wall: ['back', 'front'][intdiv($n, self::LIBRARY_DOORS_PER_WALL)],
+                            size: $landingSize,
                         ),
                         // The Library's rooms open onto each other: a wide
                         // doorway, not a door (doorway.js).
