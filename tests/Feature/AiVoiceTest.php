@@ -29,6 +29,9 @@ class AiVoiceTest extends TestCase
 
     private const AUDIO = 'ID3-fake-mp3-bytes';
 
+    // DeepInfra's reply when the model is overloaded, verbatim from production.
+    private const BUSY = ['detail' => 'Model busy, retry later'];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -285,6 +288,68 @@ class AiVoiceTest extends TestCase
         $this->assertTrue($logged->contains(fn ($log) => $log->level === 'error'
             && str_contains($log->message, 'generation failed')
             && $log->context['status'] === 500));
+    }
+
+    private function fakeBusyProvider(): void
+    {
+        Http::fake(['ai-voice.test/*' => Http::response(self::BUSY, 429)]);
+    }
+
+    public function test_a_busy_provider_is_logged_as_a_warning_without_a_credits_alert(): void
+    {
+        Mail::fake();
+        Permission::findOrCreate('super admin');
+        User::factory()->create()->givePermissionTo('super admin');
+        $logged = $this->recordLogs();
+        $this->fakeBusyProvider();
+
+        $this->speak()->assertStatus(503);
+
+        $voice = $logged->filter(fn ($log) => str_starts_with($log->message, 'AI voice'));
+        $this->assertSame(['warning'], $voice->pluck('level')->unique()->values()->all());
+        Mail::assertNothingSent();
+        // Not retried: it is asking us to back off.
+        Http::assertSentCount(1);
+    }
+
+    public function test_repeated_busy_replies_pause_the_provider(): void
+    {
+        $logged = $this->recordLogs();
+        $this->fakeBusyProvider();
+
+        foreach (['one', 'two', 'three', 'four'] as $text) {
+            $this->speak(['text' => $text])->assertStatus(503);
+        }
+
+        Http::assertSentCount(3);
+        $pause = $logged->sole(fn ($log) => str_contains($log->message, 'paused'));
+        $this->assertSame('warning', $pause->level);
+        $this->assertStringContainsString('Model busy', $pause->context['error']);
+    }
+
+    public function test_a_busy_reply_gives_the_reserved_characters_back(): void
+    {
+        // Unlike a timeout, a busy reply made no audio and was not billed.
+        $this->fakeBusyProvider();
+
+        $this->speak()->assertStatus(503);
+
+        $this->assertSame(0, AiVoiceService::charactersUsedToday());
+    }
+
+    public function test_a_busy_reply_does_not_reset_the_failure_count(): void
+    {
+        Http::fake(['ai-voice.test/*' => Http::sequence()
+            ->pushFailedConnection()
+            ->pushFailedConnection()
+            ->push(self::BUSY, 429),
+        ]);
+
+        foreach (['one', 'two', 'three'] as $text) {
+            $this->speak(['text' => $text])->assertStatus(503);
+        }
+
+        $this->assertTrue(AiVoiceService::paused());
     }
 
     /**

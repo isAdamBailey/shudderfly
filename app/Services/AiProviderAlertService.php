@@ -9,10 +9,14 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 
 /**
- * Emails super admins when a Hugging Face or Anthropic response looks
- * like the account is out of credits/quota rather than a transient
- * failure, so someone notices in time to add funds or flip AI_PROVIDER
- * to the other one.
+ * Emails super admins when a Hugging Face, Anthropic or DeepInfra
+ * response looks like the account is out of credits/quota rather than a
+ * transient failure, so someone notices in time to add funds or flip
+ * AI_PROVIDER to the other one.
+ *
+ * Only a 402 is taken as that on its own. A 429 is usually a rate limit
+ * or a busy model (DeepInfra's "Model busy, retry later"), so like any
+ * other error it counts only when its body talks about credit or quota.
  *
  * Debounced to one email per provider per ALERT_TTL_HOURS: a queue
  * worker can retry the same failure many times in a row, and this must
@@ -21,8 +25,6 @@ use Illuminate\Support\Facades\Mail;
 class AiProviderAlertService
 {
     private const ALERT_TTL_HOURS = 24;
-
-    private const QUOTA_STATUS_CODES = [402, 429];
 
     private const QUOTA_KEYWORDS = ['credit', 'quota', 'insufficient', 'balance'];
 
@@ -63,7 +65,7 @@ class AiProviderAlertService
 
     private function looksLikeQuotaExceeded(Response $response): bool
     {
-        if (in_array($response->status(), self::QUOTA_STATUS_CODES, true)) {
+        if ($response->paymentRequired()) {
             return true;
         }
 

@@ -90,7 +90,7 @@ class PrewarmAiVoiceClips extends Command
         foreach ($clips as $index => $clip) {
             // One outage, not a failure per remaining clip.
             if (AiVoiceService::paused()) {
-                $this->warn('The AI voice provider is paused after repeated connection failures; '
+                $this->warn('The AI voice provider is paused after repeated failures; '
                     .(count($clips) - $index).' clip(s) left for first play or the next prewarm.');
 
                 return Command::FAILURE;

@@ -9,6 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -35,17 +36,38 @@ class AiProviderAlertServiceTest extends TestCase
         return app(AiProviderAlertService::class);
     }
 
-    public function test_it_emails_super_admins_on_a_429_response(): void
+    public function test_it_emails_super_admins_on_a_402_response(): void
     {
         $superAdmin = User::factory()->create(['email' => 'reports@example.com']);
         $superAdmin->givePermissionTo(Permission::findOrCreate('super admin'));
 
-        $this->service()->alertIfQuotaExceeded('anthropic', $this->fakeResponse(429));
+        $this->service()->alertIfQuotaExceeded('anthropic', $this->fakeResponse(402));
 
         Mail::assertSent(
             AiProviderQuotaAlertMail::class,
             fn (AiProviderQuotaAlertMail $mail) => $mail->hasTo('reports@example.com') && $mail->provider === 'anthropic'
         );
+    }
+
+    #[DataProvider('rateLimits')]
+    public function test_a_429_emails_only_when_it_mentions_credit_or_quota(array $body, int $sent): void
+    {
+        $superAdmin = User::factory()->create(['email' => 'reports@example.com']);
+        $superAdmin->givePermissionTo(Permission::findOrCreate('super admin'));
+
+        $this->service()->alertIfQuotaExceeded('deepinfra', $this->fakeResponse(429, $body));
+
+        Mail::assertSent(AiProviderQuotaAlertMail::class, $sent);
+    }
+
+    public static function rateLimits(): array
+    {
+        return [
+            'bare rate limit' => [[], 0],
+            // DeepInfra's, captured verbatim from a production log line.
+            'model busy' => [['detail' => 'Model busy, retry later'], 0],
+            'quota' => [['detail' => 'You exceeded your current quota'], 1],
+        ];
     }
 
     public function test_it_emails_super_admins_on_a_credit_balance_message(): void
@@ -93,8 +115,8 @@ class AiProviderAlertServiceTest extends TestCase
         $superAdmin = User::factory()->create(['email' => 'reports@example.com']);
         $superAdmin->givePermissionTo(Permission::findOrCreate('super admin'));
 
-        $this->service()->alertIfQuotaExceeded('anthropic', $this->fakeResponse(429));
-        $this->service()->alertIfQuotaExceeded('anthropic', $this->fakeResponse(429));
+        $this->service()->alertIfQuotaExceeded('anthropic', $this->fakeResponse(402));
+        $this->service()->alertIfQuotaExceeded('anthropic', $this->fakeResponse(402));
 
         Mail::assertSent(AiProviderQuotaAlertMail::class, 1);
     }
@@ -104,8 +126,8 @@ class AiProviderAlertServiceTest extends TestCase
         $superAdmin = User::factory()->create(['email' => 'reports@example.com']);
         $superAdmin->givePermissionTo(Permission::findOrCreate('super admin'));
 
-        $this->service()->alertIfQuotaExceeded('anthropic', $this->fakeResponse(429));
-        $this->service()->alertIfQuotaExceeded('huggingface', $this->fakeResponse(429));
+        $this->service()->alertIfQuotaExceeded('anthropic', $this->fakeResponse(402));
+        $this->service()->alertIfQuotaExceeded('huggingface', $this->fakeResponse(402));
 
         Mail::assertSent(AiProviderQuotaAlertMail::class, 2);
     }
@@ -114,7 +136,7 @@ class AiProviderAlertServiceTest extends TestCase
     {
         User::factory()->create();
 
-        $this->service()->alertIfQuotaExceeded('anthropic', $this->fakeResponse(429));
+        $this->service()->alertIfQuotaExceeded('anthropic', $this->fakeResponse(402));
 
         Mail::assertNothingSent();
     }
@@ -123,12 +145,12 @@ class AiProviderAlertServiceTest extends TestCase
     {
         User::factory()->create();
 
-        $this->service()->alertIfQuotaExceeded('anthropic', $this->fakeResponse(429));
+        $this->service()->alertIfQuotaExceeded('anthropic', $this->fakeResponse(402));
 
         $superAdmin = User::factory()->create(['email' => 'reports@example.com']);
         $superAdmin->givePermissionTo(Permission::findOrCreate('super admin'));
 
-        $this->service()->alertIfQuotaExceeded('anthropic', $this->fakeResponse(429));
+        $this->service()->alertIfQuotaExceeded('anthropic', $this->fakeResponse(402));
 
         Mail::assertSent(AiProviderQuotaAlertMail::class, 1);
     }

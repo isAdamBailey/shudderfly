@@ -65,9 +65,10 @@ class AiVoiceService
     // The budget lock only guards a cache read and write.
     private const BUDGET_LOCK_SECONDS = 5;
 
-    // After this many connection failures in a row the provider is paused:
-    // while it hangs, every request would otherwise hold a PHP worker for
-    // the full timeout and charge the budget for audio that never came.
+    // After this many failures in a row (a timeout, a dropped connection or
+    // a 429 busy reply) the provider is paused: while it hangs or is busy,
+    // every request would otherwise hold a PHP worker for the full timeout
+    // and charge the budget for audio that never came.
     private const FAILURES_BEFORE_PAUSE = 3;
 
     private const PAUSE_SECONDS = 300;
@@ -112,7 +113,7 @@ class AiVoiceService
         // Before the lock, so a paused miss never waits on one held by a
         // request still stuck on the provider.
         if (self::paused()) {
-            throw new AiVoicePaused('AI voice provider is paused after repeated connection failures');
+            throw new AiVoicePaused('AI voice provider is paused after repeated failures');
         }
 
         try {
@@ -355,7 +356,7 @@ class AiVoiceService
             // A timeout is the provider's. Playback falls back to the device
             // voice, so it is not an error of ours. Anything else is.
             if ($exception instanceof ConnectionException) {
-                $this->recordConnectionFailure($exception, mb_strlen($text));
+                $this->recordProviderFailure($exception->getMessage(), mb_strlen($text));
             } else {
                 Log::error('AI voice request failed', ['error' => $exception->getMessage()]);
             }
@@ -363,8 +364,18 @@ class AiVoiceService
             throw new AiVoiceUnavailable('AI voice request failed', previous: $exception);
         }
 
-        // Any answer, even an error, shows the provider is reachable.
-        Cache::forget(self::FAILURES_KEY);
+        // A 429 ("Model busy, retry later" from DeepInfra) is the provider
+        // asking us to back off, so it counts towards a pause like a timeout
+        // and, being the provider's, is only a warning. Any other answer,
+        // even an error, shows the provider is reachable.
+        $busy = $response->tooManyRequests();
+        $body = mb_substr($response->body(), 0, 500);
+
+        if ($busy) {
+            $this->recordProviderFailure("HTTP 429: {$body}", mb_strlen($text));
+        } else {
+            Cache::forget(self::FAILURES_KEY);
+        }
 
         if (! $response->successful()) {
             $provider = (string) config('services.ai_voice.provider');
@@ -374,9 +385,9 @@ class AiVoiceService
                 __('messages.ai_voice.provider_alert', ['provider' => ucfirst($provider)]),
             );
 
-            Log::error('AI voice generation failed', [
+            Log::log($busy ? 'warning' : 'error', 'AI voice generation failed', [
                 'status' => $response->status(),
-                'body' => mb_substr($response->body(), 0, 500),
+                'body' => $body,
             ]);
 
             throw new AiVoiceUnavailable("AI voice provider returned {$response->status()}");
@@ -396,7 +407,7 @@ class AiVoiceService
     }
 
     /**
-     * Whether new clips are refused after repeated connection failures.
+     * Whether new clips are refused after repeated failures.
      */
     public static function paused(): bool
     {
@@ -404,27 +415,27 @@ class AiVoiceService
     }
 
     /**
-     * Counts a timeout or dropped connection, and pauses the provider once
-     * there have been enough in a row. A single timeout is the provider's,
-     * so it is not logged, but a pause is, once as it starts: every miss
-     * until it ends is a 503, which is otherwise invisible. The failure that
-     * started it is logged with it, to tell a slow provider (an operation
-     * timeout on a long text) from an unreachable one. Not atomic: two
+     * Counts a timeout, dropped connection or busy reply, and pauses the
+     * provider once there have been enough in a row. A single timeout is the
+     * provider's, so it is not logged, but a pause is, once as it starts:
+     * every miss until it ends is a 503, which is otherwise invisible. The
+     * failure that started it is logged with it, to tell a slow provider (an
+     * operation timeout on a long text) from an unreachable one. Not atomic: two
      * failures at once may count as one, which only delays the pause by a
      * request.
      */
-    private function recordConnectionFailure(ConnectionException $exception, int $characters): void
+    private function recordProviderFailure(string $error, int $characters): void
     {
         $failures = (int) Cache::get(self::FAILURES_KEY, 0) + 1;
         Cache::put(self::FAILURES_KEY, $failures, self::FAILURE_WINDOW_SECONDS);
 
         if ($failures >= self::FAILURES_BEFORE_PAUSE && Cache::add(self::PAUSED_KEY, true, self::PAUSE_SECONDS)) {
-            Log::warning('AI voice provider paused after repeated connection failures; new clips fall back to the device voice', [
+            Log::warning('AI voice provider paused after repeated failures; new clips fall back to the device voice', [
                 'failures' => $failures,
                 'pause_seconds' => self::PAUSE_SECONDS,
                 'timeout_seconds' => $this->timeoutSeconds(),
                 'characters' => $characters,
-                'error' => $exception->getMessage(),
+                'error' => $error,
             ]);
         }
     }
