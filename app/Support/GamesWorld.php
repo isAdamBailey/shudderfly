@@ -125,12 +125,15 @@ final class GamesWorld
      * the file: elsewhere his toot falls back to the fart. */
     public const GUSTER_HELLO = 'sounds/d81e2f70-318a-44f3-b967-c48d1c91ce0f.m4a';
 
+    /** How far out from the back wall a flight of stairs stands. */
+    private const STAIRS_FROM_BACK = 220;
+
     /** How high up the wall the Cockroach's candle sconces hang. */
     private const SCONCE_Y = 270;
 
-    /** The walls of a room a door can sit on. `back` is the far wall, as
-     * you come in, and `front` the one across from it, behind you (hidden
-     * while you face the back); `left` and `right` are the ends. */
+    /** The walls of a room things can go on (onWall()). `back` is the far
+     * wall, as you come in, and `front` the one across from it, behind you
+     * (hidden while you face the back); `left` and `right` are the ends. */
     public const ROOM_WALLS = ['back', 'left', 'right', 'front'];
 
     /** A room's looks, by name: `walls.back` (and `walls.sides`, and
@@ -494,6 +497,9 @@ final class GamesWorld
         $stairsEnd = 150;
         $doorGap = 240;
         $landingW = 2 * $stairsEnd + self::LIBRARY_ROOMS_PER_FLOOR * $doorGap;
+        // Every Library room is as deep.
+        $libraryD = 450;
+        $landingSize = ['w' => $landingW, 'd' => $libraryD];
 
         // The hall: the front door at the left end, then the special
         // shelves, then the stairs up at the right.
@@ -503,9 +509,10 @@ final class GamesWorld
             self::ceilingLamp($hallW),
             ...($shelves ? self::readingLamps($shelves[0]['x'], self::shelfEnd(end($shelves)), self::ROOM_LIGHTS_MAX - 1) : []),
         ];
+        $hallSize = ['w' => $hallW, 'd' => $libraryD];
         $scenes = [
             'library.hall' => self::room('library_hall', [
-                'size' => ['w' => $hallW, 'd' => 450],
+                'size' => $hallSize,
                 'spawn' => ['x' => 300, 'z' => 300],
                 'walls' => ['back' => 'brick', 'sides' => 'plaster', 'floor' => 'wood'],
                 'lights' => $hallLights,
@@ -513,7 +520,7 @@ final class GamesWorld
             ], [
                 self::roomDoor('front-door', 110, 'road', 'library', exit: true),
                 self::lightSwitch(220, $hallLights),
-                ...($floors->isEmpty() ? [] : [self::stairs(true, $floorId(0), $hallW)]),
+                ...($floors->isEmpty() ? [] : [self::stairs(true, $floorId(0), $hallSize)]),
             ]),
         ];
 
@@ -528,13 +535,13 @@ final class GamesWorld
             $floor = ['number' => $i + 2];
             $scenes[$landing] = [
                 ...self::room('library_floor', [
-                    'size' => ['w' => $landingW, 'd' => 450],
+                    'size' => $landingSize,
                     'spawn' => ['x' => $landingW / 2, 'z' => 300],
                     'walls' => ['back' => 'wallpaper-stripes', 'sides' => 'plaster', 'floor' => 'carpet'],
                     'lights' => $landingLights,
                 ], [
                     // Down the way you came on the left, up on the right.
-                    self::stairs(false, $floorId($i - 1)),
+                    self::stairs(false, $floorId($i - 1), $landingSize),
                     self::lightSwitch(intdiv($landingW, 2), $landingLights),
                     ...$categories->values()->map(fn ($category, $n) => [
                         ...self::roomDoor(
@@ -549,7 +556,7 @@ final class GamesWorld
                         'open' => true,
                         'labelArgs' => self::categoryName($category),
                     ])->all(),
-                    ...($i < $floors->count() - 1 ? [self::stairs(true, $floorId($i + 1), $landingW)] : []),
+                    ...($i < $floors->count() - 1 ? [self::stairs(true, $floorId($i + 1), $landingSize)] : []),
                 ]),
                 'labelArgs' => $floor,
             ];
@@ -565,7 +572,7 @@ final class GamesWorld
                     : [self::ceilingLamp($width)];
                 $scenes["library.category-{$category->id}"] = [
                     ...self::room('library_category', [
-                        'size' => ['w' => $width, 'd' => 450],
+                        'size' => ['w' => $width, 'd' => $libraryD],
                         'spawn' => ['x' => 300, 'z' => 300],
                         'walls' => ['back' => 'wallpaper-dots', 'sides' => 'plaster', 'floor' => 'wood'],
                         'lights' => $lights,
@@ -730,7 +737,7 @@ final class GamesWorld
         );
     }
 
-    /** A bulb on a room's back wall, `y` up it, that is the room's `lamp`
+    /** A bulb on a room's back wall (onWall() moves it), `y` up it, that is the room's `lamp`
      * and its switch, or the switch for all of `$lights`. */
     private static function lampSwitch(int $x, int $y, array $lights = ['lamp']): array
     {
@@ -744,26 +751,31 @@ final class GamesWorld
         return self::toy('light-switch', $x, 390, '💡', 'light_switch', ['size' => 60, 'move' => 'wiggle', 'light' => array_column($lights, 'id')]);
     }
 
-    /** Stairs up (`$up`) or down to `$to`, arriving at the stairs going
-     * back. Up is on the right wall (a room `span` wide), down on the left;
-     * down is the way out. A door with `stairs` is drawn as a flight of
-     * steps (staircase.js), not as its emoji. */
-    private static function stairs(bool $up, string $to, int $span = 0): array
+    /** Stairs up (`$up`) or down to `$to` in a room `size` across,
+     * arriving at the stairs going back. Up is on the right wall, down on
+     * the left, each STAIRS_FROM_BACK out from the back wall; down is the
+     * way out. A door with `stairs` is drawn as a flight of steps
+     * (staircase.js), not as its emoji. Coming up or down them, you face
+     * the back (`arriveFacing`), where a landing's doors are, not the flight. */
+    private static function stairs(bool $up, string $to, array $size): array
     {
         $id = $up ? 'upstairs' : 'downstairs';
 
         return [
             ...self::roomDoor(
                 $id,
-                220,
+                // Along each wall as you face it: the right runs out from
+                // the back, the left toward it.
+                $up ? self::STAIRS_FROM_BACK : $size['d'] - self::STAIRS_FROM_BACK,
                 $to,
                 $up ? 'downstairs' : 'upstairs',
                 exit: ! $up,
                 wall: $up ? 'right' : 'left',
-                span: $span,
+                size: $size,
                 key: "messages.games.world.doors.{$id}",
             ),
             'stairs' => $up ? 'up' : 'down',
+            'arriveFacing' => 'back',
         ];
     }
 
@@ -793,6 +805,37 @@ final class GamesWorld
         ];
     }
 
+    /**
+     * `thing` laid out as if on the back wall (`x` along it, `z` out from
+     * it, 0 if it doesn't say) moved onto `wall` of a room `size` ({ w, d })
+     * across, as views.js fromView() turns a point: `x` runs along that wall
+     * left to right as you face it, and `z` out from it into the room. On
+     * any wall but the back it names its `wall`, so it's drawn facing out
+     * from it. Works for anything with an `x`: an interactable, a photo, a
+     * light, an entertainment center, a counter or a fireplace.
+     */
+    private static function onWall(string $wall, array $size, array $thing): array
+    {
+        if ($wall !== 'back' && ! isset($size['w'], $size['d'])) {
+            throw new InvalidArgumentException("A thing on the {$wall} wall needs the room's size.");
+        }
+        $along = $thing['x'];
+        $out = $thing['z'] ?? 0;
+        [$x, $z] = match ($wall) {
+            'back' => [$along, $out],
+            'right' => [$size['w'] - $out, $along],
+            'front' => [$size['w'] - $along, $size['d'] - $out],
+            'left' => [$out, $size['d'] - $along],
+        };
+
+        return [
+            ...$thing,
+            'x' => $x,
+            'z' => $z,
+            ...($wall === 'back' ? [] : ['wall' => $wall]),
+        ];
+    }
+
     /** A room named `places.<label>`, seen ROOM_FRAME wide. */
     private static function room(string $label, array $room, array $interactables): array
     {
@@ -805,26 +848,17 @@ final class GamesWorld
         ];
     }
 
-    /** A door on `wall` of a room (`back`, `left`, `right` or `front`), named
+    /** A door `at` along `wall` of a room `size` across (onWall()), named
      * `doors.outside` if it leads out to the road, `places.<label>` after
-     * the room it leads to, or by the lang `key` it's given. `at` is x
-     * along the back or front wall, or z along a side wall; a right-hand
-     * door needs the room's `span` (its width), a front one its depth. */
-    private static function roomDoor(string $id, int $at, string $to, string $toSpot, ?string $label = null, bool $exit = false, string $wall = 'back', int $span = 0, ?string $key = null): array
+     * the room it leads to, or by the lang `key` it's given. */
+    private static function roomDoor(string $id, int $at, string $to, string $toSpot, ?string $label = null, bool $exit = false, string $wall = 'back', array $size = [], ?string $key = null): array
     {
-        [$x, $z] = match ($wall) {
-            'left' => [0, $at],
-            'right' => [$span, $at],
-            'front' => [$at, $span],
-            default => [$at, 0],
-        };
-
         return [
+            ...self::onWall($wall, $size, ['x' => $at]),
             'id' => $id,
             'type' => 'door',
+            // A door names its wall even on the back.
             'wall' => $wall,
-            'x' => $x,
-            'z' => $z,
             'emoji' => '🚪',
             'label' => $key ?? ($to === 'road'
                 ? 'messages.games.world.doors.outside'
@@ -843,7 +877,7 @@ final class GamesWorld
         return ['id' => $slug, 'type' => 'game', 'x' => $x, 'z' => $z, 'game' => $slug, ...$look];
     }
 
-    /** A clock on the back wall. `face` is one of CLOCKS; `sound` is `tick` or `bell`. */
+    /** A clock on the back wall (onWall() moves it). `face` is one of CLOCKS; `sound` is `tick` or `bell`. */
     private static function clock(int $n, int $x, string $face, string $sound, int $y): array
     {
         return [
@@ -860,7 +894,7 @@ final class GamesWorld
         ];
     }
 
-    /** A picture on a room's back wall, its bottom `y` up it: `src`
+    /** A picture on a room's back wall (onWall() moves it), its bottom `y` up it: `src`
      * `w` × `h` (the photo's own shape), in one of PICTURE_FRAMES or on a
      * plain panel. The room draws it as an image over that, the way a book
      * cover sits on a shelf. Named `toys.<key>`, and it says
@@ -880,7 +914,7 @@ final class GamesWorld
         ];
     }
 
-    /** A photo frame on a room's back wall, its bottom `y` up it, `w` ×
+    /** A photo frame on a room's back wall (onWall() moves it), its bottom `y` up it, `w` ×
      * `h`, filled with one of the photos `from` names (`['book' =>
      * '<slug>']`, that book's pictures, or `['search' => '<term>']`, the
      * pictures on pages mentioning it), picked once a day by
@@ -917,7 +951,7 @@ final class GamesWorld
         ];
     }
 
-    /** A flat-screen TV on a room's back wall, its bottom `y` up it (a
+    /** A flat-screen TV on a room's back wall (onWall() moves it), its bottom `y` up it (a
      * black panel, `screen` units wide and high). scenes() tunes it to a
      * few of the family's videos (`channels`); with none it says
      * `toys.tv_line`. */
@@ -935,7 +969,7 @@ final class GamesWorld
         ];
     }
 
-    /** A kitchen counter against the back wall from x `from` to `to`,
+    /** A kitchen counter against the back wall (onWall() moves it) from x `from` to `to`,
      * KITCHEN_COUNTER in size, with KITCHEN_CABINETS over it. */
     private static function kitchenCounter(int $from, int $to): array
     {
@@ -947,7 +981,7 @@ final class GamesWorld
         ];
     }
 
-    /** An entertainment center against the back wall, its middle `x` along
+    /** An entertainment center against the back wall (onWall() moves it), its middle `x` along
      * it, ENTERTAINMENT_CENTER in size. */
     private static function entertainmentCenter(int $x): array
     {

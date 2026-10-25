@@ -47,10 +47,17 @@ export function wallFacing(wall) {
     return FACING[wall] ?? FACING.back;
 }
 
-/** Whether `thing` hangs up the back wall without saying so: off the
- * floor, against it. */
-export function hungUp(thing) {
-    return (thing.y ?? 0) > 0 && !thing.z;
+/** How far `thing` stands out from the wall it names in a room `size`
+ * ({ w, d }) across, or from the back wall if it names none. */
+export function offWall(thing, size) {
+    const wall = WALLS.includes(thing.wall) ? thing.wall : "back";
+    return toView({ wall, size }, { x: thing.x, z: thing.z ?? 0 }).z;
+}
+
+/** Whether `thing` hangs up a wall in a room `size` across: off the
+ * floor, against the wall it names (the back if it names none). */
+export function hungUp(thing, size) {
+    return (thing.y ?? 0) > 0 && !offWall(thing, size);
 }
 
 // How far out from a wall a thing up off the floor still belongs to it,
@@ -103,6 +110,26 @@ export function viewBand(size, wall) {
 export function inView(thing, view, band) {
     if (wallOf(thing, view.size) === wallBehind(view.wall)) return false;
     return toView(view, { x: thing.x, z: thing.z ?? 0 }).z <= band;
+}
+
+/** Whether `thing` is flat on its wall with a picture laid over it in
+ * the overlay: a picture, a photo, a TV. */
+const flat = (thing) => Boolean(thing.image || thing.screen);
+
+/** Whether flat `thing` is seen face on by a camera facing `view`'s wall:
+ * it's on that wall, or (standing in the room) faces out as the back
+ * wall's things do (itemPose()) and the camera faces the back. */
+export function faceOn(thing, view) {
+    return (wallOf(thing, view.size) ?? "back") === view.wall;
+}
+
+/** Whether `thing` has its overlay (a button, a picture) facing `view`'s
+ * wall over a floor `band` deep: it's in view (inView()), and a flat one
+ * faces the camera. Seen edge on from a wall beside it, a flat thing's
+ * picture would float flat over the room, so it's left out there. */
+export function overlaid(thing, view, band) {
+    if (flat(thing) && !faceOn(thing, view)) return false;
+    return inView(thing, view, band);
 }
 
 /** Where `item` is drawn: on its wall, a hair into the room, turned to

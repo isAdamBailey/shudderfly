@@ -6,6 +6,7 @@ import { STAIRS_CLEARANCE } from "../scenes/roomLayout.js";
 import { DRAG_SPEED, FOLLOW_GAP, WALK_SPEED } from "./useGamesWorld.js";
 import {
     arrivalSpot,
+    arrivalWall,
     BLOCK_CLEARANCE,
     REACH,
     STAND,
@@ -363,6 +364,44 @@ describe("useRoom extras", () => {
         expect(r.nearest.value).toBe(book);
         r.goUse(book);
         expect(onArrive).toHaveBeenCalledWith(book);
+    });
+});
+
+describe("arrivalWall", () => {
+    const side = {
+        id: "bedroom-door",
+        type: "door",
+        x: 0,
+        z: 220,
+        wall: "left",
+    };
+    const stairs = {
+        ...side,
+        id: "downstairs",
+        stairs: "down",
+        arriveFacing: "back",
+    };
+    const hall = { ...room, interactables: [DOOR, side, stairs] };
+
+    it("faces the wall of the door it came in by", () => {
+        expect(arrivalWall(hall, { spot: "front-door" })).toBe("back");
+        expect(arrivalWall(hall, { spot: "bedroom-door" })).toBe("left");
+    });
+
+    it("faces where a door says, or the back with no door or one gone", () => {
+        expect(arrivalWall(hall, { spot: "downstairs" })).toBe("back");
+        expect(arrivalWall(hall)).toBe("back");
+        expect(arrivalWall(hall, { spot: "gone" })).toBe("back");
+    });
+
+    it("faces the wall it faced when the place was saved, over the door", () => {
+        const position = { x: 100, z: 300, view: "right" };
+        expect(arrivalWall(hall, { spot: "bedroom-door", position })).toBe(
+            "right"
+        );
+        expect(
+            arrivalWall(hall, { position: { ...position, view: "up" } })
+        ).toBe("back");
     });
 });
 

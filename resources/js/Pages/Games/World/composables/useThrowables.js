@@ -1,12 +1,13 @@
 import { ref } from "vue";
-import { wallHeightOf } from "../scenes/roomLayout.js";
+import { offWall, wallHeightOf } from "../scenes/roomLayout.js";
 import { FOOTPRINTS } from "../three/footprints.js";
 import { clamp, tossTilt } from "./useGamesWorld.js";
+import { fromView, toView } from "./views.js";
 
 // The kitchen's fruit, thrown about the room as the road's are along the
 // verge (useIdlerPhysics.js), but in the room's own world units and in all
 // three directions: they bounce off its four walls and ceiling, land on the
-// floor or on whatever stands against the back wall (a counter, the fridge),
+// floor or on whatever stands against a wall (a counter, the fridge),
 // and roll to a stop.
 const GRAVITY = 1800; // units/s²
 // The share of its speed a throwable keeps off a wall, and off the floor.
@@ -32,31 +33,48 @@ const STEP = 4;
 // drops what it holds.
 const STALE_FLING = 80;
 
-/** What stands against the back wall that a throwable can land on or bounce
- * off, as footprints out from the wall with a top: the room's `counters`,
- * and any modelled prop on the floor with a footprint (three/footprints.js),
- * at its size. */
+/** What stands against a wall that a throwable can land on or bounce off,
+ * as boxes on the floor with a top: the room's `counters`, and any
+ * modelled prop on the floor against its wall with a footprint
+ * (three/footprints.js), at its size. Each reaches `d` out from the wall
+ * it names (the back if none). */
 export function roomBlocks(room) {
     const props = room.interactables
-        .filter((item) => FOOTPRINTS[item.model] && !item.y && !item.z)
+        .filter(
+            (item) =>
+                FOOTPRINTS[item.model] && !item.y && !offWall(item, room.size)
+        )
         .map((item) => {
             const f = FOOTPRINTS[item.model];
             return {
                 x: item.x,
+                z: item.z,
+                wall: item.wall,
                 w: f.w * item.size,
                 d: f.d * item.size,
                 h: f.top * item.size,
             };
         });
-    return [...(room.counters ?? []), ...props].map(({ x, w, d, h }) => ({
-        x0: x - w / 2,
-        x1: x + w / 2,
-        z1: d,
-        top: h,
-    }));
+    return [...(room.counters ?? []), ...props].map((unit) => {
+        const view = { wall: unit.wall ?? "back", size: room.size };
+        const along = toView(view, unit).x;
+        const corners = [
+            fromView(view, { x: along - unit.w / 2, z: 0 }),
+            fromView(view, { x: along + unit.w / 2, z: unit.d }),
+        ];
+        const xs = corners.map((c) => c.x);
+        const zs = corners.map((c) => c.z);
+        return {
+            x0: Math.min(...xs),
+            x1: Math.max(...xs),
+            z0: Math.min(...zs),
+            z1: Math.max(...zs),
+            top: unit.h,
+        };
+    });
 }
 
-const inside = (b, x, z) => x >= b.x0 && x <= b.x1 && z <= b.z1;
+const inside = (b, x, z) => x >= b.x0 && x <= b.x1 && z >= b.z0 && z <= b.z1;
 
 /**
  * The `throwable` things in `room` ({ size, frame?, counters?,
@@ -225,7 +243,7 @@ export function useThrowables(
                 x = p.x;
                 p.vx = -p.vx * WALL_BOUNCE;
             }
-            if (p.z > b.z1) {
+            if (p.z < b.z0 || p.z > b.z1) {
                 z = p.z;
                 p.vz = -p.vz * WALL_BOUNCE;
             }

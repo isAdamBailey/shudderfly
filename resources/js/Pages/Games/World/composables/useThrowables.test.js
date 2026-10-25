@@ -48,8 +48,8 @@ function settle(t, limit = 20) {
 describe("roomBlocks", () => {
     it("is the counters and the modelled props on the floor, by footprint", () => {
         expect(roomBlocks(kitchen())).toEqual([
-            { x0: 400, x1: 800, z1: 44, top: 92 },
-            { x0: 205, x1: 325, z1: 45, top: 250 },
+            { x0: 400, x1: 800, z0: 0, z1: 44, top: 92 },
+            { x0: 205, x1: 325, z0: 0, z1: 45, top: 250 },
         ]);
         // A model hung on the wall, or standing on something, is no block.
         const radio = {
@@ -61,6 +61,54 @@ describe("roomBlocks", () => {
             model: "radio",
         };
         expect(roomBlocks({ interactables: [radio] })).toEqual([]);
+    });
+
+    it("stands out from whichever wall a counter or prop names", () => {
+        const size = { w: 900, d: 500 };
+        // A counter 400 long against the right wall, from 100 to 500 along
+        // it (out from the back), and a fridge against the front wall 265
+        // along it from the right.
+        const blocks = roomBlocks({
+            size,
+            counters: [{ x: 900, z: 300, w: 400, h: 92, d: 44, wall: "right" }],
+            interactables: [
+                {
+                    id: "fridge",
+                    x: 635,
+                    z: 500,
+                    size: 250,
+                    model: "fridge",
+                    wall: "front",
+                },
+            ],
+        });
+        expect(blocks).toEqual([
+            { x0: 856, x1: 900, z0: 100, z1: 500, top: 92 },
+            { x0: 575, x1: 695, z0: 455, z1: 500, top: 250 },
+        ]);
+    });
+
+    it("lands a throwable on a counter against a side wall", () => {
+        const t = useThrowables({
+            size: { w: 900, d: 500 },
+            frame: 900,
+            counters: [{ x: 900, z: 300, w: 400, h: 92, d: 44, wall: "right" }],
+            interactables: [
+                {
+                    id: "apple",
+                    type: "toy",
+                    x: 880,
+                    y: 200,
+                    z: 300,
+                    size: 20,
+                    throwable: true,
+                },
+            ],
+        });
+        t.grab("apple");
+        t.release("apple");
+        for (let i = 0; i < 240; i++) t.step(1 / 60);
+        expect(t.at.apple.y).toBe(92);
     });
 });
 

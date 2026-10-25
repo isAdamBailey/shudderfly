@@ -28,6 +28,7 @@ import {
     itemBox,
     itemPose,
     ROOM_SIZES,
+    wallFacing,
     wallHeightOf,
     wallOf,
 } from "./roomLayout.js";
@@ -475,7 +476,7 @@ export function createRoomScene(
           })
         : null;
     /** Builds `geometry` in wood into the room, on `wall` (if it's on
-     * one), posed as `pose` if it says. */
+     * one), posed as `pose` if it says, and returns its mesh. */
     function woodwork(wall, geometry, pose = null) {
         const mesh = new THREE.Mesh(geometry, wood);
         if (pose) {
@@ -486,6 +487,7 @@ export function createRoomScene(
         mesh.receiveShadow = true;
         made.add(mesh);
         hang(wall, mesh);
+        return mesh;
     }
     for (const item of stairs) {
         woodwork(wallIn(item), stairsGeometry(THREE, item, height));
@@ -493,14 +495,29 @@ export function createRoomScene(
     for (const shelf of shelves) {
         woodwork("back", bookcaseGeometry(THREE, shelf));
     }
+    /** Builds a unit flat against its wall (the back unless it names
+     * one): `geometry` makes it as if on the back wall at x 0, and it's
+     * turned out from its wall to where it stands. */
+    function builtIn(unit, geometry) {
+        const mesh = woodwork(
+            unit.wall ?? "back",
+            geometry({ ...unit, x: 0 }),
+            {
+                x: unit.x,
+                z: unit.z ?? 0,
+                turn: wallFacing(unit.wall).turn,
+            }
+        );
+        mesh.castShadow = true;
+    }
     for (const unit of entertainment) {
-        woodwork("back", entertainmentCenterGeometry(THREE, unit));
+        builtIn(unit, (u) => entertainmentCenterGeometry(THREE, u));
     }
     for (const unit of fireplaces) {
-        woodwork("back", fireplaceGeometry(THREE, unit));
+        builtIn(unit, (u) => fireplaceGeometry(THREE, u));
     }
     for (const unit of counters) {
-        woodwork("back", kitchenCounterGeometry(THREE, unit));
+        builtIn(unit, (u) => kitchenCounterGeometry(THREE, u));
     }
     if (doorways.length > 0) {
         const doorway = doorwayGeometry(THREE);
@@ -556,9 +573,9 @@ export function createRoomScene(
             continue;
         }
         const size = itemBox(item).height;
-        // Hung on the back wall (up it, against it): no shadow under it.
-        // One standing on something (a radio on its cabinet) has one.
-        const shadows = !hungUp(item);
+        // Hung on a wall (up it, against it): no shadow under it. One
+        // standing on something (a radio on its cabinet) has one.
+        const shadows = !hungUp(item, room.size);
         // A prop modelled in 3D (three/models.js), lit like the room.
         const model = MODELS[item.model]?.(THREE) ?? null;
         // A lamp's own light drives its glow (below), so only the others
@@ -632,7 +649,9 @@ export function createRoomScene(
                 size: LAMP_GLYPH,
                 shadows: false,
             });
-            puppet.group.position.set(data.x, data.y - LAMP_GLYPH / 2, data.z);
+            const pose = itemPose(data);
+            puppet.group.position.set(pose.x, data.y - LAMP_GLYPH / 2, pose.z);
+            puppet.group.rotation.y = pose.turn;
             glows.push({
                 lamps: [lamp],
                 set: glowSwitch(puppet, data.color),

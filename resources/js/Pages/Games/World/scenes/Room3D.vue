@@ -31,9 +31,9 @@ import {
     spanAt,
     worldToScreen,
 } from "../composables/projection.js";
-import { toView, WALLS, wallTurned } from "../composables/views.js";
+import { toView, wallTurned } from "../composables/views.js";
 import { bobLift, useOthers } from "../composables/useGamesWorld.js";
-import { arrivalSpot, useRoom } from "../composables/useRoom.js";
+import { arrivalSpot, arrivalWall, useRoom } from "../composables/useRoom.js";
 import { useThrowables } from "../composables/useThrowables.js";
 import { useShelves } from "../composables/useShelves.js";
 import { useTvChannels } from "../composables/useTvChannels.js";
@@ -62,10 +62,10 @@ import {
 import { convexHull, keyAt, ORGAN, zoneCorners } from "./organLayout.js";
 import { stairsBounds } from "./staircase.js";
 import {
-    inView,
     itemBox,
     itemPoint,
     itemPose,
+    overlaid,
     ROOM_SIZES,
     roomCamera,
     roomLayout,
@@ -110,11 +110,10 @@ const pictureLight = computed(() => (dark.value ? 0.6 : 1));
 const prefersReducedMotion = usePreferredReducedMotion();
 const reduced = computed(() => prefersReducedMotion.value === "reduce");
 
-// The wall the camera faces, a quarter turn at a time (turn()): the back
-// on the way in, or whichever was faced when the place was saved (the
-// stage keeps it with the Butt's spot, position()).
-const restored = props.arrival.position?.view;
-const faced = ref(WALLS.includes(restored) ? restored : "back");
+// The wall the camera faces, a quarter turn at a time (turn()): the wall
+// of the door come in by, or whichever was faced when the place was saved
+// (the stage keeps it with the Butt's spot, position()).
+const faced = ref(arrivalWall(props.scene, props.arrival));
 
 const bounds = reactive({ w: 0, h: 0 });
 const layout = computed(() =>
@@ -421,9 +420,10 @@ function stepTurn(dt) {
  * the Butt. */
 const project = (point) => worldToScreen(view.value, point);
 
-/** Whether `thing` can be seen facing the wall the camera faces. */
+/** Whether `thing` can be seen facing the wall the camera faces, its
+ * overlay with it (roomLayout.js overlaid()). */
 const seen = (thing) =>
-    inView(thing, layout.value.camera.view, layout.value.band);
+    overlaid(thing, layout.value.camera.view, layout.value.band);
 
 // What can be seen facing the wall the camera faces: only that has a
 // button, to tap, Tab to and hear. Its interactables run left to right
