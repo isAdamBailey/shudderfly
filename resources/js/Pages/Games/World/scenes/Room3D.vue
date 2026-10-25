@@ -31,7 +31,7 @@ import {
     spanAt,
     worldToScreen,
 } from "../composables/projection.js";
-import { toView, wallTurned } from "../composables/views.js";
+import { fromView, toView, wallTurned } from "../composables/views.js";
 import { bobLift, useOthers } from "../composables/useGamesWorld.js";
 import { arrivalSpot, arrivalWall, useRoom } from "../composables/useRoom.js";
 import { useThrowables } from "../composables/useThrowables.js";
@@ -46,7 +46,15 @@ import {
     playTick,
     tickLevel,
 } from "../clockSounds.js";
-import { BOOKCASE, bookcaseHeight, shelfEnd, slotsIn } from "./bookshelf.js";
+import {
+    BOOKCASE,
+    bookcaseHeight,
+    bookSlot,
+    onShelfWall,
+    shelfEnd,
+    shelfWall,
+    slotsIn,
+} from "./bookshelf.js";
 import { createRoomScene } from "./RoomScene.js";
 import { BASS_DRUM, headPoint, hitEdge } from "./drumLayout.js";
 import { isInstrument } from "./instruments.js";
@@ -136,6 +144,7 @@ const view = computed(() =>
 // A Library room's books, fetched a page at a time from the Books pages'
 // own lists as their stretch of shelf comes near the view.
 const shelves = useShelves(props.scene.shelves, {
+    size: props.scene.size,
     async fetchPage(shelf, page) {
         const { data } = await axios.get(
             route("books.category", { categoryName: shelf.category, page })
@@ -439,9 +448,13 @@ const inSight = computed(() => {
             .filter((item) => item.throwable || seen(item))
             .sort((a, b) => along(a) - along(b)),
         photos: (props.scene.photos ?? []).filter(seen),
-        // Bookcases stand against the back wall: their books are only
-        // reached facing it (from the side, they're edge on).
-        shelves: new Set(view.wall === "back" ? props.scene.shelves : []),
+        // Bookcases stand against a wall: their books are only reached
+        // facing it (from the side, they're edge on).
+        shelves: new Set(
+            (props.scene.shelves ?? []).filter(
+                (shelf) => shelfWall(shelf) === view.wall
+            )
+        ),
     };
 });
 
@@ -637,20 +650,28 @@ const drumSpots = computed(() => {
         });
 });
 
-// The stretch of back wall the overlay keeps books' buttons up for: what's
-// in view, and half as much again either side, so Tab can step to the next
-// book before the camera follows. None facing any other wall.
+// The stretch of the faced wall the overlay keeps books' buttons up for,
+// along it as you face it: what's in view, and half as much again either
+// side, so Tab can step to the next book before the camera follows. None
+// facing a wall with no shelves.
 const near = computed(() => {
     if (!view.value || inSight.value.shelves.size === 0) return null;
-    const { from, to } = spanAt(view.value, { x: 0, z: 0 });
-    const pad = (to.x - from.x) / 2;
-    return { x0: from.x - pad, x1: to.x + pad };
+    const { view: wall } = view.value;
+    const along = (point) => toView(wall, point).x;
+    const { from, to } = spanAt(view.value, fromView(wall, { x: 0, z: 0 }));
+    const [x0, x1] = [along(from), along(to)];
+    const pad = (x1 - x0) / 2;
+    return { x0: x0 - pad, x1: x1 + pad, wall: wall.wall };
 });
 
 // Fetches books only when the pages in view change, not every frame.
 watch(
-    () => near.value && shelves.pagesNear(near.value.x0, near.value.x1),
-    () => near.value && shelves.show(near.value.x0, near.value.x1),
+    () =>
+        near.value &&
+        shelves.pagesNear(near.value.x0, near.value.x1, near.value.wall),
+    () =>
+        near.value &&
+        shelves.show(near.value.x0, near.value.x1, near.value.wall),
     { immediate: true }
 );
 
@@ -665,9 +686,12 @@ const shelfSpots = computed(() => {
     const { x0, x1 } = near.value;
     return (props.scene.shelves ?? []).flatMap((shelf, s) => {
         if (!inSight.value.shelves.has(shelf)) return [];
+        // Laid out along the shelf's wall, drawn where that is in the room.
+        const at = (point) =>
+            project(onShelfWall(shelf, props.scene.size, point));
         const sign =
             shelf.label &&
-            project({
+            at({
                 x: (shelf.x + shelfEnd(shelf)) / 2,
                 y: bookcaseHeight(shelf.rows),
             });
@@ -677,7 +701,7 @@ const shelfSpots = computed(() => {
         for (let i = range?.from ?? 0; range && i <= range.to; i += 1) {
             const item = slots[i];
             if (!item) continue;
-            const p = project({ x: item.x, y: item.y, z: BOOK_FRONT });
+            const p = at({ ...bookSlot(shelf, i), z: BOOK_FRONT });
             books.push({
                 item,
                 x: p.x,

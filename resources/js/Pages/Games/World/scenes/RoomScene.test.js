@@ -728,6 +728,46 @@ describe("the room's scene graph", () => {
             expect(thingAt(front, 180, 263).visible).toBe(true);
         });
 
+        it("carries a long shelf round onto the front wall, its books with it", () => {
+            const shelf = {
+                id: "books",
+                category: "people",
+                count: 30,
+                x: 260,
+                rows: 3,
+                span: 110,
+                perPage: 10,
+            };
+            const library = {
+                ...hall,
+                shelves: [
+                    shelf,
+                    { ...shelf, id: "books-front", first: 30, wall: "front" },
+                ],
+            };
+            const books = (graph) =>
+                graph.scene.getObjectsByProperty("isInstancedMesh", true);
+            const back = facing("back", library).graph;
+            const front = facing("front", library).graph;
+
+            // A mesh of books for each wall, the front's turned onto it
+            // from its far corner, and each hidden with its wall.
+            const [onBack, onFront] = books(front);
+            expect(books(front)).toHaveLength(2);
+            expect(onFront.position.x).toBe(hall.size.w);
+            expect(onFront.position.z).toBe(hall.size.d);
+            expect(onFront.rotation.y).toBeCloseTo(Math.PI);
+            expect(onBack.position.x).toBe(0);
+            expect(onFront.visible).toBe(true);
+            expect(onBack.visible).toBe(false);
+            expect(books(back).map((mesh) => mesh.visible)).toEqual([
+                true,
+                false,
+            ]);
+            back.dispose();
+            front.dispose();
+        });
+
         it("turns its cards to the camera, but not what's posed on the wall it names", () => {
             const { graph } = facing("left");
             graph.sync(view(), 0);

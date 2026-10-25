@@ -520,6 +520,59 @@ class GamesWorldScenesTest extends TestCase
         $this->assertSame(GamesWorld::ROOM_FRAME, $room('shows')['size']['w']);
     }
 
+    public function test_a_long_category_room_carries_its_shelf_round_onto_the_front_wall(): void
+    {
+        $long = Category::factory()->create(['name' => 'zebras']);
+        Book::factory()->count(90)->create(['category_id' => $long->id]);
+
+        $room = GamesWorld::definitions()["library.category-{$long->id}"];
+        [$back, $front] = $room['shelves'];
+
+        // 90 books in 3 rows is 30 columns, half on each wall, both from
+        // as far in as you face them, the front's carrying the list on.
+        $this->assertSame(['books', 45, GamesWorld::LIBRARY_SHELVES_FROM], [$back['id'], $back['count'], $back['x']]);
+        $this->assertArrayNotHasKey('wall', $back);
+        $this->assertArrayNotHasKey('first', $back);
+        $this->assertSame(['books-front', 45, GamesWorld::LIBRARY_SHELVES_FROM, 45, 'front'], [$front['id'], $front['count'], $front['x'], $front['first'], $front['wall']]);
+        $this->assertSame('zebras', $front['category']);
+        // So the room is as long as half of them, not all.
+        $this->assertSame(GamesWorld::LIBRARY_SHELVES_FROM + 15 * GamesWorld::LIBRARY_BOOK_SPAN + 270, $room['size']['w']);
+        $this->assertGreaterThanOrEqual(GamesWorld::ROOM_FRAME, $room['size']['w']);
+
+        // Its reading lamps are shared between the walls, over each
+        // shelf, and all on the one switch.
+        $lamps = collect($room['lights'])->groupBy(fn ($lamp) => $lamp['wall'] ?? 'back');
+        $this->assertCount(GamesWorld::ROOM_LIGHTS_MAX, $room['lights']);
+        $this->assertCount(GamesWorld::ROOM_LIGHTS_MAX / 2, $lamps['front']);
+        foreach (['back' => $back, 'front' => $front] as $wall => $shelf) {
+            foreach ($lamps[$wall] as $lamp) {
+                [, $along] = $this->wallSpot($lamp, $room['size']);
+                $this->assertGreaterThan($shelf['x'], $along, $lamp['id']);
+                $this->assertLessThan($this->shelfEnd($shelf), $along, $lamp['id']);
+            }
+        }
+        $switch = collect($room['interactables'])->firstWhere('id', 'light-switch');
+        $this->assertSame(array_column($room['lights'], 'id'), $switch['light']);
+
+        // And both bookcases keep clear of everything else on their walls.
+        $this->test_everything_against_a_wall_fits_along_it();
+        $this->test_nothing_against_a_wall_overlaps_anything_else_on_it();
+        $this->test_the_far_door_stands_clear_of_the_shelves();
+    }
+
+    public function test_a_category_shelf_stays_on_the_back_wall_up_to_its_length(): void
+    {
+        $category = Category::factory()->create(['name' => 'yaks']);
+        $columns = intdiv(GamesWorld::LIBRARY_WALL_SHELF, GamesWorld::LIBRARY_BOOK_SPAN);
+        Book::factory()->count($columns * GamesWorld::LIBRARY_SHELF_ROWS)->create(['category_id' => $category->id]);
+
+        $this->assertCount(1, GamesWorld::definitions()["library.category-{$category->id}"]['shelves']);
+
+        Book::factory()->create(['category_id' => $category->id]);
+
+        $this->assertCount(2, GamesWorld::definitions()["library.category-{$category->id}"]['shelves']);
+    }
+
     public function test_the_far_door_stands_clear_of_the_shelves(): void
     {
         foreach (GamesWorld::definitions() as $sceneId => $scene) {
@@ -1387,20 +1440,32 @@ class GamesWorldScenesTest extends TestCase
         return $a[0] !== $b[0] || $a[2] <= $b[1] || $a[1] >= $b[2] || $a[4] <= $b[3] || $a[3] >= $b[4];
     }
 
-    /** Everything against a wall of `$room`, by id: interactables, photos
-     * and built-ins (entertainment centers, counters, fireplaces), each
-     * as its wallBox(). */
+    /** Everything against a wall of `$room`, by id: interactables, photos,
+     * built-ins (entertainment centers, counters, fireplaces) and
+     * bookcases, each as its wallBox(). */
     private function wallBoxes(array $room): Collection
     {
         $builtIns = collect(['entertainment', 'counters', 'fireplaces'])
             ->flatMap(fn ($kind) => collect($room[$kind] ?? [])->map(fn ($unit, $n) => ['id' => "{$kind}-{$n}", ...$unit]));
         $things = collect([...$room['interactables'], ...($room['photos'] ?? []), ...$builtIns]);
+        $shelves = collect($room['shelves'] ?? [])->keyBy(fn ($shelf) => "shelf-{$shelf['id']}");
         // Ids are unique, so nothing is lost keying by them.
-        $this->assertSame($things->count(), $things->pluck('id')->unique()->count(), $room['label']);
+        $ids = $things->pluck('id')->concat($shelves->keys());
+        $this->assertSame($ids->count(), $ids->unique()->count(), $room['label']);
 
         return $things->keyBy('id')
             ->map(fn ($thing) => $this->wallBox($thing, $room['size']))
-            ->filter();
+            ->filter()
+            ->union($shelves->map(fn ($shelf) => $this->shelfBox($shelf, $room['size'])));
+    }
+
+    /** `$shelf`'s bookcase as a wallBox(): laid out along its own wall, end
+     * boards and all, to the top of its top board (bookshelf.js BOOKCASE). */
+    private function shelfBox(array $shelf, array $size): array
+    {
+        [$wall, , , $length] = $this->wallSpot(['x' => 0, 'wall' => $shelf['wall'] ?? 'back'], $size);
+
+        return [$wall, $shelf['x'] - 8, $this->shelfEnd($shelf) + 8, 0, 148 + $shelf['rows'] * 100, $length];
     }
 
     /** The walls in the order a camera turns right through them

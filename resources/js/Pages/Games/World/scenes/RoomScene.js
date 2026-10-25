@@ -32,7 +32,12 @@ import {
     wallHeightOf,
     wallOf,
 } from "./roomLayout.js";
-import { bookcaseGeometry, booksMesh } from "./bookshelf.js";
+import {
+    bookcaseGeometry,
+    booksMesh,
+    shelfPose,
+    shelfWall,
+} from "./bookshelf.js";
 import { doorwayGeometry } from "./doorway.js";
 import { entertainmentCenterGeometry } from "./entertainmentCenter.js";
 import { exitSigns } from "./exitSign.js";
@@ -492,8 +497,15 @@ export function createRoomScene(
     for (const item of stairs) {
         woodwork(wallIn(item), stairsGeometry(THREE, item, height));
     }
+    // A bookcase is laid out along its wall as if on the back, and turned
+    // onto its own.
     for (const shelf of shelves) {
-        woodwork("back", bookcaseGeometry(THREE, shelf));
+        const pose = shelfPose(shelf, room.size);
+        woodwork(
+            shelfWall(shelf),
+            bookcaseGeometry(THREE, shelf),
+            pose
+        ).castShadow = true;
     }
     /** Builds a unit flat against its wall (the back unless it names
      * one): `geometry` makes it as if on the back wall at x 0, and it's
@@ -525,10 +537,17 @@ export function createRoomScene(
             woodwork(wallIn(item), doorway, itemPose(item));
         }
     }
-    const books = booksMesh(THREE, shelves);
-    if (books) {
-        made.add(books);
-        hang("back", books);
+    // The books, a mesh for each wall with shelves, posed as its bookcases.
+    const books = [];
+    for (const wall of new Set(shelves.map(shelfWall))) {
+        const mesh = booksMesh(THREE, shelves, wall);
+        if (!mesh) continue;
+        books.push(mesh);
+        const pose = shelfPose({ wall }, room.size);
+        mesh.position.set(pose.x, 0, pose.z);
+        mesh.rotation.y = pose.turn;
+        made.add(mesh);
+        hang(wall, mesh);
     }
 
     // A red EXIT sign over every way out (exitSign.js), on its door's wall.
@@ -931,7 +950,7 @@ export function createRoomScene(
                 for (const puppet of dressing.puppets) puppet.dispose();
                 if (dressing.crawling) dressing.crawling.dispose();
             }
-            books?.dispose();
+            for (const mesh of books) mesh.dispose();
             signs.dispose();
             disposeTree(made);
             for (const material of glowMaterials) material.dispose();

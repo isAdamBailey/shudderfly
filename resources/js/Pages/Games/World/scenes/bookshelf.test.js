@@ -10,10 +10,14 @@ import {
     bookcaseGeometry,
     bookcaseHeight,
     bookLook,
+    booksMesh,
     bookSlot,
     columnsOf,
+    onShelfWall,
     pagesIn,
     shelfEnd,
+    shelfPose,
+    shelfWall,
 } from "./bookshelf.js";
 
 // 20 books, 3 high, a book every 110 from x = 240: 7 columns.
@@ -97,6 +101,61 @@ describe("pagesIn", () => {
     it("names none when the shelf is out of view", () => {
         expect(pagesIn(shelf, 0, 200)).toEqual([]);
         expect(pagesIn(shelf, 1100, 2000)).toEqual([]);
+    });
+
+    it("counts a shelf's books from its first, carrying on another's", () => {
+        // Books 15-34 of the list: its first column is 15-17, on page 2.
+        const rest = { ...shelf, first: 15 };
+        expect(pagesIn(rest, 0, 240 + 110 - 1)).toEqual([2]);
+        // Column 1 is books 18-20: pages 2 and 3.
+        expect(pagesIn(rest, 240 + 110, 240 + 2 * 110 - 1)).toEqual([2, 3]);
+        expect(pagesIn(rest, 0, 9999)).toEqual([2, 3, 4]);
+    });
+});
+
+// A Library category room long enough to carry its shelf round.
+const size = { w: 2180, d: 450 };
+const front = { ...shelf, id: "books-front", wall: "front" };
+
+describe("a shelf on its wall", () => {
+    it("stands on the back wall unless it names another", () => {
+        expect(shelfWall(shelf)).toBe("back");
+        expect(shelfWall(front)).toBe("front");
+    });
+
+    it("lays the front wall's books left to right as you face it", () => {
+        // Along the front from 240 is from the room's far end, going back.
+        expect(onShelfWall(front, size, { x: 240, y: 10 })).toEqual({
+            x: size.w - 240,
+            y: 10,
+            z: size.d,
+        });
+        expect(onShelfWall(shelf, size, { x: 240 })).toEqual({
+            x: 240,
+            y: 0,
+            z: 0,
+        });
+        const first = onShelfWall(front, size, bookSlot(front, 0));
+        const next = onShelfWall(front, size, bookSlot(front, 3));
+        expect(next.x).toBeLessThan(first.x);
+    });
+
+    it("turns what's laid out as if on the back to where onShelfWall puts it", () => {
+        const pose = shelfPose(front, size);
+        const point = new THREE.Vector3(500, 0, 30)
+            .applyAxisAngle(new THREE.Vector3(0, 1, 0), pose.turn)
+            .add(new THREE.Vector3(pose.x, 0, pose.z));
+        const at = onShelfWall(front, size, { x: 500, z: 30 });
+        expect(point.x).toBeCloseTo(at.x);
+        expect(point.z).toBeCloseTo(at.z);
+        expect(shelfPose(shelf, size)).toEqual({ x: 0, z: 0, turn: 0 });
+    });
+
+    it("makes each wall's books a mesh of their own", () => {
+        const shelves = [shelf, front];
+        expect(booksMesh(THREE, shelves, "back").count).toBe(shelf.count);
+        expect(booksMesh(THREE, shelves, "front").count).toBe(front.count);
+        expect(booksMesh(THREE, shelves, "left")).toBeNull();
     });
 });
 

@@ -103,4 +103,70 @@ describe("useShelves", () => {
         expect(fetchPage).not.toHaveBeenCalled();
         expect(items.value).toEqual([]);
     });
+
+    it("stands a front wall's books on it, and shows them only facing it", async () => {
+        const fetchPage = vi.fn((s, p) =>
+            Promise.resolve(page((p - 1) * 10, 10))
+        );
+        const size = { w: 1200, d: 450 };
+        const front = { ...shelf, id: "books-front", wall: "front" };
+        const { items, show } = useShelves([front], { fetchPage, size });
+
+        show(0, 500);
+        await flushPromises();
+        expect(fetchPage).not.toHaveBeenCalled();
+
+        show(0, 500, "front");
+        await flushPromises();
+        expect(items.value[3]).toMatchObject({
+            id: "book-books-front-3",
+            wall: "front",
+            x: size.w - 405,
+            z: size.d,
+        });
+    });
+
+    it("carries a list on from a shelf's first", async () => {
+        const fetchPage = vi.fn((s, p) =>
+            Promise.resolve(page((p - 1) * 10, 10))
+        );
+        const size = { w: 1200, d: 450 };
+        // Books 0-5 on the back, 6-11 round on the front.
+        const back = { ...shelf, count: 6 };
+        const front = {
+            ...shelf,
+            id: "books-front",
+            count: 6,
+            first: 6,
+            wall: "front",
+        };
+        const { slots, show } = useShelves([back, front], { fetchPage, size });
+
+        show(0, 9999);
+        show(0, 9999, "front");
+        await flushPromises();
+
+        // Page 1 has the back's books and the front's first few.
+        expect(fetchPage.mock.calls.map(([s, p]) => [s.id, p])).toEqual([
+            ["books", 1],
+            ["books-front", 1],
+            ["books-front", 2],
+        ]);
+        expect(slots.value[0].map((i) => i.book.id)).toEqual([
+            0, 1, 2, 3, 4, 5,
+        ]);
+        expect(slots.value[1].map((i) => i.book.id)).toEqual([
+            6, 7, 8, 9, 10, 11,
+        ]);
+    });
+
+    it("names each wall's pages apart, so a turn fetches the other's", () => {
+        const front = { ...shelf, id: "books-front", wall: "front" };
+        const { pagesNear } = useShelves([shelf, front], {
+            fetchPage: vi.fn(),
+            size: { w: 1200, d: 450 },
+        });
+
+        expect(pagesNear(0, 500, "back")).not.toBe(pagesNear(0, 500, "front"));
+    });
 });
