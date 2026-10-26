@@ -863,7 +863,7 @@ return [
     'games.costco_pizza_poop.board_progress_label' => 'Progression',
     'games.costco_pizza_poop.board_time_label' => 'Temps',
     'games.costco_pizza_poop.board_time_value' => ':seconds s',
-    'games.costco_pizza_poop.steer_hint' => 'Fais glisser pour diriger 👇',
+    'games.costco_pizza_poop.steer_hint' => 'Fais glisser pour diriger et suis les flèches',
 
     // Games - Poop Boom
     'games.boom.name' => 'Caca Boum',

@@ -863,7 +863,7 @@ return [
     'games.costco_pizza_poop.board_progress_label' => 'Progress',
     'games.costco_pizza_poop.board_time_label' => 'Time',
     'games.costco_pizza_poop.board_time_value' => ':seconds s',
-    'games.costco_pizza_poop.steer_hint' => 'Drag to steer 👇',
+    'games.costco_pizza_poop.steer_hint' => 'Drag to steer, follow the arrows',
 
     // Games - Poop Boom
     'games.boom.name' => 'Poop Boom',
