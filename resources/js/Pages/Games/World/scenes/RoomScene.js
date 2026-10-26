@@ -363,6 +363,17 @@ export function createRoomScene(
     /** The wall `thing` is on (roomLayout.js wallOf()), or null. */
     const wallIn = (thing) => wallOf(thing, room.size);
 
+    // Panels that let what's under the canvas show through them while
+    // their wall is faced (pictureMesh(), openHoles()): each clears its
+    // pixels to nothing, alpha and all.
+    const holes = [];
+    const SEE_THROUGH = new THREE.MeshBasicMaterial({
+        color: 0x000000,
+        transparent: true,
+        opacity: 0,
+        blending: THREE.NoBlending,
+    });
+
     /** Hangs `object` on `wall`, to be hidden with it. A thing standing in
      * the room (no wall) is never hidden. */
     function hang(wall, object) {
@@ -794,6 +805,16 @@ export function createRoomScene(
      * (three/pictureFrame.js) if `image.frame` names one. */
     function pictureMesh(item) {
         const panel = panelMesh(item, PICTURE_BACKING);
+        // The collage's pictures are under the canvas (Room3D's
+        // .room-under), so while you face its wall its panel clears the
+        // canvas to see-through, wherever nothing nearer (the Butt) is
+        // drawn over it (openHoles()).
+        if (item.image.tiles) {
+            // Before the rest of the see-through things, so those in
+            // front of it still blend over it.
+            panel.renderOrder = -1;
+            holes.push({ panel, wall: wallIn(item), backing: panel.material });
+        }
         const { w, h, frame: style } = item.image;
         const frame = style && pictureFrame(THREE, style, w, h);
         if (!frame) return panel;
@@ -803,6 +824,15 @@ export function createRoomScene(
         const group = new THREE.Group();
         group.add(panel, frame);
         return group;
+    }
+
+    /** Shows what's under the canvas through each hole (pictureMesh())
+     * on wall `faced`, the only one Room3D draws it under; the rest, and
+     * every hole mid-turn (`faced` null), keep their backing. */
+    function openHoles(faced) {
+        for (const { panel, wall, backing } of holes) {
+            panel.material = wall === faced ? SEE_THROUGH : backing;
+        }
     }
 
     const puppets = [butt, ...things.values()];
@@ -825,6 +855,7 @@ export function createRoomScene(
         applyCamera(camera, cam);
         shown = cam;
         showWalls(faced);
+        openHoles(faced);
         turnCards(viewYaw(cam.view));
         if (skirt) {
             // Across the middle of the wall in view, so it covers every pan.
@@ -873,6 +904,7 @@ export function createRoomScene(
         camera.updateProjectionMatrix();
         shown = null;
         showWalls(a.view.wall, b.view.wall);
+        openHoles(null);
         const v = (p) => new THREE.Vector3(p.x, p.y, p.z);
         const [eye, light] = [lightAim(a, from.band), lightAim(b, to.band)];
         const ends = {
@@ -1040,6 +1072,9 @@ export function createRoomScene(
             signs.dispose();
             disposeTree(made);
             for (const material of glowMaterials) material.dispose();
+            // Whichever of each hole's materials isn't on it now.
+            for (const { backing } of holes) backing.dispose();
+            SEE_THROUGH.dispose();
             buttGlow.dispose();
             otherPuppets.dispose();
             for (const puppet of [...puppets, ...fixtures]) {

@@ -22,6 +22,7 @@ import {
 import InteractableButton from "../components/InteractableButton.vue";
 import FollowBox from "../components/FollowBox.vue";
 import TvScreen from "../components/TvScreen.vue";
+import CollageArt from "../components/CollageArt.vue";
 import { boxStyle, onButton, pastTap } from "../components/overlay.js";
 import LandmarkTitle from "../components/LandmarkTitle.vue";
 import OtherButton from "../components/OtherButton.vue";
@@ -530,6 +531,15 @@ const spots = computed(() =>
         (item) =>
             (item.throwable ? thrownSpots : fixedSpots).value.get(item.id) ?? []
     )
+);
+
+/** The collage painting in view, where its button is (fixedSpots): drawn
+ * under the canvas. */
+const collageSpots = computed(() =>
+    inSight.value.items.flatMap((item) => {
+        const s = item.image?.tiles && fixedSpots.value.get(item.id);
+        return s ? { item, style: boxStyle({ ...s, size: s.width }) } : [];
+    })
 );
 
 /** Each of the room's photos over its panel, where it hangs (a blank one
@@ -1243,6 +1253,18 @@ defineExpose({
         @pointerup="unlockToot"
     >
         <template v-if="layout">
+            <!-- Under the canvas, seen through the hole its panel leaves,
+                 so the Butt walks in front of it (RoomScene.js
+                 pictureMesh()). Its button is over the canvas. -->
+            <CollageArt
+                v-for="s in collageSpots"
+                :key="`collage-${s.item.id}`"
+                class="room-under"
+                :tiles="s.item.image.tiles"
+                :cols="s.item.image.cols"
+                :rows="s.item.image.rows"
+                :style="s.style"
+            />
             <!-- Under the buttons: nothing to tap. -->
             <img
                 v-for="s in photoSpots"
@@ -1311,7 +1333,7 @@ defineExpose({
                     :size="`${s.height}px`"
                 />
                 <img
-                    v-if="s.item.image"
+                    v-if="s.item.image?.src"
                     class="room-picture"
                     :class="{ framed: s.item.image.frame }"
                     :src="s.item.image.src"
@@ -1481,6 +1503,18 @@ defineExpose({
    for the view the turn ends on. */
 .room-3d.turning > * {
     visibility: hidden;
+}
+
+/* Under the canvas (in GamesWorld's isolated .world-layer), where the
+   canvas leaves a hole for it. */
+.room-under {
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: -1;
+    filter: brightness(var(--picture-light, 1));
+    pointer-events: none;
+    will-change: transform;
 }
 
 /* The Butt's hit box over what the canvas draws: invisible, but it takes

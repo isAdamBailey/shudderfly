@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Mail\CollagePdfMail;
 use App\Models\Collage;
+use App\Support\Collage as CollageLayout;
 use Aws\S3\S3Client;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Bus\Queueable;
@@ -146,29 +147,7 @@ class GenerateCollagePdf implements ShouldQueue
             // Calculate grid configuration based on actual number of successfully downloaded images
             $actualImageCount = count($localImages);
 
-            // Define grid configurations for different image counts
-            // Always maintaining 8.5x11 aspect ratio, images scale to fill available space
-            $gridConfigs = [
-                1 => ['cols' => 1, 'rows' => 1],    // 1 image = full page
-                2 => ['cols' => 2, 'rows' => 1],    // 2 images = side by side
-                3 => ['cols' => 3, 'rows' => 1],    // 3 images = three across
-                4 => ['cols' => 2, 'rows' => 2],    // 4 images = 2x2 grid
-                5 => ['cols' => 3, 'rows' => 2],    // 5 images = 3x2 grid
-                6 => ['cols' => 3, 'rows' => 2],    // 6 images = 3x2 grid
-                7 => ['cols' => 4, 'rows' => 2],    // 7 images = 4x2 grid
-                8 => ['cols' => 4, 'rows' => 2],    // 8 images = 4x2 grid
-                9 => ['cols' => 3, 'rows' => 3],    // 9 images = 3x3 grid
-                10 => ['cols' => 4, 'rows' => 3],   // 10 images = 4x3 grid
-                11 => ['cols' => 4, 'rows' => 3],   // 11 images = 4x3 grid
-                12 => ['cols' => 4, 'rows' => 3],   // 12 images = 4x3 grid
-                13 => ['cols' => 4, 'rows' => 4],   // 13 images = 4x4 grid
-                14 => ['cols' => 4, 'rows' => 4],   // 14 images = 4x4 grid
-                15 => ['cols' => 4, 'rows' => 4],   // 15 images = 4x4 grid
-            ];
-            $gridConfigs[(int) config('collage.max_pages')] = ['cols' => 4, 'rows' => 4];
-
-            // Use the specific config if available, otherwise use the largest available config
-            $gridConfig = $gridConfigs[$actualImageCount] ?? $gridConfigs[array_key_last($gridConfigs)];
+            $gridConfig = CollageLayout::grid($actualImageCount);
 
             // Calculate cell dimensions in inches matching the PDF template (8in x 10.25in with 0.05in gaps)
             $pdfGap = 0.05;

@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Book;
+use Carbon\CarbonInterface;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
@@ -88,11 +89,11 @@ class MonthBooks
     }
 
     /**
-     * The current month's name, translated.
+     * The current month's name, or `$date`'s, translated.
      */
-    public static function monthName(): string
+    public static function monthName(?CarbonInterface $date = null): string
     {
-        return __('messages.month.'.strtolower(now()->format('F')));
+        return __('messages.month.'.strtolower(($date ?? now())->format('F')));
     }
 
     /**

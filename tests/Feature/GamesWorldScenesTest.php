@@ -6,6 +6,7 @@ use App\Http\Controllers\BookController;
 use App\Http\Controllers\GameController;
 use App\Models\Book;
 use App\Models\Category;
+use App\Models\Collage;
 use App\Models\MovieFavorite;
 use App\Models\Page;
 use App\Models\SiteSetting;
@@ -272,7 +273,8 @@ class GamesWorldScenesTest extends TestCase
                 $ways = (int) isset($toy['cast']) + (int) isset($toy['emoji']) + (int) isset($toy['face']) + (int) isset($toy['image']) + (int) isset($toy['model']);
                 $this->assertSame(1, $ways, $where);
                 if (isset($toy['image'])) {
-                    $this->assertNotSame('', $toy['image']['src'] ?? '', $where);
+                    // A picture, or a source scenes() hangs one from.
+                    $this->assertNotSame('', $toy['image']['src'] ?? $toy['image']['from'] ?? '', $where);
                     $this->assertGreaterThan(0, $toy['image']['w'] ?? 0, $where);
                     $this->assertGreaterThan(0, $toy['image']['h'] ?? 0, $where);
                 }
@@ -608,7 +610,7 @@ class GamesWorldScenesTest extends TestCase
 
         $scenes = GamesWorld::definitions();
 
-        $this->assertSame(['front-door', 'light-switch'], array_column($scenes['library.hall']['interactables'], 'id'));
+        $this->assertSame(['front-door', 'light-switch', 'collage-art'], array_column($scenes['library.hall']['interactables'], 'id'));
         $this->assertEmpty(preg_grep('/^library\.(floor|category)-/', array_keys($scenes)));
     }
 
@@ -662,6 +664,64 @@ class GamesWorldScenesTest extends TestCase
         // Clear of the front door and the stairs round the corners.
         $this->test_everything_against_a_wall_fits_along_it();
         $this->test_nothing_against_a_wall_overlaps_anything_else_on_it();
+    }
+
+    public function test_the_library_hall_hangs_the_months_collage_right_of_the_movies(): void
+    {
+        foreach (range(1, 6) as $n) {
+            MovieFavorite::query()->create(['tmdb_id' => $n, 'title' => "Movie {$n}"]);
+        }
+        // No collage yet: the frame hangs blank.
+        $art = collect(GamesWorld::scenes()['library.hall']['interactables'])->firstWhere('id', 'collage-art');
+        $this->assertArrayNotHasKey('tiles', $art['image']);
+        // What the Collages page says: the collage being made is next month's.
+        $this->travelTo(now()->setDate(2026, 10, 26));
+        $art = collect(GamesWorld::scenes()['library.hall']['interactables'])->firstWhere('id', 'collage-art');
+        $this->assertSame('This is the collage for November!', $art['label']);
+        $this->assertStringContainsString('This is the collage for November.', $art['line']);
+        $this->assertSame('ornate', $art['image']['frame']);
+        $this->assertSame('fanfare', $art['sound']);
+
+        Cache::flush();
+        $archived = Collage::factory()->create(['is_archived' => true]);
+        $archived->pages()->attach(Page::factory()->create());
+        $older = Collage::factory()->create(['created_at' => now()->subMonth()]);
+        $older->pages()->attach(Page::factory()->create());
+        $current = Collage::factory()->create();
+        $pages = Page::factory()->count(5)->create();
+        foreach ($pages as $n => $page) {
+            $current->pages()->attach($page, ['created_at' => now()->addMinutes($n)]);
+        }
+
+        $hall = GamesWorld::scenes()['library.hall'];
+        $art = collect($hall['interactables'])->firstWhere('id', 'collage-art');
+        // The newest collage on the Collages page, laid out as its page.
+        $this->assertSame($pages->map(fn ($page) => $page->fresh()->media_path)->all(), $art['image']['tiles']);
+        $this->assertSame(3, $art['image']['cols']);
+        $this->assertSame(2, $art['image']['rows']);
+        $this->assertArrayNotHasKey('from', $art['image']);
+
+        // On the front wall, centred between the movie rack and the wall's end.
+        $movies = collect($hall['shelves'])->firstWhere('id', 'movies');
+        [$wall, $along] = $this->againstWall($art, $hall['size']);
+        $this->assertSame('front', $wall);
+        $this->assertEqualsWithDelta(($this->shelfEnd($movies) + $hall['size']['w']) / 2, $along, 1);
+        // Centred up the wall.
+        $border = GamesWorld::PICTURE_FRAMES['ornate'];
+        $wallHeight = GamesWorld::ROOM_FRAME / 2;
+        $this->assertEqualsWithDelta($wallHeight - $art['y'] - $art['image']['h'] - $border, $art['y'] - $border, 1);
+        // A collage's page, 8.5 × 11.
+        $this->assertEqualsWithDelta(8.5 / 11, $art['image']['w'] / $art['image']['h'], 0.01);
+        $this->test_everything_against_a_wall_fits_along_it();
+        $this->test_nothing_against_a_wall_overlaps_anything_else_on_it();
+    }
+
+    public function test_the_collage_is_looked_up_once_a_day(): void
+    {
+        Collage::factory()->create()->pages()->attach(Page::factory()->create());
+
+        $this->assertNotEmpty($this->pickQueries(fn () => GamesWorld::scenes()));
+        $this->assertSame([], $this->pickQueries(fn () => GamesWorld::scenes()));
     }
 
     public function test_the_library_hall_has_a_seasonal_shelf(): void

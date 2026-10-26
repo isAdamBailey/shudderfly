@@ -7,11 +7,13 @@ use App\Http\Controllers\GameController;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Book;
 use App\Models\Category;
+use App\Models\Collage;
 use App\Models\MovieFavorite;
 use App\Models\Page;
 use App\Models\SiteSetting;
 use App\Models\Song;
 use App\Models\Sound;
+use App\Support\Collage as CollageLayout;
 use Carbon\CarbonImmutable;
 use Closure;
 use Illuminate\Support\Collection;
@@ -64,6 +66,12 @@ final class GamesWorld
      * favourites, newest first): as many columns as fit along
      * LIBRARY_WALL_SHELF. */
     public const LIBRARY_MOVIE_SHELF = 8 * self::LIBRARY_SHELF_ROWS;
+
+    /** The collage hung as a masterpiece right of the hall's movie rack
+     * (collageArt()): its bottom `y` up the wall, `w` × `h`, a collage's
+     * 8.5 × 11 page nearly as tall as the wall (ROOM_FRAME / 2) and
+     * centred up it, ornate frame and all. */
+    public const COLLAGE_ART = ['y' => 40, 'w' => 286, 'h' => 370];
 
     /** How much of a room's width the camera shows at once, the same in
      * every room so everything in the world is drawn at one size (walls are
@@ -558,16 +566,26 @@ final class GamesWorld
 
         // The hall: the front door at the left end, then the special
         // shelves, then the stairs up at the right; across from them, on
-        // the front wall, the rack of favourite movies.
+        // the front wall, the rack of favourite movies and, right of it,
+        // the month's collage in a gilt frame.
         $shelves = self::hallShelves();
         $movies = self::movieShelf();
         $allShelves = array_values(array_filter([...$shelves, $movies]));
-        $hallW = max($roomW, (int) (collect($allShelves)->max(fn ($shelf) => self::shelfEnd($shelf)) ?? 0) + 220);
+        // The collage hangs centred between the rack and the wall's end,
+        // at least 80 clear of each.
+        $rackEnd = $movies ? self::shelfEnd($movies) : 0;
+        $artW = self::COLLAGE_ART['w'] + 2 * self::PICTURE_FRAMES['ornate'];
+        $hallW = max(
+            $roomW,
+            (int) (collect($allShelves)->max(fn ($shelf) => self::shelfEnd($shelf)) ?? 0) + 220,
+            $rackEnd + $artW + 160,
+        );
+        $artX = intdiv($rackEnd + $hallW, 2);
         $hallSize = ['w' => $hallW, 'd' => $libraryD];
         $hallLights = [
             self::ceilingLamp($hallW),
-            ...($shelves ? self::readingLamps($shelves[0]['x'], self::shelfEnd(end($shelves)), self::ROOM_LIGHTS_MAX - ($movies ? 2 : 1)) : []),
-            ...($movies ? self::readingLamps($movies['x'], self::shelfEnd($movies), 1, 'front', $hallSize) : []),
+            ...($shelves ? self::readingLamps($shelves[0]['x'], self::shelfEnd(end($shelves)), self::ROOM_LIGHTS_MAX - 2) : []),
+            ...self::readingLamps($movies['x'] ?? $artX - intdiv($artW, 2), $artX + intdiv($artW, 2), 1, 'front', $hallSize),
         ];
         $scenes = [
             'library.hall' => self::room('library_hall', [
@@ -580,6 +598,7 @@ final class GamesWorld
                 self::roomDoor('front-door', 110, 'road', 'library', exit: true),
                 self::lightSwitch(220, $hallLights),
                 ...($floors->isEmpty() ? [] : [self::stairs(true, $floorId(0), $hallSize)]),
+                self::onWall('front', $hallSize, self::collageArt($artX)),
             ]),
         ];
 
@@ -1034,6 +1053,32 @@ final class GamesWorld
         ];
     }
 
+    /** The month's collage as a priceless painting on a room's back wall
+     * (onWall() moves it), COLLAGE_ART in an ornate frame, centred on `x`:
+     * scenes() hangs the collage's pictures in it, laid out as on its
+     * page; blank while there's none. */
+    private static function collageArt(int $x): array
+    {
+        $art = self::COLLAGE_ART;
+        $month = MonthBooks::monthName(CarbonImmutable::now(config('app.local_timezone'))->startOfMonth()->addMonth());
+
+        return [
+            'id' => 'collage-art',
+            'type' => 'toy',
+            'x' => $x,
+            'z' => 0,
+            'y' => $art['y'],
+            'image' => ['w' => $art['w'], 'h' => $art['h'], 'frame' => 'ornate', 'from' => 'collage'],
+            // As the Collages page says it: the collage being made is next
+            // month's.
+            'label' => 'messages.collage.single_for_month',
+            'labelArgs' => ['month' => $month],
+            'line' => 'messages.games.world.toys.collage_art_line',
+            'lineArgs' => ['month' => $month],
+            'sound' => 'fanfare',
+        ];
+    }
+
     /** A photo frame on a room's back wall (onWall() moves it), its bottom `y` up it, `w` ×
      * `h`, filled with one of the photos `from` names (`['book' =>
      * '<slug>']`, that book's pictures, or `['search' => '<term>']`, the
@@ -1405,6 +1450,13 @@ final class GamesWorld
             return [...self::translate($item), 'songs' => $tune('songs')];
         }
 
+        if (($item['image']['from'] ?? null) === 'collage') {
+            unset($item['image']['from']);
+            $item['image'] = [...$item['image'], ...$tune('collage')];
+
+            return self::translate($item);
+        }
+
         if ($item['type'] === 'organ') {
             return [...self::translate($item), 'zones' => array_map(fn ($zone) => __($zone), $item['zones'])];
         }
@@ -1453,6 +1505,33 @@ final class GamesWorld
                 'title' => $page->book?->title ?? '',
             ])
             ->all());
+    }
+
+    /** The month's collage, the newest one still on the Collages page (not
+     * archived) with pictures in it, looked up once a day: its pictures
+     * anyone can see, in the order they were added (as `tiles`, media
+     * URLs), and the grid its page lays them out in (Collage::grid()).
+     * Empty with none. */
+    private static function collage(): array
+    {
+        return self::pickedToday('collage', function () {
+            $tiles = Collage::query()
+                ->current()
+                ->whereHas('pages', fn ($pages) => $pages->notBlocked())
+                ->latest()
+                ->latest('id')
+                ->first()
+                ?->pages()
+                ->notBlocked()
+                ->orderByPivot('created_at')
+                ->orderByPivot('id')
+                ->limit(config('collage.max_pages'))
+                ->get(['pages.id', 'pages.media_path'])
+                ->pluck('media_path')
+                ->all();
+
+            return $tiles ? ['tiles' => $tiles, ...CollageLayout::grid(count($tiles))] : [];
+        });
     }
 
     /** A few of the family's songs, picked at random once a day, for a

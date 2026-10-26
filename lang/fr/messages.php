@@ -784,6 +784,7 @@ return [
     'games.world.toys.radio_line' => 'Kssshhh ! La radio est éteinte. Juste des grésillements... et un prout.',
     'games.world.toys.cockroach_portrait' => 'Image du cafard',
     'games.world.toys.cockroach_portrait_line' => 'Sss ! Il file le long du mur.',
+    'games.world.toys.collage_art_line' => 'Une de nos pièces les plus précieuses ! Voici le collage de :month. Merci de ne pas lécher l\'œuvre.',
     'games.world.toys.organ' => 'Orgue',
     'games.world.toys.organ_deep' => 'Orgue, notes très graves',
     'games.world.toys.organ_low' => 'Orgue, notes graves',

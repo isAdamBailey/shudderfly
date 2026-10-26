@@ -124,6 +124,9 @@ export function useWorldRenderer() {
                 THREE = await loadThree();
                 renderer = new THREE.WebGLRenderer({
                     canvas,
+                    // So a room can leave a hole for what's under the
+                    // canvas (the collage painting, RoomScene.js).
+                    alpha: true,
                     antialias: true,
                     powerPreference: "default",
                 });
