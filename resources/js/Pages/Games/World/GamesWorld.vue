@@ -728,6 +728,9 @@ const stage = {
 .world-layer {
     position: absolute;
     inset: 0;
+    /* Whatever a room puts under the canvas stays in here, above the
+       stage's own background. */
+    isolation: isolate;
 }
 
 /* Fades the world out and in as you go through a door, and eats taps

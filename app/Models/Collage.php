@@ -18,6 +18,14 @@ class Collage extends Model
     ];
 
     /**
+     * The collages on the Collages page: not archived.
+     */
+    public function scopeCurrent($query)
+    {
+        return $query->where('is_archived', false);
+    }
+
+    /**
      * Get the full URL for the PDF.
      */
     public function getStoragePathAttribute($value): ?string

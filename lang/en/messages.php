@@ -784,6 +784,7 @@ return [
     'games.world.toys.radio_line' => "Kssshhh! The radio's off. Just static... and a toot.",
     'games.world.toys.cockroach_portrait' => 'Picture of the cockroach',
     'games.world.toys.cockroach_portrait_line' => 'Hiss! It skitters across the wall.',
+    'games.world.toys.collage_art_line' => 'One of our most prized pieces! This is the collage for :month. Please don\'t lick the art.',
     'games.world.toys.organ' => 'Pipe organ',
     'games.world.toys.organ_deep' => 'Pipe organ, deep notes',
     'games.world.toys.organ_low' => 'Pipe organ, low notes',

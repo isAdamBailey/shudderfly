@@ -994,10 +994,13 @@ describe("GamesWorld rooms", () => {
         });
         await enterHouse(wrapper);
 
-        const picture = roomButton(wrapper, "Picture of the cockroach");
-        expect(picture.get("img.room-picture").attributes("src")).toBe(
-            "/img/cockroach.png"
-        );
+        // Its button is over the canvas; the picture itself is under it,
+        // where the Butt can walk in front of it.
+        roomButton(wrapper, "Picture of the cockroach");
+        const picture = wrapper.get("img.room-picture");
+        expect(picture.attributes("src")).toBe("/img/cockroach.png");
+        expect(picture.classes()).toContain("room-under");
+        expect(picture.element.closest("button")).toBeNull();
     });
 
     it("hangs a room's photos as decor, with nothing to tap", async () => {
@@ -1024,6 +1027,7 @@ describe("GamesWorld rooms", () => {
         const photo = wrapper.get("img.room-photo");
         expect(photo.attributes("src")).toBe("/hank.jpg");
         expect(photo.element.closest("button")).toBeNull();
+        expect(photo.classes()).toContain("room-under");
         expect(photo.attributes("style")).toContain("width");
     });
 

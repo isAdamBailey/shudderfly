@@ -22,6 +22,7 @@ import {
 import InteractableButton from "../components/InteractableButton.vue";
 import FollowBox from "../components/FollowBox.vue";
 import TvScreen from "../components/TvScreen.vue";
+import CollageArt from "../components/CollageArt.vue";
 import { boxStyle, onButton, pastTap } from "../components/overlay.js";
 import LandmarkTitle from "../components/LandmarkTitle.vue";
 import OtherButton from "../components/OtherButton.vue";
@@ -113,7 +114,7 @@ const { t } = useTranslations();
 const page = usePage();
 const dark = useDarkMode();
 
-// Pictures and photos are <img>s over the canvas, out of the scene's light:
+// Pictures and photos are <img>s under the canvas, out of the scene's light:
 // dimmed at night to sit in the dark room rather than glow in it.
 const pictureLight = computed(() => (dark.value ? 0.6 : 1));
 
@@ -530,6 +531,16 @@ const spots = computed(() =>
         (item) =>
             (item.throwable ? thrownSpots : fixedSpots).value.get(item.id) ?? []
     )
+);
+
+/** Each picture in view (an image, or the collage's pictures), where its
+ * button is (fixedSpots): drawn under the canvas. */
+const pictureSpots = computed(() =>
+    inSight.value.items.flatMap((item) => {
+        const image = item.image;
+        const s = (image?.src || image?.tiles) && fixedSpots.value.get(item.id);
+        return s ? { item, style: boxStyle({ ...s, size: s.width }) } : [];
+    })
 );
 
 /** Each of the room's photos over its panel, where it hangs (a blank one
@@ -1243,11 +1254,33 @@ defineExpose({
         @pointerup="unlockToot"
     >
         <template v-if="layout">
-            <!-- Under the buttons: nothing to tap. -->
+            <!-- Pictures and photos are under the canvas, seen through the
+                 hole each one's panel leaves, so the Butt walks in front
+                 of them (RoomScene.js pictureMesh()). A picture's button
+                 is over the canvas; a photo is decor, nothing to tap. -->
+            <template v-for="s in pictureSpots" :key="`picture-${s.item.id}`">
+                <CollageArt
+                    v-if="s.item.image.tiles"
+                    class="room-under"
+                    :tiles="s.item.image.tiles"
+                    :cols="s.item.image.cols"
+                    :rows="s.item.image.rows"
+                    :style="s.style"
+                />
+                <img
+                    v-else
+                    class="room-under room-picture"
+                    :class="{ framed: s.item.image.frame }"
+                    :src="s.item.image.src"
+                    alt=""
+                    draggable="false"
+                    :style="s.style"
+                />
+            </template>
             <img
                 v-for="s in photoSpots"
                 :key="`photo-${s.photo.id}`"
-                class="room-photo"
+                class="room-under room-photo"
                 :class="{ framed: s.photo.image.frame }"
                 :src="s.photo.image.src"
                 alt=""
@@ -1309,14 +1342,6 @@ defineExpose({
                     :id="s.item.cast"
                     class="room-overlay"
                     :size="`${s.height}px`"
-                />
-                <img
-                    v-if="s.item.image"
-                    class="room-picture"
-                    :class="{ framed: s.item.image.frame }"
-                    :src="s.item.image.src"
-                    alt=""
-                    draggable="false"
                 />
                 <!-- Which way a flight goes, plain to see. -->
                 <span
@@ -1483,6 +1508,18 @@ defineExpose({
     visibility: hidden;
 }
 
+/* Under the canvas (in GamesWorld's isolated .world-layer), where the
+   canvas leaves a hole for it. */
+.room-under {
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: -1;
+    filter: brightness(var(--picture-light, 1));
+    pointer-events: none;
+    will-change: transform;
+}
+
 /* The Butt's hit box over what the canvas draws: invisible, but it takes
    the pointer. */
 .butt {
@@ -1516,31 +1553,21 @@ defineExpose({
     pointer-events: none;
 }
 
-/* A picture over its panel, the way a book's cover sits on its face, and
-   a room's photo over its panel; both dimmed to the room's light. A
-   picture keeps its whole shape; a photo, or a picture in a frame, fills
-   it (the frame is drawn round it, so needs no edge of its own). */
+/* A picture on its panel, the way a book's cover sits on its face, and
+   a room's photo on its panel (under the canvas, .room-under). A picture
+   keeps its whole shape, on the panel's own backing (RoomScene.js
+   PICTURE_BACKING), which the hole in the canvas no longer shows; a
+   photo, or a picture in a frame, fills it (the frame is drawn round it,
+   so needs no edge of its own). */
 .room-picture,
 .room-photo {
     object-fit: contain;
+    background: #1c1410;
     box-shadow: inset 0 0 0 3px #78350f;
-    filter: brightness(var(--picture-light, 1));
-    pointer-events: none;
-}
-
-.room-picture {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
 }
 
 .room-photo {
-    position: absolute;
-    left: 0;
-    top: 0;
     object-fit: cover;
-    will-change: transform;
 }
 
 .room-picture.framed,

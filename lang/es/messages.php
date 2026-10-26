@@ -784,6 +784,7 @@ return [
     'games.world.toys.radio_line' => '¡Kssshhh! La radio está apagada. Solo estática... y un pedito.',
     'games.world.toys.cockroach_portrait' => 'Foto de la cucaracha',
     'games.world.toys.cockroach_portrait_line' => '¡Sss! Se escurre por la pared.',
+    'games.world.toys.collage_art_line' => '¡Una de nuestras piezas más preciadas! Este es el collage de :month. Por favor, no lamas el arte.',
     'games.world.toys.organ' => 'Órgano de tubos',
     'games.world.toys.organ_deep' => 'Órgano de tubos, notas muy graves',
     'games.world.toys.organ_low' => 'Órgano de tubos, notas graves',
