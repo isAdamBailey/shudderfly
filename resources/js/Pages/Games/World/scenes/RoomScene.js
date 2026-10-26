@@ -629,7 +629,8 @@ export function createRoomScene(
             continue;
         }
         // A TV, or a picture: a thin panel, framed if it says. What you see
-        // on it is in the overlay (a <video>, or the picture's <img>).
+        // on it is in the overlay (a <video>), or under the canvas (the
+        // picture's <img>, pictureMesh()).
         if (item.image || item.screen) {
             const mesh = item.image
                 ? pictureMesh(item)
@@ -702,8 +703,8 @@ export function createRoomScene(
         things.set(item.id, puppet);
     }
 
-    // The room's photos: a panel each, like a picture's. The photo is in the
-    // overlay.
+    // The room's photos: a panel each, like a picture's. The photo is
+    // under the canvas (pictureMesh()).
     for (const photo of room.photos ?? []) {
         const mesh = pictureMesh(photo);
         made.add(mesh);
@@ -805,15 +806,17 @@ export function createRoomScene(
      * (three/pictureFrame.js) if `image.frame` names one. */
     function pictureMesh(item) {
         const panel = panelMesh(item, PICTURE_BACKING);
-        // The collage's pictures are under the canvas (Room3D's
-        // .room-under), so while you face its wall its panel clears the
-        // canvas to see-through, wherever nothing nearer (the Butt) is
-        // drawn over it (openHoles()).
-        if (item.image.tiles) {
+        // What hangs in it (a picture, a photo, the collage's pictures)
+        // is under the canvas (Room3D's .room-under), so while you face
+        // its wall its panel clears the canvas to see-through, wherever
+        // nothing nearer (the Butt) is drawn over it (openHoles()). A blank
+        // one keeps its backing.
+        const wall = wallIn(item);
+        if (wall && (item.image.src || item.image.tiles)) {
             // Before the rest of the see-through things, so those in
             // front of it still blend over it.
             panel.renderOrder = -1;
-            holes.push({ panel, wall: wallIn(item), backing: panel.material });
+            holes.push({ panel, wall, backing: panel.material });
         }
         const { w, h, frame: style } = item.image;
         const frame = style && pictureFrame(THREE, style, w, h);
