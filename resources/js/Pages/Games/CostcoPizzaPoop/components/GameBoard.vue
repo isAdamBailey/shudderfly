@@ -1,8 +1,16 @@
 <script setup>
 import { useResizeObserver } from "@vueuse/core";
-import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, shallowRef, watch } from "vue";
 import { GUSTER_CSS_VARS, PIZZA } from "@/constants/characters.js";
-import { SVG_WIDTH } from "../composables/useGameState.js";
+import {
+    FLOW_MARKS,
+    PATH_D,
+    EXIT,
+    SECTION_PATHS,
+    WALL,
+    WORLD_HEIGHT,
+    WORLD_WIDTH,
+} from "../composables/intestinePath.js";
 import GusterGlyph from "@/Components/Games/Cast/GusterGlyph.vue";
 import PepperoniGlyph from "./PepperoniGlyph.vue";
 import { useTranslations } from "@/composables/useTranslations";
@@ -11,12 +19,9 @@ const { t } = useTranslations();
 
 const props = defineProps({
     state: { type: Object, required: true },
-    segments: { type: Array, required: true },
-    totalHeight: { type: Number, required: true },
     elapsedSeconds: { type: Number, required: true },
     progress: { type: Number, required: true },
     poopRadius: { type: Number, required: true },
-    getPassageAt: { type: Function, required: true },
     controlsEnabled: { type: Boolean, default: true },
     poopVisible: { type: Boolean, default: true },
     showDigestIntro: { type: Boolean, default: false },
@@ -29,69 +34,125 @@ const svgEl = ref(null);
 const pixelW = ref(400);
 const pixelH = ref(600);
 
-const svgAspect = computed(() => SVG_WIDTH / pixelW.value);
-const svgH = computed(() => pixelH.value * svgAspect.value);
+// The gut is bigger than the board: the board's shorter side shows this
+// much of it, and the camera follows the poop round, across and down.
+const VIEW_SPAN = 420;
 
-const cameraY = computed(() => {
-    return Math.max(
-        0,
-        Math.min(
-            props.state.poopY - svgH.value / 2,
-            props.totalHeight - svgH.value
-        )
-    );
+const view = computed(() => {
+    const scale = VIEW_SPAN / Math.min(pixelW.value, pixelH.value);
+    return { w: pixelW.value * scale, h: pixelH.value * scale };
 });
 
-const svgViewBox = computed(() => {
-    return `0 ${cameraY.value} ${SVG_WIDTH} ${svgH.value}`;
-});
+// Centred on the poop, held inside the world (or centred on it, when the
+// board shows more than the whole world in one direction).
+function follow(centre, span, world) {
+    if (span >= world) return (world - span) / 2;
+    return Math.max(0, Math.min(centre - span / 2, world - span));
+}
 
-const TOP_EXTEND = 500;
+const camera = computed(() => ({
+    x: follow(props.state.poopX, view.value.w, WORLD_WIDTH),
+    y: follow(props.state.poopY, view.value.h, WORLD_HEIGHT),
+}));
 
-const intestinePaths = computed(() => {
-    const segs = props.segments;
-    if (segs.length < 2) return { fill: "" };
+const spriteSize = computed(() => props.poopRadius * 2.2);
 
-    const leftPts = segs.map((s) => ({ x: s.leftWall, y: s.y }));
-    const rightPts = segs.map((s) => ({ x: s.rightWall, y: s.y }));
-    const last = segs[segs.length - 1];
-    const exitY = last.y + 120;
+const svgViewBox = computed(
+    () => `${camera.value.x} ${camera.value.y} ${view.value.w} ${view.value.h}`
+);
 
-    let fill = `M ${leftPts[0].x} ${leftPts[0].y - TOP_EXTEND}`;
-    fill += ` L ${leftPts[0].x} ${leftPts[0].y}`;
-    fill += ` Q ${leftPts[0].x} ${leftPts[0].y}, ${
-        (leftPts[0].x + leftPts[1].x) / 2
-    } ${(leftPts[0].y + leftPts[1].y) / 2}`;
-    for (let i = 1; i < leftPts.length - 1; i++) {
-        const cx = (leftPts[i].x + leftPts[i + 1].x) / 2;
-        const cy = (leftPts[i].y + leftPts[i + 1].y) / 2;
-        fill += ` Q ${leftPts[i].x} ${leftPts[i].y}, ${cx} ${cy}`;
+// The tube, stroked in layers: the wall, then its lining in bands lighter
+// towards the middle so it reads round whichever way it runs, then folds
+// across it (the colon's deep pouches, finer rings in the small
+// intestine). Each layer goes on every section before the next, so the
+// sections' joins stay open.
+const LINING = [
+    { width: 1, color: "#c45a60" },
+    { width: 0.78, color: "#d4777c" },
+    { width: 0.52, color: "#e09498" },
+    { width: 0.24, color: "#efb0ad" },
+];
+const FOLDS = {
+    small: { dash: "3 17", color: "rgba(150, 45, 58, 0.28)" },
+    large: { dash: "6 40", color: "rgba(130, 35, 50, 0.42)" },
+};
+const TUBE_STROKES = [
+    ...SECTION_PATHS.map((run) => ({
+        d: run.d,
+        color: "#8b3545",
+        width: run.hw * 2 + WALL * 2,
+    })),
+    ...LINING.flatMap((band) =>
+        SECTION_PATHS.map((run) => ({
+            d: run.d,
+            color: band.color,
+            width: run.hw * 2 * band.width,
+        }))
+    ),
+    ...SECTION_PATHS.map((run) => ({
+        d: run.d,
+        color: FOLDS[run.section].color,
+        width: run.hw * 2,
+        dash: FOLDS[run.section].dash,
+    })),
+];
+
+// Little Gusters that tag along behind him, each this far back along the
+// way he came (so they stay in the tube), and this big next to him.
+const FOLLOWERS = [
+    { back: 50, scale: 0.8 },
+    { back: 96, scale: 0.68 },
+    { back: 138, scale: 0.58 },
+];
+const TRAIL_STEP = 3;
+const TRAIL_MAX = Math.ceil(FOLLOWERS.at(-1).back / TRAIL_STEP) * 2;
+
+// Where he has been, newest first. A new run starts it over, so they
+// bunch up behind him at the top.
+const trail = shallowRef([]);
+
+watch(
+    () => props.state.startTime,
+    () => (trail.value = [])
+);
+
+watch(
+    () => [props.state.poopX, props.state.poopY],
+    ([x, y]) => {
+        const last = trail.value[0];
+        if (last && Math.hypot(x - last.x, y - last.y) < TRAIL_STEP) return;
+        trail.value = [{ x, y }, ...trail.value].slice(0, TRAIL_MAX);
+    },
+    { immediate: true }
+);
+
+// The point `back` along the trail behind him (or its far end, if he has
+// not come that far yet).
+function behind(points, back) {
+    let walked = 0;
+    for (let i = 0; i < points.length - 1; i++) {
+        const a = points[i];
+        const b = points[i + 1];
+        const gap = Math.hypot(b.x - a.x, b.y - a.y);
+        if (walked + gap >= back) {
+            const t = (back - walked) / gap;
+            return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+        }
+        walked += gap;
     }
-    fill += ` Q ${leftPts[leftPts.length - 1].x} ${
-        leftPts[leftPts.length - 1].y
-    }, ${leftPts[leftPts.length - 1].x} ${exitY}`;
-    fill += ` L ${rightPts[rightPts.length - 1].x} ${exitY}`;
-    fill += ` Q ${rightPts[rightPts.length - 1].x} ${
-        rightPts[rightPts.length - 1].y
-    }, ${
-        (rightPts[rightPts.length - 1].x + rightPts[rightPts.length - 2].x) / 2
-    } ${
-        (rightPts[rightPts.length - 1].y + rightPts[rightPts.length - 2].y) / 2
-    }`;
-    for (let i = rightPts.length - 2; i > 0; i--) {
-        const cx = (rightPts[i].x + rightPts[i - 1].x) / 2;
-        const cy = (rightPts[i].y + rightPts[i - 1].y) / 2;
-        fill += ` Q ${rightPts[i].x} ${rightPts[i].y}, ${cx} ${cy}`;
-    }
-    fill += ` Q ${rightPts[0].x} ${rightPts[0].y}, ${rightPts[0].x} ${rightPts[0].y}`;
-    fill += ` L ${rightPts[0].x} ${rightPts[0].y - TOP_EXTEND} Z`;
+    return points.at(-1);
+}
 
-    return { fill };
-});
-
-const anusCenter = computed(() => {
-    const last = props.segments[props.segments.length - 1];
-    return { x: last.centerX, y: last.y + 100 };
+// Farthest first, so nearer ones are drawn over them.
+const followers = computed(() => {
+    const points = [
+        { x: props.state.poopX, y: props.state.poopY },
+        ...trail.value,
+    ];
+    return FOLLOWERS.map(({ back, scale }) => ({
+        ...behind(points, back),
+        size: spriteSize.value * scale,
+    })).reverse();
 });
 
 const showSteerHint = ref(false);
@@ -110,26 +171,28 @@ watch(
     }
 );
 
+// The stomach sits just above where the poop starts, and it drops into place.
 const digestIntro = computed(() => {
-    const targetX = props.state.poopX || SVG_WIDTH / 2;
-    const targetY = props.state.poopY || 232;
-    const stomachCy = Math.max(108, targetY - 84);
+    const stomachCy = Math.max(108, props.state.poopY - 84);
 
     return {
-        targetX,
-        targetY,
-        stomachCx: targetX,
+        stomachCx: props.state.poopX,
         stomachCy,
+        drop: props.state.poopY - stomachCy,
         stomachRx: 86,
         stomachRy: 66,
     };
 });
 
 const POINTER_LAG = 0.14;
+// His top speed while dragged, a step a frame.
+const MAX_DRAG_STEP = 10;
 
 let dragActive = false;
 let grabOffset = { x: 0, y: 0 };
-let lastTarget = { x: 0, y: 0 };
+// The finger on screen. Its place in the gut is worked out each frame, so a
+// finger held still keeps the poop going while the camera follows it.
+let lastClient = { x: 0, y: 0 };
 let rafId = null;
 
 function scheduleDragTick() {
@@ -140,14 +203,17 @@ function scheduleDragTick() {
 function dragTick() {
     rafId = null;
     if (!dragActive) return;
-    const rawDx = lastTarget.x - props.state.poopX;
-    const rawDy = lastTarget.y - props.state.poopY;
-    if (Math.abs(rawDx) > 0.06 || Math.abs(rawDy) > 0.06) {
-        emit("move", rawDx * POINTER_LAG, rawDy * POINTER_LAG);
+    const p = clientToSvg(lastClient.x, lastClient.y);
+    if (p) {
+        const dx = (p.x + grabOffset.x - props.state.poopX) * POINTER_LAG;
+        const dy = (p.y + grabOffset.y - props.state.poopY) * POINTER_LAG;
+        const step = Math.hypot(dx, dy);
+        if (step > 0.06) {
+            const cap = Math.min(1, MAX_DRAG_STEP / step);
+            emit("move", dx * cap, dy * cap);
+        }
     }
-    if (dragActive) {
-        rafId = requestAnimationFrame(dragTick);
-    }
+    rafId = requestAnimationFrame(dragTick);
 }
 
 function stopDragLoop() {
@@ -181,10 +247,7 @@ function onPointerDown(e) {
         x: props.state.poopX - p.x,
         y: props.state.poopY - p.y,
     };
-    lastTarget = {
-        x: p.x + grabOffset.x,
-        y: p.y + grabOffset.y,
-    };
+    lastClient = { x: e.clientX, y: e.clientY };
     try {
         boardEl.value?.setPointerCapture?.(e.pointerId);
     } catch {
@@ -192,18 +255,14 @@ function onPointerDown(e) {
     }
     document.addEventListener("pointermove", onPointerMove, { passive: false });
     document.addEventListener("pointerup", onPointerUp);
+    document.addEventListener("pointercancel", onPointerUp);
     scheduleDragTick();
 }
 
 function onPointerMove(e) {
     if (!dragActive) return;
     e.preventDefault();
-    const p = clientToSvg(e.clientX, e.clientY);
-    if (!p) return;
-    lastTarget = {
-        x: p.x + grabOffset.x,
-        y: p.y + grabOffset.y,
-    };
+    lastClient = { x: e.clientX, y: e.clientY };
 }
 
 function onPointerUp(e) {
@@ -214,6 +273,7 @@ function onPointerUp(e) {
     }
     document.removeEventListener("pointermove", onPointerMove);
     document.removeEventListener("pointerup", onPointerUp);
+    document.removeEventListener("pointercancel", onPointerUp);
     stopDragLoop();
 }
 
@@ -221,7 +281,7 @@ function onKeyDown(e) {
     if (!props.controlsEnabled) return;
     if (props.state.phase !== "playing") return;
     showSteerHint.value = false;
-    const step = 7;
+    const step = 9;
     switch (e.key) {
         case "ArrowLeft":
         case "a":
@@ -231,16 +291,26 @@ function onKeyDown(e) {
         case "d":
             emit("move", step, 0);
             break;
+        case "ArrowUp":
+        case "w":
+            emit("move", 0, -step);
+            break;
         case "ArrowDown":
         case "s":
             emit("move", 0, step);
             break;
+        default:
+            return;
     }
+    // The arrows would scroll the page; the letters are left to type with.
+    if (e.key.startsWith("Arrow")) e.preventDefault();
 }
 
 function updateSize() {
     if (!boardEl.value) return;
     const rect = boardEl.value.getBoundingClientRect();
+    // Hidden or mid-transition: keep the last size rather than divide by 0.
+    if (!rect.width || !rect.height) return;
     pixelW.value = rect.width;
     pixelH.value = rect.height;
 }
@@ -259,6 +329,7 @@ onUnmounted(() => {
     window.removeEventListener("keydown", onKeyDown);
     document.removeEventListener("pointermove", onPointerMove);
     document.removeEventListener("pointerup", onPointerUp);
+    document.removeEventListener("pointercancel", onPointerUp);
 });
 </script>
 
@@ -277,13 +348,6 @@ onUnmounted(() => {
             preserveAspectRatio="xMidYMid meet"
         >
             <defs>
-                <linearGradient id="mucosaGrad" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stop-color="#c45a60" />
-                    <stop offset="25%" stop-color="#e09498" />
-                    <stop offset="50%" stop-color="#efb0ad" />
-                    <stop offset="75%" stop-color="#e09498" />
-                    <stop offset="100%" stop-color="#c45a60" />
-                </linearGradient>
                 <radialGradient id="anusGrad" cx="50%" cy="50%" r="50%">
                     <stop offset="0%" stop-color="#1a0808" />
                     <stop offset="35%" stop-color="#3d1515" />
@@ -293,53 +357,71 @@ onUnmounted(() => {
             </defs>
 
             <rect
-                x="0"
-                :y="cameraY"
-                :width="SVG_WIDTH"
-                :height="svgH"
+                :x="camera.x"
+                :y="camera.y"
+                :width="view.w"
+                :height="view.h"
                 fill="#0c0406"
             />
 
-            <path
-                :d="intestinePaths.fill"
-                fill="#6b2535"
-                stroke="#8b3545"
-                stroke-width="16"
-                stroke-linejoin="round"
-            />
+            <!-- Never changes: Vue need not diff it as the camera moves. -->
+            <g v-once>
+                <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path
+                        v-for="(stroke, i) in TUBE_STROKES"
+                        :key="i"
+                        :d="stroke.d"
+                        :stroke="stroke.color"
+                        :stroke-width="stroke.width"
+                        :stroke-dasharray="stroke.dash"
+                        :stroke-linecap="stroke.dash ? 'butt' : undefined"
+                    />
+                </g>
 
-            <path :d="intestinePaths.fill" fill="url(#mucosaGrad)" />
+                <path
+                    v-for="(mark, i) in FLOW_MARKS"
+                    :key="`flow-${i}`"
+                    class="flow-mark"
+                    d="M -7 -11 L 5 0 L -7 11"
+                    :transform="`translate(${mark.x} ${mark.y}) rotate(${mark.heading})`"
+                />
+            </g>
 
             <ellipse
-                :cx="anusCenter.x"
-                :cy="anusCenter.y"
+                :cx="EXIT.x"
+                :cy="EXIT.y"
                 rx="38"
                 ry="22"
                 fill="url(#anusGrad)"
                 stroke="#4a1212"
                 stroke-width="3"
             />
+            <ellipse :cx="EXIT.x" :cy="EXIT.y" rx="18" ry="9" fill="#0a0303" />
             <ellipse
-                :cx="anusCenter.x"
-                :cy="anusCenter.y"
-                rx="18"
-                ry="9"
-                fill="#0a0303"
-            />
-            <ellipse
-                :cx="anusCenter.x"
-                :cy="anusCenter.y - 1"
+                :cx="EXIT.x"
+                :cy="EXIT.y - 1"
                 rx="10"
                 ry="4"
                 fill="rgba(100,30,30,0.4)"
             />
+
+            <g v-if="poopVisible" class="followers">
+                <g
+                    v-for="(f, i) in followers"
+                    :key="`follower-${i}`"
+                    class="follower"
+                    :style="{ animationDelay: `${-i * 0.18}s` }"
+                >
+                    <GusterGlyph :x="f.x" :y="f.y" :size="f.size" />
+                </g>
+            </g>
 
             <GusterGlyph
                 v-if="poopVisible"
                 class="poop-sprite"
                 :x="state.poopX"
                 :y="state.poopY"
-                :size="poopRadius * 2.2"
+                :size="spriteSize"
             />
 
             <g
@@ -409,9 +491,7 @@ onUnmounted(() => {
                 <g
                     class="digest-intro-poop"
                     :style="{
-                        '--digest-drop': `${
-                            digestIntro.targetY - digestIntro.stomachCy
-                        }px`,
+                        '--digest-drop': `${digestIntro.drop}px`,
                     }"
                 >
                     <GusterGlyph
@@ -421,6 +501,38 @@ onUnmounted(() => {
                     />
                 </g>
             </g>
+        </svg>
+
+        <svg
+            class="minimap"
+            :viewBox="`0 0 ${WORLD_WIDTH} ${WORLD_HEIGHT}`"
+            aria-hidden="true"
+        >
+            <path
+                :d="PATH_D"
+                fill="none"
+                stroke="rgba(224, 148, 152, 0.55)"
+                stroke-width="90"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+            />
+            <rect
+                :x="camera.x"
+                :y="camera.y"
+                :width="view.w"
+                :height="view.h"
+                fill="none"
+                stroke="rgba(255, 255, 255, 0.5)"
+                stroke-width="14"
+            />
+            <circle
+                :cx="state.poopX"
+                :cy="state.poopY"
+                r="44"
+                fill="var(--guster-body)"
+                stroke="var(--guster-eye-white)"
+                stroke-width="12"
+            />
         </svg>
 
         <div class="hud">
@@ -488,6 +600,50 @@ onUnmounted(() => {
     width: 100%;
     height: 100%;
     z-index: 1;
+}
+
+.flow-mark {
+    fill: none;
+    stroke: rgba(120, 28, 42, 0.38);
+    stroke-width: 5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
+}
+
+.minimap {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    z-index: 15;
+    width: clamp(64px, 18vmin, 110px);
+    height: auto;
+    padding: 6px;
+    border-radius: 10px;
+    background: rgb(var(--guster-base-rgb) / 0.72);
+    pointer-events: none;
+}
+
+/* One shadow for all of them, not one each. */
+.followers {
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+    pointer-events: none;
+}
+
+.follower {
+    transform-box: fill-box;
+    transform-origin: center bottom;
+    animation: followerBob 0.6s ease-in-out infinite;
+}
+
+@keyframes followerBob {
+    0%,
+    100% {
+        transform: translateY(0) scale(1, 1);
+    }
+    50% {
+        transform: translateY(-3px) scale(0.95, 1.06);
+    }
 }
 
 .poop-sprite {
@@ -803,6 +959,10 @@ onUnmounted(() => {
 @media (prefers-reduced-motion: reduce) {
     .progress-fill {
         transition: none;
+    }
+
+    .follower {
+        animation: none;
     }
 
     .digest-stomach-shell,

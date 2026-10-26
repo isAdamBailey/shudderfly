@@ -11,15 +11,12 @@ vi.mock("./composables/useGameState.js", () => ({
         intestine.state = reactive({ phase: "start", score: 0, collisions: 0 });
         return {
             state: intestine.state,
-            segments: ref([]),
-            totalHeight: ref(0),
             elapsedSeconds: ref(0),
             progress: ref(0),
             startGame: () => {
                 intestine.state.phase = "playing";
             },
             movePoop: vi.fn(),
-            getPassageAt: vi.fn(),
             POOP_RADIUS: 10,
         };
     },

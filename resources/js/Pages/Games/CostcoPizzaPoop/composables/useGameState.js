@@ -1,83 +1,29 @@
 import { reactive, computed, ref, onUnmounted } from "vue";
+import {
+    PATH_LENGTH,
+    PATH_POINTS,
+    PATH_START,
+    nearestPoint,
+} from "./intestinePath.js";
 
-export const SVG_WIDTH = 400;
-const PADDING = 20;
-const Y_START = 100;
 const POOP_RADIUS = 18;
 const MAX_SCORE = 1000;
 const MIN_SCORE = 100;
 const WALL_PENALTY = 10;
 const COLLISION_COOLDOWN_MS = 400;
-const SEGMENT_HEIGHT = 46;
-const NUM_SEGMENTS = 30;
-
-const SEGMENTS = generateIntestinePath();
-const TOTAL_PATH_HEIGHT = SEGMENTS[SEGMENTS.length - 1].y + 140;
-
-function generateIntestinePath() {
-    const segments = [];
-    const usableWidth = SVG_WIDTH - PADDING * 2;
-    const midX = SVG_WIDTH / 2;
-    let direction = 1;
-
-    for (let i = 0; i < NUM_SEGMENTS; i++) {
-        const y = Y_START + i * SEGMENT_HEIGHT;
-        const t = i / (NUM_SEGMENTS - 1); // 0 at the top, 1 at the exit
-        // Winding is sharper and the bends swing wider the deeper you go.
-        const wave = Math.sin(i * 0.45) * 0.35 + 0.72;
-        const amplitude = usableWidth * 0.2 * wave * (0.72 + 0.28 * t);
-        const centerX = midX + direction * amplitude;
-        // Forgiving, wide entrance that tightens toward the exit.
-        const wallGap = 92 - t * 26 + Math.max(0, 8 - i) * 3.0;
-
-        segments.push({
-            y,
-            centerX: Math.max(
-                PADDING + wallGap,
-                Math.min(SVG_WIDTH - PADDING - wallGap, centerX)
-            ),
-            leftWall: Math.max(PADDING, centerX - wallGap),
-            rightWall: Math.min(SVG_WIDTH - PADDING, centerX + wallGap),
-        });
-
-        // Tighter zig-zag in the second half — turns come more often near the end.
-        const flipEvery = i < NUM_SEGMENTS / 2 ? 3 : 2;
-        if (i % flipEvery === flipEvery - 1) direction *= -1;
-    }
-
-    return segments;
-}
-
-function getPassageAt(y) {
-    if (y <= SEGMENTS[0].y) return SEGMENTS[0];
-    if (y >= SEGMENTS[SEGMENTS.length - 1].y)
-        return SEGMENTS[SEGMENTS.length - 1];
-
-    let lo = 0;
-    let hi = SEGMENTS.length - 1;
-    while (lo < hi - 1) {
-        const mid = (lo + hi) >> 1;
-        if (SEGMENTS[mid].y <= y) lo = mid;
-        else hi = mid;
-    }
-
-    const a = SEGMENTS[lo];
-    const b = SEGMENTS[hi];
-    const t = (y - a.y) / (b.y - a.y);
-
-    return {
-        y,
-        centerX: a.centerX + (b.centerX - a.centerX) * t,
-        leftWall: a.leftWall + (b.leftWall - a.leftWall) * t,
-        rightWall: a.rightWall + (b.rightWall - a.rightWall) * t,
-    };
-}
+// No move goes further than this at once, so a fast drag cannot carry the
+// poop through a wall into the coil beside it.
+const MAX_STEP = POOP_RADIUS / 2;
+// Close enough to the end of the tube to be out.
+const EXIT_SLACK = 24;
 
 export function useGameState() {
     const state = reactive({
         phase: "start",
-        poopX: SVG_WIDTH / 2,
-        poopY: 30,
+        poopX: PATH_START.x,
+        poopY: PATH_START.y,
+        // The centreline sample the poop is beside.
+        pathIndex: 0,
         collisions: 0,
         startTime: 0,
         endTime: 0,
@@ -95,22 +41,20 @@ export function useGameState() {
     });
 
     const progress = computed(() => {
-        return Math.min(
-            1,
-            Math.max(0, state.poopY / (TOTAL_PATH_HEIGHT - 140))
-        );
+        return PATH_POINTS[state.pathIndex].s / PATH_LENGTH;
     });
 
     function startGame() {
-        const entry = SEGMENTS[0];
         state.phase = "playing";
-        state.poopX = entry.centerX;
-        state.poopY = entry.y + 74;
+        state.poopX = PATH_START.x;
+        state.poopY = PATH_START.y;
+        state.pathIndex = 0;
         state.collisions = 0;
         state.startTime = Date.now();
         state.endTime = 0;
         state.score = 0;
         lastCollisionTime = 0;
+        againstWall = false;
         clearInterval(tickInterval);
         tickInterval = setInterval(() => {
             tick.value++;
@@ -118,39 +62,52 @@ export function useGameState() {
     }
 
     let lastCollisionTime = 0;
+    // Pressed against a wall since the last bump. Sliding along it, as a
+    // held drag does round a bend, is one bump, not one every cooldown.
+    let againstWall = false;
 
     function movePoop(dx, dy) {
         if (state.phase !== "playing") return;
 
-        let newX = state.poopX + dx;
-        let newY = state.poopY + Math.max(0, dy);
-
-        const passage = getPassageAt(newY);
-
-        const hitLeft = newX - POOP_RADIUS < passage.leftWall;
-        const hitRight = newX + POOP_RADIUS > passage.rightWall;
-
-        if (hitLeft) {
-            newX = passage.leftWall + POOP_RADIUS;
-        }
-        if (hitRight) {
-            newX = passage.rightWall - POOP_RADIUS;
+        const steps = Math.max(1, Math.ceil(Math.hypot(dx, dy) / MAX_STEP));
+        let hit = false;
+        for (let i = 0; i < steps; i++) {
+            hit = stepPoop(dx / steps, dy / steps) || hit;
         }
 
         if (
-            (hitLeft || hitRight) &&
+            hit &&
+            !againstWall &&
             Date.now() - lastCollisionTime > COLLISION_COOLDOWN_MS
         ) {
             state.collisions++;
             lastCollisionTime = Date.now();
         }
+        againstWall = hit;
 
-        state.poopX = newX;
-        state.poopY = newY;
-
-        if (newY >= TOTAL_PATH_HEIGHT - 80) {
+        if (PATH_LENGTH - PATH_POINTS[state.pathIndex].s <= EXIT_SLACK) {
             win();
         }
+    }
+
+    // Moves the poop a little, keeping it inside the tube: past the wall it
+    // is held against it. True when it touched a wall.
+    function stepPoop(dx, dy) {
+        let x = state.poopX + dx;
+        let y = state.poopY + dy;
+        const index = nearestPoint(x, y, state.pathIndex);
+        const centre = PATH_POINTS[index];
+        const room = centre.hw - POOP_RADIUS;
+        const off = Math.hypot(x - centre.x, y - centre.y);
+        const hit = off > room;
+        if (hit) {
+            x = centre.x + ((x - centre.x) * room) / off;
+            y = centre.y + ((y - centre.y) * room) / off;
+        }
+        state.poopX = x;
+        state.poopY = y;
+        state.pathIndex = index;
+        return hit;
     }
 
     function win() {
@@ -167,13 +124,10 @@ export function useGameState() {
 
     return {
         state,
-        segments: SEGMENTS,
-        totalHeight: TOTAL_PATH_HEIGHT,
         elapsedSeconds,
         progress,
         startGame,
         movePoop,
-        getPassageAt,
         POOP_RADIUS,
     };
 }

@@ -65,12 +65,9 @@
     >
         <GameBoard
             :state="intestineState"
-            :segments="segments"
-            :total-height="totalHeight"
             :elapsed-seconds="intestineElapsedSeconds"
             :progress="progress"
             :poop-radius="POOP_RADIUS"
-            :get-passage-at="getPassageAt"
             :controls-enabled="!intestineIntroActive"
             :poop-visible="!intestineIntroActive"
             :show-digest-intro="intestineIntroActive"
@@ -152,13 +149,10 @@ let intestineIntroTimer = null;
 
 const {
     state: intestineState,
-    segments,
-    totalHeight,
     elapsedSeconds: intestineElapsedSeconds,
     progress,
     startGame: startIntestineGame,
     movePoop,
-    getPassageAt,
     POOP_RADIUS,
 } = useGameState();
 

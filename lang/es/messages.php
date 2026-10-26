@@ -862,7 +862,7 @@ return [
     'games.costco_pizza_poop.board_progress_label' => 'Progreso',
     'games.costco_pizza_poop.board_time_label' => 'Tiempo',
     'games.costco_pizza_poop.board_time_value' => ':seconds s',
-    'games.costco_pizza_poop.steer_hint' => 'Arrastra para dirigir 👇',
+    'games.costco_pizza_poop.steer_hint' => 'Arrastra para dirigir y sigue las flechas',
 
     // Games - Poop Boom
     'games.boom.name' => 'Popó Explosivo',
