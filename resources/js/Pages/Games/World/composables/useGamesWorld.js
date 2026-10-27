@@ -42,9 +42,9 @@ export function tossTilt(vx) {
 
 /**
  * Other people in a scene (issue #174), each walking to where they last said
- * they were: { id, name, x, z, lane, facing, walking, bob, lift }. The road
- * and a room both use it: the road has lanes and loops (`gap`, `wrap`), a
- * room has depth (`z`).
+ * they were: { id, name, avatar, x, z, lane, facing, walking, bob, lift }.
+ * The road and a room both use it: the road has lanes and loops (`gap`,
+ * `wrap`), a room has depth (`z`).
  *
  * - every: how often they say where they are, s. Each new spot sets a speed
  *   that gets them there in about that long, never slower than walking, so
@@ -77,6 +77,7 @@ export function useOthers({
             const known = others.find((o) => o.id === to.id);
             if (known) {
                 known.name = to.name;
+                known.avatar = to.avatar;
                 // A new spot, not just a new list: someone else moving.
                 if (known.to.x !== to.x || known.to.z !== to.z) {
                     known.speed = catchUp(known, to);
@@ -88,6 +89,7 @@ export function useOthers({
                 speed: WALK_SPEED,
                 id: to.id,
                 name: to.name,
+                avatar: to.avatar,
                 x: wrap(to.x),
                 z: to.z,
                 lane: to.lane,
