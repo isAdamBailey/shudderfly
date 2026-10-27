@@ -734,13 +734,13 @@ describe("GamesWorld doors", () => {
     });
 });
 
-describe("GamesWorld rooms", () => {
-    /** The room's button for `label`. */
-    const roomButton = (wrapper, label) =>
-        wrapper
-            .findAll("button.room-item")
-            .find((b) => b.attributes("aria-label") === label);
+/** The room's button for `label`. */
+const roomButton = (wrapper, label) =>
+    wrapper
+        .findAll("button.room-item")
+        .find((b) => b.attributes("aria-label") === label);
 
+describe("GamesWorld rooms", () => {
     /** The room's buttons' labels, in Tab order. */
     const roomLabels = (wrapper) =>
         wrapper
@@ -2023,9 +2023,7 @@ describe("GamesWorld together", () => {
         }
 
         async function tapRadio() {
-            const button = wrapper
-                .findAll("button.room-item")
-                .find((b) => b.attributes("aria-label") === "Radio");
+            const button = roomButton(wrapper, "Radio");
             await button.trigger("focus");
             await nextTick();
             await button.trigger("click");
@@ -2133,12 +2131,24 @@ describe("GamesWorld together", () => {
             stand: 170,
             label: "Bass drum",
         };
+        // A sound button, as Guster's Exhibit has: the room hears it.
+        const BUTTON = {
+            id: "sound-1",
+            type: "toy",
+            x: 600,
+            z: 0,
+            emoji: "🔴",
+            label: "Honk",
+            move: "wiggle",
+            toot: "guster",
+            shared: true,
+        };
         const hall = withHouse["house.hall"];
         const withDrum = {
             ...withHouse,
             "house.hall": {
                 ...hall,
-                interactables: [...hall.interactables, DRUM],
+                interactables: [...hall.interactables, DRUM, BUTTON],
             },
         };
 
@@ -2179,6 +2189,32 @@ describe("GamesWorld together", () => {
 
             hearNote({ id: "bass-drum", which: [50] });
             expect(sounds.drum).toHaveBeenCalledExactlyOnceWith(0.5);
+        });
+
+        it("tells the room a shared toy was played, and toots one someone else played", async () => {
+            const { tell } = await inTheHall();
+            const { hearNote } = wiring.options;
+
+            // Not shared: the strawberry toots for you alone.
+            hearNote({ id: "strawberry", which: [] });
+            await nextTick();
+            expect(wrapper.find(".toot-puff").exists()).toBe(false);
+
+            hearNote({ id: "sound-1", which: [] });
+            await nextTick();
+            expect(wrapper.find(".toot-puff").exists()).toBe(true);
+            expect(tell).not.toHaveBeenCalled();
+
+            // Tabbed to, the Butt stands at it, and Enter plays it.
+            const button = roomButton(wrapper, "Honk");
+            await button.trigger("focus");
+            await nextTick();
+            await button.trigger("click");
+            await nextTick();
+            expect(tell).toHaveBeenCalledExactlyOnceWith({
+                id: "sound-1",
+                which: [],
+            });
         });
     });
 });

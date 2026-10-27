@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { activate, autoTriggers } from "./index.js";
+import { activate, autoTriggers, noteOf, playedFrom } from "./index.js";
 
 function fakeCtx() {
     return {
@@ -79,5 +79,35 @@ describe("toy interaction", () => {
         expect(autoTriggers({ type: "door" })).toBe(true);
         expect(autoTriggers({ type: "game" })).toBe(false);
         expect(autoTriggers({ type: "constructor" })).toBe(false);
+    });
+
+    it("tells the room it was played only when it's shared", () => {
+        const button = {
+            id: "sound-1",
+            type: "toy",
+            move: "wiggle",
+            toot: "guster",
+            clip: "https://cdn.test/honk.m4a",
+            line: "Honk!",
+            light: "lamp",
+            shared: true,
+        };
+
+        expect(noteOf(button)).toEqual([]);
+        expect(noteOf({ ...button, shared: undefined })).toBeNull();
+        expect(playedFrom({ ...button, shared: undefined }, [])).toBeNull();
+        expect(playedFrom(button, [1])).toBeNull();
+
+        // Played back, it moves and toots, but says and switches nothing.
+        const ctx = fakeCtx();
+        activate(playedFrom(button, []), ctx);
+        expect(ctx.animate).toHaveBeenCalledWith("sound-1", "wiggle");
+        expect(ctx.toot).toHaveBeenCalledWith(
+            "guster",
+            "sound-1",
+            "https://cdn.test/honk.m4a"
+        );
+        expect(ctx.speak).not.toHaveBeenCalled();
+        expect(ctx.toggleLight).not.toHaveBeenCalled();
     });
 });

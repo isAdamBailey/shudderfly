@@ -24,6 +24,12 @@ class Sound extends Model
         'blocked' => 'boolean',
     ];
 
+    /** Sounds whose upload finished: they have a recording to play. */
+    public function scopeWithAudio($query)
+    {
+        return $query->whereNotNull('audio_path')->where('audio_path', '!=', '');
+    }
+
     public static function urlForPath(string $path): string
     {
         if (app()->environment(['local', 'testing'])) {

@@ -208,8 +208,11 @@ const ctx = {
     speak: (text) => speakGameIntro(text),
 };
 
-/** All an instrument someone else played may touch. */
+/** All an instrument (or a shared toy) someone else played may touch. */
 const instrumentCtx = {
+    animate: ctx.animate,
+    toot: ctx.toot,
+    playSound,
     pressKey: ctx.pressKey,
     pluckString: ctx.pluckString,
     hitDrum: ctx.hitDrum,

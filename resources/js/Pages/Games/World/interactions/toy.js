@@ -10,6 +10,8 @@
  * - light: the id of a room light it switches on or off, or a list of ids
  *   it switches together.
  * - line: a translated line to say.
+ * - shared: the room hears it played (issue #174's notes, as the
+ *   auditorium's instruments): its move, toot and sound, nothing else.
  * Using one needs a tap or Enter: walking past doesn't set it off.
  */
 export default {
@@ -19,5 +21,12 @@ export default {
         if (item.sound) ctx.playSound(item.sound);
         if (item.light) ctx.toggleLight(item.light);
         if (item.line) ctx.speak(item.line);
+    },
+    // Nothing to tell but that it was played.
+    note: (item) => (item.shared ? [] : null),
+    fromNote(item, which) {
+        if (!item.shared || which.length !== 0) return null;
+        const { move, toot, clip, sound } = item;
+        return { id: item.id, type: item.type, move, toot, clip, sound };
     },
 };
