@@ -276,7 +276,7 @@ const otherSpots = computed(() =>
     view.value
         ? world.others.map((other) => ({
               id: other.id,
-              name: other.name,
+              user: other,
               ...spot(
                   other.x,
                   layout.value.laneZ(other.lane),
@@ -351,7 +351,7 @@ defineExpose({ ...api, setBounds, pointOf });
                 v-for="s in otherSpots"
                 :key="s.id"
                 class="other"
-                :name="s.name"
+                :user="s.user"
                 :style="boxStyle(s)"
                 @click="stage.follow?.(s.id)"
             />

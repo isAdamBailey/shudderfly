@@ -115,10 +115,11 @@ function changedEnough(last, next) {
  * place that joins the world's channels and the only one that whispers on
  * them.
  *
- * - `world`, the roster: everyone in the world, as `{ id, name }` members,
- *   and which scene each is in, from the `client-place` ({ scene }) each
- *   sends on joining it, on changing scene and when someone new joins it,
- *   as `roster` (everyone but you); `ready` once it has said who's there.
+ * - `world`, the roster: everyone in the world, as `{ id, name, avatar }`
+ *   members, and which scene each is in, from the `client-place`
+ *   ({ scene }) each sends on joining it, on changing scene and when
+ *   someone new joins it, as `roster` (everyone but you); `ready` once it
+ *   has said who's there.
  * - `world.<scene id>`, the scene you are standing in (enterScene): where
  *   the people in it are, from their `client-place` on arrival and their
  *   `client-move`s, as `others`; its radio, `client-radio`, sent
@@ -230,6 +231,7 @@ export function useWorldPresence({
             .map((member) => ({
                 id: member.id,
                 name: member.name,
+                avatar: member.avatar,
                 ...positions.value[member.id],
             }))
     );

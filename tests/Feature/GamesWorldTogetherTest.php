@@ -66,14 +66,24 @@ class GamesWorldTogetherTest extends TestCase
             ->assertInertia(fn ($page) => $page->where('settings.'.GamesWorld::TOGETHER_SETTING, '0'));
     }
 
-    public function test_a_logged_in_user_joins_the_roster_as_their_id_and_name_only(): void
+    public function test_a_logged_in_user_joins_the_roster_as_their_id_name_and_avatar_only(): void
     {
         $this->together();
-        $user = User::factory()->create(['name' => 'Butt Friend']);
+        $user = User::factory()->create(['name' => 'Butt Friend', 'avatar' => 'bigears-7']);
 
         $member = $this->member($this->actingAs($user)->join('world'));
 
-        $this->assertSame(['id' => $user->id, 'name' => 'Butt Friend'], $member);
+        $this->assertSame(['id' => $user->id, 'name' => 'Butt Friend', 'avatar' => 'bigears-7'], $member);
+    }
+
+    public function test_someone_who_never_picked_an_avatar_joins_with_none(): void
+    {
+        $this->together();
+        $user = User::factory()->create(['avatar' => null]);
+
+        $member = $this->member($this->actingAs($user)->join('world'));
+
+        $this->assertNull($member['avatar']);
     }
 
     public function test_a_logged_in_user_joins_the_road_and_a_room(): void
@@ -84,7 +94,7 @@ class GamesWorldTogetherTest extends TestCase
 
         foreach (['road', 'house.hall', 'library.hall'] as $scene) {
             $this->assertSame(
-                ['id' => $user->id, 'name' => $user->name],
+                ['id' => $user->id, 'name' => $user->name, 'avatar' => $user->avatar],
                 $this->member($this->join("world.{$scene}")),
                 $scene
             );

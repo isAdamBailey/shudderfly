@@ -676,6 +676,26 @@ describe("useOthers in a room", () => {
         for (let i = 0; i < 40; i += 1) room.step(0.1);
         expect(other).toMatchObject({ x: 500, z: 100, walking: false });
     });
+
+    it("keeps the avatar they have, and changes it when they do (issue #208)", () => {
+        const room = useOthers({ every: 2 });
+        const at = (avatar) => ({
+            id: 2,
+            name: "Friend",
+            avatar,
+            x: 100,
+            z: 400,
+            lane: 0,
+            facing: 1,
+            moving: 0,
+        });
+
+        room.set([at(null)]);
+        expect(room.others[0].avatar).toBeNull();
+
+        room.set([at("bigears-7")]);
+        expect(room.others[0].avatar).toBe("bigears-7");
+    });
 });
 
 describe("useGamesWorld walking up to someone", () => {

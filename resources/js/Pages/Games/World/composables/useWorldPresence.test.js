@@ -370,6 +370,22 @@ describe("useWorldPresence on the street", () => {
         ]);
     });
 
+    it("draws the others with the avatar they picked (issue #208)", () => {
+        const { presence, road } = onTheRoad([
+            ME,
+            { ...FRIEND, avatar: "bigears-7" },
+        ]);
+
+        road.handlers.whispers.place(
+            { scene: "road", x: 800, z: 0, lane: 1, avatar: "<b>" },
+            { user_id: 2 }
+        );
+
+        expect(presence.others.value).toMatchObject([
+            { id: 2, name: "Friend", avatar: "bigears-7" },
+        ]);
+    });
+
     it("drops what isn't a position, or isn't from someone in the scene", () => {
         const { presence, road } = onTheRoad();
         const { place, move } = road.handlers.whispers;

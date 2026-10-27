@@ -203,7 +203,7 @@ defineExpose(api);
                 v-for="other in world.others"
                 :key="other.id"
                 class="butt other"
-                :name="other.name"
+                :user="other"
                 :lift="other.lift"
                 :style="{
                     transform: `translate3d(${other.x}px, 0, 0) translateX(-50%)`,

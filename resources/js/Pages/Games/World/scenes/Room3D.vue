@@ -780,7 +780,7 @@ const visitorSpots = computed(() =>
     view.value
         ? visitors.others.flatMap((other) => {
               const spot = seen(other) && buttSpotAt(other);
-              return spot ? { id: other.id, name: other.name, ...spot } : [];
+              return spot ? { id: other.id, user: other, ...spot } : [];
           })
         : []
 );
@@ -1418,7 +1418,7 @@ defineExpose({
                 v-for="s in visitorSpots"
                 :key="`visitor-${s.id}`"
                 class="visitor"
-                :name="s.name"
+                :user="s.user"
                 :style="boxStyle(s)"
                 @click="stage.follow?.(s.id)"
             />
