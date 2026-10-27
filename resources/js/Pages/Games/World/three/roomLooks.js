@@ -39,6 +39,8 @@ export const WALLS = {
     plaster: { base: "#e7e5e4", ink: "#d6d3d1", pattern: "plain", tile: 200 },
     // A castle's: rough grey blocks, some darker, in deep mortar.
     stone: { base: "#6b6560", ink: "#292524", pattern: "ashlar", tile: 130 },
+    // Guster's Exhibit, a peculiarium: dusky oxblood flecked with old gold.
+    curio: { base: "#4a1d1f", ink: "#a16207", pattern: "dots", tile: 60 },
 };
 
 export const FLOORS = {

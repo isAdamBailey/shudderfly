@@ -1778,4 +1778,75 @@ class GamesWorldScenesTest extends TestCase
         Carbon::setTestNow(Carbon::create(2026, 10, 13, 9, 0, 0, config('app.local_timezone')));
         $this->assertNotEmpty($this->pickQueries(fn () => $this->assertSame(['guster' => []], GamesWorld::castSounds())));
     }
+
+    /** The Exhibit's sound buttons as scenes() gives them. */
+    private function soundButtons(): Collection
+    {
+        return collect(GamesWorld::scenes()['guster-house.exhibit']['interactables'])
+            ->filter(fn ($item) => str_starts_with($item['id'], 'sound-'))
+            ->values();
+    }
+
+    private function soundsOn(bool $on = true): void
+    {
+        SiteSetting::updateOrCreate(['key' => 'sounds_enabled'], ['value' => $on]);
+    }
+
+    public function test_gusters_exhibit_is_off_his_living_room_with_buttons_on_every_wall(): void
+    {
+        $definitions = GamesWorld::definitions();
+        $door = collect($definitions['guster-house.hall']['interactables'])->firstWhere('id', 'exhibit-door');
+        $this->assertSame('guster-house.exhibit', $door['to']);
+
+        $exhibit = $definitions['guster-house.exhibit'];
+        $buttons = collect($exhibit['interactables'])->filter(fn ($item) => isset($item['board']));
+        $this->assertEqualsCanonicalizing(GamesWorld::ROOM_WALLS, $buttons->map(fn ($b) => $b['wall'] ?? 'back')->unique()->values()->all());
+        // Everyone in the room hears them, as the auditorium's instruments.
+        $this->assertTrue($buttons->every(fn ($b) => $b['toot'] === 'guster' && $b['shared']));
+        // And fart memorabilia, each with its placard read aloud.
+        $this->assertNotEmpty(collect($exhibit['interactables'])->filter(fn ($item) => str_starts_with($item['id'], 'exhibit-') && isset($item['line'])));
+    }
+
+    public function test_the_exhibits_buttons_play_the_sounds_page_recordings(): void
+    {
+        $this->soundsOn();
+        SiteSetting::updateOrCreate(['key' => ContentBlockService::SETTING], ['value' => true]);
+        $honk = Sound::factory()->create(['title' => 'Honk', 'emoji' => '📯', 'audio_path' => 'sounds/honk.m4a']);
+        Sound::factory()->create(['title' => 'Blocked', 'audio_path' => 'sounds/blocked.m4a', 'blocked' => true]);
+        Sound::factory()->create(['title' => 'Unfinished', 'audio_path' => '']);
+
+        $buttons = $this->soundButtons();
+
+        $played = $buttons->filter(fn ($b) => isset($b['clip']));
+        $this->assertCount(1, $played);
+        $this->assertSame('📯 Honk', $played->first()['label']);
+        $this->assertSame($honk->audio_path, $played->first()['clip']);
+        // The rest toot as Guster, named as buttons.
+        $this->assertSame(__('messages.games.world.toys.sound_button'), $buttons->last()['label']);
+        $this->assertArrayNotHasKey('board', $buttons->first());
+    }
+
+    public function test_the_exhibits_buttons_play_nothing_of_the_sounds_page_while_it_is_off(): void
+    {
+        $this->soundsOn(false);
+        Sound::factory()->create(['title' => 'Honk', 'audio_path' => 'sounds/honk.m4a']);
+
+        $this->assertTrue($this->soundButtons()->every(fn ($b) => ! isset($b['clip'])));
+    }
+
+    public function test_the_exhibits_sounds_are_picked_once_a_day(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 10, 12, 9, 0, 0, config('app.local_timezone')));
+        $this->soundsOn();
+        Sound::factory()->count(30)->create();
+        $clips = $this->soundButtons()->pluck('clip')->all();
+        // A different recording on every button.
+        $this->assertNotContains(null, $clips);
+        $this->assertCount(count($clips), array_unique($clips));
+
+        $this->assertSame([], $this->pickQueries(fn () => $this->assertSame($clips, $this->soundButtons()->pluck('clip')->all())));
+
+        Carbon::setTestNow(Carbon::create(2026, 10, 13, 9, 0, 0, config('app.local_timezone')));
+        $this->assertNotEmpty($this->pickQueries(fn () => $this->soundButtons()));
+    }
 }

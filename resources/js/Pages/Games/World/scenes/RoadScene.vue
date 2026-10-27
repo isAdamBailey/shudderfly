@@ -7,7 +7,6 @@ import { computed, ref } from "vue";
 import TiltPermissionButton from "@/Components/TiltPermissionButton.vue";
 import LandmarkTitle from "../components/LandmarkTitle.vue";
 import OtherButton from "../components/OtherButton.vue";
-import SkyLogo from "../components/SkyLogo.vue";
 import { useRoad } from "../composables/useRoad.js";
 
 // The `kind: "road"` renderer for when WebGL isn't available (Road3D.vue is
@@ -103,13 +102,6 @@ function peekTranslate({ x, y }) {
 
 const skyStyle = computed(() => ({ transform: peekTranslate(PEEK.sky) }));
 
-// Centered independently of the peek shift: the sky itself is a full-bleed
-// layer that doesn't need centering, but the logo has an intrinsic width and
-// has to stay anchored to the horizontal middle regardless of tilt.
-const skyLogoStyle = computed(() => ({
-    transform: `translateX(-50%) ${peekTranslate(PEEK.sky)}`,
-}));
-
 const cloudsStyle = computed(() => ({ transform: peekTranslate(PEEK.clouds) }));
 
 const worldStyle = computed(() => ({
@@ -145,8 +137,6 @@ defineExpose(api);
         @pointerup="unlockToot"
     >
         <div class="sky" :style="skyStyle" aria-hidden="true"></div>
-
-        <SkyLogo :style="skyLogoStyle" />
 
         <div class="hills-far" :style="hillStyle" aria-hidden="true"></div>
         <div class="clouds" :style="cloudsStyle" aria-hidden="true">

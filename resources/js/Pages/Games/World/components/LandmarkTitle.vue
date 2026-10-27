@@ -1,9 +1,9 @@
 <script setup>
 import { computed } from "vue";
 
-// A landmark's name in gold on an arc, shared by both road drawers: the same
-// gilded-extrusion look as the sky logo (SVG textPath on an arc, layered depth
-// copies, gradient face) rather than a straight line of CSS text — the arc
+// A landmark's name in gold on an arc, shared by both road drawers: a
+// gilded-extrusion look (SVG textPath on an arc, layered depth copies,
+// gradient face) rather than a straight line of CSS text — the arc
 // bows over the icon's shoulders so a long game name has room to fit without
 // truncating. Decorative: the button it sits in carries the name.
 const props = defineProps({

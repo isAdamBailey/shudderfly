@@ -16,7 +16,6 @@ import InteractableButton from "../components/InteractableButton.vue";
 import { boxStyle } from "../components/overlay.js";
 import LandmarkTitle from "../components/LandmarkTitle.vue";
 import OtherButton from "../components/OtherButton.vue";
-import SkyLogo from "../components/SkyLogo.vue";
 import { screenToGround, worldToScreen } from "../composables/projection.js";
 import { useRoad } from "../composables/useRoad.js";
 import { worldNight, worldTheme } from "../three/themes.js";
@@ -302,13 +301,6 @@ const puffSpots = computed(() =>
         : []
 );
 
-// Moves with the peek like the flat road's sky, and stays centred.
-const skyLogoStyle = computed(() => ({
-    transform: `translateX(-50%) translate3d(${peekX.value * 4}px, ${
-        peekY.value * 3
-    }px, 0)`,
-}));
-
 /** Where a landmark is on the stage (the middle of its building), for the
  * stage to dolly toward. */
 function pointOf(id) {
@@ -326,8 +318,6 @@ defineExpose({ ...api, setBounds, pointOf });
         @pointerdown.self="onBackgroundPointerDown"
         @pointerup="unlockToot"
     >
-        <SkyLogo :style="skyLogoStyle" />
-
         <template v-if="view">
             <span
                 v-for="s in idlerSpots"

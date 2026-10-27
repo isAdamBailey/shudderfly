@@ -149,6 +149,29 @@ final class GamesWorld
      * the file: elsewhere his toot falls back to the fart. */
     public const GUSTER_HELLO = 'sounds/d81e2f70-318a-44f3-b967-c48d1c91ce0f.m4a';
 
+    /** The Farts & Sounds Exhibit's sound buttons, on every wall: [emoji,
+     * wall, along it] (onWall()), switches, buttons and things that honk.
+     * Each plays one of the Sounds page's recordings (exhibitSounds()), so
+     * this many are picked a day. */
+    private const EXHIBIT_BUTTONS = [
+        ['🔴', 'back', 120], ['🎚️', 'back', 240], ['🔘', 'back', 360], ['🎛️', 'back', 540], ['🕹️', 'back', 660], ['🛎️', 'back', 780],
+        ['📯', 'right', 110], ['🪠', 'right', 225], ['☎️', 'right', 340],
+        ['📟', 'front', 150], ['🎺', 'front', 270], ['🪗', 'front', 630], ['🔔', 'front', 750],
+        ['🧯', 'left', 110], ['🎷', 'left', 225], ['🪀', 'left', 340],
+    ];
+
+    /** The exhibit's fart memorabilia, by key (`toys.exhibit_<key>`, each
+     * reading its placard aloud): [emoji, wall, along it]. */
+    private const EXHIBITS = [
+        'jar' => ['🫙', 'back', 180],
+        'trophy' => ['🏆', 'back', 450],
+        'beans' => ['🫘', 'back', 720],
+        'skunk' => ['🦨', 'right', 225],
+        'cheese' => ['🧀', 'front', 180],
+        'cushion' => ['🎈', 'front', 720],
+        'statue' => ['🗿', 'left', 225],
+    ];
+
     /** How far out from the back wall a flight of stairs stands. */
     private const STAIRS_FROM_BACK = 220;
 
@@ -179,7 +202,7 @@ final class GamesWorld
      * `walls.front`, which is like the sides unless it says) from WALLS,
      * `walls.floor` from FLOORS. three/roomLooks.js draws each one (a Vitest
      * test keeps the lists in step). */
-    public const WALLS = ['wallpaper-stripes', 'wallpaper-dots', 'wallpaper-green', 'tiles', 'brick', 'plaster', 'stone'];
+    public const WALLS = ['wallpaper-stripes', 'wallpaper-dots', 'wallpaper-green', 'tiles', 'brick', 'plaster', 'stone', 'curio'];
 
     public const FLOORS = ['wood', 'lino', 'tiles', 'carpet', 'moss', 'concrete', 'flagstones'];
 
@@ -276,6 +299,8 @@ final class GamesWorld
         // machine hang round the walls.
         $gusterHall = ['w' => self::ROOM_FRAME, 'd' => 450];
         $gusterOn = fn (string $wall, array $thing) => self::onWall($wall, $gusterHall, $thing);
+        // His Farts & Sounds Exhibit, off the living room: as big.
+        $exhibit = $gusterHall;
         // The Cockroach's Nest, folded onto its walls (issue #183): its
         // fireplace on the back wall, and its candles, where each burns
         // ([wall, x along it], up it at SCONCE_Y): one by the hearth, one
@@ -423,9 +448,10 @@ final class GamesWorld
 
             // --- Guster's House: all in his greens -------------------------------
             // The way in on the back wall, by his washing machine with a
-            // photo of him over it; his slot machine on the right wall, and
-            // more photos of him (pages that mention him), a new set each
-            // day, on the left and front walls. Guster stands in the room,
+            // photo of him over it, and another past his lamp; his slot
+            // machine on the right wall, the door to his Exhibit on the left,
+            // and more photos of him (pages that mention him), a new set each
+            // day, on the front wall. Guster stands in the room,
             // toward the slot machine, where he's seen from three walls.
             'guster-house.hall' => self::room('guster_house_hall', [
                 'size' => $gusterHall,
@@ -433,7 +459,7 @@ final class GamesWorld
                 'walls' => ['back' => 'wallpaper-green', 'floor' => 'moss'],
                 'photos' => array_map(
                     fn ($at) => $gusterOn($at[1], self::photoFrame($at[0], $at[2], 160, 100, 130, ['search' => self::GUSTER_SEARCH], 'green')),
-                    [['guster-1', 'back', 180], ['guster-2', 'left', 225], ['guster-3', 'front', 330], ['guster-4', 'front', 570]],
+                    [['guster-1', 'back', 180], ['guster-2', 'back', 760], ['guster-3', 'front', 330], ['guster-4', 'front', 570]],
                 ),
                 // A second, unseen lamp toward the front lights the side
                 // and front walls and their photos: the bulb by the door is
@@ -441,6 +467,7 @@ final class GamesWorld
                 'lights' => [self::lamp('lamp', 650, 280, 0), self::lamp('front-lamp', 450, 340, 330)],
             ], [
                 self::roomDoor('front-door', 450, 'road', 'guster-house', exit: true),
+                self::roomDoor('exhibit-door', 225, 'guster-house.exhibit', 'hall-door', 'guster_house_exhibit', wall: 'left', size: $gusterHall),
                 self::lampSwitch(650, 280, ['lamp', 'front-lamp']),
                 self::resident('guster', 700, 240, ['size' => 150, 'move' => 'bounce', 'toot' => 'guster', 'clip' => self::GUSTER_HELLO]),
                 // Guster's game is his washing machine, untitled like the
@@ -451,6 +478,31 @@ final class GamesWorld
                 // His slot machine, in his greens with a toot cloud on top,
                 // hung on the right wall: three Gusters wins.
                 $gusterOn('right', self::minigame('toot-slots', 225, 0, '🎰', ['y' => 90, 'size' => 130, 'model' => 'slot-machine'])),
+            ]),
+
+            // Guster's Farts & Sounds Exhibit, a peculiarium off his living
+            // room: every wall a panel of buttons and switches, each playing
+            // one of the family's recordings from the Sounds page, a new set
+            // each day, hung among his fart memorabilia on display, each
+            // reading its placard. You come in through the front wall facing
+            // the back.
+            'guster-house.exhibit' => self::room('guster_house_exhibit', [
+                'size' => $exhibit,
+                'spawn' => ['x' => 450, 'z' => 300],
+                'walls' => ['back' => 'curio', 'sides' => 'curio', 'floor' => 'wood'],
+                'lights' => [self::lamp('lamp', 450, 330, 120), self::lamp('front-lamp', 450, 330, 330)],
+            ], [
+                [
+                    ...self::roomDoor('hall-door', 450, 'guster-house.hall', 'exhibit-door', 'guster_house_hall', exit: true, wall: 'front', size: $exhibit),
+                    'arriveFacing' => 'back',
+                ],
+                self::onWall('front', $exhibit, self::lampSwitch(570, 200, ['lamp', 'front-lamp'])),
+                ...self::soundButtons($exhibit),
+                ...array_map(
+                    fn ($key, $at) => self::onWall($at[1], $exhibit, self::toy("exhibit-{$key}", $at[2], 0, $at[0], "exhibit_{$key}", ['y' => 230, 'size' => 70, 'move' => 'wobble', 'line' => true])),
+                    array_keys(self::EXHIBITS),
+                    self::EXHIBITS,
+                ),
             ]),
 
             // --- The Cockroach's House: the Nest, and an auditorium off it.
@@ -852,6 +904,22 @@ final class GamesWorld
             fn ($id, $at) => self::onWall($at[0], $size, self::toy($id, $at[1], 0, '🕯️', 'sconce', ['y' => self::SCONCE_Y, 'size' => 50, 'move' => 'wiggle', 'light' => $id])),
             array_keys($sconces),
             $sconces,
+        );
+    }
+
+    /** The Exhibit's sound buttons (EXHIBIT_BUTTONS) in a room `size`
+     * across. Each toots as Guster: the `board`th of the day's
+     * exhibitSounds(), which scenes() gives it as its `clip`, or his own
+     * toot if there aren't that many. Everyone in the room hears it
+     * (`shared`, as the auditorium's instruments). */
+    private static function soundButtons(array $size): array
+    {
+        return array_map(
+            fn ($n, $at) => self::onWall($at[1], $size, self::toy('sound-'.($n + 1), $at[2], 0, $at[0], 'sound_button', [
+                'y' => 110, 'size' => 60, 'move' => 'wiggle', 'toot' => 'guster', 'board' => $n, 'shared' => true,
+            ])),
+            array_keys(self::EXHIBIT_BUTTONS),
+            self::EXHIBIT_BUTTONS,
         );
     }
 
@@ -1442,6 +1510,14 @@ final class GamesWorld
             $item['clip'] = Sound::urlForPath($item['clip']);
         }
 
+        if (isset($item['board'])) {
+            $sound = $tune('exhibitSounds')[$item['board']] ?? null;
+            unset($item['board']);
+            $item = self::translate($item);
+
+            return $sound === null ? $item : [...$item, 'label' => $sound['title'], 'clip' => $sound['clip']];
+        }
+
         if ($item['type'] === 'tv') {
             return [...self::translate($item), 'channels' => $tune('channels')];
         }
@@ -1541,7 +1617,7 @@ final class GamesWorld
      * music back on never waits on a cached nothing. */
     private static function songs(): array
     {
-        if (! (SiteSetting::where('key', 'music_enabled')->first()?->value ?? false)) {
+        if (! self::settingOn('music_enabled')) {
             return [];
         }
 
@@ -1550,6 +1626,35 @@ final class GamesWorld
             ->limit(self::RADIO_STATIONS)
             ->get(['id', 'title', 'description', 'youtube_video_id', 'thumbnail_default', 'thumbnail_high'])
             ->toArray());
+    }
+
+    /** Whether site setting `$key` is on. A missing row counts as off. */
+    private static function settingOn(string $key): bool
+    {
+        return (bool) (SiteSetting::where('key', $key)->first()?->value ?? false);
+    }
+
+    /** The recordings the Exhibit's buttons play, one each, picked at
+     * random once a day from the Sounds page (not blocked): [title, clip
+     * URL]. None while the Sounds page is turned off, asked before the
+     * day's pick, as songs() does. */
+    private static function exhibitSounds(): array
+    {
+        if (! self::settingOn('sounds_enabled')) {
+            return [];
+        }
+
+        return self::pickedToday('exhibit-sounds', fn () => Sound::query()
+            ->notBlocked()
+            ->withAudio()
+            ->inRandomOrder()
+            ->limit(count(self::EXHIBIT_BUTTONS))
+            ->get(['title', 'emoji', 'audio_path'])
+            ->map(fn (Sound $sound) => [
+                'title' => trim("{$sound->emoji} {$sound->title}"),
+                'clip' => $sound->audio_path,
+            ])
+            ->all());
     }
 
     /** The sounds cast members toot instead of the fart, by cast id, as
@@ -1562,8 +1667,7 @@ final class GamesWorld
     {
         return ['guster' => self::pickedToday('guster-sounds', fn () => Sound::query()
             ->where('title', 'like', '%guster%')
-            ->whereNotNull('audio_path')
-            ->where('audio_path', '!=', '')
+            ->withAudio()
             // His hello is what he says when tapped, not a toot.
             ->where('audio_path', 'not like', '%'.self::GUSTER_HELLO)
             ->orderBy('id')
