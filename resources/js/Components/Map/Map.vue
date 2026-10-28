@@ -1,10 +1,13 @@
 <template>
     <div>
         <div
-            v-if="currentAddress && showAddress"
+            v-if="(openPlace || currentAddress) && showAddress"
             class="mb-2 flex items-center gap-2 text-sm text-gray-500"
         >
-            <div><strong>Address:</strong> {{ currentAddress }}</div>
+            <div v-if="openPlace">
+                <strong>{{ openPlace.name }}</strong> {{ openPlace.address }}
+            </div>
+            <div v-else><strong>Address:</strong> {{ currentAddress }}</div>
             <SpeakButton
                 :disabled="speaking"
                 aria-label="Speak address"
@@ -37,10 +40,11 @@
 /* global route */
 import Accordion from "@/Components/Accordion.vue";
 import SpeakButton from "@/Components/SpeakButton.vue";
+import { usePrefetchAiVoice } from "@/composables/aiVoice";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
-import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
 const props = defineProps({
     latitude: {
@@ -113,7 +117,8 @@ const props = defineProps({
         default: null,
     },
     // Lets shops, parks and other places on the map be tapped for
-    // Google's own place card (name, address, a link to Google Maps).
+    // Google's own place card (name, address, a link to Google Maps), and
+    // has the address line show and speak the tapped place while it's open.
     showPlaces: {
         type: Boolean,
         default: false,
@@ -129,13 +134,26 @@ const emit = defineEmits([
 const { speak, speaking } = useSpeechSynthesis();
 const { t } = useTranslations();
 
-const speakAddress = () => {
-    speak(t("map.address_speak", { address: currentAddress.value }));
-};
-
 const mapContainer = ref(null);
 const streetViewContainer = ref(null);
 const currentAddress = ref(null);
+const openPlace = ref(null);
+
+const spokenAddress = computed(() => {
+    if (openPlace.value) return t("map.place_speak", openPlace.value);
+    if (currentAddress.value) {
+        return t("map.address_speak", { address: currentAddress.value });
+    }
+    return null;
+});
+
+const speakAddress = () => {
+    speak(spokenAddress.value);
+};
+
+// Nothing warms these clips on the server, so make each one while its line
+// is on screen rather than when the speak button is tapped.
+usePrefetchAiVoice(() => (props.showAddress ? spokenAddress.value : null));
 const hasStreetViewData = ref(false);
 const streetViewAccordionOpen = ref(false);
 const pendingStreetViewCoords = ref(null);
@@ -152,6 +170,9 @@ let geocoder = null;
 let autocompleteService = null;
 let apiOptionsSet = false;
 let mapListeners = [];
+let placesService = null;
+let tappedPlaceId = null;
+let placeCardObserver = null;
 
 const isGoogleLoaded = () => {
     return (
@@ -379,8 +400,57 @@ const clearMarkers = () => {
     infoWindows = [];
 };
 
+const closePlace = () => {
+    placeCardObserver?.disconnect();
+    placeCardObserver = null;
+    tappedPlaceId = null;
+    openPlace.value = null;
+};
+
+// Google gives no event when its place card closes, so watch for it to go
+// (only while one is open).
+const watchPlaceCard = () => {
+    if (placeCardObserver) return;
+    let cardOpen = false;
+    placeCardObserver = new MutationObserver(() => {
+        const open = !!mapContainer.value?.querySelector(".gm-style-iw-poi");
+        if (cardOpen && !open) closePlace();
+        cardOpen = open;
+    });
+    placeCardObserver.observe(mapContainer.value, {
+        childList: true,
+        subtree: true,
+    });
+};
+
+// Google's place card keeps its text to itself, so look the tapped place
+// up by its ID and show (and speak) that while the card is open.
+const showTappedPlace = (placeId) => {
+    tappedPlaceId = placeId;
+    watchPlaceCard();
+    placesService ??= new window.google.maps.places.PlacesService(map);
+    placesService.getDetails(
+        { placeId, fields: ["name", "formatted_address"] },
+        (place, status) => {
+            if (
+                placeId !== tappedPlaceId ||
+                status !== window.google.maps.places.PlacesServiceStatus.OK
+            ) {
+                return;
+            }
+            openPlace.value = {
+                name: place.name,
+                address: place.formatted_address,
+            };
+        }
+    );
+};
+
 const disposeMap = () => {
     clearMarkers();
+
+    closePlace();
+    placesService = null;
 
     if (mapLinkClickHandler) {
         document.removeEventListener("click", mapLinkClickHandler, true);
@@ -648,6 +718,14 @@ const initializeMap = async () => {
         if (props.rotateView) {
             map.setHeadingInteractionEnabled(true);
             map.setTiltInteractionEnabled(true);
+        }
+
+        if (props.showPlaces) {
+            mapListeners.push(
+                map.addListener("click", (e) =>
+                    e.placeId ? showTappedPlace(e.placeId) : closePlace()
+                )
+            );
         }
 
         if (isMultipleMode) {
