@@ -112,6 +112,12 @@ const props = defineProps({
         type: [Boolean, null],
         default: null,
     },
+    // Lets shops, parks and other places on the map be tapped for
+    // Google's own place card (name, address, a link to Google Maps).
+    showPlaces: {
+        type: Boolean,
+        default: false,
+    },
 });
 
 const emit = defineEmits([
@@ -631,7 +637,7 @@ const initializeMap = async () => {
             },
             rotateControl: props.rotateView,
             streetViewControl: false,
-            clickableIcons: false,
+            clickableIcons: props.showPlaces,
             gestureHandling: gestureHandlingForMap(),
             renderingType: window.google.maps.RenderingType.VECTOR,
             headingInteractionEnabled: props.rotateView,
