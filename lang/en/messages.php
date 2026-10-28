@@ -506,6 +506,7 @@ return [
 
     // Map
     'map.address_speak' => 'The address is :address',
+    'map.place_speak' => 'This is :name, at :address',
 
     // Snapshots
     'snapshot.wait_cooldown' => 'Please wait :time before taking another screenshot',
