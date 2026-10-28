@@ -14,6 +14,7 @@
                 :initial-heading="initialHeading"
                 :show-map-type-control="showMapTypeControl"
                 :show-camera-control="showCameraControl"
+                :show-places="true"
                 container-class="w-full aspect-video rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden shadow-lg"
             />
         </div>
