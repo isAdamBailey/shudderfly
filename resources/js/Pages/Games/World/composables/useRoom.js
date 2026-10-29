@@ -30,7 +30,7 @@ export const STAND = 100;
 export const TRIGGER_REACH = 60;
 // The Butt never walks closer than this to a wall, nor someone else is
 // kept.
-export const MARGIN = 50;
+export const MARGIN = ROOM_SIZES.butt / 2;
 // Nor closer than this to furniture that blocks it (an instrument): half its
 // own width, so its sprite never covers the thing.
 export const BLOCK_CLEARANCE = ROOM_SIZES.butt / 2;

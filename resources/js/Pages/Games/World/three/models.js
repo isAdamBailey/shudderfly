@@ -1,11 +1,14 @@
 import { radioModel } from "./antiqueRadio.js";
 import { armchairModel } from "./armchair.js";
+import { bathtubModel } from "./bathtub.js";
 import { fridgeModel } from "./fridge.js";
 import { grandfatherClockModel } from "./grandfatherClock.js";
 import { ovenModel } from "./oven.js";
 import { slotMachineModel } from "./slotMachine.js";
 import { spotlightModel } from "./spotlight.js";
 import { tableLampModel } from "./tableLamp.js";
+import { toiletModel } from "./toilet.js";
+import { toiletRollModel } from "./toiletRoll.js";
 import { washingMachineModel } from "./washingMachine.js";
 
 // Props modelled in 3D, by the name an interactable's `model` gives
@@ -24,4 +27,7 @@ export const MODELS = {
     "grandfather-clock": grandfatherClockModel,
     armchair: armchairModel,
     spotlight: spotlightModel,
+    toilet: toiletModel,
+    bathtub: bathtubModel,
+    "toilet-roll": toiletRollModel,
 };

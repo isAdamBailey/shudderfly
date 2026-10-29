@@ -1,6 +1,7 @@
 import { BASS_DRUM } from "./drumLayout.js";
 import { HARP } from "./harpLayout.js";
 import { ORGAN_FOOTPRINT } from "./organLayout.js";
+import { FOOTPRINTS } from "../three/footprints.js";
 
 /**
  * The instruments a room can have, by interactable type, each with the
@@ -36,6 +37,46 @@ export function blockedFloor(room) {
     const floors = room.interactables
         .filter(isInstrument)
         .map((item) => ({ item, ...INSTRUMENT_FOOTPRINTS[item.type] }));
+    // Selected modeled fixtures can block the floor too. Use the same
+    // footprint as the rendered prop so collision cannot drift from it.
+    floors.push(
+        ...room.interactables
+            .filter((item) => item.blocksMovement && FOOTPRINTS[item.model])
+            .map((item) => {
+                const footprint = FOOTPRINTS[item.model];
+                const size = item.size ?? 80;
+                return {
+                    item,
+                    x0: (-footprint.w * size) / 2,
+                    x1: (footprint.w * size) / 2,
+                    z0: 0,
+                    z1: footprint.d * size,
+                };
+            })
+    );
+    // The bath blocks its raised sides and wall edge, but leaves an entry in
+    // the front apron so the Butt can walk into the basin. The small
+    // clearance matches the low shell, rather than closing that opening with
+    // the full body-width clearance used for solid fixtures.
+    floors.push(
+        ...room.interactables
+            .filter((item) => item.model === "bathtub" && FOOTPRINTS.bathtub)
+            .flatMap((item) => {
+                const { w, d } = FOOTPRINTS.bathtub;
+                const size = item.size ?? 80;
+                const half = (w * size) / 2;
+                const entryHalf = (w * size * 0.68) / 2;
+                const edge = 0.08 * size;
+                const clearance = 12;
+                return [
+                    { item, x0: -half, x1: half, z0: 0, z1: edge, clearance },
+                    { item, x0: -half, x1: -entryHalf, z0: d * size - edge, z1: d * size, clearance },
+                    { item, x0: entryHalf, x1: half, z0: d * size - edge, z1: d * size, clearance },
+                    { item, x0: -half, x1: -half + edge, z0: edge, z1: d * size - edge, clearance },
+                    { item, x0: half - edge, x1: half, z0: edge, z1: d * size - edge, clearance },
+                ];
+            })
+    );
     if (room.stage) {
         const { w, d } = room.stage;
         floors.push({
