@@ -777,6 +777,7 @@ return [
     'games.world.toys.plunger_line' => 'Boing !',
     'games.world.toys.air_freshener' => 'Désodorisant',
     'games.world.toys.air_freshener_line' => 'Pschitt ! Ça sent la rose maintenant.',
+    'games.world.toys.bathtub' => 'Baignoire',
     'games.world.toys.bed' => 'Lit',
     'games.world.toys.bed_line' => 'Prrrout ! Qui a caché un coussin péteur dans le lit ?',
     'games.world.toys.nightlight' => 'Veilleuse',

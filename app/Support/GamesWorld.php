@@ -230,7 +230,7 @@ final class GamesWorld
 
     /** Props modelled in 3D that an interactable's `model` may name:
      * three/models.js (a Vitest test keeps them in step). */
-    public const MODELS = ['radio', 'table-lamp', 'slot-machine', 'fridge', 'oven', 'washing-machine', 'grandfather-clock', 'armchair', 'spotlight'];
+    public const MODELS = ['radio', 'table-lamp', 'slot-machine', 'fridge', 'oven', 'washing-machine', 'grandfather-clock', 'armchair', 'spotlight', 'toilet', 'bathtub', 'toilet-roll'];
 
     /** What a model that stands on the floor takes up, per unit of its
      * size: `w` across and `d` out from the wall, three/footprints.js's (a
@@ -242,6 +242,9 @@ final class GamesWorld
         'washing-machine' => ['w' => 0.7, 'd' => 0.36],
         'grandfather-clock' => ['w' => 0.3, 'd' => 0.14],
         'armchair' => ['w' => 0.8, 'd' => 0.3],
+        'toilet' => ['w' => 0.62, 'd' => 0.48],
+        'bathtub' => ['w' => 1.35, 'd' => 1.0],
+        'toilet-roll' => ['w' => 0.45, 'd' => 0.23],
     ];
 
     /** Frames a wall picture or a room's photo can hang in (its
@@ -414,17 +417,22 @@ final class GamesWorld
                 ),
             ]),
             'house.bathroom' => self::room('house_bathroom', [
-                'size' => ['w' => self::ROOM_FRAME, 'd' => 450],
-                'spawn' => ['x' => 450, 'z' => 300],
-                'walls' => ['back' => 'tiles', 'floor' => 'tiles'],
-                'lights' => [self::lamp('lamp', 300, 280, 0)],
+                // A compact footprint gives the fixtures room to breathe
+                // without making the bathroom feel like a hallway.
+                'size' => ['w' => 760, 'd' => 450],
+                // Start in the open aisle between the bath and toilet.
+                'spawn' => ['x' => 500, 'z' => 180],
+                'walls' => ['back' => 'tiles', 'front' => 'tiles', 'floor' => 'tiles'],
+                'lights' => [self::lamp('lamp', 240, 280, 0)],
             ], [
-                self::roomDoor('hall-door', 150, 'house.hall', 'bathroom-door', 'house_hall', exit: true),
-                self::lampSwitch(300, 280),
-                self::toy('toilet-roll', 450, 0, '🧻', 'toilet_roll', ['y' => 140, 'size' => 50, 'move' => 'wobble', 'line' => true]),
-                self::game('boom', 610, 40, ['size' => 110, 'cast' => 'toilet']),
-                self::toy('plunger', 760, 140, '🪠', 'plunger', ['move' => 'bounce', 'line' => true]),
-                self::toy('air-freshener', 300, 230, '🧴', 'air_freshener', ['move' => 'hop', 'line' => true]),
+                self::roomDoor('hall-door', 120, 'house.hall', 'bathroom-door', 'house_hall', exit: true),
+                self::lampSwitch(240, 280),
+                self::toy('toilet-roll', 570, 0, null, 'toilet_roll', ['y' => 80, 'size' => 32, 'model' => 'toilet-roll']),
+                self::game('boom', 660, 40, ['size' => 150, 'cast' => 'toilet', 'model' => 'toilet', 'titled' => false, 'blocksMovement' => true]),
+                self::toy('plunger', 560, 80, '🪠', 'plunger', ['move' => 'bounce', 'line' => true]),
+                // Keep the bath on a side wall: it remains visible while
+                // facing the toilet, with a wide aisle between the fixtures.
+                self::toy('bathtub', 0, 260, null, 'bathtub', ['size' => 200, 'model' => 'bathtub', 'wall' => 'left']),
             ]),
             'house.bedroom' => self::room('house_bedroom', [
                 'size' => ['w' => 900, 'd' => 500],

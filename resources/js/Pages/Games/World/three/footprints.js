@@ -19,4 +19,10 @@ export const FOOTPRINTS = {
     // never walks into it, its cushion a little proud of `d`. A thrown
     // thing lands on its back, as a footprint is one block.
     armchair: { w: 0.8, d: 0.3, top: 1 },
+    // A close-coupled toilet, with its bowl and seat projecting from the wall.
+    toilet: { w: 0.62, d: 0.48, top: 0.48 },
+    // A long enamel tub with its faucet and raised ledge against the wall.
+    bathtub: { w: 1.35, d: 1, top: 0.62 },
+    // Wall-mounted toilet roll and its holder.
+    "toilet-roll": { w: 0.45, d: 0.23, top: 1 },
 };

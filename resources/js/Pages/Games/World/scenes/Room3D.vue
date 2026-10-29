@@ -304,6 +304,9 @@ function passed(from, every) {
 function tickClocks(from) {
     if (!audioRunning()) return;
     for (const clock of clocks) {
+        // Keep this invariant here too: a prop may have a `swing` animation
+        // without being a clock (the bath uses it to bob its bubbles).
+        if (!Number.isFinite(clock.beat)) continue;
         const tick = passed(from, clock.beat);
         const strikes = clock.chime ? chimesBetween(from, time, clock) : [];
         if (!tick && strikes.length === 0) continue;
@@ -322,7 +325,9 @@ onMounted(() => {
         night: dark.value,
         exitWord: t("games.world.exit_sign"),
     });
-    clocks = graph.swinging;
+    // Other props can use the same swing hook for animation (the bath's
+    // bubbles, for example), but only pendulum clocks have a beat to tick.
+    clocks = graph.swinging.filter((thing) => Number.isFinite(thing.beat));
     showRadios(radiosOn.value);
     const frame = framed();
     if (frame) graph.layout(frame);

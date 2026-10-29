@@ -777,6 +777,7 @@ return [
     'games.world.toys.plunger_line' => 'Boing!',
     'games.world.toys.air_freshener' => 'Air freshener',
     'games.world.toys.air_freshener_line' => 'Psssht! Smells like roses now.',
+    'games.world.toys.bathtub' => 'Bathtub',
     'games.world.toys.bed' => 'Bed',
     'games.world.toys.bed_line' => 'Pfffrt! Who hid a whoopee cushion in the bed?',
     'games.world.toys.nightlight' => 'Nightlight',
