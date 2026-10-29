@@ -23,17 +23,17 @@ export function toiletRollModel(THREE) {
         "#ffffff",
         0,
         0.56,
-        0.11
+        0.14
     ).scale.z = 0.42;
     add(
-        new THREE.CylinderGeometry(0.035, 0.035, 0.47, 16).rotateZ(Math.PI / 2),
+        new THREE.CylinderGeometry(0.035, 0.035, 0.45, 16).rotateZ(Math.PI / 2),
         "#94a3b8",
         0,
         0.56,
-        0.11,
+        0.14,
         { metalness: 0.8, roughness: 0.2 }
     );
-    const sheet = add(new THREE.PlaneGeometry(0.18, 0.28), "#ffffff", 0.08, 0.31, 0.2);
+    const sheet = add(new THREE.PlaneGeometry(0.18, 0.28), "#ffffff", 0.08, 0.31, 0.23);
     sheet.rotation.z = -0.08;
     return group;
 }

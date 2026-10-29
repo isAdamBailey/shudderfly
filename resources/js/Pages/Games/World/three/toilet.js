@@ -54,7 +54,7 @@ export function toiletModel(THREE) {
         0.42,
         0.31
     );
-    bowl.scale.set(HALF * 0.94, 0.21, 0.19);
+    bowl.scale.set(HALF, 0.21, 0.19);
     const water = add(
         new THREE.CircleGeometry(1, 40),
         material(WATER, { roughness: 0.12, metalness: 0.08 }),
