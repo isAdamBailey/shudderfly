@@ -152,8 +152,6 @@ class SoundsController extends Controller
         }
         event(new MessageCreated($message));
 
-        return redirect()
-            ->to(route('messages.index').'#message-'.$message->id)
-            ->with('success', __('messages.sound.shared'));
+        return redirect()->back()->with('success', __('messages.sound.shared'));
     }
 }

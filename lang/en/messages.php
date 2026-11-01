@@ -15,7 +15,7 @@ return [
     // Sharing & books
     'game_score_shared' => 'I scored :score in :game!',
     'game_score_shared_where' => 'I was hanging out in :place. Come check it out!',
-    'game.score_shared' => 'Shared! Your score is on the chat.',
+    'game.score_shared' => 'Your score was shared in a message.',
     'page_shared' => 'Look! This :media is from :book',
     'song_shared' => 'Listen to this song: :title',
     'movie_shared' => 'Check out this movie: :title',
