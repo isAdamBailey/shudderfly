@@ -142,6 +142,13 @@ const shareToChat = (taggedUserId = null) => {
         },
     };
 
+    if (props.kind === "game") {
+        // The world owns the current scene and player's position. Return only
+        // the flash prop so sharing doesn't reload the world or move the user.
+        options.preserveState = true;
+        options.only = ["flash"];
+    }
+
     if (props.kind === "page") {
         router.post(
             route("pages.share", props.pageId),

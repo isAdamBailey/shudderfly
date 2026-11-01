@@ -234,8 +234,6 @@ class MusicController extends Controller
         $message->load(['song', 'user']);
         event(new MessageCreated($message));
 
-        return redirect()
-            ->to(route('messages.index').'#message-'.$message->id)
-            ->with('success', __('messages.song.shared'));
+        return redirect()->back()->with('success', __('messages.song.shared'));
     }
 }

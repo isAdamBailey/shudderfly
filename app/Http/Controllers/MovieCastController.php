@@ -272,9 +272,7 @@ class MovieCastController extends Controller
         $message->load('user');
         event(new MessageCreated($message));
 
-        return redirect()
-            ->to(route('messages.index').'#message-'.$message->id)
-            ->with('success', __('messages.movie.shared'));
+        return redirect()->back()->with('success', __('messages.movie.shared'));
     }
 
     /** The favourites, newest first, as the Movies page and the Games World

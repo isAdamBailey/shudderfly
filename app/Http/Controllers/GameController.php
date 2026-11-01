@@ -236,10 +236,10 @@ class GameController extends Controller
             $shareMessage = $shareMessage.' @'.$taggedUser->name;
         }
 
-        $message = $this->postToChat($request->user(), $shareMessage, $taggedUserIds);
+        $this->postToChat($request->user(), $shareMessage, $taggedUserIds);
 
         return redirect()
-            ->to(route('messages.index').'#message-'.$message->id)
+            ->route('games.index')
             ->with('success', __('messages.game.score_shared'));
     }
 }

@@ -139,8 +139,6 @@ class CollageController extends Controller
         }
         event(new MessageCreated($message));
 
-        return redirect()
-            ->to(route('messages.index').'#message-'.$message->id)
-            ->with('success', __('messages.collage.shared'));
+        return redirect()->back()->with('success', __('messages.collage.shared'));
     }
 }

@@ -15,7 +15,7 @@ return [
     // Sharing & books
     'game_score_shared' => 'J\'ai fait :score à :game !',
     'game_score_shared_where' => 'Je traînais dans :place. Viens voir !',
-    'game.score_shared' => 'Partagé ! Ton score est dans le chat.',
+    'game.score_shared' => 'Ton score a été partagé dans un message.',
     'page_shared' => 'Regarde ! Ce :media vient de :book',
     'song_shared' => 'Écoute cette chanson : :title',
     'movie_shared' => 'Regarde ce film : :title',
