@@ -17,13 +17,25 @@ import { useTranslations } from "@/composables/useTranslations";
 import { useUnreadNotifications } from "@/composables/useUnreadNotifications";
 import ThemeToggle from "@/Layouts/Nav/ThemeToggle.vue";
 import { Link } from "@inertiajs/vue3";
-import { computed, ref } from "vue";
+import { computed, nextTick, ref } from "vue";
 
 const { canEditPages, canEditProfile } = usePermissions();
 const { t } = useTranslations();
 const isDesktopProfileOpen = ref(false);
 const isNotificationsOpen = ref(false);
 const { unreadCount, isNewNotification } = useUnreadNotifications();
+const primaryNavRef = ref(null);
+const notificationsDropdownOffset = ref(8);
+
+const onNotificationsOpenChange = async (open) => {
+    isNotificationsOpen.value = open;
+    if (open) {
+        await nextTick();
+        notificationsDropdownOffset.value =
+            Math.ceil(primaryNavRef.value?.getBoundingClientRect().height ?? 0) +
+            8;
+    }
+};
 
 const isLogoSpinning = ref(false);
 const spinLogo = () => {
@@ -135,10 +147,13 @@ const topNavItems = computed(() => {
                         <div v-if="messagingEnabled" class="relative">
                             <Dropdown
                                 align="right"
-                                width="80"
+                                width="notifications"
+                                :offset="notificationsDropdownOffset"
                                 connected
-                                :content-classes="['bg-white dark:bg-gray-800']"
-                                @open-change="isNotificationsOpen = $event"
+                                :content-classes="[
+                                    'bg-white dark:bg-gray-900 border border-indigo-300 dark:border-amber-400/60 shadow-2xl',
+                                ]"
+                                @open-change="onNotificationsOpenChange"
                             >
                                 <template #trigger>
                                     <button
@@ -245,6 +260,7 @@ const topNavItems = computed(() => {
     <nav
         aria-label="Primary"
         class="sticky top-16 z-40 hidden border-b border-white/10 bg-black/10 backdrop-blur-sm dark:bg-black/20 sm:flex"
+        ref="primaryNavRef"
     >
         <div
             class="flex w-full min-w-0 items-center gap-2 pr-2 sm:pr-6 lg:pr-8"

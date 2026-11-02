@@ -1,7 +1,9 @@
 <template>
-    <div class="max-h-96 overflow-y-auto bg-white dark:bg-gray-800">
+    <div
+        class="notification-list-scroll max-h-[calc(100dvh-9rem)] overflow-y-auto bg-white dark:bg-gray-900 sm:max-h-[min(36rem,calc(100dvh-10rem))]"
+    >
         <div
-            class="px-4 py-3 border-b border-indigo-100 dark:border-gray-700 bg-gradient-to-b from-indigo-50/70 to-transparent dark:from-gray-900/40"
+            class="flex items-center justify-between gap-3 border-b border-indigo-200 bg-indigo-50 px-5 py-3 dark:border-gray-700 dark:bg-gray-950/70"
         >
             <h2
                 class="font-heading text-xl tracking-wide text-indigo-700 dark:text-amber-400 flex items-center gap-2"
@@ -14,17 +16,6 @@
                     {{ unreadCount }}
                 </span>
             </h2>
-        </div>
-        <div
-            class="px-4 py-2.5 flex items-center justify-between border-b border-indigo-100 dark:border-gray-700 bg-indigo-50/50 dark:bg-gray-900/30"
-        >
-            <SpeakButton
-                v-if="notifications.length > 0"
-                :disabled="speaking"
-                aria-label="Speak unread notifications summary"
-                icon-class="ri-speak-fill text-lg"
-                @click.stop="speakSummary"
-            />
             <button
                 v-if="unreadCount > 0"
                 type="button"
@@ -54,10 +45,10 @@
                     v-for="notification in notifications"
                     :key="notification.id"
                     :class="[
-                        'p-2.5 rounded-lg border cursor-pointer transition-colors',
+                        'cursor-pointer rounded-xl border p-3 transition-[background-color,border-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0',
                         notification.read_at
-                            ? 'bg-white dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/60'
-                            : 'bg-amber-50 dark:bg-indigo-900/30 border-amber-200 dark:border-indigo-700/60 shadow-sm hover:bg-amber-100 dark:hover:bg-indigo-900/50',
+                            ? 'border-gray-300 bg-white hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700/80'
+                            : 'border-amber-300 bg-amber-50 shadow-sm hover:bg-amber-100 dark:border-amber-500/60 dark:bg-indigo-950/70 dark:hover:bg-indigo-900/70',
                     ]"
                     @click="handleNotificationClick(notification)"
                 >
@@ -96,7 +87,8 @@
                                     </div>
                                 </div>
                                 <p
-                                    class="text-sm text-gray-700 dark:text-gray-300 italic ml-8 mb-1"
+                                    class="notification-message ml-8 mb-1 text-sm italic text-gray-700 dark:text-gray-200"
+                                    :class="messageHeightClass(notification)"
                                 >
                                     "{{
                                         stripGameShareSlugMarker(
@@ -141,7 +133,8 @@
                                     </div>
                                 </div>
                                 <p
-                                    class="text-sm text-gray-700 dark:text-gray-300 italic ml-8 mb-1"
+                                    class="notification-message ml-8 mb-1 text-sm italic text-gray-700 dark:text-gray-200"
+                                    :class="messageHeightClass(notification)"
                                 >
                                     "{{
                                         stripGameShareSlugMarker(
@@ -151,7 +144,8 @@
                                 </p>
                                 <p
                                     v-if="notification.data.comment"
-                                    class="text-sm text-gray-600 dark:text-gray-400 ml-8 mt-1"
+                                    class="notification-message ml-8 mt-1 text-sm text-gray-700 dark:text-gray-200"
+                                    :class="messageHeightClass(notification)"
                                 >
                                     "{{
                                         stripGameShareSlugMarker(
@@ -196,7 +190,8 @@
                                     </div>
                                 </div>
                                 <p
-                                    class="text-sm text-gray-700 dark:text-gray-300 italic ml-8 mb-1"
+                                    class="notification-message ml-8 mb-1 text-sm italic text-gray-700 dark:text-gray-200"
+                                    :class="messageHeightClass(notification)"
                                 >
                                     "{{
                                         stripGameShareSlugMarker(
@@ -241,13 +236,27 @@
                                     </div>
                                 </div>
                                 <p
-                                    class="text-sm text-gray-700 dark:text-gray-300 ml-8 mb-1"
+                                    class="notification-message ml-8 mb-1 text-sm text-gray-700 dark:text-gray-200"
+                                    :class="messageHeightClass(notification)"
                                 >
                                     {{ notificationBodyText(notification) }}
                                 </p>
                             </div>
+                            <button
+                                v-if="hasLongMessage(notification)"
+                                type="button"
+                                class="ml-8 mt-1 min-h-11 rounded-md px-2 text-sm font-bold text-indigo-700 transition-colors hover:bg-indigo-50 hover:text-indigo-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:text-amber-300 dark:hover:bg-gray-700 dark:hover:text-amber-200"
+                                :aria-expanded="isExpanded(notification.id)"
+                                @click.stop="toggleMessage(notification.id)"
+                            >
+                                {{
+                                    isExpanded(notification.id)
+                                        ? t("notifications.show_less")
+                                        : t("notifications.show_more")
+                                }}
+                            </button>
                             <div
-                                class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 ml-8"
+                                class="ml-8 mt-1 flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300"
                             >
                                 <span>{{
                                     formatDate(notification.created_at)
@@ -259,27 +268,42 @@
                             </div>
                         </div>
                         <div
-                            class="flex items-center justify-end gap-1 pt-2 border-t border-gray-200 dark:border-gray-700"
+                            class="flex items-center gap-2 border-t border-gray-200 pt-2 dark:border-gray-700"
                         >
-                            <button
-                                v-if="!notification.read_at"
-                                type="button"
-                                title="Clear"
-                                class="px-2 py-1 text-xs font-bold uppercase tracking-wide text-indigo-700 dark:text-amber-400 hover:bg-indigo-50 dark:hover:bg-gray-700 rounded-md transition-colors"
-                                @click.stop="markAsRead(notification.id)"
-                            >
-                                Clear
-                            </button>
-                            <button
-                                type="button"
-                                title="Delete notification"
-                                class="px-2 py-1 text-xs font-bold uppercase tracking-wide text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/40 rounded-md transition-colors"
-                                @click.stop="
-                                    deleteNotification(notification.id)
+                            <SpeakButton
+                                :disabled="speaking"
+                                :aria-label="
+                                    t('notifications.speak_item_aria', {
+                                        name:
+                                            senderNameForNotification(
+                                                notification
+                                            ) ||
+                                            t('notifications.summary_someone'),
+                                    })
                                 "
-                            >
-                                Delete
-                            </button>
+                                @click.stop="speakNotification(notification)"
+                            />
+                            <div class="ml-auto flex items-center gap-1">
+                                <button
+                                    v-if="!notification.read_at"
+                                    type="button"
+                                    title="Clear"
+                                    class="min-h-11 rounded-md px-3 text-xs font-bold uppercase tracking-wide text-indigo-700 transition-colors hover:bg-indigo-50 dark:text-amber-400 dark:hover:bg-gray-700"
+                                    @click.stop="markAsRead(notification.id)"
+                                >
+                                    Clear
+                                </button>
+                                <button
+                                    type="button"
+                                    title="Delete notification"
+                                    class="min-h-11 rounded-md px-3 text-xs font-bold uppercase tracking-wide text-red-700 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/40"
+                                    @click.stop="
+                                        deleteNotification(notification.id)
+                                    "
+                                >
+                                    Delete
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -368,6 +392,41 @@ const notificationsChannel = ref(null);
 const { unreadCount } = useUnreadNotifications();
 const { markAsRead: syncMarkAsRead, markAllAsRead: syncMarkAllAsRead } =
     useNotificationSync();
+const expandedNotifications = ref(new Set());
+
+const notificationTextParts = (notification) => {
+    const parts =
+        notification.type === "App\\Notifications\\MessageCommented"
+            ? [notification.data?.message, notification.data?.comment]
+            : [notificationBodyText(notification)];
+
+    return parts
+        .filter((text) => typeof text === "string" && text.trim() !== "")
+        .map(stripGameShareSlugMarker);
+};
+
+const hasLongMessage = (notification) =>
+    notificationTextParts(notification).some((text) => text.length > 150);
+
+const isExpanded = (notificationId) =>
+    expandedNotifications.value.has(notificationId);
+
+const messageHeightClass = (notification) =>
+    hasLongMessage(notification)
+        ? isExpanded(notification.id)
+            ? "line-clamp-none opacity-100 translate-y-0"
+            : "line-clamp-3 opacity-95 translate-y-0.5"
+        : "opacity-100 translate-y-0";
+
+const toggleMessage = (notificationId) => {
+    const expanded = new Set(expandedNotifications.value);
+    if (expanded.has(notificationId)) {
+        expanded.delete(notificationId);
+    } else {
+        expanded.add(notificationId);
+    }
+    expandedNotifications.value = expanded;
+};
 
 const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -539,8 +598,6 @@ const deleteNotification = async (notificationId) => {
     }
 };
 
-const SPEECH_SENDER_LIMIT = 5;
-
 const senderNameForNotification = (notification) => {
     if (notification.type === "App\\Notifications\\UserTagged") {
         return notification.data.tagger_name;
@@ -557,63 +614,14 @@ const senderNameForNotification = (notification) => {
     return null;
 };
 
-const joinWithAnd = (items) => {
-    if (items.length <= 1) return items.join("");
-    const and = t("notifications.summary_and");
-    if (items.length === 2) return `${items[0]} ${and} ${items[1]}`;
-    return `${items.slice(0, -1).join(", ")}, ${and} ${
-        items[items.length - 1]
-    }`;
-};
-
-const getSummaryForSpeech = () => {
-    const unread = notifications.value.filter((n) => !n.read_at);
-    if (unread.length === 0) return t("notifications.summary_none");
-
-    const countsBySender = new Map();
-    unread.forEach((notification) => {
-        const name =
-            senderNameForNotification(notification) ||
-            t("notifications.summary_someone");
-        countsBySender.set(name, (countsBySender.get(name) || 0) + 1);
-    });
-    const senderNames = Array.from(countsBySender.keys());
-    const tap = t("notifications.summary_tap");
-
-    if (unread.length === 1) {
-        return `${t("notifications.summary_single", {
-            name: senderNames[0],
-        })} ${tap}`;
-    }
-
-    if (senderNames.length === 1) {
-        return `${t("notifications.summary_all_from_one", {
-            count: unread.length,
-            name: senderNames[0],
-        })} ${tap}`;
-    }
-
-    const shownNames = senderNames.slice(0, SPEECH_SENDER_LIMIT);
-    const senderParts = shownNames.map((name) =>
-        t("notifications.summary_from", {
-            count: countsBySender.get(name),
-            name,
-        })
-    );
-    const extraSenders = senderNames.length - shownNames.length;
-    const more =
-        extraSenders > 0
-            ? " " + t("notifications.summary_more", { count: extraSenders })
+const speakNotification = (notification) => {
+    const sender = senderNameForNotification(notification);
+    const context =
+        notification.type === "App\\Notifications\\MessageReacted"
+            ? reactionLabel(notification)
             : "";
-    const countText = t("notifications.summary_count", {
-        count: unread.length,
-    });
 
-    return `${countText} ${joinWithAnd(senderParts)}.${more} ${tap}`;
-};
-
-const speakSummary = () => {
-    speak(getSummaryForSpeech());
+    speak([sender, context, ...notificationTextParts(notification)].filter(Boolean).join(". "));
 };
 
 const setupEchoListener = () => {
