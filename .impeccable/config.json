@@ -11,6 +11,12 @@
         ],
         "createdAt": "2026-08-31T23:43:51.213Z",
         "reason": "pre-existing mobile nav label size; touch-target change only"
+      },
+      {
+        "rule": "ai-color-palette",
+        "value": "text-indigo-600",
+        "createdAt": "2026-11-02T23:23:33.687Z",
+        "reason": "Shudderfly DESIGN.md defines Storybook Indigo (#4f46e5) for music headings"
       }
     ]
   }

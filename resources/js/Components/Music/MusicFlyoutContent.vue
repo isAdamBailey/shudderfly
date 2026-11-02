@@ -113,6 +113,7 @@
                     :song="song"
                     :current-song="currentSong"
                     :is-playing="isPlaying"
+                    :is-new="isNewThisWeek(song)"
                     :can-delete="canAdmin"
                     @play="playSong"
                     @delete="deleteSong"
@@ -243,6 +244,8 @@ const headingRef = ref(null);
 const items = ref(
     (props.songs.data || []).map((song) => ({ ...song, loading: false }))
 );
+const now = ref(new Date());
+let weeklyWindowTimer = null;
 const loadingMore = ref(false);
 const nextPageUrl = ref(props.songs.next_page_url || null);
 const fetchedPages = new Set();
@@ -279,6 +282,20 @@ const getTitle = (search, filter) => {
 const title = computed(() => {
     return getTitle(props.search, props.filter);
 });
+
+const fridayMidnight = computed(() => {
+    const cutoff = new Date(now.value);
+    const daysSinceFriday = (cutoff.getDay() - 5 + 7) % 7;
+    cutoff.setDate(cutoff.getDate() - daysSinceFriday);
+    cutoff.setHours(0, 0, 0, 0);
+    return cutoff;
+});
+
+const isNewThisWeek = (song) => {
+    if (!song.created_at) return false;
+    const addedAt = new Date(song.created_at);
+    return !Number.isNaN(addedAt.getTime()) && addedAt >= fridayMidnight.value;
+};
 
 const fetchMore = async () => {
     const url = nextPageUrl.value;
@@ -593,6 +610,9 @@ const setupObserver = () => {
 };
 
 onMounted(async () => {
+    weeklyWindowTimer = window.setInterval(() => {
+        now.value = new Date();
+    }, 60 * 1000);
     await nextTick();
     setupObserver();
 });
@@ -603,6 +623,9 @@ watch([infiniteScrollRef, () => props.scrollRootEl], async () => {
 });
 
 onUnmounted(() => {
+    if (weeklyWindowTimer) {
+        window.clearInterval(weeklyWindowTimer);
+    }
     if (observer) {
         observer.disconnect();
     }

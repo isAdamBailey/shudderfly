@@ -1,6 +1,11 @@
 <template>
     <div
-        class="flex items-center p-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border-b-2 border-gray-300 dark:border-gray-600 cursor-pointer transition-colors duration-200"
+        class="flex items-center p-4 border-b-2 border-gray-300 dark:border-gray-600 cursor-pointer transition-colors duration-200"
+        :class="[
+            isNew
+                ? 'bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/50'
+                : 'bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700',
+        ]"
         @click="$emit('play', song)"
     >
         <!-- Thumbnail -->
@@ -25,12 +30,18 @@
         <!-- Song Info -->
         <div class="flex-1 min-w-0">
             <h3
-                class="text-base font-medium text-gray-900 dark:text-gray-100 truncate mb-1"
+                class="mb-1 flex min-w-0 items-center gap-2 text-base font-medium text-gray-900 dark:text-gray-100"
             >
-                {{ song.title }}
+                <span class="truncate">{{ song.title }}</span>
+                <span
+                    v-if="isNew"
+                    class="inline-flex shrink-0 items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-900 dark:bg-amber-400/20 dark:text-amber-300"
+                >
+                    {{ t("music.coming_next_friday") }}
+                </span>
                 <span
                     v-if="song.is_manual"
-                    class="ml-1 align-middle text-[10px] font-semibold uppercase text-amber-600 dark:text-amber-400"
+                    class="shrink-0 text-xs font-semibold uppercase text-amber-600 dark:text-amber-400"
                     title="Added manually; not managed by YouTube sync"
                 >
                     manual
@@ -93,6 +104,9 @@
 
 <script setup>
 import { ref, computed } from "vue";
+import { useTranslations } from "@/composables/useTranslations";
+
+const { t } = useTranslations();
 
 const props = defineProps({
     song: {
@@ -108,6 +122,10 @@ const props = defineProps({
         default: false,
     },
     canDelete: {
+        type: Boolean,
+        default: false,
+    },
+    isNew: {
         type: Boolean,
         default: false,
     },

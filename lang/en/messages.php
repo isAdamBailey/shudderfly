@@ -501,6 +501,7 @@ return [
     'music.title_newest' => 'Newest releases',
     'music.title_oldest' => 'Oldest releases',
     'music.title_latest' => 'Latest music',
+    'music.coming_next_friday' => 'Coming next Friday!',
     'music.sync_queued' => 'Playlist sync queued.',
     'music.sync_running' => 'Syncing the playlist…',
     'music.sync_quota_exceeded' => 'The YouTube API quota limit was reached, but the sync will continue tomorrow.',

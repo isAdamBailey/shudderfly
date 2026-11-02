@@ -501,6 +501,7 @@ return [
     'music.title_newest' => 'Los más recientes',
     'music.title_oldest' => 'Los más antiguos',
     'music.title_latest' => 'Música reciente',
+    'music.coming_next_friday' => '¡Llegan el próximo viernes!',
     'music.sync_queued' => 'Sincronización de la lista en cola.',
     'music.sync_running' => 'Sincronizando la lista de reproducción…',
     'music.sync_quota_exceeded' => 'Se alcanzó el límite de la cuota de la API de YouTube, pero la sincronización continuará mañana.',
