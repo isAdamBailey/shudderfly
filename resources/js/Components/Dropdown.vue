@@ -24,6 +24,10 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    offset: {
+        type: Number,
+        default: 0,
+    },
 });
 
 const closeOnEscape = (e) => {
@@ -47,6 +51,7 @@ const widthClass = computed(() => {
         56: "w-56",
         80: "w-80",
         96: "w-96",
+        notifications: "w-[min(26rem,calc(100vw-1rem))]",
     }[props.width.toString()];
 });
 
@@ -56,6 +61,12 @@ const widthStyle = computed(() => {
     }
     return {};
 });
+
+const offsetStyle = computed(() =>
+    props.connected && !props.dropUp && props.offset
+        ? { marginTop: `${props.offset}px` }
+        : {}
+);
 
 const alignmentClasses = computed(() => {
     const vertical = props.dropUp ? "bottom" : "top";
@@ -127,7 +138,7 @@ watch(open, async (newValue) => {
                         ? 'top-full rounded-b-md'
                         : 'mt-2 rounded-md',
                 ]"
-                :style="widthStyle"
+                :style="[widthStyle, offsetStyle]"
                 @click="open = false"
             >
                 <div
