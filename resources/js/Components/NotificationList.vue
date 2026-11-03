@@ -3,7 +3,7 @@
         class="notification-list-scroll max-h-[calc(100dvh-9rem)] overflow-y-auto bg-white dark:bg-gray-900 sm:max-h-[min(36rem,calc(100dvh-10rem))]"
     >
         <div
-            class="flex items-center justify-between gap-3 border-b border-indigo-200 bg-indigo-50 px-5 py-3 dark:border-gray-700 dark:bg-gray-950/70"
+            class="flex items-center justify-between gap-3 border-b border-indigo-200 bg-indigo-50 px-5 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 dark:border-gray-700 dark:bg-gray-950/70 sm:pt-3"
         >
             <h2
                 class="font-heading text-xl tracking-wide text-indigo-700 dark:text-amber-400 flex items-center gap-2"
@@ -16,14 +16,23 @@
                     {{ unreadCount }}
                 </span>
             </h2>
-            <button
-                v-if="unreadCount > 0"
-                type="button"
-                class="btn-bulge px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-theme-button bg-theme-primary hover:bg-theme-button active:bg-theme-button-active active:text-theme-button-active rounded-md shadow-sm transition-colors"
-                @click.stop="markAllAsRead"
-            >
-                Clear all
-            </button>
+            <div class="flex shrink-0 items-center gap-2">
+                <button
+                    v-if="unreadCount > 0"
+                    type="button"
+                    class="btn-bulge px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-theme-button bg-theme-primary hover:bg-theme-button active:bg-theme-button-active active:text-theme-button-active rounded-md shadow-sm transition-colors"
+                    @click.stop="markAllAsRead"
+                >
+                    Clear all
+                </button>
+                <button
+                    type="button"
+                    class="inline-flex h-10 w-10 items-center justify-center rounded-lg text-indigo-700 hover:bg-indigo-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 dark:text-gray-200 dark:hover:bg-gray-800 sm:hidden"
+                    :aria-label="t('common.close')"
+                >
+                    <i class="ri-close-line text-2xl" aria-hidden="true"></i>
+                </button>
+            </div>
         </div>
         <div class="p-3 space-y-2">
             <div

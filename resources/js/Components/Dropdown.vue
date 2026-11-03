@@ -24,6 +24,10 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    viewportBound: {
+        type: Boolean,
+        default: false,
+    },
     offset: {
         type: Number,
         default: 0,
@@ -51,7 +55,6 @@ const widthClass = computed(() => {
         56: "w-56",
         80: "w-80",
         96: "w-96",
-        notifications: "w-[min(26rem,calc(100vw-1rem))]",
     }[props.width.toString()];
 });
 
@@ -63,12 +66,18 @@ const widthStyle = computed(() => {
 });
 
 const offsetStyle = computed(() =>
-    props.connected && !props.dropUp && props.offset
+    props.viewportBound && props.offset
+        ? { "--dropdown-offset": `${props.offset}px` }
+        : props.connected && !props.dropUp && props.offset
         ? { marginTop: `${props.offset}px` }
         : {}
 );
 
 const alignmentClasses = computed(() => {
+    if (props.viewportBound) {
+        return "notification-dropdown-viewport origin-top-right";
+    }
+
     const vertical = props.dropUp ? "bottom" : "top";
     if (props.align === "left") {
         return `origin-${vertical}-left left-0`;
@@ -128,11 +137,15 @@ watch(open, async (newValue) => {
         >
             <div
                 v-show="open"
-                class="absolute z-[9999] shadow-lg"
+                class="z-[9999] shadow-lg"
                 :class="[
+                    viewportBound ? '' : 'absolute',
+                    viewportBound ? 'w-screen max-w-screen' : '',
                     widthClass,
                     alignmentClasses,
-                    dropUp
+                    viewportBound
+                        ? 'sm:rounded-b-md'
+                        : dropUp
                         ? 'mb-2 bottom-full rounded-md'
                         : connected
                         ? 'top-full rounded-b-md'

@@ -150,6 +150,7 @@ const topNavItems = computed(() => {
                                 width="notifications"
                                 :offset="notificationsDropdownOffset"
                                 connected
+                                viewport-bound
                                 :content-classes="[
                                     'bg-white dark:bg-gray-900 border border-indigo-300 dark:border-amber-400/60 shadow-2xl',
                                 ]"

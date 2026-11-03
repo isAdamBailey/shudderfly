@@ -860,6 +860,27 @@
     scrollbar-width: thin;
 }
 
+.notification-dropdown-viewport {
+    position: fixed;
+    top: calc(4rem + var(--dropdown-offset, 8px) + env(safe-area-inset-top));
+    right: 0;
+    left: 0;
+    width: 100vw;
+    max-height: calc(100dvh - 9rem);
+    box-sizing: border-box;
+}
+
+@media (min-width: 640px) {
+    .notification-dropdown-viewport {
+        position: absolute;
+        inset: auto 0 auto auto;
+        top: 100%;
+        width: min(32rem, calc(100vw - 1rem));
+        max-height: none;
+        margin-top: var(--dropdown-offset, 8px);
+    }
+}
+
 .notification-list-scroll::-webkit-scrollbar {
     width: 8px;
 }
