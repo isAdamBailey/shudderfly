@@ -11,7 +11,7 @@ use Illuminate\Support\Collection;
 class MonthBooks
 {
     /**
-     * Get the keywords for the current month (full name and abbreviation).
+     * Get the month name and theme keywords that apply to the current month.
      */
     public static function getKeywords(): array
     {
@@ -20,6 +20,7 @@ class MonthBooks
         return array_values(array_unique([
             strtolower($month->format('F')),
             strtolower($month->format('M')),
+            ...($month->month === 11 ? ThemeBooks::getKeywords('thanksgiving') : []),
         ]));
     }
 

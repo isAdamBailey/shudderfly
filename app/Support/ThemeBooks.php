@@ -18,6 +18,7 @@ class ThemeBooks
             'halloween' => ['halloween', 'trick or treat', 'spooky', 'pumpkin', 'monster', 'haunted', 'october'],
             'fireworks' => ['4th', 'fourth', 'july', 'fireworks', 'independence', 'summer'],
             'christmas' => ['christmas', 'santa', 'xmas', 'winter', 'snow', 'reindeer', 'elf', 'december', 'snowman'],
+            'thanksgiving' => ['thanksgiving'],
             default => [],
         };
     }
