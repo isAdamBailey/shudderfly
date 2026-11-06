@@ -501,6 +501,7 @@ return [
     'music.title_newest' => 'Sorties les plus récentes',
     'music.title_oldest' => 'Sorties les plus anciennes',
     'music.title_latest' => 'Musique la plus récente',
+    'music.coming_next_friday' => 'Ça arrive vendredi prochain !',
     'music.sync_queued' => 'Synchronisation de la playlist mise en file d’attente.',
     'music.sync_running' => 'Synchronisation de la playlist en cours…',
     'music.sync_quota_exceeded' => 'La limite de quota de l’API YouTube a été atteinte, mais la synchronisation se poursuivra demain.',
