@@ -92,6 +92,53 @@ describe("SongListItem", () => {
         expect(wrapper.find(".ri-play-fill").exists()).toBe(false);
     });
 
+    it("keeps a coming-Friday song highlighted while it is in the player", () => {
+        wrapper = mount(SongListItem, {
+            props: {
+                song: mockSong,
+                currentSong: mockSong,
+                isPlaying: true,
+                isNew: true,
+            },
+        });
+
+        const container = wrapper.find("div");
+        expect(container.classes()).toContain("bg-indigo-100");
+        expect(container.classes()).toContain("ring-indigo-500");
+        expect(wrapper.text()).toContain("music.coming_next_friday");
+    });
+
+    it("highlights a coming-Friday song that is not in the player", () => {
+        wrapper = mount(SongListItem, {
+            props: {
+                song: mockSong,
+                currentSong: { ...mockSong, id: 2 },
+                isPlaying: true,
+                isNew: true,
+            },
+        });
+
+        const container = wrapper.find("div");
+        expect(container.classes()).toContain("bg-indigo-50");
+        expect(container.classes()).not.toContain("ring-indigo-500");
+    });
+
+    it("does not highlight the song playing in the player", () => {
+        wrapper = mount(SongListItem, {
+            props: {
+                song: mockSong,
+                currentSong: mockSong,
+                isPlaying: true,
+            },
+        });
+
+        const container = wrapper.find("div");
+        expect(container.classes()).toContain("bg-white");
+        expect(container.classes()).not.toContain("bg-indigo-50");
+        expect(container.classes()).not.toContain("ring-indigo-500");
+        expect(wrapper.text()).not.toContain("music.coming_next_friday");
+    });
+
     it("shows currently playing indicator when song is current", () => {
         wrapper = mount(SongListItem, {
             props: {

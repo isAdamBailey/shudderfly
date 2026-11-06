@@ -283,10 +283,10 @@ const title = computed(() => {
     return getTitle(props.search, props.filter);
 });
 
-const fridayMidnight = computed(() => {
+const saturdayMidnight = computed(() => {
     const cutoff = new Date(now.value);
-    const daysSinceFriday = (cutoff.getDay() - 5 + 7) % 7;
-    cutoff.setDate(cutoff.getDate() - daysSinceFriday);
+    const daysSinceSaturday = (cutoff.getDay() - 6 + 7) % 7;
+    cutoff.setDate(cutoff.getDate() - daysSinceSaturday);
     cutoff.setHours(0, 0, 0, 0);
     return cutoff;
 });
@@ -294,7 +294,9 @@ const fridayMidnight = computed(() => {
 const isNewThisWeek = (song) => {
     if (!song.created_at) return false;
     const addedAt = new Date(song.created_at);
-    return !Number.isNaN(addedAt.getTime()) && addedAt >= fridayMidnight.value;
+    return (
+        !Number.isNaN(addedAt.getTime()) && addedAt >= saturdayMidnight.value
+    );
 };
 
 const fetchMore = async () => {

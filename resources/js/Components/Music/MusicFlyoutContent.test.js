@@ -69,6 +69,70 @@ vi.mock("@/composables/useTranslations", () => ({
     }),
 }));
 
+describe("MusicFlyoutContent coming next Friday", () => {
+    beforeEach(() => {
+        vi.useFakeTimers();
+        mockCanAdmin.value = false;
+        document.head.innerHTML =
+            '<meta name="csrf-token" content="test-token" />';
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    const at = (year, month, day, hour = 12) =>
+        new Date(year, month - 1, day, hour, 0, 0).toISOString();
+
+    const mountAt = (when, createdAt) => {
+        vi.setSystemTime(when);
+        return mount(MusicFlyoutContent, {
+            props: {
+                songs: {
+                    data: [
+                        {
+                            id: 1,
+                            title: "New This Week",
+                            created_at: createdAt,
+                        },
+                    ],
+                    next_page_url: null,
+                },
+                search: "",
+                filter: "",
+                scrollRootEl: null,
+            },
+        });
+    };
+
+    it("keeps Friday additions flagged through Friday", () => {
+        const wrapper = mountAt(
+            new Date(2026, 10, 6, 9, 0, 0),
+            at(2026, 11, 5)
+        );
+
+        expect(wrapper.text()).toContain("music.coming_next_friday");
+    });
+
+    it("clears the flag at Saturday midnight", () => {
+        const wrapper = mountAt(
+            new Date(2026, 10, 7, 0, 5, 0),
+            at(2026, 11, 6, 18)
+        );
+
+        expect(wrapper.text()).not.toContain("music.coming_next_friday");
+    });
+
+    it("flags a song added after the previous Saturday", () => {
+        const wrapper = mountAt(
+            new Date(2026, 10, 7, 15, 0, 0),
+            at(2026, 11, 7, 1)
+        );
+
+        expect(wrapper.text()).toContain("music.coming_next_friday");
+    });
+});
+
 describe("MusicFlyoutContent admin add song", () => {
     beforeEach(() => {
         vi.clearAllMocks();

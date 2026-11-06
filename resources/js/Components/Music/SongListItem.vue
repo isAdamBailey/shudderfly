@@ -2,7 +2,9 @@
     <div
         class="flex items-center p-4 border-b-2 border-gray-300 dark:border-gray-600 cursor-pointer transition-colors duration-200"
         :class="[
-            isNew
+            isNew && isCurrentSong
+                ? 'bg-indigo-100 hover:bg-indigo-200 ring-2 ring-inset ring-indigo-500 dark:bg-indigo-900/70 dark:hover:bg-indigo-800/70 dark:ring-indigo-400'
+                : isNew
                 ? 'bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/50'
                 : 'bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700',
         ]"
