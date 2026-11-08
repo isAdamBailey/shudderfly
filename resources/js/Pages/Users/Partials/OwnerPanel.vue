@@ -6,11 +6,10 @@ import ClocksSection from "@/Pages/Profile/Partials/ClocksSection.vue";
 import SettingsForm from "@/Pages/Profile/Partials/SettingsForm.vue";
 import StatsCard from "@/Pages/Profile/Partials/StatsCard.vue";
 import UsersForm from "@/Pages/Profile/Partials/UsersForm.vue";
-import { ref } from "vue";
+import { useTranslations } from "@/composables/useTranslations";
 
 const { canAdmin } = usePermissions();
-
-const settingsAccordionOpen = ref(false);
+const { t } = useTranslations();
 
 defineProps({
     adminUsers: { type: Array, default: () => [] },
@@ -51,11 +50,8 @@ defineProps({
             <Accordion title="Categories">
                 <CategoriesForm :categories="categories" />
             </Accordion>
-            <Accordion v-model="settingsAccordionOpen" title="Site">
-                <SettingsForm
-                    :settings="adminSettings"
-                    @submitted="settingsAccordionOpen = false"
-                />
+            <Accordion :title="t('settings.site.accordion_title')">
+                <SettingsForm :settings="adminSettings" />
             </Accordion>
         </div>
     </div>
