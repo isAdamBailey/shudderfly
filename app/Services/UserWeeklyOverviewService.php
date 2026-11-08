@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Log;
 
 class UserWeeklyOverviewService
 {
-    private const MAX_NEW_TOKENS = 160;
+    private const MAX_NEW_TOKENS = 80;
 
     private const CONNECT_TIMEOUT_SECONDS = 10;
 
@@ -279,23 +279,18 @@ class UserWeeklyOverviewService
             $contextLines[] = "Books authored on Shudderfly: {$metrics['total_books']} total.";
 
             if ($metrics['top_book_details'] !== []) {
-                $bookPhrases = array_map(
-                    fn (array $book) => json_encode($book['title'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
-                        ." (popularity {$book['popularity']}%)",
-                    $metrics['top_book_details']
-                );
-                $contextLines[] = 'Notable titles: '.implode(', ', $bookPhrases).'.';
+                $book = $metrics['top_book_details'][0];
+                $contextLines[] = 'One notable title: '
+                    .json_encode($book['title'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                    ." (popularity {$book['popularity']}%).";
             }
         } else {
             $contextLines[] = 'Has not authored any books yet — do not invent any book titles.';
         }
 
         if ($metrics['books_created_last_week_titles'] !== []) {
-            $titles = array_map(
-                fn (string $title) => json_encode($title, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-                $metrics['books_created_last_week_titles']
-            );
-            $contextLines[] = 'Books created this week: '.implode(', ', $titles).'.';
+            $title = json_encode($metrics['books_created_last_week_titles'][0], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            $contextLines[] = 'One book created this week: '.$title.'; other books are summarized by the count.';
         }
 
         $thisWeek = [];
@@ -333,15 +328,15 @@ class UserWeeklyOverviewService
         $context = implode(' ', $contextLines);
 
         $lengthInstruction = $hasContributedThisWeek
-            ? 'Write 1 to 2 short, goofy sentences'
-            : 'Write exactly 1 short, goofy sentence';
+            ? 'Write 1 or 2 very short, goofy sentences, no more than 30 words total'
+            : 'Write exactly 1 very short, goofy sentence, no more than 20 words';
         $userNameForPrompt = json_encode($user->name, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
         $inactiveInstruction = 'They did not add books, post messages, or give reactions this week — do not call them popular or well-known; say they are not active on Shudderfly this week. ';
         $activeInstruction = 'You may guess at their personality or vibe from the tone of book titles they created this week and how much they messaged and reacted. '
             .'When describing reach or reception, use playful plain language informed by popularity ratings and engagement — never read counts or raw stats. ';
 
-        return "{$lengthInstruction} (no preamble, no headings, no lists, no quoted snippets, no made-up details) summarizing their week on Shudderfly in a silly, playful, slightly absurd tone — like a goofy friend hyping them up, not a news recap or bulletin. Keep it punchy and short. "
+        return "{$lengthInstruction} (no preamble, no headings, no lists, no quoted snippets, no made-up details). Mention at most one book title; summarize the rest as counts or general activity instead of listing them. Summarize their week on Shudderfly in a silly, playful, slightly absurd tone — like a goofy friend hyping them up, not a news recap or bulletin. Keep it punchy. "
             ."User display name: {$userNameForPrompt}. "
             ."Facts you may use (and only these): {$context} "
             .'Start the first sentence with the user display name followed by " is". '
