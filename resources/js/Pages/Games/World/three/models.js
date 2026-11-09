@@ -4,6 +4,7 @@ import { bathtubModel } from "./bathtub.js";
 import { fridgeModel } from "./fridge.js";
 import { grandfatherClockModel } from "./grandfatherClock.js";
 import { ovenModel } from "./oven.js";
+import { exhibitEntryModel } from "./exhibitEntry.js";
 import { slotMachineModel } from "./slotMachine.js";
 import { soundAltarModel } from "./soundAltar.js";
 import { spotlightModel } from "./spotlight.js";
@@ -32,4 +33,5 @@ export const MODELS = {
     bathtub: bathtubModel,
     "toilet-roll": toiletRollModel,
     "sound-altar": soundAltarModel,
+    "exhibit-entry": exhibitEntryModel,
 };
