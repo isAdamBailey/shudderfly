@@ -1779,11 +1779,11 @@ class GamesWorldScenesTest extends TestCase
         $this->assertNotEmpty($this->pickQueries(fn () => $this->assertSame(['guster' => []], GamesWorld::castSounds())));
     }
 
-    /** The Exhibit's sound buttons as scenes() gives them. */
+    /** The Exhibit's shared wall buttons as scenes() gives them. */
     private function soundButtons(): Collection
     {
         return collect(GamesWorld::scenes()['guster-house.exhibit']['interactables'])
-            ->filter(fn ($item) => str_starts_with($item['id'], 'sound-'))
+            ->filter(fn ($item) => preg_match('/^sound-\d+$/', $item['id']) === 1)
             ->values();
     }
 
@@ -1807,7 +1807,25 @@ class GamesWorldScenesTest extends TestCase
         $this->assertNotEmpty(collect($exhibit['interactables'])->filter(fn ($item) => str_starts_with($item['id'], 'exhibit-') && isset($item['line'])));
     }
 
-    public function test_the_exhibits_buttons_play_the_sounds_page_recordings(): void
+    public function test_the_sound_altar_is_a_local_control_and_only_exists_when_sounds_are_enabled(): void
+    {
+        $this->soundsOn();
+        $exhibit = GamesWorld::definitions()['guster-house.exhibit'];
+        $altar = collect($exhibit['interactables'])->firstWhere('id', 'sound-altar');
+
+        $this->assertNotNull($altar);
+        $this->assertSame('sound_altar', $altar['type']);
+        $this->assertArrayNotHasKey('shared', $altar);
+        $buttonCount = $this->soundButtons()->count();
+
+        $this->soundsOn(false);
+        $exhibit = GamesWorld::definitions()['guster-house.exhibit'];
+
+        $this->assertNull(collect($exhibit['interactables'])->firstWhere('id', 'sound-altar'));
+        $this->assertCount($buttonCount, $this->soundButtons());
+    }
+
+    public function test_the_exhibits_buttons_play_the_sound_library_recordings(): void
     {
         $this->soundsOn();
         SiteSetting::updateOrCreate(['key' => ContentBlockService::SETTING], ['value' => true]);
@@ -1821,12 +1839,12 @@ class GamesWorldScenesTest extends TestCase
         $this->assertCount(1, $played);
         $this->assertSame('📯 Honk', $played->first()['label']);
         $this->assertSame($honk->audio_path, $played->first()['clip']);
-        // The rest toot as Guster, named as buttons.
+        // Unfilled wall buttons toot as Guster.
         $this->assertSame(__('messages.games.world.toys.sound_button'), $buttons->last()['label']);
         $this->assertArrayNotHasKey('board', $buttons->first());
     }
 
-    public function test_the_exhibits_buttons_play_nothing_of_the_sounds_page_while_it_is_off(): void
+    public function test_the_exhibits_buttons_play_nothing_from_the_sound_library_while_it_is_off(): void
     {
         $this->soundsOn(false);
         Sound::factory()->create(['title' => 'Honk', 'audio_path' => 'sounds/honk.m4a']);

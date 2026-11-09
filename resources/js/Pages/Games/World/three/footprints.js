@@ -25,4 +25,6 @@ export const FOOTPRINTS = {
     bathtub: { w: 1.35, d: 1, top: 0.62 },
     // Wall-mounted toilet roll and its holder.
     "toilet-roll": { w: 0.45, d: 0.23, top: 1 },
+    // Guster's freestanding sound console, broad enough to read as a station.
+    "sound-altar": { w: 0.95, d: 0.58, top: 0.82 },
 };

@@ -16,8 +16,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
 use Illuminate\Support\Facades\Storage;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class SoundsController extends Controller
 {
@@ -33,25 +31,6 @@ class SoundsController extends Controller
 
             return $next($request);
         });
-    }
-
-    public function index(Request $request): Response
-    {
-        $sort = $request->query('sort', 'date_added');
-
-        $soundsQuery = Sound::notBlocked();
-
-        if ($sort === 'alphabetical') {
-            $soundsQuery->orderBy('title');
-        } else {
-            $sort = 'date_added';
-            $soundsQuery->orderByDesc('created_at');
-        }
-
-        return Inertia::render('Sounds/Index', [
-            'sounds' => $soundsQuery->get(),
-            'sort' => $sort,
-        ]);
     }
 
     public function store(StoreSoundRequest $request): RedirectResponse
@@ -85,7 +64,7 @@ class SoundsController extends Controller
 
         $sound->update(['blocked' => true]);
 
-        return redirect(route('sounds.index'))->with('success', __('messages.sound.blocked'));
+        return back()->with('success', __('messages.sound.blocked'));
     }
 
     public function destroy(Sound $sound): RedirectResponse

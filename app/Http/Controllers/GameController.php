@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Events\MessageCreated;
 use App\Models\Message;
+use App\Models\Sound;
 use App\Models\SiteSetting;
 use App\Models\User;
 use App\Services\UserTaggingService;
@@ -89,6 +90,7 @@ class GameController extends Controller
             default => null,
         };
         $link = $place ? [...$place, 'visit' => Str::random(12)] : null;
+        $soundsEnabled = SiteSetting::where('key', 'sounds_enabled')->first()?->value ?? false;
         // An invite's link also names who sent it (`with`), for the world to
         // follow them in (issue #174); only a real user, never yourself.
         $with = filter_var($request->query('with'), FILTER_VALIDATE_INT);
@@ -104,6 +106,9 @@ class GameController extends Controller
             'fartSoundUrl' => asset('fart.m4a'),
             // Recorded toots a cast member plays instead (Guster's).
             'castSounds' => fn () => GamesWorld::castSounds(),
+            'soundboardSounds' => fn () => $soundsEnabled
+                ? Sound::notBlocked()->orderBy('title')->get(['id', 'title', 'emoji', 'audio_path'])
+                : [],
             // Who a minigame's score can be shared with (ShareToChatButton),
             // or invited into the world.
             'users' => fn () => self::users(),

@@ -224,6 +224,14 @@
                             aria-hidden="true"
                         ></i>
                     </button>
+                    <Link
+                        :href="route('games.index', { scene: 'guster-house.exhibit' })"
+                        class="btn-bulge mt-1 inline-flex min-h-11 items-center gap-2 rounded-lg border border-gray-500/70 bg-gray-200 px-3 py-2 text-sm font-semibold text-gray-800 transition-colors hover:bg-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
+                        @click.stop
+                    >
+                        <i class="ri-door-open-line" aria-hidden="true"></i>
+                        {{ t("message.open_soundboard") }}
+                    </Link>
                 </div>
                 <div
                     v-if="message.book_id && message.book"

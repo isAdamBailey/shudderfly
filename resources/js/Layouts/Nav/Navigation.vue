@@ -50,7 +50,6 @@ const spinLogo = () => {
 const isHome = computed(() => route().current("books.*"));
 
 const messagingEnabled = useSiteSetting("messaging_enabled");
-const soundsEnabled = useSiteSetting("sounds_enabled");
 
 const topNavItems = computed(() => {
     const items = [
@@ -79,15 +78,6 @@ const topNavItems = computed(() => {
             icon: "ri-film-line",
         },
     ];
-
-    if (soundsEnabled.value) {
-        items.push({
-            label: "Sounds",
-            href: route("sounds.index"),
-            active: route().current("sounds.*"),
-            icon: "ri-volume-up-line",
-        });
-    }
 
     if (messagingEnabled.value) {
         items.push({

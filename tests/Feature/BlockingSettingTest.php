@@ -86,8 +86,10 @@ class BlockingSettingTest extends TestCase
 
         Sound::factory()->create(['blocked' => true]);
 
-        $this->get(route('sounds.index'))->assertInertia(
-            fn (Assert $page) => $page->has('sounds', 1)
+        $this->get(route('games.index'))->assertInertia(
+            fn (Assert $page) => $page
+                ->has('soundboardSounds', 1)
+                ->where('soundboardSounds.0.id', Sound::query()->first()->id)
         );
     }
 
