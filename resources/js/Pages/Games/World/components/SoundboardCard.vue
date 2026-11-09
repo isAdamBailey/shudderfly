@@ -53,12 +53,16 @@ const editingSound = computed(
 );
 
 function stopAudio() {
-    if (audio) {
-        audio.pause();
-        audio.src = "";
-        audio = null;
-    }
+    const stoppedAudio = audio;
+    // Clear the active reference before changing the source. Clearing `src`
+    // can itself dispatch a media error, which must not be shown as a failed
+    // playback after the sound has already ended or been stopped.
+    audio = null;
     playingId.value = null;
+    if (stoppedAudio) {
+        stoppedAudio.pause();
+        stoppedAudio.src = "";
+    }
 }
 
 async function toggleSound(sound) {
@@ -68,21 +72,27 @@ async function toggleSound(sound) {
         return;
     }
     stopAudio();
+    let player = null;
     try {
-        audio = new Audio(sound.audio_path);
-        audio.preload = "none";
-        audio.addEventListener("ended", stopAudio, { once: true });
-        audio.addEventListener(
+        player = new Audio(sound.audio_path);
+        audio = player;
+        player.preload = "none";
+        player.addEventListener("ended", () => {
+            if (audio === player) stopAudio();
+        }, { once: true });
+        player.addEventListener(
             "error",
             () => {
+                if (audio !== player) return;
                 error.value = t("soundboard.play_error");
                 stopAudio();
             },
             { once: true }
         );
-        await audio.play();
-        playingId.value = sound.id;
+        await player.play();
+        if (audio === player) playingId.value = sound.id;
     } catch {
+        if (player && audio !== player) return;
         error.value = t("soundboard.play_error");
         stopAudio();
     }
