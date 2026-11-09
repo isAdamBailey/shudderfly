@@ -112,7 +112,7 @@
             >
                 <Link
                     class="flex items-center"
-                    :href="route('sounds.index')"
+                    :href="route('games.index', { scene: 'guster-house.exhibit' })"
                     aria-label="View sounds"
                 >
                     <i

@@ -43,6 +43,10 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    preserveWorld: {
+        type: Boolean,
+        default: false,
+    },
     // Defaults to the shared action-menu row styling so menu callers don't have to
     // restate it; pass a value only to opt out (e.g. the compact Collages listing).
     menuItemClass: {
@@ -142,7 +146,7 @@ const shareToChat = (taggedUserId = null) => {
         },
     };
 
-    if (props.kind === "game") {
+    if (props.kind === "game" || props.preserveWorld) {
         // The world owns the current scene and player's position. Return only
         // the flash prop so sharing doesn't reload the world or move the user.
         options.preserveState = true;

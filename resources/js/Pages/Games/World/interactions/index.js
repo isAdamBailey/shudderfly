@@ -9,6 +9,7 @@ import minigame from "./minigame.js";
 import movie from "./movie.js";
 import organ from "./organ.js";
 import radio from "./radio.js";
+import soundAltar from "./soundAltar.js";
 import toy from "./toy.js";
 import tv from "./tv.js";
 
@@ -35,6 +36,7 @@ const interactions = {
     movie,
     organ,
     radio,
+    sound_altar: soundAltar,
     toy,
     tv,
 };

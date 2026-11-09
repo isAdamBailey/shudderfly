@@ -6,6 +6,7 @@ import { useFlashMessage } from "@/composables/useFlashMessage";
 import { speakGameIntro } from "@/composables/useGameIntroSpeech";
 import { primeSpeech } from "@/composables/speechPlayback";
 import { useSiteSetting } from "@/composables/useSiteSetting";
+import { usePermissions } from "@/composables/permissions";
 import { useTranslations } from "@/composables/useTranslations";
 import { sameId } from "@/utils/object";
 import { usePreferredReducedMotion } from "@vueuse/core";
@@ -51,6 +52,8 @@ const props = defineProps({
 
 const { t } = useTranslations();
 const page = usePage();
+const { canEditPages } = usePermissions();
+const blockingEnabled = useSiteSetting("unblock_requests_enabled");
 
 // The road's sky and grass behind the stage while three loads.
 const loadingBackground = computed(() => {
@@ -206,6 +209,11 @@ const ctx = {
     playDrum,
     // Through the same voice as a game's intro (the AI voice when it's on).
     speak: (text) => speakGameIntro(text),
+    soundboard: {
+        sounds: page.props.soundboardSounds ?? [],
+        canManage: canEditPages.value,
+        blockingEnabled: blockingEnabled.value,
+    },
 };
 
 /** All an instrument (or a shared toy) someone else played may touch. */

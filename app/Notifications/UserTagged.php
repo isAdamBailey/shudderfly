@@ -22,6 +22,24 @@ class UserTagged extends Notification implements ShouldBroadcast
 
     public string $contentType;
 
+    /** A sound mention returns to its new home in the World. */
+    private function url(): string
+    {
+        if (
+            $this->contentType === 'message'
+            && $this->content instanceof Message
+            && $this->content->sound_id
+        ) {
+            return route('games.index', ['scene' => 'guster-house.exhibit']);
+        }
+
+        $messageId = $this->contentType === 'comment' && $this->content instanceof MessageComment
+            ? $this->content->message_id
+            : ($this->content instanceof Message ? $this->content->id : null);
+
+        return route('messages.index').'#message-'.$messageId;
+    }
+
     /**
      * Create a new notification instance.
      */
@@ -53,15 +71,9 @@ class UserTagged extends Notification implements ShouldBroadcast
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $messageId = $this->contentType === 'comment' && $this->content instanceof MessageComment
-            ? $this->content->message_id
-            : ($this->content instanceof Message ? $this->content->id : null);
-
         $contentText = $this->contentType === 'comment' && $this->content instanceof MessageComment
             ? $this->content->comment
             : ($this->content instanceof Message ? $this->content->message : '');
-
-        $url = route('messages.index').'#message-'.$messageId;
 
         $mailQuote = $this->contentType === 'comment'
             ? $contentText
@@ -72,7 +84,7 @@ class UserTagged extends Notification implements ShouldBroadcast
             ->greeting(__('messages.tagged.greeting', ['name' => $notifiable->name]))
             ->line(__('messages.tagged.line', ['name' => $this->tagger->name]))
             ->line('"'.$mailQuote.'"')
-            ->action(__('messages.tagged.action'), $url)
+            ->action(__('messages.tagged.action'), $this->url())
             ->line(__('messages.notifications.email.opt_out_markdown', ['url' => route('profile.edit')]))
             ->line(__('messages.tagged.thank_you'));
     }
@@ -105,7 +117,7 @@ class UserTagged extends Notification implements ShouldBroadcast
             'tagger_name' => $this->tagger->name,
             'tagger_avatar' => $this->tagger->avatar,
             'created_at' => $this->content->created_at->toIso8601String(),
-            'url' => route('messages.index').'#message-'.$messageId,
+            'url' => $this->url(),
         ];
 
         if ($this->contentType === 'comment' && $this->content instanceof MessageComment) {
@@ -136,10 +148,6 @@ class UserTagged extends Notification implements ShouldBroadcast
      */
     public function toArray(object $notifiable): array
     {
-        $messageId = $this->contentType === 'comment' && $this->content instanceof MessageComment
-            ? $this->content->message_id
-            : ($this->content instanceof Message ? $this->content->id : null);
-
         $contentText = $this->contentType === 'comment' && $this->content instanceof MessageComment
             ? $this->content->comment
             : ($this->content instanceof Message ? $this->content->message : '');
@@ -149,7 +157,7 @@ class UserTagged extends Notification implements ShouldBroadcast
             'tagger_name' => $this->tagger->name,
             'tagger_avatar' => $this->tagger->avatar,
             'created_at' => $this->content->created_at->toIso8601String(),
-            'url' => route('messages.index').'#message-'.$messageId,
+            'url' => $this->url(),
         ];
 
         if ($this->contentType === 'comment' && $this->content instanceof MessageComment) {

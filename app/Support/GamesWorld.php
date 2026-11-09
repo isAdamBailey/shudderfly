@@ -230,7 +230,7 @@ final class GamesWorld
 
     /** Props modelled in 3D that an interactable's `model` may name:
      * three/models.js (a Vitest test keeps them in step). */
-    public const MODELS = ['radio', 'table-lamp', 'slot-machine', 'fridge', 'oven', 'washing-machine', 'grandfather-clock', 'armchair', 'spotlight', 'toilet', 'bathtub', 'toilet-roll'];
+    public const MODELS = ['radio', 'table-lamp', 'slot-machine', 'fridge', 'oven', 'washing-machine', 'grandfather-clock', 'armchair', 'spotlight', 'toilet', 'bathtub', 'toilet-roll', 'sound-altar'];
 
     /** What a model that stands on the floor takes up, per unit of its
      * size: `w` across and `d` out from the wall, three/footprints.js's (a
@@ -245,6 +245,7 @@ final class GamesWorld
         'toilet' => ['w' => 0.62, 'd' => 0.48],
         'bathtub' => ['w' => 1.35, 'd' => 1.0],
         'toilet-roll' => ['w' => 0.45, 'd' => 0.23],
+        'sound-altar' => ['w' => 0.95, 'd' => 0.58],
     ];
 
     /** Frames a wall picture or a room's photo can hang in (its
@@ -506,6 +507,11 @@ final class GamesWorld
                 ],
                 self::onWall('front', $exhibit, self::lampSwitch(570, 200, ['lamp', 'front-lamp'])),
                 ...self::soundButtons($exhibit),
+                ...(self::settingOn('sounds_enabled') ? [
+                    self::toy('sound-altar', intdiv($exhibit['w'] * 2, 3), 225, null, 'sound_altar', [
+                        'type' => 'sound_altar', 'model' => 'sound-altar', 'size' => 130,
+                    ]),
+                ] : []),
                 ...array_map(
                     fn ($key, $at) => self::onWall($at[1], $exhibit, self::toy("exhibit-{$key}", $at[2], 0, $at[0], "exhibit_{$key}", ['y' => 230, 'size' => 70, 'move' => 'wobble', 'line' => true])),
                     array_keys(self::EXHIBITS),
@@ -1643,7 +1649,7 @@ final class GamesWorld
     }
 
     /** The recordings the Exhibit's buttons play, one each, picked at
-     * random once a day from the Sounds page (not blocked): [title, clip
+     * random once a day from the sound library (not blocked): [title, clip
      * URL]. None while the Sounds page is turned off, asked before the
      * day's pick, as songs() does. */
     private static function exhibitSounds(): array
@@ -1666,10 +1672,10 @@ final class GamesWorld
     }
 
     /** The sounds cast members toot instead of the fart, by cast id, as
-     * URLs: Guster's are the Sounds with his name in their title (issue
+     * URLs: Guster's are the sounds with his name in their title (issue
      * #164), looked up once a day, so a new one joins the next day. One
      * with none toots the fart. They're his voice in the world, not the
-     * sound board, so they play even while the Sounds page is turned off
+     * sound board, so they play even while the sound library is turned off
      * (`sounds_enabled`) or one of them is blocked there. */
     public static function castSounds(): array
     {

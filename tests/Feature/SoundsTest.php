@@ -9,7 +9,6 @@ use App\Models\Sound;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
@@ -37,7 +36,7 @@ class SoundsTest extends TestCase
         $response->assertRedirect(route('login'));
     }
 
-    public function test_sounds_page_returns_404_when_disabled(): void
+    public function test_legacy_sounds_url_redirects_to_exhibit_when_disabled(): void
     {
         SiteSetting::where('key', 'sounds_enabled')->update(['value' => '0']);
 
@@ -45,10 +44,10 @@ class SoundsTest extends TestCase
         $this->actingAs($user);
 
         $response = $this->get(route('sounds.index'));
-        $response->assertStatus(404);
+        $response->assertRedirect(route('games.index', ['scene' => 'guster-house.exhibit']));
     }
 
-    public function test_sounds_page_renders_for_authenticated_user(): void
+    public function test_legacy_sounds_url_redirects_to_exhibit_for_authenticated_user(): void
     {
         $user = User::factory()->create();
         $this->actingAs($user);
@@ -56,44 +55,10 @@ class SoundsTest extends TestCase
         Sound::factory()->count(3)->create();
 
         $response = $this->get(route('sounds.index'));
-        $response->assertStatus(200);
-        $response->assertInertia(
-            fn ($page) => $page
-                ->component('Sounds/Index')
-                ->has('sounds', 3)
-        );
+        $response->assertRedirect(route('games.index', ['scene' => 'guster-house.exhibit']));
     }
 
-    public function test_sounds_are_ordered_by_date_added_descending_by_default(): void
-    {
-        $user = User::factory()->create();
-        $this->actingAs($user);
-
-        $oldest = Sound::factory()->create([
-            'title' => 'Oldest Sound',
-            'created_at' => Carbon::parse('2024-01-01 00:00:00'),
-        ]);
-        $middle = Sound::factory()->create([
-            'title' => 'Middle Sound',
-            'created_at' => Carbon::parse('2024-06-01 00:00:00'),
-        ]);
-        $newest = Sound::factory()->create([
-            'title' => 'Newest Sound',
-            'created_at' => Carbon::parse('2024-12-01 00:00:00'),
-        ]);
-
-        $response = $this->get(route('sounds.index'));
-        $response->assertInertia(
-            fn ($page) => $page
-                ->component('Sounds/Index')
-                ->where('sort', 'date_added')
-                ->where('sounds.0.id', $newest->id)
-                ->where('sounds.1.id', $middle->id)
-                ->where('sounds.2.id', $oldest->id)
-        );
-    }
-
-    public function test_sounds_can_be_ordered_alphabetically(): void
+    public function test_soundboard_sounds_are_ordered_alphabetically(): void
     {
         $user = User::factory()->create();
         $this->actingAs($user);
@@ -102,14 +67,13 @@ class SoundsTest extends TestCase
         Sound::factory()->create(['title' => 'Apple Sound']);
         Sound::factory()->create(['title' => 'Mango Sound']);
 
-        $response = $this->get(route('sounds.index', ['sort' => 'alphabetical']));
+        $response = $this->get(route('games.index'));
         $response->assertInertia(
             fn ($page) => $page
-                ->component('Sounds/Index')
-                ->where('sort', 'alphabetical')
-                ->where('sounds.0.title', 'Apple Sound')
-                ->where('sounds.1.title', 'Mango Sound')
-                ->where('sounds.2.title', 'Zebra Sound')
+                ->component('Games/Index')
+                ->where('soundboardSounds.0.title', 'Apple Sound')
+                ->where('soundboardSounds.1.title', 'Mango Sound')
+                ->where('soundboardSounds.2.title', 'Zebra Sound')
         );
     }
 
@@ -411,11 +375,11 @@ class SoundsTest extends TestCase
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        $response = $this->get(route('sounds.index'));
+        $response = $this->get(route('games.index'));
 
         $response->assertInertia(
             fn ($page) => $page
-                ->has('sounds')
+                ->has('soundboardSounds')
                 ->where('settings.sounds_enabled', '1')
         );
     }
