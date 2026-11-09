@@ -230,7 +230,7 @@ final class GamesWorld
 
     /** Props modelled in 3D that an interactable's `model` may name:
      * three/models.js (a Vitest test keeps them in step). */
-    public const MODELS = ['radio', 'table-lamp', 'slot-machine', 'fridge', 'oven', 'washing-machine', 'grandfather-clock', 'armchair', 'spotlight', 'toilet', 'bathtub', 'toilet-roll', 'sound-altar'];
+    public const MODELS = ['radio', 'table-lamp', 'slot-machine', 'fridge', 'oven', 'washing-machine', 'grandfather-clock', 'armchair', 'spotlight', 'toilet', 'bathtub', 'toilet-roll', 'sound-altar', 'exhibit-entry'];
 
     /** What a model that stands on the floor takes up, per unit of its
      * size: `w` across and `d` out from the wall, three/footprints.js's (a
@@ -246,6 +246,7 @@ final class GamesWorld
         'bathtub' => ['w' => 1.35, 'd' => 1.0],
         'toilet-roll' => ['w' => 0.45, 'd' => 0.23],
         'sound-altar' => ['w' => 0.95, 'd' => 0.58],
+        'exhibit-entry' => ['w' => 0.96, 'd' => 0.2],
     ];
 
     /** Frames a wall picture or a room's photo can hang in (its
@@ -476,7 +477,11 @@ final class GamesWorld
                 'lights' => [self::lamp('lamp', 650, 280, 0), self::lamp('front-lamp', 450, 340, 330)],
             ], [
                 self::roomDoor('front-door', 450, 'road', 'guster-house', exit: true),
-                self::roomDoor('exhibit-door', 225, 'guster-house.exhibit', 'hall-door', 'guster_house_exhibit', wall: 'left', size: $gusterHall),
+                [
+                    ...self::roomDoor('exhibit-door', 225, 'guster-house.exhibit', 'hall-door', 'guster_house_exhibit', wall: 'left', size: $gusterHall),
+                    'model' => 'exhibit-entry',
+                    'titled' => false,
+                ],
                 self::lampSwitch(650, 280, ['lamp', 'front-lamp']),
                 self::resident('guster', 700, 240, ['size' => 150, 'move' => 'bounce', 'toot' => 'guster', 'clip' => self::GUSTER_HELLO]),
                 // Guster's game is his washing machine, untitled like the

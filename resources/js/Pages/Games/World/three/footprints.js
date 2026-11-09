@@ -27,4 +27,5 @@ export const FOOTPRINTS = {
     "toilet-roll": { w: 0.45, d: 0.23, top: 1 },
     // Guster's freestanding sound console, broad enough to read as a station.
     "sound-altar": { w: 0.95, d: 0.58, top: 0.82 },
+    "exhibit-entry": { w: 0.96, d: 0.2, top: 1 },
 };
