@@ -246,7 +246,7 @@ final class GamesWorld
         'bathtub' => ['w' => 1.35, 'd' => 1.0],
         'toilet-roll' => ['w' => 0.45, 'd' => 0.23],
         'sound-altar' => ['w' => 0.95, 'd' => 0.58],
-        'exhibit-entry' => ['w' => 0.92, 'd' => 0.18],
+        'exhibit-entry' => ['w' => 0.96, 'd' => 0.2],
     ];
 
     /** Frames a wall picture or a room's photo can hang in (its

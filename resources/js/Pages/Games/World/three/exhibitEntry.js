@@ -79,6 +79,6 @@ export function exhibitEntryModel(THREE) {
     face.castShadow = false;
 
     // Keep the whole ornament just proud of its wall plane.
-    group.position.z = 0.05;
+    group.position.z = 0.07;
     return group;
 }
