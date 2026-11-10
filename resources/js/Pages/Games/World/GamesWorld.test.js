@@ -1641,6 +1641,17 @@ describe("GamesWorld together", () => {
         );
     });
 
+    it("opens the butt actions from the peach", async () => {
+        asVisitor({ together: true });
+        wrapper = await mountWorld();
+
+        await wrapper.get(".world-actions-toggle").trigger("click");
+
+        expect(wrapper.get("#butt-actions").text()).toContain(
+            "games.world.roster_empty"
+        );
+    });
+
     it("draws someone else on the street with their name", async () => {
         asVisitor({ together: true });
         wrapper = await mountWorld();

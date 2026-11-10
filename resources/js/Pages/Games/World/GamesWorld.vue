@@ -743,7 +743,7 @@ const stage = {
 
             <ButtActions
                 v-if="actionsOpen && !card"
-                :others="presence.others"
+                :others="presence.others.value"
                 @wiggle="doWiggle"
                 @toot="doToot"
                 @close="actionsOpen = false"
