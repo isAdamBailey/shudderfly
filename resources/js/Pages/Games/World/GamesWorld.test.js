@@ -1669,7 +1669,7 @@ describe("GamesWorld together", () => {
         const buttons = wrapper.findAll(".butt-actions-action");
         expect(buttons.every((b) => !b.element.disabled)).toBe(true);
         const [justMe] = wrapper.findAll("input[name=butt-target]");
-        expect(justMe.element.checked).toBe(true);
+        await justMe.setValue(true);
         await buttons[0].trigger("click");
 
         expect(wrapper.find("#butt-actions").exists()).toBe(false);
@@ -1679,7 +1679,7 @@ describe("GamesWorld together", () => {
         );
     });
 
-    it("wiggles at someone picked, for them to see", async () => {
+    it("wiggles at the one other person here, for them to see", async () => {
         asVisitor({ together: true });
         wrapper = await mountWorld();
         const [, road] = roadChannel();
@@ -1693,8 +1693,6 @@ describe("GamesWorld together", () => {
         );
         await wrapper.get(".world-actions-toggle").trigger("click");
 
-        const [, friend] = wrapper.findAll("input[name=butt-target]");
-        await friend.setValue(true);
         await wrapper.get(".butt-actions-action").trigger("click");
 
         expect(road.whisper).toHaveBeenCalledWith("gesture", {

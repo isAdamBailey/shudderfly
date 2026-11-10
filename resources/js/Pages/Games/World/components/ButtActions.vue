@@ -19,11 +19,16 @@ const target = computed(() =>
     props.others.find((person) => person.id === picked.value)
 );
 
+// Opening with one other person here picks them. Later, only someone
+// picked leaving changes the pick, so a chosen "just me" stays.
 watch(
     () => props.others.map((person) => person.id).join("\0"),
-    () => {
-        if (!target.value) picked.value = null;
-    }
+    (now, before) => {
+        if (target.value) return;
+        if (before !== undefined && picked.value === null) return;
+        picked.value = props.others.length === 1 ? props.others[0].id : null;
+    },
+    { immediate: true }
 );
 
 onMounted(() => {
