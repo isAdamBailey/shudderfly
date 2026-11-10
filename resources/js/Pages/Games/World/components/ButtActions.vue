@@ -2,8 +2,8 @@
 import { useTranslations } from "@/composables/useTranslations";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 
-// What the Butt can do, in the same panel as the invite picker. One other
-// person here is picked, and a wiggle or a toot is aimed at that person only.
+// What the Butt can do, in the same panel as the invite picker. A wiggle or
+// a toot is your own, or aimed at one other person here, who sees it too.
 const props = defineProps({
     others: { type: Array, default: () => [] },
 });
@@ -22,10 +22,8 @@ const target = computed(() =>
 watch(
     () => props.others.map((person) => person.id).join("\0"),
     () => {
-        if (props.others.some((person) => person.id === picked.value)) return;
-        picked.value = props.others.length === 1 ? props.others[0].id : null;
-    },
-    { immediate: true }
+        if (!target.value) picked.value = null;
+    }
 );
 
 onMounted(() => {
@@ -37,8 +35,7 @@ function close() {
 }
 
 function send(kind) {
-    if (!target.value) return;
-    emit(kind, target.value.id);
+    emit(kind, target.value?.id ?? null);
 }
 </script>
 
@@ -58,6 +55,17 @@ function send(kind) {
             <p v-if="others.length === 0" class="butt-actions-hint">
                 {{ t("games.world.roster_empty") }}
             </p>
+            <label v-else class="butt-actions-pick">
+                <input
+                    v-model="picked"
+                    type="radio"
+                    name="butt-target"
+                    :value="null"
+                />
+                <span class="butt-actions-name">{{
+                    t("games.world.just_me")
+                }}</span>
+            </label>
             <label
                 v-for="person in others"
                 :key="person.id"
@@ -76,7 +84,6 @@ function send(kind) {
             <button
                 type="button"
                 class="butt-actions-action"
-                :disabled="!target"
                 @click="send('wiggle')"
             >
                 {{
@@ -88,7 +95,6 @@ function send(kind) {
             <button
                 type="button"
                 class="butt-actions-action"
-                :disabled="!target"
                 @click="send('toot')"
             >
                 {{
@@ -171,11 +177,7 @@ function send(kind) {
     white-space: nowrap;
 }
 
-.butt-actions-action:disabled {
-    opacity: 0.5;
-}
-
-.butt-actions-action:hover:not(:disabled) {
+.butt-actions-action:hover {
     background: rgb(255 255 255 / 0.3);
 }
 

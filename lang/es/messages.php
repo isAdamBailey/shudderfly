@@ -803,6 +803,7 @@ return [
     'games.world.follow_aria' => 'Seguir a :name',
     'games.world.actions' => 'El Trasero',
     'games.world.actions_open' => 'Acciones del trasero',
+    'games.world.just_me' => 'Solo yo',
     'games.world.wiggle' => 'Menear',
     'games.world.wiggle_at' => 'Menear a :name',
     'games.world.toot' => 'Pedo',

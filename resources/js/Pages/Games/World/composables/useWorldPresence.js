@@ -160,7 +160,8 @@ function changedEnough(last, next) {
  * (`at` is their id). `hearGesture({ id, kind, at })` is called with
  * someone else's in your scene, who sent it. The first goes at once;
  * another in the next GESTURE_EVERY_MS waits and the latest goes. None go
- * in a scene of more than NOTE_CROWD, or while you're alone there.
+ * in a scene of more than NOTE_CROWD, or while you're alone there, and none
+ * aimed at nobody (`at` null): that one is only seen here.
  */
 export function useWorldPresence({
     enabled,

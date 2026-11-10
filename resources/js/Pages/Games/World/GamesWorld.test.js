@@ -1652,6 +1652,56 @@ describe("GamesWorld together", () => {
         );
     });
 
+    it("wiggles and toots alone, telling nobody", async () => {
+        asVisitor({ together: true });
+        wrapper = await mountWorld();
+        const [, road] = roadChannel();
+        road.handlers.here([
+            { id: 7, name: "Me" },
+            { id: 8, name: "Friend" },
+        ]);
+        road.handlers.whispers.place(
+            { scene: "road", x: 900, z: 0, lane: 0 },
+            { user_id: 8 }
+        );
+        await wrapper.get(".world-actions-toggle").trigger("click");
+
+        const buttons = wrapper.findAll(".butt-actions-action");
+        expect(buttons.every((b) => !b.element.disabled)).toBe(true);
+        const [justMe] = wrapper.findAll("input[name=butt-target]");
+        expect(justMe.element.checked).toBe(true);
+        await buttons[0].trigger("click");
+
+        expect(wrapper.find("#butt-actions").exists()).toBe(false);
+        expect(road.whisper).not.toHaveBeenCalledWith(
+            "gesture",
+            expect.anything()
+        );
+    });
+
+    it("wiggles at someone picked, for them to see", async () => {
+        asVisitor({ together: true });
+        wrapper = await mountWorld();
+        const [, road] = roadChannel();
+        road.handlers.here([
+            { id: 7, name: "Me" },
+            { id: 8, name: "Friend" },
+        ]);
+        road.handlers.whispers.place(
+            { scene: "road", x: 900, z: 0, lane: 0 },
+            { user_id: 8 }
+        );
+        await wrapper.get(".world-actions-toggle").trigger("click");
+
+        const [, friend] = wrapper.findAll("input[name=butt-target]");
+        await friend.setValue(true);
+        await wrapper.get(".butt-actions-action").trigger("click");
+
+        expect(road.whisper).toHaveBeenCalledWith("gesture", {
+            kind: "wiggle",
+            at: 8,
+        });
+    });
     it("draws someone else on the street with their name", async () => {
         asVisitor({ together: true });
         wrapper = await mountWorld();

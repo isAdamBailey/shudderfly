@@ -741,6 +741,7 @@ return [
     'games.world.follow_aria' => 'Suivre :name',
     'games.world.actions' => 'Les Fesses',
     'games.world.actions_open' => 'Actions des fesses',
+    'games.world.just_me' => 'Juste moi',
     'games.world.wiggle' => 'Gigoter',
     'games.world.wiggle_at' => 'Gigoter vers :name',
     'games.world.toot' => 'Prout',

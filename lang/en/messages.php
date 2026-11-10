@@ -803,6 +803,7 @@ return [
     'games.world.follow_aria' => 'Follow :name',
     'games.world.actions' => 'The Butt',
     'games.world.actions_open' => 'Butt actions',
+    'games.world.just_me' => 'Just me',
     'games.world.wiggle' => 'Wiggle',
     'games.world.wiggle_at' => 'Wiggle at :name',
     'games.world.toot' => 'Toot',

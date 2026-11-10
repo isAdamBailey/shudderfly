@@ -206,6 +206,13 @@ function invite() {
     align-items: flex-end;
     gap: 0.5rem;
     max-width: calc(100% - 5.5rem);
+    /* As wide as its chip or panel, so it reaches over the butt actions'
+       peach beside the toggle; only what it draws takes taps. */
+    pointer-events: none;
+}
+
+.world-roster > * {
+    pointer-events: auto;
 }
 
 .roster-toggle {

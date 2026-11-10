@@ -818,7 +818,8 @@ const stage = {
     position: absolute;
     top: 0.75rem;
     right: 0.75rem;
-    z-index: 10;
+    /* Over the roster's chip and list, which reach under its panel. */
+    z-index: 11;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
