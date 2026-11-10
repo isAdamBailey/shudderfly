@@ -8,8 +8,9 @@ import { box, mergeParts } from "./streetGeometry.js";
  * its middle `x` along the wall, `h` to its worktop, `d` deep, and `upper`
  * `{ y, h, d }` its wall cabinets, their bottom `y` up the wall. Cupboard
  * doors in pairs with brass knobs over a dark kick plate, a stone worktop.
- * The fridge and the oven beside it are models (three/fridge.js,
- * three/oven.js), the kitchen's games. Geometry from an injected `THREE`,
+ * The fridge and the oven beside it, and the microwave on the side
+ * counter, are models (three/fridge.js, three/oven.js, three/microwave.js),
+ * the kitchen's games. Geometry from an injected `THREE`,
  * as in entertainmentCenter.js.
  */
 

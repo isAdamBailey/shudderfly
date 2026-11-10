@@ -167,7 +167,7 @@ class GamesTest extends TestCase
 
         $this->assertDatabaseHas('messages', [
             'user_id' => $user->id,
-            'message' => "I scored 42 in Brussels Sprout Chicken Pox! I was hanging out in the Bedroom at the Butt's House. Come check it out!\u{E000}m:sprout-pox\u{E000}",
+            'message' => "I scored 42 in Brussels Sprout Chicken Pox! I was hanging out in the Kitchen at the Butt's House. Come check it out!\u{E000}m:sprout-pox\u{E000}",
             'page_id' => null,
         ]);
 
@@ -204,6 +204,7 @@ class GamesTest extends TestCase
             'boom' => 'house.bathroom',
             'toot-foods' => 'house.kitchen',
             'costco-pizza-poop' => 'house.kitchen',
+            'sprout-pox' => 'house.kitchen',
             'cockroach' => 'cockroach-house.hall',
             'cockroach-fight' => 'cockroach-house.hall',
         ] as $game => $scene) {
@@ -289,7 +290,7 @@ class GamesTest extends TestCase
             'toot-foods' => ['Toot Foods', 'house.kitchen', "the Kitchen at the Butt's House"],
             'costco-pizza-poop' => ['Costco Food Poop', 'house.kitchen', "the Kitchen at the Butt's House"],
             'boom' => ['Poop Boom', 'house.bathroom', "the Bathroom at the Butt's House"],
-            'sprout-pox' => ['Brussels Sprout Chicken Pox', 'house.bedroom', "the Bedroom at the Butt's House"],
+            'sprout-pox' => ['Brussels Sprout Chicken Pox', 'house.kitchen', "the Kitchen at the Butt's House"],
         ] as $slug => [$name, $scene, $where]) {
             Message::query()->delete();
             $this->post(route('games.share-score', $slug), ['score' => 40])

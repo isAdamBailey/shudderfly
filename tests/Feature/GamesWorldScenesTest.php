@@ -962,23 +962,27 @@ class GamesWorldScenesTest extends TestCase
         $this->assertSame([$lamp['x'], $lamp['z']], [$light['x'], $light['z']]);
     }
 
-    public function test_the_kitchen_games_are_its_fridge_and_oven_between_the_counters(): void
+    public function test_the_kitchen_games_are_its_fridge_oven_and_microwave(): void
     {
         $kitchen = GamesWorld::scenes()['house.kitchen'];
         $items = collect($kitchen['interactables'])->keyBy('id');
         $fridge = $items['toot-foods'];
         $oven = $items['costco-pizza-poop'];
+        $microwave = $items['sprout-pox'];
 
         $this->assertSame('fridge', $fridge['model']);
         $this->assertSame('oven', $oven['model']);
+        $this->assertSame('microwave', $microwave['model']);
         foreach ([$fridge, $oven] as $game) {
             // Against the back wall, with no gold name over it.
             $this->assertSame(0, $game['z']);
             $this->assertFalse($game['titled']);
         }
-        // Their cards keep the burger and the Pizza.
+        $this->assertFalse($microwave['titled']);
+        // Their cards keep the burger, the Pizza and the sprout.
         $this->assertSame('🍔', $fridge['card']['landmark']);
         $this->assertSame('pizza', $oven['card']['cast']);
+        $this->assertSame('🥬', $microwave['card']['landmark']);
 
         // The oven stands in the gap between the counters, its cooktop at
         // their worktop and as wide as the gap (three/footprints.js: its
@@ -998,6 +1002,20 @@ class GamesWorldScenesTest extends TestCase
             $this->assertLessThanOrEqual($kitchen['size']['w'], $counter['x'] + $counter['w'] / 2);
         }
 
+        // The microwave sits on the left wall's counter, under its cabinets,
+        // and stays on the worktop.
+        $side = $kitchen['counters'][2];
+        $this->assertSame('left', $side['wall']);
+        [$wall, $along, $out] = $this->wallSpot($microwave, $kitchen['size']);
+        [, $counterAlong] = $this->wallSpot($side, $kitchen['size']);
+        $this->assertSame('left', $wall);
+        $this->assertSame($counterAlong, $along);
+        $this->assertLessThan($side['w'] / 2, $this->modelWidth($microwave) / 2);
+        $this->assertSame(GamesWorld::KITCHEN_COUNTER['h'], $microwave['y']);
+        $this->assertGreaterThan(0, $out);
+        $this->assertLessThanOrEqual($side['d'], $out + $microwave['size'] * GamesWorld::MODEL_FOOTPRINTS['microwave']['d']);
+        $this->assertLessThan($side['upper']['y'], $microwave['y'] + $microwave['size']);
+
         // The pot and the fruit stand on the worktops.
         foreach (['sprout-pot', 'grapes', 'apple', 'blueberries'] as $id) {
             $this->assertSame(GamesWorld::KITCHEN_COUNTER['h'], $items[$id]['y'], $id);
@@ -1011,6 +1029,7 @@ class GamesWorldScenesTest extends TestCase
             $this->assertTrue($items[$id]['throwable'], $id);
         }
         $this->assertArrayNotHasKey('throwable', $items['sprout-pot']);
+        $this->assertEmpty(collect(GamesWorld::scenes()['house.bedroom']['interactables'])->where('type', 'game'));
     }
 
     public function test_the_nests_games_are_its_armchair_and_grandfather_clock(): void

@@ -230,7 +230,7 @@ final class GamesWorld
 
     /** Props modelled in 3D that an interactable's `model` may name:
      * three/models.js (a Vitest test keeps them in step). */
-    public const MODELS = ['radio', 'table-lamp', 'slot-machine', 'fridge', 'oven', 'washing-machine', 'grandfather-clock', 'armchair', 'spotlight', 'toilet', 'bathtub', 'toilet-roll', 'sound-altar', 'exhibit-entry'];
+    public const MODELS = ['radio', 'table-lamp', 'slot-machine', 'fridge', 'oven', 'microwave', 'washing-machine', 'grandfather-clock', 'armchair', 'spotlight', 'toilet', 'bathtub', 'toilet-roll', 'sound-altar', 'exhibit-entry'];
 
     /** What a model that stands on the floor takes up, per unit of its
      * size: `w` across and `d` out from the wall, three/footprints.js's (a
@@ -239,6 +239,7 @@ final class GamesWorld
     public const MODEL_FOOTPRINTS = [
         'fridge' => ['w' => 0.48, 'd' => 0.18],
         'oven' => ['w' => 1.09, 'd' => 0.4],
+        'microwave' => ['w' => 1.5, 'd' => 0.48],
         'washing-machine' => ['w' => 0.7, 'd' => 0.36],
         'grandfather-clock' => ['w' => 0.3, 'd' => 0.14],
         'armchair' => ['w' => 0.8, 'd' => 0.3],
@@ -322,10 +323,13 @@ final class GamesWorld
         $music = ['w' => self::ROOM_FRAME, 'd' => 480];
         $musicSconces = ['sconce-left' => ['left', 160], 'sconce-right' => ['right', 320]];
         $spotlights = ['spotlight-left' => 250, 'spotlight-right' => 680];
-        // The kitchen's back wall, from the door: the fridge, a counter,
-        // the oven, and a counter to the far wall, with cabinets over both
-        // counters and the lamp over the oven. Things on a counter stand
-        // on its worktop, halfway back.
+        // The kitchen, on its walls: the back is the cooking run, from the
+        // door, the fridge, a counter, the oven, and a counter to the far
+        // wall, with cabinets over both and the lamp over the oven. The
+        // left wall has a counter with the microwave on it. Things on a
+        // counter stand on its worktop, halfway back.
+        $kitchen = ['w' => 900, 'd' => 500];
+        $onKitchen = fn (string $wall, array $thing) => self::onWall($wall, $kitchen, $thing);
         $fridge = 264;
         $oven = 560;
         $worktop = ['y' => self::KITCHEN_COUNTER['h'], 'z' => intdiv(self::KITCHEN_COUNTER['d'], 2)];
@@ -392,22 +396,29 @@ final class GamesWorld
             ]),
 
             'house.kitchen' => self::room('house_kitchen', [
-                'size' => ['w' => 900, 'd' => 500],
+                'size' => $kitchen,
                 'spawn' => ['x' => 450, 'z' => 330],
                 'walls' => ['back' => 'tiles', 'sides' => 'wallpaper-dots', 'floor' => 'lino'],
-                'counters' => [self::kitchenCounter(320, 500), self::kitchenCounter(620, 900)],
+                'counters' => [
+                    self::kitchenCounter(320, 500),
+                    self::kitchenCounter(620, 900),
+                    $onKitchen('left', self::kitchenCounter(150, 390)),
+                ],
                 'lights' => [self::lamp('lamp', $oven, 240, 0)],
             ], [
                 self::roomDoor('hall-door', 120, 'house.hall', 'kitchen-door', 'house_hall', exit: true),
                 self::lampSwitch($oven, 240),
                 // The kitchen's games are its appliances, untitled: the
-                // snacks in the fridge, the pizza in the oven. Their cards
-                // still show the burger and the Pizza. Each is as wide and
-                // deep as its model (three/footprints.js: the oven 1.09 of
-                // its size across, its cooktop at 0.84, the worktop), and a
-                // thrown fruit can land on either.
+                // snacks in the fridge, the pizza in the oven, the sprouts
+                // in the microwave. Their cards still show the burger, the
+                // Pizza and the sprout. The fridge and the oven are as wide
+                // and deep as their models (three/footprints.js: the oven
+                // 1.09 of its size across, its cooktop at 0.84, the worktop),
+                // and a thrown fruit can land on either. The microwave sits
+                // on the left counter, shallow enough to stay on the worktop.
                 self::game('toot-foods', $fridge, 0, ['size' => 230, 'emoji' => '🍔', 'model' => 'fridge', 'titled' => false]),
                 self::game('costco-pizza-poop', $oven, 0, ['size' => 110, 'cast' => 'pizza', 'model' => 'oven', 'titled' => false]),
+                $onKitchen('left', self::game('sprout-pox', 270, 2, ['y' => $worktop['y'], 'size' => 70, 'emoji' => '🥬', 'model' => 'microwave', 'titled' => false])),
                 self::toy('sprout-pot', 410, $worktop['z'], '🍲', 'sprout_pot', ['y' => $worktop['y'], 'size' => 70, 'move' => 'wobble', 'toot' => 'sprout', 'line' => true]),
                 // The fruit bowl, along the far counter: each toots at its
                 // own pitch, and can be picked up and thrown about the room
@@ -446,9 +457,7 @@ final class GamesWorld
                 ],
             ], [
                 self::roomDoor('hall-door', 110, 'house.hall', 'bedroom-door', 'house_hall', exit: true),
-                // The Face, sick in bed, with the TV on the wall to watch.
                 self::tv('tv', 300, 230),
-                self::game('sprout-pox', 440, 60, ['size' => 120, 'cast' => 'face']),
                 self::toy('bed', 640, 130, '🛏️', 'bed', ['size' => 110, 'move' => 'bounce', 'toot' => 'butt', 'line' => true]),
                 self::toy('nightlight', 820, 0, '🌙', 'nightlight', ['y' => 60, 'size' => 50, 'move' => 'wiggle', 'light' => 'nightlight']),
             ]),

@@ -3,6 +3,7 @@ import { armchairModel } from "./armchair.js";
 import { bathtubModel } from "./bathtub.js";
 import { fridgeModel } from "./fridge.js";
 import { grandfatherClockModel } from "./grandfatherClock.js";
+import { microwaveModel } from "./microwave.js";
 import { ovenModel } from "./oven.js";
 import { exhibitEntryModel } from "./exhibitEntry.js";
 import { slotMachineModel } from "./slotMachine.js";
@@ -25,6 +26,7 @@ export const MODELS = {
     "slot-machine": slotMachineModel,
     fridge: fridgeModel,
     oven: ovenModel,
+    microwave: microwaveModel,
     "washing-machine": washingMachineModel,
     "grandfather-clock": grandfatherClockModel,
     armchair: armchairModel,

@@ -19,7 +19,7 @@ import {
 import { SPROUT } from "@/constants/characters.js";
 import { useTranslations } from "@/composables/useTranslations";
 
-// Over the world, in the bedroom (GameHost). The kit is the only way it
+// Over the world, in the kitchen (GameHost). The kit is the only way it
 // reaches the world: the flick, the pop, the miss, the level-up fanfare and
 // the sprout's toot after it, and the score.
 const props = defineProps({
