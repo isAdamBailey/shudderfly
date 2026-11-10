@@ -33,8 +33,7 @@ export function exhibitEntryModel(THREE) {
         emissiveIntensity: 0.16,
     });
 
-    // A little throne-like frame, wide enough to announce the doorway without
-    // blocking it: green enamel pillars, brass caps, and a dark transom.
+    // A throne-like frame: green enamel pillars, brass caps, and a dark transom.
     for (const x of [-0.39, 0.39]) {
         add(new THREE.BoxGeometry(0.09, 0.82, 0.1), enamel, x, 0.41, 0.02);
         add(new THREE.CylinderGeometry(0.075, 0.09, 0.045, 16), brass, x, 0.82, 0.02);
@@ -42,6 +41,21 @@ export function exhibitEntryModel(THREE) {
     }
     add(new THREE.BoxGeometry(0.92, 0.12, 0.12), dark, 0, 0.91, 0.02);
     add(new THREE.BoxGeometry(0.86, 0.025, 0.14), brass, 0, 0.84, 0.02);
+
+    // The opening between the pillars is a door, set just behind their front
+    // faces so the wall behind the frame doesn't show through. A dark leaf,
+    // a brass-edged green panel split by a rail, a kick plate, hinges and a
+    // knob. The plaque hangs on the leaf's upper half.
+    add(new THREE.BoxGeometry(0.72, 0.83, 0.055), dark, 0, 0.415, 0.0345);
+    add(new THREE.BoxGeometry(0.56, 0.36, 0.012), brass, 0, 0.3, 0.074);
+    add(new THREE.BoxGeometry(0.44, 0.26, 0.016), enamel, 0, 0.3, 0.084);
+    add(new THREE.BoxGeometry(0.56, 0.04, 0.012), brass, 0, 0.3, 0.105);
+    add(new THREE.BoxGeometry(0.72, 0.1, 0.016), brass, 0, 0.05, 0.076);
+    for (const y of [0.16, 0.42, 0.68]) {
+        add(new THREE.BoxGeometry(0.045, 0.08, 0.016), brass, -0.325, y, 0.074);
+    }
+    add(new THREE.BoxGeometry(0.08, 0.16, 0.014), brass, 0.31, 0.42, 0.078);
+    add(new THREE.SphereGeometry(0.034, 16, 12), brass, 0.31, 0.42, 0.108);
 
     // An absurdly formal plaque: a toilet-seat medallion with a little toot
     // cloud floating over it, like the exhibit has a royal coat of arms.
