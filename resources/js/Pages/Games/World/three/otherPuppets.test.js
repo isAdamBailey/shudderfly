@@ -20,6 +20,7 @@ function fakeKit() {
                 group: { position, rotation: { y: 0 } },
                 set: vi.fn(),
                 setMove: vi.fn(),
+                play: vi.fn(),
                 setReducedMotion: vi.fn(),
                 tick: vi.fn(() => false),
                 dispose: vi.fn(),
@@ -83,5 +84,15 @@ describe("createOtherPuppets", () => {
 
         others.dispose();
         expect(three.dispose).toHaveBeenCalled();
+    });
+
+    it("plays a one-shot on that person, whichever way their id is written", () => {
+        const kit = fakeKit();
+        const others = createOtherPuppets(kit, { add() {} });
+        others.sync([someone(2)], (o) => o, 0.016);
+
+        others.play("2", "wiggle");
+
+        expect(kit.made[0].play).toHaveBeenCalledWith("wiggle");
     });
 });

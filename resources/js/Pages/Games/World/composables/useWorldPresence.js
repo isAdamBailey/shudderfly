@@ -32,6 +32,10 @@ const RADIO_SINCE_MS = 6 * 60 * 60 * 1000;
 export const NOTES_PER_SECOND = 2;
 export const NOTE_CROWD = 6;
 export const NOTE_BATCH = 16;
+// A toot at someone, or a wiggle: no more than this often. Another in the
+// window waits, and the latest goes.
+export const GESTURE_EVERY_MS = 500;
+const GESTURE_KINDS = ["toot", "wiggle"];
 // How many numbers a note may carry (its handler says what they mean).
 const NOTE_MAX_NUMBERS = 16;
 // No note in a whisper comes later than this after its first, ms.
@@ -124,7 +128,9 @@ function changedEnough(last, next) {
  *   the people in it are, from their `client-place` on arrival and their
  *   `client-move`s, as `others`; its radio, `client-radio`, sent
  *   through `radio()` and handed to `hearRadio`; and its instruments,
- *   `client-note`, sent through `note()` and handed to `hearNote`.
+ *   `client-note`, sent through `note()` and handed to `hearNote`; and a
+ *   toot or a wiggle, `client-gesture`, sent through `gesture()` and handed
+ *   to `hearGesture` (a toot names who it was for).
  *
  * Positions are `{ x, z, lane, facing, moving }` in the scene's own whole
  * units: the road's x and lane (z 0), a room's x and z (lane 0).
@@ -149,6 +155,12 @@ function changedEnough(last, next) {
  * each note with `after`, ms after the first. `hearNote(note)` is called
  * with each of someone else's in your scene, as far apart as they were
  * played, while this tab is showing.
+ *
+ * A gesture is `{ kind, at }`: `toot` or `wiggle`, aimed at one other person
+ * (`at` is their id). `hearGesture({ id, kind, at })` is called with
+ * someone else's in your scene, who sent it. The first goes at once;
+ * another in the next GESTURE_EVERY_MS waits and the latest goes. None go
+ * in a scene of more than NOTE_CROWD, or while you're alone there.
  */
 export function useWorldPresence({
     enabled,
@@ -157,6 +169,7 @@ export function useWorldPresence({
     radioNow = () => null,
     hearRadio = () => {},
     hearNote = () => {},
+    hearGesture = () => {},
 }) {
     const knownScenes = new Set(scenes);
     const members = ref([]);
@@ -205,6 +218,10 @@ export function useWorldPresence({
     // played.
     const noteTimers = new Set();
     const staleTimers = {};
+    // A toot or wiggle waiting out GESTURE_EVERY_MS ({ kind, at }), and the
+    // timer holding it.
+    let gestureWaiting = null;
+    let gestureTimer = null;
 
     const without = (list, member) =>
         list.filter((m) => !sameId(m.id, member.id));
@@ -396,7 +413,8 @@ export function useWorldPresence({
                     hear(meta, data, false)
                 )
                 .listenForWhisper("radio", heardRadio)
-                .listenForWhisper("note", heardNote);
+                .listenForWhisper("note", heardNote)
+                .listenForWhisper("gesture", heardGesture);
         } catch (e) {
             console.error("Error joining the Games World scene:", e);
             sceneChannel = null;
@@ -409,6 +427,9 @@ export function useWorldPresence({
         moveTimer = null;
         sendRadio.cancel();
         sendNotes.cancel();
+        clearTimeout(gestureTimer);
+        gestureTimer = null;
+        gestureWaiting = null;
         notesWaiting = [];
         noteTimers.forEach(clearTimeout);
         noteTimers.clear();
@@ -497,6 +518,26 @@ export function useWorldPresence({
             }, after);
             noteTimers.add(timer);
         }
+    }
+
+    /** `{ kind, at }` of a whispered toot or wiggle, or null for anything
+     * else. `at` is who a toot was for. */
+    function readGesture(data) {
+        const kind = data?.kind;
+        if (!GESTURE_KINDS.includes(kind)) return null;
+        const at = data.at;
+        const aimed =
+            (typeof at === "number" && Number.isFinite(at)) ||
+            (typeof at === "string" && /^[\w-]{1,64}$/.test(at));
+        return { kind, at: aimed ? at : null };
+    }
+
+    /** Someone in the scene tooted or wiggled. */
+    function heardGesture(data, meta) {
+        if (!fromSomeoneHere(meta) || document.hidden) return;
+        const gesture = readGesture(data);
+        if (!gesture) return;
+        hearGesture({ id: meta.user_id, ...gesture });
     }
 
     function stopStale(id) {
@@ -618,6 +659,29 @@ export function useWorldPresence({
         if (notes.length && canNote()) whisper("note", { notes });
     }, 1000 / NOTES_PER_SECOND);
 
+    /** Tooted at someone (`at` is their id), or wiggled. The first goes at
+     * once; another before GESTURE_EVERY_MS waits, and the latest goes.
+     * None go alone or in a scene of more than NOTE_CROWD. One that can't
+     * go is only seen here. */
+    function gesture(kind, at) {
+        if (!GESTURE_KINDS.includes(kind) || at == null || !canNote()) return;
+        gestureWaiting = { kind, at };
+        if (gestureTimer) return;
+        sendGesture();
+    }
+
+    function sendGesture() {
+        const waiting = gestureWaiting;
+        gestureWaiting = null;
+        if (waiting && canNote()) {
+            whisper("gesture", { kind: waiting.kind, at: waiting.at });
+        }
+        gestureTimer = setTimeout(() => {
+            gestureTimer = null;
+            if (gestureWaiting) sendGesture();
+        }, GESTURE_EVERY_MS);
+    }
+
     /** Whispers on the scene's channel; whether it went. */
     function whisper(event, data) {
         try {
@@ -651,5 +715,6 @@ export function useWorldPresence({
         move,
         radio,
         note,
+        gesture,
     };
 }

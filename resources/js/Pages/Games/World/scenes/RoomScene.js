@@ -1020,6 +1020,10 @@ export function createRoomScene(
         animateButt(move) {
             butt.play(move);
         },
+        /** Plays one-shot `move` on someone else's butt. */
+        playOther(id, move) {
+            otherPuppets.play(id, move);
+        },
         /** Presses white key `key` of zone `zone` on organ `id`: it goes
          * down and its pipe sounds. */
         pressKey(id, zone, key) {

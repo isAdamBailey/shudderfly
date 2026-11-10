@@ -71,7 +71,10 @@ export function useToot(sounds = usePage().props, clips = []) {
         if (!at) return;
 
         const id = ++nextId;
-        puffs.value.push({ id, x: at.x, y: at.y, castId });
+        const puff = { id, x: at.x, y: at.y, castId };
+        // A road puff names its depth; a screen puff doesn't.
+        if (typeof at.z === "number") puff.z = at.z;
+        puffs.value.push(puff);
         const timer = setTimeout(() => {
             timers.delete(timer);
             puffs.value = puffs.value.filter((puff) => puff.id !== id);

@@ -1,8 +1,10 @@
+import { sameId } from "@/utils/object";
+
 /**
  * Other people's butts in a scene (issue #174), for the road and the rooms
  * alike: a `castMesh("butt")` each, made as they turn up and dropped as they
- * go. Returns { sync(others, place, dt), setSize(size), setTurn(yaw),
- * setReducedMotion(on), dispose() }.
+ * go. Returns { sync(others, place, dt), play(id, move), setSize(size),
+ * setTurn(yaw), setReducedMotion(on), dispose() }.
  */
 export function createOtherPuppets(kit, scene) {
     // User id → puppet.
@@ -50,6 +52,16 @@ export function createOtherPuppets(kit, scene) {
 
     return {
         sync,
+        /** Plays one-shot `move` on person `id`'s butt (a toot, a wiggle).
+         * Ids arrive as numbers from the roster and strings from a whisper. */
+        play(id, move) {
+            for (const [key, puppet] of puppets) {
+                if (sameId(key, id)) {
+                    puppet.play(move);
+                    return;
+                }
+            }
+        },
         setSize(next) {
             size = next;
             for (const puppet of puppets.values()) puppet.set({ size });

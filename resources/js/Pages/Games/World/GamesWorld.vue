@@ -28,6 +28,7 @@ import { useRadio } from "./composables/useRadio.js";
 import { useFollow } from "./composables/useFollow.js";
 import { useSceneRouter } from "./composables/useSceneRouter.js";
 import { useWorldPresence } from "./composables/useWorldPresence.js";
+import ButtActions from "./components/ButtActions.vue";
 import WorldRoster from "./components/WorldRoster.vue";
 import { activate, noteOf, playedFrom } from "./interactions/index.js";
 import { playDrum } from "./drumSounds.js";
@@ -157,6 +158,13 @@ const presence = useWorldPresence({
         const item = thingsHere().find((t) => t.id === id);
         const played = item && playedFrom(item, which);
         if (played) activate(played, instrumentCtx);
+    },
+    // Someone here tooted or wiggled at you. Not over a card or a scene
+    // change, and not when it was aimed at somebody else.
+    hearGesture({ id, kind, at }) {
+        if (card.value || transition.active) return;
+        if (!sameId(at, page.props.auth?.user?.id)) return;
+        sceneRef.value?.hearGesture?.(id, kind);
     },
 });
 
@@ -588,9 +596,14 @@ function onKeydown(event) {
     if (transition.active) return;
     // A card closing on Escape has already used it.
     if (event.key === "Escape") {
+        if (actionsOpen.value) {
+            actionsOpen.value = false;
+            return;
+        }
         if (!event.defaultPrevented) leave();
         return;
     }
+    if (actionsOpen.value) return;
     // With the stage focused and nothing in it focused, Enter visits whatever
     // the butt is standing at. A focused button fires its own click.
     if (event.key === "Enter") {
@@ -617,6 +630,18 @@ function focusStage() {
     stageEl.value?.focus({ preventScroll: true });
 }
 
+const actionsOpen = ref(false);
+
+function doWiggle(id) {
+    actionsOpen.value = false;
+    sceneRef.value?.wiggle?.(id);
+}
+
+function doToot(id) {
+    actionsOpen.value = false;
+    sceneRef.value?.tootAt?.(id);
+}
+
 // `radioOn(songs)`: whether a radio's songs are playing, for its dial.
 const stage = {
     beginGesture,
@@ -629,6 +654,10 @@ const stage = {
     // Starts following user `id`, and stops when the player steers.
     follow: follow.start,
     steered: follow.stop,
+    // A toot at someone, or a wiggle, for the people in this scene.
+    gesture(kind, at) {
+        presence.gesture(kind, at);
+    },
 };
 </script>
 
@@ -700,6 +729,27 @@ const stage = {
             </button>
         </div>
 
+        <div class="world-actions">
+            <button
+                type="button"
+                class="world-actions-toggle bg-theme-primary text-theme-button hover:bg-theme-button"
+                :aria-expanded="actionsOpen"
+                aria-controls="butt-actions"
+                :aria-label="t('games.world.actions_open')"
+                @click="actionsOpen = !actionsOpen"
+            >
+                <span aria-hidden="true">🍑</span>
+            </button>
+
+            <ButtActions
+                v-if="actionsOpen && !card"
+                :others="presence.others"
+                @wiggle="doWiggle"
+                @toot="doToot"
+                @close="actionsOpen = false"
+            />
+        </div>
+
         <WorldRoster
             v-if="presence.enabled"
             :roster="presence.roster.value"
@@ -762,6 +812,35 @@ const stage = {
 
 .veil.blocking {
     pointer-events: auto;
+}
+
+.world-actions {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+}
+
+.world-actions-toggle {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 9999px;
+    font-size: 1.35rem;
+    line-height: 1;
+    box-shadow: 0 2px 6px rgb(0 0 0 / 0.3);
+}
+
+.stage:has(.world-roster) .world-actions {
+    right: 5.25rem;
+}
+
+.world-actions-toggle:focus-visible {
+    outline: 3px solid #1d4ed8;
+    outline-offset: 3px;
 }
 
 .world-back {

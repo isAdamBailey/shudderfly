@@ -1096,6 +1096,10 @@ export function createRoadScene(
         butt,
         layout,
         sync,
+        /** Plays one-shot `move` on someone else's butt. */
+        playOther(id, move) {
+            otherPuppets.play(id, move);
+        },
         /** The puppet drawing a landmark, e.g. to play its greet. */
         landmarkPuppet(slug) {
             return landmarkPuppets.find((e) => e.slug === slug)?.puppet;

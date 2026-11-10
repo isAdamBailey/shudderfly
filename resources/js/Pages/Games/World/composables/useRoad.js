@@ -185,6 +185,29 @@ export function useRoad(props, emit, options) {
     // CastMember in the DOM, a castMesh puppet in WebGL: both play().
     const buttCast = shallowRef(null);
 
+    /** Toots as the Butt, the puff at `at` (its own spot when left out). */
+    function greetingToot(at = null) {
+        unlockToot();
+        toot("butt", at ?? buttPuffAt());
+    }
+
+    /** Plays a one-shot on the Butt. */
+    function playButt(move) {
+        buttCast.value?.play(move);
+    }
+
+    /** A wiggle or a toot from this Butt, aimed at person `atId`. */
+    function wiggle(atId) {
+        playButt("wiggle");
+        props.stage.gesture?.("wiggle", atId);
+    }
+
+    function tootAt(atId) {
+        greetingToot();
+        playButt("toot");
+        props.stage.gesture?.("toot", atId);
+    }
+
     /** A Toot Food dropped or thrown onto the Butt makes it toot at that
      * food's pitch, the way feeding it does in Toot Foods. */
     function feedIfOnButt(slug, dx) {
@@ -467,6 +490,8 @@ export function useRoad(props, emit, options) {
         release,
         walkUpTo,
         walkThrough,
+        wiggle,
+        tootAt,
     };
 
     return {
@@ -479,6 +504,7 @@ export function useRoad(props, emit, options) {
         idlers,
         puffs,
         unlockToot,
+        greetingToot,
         buttCast,
         buttLift,
         buttMoving,

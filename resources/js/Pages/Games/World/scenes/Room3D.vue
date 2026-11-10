@@ -7,6 +7,7 @@ import { castInDom } from "@/constants/characters.js";
 import { useDarkMode } from "@/composables/useDarkMode";
 import { useToot } from "@/composables/useToot";
 import { useTranslations } from "@/composables/useTranslations";
+import { sameId } from "@/utils/object";
 import { audioRunning } from "@/composables/useAudioContext";
 import { usePreferredReducedMotion } from "@vueuse/core";
 import {
@@ -223,7 +224,11 @@ if (together) {
         together.others,
         (list) =>
             visitors.set(
-                list.map((o) => ({ ...o, ...room.inside(o.x, o.z), lane: 0 }))
+                list.map((o) => ({
+                    ...o,
+                    ...room.inside(o.x, o.z),
+                    lane: 0,
+                }))
             ),
         { immediate: true }
     );
@@ -1205,6 +1210,28 @@ function activateNearest() {
     if (room.nearest.value) room.goUse(room.nearest.value);
 }
 
+function onToot(atId) {
+    const spot = buttSpot();
+    if (spot) tootAt("butt", { x: spot.x, y: spot.y - spot.size / 2 });
+    graph?.animateButt("toot");
+    props.stage.gesture?.("toot", atId);
+}
+
+function onWiggle(atId) {
+    graph?.animateButt("wiggle");
+    props.stage.gesture?.("wiggle", atId);
+}
+
+/** Someone here tooted or wiggled: it plays on their butt. */
+function hearGesture(id, kind) {
+    if (kind === "toot") {
+        const other = visitors.others.find((person) => sameId(person.id, id));
+        const spot = other && seen(other) && buttSpotAt(other);
+        if (spot) tootAt("butt", { x: spot.x, y: spot.y - spot.size / 2 });
+    }
+    graph?.playOther(id, kind);
+}
+
 // Set while the world is paused, so a TV's picture and sound wait. (Pausing
 // also lets go of keys and drags, once; see room.halt.)
 const paused = ref(false);
@@ -1246,6 +1273,9 @@ defineExpose({
     // Following someone (useFollow): up to them, or through a door.
     walkUpTo: (other) => room.walkUpTo(other.x, other.z),
     walkThrough: (door) => room.goUse(door),
+    hearGesture,
+    wiggle: onWiggle,
+    tootAt: onToot,
 });
 </script>
 

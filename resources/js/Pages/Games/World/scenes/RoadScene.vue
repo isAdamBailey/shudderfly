@@ -3,6 +3,7 @@ import { usePage } from "@inertiajs/vue3";
 import CastMember from "@/Components/Games/Cast/CastMember.vue";
 import TootPuff from "@/Components/Games/Cast/TootPuff.vue";
 import { useTranslations } from "@/composables/useTranslations";
+import { sameId } from "@/utils/object";
 import { computed, ref } from "vue";
 import TiltPermissionButton from "@/Components/TiltPermissionButton.vue";
 import LandmarkTitle from "../components/LandmarkTitle.vue";
@@ -51,6 +52,7 @@ const {
     idlers,
     puffs,
     unlockToot,
+    greetingToot,
     buttCast,
     buttLift,
     buttMoving,
@@ -125,7 +127,28 @@ const buttStyle = computed(() => ({
     transform: `translate3d(${butt.x}px, 0, 0) translateX(-50%)`,
 }));
 
-defineExpose(api);
+const otherCasts = {};
+function setOtherCast(id, el) {
+    if (el) otherCasts[id] = el;
+    else delete otherCasts[id];
+}
+
+/** Someone here tooted or wiggled: it plays on their butt. */
+function hearGesture(id, kind) {
+    if (kind === "toot") {
+        const other = world.others.find((o) => sameId(o.id, id));
+        const butt = buttEl.value;
+        if (other && butt) {
+            greetingToot({
+                x: other.x,
+                y: butt.offsetTop + butt.offsetHeight / 2,
+            });
+        }
+    }
+    otherCasts[id]?.play(kind);
+}
+
+defineExpose({ ...api, hearGesture });
 </script>
 
 <template>
@@ -212,6 +235,7 @@ defineExpose(api);
             >
                 <CastMember
                     id="butt"
+                    :ref="(el) => setOtherCast(other.id, el)"
                     :move="other.walking ? 'walk' : null"
                     :facing="other.facing < 0 ? 'left' : 'right'"
                     :lift="other.lift"

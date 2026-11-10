@@ -4,6 +4,7 @@ import TootPuff from "@/Components/Games/Cast/TootPuff.vue";
 import TiltPermissionButton from "@/Components/TiltPermissionButton.vue";
 import { useDarkMode } from "@/composables/useDarkMode";
 import { useTranslations } from "@/composables/useTranslations";
+import { sameId } from "@/utils/object";
 import {
     computed,
     onBeforeUnmount,
@@ -56,6 +57,7 @@ const {
     idlers,
     puffs,
     unlockToot,
+    greetingToot,
     buttCast,
     buttLift,
     peekX,
@@ -295,7 +297,7 @@ const puffSpots = computed(() =>
               ...worldToScreen(view.value, {
                   x: puff.x,
                   y: puff.y,
-                  z: buttZ.value,
+                  z: puff.z ?? buttZ.value,
               }),
           }))
         : []
@@ -308,7 +310,33 @@ function pointOf(id) {
     return s ? { x: s.x, y: s.y - s.height / 2 } : null;
 }
 
-defineExpose({ ...api, setBounds, pointOf });
+/** Where someone else's toot shows, in the road's own units. */
+function puffFor(other) {
+    const L = layout.value;
+    if (!view.value || !L) return null;
+    return {
+        x: other.x,
+        y: L.sizes.butt / 2 + (other.lift || 0),
+        z: L.laneZ(other.lane),
+    };
+}
+
+/** Someone here tooted or wiggled: it plays on their butt. */
+function hearGesture(id, kind) {
+    if (kind === "toot") {
+        const other = world.others.find((o) => sameId(o.id, id));
+        const at = other && puffFor(other);
+        if (at) greetingToot(at);
+    }
+    graph?.playOther(id, kind);
+}
+
+defineExpose({
+    ...api,
+    setBounds,
+    pointOf,
+    hearGesture,
+});
 </script>
 
 <template>
