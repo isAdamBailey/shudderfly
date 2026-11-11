@@ -1,6 +1,7 @@
 import { clamp } from "../composables/useGamesWorld.js";
 import { groundZAtRow } from "../composables/projection.js";
 import { jitter } from "@/utils/math";
+import { own } from "@/utils/object";
 
 /**
  * Where everything on the WebGL road goes, as pure numbers (issue #130). The
@@ -58,6 +59,16 @@ const SIZES = {
 };
 // A roof's height, as a share of its building's height to the eaves.
 export const ROOF = 0.38;
+// The sky a shaped building leaves over its spire, as a share of the stage
+// height: it's never so tall that its top goes off the screen.
+const SKY_ROOM = 0.05;
+// A shaped building (streetGeometry.js FACADES) is this many times the
+// plain one's width and height, and its `roof` (towers and spires) this
+// share of its height above the eaves.
+export const FACADE_SIZES = {
+    gothic: { width: 1.8, height: 1.25, roof: 0.86 },
+    haunted: { width: 1.6, height: 1.3, roof: 1.12 },
+};
 // The flat road's drifter spots: rows and columns as stage shares, px size.
 export const DRIFTERS = { count: 4, size: 38, drift: 60, period: 18 };
 
@@ -101,6 +112,8 @@ export function roadLayout({ w, h, vmin }) {
         building: units(screenSize(SIZES.building, h), z.buildings),
         nearBuilding: units(screenSize(SIZES.nearBuilding, h), z.nearBuildings),
         mid: units(screenSize(SIZES.mid, h), z.mid),
+        // The tallest a far-side building may stand, roof and all.
+        buildingTop: units((ROWS.buildings - SKY_ROOM) * h, z.buildings),
     };
 
     /** World units per screen px for an idler in `row`: useRoad hands the
@@ -133,19 +146,27 @@ export function roadLayout({ w, h, vmin }) {
  * above the eaves. The far side's stand back from the road; the near side's
  * are smaller and face the camera. Sizes vary a little by x, the same every
  * visit. */
-export function buildingBox(L, { x, side = "far" }) {
+export function buildingBox(L, { x, side = "far", facade = null }) {
     const near = side === "near";
-    const height =
+    const shaped = own(FACADE_SIZES, facade ?? "");
+    const base =
         (near ? L.sizes.nearBuilding : L.sizes.building) *
         (0.9 + jitter(x) * 0.2);
-    const width = height * (0.95 + jitter(x + 3) * 0.25);
+    const plainWidth = base * (0.95 + jitter(x + 3) * 0.25);
+    const height = shaped
+        ? Math.min(
+              base * shaped.height,
+              (L.sizes.buildingTop ?? Infinity) / (1 + shaped.roof)
+          )
+        : base;
+    const width = plainWidth * (shaped?.width ?? 1);
     return {
         x,
         z: near ? L.z.nearBuildings : L.z.buildings,
         width,
         height,
-        depth: width * (near ? 0.45 : 0.7),
-        roof: height * ROOF,
+        depth: plainWidth * (near ? 0.45 : 0.7),
+        roof: height * (shaped?.roof ?? ROOF),
     };
 }
 

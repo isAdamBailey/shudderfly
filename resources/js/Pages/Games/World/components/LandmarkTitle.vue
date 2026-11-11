@@ -1,7 +1,9 @@
 <script setup>
 import { computed } from "vue";
 
-// A landmark's name in gold on an arc, shared by both road drawers: a
+// A landmark's name in gold on an arc, over the DOM road's landmarks and
+// the rooms' titled things (the WebGL road's buildings carry their own
+// signs, so it hangs none there): a
 // gilded-extrusion look (SVG textPath on an arc, layered depth copies,
 // gradient face) rather than a straight line of CSS text — the arc
 // bows over the icon's shoulders so a long game name has room to fit without

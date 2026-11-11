@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { worldToScreen } from "../composables/projection.js";
 import {
     buildingBox,
+    FACADE_SIZES,
     RIDGE_DEPTH,
     ROWS,
     roadCamera,
@@ -87,6 +88,26 @@ describe("roadLayout", () => {
             const small = roadLayout({ w: 390, h: 420, vmin: 390 });
             const tiny = buildingBox(small, { x });
             expect(tiny.width * small.scaleAt(tiny.z)).toBeGreaterThan(48);
+        }
+    });
+
+    it("keeps a shaped building's spires in the sky, however big", () => {
+        for (const facade of Object.keys(FACADE_SIZES)) {
+            for (const size of [stage, { w: 390, h: 420, vmin: 390 }]) {
+                const layout = roadLayout(size);
+                const view = roadCamera(layout, 0);
+                for (const x of [1500, 3300]) {
+                    const box = buildingBox(layout, { x, facade });
+                    const plain = buildingBox(layout, { x });
+                    const top = worldToScreen(view, {
+                        x,
+                        y: box.height + box.roof,
+                        z: box.z,
+                    });
+                    expect(top.y).toBeGreaterThan(size.h * 0.04);
+                    expect(box.width).toBeGreaterThan(plain.width * 1.5);
+                }
+            }
         }
     });
 

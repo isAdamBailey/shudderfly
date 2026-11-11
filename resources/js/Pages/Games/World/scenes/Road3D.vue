@@ -15,7 +15,6 @@ import {
 } from "vue";
 import InteractableButton from "../components/InteractableButton.vue";
 import { boxStyle } from "../components/overlay.js";
-import LandmarkTitle from "../components/LandmarkTitle.vue";
 import OtherButton from "../components/OtherButton.vue";
 import { screenToGround, worldToScreen } from "../composables/projection.js";
 import { useRoad } from "../composables/useRoad.js";
@@ -225,7 +224,12 @@ const landmarksInOrder = computed(() =>
 // The landmarks' buildings, which change only with the stage's size.
 const landmarkBoxes = computed(() =>
     layout.value
-        ? landmarks.value.map((landmark) => buildingBox(layout.value, landmark))
+        ? landmarks.value.map((landmark) =>
+              buildingBox(layout.value, {
+                  ...landmark,
+                  facade: landmark.item?.facade,
+              })
+          )
         : []
 );
 
@@ -361,6 +365,7 @@ defineExpose({
                 :key="landmark.slug"
                 :ref="(el) => setLandmarkEl(landmark.slug, el)"
                 class="landmark"
+                :data-slug="landmark.slug"
                 :x="landmarkSpots[landmark.slug].x"
                 :y="landmarkSpots[landmark.slug].y"
                 :size="landmarkSpots[landmark.slug].width"
@@ -370,9 +375,7 @@ defineExpose({
                 @click="world.openConfirm(landmark.slug)"
                 @pointerenter="hovered = landmark.slug"
                 @pointerleave="hovered = null"
-            >
-                <LandmarkTitle :id="landmark.slug" :name="landmark.name" />
-            </InteractableButton>
+            />
 
             <!-- Someone else: a tap follows them. -->
             <OtherButton

@@ -211,6 +211,11 @@ final class GamesWorld
      * Vitest test keeps them in step). */
     public const DOORS = ['guster'];
 
+    /** Named building shapes a road door's `facade` may give, instead of the
+     * street's plain gabled house: streetGeometry.js FACADES (a Vitest test
+     * keeps them in step). */
+    public const FACADES = ['gothic', 'haunted'];
+
     /** Named sounds a toy's `sound` may use: sounds.js (a Vitest test keeps
      * them in step). */
     public const SOUNDS = ['hiss', 'tick', 'bell', 'chomp', 'bonk', 'whoosh', 'pop', 'thud', 'fanfare'];
@@ -339,13 +344,17 @@ final class GamesWorld
                 'kind' => 'road',
                 'label' => 'messages.games.world.places.street',
                 'interactables' => [
-                    // The buildings you can go into. The road keeps a gap (600
-                    // on the far side) for another.
-                    self::roadDoor('house', 1050, 'near', '🏠', 'house', 'house.hall'),
-                    self::roadDoor('library', 1500, 'far', '📚', 'library', 'library.hall'),
+                    // The buildings you can go into, all on the far side,
+                    // 600 apart: the Butt's own house first, by where it
+                    // starts.
+                    self::roadDoor('house', 400, 'far', '🏠', 'house', 'house.hall'),
+                    // A great old gothic library, its sign in the rose window.
+                    self::roadDoor('library', 1000, 'far', '📚', 'library', 'library.hall', facade: 'gothic'),
                     // Guster himself is the sign over his green door.
-                    self::roadDoor('guster-house', 2400, 'far', null, 'guster_house', 'guster-house.hall', cast: 'guster', door: 'guster'),
-                    self::roadDoor('cockroach-house', 3300, 'far', '🪳', 'cockroach_house', 'cockroach-house.hall'),
+                    self::roadDoor('guster-house', 1600, 'far', null, 'guster_house', 'guster-house.hall', cast: 'guster', door: 'guster'),
+                    // A big scary house, its clock tower the hall's
+                    // grandfather clock, the sign over its door.
+                    self::roadDoor('cockroach-house', 2200, 'far', '🪳', 'cockroach_house', 'cockroach-house.hall', facade: 'haunted'),
                 ],
             ],
 
@@ -1025,7 +1034,7 @@ final class GamesWorld
      * leading to its room's `front-door`. Its sign is its `emoji`, or a
      * `cast` member over its door instead. Its front door is plain
      * wood, or the `door` named from DOORS. */
-    private static function roadDoor(string $id, int $x, string $side, ?string $emoji, string $label, string $to, ?string $cast = null, ?string $door = null): array
+    private static function roadDoor(string $id, int $x, string $side, ?string $emoji, string $label, string $to, ?string $cast = null, ?string $door = null, ?string $facade = null): array
     {
         return [
             'id' => $id,
@@ -1037,6 +1046,7 @@ final class GamesWorld
             'to' => $to,
             'toSpot' => 'front-door',
             ...($door ? ['door' => $door] : []),
+            ...($facade ? ['facade' => $facade] : []),
         ];
     }
 

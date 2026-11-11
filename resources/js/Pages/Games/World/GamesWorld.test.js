@@ -405,12 +405,13 @@ describe("GamesWorld stage", () => {
         expect(buttons.map((b) => b.attributes("aria-label"))).toEqual(
             GAMES.map(() => "games.world.landmark_aria")
         );
-        // Every button is a real tap target, with its gold title.
+        // Every button is a real tap target. The buildings carry their own
+        // signs, so no gold title hangs over them.
         for (const button of buttons) {
             expect(button.attributes("style")).toMatch(
                 /width: (4[89]|[5-9]\d|\d{3})/
             );
-            expect(button.find(".landmark-title").exists()).toBe(true);
+            expect(button.find(".landmark-title").exists()).toBe(false);
         }
         expect(wrapper.findAll(".idler")).toHaveLength(3);
         expect(wrapper.get(".butt").attributes("role")).toBe("img");
@@ -541,7 +542,10 @@ describe("GamesWorld stage", () => {
 
         const names = wrapper
             .findAll("button.interactable")
-            .map((b) => GAMES.find((g) => b.text().includes(g.name)).name);
+            .map(
+                (b) =>
+                    GAMES.find((g) => g.slug === b.attributes("data-slug")).name
+            );
         expect(names).toEqual(["Sprout Pox", "Poop Boom", "Toot Foods"]);
     });
 
@@ -1354,14 +1358,12 @@ describe("GamesWorld hosted game", () => {
         },
     };
 
-    const landmark = (label) =>
-        wrapper
-            .findAll("button.landmark")
-            .find((button) => button.text().includes(label));
+    const landmark = (slug) =>
+        wrapper.get(`button.landmark[data-slug="${slug}"]`);
 
     it("plays a game over the road and comes back to the same spot", async () => {
         wrapper = await mountWorld(withCockroach);
-        await landmark("Cockroach Fart").trigger("click");
+        await landmark("cockroach").trigger("click");
         await nextTick();
 
         expect(wrapper.get('[role="dialog"]').text()).toContain(
@@ -1374,7 +1376,7 @@ describe("GamesWorld hosted game", () => {
         expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
         expect(wrapper.find(ROAD).exists()).toBe(true);
 
-        await landmark("Cockroach Fart").trigger("click");
+        await landmark("cockroach").trigger("click");
         await nextTick();
         await wrapper.get(".world-card-action").trigger("click");
         await flushPromises();
@@ -1391,7 +1393,7 @@ describe("GamesWorld hosted game", () => {
     it("stops drawing the world while a game covers it", async () => {
         wrapper = await mountWorld(withCockroach);
         const gl = fake.renderers[0];
-        await landmark("Cockroach Fart").trigger("click");
+        await landmark("cockroach").trigger("click");
         await nextTick();
         await wrapper.get(".world-card-action").trigger("click");
         await flushPromises();

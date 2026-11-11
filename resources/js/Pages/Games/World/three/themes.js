@@ -32,6 +32,32 @@ const DEFAULT = {
     roofs: ["#b45309", "#9f1239", "#475569", "#7c2d12"],
     trim: "#fffbeb",
     glass: "#bae6fd",
+    // A gothic facade's stone (streetGeometry.js gothic()): its walls, the
+    // deep shadow of its arches, carved trim, the slate of its roofs and
+    // spires, and the gilt finials on top.
+    stone: {
+        wall: "#8f887c",
+        dark: "#4f4a43",
+        trim: "#b9b1a1",
+        roof: "#3b4250",
+        spire: "#2f3540",
+        finial: "#d4a72c",
+    },
+    // A haunted facade's look (streetGeometry.js haunted()): its weathered
+    // boards, their shadows and trim, its roofs, and its clock tower in the
+    // grandfather clock's oak, brass and cream (three/grandfatherClock.js),
+    // with sickly glass that the night lights as every window.
+    haunt: {
+        wall: "#463c34",
+        dark: "#1a1410",
+        trim: "#6b5a4a",
+        roof: "#262027",
+        oak: "#4a2c17",
+        oakDark: "#2e1a0d",
+        brass: "#d4a73a",
+        face: "#f5ecd7",
+        glass: "#b5cf86",
+    },
     // Windows glow this colour (at this strength) at night; null in
     // daylight.
     lit: null,
@@ -72,6 +98,25 @@ export const WORLD_THEMES = {
         walls: ["#b3192b", "#1f6b45", "#f4e7d0", "#b5703a"],
         roofs: ["#f8fbff"],
         trim: "#ffffff",
+        stone: {
+            wall: "#9a9488",
+            dark: "#4f4a43",
+            trim: "#ffffff",
+            roof: "#f8fbff",
+            spire: "#eef4fb",
+            finial: "#ffc83d",
+        },
+        haunt: {
+            wall: "#4d423a",
+            dark: "#1a1410",
+            trim: "#ffffff",
+            roof: "#f8fbff",
+            oak: "#4a2c17",
+            oakDark: "#2e1a0d",
+            brass: "#ffc83d",
+            face: "#f5ecd7",
+            glass: "#ffd27a",
+        },
         bulbs: ["#ff3b3b", "#36d16b", "#ffc83d", "#4aa8ff"],
         leaves: ["#166534", "#14532d"],
         lit: "#ffd27a",
@@ -87,6 +132,26 @@ export const WORLD_THEMES = {
         grass: "#4d7c0f",
         walls: ["#a78bfa", "#fb923c", "#94a3b8", "#a3a3a3"],
         roofs: ["#1f2937", "#3b0764"],
+        // Old soot-black stone, a haunted library.
+        stone: {
+            wall: "#57525c",
+            dark: "#221f26",
+            trim: "#78717c",
+            roof: "#1c1a22",
+            spire: "#141218",
+            finial: "#f97316",
+        },
+        haunt: {
+            wall: "#3a3036",
+            dark: "#0f0c10",
+            trim: "#5a4a52",
+            roof: "#16131a",
+            oak: "#3b2213",
+            oakDark: "#22130a",
+            brass: "#f97316",
+            face: "#f5ecd7",
+            glass: "#ff9a3c",
+        },
         leaves: ["#c2410c", "#a16207", "#7c2d12"],
         lit: "#ffb347",
         key: { color: "#ff9b54", intensity: 1.3 },

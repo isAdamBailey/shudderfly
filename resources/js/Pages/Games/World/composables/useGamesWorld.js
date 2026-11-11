@@ -5,7 +5,7 @@ export const WALK_SPEED = 220; // px/s while an arrow key is held
 // A drag steers the butt rather than teleporting it: it strolls toward the
 // finger at its own pace, so a flick of the wrist can't rocket it down the road.
 export const DRAG_SPEED = 320; // px/s while being dragged
-export const END_PAD = 700; // road that keeps going past the last landmark
+export const END_PAD = 500; // road that keeps going past the last landmark
 export const SNAP_RADIUS = 110; // drop this close to a landmark and its card opens
 // Camera deadzone: the camera only moves once the butt leaves the middle band
 // of the stage, expressed as fractions of stage width.

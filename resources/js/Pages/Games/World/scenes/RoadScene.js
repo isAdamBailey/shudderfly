@@ -1,5 +1,6 @@
 import { TOOT_FOODS } from "@/constants/characters.js";
 import { approach, jitter } from "@/utils/math";
+import { own } from "@/utils/object";
 import { worldToScreen } from "../composables/projection.js";
 import {
     applyCamera,
@@ -28,6 +29,7 @@ import {
     place,
     potty,
     tree,
+    FACADES,
 } from "./streetGeometry.js";
 
 // The `kind: "road"` scene graph (issue #130): a street seen side-on with
@@ -399,6 +401,9 @@ export function createRoadScene(
             // A building you can go into has a front door, its own if it
             // names one (streetGeometry.js DOORS).
             door: door ? landmark.item.door ?? "plain" : null,
+            // Its building's shape, if not the plain house
+            // (streetGeometry.js FACADES).
+            facade: landmark.item?.facade ?? null,
             // A sign is up on the wall, with no ground to shadow.
             puppet: landmark.cast
                 ? kit.castMesh(landmark.cast, { shadows: !door })
@@ -541,6 +546,7 @@ export function createRoadScene(
                 look: theme,
                 palette,
                 door: entry.door,
+                facade: entry.facade,
             });
             const at = { x: box.x, z: box.z };
             if (entry.side === "near") {
@@ -740,13 +746,17 @@ export function createRoadScene(
      * cast member standing before the building. */
     function placeLandmarkPuppet(entry, box) {
         if (entry.sign) {
-            const size = Math.min(box.width, box.height) * 0.42;
+            // A shaped front says where its sign goes (a gothic one's in
+            // its rose window); otherwise it's high in the middle.
+            const shaped = own(FACADES, entry.facade ?? "")?.sign(box);
+            const size = shaped?.size ?? Math.min(box.width, box.height) * 0.42;
             entry.puppet.set({ size });
             // Out from the wall far enough that a solid sign (Guster)
             // doesn't sink into it.
             entry.base = {
-                y: box.height * 0.97 - size,
-                z: box.z + 2 + size * (entry.puppet.back ?? 0),
+                y: shaped?.y ?? box.height * 0.97 - size,
+                // In front of a shaped front's window ring.
+                z: box.z + (shaped?.z ?? 2) + size * (entry.puppet.back ?? 0),
             };
         } else {
             const size = box.height * 0.62;

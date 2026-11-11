@@ -88,6 +88,9 @@ class GamesWorldScenesTest extends TestCase
             if (isset($item['door'])) {
                 $this->assertContains($item['door'], GamesWorld::DOORS, "road.{$item['id']} door");
             }
+            if (isset($item['facade'])) {
+                $this->assertContains($item['facade'], GamesWorld::FACADES, "road.{$item['id']} facade");
+            }
         }
     }
 
@@ -318,7 +321,7 @@ class GamesWorldScenesTest extends TestCase
         $door = collect($scenes['road']['interactables'])->firstWhere('id', 'cockroach-house');
 
         $this->assertSame('door', $door['type']);
-        $this->assertSame(3300, $door['x']);
+        $this->assertSame(2200, $door['x']);
         $this->assertSame('far', $door['side']);
         $this->assertSame('cockroach-house.hall', $door['to']);
 
