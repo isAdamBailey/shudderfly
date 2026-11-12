@@ -86,9 +86,39 @@
 
             <div class="w-full">
                 <div
+                    v-if="message.message"
                     class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words text-lg leading-relaxed"
                     v-html="formatMessage(message.message, message.user_id)"
                 ></div>
+                <div
+                    v-if="message.voice_clip_status"
+                    class="mt-2"
+                    data-test="voice-clip"
+                >
+                    <VoiceClipPlayer
+                        v-if="message.voice_clip_url"
+                        :src="message.voice_clip_url"
+                        :duration="message.voice_clip_duration"
+                    />
+                    <p
+                        v-else-if="message.voice_clip_status === 'failed'"
+                        class="inline-flex items-center gap-2 text-sm text-red-700 dark:text-red-300"
+                    >
+                        <i class="ri-error-warning-line" aria-hidden="true"></i>
+                        {{ t("voice.failed") }}
+                    </p>
+                    <p
+                        v-else
+                        class="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300"
+                        role="status"
+                    >
+                        <i
+                            class="ri-loader-4-line animate-spin text-lg"
+                            aria-hidden="true"
+                        ></i>
+                        {{ t("voice.processing") }}
+                    </p>
+                </div>
                 <div
                     v-if="
                         message.page_id &&
@@ -225,7 +255,11 @@
                         ></i>
                     </button>
                     <Link
-                        :href="route('games.index', { scene: 'guster-house.exhibit' })"
+                        :href="
+                            route('games.index', {
+                                scene: 'guster-house.exhibit',
+                            })
+                        "
                         class="btn-bulge mt-1 inline-flex min-h-11 items-center gap-2 rounded-lg border border-gray-500/70 bg-gray-200 px-3 py-2 text-sm font-semibold text-gray-800 transition-colors hover:bg-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
                         @click.stop
                     >
@@ -584,6 +618,7 @@ import ViewReactionsModal from "@/Components/Messages/ViewReactionsModal.vue";
 import Modal from "@/Components/Modal.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
+import VoiceClipPlayer from "@/Components/Messages/VoiceClipPlayer.vue";
 import { channelName } from "@/utils/broadcastChannel";
 import { stripHtml } from "@/utils/text";
 import { usePermissions } from "@/composables/permissions";
@@ -600,6 +635,7 @@ import { useMessageBuilder } from "@/composables/useMessageBuilder";
 import { useMessageLocator } from "@/composables/useMessageLocator";
 import { useMusicPlayer } from "@/composables/useMusicPlayer";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import { playVoiceClip } from "@/composables/useVoiceClipPlayback";
 import { isEmbeddableYouTubeVideo } from "@/composables/useGetYouTubeVideo";
 import { useTranslations } from "@/composables/useTranslations";
 import { useMedia } from "@/mediaHelpers";
@@ -690,8 +726,14 @@ const {
     resume: resumeInfiniteScroll,
 } = useInfiniteScroll(messagesData.value, messagesPagination);
 
+// Voice clips that finished (ready or failed) since the props were loaded,
+// by message id. Rebuilds from props or infinite scroll still carry
+// "processing", so this keeps the finished state over them.
+const voiceClipUpdates = new Map();
+
 const normalizeMessage = (message) => ({
     ...message,
+    ...voiceClipUpdates.get(message.id),
     grouped_reactions: message.grouped_reactions || {},
     comments: (message.comments || []).map((comment) => ({
         ...comment,
@@ -1105,6 +1147,11 @@ const joinForSpeech = (...parts) =>
         .join(" ");
 
 const speakMessage = (message) => {
+    // A voice-only message is heard as recorded, not read out.
+    if (!message.message?.trim() && message.voice_clip_url) {
+        playVoiceClip(message.voice_clip_url);
+        return;
+    }
     speak(
         joinForSpeech(
             formatMentionsForSpeech(message.message),
@@ -1181,6 +1228,10 @@ const setupEchoListener = () => {
             handleReactionUpdate(event);
         });
 
+        messagesChannel.value.listen(".MessageVoiceClipUpdated", (event) => {
+            handleVoiceClipUpdate(event);
+        });
+
         messagesChannel.value.listen(".CommentCreated", (event) => {
             handleCommentEvent(event);
         });
@@ -1236,6 +1287,13 @@ const handleReactionUpdate = (event) => {
     if (messageIndex !== -1) {
         localMessages.value[messageIndex].grouped_reactions = groupedReactions;
     }
+};
+
+const handleVoiceClipUpdate = (event) => {
+    const { message_id: id, ...clip } = event;
+    voiceClipUpdates.set(id, clip);
+    const message = localMessages.value.find((m) => m.id === id);
+    if (message) Object.assign(message, clip);
 };
 
 const cleanup = () => {

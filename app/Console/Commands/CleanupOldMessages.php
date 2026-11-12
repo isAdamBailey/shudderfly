@@ -5,7 +5,6 @@ namespace App\Console\Commands;
 use App\Models\Message;
 use App\Models\SiteSetting;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 
 class CleanupOldMessages extends Command
 {
@@ -34,30 +33,17 @@ class CleanupOldMessages extends Command
 
         $cutoffDate = now()->subDays($retentionDays);
 
-        // Get message IDs that will be deleted
-        $messageIds = Message::where('created_at', '<', $cutoffDate)
-            ->pluck('id')
-            ->toArray();
-
-        // Delete notifications that reference these messages (bulk delete doesn't fire model events)
-        $notificationCount = 0;
-        if (! empty($messageIds)) {
-            foreach ($messageIds as $messageId) {
-                $count = DB::table('notifications')
-                    ->where('type', 'App\\Notifications\\UserTagged')
-                    ->whereRaw("JSON_EXTRACT(data, '$.message_id') = ?", [$messageId])
-                    ->delete();
-                $notificationCount += $count;
-            }
-        }
-
-        // Delete the messages
-        $deletedCount = Message::where('created_at', '<', $cutoffDate)->delete();
+        // One at a time, not a bulk delete, so Message's deleting hook runs:
+        // it removes the message's notifications and its voice clip's audio.
+        $deletedCount = 0;
+        Message::where('created_at', '<', $cutoffDate)
+            ->lazyById()
+            ->each(function (Message $message) use (&$deletedCount) {
+                $message->delete();
+                $deletedCount++;
+            });
 
         $this->info("Deleted {$deletedCount} message(s) older than {$retentionDays} days.");
-        if ($notificationCount > 0) {
-            $this->info("Deleted {$notificationCount} notification(s) for deleted messages.");
-        }
 
         return Command::SUCCESS;
     }

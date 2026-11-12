@@ -5,7 +5,6 @@ namespace App\Notifications;
 use App\Models\Message;
 use App\Models\MessageComment;
 use App\Models\User;
-use App\Support\GameShareMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Notifications\Messages\BroadcastMessage;
@@ -71,13 +70,7 @@ class UserTagged extends Notification implements ShouldBroadcast
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $contentText = $this->contentType === 'comment' && $this->content instanceof MessageComment
-            ? $this->content->comment
-            : ($this->content instanceof Message ? $this->content->message : '');
-
-        $mailQuote = $this->contentType === 'comment'
-            ? $contentText
-            : GameShareMessage::stripSlugMarker($contentText);
+        $mailQuote = $this->content->previewText();
 
         return (new MailMessage)
             ->subject(__('messages.tagged.subject', ['name' => $this->tagger->name]))
@@ -96,13 +89,7 @@ class UserTagged extends Notification implements ShouldBroadcast
     {
         $title = __('messages.tagged.title', ['name' => $this->tagger->name]);
 
-        $contentText = $this->contentType === 'comment' && $this->content instanceof MessageComment
-            ? $this->content->comment
-            : ($this->content instanceof Message ? $this->content->message : '');
-
-        $previewText = $this->contentType === 'comment'
-            ? $contentText
-            : GameShareMessage::stripSlugMarker($contentText);
+        $previewText = $this->content->previewText();
 
         $messageBody = mb_strlen($previewText, 'UTF-8') > 120
             ? mb_substr($previewText, 0, 117, 'UTF-8').'...'
@@ -127,7 +114,7 @@ class UserTagged extends Notification implements ShouldBroadcast
             $data['message'] = $this->content->comment;
         } else {
             $data['message_id'] = $this->content instanceof Message ? $this->content->id : null;
-            $data['message'] = GameShareMessage::stripSlugMarker($contentText);
+            $data['message'] = $this->content->previewText();
         }
 
         return new BroadcastMessage([
@@ -148,10 +135,6 @@ class UserTagged extends Notification implements ShouldBroadcast
      */
     public function toArray(object $notifiable): array
     {
-        $contentText = $this->contentType === 'comment' && $this->content instanceof MessageComment
-            ? $this->content->comment
-            : ($this->content instanceof Message ? $this->content->message : '');
-
         $data = [
             'tagger_id' => $this->tagger->id,
             'tagger_name' => $this->tagger->name,
@@ -167,7 +150,7 @@ class UserTagged extends Notification implements ShouldBroadcast
             $data['message'] = $this->content->comment;
         } else {
             $data['message_id'] = $this->content instanceof Message ? $this->content->id : null;
-            $data['message'] = GameShareMessage::stripSlugMarker($contentText);
+            $data['message'] = $this->content->previewText();
         }
 
         return $data;

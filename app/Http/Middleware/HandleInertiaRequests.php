@@ -116,6 +116,7 @@ class HandleInertiaRequests extends Middleware
                 ? ['voices' => config('services.ai_voice.voices'), 'seasonal' => AiVoice::seasonalVoices()]
                 : null,
             'collageMaxPages' => (int) config('collage.max_pages'),
+            'voiceClipMaxSeconds' => (int) config('voice_messages.max_seconds'),
             'broadcastChannelPrefix' => fn () => (string) config('broadcasting.channel_prefix'),
             'worldClock' => fn () => $request->user()
                 ? WorldClockState::payload(WorldClockSetting::instance())

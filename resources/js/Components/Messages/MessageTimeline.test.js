@@ -1653,4 +1653,118 @@ describe("MessageTimeline", () => {
             );
         });
     });
+
+    describe("Voice clips", () => {
+        const voiceOnly = (attrs = {}) => ({
+            id: 7,
+            message: null,
+            created_at: new Date().toISOString(),
+            user: { id: 2, name: "Bob" },
+            voice_clip_status: "ready",
+            voice_clip_duration: 4,
+            voice_clip_url: "https://cdn.test/voice-clips/a.m4a",
+            ...attrs,
+        });
+
+        it("shows the player for a ready clip", () => {
+            const wrapper = mount(MessageTimeline, {
+                props: { messages: [voiceOnly()], users: mockUsers },
+            });
+
+            const clip = wrapper.find('[data-test="voice-clip"]');
+            expect(clip.find("button").attributes("aria-label")).toBe(
+                "voice.play"
+            );
+        });
+
+        it("shows text and a clip together", () => {
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: [voiceOnly({ message: "Listen" })],
+                    users: mockUsers,
+                },
+            });
+
+            expect(wrapper.text()).toContain("Listen");
+            expect(
+                wrapper.find('[data-test="voice-clip"] button').exists()
+            ).toBe(true);
+        });
+
+        it("shows a processing state until the clip is ready", async () => {
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: [
+                        voiceOnly({
+                            voice_clip_status: "processing",
+                            voice_clip_url: null,
+                        }),
+                    ],
+                    users: mockUsers,
+                },
+            });
+
+            expect(wrapper.find('[data-test="voice-clip"]').text()).toContain(
+                "voice.processing"
+            );
+
+            wrapper.vm.handleVoiceClipUpdate({
+                message_id: 7,
+                voice_clip_status: "ready",
+                voice_clip_duration: 4,
+                voice_clip_url: "https://cdn.test/voice-clips/a.m4a",
+            });
+            await nextTick();
+
+            expect(
+                wrapper.find('[data-test="voice-clip"] button').exists()
+            ).toBe(true);
+        });
+
+        it("keeps a finished clip when the timeline rebuilds from older props", async () => {
+            const processing = voiceOnly({
+                voice_clip_status: "processing",
+                voice_clip_url: null,
+            });
+            const wrapper = mount(MessageTimeline, {
+                props: { messages: [processing], users: mockUsers },
+            });
+
+            wrapper.vm.handleVoiceClipUpdate({
+                message_id: 7,
+                voice_clip_status: "ready",
+                voice_clip_duration: 4,
+                voice_clip_url: "https://cdn.test/voice-clips/a.m4a",
+            });
+            await wrapper.setProps({ messages: [{ ...processing }] });
+
+            expect(
+                wrapper.find('[data-test="voice-clip"] button').exists()
+            ).toBe(true);
+        });
+
+        it("plays the clip instead of reading text for a voice-only message", async () => {
+            const play = vi.fn().mockResolvedValue();
+            vi.stubGlobal(
+                "Audio",
+                vi.fn(function (src) {
+                    this.src = src;
+                    this.play = play;
+                    this.pause = vi.fn();
+                    this.addEventListener = vi.fn();
+                    this.removeEventListener = vi.fn();
+                })
+            );
+            const wrapper = mount(MessageTimeline, {
+                props: { messages: [voiceOnly()], users: mockUsers },
+            });
+            await nextTick();
+
+            wrapper.vm.speakMessage(wrapper.vm.localMessages[0]);
+
+            expect(play).toHaveBeenCalled();
+            expect(mockSpeak).not.toHaveBeenCalled();
+            vi.unstubAllGlobals();
+        });
+    });
 });

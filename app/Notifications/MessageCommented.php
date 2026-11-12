@@ -5,7 +5,6 @@ namespace App\Notifications;
 use App\Models\Message;
 use App\Models\MessageComment;
 use App\Models\User;
-use App\Support\GameShareMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Notifications\Messages\BroadcastMessage;
@@ -55,7 +54,7 @@ class MessageCommented extends Notification implements ShouldBroadcast
     {
         $url = route('messages.index').'#message-'.$this->message->id;
 
-        $quotedMessage = GameShareMessage::stripSlugMarker($this->message->message);
+        $quotedMessage = $this->message->previewText();
 
         return (new MailMessage)
             ->subject(__('messages.commented.subject', ['name' => $this->commenter->name]))
@@ -78,7 +77,7 @@ class MessageCommented extends Notification implements ShouldBroadcast
             ? mb_substr($this->comment->comment, 0, 117, 'UTF-8').'...'
             : $this->comment->comment;
 
-        $messagePreview = GameShareMessage::stripSlugMarker($this->message->message);
+        $messagePreview = $this->message->previewText();
 
         return new BroadcastMessage([
             'id' => $this->id,
@@ -111,7 +110,7 @@ class MessageCommented extends Notification implements ShouldBroadcast
         return [
             'message_id' => $this->message->id,
             'comment_id' => $this->comment->id,
-            'message' => GameShareMessage::stripSlugMarker($this->message->message),
+            'message' => $this->message->previewText(),
             'comment' => $this->comment->comment,
             'commenter_id' => $this->commenter->id,
             'commenter_name' => $this->commenter->name,

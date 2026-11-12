@@ -10,7 +10,6 @@ use App\Models\Page;
 use App\Models\Song;
 use App\Models\Sound;
 use App\Models\User;
-use App\Support\GameShareMessage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -119,8 +118,8 @@ class SiteStatisticsAggregator
     private function engagement(): array
     {
         return [
-            'mostReactedMessage' => $this->mostReacted(Message::class, 'message'),
-            'mostReactedComment' => $this->mostReacted(MessageComment::class, 'comment'),
+            'mostReactedMessage' => $this->mostReacted(Message::class),
+            'mostReactedComment' => $this->mostReacted(MessageComment::class),
             'mostActiveCommenterLast30Days' => $this->mostActiveUser(
                 MessageComment::class,
                 MessageComment::query()->where('created_at', '>=', now()->subDays(30))
@@ -138,7 +137,7 @@ class SiteStatisticsAggregator
      * @param  class-string<Message|MessageComment>  $modelClass
      * @return array<string, mixed>|null
      */
-    private function mostReacted(string $modelClass, string $textColumn): ?array
+    private function mostReacted(string $modelClass): ?array
     {
         $model = $modelClass::has('reactions')
             ->withCount('reactions')
@@ -152,7 +151,8 @@ class SiteStatisticsAggregator
 
         return [
             'id' => $model->id,
-            'text' => Str::limit(GameShareMessage::stripSlugMarker($model->{$textColumn}), 140),
+            // A voice-only message reads "{name} sent a voice message".
+            'text' => Str::limit($model->previewText(), 140),
             'reactions_count' => (int) $model->reactions_count,
             'user' => $model->user ? ['id' => $model->user->id, 'name' => $model->user->name] : null,
             'created_at' => $model->created_at?->toIso8601String(),
