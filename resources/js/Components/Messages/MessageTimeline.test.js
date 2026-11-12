@@ -1767,4 +1767,122 @@ describe("MessageTimeline", () => {
             vi.unstubAllGlobals();
         });
     });
+
+    describe("Voice comments", () => {
+        const withComment = (commentAttrs = {}) => ({
+            id: 7,
+            message: "Hello",
+            created_at: new Date().toISOString(),
+            user: { id: 2, name: "Bob" },
+            comments: [
+                {
+                    id: 30,
+                    message_id: 7,
+                    comment: null,
+                    created_at: new Date().toISOString(),
+                    user: { id: 2, name: "Bob" },
+                    voice_clip_status: "ready",
+                    voice_clip_duration: 3,
+                    voice_clip_url: "https://cdn.test/voice-clips/c.m4a",
+                    ...commentAttrs,
+                },
+            ],
+        });
+
+        const commentClip = (wrapper) =>
+            wrapper.find('[data-test="comment-voice-clip"]');
+
+        it("shows the player under a comment with a ready clip", () => {
+            const wrapper = mount(MessageTimeline, {
+                props: { messages: [withComment()], users: mockUsers },
+            });
+
+            expect(
+                commentClip(wrapper).find("button").attributes("aria-label")
+            ).toBe("voice.play");
+        });
+
+        it("shows a comment's text and clip together", () => {
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: [withComment({ comment: "Hear this" })],
+                    users: mockUsers,
+                },
+            });
+
+            expect(wrapper.text()).toContain("Hear this");
+            expect(commentClip(wrapper).find("button").exists()).toBe(true);
+        });
+
+        it("shows a failed comment clip", () => {
+            const wrapper = mount(MessageTimeline, {
+                props: {
+                    messages: [
+                        withComment({
+                            voice_clip_status: "failed",
+                            voice_clip_url: null,
+                        }),
+                    ],
+                    users: mockUsers,
+                },
+            });
+
+            expect(commentClip(wrapper).text()).toContain("voice.failed");
+        });
+
+        it("shows processing until the comment's clip update arrives, and keeps it over older props", async () => {
+            const processing = withComment({
+                voice_clip_status: "processing",
+                voice_clip_url: null,
+            });
+            const wrapper = mount(MessageTimeline, {
+                props: { messages: [processing], users: mockUsers },
+            });
+
+            expect(commentClip(wrapper).text()).toContain("voice.processing");
+
+            wrapper.vm.handleCommentVoiceClipUpdate({
+                comment_id: 30,
+                message_id: 7,
+                voice_clip_status: "ready",
+                voice_clip_duration: 3,
+                voice_clip_url: "https://cdn.test/voice-clips/c.m4a",
+            });
+            await nextTick();
+            expect(commentClip(wrapper).find("button").exists()).toBe(true);
+
+            await wrapper.setProps({
+                messages: [
+                    withComment({
+                        voice_clip_status: "processing",
+                        voice_clip_url: null,
+                    }),
+                ],
+            });
+            expect(commentClip(wrapper).find("button").exists()).toBe(true);
+        });
+
+        it("plays the clip instead of reading text for a voice-only comment", () => {
+            const play = vi.fn().mockResolvedValue();
+            vi.stubGlobal(
+                "Audio",
+                vi.fn(function (src) {
+                    this.src = src;
+                    this.play = play;
+                    this.pause = vi.fn();
+                    this.addEventListener = vi.fn();
+                    this.removeEventListener = vi.fn();
+                })
+            );
+            const wrapper = mount(MessageTimeline, {
+                props: { messages: [withComment()], users: mockUsers },
+            });
+
+            wrapper.vm.speakComment(wrapper.vm.localMessages[0].comments[0]);
+
+            expect(play).toHaveBeenCalled();
+            expect(mockSpeak).not.toHaveBeenCalled();
+            vi.unstubAllGlobals();
+        });
+    });
 });

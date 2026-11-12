@@ -58,6 +58,7 @@ class CommentCreated implements ShouldBroadcastNow
             'message_id' => $this->comment->message_id,
             'user_id' => $this->comment->user_id,
             'comment' => $this->comment->comment,
+            ...$this->comment->voiceClipPayload(),
             'created_at' => $this->comment->created_at->toIso8601String(),
             'user' => [
                 'id' => $this->comment->user->id,

@@ -5,7 +5,7 @@ import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import UserTagList from "@/Components/UserTagList.vue";
 import VoiceClipPlayer from "@/Components/Messages/VoiceClipPlayer.vue";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
-import { useMessageBuilder } from "@/composables/useMessageBuilder";
+import { inputKey, useMessageBuilder } from "@/composables/useMessageBuilder";
 import { useSiteSetting } from "@/composables/useSiteSetting";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
@@ -182,11 +182,7 @@ const emit = defineEmits(["messagePosted", "commentPosted"]);
 
 const isCommentMode = computed(() => props.mode === "comment");
 
-// Voice clips: messages only for now (comments are phase 2 of #222/#223).
-const voiceMessagesEnabled = useSiteSetting("voice_messages_enabled");
-const canRecordVoice = computed(
-    () => voiceMessagesEnabled.value && !isCommentMode.value
-);
+const canRecordVoice = useSiteSetting("voice_messages_enabled");
 const voiceMaxSeconds = usePage().props.voiceClipMaxSeconds || 60;
 const {
     state: voiceState,
@@ -199,12 +195,14 @@ const {
 } = useVoiceRecorder({ maxSeconds: voiceMaxSeconds });
 const isRecording = computed(() => voiceState.value === "recording");
 
-// Tap to start, tap to stop.
+// Tap to start, tap to stop. Starting makes this the active input, which
+// stops any other input that's recording.
 function toggleRecording() {
     if (isRecording.value) {
         stopVoice();
         return;
     }
+    handleInputFocus();
     startVoice();
 }
 
@@ -213,12 +211,28 @@ function reRecord() {
     startVoice();
 }
 
+// A comment posts through router.post, not the form, so its errors land here.
+const commentErrors = ref({});
+
 // Why recording couldn't start, or why the server turned the clip down.
-const voiceErrorText = computed(() =>
-    voiceError.value
-        ? t(`voice.${voiceError.value}`)
-        : form.errors.voice_clip || form.errors.voice_clip_duration
-);
+const voiceErrorText = computed(() => {
+    if (voiceError.value) return t(`voice.${voiceError.value}`);
+    const errors = isCommentMode.value ? commentErrors.value : form.errors;
+    return errors.voice_clip || errors.voice_clip_duration;
+});
+
+// The recorded clip as an upload, with its duration; nulls without one.
+const voiceClipFields = () => {
+    const clip = voiceClip.value;
+    return {
+        voice_clip: clip
+            ? new File([clip.blob], `voice-clip.${clip.extension}`, {
+                  type: clip.blob.type,
+              })
+            : null,
+        voice_clip_duration: clip ? clip.duration : null,
+    };
+};
 
 // Recording couldn't start: say why, as well as showing it.
 watch(voiceError, (reason) => {
@@ -665,6 +679,7 @@ function addPhrase(phrase) {
 }
 
 const {
+    activeInputKey,
     setAddWord,
     setAddPhrase,
     setGetPreview,
@@ -678,6 +693,15 @@ const registerBuilderFunctions = () => ({
     addWord: insertMentionTrigger,
     addPhrase,
     getPreview: () => preview.value,
+});
+
+// Only the active input records: another one opening or taking focus
+// stops this one's recording (what's recorded so far stays to preview).
+const ownInputKey = computed(() =>
+    inputKey(isCommentMode.value ? props.messageId : null)
+);
+watch(activeInputKey, (key) => {
+    if (key !== ownInputKey.value && isRecording.value) stopVoice();
 });
 
 const handleInputFocus = () => {
@@ -777,23 +801,16 @@ function postMessage() {
         return;
     }
 
-    const clip = voiceClip.value;
-
     const messageText = preview.value;
     speak(t("message.posting"));
 
     form.message = messageText;
     form.tagged_user_ids = collectTaggedUserIds(messageText);
-    form.voice_clip = clip
-        ? new File([clip.blob], `voice-clip.${clip.extension}`, {
-              type: clip.blob.type,
-          })
-        : null;
-    form.voice_clip_duration = clip ? clip.duration : null;
+    Object.assign(form, voiceClipFields());
 
     form.post(route("messages.store"), {
         preserveScroll: true,
-        forceFormData: Boolean(clip),
+        forceFormData: Boolean(form.voice_clip),
         onSuccess: () => {
             clearAfterSubmit();
             discardVoice();
@@ -807,30 +824,34 @@ function postMessage() {
 const commentProcessing = ref(false);
 
 function postComment() {
-    if (
-        !isCommentMode.value ||
-        !props.messageId ||
-        !preview.value?.trim() ||
-        commentProcessing.value
-    ) {
+    if (!isCommentMode.value || !props.messageId || submitDisabled.value) {
         return;
     }
 
     const commentText = preview.value;
     speak(t("comment.posting"));
     commentProcessing.value = true;
+    commentErrors.value = {};
+
+    const voiceFields = voiceClipFields();
 
     router.post(
         route("messages.comments.store", props.messageId),
         {
             comment: commentText,
             tagged_user_ids: collectTaggedUserIds(commentText),
+            ...voiceFields,
         },
         {
             preserveScroll: true,
+            forceFormData: Boolean(voiceFields.voice_clip),
             onSuccess: () => {
                 clearAfterSubmit();
+                discardVoice();
                 emit("commentPosted", props.messageId);
+            },
+            onError: (errors) => {
+                commentErrors.value = errors;
             },
             onFinish: () => {
                 commentProcessing.value = false;

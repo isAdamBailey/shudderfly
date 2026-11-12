@@ -67,9 +67,18 @@
         <!-- Content area -->
         <div class="w-full">
             <div
+                v-if="comment.comment"
                 class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words"
                 v-html="formatComment(comment.comment)"
             ></div>
+            <VoiceClip
+                v-if="comment.voice_clip_status"
+                class="mt-2"
+                data-test="comment-voice-clip"
+                :status="comment.voice_clip_status"
+                :url="comment.voice_clip_url"
+                :duration="comment.voice_clip_duration"
+            />
             <!-- Comment Reactions -->
             <MessageReactions
                 compact
@@ -86,6 +95,7 @@
 <script setup>
 import Avatar from "@/Components/Avatar.vue";
 import MessageReactions from "@/Components/Messages/MessageReactions.vue";
+import VoiceClip from "@/Components/Messages/VoiceClip.vue";
 import Dropdown from "@/Components/Dropdown.vue";
 import { usePermissions } from "@/composables/permissions";
 import { useTranslations } from "@/composables/useTranslations";

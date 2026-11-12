@@ -199,7 +199,7 @@ class VoiceMessagesTest extends TestCase
         $message = Message::factory()->create(['message' => null, 'voice_clip_status' => Message::VOICE_CLIP_PROCESSING]);
         Storage::disk('local')->put('tmp/voice-clips/clip.m4a', file_get_contents(base_path('tests/fixtures/silence.m4a')));
 
-        StoreVoiceClip::dispatchSync($message->id, 'tmp/voice-clips/clip.m4a');
+        StoreVoiceClip::dispatchSync($message, 'tmp/voice-clips/clip.m4a');
 
         $message->refresh();
         $this->assertSame(Message::VOICE_CLIP_READY, $message->voice_clip_status);
@@ -217,7 +217,7 @@ class VoiceMessagesTest extends TestCase
         Storage::disk('local')->put('tmp/voice-clips/clip.m4a', 'audio');
 
         try {
-            StoreVoiceClip::dispatchSync($message->id, 'tmp/voice-clips/clip.m4a');
+            StoreVoiceClip::dispatchSync($message, 'tmp/voice-clips/clip.m4a');
         } catch (\Throwable) {
             // dispatchSync rethrows after calling failed().
         }
@@ -231,7 +231,7 @@ class VoiceMessagesTest extends TestCase
     {
         $message = $this->readyVoiceMessage();
 
-        StoreVoiceClip::dispatchSync($message->id, 'tmp/voice-clips/already-gone.m4a');
+        StoreVoiceClip::dispatchSync($message, 'tmp/voice-clips/already-gone.m4a');
 
         $this->assertSame(Message::VOICE_CLIP_READY, $message->refresh()->voice_clip_status);
     }
@@ -253,7 +253,7 @@ class VoiceMessagesTest extends TestCase
             }
         });
 
-        StoreVoiceClip::dispatchSync($message->id, 'tmp/voice-clips/clip.m4a');
+        StoreVoiceClip::dispatchSync($message, 'tmp/voice-clips/clip.m4a');
 
         $this->assertSame([], Storage::disk('s3')->allFiles());
         Event::assertNotDispatched(MessageVoiceClipUpdated::class);
@@ -263,7 +263,7 @@ class VoiceMessagesTest extends TestCase
     {
         Storage::disk('local')->put('tmp/voice-clips/clip.m4a', 'audio');
 
-        StoreVoiceClip::dispatchSync(999, 'tmp/voice-clips/clip.m4a');
+        StoreVoiceClip::dispatchSync((new Message)->forceFill(['id' => 999]), 'tmp/voice-clips/clip.m4a');
 
         Storage::disk('local')->assertMissing('tmp/voice-clips/clip.m4a');
         $this->assertSame([], Storage::disk('s3')->allFiles());

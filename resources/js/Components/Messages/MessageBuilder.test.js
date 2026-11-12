@@ -23,16 +23,18 @@ const mockForm = {
     errors: {},
 };
 
-const { mockSettings, mockVoice } = vi.hoisted(() => ({
+// mockVoice is the latest builder's recorder; mockVoices has every one.
+const { mockSettings, mockVoice, mockVoices } = vi.hoisted(() => ({
     mockSettings: {},
     mockVoice: {},
+    mockVoices: [],
 }));
 
 vi.mock("@/composables/useVoiceRecorder", async () => {
     const { ref } = await import("vue");
     return {
         useVoiceRecorder: () => {
-            Object.assign(mockVoice, {
+            const recorder = {
                 state: ref("idle"),
                 elapsed: ref(0),
                 clip: ref(null),
@@ -40,8 +42,10 @@ vi.mock("@/composables/useVoiceRecorder", async () => {
                 start: vi.fn(),
                 stop: vi.fn(),
                 discard: vi.fn(),
-            });
-            return mockVoice;
+            };
+            mockVoices.push(recorder);
+            Object.assign(mockVoice, recorder);
+            return recorder;
         },
     };
 });
@@ -454,11 +458,11 @@ describe("MessageBuilder", () => {
             );
         });
 
-        it("hides the mic when commenting (phase 2)", () => {
+        it("shows the mic when commenting", () => {
             const wrapper = mountBuilder({ mode: "comment", messageId: 1 });
 
             expect(wrapper.find('[data-test="voice-record"]').exists()).toBe(
-                false
+                true
             );
         });
 
@@ -511,6 +515,94 @@ describe("MessageBuilder", () => {
                 "/messages.store",
                 expect.objectContaining({ forceFormData: true })
             );
+        });
+
+        const recordedClip = () => ({
+            blob: new Blob(["voice"], { type: "audio/webm" }),
+            url: "blob:clip",
+            duration: 4.2,
+            extension: "webm",
+        });
+
+        it("posts a voice-only comment with its clip", async () => {
+            const { router } = await import("@inertiajs/vue3");
+            const wrapper = mountBuilder({ mode: "comment", messageId: 7 });
+            mockVoice.state.value = "recorded";
+            mockVoice.clip.value = recordedClip();
+            await nextTick();
+
+            expect(wrapper.find('[data-test="voice-preview"]').exists()).toBe(
+                true
+            );
+            expect(wrapper.vm.submitDisabled).toBe(false);
+
+            wrapper.vm.submitContent();
+
+            expect(router.post).toHaveBeenCalledWith(
+                "/messages.comments.store",
+                expect.objectContaining({
+                    comment: "",
+                    voice_clip: expect.any(File),
+                    voice_clip_duration: 4.2,
+                }),
+                expect.objectContaining({ forceFormData: true })
+            );
+            const [, data] = router.post.mock.calls[0];
+            expect(data.voice_clip.name).toBe("voice-clip.webm");
+        });
+
+        it("discards the clip once the comment posts", async () => {
+            const { router } = await import("@inertiajs/vue3");
+            const wrapper = mountBuilder({ mode: "comment", messageId: 7 });
+            mockVoice.state.value = "recorded";
+            mockVoice.clip.value = recordedClip();
+            await nextTick();
+
+            wrapper.vm.submitContent();
+            router.post.mock.calls[0][2].onSuccess();
+
+            expect(mockVoice.discard).toHaveBeenCalled();
+            expect(wrapper.emitted("commentPosted")).toEqual([[7]]);
+        });
+
+        it("shows why the server turned a comment's clip down", async () => {
+            const { router } = await import("@inertiajs/vue3");
+            const wrapper = mountBuilder({ mode: "comment", messageId: 7 });
+            mockVoice.state.value = "recorded";
+            mockVoice.clip.value = recordedClip();
+            await nextTick();
+
+            wrapper.vm.submitContent();
+            router.post.mock.calls[0][2].onError({
+                voice_clip_duration: "Too long",
+            });
+            await nextTick();
+
+            expect(wrapper.find('[role="alert"]').text()).toBe("Too long");
+        });
+
+        it("stops recording in one comment input when another opens", async () => {
+            mockVoices.length = 0;
+            mountBuilder({ mode: "comment", messageId: 1 });
+            const first = mockVoices[0];
+            first.state.value = "recording";
+
+            mountBuilder({ mode: "comment", messageId: 2 });
+            await nextTick();
+
+            expect(first.stop).toHaveBeenCalled();
+            expect(mockVoices[1].stop).not.toHaveBeenCalled();
+        });
+
+        it("keeps recording while its own comment input stays active", async () => {
+            mockVoices.length = 0;
+            const wrapper = mountBuilder({ mode: "comment", messageId: 1 });
+            mockVoices[0].state.value = "recording";
+
+            await wrapper.find("textarea").trigger("focus");
+            await nextTick();
+
+            expect(mockVoices[0].stop).not.toHaveBeenCalled();
         });
     });
 });

@@ -104,7 +104,7 @@ class UserTaggingService
             if ($contentType === 'comment' && $content instanceof MessageComment) {
                 $pushData['comment_id'] = $content->id;
                 $pushData['message_id'] = $content->message_id;
-                $pushData['comment'] = $content->comment;
+                $pushData['comment'] = $pushPreview;
                 $pushData['url'] = route('messages.index').'#message-'.$content->message_id;
             } else {
                 $pushData['message_id'] = $content instanceof Message ? $content->id : null;
