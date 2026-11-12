@@ -6,6 +6,18 @@ export const TOILET = "🚽";
 export const PIZZA = "🍕";
 export const SPROUT = "🥬";
 
+// The Butt's skin: his figure (buttDraw.js) and his house's cheeks
+// (streetGeometry.js buttHouse()).
+export const BUTT_COLORS = {
+    highlight: "#ffe7d2",
+    shade: "#a85a38",
+    near: "#f2b184",
+    far: "#d98458",
+    leg: "#e09668",
+    foot: "#c46b4e",
+    cleft: "#7a3a2c",
+};
+
 // Guster's palette (issue #164), sampled from his photo and brightened: a
 // yellow-green, chartreuse-olive, not a grass green. Anything of his
 // coloured green takes it from here: his house and door, his figure's body,

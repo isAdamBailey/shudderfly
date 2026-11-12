@@ -1,5 +1,5 @@
-import { CAST, castInDom } from "@/constants/characters.js";
-import { BUTT_COLORS, BUTT_VIEW, buttParts } from "../buttDraw.js";
+import { BUTT_COLORS, CAST, castInDom } from "@/constants/characters.js";
+import { BUTT_VIEW, buttParts } from "../buttDraw.js";
 import { sampleButtPose } from "../buttRig.js";
 import { GUSTER_VIEW, gusterParts } from "../gusterDraw.js";
 import {

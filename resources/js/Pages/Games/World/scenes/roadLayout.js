@@ -66,6 +66,8 @@ const SKY_ROOM = 0.05;
 // plain one's width and height, and its `roof` (towers and spires) this
 // share of its height above the eaves.
 export const FACADE_SIZES = {
+    // The cheeks over the waistband are half its height again.
+    butt: { width: 1.6, height: 1.2, roof: 0.5 },
     gothic: { width: 1.8, height: 1.25, roof: 0.86 },
     haunted: { width: 1.6, height: 1.3, roof: 1.12 },
 };

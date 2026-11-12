@@ -214,7 +214,7 @@ final class GamesWorld
     /** Named building shapes a road door's `facade` may give, instead of the
      * street's plain gabled house: streetGeometry.js FACADES (a Vitest test
      * keeps them in step). */
-    public const FACADES = ['gothic', 'haunted'];
+    public const FACADES = ['butt', 'gothic', 'haunted'];
 
     /** Named sounds a toy's `sound` may use: sounds.js (a Vitest test keeps
      * them in step). */
@@ -346,8 +346,9 @@ final class GamesWorld
                 'interactables' => [
                     // The buildings you can go into, all on the far side,
                     // 600 apart: the Butt's own house first, by where it
-                    // starts.
-                    self::roadDoor('house', 400, 'far', '🏠', 'house', 'house.hall'),
+                    // starts. His is the seat of a giant pair of pants, his
+                    // cheeks the roof.
+                    self::roadDoor('house', 400, 'far', '🏠', 'house', 'house.hall', facade: 'butt'),
                     // A great old gothic library, its sign in the rose window.
                     self::roadDoor('library', 1000, 'far', '📚', 'library', 'library.hall', facade: 'gothic'),
                     // Guster himself is the sign over his green door.

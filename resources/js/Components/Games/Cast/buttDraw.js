@@ -7,22 +7,13 @@
  * projected, feet on y = 0, far parts first.
  */
 
+import { BUTT_COLORS } from "@/constants/characters.js";
 import { BUTT_RIG, sampleButtPose } from "./buttRig.js";
 import {
     boundsOf,
     project as projectTo,
     turn as turnTo,
 } from "./figureView.js";
-
-export const BUTT_COLORS = {
-    highlight: "#ffe7d2",
-    shade: "#a85a38",
-    near: "#f2b184",
-    far: "#d98458",
-    leg: "#e09668",
-    foot: "#c46b4e",
-    cleft: "#7a3a2c",
-};
 
 /** Degrees. Yaw turns a rear view into a three-quarter one; pitch looks
  * down onto the cheeks. */

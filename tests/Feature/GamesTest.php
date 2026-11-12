@@ -49,8 +49,9 @@ class GamesTest extends TestCase
                 ->where('scenes', fn ($scenes) => collect($scenes)->get('house.hall')['kind'] === 'room')
                 ->where('link', null)
                 ->has('scenes.road.interactables.0', fn (Assert $item) => $item->hasAll([
-                    'id', 'type', 'x', 'side', 'emoji', 'label', 'to', 'toSpot',
+                    'id', 'type', 'x', 'side', 'emoji', 'label', 'to', 'toSpot', 'facade',
                 ]))
+                ->where('scenes.road.interactables.0.facade', 'butt')
                 ->where('fartSoundUrl', asset('fart.m4a'))
         );
     }

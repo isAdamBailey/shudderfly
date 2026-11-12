@@ -1,4 +1,4 @@
-import { GUSTER_COLORS } from "@/constants/characters.js";
+import { BUTT_COLORS, GUSTER_COLORS } from "@/constants/characters.js";
 import { own } from "@/utils/object";
 
 /**
@@ -112,7 +112,14 @@ export function building(
 ) {
     const shaped = own(FACADES, facade ?? "");
     if (shaped)
-        return shaped.build(THREE, { width, height, depth, look, door });
+        return shaped.build(THREE, {
+            width,
+            height,
+            depth,
+            roof: roofHeight,
+            look,
+            door,
+        });
     const wall = look.walls[palette % look.walls.length];
     const roofColor = look.roofs[palette % look.roofs.length];
     const body = [
@@ -1104,11 +1111,385 @@ function haunted(THREE, { width, height, depth, look, door }) {
     };
 }
 
+// A butt facade's proportions, as shares of its front's `width` (w) or of
+// its `height` to the waistband (h). Its roof is the Butt's two cheeks,
+// over the waistband as high as the box's `roof` allows.
+export const BUTT_HOUSE = {
+    legs: 0.42, // h, the legs' tops, where the arch over the door springs
+    crotch: 0.3, // w, the gap between the legs
+    taper: 0.035, // w, how much narrower each leg is at its hem
+    waistband: 0.1, // h
+    cuff: 0.07, // h, each leg's rolled-up hem
+    pocket: 0.2, // w, each back pocket (a window)
+    pocketX: 0.25, // w, out from the middle
+    loops: [0.2, 0.42], // w, the belt loops, out from the middle each side
+    cheek: 0.28, // w, each cheek's half-width
+    cheekX: 0.22, // w, each cheek's middle: close enough that they press together
+    sag: 0.12, // radians: how far the cheeks spill down over the waistband
+};
+
+/** Where a butt front's leather label is, on its waistband under the
+ * crack: its middle `y` and its `w` × `h`, for the sign on it. */
+function buttLabel({ width, height }) {
+    const w = Math.min(width * 0.15, height * 0.22);
+    const h = w * 0.8;
+    return { y: height - h / 2 - height * 0.015, w, h };
+}
+
+/** A back pocket `w` across: square-shouldered, pointed at the bottom. */
+function pocketShape(THREE, w) {
+    const h = w * 1.1;
+    const shape = new THREE.Shape();
+    shape.moveTo(-w / 2, h);
+    shape.lineTo(w / 2, h);
+    shape.lineTo(w / 2, h * 0.15);
+    shape.lineTo(0, 0);
+    shape.lineTo(-w / 2, h * 0.15);
+    shape.closePath();
+    return shape;
+}
+
+/** A five-pointed star `r` across its points, centred on (0, 0). */
+function starShape(THREE, r) {
+    const shape = new THREE.Shape();
+    for (let i = 0; i < 10; i += 1) {
+        const a = Math.PI / 2 + (i * Math.PI) / 5;
+        const d = i % 2 === 0 ? r : r * 0.45;
+        const [x, y] = [Math.cos(a) * d, Math.sin(a) * d];
+        if (i === 0) shape.moveTo(x, y);
+        else shape.lineTo(x, y);
+    }
+    shape.closePath();
+    return shape;
+}
+
+/**
+ * The Butt's own house: the seat of a giant pair of pants, seen from
+ * behind, with the Butt's cheeks for a roof and the crack between them: a
+ * plumber's crack, spilling a little over the waistband. Two short legs
+ * stand either side of the front door, under the arch of the crotch; the
+ * back pockets are its windows, belt loops and a leather label (the
+ * sign's) on the waistband. The look's `pants` dress it for the season:
+ * jeans, Santa's trousers, Halloween stripes, stars and stripes. The
+ * cheeks are always the Butt's. Built in the same space and parts as
+ * building().
+ */
+function buttHouse(
+    THREE,
+    { width, height, depth, roof: roofHeight, look, door }
+) {
+    const c = look.pants;
+    const W = width;
+    const H = height;
+    const lip = facadeLip(W, H);
+    const legTop = H * BUTT_HOUSE.legs;
+    const gap = W * BUTT_HOUSE.crotch;
+    const archTop = legTop + gap / 2;
+    // A leg is this much narrower at its hem than at the hip, its outer
+    // side tapering in, so it reads as a trouser leg, not a wall.
+    const taper = W * BUTT_HOUSE.taper;
+    const bandH = H * BUTT_HOUSE.waistband;
+    const body = [];
+    const windows = [];
+
+    /** The pants' outline between heights `a` and `b`, grown `grow` all
+     * round (so a stripe wraps the cloth without fighting it): one piece
+     * above the crotch, one round each leg below it, or one with the
+     * crotch's arch cut out of it. */
+    const cloth = (a, b, grow = 0) => {
+        const radius = gap / 2 - grow;
+        const apex = legTop + radius;
+        const outer = (y) => W / 2 + grow - taper * Math.max(0, 1 - y / legTop);
+        // The outer edge from `a` up to `b`, through the knee where the
+        // taper stops, if it's between them.
+        const outerUp = [
+            a,
+            ...(legTop > a && legTop < b ? [legTop] : []),
+            b,
+        ].map((y) => [outer(y), y]);
+        /** The inner edge (right of the crack) from `from` up to `to`:
+         * straight up the leg, then round the arch, stepped by angle. */
+        const innerEdge = (from, to) => {
+            const points =
+                from < legTop
+                    ? [
+                          [radius, from],
+                          [radius, Math.min(to, legTop)],
+                      ]
+                    : [];
+            if (to <= legTop) return points;
+            const angle = (y) =>
+                Math.asin(Math.min(1, Math.max(0, (y - legTop) / radius)));
+            const [start, end] = [angle(from), angle(to)];
+            const steps = 16;
+            for (let i = from < legTop ? 1 : 0; i <= steps; i += 1) {
+                const t = start + ((end - start) * i) / steps;
+                points.push([
+                    radius * Math.cos(t),
+                    legTop + radius * Math.sin(t),
+                ]);
+            }
+            return points;
+        };
+        const shape = (points) =>
+            new THREE.Shape(points.map(([x, y]) => new THREE.Vector2(x, y)));
+        const mirror = (points) => points.map(([x, y]) => [-x, y]);
+        if (a >= apex) {
+            return [shape([...outerUp, ...mirror(outerUp).reverse()])];
+        }
+        const innerUp = innerEdge(a, Math.min(b, apex));
+        if (b <= apex) {
+            const leg = [...outerUp, ...[...innerUp].reverse()];
+            return [shape(leg), shape(mirror(leg))];
+        }
+        return [
+            shape([
+                ...outerUp,
+                ...mirror(outerUp).reverse(),
+                ...mirror(innerUp),
+                ...[...innerUp].reverse().slice(1),
+            ]),
+        ];
+    };
+
+    // The pants, legs and all, pushed back the house's depth.
+    body.push(extruded(THREE, c.denim, cloth(0, H)[0], depth, [0, 0, 0]));
+
+    // Stripes round them, where the season has any: each band of the
+    // cloth, a little proud of it all round.
+    if (c.stripes) {
+        const bands = 9;
+        const band = (H - bandH) / bands;
+        for (let i = 1; i < bands; i += 2) {
+            for (const stripe of cloth(i * band, (i + 1) * band, 0.3)) {
+                body.push(
+                    extruded(THREE, c.stripes, stripe, depth + 0.6, [0, 0, 0.3])
+                );
+            }
+        }
+    }
+
+    // A rolled-up cuff round each leg's hem.
+    const cuffH = H * BUTT_HOUSE.cuff;
+    const hemOuter = W / 2 - taper * (1 - cuffH / 2 / legTop);
+    for (const side of [-1, 1]) {
+        body.push(
+            box(
+                THREE,
+                c.cuff,
+                [hemOuter - gap / 2 + lip * 1.4, cuffH, depth + lip * 1.4],
+                [(side * (hemOuter + gap / 2)) / 2, cuffH / 2, -depth / 2]
+            )
+        );
+    }
+
+    // Under the crotch: the dark inside of the pants, and the door in it.
+    body.push(
+        box(THREE, c.dark, [gap, archTop, 2], [0, archTop / 2, -depth * 0.3]),
+        box(
+            THREE,
+            c.cuff,
+            [gap * 0.9, 3, depth * 0.3 + 6],
+            [0, 1.5, -depth * 0.15 + 3]
+        )
+    );
+    if (door) {
+        const doorColors = doorLook(door);
+        const doorW = gap * 0.62;
+        const doorH = Math.min(archTop * 0.88, H * 0.4);
+        body.push(
+            extruded(THREE, doorColors.wood, lancet(THREE, doorW, doorH), 1.5, [
+                0,
+                0,
+                -depth * 0.3 + 2.5,
+            ]),
+            box(
+                THREE,
+                doorColors.knob,
+                [lip, lip, 1.5],
+                [doorW * 0.28, doorH * 0.42, -depth * 0.3 + 3]
+            )
+        );
+    }
+
+    // Stitching: the seat seam from the crack to the crotch, and the yoke,
+    // dipping from the hips to the middle under the waistband.
+    const seamTo = H - bandH;
+    body.push(
+        box(
+            THREE,
+            c.stitch,
+            [lip * 0.6, seamTo - archTop, 1],
+            [0, (archTop + seamTo) / 2, 0.6]
+        )
+    );
+    const dip = H * 0.08;
+    const half = Math.hypot(W / 2, dip);
+    for (const side of [-1, 1]) {
+        body.push(
+            paint(
+                THREE,
+                new THREE.BoxGeometry(half, lip * 0.6, 1)
+                    .rotateZ(side * Math.atan2(dip, W / 2))
+                    .translate(side * (W / 4), seamTo - dip / 2 - lip, 0.6),
+                c.stitch
+            )
+        );
+    }
+
+    // The back pockets, stitched round: the windows.
+    // As wide as the front allows, but no taller than the seat between
+    // the legs and the yoke leaves them (a pocket is 1.1 times as tall).
+    const seat = seamTo - dip - legTop;
+    const pocketW = Math.min(W * BUTT_HOUSE.pocket, (seat * 0.85) / 1.1);
+    const pocketY = legTop + (seat - pocketW * 1.1) / 2;
+    for (const side of [-1, 1]) {
+        const x = side * W * BUTT_HOUSE.pocketX;
+        body.push(
+            extruded(
+                THREE,
+                c.stitch,
+                pocketShape(THREE, pocketW + lip * 1.6),
+                1,
+                [x, pocketY - lip * 1.1, 1.2]
+            ),
+            box(
+                THREE,
+                c.stitch,
+                [lip * 0.6, pocketW * 0.9, 1],
+                [x, pocketY + pocketW * 0.62, 2.4]
+            ),
+            box(
+                THREE,
+                c.stitch,
+                [pocketW * 0.96, lip * 0.6, 1],
+                [x, pocketY + pocketW * 0.68, 2.4]
+            )
+        );
+        windows.push(
+            extruded(THREE, c.glass, pocketShape(THREE, pocketW), 1, [
+                x,
+                pocketY,
+                1.8,
+            ])
+        );
+    }
+
+    // The waistband, its belt loops, and the leather label under the crack.
+    body.push(
+        box(
+            THREE,
+            c.waistband,
+            [W + lip * 2, bandH, depth + lip * 2],
+            [0, H - bandH / 2, -depth / 2]
+        )
+    );
+    const loopW = W * 0.035;
+    for (const at of BUTT_HOUSE.loops) {
+        for (const side of [-1, 1]) {
+            body.push(
+                box(
+                    THREE,
+                    c.denim,
+                    [loopW, bandH * 0.9, lip],
+                    [side * at * W, H - bandH / 2, lip * 1.5]
+                )
+            );
+        }
+    }
+    if (c.stars) {
+        for (const at of [0.1, 0.31, 0.47]) {
+            for (const side of [-1, 1]) {
+                body.push(
+                    extruded(
+                        THREE,
+                        c.stars,
+                        starShape(THREE, bandH * 0.32),
+                        0.6,
+                        [side * at * W, H - bandH / 2, lip + 0.8]
+                    )
+                );
+            }
+        }
+    }
+    const label = buttLabel({ width, height });
+    body.push(
+        box(THREE, c.label, [label.w, label.h, 1], [0, label.y, lip + 0.5])
+    );
+
+    // The cheeks: two big domes in the Butt's own colours, bulging over
+    // the back and front and spilling just over the waistband (a cut-off
+    // sphere, past its equator by `sag`).
+    const rx = W * BUTT_HOUSE.cheek;
+    const ry = roofHeight * 0.97;
+    const rz = depth / 2 + lip * 3;
+    const cheekX = W * BUTT_HOUSE.cheekX;
+    for (const side of [-1, 1]) {
+        body.push(
+            paint(
+                THREE,
+                new THREE.SphereGeometry(
+                    1,
+                    32,
+                    14,
+                    0,
+                    Math.PI * 2,
+                    0,
+                    Math.PI / 2 + BUTT_HOUSE.sag
+                )
+                    .scale(rx, ry, rz)
+                    .translate(side * cheekX, H, -depth / 2),
+                BUTT_COLORS.near
+            )
+        );
+    }
+    // The crack: a thin dark dome down the middle, just filling the curve
+    // where the cheeks press together (the cheeks meet in an ellipse
+    // `meet` times their own height and depth), so it shows only as the
+    // line between them.
+    const meet = Math.sqrt(1 - (cheekX / rx) ** 2) * 1.06;
+    body.push(
+        paint(
+            THREE,
+            new THREE.SphereGeometry(1, 24, 8, 0, Math.PI * 2, 0, Math.PI / 2)
+                .scale(lip, ry * meet, rz * meet)
+                .translate(0, H, -depth / 2),
+            BUTT_COLORS.cleft
+        )
+    );
+
+    return {
+        body,
+        windows,
+        // Along the waistband, clear of its belt loops (eaveBulbs leaves
+        // the label clear), and out past the cheeks spilling over it.
+        bulbs: eaveBulbs(THREE, look, W, H, {
+            skip: (x) =>
+                BUTT_HOUSE.loops.some(
+                    (at) => Math.abs(Math.abs(x) - at * W) < loopW
+                ),
+            out: () => lip * 3,
+        }),
+    };
+}
+
 /** Building shapes other than the plain house, by the name a road door's
  * `facade` gives (GamesWorld::FACADES, which a test keeps in step): `build`
  * draws it as building() does, `sign` says where its landmark's sign goes
  * ({ y: its foot, size, z: out from the front }) for a building box. */
 export const FACADES = {
+    butt: {
+        build: buttHouse,
+        sign(box) {
+            const label = buttLabel(box);
+            const size = label.h * 0.9;
+            return {
+                y: label.y - size / 2,
+                size,
+                z: facadeLip(box.width, box.height) + 1.5,
+            };
+        },
+    },
     gothic: {
         build: gothic,
         sign(box) {

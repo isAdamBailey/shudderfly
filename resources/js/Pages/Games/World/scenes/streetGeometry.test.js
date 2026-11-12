@@ -1,9 +1,9 @@
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
-import { GUSTER_COLORS } from "@/constants/characters.js";
+import { BUTT_COLORS, GUSTER_COLORS } from "@/constants/characters.js";
 import { serverList } from "../testing/serverList.js";
 import { FACADE_SIZES } from "./roadLayout.js";
-import { building, DOORS, FACADES } from "./streetGeometry.js";
+import { building, BUTT_HOUSE, DOORS, FACADES } from "./streetGeometry.js";
 
 const LOOK = {
     walls: ["#ffffff"],
@@ -28,6 +28,17 @@ const LOOK = {
         brass: "#d4a73a",
         face: "#f5ecd7",
         glass: "#aaccbb",
+    },
+    pants: {
+        denim: "#3355aa",
+        dark: "#112233",
+        stitch: "#ddaa33",
+        cuff: "#5577cc",
+        waistband: "#224488",
+        label: "#885522",
+        glass: "#cceeff",
+        stripes: null,
+        stars: null,
     },
 };
 
@@ -126,6 +137,130 @@ describe("street geometry", () => {
         expect(Object.keys(FACADES).sort()).toEqual(
             serverList("FACADES").sort()
         );
+    });
+
+    describe("a butt facade", () => {
+        const box = {
+            width: 300,
+            height: 160,
+            depth: 120,
+            roof: 160 * FACADE_SIZES.butt.roof,
+        };
+        const butt = (door = "plain", look = LOOK) =>
+            building(THREE, {
+                ...box,
+                look,
+                palette: 0,
+                door,
+                facade: "butt",
+            });
+        const bounds = (part) => {
+            part.computeBoundingBox();
+            return part.boundingBox;
+        };
+
+        it("wears its look's pants, not the street's walls", () => {
+            const { body } = butt();
+
+            expect(painted(body, LOOK.pants.denim)).toBe(true);
+            expect(painted(body, LOOK.pants.waistband)).toBe(true);
+            expect(painted(body, LOOK.walls[0])).toBe(false);
+            expect(painted(body, LOOK.roofs[0])).toBe(false);
+        });
+
+        it("roofs it with the Butt's cheeks over the waistband, the crack between", () => {
+            const parts = butt().body;
+            const cheeks = parts.filter((p) => painted([p], BUTT_COLORS.near));
+            const crack = parts.find((p) => painted([p], BUTT_COLORS.cleft));
+
+            expect(cheeks).toHaveLength(2);
+            const [left, right] = cheeks
+                .map(bounds)
+                .sort((a, b) => a.min.x - b.min.x);
+            expect(left.max.x).toBeLessThan(right.max.x);
+            expect((left.min.x + left.max.x) / 2).toBeLessThan(0);
+            expect((right.min.x + right.max.x) / 2).toBeGreaterThan(0);
+            // Spilling just over the waistband, no lower.
+            for (const cheek of [left, right]) {
+                expect(cheek.min.y).toBeLessThan(box.height);
+                expect(cheek.min.y).toBeGreaterThan(
+                    box.height * (1 - BUTT_HOUSE.waistband)
+                );
+            }
+            const c = bounds(crack);
+            expect(Math.abs(c.min.x + c.max.x)).toBeLessThan(1e-6);
+            expect(c.min.y).toBeGreaterThanOrEqual(box.height - 1e-6);
+        });
+
+        it("keeps the cheeks within the box's roof, well over the eaves", () => {
+            const { body } = butt();
+
+            expect(topOf(body)).toBeGreaterThan(box.height + box.roof * 0.9);
+            expect(topOf(body)).toBeLessThanOrEqual(box.height + box.roof);
+        });
+
+        it("stands on two legs, the door between them only with one", () => {
+            const { body } = butt();
+            const cuffs = body
+                .filter((p) => painted([p], LOOK.pants.cuff))
+                .map(bounds)
+                .filter((b) => b.max.y < box.height * 0.1);
+            const gap = (box.width * BUTT_HOUSE.crotch) / 2;
+
+            const middles = cuffs.map((b) => (b.min.x + b.max.x) / 2);
+            expect(middles.some((x) => x < -gap)).toBe(true);
+            expect(middles.some((x) => x > gap)).toBe(true);
+            const doorParts = body
+                .filter((p) => painted([p], DOORS.plain.wood))
+                .map(bounds);
+            expect(doorParts).toHaveLength(1);
+            expect(doorParts[0].min.x).toBeGreaterThan(-gap);
+            expect(doorParts[0].max.x).toBeLessThan(gap);
+            expect(painted(butt(null).body, DOORS.plain.wood)).toBe(false);
+        });
+
+        it("glows its back pockets, either side of the seat", () => {
+            const { windows } = butt();
+            const pockets = windows.map(bounds);
+
+            expect(pockets).toHaveLength(2);
+            expect(painted(windows, LOOK.pants.glass)).toBe(true);
+            expect(pockets.some((b) => b.max.x < 0)).toBe(true);
+            expect(pockets.some((b) => b.min.x > 0)).toBe(true);
+            for (const b of pockets) {
+                expect(b.min.y).toBeGreaterThan(box.height * BUTT_HOUSE.legs);
+                expect(b.max.y).toBeLessThan(
+                    box.height * (1 - BUTT_HOUSE.waistband)
+                );
+            }
+        });
+
+        it("hangs its sign on the waistband's label, under the crack", () => {
+            const sign = FACADES.butt.sign(box);
+
+            expect(sign.y).toBeGreaterThan(box.height * 0.8);
+            expect(sign.y + sign.size).toBeLessThan(box.height);
+        });
+
+        it("only stripes and stars the pants where the season does", () => {
+            const plain = butt();
+            const july = butt("plain", {
+                ...LOOK,
+                pants: { ...LOOK.pants, stripes: "#ff0000", stars: "#ffffff" },
+            });
+
+            expect(painted(plain.body, "#ff0000")).toBe(false);
+            expect(painted(july.body, "#ff0000")).toBe(true);
+            expect(painted(july.body, "#ffffff")).toBe(true);
+            // Stripes round each leg, never across the door.
+            const gap = (box.width * BUTT_HOUSE.crotch) / 2;
+            for (const b of july.body
+                .filter((p) => painted([p], "#ff0000"))
+                .map(bounds)
+                .filter((b) => b.min.y < box.height * BUTT_HOUSE.legs)) {
+                expect(b.min.x > gap - 1 || b.max.x < -gap + 1).toBe(true);
+            }
+        });
     });
 
     describe("a gothic facade", () => {
@@ -304,6 +439,31 @@ describe("street geometry", () => {
             expect(towers.length).toBeGreaterThan(0);
             for (const b of nave) expect(b.z).toBeLessThan(10);
             for (const b of towers) expect(b.z).toBeGreaterThan(6);
+        });
+
+        it("hang along a butt front's waistband, clear of its loops and label", () => {
+            const width = 300;
+            const height = 160;
+            const { bulbs } = building(THREE, {
+                width,
+                height,
+                depth: 120,
+                roof: 80,
+                look: lit,
+                palette: 0,
+                facade: "butt",
+            });
+            const label = FACADES.butt.sign({ width, height });
+
+            expect(bulbs.length).toBeGreaterThan(4);
+            for (const b of bulbs.map(centre)) {
+                expect(Math.abs(b.x)).toBeGreaterThan(label.size / 2);
+                for (const at of BUTT_HOUSE.loops) {
+                    expect(
+                        Math.abs(Math.abs(b.x) - at * width)
+                    ).toBeGreaterThan(width * 0.015);
+                }
+            }
         });
 
         it("leave a haunted front's clock tower clear, even kept short", () => {

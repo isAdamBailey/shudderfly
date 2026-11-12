@@ -58,6 +58,23 @@ const DEFAULT = {
         face: "#f5ecd7",
         glass: "#b5cf86",
     },
+    // The pants the Butt's House wears (streetGeometry.js buttHouse()):
+    // their cloth, its shadow under the crotch, the stitching, the rolled
+    // cuffs, the waistband and its leather label, the glass of the back
+    // pockets (its windows), and, where a season has them, the stripes
+    // round them and the stars on the waistband. The cheeks are always the
+    // Butt's own.
+    pants: {
+        denim: "#3f6fb0",
+        dark: "#1e3456",
+        stitch: "#e0a83c",
+        cuff: "#5c8fd0",
+        waistband: "#2f5a94",
+        label: "#8a5a2c",
+        glass: "#cfe7ff",
+        stripes: null,
+        stars: null,
+    },
     // Windows glow this colour (at this strength) at night; null in
     // daylight.
     lit: null,
@@ -117,6 +134,16 @@ export const WORLD_THEMES = {
             face: "#f5ecd7",
             glass: "#ffd27a",
         },
+        // Santa's trousers: red, with white fur at the waistband and cuffs.
+        pants: {
+            denim: "#c8102e",
+            dark: "#5c0715",
+            stitch: "#ffd27a",
+            cuff: "#ffffff",
+            waistband: "#ffffff",
+            label: "#1f1f1f",
+            glass: "#ffd27a",
+        },
         bulbs: ["#ff3b3b", "#36d16b", "#ffc83d", "#4aa8ff"],
         leaves: ["#166534", "#14532d"],
         lit: "#ffd27a",
@@ -152,6 +179,17 @@ export const WORLD_THEMES = {
             face: "#f5ecd7",
             glass: "#ff9a3c",
         },
+        // Orange-and-black striped, stitched in purple.
+        pants: {
+            denim: "#f97316",
+            dark: "#0f0c10",
+            stitch: "#a855f7",
+            cuff: "#1a1a1a",
+            waistband: "#1a1a1a",
+            label: "#7c3aed",
+            glass: "#c4f0a0",
+            stripes: "#1a1a1a",
+        },
         leaves: ["#c2410c", "#a16207", "#7c2d12"],
         lit: "#ffb347",
         key: { color: "#ff9b54", intensity: 1.3 },
@@ -164,6 +202,19 @@ export const WORLD_THEMES = {
         hill: "#1c2b52",
         drifter: "✨",
         grass: "#166534",
+        // Stars and stripes: red and white, a blue waistband and cuffs, and
+        // white stars along the band.
+        pants: {
+            denim: "#f8fafc",
+            dark: "#0f172a",
+            stitch: "#1d4ed8",
+            cuff: "#1d4ed8",
+            waistband: "#1d4ed8",
+            label: "#8a5a2c",
+            glass: "#fde68a",
+            stripes: "#dc2626",
+            stars: "#ffffff",
+        },
         lit: "#fde68a",
         key: { color: "#a5b4fc", intensity: 0.7 },
         ambient: { sky: "#475569", ground: "#0f172a", intensity: 0.8 },
