@@ -110,8 +110,8 @@ class UserTagged extends Notification implements ShouldBroadcast
         if ($this->contentType === 'comment' && $this->content instanceof MessageComment) {
             $data['comment_id'] = $this->content->id;
             $data['message_id'] = $this->content->message_id;
-            $data['comment'] = $this->content->comment;
-            $data['message'] = $this->content->comment;
+            $data['comment'] = $this->content->previewText();
+            $data['message'] = $data['comment'];
         } else {
             $data['message_id'] = $this->content instanceof Message ? $this->content->id : null;
             $data['message'] = $this->content->previewText();
@@ -146,8 +146,8 @@ class UserTagged extends Notification implements ShouldBroadcast
         if ($this->contentType === 'comment' && $this->content instanceof MessageComment) {
             $data['comment_id'] = $this->content->id;
             $data['message_id'] = $this->content->message_id;
-            $data['comment'] = $this->content->comment;
-            $data['message'] = $this->content->comment;
+            $data['comment'] = $this->content->previewText();
+            $data['message'] = $data['comment'];
         } else {
             $data['message_id'] = $this->content instanceof Message ? $this->content->id : null;
             $data['message'] = $this->content->previewText();

@@ -153,6 +153,7 @@ return [
     // Error messages (clear but gentle)
     'messaging.disabled' => 'El chat está apagado ahora mismo.',
     'voice.sent' => ':name envió un mensaje de voz',
+    'voice.sent_comment' => ':name envió un comentario de voz',
     'voice.disabled' => 'Los mensajes de voz están apagados ahora mismo.',
     'voice.too_long' => 'Un mensaje de voz puede durar hasta :seconds segundos.',
     'voice.record' => 'Graba tu voz',

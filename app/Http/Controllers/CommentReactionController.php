@@ -108,11 +108,16 @@ class CommentReactionController extends Controller
             return;
         }
 
+        // previewText() names the author of a voice-only comment.
+        $comment->setRelation('user', $author);
+
         $author->notify(new MessageReacted($message, $reactor, $emoji, $comment));
 
-        $body = mb_strlen($comment->comment, 'UTF-8') > 120
-            ? mb_substr($comment->comment, 0, 117, 'UTF-8').'...'
-            : $comment->comment;
+        // A voice-only comment reads "{name} sent a voice comment".
+        $preview = $comment->previewText();
+        $body = mb_strlen($preview, 'UTF-8') > 120
+            ? mb_substr($preview, 0, 117, 'UTF-8').'...'
+            : $preview;
 
         $this->pushNotificationService->sendNotification(
             $author->id,
@@ -125,7 +130,7 @@ class CommentReactionController extends Controller
                 'emoji' => $emoji,
                 'reactor_id' => $reactor->id,
                 'reactor_name' => $reactor->name,
-                'comment' => $comment->comment,
+                'comment' => $preview,
                 'url' => route('messages.index').'#message-'.$message->id,
             ]
         );

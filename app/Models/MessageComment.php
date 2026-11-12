@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Events\CommentVoiceClipUpdated;
 use App\Models\Traits\HasUserTagging;
-use App\Support\GameShareMessage;
+use App\Models\Traits\HasVoiceClip;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 
 class MessageComment extends Model
 {
-    use HasFactory, HasUserTagging;
+    use HasFactory, HasUserTagging, HasVoiceClip;
 
     protected $fillable = [
         'message_id',
@@ -25,10 +27,18 @@ class MessageComment extends Model
         'updated_at' => 'datetime',
     ];
 
-    /** The words a notification or digest shows for this comment. */
+    /**
+     * The words a notification or digest shows for this comment: its text, or
+     * "{name} sent a voice comment" for a voice-only comment.
+     */
     public function previewText(): string
     {
-        return GameShareMessage::stripSlugMarker($this->comment);
+        return $this->voicePreviewText($this->comment, 'messages.voice.sent_comment');
+    }
+
+    public function voiceClipUpdatedEvent(): ShouldBroadcast
+    {
+        return new CommentVoiceClipUpdated($this);
     }
 
     /**

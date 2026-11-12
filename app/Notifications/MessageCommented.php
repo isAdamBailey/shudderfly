@@ -61,7 +61,7 @@ class MessageCommented extends Notification implements ShouldBroadcast
             ->greeting(__('messages.commented.greeting', ['name' => $notifiable->name]))
             ->line(__('messages.commented.line', ['name' => $this->commenter->name]))
             ->line('"'.$quotedMessage.'"')
-            ->line(__('messages.commented.comment_line', ['comment' => $this->comment->comment]))
+            ->line(__('messages.commented.comment_line', ['comment' => $this->comment->previewText()]))
             ->action(__('messages.commented.action'), $url)
             ->line(__('messages.notifications.email.opt_out_markdown', ['url' => route('profile.edit')]))
             ->line(__('messages.commented.thank_you'));
@@ -73,9 +73,11 @@ class MessageCommented extends Notification implements ShouldBroadcast
     public function toBroadcast(object $notifiable): BroadcastMessage
     {
         $title = __('messages.commented.title', ['name' => $this->commenter->name]);
-        $commentBody = mb_strlen($this->comment->comment, 'UTF-8') > 120
-            ? mb_substr($this->comment->comment, 0, 117, 'UTF-8').'...'
-            : $this->comment->comment;
+        // A voice-only comment reads "{name} sent a voice comment".
+        $commentPreview = $this->comment->previewText();
+        $commentBody = mb_strlen($commentPreview, 'UTF-8') > 120
+            ? mb_substr($commentPreview, 0, 117, 'UTF-8').'...'
+            : $commentPreview;
 
         $messagePreview = $this->message->previewText();
 
@@ -89,7 +91,7 @@ class MessageCommented extends Notification implements ShouldBroadcast
                 'message_id' => $this->message->id,
                 'comment_id' => $this->comment->id,
                 'message' => $messagePreview,
-                'comment' => $this->comment->comment,
+                'comment' => $commentPreview,
                 'commenter_id' => $this->commenter->id,
                 'commenter_name' => $this->commenter->name,
                 'commenter_avatar' => $this->commenter->avatar,
@@ -111,7 +113,7 @@ class MessageCommented extends Notification implements ShouldBroadcast
             'message_id' => $this->message->id,
             'comment_id' => $this->comment->id,
             'message' => $this->message->previewText(),
-            'comment' => $this->comment->comment,
+            'comment' => $this->comment->previewText(),
             'commenter_id' => $this->commenter->id,
             'commenter_name' => $this->commenter->name,
             'commenter_avatar' => $this->commenter->avatar,

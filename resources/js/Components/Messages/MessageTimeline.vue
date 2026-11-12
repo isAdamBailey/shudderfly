@@ -90,35 +90,14 @@
                     class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words text-lg leading-relaxed"
                     v-html="formatMessage(message.message, message.user_id)"
                 ></div>
-                <div
+                <VoiceClip
                     v-if="message.voice_clip_status"
                     class="mt-2"
                     data-test="voice-clip"
-                >
-                    <VoiceClipPlayer
-                        v-if="message.voice_clip_url"
-                        :src="message.voice_clip_url"
-                        :duration="message.voice_clip_duration"
-                    />
-                    <p
-                        v-else-if="message.voice_clip_status === 'failed'"
-                        class="inline-flex items-center gap-2 text-sm text-red-700 dark:text-red-300"
-                    >
-                        <i class="ri-error-warning-line" aria-hidden="true"></i>
-                        {{ t("voice.failed") }}
-                    </p>
-                    <p
-                        v-else
-                        class="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300"
-                        role="status"
-                    >
-                        <i
-                            class="ri-loader-4-line animate-spin text-lg"
-                            aria-hidden="true"
-                        ></i>
-                        {{ t("voice.processing") }}
-                    </p>
-                </div>
+                    :status="message.voice_clip_status"
+                    :url="message.voice_clip_url"
+                    :duration="message.voice_clip_duration"
+                />
                 <div
                     v-if="
                         message.page_id &&
@@ -618,7 +597,7 @@ import ViewReactionsModal from "@/Components/Messages/ViewReactionsModal.vue";
 import Modal from "@/Components/Modal.vue";
 import ScrollTop from "@/Components/ScrollTop.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
-import VoiceClipPlayer from "@/Components/Messages/VoiceClipPlayer.vue";
+import VoiceClip from "@/Components/Messages/VoiceClip.vue";
 import { channelName } from "@/utils/broadcastChannel";
 import { stripHtml } from "@/utils/text";
 import { usePermissions } from "@/composables/permissions";
@@ -727,9 +706,10 @@ const {
 } = useInfiniteScroll(messagesData.value, messagesPagination);
 
 // Voice clips that finished (ready or failed) since the props were loaded,
-// by message id. Rebuilds from props or infinite scroll still carry
-// "processing", so this keeps the finished state over them.
+// by message id and by comment id. Rebuilds from props or infinite scroll
+// still carry "processing", so these keep the finished state over them.
 const voiceClipUpdates = new Map();
+const commentVoiceClipUpdates = new Map();
 
 const normalizeMessage = (message) => ({
     ...message,
@@ -737,6 +717,7 @@ const normalizeMessage = (message) => ({
     grouped_reactions: message.grouped_reactions || {},
     comments: (message.comments || []).map((comment) => ({
         ...comment,
+        ...commentVoiceClipUpdates.get(comment.id),
         grouped_reactions: comment.grouped_reactions || {},
     })),
 });
@@ -1232,6 +1213,10 @@ const setupEchoListener = () => {
             handleVoiceClipUpdate(event);
         });
 
+        messagesChannel.value.listen(".CommentVoiceClipUpdated", (event) => {
+            handleCommentVoiceClipUpdate(event);
+        });
+
         messagesChannel.value.listen(".CommentCreated", (event) => {
             handleCommentEvent(event);
         });
@@ -1294,6 +1279,15 @@ const handleVoiceClipUpdate = (event) => {
     voiceClipUpdates.set(id, clip);
     const message = localMessages.value.find((m) => m.id === id);
     if (message) Object.assign(message, clip);
+};
+
+const handleCommentVoiceClipUpdate = (event) => {
+    const { comment_id: id, message_id: messageId, ...clip } = event;
+    commentVoiceClipUpdates.set(id, clip);
+    const comment = localMessages.value
+        .find((m) => m.id === messageId)
+        ?.comments?.find((c) => c.id === id);
+    if (comment) Object.assign(comment, clip);
 };
 
 const cleanup = () => {
@@ -1502,6 +1496,11 @@ const openCommentForm = (messageId) => {
 };
 
 const speakComment = (comment) => {
+    // A voice-only comment is heard as recorded, not read out.
+    if (!comment.comment?.trim() && comment.voice_clip_url) {
+        playVoiceClip(comment.voice_clip_url);
+        return;
+    }
     speak(formatMentionsForSpeech(comment.comment || ""));
 };
 

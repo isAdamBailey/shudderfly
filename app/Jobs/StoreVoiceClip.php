@@ -2,8 +2,8 @@
 
 namespace App\Jobs;
 
-use App\Events\MessageVoiceClipUpdated;
 use App\Models\Message;
+use App\Models\MessageComment;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -16,7 +16,7 @@ use Throwable;
 
 /**
  * Turns a voice clip recorded in the Message Builder (WebM/Opus, or MP4/AAC
- * from Safari) into an M4A on S3, then marks its message ready. Modelled on
+ * from Safari) into an M4A on S3, then marks its message or comment ready. Modelled on
  * StoreSoundAudio, but always transcodes: that also trims anything past the
  * cap, whatever the browser claimed.
  */
@@ -28,19 +28,36 @@ class StoreVoiceClip implements ShouldQueue
 
     public int $timeout = 120;
 
+    /** @var class-string<Message|MessageComment> */
+    protected string $ownerClass;
+
+    protected int $ownerId;
+
+    /**
+     * Kept as class and id, not the model, so one deleted while this waits
+     * in the queue still runs (and drops the upload) instead of failing.
+     */
     public function __construct(
-        protected int $messageId,
+        Message|MessageComment $owner,
         protected string $localRelativePath,
-    ) {}
+    ) {
+        $this->ownerClass = $owner::class;
+        $this->ownerId = $owner->getKey();
+    }
+
+    protected function owner(): Message|MessageComment|null
+    {
+        return $this->ownerClass::find($this->ownerId);
+    }
 
     public function handle(): void
     {
         $disk = Storage::disk('local');
-        $message = Message::find($this->messageId);
+        $owner = $this->owner();
 
         // Deleted while it waited in the queue: nothing to attach it to.
         // Already ready: a retry after the broadcast failed, done already.
-        if (! $message || $message->voice_clip_status === Message::VOICE_CLIP_READY) {
+        if (! $owner || $owner->voice_clip_status === $owner::VOICE_CLIP_READY) {
             $disk->delete($this->localRelativePath);
 
             return;
@@ -70,10 +87,10 @@ class StoreVoiceClip implements ShouldQueue
                 fclose($stream);
             }
 
-            $attached = Message::whereKey($message->id)->update([
+            $attached = $this->ownerClass::whereKey($owner->getKey())->update([
                 'voice_clip_path' => $s3Key,
-                'voice_clip_duration' => $this->durationOf($outputPath) ?? $message->voice_clip_duration,
-                'voice_clip_status' => Message::VOICE_CLIP_READY,
+                'voice_clip_duration' => $this->durationOf($outputPath) ?? $owner->voice_clip_duration,
+                'voice_clip_status' => $owner::VOICE_CLIP_READY,
             ]);
 
             // Deleted while it was transcoding: its deleting hook had no
@@ -90,7 +107,7 @@ class StoreVoiceClip implements ShouldQueue
         $disk->delete($this->localRelativePath);
 
         if ($attached) {
-            event(new MessageVoiceClipUpdated($message->refresh()));
+            event($owner->refresh()->voiceClipUpdatedEvent());
         }
     }
 
@@ -98,10 +115,10 @@ class StoreVoiceClip implements ShouldQueue
     {
         Storage::disk('local')->delete($this->localRelativePath);
 
-        $message = Message::find($this->messageId);
-        if ($message) {
-            $message->update(['voice_clip_status' => Message::VOICE_CLIP_FAILED]);
-            event(new MessageVoiceClipUpdated($message));
+        $owner = $this->owner();
+        if ($owner) {
+            $owner->update(['voice_clip_status' => $owner::VOICE_CLIP_FAILED]);
+            event($owner->voiceClipUpdatedEvent());
         }
     }
 

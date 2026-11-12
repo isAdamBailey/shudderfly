@@ -8,8 +8,14 @@ const addWordFn = ref(null);
 const addPhraseFn = ref(null);
 const getPreviewFn = ref(null);
 const activeInputType = ref(null); // 'message' or 'comment'
+const activeCommentId = ref(null); // the comment input in use, by message id
 const commentInputs = ref(new Map()); // Map of messageId -> { addWord, addPhrase, getPreview }
 const messageInputFunctions = ref(null); // Store message input functions
+
+// The key activeInputKey reports for a comment input (by message id), or
+// for the message input when there's no message id.
+export const inputKey = (messageId = null) =>
+    messageId ? `comment:${messageId}` : "message";
 
 // Load initial state from localStorage
 const loadState = () => {
@@ -76,6 +82,7 @@ export function useMessageBuilder() {
 
     const setActiveCommentInput = (messageId) => {
         activeInputType.value = "comment";
+        activeCommentId.value = messageId;
         const commentInput = commentInputs.value.get(messageId);
         if (commentInput) {
             addWordFn.value = commentInput.addWord;
@@ -134,6 +141,13 @@ export function useMessageBuilder() {
         setAddWord,
         setAddPhrase,
         setGetPreview,
+
+        // Which input is in use: "message", or "comment:<messageId>".
+        activeInputKey: computed(() =>
+            activeInputType.value === "comment"
+                ? inputKey(activeCommentId.value)
+                : activeInputType.value
+        ),
 
         // Comment input management
         setCommentInput,

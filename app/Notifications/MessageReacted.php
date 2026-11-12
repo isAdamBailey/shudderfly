@@ -58,7 +58,7 @@ class MessageReacted extends Notification implements ShouldBroadcast
     protected function contentText(): string
     {
         return $this->comment
-            ? $this->comment->comment
+            ? $this->comment->previewText()
             : $this->message->previewText();
     }
 
@@ -131,7 +131,7 @@ class MessageReacted extends Notification implements ShouldBroadcast
 
         if ($this->comment) {
             $data['comment_id'] = $this->comment->id;
-            $data['comment'] = $this->comment->comment;
+            $data['comment'] = $this->comment->previewText();
         }
 
         return $data;

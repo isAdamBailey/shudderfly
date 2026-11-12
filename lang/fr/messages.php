@@ -89,6 +89,7 @@ return [
     // Error messages (clear but gentle)
     'messaging.disabled' => 'Le chat est éteint pour le moment.',
     'voice.sent' => ':name a envoyé un message vocal',
+    'voice.sent_comment' => ':name a envoyé un commentaire vocal',
     'voice.disabled' => 'Les messages vocaux sont éteints pour le moment.',
     'voice.too_long' => 'Un message vocal peut durer jusqu\'à :seconds secondes.',
     'voice.record' => 'Enregistre ta voix',

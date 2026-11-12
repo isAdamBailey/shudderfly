@@ -153,6 +153,7 @@ return [
     // Error messages (clear but gentle)
     'messaging.disabled' => 'Chat is turned off right now.',
     'voice.sent' => ':name sent a voice message',
+    'voice.sent_comment' => ':name sent a voice comment',
     'voice.disabled' => 'Voice messages are turned off right now.',
     'voice.too_long' => 'A voice message can be up to :seconds seconds long.',
     'voice.record' => 'Record your voice',

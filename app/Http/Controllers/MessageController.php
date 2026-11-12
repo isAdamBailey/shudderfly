@@ -20,21 +20,6 @@ use Inertia\Response;
 
 class MessageController extends Controller
 {
-    /**
-     * What MediaRecorder hands over: WebM/Opus (Chrome, Firefox), MP4/AAC
-     * (Safari), Ogg/Opus (older Firefox). WebM and MP4 sniff as video/*.
-     */
-    private const VOICE_CLIP_MIMES = [
-        'audio/webm',
-        'video/webm',
-        'audio/mp4',
-        'video/mp4',
-        'audio/x-m4a',
-        'audio/aac',
-        'audio/ogg',
-        'application/ogg',
-    ];
-
     public function __construct(
         protected PushNotificationService $pushNotificationService,
         protected UserTaggingService $userTaggingService
@@ -108,6 +93,7 @@ class MessageController extends Controller
             return [
                 'id' => $comment->id,
                 'comment' => $comment->comment,
+                ...$comment->voiceClipPayload(),
                 'created_at' => $comment->created_at->toIso8601String(),
                 'user' => [
                     'id' => $comment->user->id,
@@ -145,43 +131,23 @@ class MessageController extends Controller
             return back()->withErrors(['message' => __('messages.messaging.disabled')]);
         }
 
-        if ($request->hasFile('voice_clip') && ! VoiceMessages::enabled()) {
-            return back()->withErrors(['voice_clip' => __('messages.voice.disabled')]);
-        }
-
-        $maxSeconds = (int) config('voice_messages.max_seconds');
-
         $validated = $request->validate([
             // A voice-only message has no text.
             'message' => ['required_without:voice_clip', 'nullable', 'string', 'max:1000'],
-            'voice_clip' => [
-                'nullable',
-                'file',
-                'max:'.(int) config('voice_messages.max_kilobytes'),
-                'mimetypes:'.implode(',', self::VOICE_CLIP_MIMES),
-            ],
-            // The browser stops at the cap; this catches one that didn't.
-            // StoreVoiceClip also trims to it, whatever this claims.
-            'voice_clip_duration' => ['required_with:voice_clip', 'nullable', 'numeric', 'min:0', 'max:'.$maxSeconds],
+            ...VoiceMessages::rules(),
             'tagged_user_ids' => ['sometimes', 'array'],
             'tagged_user_ids.*' => ['integer', 'exists:users,id'],
-        ], [
-            'voice_clip_duration.max' => __('messages.voice.too_long', ['seconds' => $maxSeconds]),
-        ]);
+        ], VoiceMessages::messages());
 
         /** @var User $user */
         $user = $request->user();
 
-        // Stored before the message exists, so a failed write can't leave a
-        // message stuck "processing" with no job to finish it.
-        $voiceClipPath = $request->file('voice_clip')?->store('tmp/voice-clips', 'local');
+        $voiceClipPath = VoiceMessages::storeUpload($request);
 
         $message = Message::create([
             'user_id' => $user->id,
             'message' => $validated['message'] ?? null,
-            'voice_clip_status' => $voiceClipPath ? Message::VOICE_CLIP_PROCESSING : null,
-            // The browser's measure until StoreVoiceClip probes the real one.
-            'voice_clip_duration' => $voiceClipPath ? (int) ceil($validated['voice_clip_duration']) : null,
+            ...VoiceMessages::pendingAttributes($voiceClipPath, $validated['voice_clip_duration'] ?? null),
         ]);
 
         // Load user relationship for broadcasting
@@ -201,7 +167,7 @@ class MessageController extends Controller
         // After the broadcast, so a sync queue's "ready" can't arrive before
         // the message it belongs to.
         if ($voiceClipPath) {
-            StoreVoiceClip::dispatch($message->id, $voiceClipPath);
+            StoreVoiceClip::dispatch($message, $voiceClipPath);
         }
 
         // Flash message is handled via Echo broadcast for all users

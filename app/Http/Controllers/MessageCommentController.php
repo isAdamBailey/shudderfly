@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Events\CommentCreated;
+use App\Jobs\StoreVoiceClip;
 use App\Models\Message;
 use App\Models\MessageComment;
 use App\Models\User;
 use App\Notifications\MessageCommented;
 use App\Services\PushNotificationService;
 use App\Services\UserTaggingService;
+use App\Support\VoiceMessages;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,18 +28,23 @@ class MessageCommentController extends Controller
     public function store(Request $request, Message $message): RedirectResponse
     {
         $validated = $request->validate([
-            'comment' => ['required', 'string', 'max:1000'],
+            // A voice-only comment has no text.
+            'comment' => ['required_without:voice_clip', 'nullable', 'string', 'max:1000'],
+            ...VoiceMessages::rules(),
             'tagged_user_ids' => ['sometimes', 'array'],
             'tagged_user_ids.*' => ['integer', 'exists:users,id'],
-        ]);
+        ], VoiceMessages::messages());
 
         /** @var User $user */
         $user = $request->user();
 
+        $voiceClipPath = VoiceMessages::storeUpload($request);
+
         $comment = MessageComment::create([
             'message_id' => $message->id,
             'user_id' => $user->id,
-            'comment' => $validated['comment'],
+            'comment' => $validated['comment'] ?? null,
+            ...VoiceMessages::pendingAttributes($voiceClipPath, $validated['voice_clip_duration'] ?? null),
         ]);
 
         $comment->load('user');
@@ -59,9 +66,11 @@ class MessageCommentController extends Controller
             $messageAuthor->notify(new MessageCommented($message, $comment, $user));
 
             $title = __('messages.commented.push_title', ['name' => $user->name]);
-            $commentBody = mb_strlen($comment->comment, 'UTF-8') > 120
-                ? mb_substr($comment->comment, 0, 117, 'UTF-8').'...'
-                : $comment->comment;
+            // A voice-only comment reads "{name} sent a voice comment".
+            $commentPreview = $comment->previewText();
+            $commentBody = mb_strlen($commentPreview, 'UTF-8') > 120
+                ? mb_substr($commentPreview, 0, 117, 'UTF-8').'...'
+                : $commentPreview;
 
             $this->pushNotificationService->sendNotification(
                 $messageAuthor->id,
@@ -73,14 +82,20 @@ class MessageCommentController extends Controller
                     'comment_id' => $comment->id,
                     'commenter_id' => $user->id,
                     'commenter_name' => $user->name,
-                    'message' => $message->message,
-                    'comment' => $comment->comment,
+                    'message' => $message->previewText(),
+                    'comment' => $commentPreview,
                     'url' => route('messages.index').'#message-'.$message->id,
                 ]
             );
         }
 
         event(new CommentCreated($comment));
+
+        // After the broadcast, so a sync queue's "ready" can't arrive before
+        // the comment it belongs to.
+        if ($voiceClipPath) {
+            StoreVoiceClip::dispatch($comment, $voiceClipPath);
+        }
 
         return back();
     }
