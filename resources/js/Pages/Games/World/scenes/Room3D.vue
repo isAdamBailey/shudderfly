@@ -42,13 +42,7 @@ import { useTvChannels } from "../composables/useTvChannels.js";
 import { MOVE_EVERY_MS } from "../composables/useWorldPresence.js";
 import { hiddenByCurtain } from "../interactions/curtain.js";
 import { autoTriggers } from "../interactions/index.js";
-import {
-    chimesBetween,
-    dongLevel,
-    playChime,
-    playTick,
-    tickLevel,
-} from "../clockSounds.js";
+import { playTick, tickLevel } from "../clockSounds.js";
 import {
     BOOKCASE,
     bookcaseHeight,
@@ -291,10 +285,8 @@ function feedIfAtButt(id) {
 
 let graph = null;
 let stopFrames = null;
-// The room's clock, s: its pendulums swing to it, each ticks at the end
-// of every swing, and one with a chime dongs every `chime` s, playing its
-// tune first every `tune`th dong. The clocks that swing, where they
-// stand: [{ x, z, beat, chime, tune }].
+// The room's clock, s: its pendulums swing to it, each ticking at the end
+// of every swing. The clocks that swing, where they stand: [{ x, z, beat }].
 let time = 0;
 let clocks = [];
 
@@ -303,21 +295,17 @@ function passed(from, every) {
     return Math.floor(from / every) !== Math.floor(time / every);
 }
 
-/** Ticks each clock whose swing ended between `from` s and now, and
- * strikes whatever of its dong or tune came round, as loud as the Butt is
- * close to it, once audio's running (a tick nobody asked for). */
+/** Ticks each clock whose swing ended between `from` s and now, as loud
+ * as the Butt is close to it, once audio's running (a tick nobody asked
+ * for). */
 function tickClocks(from) {
     if (!audioRunning()) return;
     for (const clock of clocks) {
         // Keep this invariant here too: a prop may have a `swing` animation
         // without being a clock (the bath uses it to bob its bubbles).
         if (!Number.isFinite(clock.beat)) continue;
-        const tick = passed(from, clock.beat);
-        const strikes = clock.chime ? chimesBetween(from, time, clock) : [];
-        if (!tick && strikes.length === 0) continue;
-        const distance = Math.hypot(clock.x - butt.x, clock.z - butt.z);
-        if (tick) playTick(tickLevel(distance));
-        for (const strike of strikes) playChime(strike, dongLevel(distance));
+        if (!passed(from, clock.beat)) continue;
+        playTick(tickLevel(Math.hypot(clock.x - butt.x, clock.z - butt.z)));
     }
 }
 

@@ -598,7 +598,7 @@ export function createRoomScene(
     // lamp's shade), by its id.
     const switches = new Map();
     // Each modelled thing that swings (a clock's pendulum), where it
-    // stands, with its userData: swing, beat, and any chime and tune.
+    // stands, with its userData: swing and beat.
     const swings = [];
     // Instruments (INSTRUMENTS), by id: built into the room, but played,
     // so they're ticked. A stage's curtain is ticked as it's drawn.
@@ -1043,9 +1043,7 @@ export function createRoomScene(
             curtains.get(id)?.setOpen(open);
         },
         /** What swings to the room's clock, where it stands: [{ x, z,
-         * beat, chime, tune }], a tick at the end of each swing, every
-         * `beat` s, a dong every `chime` s (when it has one), and its
-         * tune every `tune`th. */
+         * beat }], a tick at the end of each swing, every `beat` s. */
         swinging: swings,
         /** Switches modelled thing `id`'s own light (a radio's dial while
          * it plays). */
