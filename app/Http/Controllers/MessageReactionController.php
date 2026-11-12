@@ -7,7 +7,6 @@ use App\Models\Message;
 use App\Models\MessageReaction;
 use App\Notifications\MessageReacted;
 use App\Services\PushNotificationService;
-use App\Support\GameShareMessage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -116,7 +115,7 @@ class MessageReactionController extends Controller
 
         $author->notify(new MessageReacted($message, $reactor, $emoji));
 
-        $preview = GameShareMessage::stripSlugMarker($message->message);
+        $preview = $message->previewText();
         $body = mb_strlen($preview, 'UTF-8') > 120
             ? mb_substr($preview, 0, 117, 'UTF-8').'...'
             : $preview;

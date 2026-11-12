@@ -6,7 +6,6 @@ use App\Models\Message;
 use App\Models\MessageComment;
 use App\Models\User;
 use App\Notifications\UserTagged;
-use App\Support\GameShareMessage;
 
 class UserTaggingService
 {
@@ -88,13 +87,8 @@ class UserTaggingService
 
             $taggedUser->notify(new UserTagged($content, $tagger, $contentType));
 
-            $contentText = $contentType === 'comment' && $content instanceof MessageComment
-                ? $content->comment
-                : ($content instanceof Message ? $content->message : '');
-
-            $pushPreview = $contentType === 'comment'
-                ? $contentText
-                : GameShareMessage::stripSlugMarker($contentText);
+            // A voice-only message reads "{name} sent a voice message".
+            $pushPreview = $content->previewText();
 
             $pushBody = mb_strlen($pushPreview, 'UTF-8') > 120
                 ? mb_substr($pushPreview, 0, 117, 'UTF-8').'...'
@@ -114,7 +108,7 @@ class UserTaggingService
                 $pushData['url'] = route('messages.index').'#message-'.$content->message_id;
             } else {
                 $pushData['message_id'] = $content instanceof Message ? $content->id : null;
-                $pushData['message'] = $contentText;
+                $pushData['message'] = $pushPreview;
             }
 
             $title = __('messages.tagged.push_title', ['name' => $tagger->name]);

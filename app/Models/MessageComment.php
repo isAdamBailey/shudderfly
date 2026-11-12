@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Traits\HasUserTagging;
+use App\Support\GameShareMessage;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,6 +24,12 @@ class MessageComment extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+    /** The words a notification or digest shows for this comment. */
+    public function previewText(): string
+    {
+        return GameShareMessage::stripSlugMarker($this->comment);
+    }
 
     /**
      * Boot the model.

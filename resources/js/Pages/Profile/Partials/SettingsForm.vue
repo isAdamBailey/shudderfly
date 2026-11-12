@@ -63,6 +63,8 @@ const defaultDescriptions = {
         'Show the "ask an admin to unblock" button to users without the edit pages permission (blocking itself stays on)',
     world_together_enabled:
         "Let logged-in people in the Games World see each other (uses Pusher messages)",
+    voice_messages_enabled:
+        "Let people record their own voice in the Message Builder (only while messaging is on)",
 };
 
 const buildFormSettings = (settings) =>

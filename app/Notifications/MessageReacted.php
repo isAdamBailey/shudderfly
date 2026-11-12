@@ -5,7 +5,6 @@ namespace App\Notifications;
 use App\Models\Message;
 use App\Models\MessageComment;
 use App\Models\User;
-use App\Support\GameShareMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Notifications\Messages\BroadcastMessage;
@@ -60,7 +59,7 @@ class MessageReacted extends Notification implements ShouldBroadcast
     {
         return $this->comment
             ? $this->comment->comment
-            : GameShareMessage::stripSlugMarker($this->message->message);
+            : $this->message->previewText();
     }
 
     /**
@@ -121,7 +120,7 @@ class MessageReacted extends Notification implements ShouldBroadcast
     {
         $data = [
             'message_id' => $this->message->id,
-            'message' => GameShareMessage::stripSlugMarker($this->message->message),
+            'message' => $this->message->previewText(),
             'emoji' => $this->emoji,
             'reactor_id' => $this->reactor->id,
             'reactor_name' => $this->reactor->name,

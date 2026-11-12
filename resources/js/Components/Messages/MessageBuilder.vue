@@ -3,11 +3,15 @@
 import SpeakButton from "@/Components/SpeakButton.vue";
 import ConfirmDialog from "@/Components/ConfirmDialog.vue";
 import UserTagList from "@/Components/UserTagList.vue";
+import VoiceClipPlayer from "@/Components/Messages/VoiceClipPlayer.vue";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useMessageBuilder } from "@/composables/useMessageBuilder";
+import { useSiteSetting } from "@/composables/useSiteSetting";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
-import { router, useForm } from "@inertiajs/vue3";
+import { useVoiceRecorder } from "@/composables/useVoiceRecorder";
+import { formatClock } from "@/utils/time";
+import { router, useForm, usePage } from "@inertiajs/vue3";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 // Splits text into non-empty words; used to keep `selection` (the legacy
@@ -153,6 +157,8 @@ const {
 
 const form = useForm({
     message: "",
+    voice_clip: null,
+    voice_clip_duration: null,
     tagged_user_ids: [],
 });
 
@@ -175,6 +181,49 @@ const props = defineProps({
 const emit = defineEmits(["messagePosted", "commentPosted"]);
 
 const isCommentMode = computed(() => props.mode === "comment");
+
+// Voice clips: messages only for now (comments are phase 2 of #222/#223).
+const voiceMessagesEnabled = useSiteSetting("voice_messages_enabled");
+const canRecordVoice = computed(
+    () => voiceMessagesEnabled.value && !isCommentMode.value
+);
+const voiceMaxSeconds = usePage().props.voiceClipMaxSeconds || 60;
+const {
+    state: voiceState,
+    elapsed: voiceElapsed,
+    clip: voiceClip,
+    error: voiceError,
+    start: startVoice,
+    stop: stopVoice,
+    discard: discardVoice,
+} = useVoiceRecorder({ maxSeconds: voiceMaxSeconds });
+const isRecording = computed(() => voiceState.value === "recording");
+
+// Tap to start, tap to stop.
+function toggleRecording() {
+    if (isRecording.value) {
+        stopVoice();
+        return;
+    }
+    startVoice();
+}
+
+function reRecord() {
+    discardVoice();
+    startVoice();
+}
+
+// Why recording couldn't start, or why the server turned the clip down.
+const voiceErrorText = computed(() =>
+    voiceError.value
+        ? t(`voice.${voiceError.value}`)
+        : form.errors.voice_clip || form.errors.voice_clip_duration
+);
+
+// Recording couldn't start: say why, as well as showing it.
+watch(voiceError, (reason) => {
+    if (reason) speak(t(`voice.${reason}`));
+});
 
 const FAVORITES_KEY = "message_builder_favorites_v1";
 const MAX_FAVORITES = 5;
@@ -724,20 +773,30 @@ function clearAfterSubmit() {
 }
 
 function postMessage() {
-    if (!preview.value?.trim() || form.processing) {
+    if (submitDisabled.value) {
         return;
     }
+
+    const clip = voiceClip.value;
 
     const messageText = preview.value;
     speak(t("message.posting"));
 
     form.message = messageText;
     form.tagged_user_ids = collectTaggedUserIds(messageText);
+    form.voice_clip = clip
+        ? new File([clip.blob], `voice-clip.${clip.extension}`, {
+              type: clip.blob.type,
+          })
+        : null;
+    form.voice_clip_duration = clip ? clip.duration : null;
 
     form.post(route("messages.store"), {
         preserveScroll: true,
+        forceFormData: Boolean(clip),
         onSuccess: () => {
             clearAfterSubmit();
+            discardVoice();
             form.reset();
             emit("messagePosted");
         },
@@ -789,7 +848,11 @@ function submitContent() {
 }
 
 const submitDisabled = computed(
-    () => form.processing || commentProcessing.value || !preview.value?.trim()
+    () =>
+        form.processing ||
+        commentProcessing.value ||
+        isRecording.value ||
+        (!preview.value?.trim() && !voiceClip.value)
 );
 
 const submitLabel = computed(() =>
@@ -849,8 +912,104 @@ defineExpose({
                         icon-class="ri-speak-fill text-lg"
                         @click="sayIt"
                     />
+                    <!-- Stays visible when the mic is blocked or missing:
+                         tapping it then says why. -->
+                    <button
+                        v-if="canRecordVoice"
+                        type="button"
+                        data-test="voice-record"
+                        :class="[
+                            'ml-2 self-start flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white shadow-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+                            isRecording
+                                ? 'bg-red-600 hover:bg-red-700 focus-visible:ring-red-500 animate-pulse'
+                                : 'bg-rose-600 hover:bg-rose-700 focus-visible:ring-rose-500',
+                        ]"
+                        :aria-label="
+                            isRecording ? t('voice.stop') : t('voice.record')
+                        "
+                        :aria-pressed="isRecording"
+                        :title="
+                            isRecording ? t('voice.stop') : t('voice.record')
+                        "
+                        @click="toggleRecording"
+                    >
+                        <i
+                            :class="[
+                                isRecording ? 'ri-stop-fill' : 'ri-mic-fill',
+                                'text-xl leading-none',
+                            ]"
+                            aria-hidden="true"
+                        ></i>
+                    </button>
                 </div>
             </div>
+
+            <!-- Recording: a running clock against the cap. -->
+            <div
+                v-if="isRecording"
+                class="mt-2 flex items-center gap-3 rounded-md bg-red-50 px-3 py-2 text-red-800 dark:bg-red-950/40 dark:text-red-200"
+                aria-live="polite"
+            >
+                <span
+                    class="h-3 w-3 shrink-0 rounded-full bg-red-600 animate-pulse"
+                    aria-hidden="true"
+                ></span>
+                <span class="font-semibold">{{ t("voice.recording") }}</span>
+                <span class="ml-auto tabular-nums font-semibold">
+                    {{ formatClock(voiceElapsed) }} /
+                    {{ formatClock(voiceMaxSeconds) }}
+                </span>
+            </div>
+
+            <!-- Recorded: hear it in the timeline's player before posting. -->
+            <div
+                v-else-if="voiceClip"
+                data-test="voice-preview"
+                class="mt-2 flex flex-wrap items-center gap-2 rounded-md bg-blue-50 px-3 py-2 dark:bg-slate-700"
+            >
+                <span
+                    class="text-sm font-semibold text-gray-700 dark:text-gray-200"
+                >
+                    {{ t("voice.preview") }}
+                </span>
+                <VoiceClipPlayer
+                    :src="voiceClip.url"
+                    :duration="voiceClip.duration"
+                />
+                <div class="ml-auto flex gap-2">
+                    <button
+                        type="button"
+                        class="flex h-11 w-11 items-center justify-center rounded-md bg-slate-700 text-white shadow-md hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-500"
+                        :aria-label="t('voice.re_record')"
+                        :title="t('voice.re_record')"
+                        @click="reRecord"
+                    >
+                        <i
+                            class="ri-restart-line text-xl"
+                            aria-hidden="true"
+                        ></i>
+                    </button>
+                    <button
+                        type="button"
+                        class="flex h-11 w-11 items-center justify-center rounded-md bg-red-600 text-white shadow-md hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600"
+                        :aria-label="t('voice.discard')"
+                        :title="t('voice.discard')"
+                        @click="discardVoice"
+                    >
+                        <i
+                            class="ri-delete-bin-line text-xl"
+                            aria-hidden="true"
+                        ></i>
+                    </button>
+                </div>
+            </div>
+            <p
+                v-if="voiceErrorText"
+                role="alert"
+                class="mt-2 text-sm font-semibold text-red-700 dark:text-red-300"
+            >
+                {{ voiceErrorText }}
+            </p>
         </div>
 
         <!-- Category toolbar: compact icons; each opens the shared pane below.

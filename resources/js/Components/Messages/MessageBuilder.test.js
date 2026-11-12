@@ -23,10 +23,35 @@ const mockForm = {
     errors: {},
 };
 
+const { mockSettings, mockVoice } = vi.hoisted(() => ({
+    mockSettings: {},
+    mockVoice: {},
+}));
+
+vi.mock("@/composables/useVoiceRecorder", async () => {
+    const { ref } = await import("vue");
+    return {
+        useVoiceRecorder: () => {
+            Object.assign(mockVoice, {
+                state: ref("idle"),
+                elapsed: ref(0),
+                clip: ref(null),
+                error: ref(null),
+                start: vi.fn(),
+                stop: vi.fn(),
+                discard: vi.fn(),
+            });
+            return mockVoice;
+        },
+    };
+});
+
 vi.mock("@inertiajs/vue3", () => ({
     useForm: () => mockForm,
     usePage: () => ({
         props: {
+            settings: mockSettings,
+            voiceClipMaxSeconds: 60,
             flash: {},
             auth: {
                 user: {
@@ -403,6 +428,89 @@ describe("MessageBuilder", () => {
 
             // Word count should be displayed (if the component shows it)
             expect(wrapper.vm).toBeTruthy();
+        });
+    });
+
+    describe("Voice clips", () => {
+        const mountBuilder = (props = {}) =>
+            mount(MessageBuilder, {
+                props: { users: defaultUsers, ...props },
+                global: { stubs: { VoiceClipPlayer: true } },
+            });
+
+        beforeEach(() => {
+            mockSettings.voice_messages_enabled = "1";
+            mockForm.voice_clip = null;
+            mockForm.voice_clip_duration = null;
+        });
+
+        it("hides the mic while voice messages are off", () => {
+            mockSettings.voice_messages_enabled = "0";
+
+            const wrapper = mountBuilder();
+
+            expect(wrapper.find('[data-test="voice-record"]').exists()).toBe(
+                false
+            );
+        });
+
+        it("hides the mic when commenting (phase 2)", () => {
+            const wrapper = mountBuilder({ mode: "comment", messageId: 1 });
+
+            expect(wrapper.find('[data-test="voice-record"]').exists()).toBe(
+                false
+            );
+        });
+
+        it("taps to start and taps again to stop", async () => {
+            const wrapper = mountBuilder();
+            const mic = wrapper.find('[data-test="voice-record"]');
+
+            await mic.trigger("click");
+            expect(mockVoice.start).toHaveBeenCalled();
+
+            mockVoice.state.value = "recording";
+            await nextTick();
+            await mic.trigger("click");
+            expect(mockVoice.stop).toHaveBeenCalled();
+            expect(wrapper.vm.submitDisabled).toBe(true);
+        });
+
+        it("shows and speaks why recording couldn't start", async () => {
+            const wrapper = mountBuilder();
+
+            mockVoice.error.value = "denied";
+            await nextTick();
+
+            expect(wrapper.find('[role="alert"]').text()).toBe("voice.denied");
+            expect(mockSpeak).toHaveBeenCalledWith("voice.denied");
+        });
+
+        it("previews a recording and posts it as a voice-only message", async () => {
+            const wrapper = mountBuilder();
+            mockVoice.state.value = "recorded";
+            mockVoice.clip.value = {
+                blob: new Blob(["voice"], { type: "audio/webm" }),
+                url: "blob:clip",
+                duration: 4.2,
+                extension: "webm",
+            };
+            await nextTick();
+
+            expect(wrapper.find('[data-test="voice-preview"]').exists()).toBe(
+                true
+            );
+            expect(wrapper.vm.submitDisabled).toBe(false);
+
+            wrapper.vm.submitContent();
+
+            expect(mockForm.voice_clip).toBeInstanceOf(File);
+            expect(mockForm.voice_clip.name).toBe("voice-clip.webm");
+            expect(mockForm.voice_clip_duration).toBe(4.2);
+            expect(mockForm.post).toHaveBeenCalledWith(
+                "/messages.store",
+                expect.objectContaining({ forceFormData: true })
+            );
         });
     });
 });

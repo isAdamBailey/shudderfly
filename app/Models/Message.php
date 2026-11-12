@@ -3,11 +3,13 @@
 namespace App\Models;
 
 use App\Models\Traits\HasUserTagging;
+use App\Support\GameShareMessage;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class Message extends Model
 {
@@ -24,12 +26,28 @@ class Message extends Model
         'book_id',
         'sound_id',
         'collage_id',
+        'voice_clip_path',
+        'voice_clip_duration',
+        'voice_clip_status',
     ];
+
+    /** A voice clip is being transcoded and isn't playable yet. */
+    public const VOICE_CLIP_PROCESSING = 'processing';
+
+    public const VOICE_CLIP_READY = 'ready';
+
+    /** Transcoding gave up; the clip will never play. */
+    public const VOICE_CLIP_FAILED = 'failed';
 
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'voice_clip_duration' => 'integer',
     ];
+
+    protected $hidden = ['voice_clip_path'];
+
+    protected $appends = ['voice_clip_url'];
 
     /**
      * Boot the model.
@@ -39,6 +57,10 @@ class Message extends Model
         parent::boot();
 
         static::deleting(function ($message) {
+            if ($path = $message->getRawOriginal('voice_clip_path')) {
+                Storage::disk('s3')->delete($path);
+            }
+
             $messageId = $message->id;
 
             DB::table('notifications')
@@ -52,6 +74,48 @@ class Message extends Model
                 })
                 ->delete();
         });
+    }
+
+    /** Where a ready voice clip plays from; null until it's ready. */
+    public function getVoiceClipUrlAttribute(): ?string
+    {
+        $path = $this->attributes['voice_clip_path'] ?? null;
+
+        if (! $path || ($this->attributes['voice_clip_status'] ?? null) !== self::VOICE_CLIP_READY) {
+            return null;
+        }
+
+        return Sound::urlForPath($path);
+    }
+
+    /**
+     * The voice clip fields every client payload carries (the timeline's
+     * props, MessageCreated, MessageVoiceClipUpdated).
+     *
+     * @return array{voice_clip_status: ?string, voice_clip_duration: ?int, voice_clip_url: ?string}
+     */
+    public function voiceClipPayload(): array
+    {
+        return [
+            'voice_clip_status' => $this->voice_clip_status,
+            'voice_clip_duration' => $this->voice_clip_duration,
+            'voice_clip_url' => $this->voice_clip_url,
+        ];
+    }
+
+    /**
+     * The words a notification or digest shows for this message: its text, or
+     * "{name} sent a voice message" for a voice-only message.
+     */
+    public function previewText(): string
+    {
+        $text = GameShareMessage::stripSlugMarker($this->message);
+
+        if ($text === '' && $this->voice_clip_status) {
+            return __('messages.voice.sent', ['name' => $this->user?->name ?? '']);
+        }
+
+        return $text;
     }
 
     /**

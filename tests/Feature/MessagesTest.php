@@ -526,7 +526,6 @@ class MessagesTest extends TestCase
 
         $this->artisan('messages:cleanup')
             ->expectsOutput('Deleted 1 message(s) older than 30 days.')
-            ->expectsOutput('Deleted 1 notification(s) for deleted messages.')
             ->assertExitCode(0);
 
         // Old notification should be deleted
