@@ -3,7 +3,14 @@ import { describe, expect, it } from "vitest";
 import { BUTT_COLORS, GUSTER_COLORS } from "@/constants/characters.js";
 import { serverList } from "../testing/serverList.js";
 import { FACADE_SIZES } from "./roadLayout.js";
-import { building, BUTT_HOUSE, DOORS, FACADES } from "./streetGeometry.js";
+import {
+    BEAN_CAN,
+    BEAN_CAN_COLORS,
+    building,
+    BUTT_HOUSE,
+    DOORS,
+    FACADES,
+} from "./streetGeometry.js";
 
 const LOOK = {
     walls: ["#ffffff"],
@@ -409,6 +416,128 @@ describe("street geometry", () => {
             expect(sign.y).toBeGreaterThan(box.height * 0.34);
             expect(sign.y + sign.size).toBeLessThan(box.height * 0.56);
             expect(sign.z).toBeGreaterThan(8);
+        });
+    });
+
+    describe("a bean can facade", () => {
+        const box = {
+            width: 160,
+            height: 210,
+            depth: 120,
+            roof: 210 * FACADE_SIZES.beans.roof,
+        };
+        const can = (door = "guster", look = LOOK) =>
+            building(THREE, {
+                ...box,
+                look,
+                palette: 0,
+                door,
+                facade: "beans",
+            });
+        const bounds = (parts) => {
+            const all = new THREE.Box3();
+            for (const part of parts) {
+                part.computeBoundingBox();
+                all.union(part.boundingBox);
+            }
+            return all;
+        };
+
+        it("stands as a can, taller than it's wide, its front on z = 0", () => {
+            const { body, labels } = can();
+            const b = bounds([...body, labels[0].geometry]);
+
+            expect(b.max.y - b.min.y).toBeGreaterThan(box.width * 1.25);
+            // The lid's seam, a faceted roll, comes just short of it.
+            expect(Math.abs(b.max.y - (box.height + box.roof))).toBeLessThan(
+                box.roof * 0.2
+            );
+            expect(b.max.x - b.min.x).toBeCloseTo(box.width, -1);
+            expect(b.max.z).toBeLessThan(5);
+            expect(b.min.z).toBeCloseTo(-box.width, -1);
+        });
+
+        it("is tin top and bottom, the label the same every season", () => {
+            const { body } = can();
+            expect(painted(body, BEAN_CAN_COLORS.tin)).toBe(true);
+            expect(painted(body, LOOK.pants.denim)).toBe(false);
+        });
+
+        it("wraps a label round it to paint, its middle the front", () => {
+            const [label] = can().labels;
+            const words = [];
+            const ctx = new Proxy(
+                {},
+                {
+                    get: (target, name) =>
+                        name in target
+                            ? target[name]
+                            : name === "measureText"
+                            ? () => ({ width: 400 })
+                            : name === "fillText"
+                            ? (text, x) => words.push([text, x])
+                            : name === "createRadialGradient"
+                            ? () => ({ addColorStop() {} })
+                            : () => {},
+                    set: (target, name, value) => {
+                        target[name] = value;
+                        return true;
+                    },
+                }
+            );
+            label.draw(ctx, { beans: "Magic Beans" });
+
+            expect(label.geometry.attributes.uv).toBeDefined();
+            expect(label.width / label.height).toBeGreaterThan(2);
+            expect(words).toEqual([["MAGIC BEANS", label.width / 2]]);
+        });
+
+        it("hangs its door in Guster's greens, at the foot of the front", () => {
+            const { body } = can();
+            expect(painted(body, GUSTER_COLORS.mid)).toBe(true);
+            expect(painted(can(null).body, GUSTER_COLORS.mid)).toBe(false);
+            const sign = FACADES.beans.sign(box);
+            expect(sign.y).toBeGreaterThan(box.height * BEAN_CAN.door.h);
+            expect(sign.y + sign.size).toBeLessThan(
+                box.height * (1 - BEAN_CAN.rim) * (1 - BEAN_CAN.band)
+            );
+        });
+
+        it("has two gingham windows either side of Guster, clear of him", () => {
+            const { windows } = can();
+            const sign = FACADES.beans.sign(box);
+            const [left, right] = windows.map((w) => bounds([w]));
+
+            expect(windows).toHaveLength(2);
+            expect(painted(windows, BEAN_CAN_COLORS.cross)).toBe(true);
+            expect(left.max.x).toBeCloseTo(-right.min.x);
+            expect(right.min.x).toBeGreaterThan(sign.size * 0.35);
+            expect(right.min.y).toBeGreaterThan(box.height * BEAN_CAN.door.h);
+            expect(right.max.y).toBeLessThan(sign.y + sign.size * 1.2);
+        });
+
+        it("strings Christmas lights round its rim, along the can", () => {
+            const r = box.width / 2;
+            const { bulbs } = can("guster", {
+                ...LOOK,
+                bulbs: ["#ff0000"],
+            });
+            expect(bulbs.length).toBeGreaterThan(2);
+            for (const bulb of bulbs) {
+                const { min, max } = bounds([bulb]);
+                const x = (min.x + max.x) / 2;
+                const surface = -(r - Math.sqrt(r * r - x * x));
+                expect(min.z).toBeGreaterThan(surface);
+                expect(min.z - surface).toBeLessThan(box.height * 0.05);
+            }
+        });
+
+        it("says where its pixie dust swirls", () => {
+            expect(FACADES.beans.dust(box)).toEqual({
+                radius: box.width / 2,
+                high: box.height + box.roof,
+            });
+            expect(FACADES.butt.dust).toBeUndefined();
         });
     });
 

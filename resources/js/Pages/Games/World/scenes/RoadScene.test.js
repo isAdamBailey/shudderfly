@@ -260,6 +260,83 @@ describe("the road's scene graph", () => {
         expect(glyphs(build("christmas").road.camera).size).toBe(0);
     });
 
+    describe("Guster's can of magic beans", () => {
+        function can({ reduced = false } = {}) {
+            const kit = createCastKit(THREE, { createCanvas });
+            const road = createRoadScene(THREE, kit, {
+                theme: worldTheme(""),
+                landmarks: [
+                    {
+                        slug: "guster-house",
+                        x: 600,
+                        side: "far",
+                        cast: "guster",
+                        item: { type: "door", door: "guster", facade: "beans" },
+                    },
+                ],
+                idlers: [],
+                words: { beans: "Magic Beans" },
+            });
+            const L = roadLayout({ w: 1000, h: 700, vmin: 700 });
+            road.layout(L, 2200);
+            road.sync(view(L, { idlers: [], reduced }), 0);
+            return { road, L };
+        }
+        const dust = (road) => road.scene.getObjectByName("pixie-dust");
+        const specks = (road) =>
+            dust(road).children.flatMap((o) =>
+                o.isPoints ? [...o.geometry.attributes.position.array] : []
+            );
+        const turn = (road) =>
+            road.scene.getObjectByName("pixie-dust-burst").rotation.z;
+
+        it("wraps a painted label round it", () => {
+            const { road } = can();
+            const labels = road.scene.getObjectsByProperty(
+                "name",
+                "facade-label"
+            );
+
+            expect(labels).toHaveLength(1);
+            expect(labels[0].material.map).toBeTruthy();
+            expect(labels[0].geometry.attributes.uv).toBeDefined();
+            // Painted for the can alone: no other front has a label.
+            expect(
+                build().road.scene.getObjectByName("facade-label")
+            ).toBeUndefined();
+        });
+
+        it("swirls its pixie dust round it, still under reduced motion", () => {
+            const { road, L } = can();
+            const box = buildingBox(L, { x: 600, facade: "beans" });
+            expect(dust(road).position.x).toBe(600);
+            expect(dust(road).position.z).toBe(box.z);
+
+            const [before, turned] = [specks(road), turn(road)];
+            road.sync(view(L, { idlers: [] }), 0.5);
+            expect(specks(road)).not.toEqual(before);
+            expect(turn(road)).not.toBe(turned);
+
+            const [still, held] = [specks(road), turn(road)];
+            road.sync(view(L, { idlers: [], reduced: true }), 0.5);
+            expect(specks(road)).toEqual(still);
+            expect(turn(road)).toBe(held);
+        });
+
+        it("hangs Guster in the gingham, over his door", () => {
+            const { road, L } = can();
+            const box = buildingBox(L, { x: 600, facade: "beans" });
+            const guster = road.landmarkPuppet("guster-house").group.position;
+
+            expect(guster.y).toBeCloseTo(box.height * 0.45);
+        });
+
+        it("gives no other building any dust", () => {
+            const { road } = build();
+            expect(dust(road)).toBeUndefined();
+        });
+    });
+
     it("lets the snow fall at Christmas, and holds it still under reduced motion", () => {
         const { road, L } = build("christmas");
         const layers = road.camera.children.filter((o) => o.isPoints);

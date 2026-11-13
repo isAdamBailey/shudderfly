@@ -877,6 +877,7 @@ return [
     'games.world.tv_playing' => 'Tele, con :title',
     'games.world.tv_channel' => 'CANAL :number',
     'games.world.exit_sign' => 'Salida',
+    'games.world.magic_beans' => 'Frijoles Mágicos',
     'games.world.toys.doorbell' => 'Timbre',
     'games.world.toys.doorbell_line' => '¡Din don! ¡Pum pum!',
     'games.world.toys.clock_round' => 'Reloj de madera',

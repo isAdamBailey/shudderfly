@@ -105,7 +105,9 @@ describe("roadLayout", () => {
                         z: box.z,
                     });
                     expect(top.y).toBeGreaterThan(size.h * 0.04);
-                    expect(box.width).toBeGreaterThan(plain.width * 1.5);
+                    // Grander than a plain house: a can, standing tall, is
+                    // the narrowest of them.
+                    expect(box.width).toBeGreaterThan(plain.width * 1.2);
                 }
             }
         }

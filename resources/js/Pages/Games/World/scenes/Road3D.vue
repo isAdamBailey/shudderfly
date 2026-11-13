@@ -165,6 +165,7 @@ onMounted(() => {
         night: dark.value,
         landmarks: landmarks.value,
         idlers: idlers.value,
+        words: { beans: t("games.world.magic_beans") },
     });
     for (const landmark of landmarks.value) {
         if (landmark.cast) {

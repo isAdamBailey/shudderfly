@@ -815,6 +815,7 @@ return [
     'games.world.tv_playing' => 'Télé, avec :title',
     'games.world.tv_channel' => 'CH :number',
     'games.world.exit_sign' => 'Sortie',
+    'games.world.magic_beans' => 'Haricots Magiques',
     'games.world.toys.doorbell' => 'Sonnette',
     'games.world.toys.doorbell_line' => 'Ding dong ! Prout prout !',
     'games.world.toys.clock_round' => 'Horloge en bois',

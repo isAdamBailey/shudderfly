@@ -17,6 +17,7 @@ import {
     screenSize,
 } from "./roadLayout.js";
 import { createOtherPuppets } from "../three/otherPuppets.js";
+import { pixieDust } from "./pixieDust.js";
 import { roadScenery } from "./roadScenery.js";
 import {
     billboard,
@@ -104,8 +105,9 @@ const SNOW_NIGHT = "#c7d6ea"; // flakes under the moon
  * Builds the road. `landmarks` are useGamesWorld's ({ slug, x, side, cast,
  * landmark }), `idlers` useRoad's ({ slug, cast, row, phase }), `theme` and
  * `nightTheme` three/themes.js looks (worldTheme / worldNight), and `night`
- * whether it starts at night. Call layout() with a roadLayout() before the
- * first sync(), and again on every resize.
+ * whether it starts at night, and `words` the translated words painted on
+ * the street ({ beans }, on Guster's can). Call layout() with a roadLayout()
+ * before the first sync(), and again on every resize.
  */
 export function createRoadScene(
     THREE,
@@ -116,6 +118,7 @@ export function createRoadScene(
         night: startAtNight = false,
         landmarks,
         idlers,
+        words = {},
     }
 ) {
     const scene = new THREE.Scene();
@@ -461,6 +464,8 @@ export function createRoadScene(
     // The manholes' cockroaches: { puppet, x, size, peek (0 hidden … 1) }.
     let cockroaches = [];
     let duckRadius = 0; // px either side of a manhole, for this stage
+    // The pixie dust round any front that has some (Guster's can).
+    let dusts = [];
 
     function mesh(geometry, material, shadows = true) {
         const m = new THREE.Mesh(geometry, material);
@@ -485,12 +490,13 @@ export function createRoadScene(
         sceneryPuppets = [];
         nearThings = [];
         cockroaches = [];
+        dusts = [];
 
         const { w, z, sizes } = L;
         const from = -w * 2;
         const to = worldWidth + w * 2;
         const scenery = roadScenery({ landmarks, from, to });
-        const parts = { body: [], windows: [], bulbs: [] };
+        const parts = noParts();
         const { body } = parts;
 
         // Pavements, kerbs and the mid-distance row: one mesh.
@@ -557,6 +563,19 @@ export function createRoadScene(
                 addParts(parts, house, at);
             }
             placeLandmarkPuppet(entry, box);
+            // Its pixie dust, if it has any: Guster's is on the far side,
+            // so it isn't faded with a near-side front.
+            const dust = own(FACADES, entry.facade ?? "")?.dust?.(box);
+            if (dust) {
+                const cloud = pixieDust(THREE, {
+                    ...dust,
+                    colors: theme.pixieDust,
+                });
+                cloud.group.position.set(box.x, 0, box.z);
+                cloud.place(driftTime);
+                street.add(cloud.group);
+                dusts.push(cloud);
+            }
         });
 
         // The near side's own houses, porta-potties and billboards.
@@ -667,25 +686,43 @@ export function createRoadScene(
     }
 
     /** Empty { body, windows, bulbs } part lists, to collect a street's
-     * (or one near-side thing's) parts by the material they go on. */
-    const noParts = () => ({ body: [], windows: [], bulbs: [] });
+     * (or one near-side thing's) parts by the material they go on, and its
+     * `labels`: painted pictures (Guster's can), each its own mesh. */
+    const noParts = () => ({ body: [], windows: [], bulbs: [], labels: [] });
 
     /** Adds `thing`'s part lists (any it has), placed `at`, to `parts`. */
     function addParts(parts, thing, at) {
-        for (const name of Object.keys(parts)) {
+        for (const name of ["body", "windows", "bulbs"]) {
             parts[name].push(...place(thing[name] ?? [], at));
+        }
+        for (const label of thing.labels ?? []) {
+            place([label.geometry], at);
+            parts.labels.push(label);
         }
         return parts;
     }
 
     /** One mesh per part list that has anything in it, on its shared
-     * material: the body first. */
+     * material (the body first), then one per label, painted with `words`. */
     function partMeshes(parts) {
         const meshes = [mesh(mergeParts(THREE, parts.body), solid)];
         const glassGeometry = mergeParts(THREE, parts.windows);
         if (glassGeometry) meshes.push(mesh(glassGeometry, glass, false));
         const bulbGeometry = mergeParts(THREE, parts.bulbs);
         if (bulbGeometry) meshes.push(mesh(bulbGeometry, bulb, false));
+        for (const label of parts.labels) {
+            const map = canvasTexture(THREE, label.width, label.height, (ctx) =>
+                label.draw(ctx, words)
+            );
+            map.anisotropy = 4;
+            const material = new THREE.MeshStandardMaterial({
+                map,
+                roughness: 0.6,
+            });
+            const painted = mesh(label.geometry, material);
+            painted.name = "facade-label";
+            meshes.push(painted);
+        }
         return meshes;
     }
 
@@ -937,6 +974,7 @@ export function createRoadScene(
             driftTime += dt;
             placeDrifters();
             placeSnow();
+            for (const dust of dusts) dust.place(driftTime);
             changed = true;
         }
         placeRoadToot(view.camera);

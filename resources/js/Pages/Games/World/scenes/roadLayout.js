@@ -70,6 +70,9 @@ export const FACADE_SIZES = {
     butt: { width: 1.6, height: 1.2, roof: 0.5 },
     gothic: { width: 1.8, height: 1.25, roof: 0.86 },
     haunted: { width: 1.6, height: 1.3, roof: 1.12 },
+    // A tin can, taller than it's wide (so not as wide as the rest), its
+    // lid's seam all that's over it.
+    beans: { width: 1.25, height: 1.7, roof: 0.05 },
 };
 // The flat road's drifter spots: rows and columns as stage shares, px size.
 export const DRIFTERS = { count: 4, size: 38, drift: 60, period: 18 };

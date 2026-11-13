@@ -75,6 +75,22 @@ const DEFAULT = {
         stripes: null,
         stars: null,
     },
+    // The pixie dust swirling round Guster's can (scenes/pixieDust.js), in
+    // these colours, and its burst of light's rays: the pinks, lilacs and
+    // golds of the video he was born in, with a little of everything else.
+    // The can itself never changes.
+    pixieDust: [
+        "#ff7ad9", // pink
+        "#ff4fd8", // magenta
+        "#d58bff", // lilac
+        "#a66bff", // violet
+        "#ffd34d", // gold
+        "#fff27a", // yellow
+        "#ff6b4a", // coral
+        "#b8ff6b", // lime
+        "#7ad7ff", // sky
+        "#ffffff",
+    ],
     // Windows glow this colour (at this strength) at night; null in
     // daylight.
     lit: null,
@@ -145,6 +161,7 @@ export const WORLD_THEMES = {
             glass: "#ffd27a",
         },
         bulbs: ["#ff3b3b", "#36d16b", "#ffc83d", "#4aa8ff"],
+        pixieDust: ["#ff3b3b", "#36d16b", "#ffc83d", "#4aa8ff", "#ffffff"],
         leaves: ["#166534", "#14532d"],
         lit: "#ffd27a",
         litIntensity: 0.35, // in snowlight, a stronger glow reads as white
@@ -190,6 +207,7 @@ export const WORLD_THEMES = {
             glass: "#c4f0a0",
             stripes: "#1a1a1a",
         },
+        pixieDust: ["#f97316", "#a855f7", "#84cc16", "#facc15", "#ec4899"],
         leaves: ["#c2410c", "#a16207", "#7c2d12"],
         lit: "#ffb347",
         key: { color: "#ff9b54", intensity: 1.3 },
@@ -215,6 +233,7 @@ export const WORLD_THEMES = {
             stripes: "#dc2626",
             stars: "#ffffff",
         },
+        pixieDust: ["#ef4444", "#ffffff", "#3b82f6", "#facc15", "#f472b6"],
         lit: "#fde68a",
         key: { color: "#a5b4fc", intensity: 0.7 },
         ambient: { sky: "#475569", ground: "#0f172a", intensity: 0.8 },

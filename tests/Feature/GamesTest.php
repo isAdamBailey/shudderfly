@@ -40,6 +40,8 @@ class GamesTest extends TestCase
                 ->where('scenes.road.interactables.2.id', 'guster-house')
                 ->where('scenes.road.interactables.2.x', 1600)
                 ->where('scenes.road.interactables.2.door', 'guster')
+                // A can of magic beans, as he was born.
+                ->where('scenes.road.interactables.2.facade', 'beans')
                 // Guster's sounds, none here (they live in production).
                 ->where('castSounds', ['guster' => []])
                 ->where('scenes.road.interactables.3.id', 'cockroach-house')

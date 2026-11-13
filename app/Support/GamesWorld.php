@@ -214,7 +214,7 @@ final class GamesWorld
     /** Named building shapes a road door's `facade` may give, instead of the
      * street's plain gabled house: streetGeometry.js FACADES (a Vitest test
      * keeps them in step). */
-    public const FACADES = ['butt', 'gothic', 'haunted'];
+    public const FACADES = ['beans', 'butt', 'gothic', 'haunted'];
 
     /** Named sounds a toy's `sound` may use: sounds.js (a Vitest test keeps
      * them in step). */
@@ -351,8 +351,10 @@ final class GamesWorld
                     self::roadDoor('house', 400, 'far', '🏠', 'house', 'house.hall', facade: 'butt'),
                     // A great old gothic library, its sign in the rose window.
                     self::roadDoor('library', 1000, 'far', '📚', 'library', 'library.hall', facade: 'gothic'),
-                    // Guster himself is the sign over his green door.
-                    self::roadDoor('guster-house', 1600, 'far', null, 'guster_house', 'guster-house.hall', cast: 'guster', door: 'guster'),
+                    // A giant can of magic beans, because that's how Guster
+                    // was born: pixie dust swirling round it, and Guster
+                    // himself the sign over his green door.
+                    self::roadDoor('guster-house', 1600, 'far', null, 'guster_house', 'guster-house.hall', cast: 'guster', door: 'guster', facade: 'beans'),
                     // A big scary house, its clock tower the hall's
                     // grandfather clock, the sign over its door.
                     self::roadDoor('cockroach-house', 2200, 'far', '🪳', 'cockroach_house', 'cockroach-house.hall', facade: 'haunted'),

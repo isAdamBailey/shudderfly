@@ -1,4 +1,5 @@
 import { BUTT_COLORS, GUSTER_COLORS } from "@/constants/characters.js";
+import { jitter } from "@/utils/math";
 import { own } from "@/utils/object";
 
 /**
@@ -95,7 +96,8 @@ function doorLook(door) {
  * drawn only with `door` (a building you can go into), a name from DOORS.
  * Returns { body, windows, bulbs } part lists, so the windows and the
  * string of lights under the eaves (the look's `bulbs`, none without) can
- * glow on their own materials.
+ * glow on their own materials; a shaped front may add `labels`, painted
+ * pictures with their own UVs (beanCan()).
  */
 export function building(
     THREE,
@@ -1473,11 +1475,392 @@ function buttHouse(
     };
 }
 
+// A bean can's proportions, as shares of its `height` (h) to the top of its
+// rim or of its `width` (w), its diameter. Its lid is the box's `roof`.
+export const BEAN_CAN = {
+    rim: 0.045, // h, the ribbed tin either side of the label
+    band: 0.22, // of the label's height: the red band across its top
+    door: { w: 0.2, h: 0.34 }, // w, h
+    sign: { y: 0.45, size: 0.25 }, // h: Guster's feet, and how big he is
+    bowl: { rim: 0.3, heap: 0.41, half: 0.27 }, // h, h, w (half its width)
+    window: 0.56, // h, the middle of each gingham window
+    windowAt: 24, // degrees round from the front to a window's near edge
+    checks: 11, // gingham checks down the label
+};
+
+// The can is the same all year: it's the one Guster came out of. Only its
+// pixie dust follows the season (the look's `pixieDust`).
+export const BEAN_CAN_COLORS = {
+    tin: "#c9ced6",
+    rib: "#8f97a3",
+    lid: "#dfe3e8",
+    red: "#c62828",
+    cream: "#fff4e0",
+    letter: "#ffffff",
+    outline: "#5c0d10",
+    white: "#f8fafc",
+    check: "#8dbbe6",
+    cross: "#2f6fb5", // where two checks cross, and the windows
+    bowl: "#b5653f",
+    bowlRim: "#d68a5c",
+    bowlShade: "#7a3b22",
+    beans: ["#c8693a", "#d9824a", "#b85a2f", "#e0905a"],
+    shine: "#ffe0bd",
+    glint: "#fff3b0",
+};
+
+// The label is painted this many px round, and as tall as keeps its
+// pictures unstretched.
+const LABEL_PX = 1024;
+
+/** A bean can's label, `W` across and `H` to its rim's top: where it is
+ * (`y0` to `y1`, round a can `r` in radius), the size it's painted at
+ * (`cw` × `ch` px, its middle the can's front), its gingham (`cols` checks
+ * round, each `check` px), and where a height or an x across the front
+ * lands on it (`py(y)`, `ux(x)`). */
+function beanLabel(W, H) {
+    const r = W / 2;
+    const y0 = H * BEAN_CAN.rim;
+    const y1 = H * (1 - BEAN_CAN.rim);
+    const tall = y1 - y0;
+    const cw = LABEL_PX;
+    const ch = Math.max(64, Math.round((cw * tall) / (Math.PI * W)));
+    // An even count round, so the front's middle falls between two.
+    const cols = Math.max(2, Math.round(cw / (ch / BEAN_CAN.checks) / 2) * 2);
+    return {
+        r,
+        y0,
+        y1,
+        tall,
+        cw,
+        ch,
+        cols,
+        check: cw / cols,
+        py: (y) => ((y1 - y) / tall) * ch,
+        ux: (x) =>
+            cw *
+            (0.5 + Math.asin(Math.max(-1, Math.min(1, x / r))) / (Math.PI * 2)),
+    };
+}
+
+/** A bean can's two gingham windows, a 2 × 2 block of checks either side
+ * of Guster: each { from, to } in radians round from the front, and
+ * { bottom, top } in height. On whole checks, so by day they're part of
+ * the pattern. */
+function beanWindows(label, H) {
+    const step = (Math.PI * 2) / label.cols;
+    const k = Math.max(
+        1,
+        Math.round((BEAN_CAN.windowAt * Math.PI) / 180 / step)
+    );
+    const row = Math.max(
+        1,
+        Math.round(label.py(H * BEAN_CAN.window) / label.check) - 1
+    );
+    const yAt = (px) => label.y1 - (px / label.ch) * label.tall;
+    const span = {
+        bottom: yAt((row + 2) * label.check),
+        top: yAt(row * label.check),
+    };
+    return [
+        { from: -(k + 2) * step, to: -k * step, ...span },
+        { from: k * step, to: (k + 2) * step, ...span },
+    ];
+}
+
+/** A four-pointed glint `r` across its points at (x, y). */
+function glint(ctx, x, y, r) {
+    ctx.beginPath();
+    for (let i = 0; i < 8; i += 1) {
+        const a = (i * Math.PI) / 4;
+        const d = i % 2 === 0 ? r : r * 0.28;
+        ctx[i ? "lineTo" : "moveTo"](x + Math.sin(a) * d, y - Math.cos(a) * d);
+    }
+    ctx.closePath();
+    ctx.fill();
+}
+
+/** Paints a bean can's label (`beanLabel()`) onto `ctx`: blue gingham all
+ * round, a red band across the top with `words.beans` on the front, and a
+ * bowl heaped with beans at the foot of the front, where the door is. */
+function paintBeanLabel(ctx, label, H, words) {
+    const C = BEAN_CAN_COLORS;
+    const { cw, ch, cols, check } = label;
+
+    // Gingham: white, a light blue check where one stripe runs, and a
+    // darker one where two cross.
+    ctx.fillStyle = C.white;
+    ctx.fillRect(0, 0, cw, ch);
+    ctx.fillStyle = C.check;
+    for (let i = 0; i < cols; i += 2) ctx.fillRect(i * check, 0, check, ch);
+    for (let j = 0; j * check < ch; j += 2) {
+        ctx.fillRect(0, j * check, cw, check);
+    }
+    ctx.fillStyle = C.cross;
+    for (let i = 0; i < cols; i += 2) {
+        for (let j = 0; j * check < ch; j += 2) {
+            ctx.fillRect(i * check, j * check, check, check);
+        }
+    }
+
+    // The red band, a cream line under it, and the words on the front.
+    const band = ch * BEAN_CAN.band;
+    ctx.fillStyle = C.red;
+    ctx.fillRect(0, 0, cw, band);
+    ctx.fillStyle = C.cream;
+    ctx.fillRect(0, band, cw, Math.max(2, band * 0.05));
+    const text = (words.beans ?? "").toUpperCase();
+    if (text) {
+        const room = cw * 0.25; // ±45° round the front
+        let size = band * 0.62;
+        ctx.font = `900 ${size}px "Arial Black", Impact, sans-serif`;
+        size = Math.min(size, (size * room) / ctx.measureText(text).width);
+        ctx.font = `900 ${size}px "Arial Black", Impact, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.lineJoin = "round";
+        ctx.lineWidth = size * 0.16;
+        ctx.strokeStyle = C.outline;
+        ctx.strokeText(text, cw / 2, band * 0.54);
+        ctx.fillStyle = C.letter;
+        ctx.fillText(text, cw / 2, band * 0.54);
+    }
+
+    // The bowl of beans: a heap of beans over a terracotta bowl.
+    const cx = cw / 2;
+    const half = label.ux(label.r * 2 * BEAN_CAN.bowl.half) - cx;
+    const rim = label.py(H * BEAN_CAN.bowl.rim);
+    const heap = rim - label.py(H * BEAN_CAN.bowl.heap);
+    ctx.fillStyle = C.beans[0];
+    ctx.beginPath();
+    ctx.ellipse(cx, rim, half * 0.96, heap, 0, Math.PI, 0);
+    ctx.fill();
+    const bean = Math.max(3, check * 0.3);
+    for (let i = 0; i < 160; i += 1) {
+        const a = Math.PI * (1 + jitter(i + 0.11));
+        const d = Math.sqrt(jitter(i + 0.37));
+        const x = cx + Math.cos(a) * d * half * 0.92;
+        const y = rim + Math.sin(a) * d * heap * 0.92;
+        ctx.fillStyle = C.beans[i % C.beans.length];
+        ctx.beginPath();
+        ctx.ellipse(
+            x,
+            y,
+            bean,
+            bean * 0.66,
+            jitter(i + 0.59) * Math.PI,
+            0,
+            Math.PI * 2
+        );
+        ctx.fill();
+        ctx.fillStyle = C.shine;
+        ctx.beginPath();
+        ctx.arc(x - bean * 0.3, y - bean * 0.25, bean * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    const foot = ch - Math.max(2, ch * 0.02);
+    ctx.fillStyle = C.bowl;
+    ctx.beginPath();
+    ctx.moveTo(cx - half, rim);
+    ctx.quadraticCurveTo(cx - half, foot, cx - half * 0.55, foot);
+    ctx.lineTo(cx + half * 0.55, foot);
+    ctx.quadraticCurveTo(cx + half, foot, cx + half, rim);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = C.bowlShade;
+    ctx.fillRect(
+        cx - half * 0.55,
+        foot - (foot - rim) * 0.12,
+        half * 1.1,
+        (foot - rim) * 0.12
+    );
+    // Its rolled rim, beaded like rope.
+    const lip = Math.max(4, (foot - rim) * 0.14);
+    ctx.fillStyle = C.bowlRim;
+    ctx.fillRect(cx - half * 1.03, rim - lip / 2, half * 2.06, lip);
+    ctx.fillStyle = C.shine;
+    for (let x = cx - half; x < cx + half; x += lip * 0.9) {
+        ctx.beginPath();
+        ctx.arc(x, rim, lip * 0.22, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    // A little magic on them.
+    ctx.fillStyle = C.glint;
+    for (let i = 0; i < 6; i += 1) {
+        glint(
+            ctx,
+            cx + (jitter(i + 0.71) - 0.5) * half * 1.6,
+            rim - heap * (0.4 + jitter(i + 0.83) * 0.7),
+            bean * 1.4
+        );
+    }
+}
+
+/**
+ * Guster's house: a giant can of magic beans, standing upright with its lid
+ * shut, because that's how he was born. Ribbed tin top and bottom; round
+ * the middle a label as the picture has it: blue gingham, a red band with
+ * MAGIC BEANS on it (`words.beans`, painted by the road), and a bowl of
+ * beans at the foot of the front, his door standing in it. Guster is the
+ * sign, in the gingham, between two gingham-square windows. The label
+ * comes back as `labels` (a geometry with its UVs, and how to paint it),
+ * since it's a picture, not the street's flat colour; the pixie dust round
+ * it is the road's (FACADES.beans.dust, pixieDust.js). Built in the same
+ * space as building(), the can's front on z = 0.
+ */
+function beanCan(THREE, { width, height, roof: lidHeight, look, door }) {
+    const C = BEAN_CAN_COLORS;
+    const W = width;
+    const H = height;
+    const label = beanLabel(W, H);
+    const { r } = label;
+    const onAxis = (geometry, y) => geometry.translate(0, y, -r);
+    const body = [];
+
+    // Ribbed tin either side of the label, a seam rolled round each end.
+    const rimH = H * BEAN_CAN.rim;
+    const ring = (radius, tube, y, color) =>
+        paint(
+            THREE,
+            onAxis(
+                new THREE.TorusGeometry(radius, tube, 6, 48).rotateX(
+                    Math.PI / 2
+                ),
+                y
+            ),
+            color
+        );
+    for (const y of [rimH / 2, H - rimH / 2]) {
+        body.push(
+            paint(
+                THREE,
+                onAxis(
+                    new THREE.CylinderGeometry(r * 1.01, r * 1.01, rimH, 48),
+                    y
+                ),
+                C.tin
+            ),
+            ring(r * 1.012, rimH * 0.1, y, C.rib)
+        );
+    }
+    body.push(ring(r * 0.995, rimH * 0.28, rimH * 0.28, C.rib));
+
+    // The lid, shut: its seam rolled round the top, a disc sunk inside
+    // it, and rings pressed into the disc.
+    // Tucked in, so the roll stands only a little proud of the can.
+    const seam = lidHeight / 2;
+    body.push(
+        ring(r - seam * 0.6, seam, H + seam, C.tin),
+        paint(
+            THREE,
+            onAxis(
+                new THREE.CylinderGeometry(r * 0.97, r * 0.97, seam, 48),
+                H + seam / 2
+            ),
+            C.lid
+        ),
+        ring(r * 0.62, seam * 0.18, H + seam, C.rib),
+        ring(r * 0.34, seam * 0.18, H + seam, C.rib)
+    );
+
+    // The door, standing in the bowl of beans, deep enough to meet the
+    // can as it curves away behind it.
+    if (door) {
+        const doorColors = doorLook(door);
+        const w = W * BEAN_CAN.door.w;
+        const h = H * BEAN_CAN.door.h;
+        const sunk = r - Math.sqrt(r * r - (w / 2) ** 2) + 1.5;
+        body.push(
+            box(
+                THREE,
+                doorColors.wood,
+                [w, h, sunk + 1.5],
+                [0, h / 2, 1.5 - (sunk + 1.5) / 2]
+            ),
+            box(
+                THREE,
+                doorColors.knob,
+                [w * 0.14, w * 0.14, 3],
+                [w * 0.28, h * 0.48, 2.5]
+            )
+        );
+    }
+
+    // Two gingham checks for windows, curved with the can, a hair proud of
+    // the label: the darkest check by day, lit at night.
+    const windows = beanWindows(label, H).map(({ from, to, bottom, top }) =>
+        paint(
+            THREE,
+            onAxis(
+                new THREE.CylinderGeometry(
+                    r + 0.6,
+                    r + 0.6,
+                    top - bottom,
+                    8,
+                    1,
+                    true,
+                    from,
+                    to - from
+                ),
+                (top + bottom) / 2
+            ),
+            C.cross
+        )
+    );
+
+    // The label: a cylinder open at both ends, its seam at the back.
+    const labelGeometry = onAxis(
+        new THREE.CylinderGeometry(
+            r,
+            r,
+            label.tall,
+            64,
+            1,
+            true,
+            -Math.PI,
+            Math.PI * 2
+        ),
+        (label.y0 + label.y1) / 2
+    );
+
+    return {
+        body,
+        windows,
+        labels: [
+            {
+                geometry: labelGeometry,
+                width: label.cw,
+                height: label.ch,
+                draw: (ctx, words = {}) => paintBeanLabel(ctx, label, H, words),
+            },
+        ],
+        // Round the top rim, following the can as it curves away.
+        bulbs: eaveBulbs(THREE, look, W, H, {
+            out: (x) => r * 0.012 - (r - Math.sqrt(Math.max(0, r * r - x * x))),
+        }),
+    };
+}
+
 /** Building shapes other than the plain house, by the name a road door's
  * `facade` gives (GamesWorld::FACADES, which a test keeps in step): `build`
  * draws it as building() does, `sign` says where its landmark's sign goes
- * ({ y: its foot, size, z: out from the front }) for a building box. */
+ * ({ y: its foot, size, z: out from the front }) for a building box, and
+ * `dust`, where a front has any, the pixie dust swirling round it
+ * (pixieDust.js: the can's `radius` and how `high` it rises). */
 export const FACADES = {
+    beans: {
+        build: beanCan,
+        sign(box) {
+            return {
+                y: box.height * BEAN_CAN.sign.y,
+                size: box.height * BEAN_CAN.sign.size,
+                z: 2,
+            };
+        },
+        dust(box) {
+            return { radius: box.width / 2, high: box.height + box.roof };
+        },
+    },
     butt: {
         build: buttHouse,
         sign(box) {

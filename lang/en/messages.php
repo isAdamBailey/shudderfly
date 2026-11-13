@@ -877,6 +877,7 @@ return [
     'games.world.tv_playing' => 'TV, showing :title',
     'games.world.tv_channel' => 'CH :number',
     'games.world.exit_sign' => 'Exit',
+    'games.world.magic_beans' => 'Magic Beans',
     'games.world.toys.doorbell' => 'Doorbell',
     'games.world.toys.doorbell_line' => 'Ding dong! Toot toot!',
     'games.world.toys.clock_round' => 'Wooden clock',
