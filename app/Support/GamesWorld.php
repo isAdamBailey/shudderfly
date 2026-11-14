@@ -180,7 +180,7 @@ final class GamesWorld
         'statue' => ['🗿', 'left', 225],
     ];
 
-    /** How far out from the back wall a flight of stairs stands. */
+    /** How far out from the back wall a spiral staircase's middle stands. */
     private const STAIRS_FROM_BACK = 220;
 
     /** How high up the wall the Cockroach's candle sconces hang. */
@@ -1029,9 +1029,10 @@ final class GamesWorld
     /** Stairs up (`$up`) or down to `$to` in a room `size` across,
      * arriving at the stairs going back. Up is on the right wall, down on
      * the left, each STAIRS_FROM_BACK out from the back wall; down is the
-     * way out. A door with `stairs` is drawn as a flight of steps
-     * (staircase.js), not as its emoji. Coming up or down them, you face
-     * the back (`arriveFacing`), where a landing's doors are, not the flight. */
+     * way out. A door with `stairs` is drawn as a spiral staircase
+     * (staircase.js), not as its emoji, and the Butt climbs it. Coming
+     * up or down, you face the back (`arriveFacing`), where a landing's
+     * doors are, not the stairs. */
     private static function stairs(bool $up, string $to, array $size): array
     {
         $id = $up ? 'upstairs' : 'downstairs';

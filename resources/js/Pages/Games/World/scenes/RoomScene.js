@@ -47,7 +47,7 @@ import { fireplaceGeometry } from "./fireplace.js";
 import { kitchenCounterGeometry } from "./kitchenCounter.js";
 import { ORGAN } from "./organLayout.js";
 import { seatsGeometry, stageGeometry } from "./stage.js";
-import { floorGeometry, stairsFootprint, stairsGeometry } from "./staircase.js";
+import { floorGeometry, stairsGeometry, stairsWell } from "./staircase.js";
 import { createWallCrawlers } from "./wallCrawlers.js";
 
 // The `kind: "room"` scene graph (issue #130): a dollhouse room, its four
@@ -455,12 +455,12 @@ export function createRoomScene(
     }
     showWalls("back");
 
-    // Stairs are drawn as a flight, not a card; a flight down is a well
+    // Stairs are drawn as a spiral, not a card; a spiral down is a well
     // cut out of the floor.
     const stairs = room.interactables.filter((item) => item.stairs);
     const wells = stairs
         .filter((item) => item.stairs === "down")
-        .map(stairsFootprint);
+        .map(stairsWell);
     const floor = new THREE.Mesh(
         floorGeometry(THREE, width, depth, wells),
         lookMaterial(THREE, look.floor, width, depth)
@@ -931,7 +931,9 @@ export function createRoomScene(
     /**
      * Poses the room for one frame; whether anything changed. `view`: {
      *   butt: { x, z, facing, walking },
-     *   buttLift,   // units, the walking bob
+     *   buttLift,   // units, the walking bob (or how high up, or low
+     *               // down, a spiral staircase it is)
+     *   buttOpacity, // 0 to 1, fading out of sight up or down the stairs
      *   others,     // useOthers', each with its own `lift` in units
      *   reduced,    // prefers reduced motion
      *   time,       // s on the room's clock, which a pendulum swings to
@@ -978,6 +980,7 @@ export function createRoomScene(
             lift: view.buttLift,
             facing: view.butt.facing < 0 ? "left" : "right",
         });
+        if (butt.setOpacity(view.buttOpacity ?? 1)) changed = true;
         butt.setMove(view.butt.walking ? "walk" : "idle");
         changed =
             otherPuppets.sync(view.others ?? [], (other) => other, dt) ||
