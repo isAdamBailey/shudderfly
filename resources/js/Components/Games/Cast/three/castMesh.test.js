@@ -298,6 +298,45 @@ describe("castMesh", () => {
         ).toBeGreaterThan(120);
     });
 
+    it("keeps the Butt lifted (or sunk) while it walks", () => {
+        for (const lift of [200, -150]) {
+            const puppet = kit().castMesh("butt", { size: 100 });
+            puppet.setMove("walk");
+            puppet.set({ lift });
+            // Several frames, each posing the walk afresh.
+            for (let i = 0; i < 5; i += 1) puppet.tick(0.1);
+            puppet.group.updateMatrixWorld(true);
+            const feet = new THREE.Box3().setFromObject(
+                puppet.group.getObjectByName("butt")
+            ).min.y;
+            expect(feet).toBeCloseTo(lift, 0);
+        }
+    });
+
+    it("keeps its fade while it walks, and hides its shadow below the ground", () => {
+        const k = kit();
+        const puppet = k.castMesh("butt", { size: 100 });
+        const other = k.castMesh("butt", { size: 100 });
+        const blob = puppet.group.children[0];
+        puppet.setMove("walk");
+        puppet.setOpacity(0.5);
+        for (let i = 0; i < 5; i += 1) puppet.tick(0.1);
+        puppet.group.getObjectByName("butt").traverse((node) => {
+            if (node.isMesh) expect(node.material.opacity).toBe(0.5);
+        });
+        other.group.getObjectByName("butt").traverse((node) => {
+            if (node.isMesh) expect(node.material.opacity).toBe(1);
+        });
+
+        puppet.setOpacity(1);
+        puppet.set({ lift: -80 });
+        puppet.tick(0.1);
+        expect(blob.visible).toBe(false);
+        puppet.set({ lift: 0 });
+        puppet.tick(0.1);
+        expect(blob.visible).toBe(true);
+    });
+
     it("mirrors when facing left", () => {
         const puppet = kit().castMesh("butt");
         puppet.set({ facing: "left" });
@@ -402,6 +441,44 @@ describe("castMesh", () => {
 
         expect(spy).toHaveBeenCalled();
         expect(textureSpy).toHaveBeenCalled();
+    });
+
+    it("fades one puppet without fading the others that share its look", () => {
+        const k = kit();
+        const [fading, other] = [k.castMesh("butt"), k.castMesh("butt")];
+        const meshes = (puppet) => {
+            const found = [];
+            puppet.group.getObjectByName("butt").traverse((node) => {
+                if (node.isMesh) found.push(node);
+            });
+            return found;
+        };
+        const shared = meshes(fading).map((mesh) => mesh.material);
+        const blob = fading.group.children[0];
+
+        fading.setOpacity(0.4);
+        for (const mesh of meshes(fading)) {
+            expect(mesh.material.transparent).toBe(true);
+            expect(mesh.material.opacity).toBe(0.4);
+            expect(mesh.castShadow).toBe(false);
+        }
+        expect(blob.visible).toBe(false);
+        for (const mesh of meshes(other)) {
+            expect(mesh.material.opacity).toBe(1);
+            expect(mesh.material.transparent).toBe(false);
+        }
+
+        fading.setOpacity(0);
+        const hidden = (node) => {
+            for (let n = node; n; n = n.parent) if (!n.visible) return true;
+            return false;
+        };
+        expect(meshes(fading).every(hidden)).toBe(true);
+        expect(meshes(other).some(hidden)).toBe(false);
+
+        fading.setOpacity(1);
+        expect(meshes(fading).map((mesh) => mesh.material)).toEqual(shared);
+        expect(blob.visible).toBe(true);
     });
 
     it("sounds a character's moves, even under reduced motion", () => {

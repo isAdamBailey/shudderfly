@@ -16,6 +16,7 @@ import {
     ROOF,
     screenSize,
 } from "./roadLayout.js";
+import { seeThrough } from "@/Components/Games/Cast/three/seeThrough.js";
 import { createOtherPuppets } from "../three/otherPuppets.js";
 import { pixieDust } from "./pixieDust.js";
 import { roadScenery } from "./roadScenery.js";
@@ -458,7 +459,7 @@ export function createRoadScene(
     let reduced = false; // what the puppets were last told
     let driftTime = 0;
     let lastCamera = null;
-    // The near side's tall things: { meshes, faded, puppets, x, z, width,
+    // The near side's tall things: { meshes, fade, puppets, x, z, width,
     // height, roof, opacity }.
     let nearThings = [];
     // The manholes' cockroaches: { puppet, x, size, peek (0 hidden … 1) }.
@@ -737,35 +738,12 @@ export function createRoadScene(
         nearThings.push({
             ...box,
             meshes,
-            shared: meshes.map((m) => m.material),
-            faded: null,
+            // See-through copies of its materials while it fades (the
+            // shared ones stay opaque, out of the blended pass).
+            fade: seeThrough(meshes),
             puppets: thingPuppets,
             opacity: 1,
         });
-    }
-
-    /** Gives a near-side thing see-through copies of its materials while it
-     * fades (the shared ones stay opaque, out of the blended pass). */
-    function fade(thing, opacity) {
-        if (opacity === 1) return unfade(thing);
-        if (!thing.faded) {
-            thing.faded = thing.meshes.map((m) => {
-                const material = m.material.clone();
-                material.transparent = true;
-                m.material = material;
-                return material;
-            });
-        }
-        for (const material of thing.faded) material.opacity = opacity;
-    }
-
-    function unfade(thing) {
-        if (!thing.faded) return;
-        thing.meshes.forEach((m, i) => {
-            m.material = thing.shared[i];
-        });
-        for (const material of thing.faded) material.dispose();
-        thing.faded = null;
     }
 
     /** Scales a landmark's puppet by how far it has grown. */
@@ -1022,7 +1000,7 @@ export function createRoadScene(
             const target = hides ? FADE.to : 1;
             if (thing.opacity === target) continue;
             thing.opacity = ease(thing.opacity, target, dt, FADE.time);
-            fade(thing, thing.opacity);
+            thing.fade.set(thing.opacity);
             for (const puppet of thing.puppets) {
                 puppet.group.visible = thing.opacity > 0.6;
             }

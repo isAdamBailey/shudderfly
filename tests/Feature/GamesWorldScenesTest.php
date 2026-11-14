@@ -797,14 +797,15 @@ class GamesWorldScenesTest extends TestCase
             if (! str_starts_with($sceneId, 'library.floor-')) {
                 continue;
             }
-            // A doorway is 180 wide; a flight reaches 90 in off its wall,
-            // whichever long wall the doorway is on.
+            // A doorway is 180 wide; a spiral staircase reaches 170 in off
+            // its wall (roomLayout.js STAIRS_REACH), whichever long wall the
+            // doorway is on.
             foreach ($this->landingDoors($scene) as $door) {
                 [$wall, $along, , $length] = $this->wallSpot($door, $scene['size']);
                 $this->assertContains($wall, ['back', 'front'], "{$sceneId}.{$door['id']}");
                 $this->assertTrue($door['open'] ?? false, "{$sceneId}.{$door['id']} is an open doorway");
-                $this->assertGreaterThanOrEqual(90 + 90, $along, "{$sceneId}.{$door['id']}");
-                $this->assertLessThanOrEqual($length - 90 - 90, $along, "{$sceneId}.{$door['id']}");
+                $this->assertGreaterThanOrEqual(170 + 90, $along, "{$sceneId}.{$door['id']}");
+                $this->assertLessThanOrEqual($length - 170 - 90, $along, "{$sceneId}.{$door['id']}");
                 $checked++;
             }
         }
@@ -1512,12 +1513,13 @@ class GamesWorldScenesTest extends TestCase
     }
 
     /** How wide `$item` is along its wall: a door's frame, a picture or
-     * TV's panel, a flight of stairs' run, a built-in's width, or its size (its model's
+     * TV's panel, a spiral staircase's width across (staircase.js
+     * stairsFootprint(), its collar and all), a built-in's width, or its size (its model's
      * footprint; roomLayout.js ROOM_SIZES.toy, 80, if it says none). */
     private function widthOnWall(array $item): float
     {
         return match (true) {
-            isset($item['stairs']) => 300,
+            isset($item['stairs']) => 170,
             ($item['open'] ?? false) => 180,
             ($item['type'] ?? null) === 'door' => 120,
             // organLayout.js ORGAN.length.

@@ -65,7 +65,12 @@ import {
     stringX,
 } from "./harpLayout.js";
 import { convexHull, keyAt, ORGAN, zoneCorners } from "./organLayout.js";
-import { stairsBounds } from "./staircase.js";
+import {
+    ARROW_PX,
+    climbPose,
+    stairsBounds,
+    stairsButton,
+} from "./staircase.js";
 import { curtainCorners } from "./stageLayout.js";
 import {
     itemBox,
@@ -77,6 +82,7 @@ import {
     roomLayout,
     roomLook,
     wallFacing,
+    wallHeightOf,
 } from "./roomLayout.js";
 
 // The `kind: "room"` renderer on the stage's WebGL canvas (issue #130): the
@@ -186,10 +192,94 @@ const room = useRoom(props.scene, {
     isReducedMotion: () => reduced.value,
     onArrive(item) {
         lastUsed = item.id;
-        emit("activate", item);
+        // Stairs are climbed first, and gone up (or down) once the Butt's
+        // out of sight.
+        if (item.stairs && !reduced.value) {
+            climbStairs(item, true, () => emit("activate", item));
+        } else emit("activate", item);
     },
 });
 const { butt } = room;
+
+// --- Stairs ------------------------------------------------------------------
+
+// A staircase's arrow badge across (.stairs-arrow).
+const arrowSize = `${ARROW_PX}px`;
+
+// How long the Butt takes to climb a spiral staircase, up or down, s.
+const CLIMB_S = 1.6;
+// The climb under way, posing the Butt round the spiral (staircase.js
+// climbPose()) instead of the room walking it: { item, from, s, leaving,
+// pose, then }, `pose` being where it's got to. `s` runs 0 to 1; leaving, it's climbed from `from`
+// into the opening (or the well), and arriving the other way, to `from`.
+// A finished climb out stays, the Butt out of sight, until the room goes.
+let climb = null;
+
+/** Climbs `item`'s stairs, leaving the room by them (`leaving`) or arriving
+ * by them; `then` once it's done. The room is frozen meanwhile. */
+function climbStairs(item, leaving, then = () => {}) {
+    room.state.frozen = true;
+    const from = { x: butt.x, z: butt.z };
+    climb = {
+        item,
+        from,
+        s: 0,
+        leaving,
+        pose: climbPose(item, from, leaving ? 0 : 1, wallHeightOf(props.scene)),
+        then,
+    };
+}
+
+/** Carries the climb on by `dt` s; whether the Butt moved. */
+function stepClimb(dt) {
+    const c = climb;
+    if (c.s >= 1) return false;
+    c.s = Math.min(1, c.s + dt / CLIMB_S);
+    const pose = climbPose(
+        c.item,
+        c.from,
+        c.leaving ? c.s : 1 - c.s,
+        wallHeightOf(props.scene)
+    );
+    if (layout.value) {
+        const { view } = layout.value.camera;
+        const across = toView(view, pose).x - toView(view, butt).x;
+        if (Math.abs(across) > 0.01) butt.facing = Math.sign(across);
+    }
+    Object.assign(butt, { x: pose.x, z: pose.z, walking: c.s < 1 });
+    c.pose = pose;
+    if (c.s >= 1) {
+        if (!c.leaving) {
+            climb = null;
+            room.unfreeze();
+        }
+        c.then();
+    }
+    return true;
+}
+
+/** Lets the room go, a climb out it's still on included. */
+function unfreeze() {
+    endClimb();
+    room.unfreeze();
+}
+
+/** Puts the Butt back where a climb out began, seen, for a room that
+ * wasn't left after all (the way up failed to load). */
+function endClimb() {
+    if (!climb) return;
+    Object.assign(butt, { ...climb.from, walking: false });
+    climb = null;
+}
+
+// Come up or down the stairs, the Butt comes off them (not after a reload,
+// which puts it back where it was).
+const cameBy = !props.arrival.position
+    ? props.scene.interactables.find(
+          (item) => item.stairs && item.id === props.arrival.spot
+      )
+    : null;
+if (cameBy && !reduced.value) climbStairs(cameBy, false);
 
 // --- Other people ------------------------------------------------------------
 
@@ -248,7 +338,11 @@ function framed() {
 }
 
 // The walking bob, as height above the floor, as on the road.
-const buttLift = computed(() => bobLift(butt.bob));
+const bob = computed(() => bobLift(butt.bob));
+
+/** How high the Butt is off the floor: its walking bob, or how far up (or
+ * down) the stairs it's climbed. */
+const buttLift = () => (climb ? climb.pose.lift : bob.value);
 
 // The recordings this room's things toot (a toy's `clip`), loaded up front.
 const {
@@ -326,7 +420,7 @@ onMounted(() => {
     if (frame) graph.layout(frame);
     renderer.show(graph.scene, graph.camera);
     stopFrames = renderer.onFrame((dt) => {
-        room.step(dt);
+        const climbed = climb ? stepClimb(dt) : room.step(dt);
         // Other people carry on behind a card: it's only your room frozen.
         visitors.step(dt);
         // A throw waits, mid-air, while a card is up.
@@ -340,7 +434,8 @@ onMounted(() => {
         const changed = graph.sync(
             {
                 butt,
-                buttLift: buttLift.value,
+                buttLift: buttLift(),
+                buttOpacity: climb?.pose.opacity ?? 1,
                 others: visitors.others,
                 reduced: reduced.value,
                 time,
@@ -350,7 +445,7 @@ onMounted(() => {
             },
             dt
         );
-        return changed || flew || swung;
+        return changed || flew || swung || climbed;
     });
 });
 
@@ -561,8 +656,10 @@ const photoSpots = computed(() => {
     });
 });
 
-/** A flight of stairs' button: over all of it as drawn (the steps up, or
- * the opening and rail going down), so it's as easy to hit as it looks. */
+/** A staircase's button: over all of it as drawn (the spiral up, or the
+ * well and its rail going down), so it's as easy to hit as it looks, or
+ * pinned to the stage's edge while it's off it (staircase.js
+ * stairsButton()). */
 function stairsSpot(item) {
     const b = stairsBounds(item, layout.value.wallHeight);
     const corners = [];
@@ -575,22 +672,12 @@ function stairsSpot(item) {
         }
     }
     if (corners.length === 0) return [];
-    // Kept on the stage, so its middle (and its arrow) can be seen.
-    const { left, top, width, height } = screenRect(
-        corners.map((p) => ({
-            x: Math.min(bounds.w, Math.max(0, p.x)),
-            y: Math.min(bounds.h, Math.max(0, p.y)),
-        }))
-    );
     return {
         item,
         label: item.label,
-        x: left + width / 2,
-        y: top + height,
-        width,
-        height,
         titled: false,
         overlay: false,
+        ...stairsButton(screenRect(corners), bounds),
     };
 }
 
@@ -761,7 +848,7 @@ const shelfSpots = computed(() => {
 /** Where the Butt's hit box goes: read by FollowBox, so the overlay
  * doesn't re-render as it walks. */
 function buttSpot() {
-    return view.value && buttSpotAt({ ...butt, lift: buttLift.value });
+    return view.value && buttSpotAt({ ...butt, lift: buttLift() });
 }
 
 /** The screen box of a butt standing at { x, z }, `lift` units up, or
@@ -1244,14 +1331,19 @@ defineExpose({
     onKeydown,
     onKeyup,
     activateNearest,
-    unfreeze: room.unfreeze,
+    unfreeze,
     release() {
-        room.unfreeze();
+        unfreeze();
         nextTick(() => lastUsed && focusItem(lastUsed));
     },
     focusItem,
     pointOf,
-    position: () => ({ x: butt.x, z: butt.z, view: faced.value }),
+    // Mid-climb (or gone up it, the next floor loading), where it stood
+    // before it, never a spot on the stairs.
+    position: () => ({
+        ...(climb ? climb.from : { x: butt.x, z: butt.z }),
+        view: faced.value,
+    }),
     turn,
     animate,
     toot,
@@ -1373,7 +1465,10 @@ defineExpose({
                 <span
                     v-if="s.item.stairs"
                     class="stairs-arrow bg-theme-primary text-theme-button"
-                    :class="`stairs-${s.item.stairs}`"
+                    :class="[
+                        `stairs-${s.item.stairs}`,
+                        s.pinned && `pinned-${s.pinned}`,
+                    ]"
                     aria-hidden="true"
                 >
                     <svg viewBox="0 0 24 24" width="100%" height="100%">
@@ -1607,8 +1702,9 @@ defineExpose({
     position: absolute;
     left: 50%;
     top: 50%;
-    width: 3.25rem;
-    height: 3.25rem;
+    /* staircase.js ARROW_PX, which a pinned arrow is placed by. */
+    width: v-bind(arrowSize);
+    height: v-bind(arrowSize);
     padding: 0.45rem;
     border-radius: 9999px;
     /* Coloured like the site's buttons, theme and all (the classes). */
@@ -1626,6 +1722,28 @@ defineExpose({
 
 .stairs-arrow.stairs-down {
     animation-name: stairs-nudge-down;
+}
+
+/* Pinned to the stage's edge while the stairs are off it: a point on the
+ * badge toward them, in its own colour (under its arrow). */
+.stairs-arrow.pinned-left::after,
+.stairs-arrow.pinned-right::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 1rem;
+    height: 1rem;
+    background: inherit;
+    transform: translateY(-50%) rotate(45deg);
+    z-index: -1;
+}
+
+.stairs-arrow.pinned-left::after {
+    left: -0.4rem;
+}
+
+.stairs-arrow.pinned-right::after {
+    right: -0.4rem;
 }
 
 @keyframes stairs-nudge {

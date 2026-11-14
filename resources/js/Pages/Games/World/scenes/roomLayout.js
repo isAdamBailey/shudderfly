@@ -189,12 +189,18 @@ export const ROOM_SIZES = {
     toy: 80,
 };
 
-// A flight of stairs (staircase.js), in world units: how far it runs along
-// its wall, how far it reaches into the room, and its steps.
-export const STAIRS = { run: 300, width: 90, steps: 9 };
+// A spiral staircase (staircase.js), in world units: its treads' reach
+// round the pole, how much further its rail or collar reaches (`over`),
+// how far its treads stand off its wall, and its treads, one turn.
+export const STAIRS = { radius: 75, over: 10, gap: 10, treads: 12 };
 
-/** How far from a wall with stairs the Butt keeps: clear of the flight. */
-export const STAIRS_CLEARANCE = STAIRS.width + ROOM_SIZES.butt / 2;
+/** How far a spiral staircase reaches into the room off its wall, rail and
+ * collar and all (and, as it's round, how far it runs along it: its
+ * width). */
+export const STAIRS_REACH = STAIRS.gap + 2 * STAIRS.radius + STAIRS.over;
+
+/** How far from a wall with stairs the Butt keeps: clear of the spiral. */
+export const STAIRS_CLEARANCE = STAIRS_REACH + ROOM_SIZES.butt / 2;
 
 /** How tall a room's walls are, in world units: set by the width the camera
  * frames, so a long hall is no taller than the part of it on screen. */
@@ -281,8 +287,8 @@ const wayBack = (item) => Boolean(item.exit || item.stairs);
  * model's footprint (three/footprints.js: a tall fridge), a TV's
  * `screen` { w, h }, or a
  * picture's `image` { w, h }, titled if it leads somewhere (a game) or
- * says `titled`. A flight of stairs' button covers the flight
- * (staircase.js stairsBounds()). */
+ * says `titled`. A staircase's button covers the spiral, or is its arrow
+ * pinned to the stage's edge (staircase.js stairsButton()). */
 export function itemBox(item) {
     const titled =
         item.titled ??

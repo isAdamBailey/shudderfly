@@ -10,6 +10,7 @@ import {
     sampleMove,
     stillPose,
 } from "../castMoveData.js";
+import { seeThrough } from "./seeThrough.js";
 
 // The WebGL drawer of the cast kit (issue #130): CastMember.vue's twin. A
 // character is its emoji, drawn once into a cached texture and shown on a lit,
@@ -116,6 +117,8 @@ export function createCastKit(
     { createCanvas = defaultCanvas, onSound = () => {} } = {}
 ) {
     const materials = new Map();
+    // Reused each time a figure is stood back on its feet (tick()).
+    const scratchBox = new THREE.Box3();
     const pictures = [];
     const models = new Set();
     const plane = new THREE.PlaneGeometry(1, 1);
@@ -150,7 +153,13 @@ export function createCastKit(
             const mesh = meshes.cheeks[i];
             mesh.position.set(cheek.x, cheek.y, cheek.z);
             mesh.scale.set(cheek.rx, cheek.ry, (cheek.rx + cheek.ry) / 2);
-            mesh.material = skin(cheek.color);
+            // Only when its colour changes: a fading figure (setOpacity())
+            // keeps its see-through copy while it walks.
+            const material = skin(cheek.color);
+            if (mesh.userData.skin !== material) {
+                mesh.userData.skin = material;
+                mesh.material = material;
+            }
         });
         feet.forEach((foot, i) => {
             meshes.feet[i].position.set(foot.x, foot.y, foot.z);
@@ -481,6 +490,17 @@ export function createCastKit(
             tiltInner.position.y = -s / 2;
         }
 
+        // Its meshes, fading them (setOpacity()), and whether each cast a
+        // shadow; made the first time it fades.
+        let fader = null;
+        let solid = true;
+
+        /** Its shadow on the ground shows while it's solid and above the
+         * ground (not sinking down a stairwell, over the hole). */
+        function showBlob() {
+            blob.visible = shadows && solid && state.lift >= 0;
+        }
+
         function moveData(name) {
             return name && moves.includes(name) ? CAST_MOVE_DATA[name] : null;
         }
@@ -536,9 +556,40 @@ export function createCastKit(
                 }
             },
 
+            /** How solid it's drawn, 0 (gone) to 1: the Butt fading out of
+             * sight up or down a spiral staircase. Its shadow goes while it
+             * fades. Seen through, it draws with its own copies of the
+             * kit's materials (seeThrough()), which every other puppet
+             * shares. Returns whether anything changed. */
+            setOpacity(opacity) {
+                const o = Math.min(1, Math.max(0, opacity));
+                if (!fader) {
+                    if (o >= 1) return false;
+                    const meshes = [];
+                    lift.traverse((node) => {
+                        if (node.isMesh) meshes.push(node);
+                    });
+                    fader = {
+                        meshes,
+                        see: seeThrough(meshes),
+                        shadows: meshes.map((mesh) => mesh.castShadow),
+                    };
+                }
+                if (!fader.see.set(o)) return false;
+                fader.meshes.forEach((mesh, i) => {
+                    mesh.castShadow = o >= 1 && fader.shadows[i];
+                });
+                solid = o >= 1;
+                showBlob();
+                lift.visible = o > 0;
+                return true;
+            },
+
             /** Takes it out of the scene. Its geometry, materials and
-             * textures are the kit's, freed by the kit's dispose(). */
+             * textures are the kit's, freed by the kit's dispose(), but for
+             * any copies it fades with (setOpacity()), freed here. */
             dispose() {
+                instance.setOpacity(1);
                 group.removeFromParent();
             },
 
@@ -628,7 +679,12 @@ export function createCastKit(
                     poseFigure(figure, figure.userData.nextPose);
                     figure.userData.nextPose = null;
                     group.updateMatrixWorld(true);
-                    const minY = new THREE.Box3().setFromObject(figure).min.y;
+                    // Its feet stood on the lift, not the ground: measured
+                    // from the ground, a walking figure (posed afresh every
+                    // frame) would lose its lift and never leave the floor.
+                    const minY =
+                        scratchBox.setFromObject(figure).min.y -
+                        lift.matrixWorld.elements[13];
                     figure.position.y -= minY;
                     figure.userData.foot =
                         figure.position.y / (state.size || 1);
@@ -636,6 +692,7 @@ export function createCastKit(
 
                 // As CastMember: shrinks as the body rises, times the move's
                 // own shadow beat.
+                showBlob();
                 const height = Math.max(state.lift, 0);
                 const k =
                     (SHADOW_FALLOFF / (SHADOW_FALLOFF + height)) * pose.shadow;
