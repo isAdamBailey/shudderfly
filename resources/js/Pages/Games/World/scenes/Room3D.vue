@@ -1104,10 +1104,13 @@ function onButtPointerDown(event) {
     const start = { clientX: event.clientX, clientY: event.clientY };
     let tap = true;
     let grab = 0;
+    // The last move, aimed again every frame as the view scrolls.
+    let held = null;
     const rect = props.stage.beginGesture({
         move(e) {
             e.preventDefault();
             if (pastTap(start, e)) tap = false;
+            held = e;
             const floor = floorAt(e, rect, grab);
             if (floor) room.updateDrag(floor.x, floor.z);
         },
@@ -1120,7 +1123,7 @@ function onButtPointerDown(event) {
     // Held anywhere on the Butt, it's dragged by its feet.
     grab = buttSpot().y - (event.clientY - rect.top);
     steered();
-    room.startDrag();
+    room.startDrag(() => held && floorAt(held, rect, grab));
 }
 
 /** A tap on the bare floor walks the Butt there; a swipe across the room

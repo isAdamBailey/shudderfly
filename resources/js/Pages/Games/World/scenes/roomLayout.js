@@ -241,8 +241,11 @@ export function roomLayout(room, { w, h }, wall = "back") {
         wallHeight,
         camera,
         band: depth,
+        // The Butt stays in the middle 30% of the screen as the view
+        // scrolls, as on the road (SOFT_LEFT / SOFT_RIGHT), so a phone has
+        // room for a finger ahead of it.
         pan: scrolls
-            ? { min: half, max: width - half, slack: half * 0.4 }
+            ? { min: half, max: width - half, slack: half * 0.3 }
             : { min: width / 2, max: width / 2, slack: 0 },
     };
 }

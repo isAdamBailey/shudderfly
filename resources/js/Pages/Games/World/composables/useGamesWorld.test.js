@@ -274,6 +274,42 @@ describe("useGamesWorld dropping the butt", () => {
         expect(world.state.confirmSlug).toBeNull();
     });
 
+    it("keeps walking while a finger is held still ahead of it", () => {
+        const world = makeWorld();
+        // A finger held near the right edge of the screen: a road x that
+        // moves on as the camera follows the butt.
+        const finger = STAGE_W - 20;
+        world.startDrag(() => ({ x: world.camera.x + finger }));
+        world.updateDrag(world.camera.x + finger);
+        advance(world, 3000);
+
+        // Further than the finger first pointed, with the butt held back
+        // from the edge by the camera.
+        expect(world.butt.x).toBeGreaterThan(finger + 200);
+        expect(world.butt.x - world.camera.x).toBeCloseTo(STAGE_W * SOFT_RIGHT);
+
+        // Let go: it stops once it reaches where the finger last pointed.
+        world.endDrag();
+        advance(world, 2000);
+        const { x } = world.butt;
+        advance(world, 1000);
+        expect(world.butt.x).toBe(x);
+    });
+
+    it("lets an arrow key take over from a finger held still", () => {
+        const world = makeWorld();
+        const finger = STAGE_W - 20;
+        world.startDrag(() => ({ x: world.camera.x + finger }));
+        world.updateDrag(world.camera.x + finger);
+        advance(world, 500);
+
+        world.setWalk(-1);
+        const { x } = world.butt;
+        advance(world, 500);
+
+        expect(world.butt.x).toBeLessThan(x);
+    });
+
     it("abandons an unfinished journey when the player walks instead", () => {
         const world = makeWorld();
 

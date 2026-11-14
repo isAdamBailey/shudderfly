@@ -279,6 +279,12 @@ export function useRoom(
     /** Advances the room by `dt` s; whether anything moved. */
     function step(dt) {
         if (state.frozen) return false;
+        // A finger held still points further along each frame the view
+        // follows the Butt, so it keeps walking (startDrag).
+        if (state.dragging && aimDrag) {
+            const to = aimDrag();
+            if (to) updateDrag(to.x, to.z);
+        }
         const { keys } = state;
         let dx = 0;
         let dz = 0;
@@ -429,8 +435,17 @@ export function useRoom(
         if (!inView(thing, view, band)) face(wallToFace(thing, room.size));
     }
 
-    function startDrag() {
+    // Where the held finger points now ({ x, z } or null), asked every
+    // frame of a drag.
+    let aimDrag = null;
+
+    /** `aim` (optional) says where the finger points with the view as it
+     * is now, so a finger held near the edge of the screen keeps the Butt
+     * walking as the view scrolls, rather than it stopping where the finger
+     * last moved (with no room left on a phone to get ahead of it). */
+    function startDrag(aim = null) {
         if (state.frozen) return;
+        aimDrag = aim;
         state.dragging = true;
         walkFrom = doorway();
         target = { x: butt.x, z: butt.z };
@@ -445,18 +460,25 @@ export function useRoom(
     /** Let go: the Butt finishes the stroll, and a door it lands at opens. */
     function endDrag() {
         state.dragging = false;
+        aimDrag = null;
     }
 
     /** A cancelled drag (an incoming call): stop where it is. */
     function cancelDrag() {
         state.dragging = false;
+        aimDrag = null;
         target = null;
     }
 
     /** Holds an arrow key down (or lets it go, with 0) on `axis`. */
     function setKey(axis, dir) {
         state.keys[axis] = dir;
-        if (dir) target = null;
+        // A key takes over from a stroll, and from a finger held still,
+        // until it moves again.
+        if (dir) {
+            target = null;
+            aimDrag = null;
+        }
     }
 
     /** Stops everything in hand: keys, a stroll, a drag. */
@@ -464,6 +486,7 @@ export function useRoom(
         state.keys.x = 0;
         state.keys.z = 0;
         state.dragging = false;
+        aimDrag = null;
         target = null;
     }
 

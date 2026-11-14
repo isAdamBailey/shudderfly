@@ -155,6 +155,21 @@ describe("useRoom", () => {
         expect(onArrive).not.toHaveBeenCalled();
     });
 
+    it("asks a held finger where it points every frame of a drag", () => {
+        const { r } = makeRoom();
+        // As the view scrolls under a finger held still, the floor under
+        // it moves on.
+        let x = 500;
+        r.startDrag(() => ({ x: (x += 5), z: 400 }));
+        run(r, 1);
+        expect(r.butt.x).toBeGreaterThan(700);
+
+        r.endDrag();
+        const asked = x;
+        run(r, 3);
+        expect(x).toBe(asked);
+    });
+
     it("stands still when a drag is cancelled", () => {
         const { r, onArrive } = makeRoom();
 

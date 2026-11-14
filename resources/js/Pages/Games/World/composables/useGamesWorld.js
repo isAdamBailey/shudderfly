@@ -290,6 +290,13 @@ export function useGamesWorld(games, callbacks = {}) {
         if (others.length) othersCtl.step(dt);
         if (state.confirmSlug) return; // the world freezes behind the card
 
+        // A finger held still keeps pointing at the same spot on screen,
+        // which is further along the road each frame the camera follows.
+        if (state.mode === "dragging" && aimDrag) {
+            const to = aimDrag();
+            if (to) updateDrag(to.x, to.side);
+        }
+
         const crossing = !settled();
         if (crossing) {
             butt.lane = approach(butt.lane, LANES[butt.side], dt / CROSS_TIME);
@@ -407,11 +414,20 @@ export function useGamesWorld(games, callbacks = {}) {
         quietArrival = true;
     }
 
-    function startDrag() {
+    // Where the held finger points now ({ x, side? } or null), asked every
+    // frame of a drag: see step.
+    let aimDrag = null;
+
+    /** `aim` (optional) says where the finger points from the camera as it
+     * is now, so a finger held near the edge of the screen keeps the Butt
+     * walking as the view scrolls, rather than it stopping where the finger
+     * last moved (with no room left on a phone to get ahead of it). */
+    function startDrag(aim = null) {
         state.mode = "dragging";
         state.walkDir = 0; // a held arrow must not fight the finger
         targetX = butt.x;
         quietArrival = false;
+        aimDrag = aim;
     }
 
     /** Records where the finger is; `step` walks the butt there at DRAG_SPEED
@@ -429,6 +445,7 @@ export function useGamesWorld(games, callbacks = {}) {
     function endDrag() {
         if (state.mode !== "dragging") return;
         state.mode = "idle";
+        aimDrag = null;
         if (targetX === null || (butt.x === targetX && settled())) arrive();
     }
 
@@ -438,6 +455,7 @@ export function useGamesWorld(games, callbacks = {}) {
     function cancelDrag() {
         if (state.mode !== "dragging") return;
         state.mode = "idle";
+        aimDrag = null;
         targetX = null;
     }
 
@@ -459,8 +477,10 @@ export function useGamesWorld(games, callbacks = {}) {
     }
 
     function setWalk(dir) {
-        // Walking takes over from an unfinished stroll to a dropped spot.
+        // Walking takes over from an unfinished stroll to a dropped spot,
+        // and from a finger held still, until it moves again.
         targetX = null;
+        aimDrag = null;
         state.walkDir = dir;
     }
 

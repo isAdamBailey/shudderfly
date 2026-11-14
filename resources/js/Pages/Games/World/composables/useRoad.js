@@ -261,10 +261,13 @@ export function useRoad(props, emit, options) {
     // once per gesture (by the stage) instead of on every move.
     let gestureRect = null;
     let dragMove = null;
+    // The drag's last pointer event, aimed again every frame (startDrag).
+    let held = null;
 
     const dragGesture = {
         move(event) {
             event.preventDefault();
+            held = event;
             const to = dragMove(event);
             world.updateDrag(to.x, to.side);
         },
@@ -304,7 +307,8 @@ export function useRoad(props, emit, options) {
         steered();
         gestureRect = props.stage.beginGesture(dragGesture);
         dragMove = dragTo(event, gestureRect);
-        world.startDrag();
+        held = null;
+        world.startDrag(() => held && dragMove(held));
     }
 
     /** Only the bare background pans (or, tapped, sends the Butt there); the
