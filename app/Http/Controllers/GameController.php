@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Events\MessageCreated;
 use App\Models\Message;
-use App\Models\Sound;
 use App\Models\SiteSetting;
+use App\Models\Sound;
 use App\Models\User;
 use App\Services\UserTaggingService;
 use App\Support\GameShareMessage;
@@ -69,6 +69,30 @@ class GameController extends Controller
 
     public function index(Request $request): Response
     {
+        $soundsEnabled = SiteSetting::where('key', 'sounds_enabled')->first()?->value ?? false;
+
+        // Closures, so a request back for only the flash (an invite or a
+        // movie shared from the world) builds none of it.
+        return Inertia::render('Games/Index', [
+            'scenes' => fn () => GamesWorld::scenes(),
+            'link' => fn () => self::link($request),
+            'fartSoundUrl' => asset('fart.m4a'),
+            // Where the podium's Movies dialog finds posters and cast photos.
+            'tmdbImageBaseUrl' => config('services.tmdb.base_image_url'),
+            // Recorded toots a cast member plays instead (Guster's).
+            'castSounds' => fn () => GamesWorld::castSounds(),
+            'soundboardSounds' => fn () => $soundsEnabled
+                ? Sound::notBlocked()->orderBy('title')->get(['id', 'title', 'emoji', 'audio_path'])
+                : [],
+            // Who a minigame's score can be shared with (ShareToChatButton),
+            // or invited into the world.
+            'users' => fn () => self::users(),
+        ]);
+    }
+
+    /** Where a shared link opens the world, or null. */
+    private static function link(Request $request): ?array
+    {
         // A shared link can open the world in a given place
         // (/games?scene=house.hall, an invite's), or in front of a game's or a
         // minigame's launcher wherever it stands (/games?game=boom,
@@ -79,6 +103,7 @@ class GameController extends Controller
         // comes back to this page from history, so the world can tell a fresh
         // click on the link (open there) from coming back to it (stay put).
         $scene = $request->query('scene');
+        $movie = $request->query('movie');
         $game = $request->query('game');
         $minigame = $request->query('minigame');
         $games = self::games();
@@ -87,10 +112,13 @@ class GameController extends Controller
             is_string($game) && array_key_exists($game, $games) => GamesWorld::whereIs('game', $game),
             is_string($minigame) && array_key_exists($minigame, $games) => GamesWorld::whereIs('game', $minigame),
             is_string($minigame) && in_array($minigame, GamesWorld::MINIGAMES, true) => GamesWorld::whereIs('minigame', $minigame),
+            // A shared movie (/games?movie=862&title=…), or a movies book's
+            // title to look up (/games?title=…): the Library hall's podium,
+            // its dialog open on it.
+            $request->has('movie') || $request->filled('title') => self::moviesAt($movie, $request->query('title')),
             default => null,
         };
         $link = $place ? [...$place, 'visit' => Str::random(12)] : null;
-        $soundsEnabled = SiteSetting::where('key', 'sounds_enabled')->first()?->value ?? false;
         // An invite's link also names who sent it (`with`), for the world to
         // follow them in (issue #174); only a real user, never yourself.
         $with = filter_var($request->query('with'), FILTER_VALIDATE_INT);
@@ -98,21 +126,24 @@ class GameController extends Controller
             $link['with'] = $with;
         }
 
-        // Closures, so a request back for only the flash (an invite sent
-        // from the world) builds none of it.
-        return Inertia::render('Games/Index', [
-            'scenes' => fn () => GamesWorld::scenes(),
-            'link' => $link,
-            'fartSoundUrl' => asset('fart.m4a'),
-            // Recorded toots a cast member plays instead (Guster's).
-            'castSounds' => fn () => GamesWorld::castSounds(),
-            'soundboardSounds' => fn () => $soundsEnabled
-                ? Sound::notBlocked()->orderBy('title')->get(['id', 'title', 'emoji', 'audio_path'])
-                : [],
-            // Who a minigame's score can be shared with (ShareToChatButton),
-            // or invited into the world.
-            'users' => fn () => self::users(),
-        ]);
+        return $link;
+    }
+
+    /** Where the movie podium stands, and what a fresh link has it open
+     * (`open`, its interaction's arguments, GamesWorld.vue): movie `$movie`,
+     * or a search for `$title`. Null if the podium isn't in the world. */
+    private static function moviesAt(mixed $movie, mixed $title): ?array
+    {
+        $place = GamesWorld::whereIs('movie_podium', 'movies');
+        $title = is_string($title) ? trim($title) : '';
+
+        return $place === null ? null : [
+            ...$place,
+            'open' => [
+                'movieId' => is_string($movie) && ctype_digit($movie) && (int) $movie > 0 ? (int) $movie : null,
+                'title' => $title !== '' ? mb_substr($title, 0, 255) : null,
+            ],
+        ];
     }
 
     /** Every game plays in its house now (issue #144). A game's old page

@@ -196,6 +196,36 @@ class GamesTest extends TestCase
         }
     }
 
+    public function test_games_index_opens_the_movies_at_the_library_podium_from_a_link(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        // A shared movie: that movie in the dialog, at the podium.
+        $this->get(route('games.index', ['movie' => 862, 'title' => 'Toy Story']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('link.scene', 'library.hall')
+                ->where('link.spot', GamesWorld::MOVIE_PODIUM)
+                ->where('link.open', ['movieId' => 862, 'title' => 'Toy Story'])
+                ->has('link.visit')
+                ->where('tmdbImageBaseUrl', config('services.tmdb.base_image_url')));
+
+        // A movies book's title: searched for.
+        $this->get(route('games.index', ['title' => 'Toy Story']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('link.spot', GamesWorld::MOVIE_PODIUM)
+                ->where('link.open', ['movieId' => null, 'title' => 'Toy Story']));
+
+        // Just the podium.
+        $this->get(route('games.index', ['movie' => '']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('link.scene', 'library.hall')
+                ->where('link.open', ['movieId' => null, 'title' => null]));
+
+        // A movie id that isn't one is dropped, not passed on.
+        $this->get(route('games.index', ['movie' => 'nope']))
+            ->assertInertia(fn (Assert $page) => $page->where('link.open.movieId', null));
+    }
+
     public function test_games_index_opens_in_front_of_a_game_named_in_the_link(): void
     {
         /** @var User $user */

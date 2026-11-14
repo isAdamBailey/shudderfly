@@ -843,8 +843,9 @@ const getSongThumbnailSrc = (song) => {
 };
 
 const getMovieCastHref = (message) => {
-    return route("movie-cast.index", {
-        movieId: message.movie_tmdb_id,
+    // The Library hall's movie podium, its dialog open on the movie.
+    return route("games.index", {
+        movie: message.movie_tmdb_id,
         title: message.movie_title,
     });
 };

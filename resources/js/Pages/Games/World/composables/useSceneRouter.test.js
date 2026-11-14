@@ -232,6 +232,30 @@ describe("useSceneRouter", () => {
         expect(plain.invitedBy).toBe(null);
     });
 
+    it("hands over what a fresh link opens, but not coming back to it", () => {
+        const store = memoryStorage();
+        const open = { movieId: 862, title: "Toy Story" };
+        const link = { scene: "house.hall", spot: "podium", open, visit: "a" };
+        const first = useSceneRouter(scenes, { link, storage: store });
+        expect(first.opens).toEqual({
+            scene: "house.hall",
+            spot: "podium",
+            args: open,
+        });
+        first.remember();
+
+        // Back to the same page from history: it stays shut.
+        expect(useSceneRouter(scenes, { link, storage: store }).opens).toBe(
+            null
+        );
+        expect(
+            useSceneRouter(scenes, {
+                link: { scene: "house.hall", visit: "b" },
+                storage: memoryStorage(),
+            }).opens
+        ).toBe(null);
+    });
+
     it("ignores a link to a scene that doesn't exist", () => {
         const router = useSceneRouter(scenes, {
             link: { scene: "house.attic", visit: "a" },

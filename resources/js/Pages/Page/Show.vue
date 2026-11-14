@@ -126,7 +126,7 @@
                         <Link
                             v-if="isMoviesCategory"
                             :href="
-                                route('movie-cast.index', {
+                                route('games.index', {
                                     title: page.book.title,
                                 })
                             "

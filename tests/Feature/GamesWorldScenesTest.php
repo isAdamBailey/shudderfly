@@ -613,7 +613,7 @@ class GamesWorldScenesTest extends TestCase
 
         $scenes = GamesWorld::definitions();
 
-        $this->assertSame(['front-door', 'light-switch', 'collage-art'], array_column($scenes['library.hall']['interactables'], 'id'));
+        $this->assertSame(['front-door', 'light-switch', GamesWorld::MOVIE_PODIUM, 'collage-art'], array_column($scenes['library.hall']['interactables'], 'id'));
         $this->assertEmpty(preg_grep('/^library\.(floor|category)-/', array_keys($scenes)));
     }
 
@@ -669,6 +669,35 @@ class GamesWorldScenesTest extends TestCase
         $this->test_nothing_against_a_wall_overlaps_anything_else_on_it();
     }
 
+    public function test_the_library_hall_has_a_movie_podium_right_of_the_movie_rack(): void
+    {
+        // There with no favourites too: it's where they're added.
+        foreach ([0, GamesWorld::LIBRARY_MOVIE_SHELF] as $favourites) {
+            foreach (range(1, $favourites ?: 1) as $n) {
+                $favourites && MovieFavorite::query()->create(['tmdb_id' => $n, 'title' => "Movie {$n}"]);
+            }
+            $hall = GamesWorld::scenes()['library.hall'];
+            $podium = collect($hall['interactables'])->firstWhere('id', GamesWorld::MOVIE_PODIUM);
+
+            $this->assertNotNull($podium, "with {$favourites} favourites");
+            $this->assertSame('movie_podium', $podium['type']);
+            $this->assertSame('movie-podium', $podium['model']);
+            $this->assertSame('front', $podium['wall']);
+            $this->assertSame('Movie podium', $podium['label']);
+            // Tall, and right of the rack as you face it, away from the
+            // stairs (at the hall's right end, where the front wall starts),
+            // with the collage right of it.
+            $this->assertGreaterThan(150, $podium['size']);
+            $along = $hall['size']['w'] - $podium['x'];
+            $rack = collect($hall['shelves'] ?? [])->firstWhere('id', 'movies');
+            $this->assertGreaterThan($rack ? $this->shelfEnd($rack) : GamesWorld::LIBRARY_SHELVES_FROM, $along - $this->widthOnWall($podium) / 2);
+            $art = collect($hall['interactables'])->firstWhere('id', 'collage-art');
+            $this->assertLessThan($hall['size']['w'] - $art['x'] - $art['image']['w'] / 2, $along + $this->widthOnWall($podium) / 2);
+            $this->test_everything_against_a_wall_fits_along_it();
+            $this->test_nothing_against_a_wall_overlaps_anything_else_on_it();
+        }
+    }
+
     public function test_the_library_hall_hangs_the_months_collage_right_of_the_movies(): void
     {
         foreach (range(1, 6) as $n) {
@@ -704,11 +733,13 @@ class GamesWorldScenesTest extends TestCase
         $this->assertSame(2, $art['image']['rows']);
         $this->assertArrayNotHasKey('from', $art['image']);
 
-        // On the front wall, centred between the movie rack and the wall's end.
-        $movies = collect($hall['shelves'])->firstWhere('id', 'movies');
+        // On the front wall, centred between the movie podium (right of
+        // the rack) and the wall's end.
+        $podium = collect($hall['interactables'])->firstWhere('id', GamesWorld::MOVIE_PODIUM);
+        [, $podiumAlong] = $this->againstWall($podium, $hall['size']);
         [$wall, $along] = $this->againstWall($art, $hall['size']);
         $this->assertSame('front', $wall);
-        $this->assertEqualsWithDelta(($this->shelfEnd($movies) + $hall['size']['w']) / 2, $along, 1);
+        $this->assertEqualsWithDelta(($podiumAlong + $this->widthOnWall($podium) / 2 + $hall['size']['w']) / 2, $along, 1);
         // Centred up the wall.
         $border = GamesWorld::PICTURE_FRAMES['ornate'];
         $wallHeight = GamesWorld::ROOM_FRAME / 2;

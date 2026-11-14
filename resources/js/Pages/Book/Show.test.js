@@ -581,16 +581,16 @@ describe("Book/Show.vue", () => {
 
         const movieLink = wrapper
             .findAllComponents({ name: "Link" })
-            .find((item) => item.props("href")?.includes("movie-cast"));
+            .find((item) => item.props("href")?.includes("title="));
 
         expect(movieLink).toBeDefined();
-        expect(movieLink.props("href")).toBe("/movie-cast?title=Toy+Story");
+        expect(movieLink.props("href")).toBe("/games?title=Toy+Story");
     });
 
     it("does not show movie cast link for non-movies categories", () => {
         const movieLinks = wrapper
             .findAllComponents({ name: "Link" })
-            .filter((item) => item.props("href")?.includes("movie-cast"));
+            .filter((item) => item.props("href")?.includes("title="));
 
         expect(movieLinks).toHaveLength(0);
     });

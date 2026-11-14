@@ -14,8 +14,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class MovieCastController extends Controller
 {
@@ -24,18 +22,6 @@ class MovieCastController extends Controller
     public function __construct(
         private UserTaggingService $userTaggingService
     ) {}
-
-    public function index(Request $request): Response
-    {
-        $movieId = $request->query('movieId');
-
-        return Inertia::render('MovieCast/Index', [
-            'tmdbImageBaseUrl' => config('services.tmdb.base_image_url'),
-            'favorites' => $this->favoritesPayload(),
-            'title' => $request->query('title'),
-            'movieId' => is_numeric($movieId) ? (int) $movieId : null,
-        ]);
-    }
 
     public function search(Request $request): JsonResponse
     {
@@ -194,6 +180,14 @@ class MovieCastController extends Controller
         return response()->json(['movies' => $movies]);
     }
 
+    /** Every favourite, newest first, for the podium's dialog
+     * (MoviesCard.vue; its posters' paths go on the Games World page's
+     * `tmdbImageBaseUrl`). */
+    public function favoritesList(): JsonResponse
+    {
+        return response()->json(['favorites' => $this->favoritesPayload()]);
+    }
+
     public function storeFavorite(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -275,7 +269,7 @@ class MovieCastController extends Controller
         return redirect()->back()->with('success', __('messages.movie.shared'));
     }
 
-    /** The favourites, newest first, as the Movies page and the Games World
+    /** The favourites, newest first, as the podium's Movies dialog and the Games World
      * Library's movie rack both list them. */
     private function newestFavorites(): Builder
     {

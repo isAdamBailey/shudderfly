@@ -20,11 +20,8 @@ global.route = vi.fn((name, params) => {
     if (name === "pages.show" && params?.page != null) {
         return `/pages/${params.page}`;
     }
-    if (name === "movie-cast.index") {
-        const title = params?.title
-            ? `?title=${encodeURIComponent(params.title)}`
-            : "";
-        return `/movie-cast${title}`;
+    if (name === "games.index" && params) {
+        return `/games?${new URLSearchParams(params)}`;
     }
     return `/${name}`;
 });
@@ -590,16 +587,16 @@ describe("Page/Show.vue", () => {
 
         const movieLink = wrapper
             .findAllComponents({ name: "Link" })
-            .find((item) => item.props("href")?.includes("movie-cast"));
+            .find((item) => item.props("href")?.includes("title="));
 
         expect(movieLink).toBeDefined();
-        expect(movieLink.props("href")).toBe("/movie-cast?title=Toy+Story");
+        expect(movieLink.props("href")).toBe("/games?title=Toy+Story");
     });
 
     it("does not show movie cast link for non-movies categories", () => {
         const movieLinks = wrapper
             .findAllComponents({ name: "Link" })
-            .filter((item) => item.props("href")?.includes("movie-cast"));
+            .filter((item) => item.props("href")?.includes("title="));
 
         expect(movieLinks).toHaveLength(0);
     });

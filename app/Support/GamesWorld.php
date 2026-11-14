@@ -62,10 +62,18 @@ final class GamesWorld
      * books.category. */
     public const LIBRARY_HALL_SHELF = 9;
 
-    /** The most movies the hall's movie rack holds (the Movies page's
+    /** The most movies the hall's movie rack holds (the Movies dialog's
      * favourites, newest first): as many columns as fit along
      * LIBRARY_WALL_SHELF. */
     public const LIBRARY_MOVIE_SHELF = 8 * self::LIBRARY_SHELF_ROWS;
+
+    /** The Library hall's movie podium (moviePodium()): opens the Movies
+     * dialog, and where a shared movie's link stands you. */
+    public const MOVIE_PODIUM = 'movie-podium';
+
+    /** How tall the movie podium stands: well over the Butt, as an old
+     * library's lectern would. */
+    public const MOVIE_PODIUM_SIZE = 250;
 
     /** The collage hung as a masterpiece right of the hall's movie rack
      * (collageArt()): its bottom `y` up the wall, `w` × `h`, a collage's
@@ -235,7 +243,7 @@ final class GamesWorld
 
     /** Props modelled in 3D that an interactable's `model` may name:
      * three/models.js (a Vitest test keeps them in step). */
-    public const MODELS = ['radio', 'table-lamp', 'slot-machine', 'fridge', 'oven', 'microwave', 'washing-machine', 'grandfather-clock', 'armchair', 'spotlight', 'toilet', 'bathtub', 'toilet-roll', 'sound-altar', 'exhibit-entry'];
+    public const MODELS = ['radio', 'table-lamp', 'slot-machine', 'fridge', 'oven', 'microwave', 'washing-machine', 'grandfather-clock', 'armchair', 'spotlight', 'toilet', 'bathtub', 'toilet-roll', 'sound-altar', 'exhibit-entry', 'movie-podium'];
 
     /** What a model that stands on the floor takes up, per unit of its
      * size: `w` across and `d` out from the wall, three/footprints.js's (a
@@ -253,6 +261,7 @@ final class GamesWorld
         'toilet-roll' => ['w' => 0.45, 'd' => 0.23],
         'sound-altar' => ['w' => 0.95, 'd' => 0.58],
         'exhibit-entry' => ['w' => 0.96, 'd' => 0.2],
+        'movie-podium' => ['w' => 0.55, 'd' => 0.35],
     ];
 
     /** Frames a wall picture or a room's photo can hang in (its
@@ -658,26 +667,31 @@ final class GamesWorld
 
         // The hall: the front door at the left end, then the special
         // shelves, then the stairs up at the right; across from them, on
-        // the front wall, the rack of favourite movies and, right of it,
-        // the month's collage in a gilt frame.
+        // the front wall, the rack of favourite movies, the movie podium
+        // right of it, away from the stairs, and right of that the month's
+        // collage in a gilt frame.
         $shelves = self::hallShelves();
         $movies = self::movieShelf();
         $allShelves = array_values(array_filter([...$shelves, $movies]));
-        // The collage hangs centred between the rack and the wall's end,
-        // at least 80 clear of each.
-        $rackEnd = $movies ? self::shelfEnd($movies) : 0;
+        // The podium stands 60 past the rack (or where it would start),
+        // and the collage hangs centred between the podium and the wall's
+        // end, at least 80 clear of each.
+        $rackEnd = $movies ? self::shelfEnd($movies) : self::LIBRARY_SHELVES_FROM;
+        $podiumW = (int) ceil(self::MOVIE_PODIUM_SIZE * self::MODEL_FOOTPRINTS['movie-podium']['w']);
+        $podiumX = $rackEnd + 60 + intdiv($podiumW, 2);
+        $podiumEnd = $podiumX + intdiv($podiumW, 2);
         $artW = self::COLLAGE_ART['w'] + 2 * self::PICTURE_FRAMES['ornate'];
         $hallW = max(
             $roomW,
             (int) (collect($allShelves)->max(fn ($shelf) => self::shelfEnd($shelf)) ?? 0) + 220,
-            $rackEnd + $artW + 160,
+            $podiumEnd + $artW + 160,
         );
-        $artX = intdiv($rackEnd + $hallW, 2);
+        $artX = intdiv($podiumEnd + $hallW, 2);
         $hallSize = ['w' => $hallW, 'd' => $libraryD];
         $hallLights = [
             self::ceilingLamp($hallW),
             ...($shelves ? self::readingLamps($shelves[0]['x'], self::shelfEnd(end($shelves)), self::ROOM_LIGHTS_MAX - 2) : []),
-            ...self::readingLamps($movies['x'] ?? $artX - intdiv($artW, 2), $artX + intdiv($artW, 2), 1, 'front', $hallSize),
+            ...self::readingLamps($movies['x'] ?? $podiumX - intdiv($podiumW, 2), $artX + intdiv($artW, 2), 1, 'front', $hallSize),
         ];
         $scenes = [
             'library.hall' => self::room('library_hall', [
@@ -690,6 +704,7 @@ final class GamesWorld
                 self::roomDoor('front-door', 110, 'road', 'library', exit: true),
                 self::lightSwitch(220, $hallLights),
                 ...($floors->isEmpty() ? [] : [self::stairs(true, $floorId(0), $hallSize)]),
+                self::onWall('front', $hallSize, self::moviePodium($podiumX)),
                 self::onWall('front', $hallSize, self::collageArt($artX)),
             ]),
         ];
@@ -837,13 +852,13 @@ final class GamesWorld
         return $shelves;
     }
 
-    /** The hall's movie rack on the front wall: the Movies page's
+    /** The hall's movie rack on the front wall: the Movies dialog's
      * favourites (MovieCastController::favoritesPage()), up to
      * LIBRARY_MOVIE_SHELF, or null with none. */
     private static function movieShelf(): ?array
     {
         // Counted live, as hallShelves() counts the books, not picked once
-        // a day (pickedToday()): a movie favourited on the Movies page is
+        // a day (pickedToday()): a movie favourited at the podium is
         // on the rack the next visit, as that page promises.
         $count = min(MovieFavorite::count(), self::LIBRARY_MOVIE_SHELF);
 
@@ -854,6 +869,19 @@ final class GamesWorld
             'perPage' => self::LIBRARY_MOVIE_SHELF,
             'label' => 'messages.games.world.shelves.movies',
         ];
+    }
+
+    /** The movie podium, a tall old-library lectern, on a room's back
+     * wall (onWall() moves it), centred on `x`: it opens the Movies
+     * dialog (interactions/moviePodium.js), to look up a movie's cast and
+     * trailer and add it to the rack. There with no favourites too, since
+     * that's where they're added. */
+    private static function moviePodium(int $x): array
+    {
+        return self::toy(self::MOVIE_PODIUM, $x, 0, null, 'movie_podium', [
+            'type' => 'movie_podium', 'movie_podium' => 'movies',
+            'model' => 'movie-podium', 'size' => self::MOVIE_PODIUM_SIZE,
+        ]);
     }
 
     /** A category room's shelves of `count` books: one bookcase along the

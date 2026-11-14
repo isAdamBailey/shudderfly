@@ -4,16 +4,6 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 
 global.route = (name, params) => {
-    if (name === "movie-cast.index" && params && typeof params === "object") {
-        const query = new URLSearchParams();
-        if (params.title) {
-            query.set("title", params.title);
-        }
-        if (params.movieId != null) {
-            query.set("movieId", String(params.movieId));
-        }
-        return `/movie-cast?${query.toString()}`;
-    }
     if (name === "games.index" && params) {
         return `/games?${new URLSearchParams(params)}`;
     }
@@ -1639,12 +1629,10 @@ describe("MessageTimeline", () => {
 
             const link = wrapper
                 .findAllComponents({ name: "Link" })
-                .find((item) => item.props("href")?.includes("movie-cast"));
+                .find((item) => item.props("href")?.includes("movie="));
 
             expect(link).toBeDefined();
-            expect(link.props("href")).toBe(
-                "/movie-cast?title=Toy+Story&movieId=862"
-            );
+            expect(link.props("href")).toBe("/games?movie=862&title=Toy+Story");
 
             const img = wrapper.find('img[alt="Toy Story"]');
             expect(img.exists()).toBe(true);

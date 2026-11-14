@@ -47,7 +47,7 @@ import { supportsWebGL, useWorldRenderer } from "./three/useWorldRenderer.js";
 // through the API it exposes (see useRoad's `api`).
 const props = defineProps({
     scenes: { type: Object, required: true },
-    // A shared link's { scene, spot?, with?, visit }, to open in
+    // A shared link's { scene, spot?, with?, open?, visit }, to open in
     // (useSceneRouter).
     link: { type: Object, default: null },
 });
@@ -278,6 +278,18 @@ const follow = useFollow({
 // they're still in the world.
 if (presence.enabled && router.invitedBy !== null) {
     follow.startWhenHere(router.invitedBy);
+}
+
+// A link that opens something (a shared movie's: the podium's Movies
+// dialog, on it) activates the thing at its spot with its arguments. Found
+// in the scene's list, not its view, so it still opens where a browser
+// without WebGL is put back on the road.
+if (router.opens) {
+    const { scene, spot, args } = router.opens;
+    const item = props.scenes[scene]?.interactables?.find(
+        (thing) => thing.id === spot
+    );
+    if (item) activate(item, ctx, args);
 }
 
 // What the aria-live region says: the place you've just arrived in, or why

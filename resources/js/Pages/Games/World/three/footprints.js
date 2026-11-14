@@ -32,4 +32,6 @@ export const FOOTPRINTS = {
     // Guster's freestanding sound console, broad enough to read as a station.
     "sound-altar": { w: 0.95, d: 0.58, top: 0.82 },
     "exhibit-entry": { w: 0.96, d: 0.2, top: 1 },
+    // The Library hall's tall movie podium: things thrown land on its desk.
+    "movie-podium": { w: 0.55, d: 0.35, top: 0.66 },
 };

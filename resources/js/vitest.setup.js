@@ -92,30 +92,18 @@ export const ROUTE_MAPPINGS = {
     "books.category": (params) =>
         `/books-category?${new URLSearchParams(params)}`,
     "categories.show": (params) => `/categories/${params.categoryName}`,
-    "games.index": "/games",
+    "games.index": (params) =>
+        params ? `/games?${new URLSearchParams(params)}` : "/games",
     "games.share-score": (params) => `/games/${params}/share-score`,
     "games.invite": "/games/invite",
     "music.share": (params) => `/music/${params}/share`,
     "music.show": (params) => `/music/${params}`,
-    "movie-cast.index": (params) => {
-        if (params?.title || params?.movieId) {
-            const query = new URLSearchParams();
-            if (params?.title) {
-                query.set("title", params.title);
-            }
-            if (params?.movieId != null) {
-                query.set("movieId", String(params.movieId));
-            }
-            return `/movie-cast?${query.toString()}`;
-        }
-
-        return "/movie-cast";
-    },
     "movie-cast.search": "/api/movie-cast/search",
     "movie-cast.credits": (params) => `/api/movie-cast/${params}/credits`,
     "movie-cast.details": (params) => `/api/movie-cast/${params}/details`,
     "movie-cast.favorites.index": (params) =>
         `/api/movie-cast/favorites?${new URLSearchParams(params)}`,
+    "movie-cast.favorites.list": "/api/movie-cast/favorites/all",
     "movie-cast.favorites.store": "/movie-cast/favorites",
     "movie-cast.favorites.destroy": (params) =>
         `/movie-cast/favorites/${params}`,

@@ -8,21 +8,20 @@ import ShareToChatButton from "@/Components/ShareToChatButton.vue";
 import TextInput from "@/Components/TextInput.vue";
 import VideoWrapper from "@/Components/VideoWrapper.vue";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
+import Modal from "@/Components/Modal.vue";
 import { useTranslations } from "@/composables/useTranslations";
-import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import { Head, router } from "@inertiajs/vue3";
+import { usePage } from "@inertiajs/vue3";
 import { useSpeechRecognition } from "@vueuse/core";
+import axios from "axios";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
+// The Movies dialog the Library hall's podium opens (interactions/
+// moviePodium.js), once the Movies page: look a movie up, by typing or by
+// voice, for its cast (each character read aloud), its trailer and its
+// description, share it, and add it to the favourites the hall's rack
+// holds. `movieId` opens it on a movie (a rack's, or a shared one's link),
+// `title` on a search for it (a movies book's).
 const props = defineProps({
-    tmdbImageBaseUrl: {
-        type: String,
-        required: true,
-    },
-    favorites: {
-        type: Array,
-        default: () => [],
-    },
     title: {
         type: String,
         default: null,
@@ -32,6 +31,8 @@ const props = defineProps({
         default: null,
     },
 });
+const emit = defineEmits(["cancel"]);
+const titleId = "movies-card-title";
 
 const { speak, speaking, stopSpeech } = useSpeechSynthesis();
 const { t } = useTranslations();
@@ -116,15 +117,16 @@ const movieDetails = ref(null);
 const isLoading = ref(false);
 const errorMessage = ref("");
 const hasSearched = ref(false);
-const favoritesList = ref([...props.favorites]);
+// Null until they come, so there's no "no favourites yet" meanwhile.
+const favoritesList = ref(null);
+// Where posters and cast photos come from: the Games World page's prop.
+const tmdbImageBaseUrl = computed(() => usePage().props.tmdbImageBaseUrl ?? "");
 const isRemoveDialogOpen = ref(false);
 const pendingRemoveMovie = ref(null);
 const speakingMemberId = ref(null);
 const isSpeakingDescription = ref(false);
 
 let speechTimeout = null;
-
-const currentYear = new Date().getFullYear();
 
 const trailerYoutubeUrl = computed(() => {
     if (!movieDetails.value?.trailer_key) {
@@ -152,7 +154,7 @@ const isCurrentMovieFavorite = computed(() => {
         return false;
     }
 
-    return favoritesList.value.some(
+    return (favoritesList.value ?? []).some(
         (movie) => movie.id === movieDetails.value.id
     );
 });
@@ -183,12 +185,36 @@ const openRemoveFavoriteDialog = (movie) => {
     speak(t("movie.remove_favorite_confirm_speak", { title: movie.title }));
 };
 
-const resetPage = () => {
+// The heading starts over: no search, back to the favourites.
+const startOver = () => {
     stopSpeech();
     if (isListening.value) {
         stop();
     }
-    router.get(route("movie-cast.index"));
+    searchQuery.value = "";
+    searchResults.value = [];
+    castMembers.value = [];
+    movieTitle.value = "";
+    movieDetails.value = null;
+    errorMessage.value = "";
+    hasSearched.value = false;
+};
+
+// Asked for each time it opens, so a favourite added last time is here.
+// Dropped if one was added or removed meanwhile (that answer is newer), and
+// quietly on failure: the movie being looked up matters more.
+let favoritesChanged = false;
+const setFavorites = (list) => {
+    favoritesChanged = true;
+    favoritesList.value = list;
+};
+const loadFavorites = async () => {
+    try {
+        const { data } = await axios.get(route("movie-cast.favorites.list"));
+        if (!favoritesChanged) favoritesList.value = data.favorites ?? [];
+    } catch {
+        // No favourites to show; searching still works.
+    }
 };
 
 const getReleaseYear = (releaseDate) => {
@@ -196,8 +222,8 @@ const getReleaseYear = (releaseDate) => {
 };
 
 const getProfileImageUrl = (profilePath) =>
-    `${props.tmdbImageBaseUrl}${profilePath}`;
-const getMovieImageUrl = (path) => `${props.tmdbImageBaseUrl}${path}`;
+    `${tmdbImageBaseUrl.value}${profilePath}`;
+const getMovieImageUrl = (path) => `${tmdbImageBaseUrl.value}${path}`;
 
 const speakMovieTitle = (title) => {
     if (!title?.trim()) {
@@ -224,8 +250,8 @@ const loadMovieById = async (
 
     try {
         const [creditsResponse, detailsResponse] = await Promise.all([
-            window.axios.get(route("movie-cast.credits", movieId)),
-            window.axios.get(route("movie-cast.details", movieId)),
+            axios.get(route("movie-cast.credits", movieId)),
+            axios.get(route("movie-cast.details", movieId)),
         ]);
 
         movieTitle.value = preferredTitle?.trim() || detailsResponse.data.title;
@@ -256,7 +282,7 @@ const onSubmit = async () => {
     }
 
     try {
-        const response = await window.axios.get(route("movie-cast.search"), {
+        const response = await axios.get(route("movie-cast.search"), {
             params: { query },
         });
         const movies = response.data;
@@ -306,11 +332,11 @@ const onFavoriteButtonClick = async () => {
     }
 
     try {
-        const response = await window.axios.post(
+        const response = await axios.post(
             route("movie-cast.favorites.store"),
             currentFavoriteMovie.value
         );
-        favoritesList.value = response.data;
+        setFavorites(response.data);
     } catch {
         notifyError("movie.favorite_save_failed");
     }
@@ -322,10 +348,10 @@ const confirmRemoveFavorite = async () => {
     }
 
     try {
-        const response = await window.axios.delete(
+        const response = await axios.delete(
             route("movie-cast.favorites.destroy", pendingRemoveMovie.value.id)
         );
-        favoritesList.value = response.data;
+        setFavorites(response.data);
     } catch {
         notifyError("movie.favorite_remove_failed");
     } finally {
@@ -427,6 +453,7 @@ const speakMovieDescription = () => {
 };
 
 onMounted(() => {
+    void loadFavorites();
     if (props.movieId) {
         void loadMovieById(props.movieId, props.title?.trim() || undefined);
     } else if (props.title?.trim()) {
@@ -447,21 +474,39 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <Head :title="t('movie.page_title')" />
-
-    <AuthenticatedLayout>
-        <template #header>
-            <button type="button" @click="resetPage">
-                <h2
-                    class="font-heading text-2xl text-theme-title leading-tight"
+    <Modal
+        :show="true"
+        max-width="4xl"
+        :labelledby="titleId"
+        @close="emit('cancel')"
+    >
+        <section class="movies-shell">
+            <header
+                class="flex items-center justify-between gap-4 border-b border-gray-700 bg-gray-900 px-5 py-4"
+            >
+                <button
+                    type="button"
+                    class="min-w-0 text-left"
+                    @click="startOver"
                 >
-                    {{ t("movie.page_heading") }}
-                </h2>
-            </button>
-        </template>
+                    <h2
+                        :id="titleId"
+                        class="font-heading text-2xl leading-tight text-amber-300"
+                    >
+                        🎬 {{ t("movie.page_heading") }}
+                    </h2>
+                </button>
+                <button
+                    type="button"
+                    class="btn-bulge grid h-11 w-11 flex-none place-items-center rounded-xl border border-slate-500 text-2xl text-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                    :aria-label="t('common.close')"
+                    @click="emit('cancel')"
+                >
+                    <i class="ri-close-line" aria-hidden="true"></i>
+                </button>
+            </header>
 
-        <div class="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-            <div class="space-y-8">
+            <div class="space-y-8 px-4 py-6 sm:px-6">
                 <p class="text-gray-300">
                     {{ t("movie.search_prompt") }}
                 </p>
@@ -548,13 +593,9 @@ onBeforeUnmount(() => {
                     </h3>
                     <p class="text-sm text-gray-400">
                         🎬
-                        {{
-                            t("movie.favorites_library_note", {
-                                world: t("games.world.title"),
-                            })
-                        }}
+                        {{ t("movie.favorites_library_note") }}
                     </p>
-                    <p v-if="!favoritesList.length" class="text-gray-400">
+                    <p v-if="favoritesList?.length === 0" class="text-gray-400">
                         {{ t("movie.favorites_empty") }}
                     </p>
                     <div
@@ -562,7 +603,7 @@ onBeforeUnmount(() => {
                         class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"
                     >
                         <div
-                            v-for="movie in favoritesList"
+                            v-for="movie in favoritesList ?? []"
                             :key="movie.id"
                             class="relative rounded-lg bg-gray-800 p-3"
                         >
@@ -683,6 +724,7 @@ onBeforeUnmount(() => {
                                         </Button>
                                         <ShareToChatButton
                                             kind="movie"
+                                            :preserve-world="true"
                                             :movie-tmdb-id="movieDetails.id"
                                             :movie-title="movieDetails.title"
                                             :movie-image-path="
@@ -816,11 +858,7 @@ onBeforeUnmount(() => {
                     </p>
                 </div>
             </div>
-
-            <p class="mt-12 text-center text-sm text-gray-500">
-                Copyright {{ currentYear }} Adam Bailey
-            </p>
-        </div>
+        </section>
 
         <ConfirmDialog
             v-model:show="isRemoveDialogOpen"
@@ -832,5 +870,16 @@ onBeforeUnmount(() => {
             @confirm="confirmRemoveFavorite"
             @cancel="cancelRemoveFavorite"
         />
-    </AuthenticatedLayout>
+    </Modal>
 </template>
+
+<style scoped>
+.movies-shell {
+    max-height: min(88vh, 900px);
+    overflow-y: auto;
+    background: #111827;
+    color: #f9fafb;
+    scrollbar-color: #6b7280 #1f2937;
+    scrollbar-width: thin;
+}
+</style>

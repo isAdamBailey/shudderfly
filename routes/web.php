@@ -22,6 +22,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorldClockController;
 use App\Http\Controllers\YouTubeProxyController;
 use Illuminate\Foundation\Application;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -101,11 +102,17 @@ Route::middleware('auth')->group(function () {
     Route::get('/games/{game}', [GameController::class, 'oldPage'])->name('games.old-page');
     Route::post('/games/{game}/share-score', [GameController::class, 'shareScore'])->name('games.share-score');
 
-    Route::get('/movie-cast', [MovieCastController::class, 'index'])->name('movie-cast.index');
+    // The Movies page is the Library hall's podium now: an old link or
+    // bookmark opens the world there, on the movie it named (GameController).
+    Route::get('/movie-cast', fn (Request $request) => redirect()->route('games.index', [
+        'movie' => $request->query('movieId', ''),
+        'title' => $request->query('title'),
+    ]))->name('movie-cast.index');
     Route::get('/api/movie-cast/search', [MovieCastController::class, 'search'])->name('movie-cast.search');
     Route::get('/api/movie-cast/{id}/credits', [MovieCastController::class, 'credits'])->name('movie-cast.credits');
     Route::get('/api/movie-cast/{id}/details', [MovieCastController::class, 'details'])->name('movie-cast.details');
     Route::get('/api/movie-cast/favorites', [MovieCastController::class, 'favoritesPage'])->name('movie-cast.favorites.index');
+    Route::get('/api/movie-cast/favorites/all', [MovieCastController::class, 'favoritesList'])->name('movie-cast.favorites.list');
     Route::post('/movie-cast/favorites', [MovieCastController::class, 'storeFavorite'])->name('movie-cast.favorites.store');
     Route::delete('/movie-cast/favorites/{tmdbId}', [MovieCastController::class, 'destroyFavorite'])->name('movie-cast.favorites.destroy');
     Route::post('/movie-cast/share', [MovieCastController::class, 'share'])->name('movie-cast.share');

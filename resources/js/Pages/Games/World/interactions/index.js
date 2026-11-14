@@ -7,6 +7,7 @@ import game from "./game.js";
 import harp from "./harp.js";
 import minigame from "./minigame.js";
 import movie from "./movie.js";
+import moviePodium from "./moviePodium.js";
 import organ from "./organ.js";
 import radio from "./radio.js";
 import soundAltar from "./soundAltar.js";
@@ -34,6 +35,7 @@ const interactions = {
     harp,
     minigame,
     movie,
+    movie_podium: moviePodium,
     organ,
     radio,
     sound_altar: soundAltar,
@@ -50,10 +52,11 @@ export function autoTriggers(item) {
     return Boolean(handlerFor(item)?.autoTrigger);
 }
 
-/** Runs the handler for an interactable. An unknown type does nothing rather
- * than throwing, so a registry entry the client doesn't know yet is inert. */
-export function activate(item, ctx) {
-    handlerFor(item)?.activate(item, ctx);
+/** Runs the handler for an interactable, with `args` when a link opens it
+ * (GamesWorld.vue). An unknown type does nothing rather than throwing, so a
+ * registry entry the client doesn't know yet is inert. */
+export function activate(item, ctx, args) {
+    return handlerFor(item)?.activate(item, ctx, args);
 }
 
 /** What playing `item` played, for the room (its handler's `note`), or

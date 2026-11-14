@@ -23,9 +23,12 @@ function sessionStore() {
  *
  * Options:
  * - link: a shared link (`/games?scene=house.hall`) as the server sends it,
- *   { scene, spot?, with?, visit }; `spot` is where to stand (a shared
+ *   { scene, spot?, with?, open?, visit }; `spot` is where to stand (a shared
  *   score's link puts you in front of its game), `with` who sent it (an
- *   invite's link: the world follows them, issue #174). `visit` is new on every click of the link but the same
+ *   invite's link: the world follows them, issue #174), `open` the
+ *   arguments to activate the thing at `spot` with on arriving (a shared
+ *   movie's { movieId, title }: the podium opens the Movies dialog on it).
+ *   `visit` is new on every click of the link but the same
  *   when the browser comes back to the page from history, so a fresh click
  *   opens at the link and coming back from a game to that URL puts you
  *   where you were.
@@ -56,6 +59,12 @@ export function useSceneRouter(scenes, { link = null, storage } = {}) {
     // Who invited you here, when the page opened at their link (not when
     // coming back to it).
     const invitedBy = linked ? link.with ?? null : null;
+    // What the link opens, likewise only when it was just followed: the
+    // thing at its spot, and the arguments to activate it with.
+    const opens =
+        linked && link.open
+            ? { scene: link.scene, spot: link.spot ?? null, args: link.open }
+            : null;
 
     // Scene ids left through doors, most recent last: Escape goes back the
     // way you came.
@@ -139,6 +148,7 @@ export function useSceneRouter(scenes, { link = null, storage } = {}) {
         currentId,
         arrival,
         invitedBy,
+        opens,
         goTo,
         stay,
         exitDoor,

@@ -1,13 +1,15 @@
-import MovieCard from "../components/MovieCard.vue";
+import { openMovies } from "./moviePodium.js";
 
 /**
  * A favourite movie on the Library hall's movie rack (scenes/bookshelf.js,
- * a shelf that `holds: "movies"`). Like a book, it asks first: opening it
- * leaves the world for the Movies page, so its card stands between the tap
- * and the movie.
+ * a shelf that `holds: "movies"`): the Movies dialog, on that movie, over
+ * the world (the podium's, interactions/moviePodium.js).
  */
 export default {
     activate(item, ctx) {
-        ctx.openCard(MovieCard, { movie: item.movie });
+        return openMovies(ctx, {
+            movieId: item.movie.id,
+            title: item.movie.title,
+        });
     },
 };

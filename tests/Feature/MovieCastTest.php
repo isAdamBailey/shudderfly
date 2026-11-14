@@ -9,7 +9,6 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
-use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class MovieCastTest extends TestCase
@@ -27,42 +26,34 @@ class MovieCastTest extends TestCase
         ]);
     }
 
-    public function test_movie_cast_page_is_displayed(): void
+    public function test_the_movies_page_is_now_the_library_podium(): void
     {
-        $user = User::factory()->create();
-        $this->actingAs($user);
+        $this->actingAs(User::factory()->create());
 
-        MovieFavorite::query()->create([
-            'tmdb_id' => 550,
-            'title' => 'Fight Club',
-            'image_path' => '/poster.jpg',
-        ]);
-
-        $response = $this->get(route('movie-cast.index'));
-
-        $response->assertInertia(
-            fn (Assert $page) => $page
-                ->component('MovieCast/Index')
-                ->where('tmdbImageBaseUrl', 'https://image.tmdb.org/t/p/w200')
-                ->where('title', null)
-                ->has('favorites', 1)
-                ->where('favorites.0.id', 550)
-                ->where('favorites.0.title', 'Fight Club')
-        );
+        // Old links and bookmarks: the podium, with what they asked for.
+        $this->get(route('movie-cast.index'))
+            ->assertRedirect(route('games.index', ['movie' => '']));
+        $this->get(route('movie-cast.index', ['movieId' => 862, 'title' => 'Toy Story']))
+            ->assertRedirect(route('games.index', ['movie' => 862, 'title' => 'Toy Story']));
+        $this->get(route('movie-cast.index', ['title' => 'Toy Story']))
+            ->assertRedirect(route('games.index', ['movie' => '', 'title' => 'Toy Story']));
+        // Whatever it's sent, checked where the world opens.
+        $this->get(route('games.index', ['movie' => '1.5']))
+            ->assertInertia(fn ($page) => $page->where('link.open.movieId', null));
     }
 
-    public function test_movie_cast_page_accepts_title_query_param(): void
+    public function test_the_podium_lists_every_favorite_newest_first(): void
     {
-        $user = User::factory()->create();
-        $this->actingAs($user);
+        $this->actingAs(User::factory()->create());
+        MovieFavorite::query()->create(['tmdb_id' => 550, 'title' => 'Fight Club', 'image_path' => '/poster.jpg']);
+        $this->travel(1)->minutes();
+        MovieFavorite::query()->create(['tmdb_id' => 12, 'title' => 'Finding Nemo', 'image_path' => null]);
 
-        $response = $this->get(route('movie-cast.index', ['title' => 'Toy Story']));
-
-        $response->assertInertia(
-            fn (Assert $page) => $page
-                ->component('MovieCast/Index')
-                ->where('title', 'Toy Story')
-        );
+        $this->getJson(route('movie-cast.favorites.list'))
+            ->assertOk()
+            ->assertJsonPath('favorites.0.id', 12)
+            ->assertJsonPath('favorites.1.id', 550)
+            ->assertJsonPath('favorites.1.image_path', '/poster.jpg');
     }
 
     public function test_movie_cast_search_returns_filtered_results(): void
@@ -317,6 +308,7 @@ class MovieCastTest extends TestCase
     public function test_movie_cast_routes_require_authentication(): void
     {
         $this->getJson(route('movie-cast.favorites.index'))->assertUnauthorized();
+        $this->getJson(route('movie-cast.favorites.list'))->assertUnauthorized();
         $this->get(route('movie-cast.index'))->assertRedirect(route('login'));
         $this->getJson(route('movie-cast.search', ['query' => 'Toy Story']))
             ->assertUnauthorized();

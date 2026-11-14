@@ -1483,7 +1483,7 @@ describe("GamesWorld Library shelves", () => {
         expect(wrapper.find("[role='dialog']").exists()).toBe(false);
     });
 
-    it("fills a movie rack from the favourites, and a movie's card leads to it", async () => {
+    it("fills a movie rack from the favourites, and a movie opens the Movies dialog on it", async () => {
         const [room] = Object.values(shelfRoom).slice(1);
         const movieRoom = {
             road: shelfRoom.road,
@@ -1502,16 +1502,16 @@ describe("GamesWorld Library shelves", () => {
                 ],
             },
         };
-        const get = spy(axios, "get").mockResolvedValue({
-            data: {
+        const get = spy(axios, "get").mockImplementation(async (url) => ({
+            data: moviesApi(url, {
                 movies: {
                     data: [
                         { id: 862, title: "Toy Story", cover: "/toy.jpg" },
                         { id: 12, title: "Finding Nemo", cover: null },
                     ],
                 },
-            },
-        });
+            }),
+        }));
         wrapper = await mountWorld(movieRoom, {
             link: { scene: "library.category-1", visit: "a" },
         });
@@ -1526,13 +1526,72 @@ describe("GamesWorld Library shelves", () => {
 
         await button.trigger("focus");
         await button.trigger("click");
-        await showing(wrapper, "[role='dialog']");
-        expect(wrapper.get("[role='dialog'] h2").text()).toBe("Toy Story");
-        expect(wrapper.get("[role='dialog'] a").attributes("href")).toContain(
-            "movieId=862"
-        );
+        expect(await moviesDialogShows()).toBe("Toy Story");
+        expect(get).toHaveBeenCalledWith("/api/movie-cast/862/details");
+        // Still in the world, behind the dialog.
+        expect(wrapper.find(".room-3d").exists()).toBe(true);
+    });
+
+    it("opens the Movies dialog on a shared movie's link, but not coming back to it", async () => {
+        const get = spy(axios, "get").mockImplementation(async (url) => ({
+            data: moviesApi(url),
+        }));
+        // The podium it stands you at activated, from the scene's list.
+        const world = {
+            road: {
+                ...scenes.road,
+                interactables: [
+                    ...scenes.road.interactables,
+                    { id: "movie-podium", type: "movie_podium", x: 900 },
+                ],
+            },
+        };
+        const link = {
+            scene: "road",
+            spot: "movie-podium",
+            open: { movieId: 862, title: "Toy Story" },
+            visit: "shared-movie",
+        };
+        wrapper = await mountWorld(world, { link });
+
+        expect(await moviesDialogShows()).toBe("Toy Story");
+        expect(get).toHaveBeenCalledWith("/api/movie-cast/favorites/all");
+        expect(get).toHaveBeenCalledWith("/api/movie-cast/862/credits");
+
+        wrapper.unmount();
+        wrapper = await mountWorld(world, { link });
+        expect(
+            document.querySelector("[aria-labelledby='movies-card-title']")
+        ).toBe(null);
     });
 });
+
+/** The movie the Movies dialog (teleported to the body, as a Modal is)
+ * comes to show, once it has. */
+async function moviesDialogShows() {
+    const heading = () =>
+        document.querySelector("[aria-labelledby='movies-card-title'] h3");
+    await vi.waitFor(
+        () => {
+            if (!heading()) throw new Error("no movie in the dialog yet");
+        },
+        { timeout: 3000 }
+    );
+    return heading().textContent.trim();
+}
+
+/** What the Movies dialog's requests get back: no favourites, Toy Story's
+ * details and no cast, or `other` for anything else (a rack's page). */
+function moviesApi(url, other = {}) {
+    if (url.endsWith("/favorites/all")) {
+        return { tmdbImageBaseUrl: "", favorites: [] };
+    }
+    if (url.endsWith("/credits")) return { cast: [] };
+    if (url.endsWith("/details")) {
+        return { id: 862, title: "Toy Story", overview: "", trailer_key: null };
+    }
+    return other;
+}
 
 describe("GamesWorld together", () => {
     let echo;

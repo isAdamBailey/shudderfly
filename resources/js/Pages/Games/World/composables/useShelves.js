@@ -14,7 +14,7 @@ import {
  * `fetchPage(shelf, page)` (books.category, the Books pages' own lists), as
  * `show(x0, x1, wall)` says that stretch of a wall is in view, so a long
  * shelf fills in as the Butt walks along it. A movie rack's (`holds:
- * "movies"`) come the same way, from the Movies page's favourites. A page
+ * "movies"`) come the same way, from the podium's favourites. A page
  * that fails is asked for again a little later, a few times.
  * `size` is the room's ({ w, d }), to stand books on a wall but the back.
  */

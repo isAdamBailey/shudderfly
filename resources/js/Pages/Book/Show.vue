@@ -105,7 +105,7 @@
                 <div class="flex flex-wrap items-center gap-2 shrink-0">
                     <Link
                         v-if="isMoviesCategory"
-                        :href="route('movie-cast.index', { title: book.title })"
+                        :href="route('games.index', { title: book.title })"
                     >
                         <Button
                             type="button"
