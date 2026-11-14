@@ -4,6 +4,7 @@ import { router as inertia, usePage } from "@inertiajs/vue3";
 import { audioRunning, unlockAudio } from "@/composables/useAudioContext";
 import { useFlashMessage } from "@/composables/useFlashMessage";
 import { speakGameIntro } from "@/composables/useGameIntroSpeech";
+import { primeMusicPlayback } from "@/composables/musicPlaybackUnlock";
 import { primeSpeech } from "@/composables/speechPlayback";
 import { useSiteSetting } from "@/composables/useSiteSetting";
 import { usePermissions } from "@/composables/permissions";
@@ -584,14 +585,17 @@ function resetScroll() {
 /** A key or a tap anywhere on the stage lets the world's sounds start (a
  * keyboard player never taps), and its voices: a line said once the Butt
  * has walked over, or a device voice standing in for an AI clip that was
- * slow, comes after the tap, and iOS keeps quiet unless one spoke in it. */
+ * slow, comes after the tap, and iOS keeps quiet unless one spoke in it.
+ * The same goes for a radio's song, which starts once the Butt has walked
+ * over or when someone else in the room tunes it. */
 function unlockSounds() {
     if (!audioRunning()) unlockAudio();
     primeSpeech();
+    if (radiosHere().length) primeMusicPlayback();
 }
 
 function onKeydown(event) {
-    unlockSounds();
+    if (!event.repeat) unlockSounds();
     // Mid-door, the scene's keys wait; Tab and the browser's own still work.
     if (transition.active) return;
     // A card closing on Escape has already used it.

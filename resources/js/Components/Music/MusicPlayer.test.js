@@ -1,4 +1,8 @@
 import MusicPlayer from "@/Components/Music/MusicPlayer.vue";
+import {
+    primeMusicPlayback,
+    resetMusicPlaybackUnlock,
+} from "@/composables/musicPlaybackUnlock";
 import { mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, nextTick, ref } from "vue";
@@ -105,6 +109,7 @@ describe("MusicPlayer", () => {
             getDuration: vi.fn(() => 180),
             getPlayerState: vi.fn(() => global.YT.PlayerState.PAUSED),
             getVideoData: vi.fn(() => ({ video_id: "dQw4w9WgXcQ" })),
+            cueVideoById: vi.fn(),
             destroy: vi.fn(),
         };
 
@@ -439,6 +444,129 @@ describe("MusicPlayer", () => {
         expect(share.props("songId")).toBe(mockSong.id);
     });
 
+    describe("changing song", () => {
+        const nextSong = { ...mockSong, id: 2, youtube_video_id: "next" };
+
+        beforeEach(() => {
+            vi.useFakeTimers();
+        });
+
+        afterEach(() => {
+            vi.useRealTimers();
+        });
+
+        it("cues the next song into the same player, and plays it", async () => {
+            mockCurrentSong.value = mockSong;
+            wrapper = mount(MusicPlayer);
+            await vi.advanceTimersByTimeAsync(200);
+            window.__globalMusicPlayer = mockPlayer;
+
+            mockCurrentSong.value = nextSong;
+            await vi.advanceTimersByTimeAsync(600);
+
+            // A new player would need a tap to start on iOS Safari.
+            expect(mockPlayer.destroy).not.toHaveBeenCalled();
+            expect(mockPlayer.cueVideoById).toHaveBeenCalledWith("next");
+            expect(mockPlayer.playVideo).toHaveBeenCalled();
+            // Not playing until the player says so: a browser that won't
+            // let it start by itself leaves it stopped.
+            expect(mockSetPlaying).not.toHaveBeenCalledWith(true);
+
+            wrapper.vm.onPlayerStateChange({
+                data: global.YT.PlayerState.PLAYING,
+                target: mockPlayer,
+            });
+            expect(mockSetPlaying).toHaveBeenLastCalledWith(true);
+        });
+
+        it("leaves a skipped song's start to the song skipped to", async () => {
+            mockCurrentSong.value = mockSong;
+            wrapper = mount(MusicPlayer);
+            await vi.advanceTimersByTimeAsync(200);
+            window.__globalMusicPlayer = mockPlayer;
+
+            mockCurrentSong.value = nextSong;
+            await vi.advanceTimersByTimeAsync(100);
+            // Skipped on, to a song still being announced.
+            mockIsAnnouncing.value = true;
+            mockCurrentSong.value = {
+                ...mockSong,
+                id: 3,
+                youtube_video_id: "c",
+            };
+            await vi.advanceTimersByTimeAsync(600);
+
+            expect(mockPlayer.cueVideoById).toHaveBeenLastCalledWith("c");
+            expect(mockPlayer.playVideo).not.toHaveBeenCalled();
+        });
+
+        it("takes a cued song's length from the player", async () => {
+            mockCurrentSong.value = mockSong;
+            wrapper = mount(MusicPlayer);
+            await vi.advanceTimersByTimeAsync(200);
+            window.__globalMusicPlayer = mockPlayer;
+
+            mockCurrentSong.value = nextSong;
+            await vi.advanceTimersByTimeAsync(100);
+            mockPlayer.getDuration.mockReturnValue(240);
+            wrapper.vm.onPlayerStateChange({
+                data: global.YT.PlayerState.CUED,
+                target: mockPlayer,
+            });
+            await nextTick();
+
+            expect(wrapper.text()).toContain("4:00");
+        });
+
+        it("hears the player through the MusicPlayer on the page now", async () => {
+            window.__globalMusicPlayer = null;
+            mockCurrentSong.value = mockSong;
+            const first = mount(MusicPlayer);
+            await vi.advanceTimersByTimeAsync(200);
+            const { events } = global.YT.Player.mock.calls[0][1];
+            first.unmount();
+
+            // Another page's player, with the same YouTube player.
+            window.__globalMusicPlayer = mockPlayer;
+            wrapper = mount(MusicPlayer);
+            await vi.advanceTimersByTimeAsync(200);
+            mockPlayer.getDuration.mockReturnValue(240);
+            events.onStateChange({
+                data: global.YT.PlayerState.CUED,
+                target: mockPlayer,
+            });
+            await nextTick();
+
+            expect(wrapper.text()).toContain("4:00");
+        });
+
+        it("pauses a muted play that only unlocked the player", async () => {
+            mockPlayer.mute = vi.fn();
+            mockPlayer.unMute = vi.fn();
+            mockPlayer.getPlayerState.mockReturnValue(
+                global.YT.PlayerState.CUED
+            );
+            mockCurrentSong.value = mockSong;
+            wrapper = mount(MusicPlayer);
+            await vi.advanceTimersByTimeAsync(200);
+            window.__globalMusicPlayer = mockPlayer;
+            resetMusicPlaybackUnlock();
+
+            primeMusicPlayback();
+
+            expect(mockPlayer.mute).toHaveBeenCalled();
+            expect(mockPlayer.playVideo).toHaveBeenCalledTimes(1);
+
+            // Paused again as it starts, and not counted as playing.
+            wrapper.vm.onPlayerStateChange({
+                data: global.YT.PlayerState.PLAYING,
+                target: mockPlayer,
+            });
+            expect(mockPlayer.pauseVideo).toHaveBeenCalled();
+            expect(mockSetPlaying).not.toHaveBeenCalledWith(true);
+        });
+    });
+
     describe("joining a song part way through", () => {
         beforeEach(() => {
             vi.useFakeTimers();
@@ -518,7 +646,6 @@ describe("MusicPlayer", () => {
 
             expect(mockPlayer.seekTo).toHaveBeenCalledWith(10, true);
             expect(mockPlayer.playVideo).toHaveBeenCalled();
-            expect(mockSetPlaying).toHaveBeenCalledWith(true);
         });
 
         it("leaves a new song to catch up once it plays", async () => {

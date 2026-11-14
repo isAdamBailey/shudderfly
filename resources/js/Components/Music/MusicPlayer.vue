@@ -210,6 +210,11 @@
 
 <script setup>
 import ShareToChatButton from "@/Components/ShareToChatButton.vue";
+import {
+    resetMusicPlaybackUnlock,
+    settlePrimedPlayback,
+    startMusicPlayback,
+} from "@/composables/musicPlaybackUnlock";
 import { useMusicPlayer } from "@/composables/useMusicPlayer";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
@@ -234,6 +239,17 @@ if (!window.__lastPlayedSongId) window.__lastPlayedSongId = null;
 const globalPlayer = () => window.__globalMusicPlayer;
 const setGlobalPlayer = (player) => {
     window.__globalMusicPlayer = player;
+    window.__globalMusicCuedVideoId = null;
+    // Another player is another iframe, locked until a tap plays it.
+    resetMusicPlaybackUnlock();
+};
+// The video the player holds: the one last cued into it, which
+// getVideoData() takes a moment to catch up with.
+const loadedVideoId = (player) =>
+    window.__globalMusicCuedVideoId ?? player.getVideoData()?.video_id;
+const cueVideo = (player, videoId) => {
+    player.cueVideoById(videoId);
+    window.__globalMusicCuedVideoId = videoId;
 };
 const globalUpdateInterval = () => window.__globalMusicUpdateInterval;
 const setGlobalUpdateInterval = (interval) => {
@@ -313,7 +329,7 @@ const togglePlayPause = async () => {
             player.pauseVideo();
             setPlaying(false);
         } else {
-            player.playVideo();
+            startMusicPlayback(player);
             setPlaying(true);
         }
     } catch (error) {
@@ -464,7 +480,7 @@ const createPlayer = async () => {
 
     if (player) {
         try {
-            const currentVideoId = player.getVideoData()?.video_id;
+            const currentVideoId = loadedVideoId(player);
             if (currentVideoId === currentSong.value.youtube_video_id) {
                 isLoading.value = false;
                 try {
@@ -473,19 +489,21 @@ const createPlayer = async () => {
                         player.getPlayerState() !==
                             window.YT.PlayerState.PLAYING
                     ) {
-                        player.playVideo();
+                        startMusicPlayback(player);
                     }
                 } catch (e) {
                     // Player may be in transition
                 }
                 return;
             }
-            try {
-                player.destroy();
-            } catch (e) {
-                // Player may already be destroyed
-            }
-            setGlobalPlayer(null);
+            // The next song goes into the same player, not a new one: iOS
+            // Safari only lets a player start by itself once a tap has
+            // played it (musicPlaybackUnlock), and a new one would need
+            // tapping again for every song.
+            cueVideo(player, currentSong.value.youtube_video_id);
+            isLoading.value = false;
+            if (shouldAutoplay.value) startPlaybackWhenAnnouncementEnds();
+            return;
         } catch (error) {
             isLoading.value = false;
             return;
@@ -530,10 +548,14 @@ const createPlayer = async () => {
                 origin: window.location.origin,
                 playsinline: 1,
             },
+            // Through whichever MusicPlayer is on the page now: the
+            // player outlives the one that made it (each page mounts its
+            // own), and plays every later song.
             events: {
-                onReady: onPlayerReady,
-                onStateChange: onPlayerStateChange,
-                onError: onPlayerError,
+                onReady: (e) => window.__globalMusicHandlers.onReady(e),
+                onStateChange: (e) =>
+                    window.__globalMusicHandlers.onStateChange(e),
+                onError: (e) => window.__globalMusicHandlers.onError(e),
             },
         });
 
@@ -555,24 +577,21 @@ const onPlayerReady = (event) => {
 
     const existingInterval = globalUpdateInterval();
     if (!existingInterval) {
-        const interval = setInterval(() => {
-            if (isScrubbing.value) return;
-            const currentPlayer = globalPlayer();
-            if (
-                currentPlayer &&
-                typeof currentPlayer.getCurrentTime === "function"
-            ) {
-                try {
-                    const currentTimeValue = currentPlayer.getCurrentTime();
-                    if (!isNaN(currentTimeValue) && currentTimeValue >= 0) {
-                        currentTime.value = currentTimeValue;
-                    }
-                } catch (error) {
-                    // Skip this update
-                }
-            }
-        }, 500);
+        const interval = setInterval(
+            () => window.__globalMusicHandlers.tick(),
+            500
+        );
         setGlobalUpdateInterval(interval);
+    }
+
+    // Another song was picked while this one's player was loading.
+    try {
+        const videoId = currentSong.value?.youtube_video_id;
+        if (videoId && loadedVideoId(player) !== videoId) {
+            cueVideo(player, videoId);
+        }
+    } catch (error) {
+        // Player may be in transition
     }
 
     if (shouldAutoplay.value) {
@@ -582,13 +601,35 @@ const onPlayerReady = (event) => {
     isLoading.value = false;
 };
 
+/** Where the song has got to, for the progress bar. */
+const updateCurrentTime = () => {
+    if (isScrubbing.value) return;
+    const currentPlayer = globalPlayer();
+    if (currentPlayer && typeof currentPlayer.getCurrentTime === "function") {
+        try {
+            const currentTimeValue = currentPlayer.getCurrentTime();
+            if (!isNaN(currentTimeValue) && currentTimeValue >= 0) {
+                currentTime.value = currentTimeValue;
+            }
+        } catch (error) {
+            // Skip this update
+        }
+    }
+};
+
 const startPlaybackWhenAnnouncementEnds = () => {
+    const songId = currentSong.value?.id;
     const tryPlay = () => {
+        // Skipped on to another song meanwhile, which starts itself (after
+        // its own announcement): they share the one player.
+        if (currentSong.value?.id !== songId) return;
         const currentPlayer = globalPlayer();
         if (currentPlayer && typeof currentPlayer.playVideo === "function") {
             try {
-                currentPlayer.playVideo();
-                setPlaying(true);
+                // It's playing once the player says so (PLAYING): a
+                // browser that won't let it start by itself leaves it
+                // stopped, with play to press.
+                startMusicPlayback(currentPlayer);
             } catch (error) {
                 // Auto-play may fail due to browser policies
             }
@@ -610,7 +651,14 @@ const startPlaybackWhenAnnouncementEnds = () => {
 const onPlayerStateChange = (event) => {
     switch (event.data) {
         case window.YT.PlayerState.PLAYING:
+            // Only a tap unlocking the player: it's paused again.
+            if (settlePrimedPlayback(event.target)) break;
             setPlaying(true);
+            try {
+                duration.value = event.target.getDuration();
+            } catch (error) {
+                // Duration may not be available yet
+            }
             // A seek's start wins over where it was.
             notePlayback(event.target);
             catchUp(event.target);
@@ -631,6 +679,12 @@ const onPlayerStateChange = (event) => {
             }
             break;
         case window.YT.PlayerState.CUED:
+            try {
+                // A song cued into the player has no onReady to say.
+                duration.value = event.target.getDuration();
+            } catch (error) {
+                // Duration may not be available yet
+            }
             break;
     }
 };
@@ -672,15 +726,11 @@ watch(joinAt, (join) => {
     const player = globalPlayer();
     if (!join || !player || join.id !== currentSong.value?.id) return;
     try {
-        if (
-            player.getVideoData()?.video_id !==
-            currentSong.value.youtube_video_id
-        ) {
+        if (loadedVideoId(player) !== currentSong.value.youtube_video_id) {
             return;
         }
         catchUp(player);
-        player.playVideo();
-        setPlaying(true);
+        startMusicPlayback(player);
     } catch (error) {
         // Player may not be ready
     }
@@ -756,7 +806,7 @@ watch(
 
         if (player) {
             try {
-                const currentVideoId = player.getVideoData()?.video_id;
+                const currentVideoId = loadedVideoId(player);
                 const newVideoId = currentSong.value?.youtube_video_id;
 
                 if (currentVideoId === newVideoId) {
@@ -829,6 +879,15 @@ onMounted(() => {
         isInitialMount.value = false;
     }, 100);
 });
+
+// What the player's events and its progress timer call: this page's
+// MusicPlayer, not the one that made the player (createPlayer).
+window.__globalMusicHandlers = {
+    onReady: onPlayerReady,
+    onStateChange: onPlayerStateChange,
+    onError: onPlayerError,
+    tick: updateCurrentTime,
+};
 
 onUnmounted(() => {
     // Player persists across routes

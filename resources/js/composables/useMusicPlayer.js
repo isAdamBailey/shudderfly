@@ -1,4 +1,8 @@
 import { computed, ref, watch } from "vue";
+import {
+    primeMusicPlayback,
+    startMusicPlayback,
+} from "@/composables/musicPlaybackUnlock";
 import { useSpeechSynthesis } from "@/composables/useSpeechSynthesis";
 import { useTranslations } from "@/composables/useTranslations";
 
@@ -95,6 +99,9 @@ export function useMusicPlayer() {
     // `startedAt` (ms, this browser's clock) joins it part way through:
     // MusicPlayer seeks it to where it has got to.
     const playSong = (song, { openFlyout = true, startedAt = null } = {}) => {
+        // In a tap on a song, this lets it start once it has been
+        // announced: too late for iOS Safari otherwise.
+        primeMusicPlayback();
         const isNewSong =
             !currentSong.value || currentSong.value.id !== song.id;
         currentSong.value = song;
@@ -129,7 +136,7 @@ export function useMusicPlayer() {
                 player.pauseVideo();
                 setPlaying(false);
             } else {
-                player.playVideo();
+                startMusicPlayback(player);
                 setPlaying(true);
             }
         } catch (e) {
