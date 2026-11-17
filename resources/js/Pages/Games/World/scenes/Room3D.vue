@@ -52,6 +52,8 @@ import {
     shelfWall,
     slotsIn,
 } from "./bookshelf.js";
+import GarageClicker from "../components/GarageClicker.vue";
+import { createOpener } from "./garageOpener.js";
 import { createRoomScene } from "./RoomScene.js";
 import { BASS_DRUM, headPoint, hitEdge } from "./drumLayout.js";
 import { isInstrument } from "./instruments.js";
@@ -403,6 +405,41 @@ function tickClocks(from) {
     }
 }
 
+// The Garage's door opener (issue #227), its door shut on every visit,
+// and its button on the wall, which pushes in whichever is pressed: it or
+// the clicker on screen.
+const opener = props.scene.garageDoor ? createOpener() : null;
+const wallButton = props.scene.interactables.find(
+    (item) => item.type === "garage_button"
+);
+// Whether the opener's light is on, for the clicker's lamp.
+const openerLit = ref(false);
+
+/** Shows where the opener has the door and its light. */
+function showOpener() {
+    graph?.setGarageDoor(opener.position);
+    if (openerLit.value !== opener.lit) {
+        openerLit.value = opener.lit;
+        graph?.setLight(props.scene.garageDoor.light, opener.lit);
+    }
+}
+
+/** Presses the Garage door's button (ctx.pressGarageDoor, or the
+ * clicker): the door starts, stops or turns back. */
+function pressGarageDoor() {
+    if (!opener) return;
+    opener.press();
+    showOpener();
+    if (wallButton) graph?.press(wallButton.id);
+    props.stage.renderer.invalidate();
+}
+
+/** The clicker on screen: as the wall button, from wherever you are. */
+function onClicker() {
+    if (room.state.frozen) return;
+    pressGarageDoor();
+}
+
 onMounted(() => {
     const { renderer } = props.stage;
     graph = createRoomScene(renderer.three, renderer.kit, {
@@ -431,6 +468,8 @@ onMounted(() => {
         const from = time;
         time += dt;
         tickClocks(from);
+        const door = opener?.tick(dt, reduced.value);
+        if (door?.changed) showOpener();
         const changed = graph.sync(
             {
                 butt,
@@ -445,7 +484,7 @@ onMounted(() => {
             },
             dt
         );
-        return changed || flew || swung || climbed;
+        return changed || flew || swung || climbed || Boolean(door?.changed);
     });
 });
 
@@ -1352,6 +1391,7 @@ defineExpose({
     pluckString,
     hitDrum,
     drawCurtain,
+    pressGarageDoor,
     changeChannel: tvs.changeChannel,
     // Following someone (useFollow): up to them, or through a door.
     walkUpTo: (other) => room.walkUpTo(other.x, other.z),
@@ -1606,6 +1646,8 @@ defineExpose({
                 @focus="onItemFocus(s.item)"
                 @click="onInstrumentClick(s.item, $event)"
             />
+
+            <GarageClicker v-if="opener" :lit="openerLit" @press="onClicker" />
 
             <TootPuff
                 v-for="puff in puffs"

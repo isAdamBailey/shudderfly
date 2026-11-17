@@ -209,6 +209,7 @@ const ctx = {
     pluckString: (id, n, delay) => sceneRef.value?.pluckString?.(id, n, delay),
     hitDrum: (id, edge) => sceneRef.value?.hitDrum?.(id, edge),
     drawCurtain: (id) => sceneRef.value?.drawCurtain?.(id),
+    pressGarageDoor: () => sceneRef.value?.pressGarageDoor?.(),
     changeChannel: (id) => sceneRef.value?.changeChannel?.(id),
     // Through the site's music player, so it plays on in its flyout.
     tuneRadio,

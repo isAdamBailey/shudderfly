@@ -942,7 +942,7 @@ class GamesWorldScenesTest extends TestCase
 
         // A door on every wall, the way out on the back, where you come in.
         $this->assertSame(
-            ['front-door' => 'back', 'bedroom-door' => 'left', 'bathroom-door' => 'right', 'kitchen-door' => 'front'],
+            ['front-door' => 'back', 'bedroom-door' => 'left', 'bathroom-door' => 'right', 'kitchen-door' => 'front', 'garage-door' => 'back'],
             $items->where('type', 'door')->map($wallOf)->all(),
         );
         $this->assertTrue($items['front-door']['exit']);
@@ -953,6 +953,65 @@ class GamesWorldScenesTest extends TestCase
         $this->assertEqualsCanonicalizing(['back', 'left', 'right', 'front'], $clocks->map($wallOf)->unique()->values()->all());
         $this->assertSame('front', $wallOf($items['radio']));
         $this->assertSame('front', $wallOf($hall['entertainment'][0]));
+    }
+
+    public function test_the_garage_is_off_the_butts_hall_and_you_arrive_facing_its_door(): void
+    {
+        $scenes = GamesWorld::definitions();
+        $hall = collect($scenes['house.hall']['interactables'])->keyBy('id');
+        $this->assertSame('house.garage', $hall['garage-door']['to']);
+        $this->assertSame('hall-door', $hall['garage-door']['toSpot']);
+
+        $garage = $scenes['house.garage'];
+        $this->assertSame('messages.games.world.places.house_garage', $garage['label']);
+        $items = collect($garage['interactables'])->keyBy('id');
+
+        // The way back to the hall is behind you: you come in facing the
+        // garage door, which fills the back wall.
+        $this->assertTrue($items['hall-door']['exit']);
+        $this->assertSame('front', $items['hall-door']['wall']);
+        $this->assertSame('garage-door', $items['hall-door']['toSpot']);
+        $this->assertSame('back', $items['hall-door']['arriveFacing']);
+        $door = $garage['garageDoor'];
+        $this->assertSame(intdiv($garage['size']['w'], 2), $door['x']);
+        $this->assertGreaterThan($garage['size']['w'] / 2, $door['w']);
+        // Under the season's decorations.
+        $this->assertLessThan($this->decorationsBottom($garage), $door['h']);
+        $this->assertGreaterThan(1, $door['sections']);
+        // No way out through it, onto the road.
+        $this->assertCount(1, $items->where('type', 'door'));
+    }
+
+    public function test_the_garage_doors_button_is_on_a_side_wall_and_works_its_opener_light(): void
+    {
+        $garage = GamesWorld::definitions()['house.garage'];
+        $buttons = collect($garage['interactables'])->where('type', 'garage_button');
+        $this->assertCount(1, $buttons);
+        $button = $buttons->first();
+        $this->assertContains($button['wall'], ['left', 'right']);
+        $this->assertSame('garage-button', $button['model']);
+        $this->assertSame('messages.games.world.toys.garage_button', $button['label']);
+
+        // The opener's light, which the opener (not a switch) turns on, is
+        // the button's to show: a list, so the button isn't its bulb.
+        $lights = collect($garage['lights'])->keyBy('id');
+        $opener = $garage['garageDoor']['light'];
+        $this->assertFalse($lights[$opener]['nightfall']);
+        $this->assertSame([$opener], $button['light']);
+        // And an overhead lamp you switch, which comes on at nightfall.
+        $this->assertArrayNotHasKey('nightfall', $lights['lamp']);
+        $switches = collect($garage['interactables'])
+            ->filter(fn ($item) => in_array('lamp', (array) ($item['light'] ?? []), true));
+        $this->assertCount(1, $switches);
+    }
+
+    public function test_the_garage_has_a_tool_pegboard(): void
+    {
+        $garage = GamesWorld::definitions()['house.garage'];
+        $items = collect($garage['interactables'])->keyBy('id');
+
+        $this->assertSame('pegboard', $items['pegboard']['model']);
+        $this->assertContains($items['pegboard']['wall'], ['left', 'right']);
     }
 
     private function radio(): array
@@ -1625,7 +1684,9 @@ class GamesWorldScenesTest extends TestCase
     private function wallBoxes(array $room): Collection
     {
         $builtIns = collect(['entertainment', 'counters', 'fireplaces'])
-            ->flatMap(fn ($kind) => collect($room[$kind] ?? [])->map(fn ($unit, $n) => ['id' => "{$kind}-{$n}", ...$unit]));
+            ->flatMap(fn ($kind) => collect($room[$kind] ?? [])->map(fn ($unit, $n) => ['id' => "{$kind}-{$n}", ...$unit]))
+            // The Garage's door fills its opening in the back wall.
+            ->concat(isset($room['garageDoor']) ? [['id' => 'garage-door-opening', ...$room['garageDoor']]] : []);
         $things = collect([...$room['interactables'], ...($room['photos'] ?? []), ...$builtIns]);
         $shelves = collect($room['shelves'] ?? [])->keyBy(fn ($shelf) => "shelf-{$shelf['id']}");
         // Ids are unique, so nothing is lost keying by them.

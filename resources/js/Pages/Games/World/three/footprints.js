@@ -34,4 +34,8 @@ export const FOOTPRINTS = {
     "exhibit-entry": { w: 0.96, d: 0.2, top: 1 },
     // The Library hall's tall movie podium: things thrown land on its desk.
     "movie-podium": { w: 0.55, d: 0.35, top: 0.66 },
+    // The Garage's tool pegboard, flat on its wall.
+    pegboard: { w: 1.6, d: 0.06, top: 1 },
+    // The Garage door's console, flat on its wall, its push bar proud.
+    "garage-button": { w: 0.62, d: 0.12, top: 1 },
 };
