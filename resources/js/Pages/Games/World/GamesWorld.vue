@@ -210,6 +210,10 @@ const ctx = {
     hitDrum: (id, edge) => sceneRef.value?.hitDrum?.(id, edge),
     drawCurtain: (id) => sceneRef.value?.drawCurtain?.(id),
     pressGarageDoor: () => sceneRef.value?.pressGarageDoor?.(),
+    // Whether the Garage's door is all the way up, from whichever side
+    // you're on, and the Butt bumping into it when it isn't.
+    garageOpen: () => Boolean(sceneRef.value?.garageOpen?.()),
+    bump: () => sceneRef.value?.bump?.(),
     changeChannel: (id) => sceneRef.value?.changeChannel?.(id),
     // Through the site's music player, so it plays on in its flyout.
     tuneRadio,

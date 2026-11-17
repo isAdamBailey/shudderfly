@@ -11,3 +11,9 @@ export function serverList(name) {
         .match(/'([a-z-]+)'/g)
         .map((id) => id.slice(1, -1));
 }
+
+/** Where the road door `id` stands on the road: its `x` in GamesWorld's
+ * `self::roadDoor('<id>', <x>, …)`. */
+export function serverRoadX(id) {
+    return Number(php.match(new RegExp(`roadDoor\\('${id}', (\\d+),`))[1]);
+}

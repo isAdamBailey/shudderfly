@@ -35,7 +35,12 @@ import {
 } from "../composables/projection.js";
 import { fromView, toView, wallTurned } from "../composables/views.js";
 import { bobLift, useOthers } from "../composables/useGamesWorld.js";
-import { arrivalSpot, arrivalWall, useRoom } from "../composables/useRoom.js";
+import {
+    arrivalSpot,
+    arrivalWall,
+    STAND,
+    useRoom,
+} from "../composables/useRoom.js";
 import { useThrowables } from "../composables/useThrowables.js";
 import { useShelves } from "../composables/useShelves.js";
 import { useTvChannels } from "../composables/useTvChannels.js";
@@ -57,6 +62,10 @@ import GarageClicker from "../components/GarageClicker.vue";
 import { useGarageCount } from "../composables/useGarageCount.js";
 import { useGarageStyles } from "../composables/useGarageStyles.js";
 import { createOpener } from "./garageOpener.js";
+import {
+    saveGarageDoor,
+    savedGarageDoor,
+} from "../composables/garageDoorState.js";
 import { createRoomScene } from "./RoomScene.js";
 import { BASS_DRUM, headPoint, hitEdge } from "./drumLayout.js";
 import { isInstrument } from "./instruments.js";
@@ -408,10 +417,18 @@ function tickClocks(from) {
     }
 }
 
-// The Garage's door opener (issue #227), its door shut on every visit,
-// and its button on the wall, which pushes in whichever is pressed: it or
-// the clicker on screen.
-const opener = props.scene.garageDoor ? createOpener() : null;
+// The Garage's door opener (issue #227), its door where it was left on
+// this device (issue #230), and its button on the wall, which pushes in
+// whichever is pressed: it or the clicker on screen.
+const opener = props.scene.garageDoor ? createOpener(savedGarageDoor()) : null;
+// How far into the room the door's safety sensor sees the Butt under
+// it: in the doorway itself, short of where it stands to go out through
+// it (and lands coming in), so you can shut it from there.
+const GARAGE_SENSOR_REACH = STAND - 20;
+// The way out through it, which its safety sensor watches.
+const garageOpening = props.scene.interactables.find(
+    (item) => item.type === "garage_door"
+);
 const wallButton = props.scene.interactables.find(
     (item) => item.type === "garage_button"
 );
@@ -451,6 +468,24 @@ function quietOpener() {
     stopHum = null;
 }
 
+/** Remembers where the door will be, for the next visit and the road:
+ * on each press and reversal, which is all that changes where it's going
+ * (rest()). */
+function rememberOpener() {
+    if (opener) saveGarageDoor(opener.rest());
+}
+
+/** Whether the Butt stands in the opening, where the door would come
+ * down on it (the sensor's beam runs across it, a step into the room). */
+function underGarageDoor() {
+    if (!garageOpening) return false;
+    const half = garageOpening.opening.w / 2;
+    return (
+        Math.abs(butt.x - garageOpening.x) < half &&
+        butt.z < GARAGE_SENSOR_REACH
+    );
+}
+
 /** The door's got to the top or bottom (`end`): it clunks, and going all
  * the way up counts. */
 function openerArrived(end) {
@@ -473,6 +508,7 @@ function showOpener() {
 function pressGarageDoor() {
     if (!opener) return;
     opener.press();
+    rememberOpener();
     showOpener();
     if (wallButton) graph?.press(wallButton.id);
     props.stage.renderer.invalidate();
@@ -500,6 +536,8 @@ onMounted(() => {
         garageDoorStyle: garageStyles.door.value,
         garageCount: garageCount.count.value,
     });
+    // The door where it was left.
+    if (opener) graph.setGarageDoor(opener.position);
     // Other props can use the same swing hook for animation (the bath's
     // bubbles, for example), but only pendulum clocks have a beat to tick.
     clocks = graph.swinging.filter((thing) => Number.isFinite(thing.beat));
@@ -519,7 +557,8 @@ onMounted(() => {
         const from = time;
         time += dt;
         tickClocks(from);
-        const door = opener?.tick(dt, reduced.value);
+        const door = opener?.tick(dt, reduced.value, underGarageDoor());
+        if (door?.reversed) rememberOpener();
         if (door?.changed) showOpener();
         if (opener) humOpener();
         if (door?.arrived) openerArrived(door.arrived);
@@ -1449,6 +1488,10 @@ defineExpose({
     hitDrum,
     drawCurtain,
     pressGarageDoor,
+    // All the way up, so you can go out through it.
+    garageOpen: () =>
+        Boolean(opener) && opener.position === 1 && !opener.moving,
+    bump: () => graph?.animateButt("wobble"),
     changeChannel: tvs.changeChannel,
     // Following someone (useFollow): up to them, or through a door.
     walkUpTo: (other) => room.walkUpTo(other.x, other.z),

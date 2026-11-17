@@ -282,7 +282,8 @@ const wayBack = (item) => Boolean(item.exit || item.stairs);
  * height } (its glyph is `height` tall) and whether its button carries an
  * arched gold title, as the road's landmarks do. A door is a doorway
  * (wider and open with `open`), with its name over it unless it's plainly
- * the way back (see wayBack()); anything else is `size` tall
+ * the way back (see wayBack()); the Garage's way out is its door's
+ * `opening` { w, h }; anything else is `size` tall
  * (ROOM_SIZES.toy if it says nothing) and as wide, or as wide as its
  * model's footprint (three/footprints.js: a tall fridge), a TV's
  * `screen` { w, h }, or a
@@ -294,6 +295,9 @@ export function itemBox(item) {
         item.titled ??
         (item.type === "game" || (item.type === "door" && !wayBack(item)));
     if (item.open) return { ...ROOM_SIZES.doorway, titled };
+    // The way through the Garage's door covers its opening.
+    if (item.opening)
+        return { width: item.opening.w, height: item.opening.h, titled };
     if (item.type === "door") return { ...ROOM_SIZES.door, titled };
     if (item.screen)
         return { width: item.screen.w, height: item.screen.h, titled };

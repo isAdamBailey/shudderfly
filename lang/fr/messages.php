@@ -862,6 +862,8 @@ return [
     'games.world.garage.swap_clicker' => 'Changer la télécommande',
     'games.world.garage.swap_door' => 'Changer la porte de garage',
     'games.world.garage.enter' => 'Entrée',
+    'games.world.garage.shut' => 'La porte est fermée !',
+    'games.world.garage.shut_outside' => 'Elle est fermée ! Ouvre-la de l\'intérieur.',
     'games.world.toys.spotlight' => 'Projecteur',
     'games.world.toys.sound_button' => 'Bouton sonore',
     'games.world.toys.sound_altar' => 'Autel sonore de Guster',

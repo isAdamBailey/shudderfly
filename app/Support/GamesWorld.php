@@ -200,6 +200,13 @@ final class GamesWorld
      * (RoomScene.js), wherever this says. */
     public const GARAGE_DOOR = ['w' => 560, 'h' => 300, 'sections' => 4, 'light' => 'opener'];
 
+    /** Where the Garage stands on the road (issue #230): the middle of its
+     * door, the right of the Butt's House as you face it, as the Garage is
+     * off his hall. RoadScene.js joins its wing onto the house however
+     * wide the house is drawn, and the Library is far enough along to
+     * leave it room on the tallest stage. */
+    public const GARAGE_ON_ROAD = 740;
+
     /** Where a spotlight (three/spotlight.js) hangs from the curtain's
      * valance: `y` its foot, `size` tall, `z` just out in front of the
      * curtain, and the stage floor it shines at, `aim` out from the back
@@ -368,19 +375,35 @@ final class GamesWorld
                 'label' => 'messages.games.world.places.street',
                 'interactables' => [
                     // The buildings you can go into, all on the far side,
-                    // 600 apart: the Butt's own house first, by where it
+                    // 600 apart but for the Butt's Garage beside his house:
+                    // the Butt's own house first, by where it
                     // starts. His is the seat of a giant pair of pants, his
                     // cheeks the roof.
                     self::roadDoor('house', 400, 'far', '🏠', 'house', 'house.hall', facade: 'butt'),
                     // A great old gothic library, its sign in the rose window.
-                    self::roadDoor('library', 1000, 'far', '📚', 'library', 'library.hall', facade: 'gothic'),
+                    // The Garage (issue #230), joined onto the house: in
+                    // only while its door's open (interactions/garageDoor.js),
+                    // which you can only do from inside.
+                    [
+                        'id' => 'house-garage',
+                        'type' => 'garage_door',
+                        'x' => self::GARAGE_ON_ROAD,
+                        'side' => 'far',
+                        'emoji' => '🚗',
+                        'label' => 'messages.games.world.places.house_garage',
+                        'to' => 'house.garage',
+                        'toSpot' => 'garage-opening',
+                        'attachedTo' => 'house',
+                        'line' => 'messages.games.world.garage.shut_outside',
+                    ],
+                    self::roadDoor('library', 1200, 'far', '📚', 'library', 'library.hall', facade: 'gothic'),
                     // A giant can of magic beans, because that's how Guster
                     // was born: pixie dust swirling round it, and Guster
                     // himself the sign over his green door.
-                    self::roadDoor('guster-house', 1600, 'far', null, 'guster_house', 'guster-house.hall', cast: 'guster', door: 'guster', facade: 'beans'),
+                    self::roadDoor('guster-house', 1800, 'far', null, 'guster_house', 'guster-house.hall', cast: 'guster', door: 'guster', facade: 'beans'),
                     // A big scary house, its clock tower the hall's
                     // grandfather clock, the sign over its door.
-                    self::roadDoor('cockroach-house', 2200, 'far', '🪳', 'cockroach_house', 'cockroach-house.hall', facade: 'haunted'),
+                    self::roadDoor('cockroach-house', 2400, 'far', '🪳', 'cockroach_house', 'cockroach-house.hall', facade: 'haunted'),
                 ],
             ],
 
@@ -468,7 +491,8 @@ final class GamesWorld
             ]),
             // The Garage: press the button on the right wall and its door
             // rolls up (or down, or stops) on the back wall, showing the
-            // driveway out past it. You can't go out that way. The opener
+            // driveway out past it, the way out onto the road while it's
+            // all the way up (issue #230). The opener
             // hangs from the ceiling past the end of the door's track, its
             // light lit by the opener, not a switch (`nightfall: false`), and shown
             // on the button too, and on the clicker that stays on screen
@@ -498,6 +522,24 @@ final class GamesWorld
                     ...self::toy('garage-button', 170, 0, null, 'garage_button', ['y' => 110, 'size' => 60, 'model' => 'garage-button', 'light' => ['opener']]),
                     'type' => 'garage_button',
                 ]),
+                // Through the door, while it's open, out to the road in front
+                // of the Garage; shut, the Butt bumps into it. Built into the
+                // room (the door itself is `garageDoor`), its button covers
+                // the opening.
+                [
+                    'id' => 'garage-opening',
+                    'type' => 'garage_door',
+                    'x' => intdiv($garage['w'], 2),
+                    'z' => 0,
+                    'wall' => 'back',
+                    'opening' => ['w' => self::GARAGE_DOOR['w'], 'h' => self::GARAGE_DOOR['h']],
+                    'label' => 'messages.games.world.doors.outside',
+                    'to' => 'road',
+                    'toSpot' => 'house-garage',
+                    'line' => 'messages.games.world.garage.shut',
+                    // Coming in off the road, you face the door you came
+                    // through, the Butt in front of it (a door's own wall).
+                ],
                 $onGarage('left', self::toy('pegboard', 250, 0, null, 'pegboard', ['y' => 130, 'size' => 120, 'model' => 'pegboard', 'move' => 'wiggle'])),
             ]),
             'house.bathroom' => self::room('house_bathroom', [

@@ -15,6 +15,7 @@ import {
     tossTilt,
     useGamesWorld,
 } from "./useGamesWorld.js";
+import { garageDoorOpen } from "./garageDoorState.js";
 import { useIdlerPhysics } from "./useIdlerPhysics.js";
 import { MOVE_EVERY_MS } from "./useWorldPresence.js";
 
@@ -57,6 +58,9 @@ const PEEK_DEADBAND = 0.005;
  * - ownLoop: run useGamesWorld's own rAF loop (the DOM road). The WebGL road
  *   steps the world from the renderer's frame instead.
  * - peekTarget: the element the tilt peek follows the pointer over.
+ * - placeAt(item): where on the road `item` stands, if the drawer puts it
+ *   somewhere other than its `x` (the WebGL road's Garage, joined onto
+ *   its house however wide that's drawn), or undefined.
  */
 export function useRoad(props, emit, options) {
     const {
@@ -67,6 +71,7 @@ export function useRoad(props, emit, options) {
         idlerDxToWorld = (idler, dx) => dx,
         ownLoop = true,
         peekTarget,
+        placeAt = () => undefined,
     } = options;
 
     const prefersReducedMotion = usePreferredReducedMotion();
@@ -75,17 +80,21 @@ export function useRoad(props, emit, options) {
     // useGamesWorld speaks in landmarks (slug, distance, name, landmark
     // emoji); the scene registry speaks in interactables. The original item
     // rides along so arrival can hand it to the stage untouched.
+    // Something joined onto another building (the Butt's Garage) is only
+    // drawn on the WebGL road: the DOM road has nowhere to put it.
     const roadLandmarks = computed(() =>
-        props.scene.interactables.map((item) => ({
-            slug: item.id,
-            distance: item.x,
-            name: item.label,
-            landmark: item.emoji,
-            cast: item.cast,
-            // A drawer with one side of the street puts everything on it.
-            side: lanes ? item.side : "far",
-            item,
-        }))
+        props.scene.interactables
+            .filter((item) => lanes || !item.attachedTo)
+            .map((item) => ({
+                slug: item.id,
+                distance: placeAt(item) ?? item.x,
+                name: item.label,
+                landmark: item.emoji,
+                cast: item.cast,
+                // A drawer with one side of the street puts everything on it.
+                side: lanes ? item.side : "far",
+                item,
+            }))
     );
 
     // Where the Butt starts: at the door it came out of, or where it was
@@ -107,6 +116,12 @@ export function useRoad(props, emit, options) {
         othersEvery: MOVE_EVERY_MS / 1000,
     });
     const { landmarks, butt, camera, state, nearestLandmark } = world;
+
+    // Each building of its own has a roadside food before it; what's
+    // joined onto one (the Garage) has none of its own.
+    const ownBuildings = computed(() =>
+        landmarks.value.filter((landmark) => !landmark.item?.attachedTo)
+    );
 
     /** Walking, or crossing the street. */
     const buttMoving = computed(
@@ -153,7 +168,7 @@ export function useRoad(props, emit, options) {
     const { idlerPhysics } = idlerPhysicsCtl;
 
     const idlers = computed(() =>
-        landmarks.value.map((landmark, i) => {
+        ownBuildings.value.map((landmark, i) => {
             const x = landmark.x - IDLER_SETBACK;
             const p = idlerPhysics[landmark.slug];
             return {
@@ -496,6 +511,9 @@ export function useRoad(props, emit, options) {
         walkThrough,
         wiggle,
         tootAt,
+        // The Garage's door, as it was left inside (only opened there).
+        garageOpen: garageDoorOpen,
+        bump: () => playButt("wobble"),
     };
 
     return {

@@ -321,7 +321,7 @@ class GamesWorldScenesTest extends TestCase
         $door = collect($scenes['road']['interactables'])->firstWhere('id', 'cockroach-house');
 
         $this->assertSame('door', $door['type']);
-        $this->assertSame(2200, $door['x']);
+        $this->assertSame(2400, $door['x']);
         $this->assertSame('far', $door['side']);
         $this->assertSame('cockroach-house.hall', $door['to']);
 
@@ -978,8 +978,50 @@ class GamesWorldScenesTest extends TestCase
         // Under the season's decorations.
         $this->assertLessThan($this->decorationsBottom($garage), $door['h']);
         $this->assertGreaterThan(1, $door['sections']);
-        // No way out through it, onto the road.
+        // Its one door is the hall's: the garage door is the way onto the
+        // road (below).
         $this->assertCount(1, $items->where('type', 'door'));
+    }
+
+    public function test_you_walk_through_the_garage_door_to_the_garage_on_the_road_and_back(): void
+    {
+        $scenes = GamesWorld::definitions();
+        $garage = $scenes['house.garage'];
+        $road = collect($scenes['road']['interactables'])->keyBy('id');
+        $ways = collect($garage['interactables'])->where('type', 'garage_door');
+        $this->assertCount(1, $ways);
+        $out = $ways->first();
+
+        // Out through the door's opening, which its button covers, to the
+        // Garage on the road.
+        $this->assertSame('back', $out['wall']);
+        $this->assertSame($garage['garageDoor']['x'], $out['x']);
+        $this->assertSame(0, $out['z']);
+        $this->assertSame(['w' => $garage['garageDoor']['w'], 'h' => $garage['garageDoor']['h']], $out['opening']);
+        $this->assertSame('road', $out['to']);
+        $this->assertArrayNotHasKey('exit', $out);
+        $in = $road[$out['toSpot']];
+
+        // And back in from the road, facing the door you came in by, the
+        // Butt in front of it.
+        $this->assertSame('garage_door', $in['type']);
+        $this->assertSame('house.garage', $in['to']);
+        $this->assertSame($out['id'], $in['toSpot']);
+        $this->assertArrayNotHasKey('arriveFacing', $out);
+
+        // Joined onto the right of the Butt's House as you face it (the
+        // Garage is off the hall to the left of its front door, from
+        // inside), short of the Library.
+        $this->assertSame('house', $in['attachedTo']);
+        $this->assertSame($road['house']['side'], $in['side']);
+        $this->assertGreaterThan($road['house']['x'], $in['x']);
+        $this->assertLessThan($road['library']['x'], $in['x']);
+        $hall = collect($scenes['house.hall']['interactables'])->keyBy('id');
+        $this->assertLessThan($hall['front-door']['x'], $hall['garage-door']['x']);
+
+        // Shut, each side says so: from outside, how to open it.
+        $this->assertSame('messages.games.world.garage.shut', $out['line']);
+        $this->assertSame('messages.games.world.garage.shut_outside', $in['line']);
     }
 
     public function test_the_garage_doors_button_is_on_a_side_wall_and_works_its_opener_light(): void
@@ -1687,7 +1729,9 @@ class GamesWorldScenesTest extends TestCase
             ->flatMap(fn ($kind) => collect($room[$kind] ?? [])->map(fn ($unit, $n) => ['id' => "{$kind}-{$n}", ...$unit]))
             // The Garage's door fills its opening in the back wall.
             ->concat(isset($room['garageDoor']) ? [['id' => 'garage-door-opening', ...$room['garageDoor']]] : []);
-        $things = collect([...$room['interactables'], ...($room['photos'] ?? []), ...$builtIns]);
+        // The way out through it is that same opening, counted once.
+        $interactables = collect($room['interactables'])->reject(fn ($item) => isset($item['opening']));
+        $things = collect([...$interactables, ...($room['photos'] ?? []), ...$builtIns]);
         $shelves = collect($room['shelves'] ?? [])->keyBy(fn ($shelf) => "shelf-{$shelf['id']}");
         // Ids are unique, so nothing is lost keying by them.
         $ids = $things->pluck('id')->concat($shelves->keys());

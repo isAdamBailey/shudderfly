@@ -20,7 +20,9 @@ import { screenToGround, worldToScreen } from "../composables/projection.js";
 import { useRoad } from "../composables/useRoad.js";
 import { worldNight, worldTheme } from "../three/themes.js";
 import { createRoadScene } from "./RoadScene.js";
-import { buildingBox, roadCamera, roadLayout } from "./roadLayout.js";
+import { landmarkBoxes, roadCamera, roadLayout } from "./roadLayout.js";
+import { savedGarageDoor } from "../composables/garageDoorState.js";
+import { useGarageStyles } from "../composables/useGarageStyles.js";
 
 // The `kind: "road"` renderer on the stage's WebGL canvas (issue #130): the
 // road's scene graph (RoadScene.js) on the stage's renderer, and a DOM
@@ -45,6 +47,18 @@ const dark = useDarkMode();
 const sceneEl = shallowRef(null);
 const bounds = reactive({ w: 0, h: 0, vmin: 0 });
 const layout = computed(() => (bounds.w ? roadLayout(bounds) : null));
+// Where whatever's joined onto another building (the Butt's Garage, issue
+// #230) stands on this stage: wherever its wing is drawn.
+const placed = computed(() => {
+    if (!layout.value) return {};
+    const items = props.scene.interactables;
+    const boxes = landmarkBoxes(layout.value, items);
+    return Object.fromEntries(
+        items.flatMap((item, i) =>
+            item.attachedTo ? [[item.id, boxes[i].x]] : []
+        )
+    );
+});
 
 const {
     world,
@@ -70,6 +84,7 @@ const {
     api,
 } = useRoad(props, emit, {
     lanes: true,
+    placeAt: (item) => placed.value[item.id],
     // A drag's x is the flat road's: the camera keeps the Butt at that
     // screen x on either lane (roadCamera), so a finger anywhere on it moves
     // it the same. Its side is where the Butt's feet would be under the
@@ -166,6 +181,11 @@ onMounted(() => {
         landmarks: landmarks.value,
         idlers: idlers.value,
         words: { beans: t("games.world.magic_beans") },
+        // The Garage's door, as it was left inside (only opened there).
+        garage: {
+            style: useGarageStyles().door.value,
+            open: savedGarageDoor().position,
+        },
     });
     for (const landmark of landmarks.value) {
         if (landmark.cast) {
@@ -202,8 +222,16 @@ function setBounds(w, h) {
     bounds.h = h;
     // The flat road sized things in CSS vmin, which is the viewport's.
     bounds.vmin = Math.min(window.innerWidth, window.innerHeight);
+    // Come out of the Garage, the Butt stands where it's drawn, now that
+    // it's known.
+    if (!placedArrival) {
+        placedArrival = true;
+        const x = placed.value[props.arrival?.spot];
+        if (Number.isFinite(x)) butt.x = x;
+    }
     world.setBounds(w, h);
 }
+let placedArrival = false;
 
 // --- Overlay ---------------------------------------------------------------
 
@@ -223,13 +251,15 @@ const landmarksInOrder = computed(() =>
 );
 
 // The landmarks' buildings, which change only with the stage's size.
-const landmarkBoxes = computed(() =>
+const buildingBoxes = computed(() =>
     layout.value
-        ? landmarks.value.map((landmark) =>
-              buildingBox(layout.value, {
+        ? landmarkBoxes(
+              layout.value,
+              landmarks.value.map((landmark) => ({
                   ...landmark,
                   facade: landmark.item?.facade,
-              })
+                  attachedTo: landmark.item?.attachedTo,
+              }))
           )
         : []
 );
@@ -239,7 +269,7 @@ const landmarkSpots = computed(() => {
     if (!view.value) return {};
     return Object.fromEntries(
         landmarks.value.map((landmark, i) => {
-            const box = landmarkBoxes.value[i];
+            const box = buildingBoxes.value[i];
             const p = worldToScreen(view.value, { x: box.x, z: box.z });
             return [
                 landmark.slug,

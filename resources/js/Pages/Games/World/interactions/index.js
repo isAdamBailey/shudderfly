@@ -5,6 +5,7 @@ import door from "./door.js";
 import drum from "./drum.js";
 import game from "./game.js";
 import garageButton from "./garageButton.js";
+import garageDoor from "./garageDoor.js";
 import harp from "./harp.js";
 import minigame from "./minigame.js";
 import movie from "./movie.js";
@@ -34,6 +35,7 @@ const interactions = {
     drum,
     game,
     garage_button: garageButton,
+    garage_door: garageDoor,
     harp,
     minigame,
     movie,

@@ -175,6 +175,59 @@ export function buildingBox(L, { x, side = "far", facade = null }) {
     };
 }
 
+// The Butt's Garage on the road (issue #230, streetGeometry.js
+// garageWing()), as shares of a far building's size: its door `door` wide
+// and `doorHigh` tall with `jamb` of wall either side, its flat roof
+// `high` up, `deep` as deep as the house it's joined onto and `overlap`
+// of that house's width into its side, so no gap shows at its hem, and
+// `back` units behind its front, so the two fronts don't fight.
+export const GARAGE_WING = {
+    door: 0.7,
+    doorHigh: 0.38,
+    jamb: 0.08,
+    high: 0.62,
+    deep: 0.85,
+    overlap: 0.04,
+    back: 3,
+};
+
+/** The Garage's wing for building box `onto` (the house's buildingBox()),
+ * joined onto its side toward +x: a building box, with no roof over its
+ * eaves, and its `door` { w, h }, in the middle of its front. Its x is
+ * where the Garage is on the road, which depends on how wide the house is
+ * drawn, so on the stage. */
+export function garageBox(L, onto) {
+    const base = L.sizes.building;
+    const door = { w: base * GARAGE_WING.door, h: base * GARAGE_WING.doorHigh };
+    const width = door.w + 2 * base * GARAGE_WING.jamb;
+    const left = onto.x + onto.width * (0.5 - GARAGE_WING.overlap);
+    return {
+        x: left + width / 2,
+        z: onto.z - GARAGE_WING.back,
+        width,
+        height: base * GARAGE_WING.high,
+        depth: onto.depth * GARAGE_WING.deep,
+        roof: 0,
+        door,
+    };
+}
+
+/** Each of `landmarks`' building boxes, in order: buildingBox() for one
+ * of its own, or garageBox() for one joined onto another (`attachedTo`,
+ * the other's `slug` or `id`), whatever x it says. Takes landmarks or the
+ * road's interactables alike ({ x, side, facade, attachedTo }). */
+export function landmarkBoxes(L, landmarks) {
+    const idOf = (lm) => lm.slug ?? lm.id;
+    const own = landmarks.map((lm) =>
+        lm.attachedTo ? null : buildingBox(L, lm)
+    );
+    return landmarks.map((lm, i) => {
+        if (!lm.attachedTo) return own[i];
+        const onto = own[landmarks.findIndex((o) => idOf(o) === lm.attachedTo)];
+        return garageBox(L, onto ?? buildingBox(L, lm));
+    });
+}
+
 /** The projection.js camera for the road: following useGamesWorld's
  * camera.x (the left edge of the view on the Butt's plane), shifted by the
  * tilt peek (each -1..1). `butt` ({ x, z }) is where the Butt is: off the far

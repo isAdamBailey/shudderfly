@@ -80,6 +80,7 @@ describe("the garage door opener", () => {
         expect(opener.tick(0.016, true)).toEqual({
             changed: true,
             arrived: "open",
+            reversed: false,
         });
         expect(opener.position).toBe(1);
         opener.press();
@@ -96,5 +97,77 @@ describe("the garage door opener", () => {
         expect(opener.lit).toBe(true);
         run(opener, 1);
         expect(opener.lit).toBe(false);
+    });
+
+    it("starts where it was left, still and dark", () => {
+        const open = createOpener({ position: 1, last: 1 });
+        expect(open.position).toBe(1);
+        expect(open.moving).toBe(false);
+        expect(open.lit).toBe(false);
+        // Up, so the next press brings it down.
+        open.press();
+        expect(run(open, OPENER.travel + 1)).toEqual(["closed"]);
+
+        const partWay = createOpener({ position: 0.4, last: 1 });
+        expect(partWay.position).toBe(0.4);
+        // Stopped on its way up, so the next press sends it back down.
+        partWay.press();
+        expect(run(partWay, OPENER.travel)).toEqual(["closed"]);
+    });
+
+    it("keeps a saved position on the door", () => {
+        expect(createOpener({ position: 7 }).position).toBe(1);
+        expect(createOpener({ position: -1 }).position).toBe(0);
+        expect(createOpener({ position: "nonsense" }).position).toBe(0);
+    });
+
+    it("rests where it will stop: its end while it moves, or where it stopped", () => {
+        const opener = createOpener();
+        expect(opener.rest()).toEqual({ position: 0, last: -1 });
+        opener.press();
+        run(opener, OPENER.travel / 2);
+        // Left on its way up, it's gone up by the time anyone's back.
+        expect(opener.rest()).toEqual({ position: 1, last: 1 });
+        opener.press();
+        const { position } = opener;
+        expect(opener.rest()).toEqual({ position, last: 1 });
+        // And it starts again where it rests.
+        const again = createOpener(opener.rest());
+        expect(again.position).toBe(position);
+    });
+
+    it("goes back up when it comes down on something under it", () => {
+        const opener = createOpener({ position: 1, last: 1 });
+        opener.press();
+        run(opener, OPENER.travel / 2);
+        const { reversed } = opener.tick(0.05, false, true);
+        expect(reversed).toBe(true);
+        expect(opener.rest()).toEqual({ position: 1, last: 1 });
+        expect(run(opener, OPENER.travel)).toEqual(["open"]);
+    });
+
+    it("doesn't care what's under it on the way up", () => {
+        const opener = createOpener();
+        opener.press();
+        expect(opener.tick(0.05, false, true).reversed).toBe(false);
+        expect(opener.rest()).toEqual({ position: 1, last: 1 });
+    });
+
+    it("won't start down from the top with something under it", () => {
+        const opener = createOpener({ position: 1, last: 1 });
+        opener.press();
+        expect(opener.tick(0.05, false, true)).toEqual({
+            changed: false,
+            arrived: null,
+            reversed: true,
+        });
+        expect(opener.moving).toBe(false);
+        expect(opener.position).toBe(1);
+        expect(opener.rest()).toEqual({ position: 1, last: 1 });
+        // So nothing reaches the top again to count.
+        expect(run(opener, 1)).toEqual([]);
+        // Clear of it, the next press brings it down.
+        opener.press();
+        expect(run(opener, OPENER.travel + 1)).toEqual(["closed"]);
     });
 });

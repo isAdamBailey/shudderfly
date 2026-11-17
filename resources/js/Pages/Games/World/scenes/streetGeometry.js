@@ -1841,6 +1841,205 @@ function beanCan(THREE, { width, height, roof: lidHeight, look, door }) {
     };
 }
 
+// The inside of the Butt's Garage, seen from the road through its open
+// door (issue #230): dark, and darker further in, so you see a garage,
+// not how little of one there is. Its floor's `floor` greys from the door
+// back, its walls and ceiling `walls`, the back `back`; the opener under
+// the ceiling and the pegboard on the wall are only just made out.
+const GARAGE_INSIDE = {
+    floor: ["#5b5b5b", "#353535", "#1c1c1c", "#0d0d0d"],
+    walls: "#1f1f1f",
+    back: "#070707",
+    opener: "#6b6b6b",
+    pegboard: "#4a3a2a",
+};
+
+// The Garage's doors from outside, by the style picked inside it
+// (useGarageStyles.js GARAGE_DOORS, as three/garageDoor.js draws them
+// inside): the panel, its ribs or slats, and a carriage door's brace.
+const GARAGE_OUTSIDE = {
+    sectional: { panel: "#f8fafc", rib: "#d6dde6", sections: 4 },
+    "roll-up": { panel: "#a3afbf", rib: "#7d8a9c", slat: 0.06 },
+    carriage: { panel: "#8b5a2b", rib: "#5f3b1a" },
+};
+
+/**
+ * The Butt's Garage on the road (issue #230): a low wing of the season's
+ * pants (the house's `look.pants`), `width` × `height` with a flat roof
+ * along its waistband, its door `door` ({ w, h }) in the middle of its
+ * front in `style` (sectional, roll-up or carriage; the sectional for any
+ * other), `open` of the way (0 shut, 1 open: as the door was left inside,
+ * garageDoorState.js). Through whatever of the opening the door leaves,
+ * the dark inside, `depth` deep. Built in the same space and parts as
+ * building(), its sign over the door.
+ */
+export function garageWing(
+    THREE,
+    { width, height, depth, door, look, style = "sectional", open = 0 }
+) {
+    const c = look.pants;
+    const body = [];
+    const jamb = (width - door.w) / 2;
+    const over = height - door.h;
+    const half = door.w / 2;
+
+    // The wall either side of the door and over it, all the way back.
+    for (const side of [-1, 1]) {
+        body.push(
+            box(
+                THREE,
+                c.denim,
+                [jamb, height, depth],
+                [side * (half + jamb / 2), height / 2, -depth / 2]
+            )
+        );
+    }
+    body.push(
+        box(
+            THREE,
+            c.denim,
+            [door.w, over, depth],
+            [0, door.h + over / 2, -depth / 2]
+        ),
+        // Its waistband for a flat roof, and the stitching round the door.
+        box(
+            THREE,
+            c.waistband,
+            [width + 4, height * 0.08, depth + 4],
+            [0, height - height * 0.04, -depth / 2]
+        ),
+        box(THREE, c.stitch, [door.w + 4, 1.5, 1], [0, door.h + 1.5, 0.5])
+    );
+    for (const side of [-1, 1]) {
+        body.push(
+            box(
+                THREE,
+                c.stitch,
+                [1.5, door.h, 1],
+                [side * (half + 1.5), door.h / 2, 0.5]
+            )
+        );
+    }
+    if (c.stripes) {
+        body.push(
+            box(
+                THREE,
+                c.stripes,
+                [width + 0.6, height * 0.06, depth + 0.6],
+                [0, height * 0.82, -depth / 2]
+            )
+        );
+    }
+
+    // Inside: the floor in slices, darker as they go back, the walls and
+    // ceiling round it, the back wall darkest, and the opener and
+    // pegboard (on the right as you look in: the room's left wall).
+    if (open > 0) body.push(...garageInside(THREE, door, depth));
+    body.push(...garageDoorOutside(THREE, door, style, open));
+    return { body, windows: [], bulbs: eaveBulbs(THREE, look, width, height) };
+}
+
+/** The Garage's dark inside, through door `door`, `depth` deep. */
+function garageInside(THREE, door, depth) {
+    const half = door.w / 2;
+    const body = [];
+    const slices = GARAGE_INSIDE.floor;
+    const slice = depth / slices.length;
+    slices.forEach((color, i) => {
+        body.push(
+            box(THREE, color, [door.w, 1, slice], [0, 0.5, -(i + 0.5) * slice])
+        );
+    });
+    for (const side of [-1, 1]) {
+        body.push(
+            box(
+                THREE,
+                GARAGE_INSIDE.walls,
+                [1, door.h, depth],
+                [side * (half - 0.5), door.h / 2, -depth / 2]
+            )
+        );
+    }
+    body.push(
+        box(
+            THREE,
+            GARAGE_INSIDE.walls,
+            [door.w, 1, depth],
+            [0, door.h - 0.5, -depth / 2]
+        ),
+        box(
+            THREE,
+            GARAGE_INSIDE.back,
+            [door.w, door.h, 1],
+            [0, door.h / 2, -depth + 1]
+        ),
+        box(
+            THREE,
+            GARAGE_INSIDE.opener,
+            [door.w * 0.12, door.h * 0.08, depth * 0.18],
+            [0, door.h * 0.88, -depth * 0.5]
+        ),
+        box(
+            THREE,
+            GARAGE_INSIDE.pegboard,
+            [1, door.h * 0.35, depth * 0.3],
+            [half - 1.5, door.h * 0.55, -depth * 0.55]
+        )
+    );
+
+    return body;
+}
+
+/** The Garage's door seen from the road, `open` of the way, as parts: a
+ * sectional or roll-up door's panel risen into the top of the opening,
+ * what's still below it ribbed or slatted, or a carriage door's leaves
+ * swung out toward the street. */
+function garageDoorOutside(THREE, door, style, open) {
+    const { w, h } = door;
+    const look = own(GARAGE_OUTSIDE, style) ?? GARAGE_OUTSIDE.sectional;
+    const parts = [];
+    if (style === "carriage") {
+        const turn = (open * Math.PI) / 2;
+        for (const side of [-1, 1]) {
+            // Each leaf from its hinge at the jamb, swung out about it.
+            const leaf = [
+                box(
+                    THREE,
+                    look.panel,
+                    [w / 2 - 1, h - 1, 3],
+                    [(-side * w) / 4, h / 2, 1.5]
+                ),
+                // Its braces, across the bottom, middle and top.
+                ...[0.15, 0.5, 0.85].map((at) =>
+                    box(
+                        THREE,
+                        look.rib,
+                        [w / 2 - 6, 3, 1],
+                        [(-side * w) / 4, h * at, 3.5]
+                    )
+                ),
+            ];
+            for (const part of leaf) {
+                part.rotateY(side * turn).translate(side * (w / 2), 0, 0);
+                parts.push(part);
+            }
+        }
+        return parts;
+    }
+    const bottom = open * h;
+    const shown = h - bottom;
+    if (shown < 0.5) return parts;
+    parts.push(
+        box(THREE, look.panel, [w, shown, 2], [0, bottom + shown / 2, 1])
+    );
+    // A sectional door's seams rise with it; a roll-up's slats too.
+    const step = look.sections ? h / look.sections : h * look.slat;
+    for (let y = bottom + step; y < h - 0.5; y += step) {
+        parts.push(box(THREE, look.rib, [w - 4, 1.2, 1], [0, y, 2.5]));
+    }
+    return parts;
+}
+
 /** Building shapes other than the plain house, by the name a road door's
  * `facade` gives (GamesWorld::FACADES, which a test keeps in step): `build`
  * draws it as building() does, `sign` says where its landmark's sign goes

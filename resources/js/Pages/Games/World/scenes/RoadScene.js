@@ -11,6 +11,7 @@ import {
     buildingBox,
     DRIFTER_DEPTH,
     DRIFTERS,
+    landmarkBoxes,
     ROWS,
     RIDGE_DEPTH,
     ROOF,
@@ -26,6 +27,7 @@ import {
     building,
     bush,
     fence,
+    garageWing,
     manhole,
     mergeParts,
     place,
@@ -106,8 +108,10 @@ const SNOW_NIGHT = "#c7d6ea"; // flakes under the moon
  * Builds the road. `landmarks` are useGamesWorld's ({ slug, x, side, cast,
  * landmark }), `idlers` useRoad's ({ slug, cast, row, phase }), `theme` and
  * `nightTheme` three/themes.js looks (worldTheme / worldNight), and `night`
- * whether it starts at night, and `words` the translated words painted on
- * the street ({ beans }, on Guster's can). Call layout() with a roadLayout()
+ * whether it starts at night, `words` the translated words painted on
+ * the street ({ beans }, on Guster's can), and `garage` the Butt's Garage's
+ * door as it was left inside ({ style, open }: useGarageStyles.js,
+ * garageDoorState.js), drawn on its wing. Call layout() with a roadLayout()
  * before the first sync(), and again on every resize.
  */
 export function createRoadScene(
@@ -120,6 +124,7 @@ export function createRoadScene(
         landmarks,
         idlers,
         words = {},
+        garage = { style: "sectional", open: 0 },
     }
 ) {
     const scene = new THREE.Scene();
@@ -408,6 +413,9 @@ export function createRoadScene(
             // Its building's shape, if not the plain house
             // (streetGeometry.js FACADES).
             facade: landmark.item?.facade ?? null,
+            // The building it's joined onto, if it isn't one of its own
+            // (the Garage's wing, onto the Butt's House).
+            attachedTo: landmark.item?.attachedTo ?? null,
             // A sign is up on the wall, with no ground to shadow.
             puppet: landmark.cast
                 ? kit.castMesh(landmark.cast, { shadows: !door })
@@ -496,7 +504,12 @@ export function createRoadScene(
         const { w, z, sizes } = L;
         const from = -w * 2;
         const to = worldWidth + w * 2;
-        const scenery = roadScenery({ landmarks, from, to });
+        // What's joined onto a building is part of it, not a gap.
+        const scenery = roadScenery({
+            landmarks: landmarks.filter((lm) => !lm.item?.attachedTo),
+            from,
+            to,
+        });
         const parts = noParts();
         const { body } = parts;
 
@@ -546,15 +559,26 @@ export function createRoadScene(
 
         // The landmarks' buildings. The far side's merge into the street;
         // a near-side one fades, so it gets its own mesh.
+        const boxes = landmarkBoxes(L, landmarkPuppets);
         landmarkPuppets.forEach((entry, palette) => {
-            const box = buildingBox(L, entry);
-            const house = building(THREE, {
-                ...box,
-                look: theme,
-                palette,
-                door: entry.door,
-                facade: entry.facade,
-            });
+            const box = boxes[palette];
+            // The Garage stands wherever its wing is drawn (Road3D.vue
+            // places it there too).
+            if (entry.attachedTo) entry.x = box.x;
+            const house = entry.attachedTo
+                ? garageWing(THREE, {
+                      ...box,
+                      look: theme,
+                      style: garage.style,
+                      open: garage.open,
+                  })
+                : building(THREE, {
+                      ...box,
+                      look: theme,
+                      palette,
+                      door: entry.door,
+                      facade: entry.facade,
+                  });
             const at = { x: box.x, z: box.z };
             if (entry.side === "near") {
                 addNearThing(box, addParts(noParts(), house, at), [
@@ -577,6 +601,20 @@ export function createRoadScene(
                 street.add(cloud.group);
                 dusts.push(cloud);
             }
+        });
+
+        // The Garage's driveway, from its door out to the street.
+        landmarkPuppets.forEach((entry, i) => {
+            if (!entry.attachedTo) return;
+            const wing = boxes[i];
+            body.push(
+                box(
+                    THREE,
+                    theme.kerb,
+                    [wing.door.w * 1.04, 0.6, -wing.z],
+                    [wing.x, PAVEMENT + 0.3, wing.z / 2]
+                )
+            );
         });
 
         // The near side's own houses, porta-potties and billboards.
@@ -762,8 +800,11 @@ export function createRoadScene(
     function placeLandmarkPuppet(entry, box) {
         if (entry.sign) {
             // A shaped front says where its sign goes (a gothic one's in
-            // its rose window); otherwise it's high in the middle.
-            const shaped = own(FACADES, entry.facade ?? "")?.sign(box);
+            // its rose window), the Garage's over its door; otherwise it's
+            // high in the middle.
+            const shaped = entry.attachedTo
+                ? garageSign(box)
+                : own(FACADES, entry.facade ?? "")?.sign(box);
             const size = shaped?.size ?? Math.min(box.width, box.height) * 0.42;
             entry.puppet.set({ size });
             // Out from the wall far enough that a solid sign (Guster)
@@ -779,6 +820,13 @@ export function createRoadScene(
             entry.base = { y: 0, z: box.z + size * 0.25 };
         }
         poseGrow(entry);
+    }
+
+    /** Where the Garage's sign goes, in the wall over its door. */
+    function garageSign(box) {
+        const room = box.height - box.door.h;
+        const size = room * 0.75;
+        return { y: box.door.h + (room - size) / 2, size, z: 2 };
     }
 
     /** Sizes and places everything that depends on the stage. */

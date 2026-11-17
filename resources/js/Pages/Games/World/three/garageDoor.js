@@ -32,10 +32,23 @@ const STEEL = "#64748b";
 const OPENER = "#e7e5e4";
 // The frame round the opening, units wide.
 const JAMB = 12;
-// How far a section is out from the wall, so the backdrop is behind it.
+// How far a section is out from the wall.
 const SECTION_Z = 4;
 const SECTION_DEPTH = 4;
-const BACKDROP_Z = 1.5;
+// Outside, through the opening (issue #230), in the door's own space: the
+// ground runs `depth` out from the wall (-z), the view of the street
+// stands at its end, `wide` × `high` the opening's size, so no edge of it
+// shows from anywhere in the room, its horizon `horizon` of the way down
+// and the driveway `drive` of its width across at the bottom. The haze is
+// [at the driveway's far end, at the horizon] thick.
+export const OUTSIDE = {
+    depth: 360,
+    wide: 3.2,
+    high: 2.4,
+    // Low enough to see through the opening: the room's eye is over it.
+    horizon: 0.65,
+    haze: [0.3, 0.8],
+};
 // The opener: its box, how far it hangs `out` past the end of the
 // track and `up` off the door's top. Its light hangs under its lens
 // (`light`, which the room moves the opener's lamp to).
@@ -45,7 +58,7 @@ const UNIT = { w: 70, h: 36, d: 60, out: 50, up: 36 };
 // past the door's top edge on its arm.
 const RELEASE = "#dc2626";
 const ROPE = { bottom: 230, z: 22 };
-const PX = 512; // the backdrop's canvas, across
+const PX = 768; // the outside's view of the street, across
 // The opener's readout of how many times the door has gone up: its size
 // on the unit's face, units, and its canvas, px.
 const READOUT = { w: 40, h: 13, px: [160, 52], digits: 4 };
@@ -80,10 +93,23 @@ export function paintReadout(ctx, w, h, count) {
     ctx.fillText(text, w / 2, h / 2 + size * 0.05);
 }
 
-/** Paints the driveway out of the opening, `w` × `h` px, in look `look`
- * (worldTheme() or worldNight()), with stars when it's `night`. */
-function paintDriveway(ctx, w, h, look, night) {
-    const horizon = h * 0.42;
+/** Paints the view out of the opening, `w` × `h` px, in look `look`
+ * (worldTheme() or worldNight()), with stars when it's `night`: the
+ * houses over the street, the street, and the lawn with the driveway
+ * down through it to the bottom, `drive` of the way across there. Its
+ * horizon is `horizon` of the way down. Haze thickens toward the horizon
+ * (OUTSIDE.haze), in the colour of the sky at it, so the flat picture
+ * reads as far away, and its bottom edge is as hazy as the far end of
+ * the driveway in front of it (paintGround()). */
+function paintDriveway(
+    ctx,
+    w,
+    h,
+    look,
+    night,
+    { horizon: row, drive, haze: tint }
+) {
+    const horizon = h * row;
     const sky = ctx.createLinearGradient(0, 0, 0, horizon);
     sky.addColorStop(0, look.skyTop);
     sky.addColorStop(1, look.skyBottom);
@@ -91,7 +117,7 @@ function paintDriveway(ctx, w, h, look, night) {
     ctx.fillRect(0, 0, w, horizon);
     if (night) {
         ctx.fillStyle = "#fefce8";
-        for (let i = 0; i < 40; i += 1) {
+        for (let i = 0; i < 80; i += 1) {
             // Scattered the same way every time.
             const x = (i * 97.3) % w;
             const y = (i * 53.7) % (horizon * 0.9);
@@ -99,43 +125,46 @@ function paintDriveway(ctx, w, h, look, night) {
         }
     }
     // The houses over the street, low against the sky.
-    for (let i = 0; i < 5; i += 1) {
-        const x = (i + 0.1) * (w / 5);
-        const tall = horizon * (0.22 + 0.08 * (i % 2));
+    const ground = h - horizon;
+    const houses = 9;
+    for (let i = 0; i < houses; i += 1) {
+        const x = (i + 0.1) * (w / houses);
+        const tall = ground * (0.22 + 0.08 * (i % 2));
+        const wide = w / (houses + 1.5);
         ctx.fillStyle = look.walls[i % look.walls.length];
-        ctx.fillRect(x, horizon - tall, w / 6, tall);
+        ctx.fillRect(x, horizon - tall, wide, tall);
         ctx.fillStyle = look.roofs[i % look.roofs.length];
         ctx.beginPath();
         ctx.moveTo(x - 6, horizon - tall);
-        ctx.lineTo(x + w / 12, horizon - tall - tall * 0.5);
-        ctx.lineTo(x + w / 6 + 6, horizon - tall);
+        ctx.lineTo(x + wide / 2, horizon - tall - tall * 0.5);
+        ctx.lineTo(x + wide + 6, horizon - tall);
         ctx.fill();
     }
     // The pavement over the way, the street and its line, this side's
     // pavement, then the lawn either side of the driveway.
     const bands = [
-        [look.pavement, 0.05],
-        [look.road, 0.13],
-        [look.pavement, 0.05],
+        [look.pavement, 0.06],
+        [look.road, 0.16],
+        [look.pavement, 0.06],
     ];
     let y = horizon;
     for (const [color, share] of bands) {
         ctx.fillStyle = color;
-        ctx.fillRect(0, y, w, h * share);
-        y += h * share;
+        ctx.fillRect(0, y, w, ground * share);
+        y += ground * share;
     }
     ctx.fillStyle = look.roadLine;
-    const line = horizon + h * (0.05 + 0.065);
+    const line = horizon + ground * (0.06 + 0.075);
     for (let x = 10; x < w; x += 60) ctx.fillRect(x, line - 2, 32, 4);
     ctx.fillStyle = look.grass;
     ctx.fillRect(0, y, w, h - y);
     // The driveway, wider as it comes up to the door.
     ctx.fillStyle = look.pavement;
     ctx.beginPath();
-    ctx.moveTo(w * 0.38, y);
-    ctx.lineTo(w * 0.62, y);
-    ctx.lineTo(w * 0.92, h);
-    ctx.lineTo(w * 0.08, h);
+    ctx.moveTo(w * (0.5 - drive * 0.18), y);
+    ctx.lineTo(w * (0.5 + drive * 0.18), y);
+    ctx.lineTo(w * (0.5 + drive / 2), h);
+    ctx.lineTo(w * (0.5 - drive / 2), h);
     ctx.fill();
     // Night falls on the ground as it does on the street's ridge.
     if (night) {
@@ -144,6 +173,50 @@ function paintDriveway(ctx, w, h, look, night) {
         ctx.fillRect(0, horizon, w, h - horizon);
         ctx.globalCompositeOperation = "source-over";
     }
+    // The haze: thickest just over the horizon, thinning up the sky and
+    // down to the driveway's far end at the bottom.
+    const [near, far] = OUTSIDE.haze;
+    const haze = ctx.createLinearGradient(0, 0, 0, h);
+    haze.addColorStop(0, hazeAt(tint, 0));
+    haze.addColorStop(row * 0.6, hazeAt(tint, far * 0.6));
+    haze.addColorStop(row, hazeAt(tint, far));
+    haze.addColorStop(1, hazeAt(tint, near));
+    ctx.fillStyle = haze;
+    ctx.fillRect(0, 0, w, h);
+}
+
+/** The haze, `tint` (a THREE.Color: the sky's at the horizon) `alpha`
+ * thick, as a CSS colour. */
+function hazeAt(tint, alpha) {
+    const [r, g, b] = [tint.r, tint.g, tint.b].map((c) => Math.round(c * 255));
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/** Paints the ground just outside the opening, `w` × `h` px, its top the
+ * far end: the driveway `drive` of the way across, lawn either side,
+ * night falling on it as on the street, and hazier as it goes, until at
+ * the far end it's as hazy as the bottom of the view (paintDriveway()). */
+function paintGround(ctx, w, h, look, night, { drive, haze: tint }) {
+    ctx.fillStyle = look.grass;
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = look.pavement;
+    ctx.fillRect(w * (0.5 - drive / 2), 0, w * drive, h);
+    // The driveway's joints, a slab's length apart.
+    ctx.fillStyle = "rgba(0, 0, 0, 0.12)";
+    for (let y = h * 0.25; y < h; y += h * 0.25) {
+        ctx.fillRect(w * (0.5 - drive / 2), y, w * drive, 2);
+    }
+    if (night) {
+        ctx.globalCompositeOperation = "multiply";
+        ctx.fillStyle = look.ridgeTint;
+        ctx.fillRect(0, 0, w, h);
+        ctx.globalCompositeOperation = "source-over";
+    }
+    const haze = ctx.createLinearGradient(0, 0, 0, h);
+    haze.addColorStop(0, hazeAt(tint, OUTSIDE.haze[0]));
+    haze.addColorStop(1, hazeAt(tint, 0));
+    ctx.fillStyle = haze;
+    ctx.fillRect(0, 0, w, h);
 }
 
 /** The sectional door's sections and their hardware (tracks, rail,
@@ -441,7 +514,7 @@ export const DOOR_STYLES = {
 export function garageDoor(
     THREE,
     door,
-    { theme, wallHeight, style = "sectional", count = 0 }
+    { theme, wallHeight, wallSpan, style = "sectional", count = 0 }
 ) {
     const { w, h } = door;
     const { up, out } = UNIT;
@@ -460,30 +533,97 @@ export function garageDoor(
     const box = (size, mat, at, parent) =>
         add(new THREE.BoxGeometry(...size), mat, at, parent);
 
-    // Out through the opening: the day's driveway, and the night's over
-    // it, as dark mode falls (setNight()). Unlit, as a view outside is.
-    const px = [PX, Math.round((PX * h) / w)];
-    const drive = (look, night) =>
-        new THREE.MeshBasicMaterial({
-            map: canvasTexture(THREE, ...px, (ctx) =>
-                paintDriveway(ctx, ...px, look, night)
-            ),
-            transparent: night,
-            opacity: night ? 0 : 1,
-            depthWrite: !night,
+    // Out through the opening (the room leaves a hole in its wall for it):
+    // the ground running out to the view of the street, the day's and the
+    // night's over it, as dark mode falls (setNight()). Unlit, as a view
+    // outside is. The driveway is a little wider than the door.
+    // No wider than the wall it's behind, nor taller, so seen from in the
+    // room it only shows through the opening (OUTSIDE.depth back, it looks
+    // smaller than the wall still).
+    const view = {
+        w: Math.min(w * OUTSIDE.wide, wallSpan ?? Infinity),
+        h: Math.min(h * OUTSIDE.high, wallHeight),
+    };
+    // Both paintings are as wide as the view.
+    const drive = (w * 1.1) / view.w;
+    const paintings = [
+        {
+            size: [view.w, view.h],
+            paint: paintDriveway,
+            px: PX,
+            options: { horizon: OUTSIDE.horizon, drive },
+            place: (mesh) => mesh.position.set(0, view.h / 2, -OUTSIDE.depth),
+        },
+        {
+            size: [view.w, OUTSIDE.depth],
+            paint: paintGround,
+            // Only bands and a gradient: a small canvas does.
+            px: PX / 4,
+            options: { drive },
+            place: (mesh) => {
+                // Flat on the ground, its top (the far end) away from the
+                // wall, a hair over the floor so the two don't fight.
+                mesh.rotation.x = -Math.PI / 2;
+                mesh.position.set(0, 0.2, -OUTSIDE.depth / 2);
+            },
+        },
+    ];
+    /** The outside in look `look`, a mesh per painting, the night's over
+     * the day's. */
+    const outside = (look, night) =>
+        paintings.map(({ size, px: across, paint, options, place }) => {
+            const px = [across, Math.round((across * size[1]) / size[0])];
+            const haze = new THREE.Color(look.skyBottom);
+            const mesh = new THREE.Mesh(
+                new THREE.PlaneGeometry(...size),
+                new THREE.MeshBasicMaterial({
+                    map: canvasTexture(THREE, ...px, (ctx) =>
+                        paint(ctx, ...px, look, night, { ...options, haze })
+                    ),
+                    transparent: night,
+                    opacity: night ? 0 : 1,
+                    depthWrite: !night,
+                })
+            );
+            place(mesh);
+            if (night) {
+                // Just nearer the room than the day's.
+                mesh.translateZ(0.5);
+                mesh.visible = false;
+            }
+            group.add(mesh);
+            return mesh;
         });
-    const day = drive(worldTheme(theme), false);
-    const dark = drive(worldNight(theme), true);
-    const [dayView, darkView] = [
-        [day, BACKDROP_Z],
-        [dark, BACKDROP_Z + 0.5],
-    ].map(([mat, z]) => {
-        const view = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
-        view.position.set(0, h / 2, z);
-        group.add(view);
-        return view;
-    });
-    darkView.visible = false;
+    const dayViews = outside(worldTheme(theme), false);
+    const darkViews = outside(worldNight(theme), true);
+    // From any other wall, or turning, the opening is a flat haze in the
+    // sky's colour at the horizon, by day or night, rather than the street
+    // past the room's end (showOutside()).
+    const hazes = [worldTheme(theme), worldNight(theme)].map(
+        (look) => new THREE.Color(look.skyBottom)
+    );
+    const fill = new THREE.Mesh(
+        new THREE.PlaneGeometry(w, h),
+        new THREE.MeshBasicMaterial({ color: hazes[0].clone() })
+    );
+    fill.position.set(0, h / 2, -0.5);
+    fill.visible = false;
+    group.add(fill);
+    let outsideShown = true;
+    let nightShown = 0;
+    /** Shows only what's drawn of the outside, by `outsideShown` and
+     * `nightShown`. */
+    function showViews() {
+        for (const mesh of darkViews) {
+            mesh.material.opacity = nightShown;
+            mesh.visible = outsideShown && nightShown > 0;
+        }
+        for (const mesh of dayViews) {
+            mesh.visible = outsideShown && nightShown < 1;
+        }
+        fill.visible = !outsideShown;
+        fill.material.color.lerpColors(hazes[0], hazes[1], nightShown);
+    }
 
     // The frame: a jamb up each side and the header over the top.
     const wood = material("#f5f5f4", { roughness: 0.8 });
@@ -575,10 +715,14 @@ export function garageDoor(
         setStyle,
         /** The night's driveway `n` of the way over the day's. */
         setNight(n) {
-            dark.opacity = n;
-            // Only what shows is drawn.
-            darkView.visible = n > 0;
-            dayView.visible = n < 1;
+            nightShown = n;
+            showViews();
+        },
+        /** Shows the street out through the opening, or (`shown` false)
+         * only a haze in it. */
+        showOutside(shown) {
+            outsideShown = shown;
+            showViews();
         },
         light: { x: 0, y: unitAt - UNIT.h / 2 - 6, z: unitZ },
         /** Shows `n` on the opener's readout. */

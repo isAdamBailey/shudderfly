@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { worldToScreen } from "../composables/projection.js";
+import { serverRoadX } from "../testing/serverList.js";
 import {
     buildingBox,
     FACADE_SIZES,
+    GARAGE_WING,
+    garageBox,
+    landmarkBoxes,
     RIDGE_DEPTH,
     ROWS,
     roadCamera,
@@ -152,5 +156,71 @@ describe("roadLayout", () => {
         expect(worldToScreen(peeked, far).x).toBeGreaterThan(
             worldToScreen(plain, far).x
         );
+    });
+});
+
+describe("the Butt's Garage on the road", () => {
+    // From a phone held sideways to a tall monitor.
+    const stages = [400, 600, 833, 1200].map((h) => ({
+        w: 1000,
+        h,
+        vmin: Math.min(1000, h),
+    }));
+    const road = [
+        { id: "house", x: serverRoadX("house"), side: "far", facade: "butt" },
+        { id: "house-garage", x: 740, side: "far", attachedTo: "house" },
+        {
+            id: "library",
+            x: serverRoadX("library"),
+            side: "far",
+            facade: "gothic",
+        },
+    ];
+
+    it("joins its wing onto the house's side, however wide that's drawn", () => {
+        for (const stage of stages) {
+            const L = roadLayout(stage);
+            const [house, garage] = landmarkBoxes(L, road);
+            const houseRight = house.x + house.width / 2;
+            const garageLeft = garage.x - garage.width / 2;
+            expect(garageLeft).toBeLessThan(houseRight);
+            expect(houseRight - garageLeft).toBeCloseTo(
+                house.width * GARAGE_WING.overlap
+            );
+            // Behind the house's front, lower than its waistband, with its
+            // door under its roof and room over it for the sign.
+            expect(garage.z).toBeLessThan(house.z);
+            expect(garage.height).toBeLessThan(house.height);
+            expect(garage.door.w).toBeLessThan(garage.width);
+            expect(garage.door.h).toBeLessThan(garage.height * 0.7);
+            expect(garage.roof).toBe(0);
+        }
+    });
+
+    it("leaves room before the Library on every stage", () => {
+        for (const stage of stages) {
+            const L = roadLayout(stage);
+            const [, garage, library] = landmarkBoxes(L, road);
+            expect(garage.x + garage.width / 2).toBeLessThan(
+                library.x - library.width / 2 - 50
+            );
+        }
+    });
+
+    it("stands wherever its wing is, whatever x it says", () => {
+        const L = roadLayout(stages[1]);
+        const moved = road.map((lm) =>
+            lm.attachedTo ? { ...lm, x: 99999 } : lm
+        );
+        expect(landmarkBoxes(L, moved)[1]).toEqual(landmarkBoxes(L, road)[1]);
+        expect(landmarkBoxes(L, road)[1]).toEqual(
+            garageBox(L, buildingBox(L, road[0]))
+        );
+    });
+
+    it("keys what it's joined onto by slug as well as id", () => {
+        const L = roadLayout(stages[1]);
+        const bySlug = road.map(({ id, ...lm }) => ({ ...lm, slug: id }));
+        expect(landmarkBoxes(L, bySlug)).toEqual(landmarkBoxes(L, road));
     });
 });

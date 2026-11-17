@@ -924,6 +924,8 @@ return [
     'games.world.garage.swap_clicker' => 'Cambiar el control',
     'games.world.garage.swap_door' => 'Cambiar la puerta del garaje',
     'games.world.garage.enter' => 'Intro',
+    'games.world.garage.shut' => '¡La puerta está cerrada!',
+    'games.world.garage.shut_outside' => '¡Está cerrada! Ábrela desde dentro.',
     'games.world.toys.spotlight' => 'Foco',
     'games.world.toys.sound_button' => 'Botón de sonido',
     'games.world.toys.sound_altar' => 'Altar de sonido de Guster',

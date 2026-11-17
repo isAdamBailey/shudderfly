@@ -340,6 +340,58 @@ export function createRoomScene(
         };
     }
 
+    /** Pieces of a wall `along` long, `hole` ({ x, w, h }, its middle
+     * along the wall from the wall's middle) cut out of it if it has one:
+     * the wall either side of the hole and over it, each mapping its own
+     * part of the wall's pattern, so they read as one wall. */
+    function wallPlanes(material, along, hole) {
+        if (!hole) {
+            return [plane(material, along, height, [0, height / 2, 0])];
+        }
+        const left = hole.x - hole.w / 2;
+        const right = hole.x + hole.w / 2;
+        // [x0, x1, y0, y1] of each piece, along the wall from its middle.
+        const pieces = [
+            [-along / 2, left, 0, height],
+            [right, along / 2, 0, height],
+            [left, right, hole.h, height],
+        ].filter(([x0, x1, y0, y1]) => x1 > x0 && y1 > y0);
+        return pieces.map(([x0, x1, y0, y1]) => {
+            const geometry = new THREE.PlaneGeometry(x1 - x0, y1 - y0);
+            geometry.translate((x0 + x1) / 2, (y0 + y1) / 2, 0);
+            const position = geometry.attributes.position;
+            const uv = geometry.attributes.uv;
+            for (let i = 0; i < position.count; i += 1) {
+                uv.setXY(
+                    i,
+                    (position.getX(i) + along / 2) / along,
+                    position.getY(i) / height
+                );
+            }
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.receiveShadow = true;
+            return mesh;
+        });
+    }
+
+    /** A wall `along` long's skirting, broken by `hole` if it has one. */
+    function skirting(along, hole) {
+        const runs = hole
+            ? [
+                  [-along / 2, hole.x - hole.w / 2],
+                  [hole.x + hole.w / 2, along / 2],
+              ]
+            : [[-along / 2, along / 2]];
+        return runs
+            .filter(([x0, x1]) => x1 > x0)
+            .map(([x0, x1]) =>
+                trimBox(
+                    [x1 - x0, SKIRTING, 4],
+                    [(x0 + x1) / 2, SKIRTING / 2, 2]
+                )
+            );
+    }
+
     // Each wall's look (the ends' is `sides`) by its length, made once:
     // look → length → material.
     const wallMaterials = new Map();
@@ -357,20 +409,25 @@ export function createRoomScene(
     // face into the room, with its skirting and the ceiling edge along its
     // top. Wall → everything on it (hang()), hidden with it while it's the
     // one behind the camera (showWalls()).
+    // The Garage's back wall has a hole where its door is (issue #230),
+    // to see out through it: its middle along the wall, `w` across and `h`
+    // up.
+    const garageHole = room.garageDoor && {
+        x: room.garageDoor.x - room.size.w / 2,
+        w: room.garageDoor.w,
+        h: room.garageDoor.h,
+    };
     const walls = Object.fromEntries(
         WALLS.map((wall) => {
             const { middle, along, turn } = wallLine(wall);
             const box = new THREE.Group();
             box.position.set(middle.x, 0, middle.z);
             box.rotation.y = turn;
+            const hole = wall === "back" ? garageHole : null;
             box.add(
-                plane(wallMaterial(wall, along), along, height, [
-                    0,
-                    height / 2,
-                    0,
-                ]),
+                ...wallPlanes(wallMaterial(wall, along), along, hole),
                 trimBox([along, CEILING_EDGE, 6], [0, height, 3]),
-                trimBox([along, SKIRTING, 4], [0, SKIRTING / 2, 2])
+                ...skirting(along, hole)
             );
             made.add(box);
             return [wall, [box]];
@@ -585,6 +642,11 @@ export function createRoomScene(
         garageDoor(THREE, room.garageDoor, {
             theme,
             wallHeight: height,
+            // The outside stays behind the back wall, the door's middle
+            // this far from either end of it.
+            wallSpan:
+                Math.min(room.garageDoor.x, room.size.w - room.garageDoor.x) *
+                2,
             style: garageDoorStyle,
             count: garageCount,
         });
@@ -647,8 +709,9 @@ export function createRoomScene(
     const instruments = new Map();
     const curtains = new Map();
     for (const item of room.interactables) {
-        // Built into the room above, not played with.
-        if (item.stairs || item.open) continue;
+        // Built into the room above, not played with (the Garage's way
+        // out is its door).
+        if (item.stairs || item.open || item.opening) continue;
         if (item.type === "curtain") {
             const built = stageCurtain(THREE, item, height);
             const pose = itemPose(item);
@@ -901,6 +964,9 @@ export function createRoomScene(
         applyCamera(camera, cam);
         shown = cam;
         showWalls(faced);
+        // Out through the Garage's door only while you face it: from any
+        // other wall the street would show past the end of the room.
+        garage?.showOutside(faced === "back");
         openHoles(faced);
         turnCards(viewYaw(cam.view));
         if (skirt) {
@@ -951,6 +1017,7 @@ export function createRoomScene(
         shown = null;
         showWalls(a.view.wall, b.view.wall);
         openHoles(null);
+        garage?.showOutside(false);
         const v = (p) => new THREE.Vector3(p.x, p.y, p.z);
         const [eye, light] = [lightAim(a, from.band), lightAim(b, to.band)];
         const ends = {

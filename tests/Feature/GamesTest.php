@@ -33,20 +33,23 @@ class GamesTest extends TestCase
                 ->where('scenes.road.kind', 'road')
                 // The buildings you can go into. The cockroach games' lots
                 // are closed: Guster's House stands where the fight was,
-                // the Cockroach's House past it.
-                ->has('scenes.road.interactables', 4)
+                // the Cockroach's House past it. The Butt's Garage is joined
+                // onto his house.
+                ->has('scenes.road.interactables', 5)
                 ->where('scenes.road.interactables.0.id', 'house')
-                ->where('scenes.road.interactables.1.id', 'library')
-                ->where('scenes.road.interactables.2.id', 'guster-house')
-                ->where('scenes.road.interactables.2.x', 1600)
-                ->where('scenes.road.interactables.2.door', 'guster')
+                ->where('scenes.road.interactables.1.id', 'house-garage')
+                ->where('scenes.road.interactables.1.attachedTo', 'house')
+                ->where('scenes.road.interactables.2.id', 'library')
+                ->where('scenes.road.interactables.3.id', 'guster-house')
+                ->where('scenes.road.interactables.3.x', 1800)
+                ->where('scenes.road.interactables.3.door', 'guster')
                 // A can of magic beans, as he was born.
-                ->where('scenes.road.interactables.2.facade', 'beans')
+                ->where('scenes.road.interactables.3.facade', 'beans')
                 // Guster's sounds, none here (they live in production).
                 ->where('castSounds', ['guster' => []])
-                ->where('scenes.road.interactables.3.id', 'cockroach-house')
-                ->where('scenes.road.interactables.3.x', 2200)
-                ->where('scenes.road.interactables.3.to', 'cockroach-house.hall')
+                ->where('scenes.road.interactables.4.id', 'cockroach-house')
+                ->where('scenes.road.interactables.4.x', 2400)
+                ->where('scenes.road.interactables.4.to', 'cockroach-house.hall')
                 // A dotted id can't be a path here.
                 ->where('scenes', fn ($scenes) => collect($scenes)->get('house.hall')['kind'] === 'room')
                 ->where('link', null)

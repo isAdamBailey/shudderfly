@@ -924,6 +924,8 @@ return [
     'games.world.garage.swap_clicker' => 'Change the clicker',
     'games.world.garage.swap_door' => 'Change the garage door',
     'games.world.garage.enter' => 'Enter',
+    'games.world.garage.shut' => 'The door\'s shut!',
+    'games.world.garage.shut_outside' => 'It\'s shut! Open it from inside.',
     'games.world.toys.spotlight' => 'Spotlight',
     'games.world.toys.sound_button' => 'Sound button',
     'games.world.toys.sound_altar' => 'Guster’s sound altar',

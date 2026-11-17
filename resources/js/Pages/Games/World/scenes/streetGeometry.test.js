@@ -10,7 +10,9 @@ import {
     BUTT_HOUSE,
     DOORS,
     FACADES,
+    garageWing,
 } from "./streetGeometry.js";
+import { GARAGE_DOORS } from "../composables/useGarageStyles.js";
 
 const LOOK = {
     walls: ["#ffffff"],
@@ -612,5 +614,75 @@ describe("street geometry", () => {
                 expect(Math.abs(b.x)).toBeGreaterThan((width * 0.3) / 2);
             }
         });
+    });
+});
+
+describe("the Butt's Garage on the road", () => {
+    const door = { w: 140, h: 76 };
+    const wing = (style, open) =>
+        garageWing(THREE, {
+            width: 172,
+            height: 124,
+            depth: 120,
+            door,
+            look: LOOK,
+            style,
+            open,
+        }).body;
+    const furthestOut = (parts) =>
+        Math.max(
+            ...parts.map((part) => {
+                part.computeBoundingBox();
+                return part.boundingBox.max.z;
+            })
+        );
+
+    it("wears the house's pants, under a flat roof", () => {
+        const body = wing("sectional", 0);
+        expect(painted(body, LOOK.pants.denim)).toBe(true);
+        expect(painted(body, LOOK.pants.waistband)).toBe(true);
+        expect(topOf(body)).toBeLessThan(124 * 1.05);
+    });
+
+    it("draws every door style the Garage can have, hiding the inside shut", () => {
+        for (const style of GARAGE_DOORS) {
+            expect(painted(wing(style, 0), "#5b5b5b")).toBe(false);
+            expect(painted(wing(style, 1), "#5b5b5b")).toBe(true);
+        }
+    });
+
+    it("raises a sectional or roll-up door into the top of the opening", () => {
+        // Half up, what's left of it hangs from the top of the opening.
+        const lowest = (parts, color) =>
+            Math.min(
+                ...parts
+                    .filter((part) => painted([part], color))
+                    .map((part) => {
+                        part.computeBoundingBox();
+                        return part.boundingBox.min.y;
+                    })
+            );
+        expect(lowest(wing("sectional", 0), "#f8fafc")).toBeCloseTo(0);
+        expect(lowest(wing("sectional", 0.5), "#f8fafc")).toBeCloseTo(
+            door.h / 2
+        );
+        // Shut, the sectional's white fills the opening; all the way up,
+        // there's nothing of it to see but the dark.
+        expect(painted(wing("sectional", 0), "#f8fafc")).toBe(true);
+        expect(painted(wing("sectional", 1), "#f8fafc")).toBe(false);
+        expect(painted(wing("roll-up", 0), "#a3afbf")).toBe(true);
+        expect(painted(wing("roll-up", 1), "#a3afbf")).toBe(false);
+    });
+
+    it("swings a carriage door's leaves out toward the street", () => {
+        const shut = furthestOut(wing("carriage", 0));
+        const open = furthestOut(wing("carriage", 1));
+        expect(open).toBeGreaterThan(shut + door.w / 3);
+    });
+
+    it("is dark inside, darker further in", () => {
+        const body = wing("sectional", 1);
+        expect(painted(body, "#5b5b5b")).toBe(true);
+        expect(painted(body, "#070707")).toBe(true);
     });
 });
